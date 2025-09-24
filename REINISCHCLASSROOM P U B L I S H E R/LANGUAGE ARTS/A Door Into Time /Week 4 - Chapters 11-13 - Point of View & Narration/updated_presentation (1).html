@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Week 04 - POV/Narration Focus | A Door Into Time (Auto-Rotating Backgrounds)</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            background: #0f3460;
+            color: #fff;
+            overflow: hidden;
+        }
+        .presentation-container { width: 100vw; height: 100vh; position: relative; }
+        .slide {
+            display: none;
+            width: 100%;
+            height: 100%;
+            padding: 40px;
+            position: absolute;
+            top: 0; left: 0;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            background-size: cover;
+            background-position: center center;
+            background-repeat: no-repeat;
+            background-color: transparent;
+            z-index: 1;
+        }
+        /* Clear overlay for better text readability */
+        .slide::before {
+            content: "";
+            position: absolute; inset: 0;
+            background: linear-gradient(180deg, rgba(0,0,0,.25), rgba(0,0,0,.35));
+            z-index: -1;
+        }
+        .slide > * { position: relative; z-index: 1; }
+        .slide.active { display: flex; }
+
+        .slide h1 { font-size: 3.2em; margin-bottom: 18px; text-shadow: 3px 3px 8px rgba(0,0,0,.8); color: #f4a261; }
+        .slide h2 { font-size: 2.3em; margin-bottom: 24px; color: #e9c46a; text-shadow: 2px 2px 6px rgba(0,0,0,.7); }
+        .slide h3 { font-size: 1.8em; margin-bottom: 16px; color: #2aebd1; text-shadow: 2px 2px 5px rgba(0,0,0,.6); }
+        .slide p, .slide li { font-size: 1.25em; line-height: 1.6; margin-bottom: 12px; text-shadow: 2px 2px 5px rgba(0,0,0,.7); }
+        .slide ul { text-align: left; max-width: 880px; margin: 0 auto; }
+        .slide li { margin-bottom: 8px; padding-left: 8px; }
+
+        .day-header {
+            position: absolute; top: 20px; left: 20px;
+            background: rgba(244,162,97,.95);
+            padding: 10px 20px; border-radius: 8px;
+            font-weight: bold; color: #1a1a2e; box-shadow: 0 6px 18px rgba(0,0,0,.4);
+        }
+        .slide-counter {
+            position: absolute; top: 20px; right: 20px;
+            background: rgba(42,157,143,.95);
+            padding: 10px 15px; border-radius: 8px; font-size: 1em;
+            box-shadow: 0 6px 18px rgba(0,0,0,.4);
+        }
+        .navigation { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; z-index: 2; }
+        .nav-btn {
+            padding: 10px 20px; background: rgba(233,196,106,.95);
+            border: none; border-radius: 8px; color: #1a1a2e; cursor: pointer; font-weight: bold;
+            transition: transform .2s ease, background-color .2s ease; box-shadow: 0 6px 18px rgba(0,0,0,.4);
+        }
+        .nav-btn:hover { background: rgba(233,196,106,1); transform: translateY(-2px); }
+        .nav-btn:disabled { background: rgba(150,150,150,.6); cursor: not-allowed; color: #111; }
+
+        .example-box {
+            background: rgba(42,157,143,.35);
+            border: 2px solid #2a9d8f; border-radius: 12px; padding: 20px; margin: 20px 0; max-width: 900px;
+            box-shadow: 0 4px 12px rgba(0,0,0,.3);
+        }
+        .vocab-word {
+            background: linear-gradient(45deg, #f4a261, #e9c46a);
+            color: #1a1a2e; padding: 15px 30px; border-radius: 15px; margin: 20px 0; font-size: 1.8em; font-weight: bold; text-shadow: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,.3);
+        }
+        .parts-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; max-width: 900px; margin: 20px auto; }
+        .part-box { background: rgba(244,162,97,.35); border: 2px solid #f4a261; border-radius: 12px; padding: 20px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,.3); }
+        .part-title { color: #f4a261; font-size: 1.6em; font-weight: bold; margin-bottom: 10px; }
+        .prefix-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; max-width: 900px; margin: 20px auto; }
+        .prefix-box { background: rgba(42,157,143,.35); border: 2px solid #2a9d8f; border-radius: 12px; padding: 15px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,.3); }
+        .prefix-title { color: #2aebd1; font-size: 1.4em; font-weight: bold; margin-bottom: 8px; }
+
+        /* Auto-rotating background layers */
+        .bg-layer{
+            position:absolute; 
+            inset:0; 
+            background-size:cover; 
+            background-position:center center; 
+            background-repeat:no-repeat; 
+            transition:opacity 2000ms ease-in-out; 
+            z-index:0;
+        }
+        #bgA{opacity:1;}
+        #bgB{opacity:0;}
+        
+        #bgStatus{
+            position:absolute; 
+            bottom:10px; 
+            right:10px; 
+            background:rgba(0,0,0,.6); 
+            color:#fff; 
+            padding:8px 12px; 
+            border-radius:8px; 
+            font-size:12px; 
+            z-index:3; 
+            letter-spacing:.3px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.3);
+        }
+        
+        .bg-controls {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0,0,0,.6);
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 11px;
+            z-index: 3;
+            box-shadow: 0 2px 8px rgba(0,0,0,.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="presentation-container">
+        <div class="bg-layer" id="bgA"></div>
+        <div class="bg-layer" id="bgB"></div>
+        <div id="bgStatus">Backgrounds: Loading...</div>
+        <div class="bg-controls">P=Pause | [=Slower | ]=Faster</div>
+        <div class="slide-counter">Slide <span id="current">1</span> of <span id="total">—</span></div>
+
+        <!-- DAY 1 SLIDES (CH 11) -->
+        <div class="slide active">
+            <div class="day-header">DAY 1 - CHAPTER 11</div>
+            <h1>Point of View & Narration</h1>
+            <h2>Seeing Through Alex's Eyes</h2>
+            <div style="font-size: 1.3em; margin-top: 30px;">
+                <p>📖 Week 04 - Day 1</p>
+                <p>🎯 Focus: How authors show us character thoughts and perspectives</p>
+                <p>📚 Chapter 11: "The Oath" - Alex's recovery and growing connection</p>
+                <p>📈 Goal: Understand different types of narration and point of view</p>
+            </div>
+        </div>
+
+        <div class="slide">
+            <h2>Today's Reading Detective Work</h2>
+            <ul style="font-size: 1.6em;">
+                <li>🔍 <strong>Identify</strong> whose thoughts we're reading in each scene</li>
+                <li>👁️ <strong>Recognize</strong> third person limited vs. omniscient narration</li>
+                <li>🧠 <strong>Analyze</strong> how Alex's perspective shapes what we know</li>
+                <li>📖 <strong>Read</strong> Chapter 11 together with POV focus</li>
+                <li>✅ <strong>Complete</strong> Day 1 comprehension questions</li>
+            </ul>
+        </div>
+
+        <div class="slide">
+            <h2>Point of View Quick Guide</h2>
+            <div class="parts-grid">
+                <div class="part-box">
+                    <div class="part-title">First Person</div>
+                    <p><strong>I, me, my</strong></p>
+                    <p>Character tells their own story</p>
+                    <p><em>"I looked at myself and was shocked"</em></p>
+                </div>
+                <div class="part-box">
+                    <div class="part-title">Third Person Limited</div>
+                    <p><strong>He, she, they</strong></p>
+                    <p>Narrator shows ONE character's thoughts</p>
+                    <p><em>"Alex found himself emaciated"</em></p>
+                </div>
+                <div class="part-box">
+                    <div class="part-title">Third Person Omniscient</div>
+                    <p><strong>He, she, they</strong></p>
+                    <p>Narrator knows ALL characters' thoughts</p>
+                    <p><em>"Alex worried while Dan secretly planned"</em></p>
+                </div>
+                <div class="part-box">
+                    <div class="part-title">Objective/Dramatic</div>
+                    <p><strong>He, she, they</strong></p>
+                    <p>Only actions and dialogue, no thoughts</p>
+                    <p><em>"Alex sat down. Dan walked away."</em></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="slide">
+            <h2>Think-Aloud & Model</h2>
+            <div class="example-box">
+                <h3>From Chapter 11:</h3>
+                <p><em>"There were no mirrors in the caves, but when Alex first looked down at himself, he reeled. His knees were knobby, his hip bones stuck out, and he could have played the xylophone on his ribs."</em></p>
+                <h3>Analysis:</h3>
+                <p>✅ This is <strong>third person limited</strong> because:</p>
+                <ul style="text-align: left; max-width: 600px;">
+                    <li>We see through Alex's perspective as he discovers his condition</li>
+                    <li>The metaphor "xylophone on his ribs" shows Alex's thoughts</li>
+                    <li>We don't know what others are thinking—only Alex</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide">
+            <h2>Guided Practice: POV Detective</h2>
+            <div class="example-box">
+                <h3>Practice with these sentence frames:</h3>
+                <ul style="text-align: left; font-size: 1.3em;">
+                    <li>🔍 "I know this is Alex's perspective because..."</li>
+                    <li>🔍 "The narrator tells us something the characters don't realize when..."</li>
+                    <li>🔍 "Alex's thoughts are revealed through..."</li>
+                    <li>🔍 "This shows third person limited because..."</li>
+                </ul>
+                <h3 style="margin-top: 30px;">Key Signal Words:</h3>
+                <p><strong>Alex thought • he realized • Alex felt • he wondered • Alex found himself</strong></p>
+            </div>
+        </div>
+
+        <!-- DAY 2 SLIDES (CH 12) -->
+        <div class="slide">
+            <div class="day-header">DAY 2 - CHAPTER 12</div>
+            <h1>Vocabulary Focus</h1>
+            <h2>Building Language Skills</h2>
+            <div style="font-size: 1.3em; margin-top: 30px;">
+                <p>📖 Week 04 - Day 2</p>
+                <p>🎯 Focus: Prefixes, suffixes, parts of speech, and word meanings</p>
+                <p>📚 Chapter 12: "A Quest" - Alex begins his trials</p>
+                <p>🔨 Goal: Master vocabulary tools for better comprehension</p>
+            </div>
+        </div>
+
+        <div class="slide">
+            <h2>Today's Word Detective Work</h2>
+            <ul style="font-size: 1.6em;">
+                <li>🔤 <strong>Identify</strong> parts of speech in sentences</li>
+                <li>🧩 <strong>Recognize</strong> prefixes and suffixes</li>
+                <li>💡 <strong>Understand</strong> how word parts create meaning</li>
+                <li>📖 <strong>Read</strong> Chapter 12 with vocabulary focus</li>
+                <li>✅ <strong>Complete</strong> Day 2 vocabulary questions</li>
+            </ul>
+        </div>
+
+        <div class="slide">
+            <h2>Parts of Speech Review</h2>
+            <div class="parts-grid">
+                <div class="part-box">
+                    <div class="part-title">Noun</div>
+                    <p>Person, place, thing, or idea</p>
+                    <p><strong>Alex</strong>, village, <strong>quest</strong></p>
+                </div>
+                <div class="part-box">
+                    <div class="part-title">Verb</div>
+                    <p>Action or state of being</p>
+                    <p><strong>walked</strong>, is, <strong>approached</strong></p>
+                </div>
+                <div class="part-box">
+                    <div class="part-title">Adjective</div>
+                    <p>Describes a noun</p>
+                    <p><strong>cautious</strong>, tall, <strong>dangerous</strong></p>
+                </div>
+                <div class="part-box">
+                    <div class="part-title">Adverb</div>
+                    <p>Describes a verb (often ends in -ly)</p>
+                    <p><strong>cautiously</strong>, quickly, <strong>carefully</strong></p>
+                </div>
+            </div>
+            <div class="example-box" style="margin-top: 20px;">
+                <p><strong>Example:</strong> "Alex walked <em>cautiously</em> toward the <em>dangerous</em> armory."</p>
+                <p>Alex = noun • walked = verb • cautiously = adverb • dangerous = adjective • armory = noun</p>
+            </div>
+        </div>
+
+        <div class="slide">
+            <h2>Prefixes and Suffixes</h2>
+            <div class="prefix-grid">
+                <div class="prefix-box">
+                    <div class="prefix-title">UN-</div>
+                    <p>Means "not" or "opposite"</p>
+                    <p><strong>unexpected</strong></p>
+                    <p>not expected</p>
+                </div>
+                <div class="prefix-box">
+                    <div class="prefix-title">PRE-</div>
+                    <p>Means "before"</p>
+                    <p><strong>preview</strong></p>
+                    <p>see before</p>
+                </div>
+                <div class="prefix-box">
+                    <div class="prefix-title">-LY</div>
+                    <p>Makes adverbs</p>
+                    <p><strong>cautiously</strong></p>
+                    <p>in a cautious way</p>
+                </div>
+            </div>
+            <div class="example-box" style="margin-top: 20px;">
+                <p><strong>Word Building:</strong> caution → cautious → cautiously</p>
+                <p>noun → adjective → adverb</p>
+            </div>
+        </div>
+
+        <div class="slide">
+            <div class="vocab-word">METRONOME</div>
+            <h3>Definition:</h3>
+            <p>A device that keeps steady time and rhythm</p>
+            <h3>From Chapter 12:</h3>
+            <p><em>"He set a metronome in his head—tic, tic, tic, tic—and matched his steps to it."</em></p>
+            <h3>Connection:</h3>
+            <p>Alex uses mental rhythm to pace himself during his long run, like a musician uses a metronome to stay in time.</p>
+        </div>
+
+        <div class="slide">
+            <div class="vocab-word">PROGRESSIVE</div>
+            <h3>Definition:</h3>
+            <p>Happening step by step; increasing gradually</p>
+            <h3>From Chapter 12:</h3>
+            <p><em>"These tasks are supposed to get progressively more difficult."</em></p>
+            <h3>Connection:</h3>
+            <p>Each test Alex faces is harder than the last one, building his skills gradually like climbing stairs.</p>
+        </div>
+
+        <div class="slide">
+            <div class="vocab-word">CAUTIOUSLY</div>
+            <h3>Definition:</h3>
+            <p>Carefully and with attention to danger</p>
+            <h3>From Chapter 12:</h3>
+            <p><em>"Alex approached the rubble cautiously."</em></p>
+            <h3>Connection:</h3>
+            <p>Alex moves carefully because he knows the rocks could shift and cause him to fall.</p>
+        </div>
+
+        <div class="slide">
+            <div class="vocab-word">DELICATELY</div>
+            <h3>Definition:</h3>
+            <p>In a careful, gentle way</p>
+            <h3>From Chapter 12:</h3>
+            <p><em>"He delicately set the arrow down."</em></p>
+            <h3>Connection:</h3>
+            <p>Sekun-ak handles the arrow with care, showing respect for his crafted weapon.</p>
+        </div>
+
+        <!-- DAY 3 SLIDES (CH 13) -->
+        <div class="slide">
+            <div class="day-header">DAY 3 - CHAPTER 13</div>
+            <h1>Building Suspense</h1>
+            <h2>How Authors Keep Us on the Edge</h2>
+            <div style="font-size: 1.3em; margin-top: 30px;">
+                <p>📖 Week 04 - Day 3</p>
+                <p>🎯 Focus: Narrative techniques that create tension and excitement</p>
+                <p>📚 Chapter 13: "A Quest II" - Alex faces the snake and races time</p>
+                <p>⚡ Goal: Analyze how POV and pacing build suspense</p>
+            </div>
+        </div>
+
+        <div class="slide">
+            <h2>Today's Suspense Analysis</h2>
+            <ul style="font-size: 1.6em;">
+                <li>⏰ <strong>Track</strong> how time pressure builds tension</li>
+                <li>🐍 <strong>Analyze</strong> the shocking snake encounter</li>
+                <li>🧠 <strong>Follow</strong> Alex's problem-solving under pressure</li>
+                <li>📖 <strong>Read</strong> Chapter 13 with suspense focus</li>
+                <li>✅ <strong>Complete</strong> Day 3 comprehension questions</li>
+            </ul>
+        </div>
+
+        <div class="slide">
+            <h2>Suspense Building Techniques</h2>
+            <div class="example-box">
+                <h3>1. Limited Information</h3>
+                <p>We only know what Alex knows - surprises shock us too!</p>
+                <h3>2. Time Pressure</h3>
+                <p>Sunset deadline creates urgency and worry</p>
+                <h3>3. Unexpected Obstacles</h3>
+                <p>The snake guarding the plate - sudden danger!</p>
+                <h3>4. Internal Struggle</h3>
+                <p>Alex's thoughts show his fear and determination</p>
+            </div>
+        </div>
+
+        <div class="slide">
+            <h2>The Snake Encounter Analysis</h2>
+            <div class="example-box">
+                <h3>From Chapter 13:</h3>
+                <p><em>"He could see the wooden plate. He could also see a western diamondback rattlesnake curled up around it, rattling a warning."</em></p>
+                <h3>Why This Builds Suspense:</h3>
+                <ul style="text-align: left; max-width: 600px;">
+                    <li>✅ <strong>Delayed revelation</strong> - plate first, then danger</li>
+                    <li>✅ <strong>Limited POV</strong> - we discover with Alex</li>
+                    <li>✅ <strong>Immediate threat</strong> - deadly snake guarding goal</li>
+                    <li>✅ <strong>Time pressure</strong> - sunset approaching fast</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- DAY 4 SLIDES -->
+        <div class="slide">
+            <div class="day-header">DAY 4 - WRITING DAY</div>
+            <h1>Writing Workshop</h1>
+            <h2>Analyzing POV & Narration</h2>
+            <div style="font-size: 1.3em; margin-top: 30px;">
+                <p>📖 Week 04 - Day 4</p>
+                <p>🎯 Focus: Written analysis of point of view and narrative techniques</p>
+                <p>✏️ Task: Respond to prompts about POV and suspense building</p>
+                <p>🎯 Goal: Support analysis with strong text evidence</p>
+            </div>
+        </div>
+
+        <div class="slide">
+            <h2>Writing Structure Review</h2>
+            <div class="example-box">
+                <h3>Our Simple, Effective Structure:</h3>
+                <ul style="text-align: left; font-size: 1.3em;">
+                    <li>🎯 <strong>Topic Sentence</strong> - Restate the question as a statement</li>
+                    <li>📚 <strong>Supporting Detail 1</strong> - First evidence + explanation</li>
+                    <li>📚 <strong>Supporting Detail 2</strong> - Second evidence + explanation</li>
+                    <li>📚 <strong>Supporting Detail 3</strong> - Third evidence + explanation</li>
+                    <li>🎯 <strong>Conclusion Sentence</strong> - Wrap up and connect back</li>
+                </ul>
+                <h3 style="margin-top: 20px;">Remember:</h3>
+                <p>Each supporting detail needs <strong>evidence from the text</strong> AND <strong>your explanation</strong> of why it matters!</p>
+            </div>
+        </div>
+
+        <div class="slide">
+            <h2>Today's Writing Prompts</h2>
+            <div class="example-box">
+                <h3>Response 1:</h3>
+                <p>How does the author use Alex's point of view to show his growing connection to the Winten-ah tribe in Chapter 11?</p>
+                <h3>Response 2:</h3>
+                <p>How does the author build suspense and tension during Alex's quest trials in Chapters 12-13?</p>
+                <h3 style="margin-top: 30px;">Success Tips:</h3>
+                <ul style="text-align: left;">
+                    <li>Use specific quotes or examples from the chapters</li>
+                    <li>Explain HOW each example supports your main point</li>
+                    <li>Connect everything back to POV and narrative techniques</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide">
+            <h2>Writing Time & Conferences</h2>
+            <div class="example-box">
+                <h3>Writing Workshop Schedule:</h3>
+                <ul style="text-align: left; font-size: 1.3em;">
+                    <li>⏰ <strong>5 minutes</strong> - Plan your responses</li>
+                    <li>⏰ <strong>30 minutes</strong> - Write your responses</li>
+                    <li>⏰ <strong>10 minutes</strong> - Review and revise</li>
+                </ul>
+                <h3>Conference Focus:</h3>
+                <ul style="text-align: left;">
+                    <li>✅ Clear topic sentences that restate the questions</li>
+                    <li>✅ Strong evidence from the text</li>
+                    <li>✅ Good explanations connecting evidence to main points</li>
+                    <li>✅ Solid conclusions that wrap everything up</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="navigation">
+            <button class="nav-btn" id="prevBtn" onclick="changeSlide(-1)">Previous</button>
+            <button class="nav-btn" id="nextBtn" onclick="changeSlide(1)">Next</button>
+        </div>
+    </div>
+
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+        document.getElementById('total').textContent = totalSlides;
+
+        function showSlide(n) {
+            slides[currentSlide].classList.remove('active');
+            currentSlide = (n + totalSlides) % totalSlides;
+            slides[currentSlide].classList.add('active');
+            document.getElementById('current').textContent = currentSlide + 1;
+            document.getElementById('prevBtn').disabled = currentSlide === 0;
+            document.getElementById('nextBtn').disabled = currentSlide === totalSlides - 1;
+        }
+        function changeSlide(direction) {
+            if (direction === 1 && currentSlide < totalSlides - 1) {
+                showSlide(currentSlide + 1);
+            } else if (direction === -1 && currentSlide > 0) {
+                showSlide(currentSlide - 1);
+            }
+        }
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === ' ') { changeSlide(1); }
+            else if (e.key === 'ArrowLeft') { changeSlide(-1); }
+        });
+        showSlide(0);
+
+        // === Auto-rotating background images system ===
+        const candidateImages = [
+            // Use these simple names - save your 18 images with these filenames
+            'image1.png', 'image2.png', 'image3.png', 'image4.png', 'image5.png',
+            'image6.png', 'image7.png', 'image8.png', 'image9.png', 'image10.png',
+            'image11.png', 'image12.png', 'image13.png', 'image14.png', 'image15.png',
+            'image16.png', 'image17.png', 'image18.png'
+        ];
+
+        // Preload and keep only those that actually exist
+        function preload(src){
+            return new Promise((resolve)=>{
+                const im = new Image();
+                im.onload = () => resolve({ src, ok:true });
+                im.onerror = () => resolve({ src, ok:false });
+                im.src = src;
+            });
+        }
+
+        const bgA = document.getElementById('bgA');
+        const bgB = document.getElementById('bgB');
+        const container = document.querySelector('.presentation-container');
+        const bgStatus = document.getElementById('bgStatus');
+        let validBGs = [];
+        let bgIndex = 0;
+        let bgTimer = null;
+        const BG_INTERVAL_DEFAULT = 8000; // 8 seconds per image
+        let intervalMs = BG_INTERVAL_DEFAULT;
+        
+        function setBg(el, src) { 
+            el.style.backgroundImage = `url('${src}')`; 
+        }
+        
+        function startBgTimer(){ 
+            if(bgTimer) clearInterval(bgTimer); 
+            bgTimer = setInterval(rotateBg, intervalMs); 
+        }
+        
+        function stopBgTimer(){ 
+            if(bgTimer) clearInterval(bgTimer); 
+            bgTimer = null; 
+        }
+
+        // Initialize background system
+        Promise.all(candidateImages.map(preload)).then(results => {
+            validBGs = Array.from(new Set(results.filter(r=>r.ok).map(r=>r.src)));
+            
+            if(bgStatus) {
+                bgStatus.textContent = `Backgrounds: ${validBGs.length} loaded`;
+            }
+            
+            if(validBGs.length === 0){
+                console.warn('No background images found. Please save your images as image1.png through image18.png in the same folder as this HTML file.');
+                if(bgStatus) bgStatus.textContent = 'Backgrounds: 0 - Save images as image1.png-image18.png';
+                return;
+            }
+            
+            // Initialize first two backgrounds
+            bgIndex = 0;
+            setBg(bgA, validBGs[bgIndex]);
+            if(validBGs.length > 1) {
+                setBg(bgB, validBGs[(bgIndex + 1) % validBGs.length]);
+            }
+            bgA.style.opacity = 1; 
+            bgB.style.opacity = 0;
+            
+            // Start rotation
+            if(validBGs.length > 1) {
+                startBgTimer();
+            }
+        });
+
+        function rotateBg(){
+            if(validBGs.length <= 1) return;
+            
+            const next = (bgIndex + 1) % validBGs.length;
+            const showA = getComputedStyle(bgA).opacity !== '0';
+            const top = showA ? bgB : bgA;     // the one to fade in
+            const bottom = showA ? bgA : bgB;  // the one to fade out
+            
+            setBg(top, validBGs[next]);
+            top.style.opacity = 1; 
+            bottom.style.opacity = 0;
+            bgIndex = next;
+        }
+
+        // Pause rotation when hovering (useful for reading slides)
+        container.addEventListener('mouseenter', stopBgTimer);
+        container.addEventListener('mouseleave', () => {
+            if(validBGs.length > 1 && !paused) startBgTimer();
+        });
+
+        // Keyboard controls: P = pause/resume, [ and ] to adjust speed
+        let paused = false;
+        document.addEventListener('keydown', (e)=>{
+            if(e.key.toLowerCase() === 'p'){
+                paused = !paused; 
+                if(paused) {
+                    stopBgTimer();
+                    if(bgStatus) bgStatus.textContent = `Backgrounds: ${validBGs.length} (PAUSED)`;
+                } else {
+                    if(validBGs.length > 1) startBgTimer();
+                    if(bgStatus) bgStatus.textContent = `Backgrounds: ${validBGs.length} loaded`;
+                }
+            } else if(e.key === '['){ // slower
+                intervalMs = Math.min(20000, intervalMs + 2000); 
+                if(!paused && validBGs.length > 1) startBgTimer();
+            } else if(e.key === ']'){ // faster
+                intervalMs = Math.max(2000, intervalMs - 2000); 
+                if(!paused && validBGs.length > 1) startBgTimer();
+            }
+        });
+    </script>
+</body>
+</html>

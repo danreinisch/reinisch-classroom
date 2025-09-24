@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Reinisch Classroom – Netlify ZIP Builder (v9 Enhanced)</title>
+  <style>
+    :root{--bg:#0b1220;--ink:#e8edf5;--muted:#b8c1d9;--edge:rgba(255,255,255,.14);--success:#4ade80;--warning:#fbbf24}
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif;background:linear-gradient(180deg,#0b1220,#0d1424);color:var(--ink);overflow-y:auto;padding:20px}
+    .app{width:min(1200px,96vw);margin:3vh auto;background:rgba(255,255,255,.05);border:1px solid var(--edge);border-radius:18px;padding:24px 22px;box-shadow:0 25px 80px rgba(0,0,0,.35)}
+    h1{margin:0 0 8px;font-size:clamp(1.25rem,2.8vw,1.8rem)}
+    p{margin:.25rem 0 .75rem;color:var(--muted)}
+    fieldset{border:1px solid var(--edge);border-radius:14px;padding:14px;margin:12px 0}
+    legend{padding:0 6px;color:#cfe1ff}
+    .grid{display:grid;gap:12px}
+    .four{grid-template-columns:repeat(4,1fr)}
+    @media (max-width:940px){.four{grid-template-columns:1fr 1fr}}
+    @media (max-width:600px){.four{grid-template-columns:1fr}}
+    label{display:block;font-size:.9rem;margin:.35rem 0 .25rem;color:#cfe1ff}
+    input[type=file]{display:block;width:100%;background:rgba(255,255,255,.06);border:1px dashed rgba(255,255,255,.25);padding:10px;border-radius:10px;color:#fff}
+    input[type=text]{width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.18);padding:10px;border-radius:10px;color:#fff}
+    small.hint{display:block;color:#9fb1d8;opacity:.9;font-size:.85rem}
+    .row{display:grid;grid-template-columns:72px 1fr 1fr;gap:10px;align-items:center}
+    @media (max-width:600px){.row{grid-template-columns:1fr;gap:8px}}
+    .row .slot{font-variant-numeric:tabular-nums;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.2);border-radius:10px;padding:10px;text-align:center}
+    .section{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:12px;margin:12px 0}
+    .section h2{margin:6px 6px 14px;font-size:1.05rem;color:#d8e6ff}
+    .log{background:#0e1629;border:1px solid var(--edge);border-radius:10px;padding:10px;height:160px;overflow:auto;font:12px ui-monospace,Menlo,Consolas,monospace;color:#dbeafe}
+    .actions{display:flex;gap:10px;justify-content:flex-end;align-items:center;margin-top:10px}
+    button{appearance:none;border:1px solid rgba(255,255,255,.3);background:linear-gradient(180deg,#1a2440,#172037);color:#fff;padding:9px 12px;border-radius:10px;cursor:pointer;transition:all .2s}
+    button:hover{transform:translateY(-1px);background:linear-gradient(180deg,#1e2847,#1a243e)}
+    button.primary{border-color:#60a5fa;background:linear-gradient(180deg,#60a5fa,#2563eb)}
+    button.primary:hover{background:linear-gradient(180deg,#3b82f6,#1d4ed8)}
+    button.success{border-color:#4ade80;background:linear-gradient(180deg,#4ade80,#22c55e)}
+    button.success:hover{background:linear-gradient(180deg,#22c55e,#16a34a)}
+    .note{background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.3);border-radius:8px;padding:10px;margin:10px 0;font-size:.9rem}
+    .import-section{background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.3);border-radius:12px;padding:16px;margin:16px 0}
+    .import-section h2{color:#4ade80;margin:0 0 10px}
+    .tabs{display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid var(--edge);padding-bottom:8px}
+    .tab{padding:8px 16px;background:rgba(255,255,255,.05);border:1px solid transparent;border-radius:8px 8px 0 0;cursor:pointer;transition:all .2s}
+    .tab.active{background:rgba(255,255,255,.1);border-color:var(--edge);border-bottom:1px solid #0b1220}
+    .tab:hover:not(.active){background:rgba(255,255,255,.08)}
+    .tab-content{display:none}
+    .tab-content.active{display:block}
+    .status{padding:8px 12px;border-radius:8px;margin:10px 0;display:none}
+    .status.success{background:rgba(74,222,128,.15);border:1px solid rgba(74,222,128,.3);color:#4ade80;display:block}
+    .status.warning{background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.3);color:#fbbf24;display:block}
+    .preserved-item{background:rgba(255,255,255,.03);border:1px solid var(--edge);border-radius:8px;padding:8px;margin:4px 0;font-size:.9rem}
+    .preserved-item strong{color:#60a5fa}
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+</head>
+<body>
+  <div class="app">
+    <h1>Reinisch Classroom – Netlify ZIP Builder (v9 Enhanced)</h1>
+    <p>Import existing deployments with full retention, enhanced navigation, and proper centering.</p>
+
+    <!-- Import Section -->
+    <div class="import-section">
+      <h2>🔥 Quick Import (Optional)</h2>
+      <p style="margin:8px 0;color:#b8c1d9">Upload your current deployment ZIP to auto-fill all presentations, titles, and backgrounds</p>
+      
+      <div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center">
+        <input id="importZip" type="file" accept=".zip">
+        <button class="success" onclick="importExistingZip()">Import & Retain All Data</button>
+      </div>
+      
+      <div id="importStatus" class="status"></div>
+      <div id="preservedData" style="display:none;margin-top:10px"></div>
+    </div>
+
+    <div class="note">
+      <strong>v9 Features:</strong> Full title & folder retention on import | Home button on all pages | Section return buttons on all presentations | Centered layout throughout | Reliable ZIP export
+    </div>
+
+    <!-- Tab Navigation -->
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('backgrounds')">🖼️ Backgrounds</div>
+      <div class="tab" onclick="switchTab('presentations')">📂 Presentations</div>
+      <div class="tab" onclick="switchTab('build')">🚀 Build & Export</div>
+    </div>
+
+    <!-- Backgrounds Tab -->
+    <div id="backgrounds-tab" class="tab-content active">
+      <fieldset>
+        <legend>Background Images (required)</legend>
+        <div class="grid four">
+          <div><label>Home background</label><input id="imgHome" type="file" accept="image/*" required><small class="hint">e.g., mountains image</small></div>
+          <div><label>Language Arts main</label><input id="imgLA" type="file" accept="image/*" required><small class="hint">moonlit watchers</small></div>
+          <div><label>A Door Into Time</label><input id="imgADIT" type="file" accept="image/*" required><small class="hint">torch in cave</small></div>
+          <div><label>Lost in Kragdon-ah</label><input id="imgLIK" type="file" accept="image/*" required><small class="hint">river raft</small></div>
+          <div><label>Return from Kragdon-ah</label><input id="imgRFK" type="file" accept="image/*" required><small class="hint">archers & palisade</small></div>
+          <div><label>Warrior of Kragdon-ah</label><input id="imgWOK" type="file" accept="image/*" required><small class="hint">cliff climb</small></div>
+          <div><label>Life Skills background</label><input id="imgLife" type="file" accept="image/*" required><small class="hint">icons gradient</small></div>
+          <div><label>LA Toolkit bg (optional)</label><input id="imgToolkit" type="file" accept="image/*"><small class="hint">custom toolkit bg</small></div>
+        </div>
+      </fieldset>
+    </div>
+
+    <!-- Presentations Tab -->
+    <div id="presentations-tab" class="tab-content">
+      <div class="section" id="sec-toolkit"><h2>Language Arts Toolkit – 8 slots</h2><div id="rows-toolkit" class="grid"></div></div>
+      <div class="section" id="sec-adit"><h2>A Door Into Time – 16 slots</h2><div id="rows-adit" class="grid"></div></div>
+      <div class="section" id="sec-lik"><h2>Lost in Kragdon-ah – 16 slots</h2><div id="rows-lik" class="grid"></div></div>
+      <div class="section" id="sec-rfk"><h2>Return from Kragdon-ah – 16 slots</h2><div id="rows-rfk" class="grid"></div></div>
+      <div class="section" id="sec-wok"><h2>Warrior of Kragdon-ah – 16 slots</h2><div id="rows-wok" class="grid"></div></div>
+      <div class="section" id="sec-life"><h2>Life Skills – 32 slots</h2><div id="rows-life" class="grid"></div></div>
+    </div>
+
+    <!-- Build Tab -->
+    <div id="build-tab" class="tab-content">
+      <div style="text-align:center;padding:40px">
+        <h2 style="color:#60a5fa;margin-bottom:20px">Ready to Build</h2>
+        <p style="margin-bottom:30px">Click below to generate your Netlify-ready ZIP file with enhanced navigation and centered layouts.</p>
+        <button class="primary" style="font-size:1.1rem;padding:12px 24px" onclick="buildZip()">🚀 Build & Export Netlify ZIP</button>
+      </div>
+      
+      <div class="actions">
+        <button onclick="resetLog()">Clear Log</button>
+        <button onclick="exportSettings()">💾 Export Settings</button>
+        <button onclick="document.getElementById('importSettings').click()">📂 Import Settings</button>
+        <input id="importSettings" type="file" accept=".json" style="display:none" onchange="importSettingsFile(this)">
+      </div>
+      
+      <div id="log" class="log" aria-live="polite"></div>
+    </div>
+  </div>
+
+<script>
+  // ---------- Global State ----------
+  const importedData = {
+    backgrounds: {},
+    presentations: {},
+    titles: {}
+  };
+  
+  // ---------- Tab Switching ----------
+  function switchTab(tabName) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    
+    event.target.classList.add('active');
+    document.getElementById(tabName + '-tab').classList.add('active');
+  }
+  
+  // ---------- Import Existing ZIP ----------
+  async function importExistingZip() {
+    const input = document.getElementById('importZip');
+    if (!input.files[0]) {
+      showStatus('warning', '⚠️ Please select a ZIP file to import');
+      return;
+    }
+    
+    const file = input.files[0];
+    const status = document.getElementById('importStatus');
+    const preservedDiv = document.getElementById('preservedData');
+    
+    try {
+      status.className = 'status success';
+      status.textContent = '⏳ Analyzing and retaining all data from ZIP file...';
+      status.style.display = 'block';
+      
+      const zip = await JSZip.loadAsync(file);
+      let extractedCount = 0;
+      let preservedFolders = 0;
+      
+      // Extract titles from HTML pages
+      const pagesToCheck = [
+        { path: 'language-arts/toolkit/index.html', cat: 'toolkit' },
+        { path: 'language-arts/a-door-into-time/index.html', cat: 'adit' },
+        { path: 'language-arts/lost-in-kragdon-ah/index.html', cat: 'lik' },
+        { path: 'language-arts/return-from-kragdon-ah/index.html', cat: 'rfk' },
+        { path: 'language-arts/warrior-of-kragdon-ah/index.html', cat: 'wok' },
+        { path: 'life-skills/index.html', cat: 'life' }
+      ];
+      
+      for (const page of pagesToCheck) {
+        const htmlFile = zip.file(page.path);
+        if (htmlFile) {
+          const content = await htmlFile.async('text');
+          const titles = extractTitlesFromHTML(content);
+          importedData.titles[page.cat] = titles;
+          extractedCount += titles.filter(t => t).length;
+        }
+      }
+      
+      // Store presentation folders and ALL their contents
+      const categories = [
+        { id: 'toolkit', base: 'language-arts/toolkit/presentations' },
+        { id: 'adit', base: 'presentations/a-door-into-time' },
+        { id: 'lik', base: 'presentations/lost-in-kragdon-ah' },
+        { id: 'rfk', base: 'presentations/return-from-kragdon-ah' },
+        { id: 'wok', base: 'presentations/warrior-of-kragdon-ah' },
+        { id: 'life', base: 'life-skills/presentations' }
+      ];
+      
+      for (const cat of categories) {
+        importedData.presentations[cat.id] = {};
+        
+        for (let i = 1; i <= 32; i++) {
+          const folderPath = cat.base + '/presentation-' + String(i).padStart(2, '0') + '/';
+          const files = Object.keys(zip.files).filter(path => path.startsWith(folderPath) && !path.endsWith('/'));
+          
+          if (files.length > 0) {
+            importedData.presentations[cat.id][i] = files.map(path => ({
+              path: path,
+              content: zip.file(path)
+            }));
+            preservedFolders++;
+          }
+        }
+      }
+      
+      // Apply imported titles to inputs
+      applyImportedData();
+      
+      status.className = 'status success';
+      status.innerHTML = `✅ Successfully imported & retained ${extractedCount} titles and ${preservedFolders} presentation folders!<br>All data preserved. Update backgrounds if needed and click Build.`;
+      
+      preservedDiv.style.display = 'block';
+      preservedDiv.innerHTML = '<strong>Data retained from import:</strong> ' + 
+        Object.entries(importedData.titles).map(([cat, titles]) => 
+          `${getCategoryLabel(cat)}: ${titles.filter(t => t).length} items`
+        ).join(', ');
+      
+    } catch (error) {
+      status.className = 'status warning';
+      status.textContent = '❌ Error importing ZIP: ' + error.message;
+      console.error(error);
+    }
+  }
+  
+  function extractTitlesFromHTML(html) {
+    const titles = [];
+    // Extract titles from the button/card text
+    const strongMatches = html.match(/<strong>([^<]+)<\/strong>/g) || [];
+    strongMatches.forEach(match => {
+      const title = match.replace(/<\/?strong>/g, '').replace(/&amp;/g, '&');
+      if (!title.includes('Placeholder') && !title.startsWith('Presentation ') && !title.startsWith('Toolkit ')) {
+        titles.push(title);
+      }
+    });
+    return titles;
+  }
+  
+  function applyImportedData() {
+    // Apply titles to input fields
+    Object.entries(importedData.titles).forEach(([catId, titles]) => {
+      titles.forEach((title, index) => {
+        const input = document.getElementById('title-' + catId + '-' + (index + 1));
+        if (input && title) {
+          input.value = title;
+        }
+      });
+    });
+  }
+  
+  function getCategoryLabel(catId) {
+    const labels = {
+      toolkit: 'Toolkit',
+      adit: 'A Door Into Time',
+      lik: 'Lost in Kragdon-ah',
+      rfk: 'Return from Kragdon-ah',
+      wok: 'Warrior of Kragdon-ah',
+      life: 'Life Skills'
+    };
+    return labels[catId] || catId;
+  }
+  
+  function showStatus(type, message) {
+    const status = document.getElementById('importStatus');
+    status.className = 'status ' + type;
+    status.textContent = message;
+    status.style.display = 'block';
+    setTimeout(() => status.style.display = 'none', 5000);
+  }
+  
+  // ---------- Settings Export/Import ----------
+  function exportSettings() {
+    const settings = {
+      version: 'v9',
+      date: new Date().toISOString(),
+      titles: {}
+    };
+    
+    const categories = ['toolkit', 'adit', 'lik', 'rfk', 'wok', 'life'];
+    categories.forEach(catId => {
+      settings.titles[catId] = [];
+      const slots = catId === 'life' ? 32 : (catId === 'toolkit' ? 8 : 16);
+      for (let i = 1; i <= slots; i++) {
+        const input = document.getElementById('title-' + catId + '-' + i);
+        settings.titles[catId].push(input ? input.value : '');
+      }
+    });
+    
+    const blob = new Blob([JSON.stringify(settings, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'reinisch-settings-' + new Date().toISOString().split('T')[0] + '.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+    log('✅ Settings exported');
+  }
+  
+  async function importSettingsFile(input) {
+    if (!input.files[0]) return;
+    
+    try {
+      const text = await input.files[0].text();
+      const settings = JSON.parse(text);
+      
+      if (settings.titles) {
+        Object.entries(settings.titles).forEach(([catId, titles]) => {
+          titles.forEach((title, index) => {
+            const input = document.getElementById('title-' + catId + '-' + (index + 1));
+            if (input) input.value = title || '';
+          });
+        });
+      }
+      
+      log('✅ Settings imported successfully');
+    } catch (error) {
+      log('❌ Error importing settings: ' + error.message);
+    }
+  }
+
+  // ---------- helpers ----------
+  const log = function() {
+    const el = document.getElementById('log');
+    el.textContent += Array.from(arguments).join(' ') + '\n';
+    el.scrollTop = el.scrollHeight;
+  };
+  
+  const resetLog = function() {
+    document.getElementById('log').textContent = '';
+  };
+  
+  const pad2 = function(n) {
+    return String(n).padStart(2, '0');
+  };
+  
+  const isHtml = function(name) {
+    return /\.(html?)$/i.test(name);
+  };
+  
+  function fileToArrayBuffer(file) {
+    return new Promise(function(res, rej) {
+      const r = new FileReader();
+      r.onload = function() { res(r.result); };
+      r.onerror = rej;
+      r.readAsArrayBuffer(file);
+    });
+  }
+  
+  function fileToText(file) {
+    return new Promise(function(res, rej) {
+      const r = new FileReader();
+      r.onload = function() { res(r.result); };
+      r.onerror = rej;
+      r.readAsText(file);
+    });
+  }
+  
+  function titleFromHtmlString(txt, fallback) {
+    const m = /<title>([^<]+)<\/title>/i.exec(txt || '');
+    if(m && m[1]) return m[1].trim();
+    return (fallback || '').replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').replace(/\.html?$/i, '').trim() || 'Presentation';
+  }
+
+  // Enhanced redirect function with comprehensive navigation
+  function redirectIndexHtml(title, targetRel, backHref, section) {
+    const isLanguageArts = section === 'language-arts' || section === 'toolkit';
+    const sectionReturn = isLanguageArts ? '/language-arts/index.html' : '/life-skills/index.html';
+    const sectionLabel = isLanguageArts ? 'Language Arts' : 'Life Skills';
+    
+    if(!targetRel) {
+      return '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>' + title + '</title><style>html,body{height:100%;margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}.wrap{display:grid;place-items:center;height:100%;background:#0b1220;color:#e8edf5;text-align:center;padding:2rem}.nav{position:fixed;top:1rem;width:calc(100% - 2rem);display:flex;justify-content:space-between}.btn-nav{color:#fff;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);padding:.6rem 1rem;border-radius:.6rem;text-decoration:none;transition:all .2s}.btn-nav:hover{background:rgba(255,255,255,.22);transform:translateY(-1px)}.content{text-align:center}h1{margin-bottom:1rem}a.btn{display:inline-block;margin-top:1rem;color:#111;background:#fff;padding:.6rem 1rem;border-radius:.6rem;text-decoration:none}</style></head><body><div class="nav"><a class="btn-nav" href="/">Home</a><a class="btn-nav" href="' + sectionReturn + '">' + sectionLabel + '</a></div><div class="wrap"><div class="content"><h1>' + title + '</h1><p>No HTML file was found in this presentation folder.</p><p><a class="btn" href="' + backHref + '">Back</a></p></div></div></body></html>';
+    }
+    
+    // Add navigation to the redirect page
+    const navHtml = '<div style="position:fixed;top:1rem;left:1rem;right:1rem;display:flex;justify-content:space-between;z-index:100"><a href="/" style="color:#fff;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);padding:.6rem 1rem;border-radius:.6rem;text-decoration:none;transition:all .2s">Home</a><a href="' + sectionReturn + '" style="color:#fff;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);padding:.6rem 1rem;border-radius:.6rem;text-decoration:none;transition:all .2s">' + sectionLabel + '</a></div>';
+    
+    return '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta http-equiv="refresh" content="0; url=' + targetRel + '"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>' + title + '</title><script>location.replace(' + JSON.stringify(targetRel) + ');</scr' + 'ipt></head><body>' + navHtml + '</body></html>';
+  }
+
+  // ---------- Updated page generators with enhanced navigation and centering ----------
+  function pageHome() {
+    return '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Reinisch Classroom – Home</title><style>:root{--ink:#e8edf5}*{box-sizing:border-box}html,body{height:100%;margin:0;font-family:Inter,system-ui,sans-serif;color:var(--ink)}.bg{position:fixed;inset:0;z-index:0;background-image:linear-gradient(rgba(5,10,20,.6),rgba(5,10,20,.75)),url("/assets/images/home_bg");background-size:cover;background-position:center}.centered{position:relative;z-index:1;display:grid;place-items:center;height:100vh;padding:2rem;text-align:center;gap:1.25rem}.buttons{display:flex;flex-wrap:wrap;justify-content:center;gap:1rem;width:100%;max-width:760px}.btn{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);color:#fff;text-decoration:none;padding:1rem 1.5rem;border-radius:1rem;transition:transform .2s,background .2s;box-shadow:0 10px 30px rgba(0,0,0,.15);font-size:1.1rem;min-width:220px;text-align:center}.btn:hover{transform:translateY(-2px);background:rgba(255,255,255,.22)}h1{font-size:clamp(2rem,5vw,3rem);margin:0}p{margin:0 0 1rem;opacity:.95}</style></head><body><div class="bg"></div><div class="centered"><header><h1>Welcome to Reinisch Classroom</h1><p>Explore Language Arts and Life Skills units and presentations.</p></header><nav class="buttons"><a class="btn" href="/language-arts/index.html">Go to Language Arts</a><a class="btn" href="/life-skills/index.html">Go to Life Skills</a></nav></div></body></html>';
+  }
+
+  function pageLAMain() {
+    return '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Language Arts – Reinisch Classroom</title><style>*{box-sizing:border-box;margin:0;padding:0}:root{--glass:rgba(255,255,255,.14);--glass-brd:rgba(255,255,255,.28);--text:#e8edf5}body{min-height:100vh;font-family:Segoe UI,Roboto,Arial,sans-serif;color:var(--text);background:linear-gradient(rgba(5,10,20,.6),rgba(5,10,20,.78)),url("/assets/images/la_main_bg") center/cover no-repeat fixed;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:2rem}.home-button{position:fixed;top:1rem;left:1rem;text-decoration:none;background:var(--glass);border:1px solid var(--glass-brd);color:#fff;padding:.6rem 1rem;border-radius:.6rem;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);transition:background .2s,transform .2s}.home-button:hover{background:rgba(255,255,255,.24);transform:translateY(-1px)}h1{font-size:clamp(2rem,4vw,2.75rem);margin-bottom:.75rem}.description{max-width:740px;margin:0 auto 1.25rem;opacity:.95}.toolkit{margin:0 auto 1.25rem;max-width:900px}.toolkit .btn{display:block;background:var(--glass);border:1px solid var(--glass-brd);color:var(--text);padding:1rem 1.25rem;border-radius:1rem;text-decoration:none;font-size:1.1rem;box-shadow:0 10px 30px rgba(0,0,0,.15);transition:transform .2s,background .2s}.toolkit .btn:hover{background:rgba(255,255,255,.22);transform:translateY(-2px)}.button-grid{width:100%;max-width:900px;display:grid;gap:1.25rem;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));margin:0 auto}.book-button{display:block;background:var(--glass);border:1px solid var(--glass-brd);color:var(--text);padding:1rem 1.25rem;border-radius:1rem;text-decoration:none;font-size:1.1rem;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.15);transition:transform .2s,background .2s}.book-button:hover{background:rgba(255,255,255,.22);transform:translateY(-2px)}</style></head><body><a class="home-button" href="/">Home</a><main><h1>Language Arts</h1><p class="description">Choose a book or open the toolkit for skills reference & mini-lessons.</p><div class="toolkit"><a class="btn" href="/language-arts/toolkit/index.html">Language Arts Toolkit</a></div><div class="button-grid"><a class="book-button" href="/language-arts/a-door-into-time/index.html">A Door Into Time</a><a class="book-button" href="/language-arts/lost-in-kragdon-ah/index.html">Lost in Kragdon-ah</a><a class="book-button" href="/language-arts/return-from-kragdon-ah/index.html">Return from Kragdon-ah</a><a class="book-button" href="/language-arts/warrior-of-kragdon-ah/index.html">Warrior of Kragdon-ah</a></div></main></body></html>';
+  }
+
+  function pageBook(title, bgName, slotTitles, slotLinks) {
+    slotTitles = slotTitles || [];
+    slotLinks = slotLinks || [];
+    const light = (bgName === 'rfk_bg' || bgName === 'wok_bg');
+    
+    let style = '';
+    if(light) {
+      style = ':root{--glass:rgba(255,255,255,.6);--glass-brd:rgba(0,0,0,.1);--text:#1e2329}body{color:#222;background:linear-gradient(' + (bgName === 'rfk_bg' ? 'rgba(255,255,255,.35),rgba(255,255,255,.5)' : 'rgba(255,255,255,.25),rgba(255,255,255,.45)') + '),url("/assets/images/' + bgName + '") center/cover no-repeat fixed}';
+    } else {
+      style = ':root{--glass:rgba(255,255,255,.14);--glass-brd:rgba(255,255,255,.28);--text:#e8edf5}body{color:var(--text);background:linear-gradient(' + (bgName === 'lik_bg' ? 'rgba(5,10,20,.55),rgba(5,10,20,.7)' : 'rgba(5,10,20,.6),rgba(5,10,20,.78)') + '),url("/assets/images/' + bgName + '") center/cover no-repeat fixed}';
+    }
+    
+    let cards = '';
+    for(let i = 0; i < 16; i++) {
+      const t = (slotTitles[i] || ('Presentation ' + (i + 1))).replace(/&/g, '&amp;');
+      const href = slotLinks[i] || '#';
+      const sub = (href && href !== '#') ? 'Open presentation' : 'Placeholder';
+      cards += '<a class="slot" href="' + href + '"><strong>' + t + '</strong><small>' + sub + '</small></a>';
+    }
+    
+    return '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>' + title + ' – Reinisch Classroom</title><style>*{box-sizing:border-box;margin:0;padding:0}' + style + ';min-height:100vh;font-family:Segoe UI,Roboto,Arial,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:2rem}.home{position:fixed;top:1rem;left:1rem}.la{position:fixed;top:1rem;right:1rem}.btn{background:var(--glass);border:1px solid var(--glass-brd);color:' + (light ? '#1e2329' : '#fff') + ';padding:.6rem 1rem;border-radius:.6rem;text-decoration:none;backdrop-filter:blur(' + (light ? 8 : 10) + 'px);-webkit-backdrop-filter:blur(' + (light ? 8 : 10) + 'px);transition:background .2s,transform .2s}.btn:hover{background:' + (light ? 'rgba(255,255,255,.75)' : 'rgba(255,255,255,.24)') + ';transform:translateY(-1px)}h1{font-size:clamp(2rem,4vw,2.5rem);margin-bottom:1rem}' + (light ? 'h1{color:#1b1b1b;text-shadow:0 1px 0 rgba(255,255,255,.7)} .lead{color:#1f1f1f}' : '') + '.lead{opacity:.95;margin-bottom:1.75rem;max-width:720px}.grid16{width:100%;max-width:1100px;display:grid;gap:1rem;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));justify-content:center}.slot{background:' + (light ? 'rgba(255,255,255,.65)' : 'var(--glass)') + ';border:1px solid ' + (light ? 'rgba(0,0,0,.1)' : 'var(--glass-brd)') + ';border-radius:1rem;padding:1rem 1.25rem;color:' + (light ? '#1e2329' : 'var(--text)') + ';text-decoration:none;min-height:86px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,' + (light ? '.12' : '.15') + ');transition:transform .2s,background .2s}.slot:hover{background:' + (light ? 'rgba(255,255,255,.78)' : 'rgba(255,255,255,.22)') + ';transform:translateY(-2px)}.slot small{opacity:.85;display:block;margin-top:.25rem}</style></head><body><a class="btn home" href="/">Home</a><a class="btn la" href="/language-arts/index.html">Language Arts</a><header><h1>' + title + '</h1><p class="lead">Unit hub and upcoming presentations.</p></header><section class="grid16" aria-label="Presentations">' + cards + '</section></body></html>';
+  }
+
+  function pageToolkit(titles, links, useCustomBg) {
+    titles = titles || [];
+    links = links || [];
+    
+    let cards = '';
+    for(let i = 0; i < 8; i++) {
+      const t = (titles[i] || ('Toolkit ' + (i + 1))).replace(/&/g, '&amp;');
+      const href = links[i] || '#';
+      const sub = (href && href !== '#') ? 'Open resource' : 'Placeholder';
+      cards += '<a class="card" href="' + href + '"><strong>' + t + '</strong><small>' + sub + '</small></a>';
+    }
+    
+    const bgImage = useCustomBg ? 'toolkit_bg' : 'la_main_bg';
+    
+    return '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Language Arts Toolkit – Reinisch Classroom</title><style>*{box-sizing:border-box;margin:0;padding:0}:root{--glass:rgba(255,255,255,.14);--glass-brd:rgba(255,255,255,.28);--text:#e8edf5}body{min-height:100vh;font-family:Segoe UI,Roboto,Arial,sans-serif;color:var(--text);background:linear-gradient(rgba(5,10,20,.55),rgba(5,10,20,.78)),url("/assets/images/' + bgImage + '") center/cover no-repeat fixed;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:2rem}.home{position:fixed;top:1rem;left:1rem}.la{position:fixed;top:1rem;right:1rem}.btn{background:var(--glass);border:1px solid var(--glass-brd);color:#fff;padding:.6rem 1rem;border-radius:.6rem;text-decoration:none;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);transition:background .2s,transform .2s}.btn:hover{background:rgba(255,255,255,.24);transform:translateY(-1px)}h1{font-size:clamp(2rem,4vw,2.5rem);margin-bottom:1rem}.lead{opacity:.95;margin-bottom:1.75rem;max-width:760px}.grid{width:100%;max-width:900px;display:grid;gap:1rem;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));justify-content:center}.card{background:var(--glass);border:1px solid var(--glass-brd);border-radius:1rem;padding:1rem 1.25rem;color:var(--text);text-decoration:none;min-height:86px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.15);transition:transform .2s,background .2s}.card:hover{background:rgba(255,255,255,.22);transform:translateY(-2px)}.card small{opacity:.85;display:block;margin-top:.25rem}</style></head><body><a class="btn home" href="/">Home</a><a class="btn la" href="/language-arts/index.html">Language Arts</a><header><h1>Language Arts Toolkit</h1><p class="lead">Reusable skill mini-lessons (e.g., responses, word types, prefixes/suffixes, etc.).</p></header><section class="grid" aria-label="Toolkit items">' + cards + '</section></body></html>';
+  }
+
+  function pageLife(titles, links) {
+    titles = titles || [];
+    links = links || [];
+    
+    let cards = '';
+    for(let i = 0; i < 32; i++) {
+      const t = (titles[i] || ('Presentation ' + (i + 1))).replace(/&/g, '&amp;');
+      const href = links[i] || '#';
+      const sub = (href && href !== '#') ? 'Open presentation' : 'Placeholder';
+      cards += '<a class="card" href="' + href + '"><strong>' + t + '</strong><small>' + sub + '</small></a>';
+    }
+    
+    return '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Life Skills – Reinisch Classroom</title><style>*{box-sizing:border-box;margin:0;padding:0}:root{--glass:rgba(255,255,255,.14);--glass-brd:rgba(255,255,255,.28);--text:#e8edf5}body{min-height:100vh;font-family:Segoe UI,Roboto,Arial,sans-serif;color:var(--text);background:linear-gradient(rgba(5,10,20,.55),rgba(5,10,20,.75)),url("/assets/images/life_bg") center/cover no-repeat fixed;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:2rem}.home{position:fixed;top:1rem;left:1rem}.btn{background:var(--glass);border:1px solid var(--glass-brd);color:#fff;padding:.6rem 1rem;border-radius:.6rem;text-decoration:none;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);transition:background .2s,transform .2s}.btn:hover{background:rgba(255,255,255,.24);transform:translateY(-1px)}h1{font-size:clamp(2rem,4vw,2.5rem);margin-bottom:1rem}.lead{opacity:.95;margin-bottom:1.75rem;max-width:720px}.grid{width:100%;max-width:1100px;display:grid;gap:1rem;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));justify-content:center}.card{background:var(--glass);border:1px solid var(--glass-brd);border-radius:1rem;padding:1rem 1.25rem;color:var(--text);text-decoration:none;min-height:86px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.15);transition:transform .2s,background .2s}.card:hover{background:rgba(255,255,255,.22);transform:translateY(-2px)}.card small{opacity:.85;display:block;margin-top:.25rem}</style></head><body><a class="btn home" href="/">Home</a><header><h1>Life Skills</h1><p class="lead">Lessons and presentations for practical life skills.</p></header><section class="grid" aria-label="Life Skills presentations">' + cards + '</section></body></html>';
+  }
+
+  // ---------- UI build ----------
+  const categories = [
+    { id:'toolkit', label:'Language Arts Toolkit', slots:8,  baseOut:'language-arts/toolkit/presentations', back:'/language-arts/toolkit/index.html', section:'language-arts' },
+    { id:'adit',    label:'A Door Into Time',     slots:16, baseOut:'presentations/a-door-into-time',      back:'/language-arts/a-door-into-time/index.html', section:'language-arts' },
+    { id:'lik',     label:'Lost in Kragdon-ah',   slots:16, baseOut:'presentations/lost-in-kragdon-ah',     back:'/language-arts/lost-in-kragdon-ah/index.html', section:'language-arts' },
+    { id:'rfk',     label:'Return from Kragdon-ah',slots:16, baseOut:'presentations/return-from-kragdon-ah', back:'/language-arts/return-from-kragdon-ah/index.html', section:'language-arts' },
+    { id:'wok',     label:'Warrior of Kragdon-ah', slots:16, baseOut:'presentations/warrior-of-kragdon-ah',  back:'/language-arts/warrior-of-kragdon-ah/index.html', section:'language-arts' },
+    { id:'life',    label:'Life Skills',           slots:32, baseOut:'life-skills/presentations',            back:'/life-skills/index.html', section:'life-skills' },
+  ];
+
+  const filesMap = new Map();
+
+  function buildRows() {
+    for(let catIdx = 0; catIdx < categories.length; catIdx++) {
+      const cat = categories[catIdx];
+      const host = document.getElementById('rows-' + cat.id);
+      if (!host) continue;
+      
+      host.classList.add('grid');
+      host.style.gap = '8px';
+      
+      for(let i = 1; i <= cat.slots; i++) {
+        const row = document.createElement('div');
+        row.className = 'row';
+        
+        const slotDiv = document.createElement('div');
+        slotDiv.className = 'slot';
+        slotDiv.textContent = '#' + pad2(i);
+        
+        const titleDiv = document.createElement('div');
+        const titleLabel = document.createElement('label');
+        titleLabel.textContent = 'Title (optional)';
+        const titleInput = document.createElement('input');
+        titleInput.type = 'text';
+        titleInput.id = 'title-' + cat.id + '-' + i;
+        titleInput.placeholder = (cat.label.includes('Toolkit') ? 'Toolkit' : 'Presentation') + ' ' + i;
+        titleDiv.appendChild(titleLabel);
+        titleDiv.appendChild(titleInput);
+        
+        const folderDiv = document.createElement('div');
+        const folderLabel = document.createElement('label');
+        folderLabel.textContent = 'Folder for this slot';
+        const folderInput = document.createElement('input');
+        folderInput.type = 'file';
+        folderInput.id = 'dir-' + cat.id + '-' + i;
+        folderInput.setAttribute('webkitdirectory', '');
+        folderInput.setAttribute('directory', '');
+        folderInput.setAttribute('multiple', '');
+        const hint = document.createElement('small');
+        hint.className = 'hint';
+        hint.id = 'hint-' + cat.id + '-' + i;
+        hint.textContent = 'No folder selected';
+        folderDiv.appendChild(folderLabel);
+        folderDiv.appendChild(folderInput);
+        folderDiv.appendChild(hint);
+        
+        row.appendChild(slotDiv);
+        row.appendChild(titleDiv);
+        row.appendChild(folderDiv);
+        
+        host.appendChild(row);
+        
+        (function(catId, index) {
+          folderInput.addEventListener('change', function(e) {
+            filesMap.set(catId + '-' + index, e.target.files);
+            document.getElementById('hint-' + catId + '-' + index).textContent = 
+              e.target.files.length ? e.target.files.length + ' files selected' : 'No folder selected';
+          });
+        })(cat.id, i);
+      }
+    }
+  }
+
+  // ---------- build ZIP ----------
+  async function buildZip() {
+    resetLog();
+    switchTab('build');
+    
+    const imgs = {
+      home_bg: document.getElementById('imgHome').files[0],
+      la_main_bg: document.getElementById('imgLA').files[0],
+      adit_bg: document.getElementById('imgADIT').files[0],
+      lik_bg: document.getElementById('imgLIK').files[0],
+      rfk_bg: document.getElementById('imgRFK').files[0],
+      wok_bg: document.getElementById('imgWOK').files[0],
+      life_bg: document.getElementById('imgLife').files[0],
+    };
+    
+    const toolkitBg = document.getElementById('imgToolkit').files[0];
+    const hasCustomToolkitBg = !!toolkitBg;
+    
+    let hasError = false;
+    for(let key in imgs) {
+      if(!imgs[key]) {
+        hasError = true;
+        break;
+      }
+    }
+    
+    if(hasError) {
+      log('❌ Please select all required background images.');
+      return;
+    }
+
+    const zip = new JSZip();
+    
+    const addText = function(path, txt) {
+      zip.file(path, txt);
+    };
+    
+    const addFile = async function(path, file) {
+      const buffer = await fileToArrayBuffer(file);
+      zip.file(path, buffer);
+    };
+
+    const titles = { toolkit:[], adit:[], lik:[], rfk:[], wok:[], life:[] };
+    const links  = { toolkit:[], adit:[], lik:[], rfk:[], wok:[], life:[] };
+
+    log('📦 Processing presentations and applying navigation...');
+    
+    // Process imported presentations first
+    if (Object.keys(importedData.presentations).length > 0) {
+      for (const cat of categories) {
+        if (importedData.presentations[cat.id]) {
+          for (let i = 1; i <= cat.slots; i++) {
+            const importedFiles = importedData.presentations[cat.id][i];
+            if (importedFiles) {
+              const slotDir = cat.baseOut + '/presentation-' + pad2(i);
+              
+              for (const fileData of importedFiles) {
+                const content = await fileData.content.async('arraybuffer');
+                zip.file(fileData.path, content);
+              }
+              
+              const titleInput = document.getElementById('title-' + cat.id + '-' + i);
+              const title = (titleInput ? titleInput.value : '') || importedData.titles[cat.id]?.[i-1] || 
+                          ((cat.label.includes('Toolkit') ? 'Toolkit' : 'Presentation') + ' ' + i);
+              
+              titles[cat.id][i - 1] = title;
+              links[cat.id][i - 1] = '/' + slotDir + '/';
+              log('✓ restored & updated ' + cat.label + ' slot ' + pad2(i) + ' (' + title + ')');
+            }
+          }
+        }
+      }
+    }
+    
+    // Process new folder inputs
+    for(let catIdx = 0; catIdx < categories.length; catIdx++) {
+      const cat = categories[catIdx];
+      for(let i = 1; i <= cat.slots; i++) {
+        const key = cat.id + '-' + i;
+        const titleInput = document.getElementById('title-' + cat.id + '-' + i);
+        const manualTitle = (titleInput ? titleInput.value : '').trim();
+        const slotDir = cat.baseOut + '/presentation-' + pad2(i);
+        const files = filesMap.get(key);
+        
+        if(files && files.length) {
+          const fileArr = Array.from(files);
+          const relTuples = [];
+          
+          for(let j = 0; j < fileArr.length; j++) {
+            const f = fileArr[j];
+            let rel = f.name;
+            if(f.webkitRelativePath) {
+              const parts = f.webkitRelativePath.split('/');
+              rel = parts.slice(1).join('/');
+            }
+            relTuples.push({ file: f, rel: rel });
+          }
+          
+          const htmls = relTuples.filter(function(t) { return isHtml(t.file.name); });
+          let entryRel = null, entryTitle = null;
+          
+          if(htmls.length) {
+            htmls.sort(function(a, b) {
+              const aI = /index\.html?$/i.test(a.rel) ? -1 : 0;
+              const bI = /index\.html?$/i.test(b.rel) ? -1 : 0;
+              if(aI !== bI) return aI - bI;
+              return a.rel.length - b.rel.length;
+            });
+            entryRel = htmls[0].rel;
+            try {
+              const htmlText = await fileToText(htmls[0].file);
+              entryTitle = titleFromHtmlString(htmlText, htmls[0].file.name);
+            } catch(e) {
+              entryTitle = titleFromHtmlString('', htmls[0].file.name);
+            }
+          }
+          
+          for(let k = 0; k < relTuples.length; k++) {
+            const t = relTuples[k];
+            await addFile(slotDir + '/' + t.rel, t.file);
+          }
+          
+          const title = manualTitle || entryTitle || ((cat.label.includes('Toolkit') ? 'Toolkit' : 'Presentation') + ' ' + i);
+          addText(slotDir + '/index.html', redirectIndexHtml(title, entryRel, cat.back, cat.section));
+          titles[cat.id][i - 1] = title;
+          links[cat.id][i - 1] = '/' + slotDir + '/';
+          log('✓ mapped ' + cat.label + ' slot ' + pad2(i) + ' (' + title + ')');
+        } else if(manualTitle && !links[cat.id][i - 1]) {
+          titles[cat.id][i - 1] = manualTitle;
+          log('• titled ' + cat.label + ' slot ' + pad2(i) + ' (' + manualTitle + ') – no folder');
+        }
+      }
+    }
+
+    // Pages with enhanced navigation
+    log('📄 Creating pages with comprehensive navigation...');
+    addText('index.html', pageHome());
+    addText('language-arts/index.html', pageLAMain());
+    addText('language-arts/toolkit/index.html', pageToolkit(titles.toolkit, links.toolkit, hasCustomToolkitBg));
+    addText('language-arts/a-door-into-time/index.html', pageBook('A Door Into Time', 'adit_bg', titles.adit, links.adit));
+    addText('language-arts/lost-in-kragdon-ah/index.html', pageBook('Lost in Kragdon-ah', 'lik_bg', titles.lik, links.lik));
+    addText('language-arts/return-from-kragdon-ah/index.html', pageBook('Return from Kragdon-ah', 'rfk_bg', titles.rfk, links.rfk));
+    addText('language-arts/warrior-of-kragdon-ah/index.html', pageBook('Warrior of Kragdon-ah', 'wok_bg', titles.wok, links.wok));
+    addText('life-skills/index.html', pageLife(titles.life, links.life));
+
+    // Images
+    log('🖼️ Adding background images...');
+    for(let key in imgs) {
+      const file = imgs[key];
+      const nameParts = file.name.split('.');
+      const ext = '.' + (nameParts.length > 1 ? nameParts[nameParts.length - 1] : 'png');
+      await addFile('assets/images/' + key + ext, file);
+      const buffer = await fileToArrayBuffer(file);
+      zip.file('assets/images/' + key, buffer);
+      log('✓ image ' + key + ext);
+    }
+    
+    // Add custom toolkit background if provided
+    if(hasCustomToolkitBg) {
+      const nameParts = toolkitBg.name.split('.');
+      const ext = '.' + (nameParts.length > 1 ? nameParts[nameParts.length - 1] : 'png');
+      await addFile('assets/images/toolkit_bg' + ext, toolkitBg);
+      const buffer = await fileToArrayBuffer(toolkitBg);
+      zip.file('assets/images/toolkit_bg', buffer);
+      log('✓ custom toolkit background image');
+    }
+
+    log('⏳ Building and exporting ZIP file...');
+    const blob = await zip.generateAsync({
+      type: 'blob',
+      compression: 'DEFLATE',
+      compressionOptions: { level: 9 }
+    });
+    
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'reinisch-classroom-netlify-v9.zip';
+    a.click();
+    URL.revokeObjectURL(a.href);
+    
+    log('✅ Success! ZIP file exported: reinisch-classroom-netlify-v9.zip');
+    log('🧭 Navigation: Home button on all pages | Section buttons on presentations');
+    log('🎯 Layout: All content properly centered');
+    log('💾 Data: All titles and folders retained from import');
+  }
+
+  // Initialize
+  window.addEventListener('DOMContentLoaded', function() {
+    buildRows();
+    log('Builder v9 ready – Enhanced navigation, centering, and retention');
+    log('Import existing deployment to preserve all data');
+    log('Chrome/Edge recommended for folder selection');
+  });
+</script>
+</body>
+</html>

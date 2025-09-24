@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Written Response Builder</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .prompt-section {
+            margin-bottom: 30px;
+            padding: 25px;
+            background: #f8f9ff;
+            border-radius: 10px;
+            border-left: 5px solid #667eea;
+        }
+
+        .prompt-section h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+
+        .prompt-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1.1em;
+            resize: vertical;
+            min-height: 100px;
+            font-family: inherit;
+        }
+
+        .prompt-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 10px rgba(102, 126, 234, 0.1);
+        }
+
+        .writing-section {
+            margin-bottom: 25px;
+            padding: 25px;
+            background: #fff;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .writing-section:hover {
+            border-color: #667eea;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.1);
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            background: #667eea;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 25px;
+            font-weight: bold;
+            font-size: 1.1em;
+            margin-right: 15px;
+            min-width: 200px;
+            text-align: center;
+        }
+
+        .topic-sentence .section-title {
+            background: #28a745;
+        }
+
+        .supporting-detail-1 .section-title {
+            background: #007bff;
+        }
+
+        .supporting-detail-2 .section-title {
+            background: #6f42c1;
+        }
+
+        .supporting-detail-3 .section-title {
+            background: #fd7e14;
+        }
+
+        .conclusion .section-title {
+            background: #dc3545;
+        }
+
+        .writing-content {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+        }
+
+        .transition-dropdown {
+            min-width: 200px;
+        }
+
+        .transition-dropdown select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+            background: white;
+            cursor: pointer;
+        }
+
+        .transition-dropdown select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .content-input {
+            flex: 1;
+        }
+
+        .content-textarea {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            min-height: 120px;
+            font-size: 1.1em;
+            resize: vertical;
+            font-family: inherit;
+            line-height: 1.6;
+        }
+
+        .content-textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 10px rgba(102, 126, 234, 0.1);
+        }
+
+        .topic-sentence .content-textarea {
+            min-height: 80px;
+        }
+
+        .tips {
+            margin-top: 15px;
+            padding: 12px;
+            background: #e8f4ff;
+            border-radius: 6px;
+            border-left: 4px solid #007bff;
+            font-size: 0.9em;
+            color: #555;
+        }
+
+        .actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 30px;
+            padding: 25px;
+            background: #f8f9ff;
+            border-radius: 10px;
+        }
+
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 25px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .preview-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+
+        .preview-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 80%;
+            max-height: 80%;
+            overflow-y: auto;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+
+        .preview-text {
+            line-height: 1.8;
+            font-size: 1.1em;
+            color: #333;
+        }
+
+        .word-count {
+            background: #e9ecef;
+            padding: 10px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            color: #666;
+            margin-left: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📝 Written Response Builder</h1>
+            <p>Structure your essay with clear organization and smooth transitions</p>
+        </div>
+
+        <div class="content">
+            <!-- Prompt Section -->
+            <div class="prompt-section">
+                <h2>📋 Writing Prompt/Question</h2>
+                <textarea 
+                    class="prompt-input" 
+                    id="promptInput"
+                    placeholder="Paste your writing prompt or question here..."
+                ></textarea>
+            </div>
+
+            <!-- Topic Sentence -->
+            <div class="writing-section topic-sentence">
+                <div class="section-header">
+                    <div class="section-title">TOPIC SENTENCE</div>
+                    <div class="word-count" id="topicWordCount">0 words</div>
+                </div>
+                <div class="writing-content">
+                    <div class="content-input">
+                        <textarea 
+                            class="content-textarea" 
+                            id="topicSentence"
+                            placeholder="Write your main thesis or topic sentence here. This should clearly state your position or main argument..."
+                        ></textarea>
+                        <div class="tips">
+                            💡 <strong>Tip:</strong> Your topic sentence should clearly state your main argument and preview what you'll discuss in your supporting details.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Supporting Detail 1 -->
+            <div class="writing-section supporting-detail-1">
+                <div class="section-header">
+                    <div class="section-title">SUPPORTING DETAIL 1</div>
+                    <div class="word-count" id="detail1WordCount">0 words</div>
+                </div>
+                <div class="writing-content">
+                    <div class="transition-dropdown">
+                        <select id="transition1">
+                            <option value="">Choose transition...</option>
+                            <option value="First,">First,</option>
+                            <option value="To begin with,">To begin with,</option>
+                            <option value="Initially,">Initially,</option>
+                            <option value="One reason is that">One reason is that</option>
+                            <option value="The first point is">The first point is</option>
+                            <option value="For instance,">For instance,</option>
+                            <option value="For example,">For example,</option>
+                        </select>
+                    </div>
+                    <div class="content-input">
+                        <textarea 
+                            class="content-textarea" 
+                            id="supportingDetail1"
+                            placeholder="Provide your first supporting point with evidence and explanation..."
+                        ></textarea>
+                        <div class="tips">
+                            💡 <strong>Tip:</strong> Include specific evidence, examples, or reasoning to support your main argument.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Supporting Detail 2 -->
+            <div class="writing-section supporting-detail-2">
+                <div class="section-header">
+                    <div class="section-title">SUPPORTING DETAIL 2</div>
+                    <div class="word-count" id="detail2WordCount">0 words</div>
+                </div>
+                <div class="writing-content">
+                    <div class="transition-dropdown">
+                        <select id="transition2">
+                            <option value="">Choose transition...</option>
+                            <option value="Second,">Second,</option>
+                            <option value="Additionally,">Additionally,</option>
+                            <option value="Furthermore,">Furthermore,</option>
+                            <option value="Another reason is">Another reason is</option>
+                            <option value="In addition,">In addition,</option>
+                            <option value="Moreover,">Moreover,</option>
+                            <option value="Also,">Also,</option>
+                        </select>
+                    </div>
+                    <div class="content-input">
+                        <textarea 
+                            class="content-textarea" 
+                            id="supportingDetail2"
+                            placeholder="Provide your second supporting point with evidence and explanation..."
+                        ></textarea>
+                        <div class="tips">
+                            💡 <strong>Tip:</strong> Make sure this point is different from your first detail but still supports your main argument.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Supporting Detail 3 -->
+            <div class="writing-section supporting-detail-3">
+                <div class="section-header">
+                    <div class="section-title">SUPPORTING DETAIL 3</div>
+                    <div class="word-count" id="detail3WordCount">0 words</div>
+                </div>
+                <div class="writing-content">
+                    <div class="transition-dropdown">
+                        <select id="transition3">
+                            <option value="">Choose transition...</option>
+                            <option value="Third,">Third,</option>
+                            <option value="Finally,">Finally,</option>
+                            <option value="Lastly,">Lastly,</option>
+                            <option value="Most importantly,">Most importantly,</option>
+                            <option value="The final reason is">The final reason is</option>
+                            <option value="In conclusion,">In conclusion,</option>
+                            <option value="Above all,">Above all,</option>
+                        </select>
+                    </div>
+                    <div class="content-input">
+                        <textarea 
+                            class="content-textarea" 
+                            id="supportingDetail3"
+                            placeholder="Provide your third supporting point with evidence and explanation..."
+                        ></textarea>
+                        <div class="tips">
+                            💡 <strong>Tip:</strong> Consider making this your strongest point to leave a lasting impression.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Conclusion -->
+            <div class="writing-section conclusion">
+                <div class="section-header">
+                    <div class="section-title">CONCLUSION</div>
+                    <div class="word-count" id="conclusionWordCount">0 words</div>
+                </div>
+                <div class="writing-content">
+                    <div class="transition-dropdown">
+                        <select id="transitionConclusion">
+                            <option value="">Choose transition...</option>
+                            <option value="In conclusion,">In conclusion,</option>
+                            <option value="To summarize,">To summarize,</option>
+                            <option value="In summary,">In summary,</option>
+                            <option value="Therefore,">Therefore,</option>
+                            <option value="As a result,">As a result,</option>
+                            <option value="That is why,">That is why,</option>
+                            <option value="Ultimately,">Ultimately,</option>
+                        </select>
+                    </div>
+                    <div class="content-input">
+                        <textarea 
+                            class="content-textarea" 
+                            id="conclusion"
+                            placeholder="Restate your main argument and summarize your key points. End with a strong closing thought..."
+                        ></textarea>
+                        <div class="tips">
+                            💡 <strong>Tip:</strong> Restate your thesis in different words and leave the reader with something to think about.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="actions">
+                <button class="btn btn-secondary" onclick="clearAll()">🗑️ Clear All</button>
+                <button class="btn btn-primary" onclick="previewResponse()">👁️ Preview Response</button>
+                <button class="btn btn-success" onclick="copyResponse()">📋 Copy to Clipboard</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Preview Modal -->
+    <div class="preview-modal" id="previewModal">
+        <div class="preview-content">
+            <h2 style="margin-bottom: 20px; color: #333;">📄 Your Written Response</h2>
+            <div class="preview-text" id="previewText"></div>
+            <div style="text-align: center; margin-top: 20px;">
+                <button class="btn btn-secondary" onclick="closePreview()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Word count functionality
+        function updateWordCount(textareaId, countId) {
+            const textarea = document.getElementById(textareaId);
+            const countElement = document.getElementById(countId);
+            const text = textarea.value.trim();
+            const wordCount = text === '' ? 0 : text.split(/\s+/).length;
+            countElement.textContent = `${wordCount} words`;
+        }
+
+        // Add event listeners for word counting
+        const textareas = [
+            { id: 'topicSentence', counter: 'topicWordCount' },
+            { id: 'supportingDetail1', counter: 'detail1WordCount' },
+            { id: 'supportingDetail2', counter: 'detail2WordCount' },
+            { id: 'supportingDetail3', counter: 'detail3WordCount' },
+            { id: 'conclusion', counter: 'conclusionWordCount' }
+        ];
+
+        textareas.forEach(item => {
+            const textarea = document.getElementById(item.id);
+            textarea.addEventListener('input', () => updateWordCount(item.id, item.counter));
+        });
+
+        function clearAll() {
+            if (confirm('Are you sure you want to clear all content?')) {
+                document.getElementById('promptInput').value = '';
+                document.getElementById('topicSentence').value = '';
+                document.getElementById('supportingDetail1').value = '';
+                document.getElementById('supportingDetail2').value = '';
+                document.getElementById('supportingDetail3').value = '';
+                document.getElementById('conclusion').value = '';
+                
+                // Reset transitions
+                document.getElementById('transition1').value = '';
+                document.getElementById('transition2').value = '';
+                document.getElementById('transition3').value = '';
+                document.getElementById('transitionConclusion').value = '';
+                
+                // Update word counts
+                textareas.forEach(item => updateWordCount(item.id, item.counter));
+            }
+        }
+
+        function generateResponse() {
+            const prompt = document.getElementById('promptInput').value;
+            const topic = document.getElementById('topicSentence').value;
+            const detail1 = document.getElementById('supportingDetail1').value;
+            const detail2 = document.getElementById('supportingDetail2').value;
+            const detail3 = document.getElementById('supportingDetail3').value;
+            const conclusionText = document.getElementById('conclusion').value;
+            
+            const transition1 = document.getElementById('transition1').value;
+            const transition2 = document.getElementById('transition2').value;
+            const transition3 = document.getElementById('transition3').value;
+            const transitionConc = document.getElementById('transitionConclusion').value;
+            
+            let response = '';
+            
+            if (prompt.trim()) {
+                response += `<strong>Prompt:</strong> ${prompt}\n\n`;
+            }
+            
+            if (topic.trim()) {
+                response += `${topic}\n\n`;
+            }
+            
+            if (detail1.trim()) {
+                response += `${transition1 ? transition1 + ' ' : ''}${detail1}\n\n`;
+            }
+            
+            if (detail2.trim()) {
+                response += `${transition2 ? transition2 + ' ' : ''}${detail2}\n\n`;
+            }
+            
+            if (detail3.trim()) {
+                response += `${transition3 ? transition3 + ' ' : ''}${detail3}\n\n`;
+            }
+            
+            if (conclusionText.trim()) {
+                response += `${transitionConc ? transitionConc + ' ' : ''}${conclusionText}`;
+            }
+            
+            return response;
+        }
+
+        function previewResponse() {
+            const response = generateResponse();
+            if (response.trim() === '') {
+                alert('Please write something before previewing!');
+                return;
+            }
+            
+            const formattedResponse = response.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>');
+            document.getElementById('previewText').innerHTML = `<p>${formattedResponse}</p>`;
+            document.getElementById('previewModal').style.display = 'block';
+        }
+
+        function closePreview() {
+            document.getElementById('previewModal').style.display = 'none';
+        }
+
+        function copyResponse() {
+            const response = generateResponse();
+            if (response.trim() === '') {
+                alert('Please write something before copying!');
+                return;
+            }
+            
+            // Remove HTML tags for plain text copy
+            const plainText = response.replace(/<[^>]*>/g, '');
+            
+            navigator.clipboard.writeText(plainText).then(() => {
+                alert('Response copied to clipboard!');
+            }).catch(() => {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = plainText;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                alert('Response copied to clipboard!');
+            });
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('previewModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closePreview();
+            }
+        });
+    </script>
+</body>
+</html>
