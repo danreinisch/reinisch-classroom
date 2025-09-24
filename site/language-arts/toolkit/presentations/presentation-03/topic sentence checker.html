@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Topic Sentence Checker</title>
+  <style>
+    :root {
+      --glass: rgba(255, 255, 255, 0.14);
+      --glass-brd: rgba(255, 255, 255, 0.28);
+      --text: #e8edf5;
+    }
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      min-height: 100vh;
+      margin: 0;
+      font-family: Segoe UI, Roboto, Arial, sans-serif;
+      color: var(--text);
+      background: linear-gradient(rgba(5, 10, 20, 0.55), rgba(5, 10, 20, 0.78)),
+        url('/assets/images/la_main_bg') center/cover no-repeat fixed;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: 2rem;
+    }
+    .btn {
+      background: var(--glass);
+      border: 1px solid var(--glass-brd);
+      color: #fff;
+      padding: 0.6rem 1rem;
+      border-radius: 0.6rem;
+      text-decoration: none;
+      margin-bottom: 1rem;
+    }
+    h1 {
+      font-size: clamp(2rem, 4vw, 2.5rem);
+      margin-bottom: 0.5rem;
+    }
+    .checker {
+      max-width: 720px;
+      background: var(--glass);
+      border: 1px solid var(--glass-brd);
+      padding: 1.5rem;
+      border-radius: 1rem;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    }
+    textarea {
+      width: 100%;
+      min-height: 100px;
+      padding: 1rem;
+      border-radius: 0.6rem;
+      border: 1px solid var(--glass-brd);
+      font-size: 1rem;
+      background: rgba(255, 255, 255, 0.05);
+      color: #fff;
+      margin-bottom: 1rem;
+    }
+    .feedback {
+      text-align: left;
+    }
+    .feedback p {
+      margin: 0.5rem 0;
+      padding: 0.5rem;
+      background: rgba(255, 255, 255, 0.07);
+      border-left: 4px solid #4ade80;
+      border-radius: 0.5rem;
+    }
+    .feedback p.warn {
+      border-left-color: #facc15;
+    }
+    .feedback p.error {
+      border-left-color: #f87171;
+    }
+  </style>
+</head>
+<body>
+  <a class="btn" href="/language-arts/toolkit/index.html">← Back to Toolkit</a>
+  <main class="checker">
+    <h1>Topic Sentence Checker</h1>
+    <p>Paste your topic sentence below. We'll help you reflect on it!</p>
+    <textarea id="sentenceInput" placeholder="Enter your topic sentence here..."></textarea>
+    <div class="feedback" id="feedback"></div>
+  </main>
+  <script>
+    const input = document.getElementById('sentenceInput');
+    const feedback = document.getElementById('feedback');
+
+    input.addEventListener('input', () => {
+      const text = input.value.trim();
+      const messages = [];
+
+      if (!text) {
+        feedback.innerHTML = '';
+        return;
+      }
+
+      // Capital letter check
+      if (text[0] === text[0].toLowerCase()) {
+        messages.push('<p class="error">Your sentence should start with a capital letter.</p>');
+      }
+
+      // Sentence length
+      if (text.length < 8) {
+        messages.push('<p class="warn">Too short. Try to expand your idea more clearly.</p>');
+      } else {
+        messages.push('<p>✔️ Sentence is a good length.</p>');
+      }
+
+      // Check for a subject noun
+      const pronouns = ["he", "she", "they", "it", "we", "you", "i"];
+      const words = text.toLowerCase().replace(/[^a-z\s]/g, '').split(/\s+/);
+      const mainWords = words.filter(w => w.length > 3 && !pronouns.includes(w));
+      if (mainWords.length > 0) {
+        messages.push('<p>✔️ Looks like you have a topic-worthy subject.</p>');
+      } else {
+        messages.push('<p class="warn">Your sentence may lack a clear subject. Try using a noun or specific topic.</p>');
+      }
+
+      // Purposeful structure check
+      const purposefulPatterns = /(should|because|explains|means|shows|argues|reveals|one reason|the main idea|this paragraph|this essay)/i;
+      if (purposefulPatterns.test(text)) {
+        messages.push('<p>✔️ Sentence has direction or purpose. Good!</p>');
+      } else {
+        messages.push('<p class="warn">Try stating a reason, opinion, or purpose to guide the paragraph.</p>');
+      }
+
+      // Answer-like phrasing (e.g. yes, no, maybe)
+      if (/^(yes|no|maybe|sure|not really|i think)/i.test(text)) {
+        messages.push('<p class="error">This sounds like an answer, not a topic sentence. Try restating the question in your own words.</p>');
+      }
+
+      feedback.innerHTML = messages.join('');
+    });
+  </script>
+</body>
+</html>

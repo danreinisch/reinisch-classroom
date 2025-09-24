@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parts of Speech - Interactive Presentation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .presentation-container {
+            width: 90%;
+            max-width: 900px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .slide {
+            display: none;
+            padding: 40px;
+            min-height: 600px;
+            animation: slideIn 0.5s ease-in-out;
+        }
+
+        .slide.active {
+            display: block;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .slide h1 {
+            color: #667eea;
+            font-size: 2.5em;
+            margin-bottom: 30px;
+            text-align: center;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 15px;
+        }
+
+        .slide h2 {
+            color: #764ba2;
+            font-size: 2em;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .content-section {
+            margin-bottom: 25px;
+            padding: 20px;
+            background: #f8f9ff;
+            border-radius: 10px;
+            border-left: 5px solid #667eea;
+        }
+
+        .content-section h3 {
+            color: #333;
+            font-size: 1.3em;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+
+        .content-section h3::before {
+            content: "📝";
+            margin-right: 10px;
+            font-size: 1.2em;
+        }
+
+        .definition h3::before { content: "📖"; }
+        .examples h3::before { content: "💡"; }
+        .test h3::before { content: "🔍"; }
+        .sentence h3::before { content: "✍️"; }
+
+        .content-section p {
+            color: #555;
+            line-height: 1.6;
+            font-size: 1.1em;
+        }
+
+        .examples-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .example-word {
+            background: #667eea;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+
+        .test-box {
+            background: #e8f4ff;
+            border: 2px dashed #667eea;
+            padding: 15px;
+            border-radius: 8px;
+            font-style: italic;
+        }
+
+        .sentence-example {
+            background: #fff;
+            border: 2px solid #764ba2;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 1.2em;
+            text-align: center;
+        }
+
+        .highlight {
+            background: #ffeb3b;
+            font-weight: bold;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
+        .navigation {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 40px;
+            background: #f5f5f5;
+            border-top: 1px solid #ddd;
+        }
+
+        .nav-button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .nav-button:hover {
+            background: #5a6fd8;
+            transform: translateY(-2px);
+        }
+
+        .nav-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .slide-counter {
+            color: #667eea;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+
+        .title-slide {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 500px;
+        }
+
+        .title-slide h1 {
+            font-size: 3.5em;
+            margin-bottom: 20px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .title-slide p {
+            font-size: 1.3em;
+            color: #666;
+            max-width: 600px;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="presentation-container">
+        <!-- Title Slide -->
+        <div class="slide active title-slide">
+            <h1>Parts of Speech</h1>
+            <p>An Interactive Guide to Understanding the Building Blocks of Language</p>
+            <p style="margin-top: 20px; font-size: 1em; color: #888;">Navigate through different word types and learn their definitions, examples, identification tests, and usage in sentences.</p>
+        </div>
+
+        <!-- Nouns Slide -->
+        <div class="slide">
+            <h2>Nouns</h2>
+            
+            <div class="content-section definition">
+                <h3>Definition</h3>
+                <p>A noun is a word that names a person, place, thing, or idea. Nouns are the subjects and objects in sentences and form the backbone of most communication.</p>
+            </div>
+
+            <div class="content-section examples">
+                <h3>Examples</h3>
+                <div class="examples-list">
+                    <span class="example-word">teacher</span>
+                    <span class="example-word">city</span>
+                    <span class="example-word">book</span>
+                    <span class="example-word">happiness</span>
+                    <span class="example-word">dog</span>
+                    <span class="example-word">freedom</span>
+                </div>
+            </div>
+
+            <div class="content-section test">
+                <h3>How to Identify</h3>
+                <div class="test-box">
+                    Ask yourself: "Can I put 'the', 'a', or 'an' in front of this word?" If yes, it's likely a noun. 
+                    Also try: "Can this word be made plural?" Most nouns can be.
+                </div>
+            </div>
+
+            <div class="content-section sentence">
+                <h3>Sentence Example</h3>
+                <div class="sentence-example">
+                    The <span class="highlight">teacher</span> read a <span class="highlight">book</span> about <span class="highlight">friendship</span> to her <span class="highlight">students</span>.
+                </div>
+            </div>
+        </div>
+
+        <!-- Verbs Slide -->
+        <div class="slide">
+            <h2>Verbs</h2>
+            
+            <div class="content-section definition">
+                <h3>Definition</h3>
+                <p>A verb is a word that expresses an action, occurrence, or state of being. Verbs tell us what the subject is doing or what is happening to the subject.</p>
+            </div>
+
+            <div class="content-section examples">
+                <h3>Examples</h3>
+                <div class="examples-list">
+                    <span class="example-word">run</span>
+                    <span class="example-word">think</span>
+                    <span class="example-word">is</span>
+                    <span class="example-word">became</span>
+                    <span class="example-word">dance</span>
+                    <span class="example-word">exist</span>
+                </div>
+            </div>
+
+            <div class="content-section test">
+                <h3>How to Identify</h3>
+                <div class="test-box">
+                    Ask: "What is the subject doing?" or "What is happening?" The answer is usually a verb. 
+                    Also try adding "-ing" to the word - if it makes sense, it's likely a verb.
+                </div>
+            </div>
+
+            <div class="content-section sentence">
+                <h3>Sentence Example</h3>
+                <div class="sentence-example">
+                    The children <span class="highlight">laughed</span> loudly and <span class="highlight">played</span> in the park while their parents <span class="highlight">watched</span>.
+                </div>
+            </div>
+        </div>
+
+        <!-- Adjectives Slide -->
+        <div class="slide">
+            <h2>Adjectives</h2>
+            
+            <div class="content-section definition">
+                <h3>Definition</h3>
+                <p>An adjective is a word that describes or modifies a noun or pronoun. Adjectives provide more information about the qualities, characteristics, or attributes of the thing being described.</p>
+            </div>
+
+            <div class="content-section examples">
+                <h3>Examples</h3>
+                <div class="examples-list">
+                    <span class="example-word">beautiful</span>
+                    <span class="example-word">tall</span>
+                    <span class="example-word">red</span>
+                    <span class="example-word">happy</span>
+                    <span class="example-word">ancient</span>
+                    <span class="example-word">delicious</span>
+                </div>
+            </div>
+
+            <div class="content-section test">
+                <h3>How to Identify</h3>
+                <div class="test-box">
+                    Ask: "What kind?" or "Which one?" or "How many?" The answer is often an adjective. 
+                    Try putting the word between "very" and a noun - if it makes sense, it's likely an adjective.
+                </div>
+            </div>
+
+            <div class="content-section sentence">
+                <h3>Sentence Example</h3>
+                <div class="sentence-example">
+                    The <span class="highlight">brave</span> knight rode his <span class="highlight">white</span> horse through the <span class="highlight">dark</span> forest.
+                </div>
+            </div>
+        </div>
+
+        <!-- Adverbs Slide -->
+        <div class="slide">
+            <h2>Adverbs</h2>
+            
+            <div class="content-section definition">
+                <h3>Definition</h3>
+                <p>An adverb is a word that modifies a verb, adjective, or another adverb. Adverbs often describe how, when, where, or to what extent something happens.</p>
+            </div>
+
+            <div class="content-section examples">
+                <h3>Examples</h3>
+                <div class="examples-list">
+                    <span class="example-word">quickly</span>
+                    <span class="example-word">very</span>
+                    <span class="example-word">yesterday</span>
+                    <span class="example-word">carefully</span>
+                    <span class="example-word">here</span>
+                    <span class="example-word">extremely</span>
+                </div>
+            </div>
+
+            <div class="content-section test">
+                <h3>How to Identify</h3>
+                <div class="test-box">
+                    Ask: "How?" "When?" "Where?" or "To what extent?" Many adverbs end in "-ly". 
+                    Try removing the word - if the sentence still makes sense but loses detail about the action, it's likely an adverb.
+                </div>
+            </div>
+
+            <div class="content-section sentence">
+                <h3>Sentence Example</h3>
+                <div class="sentence-example">
+                    She <span class="highlight">carefully</span> and <span class="highlight">slowly</span> walked <span class="highlight">upstairs</span> <span class="highlight">yesterday</span>.
+                </div>
+            </div>
+        </div>
+
+        <!-- Pronouns Slide -->
+        <div class="slide">
+            <h2>Pronouns</h2>
+            
+            <div class="content-section definition">
+                <h3>Definition</h3>
+                <p>A pronoun is a word that takes the place of a noun. Pronouns help avoid repetition and make sentences flow more smoothly by referring back to nouns mentioned earlier.</p>
+            </div>
+
+            <div class="content-section examples">
+                <h3>Examples</h3>
+                <div class="examples-list">
+                    <span class="example-word">he</span>
+                    <span class="example-word">she</span>
+                    <span class="example-word">it</span>
+                    <span class="example-word">they</span>
+                    <span class="example-word">this</span>
+                    <span class="example-word">who</span>
+                </div>
+            </div>
+
+            <div class="content-section test">
+                <h3>How to Identify</h3>
+                <div class="test-box">
+                    Ask: "What noun could this word replace?" If you can substitute a specific noun for the word and the sentence still makes sense, it's likely a pronoun.
+                </div>
+            </div>
+
+            <div class="content-section sentence">
+                <h3>Sentence Example</h3>
+                <div class="sentence-example">
+                    Sarah loves books. <span class="highlight">She</span> reads <span class="highlight">them</span> every day because <span class="highlight">they</span> make <span class="highlight">her</span> happy.
+                </div>
+            </div>
+        </div>
+
+        <!-- Prepositions Slide -->
+        <div class="slide">
+            <h2>Prepositions</h2>
+            
+            <div class="content-section definition">
+                <h3>Definition</h3>
+                <p>A preposition is a word that shows the relationship between a noun (or pronoun) and other words in a sentence. Prepositions often indicate location, direction, time, or manner.</p>
+            </div>
+
+            <div class="content-section examples">
+                <h3>Examples</h3>
+                <div class="examples-list">
+                    <span class="example-word">on</span>
+                    <span class="example-word">in</span>
+                    <span class="example-word">under</span>
+                    <span class="example-word">before</span>
+                    <span class="example-word">with</span>
+                    <span class="example-word">through</span>
+                </div>
+            </div>
+
+            <div class="content-section test">
+                <h3>How to Identify</h3>
+                <div class="test-box">
+                    Think of a box. Ask: "Where is something in relation to the box?" Words like "in," "on," "under," "beside" are prepositions. 
+                    Prepositions are usually followed by a noun or pronoun.
+                </div>
+            </div>
+
+            <div class="content-section sentence">
+                <h3>Sentence Example</h3>
+                <div class="sentence-example">
+                    The cat jumped <span class="highlight">onto</span> the table and knocked the vase <span class="highlight">off</span> <span class="highlight">during</span> the party.
+                </div>
+            </div>
+        </div>
+
+        <!-- Conjunctions Slide -->
+        <div class="slide">
+            <h2>Conjunctions</h2>
+            
+            <div class="content-section definition">
+                <h3>Definition</h3>
+                <p>A conjunction is a word that connects words, phrases, or clauses. Conjunctions help create compound sentences and show relationships between ideas.</p>
+            </div>
+
+            <div class="content-section examples">
+                <h3>Examples</h3>
+                <div class="examples-list">
+                    <span class="example-word">and</span>
+                    <span class="example-word">but</span>
+                    <span class="example-word">or</span>
+                    <span class="example-word">because</span>
+                    <span class="example-word">although</span>
+                    <span class="example-word">while</span>
+                </div>
+            </div>
+
+            <div class="content-section test">
+                <h3>How to Identify</h3>
+                <div class="test-box">
+                    Ask: "Does this word join two parts of a sentence?" or "Does it show the relationship between two ideas?" 
+                    Try removing it - if the sentence breaks into two separate thoughts, it's likely a conjunction.
+                </div>
+            </div>
+
+            <div class="content-section sentence">
+                <h3>Sentence Example</h3>
+                <div class="sentence-example">
+                    I wanted to go to the movies, <span class="highlight">but</span> it was raining, <span class="highlight">so</span> I stayed home <span class="highlight">and</span> read a book instead.
+                </div>
+            </div>
+        </div>
+
+        <!-- Interjections Slide -->
+        <div class="slide">
+            <h2>Interjections</h2>
+            
+            <div class="content-section definition">
+                <h3>Definition</h3>
+                <p>An interjection is a word or phrase that expresses strong emotion or sudden feeling. Interjections are often followed by exclamation points and stand alone or are set off by commas.</p>
+            </div>
+
+            <div class="content-section examples">
+                <h3>Examples</h3>
+                <div class="examples-list">
+                    <span class="example-word">wow!</span>
+                    <span class="example-word">ouch!</span>
+                    <span class="example-word">hooray!</span>
+                    <span class="example-word">oh no!</span>
+                    <span class="example-word">alas</span>
+                    <span class="example-word">yikes!</span>
+                </div>
+            </div>
+
+            <div class="content-section test">
+                <h3>How to Identify</h3>
+                <div class="test-box">
+                    Ask: "Does this word express strong emotion?" or "Could this word stand alone as an exclamation?" 
+                    Interjections often come with exclamation points and express feelings like surprise, joy, or pain.
+                </div>
+            </div>
+
+            <div class="content-section sentence">
+                <h3>Sentence Example</h3>
+                <div class="sentence-example">
+                    <span class="highlight">Wow!</span> That was an amazing performance. <span class="highlight">Bravo!</span> You should be proud of yourself.
+                </div>
+            </div>
+        </div>
+
+        <!-- Articles Slide -->
+        <div class="slide">
+            <h2>Articles</h2>
+            
+            <div class="content-section definition">
+                <h3>Definition</h3>
+                <p>Articles are special types of adjectives that come before nouns to indicate whether the noun is specific or general. There are only three articles in English.</p>
+            </div>
+
+            <div class="content-section examples">
+                <h3>Examples</h3>
+                <div class="examples-list">
+                    <span class="example-word">the</span>
+                    <span class="example-word">a</span>
+                    <span class="example-word">an</span>
+                </div>
+            </div>
+
+            <div class="content-section test">
+                <h3>How to Identify</h3>
+                <div class="test-box">
+                    There are only three articles: "the" (definite), "a" and "an" (indefinite). 
+                    "The" refers to something specific, while "a" and "an" refer to something general. Use "an" before vowel sounds.
+                </div>
+            </div>
+
+            <div class="content-section sentence">
+                <h3>Sentence Example</h3>
+                <div class="sentence-example">
+                    <span class="highlight">The</span> student brought <span class="highlight">a</span> pencil and <span class="highlight">an</span> eraser to <span class="highlight">the</span> exam.
+                </div>
+            </div>
+        </div>
+
+        <div class="navigation">
+            <button class="nav-button" id="prevBtn" onclick="changeSlide(-1)">Previous</button>
+            <span class="slide-counter">
+                <span id="currentSlide">1</span> / <span id="totalSlides">10</span>
+            </span>
+            <button class="nav-button" id="nextBtn" onclick="changeSlide(1)">Next</button>
+        </div>
+    </div>
+
+    <script>
+        let currentSlideIndex = 0;
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+        
+        document.getElementById('totalSlides').textContent = totalSlides;
+
+        function showSlide(index) {
+            slides.forEach(slide => slide.classList.remove('active'));
+            slides[index].classList.add('active');
+            
+            document.getElementById('currentSlide').textContent = index + 1;
+            
+            // Update button states
+            document.getElementById('prevBtn').disabled = index === 0;
+            document.getElementById('nextBtn').disabled = index === totalSlides - 1;
+        }
+
+        function changeSlide(direction) {
+            const newIndex = currentSlideIndex + direction;
+            
+            if (newIndex >= 0 && newIndex < totalSlides) {
+                currentSlideIndex = newIndex;
+                showSlide(currentSlideIndex);
+            }
+        }
+
+        // Initialize
+        showSlide(0);
+
+        // Keyboard navigation
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowLeft') {
+                changeSlide(-1);
+            } else if (e.key === 'ArrowRight') {
+                changeSlide(1);
+            }
+        });
+    </script>
+</body>
+</html>

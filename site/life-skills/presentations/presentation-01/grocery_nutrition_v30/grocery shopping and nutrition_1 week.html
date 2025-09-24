@@ -1,0 +1,1215 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Life Skills: Nutrition &amp; Grocery Shopping - 4 Day Program</title>
+<style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            color: white;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Rotating Background Images - Using your actual grocery store photos */
+        .background-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+
+        .background-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            opacity: 0;
+            transition: opacity 1s ease-in-out;
+        }
+
+        .background-image.active {
+            opacity: 1;
+        }
+
+        /* Your actual grocery store images with fallback gradients */
+        .bg1 { 
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.7) 0%, rgba(118, 75, 162, 0.7) 100%),
+                        url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAGAAyADASIAAhEBAxEB/8QAGwAAAQUBAQAAAAAAAAAAAAAAAAECAwQFBgf/xAAzEAABBAEEAgEDAwQBBAMBAAABAhEDBBIhMUEFUWETInGBBjKRocHR8BQjscIHFeLh/8QAGgEBAAMBAQEAAAAAAAAAAAAAAAECAwQFBg==');
+        }
+        .bg2 { 
+            background: linear-gradient(135deg, rgba(240, 147, 251, 0.7) 0%, rgba(245, 87, 108, 0.7) 100%),
+                        url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAGAAyADASIAAhEBAxEB/8QAGwAAAQUBAQAAAAAAAAAAAAAAAAECAwQFBgf/xAAzEAABBAEEAgEDAwQBBAMBAAABAhEDBBIhMUEFUWETInGBBjKRocHR8BQjscIHFeLh/8QAGgEBAAMBAQEAAAAAAAAAAAAAAAECAwQFBg==');
+        }
+        .bg3 { 
+            background: linear-gradient(135deg, rgba(79, 172, 254, 0.7) 0%, rgba(0, 242, 254, 0.7) 100%),
+                        url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAGAAyADASIAAhEBAxEB/8QAGwAAAQUBAQAAAAAAAAAAAAAAAAECAwQFBgf/xAAzEAABBAEEAgEDAwQBBAMBAAABAhEDBBIhMUEFUWETInGBBjKRocHR8BQjscIHFeLh/8QAGgEBAAMBAQEAAAAAAAAAAAAAAAECAwQFBg==');
+        }
+        .bg4 { 
+            background: linear-gradient(135deg, rgba(67, 233, 123, 0.7) 0%, rgba(56, 249, 215, 0.7) 100%),
+                        url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAGAAyADASIAAhEBAxEB/8QAGwAAAQUBAQAAAAAAAAAAAAAAAAECAwQFBgf/xAAzEAABBAEEAgEDAwQBBAMBAAABAhEDBBIhMUEFUWETInGBBjKRocHR8BQjscIHFeLh/8QAGgEBAAMBAQEAAAAAAAAAAAAAAAECAwQFBg==');
+        }
+
+        .presentation-container {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Improved glass effect with better text clarity */
+        .slide {
+            display: none;
+            text-align: center;
+            max-width: 90%;
+            max-height: 90%;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(8px);
+            border-radius: 25px;
+            padding: 40px;
+            box-shadow: 
+                0 8px 32px rgba(31, 38, 135, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.8);
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            animation: slideIn 0.6s ease-in-out;
+            overflow-y: auto;
+            color: #333;
+        }
+
+        .slide.active {
+            display: block;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(30px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            background: linear-gradient(45deg, #FFD700, #FFA500);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: bold;
+        }
+
+        h2 {
+            font-size: 2.5rem;
+            margin-bottom: 25px;
+            color: #2c5282;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+            font-weight: bold;
+        }
+
+        h3 {
+            font-size: 2rem;
+            margin-bottom: 20px;
+            color: #2b6cb0;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+            font-weight: 600;
+        }
+
+        h4 {
+            font-size: 1.7rem;
+            margin-bottom: 15px;
+            color: #2c5282;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+            font-weight: 600;
+        }
+
+        p, li {
+            font-size: 1.5rem;
+            line-height: 1.6;
+            margin-bottom: 15px;
+            color: #333;
+            text-shadow: none;
+            font-weight: 500;
+        }
+
+        ul, ol {
+            text-align: left;
+            display: inline-block;
+            max-width: 100%;
+        }
+
+        /* Clear containers with solid backgrounds for better text readability */
+        .nutrition-label, .sample-list, .instruction-box {
+            background: rgba(255, 255, 255, 0.98);
+            color: #333;
+            border: 2px solid rgba(44, 82, 130, 0.3);
+            padding: 25px;
+            margin: 20px auto;
+            max-width: 500px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+        }
+
+        .day-header {
+            background: rgba(255, 235, 59, 0.9);
+            color: #333;
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+            border: 2px solid rgba(255, 193, 7, 0.5);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .step-box {
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 12px;
+            border: 2px solid rgba(44, 82, 130, 0.2);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .highlight {
+            background: linear-gradient(120deg, #FFD700 0%, #FFA500 100%);
+            color: #333;
+            padding: 8px 15px;
+            border-radius: 10px;
+            font-weight: bold;
+            display: inline-block;
+            margin: 5px;
+            text-shadow: none;
+        }
+
+        .navigation {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+            z-index: 1000;
+        }
+
+        button {
+            padding: 15px 30px;
+            background: rgba(44, 82, 130, 0.9);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            text-shadow: none;
+        }
+
+        button:hover {
+            background: rgba(44, 82, 130, 1);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .slide-counter {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            background: rgba(44, 82, 130, 0.9);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .sample-nutrition-facts {
+            background: white;
+            color: black;
+            border: 3px solid black;
+            padding: 20px;
+            margin: 20px auto;
+            max-width: 400px;
+            border-radius: 10px;
+            font-family: 'Arial', sans-serif;
+            text-shadow: none;
+        }
+
+        .nutrition-facts-header {
+            border-bottom: 3px solid black;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+            font-size: 1.8rem;
+            font-weight: bold;
+        }
+
+        .calories-large {
+            font-size: 2.2rem;
+            font-weight: bold;
+            margin: 15px 0;
+            padding: 10px 0;
+            border-top: 2px solid black;
+            border-bottom: 1px solid black;
+        }
+
+        .worksheet-question {
+            background: rgba(255, 255, 255, 0.95);
+            color: #333;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 12px;
+            border: 2px solid rgba(44, 82, 130, 0.3);
+            text-align: left;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .category-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .category-card {
+            background: rgba(255, 255, 255, 0.95);
+            color: #333;
+            padding: 20px;
+            border-radius: 15px;
+            border: 2px solid rgba(44, 82, 130, 0.3);
+            transition: transform 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .category-card:hover {
+            transform: scale(1.05);
+        }
+
+        .shopping-categories {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+            text-align: left;
+        }
+
+        .shopping-category {
+            background: rgba(255, 255, 255, 0.95);
+            color: #333;
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid rgba(44, 82, 130, 0.3);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .emoji {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .tips-list {
+            text-align: left;
+            margin: 20px 0;
+        }
+
+        .tip-item {
+            background: rgba(255, 255, 255, 0.95);
+            color: #333;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 10px;
+            border: 2px solid rgba(44, 82, 130, 0.2);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .progress-indicator {
+            position: fixed;
+            top: 30px;
+            left: 30px;
+            background: rgba(44, 82, 130, 0.9);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: bold;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+<style>
+.reveal .slides section {
+    background-size: cover !important;
+    background-position: center !important;
+    color: white;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
+}
+</style></head>
+<body>
+<div class="background-container">
+<div class="background-image bg1 active"></div>
+<div class="background-image bg2"></div>
+<div class="background-image bg3"></div>
+<div class="background-image bg4"></div>
+</div>
+<div class="presentation-container">
+<div class="slide-counter">
+<span id="current-slide">1</span> / <span id="total-slides">25</span>
+</div>
+<div class="progress-indicator">
+<span id="current-day">Day 1</span>
+</div>
+<!-- Slide 1: Title -->
+<div class="slide active">
+<h1>🥯 Life Skills Program 🛒</h1>
+<h2>Nutrition Labels &amp; Grocery Shopping</h2>
+<div class="day-header">
+<p style="font-size: 2rem; margin-top: 40px;">A Complete 4-Day Learning Journey</p>
+<div style="margin-top: 40px;">
+<div class="step-box">
+<h4>Day 1: Introduction to Nutrition Labels</h4>
+<p style="font-size: 1.3rem;">Learn what nutrition labels are and why they matter</p>
+</div>
+<div class="step-box">
+<h4>Day 2: Reading &amp; Understanding Labels</h4>
+<p style="font-size: 1.3rem;">Practice with real examples and worksheets</p>
+</div>
+<div class="step-box">
+<h4>Day 3: Introduction to Grocery Shopping</h4>
+<p style="font-size: 1.3rem;">Learn to plan and organize your shopping</p>
+</div>
+<div class="step-box">
+<h4>Day 4: Advanced Shopping Skills</h4>
+<p style="font-size: 1.3rem;">Master weekly planning and smart shopping</p>
+</div>
+</div>
+</div>
+</div>
+<!-- DAY 1 SLIDES -->
+<!-- Slide 2: Day 1 Introduction -->
+<div class="slide">
+<div class="day-header">
+<h1>📅 Day 1: Introduction to Nutrition Labels</h1>
+<h3>🎯 Today's Goals</h3>
+</div>
+<div class="instruction-box">
+<h4>What We'll Learn Today:</h4>
+<ul style="font-size: 1.4rem; line-height: 2;">
+<li>What nutrition labels are</li>
+<li>Where to find them on food packages</li>
+<li>Why nutrition labels are important for our health</li>
+<li>The basic parts of a nutrition label</li>
+<li>How nutrition labels help us make better food choices</li>
+</ul>
+</div>
+<p style="font-size: 1.5rem; margin-top: 30px; color: #2c5282;">
+                🔍 Let's become nutrition detectives!
+            </p>
+</div>
+<!-- Slide 3: What is a Nutrition Label? -->
+<div class="slide">
+<h2>🏷️ What is a Nutrition Label?</h2>
+<div class="instruction-box">
+<h3 style="color: #2c5282;">A nutrition label is like a "report card" for food!</h3>
+<p style="font-size: 1.4rem; margin: 20px 0;">It tells us:</p>
+<div class="category-grid">
+<div class="category-card">
+<span class="emoji">⚡</span>
+<h4>How much energy (calories) the food gives us</h4>
+</div>
+<div class="category-card">
+<span class="emoji">🍎</span>
+<h4>What nutrients are inside</h4>
+</div>
+<div class="category-card">
+<span class="emoji">📏</span>
+<h4>How much we should eat (serving size)</h4>
+</div>
+<div class="category-card">
+<span class="emoji">🧪</span>
+<h4>What ingredients were used to make it</h4>
+</div>
+</div>
+</div>
+<p style="font-size: 1.3rem; margin-top: 30px;">
+                💡 <strong>Think of it as:</strong> A food's ID card that tells us everything we need to know!
+            </p>
+</div>
+<!-- Slide 4: Where to Find Nutrition Labels -->
+<div class="slide">
+<h2>🔍 Where Do We Find Nutrition Labels?</h2>
+<div class="step-box">
+<h3>🥫 On packaged foods:</h3>
+<ul style="font-size: 1.3rem;">
+<li>Back or side of cereal boxes</li>
+<li>Side of canned foods</li>
+<li>Back of snack packages</li>
+<li>Side of bread bags</li>
+<li>On yogurt containers</li>
+</ul>
+</div>
+<div class="step-box">
+<h3>🚫 Foods that DON'T have labels:</h3>
+<ul style="font-size: 1.3rem;">
+<li>Fresh fruits and vegetables</li>
+<li>Fresh meat from the deli</li>
+<li>Fresh bread from the bakery</li>
+</ul>
+</div>
+<div class="instruction-box">
+<h4>🎯 Your Mission Today:</h4>
+<p>At home, find 3 different food packages and look for their nutrition labels!</p>
+</div>
+</div>
+<!-- Slide 5: Why Nutrition Labels Matter -->
+<div class="slide">
+<h2>🌟 Why Are Nutrition Labels Important?</h2>
+<div class="category-grid">
+<div class="category-card">
+<span class="emoji">💪</span>
+<h4>Stay Healthy</h4>
+<p>Know what nutrients your body is getting</p>
+</div>
+<div class="category-card">
+<span class="emoji">⚖️</span>
+<h4>Control Portions</h4>
+<p>Learn how much is the right amount to eat</p>
+</div>
+<div class="category-card">
+<span class="emoji">🔄</span>
+<h4>Compare Foods</h4>
+<p>Choose between similar products</p>
+</div>
+<div class="category-card">
+<span class="emoji">🚫</span>
+<h4>Avoid Allergens</h4>
+<p>Check ingredients for things you can't eat</p>
+</div>
+</div>
+<div class="instruction-box">
+<h3>Real Life Example:</h3>
+<p style="font-size: 1.3rem;">If you want to choose between two breakfast cereals, the nutrition labels help you pick the one with less sugar and more fiber!</p>
+</div>
+</div>
+<!-- Slide 6: Basic Parts of a Nutrition Label -->
+<div class="slide">
+<h2>🧩 Parts of a Nutrition Label</h2>
+<div class="sample-nutrition-facts">
+<div class="nutrition-facts-header">Nutrition Facts</div>
+<p style="margin: 5px 0; font-size: 1rem;">8 servings per container</p>
+<p style="margin: 5px 0; font-size: 1.1rem;"><strong>Serving size: 1 cup (240ml)</strong></p>
+<div class="calories-large">Calories 150</div>
+<p style="margin: 8px 0; font-size: 1rem;">Total Fat 3g</p>
+<p style="margin: 8px 0; font-size: 1rem;">Sodium 470mg</p>
+<p style="margin: 8px 0; font-size: 1rem;">Total Carbs 22g</p>
+<p style="margin: 8px 0; font-size: 1rem;">Protein 8g</p>
+<hr style="margin: 10px 0; border: 1px solid black;"/>
+<p style="font-size: 0.9rem; margin: 5px 0;"><strong>Ingredients:</strong> Water, Tomatoes, Carrots, Salt...</p>
+</div>
+<div class="tips-list">
+<div class="tip-item">
+<strong>1. Serving Size:</strong> How much equals one serving
+                </div>
+<div class="tip-item">
+<strong>2. Calories:</strong> Energy the food gives you
+                </div>
+<div class="tip-item">
+<strong>3. Nutrients:</strong> The good and not-so-good stuff
+                </div>
+<div class="tip-item">
+<strong>4. Ingredients:</strong> What's actually in the food
+                </div>
+</div>
+</div>
+<!-- DAY 2 SLIDES -->
+<!-- Slide 7: Day 2 Introduction -->
+<div class="slide">
+<div class="day-header">
+<h1>📅 Day 2: Reading &amp; Understanding Labels</h1>
+<h3>🎯 Today's Goals</h3>
+</div>
+<div class="instruction-box">
+<h4>What We'll Learn Today:</h4>
+<ul style="font-size: 1.4rem; line-height: 2;">
+<li>How to read serving sizes correctly</li>
+<li>Understanding what calories mean</li>
+<li>Reading ingredient lists</li>
+<li>Completing the nutrition label worksheet</li>
+<li>Practicing with real food examples</li>
+</ul>
+</div>
+<div class="step-box">
+<h4>📋 Today's Worksheet Focus:</h4>
+<p style="font-size: 1.3rem;">We'll work through the "Reading Nutrition Labels" worksheet together, learning how to answer each type of question!</p>
+</div>
+</div>
+<!-- Slide 8: Understanding Serving Size -->
+<div class="slide">
+<h2>📏 Understanding Serving Size</h2>
+<div class="instruction-box">
+<h3>🎯 Serving Size = The Foundation of Everything!</h3>
+<p style="font-size: 1.4rem;">ALL the numbers on the label are based on ONE serving size.</p>
+</div>
+<div class="sample-nutrition-facts">
+<p style="font-size: 1.2rem; margin: 10px 0;"><strong>8 servings per container</strong></p>
+<p style="font-size: 1.2rem; margin: 10px 0;"><strong>Serving size: 1 cup</strong></p>
+<div class="calories-large">Calories 500</div>
+</div>
+<div class="worksheet-question">
+<h4>Worksheet Question Practice:</h4>
+<p><strong>Q: What is the serving size for this product?</strong></p>
+<p style="color: #4CAF50;"><strong>A: 1 cup</strong></p>
+<p><strong>Q: How many servings are in the container?</strong></p>
+<p style="color: #4CAF50;"><strong>A: 8 servings</strong></p>
+</div>
+<div class="step-box">
+<h4>💡 Important Rule:</h4>
+<p>If you eat 2 cups instead of 1, you need to DOUBLE all the numbers!</p>
+</div>
+</div>
+<!-- Slide 9: Understanding Calories -->
+<div class="slide">
+<h2>⚡ Understanding Calories</h2>
+<div class="instruction-box">
+<h3>What are calories?</h3>
+<p style="font-size: 1.4rem;">Calories = Energy units that fuel your body</p>
+<p style="font-size: 1.3rem;">Think of them like gasoline for a car!</p>
+</div>
+<div class="category-grid">
+<div class="category-card">
+<span class="emoji">🔋</span>
+<h4>Low Calories</h4>
+<p>Under 100 per serving</p>
+<p><small>Examples: Most vegetables, some fruits</small></p>
+</div>
+<div class="category-card">
+<span class="emoji">⚡</span>
+<h4>Moderate Calories</h4>
+<p>100-400 per serving</p>
+<p><small>Examples: Bread, yogurt, most meals</small></p>
+</div>
+<div class="category-card">
+<span class="emoji">🔥</span>
+<h4>High Calories</h4>
+<p>Over 400 per serving</p>
+<p><small>Examples: Ice cream, fried foods</small></p>
+</div>
+<div class="category-card">
+<span class="emoji">🎯</span>
+<h4>Daily Goal</h4>
+<p>About 2000 calories total per day for most adults</p>
+</div>
+</div>
+<div class="worksheet-question">
+<h4>Worksheet Question Practice:</h4>
+<p><strong>Q: How many calories per serving?</strong></p>
+<p style="color: #4CAF50;"><strong>A: Look for the big bold "Calories" number</strong></p>
+</div>
+</div>
+<!-- Slide 10: Reading Ingredients Lists -->
+<div class="slide">
+<h2>📋 Reading Ingredients Lists</h2>
+<div class="instruction-box">
+<h3>🔢 The Secret Order:</h3>
+<p style="font-size: 1.4rem;">Ingredients are listed from MOST to LEAST amount!</p>
+</div>
+<div class="sample-nutrition-facts">
+<p style="font-size: 1.1rem; margin: 15px 0; text-align: left;">
+<strong>Ingredients:</strong> Whole Grain Oats, Corn Starch, Sugar, Salt, Tripotassium Phosphate, Vitamin E Added to Preserve Freshness
+                </p>
+</div>
+<div class="step-box">
+<h4>🕵️ What this tells us:</h4>
+<ul style="text-align: left; font-size: 1.3rem;">
+<li><strong>Most:</strong> Whole Grain Oats (good!)</li>
+<li><strong>Second:</strong> Corn Starch</li>
+<li><strong>Third:</strong> Sugar</li>
+<li><strong>Least:</strong> Vitamin E (just a tiny bit for freshness)</li>
+</ul>
+</div>
+<div class="worksheet-question">
+<h4>Worksheet Question Practice:</h4>
+<p><strong>Q: Look up Tripotassium Phosphate. What is it?</strong></p>
+<p style="color: #4CAF50;"><strong>A: It's a food additive that helps prevent clumping and acts as a preservative</strong></p>
+<p><strong>Q: What other uses does it have?</strong></p>
+<p style="color: #4CAF50;"><strong>A: Used in cleaning products and as a fertilizer</strong></p>
+</div>
+</div>
+<!-- Slide 11: Understanding Added Sugars and Trans Fat -->
+<div class="slide">
+<h2>⚠️ Understanding Added Sugars &amp; Trans Fat</h2>
+<div class="category-grid">
+<div class="category-card">
+<span class="emoji">🍯</span>
+<h4>Added Sugars</h4>
+<p>Sugar added during processing</p>
+<p><strong>Goal:</strong> Less than 50g per day</p>
+</div>
+<div class="category-card">
+<span class="emoji">🚫</span>
+<h4>Trans Fat</h4>
+<p>Unhealthy fat to avoid</p>
+<p><strong>Goal:</strong> 0g (zero grams!)</p>
+</div>
+</div>
+<div class="sample-nutrition-facts">
+<p style="margin: 8px 0;">Sugars 41g</p>
+<p style="margin: 8px 0; font-weight: bold;">Added Sugars 10g</p>
+<p style="margin: 8px 0; font-weight: bold;">Trans Fat 0g ✓</p>
+</div>
+<div class="worksheet-question">
+<h4>Worksheet Question Practice:</h4>
+<p><strong>Q: Does this product contain added sugars?</strong></p>
+<p style="color: #4CAF50;"><strong>A: Yes, 10g of added sugars</strong></p>
+<p><strong>Q: Does this product contain trans fat?</strong></p>
+<p style="color: #4CAF50;"><strong>A: No, 0g trans fat</strong></p>
+</div>
+</div>
+<!-- Slide 12: Sodium and Making Personal Choices -->
+<div class="slide">
+<h2>🧂 Understanding Sodium &amp; Making Choices</h2>
+<div class="instruction-box">
+<h3>What is Sodium?</h3>
+<p style="font-size: 1.4rem;">Sodium = Salt. Too much can raise blood pressure.</p>
+<p style="font-size: 1.3rem;"><strong>Daily Goal:</strong> Less than 2,300mg per day</p>
+</div>
+<div class="step-box">
+<h4>Sodium Guidelines:</h4>
+<ul style="text-align: left; font-size: 1.3rem;">
+<li><strong>Low:</strong> 140mg or less per serving</li>
+<li><strong>Medium:</strong> 140-400mg per serving</li>
+<li><strong>High:</strong> Over 400mg per serving</li>
+</ul>
+</div>
+<div class="worksheet-question">
+<h4>Worksheet Question Practice:</h4>
+<p><strong>Q: How much sodium is in one serving of this product?</strong></p>
+<p style="color: #4CAF50;"><strong>A: 180mg (look at the nutrition facts)</strong></p>
+<p><strong>Q: Would you eat this food? Why or why not?</strong></p>
+<p style="color: #4CAF50;"><strong>A: This is a personal choice! Consider the calories, nutrients, ingredients, and how it fits into your daily eating.</strong></p>
+</div>
+</div>
+<!-- DAY 3 SLIDES -->
+<!-- Slide 13: Day 3 Introduction -->
+<div class="slide">
+<div class="day-header">
+<h1>📅 Day 3: Introduction to Grocery Shopping</h1>
+<h3>🎯 Today's Goals</h3>
+</div>
+<div class="instruction-box">
+<h4>What We'll Learn Today:</h4>
+<ul style="font-size: 1.4rem; line-height: 2;">
+<li>How to plan before going shopping</li>
+<li>Creating organized shopping lists</li>
+<li>Understanding store layout and categories</li>
+<li>Shopping specifically for an Asiago Bagel Sandwich</li>
+<li>Using the grocery list worksheet</li>
+</ul>
+</div>
+<div class="step-box">
+<h4>🥯 Today's Special Project:</h4>
+<p style="font-size: 1.3rem;">We'll create a complete shopping list to make delicious Asiago Cheese Bagel Sandwiches!</p>
+</div>
+</div>
+<!-- Slide 14: Planning Before Shopping -->
+<div class="slide">
+<h2>📝 Step 1: Planning Before You Go</h2>
+<div class="instruction-box">
+<h3>🏠 Before leaving home:</h3>
+<ol style="text-align: left; font-size: 1.3rem; line-height: 1.8;">
+<li>Check your refrigerator</li>
+<li>Check your cupboards</li>
+<li>Check your pantry</li>
+<li>Decide what meals you want to make</li>
+<li>Write down what you need</li>
+</ol>
+</div>
+<div class="tips-list">
+<div class="tip-item">
+<h4>💡 Pro Tip #1:</h4>
+<p>Never shop when you're hungry - you'll buy too much!</p>
+</div>
+<div class="tip-item">
+<h4>💡 Pro Tip #2:</h4>
+<p>Bring a list and stick to it to save money</p>
+</div>
+<div class="tip-item">
+<h4>💡 Pro Tip #3:</h4>
+<p>Check store sales ads before making your list</p>
+</div>
+</div>
+</div>
+<!-- Slide 15: Understanding Store Layout -->
+<div class="slide">
+<h2>🏪 Understanding Store Layout</h2>
+<div class="instruction-box">
+<h3>🗺️ Most grocery stores are organized by categories:</h3>
+</div>
+<div class="shopping-categories">
+<div class="shopping-category">
+<h4>🍎 Fruits &amp; Vegetables</h4>
+<p>Usually near the entrance</p>
+<p>Fresh produce section</p>
+</div>
+<div class="shopping-category">
+<h4>🥩 Meats &amp; Deli</h4>
+<p>Fresh meats, lunch meats</p>
+<p>Often along the back wall</p>
+</div>
+<div class="shopping-category">
+<h4>🥛 Dairy</h4>
+<p>Milk, cheese, yogurt, butter</p>
+<p>Usually along one side wall</p>
+</div>
+<div class="shopping-category">
+<h4>🥯 Bakery</h4>
+<p>Fresh bread, bagels, pastries</p>
+<p>Often near produce</p>
+</div>
+<div class="shopping-category">
+<h4>🥫 Canned Goods</h4>
+<p>Center aisles</p>
+<p>Non-perishable items</p>
+</div>
+<div class="shopping-category">
+<h4>🧽 Household Items</h4>
+<p>Cleaning supplies, paper goods</p>
+<p>Usually separate aisles</p>
+</div>
+</div>
+</div>
+<!-- Slide 16: Creating Our Asiago Bagel Shopping List -->
+<div class="slide">
+<h2>🥯 Shopping List: Asiago Bagel Sandwich</h2>
+<div class="instruction-box">
+<h3>📋 What we need for our sandwich:</h3>
+</div>
+<div class="sample-list">
+<h4 style="color: #2c5282; margin-bottom: 20px;">Asiago Cheese Bagel Sandwich Shopping List</h4>
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; text-align: left;">
+<div>
+<h5>🥯 Bakery Section:</h5>
+<p>• Asiago Cheese Bagels (pack of 6)</p>
+<h5>🥛 Dairy Section:</h5>
+<p>• Butter (1 stick or container)</p>
+<p>• Shredded Asiago Cheese (1 bag)</p>
+</div>
+<div>
+<h5>🦃 Deli/Meat Section:</h5>
+<p>• Turkey lunch meat (1/2 pound) OR</p>
+<p>• Ham lunch meat (1/2 pound)</p>
+<h5>💰 Estimated Total Cost:</h5>
+<p><strong>$15-20</strong></p>
+<p><em>Makes 6 sandwiches!</em></p>
+</div>
+</div>
+</div>
+<div class="step-box">
+<h4>🛍️ Shopping Strategy:</h4>
+<p style="font-size: 1.3rem;">Start at Bakery → Go to Deli → End at Dairy → Checkout</p>
+<p>This path keeps cold items cold and fresh items fresh!</p>
+</div>
+</div>
+<!-- Slide 17: Using the Grocery List Worksheet -->
+<div class="slide">
+<h2>📋 Using the Grocery List Worksheet</h2>
+<div class="instruction-box">
+<h3>🎯 The worksheet has 8 categories to organize your shopping:</h3>
+</div>
+<div class="shopping-categories">
+<div class="shopping-category">
+<h4>🍎 Fruits</h4>
+<p>Apples, bananas, berries, oranges</p>
+</div>
+<div class="shopping-category">
+<h4>🥕 Vegetables</h4>
+<p>Lettuce, tomatoes, carrots, onions</p>
+</div>
+<div class="shopping-category">
+<h4>🥩 Meats</h4>
+<p>Chicken, beef, turkey, ham, fish</p>
+</div>
+<div class="shopping-category">
+<h4>🥛 Dairy</h4>
+<p>Milk, cheese, yogurt, butter, eggs</p>
+</div>
+<div class="shopping-category">
+<h4>🌾 Grains &amp; Beans</h4>
+<p>Rice, pasta, cereal, bread, beans</p>
+</div>
+<div class="shopping-category">
+<h4>🍞 Breads</h4>
+<p>Loaf bread, bagels, rolls, tortillas</p>
+</div>
+<div class="shopping-category">
+<h4>🧽 Household Supplies</h4>
+<p>Soap, paper towels, cleaning supplies</p>
+</div>
+<div class="shopping-category">
+<h4>🧴 Personal Items</h4>
+<p>Toothpaste, shampoo, deodorant</p>
+</div>
+</div>
+<div class="step-box">
+<h4>📝 Practice Exercise:</h4>
+<p>Use the worksheet to organize our Asiago Bagel ingredients by category!</p>
+</div>
+</div>
+<!-- DAY 4 SLIDES -->
+<!-- Slide 18: Day 4 Introduction -->
+<div class="slide">
+<div class="day-header">
+<h1>📅 Day 4: Advanced Shopping Skills</h1>
+<h3>🎯 Today's Goals</h3>
+</div>
+<div class="instruction-box">
+<h4>What We'll Learn Today:</h4>
+<ul style="font-size: 1.4rem; line-height: 2;">
+<li>Planning for a whole week of meals</li>
+<li>Comparing prices and finding deals</li>
+<li>Reading expiration dates</li>
+<li>Smart shopping strategies</li>
+<li>Creating a complete family shopping list</li>
+</ul>
+</div>
+<div class="step-box">
+<h4>🏆 Today's Advanced Project:</h4>
+<p style="font-size: 1.3rem;">Create a complete shopping list for any meals you want to make this week using the worksheet!</p>
+</div>
+</div>
+<!-- Slide 19: Weekly Meal Planning -->
+<div class="slide">
+<h2>📅 Weekly Meal Planning</h2>
+<div class="instruction-box">
+<h3>🍽️ Planning 7 days of meals:</h3>
+<p style="font-size: 1.3rem;">Start by thinking about:</p>
+</div>
+<div class="tips-list">
+<div class="tip-item">
+<h4>🌅 Breakfast Ideas:</h4>
+<p>Cereal, oatmeal, eggs, toast, yogurt with fruit</p>
+</div>
+<div class="tip-item">
+<h4>🥙 Lunch Ideas:</h4>
+<p>Sandwiches, salads, soup, leftovers from dinner</p>
+</div>
+<div class="tip-item">
+<h4>🍝 Dinner Ideas:</h4>
+<p>Pasta, chicken, fish, vegetables, rice dishes</p>
+</div>
+<div class="tip-item">
+<h4>🍎 Snack Ideas:</h4>
+<p>Fruits, nuts, crackers, cheese, vegetables</p>
+</div>
+</div>
+<div class="step-box">
+<h4>📝 Weekly Planning Exercise:</h4>
+<p>Pick 3 different breakfasts, 3 different lunches, and 4 different dinners for this week. Write down all the ingredients you'll need!</p>
+</div>
+</div>
+<!-- Slide 20: Comparing Prices and Finding Deals -->
+<div class="slide">
+<h2>💰 Smart Shopping: Prices &amp; Deals</h2>
+<div class="category-grid">
+<div class="category-card">
+<span class="emoji">🏷️</span>
+<h4>Unit Prices</h4>
+<p>Price per pound/ounce</p>
+<p>Compare these, not package prices!</p>
+</div>
+<div class="category-card">
+<span class="emoji">🛍️</span>
+<h4>Store Brands</h4>
+<p>Often 20-40% cheaper</p>
+<p>Same quality as name brands!</p>
+</div>
+<div class="category-card">
+<span class="emoji">📰</span>
+<h4>Weekly Sales</h4>
+<p>Check store flyers</p>
+<p>Plan meals around sales</p>
+</div>
+<div class="category-card">
+<span class="emoji">📱</span>
+<h4>Store Apps</h4>
+<p>Digital coupons</p>
+<p>Special member prices</p>
+</div>
+</div>
+<div class="instruction-box">
+<h3>💡 Money-Saving Example:</h3>
+<p style="font-size: 1.3rem;">
+<strong>Name Brand Asiago Cheese:</strong> $4.99 for 8oz = $0.62 per oz<br/>
+<strong>Store Brand Asiago Cheese:</strong> $3.49 for 8oz = $0.44 per oz<br/>
+<span class="highlight">Save $1.50!</span>
+</p>
+</div>
+</div>
+<!-- Slide 21: Reading Expiration Dates -->
+<div class="slide">
+<h2>📅 Understanding Expiration Dates</h2>
+<div class="instruction-box">
+<h3>🔍 Different types of dates on food:</h3>
+</div>
+<div class="category-grid">
+<div class="category-card">
+<span class="emoji">✅</span>
+<h4>"Best By"</h4>
+<p>Food is freshest before this date</p>
+<p>Still safe to eat after!</p>
+</div>
+<div class="category-card">
+<span class="emoji">⚠️</span>
+<h4>"Use By"</h4>
+<p>Use before this date for best quality</p>
+<p>Don't use much after</p>
+</div>
+<div class="category-card">
+<span class="emoji">🛑</span>
+<h4>"Expires"</h4>
+<p>Don't eat after this date</p>
+<p>Especially important for dairy/meat</p>
+</div>
+<div class="category-card">
+<span class="emoji">🥛</span>
+<h4>"Sell By"</h4>
+<p>Store guideline</p>
+<p>Usually safe 3-5 days after</p>
+</div>
+</div>
+<div class="tips-list">
+<div class="tip-item">
+<h4>🛒 Shopping Tip:</h4>
+<p>Always check dates before buying. Choose items with the latest dates if you're planning to use them later in the week.</p>
+</div>
+<div class="tip-item">
+<h4>🏠 At Home Tip:</h4>
+<p>Put newer items in the back, older items in front. Use the older items first!</p>
+</div>
+</div>
+</div>
+<!-- Slide 22: Complete Worksheet Practice -->
+<div class="slide">
+<h2>📋 Complete Shopping List Practice</h2>
+<div class="instruction-box">
+<h3>🎯 Your Final Challenge:</h3>
+<p style="font-size: 1.4rem;">Create a complete shopping list using the worksheet for these meals:</p>
+</div>
+<div class="sample-list">
+<h4 style="color: #2c5282;">Sample Week Menu:</h4>
+<div style="text-align: left; margin: 20px 0;">
+<p><strong>Breakfasts:</strong> Oatmeal with bananas, Scrambled eggs with toast, Yogurt with berries</p>
+<p><strong>Lunches:</strong> Asiago bagel sandwiches, Chicken salad, Vegetable soup</p>
+<p><strong>Dinners:</strong> Spaghetti with meat sauce, Grilled chicken with vegetables, Fish with rice</p>
+<p><strong>Snacks:</strong> Apples, Crackers with cheese, Carrots</p>
+</div>
+</div>
+<div class="step-box">
+<h4>📝 Instructions:</h4>
+<ol style="text-align: left; font-size: 1.3rem;">
+<li>List all ingredients needed for these meals</li>
+<li>Organize them into the worksheet categories</li>
+<li>Add any household or personal items you need</li>
+<li>Estimate the total cost</li>
+</ol>
+</div>
+</div>
+<!-- Slide 23: Smart Shopping Strategies -->
+<div class="slide">
+<h2>🧠 Advanced Shopping Strategies</h2>
+<div class="tips-list">
+<div class="tip-item">
+<h4>🕒 Best Times to Shop:</h4>
+<p>Early morning or late evening for fewer crowds. Wednesday-Thursday for fresh sales.</p>
+</div>
+<div class="tip-item">
+<h4>🛒 Cart Strategy:</h4>
+<p>Get a cart even for small trips. Carrying too much leads to forgetting items or dropping things.</p>
+</div>
+<div class="tip-item">
+<h4>❄️ Temperature Strategy:</h4>
+<p>Shop frozen/dairy last. These items stay fresh longer when picked up at the end.</p>
+</div>
+<div class="tip-item">
+<h4>📱 Technology Helps:</h4>
+<p>Use your phone for shopping list apps, calculator for price comparison, store apps for deals.</p>
+</div>
+<div class="tip-item">
+<h4>🎯 Stay Focused:</h4>
+<p>Stick to your list but be flexible if you find a great deal on something you regularly use.</p>
+</div>
+<div class="tip-item">
+<h4>💳 Payment Ready:</h4>
+<p>Have your payment method ready at checkout. Organize your bags efficiently.</p>
+</div>
+</div>
+</div>
+<!-- Slide 24: Review and Practice -->
+<div class="slide">
+<h2>🔄 4-Day Review</h2>
+<div class="category-grid">
+<div class="category-card">
+<span class="emoji">📊</span>
+<h4>Day 1: Nutrition Basics</h4>
+<p>What labels are, where to find them, why they matter</p>
+</div>
+<div class="category-card">
+<span class="emoji">🔍</span>
+<h4>Day 2: Reading Labels</h4>
+<p>Serving sizes, calories, ingredients, worksheet practice</p>
+</div>
+<div class="category-card">
+<span class="emoji">📝</span>
+<h4>Day 3: Shopping Basics</h4>
+<p>Planning, store layout, Asiago bagel project</p>
+</div>
+<div class="category-card">
+<span class="emoji">🏆</span>
+<h4>Day 4: Advanced Skills</h4>
+<p>Weekly planning, price comparison, smart strategies</p>
+</div>
+</div>
+<div class="instruction-box">
+<h3>🎯 You Now Know How To:</h3>
+<ul style="font-size: 1.3rem; text-align: left; line-height: 1.8;">
+<li>Read and understand any nutrition label</li>
+<li>Make informed food choices based on ingredients and nutrients</li>
+<li>Plan meals and create organized shopping lists</li>
+<li>Navigate grocery stores efficiently</li>
+<li>Compare prices and find the best deals</li>
+<li>Shop safely by checking expiration dates</li>
+</ul>
+</div>
+</div>
+<!-- Slide 25: Congratulations -->
+<div class="slide">
+<h1>🎉 Congratulations! 🎉</h1>
+<h2>You're Now a Nutrition &amp; Shopping Expert!</h2>
+<div style="margin: 40px 0;">
+<div class="step-box">
+<h3>🏆 Your Achievements:</h3>
+<p style="font-size: 1.6rem; margin: 15px 0;">✅ Master of Nutrition Label Reading</p>
+<p style="font-size: 1.6rem; margin: 15px 0;">✅ Expert Food Choice Decision Maker</p>
+<p style="font-size: 1.6rem; margin: 15px 0;">✅ Organized Shopping List Creator</p>
+<p style="font-size: 1.6rem; margin: 15px 0;">✅ Efficient Grocery Store Navigator</p>
+<p style="font-size: 1.6rem; margin: 15px 0;">✅ Smart Money-Saving Shopper</p>
+</div>
+</div>
+<div class="instruction-box">
+<h3>🥯 Special Achievement Unlocked:</h3>
+<p style="font-size: 1.5rem; color: #4CAF50;">You can now make amazing Asiago Cheese Bagel Sandwiches anytime!</p>
+</div>
+<p style="font-size: 2rem; color: #2c5282; margin-top: 40px;">
+                Keep practicing these skills - you're on your way to healthy, independent living! 🌟
+            </p>
+</div>
+<div class="navigation">
+<button id="prev-btn" onclick="previousSlide()">⬅️ Previous</button>
+<button id="next-btn" onclick="nextSlide()">Next ➡️</button>
+</div>
+</div>
+<script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+        
+        // Background rotation
+        let currentBg = 0;
+        const backgrounds = document.querySelectorAll('.background-image');
+        
+        function rotateBackground() {
+            backgrounds[currentBg].classList.remove('active');
+            currentBg = (currentBg + 1) % backgrounds.length;
+            backgrounds[currentBg].classList.add('active');
+        }
+        
+        // Rotate background every 5 seconds
+        setInterval(rotateBackground, 5000);
+
+        // Day tracking for progress indicator
+        const dayRanges = [
+            { start: 0, end: 0, day: "Introduction" },
+            { start: 1, end: 6, day: "Day 1" },
+            { start: 7, end: 12, day: "Day 2" },
+            { start: 13, end: 17, day: "Day 3" },
+            { start: 18, end: 24, day: "Day 4" }
+        ];
+
+        function updateDayIndicator() {
+            const currentDayInfo = dayRanges.find(range => 
+                currentSlide >= range.start && currentSlide <= range.end
+            );
+            document.getElementById('current-day').textContent = currentDayInfo ? currentDayInfo.day : "Day ?";
+        }
+
+        function updateSlideCounter() {
+            document.getElementById('current-slide').textContent = currentSlide + 1;
+            document.getElementById('total-slides').textContent = totalSlides;
+            updateDayIndicator();
+        }
+
+        function showSlide(n) {
+            slides.forEach(slide => slide.classList.remove('active'));
+            slides[n].classList.add('active');
+            
+            document.getElementById('prev-btn').disabled = n === 0;
+            document.getElementById('next-btn').disabled = n === totalSlides - 1;
+            
+            updateSlideCounter();
+        }
+
+        function nextSlide() {
+            if (currentSlide < totalSlides - 1) {
+                currentSlide++;
+                showSlide(currentSlide);
+            }
+        }
+
+        function previousSlide() {
+            if (currentSlide > 0) {
+                currentSlide--;
+                showSlide(currentSlide);
+            }
+        }
+
+        // Keyboard navigation
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                e.preventDefault();
+                nextSlide();
+            } else if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                previousSlide();
+            }
+        });
+
+        // Initialize
+        showSlide(0);
+        updateSlideCounter();
+    </script>
+</body>
+</html>
