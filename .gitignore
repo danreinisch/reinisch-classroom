@@ -1,0 +1,14 @@
+# macOS cruft
+.DS_Store
+.AppleDouble
+
+# Windows cruft
+Thumbs.db
+
+# Build artifacts (future-proof)
+node_modules/
+dist/
+build/
+
+# Netlify local folder
+.netlify/
