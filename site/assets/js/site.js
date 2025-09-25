@@ -35,6 +35,26 @@
     // Skip landing pages (no back button on the main Language Arts / Life Skills index pages)
     if (isSectionLandingPage(section, siteBase)) return;
 
+    // Check if we're in a toolkit presentation (need both Toolkit and Language Arts buttons)
+    const currentPath = location.pathname.toLowerCase();
+    const isToolkitPresentation = currentPath.includes('/language-arts/toolkit/presentations/');
+    
+    const target = document.querySelector('main') || document.body;
+    
+    if (isToolkitPresentation) {
+      // Add Toolkit button first
+      const toolkitNav = document.createElement('nav');
+      toolkitNav.className = 'back-nav';
+      const toolkitBtn = document.createElement('a');
+      toolkitBtn.className = 'back-button';
+      toolkitBtn.href = siteBase + 'language-arts/toolkit/';
+      toolkitBtn.setAttribute('aria-label', 'Back to Toolkit');
+      toolkitBtn.innerHTML = '<span aria-hidden="true">←</span><span>Back to Toolkit</span>';
+      toolkitNav.appendChild(toolkitBtn);
+      target.insertBefore(toolkitNav, target.firstChild);
+    }
+
+    // Add section button (Language Arts or Life Skills)
     const label = section === 'language-arts' ? 'Language Arts' : 'Life Skills';
     const href = siteBase + (section === 'language-arts' ? 'language-arts/' : 'life-skills/');
     const nav = document.createElement('nav');
@@ -45,8 +65,6 @@
     a.setAttribute('aria-label', 'Back to ' + label);
     a.innerHTML = '<span aria-hidden="true">←</span><span>Back to ' + label + '</span>';
     nav.appendChild(a);
-
-    const target = document.querySelector('main') || document.body;
     target.insertBefore(nav, target.firstChild);
   }
 
