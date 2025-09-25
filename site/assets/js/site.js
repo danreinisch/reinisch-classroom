@@ -55,9 +55,16 @@
     document.querySelectorAll('h1,h2,h3,h4').forEach(h => { h.style.textAlign = 'center'; });
   }
 
-  document.addEventListener('DOMContentLoaded', function() {
+  function initializeNavigation() {
     const section = getSection();
     insertBackButton(section);
     centerHeadings();
-  });
+  }
+
+  // Run immediately if DOM is already loaded, otherwise wait for DOMContentLoaded
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeNavigation);
+  } else {
+    initializeNavigation();
+  }
 })();
