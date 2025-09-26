@@ -270,17 +270,8 @@
             margin: 20px 0;
         }
     </style>
-<script>
-(function(){
-  // Determine root: if path contains "/site/", assets live under that; else assets are at root
-  var root = location.pathname.indexOf('/site/') >= 0 ? location.pathname.slice(0, location.pathname.indexOf('/site/') + 6) : '/';
-  function addCSS(href){ var l=document.createElement('link'); l.rel='stylesheet'; l.href=href; document.head.appendChild(l); }
-  function addJS(src){ var s=document.createElement('script'); s.defer=true; s.src=src; document.head.appendChild(s); }
-  addCSS(root + 'assets/css/site.css');
-  addJS(root + 'assets/js/site.js');
-})();
-</script>
-</head>
+
+<link rel="stylesheet" href="/assets/css/site.css"><script defer src="/assets/js/site.js"></script><meta name="section" content="language-arts"></head>
 <body>
     <!-- Background Images Container -->
     <div class="background-container">
