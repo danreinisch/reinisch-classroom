@@ -1,7 +1,7 @@
 [build]
   publish = "site"
   command = ""
-  functions = "netlify/functions"   # <- explicitly declare functions path
+  functions = "netlify/functions"   # explicitly set functions dir
 
 [functions]
   node_bundler = "esbuild"
