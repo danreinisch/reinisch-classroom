@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Teacher Center</title>
+  <script>
+    (function(){
+      var root = '/';
+      function addCSS(href){ var l=document.createElement('link'); l.rel='stylesheet'; l.href=href; document.head.appendChild(l); }
+      function addJS(src){ var s=document.createElement('script'); s.defer=true; s.src=src; document.head.appendChild(s); }
+      addCSS(root + 'assets/css/site.css');
+      addJS(root + 'assets/js/site.js');
+    })();
+  </script>
+  <style>
+    main { max-width: 980px; margin: 0 auto; padding: 1rem; }
+    .card { border:1px solid #e5e7eb; border-radius:.5rem; padding:1rem; margin: .75rem 0; background:#fff; }
+    .row { display: grid; gap: 1rem; grid-template-columns: 1fr 1fr; }
+    label { font-weight: 600; display:block; margin:.25rem 0; }
+    input, textarea, select { width: 100%; padding:.5rem; border:1px solid #cbd5e1; border-radius:.375rem; }
+    button { padding:.5rem .9rem; border:1px solid #1a73e8; background:#1a73e8; color:#fff; border-radius:.375rem; }
+    nav.tabs { display:flex; gap:.5rem; margin:.5rem 0 1rem; }
+    nav.tabs button { background:#eef2ff; color:#1f2937; border:1px solid #c7d2fe; }
+    nav.tabs button.active { background:#1a73e8; color:#fff; border-color:#1a73e8; }
+    .status { font-size:.9rem; margin-left:.5rem; }
+    table { width:100%; border-collapse: collapse; }
+    th, td { border-bottom:1px solid #eee; padding:.4rem .2rem; text-align:left; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Teacher Center</h1>
+
+    <section id="login" class="card">
+      <h3>Login</h3>
+      <form onsubmit="return doLogin(event)">
+        <label>Password <input type="password" name="password" required /></label>
+        <button type="submit">Login</button>
+        <span id="login-status" class="status"></span>
+      </form>
+    </section>
+
+    <section id="app" style="display:none">
+      <nav class="tabs">
+        <button onclick="showTab('upload')" id="tab-upload" class="active">Add Assignment</button>
+        <button onclick="showTab('view')" id="tab-view">Assignments</button>
+        <button onclick="showTab('subs')" id="tab-subs">Submissions</button>
+      </nav>
+
+      <div class="card">
+        <label>Class
+          <select id="class-select">
+            <option value="">All</option>
+            <option value="1">Life Skills Language Arts</option>
+            <option value="2">Language Arts 1</option>
+            <option value="3">Language Arts 2</option>
+            <option value="4">Language Arts 3</option>
+            <option value="5">Language Arts 4</option>
+            <option value="6">Life Skills</option>
+          </select>
+        </label>
+      </div>
+
+      <section id="upload" class="card">
+        <h3>Add HTML Assignment</h3>
+        <div class="row">
+          <div>
+            <label>Title <input id="a-title" required /></label>
+            <label>Due date <input type="date" id="a-due" /></label>
+            <label>Section
+              <select id="a-section">
+                <option value="language-arts">Language Arts</option>
+                <option value="life-skills">Life Skills</option>
+              </select>
+            </label>
+            <label>Classes (optional, multi-select)
+              <select id="a-classes" multiple>
+                <option value="1">Life Skills Language Arts</option>
+                <option value="2">Language Arts 1</option>
+                <option value="3">Language Arts 2</option>
+                <option value="4">Language Arts 3</option>
+                <option value="5">Language Arts 4</option>
+                <option value="6">Life Skills</option>
+              </select>
+            </label>
+            <label>Description <textarea id="a-desc"></textarea></label>
+          </div>
+          <div>
+            <label>HTML file <input type="file" id="a-file" accept=".html,text/html" /></label>
+            <label>Or paste HTML <textarea id="a-html" placeholder="<!DOCTYPE html>..." rows="12"></textarea></label>
+          </div>
+        </div>
+        <button onclick="createAssignment()">Create</button>
+        <span id="create-status" class="status"></span>
+      </section>
+
+      <section id="view" class="card" style="display:none">
+        <h3>Assignments</h3>
+        <div id="assignments-list">Loading…</div>
+      </section>
+
+      <section id="subs" class="card" style="display:none">
+        <h3>Submissions</h3>
+        <div>
+          <label>Assignment
+            <select id="subs-assignment"></select>
+          </label>
+          <button onclick="loadSubmissions()">Load</button>
+        </div>
+        <div id="subs-list" style="margin-top: .5rem;"></div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    function showTab(id){
+      for (const sec of ['upload','view','subs']) {
+        document.getElementById(sec).style.display = sec === id ? '' : 'none';
+        document.getElementById('tab-' + sec).classList.toggle('active', sec === id);
+      }
+      if (id === 'view') loadAssignments();
+      if (id === 'subs') refreshAssignmentsDrop();
+    }
+
+    async function doLogin(ev){
+      ev.preventDefault();
+      const pass = ev.target.password.value;
+      const res = await fetch('/.netlify/functions/teacher-login', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: pass })
+      });
+      const ok = res.ok;
+      document.getElementById('login-status').textContent = ok ? 'Logged in.' : 'Invalid password';
+      if (ok) { document.getElementById('login').style.display = 'none'; document.getElementById('app').style.display = ''; }
+      return false;
+    }
+
+    async function createAssignment(){
+      const status = document.getElementById('create-status');
+      status.textContent = 'Creating…';
+
+      const title = document.getElementById('a-title').value.trim();
+      const description = document.getElementById('a-desc').value.trim();
+      const section = document.getElementById('a-section').value;
+      const due_date = document.getElementById('a-due').value || null;
+      const classes = Array.from(document.getElementById('a-classes').selectedOptions).map(o=>Number(o.value));
+
+      let htmlText = document.getElementById('a-html').value;
+      const file = document.getElementById('a-file').files[0];
+      if (!htmlText && file) {
+        htmlText = await file.text();
+      }
+      if (!title || !htmlText) { status.textContent = 'Title and HTML are required.'; return; }
+
+      const res = await fetch('/.netlify/functions/assignment-create', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, description, section, due_date, class_ids: classes, htmlText })
+      });
+      const text = await res.text();
+      if (!res.ok) { status.textContent = 'Error: ' + text; return; }
+      status.textContent = 'Created.';
+      loadAssignments();
+    }
+
+    async function loadAssignments(){
+      const classId = document.getElementById('class-select').value;
+      const q = classId ? ('?class_id=' + encodeURIComponent(classId)) : '';
+      const res = await fetch('/.netlify/functions/assignments-admin-list' + q);
+      const data = await res.json().catch(()=>({ assignments:[] }));
+      const div = document.getElementById('assignments-list');
+      if (!data.assignments?.length) { div.textContent = 'No assignments yet.'; return; }
+      div.innerHTML = `
+        <table>
+          <thead><tr><th>Title</th><th>Due</th><th>Section</th><th>URL</th><th>Submitted</th><th>Missing</th></tr></thead>
+          <tbody>
+          ${data.assignments.map(a => `
+            <tr>
+              <td>${a.title}</td>
+              <td>${a.due_date || ''}</td>
+              <td>${a.section || ''}</td>
+              <td>${a.public_url ? `<a href="${a.public_url}" target="_blank">open</a>` : ''}</td>
+              <td>${data.counts?.[a.id]?.submitted ?? ''}</td>
+              <td>${data.counts?.[a.id]?.missing ?? ''}</td>
+            </tr>
+          `).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    async function refreshAssignmentsDrop(){
+      const res = await fetch('/.netlify/functions/assignments-admin-list');
+      const data = await res.json().catch(()=>({ assignments:[] }));
+      const sel = document.getElementById('subs-assignment');
+      sel.innerHTML = (data.assignments || []).map(a => `<option value="${a.id}">${a.title}</option>`).join('');
+    }
+
+    async function loadSubmissions(){
+      const status = document.getElementById('subs-list');
+      status.textContent = 'Loading…';
+      const classId = document.getElementById('class-select').value;
+      const asnId = document.getElementById('subs-assignment').value;
+      let url = '/.netlify/functions/submissions-list?assignment_id=' + encodeURIComponent(asnId);
+      if (classId) url += '&class_id=' + encodeURIComponent(classId);
+      const res = await fetch(url);
+      const data = await res.json().catch(()=>({ submissions:[] }));
+      if (!data.submissions?.length) { status.textContent = 'No submissions yet.'; return; }
+      status.innerHTML = `
+        <table>
+          <thead><tr><th>Student</th><th>Submitted</th><th>Content</th><th>Link</th></tr></thead>
+          <tbody>
+          ${data.submissions.map(s => `
+            <tr>
+              <td>${s.student_name || s.student_id || ''}</td>
+              <td>${s.submitted_at || ''}</td>
+              <td>${(s.content || '').slice(0,140)}</td>
+              <td>${s.content_url ? `<a href="${s.content_url}" target="_blank">open</a>` : ''}</td>
+            </tr>
+          `).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+  </script>
+</body>
+</html>
