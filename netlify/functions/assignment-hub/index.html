@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Assignment Hub – Language Arts</title>
+  <meta name="section" content="Language Arts" />
+  <script>
+    (function(){
+      var root = location.pathname.indexOf('/site/') >= 0
+        ? location.pathname.slice(0, location.pathname.indexOf('/site/') + 6)
+        : '/';
+      function addCSS(href){ var l=document.createElement('link'); l.rel='stylesheet'; l.href=href; document.head.appendChild(l); }
+      function addJS(src){ var s=document.createElement('script'); s.defer=true; s.src=src; document.head.appendChild(s); }
+      addCSS(root + 'assets/css/site.css');
+      addJS(root + 'assets/js/site.js');
+    })();
+  </script>
+  <style>
+    .assignments { max-width: 900px; margin: 0 auto; padding: 1rem; }
+    .card { border:1px solid #e5e7eb; border-radius: .5rem; padding: 1rem; margin: .75rem 0; background: #fff; }
+    .card h3 { margin: 0 0 .25rem; }
+    .meta { color: #555; font-size: .9rem; margin-bottom: .5rem; }
+    form { display: grid; gap: .5rem; margin-top: .5rem; }
+    input[type=text], textarea { width: 100%; padding: .5rem; border:1px solid #cbd5e1; border-radius:.375rem; }
+    button { padding:.5rem .9rem; border:1px solid #1a73e8; background:#1a73e8; color:#fff; border-radius:.375rem; }
+    .ok { color: #0a7f2d; font-weight: 600; }
+    .err { color: #b00020; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <main class="assignments">
+    <h1>Assignment Hub</h1>
+    <div id="list">Loading assignments…</div>
+  </main>
+
+  <script>
+    async function fetchJSON(url, init) {
+      const res = await fetch(url, init);
+      const text = await res.text();
+      try { return { ok: res.ok, status: res.status, data: res.ok ? JSON.parse(text) : text }; }
+      catch { return { ok: res.ok, status: res.status, data: text }; }
+    }
+
+    function card(assign) {
+      const due = assign.due_date ? new Date(assign.due_date + 'T00:00:00').toLocaleDateString() : 'No due date';
+      return `
+        <div class="card" data-id="${assign.id}">
+          <h3>${assign.title}</h3>
+          <div class="meta">Due: ${due} · Section: ${assign.section || 'language-arts'}</div>
+          <p>${assign.description || ''}</p>
+          <form onsubmit="return submitWork(event, ${assign.id})">
+            <input type="text" name="student_name" placeholder="Your name" required />
+            <textarea name="content" placeholder="Write your response (optional)"></textarea>
+            <input type="text" name="content_url" placeholder="Link to Google Doc / Drive (optional)" />
+            <button type="submit">Submit</button>
+            <span class="status" aria-live="polite"></span>
+          </form>
+        </div>
+      `;
+    }
+
+    async function loadAssignments() {
+      const base = '/.netlify/functions/assignments-list';
+      const { ok, data } = await fetchJSON(base);
+      const list = document.getElementById('list');
+      if (!ok) { list.textContent = 'Failed to load assignments.'; return; }
+      const A = (data.assignments || []);
+      if (!A.length) { list.textContent = 'No active assignments yet.'; return; }
+      list.innerHTML = A.map(card).join('');
+    }
+
+    async function submitWork(ev, assignment_id) {
+      ev.preventDefault();
+      const form = ev.target;
+      const status = form.querySelector('.status');
+      status.textContent = 'Submitting…';
+      const payload = {
+        assignment_id,
+        student_name: form.student_name.value.trim(),
+        content: form.content.value.trim() || null,
+        content_url: form.content_url.value.trim() || null,
+      };
+      const { ok, data } = await fetchJSON('/.netlify/functions/submissions-create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (ok) {
+        status.textContent = 'Submitted!';
+        status.className = 'status ok';
+        form.reset();
+      } else {
+        status.textContent = 'Submit failed: ' + (typeof data === 'string' ? data : 'error');
+        status.className = 'status err';
+      }
+      return false;
+    }
+
+    loadAssignments();
+  </script>
+</body>
+</html>
