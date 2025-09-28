@@ -1,75 +1,428 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Week 06 – A Door Into Time (Ch. 17–19)</title>
-  <style>
-    html,body{height:100%} body{margin:0;color:#fff;font-family:Arial,Helvetica,sans-serif;overflow:hidden;position:relative}
-    .bg{position:fixed;inset:0;z-index:-2}
-    .bg div{position:absolute;inset:0;background:center/cover no-repeat;opacity:0;transition:opacity 3s ease}
-    .bg .show{opacity:.4}
-    .overlay{position:fixed;inset:0;background:rgba(0,0,0,.1);z-index:-1}
-    main{width:100vw;height:100vh;display:flex;align-items:center;justify-content:center}
-    .slide{display:none;max-width:960px;background:rgba(0,0,0,.35);padding:1rem;border-radius:8px}
-    .slide.active{display:block}
-    h1{font-size:3rem;margin:.25rem 0;color:#ffd700;text-shadow:2px 2px 4px rgba(0,0,0,.8)}
-    h2{font-size:2rem;margin:.25rem 0;color:#ffa500;text-shadow:2px 2px 4px rgba(0,0,0,.8)}
-    .controls{position:fixed;right:1rem;bottom:1rem;display:flex;gap:.5rem}
-    .controls button{padding:.5rem .8rem;border-radius:20px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.15);color:#fff;cursor:pointer}
-    .counter{position:fixed;top:1rem;right:1rem;background:rgba(0,0,0,.7);padding:.3rem .6rem;border-radius:16px;font-size:.85rem}
-    .back{position:fixed;top:1rem;left:1rem;background:rgba(255,255,255,.15);padding:.4rem .8rem;border-radius:20px;color:#fff;text-decoration:none}
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Week 06 - Craft/Setting Focus | A Door Into Time</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Arial', sans-serif; color: #fff; overflow: hidden; position: relative; }
+
+        /* Background slideshow */
+        .background-slideshow { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; }
+        .bg-image { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-size: cover; background-position: center; opacity: 0; transition: opacity 3s ease-in-out; }
+        .bg-image.active { opacity: 0.4; }
+
+        /* Use the six JPGs next to this file */
+        .bg-image:nth-child(1){ background: linear-gradient(rgba(0,0,0,.2), rgba(0,0,0,.3)), url('image1.jpg'); background-size: cover; background-position: center; }
+        .bg-image:nth-child(2){ background: linear-gradient(rgba(0,0,0,.2), rgba(0,0,0,.3)), url('image2.jpg'); background-size: cover; background-position: center; }
+        .bg-image:nth-child(3){ background: linear-gradient(rgba(0,0,0,.2), rgba(0,0,0,.3)), url('image3.jpg'); background-size: cover; background-position: center; }
+        .bg-image:nth-child(4){ background: linear-gradient(rgba(0,0,0,.2), rgba(0,0,0,.3)), url('image4.jpg'); background-size: cover; background-position: center; }
+        .bg-image:nth-child(5){ background: linear-gradient(rgba(0,0,0,.2), rgba(0,0,0,.3)), url('image5.jpg'); background-size: cover; background-position: center; }
+        .bg-image:nth-child(6){ background: linear-gradient(rgba(0,0,0,.2), rgba(0,0,0,.3)), url('image6.jpg'); background-size: cover; background-position: center; }
+
+        /* Overlay gradient for readability */
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, rgba(45, 27, 105, 0.7), rgba(17, 153, 142, 0.7), rgba(56, 239, 125, 0.7)); z-index: -1; }
+        
+        .presentation-container { width: 100vw; height: 100vh; position: relative; }
+        .slide { display: none; width: 100%; height: 100%; padding: 40px; position: absolute; top: 0; left: 0; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+        .slide.active { display: flex; }
+
+        .slide h1 { font-size: 3.5em; margin-bottom: 20px; text-shadow: 2px 2px 4px rgba(0,0,0,0.8); color: #ffd700; }
+        .slide h2 { font-size: 2.5em; margin-bottom: 30px; color: #ffa500; text-shadow: 2px 2px 4px rgba(0,0,0,0.8); }
+        .slide h3 { font-size: 2em; margin-bottom: 20px; color: #98fb98; text-shadow: 1px 1px 3px rgba(0,0,0,0.8); }
+        .slide p, .slide li { font-size: 1.4em; line-height: 1.6; margin-bottom: 15px; text-shadow: 1px 1px 2px rgba(0,0,0,0.7); }
+        .slide ul { text-align: left; max-width: 800px; margin: 0 auto; }
+        .slide li { margin-bottom: 10px; padding-left: 10px; }
+
+        .day-header { background: linear-gradient(45deg, #ff6b35, #f7931e); padding: 15px 30px; border-radius: 25px; font-size: 1.5em; font-weight: bold; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        .example-box { background: rgba(255,255,255,0.15); border-radius: 15px; padding: 30px; margin: 20px 0; box-shadow: 0 8px 32px rgba(0,0,0,0.4); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.3); }
+        .parts-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; max-width: 900px; margin: 20px 0; }
+        .part-box { background: rgba(255,255,255,0.2); padding: 20px; border-radius: 10px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        .part-title { font-size: 1.3em; font-weight: bold; color: #ffd700; margin-bottom: 10px; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); }
+
+        .controls { position: fixed; bottom: 20px; right: 20px; display: flex; gap: 10px; }
+        .controls button { padding: 12px 20px; background: rgba(255,255,255,0.3); border: none; border-radius: 25px; color: #fff; cursor: pointer; font-size: 16px; transition: all .3s ease; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); }
+        .controls button:hover { background: rgba(255,255,255,0.5); transform: translateY(-2px); }
+
+        .slide-counter { position: fixed; top: 20px; right: 20px; background: rgba(0,0,0,0.7); padding: 10px 15px; border-radius: 20px; font-size: 14px; }
+
+        .signal-words { display: grid; grid-template-columns: repeat(3,1fr); gap: 15px; max-width: 900px; margin: 20px 0; }
+        .signal-word { background: rgba(255,215,0,0.3); padding: 10px; border-radius: 8px; font-weight: bold; color: #ffd700; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); }
+    </style>
 </head>
 <body>
-  <div class="bg" id="bg">
-    <div class="show" style="background-image:url('image1.jpg')"></div>
-    <div style="background-image:url('image2.jpg')"></div>
-    <div style="background-image:url('image3.jpg')"></div>
-    <div style="background-image:url('image4.jpg')"></div>
-    <div style="background-image:url('image5.jpg')"></div>
-    <div style="background-image:url('image6.jpg')"></div>
-  </div>
-  <div class="overlay"></div>
+    <!-- Background slideshow -->
+    <div class="background-slideshow">
+        <div class="bg-image active"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+    </div>
 
-  <a class="back" href="/language-arts">← Language Arts</a>
-  <div class="counter"><span id="cur">1</span>/<span id="tot">—</span></div>
+    <!-- Overlay for readability -->
+    <div class="overlay"></div>
 
-  <main>
-    <!-- Replace slides below with your Week 06 content -->
-    <section class="slide active">
-      <h1>Craft & Setting</h1>
-      <h2>Week 06 – Chapters 17–19</h2>
-      <p>Focus: How setting and craft create mood and meaning.</p>
-    </section>
-    <section class="slide">
-      <h2>Today's Reading Detective Work</h2>
-      <ul>
-        <li>Identify key setting details</li>
-        <li>Analyze atmosphere and mood</li>
-        <li>Connect setting to emotions</li>
-      </ul>
-    </section>
-  </main>
+    <div class="presentation-container">
+        <div class="slide-counter"><span id="current-slide">1</span> / <span id="total-slides">22</span></div>
 
-  <div class="controls">
-    <button id="prev">Prev (←)</button>
-    <button id="next">Next (→)</button>
-  </div>
+        <!-- DAY 1 SLIDES -->
+        <div class="slide active">
+            <div class="day-header">DAY 1 - COMPREHENSION FOCUS</div>
+            <h1>Craft & Setting</h1>
+            <h2>Chapter 17: The Hunt</h2>
+            <div style="font-size:1.3em;margin-top:30px;">
+                <p>📖 Week 06 - Day 1</p>
+                <p>🎯 Focus: How authors craft setting to create mood and atmosphere</p>
+                <p>📄 Chapter: 17 - The Hunt</p>
+                <p>✨ Goal: Understand how setting influences story emotion</p>
+            </div>
+        </div>
 
-  <script>
-    const layers=[...document.querySelectorAll('#bg div')];
-    const imgs=['image1.jpg','image2.jpg','image3.jpg','image4.jpg','image5.jpg','image6.jpg'];
-    imgs.forEach(s=>{const i=new Image();i.src=s});
-    let bi=0; setInterval(()=>{layers[bi].classList.remove('show'); bi=(bi+1)%layers.length; layers[bi].classList.add('show')},8000);
+        <div class="slide">
+            <h2>Today's Reading Detective Work</h2>
+            <ul style="font-size:1.6em;">
+                <li>🔍 <strong>Identify</strong> key setting details in the chapter</li>
+                <li>🎨 <strong>Analyze</strong> how the author describes places and atmosphere</li>
+                <li>💭 <strong>Connect</strong> setting to character emotions</li>
+                <li>📖 <strong>Read</strong> Chapter 17 together with craft focus</li>
+                <li>✅ <strong>Complete</strong> Day 1 comprehension questions</li>
+            </ul>
+        </div>
 
-    const slides=[...document.querySelectorAll('.slide')];
-    const cur=document.getElementById('cur'), tot=document.getElementById('tot');
-    let i=slides.findIndex(s=>s.classList.contains('active')); if(i<0) i=0; tot.textContent=slides.length;
-    const show=n=>{slides[i].classList.remove('active'); i=(n+slides.length)%slides.length; slides[i].classList.add('active'); cur.textContent=i+1;};
-    document.getElementById('prev').onclick=()=>show(i-1);
-    document.getElementById('next').onclick=()=>show(i+1);
-    window.addEventListener('keydown',e=>{ if(e.key==='ArrowLeft')show(i-1); if(e.key==='ArrowRight')show(i+1); });
-  </script>
+        <div class="slide">
+            <h2>What is Literary Craft?</h2>
+            <div class="example-box">
+                <h3>Craft = The Author's Toolbox</h3>
+                <p style="font-size:1.5em;">Literary craft is <strong>HOW</strong> authors write, not just <strong>WHAT</strong> they write about.</p>
+                <h3>Key Craft Elements:</h3>
+                <ul style="font-size:1.3em;">
+                    <li>🎨 <strong>Vivid descriptions</strong> - Paint pictures with words</li>
+                    <li>🔀 <strong>Sentence variety</strong> - Mix short and long sentences</li>
+                    <li>🎭 <strong>Dialogue</strong> - Characters speaking naturally</li>
+                    <li>🌅 <strong>Setting details</strong> - Time, place, atmosphere</li>
+                    <li>⚡ <strong>Pacing</strong> - Speed up or slow down action</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide">
+            <h2>Setting: More Than Just Location</h2>
+            <div class="parts-grid">
+                <div class="part-box">
+                    <div class="part-title">Physical Place</div>
+                    <p>WHERE the story happens</p>
+                    <p><em>Caves, forests, mountains</em></p>
+                </div>
+                <div class="part-box">
+                    <div class="part-title">Time Period</div>
+                    <p>WHEN the story occurs</p>
+                    <p><em>Prehistoric future world</em></p>
+                </div>
+                <div class="part-box">
+                    <div class="part-title">Atmosphere</div>
+                    <p>The MOOD of the place</p>
+                    <p><em>Mysterious, dangerous, welcoming</em></p>
+                </div>
+                <div class="part-box">
+                    <div class="part-title">Cultural Context</div>
+                    <p>The SOCIETY and customs</p>
+                    <p><em>Tribal laws, ceremonies, values</em></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="slide">
+            <h2>Think-Aloud & Model</h2>
+            <div class="example-box">
+                <h3>Let's analyze this together:</h3>
+                <p><em>"Alex looked around at the faces surrounding him in the flickering firelight. Some were friendly, some were curious, and some seemed to be weighing him, trying to decide if he was worthy."</em></p>
+                <h3>My thinking process:</h3>
+                <p style="text-align:left;font-size:1.3em;">
+                    <strong>Setting details:</strong> "flickering firelight" creates mood<br/>
+                    <strong>Because:</strong> Fire = warmth but also uncertainty (flickering)<br/>
+                    <strong>Craft technique:</strong> Author uses lighting to show Alex's uncertain position
+                </p>
+            </div>
+        </div>
+
+        <div class="slide">
+            <h2>Guided Practice & Sentence Frames</h2>
+            <div class="example-box">
+                <h3>Practice Question:</h3>
+                <p>How does the author use setting to show Alex's internal conflict about leaving?</p>
+                <h3>Sentence Frames to Help You:</h3>
+                <ul style="text-align:left;font-size:1.3em;">
+                    <li>📝 "The author describes the setting as _______ to show _______."</li>
+                    <li>📝 "When the author writes about _______, it creates a feeling of _______."</li>
+                    <li>📝 "The setting details like _______ help readers understand that Alex feels _______."</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- DAY 2 SLIDES -->
+        <div class="slide">
+            <div class="day-header">DAY 2 - VOCABULARY FOCUS</div>
+            <h1>Vocabulary Focus</h1>
+            <h2>Chapter 18: Stama</h2>
+            <div style="font-size:1.3em;margin-top:30px;">
+                <p>📖 Week 06 - Day 2</p>
+                <p>🎯 Focus: Prefixes, Suffixes, and Parts of Speech</p>
+                <p>📄 Chapter: 18 - Stama</p>
+                <p>🔤 Goal: Master word parts and vocabulary in context</p>
+            </div>
+        </div>
+
+        <div class="slide">
+            <h2>Today's Vocabulary Goals</h2>
+            <ul style="font-size:1.6em;">
+                <li>🔍 <strong>Identify</strong> prefixes and suffixes in chapter words</li>
+                <li>📚 <strong>Understand</strong> how word parts change meaning</li>
+                <li>🎭 <strong>Practice</strong> parts of speech identification</li>
+                <li>📖 <strong>Read</strong> Chapter 18 with vocabulary focus</li>
+                <li>✅ <strong>Complete</strong> Day 2 vocabulary questions</li>
+            </ul>
+        </div>
+
+        <div class="slide">
+            <h2>Prefix/Suffix Lesson</h2>
+            <div class="example-box">
+                <h3>From Chapter 18 - Common Word Parts:</h3>
+                <div class="signal-words">
+                    <div class="signal-word">un- (not)<br/><em>unfamiliar</em></div>
+                    <div class="signal-word">pre- (before)<br/><em>prepare</em></div>
+                    <div class="signal-word">-ful (full of)<br/><em>powerful</em></div>
+                    <div class="signal-word">-ed (past)<br/><em>revered</em></div>
+                    <div class="signal-word">-dom (state of)<br/><em>wisdom</em></div>
+                    <div class="signal-word">-less (without)<br/><em>fearless</em></div>
+                </div>
+                <h3>Remember:</h3>
+                <p>PREFIX + ROOT + SUFFIX = COMPLETE WORD</p>
+            </div>
+        </div>
+
+        <div class="slide">
+            <h2>Parts of Speech Review</h2>
+            <div class="parts-grid">
+                <div class="part-box">
+                    <div class="part-title">Noun</div>
+                    <p>Person, place, thing, idea</p>
+                    <p><em>hunter, forest, spear, courage</em></p>
+                </div>
+                <div class="part-box">
+                    <div class="part-title">Verb</div>
+                    <p>Action or being words</p>
+                    <p><em>hunt, track, follow, was</em></p>
+                </div>
+                <div class="part-box">
+                    <div class="part-title">Adjective</div>
+                    <p>Describes nouns</p>
+                    <p><em>skilled, dangerous, large</em></p>
+                </div>
+                <div class="part-box">
+                    <div class="part-title">Adverb</div>
+                    <p>Describes verbs (often ends in -ly)</p>
+                    <p><em>carefully, quickly, silently</em></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="slide">
+            <h2>Vocabulary in Context</h2>
+            <div class="example-box">
+                <h3>Key Chapter 18 Words:</h3>
+                <ul style="text-align:left;font-size:1.3em;">
+                    <li><strong>Revered</strong> - highly respected and honored</li>
+                    <li><strong>Ancient</strong> - very old, from long ago</li>
+                    <li><strong>Wisdom</strong> - deep knowledge and good judgment</li>
+                    <li><strong>Powerful</strong> - having great strength or influence</li>
+                </ul>
+                <h3>Context Clue Strategy:</h3>
+                <p>Look for definition clues, example clues, and contrast clues in the sentences around unknown words!</p>
+            </div>
+        </div>
+
+        <!-- DAY 3 SLIDES -->
+        <div class="slide">
+            <div class="day-header">DAY 3 - COMPREHENSION FOCUS</div>
+            <h1>Craft & Setting Deep Dive</h1>
+            <h2>Chapter 19: Stipa-ah</h2>
+            <div style="font-size:1.3em;margin-top:30px;">
+                <p>📖 Week 06 - Day 3</p>
+                <p>🎯 Focus: Advanced craft techniques and setting analysis</p>
+                <p>📄 Chapter: 19 - Stipa-ah</p>
+                <p>⭐ Goal: Analyze complex setting and mood relationships</p>
+            </div>
+        </div>
+
+        <div class="slide">
+            <h2>Today's Advanced Analysis</h2>
+            <ul style="font-size:1.6em;">
+                <li>🎨 <strong>Examine</strong> sophisticated craft techniques</li>
+                <li>🌊 <strong>Analyze</strong> how setting creates emotional impact</li>
+                <li>🔍 <strong>Compare</strong> different settings within the chapter</li>
+                <li>📖 <strong>Read</strong> Chapter 19 with expert eyes</li>
+                <li>✅ <strong>Complete</strong> Day 3 advanced questions</li>
+            </ul>
+        </div>
+
+        <div class="slide">
+            <h2>Advanced Setting Analysis</h2>
+            <div class="example-box">
+                <h3>Setting as Character</h3>
+                <p style="font-size:1.4em;">In Chapter 19, notice how setting almost becomes a character itself!</p>
+                <h3>Look for:</h3>
+                <ul style="font-size:1.3em;text-align:left;">
+                    <li>🃏 <strong>Setting influencing action</strong> - How place changes what characters do</li>
+                    <li>💭 <strong>Setting reflecting emotions</strong> - Mood matching feelings</li>
+                    <li>⚡ <strong>Setting driving conflict</strong> - Environment creating problems</li>
+                    <li>🔮 <strong>Setting foreshadowing</strong> - Place hints at future events</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide">
+            <h2>Craft Technique: Contrast</h2>
+            <div class="example-box">
+                <h3>Authors use contrasting settings to:</h3>
+                <div class="signal-words">
+                    <div class="signal-word">Show Change<br/><em>Safe → Dangerous</em></div>
+                    <div class="signal-word">Create Tension<br/><em>Known → Unknown</em></div>
+                    <div class="signal-word">Highlight Growth<br/><em>Old → New</em></div>
+                    <div class="signal-word">Build Suspense<br/><em>Calm → Chaotic</em></div>
+                    <div class="signal-word">Emphasize Themes<br/><em>Light → Dark</em></div>
+                    <div class="signal-word">Develop Character<br/><em>Comfort → Challenge</em></div>
+                </div>
+                <h3>Signal Words for Setting Contrast:</h3>
+                <p><em>However, meanwhile, on the other hand, in contrast, unlike, suddenly, but</em></p>
+            </div>
+        </div>
+
+        <div class="slide">
+            <h2>Think-Aloud: Expert Analysis</h2>
+            <div class="example-box">
+                <h3>Let's think like literary experts:</h3>
+                <p><em>"As Alex approached Stipa-ah, the familiar sounds of the tribe faded behind him, replaced by an otherworldly silence that seemed to press against his consciousness."</em></p>
+                <h3>Expert Analysis Process:</h3>
+                <ul style="text-align:left;font-size:1.2em;">
+                    <li>🎨 <strong>Craft technique:</strong> Sensory contrast (warm/chatter vs cold/silence)</li>
+                    <li>🔍 <strong>Setting shift:</strong> Community space to isolated space</li>
+                    <li>💭 <strong>Emotional impact:</strong> Comfort transforms to anxiety</li>
+                    <li>🔮 <strong>Foreshadowing:</strong> Silence "pressing" suggests coming tension</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide">
+            <h2>Guided Check & Advanced Frames</h2>
+            <div class="example-box">
+                <h3>Practice Question:</h3>
+                <p>How does the author use contrasting settings to show Alex's internal journey?</p>
+                <h3>Advanced Analysis Frames:</h3>
+                <ul style="text-align:left;font-size:1.2em;">
+                    <li>📝 "The author contrasts _______ with _______ to show _______ ."</li>
+                    <li>📝 "This setting shift from _______ to _______ reflects Alex's _______ ."</li>
+                    <li>📝 "By describing _______, the author creates _______ which helps readers understand _______ ."</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- DAY 4 SLIDES -->
+        <div class="slide">
+            <div class="day-header">DAY 4 - WRITING DAY</div>
+            <h1>Writing Workshop</h1>
+            <h2>Analyzing Craft & Setting</h2>
+            <div style="font-size:1.3em;margin-top:30px;">
+                <p>📖 Week 06 - Day 4</p>
+                <p>🎯 Focus: Written analysis of craft techniques and setting</p>
+                <p>✏️ Task: Respond to prompts about author's craft and setting impact</p>
+                <p>📝 Goal: Support analysis with specific text evidence</p>
+            </div>
+        </div>
+
+        <div class="slide">
+            <h2>RACES Method Review</h2>
+            <div class="example-box">
+                <h3>Our Trusted Writing Structure:</h3>
+                <ul style="text-align:left;font-size:1.4em;">
+                    <li>📝 <strong>R - Restate</strong> the question in your own words</li>
+                    <li>💡 <strong>A - Answer</strong> the question completely</li>
+                    <li>📚 <strong>C - Cite</strong> specific evidence from the text</li>
+                    <li>🔗 <strong>E - Explain</strong> how evidence supports your answer</li>
+                    <li>🎯 <strong>S - Summarize</strong> with a strong conclusion</li>
+                </ul>
+                <h3>Remember:</h3>
+                <p>Each supporting detail needs <strong>evidence from the text</strong> AND <strong>your explanation</strong> of how it works!</p>
+            </div>
+        </div>
+
+        <div class="slide">
+            <h2>Today's Writing Prompts</h2>
+            <div class="example-box">
+                <h3>Response 1:</h3>
+                <p>How does the author use setting descriptions to create different moods throughout Chapters 16-18? Use specific examples from at least two different settings.</p>
+                <h3>Response 2:</h3>
+                <p>Analyze how the author's craft techniques (word choice, sentence structure, imagery) help readers understand Alex's changing relationship with his environment in these chapters.</p>
+                <h3 style="margin-top:30px;">Success Tips:</h3>
+                <ul style="text-align:left;">
+                    <li>Compare and contrast different settings</li>
+                    <li>Explain HOW each craft technique creates its effect</li>
+                    <li>Connect setting details to character emotions and plot</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide">
+            <h2>Writing Time & Conferences</h2>
+            <div class="example-box">
+                <h3>Writing Workshop Schedule:</h3>
+                <ul style="text-align:left;font-size:1.3em;">
+                    <li>⏰ <strong>5 minutes</strong> - Plan your responses and gather evidence</li>
+                    <li>⏰ <strong>30 minutes</strong> - Write your detailed responses</li>
+                    <li>⏰ <strong>10 minutes</strong> - Review, revise, and strengthen analysis</li>
+                </ul>
+                <h3>Conference Focus Today:</h3>
+                <ul style="text-align:left;">
+                    <li>✅ Clear topic sentences that address the prompts</li>
+                    <li>✅ Specific, relevant text evidence and examples</li>
+                    <li>✅ Strong analysis explaining HOW craft techniques work</li>
+                    <li>✅ Connections between setting and character/plot development</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button onclick="previousSlide()">Previous</button>
+        <button onclick="nextSlide()">Next</button>
+    </div>
+
+    <script>
+        let currentSlide = 0;
+        let currentBg = 0;
+        const slides = document.querySelectorAll('.slide');
+        const bgImages = document.querySelectorAll('.bg-image');
+        const totalSlides = slides.length;
+        document.getElementById('total-slides').textContent = totalSlides;
+
+        function rotateBackground() {
+            bgImages[currentBg].classList.remove('active');
+            currentBg = (currentBg + 1) % bgImages.length;
+            bgImages[currentBg].classList.add('active');
+        }
+        setInterval(rotateBackground, 8000);
+
+        function showSlide(n) {
+            slides[currentSlide].classList.remove('active');
+            currentSlide = (n + totalSlides) % totalSlides;
+            slides[currentSlide].classList.add('active');
+            document.getElementById('current-slide').textContent = currentSlide + 1;
+        }
+        function nextSlide() { showSlide(currentSlide + 1); }
+        function previousSlide() { showSlide(currentSlide - 1); }
+        document.addEventListener('keydown', function(e){ if(e.key==='ArrowRight') nextSlide(); if(e.key==='ArrowLeft') previousSlide(); });
+    </script>
 </body>
 </html>
