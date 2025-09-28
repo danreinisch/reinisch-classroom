@@ -1,11 +1,75 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta http-equiv="refresh" content="0; url=week06_presentation_with_backgrounds.html"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Week 6 - Chapters 17-19 - Craft and Setting</title><script>location.replace("week06_presentation_with_backgrounds.html");</script><script>
-(function(){
-  // Determine root: if path contains "/site/", assets live under that; else assets are at root
-  var root = location.pathname.indexOf('/site/') >= 0 ? location.pathname.slice(0, location.pathname.indexOf('/site/') + 6) : '/';
-  function addCSS(href){ var l=document.createElement('link'); l.rel='stylesheet'; l.href=href; document.head.appendChild(l); }
-  function addJS(src){ var s=document.createElement('script'); s.defer=true; s.src=src; document.head.appendChild(s); }
-  addCSS(root + 'assets/css/site.css');
-  addJS(root + 'assets/js/site.js');
-})();
-</script>
-</head><body><div style="position:fixed;top:1rem;left:1rem;right:1rem;display:flex;justify-content:space-between;z-index:100"><a href="/" style="color:#fff;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);padding:.6rem 1rem;border-radius:.6rem;text-decoration:none">Home</a><a href="/language-arts/index.html" style="color:#fff;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);padding:.6rem 1rem;border-radius:.6rem;text-decoration:none">Language Arts</a></div></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Week 06 – A Door Into Time (Ch. 17–19)</title>
+  <style>
+    html,body{height:100%} body{margin:0;color:#fff;font-family:Arial,Helvetica,sans-serif;overflow:hidden;position:relative}
+    .bg{position:fixed;inset:0;z-index:-2}
+    .bg div{position:absolute;inset:0;background:center/cover no-repeat;opacity:0;transition:opacity 3s ease}
+    .bg .show{opacity:.4}
+    .overlay{position:fixed;inset:0;background:rgba(0,0,0,.1);z-index:-1}
+    main{width:100vw;height:100vh;display:flex;align-items:center;justify-content:center}
+    .slide{display:none;max-width:960px;background:rgba(0,0,0,.35);padding:1rem;border-radius:8px}
+    .slide.active{display:block}
+    h1{font-size:3rem;margin:.25rem 0;color:#ffd700;text-shadow:2px 2px 4px rgba(0,0,0,.8)}
+    h2{font-size:2rem;margin:.25rem 0;color:#ffa500;text-shadow:2px 2px 4px rgba(0,0,0,.8)}
+    .controls{position:fixed;right:1rem;bottom:1rem;display:flex;gap:.5rem}
+    .controls button{padding:.5rem .8rem;border-radius:20px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.15);color:#fff;cursor:pointer}
+    .counter{position:fixed;top:1rem;right:1rem;background:rgba(0,0,0,.7);padding:.3rem .6rem;border-radius:16px;font-size:.85rem}
+    .back{position:fixed;top:1rem;left:1rem;background:rgba(255,255,255,.15);padding:.4rem .8rem;border-radius:20px;color:#fff;text-decoration:none}
+  </style>
+</head>
+<body>
+  <div class="bg" id="bg">
+    <div class="show" style="background-image:url('image1.jpg')"></div>
+    <div style="background-image:url('image2.jpg')"></div>
+    <div style="background-image:url('image3.jpg')"></div>
+    <div style="background-image:url('image4.jpg')"></div>
+    <div style="background-image:url('image5.jpg')"></div>
+    <div style="background-image:url('image6.jpg')"></div>
+  </div>
+  <div class="overlay"></div>
+
+  <a class="back" href="/language-arts">← Language Arts</a>
+  <div class="counter"><span id="cur">1</span>/<span id="tot">—</span></div>
+
+  <main>
+    <!-- Replace slides below with your Week 06 content -->
+    <section class="slide active">
+      <h1>Craft & Setting</h1>
+      <h2>Week 06 – Chapters 17–19</h2>
+      <p>Focus: How setting and craft create mood and meaning.</p>
+    </section>
+    <section class="slide">
+      <h2>Today's Reading Detective Work</h2>
+      <ul>
+        <li>Identify key setting details</li>
+        <li>Analyze atmosphere and mood</li>
+        <li>Connect setting to emotions</li>
+      </ul>
+    </section>
+  </main>
+
+  <div class="controls">
+    <button id="prev">Prev (←)</button>
+    <button id="next">Next (→)</button>
+  </div>
+
+  <script>
+    const layers=[...document.querySelectorAll('#bg div')];
+    const imgs=['image1.jpg','image2.jpg','image3.jpg','image4.jpg','image5.jpg','image6.jpg'];
+    imgs.forEach(s=>{const i=new Image();i.src=s});
+    let bi=0; setInterval(()=>{layers[bi].classList.remove('show'); bi=(bi+1)%layers.length; layers[bi].classList.add('show')},8000);
+
+    const slides=[...document.querySelectorAll('.slide')];
+    const cur=document.getElementById('cur'), tot=document.getElementById('tot');
+    let i=slides.findIndex(s=>s.classList.contains('active')); if(i<0) i=0; tot.textContent=slides.length;
+    const show=n=>{slides[i].classList.remove('active'); i=(n+slides.length)%slides.length; slides[i].classList.add('active'); cur.textContent=i+1;};
+    document.getElementById('prev').onclick=()=>show(i-1);
+    document.getElementById('next').onclick=()=>show(i+1);
+    window.addEventListener('keydown',e=>{ if(e.key==='ArrowLeft')show(i-1); if(e.key==='ArrowRight')show(i+1); });
+  </script>
+</body>
+</html>
