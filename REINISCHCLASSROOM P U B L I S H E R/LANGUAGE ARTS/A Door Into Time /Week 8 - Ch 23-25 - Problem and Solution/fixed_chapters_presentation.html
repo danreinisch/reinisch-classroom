@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapters 23-25: Problem and Solution Theme</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background: #1a1a2e;
+            color: white;
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .background-carousel {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -2;
+        }
+        
+        .background-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            opacity: 0;
+            transition: opacity 3s ease-in-out;
+        }
+        
+        .background-image.active {
+            opacity: 0.7;
+        }
+        
+        .bg-image-1 { background-image: url('image1.jpg'); }
+        .bg-image-2 { background-image: url('image2.jpg'); }
+        .bg-image-3 { background-image: url('image3.jpg'); }
+        .bg-image-4 { background-image: url('image4.jpg'); }
+        .bg-image-5 { background-image: url('image5.jpg'); }
+        .bg-image-6 { background-image: url('image6.jpg'); }
+        .bg-image-7 { background-image: url('image7.jpg'); }
+        .bg-image-8 { background-image: url('image8.jpg'); }
+        
+        .background-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            z-index: -1;
+        }
+        
+        .slide-container {
+            height: 100vh;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding: 40px 40px 120px 40px;
+            overflow-y: auto;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .slide {
+            display: none;
+            width: 100%;
+            max-width: 1000px;
+            text-align: center;
+            min-height: calc(100vh - 160px);
+            padding-bottom: 20px;
+        }
+        
+        .slide.active {
+            display: block;
+        }
+        
+        h1 {
+            font-size: 3.5em;
+            margin-bottom: 30px;
+            color: #FFD700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+        }
+        
+        h2 {
+            font-size: 2.8em;
+            margin-bottom: 25px;
+            color: #FFD700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+        }
+        
+        .content {
+            font-size: 1.4em;
+            line-height: 1.6;
+            text-align: left;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        
+        .question-box {
+            background: rgba(0,0,0,0.7);
+            padding: 30px;
+            border-radius: 15px;
+            margin: 25px 0;
+            border: 3px solid #FFD700;
+            backdrop-filter: blur(10px);
+        }
+        
+        .problem-box {
+            background: rgba(139,0,0,0.8);
+            padding: 25px;
+            border-radius: 15px;
+            margin: 20px 0;
+            border: 3px solid #FF6B6B;
+        }
+        
+        .solution-box {
+            background: rgba(0,100,0,0.8);
+            padding: 25px;
+            border-radius: 15px;
+            margin: 20px 0;
+            border: 3px solid #32CD32;
+        }
+        
+        .vocab-word {
+            color: #FFD700;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        
+        .writing-prompt {
+            background: rgba(184,134,11,0.8);
+            padding: 30px;
+            border-radius: 15px;
+            margin: 25px 0;
+            border: 3px solid #FFD700;
+        }
+        
+        ul {
+            margin-left: 20px;
+            margin-top: 15px;
+        }
+        
+        li {
+            margin-bottom: 12px;
+            font-size: 1.2em;
+        }
+        
+        ol {
+            margin-left: 20px;
+            margin-top: 15px;
+        }
+        
+        ol li {
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+        
+        .navigation {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            display: flex;
+            gap: 15px;
+            z-index: 10;
+        }
+        
+        .nav-btn {
+            padding: 15px 25px;
+            font-size: 1.1em;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: 1px solid rgba(255, 215, 0, 0.5);
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        .nav-btn:hover {
+            background: rgba(255, 215, 0, 0.2);
+            border-color: rgba(255, 215, 0, 0.8);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+        }
+        
+        .nav-btn:disabled {
+            background: rgba(128, 128, 128, 0.3);
+            color: rgba(255, 255, 255, 0.5);
+            border-color: rgba(128, 128, 128, 0.3);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .slide-counter {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            font-size: 1.3em;
+            background: rgba(0,0,0,0.7);
+            padding: 10px 20px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            z-index: 10;
+        }
+        
+        .chapter-title {
+            font-size: 2.2em;
+            color: #87CEEB;
+            margin: 15px 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+        }
+        
+        .theme-title {
+            font-size: 1.8em;
+            color: #32CD32;
+            margin-bottom: 30px;
+            font-style: italic;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+        }
+        
+        strong {
+            color: #FFD700;
+        }
+        
+        .problem-text {
+            color: #FF6B6B;
+            font-weight: bold;
+        }
+        
+        .solution-text {
+            color: #32CD32;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="background-carousel">
+        <div class="background-image bg-image-1 active"></div>
+        <div class="background-image bg-image-2"></div>
+        <div class="background-image bg-image-3"></div>
+        <div class="background-image bg-image-4"></div>
+        <div class="background-image bg-image-5"></div>
+        <div class="background-image bg-image-6"></div>
+        <div class="background-image bg-image-7"></div>
+        <div class="background-image bg-image-8"></div>
+    </div>
+    <div class="background-overlay"></div>
+
+    <div class="slide-counter" id="slideCounter">1 / 20</div>
+
+    <div class="slide-container">
+        <!-- Slide 1: Title -->
+        <div class="slide active">
+            <h1>Chapters 23-25</h1>
+            <div class="chapter-title">The Journey Home • Blizzard • A Leap of Faith</div>
+            <div class="theme-title">ELA Focus: Problem and Solution</div>
+            <div class="question-box">
+                <p style="text-align: center; font-size: 1.3em;">
+                    Watch how Alex and his friends face <span class="problem-text">PROBLEMS</span> and find clever <span class="solution-text">SOLUTIONS</span> to survive!
+                </p>
+            </div>
+        </div>
+
+        <!-- Day 1 Slides (5 slides) - Chapter 23 ONLY -->
+        
+        <!-- Slide 2: Day 1 Chapter 23 Focus -->
+        <div class="slide">
+            <h2>Day 1: Chapter 23 - The Journey Home</h2>
+            <div class="content">
+                <div class="question-box">
+                    <p><strong>Chapter 23 Problem and Solution Focus:</strong></p>
+                    <div class="problem-box">
+                        <p><span class="problem-text">PROBLEMS in Chapter 23:</span></p>
+                        <ul>
+                            <li>Armed men are chasing them with weapons</li>
+                            <li>Sekun-ak can't swim well in the cold river</li>
+                            <li>Sekun-ak stops breathing and his heart stops</li>
+                            <li>They're cold and wet with no fire or shelter</li>
+                            <li>A dangerous cat visits them at night</li>
+                        </ul>
+                    </div>
+                    <div class="solution-box">
+                        <p><span class="solution-text">SOLUTIONS in Chapter 23:</span></p>
+                        <ul>
+                            <li>Jump into the river to escape the men</li>
+                            <li>Alex helps him swim to safety</li>
+                            <li>Alex uses CPR to bring him back to life</li>
+                            <li>Hide in a hollow tree with Monda-ak for warmth</li>
+                            <li>Stay very still until the cat leaves them alone</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3: CPR - The Big Solution -->
+        <div class="slide">
+            <h2>Chapter 23's Most Important Solution</h2>
+            <div class="content">
+                <div class="problem-box">
+                    <p><strong><span class="problem-text">LIFE OR DEATH PROBLEM:</span></strong></p>
+                    <p>Sekun-ak drowns in the river. His heart stops beating and he's not breathing. Alex thinks his friend is dead.</p>
+                </div>
+                <div class="solution-box">
+                    <p><strong><span class="solution-text">ALEX'S LIFE-SAVING SOLUTION:</span></strong></p>
+                    <p>Alex uses CPR - he pushes on Sekun-ak's chest and breathes air into his mouth. After many tries, Sekun-ak's heart starts beating again!</p>
+                </div>
+                <div class="question-box">
+                    <p style="text-align: center;"><strong>Why is this the most important moment in Chapter 23?</strong></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 4: Problem Chain in Chapter 23 -->
+        <div class="slide">
+            <h2>How One Solution Creates Another Problem in Chapter 23</h2>
+            <div class="content">
+                <div class="question-box">
+                    <p><strong>The Problem Chain in Chapter 23:</strong></p>
+                    <p><span class="problem-text">Problem 1:</span> Armed men want to kill them</p>
+                    <p><span class="solution-text">Solution 1:</span> Jump in the river to escape</p>
+                    <p><span class="problem-text">Problem 2:</span> Now they're in freezing water</p>
+                    <p><span class="solution-text">Solution 2:</span> Swim to the other side</p>
+                    <p><span class="problem-text">Problem 3:</span> Sekun-ak drowns and dies</p>
+                    <p><span class="solution-text">Solution 3:</span> Alex uses CPR to save him</p>
+                    <p><span class="problem-text">Problem 4:</span> Now they're wet and freezing</p>
+                    <p><span class="solution-text">Solution 4:</span> Hide in hollow tree with Monda-ak</p>
+                    <p style="text-align: center; margin-top: 20px; font-size: 1.2em;">
+                        <strong>Chapter 23 shows how solving one problem often creates a new one!</strong>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 5: Alex Becomes a Hero -->
+        <div class="slide">
+            <h2>How Alex Changes in Chapter 23</h2>
+            <div class="content">
+                <div class="question-box">
+                    <p><strong>Alex shows new leadership skills:</strong></p>
+                    <ul>
+                        <li><span class="solution-text">Quick thinking:</span> Decides to jump in river to escape</li>
+                        <li><span class="solution-text">Life-saving skills:</span> Uses CPR to bring Sekun-ak back to life</li>
+                        <li><span class="solution-text">Caring for others:</span> Makes sure Sekun-ak gets warm and safe</li>
+                        <li><span class="solution-text">Staying calm:</span> Doesn't panic when things go wrong</li>
+                    </ul>
+                    <p style="text-align: center; margin-top: 25px; font-size: 1.3em;">
+                        <strong>Chapter 23 shows Alex becoming a true hero and leader!</strong>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 6: Chapter 23 Discussion -->
+        <div class="slide">
+            <h2>Let's Talk About Chapter 23!</h2>
+            <div class="content">
+                <div class="question-box">
+                    <p><strong>Discussion Questions:</strong></p>
+                    <ul>
+                        <li>What would happen if Alex couldn't solve the drowning problem?</li>
+                        <li>Why was jumping in the river both a solution AND a new problem?</li>
+                        <li>How did Alex show he's becoming a better leader?</li>
+                        <li>What problems from Chapter 23 do they still need to solve?</li>
+                        <li>How do you think Sekun-ak feels about Alex after being saved?</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Day 2 Slides (6 slides) - Chapter 24 + Vocabulary -->
+
+        <!-- Slide 7: Day 2 Chapter 24 Focus -->
+        <div class="slide">
+            <h2>Day 2: Chapter 24 - Blizzard</h2>
+            <div class="content">
+                <div class="question-box">
+                    <p><strong>Chapter 24 Problem and Solution Focus:</strong></p>
+                    <div class="problem-box">
+                        <p><span class="problem-text">NEW PROBLEMS in Chapter 24:</span></p>
+                        <ul>
+                            <li>Dangerous snowstorm with strong winds starts</li>
+                            <li>They need shelter or they'll freeze to death</li>
+                            <li>Giant badger attacks them in the cave</li>
+                            <li>They have no food left and are starving</li>
+                        </ul>
+                    </div>
+                    <div class="solution-box">
+                        <p><span class="solution-text">SMART SOLUTIONS in Chapter 24:</span></p>
+                        <ul>
+                            <li>Find a cave to wait out the dangerous storm</li>
+                            <li>Fight the badger together as a team</li>
+                            <li>Build a fire for warmth and protection</li>
+                            <li>Use the badger meat to feed Monda-ak</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 8: Chapter 24 Vocabulary Words -->
+        <div class="slide">
+            <h2>Important Words from Chapter 24</h2>
+            <div class="content">
+                <div class="question-box">
+                    <p><strong>New vocabulary words we'll use in questions:</strong></p>
+                    <ul>
+                        <li><span class="vocab-word">blizzard:</span> a dangerous snowstorm with strong winds</li>
+                        <li><span class="vocab-word">hypothermia:</span> when your body gets dangerously cold</li>
+                        <li><span class="vocab-word">shelter:</span> a safe place that protects you from bad weather</li>
+                        <li><span class="vocab-word">makeshift:</span> something built quickly from whatever you can find</li>
+                        <li><span class="vocab-word">ferocity:</span> wild, fierce fighting or attacking</li>
+                        <li><span class="vocab-word">cordage:</span> string or rope used to tie things together</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 9: Word Parts from Chapter 24 -->
+        <div class="slide">
+            <h2>Beginning and Ending Word Parts</h2>
+            <div class="content">
+                <div class="question-box">
+                    <p><strong>Beginning parts (prefixes) from Chapter 24:</strong></p>
+                    <ul>
+                        <li><span class="vocab-word">un-successful</span> = not successful (didn't work)</li>
+                        <li><span class="vocab-word">un-nerving</span> = not calming (scary)</li>
+                        <li><span class="vocab-word">re-evaluated</span> = thought about again</li>
+                    </ul>
+                    <p><strong>Ending parts (suffixes) from Chapter 24:</strong></p>
+                    <ul>
+                        <li><span class="vocab-word">motion-less</span> = without motion (not moving)</li>
+                        <li><span class="vocab-word">hope-less</span> = without hope</li>
+                        <li><span class="vocab-word">danger-ous</span> = full of danger</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 10: Types of Words in Chapter 24 -->
+        <div class="slide">
+            <h2>Types of Words from Chapter 24</h2>
+            <div class="content">
+                <div class="question-box">
+                    <p><strong>Examples from the badger fight:</strong></p>
+                    <ul>
+                        <li><span class="vocab-word">Noun (naming words):</span> badger, cave, snow, claws, Alex</li>
+                        <li><span class="vocab-word">Verb (action words):</span> attacked, fought, grabbed, bit, escaped</li>
+                        <li><span class="vocab-word">Adjective (describing words):</span> giant, sharp, fierce, brave, dangerous</li>
+                        <li><span class="vocab-word">Adverb (words that tell how):</span> suddenly, violently, carefully, desperately</li>
+                    </ul>
+                    <p style="text-align: center; margin-top: 20px;">
+                        <strong>Action words help us feel the excitement of the fight!</strong>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 11: Badger Fight - Teamwork Solution -->
+        <div class="slide">
+            <h2>The Badger Fight - Working Together</h2>
+            <div class="content">
+                <div class="problem-box">
+                    <p><strong><span class="problem-text">SCARY PROBLEM:</span></strong></p>
+                    <p>A giant badger attacks them in the cave! It has sharp claws and teeth and fights with wild anger.</p>
+                </div>
+                <div class="solution-box">
+                    <p><strong><span class="solution-text">TEAMWORK SOLUTION:</span></strong></p>
+                    <p>Monda-ak grabs the badger, Sekun-ak stabs it with his spear, and Alex hits it from above. Working together, they win!</p>
+                </div>
+                <div class="question-box">
+                    <p style="text-align: center;"><strong>How does this fight show they're becoming a real team?</strong></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 12: Fire Solution -->
+        <div class="slide">
+            <h2>Making Fire - An Important Solution</h2>
+            <div class="content">
+                <div class="question-box">
+                    <p><strong>How Sekun-ak solves the warmth problem:</strong></p>
+                    <ul>
+                        <li><span class="solution-text">Gathers materials:</span> Dry sticks, pine needles, sticky tree sap</li>
+                        <li><span class="solution-text">Uses tools:</span> Makes a fire bow from wood and vine</li>
+                        <li><span class="solution-text">Creates friction:</span> Rubs stick on wood until it smokes</li>
+                        <li><span class="solution-text">Builds the fire:</span> Blows gently until flames start</li>
+                    </ul>
+                    <p style="text-align: center; margin-top: 25px; font-size: 1.3em;">
+                        <strong>Fire gives them warmth, light, and protection from animals!</strong>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Day 3 Slides (5 slides) - Chapter 25 ONLY -->
+
+        <!-- Slide 13: Day 3 Chapter 25 Focus -->
+        <div class="slide">
+            <h2>Day 3: Chapter 25 - A Leap of Faith</h2>
+            <div class="content">
+                <div class="question-box">
+                    <p><strong>Chapter 25 Problem and Solution Focus:</strong></p>
+                    <div class="problem-box">
+                        <p><span class="problem-text">FINAL BIG PROBLEMS in Chapter 25:</span></p>
+                        <ul>
+                            <li>Tall hills with a dangerous waterfall block their path home</li>
+                            <li>Going around the hills would take too many days</li>
+                            <li>The waterfall drop looks very scary and dangerous</li>
+                            <li>They might die if they jump off the waterfall</li>
+                        </ul>
+                    </div>
+                    <div class="solution-box">
+                        <p><span class="solution-text">BRAVE SOLUTIONS in Chapter 25:</span></p>
+                        <ul>
+                            <li>Alex decides they must take the risk and jump</li>
+                            <li>He goes first to prove it can be done safely</li>
+                            <li>Sekun-ak follows because he trusts Alex now</li>
+                            <li>They both survive and see landmarks near home!</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 14: The Waterfall Decision -->
+        <div class="slide">
+            <h2>Alex's Biggest Leadership Decision</h2>
+            <div class="content">
+                <div class="problem-box">
+                    <p><strong><span class="problem-text">THE IMPOSSIBLE CHOICE:</span></strong></p>
+                    <p>Go around the hills (safe but takes too long) OR jump off the waterfall (dangerous but gets them home fast).</p>
+                </div>
+                <div class="solution-box">
+                    <p><strong><span class="solution-text">ALEX'S LEADERSHIP:</span></strong></p>
+                    <p>Alex chooses the dangerous jump because getting home quickly is more important than staying safe. He goes first to show Sekun-ak it can be done.</p>
+                </div>
+                <div class="question-box">
+                    <p style="text-align: center;"><strong>How does this show Alex has become a real leader?</strong></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 15: Trust and Teamwork -->
+        <div class="slide">
+            <h2>How Chapter 25 Shows Trust</h2>
+            <div class="content">
+                <div class="question-box">
+                    <p><strong>Sekun-ak's change of heart:</strong></p>
+                    <ul>
+                        <li><span class="problem-text">At first:</span> "I will not do it" - refuses to jump</li>
+                        <li><span class="solution-text">Alex's action:</span> Steps into the river first to show the way</li>
+                        <li><span class="solution-text">Sekun-ak's response:</span> Follows Alex because he trusts him now</li>
+                        <li><span class="solution-text">Result:</span> They both survive and work as a real team</li>
+                    </ul>
+                    <p style="text-align: center; margin-top: 25px; font-size: 1.3em;">
+                        <strong>Saving Sekun-ak's life in Chapter 23 built the trust needed for Chapter 25!</strong>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 16: The Jump - Action Writing -->
+        <div class="slide">
+            <h2>How the Author Makes the Jump Exciting</h2>
+            <div class="content">
+                <div class="question-box">
+                    <p><strong>Writing methods that create excitement:</strong></p>
+                    <ul>
+                        <li><span class="vocab-word">Action words:</span> "tumbled," "smashed," "flip-flopped," "surged"</li>
+                        <li><span class="vocab-word">Body feelings:</span> "stomach flip-flopped like a rollercoaster"</li>
+                        <li><span class="vocab-word">Fear details:</span> "pinwheel out of control"</li>
+                        <li><span class="vocab-word">Relief moment:</span> "When he surfaced" shows they survived</li>
+                    </ul>
+                    <p style="text-align: center; margin-top: 25px;">
+                        <strong>The author makes us feel like we're falling too!</strong>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 17: Hope - Gakan Gate -->
+        <div class="slide">
+            <h2>Finally - Hope and Home!</h2>
+            <div class="content">
+                <div class="solution-box">
+                    <p><strong><span class="solution-text">THE BEST SOLUTION OF ALL:</span></strong></p>
+                    <p>Sekun-ak sees Gakan Gate and knows exactly where they are. They're only one day away from home and safety!</p>
+                </div>
+                <div class="question-box">
+                    <p><strong>Why this ending gives us hope:</strong></p>
+                    <ul>
+                        <li>All their problem-solving worked</li>
+                        <li>They survived every dangerous challenge</li>
+                        <li>They're almost back to their people</li>
+                        <li>Alex proved he's a true hero and leader</li>
+                        <li>Sekun-ak and Alex are now real friends and partners</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Day 4 Slides (3 slides) - Writing Workshop -->
+
+        <!-- Slide 18: Day 4 Writing Time -->
+        <div class="slide">
+            <h2>Day 4: Writing Workshop</h2>
+            <div class="content">
+                <div class="question-box">
+                    <p><strong>Today you'll write about PROBLEM AND SOLUTION:</strong></p>
+                    <div class="writing-prompt">
+                        <p><strong>For Life Skills LA students:</strong></p>
+                        <p>What is the biggest problem Alex faces in these three chapters, and how does he solve it? Use details from the story to support your answer.</p>
+                        
+                        <p style="margin-top: 20px;"><strong>For Language Arts 1-4 SC students, you'll also write:</strong></p>
+                        <p>How does solving problems change Alex as a person? Use details from the story to support your answer.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 19: Writing Structure -->
+        <div class="slide">
+            <h2>How to Organize Your Writing</h2>
+            <div class="content">
+                <div class="question-box">
+                    <p><strong>Follow this pattern:</strong></p>
+                    <ol>
+                        <li><span class="vocab-word">Topic Sentence:</span> Clear answer about the main problem and solution</li>
+                        <li><span class="vocab-word">Supporting Detail 1:</span> First example from the story with explanation</li>
+                        <li><span class="vocab-word">Supporting Detail 2:</span> Second example from the story with explanation</li>
+                        <li><span class="vocab-word">Supporting Detail 3:</span> Third example from the story with explanation</li>
+                        <li><span class="vocab-word">Conclusion:</span> Wrap up why this problem and solution matters</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 20: Success Tips -->
+        <div class="slide">
+            <h2>Tips for Great Problem and Solution Writing</h2>
+            <div class="content">
+                <div class="writing-prompt">
+                    <p><strong>Make your writing stronger:</strong></p>
+                    <ul>
+                        <li><span class="problem-text">Show the problem clearly:</span> Explain why it was dangerous or difficult</li>
+                        <li><span class="solution-text">Explain the solution steps:</span> Tell exactly what Alex did to solve it</li>
+                        <li><span class="vocab-word">Use connecting words:</span> "The problem was," "Alex solved this by," "This worked because"</li>
+                        <li><span class="vocab-word">Give specific details:</span> Quote exact actions from the chapters</li>
+                        <li><span class="vocab-word">Check your work:</span> Read it aloud to make sure it makes sense</li>
+                    </ul>
+                    <p style="text-align: center; font-size: 1.5em; margin-top: 30px;">
+                        <strong>Show how Alex became a problem-solving hero!</strong>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="navigation">
+        <button class="nav-btn" onclick="previousSlide()" id="prevBtn">← Previous</button>
+        <button class="nav-btn" onclick="nextSlide()" id="nextBtn">Next →</button>
+    </div>
+
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+        
+        let currentBgImage = 0;
+        const bgImages = document.querySelectorAll('.background-image');
+        const totalBgImages = bgImages.length;
+
+        function showSlide(n) {
+            slides[currentSlide].classList.remove('active');
+            currentSlide = (n + totalSlides) % totalSlides;
+            slides[currentSlide].classList.add('active');
+            
+            document.getElementById('slideCounter').textContent = `${currentSlide + 1} / ${totalSlides}`;
+            
+            document.getElementById('prevBtn').disabled = currentSlide === 0;
+            document.getElementById('nextBtn').disabled = currentSlide === totalSlides - 1;
+        }
+        
+        function rotateBgImage() {
+            bgImages[currentBgImage].classList.remove('active');
+            currentBgImage = (currentBgImage + 1) % totalBgImages;
+            bgImages[currentBgImage].classList.add('active');
+        }
+
+        function nextSlide() {
+            if (currentSlide < totalSlides - 1) {
+                showSlide(currentSlide + 1);
+            }
+        }
+
+        function previousSlide() {
+            if (currentSlide > 0) {
+                showSlide(currentSlide - 1);
+            }
+        }
+
+        // Keyboard navigation
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                e.preventDefault();
+                nextSlide();
+            } else if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                previousSlide();
+            }
+        });
+
+        // Initialize
+        showSlide(0);
+        
+        // Auto-rotate background images every 8 seconds
+        setInterval(rotateBgImage, 8000);
+    </script>
+</body>
+</html>

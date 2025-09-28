@@ -44,29 +44,42 @@
             opacity: 0.4;
         }
 
+        /* Replace these URLs with your own images */
         .bg-image:nth-child(1) { 
-            background: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.5)), 
-                        url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600"><rect width="800" height="600" fill="%23234"/><path d="M100 300 Q200 250 300 300 T500 300" stroke="%23567" stroke-width="3" fill="none"/><circle cx="200" cy="400" r="50" fill="%23345"/><polygon points="600,200 650,300 550,300" fill="%23456"/></svg>'); 
+            background: linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.3)), 
+                        url('image1.jpg'); /* Replace with your hunt scene image */
+            background-size: cover;
+            background-position: center;
         }
         .bg-image:nth-child(2) { 
-            background: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.5)), 
-                        url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600"><rect width="800" height="600" fill="%23123"/><circle cx="400" cy="300" r="80" fill="%23FF6B35"/><rect x="300" y="400" width="200" height="100" fill="%23234"/></svg>'); 
+            background: linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.3)), 
+                        url('image2.jpg'); /* Replace with your second image */
+            background-size: cover;
+            background-position: center;
         }
         .bg-image:nth-child(3) { 
-            background: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.5)), 
-                        url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600"><rect width="800" height="600" fill="%23345"/><ellipse cx="400" cy="200" rx="150" ry="80" fill="%23567"/><path d="M200 400 L600 400 L500 500 L300 500 Z" fill="%23789"/></svg>'); 
+            background: linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.3)), 
+                        url('image3.jpg'); /* Replace with your tribal scene image */
+            background-size: cover;
+            background-position: center;
         }
         .bg-image:nth-child(4) { 
-            background: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.5)), 
-                        url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600"><rect width="800" height="600" fill="%23456"/><circle cx="300" cy="250" r="60" fill="%23678"/><circle cx="500" cy="350" r="70" fill="%23789"/></svg>'); 
+            background: linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.3)), 
+                        url('image4.jpg'); /* Replace with your fire scene image */
+            background-size: cover;
+            background-position: center;
         }
         .bg-image:nth-child(5) { 
-            background: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.5)), 
-                        url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600"><rect width="800" height="600" fill="%23567"/><polygon points="400,100 500,300 300,300" fill="%238AB"/><rect x="350" y="350" width="100" height="150" fill="%239BC"/></svg>'); 
+            background: linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.3)), 
+                        url('image5.jpg'); /* Replace with your forest scene image */
+            background-size: cover;
+            background-position: center;
         }
         .bg-image:nth-child(6) { 
-            background: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.5)), 
-                        url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600"><rect width="800" height="600" fill="%23678"/><path d="M100 500 Q400 200 700 500" stroke="%23ACD" stroke-width="5" fill="none"/><circle cx="400" cy="350" r="40" fill="%23BDE"/></svg>'); 
+            background: linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.3)), 
+                        url('image6.jpg'); /* Replace with your village scene image */
+            background-size: cover;
+            background-position: center;
         }
 
         /* Overlay gradient for readability */
@@ -76,7 +89,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: linear-gradient(135deg, rgba(45, 27, 105, 0.7), rgba(17, 153, 142, 0.7), rgba(56, 239, 125, 0.7));
+            background: rgba(0, 0, 0, 0.1);
             z-index: -1;
         }
         
@@ -197,19 +210,27 @@
         
         .controls button {
             padding: 12px 20px;
-            background: rgba(255, 255, 255, 0.3);
-            border: none;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 25px;
             color: white;
             cursor: pointer;
             font-size: 16px;
+            font-weight: 500;
             transition: all 0.3s ease;
             text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
         }
         
         .controls button:hover {
-            background: rgba(255, 255, 255, 0.5);
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
             transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
         }
         
         .slide-counter {
@@ -220,6 +241,37 @@
             padding: 10px 15px;
             border-radius: 20px;
             font-size: 14px;
+        }
+        
+        .return-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 25px;
+            color: white;
+            text-decoration: none;
+            padding: 12px 20px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            display: inline-block;
+        }
+        
+        .return-button:hover {
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            text-decoration: none;
+            color: white;
         }
         
         .signal-words {
@@ -259,27 +311,29 @@
             <span id="current-slide">1</span> / <span id="total-slides">22</span>
         </div>
         
+        <a href="https://reinischclassroom.com/language-arts/" class="return-button">← Language Arts</a>
+        
         <!-- DAY 1 SLIDES -->
         <div class="slide active">
             <div class="day-header">DAY 1 - COMPREHENSION FOCUS</div>
             <h1>Craft & Setting</h1>
             <h2>Chapter 17: The Hunt</h2>
             <div style="font-size: 1.3em; margin-top: 30px;">
-                <p>📖 Week 06 - Day 1</p>
-                <p>🎯 Focus: How authors craft setting to create mood and atmosphere</p>
-                <p>📄 Chapter: 17 - The Hunt</p>
-                <p>✨ Goal: Understand how setting influences story emotion</p>
+                <p>Week 06 - Day 1</p>
+                <p>Focus: How authors craft setting to create mood and atmosphere</p>
+                <p>Chapter: 17 - The Hunt</p>
+                <p>Goal: Understand how setting influences story emotion</p>
             </div>
         </div>
 
         <div class="slide">
             <h2>Today's Reading Detective Work</h2>
             <ul style="font-size: 1.6em;">
-                <li>🔍 <strong>Identify</strong> key setting details in the chapter</li>
-                <li>🎨 <strong>Analyze</strong> how the author describes places and atmosphere</li>
-                <li>💭 <strong>Connect</strong> setting to character emotions</li>
-                <li>📖 <strong>Read</strong> Chapter 17 together with craft focus</li>
-                <li>✅ <strong>Complete</strong> Day 1 comprehension questions</li>
+                <li><strong>Identify</strong> key setting details in the chapter</li>
+                <li><strong>Analyze</strong> how the author describes places and atmosphere</li>
+                <li><strong>Connect</strong> setting to character emotions</li>
+                <li><strong>Read</strong> Chapter 17 together with craft focus</li>
+                <li><strong>Complete</strong> Day 1 comprehension questions</li>
             </ul>
         </div>
 
@@ -291,11 +345,11 @@
                 
                 <h3>Key Craft Elements:</h3>
                 <ul style="font-size: 1.3em;">
-                    <li>🎨 <strong>Vivid descriptions</strong> - Paint pictures with words</li>
-                    <li>🔀 <strong>Sentence variety</strong> - Mix short and long sentences</li>
-                    <li>🎭 <strong>Dialogue</strong> - Characters speaking naturally</li>
-                    <li>🌅 <strong>Setting details</strong> - Time, place, atmosphere</li>
-                    <li>⚡ <strong>Pacing</strong> - Speed up or slow down action</li>
+                    <li><strong>Vivid descriptions</strong> - Paint pictures with words</li>
+                    <li><strong>Sentence variety</strong> - Mix short and long sentences</li>
+                    <li><strong>Dialogue</strong> - Characters speaking naturally</li>
+                    <li><strong>Setting details</strong> - Time, place, atmosphere</li>
+                    <li><strong>Pacing</strong> - Speed up or slow down action</li>
                 </ul>
             </div>
         </div>
@@ -349,9 +403,9 @@
                 
                 <h3>Sentence Frames to Help You:</h3>
                 <ul style="text-align: left; font-size: 1.3em;">
-                    <li>📝 "The author describes the setting as _______ to show _______."</li>
-                    <li>📝 "When the author writes about _______, it creates a feeling of _______."</li>
-                    <li>📝 "The setting details like _______ help readers understand that Alex feels _______."</li>
+                    <li>"The author describes the setting as _______ to show _______."</li>
+                    <li>"When the author writes about _______, it creates a feeling of _______."</li>
+                    <li>"The setting details like _______ help readers understand that Alex feels _______."</li>
                 </ul>
             </div>
         </div>
@@ -362,21 +416,21 @@
             <h1>Vocabulary Focus</h1>
             <h2>Chapter 18: Stama</h2>
             <div style="font-size: 1.3em; margin-top: 30px;">
-                <p>📖 Week 06 - Day 2</p>
-                <p>🎯 Focus: Prefixes, Suffixes, and Parts of Speech</p>
-                <p>📄 Chapter: 18 - Stama</p>
-                <p>🔤 Goal: Master word parts and vocabulary in context</p>
+                <p>Week 06 - Day 2</p>
+                <p>Focus: Prefixes, Suffixes, and Parts of Speech</p>
+                <p>Chapter: 18 - Stama</p>
+                <p>Goal: Master word parts and vocabulary in context</p>
             </div>
         </div>
 
         <div class="slide">
             <h2>Today's Vocabulary Goals</h2>
             <ul style="font-size: 1.6em;">
-                <li>🔍 <strong>Identify</strong> prefixes and suffixes in chapter words</li>
-                <li>📚 <strong>Understand</strong> how word parts change meaning</li>
-                <li>🎭 <strong>Practice</strong> parts of speech identification</li>
-                <li>📖 <strong>Read</strong> Chapter 18 with vocabulary focus</li>
-                <li>✅ <strong>Complete</strong> Day 2 vocabulary questions</li>
+                <li><strong>Identify</strong> prefixes and suffixes in chapter words</li>
+                <li><strong>Understand</strong> how word parts change meaning</li>
+                <li><strong>Practice</strong> parts of speech identification</li>
+                <li><strong>Read</strong> Chapter 18 with vocabulary focus</li>
+                <li><strong>Complete</strong> Day 2 vocabulary questions</li>
             </ul>
         </div>
 
@@ -448,9 +502,9 @@
                 
                 <h3>Analysis Frames:</h3>
                 <ul style="text-align: left; font-size: 1.3em;">
-                    <li>📝 "The prefix _______ means _______."</li>
-                    <li>📝 "The word _______ is a _______ (part of speech)."</li>
-                    <li>📝 "I can tell _______ means _______ because _______."</li>
+                    <li>"The prefix _______ means _______."</li>
+                    <li>"The word _______ is a _______ (part of speech)."</li>
+                    <li>"I can tell _______ means _______ because _______."</li>
                 </ul>
             </div>
         </div>
@@ -461,21 +515,21 @@
             <h1>Craft & Setting Deep Dive</h1>
             <h2>Chapter 19: Stipa-ah</h2>
             <div style="font-size: 1.3em; margin-top: 30px;">
-                <p>📖 Week 06 - Day 3</p>
-                <p>🎯 Focus: Advanced craft techniques and setting analysis</p>
-                <p>📄 Chapter: 19 - Stipa-ah</p>
-                <p>⭐ Goal: Analyze complex setting and mood relationships</p>
+                <p>Week 06 - Day 3</p>
+                <p>Focus: Advanced craft techniques and setting analysis</p>
+                <p>Chapter: 19 - Stipa-ah</p>
+                <p>Goal: Analyze complex setting and mood relationships</p>
             </div>
         </div>
 
         <div class="slide">
             <h2>Today's Advanced Analysis</h2>
             <ul style="font-size: 1.6em;">
-                <li>🎨 <strong>Examine</strong> sophisticated craft techniques</li>
-                <li>🌊 <strong>Analyze</strong> how setting creates emotional impact</li>
-                <li>🔍 <strong>Compare</strong> different settings within the chapter</li>
-                <li>📖 <strong>Read</strong> Chapter 19 with expert eyes</li>
-                <li>✅ <strong>Complete</strong> Day 3 advanced questions</li>
+                <li><strong>Examine</strong> sophisticated craft techniques</li>
+                <li><strong>Analyze</strong> how setting creates emotional impact</li>
+                <li><strong>Compare</strong> different settings within the chapter</li>
+                <li><strong>Read</strong> Chapter 19 with expert eyes</li>
+                <li><strong>Complete</strong> Day 3 advanced questions</li>
             </ul>
         </div>
 
@@ -487,10 +541,10 @@
                 
                 <h3>Look for:</h3>
                 <ul style="font-size: 1.3em; text-align: left;">
-                    <li>🃏 <strong>Setting influencing action</strong> - How place changes what characters do</li>
-                    <li>💭 <strong>Setting reflecting emotions</strong> - Mood matching feelings</li>
-                    <li>⚡ <strong>Setting driving conflict</strong> - Environment creating problems</li>
-                    <li>🔮 <strong>Setting foreshadowing</strong> - Place hints at future events</li>
+                    <li><strong>Setting influencing action</strong> - How place changes what characters do</li>
+                    <li><strong>Setting reflecting emotions</strong> - Mood matching feelings</li>
+                    <li><strong>Setting driving conflict</strong> - Environment creating problems</li>
+                    <li><strong>Setting foreshadowing</strong> - Place hints at future events</li>
                 </ul>
             </div>
         </div>
@@ -521,10 +575,10 @@
                 
                 <h3>Expert Analysis Process:</h3>
                 <ul style="text-align: left; font-size: 1.2em;">
-                    <li>🎨 <strong>Craft technique:</strong> Sensory contrast (warm/chatter vs cold/silence)</li>
-                    <li>🔍 <strong>Setting shift:</strong> Community space to isolated space</li>
-                    <li>💭 <strong>Emotional impact:</strong> Comfort transforms to anxiety</li>
-                    <li>🔮 <strong>Foreshadowing:</strong> Silence "pressing" suggests coming tension</li>
+                    <li><strong>Craft technique:</strong> Sensory contrast (warm/chatter vs cold/silence)</li>
+                    <li><strong>Setting shift:</strong> Community space to isolated space</li>
+                    <li><strong>Emotional impact:</strong> Comfort transforms to anxiety</li>
+                    <li><strong>Foreshadowing:</strong> Silence "pressing" suggests coming tension</li>
                 </ul>
             </div>
         </div>
@@ -537,9 +591,9 @@
                 
                 <h3>Advanced Analysis Frames:</h3>
                 <ul style="text-align: left; font-size: 1.2em;">
-                    <li>📝 "The author contrasts _______ with _______ to show _______."</li>
-                    <li>📝 "This setting shift from _______ to _______ reflects Alex's _______."</li>
-                    <li>📝 "By describing _______, the author creates _______ which helps readers understand _______."</li>
+                    <li>"The author contrasts _______ with _______ to show _______."</li>
+                    <li>"This setting shift from _______ to _______ reflects Alex's _______."</li>
+                    <li>"By describing _______, the author creates _______ which helps readers understand _______."</li>
                 </ul>
             </div>
         </div>
@@ -550,23 +604,23 @@
             <h1>Writing Workshop</h1>
             <h2>Analyzing Craft & Setting</h2>
             <div style="font-size: 1.3em; margin-top: 30px;">
-                <p>📖 Week 06 - Day 4</p>
-                <p>🎯 Focus: Written analysis of craft techniques and setting</p>
-                <p>✏️ Task: Respond to prompts about author's craft and setting impact</p>
-                <p>📝 Goal: Support analysis with specific text evidence</p>
+                <p>Week 06 - Day 4</p>
+                <p>Focus: Written analysis of craft techniques and setting</p>
+                <p>Task: Respond to prompts about author's craft and setting impact</p>
+                <p>Goal: Support analysis with specific text evidence</p>
             </div>
         </div>
 
         <div class="slide">
-            <h2>RACES Method Review</h2>
+            <h2>Writing Structure Review</h2>
             <div class="example-box">
-                <h3>Our Trusted Writing Structure:</h3>
+                <h3>Our Writing Method:</h3>
                 <ul style="text-align: left; font-size: 1.4em;">
-                    <li>📝 <strong>R - Restate</strong> the question in your own words</li>
-                    <li>💡 <strong>A - Answer</strong> the question completely</li>
-                    <li>📚 <strong>C - Cite</strong> specific evidence from the text</li>
-                    <li>🔗 <strong>E - Explain</strong> how evidence supports your answer</li>
-                    <li>🎯 <strong>S - Summarize</strong> with a strong conclusion</li>
+                    <li><strong>Topic Sentence</strong> - Clear statement that answers the prompt</li>
+                    <li><strong>Supporting Detail 1</strong> - First piece of evidence with explanation</li>
+                    <li><strong>Supporting Detail 2</strong> - Second piece of evidence with explanation</li>
+                    <li><strong>Supporting Detail 3</strong> - Third piece of evidence with explanation</li>
+                    <li><strong>Conclusion</strong> - Wrap up that restates your main point</li>
                 </ul>
                 
                 <h3>Remember:</h3>
@@ -597,17 +651,17 @@
             <div class="example-box">
                 <h3>Writing Workshop Schedule:</h3>
                 <ul style="text-align: left; font-size: 1.3em;">
-                    <li>⏰ <strong>5 minutes</strong> - Plan your responses and gather evidence</li>
-                    <li>⏰ <strong>30 minutes</strong> - Write your detailed responses</li>
-                    <li>⏰ <strong>10 minutes</strong> - Review, revise, and strengthen analysis</li>
+                    <li><strong>5 minutes</strong> - Plan your responses and gather evidence</li>
+                    <li><strong>30 minutes</strong> - Write your detailed responses</li>
+                    <li><strong>10 minutes</strong> - Review, revise, and strengthen analysis</li>
                 </ul>
                 
                 <h3>Conference Focus Today:</h3>
                 <ul style="text-align: left;">
-                    <li>✅ Clear topic sentences that address the prompts</li>
-                    <li>✅ Specific, relevant text evidence and examples</li>
-                    <li>✅ Strong analysis explaining HOW craft techniques work</li>
-                    <li>✅ Connections between setting and character/plot development</li>
+                    <li>Clear topic sentences that address the prompts</li>
+                    <li>Specific, relevant text evidence and examples</li>
+                    <li>Strong analysis explaining HOW craft techniques work</li>
+                    <li>Connections between setting and character/plot development</li>
                 </ul>
             </div>
         </div>
