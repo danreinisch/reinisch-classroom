@@ -1,14 +1,33 @@
-# macOS cruft
+# macOS
 .DS_Store
 .AppleDouble
+.LSOverride
 
-# Windows cruft
+# Windows
 Thumbs.db
 
-# Build artifacts (future-proof)
+# Finder text snippets
+*.textClipping
+
+# Editors
+*.swp
+*~
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Builds
 node_modules/
 dist/
 build/
 
-# Netlify local folder
+# Netlify local state (not needed on CI)
 .netlify/
+.netlify/state.json
+.netlify/tmp/
+
+# Env
+.env
+.env.*
