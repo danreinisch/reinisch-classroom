@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Week 07 - Writing Methods & Setting Focus | A Door Into Time</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+            color: #fff;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .background-slideshow {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+        
+        .background-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            opacity: 0;
+            transition: opacity 2s ease-in-out;
+        }
+        
+        .background-image.active {
+            opacity: 0.8;
+        }
+        
+        .background-image:nth-child(1) { background-image: url('image1.jpg'); }
+        .background-image:nth-child(2) { background-image: url('image2.jpg'); }
+        .background-image:nth-child(3) { background-image: url('image3.jpg'); }
+        .background-image:nth-child(4) { background-image: url('image4.jpg'); }
+        .background-image:nth-child(5) { background-image: url('image5.jpg'); }
+        .background-image:nth-child(6) { background-image: url('image6.jpg'); }
+        .background-image:nth-child(7) { background-image: url('image7.jpg'); }
+        
+        .presentation-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            z-index: 2;
+        }
+        
+        .presentation-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: transparent;
+            z-index: 1;
+        }
+        
+        .slide {
+            display: none;
+            width: 100%;
+            height: 100%;
+            padding: 40px;
+            position: absolute;
+            top: 0;
+            left: 0;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            text-align: center;
+            z-index: 2;
+            overflow-y: auto;
+            padding-bottom: 100px;
+        }
+        
+        .slide.active {
+            display: flex;
+        }
+        
+        .slide h1 {
+            font-size: 3.5em;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            color: #f4a261;
+        }
+        
+        .slide h2 {
+            font-size: 2.5em;
+            margin-bottom: 30px;
+            color: #e9c46a;
+        }
+        
+        .slide h3 {
+            font-size: 2em;
+            margin-bottom: 20px;
+            color: #2a9d8f;
+        }
+        
+        .slide p, .slide li {
+            font-size: 1.4em;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+        
+        .slide ul {
+            text-align: left;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .slide li {
+            margin-bottom: 10px;
+            padding-left: 10px;
+        }
+        
+        .day-header {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(244, 162, 97, 0.8);
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-weight: bold;
+            color: #1a1a2e;
+            z-index: 3;
+        }
+        
+        .back-nav {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 20px;
+            padding: 12px 24px;
+            text-decoration: none;
+            color: #fff;
+            font-weight: bold;
+            font-size: 1em;
+            transition: all 0.4s ease;
+            z-index: 3;
+            box-shadow: 
+                0 10px 25px rgba(0, 0, 0, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+        
+        .back-nav::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, 
+                rgba(255, 255, 255, 0.1) 0%, 
+                transparent 50%, 
+                rgba(255, 255, 255, 0.05) 100%);
+            border-radius: 20px;
+            pointer-events: none;
+        }
+        
+        .back-nav:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.4);
+            color: #fff;
+            box-shadow: 
+                0 15px 35px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.3);
+            transform: translateX(-50%) translateY(-2px);
+        }
+        
+        .slide-counter {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(42, 157, 143, 0.8);
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-size: 1em;
+            z-index: 3;
+        }
+        
+        .navigation {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            z-index: 3;
+        }
+        
+        .nav-btn {
+            padding: 12px 24px;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 20px;
+            color: #fff;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.4s ease;
+            box-shadow: 
+                0 10px 25px rgba(0, 0, 0, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+        
+        .nav-btn::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, 
+                rgba(255, 255, 255, 0.1) 0%, 
+                transparent 50%, 
+                rgba(255, 255, 255, 0.05) 100%);
+            border-radius: 20px;
+            pointer-events: none;
+        }
+        
+        .nav-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.4);
+            box-shadow: 
+                0 15px 35px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        .nav-btn:disabled {
+            background: rgba(150, 150, 150, 0.15);
+            cursor: not-allowed;
+            color: rgba(255, 255, 255, 0.5);
+            border-color: rgba(255, 255, 255, 0.2);
+            box-shadow: 
+                0 5px 15px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+        
+        .example-box {
+            background: rgba(42, 157, 143, 0.2);
+            border: 2px solid #2a9d8f;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            max-width: 800px;
+        }
+        
+        .vocab-word {
+            background: linear-gradient(45deg, #f4a261, #e9c46a);
+            color: #1a1a2e;
+            padding: 15px 30px;
+            border-radius: 15px;
+            margin: 20px 0;
+            font-size: 1.8em;
+            font-weight: bold;
+            text-shadow: none;
+        }
+        
+        .parts-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            max-width: 900px;
+            margin: 20px auto;
+        }
+        
+        .part-box {
+            background: rgba(244, 162, 97, 0.2);
+            border: 2px solid #f4a261;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .part-title {
+            color: #f4a261;
+            font-size: 1.6em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .prefix-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            max-width: 900px;
+            margin: 20px auto;
+        }
+        
+        .prefix-box {
+            background: rgba(42, 157, 143, 0.2);
+            border: 2px solid #2a9d8f;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+        }
+        
+        .prefix-title {
+            color: #2a9d8f;
+            font-size: 1.4em;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="background-slideshow">
+        <div class="background-image active"></div>
+        <div class="background-image"></div>
+        <div class="background-image"></div>
+        <div class="background-image"></div>
+        <div class="background-image"></div>
+        <div class="background-image"></div>
+        <div class="background-image"></div>
+    </div>
+    
+    <div class="presentation-container">
+        <a href="https://reinischclassroom.com/language-arts" class="back-nav">Return to Language Arts</a>
+        
+        <div class="slide-counter">
+            Slide <span id="current">1</span> of <span id="total">21</span>
+        </div>
+
+        <!-- DAY 1 SLIDES -->
+        <div class="slide active">
+            <div class="day-header">DAY 1 - CHAPTER 20</div>
+            <h1>Writing Methods & Setting</h1>
+            <h2>Discovering Denta-ah</h2>
+            <div style="font-size: 1.3em; margin-top: 30px;">
+                <p>Week 07 - Day 1</p>
+                <p>Focus: How authors use setting and writing methods to tell stories</p>
+                <p>Chapter 20: "Denta-ah" - Alex arrives at a major village</p>
+                <p>Goal: Understand how places and descriptions help tell the story</p>
+            </div>
+        </div>
+
+        <div class="slide">
+            <h2>Today's Reading Detective Work</h2>
+            <ul style="font-size: 1.6em;">
+                <li><strong>Explore</strong> how the author describes Denta-ah as a big, important place</li>
+                <li><strong>Notice</strong> how Alex feels when he sees this new place</li>
+                <li><strong>Think about</strong> how the author shows us differences between Alex's world and this one</li>
+                <li><strong>Read</strong> Chapter 20 together with setting focus</li>
+                <li><strong>Complete</strong> Day 1 reading questions</li>
+            </ul>
+        </div>
+
+        <div class="slide">
+            <h2>Writing Methods Quick Guide</h2>
+            <div class="parts-grid">
+                <div class="part-box">
+                    <div class="part-title">Describing Places</div>
+                    <p><strong>Setting Details</strong></p>
+                    <p>Author tells us about buildings, people, activities</p>
+                    <p><em>"The village bustled with activity"</em></p>
+                </div>
+                <div class="part-box">
+                    <div class="part-title">Showing Feelings</div>
+                    <p><strong>Character Reactions</strong></p>
+                    <p>Author shows what characters think and feel</p>
+                    <p><em>"Alex felt overwhelmed by the size"</em></p>
+                </div>
+                <div class="part-box">
+                    <div class="part-title">Making Comparisons</div>
+                    <p><strong>Contrasting Ideas</strong></p>
+                    <p>Author shows differences between things</p>
+                    <p><em>"Unlike his small village, Denta-ah was huge"</em></p>
+                </div>
+                <div class="part-box">
+                    <div class="part-title">Building Pictures</div>
+                    <p><strong>Detailed Descriptions</strong></p>
+                    <p>Author uses specific details to help us see</p>
+                    <p><em>"Smoke rose from dozens of cooking fires"</em></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="slide">
+            <h2>Think-Aloud & Model</h2>
+            <div class="example-box">
+                <h3>From Chapter 20:</h3>
+                <p><em>"As Alex crested the hill, Denta-ah spread out before him like nothing he had ever seen. The village was enormous—easily ten times larger than the Winten-ah settlement. Hundreds of people moved through the bustling pathways between countless dwellings."</em></p>
+                
+                <h3>Let's Think About This:</h3>
+                <p><strong>Writing Method:</strong> The author uses comparison ("ten times larger") and specific details ("hundreds of people," "countless dwellings") to show us how big and busy Denta-ah is.</p>
+                
+                <h3>Why This Works:</h3>
+                <p>This helps us understand Alex's amazement and shows us this is a very important, developed place!</p>
+            </div>
+        </div>
+
+        <div class="slide">
+            <h2>Practice & Guided Check</h2>
+            <div class="example-box">
+                <h3>Your Turn to Think:</h3>
+                <p>How does the author show us that Alex feels overwhelmed by Denta-ah?</p>
+                
+                <h3>Sentence Starters to Help:</h3>
+                <ul style="text-align: left;">
+                    <li>The author shows Alex's feelings by...</li>
+                    <li>Alex's reaction tells us that...</li>
+                    <li>The description helps us understand...</li>
+                </ul>
+                
+                <h3 style="margin-top: 20px;">Remember:</h3>
+                <p>Look for specific words that show Alex's amazement and worry!</p>
+            </div>
+        </div>
+
+        <!-- DAY 2 SLIDES -->
+        <div class="slide">
+            <div class="day-header">DAY 2 - CHAPTER 21</div>
+            <h1>Vocabulary Focus</h1>
+            <h2>Building Word Power</h2>
+            <div style="font-size: 1.3em; margin-top: 30px;">
+                <p>Week 07 - Day 2</p>
+                <p>Focus: Beginning parts, ending parts, types of words, and word meanings</p>
+                <p>Chapter 21: "Enslaved" - Alex faces difficult times</p>
+                <p>Goal: Master word tools for better reading</p>
+            </div>
+        </div>
+
+        <div class="slide">
+            <h2>Today's Word Detective Work</h2>
+            <ul style="font-size: 1.6em;">
+                <li><strong>Find</strong> types of words in sentences</li>
+                <li><strong>Spot</strong> beginning and ending parts of words</li>
+                <li><strong>Understand</strong> how word parts make meaning</li>
+                <li><strong>Read</strong> Chapter 21 with word focus</li>
+                <li><strong>Complete</strong> Day 2 word questions</li>
+            </ul>
+        </div>
+
+        <div class="slide">
+            <h2>Beginning and Ending Parts</h2>
+            <div class="prefix-grid">
+                <div class="prefix-box">
+                    <div class="prefix-title">un-</div>
+                    <p>Beginning part meaning "not"</p>
+                    <p><strong>un</strong>happy = not happy</p>
+                </div>
+                <div class="prefix-box">
+                    <div class="prefix-title">re-</div>
+                    <p>Beginning part meaning "again"</p>
+                    <p><strong>re</strong>play = play again</p>
+                </div>
+                <div class="prefix-box">
+                    <div class="prefix-title">-less</div>
+                    <p>Ending part meaning "without"</p>
+                    <p>hope<strong>less</strong> = without hope</p>
+                </div>
+                <div class="prefix-box">
+                    <div class="prefix-title">-ful</div>
+                    <p>Ending part meaning "full of"</p>
+                    <p>hope<strong>ful</strong> = full of hope</p>
+                </div>
+                <div class="prefix-box">
+                    <div class="prefix-title">-ly</div>
+                    <p>Ending part meaning "in that way"</p>
+                    <p>quick<strong>ly</strong> = in a quick way</p>
+                </div>
+                <div class="prefix-box">
+                    <div class="prefix-title">-er</div>
+                    <p>Ending part meaning "person who"</p>
+                    <p>teach<strong>er</strong> = person who teaches</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="slide">
+            <h2>Types of Words Review</h2>
+            <div class="parts-grid">
+                <div class="part-box">
+                    <div class="part-title">Noun</div>
+                    <p><strong>Naming Word</strong></p>
+                    <p>Person, place, thing, or idea</p>
+                    <p><strong>Alex</strong>, village, <strong>hope</strong></p>
+                </div>
+                <div class="part-box">
+                    <div class="part-title">Verb</div>
+                    <p><strong>Action Word</strong></p>
+                    <p>What someone or something does</p>
+                    <p><strong>walked</strong>, is, <strong>worried</strong></p>
+                </div>
+                <div class="part-box">
+                    <div class="part-title">Adjective</div>
+                    <p><strong>Describing Word</strong></p>
+                    <p>Tells about a naming word</p>
+                    <p><strong>worried</strong>, big, <strong>scary</strong></p>
+                </div>
+                <div class="part-box">
+                    <div class="part-title">Adverb</div>
+                    <p><strong>Word That Tells How</strong></p>
+                    <p>Tells how an action is done</p>
+                    <p><strong>slowly</strong>, quickly, <strong>carefully</strong></p>
+                </div>
+            </div>
+            <div class="example-box" style="margin-top: 20px;">
+                <p><strong>Example:</strong> "Alex walked <em>slowly</em> toward the <em>scary</em> building."</p>
+                <p>walked = verb (action word) • slowly = adverb (word that tells how) • scary = adjective (describing word) • building = noun (naming word)</p>
+            </div>
+        </div>
+
+        <div class="slide">
+            <h2>Practice & Word Frames</h2>
+            <div class="example-box">
+                <h3>Let's Practice Together:</h3>
+                <p>Word: "unhappy"</p>
+                <p>Beginning part: <strong>un-</strong> (means "not")</p>
+                <p>Main word: <strong>happy</strong></p>
+                <p>Meaning: not happy</p>
+                
+                <h3>Helpful Sentence Starters:</h3>
+                <ul style="text-align: left;">
+                    <li>The beginning part _____ means...</li>
+                    <li>The ending part _____ means...</li>
+                    <li>In this sentence, the word _____ is a...</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- DAY 3 SLIDES -->
+        <div class="slide">
+            <div class="day-header">DAY 3 - CHAPTER 22</div>
+            <h1>Deeper Understanding</h1>
+            <h2>Meeting Douglas Winterborne</h2>
+            <div style="font-size: 1.3em; margin-top: 30px;">
+                <p>Week 07 - Day 3</p>
+                <p>Focus: Understanding how authors build excitement and reveal important information</p>
+                <p>Chapter 22: "Douglas Winterborne" - Alex meets someone special</p>
+                <p>Goal: See how authors create surprises and connections</p>
+            </div>
+        </div>
+
+        <div class="slide">
+            <h2>Today's Story Detective Work</h2>
+            <ul style="font-size: 1.6em;">
+                <li><strong>Discover</strong> who Douglas Winterborne is and why he's important</li>
+                <li><strong>Notice</strong> how the author makes us excited before revealing his identity</li>
+                <li><strong>Think about</strong> what makes Douglas different from other people in this time</li>
+                <li><strong>Read</strong> Chapter 22 together with character focus</li>
+                <li><strong>Complete</strong> Day 3 advanced questions</li>
+            </ul>
+        </div>
+
+        <div class="slide">
+            <h2>How Authors Build Excitement</h2>
+            <div class="example-box">
+                <h3>Writing Methods for Creating Surprises:</h3>
+                
+                <h3>1. Mystery First</h3>
+                <p>Give us clues but don't tell us everything right away</p>
+                
+                <h3>2. Familiar Hints</h3>
+                <p>Show us things that seem familiar to the main character</p>
+                
+                <h3>3. Big Reveal</h3>
+                <p>Finally tell us the important information at the perfect moment</p>
+                
+                <h3>4. Character Reaction</h3>
+                <p>Show how the main character feels about the surprise</p>
+            </div>
+        </div>
+
+        <div class="slide">
+            <h2>Douglas Winterborne Analysis</h2>
+            <div class="example-box">
+                <h3>Why Douglas is Special:</h3>
+                <p><em>"When Douglas spoke, Alex's eyes widened. The man was speaking perfect English—modern English, not the broken dialect of this time period."</em></p>
+                
+                <h3>What This Shows Us:</h3>
+                <ul style="text-align: left; max-width: 600px;">
+                    <li><strong>Same time period</strong> - Douglas knows modern English</li>
+                    <li><strong>Fellow traveler</strong> - He's from Alex's world</li>
+                    <li><strong>Hope for Alex</strong> - Alex isn't alone anymore</li>
+                    <li><strong>Proof of survival</strong> - Someone like Alex made it work</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide">
+            <h2>Setting & Character Connection</h2>
+            <div class="example-box">
+                <h3>How the Author Uses Denta-ah:</h3>
+                <ul style="text-align: left; font-size: 1.3em;">
+                    <li><strong>Shows contrast</strong> - Primitive village vs. modern knowledge</li>
+                    <li><strong>Brings people together</strong> - Big place where travelers meet</li>
+                    <li><strong>Creates challenges</strong> - Alex must adapt to survive</li>
+                    <li><strong>Offers opportunities</strong> - Meeting Douglas gives Alex hope</li>
+                </ul>
+                
+                <h3 style="margin-top: 30px;">Writing Method:</h3>
+                <p>The author uses the setting to create both problems and solutions for Alex!</p>
+            </div>
+        </div>
+
+        <!-- DAY 4 SLIDES -->
+        <div class="slide">
+            <div class="day-header">DAY 4 - WRITING DAY</div>
+            <h1>Writing Workshop</h1>
+            <h2>Analyzing Setting & Characters</h2>
+            <div style="font-size: 1.3em; margin-top: 30px;">
+                <p>Week 07 - Day 4</p>
+                <p>Focus: Written analysis of setting and character development</p>
+                <p>Task: Respond to prompts about how authors use places and people</p>
+                <p>Goal: Support ideas with strong details from the text</p>
+            </div>
+        </div>
+
+        <div class="slide">
+            <h2>Writing Structure Review</h2>
+            <div class="example-box">
+                <h3>Our Simple, Effective Structure:</h3>
+                <ul style="text-align: left; font-size: 1.3em;">
+                    <li><strong>Topic Sentence</strong> - Clear statement answering the question</li>
+                    <li><strong>Supporting Detail 1</strong> - First detail from text + explanation</li>
+                    <li><strong>Supporting Detail 2</strong> - Second detail from text + explanation</li>
+                    <li><strong>Supporting Detail 3</strong> - Third detail from text + explanation</li>
+                    <li><strong>Conclusion</strong> - Wrap up and connect back</li>
+                </ul>
+                
+                <h3 style="margin-top: 20px;">Remember:</h3>
+                <p>Each supporting detail needs <strong>evidence from the text</strong> AND <strong>your explanation</strong> of why it matters!</p>
+            </div>
+        </div>
+
+        <div class="slide">
+            <h2>Today's Writing Prompts</h2>
+            <div class="example-box">
+                <h3>Response 1:</h3>
+                <p>How does the author use descriptions of Denta-ah to show how different this world is from Alex's modern world?</p>
+                
+                <h3>Response 2:</h3>
+                <p>What details from Chapter 22 prove that Douglas Winterborne is from the same time period as Alex?</p>
+                
+                <h3 style="margin-top: 30px;">Success Tips:</h3>
+                <ul style="text-align: left;">
+                    <li>Use specific quotes or examples from the chapters</li>
+                    <li>Explain HOW each example supports your main point</li>
+                    <li>Connect everything back to setting and character development</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide">
+            <h2>Writing Time & Conferences</h2>
+            <div class="example-box">
+                <h3>Writing Workshop Schedule:</h3>
+                <ul style="text-align: left; font-size: 1.3em;">
+                    <li><strong>5 minutes</strong> - Plan your responses</li>
+                    <li><strong>30 minutes</strong> - Write your responses</li>
+                    <li><strong>10 minutes</strong> - Review and revise</li>
+                </ul>
+                
+                <h3>Conference Focus:</h3>
+                <ul style="text-align: left;">
+                    <li>Clear topic sentences that answer the questions</li>
+                    <li>Specific details from the text as evidence</li>
+                    <li>Good explanations of why each detail matters</li>
+                    <li>Strong conclusions that wrap everything up</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="navigation">
+            <button class="nav-btn" id="prevBtn" onclick="changeSlide(-1)">Previous</button>
+            <button class="nav-btn" id="nextBtn" onclick="changeSlide(1)">Next</button>
+        </div>
+    </div>
+
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+
+        document.getElementById('total').textContent = totalSlides;
+
+        function showSlide(n) {
+            slides[currentSlide].classList.remove('active');
+            currentSlide = (n + totalSlides) % totalSlides;
+            slides[currentSlide].classList.add('active');
+            
+            document.getElementById('current').textContent = currentSlide + 1;
+            
+            document.getElementById('prevBtn').disabled = currentSlide === 0;
+            document.getElementById('nextBtn').disabled = currentSlide === totalSlides - 1;
+        }
+
+        function changeSlide(direction) {
+            if (direction === 1 && currentSlide < totalSlides - 1) {
+                showSlide(currentSlide + 1);
+            } else if (direction === -1 && currentSlide > 0) {
+                showSlide(currentSlide - 1);
+            }
+        }
+
+        // Keyboard navigation
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                changeSlide(1);
+            } else if (e.key === 'ArrowLeft') {
+                changeSlide(-1);
+            }
+        });
+
+        // Initialize
+        showSlide(0);
+        
+        // Background slideshow functionality
+        let currentBgImage = 0;
+        const bgImages = document.querySelectorAll('.background-image');
+        const totalBgImages = bgImages.length;
+        
+        function rotateBackground() {
+            bgImages[currentBgImage].classList.remove('active');
+            currentBgImage = (currentBgImage + 1) % totalBgImages;
+            bgImages[currentBgImage].classList.add('active');
+        }
+        
+        // Auto-rotate background images every 8 seconds
+        setInterval(rotateBackground, 8000);
+    </script>
+</body>
+</html>
