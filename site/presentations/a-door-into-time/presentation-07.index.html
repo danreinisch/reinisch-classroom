@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Week 07 – A Door Into Time</title>
+  <style>
+    html,body{height:100%} body{margin:0;color:#fff;font-family:Arial,Helvetica,sans-serif;overflow:hidden}
+    .bg{position:fixed;inset:0;z-index:-1}
+    .bg div{position:absolute;inset:0;background:center/cover no-repeat;opacity:0;transition:opacity .8s ease}
+    .bg .show{opacity:.4}
+    main{max-width:960px;margin:1rem auto;background:rgba(0,0,0,.35);padding:1rem;border-radius:8px}
+    section{background:#fff;color:#111;margin:.75rem 0;padding:1rem;border-radius:8px}
+  </style>
+</head>
+<body>
+  <div class="bg" id="bg">
+    <div class="show" style="background-image:url('image1.jpg')"></div>
+    <div style="background-image:url('image2.jpg')"></div>
+    <div style="background-image:url('image3.jpg')"></div>
+    <div style="background-image:url('image4.jpg')"></div>
+    <div style="background-image:url('image5.jpg')"></div>
+    <div style="background-image:url('image6.jpg')"></div>
+  </div>
+  <main>
+    <h1>Week 07 – A Door Into Time</h1>
+    <section>
+      <h2>Intro</h2>
+      <p>Replace this content with your Week 7 slides.</p>
+    </section>
+  </main>
+  <script>
+    const layers=[...document.querySelectorAll('#bg div')];
+    const imgs=['image1.jpg','image2.jpg','image3.jpg','image4.jpg','image5.jpg','image6.jpg'];
+    imgs.forEach(s=>{const i=new Image();i.src=s});
+    let i=0; setInterval(()=>{layers[i].classList.remove('show'); i=(i+1)%layers.length; layers[i].classList.add('show')},8000);
+  </script>
+</body>
+</html>
