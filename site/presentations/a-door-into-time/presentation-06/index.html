@@ -291,6 +291,13 @@
             text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
         }
     </style>
+
+    <!-- z-index fix to ensure background images render above page background -->
+    <style>
+      .background-slideshow { z-index: 0; }
+      .overlay { z-index: 1; }
+      .presentation-container { position: relative; z-index: 2; }
+    </style>
 </head>
 <body>
     <!-- Background slideshow -->
@@ -403,9 +410,9 @@
                 
                 <h3>Sentence Frames to Help You:</h3>
                 <ul style="text-align: left; font-size: 1.3em;">
-                    <li>"The author describes the setting as _______ to show _______.”</li>
-                    <li>"When the author writes about _______, it creates a feeling of _______.”</li>
-                    <li>"The setting details like _______ help readers understand that Alex feels _______.”</li>
+                    <li>"The author describes the setting as _______ to show _______.'</li>
+                    <li>"When the author writes about _______, it creates a feeling of _______.'</li>
+                    <li>"The setting details like _______ help readers understand that Alex feels _______.'</li>
                 </ul>
             </div>
         </div>
@@ -498,13 +505,13 @@
             <h2>Practice & Sentence Frames</h2>
             <div class="example-box">
                 <h3>Guided Vocabulary Practice:</h3>
-                <p>Sentence: "The hunter moved stealthily through the underbrush."
-                </p>
+                <p>Sentence: "The hunter moved stealthily through the underbrush." </p>
+                
                 <h3>Analysis Frames:</h3>
                 <ul style="text-align: left; font-size: 1.3em;">
-                    <li>"The prefix _______ means _______.”</li>
-                    <li>"The word _______ is a _______ (part of speech).”</li>
-                    <li>"I can tell _______ means _______ because _______.”</li>
+                    <li>"The prefix _______ means _______." </li>
+                    <li>"The word _______ is a _______ (part of speech)." </li>
+                    <li>"I can tell _______ means _______ because _______." </li>
                 </ul>
             </div>
         </div>
@@ -591,9 +598,9 @@
                 
                 <h3>Advanced Analysis Frames:</h3>
                 <ul style="text-align: left; font-size: 1.2em;">
-                    <li>"The author contrasts _______ with _______ to show _______.”</li>
-                    <li>"This setting shift from _______ to _______ reflects Alex's _______.”</li>
-                    <li>"By describing _______, the author creates _______ which helps readers understand _______.”</li>
+                    <li>"The author contrasts _______ with _______ to show _______." </li>
+                    <li>"This setting shift from _______ to _______ reflects Alex's _______." </li>
+                    <li>"By describing _______, the author creates _______ which helps readers understand _______." </li>
                 </ul>
             </div>
         </div>
