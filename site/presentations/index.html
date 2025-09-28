@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Presentations</title>
+  <link rel="stylesheet" href="/assets/css/site.css" />
+  <style>
+    main { max-width: 1000px; margin: 0 auto; padding: 1rem; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(260px,1fr)); gap: 1rem; }
+    .card { border:1px solid #e5e7eb; border-radius:.5rem; padding:1rem; background:#fff; }
+    .card h3 { margin: 0 0 .25rem; font-size:1.1rem; }
+    .meta { color:#555; font-size:.9rem; margin:.25rem 0 .5rem; }
+    .desc { color:#333; font-size:.95rem; }
+    .card a.button { display:inline-block; margin-top:.5rem; padding:.4rem .7rem; background:#1a73e8; color:#fff; border-radius:.375rem; text-decoration:none; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Presentations</h1>
+    <div id="list" class="grid">Loading…</div>
+  </main>
+
+  <script>
+    async function loadManifest() {
+      const res = await fetch('/presentations/manifest.json', { cache: 'no-cache' });
+      if (!res.ok) { document.getElementById('list').textContent = 'Unable to load presentations.'; return; }
+      const items = await res.json().catch(()=>[]);
+      const list = document.getElementById('list');
+      if (!Array.isArray(items) || !items.length) { list.textContent = 'No presentations yet.'; return; }
+
+      list.innerHTML = items.map(item => {
+        const url = item.external_url ? item.external_url : `/presentations/${item.slug}/`;
+        const target = item.external_url ? ` target="_blank" rel="noopener"` : '';
+        const date = item.date ? new Date(item.date + 'T00:00:00').toLocaleDateString() : '';
+        const meta = [date, item.section].filter(Boolean).join(' • ');
+        return `
+          <div class="card">
+            <h3>${item.title}</h3>
+            ${meta ? `<div class="meta">${meta}</div>` : ''}
+            ${item.description ? `<div class="desc">${item.description}</div>` : ''}
+            <a class="button" href="${url}"${target}>Open</a>
+          </div>
+        `;
+      }).join('');
+    }
+    loadManifest();
+  </script>
+</body>
+</html>
