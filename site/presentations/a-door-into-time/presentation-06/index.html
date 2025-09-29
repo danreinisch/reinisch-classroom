@@ -293,6 +293,18 @@
             color: #ffd700;
             text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
         }
+
+        /* Ken Burns animation */
+        @keyframes kenburns {
+          0%   { transform: scale(1) translate(0, 0); transform-origin: center; }
+          100% { transform: scale(1.12) translate(2%, -2%); }
+        }
+        .background-slideshow .bg-image { will-change: transform, opacity; }
+        .background-slideshow .bg-image.active { animation: kenburns 8s ease-in-out forwards; }
+        @media (prefers-reduced-motion: reduce) {
+          .background-slideshow .bg-image { transition: none; }
+          .background-slideshow .bg-image.active { animation: none; }
+        }
     </style>
 
     <!-- z-index fix to ensure background images render above page background -->
@@ -413,9 +425,9 @@
                 
                 <h3>Sentence Frames to Help You:</h3>
                 <ul style="text-align: left; font-size: 1.3em;">
-                    <li>"The author describes the setting as _______ to show _______.'</li>
-                    <li>"When the author writes about _______, it creates a feeling of _______.'</li>
-                    <li>"The setting details like _______ help readers understand that Alex feels _______.'</li>
+                    <li>"The author describes the setting as _______ to show _______."</li>
+                    <li>"When the author writes about _______, it creates a feeling of _______."</li>
+                    <li>"The setting details like _______ help readers understand that Alex feels _______."</li>
                 </ul>
             </div>
         </div>
