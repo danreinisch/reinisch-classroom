@@ -12,6 +12,15 @@
     a:hover { filter: brightness(1.05); }
   </style>
   <script> window.location.replace('fixed_chapters_presentation.html'); </script>
+  <script>
+    // Same-origin back-link script
+    (function() {
+        var languageArtsLinks = document.querySelectorAll('a[href*="language-arts"]');
+        languageArtsLinks.forEach(function(link) {
+            link.href = window.location.origin + '/language-arts/';
+        });
+    })();
+  </script>
 </head>
 <body>
   <div class="fallback">
