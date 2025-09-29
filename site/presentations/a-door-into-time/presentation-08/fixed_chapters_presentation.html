@@ -809,5 +809,15 @@
         // Auto-rotate background images every 8 seconds
         setInterval(rotateBgImage, 8000);
     </script>
+
+    <script>
+        // Fix navigation to stay within same environment (preview/production)
+        (function() {
+            const backLink = document.querySelector('.back-nav');
+            if (backLink) {
+                backLink.href = window.location.origin + '/language-arts/';
+            }
+        })();
+    </script>
 </body>
 </html>
