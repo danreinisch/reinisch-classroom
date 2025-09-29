@@ -90,7 +90,7 @@
             width: 100%;
             height: 100%;
             background: rgba(0, 0, 0, 0.1);
-            z-index: -1;
+            z-index: 1;
         }
         
         .presentation-container {
@@ -206,6 +206,7 @@
             right: 20px;
             display: flex;
             gap: 10px;
+            z-index: 3; /* ensure buttons are above the overlay */
         }
         
         .controls button {
@@ -391,7 +392,7 @@
             <h2>Think-Aloud & Model</h2>
             <div class="example-box">
                 <h3>Let's analyze this together:</h3>
-                <p><em>"Alex looked around at the faces surrounding him in the flickering firelight. Some were friendly, some were curious, and some seemed to be weighing him, trying to decide if he was worthy."</em></p>
+                <p><em>"Alex looked around at the faces surrounding him in the flickering firelight. Some were friendly, some were curious, and some seemed to be weighing him, trying to decide if[...]</em></p>
                 
                 <h3>My thinking process:</h3>
                 <p style="text-align: left; font-size: 1.3em;">
@@ -642,7 +643,7 @@
                 <p>How does the author use setting descriptions to create different moods throughout Chapters 16-18? Use specific examples from at least two different settings.</p>
                 
                 <h3>Response 2:</h3>
-                <p>Analyze how the author's craft techniques (word choice, sentence structure, imagery) help readers understand Alex's changing relationship with his environment in these chapters.</p>
+                <p>Analyze how the author's craft techniques (word choice, sentence structure, imagery) help readers understand Alex's changing relationship with his environment in these chapters[...]</p>
                 
                 <h3 style="margin-top: 30px;">Success Tips:</h3>
                 <ul style="text-align: left;">
@@ -718,6 +719,9 @@
             if (e.key === 'ArrowRight') nextSlide();
             if (e.key === 'ArrowLeft') previousSlide();
         });
+
+        // Initialize first slide explicitly (ensures nav works after load)
+        showSlide(0);
     </script>
 </body>
 </html>
