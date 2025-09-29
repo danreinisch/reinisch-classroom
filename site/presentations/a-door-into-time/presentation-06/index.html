@@ -719,5 +719,15 @@
             if (e.key === 'ArrowLeft') previousSlide();
         });
     </script>
+
+    <script>
+        // Fix navigation to stay within same environment (preview/production)
+        (function() {
+            const backLink = document.querySelector('.return-button');
+            if (backLink) {
+                backLink.href = window.location.origin + '/language-arts/';
+            }
+        })();
+    </script>
 </body>
 </html>
