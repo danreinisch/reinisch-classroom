@@ -809,5 +809,14 @@
         // Auto-rotate background images every 8 seconds
         setInterval(rotateBgImage, 8000);
     </script>
+    <script>
+        // Same-origin back-link script
+        (function() {
+            var languageArtsLinks = document.querySelectorAll('a[href*="language-arts"]');
+            languageArtsLinks.forEach(function(link) {
+                link.href = window.location.origin + '/language-arts/';
+            });
+        })();
+    </script>
 </body>
 </html>
