@@ -12,148 +12,156 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #7e22ce 100%);
             min-height: 100vh;
             padding: 20px;
+            color: #e8edf5;
         }
 
         .container {
-            max-width: 1000px;
+            max-width: 1400px;
             margin: 0 auto;
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            background: rgba(30, 41, 59, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.3);
             overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .header {
-            background: linear-gradient(135deg, #667eea, #764ba2);
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(147, 51, 234, 0.3));
+            backdrop-filter: blur(10px);
             color: white;
-            padding: 30px;
-            text-align: center;
+            padding: 30px 40px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
+            font-size: 2em;
+            margin-bottom: 8px;
+            font-weight: 600;
         }
 
         .header p {
-            font-size: 1.2em;
-            opacity: 0.9;
+            font-size: 1em;
+            opacity: 0.8;
         }
 
         .content {
-            padding: 30px;
+            padding: 30px 40px;
+            display: grid;
+            gap: 20px;
         }
 
         .prompt-section {
-            margin-bottom: 30px;
-            padding: 25px;
-            background: #f8f9ff;
-            border-radius: 10px;
-            border-left: 5px solid #667eea;
+            background: rgba(51, 65, 85, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 12px;
         }
 
         .prompt-section h2 {
-            color: #333;
-            margin-bottom: 15px;
-            font-size: 1.5em;
+            color: #e8edf5;
+            margin-bottom: 12px;
+            font-size: 1.2em;
+            font-weight: 500;
         }
 
         .prompt-input {
             width: 100%;
-            padding: 15px;
-            border: 2px solid #ddd;
+            padding: 12px 15px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 8px;
-            font-size: 1.1em;
+            font-size: 1em;
             resize: vertical;
-            min-height: 100px;
+            min-height: 80px;
             font-family: inherit;
+            background: rgba(30, 41, 59, 0.8);
+            color: #e8edf5;
         }
 
         .prompt-input:focus {
             outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 10px rgba(102, 126, 234, 0.1);
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
         }
 
         .writing-section {
-            margin-bottom: 25px;
-            padding: 25px;
-            background: #fff;
-            border: 2px solid #e9ecef;
+            background: rgba(51, 65, 85, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 20px;
             border-radius: 12px;
             transition: all 0.3s ease;
         }
 
         .writing-section:hover {
-            border-color: #667eea;
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.1);
+            border-color: rgba(59, 130, 246, 0.5);
+            background: rgba(51, 65, 85, 0.7);
         }
 
         .section-header {
             display: flex;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
+            gap: 15px;
         }
 
         .section-title {
-            background: #667eea;
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
             color: white;
-            padding: 12px 20px;
-            border-radius: 25px;
-            font-weight: bold;
-            font-size: 1.1em;
-            margin-right: 15px;
-            min-width: 200px;
-            text-align: center;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .topic-sentence .section-title {
-            background: #28a745;
+            background: linear-gradient(135deg, #10b981, #059669);
         }
 
         .supporting-detail-1 .section-title {
-            background: #007bff;
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
         }
 
         .supporting-detail-2 .section-title {
-            background: #6f42c1;
+            background: linear-gradient(135deg, #8b5cf6, #6d28d9);
         }
 
         .supporting-detail-3 .section-title {
-            background: #fd7e14;
+            background: linear-gradient(135deg, #f59e0b, #d97706);
         }
 
         .conclusion .section-title {
-            background: #dc3545;
+            background: linear-gradient(135deg, #ef4444, #dc2626);
         }
 
         .writing-content {
             display: flex;
-            gap: 20px;
+            gap: 15px;
             align-items: flex-start;
         }
 
         .transition-dropdown {
-            min-width: 200px;
+            min-width: 180px;
         }
 
         .transition-dropdown select {
             width: 100%;
-            padding: 12px;
-            border: 2px solid #ddd;
+            padding: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 8px;
-            font-size: 1em;
-            background: white;
+            font-size: 0.95em;
+            background: rgba(30, 41, 59, 0.8);
+            color: #e8edf5;
             cursor: pointer;
         }
 
         .transition-dropdown select:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: #3b82f6;
         }
 
         .content-input {
@@ -162,74 +170,111 @@
 
         .content-textarea {
             width: 100%;
-            padding: 15px;
-            border: 2px solid #ddd;
+            padding: 12px 15px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 8px;
-            min-height: 120px;
-            font-size: 1.1em;
+            min-height: 100px;
+            font-size: 1em;
             resize: vertical;
             font-family: inherit;
             line-height: 1.6;
+            background: rgba(30, 41, 59, 0.8);
+            color: #e8edf5;
         }
 
         .content-textarea:focus {
             outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 10px rgba(102, 126, 234, 0.1);
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
         }
 
         .topic-sentence .content-textarea {
-            min-height: 80px;
+            min-height: 70px;
         }
 
         .tips {
-            margin-top: 15px;
-            padding: 12px;
-            background: #e8f4ff;
+            margin-top: 10px;
+            padding: 10px;
+            background: rgba(59, 130, 246, 0.1);
             border-radius: 6px;
-            border-left: 4px solid #007bff;
-            font-size: 0.9em;
-            color: #555;
+            border-left: 3px solid #3b82f6;
+            font-size: 0.85em;
+            color: #cbd5e1;
+        }
+
+        .word-count {
+            background: rgba(30, 41, 59, 0.8);
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-size: 0.85em;
+            color: #94a3b8;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-left: auto;
+        }
+
+        .feedback {
+            margin-top: 10px;
+        }
+
+        .feedback p {
+            margin: 6px 0;
+            padding: 8px 12px;
+            background: rgba(16, 185, 129, 0.1);
+            border-left: 3px solid #10b981;
+            border-radius: 6px;
+            font-size: 0.85em;
+        }
+
+        .feedback p.warn {
+            background: rgba(245, 158, 11, 0.1);
+            border-left-color: #f59e0b;
+        }
+
+        .feedback p.error {
+            background: rgba(239, 68, 68, 0.1);
+            border-left-color: #ef4444;
         }
 
         .actions {
             display: flex;
-            gap: 15px;
+            gap: 12px;
             justify-content: center;
-            margin-top: 30px;
-            padding: 25px;
-            background: #f8f9ff;
-            border-radius: 10px;
+            margin-top: 20px;
+            padding: 20px;
+            background: rgba(51, 65, 85, 0.4);
+            border-radius: 12px;
         }
 
         .btn {
-            padding: 12px 25px;
+            padding: 12px 24px;
             border: none;
-            border-radius: 25px;
-            font-size: 1em;
-            font-weight: bold;
+            border-radius: 8px;
+            font-size: 0.95em;
+            font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
+            border: 1px solid transparent;
         }
 
         .btn-primary {
-            background: #667eea;
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
             color: white;
         }
 
         .btn-secondary {
-            background: #6c757d;
+            background: rgba(100, 116, 139, 0.8);
             color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
 
         .btn-success {
-            background: #28a745;
+            background: linear-gradient(135deg, #10b981, #059669);
             color: white;
         }
 
         .btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
         }
 
         .preview-modal {
@@ -239,8 +284,9 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.5);
+            background: rgba(0,0,0,0.7);
             z-index: 1000;
+            backdrop-filter: blur(5px);
         }
 
         .preview-content {
@@ -248,40 +294,49 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: white;
+            background: rgba(30, 41, 59, 0.98);
             padding: 30px;
             border-radius: 15px;
             max-width: 80%;
             max-height: 80%;
             overflow-y: auto;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .preview-content h2 {
+            color: #e8edf5;
+            margin-bottom: 20px;
         }
 
         .preview-text {
             line-height: 1.8;
-            font-size: 1.1em;
-            color: #333;
+            font-size: 1.05em;
+            color: #cbd5e1;
         }
 
-        .word-count {
-            background: #e9ecef;
-            padding: 10px 15px;
-            border-radius: 20px;
-            font-size: 0.9em;
-            color: #666;
-            margin-left: auto;
+        textarea::placeholder,
+        select option:first-child {
+            color: #64748b;
+        }
+
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(30, 41, 59, 0.5);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(59, 130, 246, 0.5);
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(59, 130, 246, 0.7);
         }
     </style>
-<script>
-(function(){
-  // Determine root: if path contains "/site/", assets live under that; else assets are at root
-  var root = location.pathname.indexOf('/site/') >= 0 ? location.pathname.slice(0, location.pathname.indexOf('/site/') + 6) : '/';
-  function addCSS(href){ var l=document.createElement('link'); l.rel='stylesheet'; l.href=href; document.head.appendChild(l); }
-  function addJS(src){ var s=document.createElement('script'); s.defer=true; s.src=src; document.head.appendChild(s); }
-  addCSS(root + 'assets/css/site.css');
-  addJS(root + 'assets/js/site.js');
-})();
-</script>
 </head>
 <body>
     <div class="container">
@@ -291,7 +346,6 @@
         </div>
 
         <div class="content">
-            <!-- Prompt Section -->
             <div class="prompt-section">
                 <h2>📋 Writing Prompt/Question</h2>
                 <textarea 
@@ -301,10 +355,9 @@
                 ></textarea>
             </div>
 
-            <!-- Topic Sentence -->
             <div class="writing-section topic-sentence">
                 <div class="section-header">
-                    <div class="section-title">TOPIC SENTENCE</div>
+                    <div class="section-title">Topic Sentence</div>
                     <div class="word-count" id="topicWordCount">0 words</div>
                 </div>
                 <div class="writing-content">
@@ -314,6 +367,7 @@
                             id="topicSentence"
                             placeholder="Write your main thesis or topic sentence here. This should clearly state your position or main argument..."
                         ></textarea>
+                        <div class="feedback" id="topicFeedback"></div>
                         <div class="tips">
                             💡 <strong>Tip:</strong> Your topic sentence should clearly state your main argument and preview what you'll discuss in your supporting details.
                         </div>
@@ -321,10 +375,9 @@
                 </div>
             </div>
 
-            <!-- Supporting Detail 1 -->
             <div class="writing-section supporting-detail-1">
                 <div class="section-header">
-                    <div class="section-title">SUPPORTING DETAIL 1</div>
+                    <div class="section-title">Supporting Detail 1</div>
                     <div class="word-count" id="detail1WordCount">0 words</div>
                 </div>
                 <div class="writing-content">
@@ -353,10 +406,9 @@
                 </div>
             </div>
 
-            <!-- Supporting Detail 2 -->
             <div class="writing-section supporting-detail-2">
                 <div class="section-header">
-                    <div class="section-title">SUPPORTING DETAIL 2</div>
+                    <div class="section-title">Supporting Detail 2</div>
                     <div class="word-count" id="detail2WordCount">0 words</div>
                 </div>
                 <div class="writing-content">
@@ -385,10 +437,9 @@
                 </div>
             </div>
 
-            <!-- Supporting Detail 3 -->
             <div class="writing-section supporting-detail-3">
                 <div class="section-header">
-                    <div class="section-title">SUPPORTING DETAIL 3</div>
+                    <div class="section-title">Supporting Detail 3</div>
                     <div class="word-count" id="detail3WordCount">0 words</div>
                 </div>
                 <div class="writing-content">
@@ -417,10 +468,9 @@
                 </div>
             </div>
 
-            <!-- Conclusion -->
             <div class="writing-section conclusion">
                 <div class="section-header">
-                    <div class="section-title">CONCLUSION</div>
+                    <div class="section-title">Conclusion</div>
                     <div class="word-count" id="conclusionWordCount">0 words</div>
                 </div>
                 <div class="writing-content">
@@ -449,7 +499,6 @@
                 </div>
             </div>
 
-            <!-- Action Buttons -->
             <div class="actions">
                 <button class="btn btn-secondary" onclick="clearAll()">🗑️ Clear All</button>
                 <button class="btn btn-primary" onclick="previewResponse()">👁️ Preview Response</button>
@@ -458,10 +507,9 @@
         </div>
     </div>
 
-    <!-- Preview Modal -->
     <div class="preview-modal" id="previewModal">
         <div class="preview-content">
-            <h2 style="margin-bottom: 20px; color: #333;">📄 Your Written Response</h2>
+            <h2>📄 Your Written Response</h2>
             <div class="preview-text" id="previewText"></div>
             <div style="text-align: center; margin-top: 20px;">
                 <button class="btn btn-secondary" onclick="closePreview()">Close</button>
@@ -470,7 +518,6 @@
     </div>
 
     <script>
-        // Word count functionality
         function updateWordCount(textareaId, countId) {
             const textarea = document.getElementById(textareaId);
             const countElement = document.getElementById(countId);
@@ -479,7 +526,113 @@
             countElement.textContent = `${wordCount} words`;
         }
 
-        // Add event listeners for word counting
+        function checkTopicSentence() {
+            const input = document.getElementById('topicSentence');
+            const feedback = document.getElementById('topicFeedback');
+            const text = input.value.trim();
+            const messages = [];
+
+            if (!text) {
+                feedback.innerHTML = '';
+                return;
+            }
+
+            // Capital letter check
+            if (text[0] === text[0].toLowerCase()) {
+                messages.push('<p class="error">Your sentence should start with a capital letter.</p>');
+            }
+
+            // Proper ending punctuation
+            if (!/[.!?]$/.test(text)) {
+                messages.push('<p class="error">Your sentence should end with proper punctuation (. ! or ?).</p>');
+            }
+
+            // Question check - topic sentences should be statements, not questions
+            if (text.trim().endsWith('?')) {
+                messages.push('<p class="error">Topic sentences should be statements, not questions. Make a claim instead of asking.</p>');
+            }
+
+            // Sentence length check - more strict
+            const words = text.split(/\s+/);
+            if (text.length < 15) {
+                messages.push('<p class="error">Too short. A strong topic sentence needs more development (aim for at least 10-15 words).</p>');
+            } else if (words.length < 8) {
+                messages.push('<p class="warn">Your sentence is quite brief. Consider adding more detail about your main point.</p>');
+            } else if (words.length >= 8 && words.length <= 25) {
+                messages.push('<p>✔️ Good sentence length.</p>');
+            } else {
+                messages.push('<p class="warn">Your sentence is quite long. Consider breaking it into two sentences or simplifying.</p>');
+            }
+
+            // Check for weak starters
+            const weakStarters = /^(i think|i believe|i feel|in my opinion|i guess|i would say|this essay|this paragraph|this paper)/i;
+            if (weakStarters.test(text)) {
+                messages.push('<p class="error">Avoid weak starters like "I think," "I believe," or "This essay." State your claim directly and confidently.</p>');
+            }
+
+            // Check for answer-like phrasing
+            if (/^(yes|no|maybe|sure|not really|kind of|sort of)/i.test(text)) {
+                messages.push('<p class="error">This sounds like a simple answer, not a topic sentence. Restate the question as a complete claim in your own words.</p>');
+            }
+
+            // Check for subject and specificity
+            const pronouns = ["he", "she", "they", "it", "we", "you", "i"];
+            const contentWords = text.toLowerCase().replace(/[^a-z\s]/g, '').split(/\s+/);
+            const mainWords = contentWords.filter(w => w.length > 3 && !pronouns.includes(w));
+            
+            if (mainWords.length === 0) {
+                messages.push('<p class="error">Your sentence needs a clear, specific subject. What exactly are you writing about?</p>');
+            } else if (mainWords.length < 3) {
+                messages.push('<p class="warn">Your topic sentence could be more specific. Add more detail about your subject.</p>');
+            } else {
+                messages.push('<p>✔️ Your sentence has a clear subject.</p>');
+            }
+
+            // Check for vague language
+            const vagueWords = /(thing|stuff|good|bad|nice|interesting|a lot|very|really|some|many)/i;
+            if (vagueWords.test(text)) {
+                messages.push('<p class="warn">Try to be more specific. Avoid vague words like "thing," "stuff," "good," "bad," "nice," "interesting," etc.</p>');
+            }
+
+            // Check for purpose and direction
+            const purposefulPatterns = /(should|must|because|since|therefore|demonstrates|proves|shows|reveals|argues|suggests|explains|indicates|illustrates|the main reason|one reason|the primary|the key|the most important)/i;
+            if (purposefulPatterns.test(text)) {
+                messages.push('<p>✔️ Your sentence has clear direction and purpose. Excellent!</p>');
+            } else {
+                messages.push('<p class="warn">Your sentence needs stronger direction. Include words that show your position or reasoning (e.g., "because," "demonstrates," "proves," "should").</p>');
+            }
+
+            // Check for listing or announcement
+            if (/will (discuss|talk about|explain|write about|tell you)/i.test(text)) {
+                messages.push('<p class="error">Don\'t announce what you\'ll do ("I will discuss..."). Instead, make your claim directly.</p>');
+            }
+
+            // Check for multiple sentences
+            const sentenceCount = (text.match(/[.!?]+/g) || []).length;
+            if (sentenceCount > 1) {
+                messages.push('<p class="warn">A topic sentence should typically be ONE sentence. Consider combining your ideas or using only the strongest one.</p>');
+            }
+
+            // Check for contractions (more formal writing)
+            if (/n't|'re|'ve|'ll|'d|'s/.test(text)) {
+                messages.push('<p class="warn">Avoid contractions in formal writing. Write out "don\'t" as "do not," etc.</p>');
+            }
+
+            // Overall assessment
+            const errorCount = messages.filter(m => m.includes('class="error"')).length;
+            const warnCount = messages.filter(m => m.includes('class="warn"')).length;
+            
+            if (errorCount === 0 && warnCount === 0) {
+                messages.push('<p style="background: rgba(16, 185, 129, 0.2); font-weight: bold;">🌟 Excellent topic sentence! This is ready to use.</p>');
+            } else if (errorCount === 0 && warnCount <= 2) {
+                messages.push('<p style="background: rgba(34, 197, 94, 0.15);">✅ Good topic sentence! Consider addressing the suggestions above to make it even stronger.</p>');
+            } else if (errorCount > 0) {
+                messages.push('<p style="background: rgba(239, 68, 68, 0.2); font-weight: bold;">⚠️ This needs revision. Please address the errors above before continuing.</p>');
+            }
+
+            feedback.innerHTML = messages.join('');
+        }
+
         const textareas = [
             { id: 'topicSentence', counter: 'topicWordCount' },
             { id: 'supportingDetail1', counter: 'detail1WordCount' },
@@ -490,7 +643,12 @@
 
         textareas.forEach(item => {
             const textarea = document.getElementById(item.id);
-            textarea.addEventListener('input', () => updateWordCount(item.id, item.counter));
+            textarea.addEventListener('input', () => {
+                updateWordCount(item.id, item.counter);
+                if (item.id === 'topicSentence') {
+                    checkTopicSentence();
+                }
+            });
         });
 
         function clearAll() {
@@ -502,13 +660,13 @@
                 document.getElementById('supportingDetail3').value = '';
                 document.getElementById('conclusion').value = '';
                 
-                // Reset transitions
                 document.getElementById('transition1').value = '';
                 document.getElementById('transition2').value = '';
                 document.getElementById('transition3').value = '';
                 document.getElementById('transitionConclusion').value = '';
                 
-                // Update word counts
+                document.getElementById('topicFeedback').innerHTML = '';
+                
                 textareas.forEach(item => updateWordCount(item.id, item.counter));
             }
         }
@@ -533,36 +691,36 @@
             }
             
             if (topic.trim()) {
-                response += `${topic}\n\n`;
+                response += `${topic} `;
             }
             
             if (detail1.trim()) {
-                response += `${transition1 ? transition1 + ' ' : ''}${detail1}\n\n`;
+                response += `${transition1 ? transition1 + ' ' : ''}${detail1} `;
             }
             
             if (detail2.trim()) {
-                response += `${transition2 ? transition2 + ' ' : ''}${detail2}\n\n`;
+                response += `${transition2 ? transition2 + ' ' : ''}${detail2} `;
             }
             
             if (detail3.trim()) {
-                response += `${transition3 ? transition3 + ' ' : ''}${detail3}\n\n`;
+                response += `${transition3 ? transition3 + ' ' : ''}${detail3} `;
             }
             
             if (conclusionText.trim()) {
                 response += `${transitionConc ? transitionConc + ' ' : ''}${conclusionText}`;
             }
             
-            return response;
+            return response.trim();
         }
 
         function previewResponse() {
             const response = generateResponse();
-            if (response.trim() === '') {
+            if (response.trim() === '' || response === '<strong>Prompt:</strong>') {
                 alert('Please write something before previewing!');
                 return;
             }
             
-            const formattedResponse = response.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>');
+            const formattedResponse = response.replace(/\n\n/g, '</p><p>');
             document.getElementById('previewText').innerHTML = `<p>${formattedResponse}</p>`;
             document.getElementById('previewModal').style.display = 'block';
         }
@@ -573,18 +731,16 @@
 
         function copyResponse() {
             const response = generateResponse();
-            if (response.trim() === '') {
+            if (response.trim() === '' || response === '<strong>Prompt:</strong>') {
                 alert('Please write something before copying!');
                 return;
             }
             
-            // Remove HTML tags for plain text copy
             const plainText = response.replace(/<[^>]*>/g, '');
             
             navigator.clipboard.writeText(plainText).then(() => {
                 alert('Response copied to clipboard!');
             }).catch(() => {
-                // Fallback for older browsers
                 const textArea = document.createElement('textarea');
                 textArea.value = plainText;
                 document.body.appendChild(textArea);
@@ -595,7 +751,6 @@
             });
         }
 
-        // Close modal when clicking outside
         document.getElementById('previewModal').addEventListener('click', function(e) {
             if (e.target === this) {
                 closePreview();
