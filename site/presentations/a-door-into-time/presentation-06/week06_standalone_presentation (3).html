@@ -17,13 +17,6 @@
             overflow: hidden;
             position: relative;
         }
-
-        /* Sync variables for rotation + fades + Ken Burns */
-        :root {
-          --rotate-ms: 8000;       /* rotation cadence */
-          --fade-ms: 1200;         /* crossfade duration */
-          --kenburns-ms: 8000;     /* Ken Burns runs full duration */
-        }
         
         /* Background slideshow */
         .background-slideshow {
@@ -44,13 +37,21 @@
             background-size: cover;
             background-position: center;
             opacity: 0;
-            transition: opacity 1200ms ease-in-out;
-            will-change: transform, opacity;
-            transform-origin: center center;
+            transition: opacity 1500ms ease-in-out;
         }
 
-        .bg-image.active {
-            opacity: 0.2;
+        .bg-image.visible {
+            opacity: 0.10;
+        }
+
+        /* Ken Burns - always running */
+        @keyframes kenburns {
+          from { transform: scale(1) translate(0, 0); }
+          to { transform: scale(1.12) translate(2%, -2%); }
+        }
+        
+        .bg-image {
+            animation: kenburns 8000ms ease-in-out infinite;
         }
 
         /* Replace these URLs with your own images */
@@ -305,26 +306,15 @@
             text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
         }
 
-        /* Ken Burns animation */
-        @keyframes kenburns {
-          0%   { transform: scale(1) translate(0, 0); }
-          100% { transform: scale(1.12) translate(2%, -2%); }
-        }
-        
-        .bg-image.active {
-            animation: kenburns 8000ms ease-in-out forwards;
-        }
-        
         @media (prefers-reduced-motion: reduce) {
-          .bg-image { transition: none; }
-          .bg-image.active { animation: none; }
+          .bg-image { animation: none; }
         }
     </style>
 </head>
 <body>
     <!-- Background slideshow -->
     <div class="background-slideshow">
-        <div class="bg-image active"></div>
+        <div class="bg-image visible"></div>
         <div class="bg-image"></div>
         <div class="bg-image"></div>
         <div class="bg-image"></div>
@@ -342,8 +332,7 @@
         
         <a href="https://reinischclassroom.com/language-arts/" class="return-button">← Language Arts</a>
         
-        <!-- [Rest of your slides content remains exactly the same] -->
-        <!-- I'm omitting the full slide content here for brevity, but keep all your existing slides -->
+        <!-- Keep all your existing slide content here -->
         
     </div>
 
@@ -383,20 +372,16 @@
             if (e.key === 'ArrowLeft') previousSlide();
         });
 
-        // Smooth background rotation with Ken Burns
+        // Smooth background rotation
         function rotateBackground() {
-            const prev = bgImages[currentBg];
             const nextIndex = (currentBg + 1) % bgImages.length;
-            const next = bgImages[nextIndex];
-
-            // Activate next image (starts Ken Burns and fade-in)
-            next.classList.add('active');
             
-            // Small delay to ensure next image starts animating before we fade out previous
-            setTimeout(() => {
-                prev.classList.remove('active');
-            }, 50);
-
+            // Fade in next
+            bgImages[nextIndex].classList.add('visible');
+            
+            // Fade out current
+            bgImages[currentBg].classList.remove('visible');
+            
             currentBg = nextIndex;
         }
 
