@@ -37,371 +37,39 @@
             background-size: cover;
             background-position: center;
             opacity: 0;
-            transition: opacity 1500ms ease-in-out;
+            transition: opacity 2s ease-in-out;
         }
 
-        .bg-image.visible {
-            opacity: 0.10;
+        .bg-image.active {
+            opacity: 0.35;
         }
 
-        /* Ken Burns - always running */
-        @keyframes kenburns {
-          from { transform: scale(1) translate(0, 0); }
-          to { transform: scale(1.12) translate(2%, -2%); }
+        /* Simple slow drift - only on active image */
+        .bg-image.active {
+            animation: slowDrift 20s ease-in-out;
         }
-        
-        .bg-image {
-            animation: kenburns 8000ms ease-in-out infinite;
+
+        @keyframes slowDrift {
+          0% { 
+            transform: scale(1.05) translate(0, 0);
+          }
+          100% { 
+            transform: scale(1.05) translate(-2%, -1%);
+          }
         }
 
         /* Replace these URLs with your own images */
         .bg-image:nth-child(1) { 
-            background: linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.3)), 
+            background: linear-gradient(rgba(0,0,0,0.1), rgba(0,0,0,0.15)), 
                         url('image1.jpg');
             background-size: cover;
             background-position: center;
         }
         .bg-image:nth-child(2) { 
-            background: linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.3)), 
+            background: linear-gradient(rgba(0,0,0,0.1), rgba(0,0,0,0.15)), 
                         url('image2.jpg');
             background-size: cover;
             background-position: center;
         }
         .bg-image:nth-child(3) { 
-            background: linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.3)), 
-                        url('image3.jpg');
-            background-size: cover;
-            background-position: center;
-        }
-        .bg-image:nth-child(4) { 
-            background: linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.3)), 
-                        url('image4.jpg');
-            background-size: cover;
-            background-position: center;
-        }
-        .bg-image:nth-child(5) { 
-            background: linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.3)), 
-                        url('image5.jpg');
-            background-size: cover;
-            background-position: center;
-        }
-        .bg-image:nth-child(6) { 
-            background: linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.3)), 
-                        url('image6.jpg');
-            background-size: cover;
-            background-position: center;
-        }
-
-        /* Overlay gradient for readability */
-        .overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.1);
-            z-index: 1;
-            pointer-events: none;
-        }
-        
-        .presentation-container {
-            width: 100vw;
-            height: 100vh;
-            position: relative;
-            z-index: 2;
-        }
-        
-        .slide {
-            display: none;
-            width: 100%;
-            height: 100%;
-            padding: 40px;
-            position: absolute;
-            top: 0;
-            left: 0;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-        }
-        
-        .slide.active {
-            display: flex;
-        }
-        
-        .slide h1 {
-            font-size: 3.5em;
-            margin-bottom: 20px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
-            color: #ffd700;
-        }
-        
-        .slide h2 {
-            font-size: 2.5em;
-            margin-bottom: 30px;
-            color: #ffa500;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
-        }
-        
-        .slide h3 {
-            font-size: 2em;
-            margin-bottom: 20px;
-            color: #98fb98;
-            text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
-        }
-        
-        .slide p, .slide li {
-            font-size: 1.4em;
-            line-height: 1.6;
-            margin-bottom: 15px;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
-        }
-        
-        .slide ul {
-            text-align: left;
-            max-width: 800px;
-            margin: 0 auto;
-        }
-        
-        .slide li {
-            margin-bottom: 10px;
-            padding-left: 10px;
-        }
-        
-        .day-header {
-            background: linear-gradient(45deg, #ff6b35, #f7931e);
-            padding: 15px 30px;
-            border-radius: 25px;
-            font-size: 1.5em;
-            font-weight: bold;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-        }
-        
-        .example-box {
-            background: rgba(255, 255, 255, 0.15);
-            border-radius: 15px;
-            padding: 30px;
-            margin: 20px 0;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-        }
-        
-        .parts-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 20px;
-            max-width: 900px;
-            margin: 20px 0;
-        }
-        
-        .part-box {
-            background: rgba(255, 255, 255, 0.2);
-            padding: 20px;
-            border-radius: 10px;
-            text-align: center;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-        }
-        
-        .part-title {
-            font-size: 1.3em;
-            font-weight: bold;
-            color: #ffd700;
-            margin-bottom: 10px;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
-        }
-        
-        .controls {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            display: flex;
-            gap: 10px;
-            z-index: 3;
-        }
-        
-        .controls button {
-            padding: 12px 20px;
-            background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 25px;
-            color: white;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: 500;
-            transition: all 0.3s ease;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-        }
-        
-        .controls button:hover {
-            background: rgba(255, 255, 255, 0.25);
-            backdrop-filter: blur(25px);
-            -webkit-backdrop-filter: blur(25px);
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-        }
-        
-        .slide-counter {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: rgba(0,0,0,0.7);
-            padding: 10px 15px;
-            border-radius: 20px;
-            font-size: 14px;
-            z-index: 3;
-        }
-        
-        .return-button {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 25px;
-            color: white;
-            text-decoration: none;
-            padding: 12px 20px;
-            font-size: 14px;
-            font-weight: 500;
-            transition: all 0.3s ease;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-            display: inline-block;
-            z-index: 3;
-        }
-        
-        .return-button:hover {
-            background: rgba(255, 255, 255, 0.25);
-            backdrop-filter: blur(25px);
-            -webkit-backdrop-filter: blur(25px);
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            text-decoration: none;
-            color: white;
-        }
-        
-        .signal-words {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 15px;
-            max-width: 900px;
-            margin: 20px 0;
-        }
-        
-        .signal-word {
-            background: rgba(255, 215, 0, 0.3);
-            padding: 10px;
-            border-radius: 8px;
-            font-weight: bold;
-            color: #ffd700;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          .bg-image { animation: none; }
-        }
-    </style>
-</head>
-<body>
-    <!-- Background slideshow -->
-    <div class="background-slideshow">
-        <div class="bg-image visible"></div>
-        <div class="bg-image"></div>
-        <div class="bg-image"></div>
-        <div class="bg-image"></div>
-        <div class="bg-image"></div>
-        <div class="bg-image"></div>
-    </div>
-    
-    <!-- Overlay for readability -->
-    <div class="overlay"></div>
-
-    <div class="presentation-container">
-        <div class="slide-counter">
-            <span id="current-slide">1</span> / <span id="total-slides">22</span>
-        </div>
-        
-        <a href="https://reinischclassroom.com/language-arts/" class="return-button">← Language Arts</a>
-        
-        <!-- Keep all your existing slide content here -->
-        
-    </div>
-
-    <div class="controls">
-        <button onclick="previousSlide()">Previous</button>
-        <button onclick="nextSlide()">Next</button>
-    </div>
-
-    <script>
-        let currentSlide = 0;
-        let currentBg = 0;
-        const slides = document.querySelectorAll('.slide');
-        const bgImages = document.querySelectorAll('.bg-image');
-        const totalSlides = slides.length;
-        const ROTATE_MS = 8000;
-        
-        document.getElementById('total-slides').textContent = totalSlides;
-        
-        function showSlide(n) {
-            slides[currentSlide].classList.remove('active');
-            currentSlide = (n + totalSlides) % totalSlides;
-            slides[currentSlide].classList.add('active');
-            document.getElementById('current-slide').textContent = currentSlide + 1;
-        }
-        
-        function nextSlide() {
-            showSlide(currentSlide + 1);
-        }
-        
-        function previousSlide() {
-            showSlide(currentSlide - 1);
-        }
-        
-        // Keyboard navigation
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'ArrowRight') nextSlide();
-            if (e.key === 'ArrowLeft') previousSlide();
-        });
-
-        // Smooth background rotation
-        function rotateBackground() {
-            const nextIndex = (currentBg + 1) % bgImages.length;
-            
-            // Fade in next
-            bgImages[nextIndex].classList.add('visible');
-            
-            // Fade out current
-            bgImages[currentBg].classList.remove('visible');
-            
-            currentBg = nextIndex;
-        }
-
-        // Start background rotation
-        setInterval(rotateBackground, ROTATE_MS);
-        
-        // Initialize
-        showSlide(0);
-    </script>
-
-    <script>
-      (function(){
-        var root = location.pathname.indexOf('/site/') >= 0
-          ? location.pathname.slice(0, location.pathname.indexOf('/site/') + 6)
-          : '/';
-        var s = document.createElement('script');
-        s.defer = true;
-        s.src = root + 'assets/js/adit-week6-bg-preload.js';
-        document.head.appendChild(s);
-      })();
-    </script>
-</body>
-</html>
+            background: linear-gradient(rgba(0,0,0,0.1), rgba(0,0,0,0.15)),
