@@ -17,6 +17,13 @@
             overflow: hidden;
             position: relative;
         }
+
+        /* Sync variables for rotation + fades + Ken Burns */
+        :root {
+          --rotate-ms: 8000ms;     /* rotation cadence */
+          --fade-ms: 1200ms;       /* crossfade duration */
+          --kenburns-ms: calc(var(--rotate-ms) - var(--fade-ms));
+        }
         
         /* Background slideshow */
         .background-slideshow {
@@ -37,7 +44,9 @@
             background-size: cover;
             background-position: center;
             opacity: 0;
-            transition: opacity 3s ease-in-out;
+            transition: opacity var(--fade-ms) ease-in-out;
+            will-change: transform, opacity;
+            transform-origin: center center;
         }
 
         .bg-image.active {
@@ -300,7 +309,8 @@
           100% { transform: scale(1.12) translate(2%, -2%); }
         }
         .background-slideshow .bg-image { will-change: transform, opacity; }
-        .background-slideshow .bg-image.active { animation: kenburns 8s ease-in-out forwards; }
+        .background-slideshow .bg-image.active { animation: kenburns var(--kenburns-ms) ease-in-out both; }
+        .background-slideshow .bg-image.active.fading-out { opacity: 0; }
         @media (prefers-reduced-motion: reduce) {
           .background-slideshow .bg-image { transition: none; }
           .background-slideshow .bg-image.active { animation: none; }
@@ -696,22 +706,8 @@
 
     <script>
         let currentSlide = 0;
-        let currentBg = 0;
         const slides = document.querySelectorAll('.slide');
-        const bgImages = document.querySelectorAll('.bg-image');
         const totalSlides = slides.length;
-        
-        document.getElementById('total-slides').textContent = totalSlides;
-        
-        // Auto-rotate background images
-        function rotateBackground() {
-            bgImages[currentBg].classList.remove('active');
-            currentBg = (currentBg + 1) % bgImages.length;
-            bgImages[currentBg].classList.add('active');
-        }
-        
-        // Start background rotation
-        setInterval(rotateBackground, 8000);
         
         function showSlide(n) {
             slides[currentSlide].classList.remove('active');
@@ -734,8 +730,51 @@
             if (e.key === 'ArrowLeft') previousSlide();
         });
 
+        // Flicker-free background rotation
+        const ROTATE_MS = 8000; // keep in sync with --rotate-ms
+        let currentBg = 0;
+        const bgImages = document.querySelectorAll('.bg-image');
+
+        function rotateBackground() {
+            const prev = bgImages[currentBg];
+            const nextIndex = (currentBg + 1) % bgImages.length;
+            const next = bgImages[nextIndex];
+
+            // Bring in next image (starts Ken Burns + fade-in)
+            next.classList.add('active');
+
+            // Fade out previous but keep its final zoom during the fade
+            prev.classList.add('fading-out');
+
+            // After opacity transition completes, clean up classes
+            const onFadeEnd = (e) => {
+                if (e.propertyName !== 'opacity') return;
+                prev.classList.remove('active', 'fading-out');
+                prev.removeEventListener('transitionend', onFadeEnd);
+            };
+            prev.addEventListener('transitionend', onFadeEnd);
+
+            currentBg = nextIndex;
+        }
+
+        // Start background rotation
+        setInterval(rotateBackground, ROTATE_MS);
+
         // Initialize first slide explicitly (ensures nav works after load)
         showSlide(0);
+    </script>
+
+    <!-- Load the preloader script with a path that works under / or under /site/ -->
+    <script>
+      (function(){
+        var root = location.pathname.indexOf('/site/') >= 0
+          ? location.pathname.slice(0, location.pathname.indexOf('/site/') + 6)
+          : '/';
+        var s = document.createElement('script');
+        s.defer = true;
+        s.src = root + 'assets/js/adit-week6-bg-preload.js';
+        document.head.appendChild(s);
+      })();
     </script>
 </body>
 </html>
