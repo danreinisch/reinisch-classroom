@@ -16,9 +16,9 @@
             color: #fff;
             overflow: hidden;
             position: relative;
+            background: #000;
         }
         
-        /* Background slideshow */
         .background-slideshow {
             position: fixed;
             top: 0;
@@ -37,52 +37,44 @@
             background-size: cover;
             background-position: center;
             opacity: 0;
-            transition: opacity 2s ease-in-out;
+            transition: opacity 1.8s ease-in-out;
         }
 
         .bg-image.active {
-            opacity: 0.5;
+            opacity: 0.6;
         }
 
-        /* Replace these URLs with your own images */
         .bg-image:nth-child(1) { 
-            background: linear-gradient(rgba(0,0,0,0.05), rgba(0,0,0,0.1)), 
-                        url('image1.jpg');
+            background: linear-gradient(rgba(0,0,0,0.02), rgba(0,0,0,0.05)), url('image1.jpg');
             background-size: cover;
             background-position: center;
         }
         .bg-image:nth-child(2) { 
-            background: linear-gradient(rgba(0,0,0,0.05), rgba(0,0,0,0.1)), 
-                        url('image2.jpg');
+            background: linear-gradient(rgba(0,0,0,0.02), rgba(0,0,0,0.05)), url('image2.jpg');
             background-size: cover;
             background-position: center;
         }
         .bg-image:nth-child(3) { 
-            background: linear-gradient(rgba(0,0,0,0.05), rgba(0,0,0,0.1)), 
-                        url('image3.jpg');
+            background: linear-gradient(rgba(0,0,0,0.02), rgba(0,0,0,0.05)), url('image3.jpg');
             background-size: cover;
             background-position: center;
         }
         .bg-image:nth-child(4) { 
-            background: linear-gradient(rgba(0,0,0,0.05), rgba(0,0,0,0.1)), 
-                        url('image4.jpg');
+            background: linear-gradient(rgba(0,0,0,0.02), rgba(0,0,0,0.05)), url('image4.jpg');
             background-size: cover;
             background-position: center;
         }
         .bg-image:nth-child(5) { 
-            background: linear-gradient(rgba(0,0,0,0.05), rgba(0,0,0,0.1)), 
-                        url('image5.jpg');
+            background: linear-gradient(rgba(0,0,0,0.02), rgba(0,0,0,0.05)), url('image5.jpg');
             background-size: cover;
             background-position: center;
         }
         .bg-image:nth-child(6) { 
-            background: linear-gradient(rgba(0,0,0,0.05), rgba(0,0,0,0.1)), 
-                        url('image6.jpg');
+            background: linear-gradient(rgba(0,0,0,0.02), rgba(0,0,0,0.05)), url('image6.jpg');
             background-size: cover;
             background-position: center;
         }
 
-        /* Overlay gradient for readability */
         .overlay {
             position: fixed;
             top: 0;
@@ -298,7 +290,6 @@
     </style>
 </head>
 <body>
-    <!-- Background slideshow -->
     <div class="background-slideshow">
         <div class="bg-image active"></div>
         <div class="bg-image"></div>
@@ -308,7 +299,6 @@
         <div class="bg-image"></div>
     </div>
     
-    <!-- Overlay for readability -->
     <div class="overlay"></div>
 
     <div class="presentation-container">
@@ -683,7 +673,6 @@
         const slides = document.querySelectorAll('.slide');
         const bgImages = document.querySelectorAll('.bg-image');
         const totalSlides = slides.length;
-        const ROTATE_MS = 8000;
         
         document.getElementById('total-slides').textContent = totalSlides;
         
@@ -701,3 +690,10 @@
         function previousSlide() {
             showSlide(currentSlide - 1);
         }
+        
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowRight') nextSlide();
+            if (e.key === 'ArrowLeft') previousSlide();
+        });
+
+        // Clean background rotation -
