@@ -6,8 +6,13 @@
       h1, h2, h3, h4 { text-align: center; line-height: 1.2; margin: 0.6em 0; }
       /* Back button styles (clear and accessible) */
       .back-nav { display: flex; justify-content: center; margin: 0.5rem 0 1rem; }
-      .back-button { display: inline-flex; align-items: center; gap:.5rem; padding:.6rem 1rem; border:1px solid #1a73e8; border-radius:.5rem; background:#1a73e8; color:#ffffff; text-decoration:none; }
+      .back-button { display: inline-flex; align-items: center; gap:.5rem; padding:.6rem 1rem; border:1px solid #1a73e8; border-radius:.5rem; background:#1a73e8; color:#ffffff; text-decoration:none; font-weight:700; letter-spacing:.2px; box-shadow:0 1px 2px rgba(0,0,0,.08); }
       .back-button:hover { filter: brightness(1.05); }
+
+      /* Background video and overlay (duplicated here as a safety net if CSS fails to load) */
+      .bg-video{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;z-index:-2}
+      .bg-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:-1}
+      @media (prefers-reduced-motion: reduce){ .bg-video{display:none} }
     `;
     const style = document.createElement('style');
     style.id = 'copilot-inline-site-css';
@@ -25,7 +30,6 @@
     const p = location.pathname.toLowerCase();
     if (p.includes('/language-arts/')) return 'language-arts';
     if (p.includes('/life-skills/')) return 'life-skills';
-    // Presentations living outside section folders default to Language Arts
     if (p.includes('/presentations/')) return 'language-arts';
     return null;
   }
@@ -82,8 +86,47 @@
     });
   }
 
+  // Inject a full-bleed background video behind the content
+  function injectBackgroundVideo() {
+    // Respect reduced-motion
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (document.querySelector('.bg-video')) return; // already present
+
+    var root = location.pathname.indexOf('/site/') >= 0
+      ? location.pathname.slice(0, location.pathname.indexOf('/site/') + 6)
+      : '/';
+    var src = root + 'assets/HomePageBackground.mp4';
+
+    var v = document.createElement('video');
+    v.className = 'bg-video';
+    v.autoplay = true; v.muted = true; v.loop = true; v.playsInline = true; v.setAttribute('preload','metadata');
+
+    var s = document.createElement('source');
+    s.src = src; s.type = 'video/mp4';
+    v.appendChild(s);
+
+    // Insert before the static .bg so the z-index stack is clean
+    var bg = document.querySelector('.bg');
+    if (bg && bg.parentNode) {
+      bg.parentNode.insertBefore(v, bg);
+      var overlay = document.createElement('div');
+      overlay.className = 'bg-overlay';
+      bg.parentNode.insertBefore(overlay, bg);
+    } else {
+      document.body.insertBefore(v, document.body.firstChild);
+      var overlay2 = document.createElement('div');
+      overlay2.className = 'bg-overlay';
+      document.body.insertBefore(overlay2, document.body.firstChild.nextSibling);
+    }
+
+    // Robust looping and autoplay kick
+    v.addEventListener('ended', function(){ this.currentTime = 0; this.play().catch(function(){}) });
+    v.play && v.play().catch(function(){});
+  }
+
   function init() {
     injectMinimalStyles();
+    injectBackgroundVideo();
     const section = getSection();
     insertBackButton(section);
     centerHeadings();
