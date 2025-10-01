@@ -37,7 +37,9 @@
             background-size: cover;
             background-position: center;
             opacity: 0;
-            transition: opacity 1.8s ease-in-out;
+            transition: opacity 1.8s ease-in-out; /* crossfade only */
+            animation: none !important; /* ensure no Ken Burns */
+            transform: none !important; /* ensure no Ken Burns */
         }
 
         .bg-image.active {
@@ -227,6 +229,40 @@
             box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
             border: 1px solid rgba(255, 255, 255, 0.3);
         }
+
+        .week-nav {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            display: flex;
+            gap: 10px;
+            z-index: 3;
+        }
+        .week-nav a {
+            padding: 12px 20px;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 25px;
+            color: white;
+            text-decoration: none;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        .week-nav a:hover {
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            text-decoration: none;
+            color: white;
+        }
         
         .slide-counter {
             position: fixed;
@@ -302,11 +338,16 @@
     <div class="overlay"></div>
 
     <div class="presentation-container">
-        <div class="slide-counter">
+        <div class="slide-counter" aria-live="polite">
             <span id="current-slide">1</span> / <span id="total-slides">22</span>
         </div>
         
         <a href="https://reinischclassroom.com/language-arts/" class="return-button">← Language Arts</a>
+
+        <div class="week-nav" aria-label="Week navigation">
+            <a href="../presentation-05/" id="prev-week" title="Go to Week 5 ([)">← Week 5</a>
+            <a href="../presentation-07/" id="next-week" title="Go to Week 7 (])">Week 7 →</a>
+        </div>
         
         <!-- DAY 1 SLIDES -->
         <div class="slide active">
@@ -379,7 +420,7 @@
             <h2>Think-Aloud & Model</h2>
             <div class="example-box">
                 <h3>Let's analyze this together:</h3>
-                <p><em>"Alex looked around at the faces surrounding him in the flickering firelight. Some were friendly, some were curious, and some seemed to be weighing him, trying to decide if he was worthy."</em></p>
+                <p><em>"Alex looked around at the faces surrounding him in the flickering firelight. Some were friendly, some were curious, and some seemed to be weighing him, trying to decide if[...]</em></p>
                 
                 <h3>My thinking process:</h3>
                 <p style="text-align: left; font-size: 1.3em;">
@@ -493,7 +534,7 @@
             <h2>Practice & Sentence Frames</h2>
             <div class="example-box">
                 <h3>Guided Vocabulary Practice:</h3>
-                <p>Sentence: "The hunter moved stealthily through the underbrush."</p>
+                <p>Sentence: "The hunter moved stealthily through the underbrush." </p>
                 
                 <h3>Analysis Frames:</h3>
                 <ul style="text-align: left; font-size: 1.3em;">
@@ -661,10 +702,10 @@
             </div>
         </div>
     </div>
-
-    <div class="controls">
-        <button onclick="previousSlide()">Previous</button>
-        <button onclick="nextSlide()">Next</button>
+    
+    <div class="controls" aria-label="Slide controls">
+        <button type="button" onclick="previousSlide()" title="Previous slide (Left, PageUp, Backspace)">Previous</button>
+        <button type="button" onclick="nextSlide()" title="Next slide (Right, PageDown, Space)">Next</button>
     </div>
 
     <script>
@@ -673,39 +714,61 @@
         const slides = document.querySelectorAll('.slide');
         const bgImages = document.querySelectorAll('.bg-image');
         const totalSlides = slides.length;
-        
-        document.getElementById('total-slides').textContent = totalSlides;
-        
+
+        const currentEl = document.getElementById('current-slide');
+        const totalEl = document.getElementById('total-slides');
+        if (totalEl) totalEl.textContent = totalSlides;
+
         function showSlide(n) {
             slides[currentSlide].classList.remove('active');
             currentSlide = (n + totalSlides) % totalSlides;
             slides[currentSlide].classList.add('active');
-            document.getElementById('current-slide').textContent = currentSlide + 1;
+            if (currentEl) currentEl.textContent = currentSlide + 1;
         }
-        
-        function nextSlide() {
-            showSlide(currentSlide + 1);
-        }
-        
-        function previousSlide() {
-            showSlide(currentSlide - 1);
-        }
-        
+
+        function nextSlide() { showSlide(currentSlide + 1); }
+        function previousSlide() { showSlide(currentSlide - 1); }
+
+        // Keyboard navigation
         document.addEventListener('keydown', function(e) {
-            if (e.key === 'ArrowRight') nextSlide();
-            if (e.key === 'ArrowLeft') previousSlide();
+            // Next: Right, PageDown, Space (only when focus is on body)
+            if (e.key === 'ArrowRight' || e.key === 'PageDown' || (e.key === ' ' && e.target === document.body)) {
+                e.preventDefault();
+                nextSlide();
+            }
+            // Previous: Left, PageUp, Backspace
+            if (e.key === 'ArrowLeft' || e.key === 'PageUp' || e.key === 'Backspace') {
+                e.preventDefault();
+                previousSlide();
+            }
+            // Week navigation shortcuts
+            if (e.key === '[') {
+                e.preventDefault();
+                const prevWeek = document.getElementById('prev-week');
+                if (prevWeek) window.location.href = prevWeek.getAttribute('href');
+            }
+            if (e.key === ']') {
+                e.preventDefault();
+                const nextWeek = document.getElementById('next-week');
+                if (nextWeek) window.location.href = nextWeek.getAttribute('href');
+            }
         });
 
+        // Background rotation (crossfade only; no Ken Burns)
         function rotateBackground() {
-            const nextIndex = (currentBg + 1) % bgImages.lengthfunction rotateBackground() {
+            if (bgImages.length <= 1) return;
             const nextIndex = (currentBg + 1) % bgImages.length;
             bgImages[currentBg].classList.remove('active');
             bgImages[nextIndex].classList.add('active');
             currentBg = nextIndex;
         }
-
         setInterval(rotateBackground, 9000);
-        showSlide(0);
+
+        // Initialize
+        if (totalSlides > 0) {
+            slides[0].classList.add('active');
+            if (currentEl) currentEl.textContent = 1;
+        }
     </script>
 
     <script>
