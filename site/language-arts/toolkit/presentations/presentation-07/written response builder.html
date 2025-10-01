@@ -1,99 +1,45 @@
-if (!text) {
-    feedback.innerHTML = '';
-    return;
-}
+.header {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(147, 51, 234, 0.3));
+            backdrop-filter: blur(10px);
+            color: white;
+            padding: 30px 40px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+        }
 
-// Capital letter check
-if (text[0] === text[0].toLowerCase()) {
-    messages.push('<p class="error">Your sentence should start with a capital letter.</p>');
-}
+        .back-button {
+            position: absolute;
+            top: 30px;
+            right: 40px;
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.95em;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
 
-// Proper ending punctuation
-if (!/[.!?]$/.test(text)) {
-    messages.push('<p class="error">Your sentence should end with proper punctuation (. ! or ?).</p>');
-}
+        .back-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.4);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+        }
 
-// Question check - topic sentences should be statements, not questions
-if (text.trim().endsWith('?')) {
-    messages.push('<p class="error">Topic sentences should be statements, not questions. Make a claim instead of asking.</p>');
-}
+        .header h1 {
+            font-size: 2em;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
 
-// Sentence length check - more strict
-const words = text.split(/\s+/);
-if (text.length < 15) {
-    messages.push('<p class="error">Too short. A strong topic sentence needs more development (aim for at least 10-15 words).</p>');
-} else if (words.length < 8) {
-    messages.push('<p class="warn">Your sentence is quite brief. Consider adding more detail about your main point.</p>');
-} else if (words.length >= 8 && words.length <= 25) {
-    messages.push('<p>✔️ Good sentence length.</p>');
-} else {
-    messages.push('<p class="warn">Your sentence is quite long. Consider breaking it into two sentences or simplifying.</p>');
-}
-
-// Check for weak starters
-const weakStarters = /^(i think|i believe|i feel|in my opinion|i guess|i would say|this essay|this paragraph|this paper)/i;
-if (weakStarters.test(text)) {
-    messages.push('<p class="error">Avoid weak starters like "I think," "I believe," or "This essay." State your claim directly and confidently.</p>');
-}
-
-// Check for answer-like phrasing
-if (/^(yes|no|maybe|sure|not really|kind of|sort of)/i.test(text)) {
-    messages.push('<p class="error">This sounds like a simple answer, not a topic sentence. Restate the question as a complete claim in your own words.</p>');
-}
-
-// Check for subject and specificity
-const pronouns = ["he", "she", "they", "it", "we", "you", "i"];
-const contentWords = text.toLowerCase().replace(/[^a-z\s]/g, '').split(/\s+/);
-const mainWords = contentWords.filter(w => w.length > 3 && !pronouns.includes(w));
-
-if (mainWords.length === 0) {
-    messages.push('<p class="error">Your sentence needs a clear, specific subject. What exactly are you writing about?</p>');
-} else if (mainWords.length < 3) {
-    messages.push('<p class="warn">Your topic sentence could be more specific. Add more detail about your subject.</p>');
-} else {
-    messages.push('<p>✔️ Your sentence has a clear subject.</p>');
-}
-
-// Check for vague language
-const vagueWords = /(thing|stuff|good|bad|nice|interesting|a lot|very|really|some|many)/i;
-if (vagueWords.test(text)) {
-    messages.push('<p class="warn">Try to be more specific. Avoid vague words like "thing," "stuff," "good," "bad," "nice," "interesting," etc.</p>');
-}
-
-// Check for purpose and direction (FIXED REGEX)
-const purposefulPatterns = /(should|must|because|since|therefore|demonstrates|proves|shows|reveals|argues|suggests|explains|indicates|illustrates|the main reason|one reason)/i;
-if (purposefulPatterns.test(text)) {
-    messages.push('<p>✔️ Your sentence has clear direction and purpose. Excellent!</p>');
-} else {
-    messages.push('<p class="warn">Your sentence needs stronger direction. Include words that show your position or reasoning (e.g., "because," "demonstrates," "proves," "should").</p>');
-}
-
-// Check for listing or announcement
-if (/will (discuss|talk about|explain|write about|tell you)/i.test(text)) {
-    messages.push('<p class="error">Don\'t announce what you\'ll do ("I will discuss..."). Instead, make your claim directly.</p>');
-}
-
-// Check for multiple sentences
-const sentenceCount = (text.match(/[.!?]+/g) || []).length;
-if (sentenceCount > 1) {
-    messages.push('<p class="warn">A topic sentence should typically be ONE sentence. Consider combining your ideas or using only the strongest one.</p>');
-}
-
-// Check for contractions (more formal writing)
-if (/n\'t|\'re|\'ve|\'ll|\'d|\'s/.test(text)) {
-    messages.push('<p class="warn">Avoid contractions in formal writing. Write out "don\'t" as "do not," etc.</p>');
-}
-
-// Overall assessment
-const errorCount = messages.filter(m => m.includes('class="error"')).length;
-const warnCount = messages.filter(m => m.includes('class="warn"')).length;
-
-if (errorCount === 0 && warnCount === 0) {
-    messages.push('<p style="background: rgba(16, 185, 129, 0.2); font-weight: bold;">🌟 Excellent topic sentence! This is ready to use.</p>');
-} else if (errorCount === 0 && warnCount <= 2) {
-    messages.push('<p style="background: rgba(34, 197, 94, 0.15);">✅ Good topic sentence! Consider addressing the suggestions above to make it even stronger.</p>');
-} else if (errorCount > 0) {
-    messages.push('<p style="background: rgba(239, 68, 68, 0.2); font-weight: bold;">⚠️ This needs revision. Please address the errors above before continuing.</p>');
-}
-
-feedback.innerHTML = messages.join('');
+        .header p {
+            font-size: 1em;
+            opacity: 0.8;
+        }
