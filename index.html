@@ -16,6 +16,7 @@
       loop
       playsinline
       preload="metadata"
+      poster="assets/background-poster.jpg"
       aria-hidden="true"
       tabindex="-1"
     >
@@ -32,5 +33,24 @@
       <p>Your subheading or intro copy goes here.</p>
       <a class="cta" href="#learn-more">Learn more</a>
     </main>
+
+    <!-- Ensure reliable video looping -->
+    <script>
+      (function() {
+        const video = document.getElementById('bg-video');
+        if (video) {
+          // Fallback for browsers that don't respect the loop attribute
+          video.addEventListener('ended', function() {
+            this.currentTime = 0;
+            this.play();
+          });
+          
+          // Ensure video plays on page load (some browsers block autoplay)
+          video.play().catch(function(error) {
+            console.log('Video autoplay failed:', error);
+          });
+        }
+      })();
+    </script>
   </body>
 </html>
