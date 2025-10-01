@@ -16,11 +16,10 @@
       loop
       playsinline
       preload="metadata"
-      poster="assets/background-poster.jpg"
       aria-hidden="true"
       tabindex="-1"
     >
-      <source src="assets/background.mp4" type="video/mp4" />
+      <source src="assets/HomePageBackground.mp4" type="video/mp4" />
       Your browser does not support the HTML5 Video element.
     </video>
 
@@ -29,8 +28,8 @@
 
     <!-- Your page content -->
     <main class="content">
-      <h1>Your Headline</h1>
-      <p>Your subheading or intro copy goes here.</p>
+      <h1>Welcome to Reinisch Classroom</h1>
+      <p>Explore Language Arts and Life Skills units, presentations and tools to help students learn and grow.</p>
       <a class="cta" href="#learn-more">Learn more</a>
     </main>
 
@@ -39,13 +38,10 @@
       (function() {
         const video = document.getElementById('bg-video');
         if (video) {
-          // Fallback for browsers that don't respect the loop attribute
           video.addEventListener('ended', function() {
             this.currentTime = 0;
             this.play();
           });
-          
-          // Ensure video plays on page load (some browsers block autoplay)
           video.play().catch(function(error) {
             console.log('Video autoplay failed:', error);
           });
