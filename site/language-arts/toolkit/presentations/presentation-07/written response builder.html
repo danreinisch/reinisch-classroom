@@ -481,7 +481,8 @@
                             <option value="To summarize,">To summarize,</option>
                             <option value="In summary,">In summary,</option>
                             <option value="Therefore,">Therefore,</option>
-                            <option value="As a result,">As a result,</option>
+                            <option value="As a result,">As a result,
+                            </option>
                             <option value="That is why,">That is why,</option>
                             <option value="Ultimately,">Ultimately,</option>
                         </select>
@@ -516,6 +517,39 @@
             </div>
         </div>
     </div>
+
+    <!-- Inject Language Arts return button -->
+    <script>
+    (function () {
+      var btn = document.createElement('a');
+      var origin = (window.location && window.location.origin) ? window.location.origin : '';
+      btn.href = origin + '/language-arts/';
+      btn.textContent = '← Language Arts';
+      btn.setAttribute('aria-label', 'Return to Language Arts');
+      btn.style.position = 'fixed';
+      btn.style.top = '1rem';
+      btn.style.left = '1rem';
+      btn.style.zIndex = '1000';
+      btn.style.background = 'rgba(255,255,255,0.12)';
+      btn.style.border = '1px solid rgba(255, 255, 255, 0.25)';
+      btn.style.padding = '.6rem 1rem';
+      btn.style.borderRadius = '.6rem';
+      btn.style.color = '#fff';
+      btn.style.textDecoration = 'none';
+      btn.style.backdropFilter = 'blur(10px)';
+      btn.style.webkitBackdropFilter = 'blur(10px)';
+      btn.style.transition = 'background .2s, transform .2s';
+      btn.addEventListener('mouseenter', function () {
+        btn.style.background = 'rgba(255,255,255,0.24)';
+        btn.style.transform = 'translateY(-1px)';
+      });
+      btn.addEventListener('mouseleave', function () {
+        btn.style.background = 'rgba(255,255,255,0.12)';
+        btn.style.transform = 'translateY(0)';
+      });
+      document.body.appendChild(btn);
+    })();
+    </script>
 
     <script>
         function updateWordCount(textareaId, countId) {
@@ -595,7 +629,7 @@
             }
 
             // Check for purpose and direction
-            const purposefulPatterns = /(should|must|because|since|therefore|demonstrates|proves|shows|reveals|argues|suggests|explains|indicates|illustrates|the main reason|one reason|the primary|the key|the most important)/i;
+            const purposefulPatterns = /(should|must|because|since|therefore|demonstrates|proves|shows|reveals|argues|suggests|explains|indicates|illustrates|the main reason|one reason|.../i;
             if (purposefulPatterns.test(text)) {
                 messages.push('<p>✔️ Your sentence has clear direction and purpose. Excellent!</p>');
             } else {
@@ -614,7 +648,7 @@
             }
 
             // Check for contractions (more formal writing)
-            if (/n't|'re|'ve|'ll|'d|'s/.test(text)) {
+            if (/n\'t|\'re|\'ve|\'ll|\'d|\'s/.test(text)) {
                 messages.push('<p class="warn">Avoid contractions in formal writing. Write out "don\'t" as "do not," etc.</p>');
             }
 
