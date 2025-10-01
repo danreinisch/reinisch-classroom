@@ -30,3 +30,31 @@ h1, h2, h3, h4 {
 .back-button:hover {
   filter: brightness(1.05);
 }
+
+/* --- Background video and overlay --- */
+.bg-video {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: -2; /* behind content */
+}
+
+.bg-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.35);
+  z-index: -1; /* above video, below content */
+}
+
+/* Hide static image layer by default so video is visible */
+.bg {
+  display: none;
+}
+
+/* Respect users who prefer reduced motion: show static image, hide video */
+@media (prefers-reduced-motion: reduce) {
+  .bg-video { display: none; }
+  .bg { display: block; }
+}
