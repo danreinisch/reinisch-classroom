@@ -655,7 +655,7 @@
                 <ul style="text-align: left;">
                     <li>Clear topic sentences that address the prompts</li>
                     <li>Specific, relevant text evidence and examples</li>
-                    <li><strong>Strong analysis explaining HOW craft techniques work</li>
+                    <li>Strong analysis explaining HOW craft techniques work</li>
                     <li>Connections between setting and character/plot development</li>
                 </ul>
             </div>
@@ -687,7 +687,7 @@
             showSlide(currentSlide + 1);
         }
         
-        function previousSlide()function previousSlide() {
+        function previousSlide() {
             showSlide(currentSlide - 1);
         }
         
@@ -697,6 +697,7 @@
         });
 
         function rotateBackground() {
+            const nextIndex = (currentBg + 1) % bgImages.lengthfunction rotateBackground() {
             const nextIndex = (currentBg + 1) % bgImages.length;
             bgImages[currentBg].classList.remove('active');
             bgImages[nextIndex].classList.add('active');
