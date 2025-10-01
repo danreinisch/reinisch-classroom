@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Homepage with Background Video</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <!-- Background video -->
+    <video
+      id="bg-video"
+      class="bg-video"
+      autoplay
+      muted
+      loop
+      playsinline
+      preload="metadata"
+      aria-hidden="true"
+      tabindex="-1"
+    >
+      <source src="assets/background.mp4" type="video/mp4" />
+      Your browser does not support the HTML5 Video element.
+    </video>
+
+    <!-- Optional: a subtle overlay to improve text contrast -->
+    <div class="bg-overlay" aria-hidden="true"></div>
+
+    <!-- Your page content -->
+    <main class="content">
+      <h1>Your Headline</h1>
+      <p>Your subheading or intro copy goes here.</p>
+      <a class="cta" href="#learn-more">Learn more</a>
+    </main>
+  </body>
+</html>
