@@ -124,6 +124,31 @@
     v.play && v.play().catch(function(){});
   }
 
+  // New: Add a “Math Toolkit” button to the sub-site homepage without editing its minified HTML
+  function addMathToolkitButtonToSubSiteHome() {
+    var p = location.pathname.replace(/index\.html$/i,'');
+    var isSubHome = (p === '/site/' || p === '/site');
+    if (!isSubHome) return;
+
+    // Avoid duplicates
+    if (document.querySelector('a[href="/site/math-toolkit/"]')) return;
+
+    // Prefer an existing nav inside the centered layout; fall back gracefully
+    var container =
+      document.querySelector('.centered nav') ||
+      document.querySelector('nav') ||
+      document.querySelector('.centered header') ||
+      document.querySelector('header') ||
+      document.body;
+
+    var a = document.createElement('a');
+    a.href = '/site/math-toolkit/';
+    a.textContent = 'Math Toolkit';
+    // Use the site’s existing button class if present
+    a.className = (container && container.querySelector('.btn')) ? 'btn' : '';
+    container.appendChild(a);
+  }
+
   function init() {
     injectMinimalStyles();
     injectBackgroundVideo();
@@ -131,6 +156,7 @@
     insertBackButton(section);
     centerHeadings();
     updateADITLinks();
+    addMathToolkitButtonToSubSiteHome();
   }
 
   if (document.readyState === 'loading') {
