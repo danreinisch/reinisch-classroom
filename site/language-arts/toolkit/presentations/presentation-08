@@ -1,1 +1,968 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>5-Paragraph Essay Builder</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #7e22ce 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #e8edf5;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(30, 41, 59, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.3);
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .header {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(147, 51, 234, 0.3));
+            backdrop-filter: blur(10px);
+            color: white;
+            padding: 30px 40px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .header h1 {
+            font-size: 2em;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .header p {
+            font-size: 1em;
+            opacity: 0.8;
+        }
+
+        .content {
+            padding: 30px 40px;
+            display: grid;
+            gap: 20px;
+        }
+
+        .prompt-section {
+            background: rgba(51, 65, 85, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 12px;
+        }
+
+        .prompt-section h2 {
+            color: #e8edf5;
+            margin-bottom: 12px;
+            font-size: 1.2em;
+            font-weight: 500;
+        }
+
+        .prompt-input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            font-size: 1em;
+            resize: vertical;
+            min-height: 80px;
+            font-family: inherit;
+            background: rgba(30, 41, 59, 0.8);
+            color: #e8edf5;
+        }
+
+        .prompt-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .paragraph-section {
+            background: rgba(51, 65, 85, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .paragraph-section:hover {
+            border-color: rgba(59, 130, 246, 0.5);
+            background: rgba(51, 65, 85, 0.7);
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .section-title {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .intro .section-title {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+
+        .body1 .section-title {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+        }
+
+        .body2 .section-title {
+            background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+        }
+
+        .body3 .section-title {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+        }
+
+        .conclusion .section-title {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+        }
+
+        .word-count {
+            background: rgba(30, 41, 59, 0.8);
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-size: 0.85em;
+            color: #94a3b8;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-left: auto;
+        }
+
+        .subsection {
+            margin-bottom: 15px;
+        }
+
+        .subsection-label {
+            color: #cbd5e1;
+            font-weight: 500;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+        }
+
+        .content-textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            min-height: 80px;
+            font-size: 1em;
+            resize: vertical;
+            font-family: inherit;
+            line-height: 1.6;
+            background: rgba(30, 41, 59, 0.8);
+            color: #e8edf5;
+        }
+
+        .content-textarea:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .transition-dropdown {
+            margin-bottom: 10px;
+        }
+
+        .transition-dropdown select {
+            width: 100%;
+            max-width: 250px;
+            padding: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            font-size: 0.95em;
+            background: rgba(30, 41, 59, 0.8);
+            color: #e8edf5;
+            cursor: pointer;
+        }
+
+        .transition-dropdown select:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+
+        .tips {
+            margin-top: 10px;
+            padding: 10px;
+            background: rgba(59, 130, 246, 0.1);
+            border-radius: 6px;
+            border-left: 3px solid #3b82f6;
+            font-size: 0.85em;
+            color: #cbd5e1;
+        }
+
+        .feedback {
+            margin-top: 10px;
+        }
+
+        .feedback p {
+            margin: 6px 0;
+            padding: 8px 12px;
+            background: rgba(16, 185, 129, 0.1);
+            border-left: 3px solid #10b981;
+            border-radius: 6px;
+            font-size: 0.85em;
+        }
+
+        .feedback p.warn {
+            background: rgba(245, 158, 11, 0.1);
+            border-left-color: #f59e0b;
+        }
+
+        .feedback p.error {
+            background: rgba(239, 68, 68, 0.1);
+            border-left-color: #ef4444;
+        }
+
+        .actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-top: 20px;
+            padding: 20px;
+            background: rgba(51, 65, 85, 0.4);
+            border-radius: 12px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid transparent;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: rgba(100, 116, 139, 0.8);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+        }
+
+        .preview-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+
+        .preview-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(30, 41, 59, 0.98);
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 80%;
+            max-height: 80%;
+            overflow-y: auto;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .preview-content h2 {
+            color: #e8edf5;
+            margin-bottom: 20px;
+        }
+
+        .preview-text {
+            line-height: 1.8;
+            font-size: 1.05em;
+            color: #cbd5e1;
+        }
+
+        .preview-text p {
+            margin-bottom: 15px;
+            text-indent: 2em;
+        }
+
+        textarea::placeholder,
+        select option:first-child {
+            color: #64748b;
+        }
+
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(30, 41, 59, 0.5);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(59, 130, 246, 0.5);
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(59, 130, 246, 0.7);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📝 5-Paragraph Essay Builder</h1>
+            <p>Craft a well-structured essay with introduction, body paragraphs, and conclusion</p>
+        </div>
+
+        <div class="content">
+            <div class="prompt-section">
+                <h2>📋 Essay Prompt/Topic</h2>
+                <textarea 
+                    class="prompt-input" 
+                    id="promptInput"
+                    placeholder="Paste your essay prompt or topic here..."
+                ></textarea>
+            </div>
+
+            <!-- INTRODUCTION PARAGRAPH -->
+            <div class="paragraph-section intro">
+                <div class="section-header">
+                    <div class="section-title">Paragraph 1: Introduction</div>
+                    <div class="word-count" id="introWordCount">0 words</div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-label">Hook Sentence</div>
+                    <textarea 
+                        class="content-textarea" 
+                        id="hook"
+                        style="min-height: 60px;"
+                        placeholder="Start with an attention-grabbing hook (question, quote, interesting fact, or scenario)..."
+                    ></textarea>
+                    <div class="feedback" id="hookFeedback"></div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-label">Background/Context (2-3 sentences)</div>
+                    <textarea 
+                        class="content-textarea" 
+                        id="background"
+                        placeholder="Provide background information and context about your topic..."
+                    ></textarea>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-label">Thesis Statement</div>
+                    <textarea 
+                        class="content-textarea" 
+                        id="thesis"
+                        style="min-height: 60px;"
+                        placeholder="Write your clear thesis statement that previews your three main points..."
+                    ></textarea>
+                    <div class="feedback" id="thesisFeedback"></div>
+                </div>
+
+                <div class="tips">
+                    💡 <strong>Tip:</strong> Your introduction should funnel from general to specific, ending with a strong thesis that outlines your three main arguments.
+                </div>
+            </div>
+
+            <!-- BODY PARAGRAPH 1 -->
+            <div class="paragraph-section body1">
+                <div class="section-header">
+                    <div class="section-title">Paragraph 2: Body Paragraph 1</div>
+                    <div class="word-count" id="body1WordCount">0 words</div>
+                </div>
+
+                <div class="subsection">
+                    <div class="transition-dropdown">
+                        <select id="transition1">
+                            <option value="">Choose transition...</option>
+                            <option value="First,">First,</option>
+                            <option value="To begin with,">To begin with,</option>
+                            <option value="Initially,">Initially,</option>
+                            <option value="One reason is that">One reason is that</option>
+                            <option value="The first point to consider is">The first point to consider is</option>
+                        </select>
+                    </div>
+                    <div class="subsection-label">Topic Sentence</div>
+                    <textarea 
+                        class="content-textarea" 
+                        id="body1Topic"
+                        style="min-height: 60px;"
+                        placeholder="State your first main point that supports your thesis..."
+                    ></textarea>
+                    <div class="feedback" id="body1TopicFeedback"></div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-label">Evidence & Explanation</div>
+                    <textarea 
+                        class="content-textarea" 
+                        id="body1Evidence"
+                        placeholder="Provide specific evidence (examples, facts, quotes) and explain how it supports your topic sentence..."
+                    ></textarea>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-label">Concluding Sentence</div>
+                    <textarea 
+                        class="content-textarea" 
+                        id="body1Concluding"
+                        style="min-height: 60px;"
+                        placeholder="Wrap up this point and transition to the next paragraph..."
+                    ></textarea>
+                </div>
+
+                <div class="tips">
+                    💡 <strong>Tip:</strong> Follow the structure: Topic Sentence → Evidence → Explanation → Concluding Sentence.
+                </div>
+            </div>
+
+            <!-- BODY PARAGRAPH 2 -->
+            <div class="paragraph-section body2">
+                <div class="section-header">
+                    <div class="section-title">Paragraph 3: Body Paragraph 2</div>
+                    <div class="word-count" id="body2WordCount">0 words</div>
+                </div>
+
+                <div class="subsection">
+                    <div class="transition-dropdown">
+                        <select id="transition2">
+                            <option value="">Choose transition...</option>
+                            <option value="Second,">Second,</option>
+                            <option value="Additionally,">Additionally,</option>
+                            <option value="Furthermore,">Furthermore,</option>
+                            <option value="Another reason is that">Another reason is that</option>
+                            <option value="In addition,">In addition,</option>
+                            <option value="Moreover,">Moreover,</option>
+                        </select>
+                    </div>
+                    <div class="subsection-label">Topic Sentence</div>
+                    <textarea 
+                        class="content-textarea" 
+                        id="body2Topic"
+                        style="min-height: 60px;"
+                        placeholder="State your second main point that supports your thesis..."
+                    ></textarea>
+                    <div class="feedback" id="body2TopicFeedback"></div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-label">Evidence & Explanation</div>
+                    <textarea 
+                        class="content-textarea" 
+                        id="body2Evidence"
+                        placeholder="Provide specific evidence (examples, facts, quotes) and explain how it supports your topic sentence..."
+                    ></textarea>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-label">Concluding Sentence</div>
+                    <textarea 
+                        class="content-textarea" 
+                        id="body2Concluding"
+                        style="min-height: 60px;"
+                        placeholder="Wrap up this point and transition to the next paragraph..."
+                    ></textarea>
+                </div>
+
+                <div class="tips">
+                    💡 <strong>Tip:</strong> Make sure this point is distinct from your first body paragraph but still supports your thesis.
+                </div>
+            </div>
+
+            <!-- BODY PARAGRAPH 3 -->
+            <div class="paragraph-section body3">
+                <div class="section-header">
+                    <div class="section-title">Paragraph 4: Body Paragraph 3</div>
+                    <div class="word-count" id="body3WordCount">0 words</div>
+                </div>
+
+                <div class="subsection">
+                    <div class="transition-dropdown">
+                        <select id="transition3">
+                            <option value="">Choose transition...</option>
+                            <option value="Third,">Third,</option>
+                            <option value="Finally,">Finally,</option>
+                            <option value="Lastly,">Lastly,</option>
+                            <option value="Most importantly,">Most importantly,</option>
+                            <option value="The final reason is that">The final reason is that</option>
+                        </select>
+                    </div>
+                    <div class="subsection-label">Topic Sentence</div>
+                    <textarea 
+                        class="content-textarea" 
+                        id="body3Topic"
+                        style="min-height: 60px;"
+                        placeholder="State your third main point that supports your thesis..."
+                    ></textarea>
+                    <div class="feedback" id="body3TopicFeedback"></div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-label">Evidence & Explanation</div>
+                    <textarea 
+                        class="content-textarea" 
+                        id="body3Evidence"
+                        placeholder="Provide specific evidence (examples, facts, quotes) and explain how it supports your topic sentence..."
+                    ></textarea>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-label">Concluding Sentence</div>
+                    <textarea 
+                        class="content-textarea" 
+                        id="body3Concluding"
+                        style="min-height: 60px;"
+                        placeholder="Wrap up this point and transition to the conclusion..."
+                    ></textarea>
+                </div>
+
+                <div class="tips">
+                    💡 <strong>Tip:</strong> This is often your strongest argument. Make it count!
+                </div>
+            </div>
+
+            <!-- CONCLUSION PARAGRAPH -->
+            <div class="paragraph-section conclusion">
+                <div class="section-header">
+                    <div class="section-title">Paragraph 5: Conclusion</div>
+                    <div class="word-count" id="conclusionWordCount">0 words</div>
+                </div>
+
+                <div class="subsection">
+                    <div class="transition-dropdown">
+                        <select id="transitionConclusion">
+                            <option value="">Choose transition...</option>
+                            <option value="In conclusion,">In conclusion,</option>
+                            <option value="To summarize,">To summarize,</option>
+                            <option value="In summary,">In summary,</option>
+                            <option value="Therefore,">Therefore,</option>
+                            <option value="Ultimately,">Ultimately,</option>
+                            <option value="As demonstrated,">As demonstrated,</option>
+                        </select>
+                    </div>
+                    <div class="subsection-label">Restated Thesis</div>
+                    <textarea 
+                        class="content-textarea" 
+                        id="restatedThesis"
+                        style="min-height: 60px;"
+                        placeholder="Restate your thesis in different words..."
+                    ></textarea>
+                    <div class="feedback" id="conclusionFeedback"></div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-label">Summary of Main Points</div>
+                    <textarea 
+                        class="content-textarea" 
+                        id="summary"
+                        placeholder="Briefly summarize your three main points..."
+                    ></textarea>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-label">Closing Thought</div>
+                    <textarea 
+                        class="content-textarea" 
+                        id="closingThought"
+                        style="min-height: 60px;"
+                        placeholder="End with a final thought, call to action, or broader implication..."
+                    ></textarea>
+                </div>
+
+                <div class="tips">
+                    💡 <strong>Tip:</strong> Your conclusion should leave a lasting impression. Don't just repeat—synthesize and reflect on the significance of your argument.
+                </div>
+            </div>
+
+            <div class="actions">
+                <button class="btn btn-secondary" onclick="clearAll()">🗑️ Clear All</button>
+                <button class="btn btn-primary" onclick="previewEssay()">👁️ Preview Essay</button>
+                <button class="btn btn-success" onclick="copyEssay()">📋 Copy to Clipboard</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="preview-modal" id="previewModal">
+        <div class="preview-content">
+            <h2>📄 Your Complete Essay</h2>
+            <div class="preview-text" id="previewText"></div>
+            <div style="text-align: center; margin-top: 20px;">
+                <button class="btn btn-secondary" onclick="closePreview()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function countWords(text) {
+            const trimmed = text.trim();
+            return trimmed === '' ? 0 : trimmed.split(/\s+/).length;
+        }
+
+        function updateWordCount(ids, countId) {
+            let totalWords = 0;
+            ids.forEach(id => {
+                const elem = document.getElementById(id);
+                if (elem) {
+                    totalWords += countWords(elem.value);
+                }
+            });
+            document.getElementById(countId).textContent = `${totalWords} words`;
+        }
+
+        function checkSentenceBasics(text, feedbackId) {
+            const feedback = document.getElementById(feedbackId);
+            const messages = [];
+
+            if (!text.trim()) {
+                feedback.innerHTML = '';
+                return;
+            }
+
+            if (text[0] === text[0].toLowerCase()) {
+                messages.push('<p class="error">Start with a capital letter.</p>');
+            }
+
+            if (!/[.!?]$/.test(text.trim())) {
+                messages.push('<p class="error">End with proper punctuation (. ! or ?).</p>');
+            }
+
+            if (text.trim().endsWith('?')) {
+                messages.push('<p class="warn">Consider using a statement rather than a question.</p>');
+            }
+
+            const words = text.split(/\s+/);
+            if (text.length < 15) {
+                messages.push('<p class="error">Too short. Add more detail.</p>');
+            } else if (words.length >= 8 && words.length <= 30) {
+                messages.push('<p>✔️ Good sentence length.</p>');
+            } else if (words.length > 30) {
+                messages.push('<p class="warn">This sentence is quite long. Consider breaking it up.</p>');
+            }
+
+            if (/n't|'re|'ve|'ll|'d|'s/.test(text)) {
+                messages.push('<p class="warn">Avoid contractions in formal essays.</p>');
+            }
+
+            feedback.innerHTML = messages.join('');
+        }
+
+        function checkHook() {
+            const text = document.getElementById('hook').value.trim();
+            const feedback = document.getElementById('hookFeedback');
+            const messages = [];
+
+            if (!text) {
+                feedback.innerHTML = '';
+                return;
+            }
+
+            checkSentenceBasics(text, 'hookFeedback');
+
+            const hookPatterns = /(imagine|what if|did you know|have you ever|picture this|consider)/i;
+            if (hookPatterns.test(text)) {
+                messages.push('<p>✔️ Great engaging hook!</p>');
+            } else {
+                messages.push('<p class="warn">Try to make your hook more engaging with a question, scenario, or surprising fact.</p>');
+            }
+
+            const weakStarters = /^(this essay|this paper|in this essay|i will)/i;
+            if (weakStarters.test(text)) {
+                messages.push('<p class="error">Don\'t announce what you\'re doing. Start with an engaging hook instead.</p>');
+            }
+
+            feedback.innerHTML += messages.join('');
+        }
+
+        function checkThesis() {
+            const text = document.getElementById('thesis').value.trim();
+            const feedback = document.getElementById('thesisFeedback');
+            const messages = [];
+
+            if (!text) {
+                feedback.innerHTML = '';
+                return;
+            }
+
+            checkSentenceBasics(text, 'thesisFeedback');
+
+            const weakStarters = /^(i think|i believe|i feel|in my opinion)/i;
+            if (weakStarters.test(text)) {
+                messages.push('<p class="error">State your thesis directly without "I think" or "I believe".</p>');
+            }
+
+            const words = text.split(/\s+/);
+            if (words.length < 12) {
+                messages.push('<p class="warn">Your thesis seems brief. It should preview your three main points.</p>');
+            }
+
+            const strongIndicators = /(because|demonstrates|proves|shows|reveals|three|first.*second.*third)/i;
+            if (strongIndicators.test(text)) {
+                messages.push('<p>✔️ Strong thesis with clear direction!</p>');
+            } else {
+                messages.push('<p class="warn">Try to preview your three main points in your thesis.</p>');
+            }
+
+            feedback.innerHTML += messages.join('');
+        }
+
+        function checkTopicSentence(id, feedbackId) {
+            const text = document.getElementById(id).value.trim();
+            const feedback = document.getElementById(feedbackId);
+            const messages = [];
+
+            if (!text) {
+                feedback.innerHTML = '';
+                return;
+            }
+
+            checkSentenceBasics(text, feedbackId);
+
+            const weakStarters = /^(i think|i believe|this paragraph|the first|the second|the third)/i;
+            if (weakStarters.test(text)) {
+                messages.push('<p class="error">State your point directly without weak starters.</p>');
+            }
+
+            const purposefulPatterns = /(should|must|because|since|therefore|demonstrates|proves|shows|reveals)/i;
+            if (purposefulPatterns.test(text)) {
+                messages.push('<p>✔️ Clear topic sentence with strong direction!</p>');
+            } else {
+                messages.push('<p class="warn">Add stronger language to show your point (e.g., "demonstrates," "proves," "because").</p>');
+            }
+
+            const vagueWords = /(thing|stuff|good|bad|nice|interesting)/i;
+            if (vagueWords.test(text)) {
+                messages.push('<p class="warn">Be more specific. Avoid vague words like "thing," "good," "bad," or "interesting".</p>');
+            }
+
+            feedback.innerHTML += messages.join('');
+        }
+
+        function checkConclusion() {
+            const text = document.getElementById('restatedThesis').value.trim();
+            const thesis = document.getElementById('thesis').value.trim();
+            const feedback = document.getElementById('conclusionFeedback');
+            const messages = [];
+
+            if (!text) {
+                feedback.innerHTML = '';
+                return;
+            }
+
+            checkSentenceBasics(text, 'conclusionFeedback');
+
+            if (thesis && text.toLowerCase() === thesis.toLowerCase()) {
+                messages.push('<p class="error">Don\'t copy your thesis exactly. Restate it in different words.</p>');
+            } else if (thesis && text.length > 10) {
+                messages.push('<p>✔️ Good job restating your thesis in new words!</p>');
+            }
+
+            const newInfo = /^(a new|another|also|additionally)/i;
+            if (newInfo.test(text)) {
+                messages.push('<p class="error">Don\'t introduce new information in your conclusion.</p>');
+            }
+
+            feedback.innerHTML += messages.join('');
+        }
+
+        document.getElementById('hook').addEventListener('input', checkHook);
+        document.getElementById('thesis').addEventListener('input', checkThesis);
+        document.getElementById('body1Topic').addEventListener('input', () => checkTopicSentence('body1Topic', 'body1TopicFeedback'));
+        document.getElementById('body2Topic').addEventListener('input', () => checkTopicSentence('body2Topic', 'body2TopicFeedback'));
+        document.getElementById('body3Topic').addEventListener('input', () => checkTopicSentence('body3Topic', 'body3TopicFeedback'));
+        document.getElementById('restatedThesis').addEventListener('input', checkConclusion);
+
+        const sections = [
+            { ids: ['hook', 'background', 'thesis'], counter: 'introWordCount' },
+            { ids: ['body1Topic', 'body1Evidence', 'body1Concluding'], counter: 'body1WordCount' },
+            { ids: ['body2Topic', 'body2Evidence', 'body2Concluding'], counter: 'body2WordCount' },
+            { ids: ['body3Topic', 'body3Evidence', 'body3Concluding'], counter: 'body3WordCount' },
+            { ids: ['restatedThesis', 'summary', 'closingThought'], counter: 'conclusionWordCount' }
+        ];
+
+        sections.forEach(section => {
+            section.ids.forEach(id => {
+                const elem = document.getElementById(id);
+                if (elem) {
+                    elem.addEventListener('input', () => updateWordCount(section.ids, section.counter));
+                }
+            });
+        });
+
+        function clearAll() {
+            if (confirm('Are you sure you want to clear all content?')) {
+                const allInputs = [
+                    'promptInput', 'hook', 'background', 'thesis',
+                    'body1Topic', 'body1Evidence', 'body1Concluding',
+                    'body2Topic', 'body2Evidence', 'body2Concluding',
+                    'body3Topic', 'body3Evidence', 'body3Concluding',
+                    'restatedThesis', 'summary', 'closingThought'
+                ];
+                
+                allInputs.forEach(id => {
+                    const elem = document.getElementById(id);
+                    if (elem) elem.value = '';
+                });
+
+                const transitions = ['transition1', 'transition2', 'transition3', 'transitionConclusion'];
+                transitions.forEach(id => {
+                    const elem = document.getElementById(id);
+                    if (elem) elem.value = '';
+                });
+
+                const feedbacks = ['hookFeedback', 'thesisFeedback', 'body1TopicFeedback', 
+                                  'body2TopicFeedback', 'body3TopicFeedback', 'conclusionFeedback'];
+                feedbacks.forEach(id => {
+                    const elem = document.getElementById(id);
+                    if (elem) elem.innerHTML = '';
+                });
+
+                sections.forEach(section => updateWordCount(section.ids, section.counter));
+            }
+        }
+
+        function generateEssay() {
+            const prompt = document.getElementById('promptInput').value;
+            let essay = '';
+
+            if (prompt.trim()) {
+                essay += `Essay Topic: ${prompt}\n\n`;
+            }
+
+            const hook = document.getElementById('hook').value.trim();
+            const background = document.getElementById('background').value.trim();
+            const thesis = document.getElementById('thesis').value.trim();
+
+            if (hook || background || thesis) {
+                essay += `${hook} ${background} ${thesis}`.trim() + '\n\n';
+            }
+
+            const transition1 = document.getElementById('transition1').value;
+            const body1Topic = document.getElementById('body1Topic').value.trim();
+            const body1Evidence = document.getElementById('body1Evidence').value.trim();
+            const body1Concluding = document.getElementById('body1Concluding').value.trim();
+
+            if (body1Topic || body1Evidence || body1Concluding) {
+                essay += `${transition1 ? transition1 + ' ' : ''}${body1Topic} ${body1Evidence} ${body1Concluding}`.trim() + '\n\n';
+            }
+
+            const transition2 = document.getElementById('transition2').value;
+            const body2Topic = document.getElementById('body2Topic').value.trim();
+            const body2Evidence = document.getElementById('body2Evidence').value.trim();
+            const body2Concluding = document.getElementById('body2Concluding').value.trim();
+
+            if (body2Topic || body2Evidence || body2Concluding) {
+                essay += `${transition2 ? transition2 + ' ' : ''}${body2Topic} ${body2Evidence} ${body2Concluding}`.trim() + '\n\n';
+            }
+
+            const transition3 = document.getElementById('transition3').value;
+            const body3Topic = document.getElementById('body3Topic').value.trim();
+            const body3Evidence = document.getElementById('body3Evidence').value.trim();
+            const body3Concluding = document.getElementById('body3Concluding').value.trim();
+
+            if (body3Topic || body3Evidence || body3Concluding) {
+                essay += `${transition3 ? transition3 + ' ' : ''}${body3Topic} ${body3Evidence} ${body3Concluding}`.trim() + '\n\n';
+            }
+
+            const transitionConc = document.getElementById('transitionConclusion').value;
+            const restatedThesis = document.getElementById('restatedThesis').value.trim();
+            const summary = document.getElementById('summary').value.trim();
+            const closingThought = document.getElementById('closingThought').value.trim();
+
+            if (restatedThesis || summary || closingThought) {
+                essay += `${transitionConc ? transitionConc + ' ' : ''}${restatedThesis} ${summary} ${closingThought}`.trim();
+            }
+
+            return essay.trim();
+        }
+
+        function previewEssay() {
+            const essay = generateEssay();
+            if (!essay || essay.startsWith('Essay Topic:') && essay.length < 20) {
+                alert('Please write some content before previewing!');
+                return;
+            }
+
+            const paragraphs = essay.split('\n\n');
+            const formattedEssay = paragraphs.map(p => {
+                if (p.startsWith('Essay Topic:')) {
+                    return `<p style="text-indent: 0; font-weight: bold; margin-bottom: 20px;">${p}</p>`;
+                }
+                return `<p>${p}</p>`;
+            }).join('');
+
+            document.getElementById('previewText').innerHTML = formattedEssay;
+            document.getElementById('previewModal').style.display = 'block';
+        }
+
+        function closePreview() {
+            document.getElementById('previewModal').style.display = 'none';
+        }
+
+        function copyEssay() {
+            const essay = generateEssay();
+            if (!essay || essay.startsWith('Essay Topic:') && essay.length < 20) {
+                alert('Please write some content before copying!');
+                return;
+            }
+
+            navigator.clipboard.writeText(essay).then(() => {
+                alert('Essay copied to clipboard!');
+            }).catch(() => {
+                const textArea = document.createElement('textarea');
+                textArea.value = essay;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                alert('Essay copied to clipboard!');
+            });
+        }
+
+        document.getElementById('previewModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closePreview();
+            }
+        });
+    </script>
+</body>
+</html>
 
