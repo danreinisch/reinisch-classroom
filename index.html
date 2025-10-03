@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Homepage with Background Video</title>
     <link rel="stylesheet" href="styles.css" />
+    <style>
+      /* Minimal layout helper so both CTAs sit nicely */
+      .cta-row { display: inline-flex; gap: 0.75rem; flex-wrap: wrap; }
+    </style>
   </head>
   <body>
     <!-- Background video -->
@@ -30,7 +34,10 @@
     <main class="content">
       <h1>Welcome to Reinisch Classroom</h1>
       <p>Explore Language Arts and Life Skills units, presentations and tools to help students learn and grow.</p>
-      <a class="cta" href="#learn-more">Learn more</a>
+      <div class="cta-row">
+        <a class="cta" href="#learn-more">Learn more</a>
+        <a class="cta" href="/site/math-toolkit/">Math Toolkit</a>
+      </div>
     </main>
 
     <!-- Ensure reliable video looping -->
