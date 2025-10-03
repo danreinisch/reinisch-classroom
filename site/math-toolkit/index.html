@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Math Toolkit | Reinisch Classroom</title>
+
+  <style>
+    :root { --gap: 1rem; --accent: #0b5fff; --border: #e5e7eb; --ink: #0b1021; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; line-height: 1.5; color: var(--ink); background: #fafbfe; }
+    header, main, footer { max-width: 1100px; margin: 0 auto; padding: 1rem; }
+    header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+    a { color: var(--accent); text-decoration: none; }
+    .title { margin: 0.25rem 0; }
+    .subtitle { margin: 0; color: #556; }
+    .controls { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
+    .search { padding: 0.6rem 0.75rem; border: 1px solid var(--border); border-radius: 8px; width: 260px; max-width: 100%; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--gap); padding-top: 0.5rem; }
+    .card { border: 1px solid var(--border); border-radius: 10px; padding: 1rem; background: #fff; display: flex; flex-direction: column; gap: 0.5rem; }
+    .card h3 { margin: 0; font-size: 1.05rem; }
+    .card p { margin: 0; color: #455; }
+    .thumb { width: 100%; aspect-ratio: 16/9; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); background: #f8fafc; }
+    .btn { display: inline-block; padding: 0.55rem 0.9rem; border-radius: 8px; background: var(--accent); color: #fff; }
+    .muted { color: #667; font-size: 0.9rem; }
+    .empty { border: 1px dashed var(--border); border-radius: 10px; padding: 1rem; background: #fbfdff; }
+    code { background: #eef3ff; padding: 0 0.3rem; border-radius: 4px; }
+  </style>
+
+  <script>
+    (function(){
+      var root = location.pathname.indexOf('/site/') >= 0
+        ? location.pathname.slice(0, location.pathname.indexOf('/site/') + 6)
+        : '/';
+      function addCSS(href){ var l=document.createElement('link'); l.rel='stylesheet'; l.href=href; document.head.appendChild(l); }
+      function addJS(src){ var s=document.createElement('script'); s.defer=true; s.src=src; document.head.appendChild(s); }
+      addCSS(root + 'assets/css/site.css');
+      addJS(root + 'assets/js/site.js');
+    })();
+  </script>
+</head>
+<body>
+  <header>
+    <div>
+      <a href="/">← Home</a>
+      <h1 class="title">Math Toolkit</h1>
+      <p class="subtitle">Drop new modules into <code>site/math-toolkit/modules/</code> and they’ll appear here automatically.</p>
+    </div>
+    <div class="controls">
+      <input class="search" id="search" type="search" placeholder="Search modules..." aria-label="Search modules" />
+    </div>
+  </header>
+
+  <main>
+    <div id="modules" class="grid" role="list"></div>
+    <div id="empty" class="empty" hidden>
+      <p class="muted">
+        No modules yet. Add one by uploading an HTML file to
+        <code>site/math-toolkit/modules/</code>. Within ~30–60 seconds of your push, this page updates.
+      </p>
+    </div>
+  </main>
+
+  <footer>
+    <div style="max-width:1100px;margin:0 auto;padding:1rem;">
+      <p class="muted">Tip: Add metadata in your module for better cards: <code>&lt;title&gt;</code>, <code>&lt;meta name="description" ...&gt;</code>, <code>&lt;meta property="og:image" ...&gt;</code>.</p>
+    </div>
+  </footer>
+
+  <script>
+    const listEl = document.getElementById('modules');
+    const emptyEl = document.getElementById('empty');
+    const searchEl = document.getElementById('search');
+    let allModules = [];
+
+    function cardTemplate(m) {
+      const thumb = m.thumbnail ? `<img class="thumb" src="${m.thumbnail}" alt="" loading="lazy" decoding="async">` : '';
+      const desc = m.description ? `<p>${m.description}</p>` : '<p class="muted">No description provided.</p>';
+      const when = m.lastModified ? new Date(m.lastModified).toLocaleDateString() : '';
+      const meta = when ? `<span class="muted">Updated ${when}</span>` : '';
+      return `
+        <article class="card" role="listitem">
+          ${thumb}
+          <h3>${m.title}</h3>
+          ${desc}
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:.5rem;flex-wrap:wrap;margin-top:.25rem;">
+            ${meta}
+            <a class="btn" href="${m.url}" rel="noopener">Open Module</a>
+          </div>
+        </article>
+      `;
+    }
+
+    function render(items) {
+      listEl.innerHTML = items.map(cardTemplate).join('');
+      listEl.hidden = items.length === 0;
+      emptyEl.hidden = items.length !== 0;
+    }
+
+    function filter(query) {
+      const q = query.trim().toLowerCase();
+      if (!q) return allModules;
+      return allModules.filter(m =>
+        (m.title || '').toLowerCase().includes(q) ||
+        (m.description || '').toLowerCase().includes(q)
+      );
+    }
+
+    async function load() {
+      try {
+        const res = await fetch('./modules.json?' + Date.now(), { cache: 'no-store' });
+        if (!res.ok) throw new Error('modules.json not found');
+        const data = await res.json();
+        allModules = Array.isArray(data) ? data : (data.modules || []);
+        render(allModules);
+      } catch (e) {
+        console.warn('Failed to load modules.json', e);
+        allModules = [];
+        render(allModules);
+      }
+    }
+
+    searchEl.addEventListener('input', () => render(filter(searchEl.value)));
+    load();
+  </script>
+</body>
+</html>
