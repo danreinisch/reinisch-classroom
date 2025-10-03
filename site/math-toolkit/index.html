@@ -6,28 +6,52 @@
   <title>Math Toolkit | Reinisch Classroom</title>
 
   <style>
-    :root { --gap: 1rem; --accent: #0b5fff; --border: #e5e7eb; --ink: #0b1021; }
+    :root {
+      --gap: 1rem;
+      --ink: #e8edf5;
+      --glass: rgba(255,255,255,.14);
+      --glass-brd: rgba(255,255,255,.28);
+      --card-brd: rgba(255,255,255,.22);
+    }
     * { box-sizing: border-box; }
-    body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; line-height: 1.5; color: var(--ink); background: #fafbfe; }
-    header, main, footer { max-width: 1100px; margin: 0 auto; padding: 1rem; }
-    header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
-    a { color: var(--accent); text-decoration: none; }
-    .title { margin: 0.25rem 0; }
-    .subtitle { margin: 0; color: #556; }
-    .controls { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
-    .search { padding: 0.6rem 0.75rem; border: 1px solid var(--border); border-radius: 8px; width: 260px; max-width: 100%; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--gap); padding-top: 0.5rem; }
-    .card { border: 1px solid var(--border); border-radius: 10px; padding: 1rem; background: #fff; display: flex; flex-direction: column; gap: 0.5rem; }
-    .card h3 { margin: 0; font-size: 1.05rem; }
-    .card p { margin: 0; color: #455; }
-    .thumb { width: 100%; aspect-ratio: 16/9; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); background: #f8fafc; }
-    .btn { display: inline-block; padding: 0.55rem 0.9rem; border-radius: 8px; background: var(--accent); color: #fff; }
-    .muted { color: #667; font-size: 0.9rem; }
-    .empty { border: 1px dashed var(--border); border-radius: 10px; padding: 1rem; background: #fbfdff; }
-    code { background: #eef3ff; padding: 0 0.3rem; border-radius: 4px; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      line-height: 1.5;
+      color: var(--ink);
+      background: transparent;
+    }
+    /* Layout */
+    .container { max-width: 1100px; margin: 0 auto; padding: 1rem; }
+
+    /* Glass buttons (match home style) */
+    .btn{background:var(--glass); border:1px solid var(--glass-brd); color:#fff; padding:.6rem 1rem;
+         border-radius:.6rem; text-decoration:none; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+         transition: background .2s, transform .2s}
+    .btn:hover{background:rgba(255,255,255,.24); transform: translateY(-1px)}
+
+    /* Header actions */
+    .home{position:fixed; top:1rem; left:1rem; z-index:1}
+
+    /* Grid of modules (thumbnail + description only, whole card clickable) */
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--gap); padding-top: 3.5rem; }
+    .card-link { display:block; color: inherit; text-decoration:none; }
+    .card { border:1px solid var(--card-brd); border-radius: 1rem; overflow:hidden; background: rgba(0,0,0,.25); }
+    .thumb { width: 100%; aspect-ratio: 16/9; object-fit: cover; display:block; }
+    .desc { padding: .85rem 1rem; color: #f0f4ff; min-height: 3rem; }
+
+    /* Empty state */
+    .empty { border: 1px dashed var(--glass-brd); border-radius: 10px; padding: 1rem; background: rgba(0,0,0,.18); color:#dfe8ff; }
+
+    /* Search (optional) */
+    .controls { position: sticky; top: .75rem; display:flex; justify-content:flex-end; z-index: 1; }
+    .search { padding: 0.6rem 0.75rem; border: 1px solid var(--glass-brd); border-radius: 8px; width: 260px; max-width: 100%; background: rgba(0,0,0,.25); color: #fff; }
+    .search::placeholder{color:#c7d2fe}
   </style>
 
   <script>
+    // Load shared site assets (CSS/JS) to get the same background as the home page
     (function(){
       var root = location.pathname.indexOf('/site/') >= 0
         ? location.pathname.slice(0, location.pathname.indexOf('/site/') + 6)
@@ -40,32 +64,28 @@
   </script>
 </head>
 <body>
-  <header>
-    <div>
-      <a href="/">← Home</a>
-      <h1 class="title">Math Toolkit</h1>
-      <p class="subtitle">Drop new modules into <code>site/math-toolkit/modules/</code> and they’ll appear here automatically.</p>
-    </div>
-    <div class="controls">
-      <input class="search" id="search" type="search" placeholder="Search modules..." aria-label="Search modules" />
-    </div>
-  </header>
+  <!-- Static background anchor (video + overlay will be injected by site.js before this element) -->
+  <div class="bg"></div>
 
-  <main>
-    <div id="modules" class="grid" role="list"></div>
-    <div id="empty" class="empty" hidden>
-      <p class="muted">
-        No modules yet. Add one by uploading an HTML file to
-        <code>site/math-toolkit/modules/</code>. Within ~30–60 seconds of your push, this page updates.
-      </p>
-    </div>
-  </main>
+  <!-- Fixed Home button (glass) -->
+  <a class="btn home" href="/">Home</a>
 
-  <footer>
-    <div style="max-width:1100px;margin:0 auto;padding:1rem;">
-      <p class="muted">Tip: Add metadata in your module for better cards: <code>&lt;title&gt;</code>, <code>&lt;meta name="description" ...&gt;</code>, <code>&lt;meta property="og:image" ...&gt;</code>.</p>
-    </div>
-  </footer>
+  <div class="container">
+    <header class="container" style="padding-top:2.5rem;">
+      <h1 style="margin:0 0 .25rem; font-size: clamp(1.75rem, 3.5vw, 2.25rem);">Math Toolkit</h1>
+      <p style="margin:.25rem 0 1rem; opacity:.95; max-width: 72ch;">Explore math modules. Click a card to open the module. Use Teacher Tools to add or update modules.</p>
+      <div class="controls">
+        <input class="search" id="search" type="search" placeholder="Search modules..." aria-label="Search modules" />
+      </div>
+    </header>
+
+    <main class="container" style="padding-top:0;">
+      <div id="modules" class="grid" role="list"></div>
+      <div id="empty" class="empty" hidden>
+        <p>No modules yet. Teachers can upload modules via Teacher Tools.</p>
+      </div>
+    </main>
+  </div>
 
   <script>
     const listEl = document.getElementById('modules');
@@ -75,19 +95,16 @@
 
     function cardTemplate(m) {
       const thumb = m.thumbnail ? `<img class="thumb" src="${m.thumbnail}" alt="" loading="lazy" decoding="async">` : '';
-      const desc = m.description ? `<p>${m.description}</p>` : '<p class="muted">No description provided.</p>';
-      const when = m.lastModified ? new Date(m.lastModified).toLocaleDateString() : '';
-      const meta = when ? `<span class="muted">Updated ${when}</span>` : '';
+      const desc = m.description ? `${m.description}` : 'Module';
+      // Route through viewer so every module shows a persistent back button without modifying module files
+      const viewerURL = `./viewer.html?p=${encodeURIComponent(m.url)}`;
       return `
-        <article class="card" role="listitem">
-          ${thumb}
-          <h3>${m.title}</h3>
-          ${desc}
-          <div style="display:flex;justify-content:space-between;align-items:center;gap:.5rem;flex-wrap:wrap;margin-top:.25rem;">
-            ${meta}
-            <a class="btn" href="${m.url}" rel="noopener">Open Module</a>
-          </div>
-        </article>
+        <a class="card-link" href="${viewerURL}" role="listitem" aria-label="Open module">
+          <article class="card">
+            ${thumb}
+            <div class="desc">${desc}</div>
+          </article>
+        </a>
       `;
     }
 
@@ -98,7 +115,7 @@
     }
 
     function filter(query) {
-      const q = query.trim().toLowerCase();
+      const q = (query || '').trim().toLowerCase();
       if (!q) return allModules;
       return allModules.filter(m =>
         (m.title || '').toLowerCase().includes(q) ||
