@@ -1,0 +1,20 @@
+{
+  "modules": [
+    {
+      "title": "Times Tables Practice",
+      "description": "Interactive multiplication tables practice tool with instant feedback and progress tracking.",
+      "url": "./modules/times-tables.html",
+      "slug": "times-tables",
+      "thumbnail": "",
+      "lastModified": "2025-10-03T22:06:46.410Z"
+    },
+    {
+      "title": "Fraction Visualizer",
+      "description": "Interactive tool to visualize and understand fractions with visual pie charts and number lines.",
+      "url": "./modules/fraction-visualizer.html",
+      "slug": "fraction-visualizer",
+      "thumbnail": "",
+      "lastModified": "2025-10-03T22:06:20.258Z"
+    }
+  ]
+}

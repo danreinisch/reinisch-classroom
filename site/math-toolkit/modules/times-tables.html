@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Times Tables Practice</title>
+  <meta name="description" content="Interactive multiplication tables practice tool with instant feedback and progress tracking.">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { 
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; 
+      line-height: 1.6; 
+      padding: 2rem; 
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      color: #333;
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 700px;
+      margin: 0 auto;
+      background: white;
+      padding: 2rem;
+      border-radius: 15px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+    h1 { 
+      color: #f5576c; 
+      text-align: center; 
+      margin-bottom: 2rem;
+      font-size: 2.5rem;
+    }
+    .question {
+      text-align: center;
+      font-size: 3rem;
+      font-weight: bold;
+      color: #333;
+      margin: 2rem 0;
+      padding: 2rem;
+      background: #f8f8f8;
+      border-radius: 15px;
+    }
+    .answer-input {
+      display: block;
+      width: 200px;
+      margin: 0 auto 2rem;
+      padding: 1rem;
+      font-size: 2rem;
+      text-align: center;
+      border: 3px solid #f5576c;
+      border-radius: 10px;
+    }
+    .answer-input:focus {
+      outline: none;
+      border-color: #f093fb;
+      box-shadow: 0 0 0 3px rgba(245, 87, 108, 0.2);
+    }
+    .feedback {
+      text-align: center;
+      font-size: 1.5rem;
+      min-height: 2rem;
+      margin-bottom: 1rem;
+    }
+    .correct { color: #4caf50; }
+    .incorrect { color: #f44336; }
+    .stats {
+      display: flex;
+      justify-content: space-around;
+      margin-top: 2rem;
+      padding: 1.5rem;
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      border-radius: 10px;
+      color: white;
+    }
+    .stat {
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 2rem;
+      font-weight: bold;
+    }
+    .stat-label {
+      font-size: 0.9rem;
+    }
+    .button {
+      display: block;
+      width: 200px;
+      margin: 1rem auto;
+      padding: 1rem;
+      font-size: 1.2rem;
+      background: #f5576c;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .button:hover {
+      background: #f093fb;
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+    .back-link {
+      display: inline-block;
+      margin-bottom: 1rem;
+      color: #f5576c;
+      text-decoration: none;
+      font-weight: bold;
+    }
+    .back-link:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="../" class="back-link">← Back to Math Toolkit</a>
+    <h1>✖️ Times Tables Practice</h1>
+    
+    <div class="question" id="question">7 × 8 = ?</div>
+    
+    <input 
+      type="number" 
+      class="answer-input" 
+      id="answerInput" 
+      placeholder="?" 
+      autofocus
+    >
+    
+    <div class="feedback" id="feedback"></div>
+    
+    <button class="button" id="nextBtn" style="display: none;">Next Question</button>
+    
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-value" id="correct">0</div>
+        <div class="stat-label">Correct</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" id="total">0</div>
+        <div class="stat-label">Total</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" id="percentage">0%</div>
+        <div class="stat-label">Accuracy</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentQuestion = {};
+    let stats = { correct: 0, total: 0 };
+    
+    const questionEl = document.getElementById('question');
+    const answerInput = document.getElementById('answerInput');
+    const feedbackEl = document.getElementById('feedback');
+    const nextBtn = document.getElementById('nextBtn');
+    const correctEl = document.getElementById('correct');
+    const totalEl = document.getElementById('total');
+    const percentageEl = document.getElementById('percentage');
+
+    function generateQuestion() {
+      const num1 = Math.floor(Math.random() * 12) + 1;
+      const num2 = Math.floor(Math.random() * 12) + 1;
+      currentQuestion = {
+        num1,
+        num2,
+        answer: num1 * num2
+      };
+      questionEl.textContent = `${num1} × ${num2} = ?`;
+      answerInput.value = '';
+      answerInput.focus();
+      feedbackEl.textContent = '';
+      feedbackEl.className = 'feedback';
+      nextBtn.style.display = 'none';
+    }
+
+    function checkAnswer() {
+      const userAnswer = parseInt(answerInput.value);
+      if (isNaN(userAnswer)) return;
+
+      stats.total++;
+      
+      if (userAnswer === currentQuestion.answer) {
+        stats.correct++;
+        feedbackEl.textContent = '✅ Correct! Well done!';
+        feedbackEl.className = 'feedback correct';
+      } else {
+        feedbackEl.textContent = `❌ Not quite. The answer is ${currentQuestion.answer}`;
+        feedbackEl.className = 'feedback incorrect';
+      }
+      
+      updateStats();
+      nextBtn.style.display = 'block';
+      answerInput.disabled = true;
+    }
+
+    function updateStats() {
+      correctEl.textContent = stats.correct;
+      totalEl.textContent = stats.total;
+      const percentage = stats.total > 0 ? Math.round((stats.correct / stats.total) * 100) : 0;
+      percentageEl.textContent = `${percentage}%`;
+    }
+
+    function nextQuestion() {
+      answerInput.disabled = false;
+      generateQuestion();
+    }
+
+    answerInput.addEventListener('keyup', (e) => {
+      if (e.key === 'Enter' && !answerInput.disabled) {
+        checkAnswer();
+      }
+    });
+
+    nextBtn.addEventListener('click', nextQuestion);
+
+    generateQuestion();
+  </script>
+</body>
+</html>

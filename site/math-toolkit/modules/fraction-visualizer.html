@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fraction Visualizer</title>
+  <meta name="description" content="Interactive tool to visualize and understand fractions with visual pie charts and number lines.">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { 
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; 
+      line-height: 1.6; 
+      padding: 2rem; 
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #333;
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: white;
+      padding: 2rem;
+      border-radius: 15px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+    h1 { 
+      color: #667eea; 
+      text-align: center; 
+      margin-bottom: 2rem;
+      font-size: 2.5rem;
+    }
+    .controls {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+    }
+    label {
+      font-weight: bold;
+      color: #555;
+    }
+    input[type="number"] {
+      width: 80px;
+      padding: 0.5rem;
+      border: 2px solid #667eea;
+      border-radius: 8px;
+      font-size: 1rem;
+    }
+    .visualization {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      margin-top: 2rem;
+    }
+    .pie-chart {
+      position: relative;
+      width: 250px;
+      height: 250px;
+      margin: 0 auto;
+    }
+    .pie-slice {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      clip-path: polygon(50% 50%, 50% 0%, 100% 0%, 100% 100%, 0% 100%, 0% 0%, 50% 0%);
+      transition: all 0.3s ease;
+    }
+    .number-line {
+      width: 100%;
+      height: 60px;
+      background: #f0f0f0;
+      border-radius: 10px;
+      position: relative;
+      margin-top: 1rem;
+    }
+    .marker {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      background: #764ba2;
+      border-radius: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      border: 3px solid white;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    .result {
+      text-align: center;
+      margin-top: 2rem;
+      padding: 1.5rem;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-radius: 10px;
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+    .back-link {
+      display: inline-block;
+      margin-bottom: 1rem;
+      color: #667eea;
+      text-decoration: none;
+      font-weight: bold;
+    }
+    .back-link:hover {
+      text-decoration: underline;
+    }
+    @media (max-width: 768px) {
+      .visualization {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="../" class="back-link">← Back to Math Toolkit</a>
+    <h1>🥧 Fraction Visualizer</h1>
+    
+    <div class="controls">
+      <label>
+        Numerator:
+        <input type="number" id="numerator" value="1" min="0" max="100">
+      </label>
+      <label>
+        Denominator:
+        <input type="number" id="denominator" value="4" min="1" max="100">
+      </label>
+    </div>
+
+    <div class="visualization">
+      <div>
+        <h3 style="text-align: center; color: #667eea;">Pie Chart</h3>
+        <div class="pie-chart" id="pieChart"></div>
+      </div>
+      <div>
+        <h3 style="text-align: center; color: #667eea;">Number Line</h3>
+        <div class="number-line" id="numberLine">
+          <div class="marker" id="marker"></div>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-top: 0.5rem; font-size: 0.9rem; color: #666;">
+          <span>0</span>
+          <span>1</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="result" id="result">
+      1 / 4 = 0.25
+    </div>
+  </div>
+
+  <script>
+    const numeratorInput = document.getElementById('numerator');
+    const denominatorInput = document.getElementById('denominator');
+    const pieChart = document.getElementById('pieChart');
+    const marker = document.getElementById('marker');
+    const result = document.getElementById('result');
+
+    function updateVisualization() {
+      const numerator = parseInt(numeratorInput.value) || 0;
+      const denominator = parseInt(denominatorInput.value) || 1;
+      const fraction = numerator / denominator;
+      const percentage = (fraction * 100).toFixed(1);
+      const decimal = fraction.toFixed(4);
+
+      // Update pie chart
+      pieChart.innerHTML = '';
+      const filledSlices = Math.floor(numerator);
+      const remainder = numerator % denominator;
+      
+      for (let i = 0; i < denominator; i++) {
+        const slice = document.createElement('div');
+        slice.className = 'pie-slice';
+        const angle = (360 / denominator) * i;
+        const nextAngle = (360 / denominator) * (i + 1);
+        
+        if (i < filledSlices) {
+          slice.style.background = '#667eea';
+        } else if (i === filledSlices && remainder > 0) {
+          slice.style.background = '#764ba2';
+        } else {
+          slice.style.background = '#e0e0e0';
+        }
+        
+        const midAngle = (angle + nextAngle) / 2;
+        const radians = (midAngle - 90) * (Math.PI / 180);
+        const x = 50 + 40 * Math.cos(radians);
+        const y = 50 + 40 * Math.sin(radians);
+        
+        slice.style.clipPath = `polygon(50% 50%, 
+          ${50 + 50 * Math.cos((angle - 90) * Math.PI / 180)}% ${50 + 50 * Math.sin((angle - 90) * Math.PI / 180)}%, 
+          ${50 + 50 * Math.cos((nextAngle - 90) * Math.PI / 180)}% ${50 + 50 * Math.sin((nextAngle - 90) * Math.PI / 180)}%)`;
+        
+        pieChart.appendChild(slice);
+      }
+
+      // Update number line marker
+      const position = Math.min(Math.max(fraction * 100, 0), 100);
+      marker.style.left = `${position}%`;
+
+      // Update result
+      result.textContent = `${numerator} / ${denominator} = ${decimal} (${percentage}%)`;
+    }
+
+    numeratorInput.addEventListener('input', updateVisualization);
+    denominatorInput.addEventListener('input', updateVisualization);
+
+    updateVisualization();
+  </script>
+</body>
+</html>

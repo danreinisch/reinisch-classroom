@@ -76,7 +76,7 @@ async function scan() {
 
   for (const ent of entries) {
     try {
-      if (ent.isFile() && \/\.html?$/i.test(ent.name)) {
+      if (ent.isFile() && /\.html?$/i.test(ent.name)) {
         const filePath = path.join(MODULES_DIR, ent.name);
         const stat = await fsp.stat(filePath);
         const meta = await extractFromHtml(filePath);

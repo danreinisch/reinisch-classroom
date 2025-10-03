@@ -25,6 +25,29 @@
     .muted { color: #667; font-size: 0.9rem; }
     .empty { border: 1px dashed var(--border); border-radius: 10px; padding: 1rem; background: #fbfdff; }
     code { background: #eef3ff; padding: 0 0.3rem; border-radius: 4px; }
+    .drag-drop-area { 
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+      border: 3px dashed #fff; 
+      border-radius: 15px; 
+      padding: 40px 30px; 
+      margin: 20px 0; 
+      text-align: center; 
+      min-height: 200px; 
+      display: flex; 
+      flex-direction: column;
+      align-items: center; 
+      justify-content: center; 
+      color: #fff;
+      transition: all 0.3s ease;
+    }
+    .drag-drop-area.drag-over {
+      background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+      border-color: #ffd700;
+      transform: scale(1.02);
+    }
+    .drag-drop-area h3 { color: #fff; margin-top: 0; }
+    .drag-drop-area p { color: #f0f0f0; margin: 0.5rem 0; }
+    .drag-drop-icon { font-size: 3rem; margin-bottom: 1rem; }
   </style>
 
   <script>
@@ -52,6 +75,14 @@
   </header>
 
   <main>
+    <!-- Drag and Drop Upload Area -->
+    <div class="drag-drop-area" id="dropZone">
+      <div class="drag-drop-icon">📁</div>
+      <h3>Drag & Drop HTML Modules Here</h3>
+      <p>Or use Git to push files to <code style="background: rgba(255,255,255,0.2); color: #fff;">site/math-toolkit/modules/</code></p>
+      <p style="font-size: 0.85rem; margin-top: 1rem;">Tip: This is a visual guide. To actually add modules, commit HTML files to the repository.</p>
+    </div>
+
     <div id="modules" class="grid" role="list"></div>
     <div id="empty" class="empty" hidden>
       <p class="muted">
@@ -122,6 +153,38 @@
 
     searchEl.addEventListener('input', () => render(filter(searchEl.value)));
     load();
+
+    // Drag and drop visual feedback
+    const dropZone = document.getElementById('dropZone');
+    
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+      dropZone.addEventListener(eventName, preventDefaults, false);
+    });
+    
+    function preventDefaults(e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
+    ['dragenter', 'dragover'].forEach(eventName => {
+      dropZone.addEventListener(eventName, () => {
+        dropZone.classList.add('drag-over');
+      }, false);
+    });
+    
+    ['dragleave', 'drop'].forEach(eventName => {
+      dropZone.addEventListener(eventName, () => {
+        dropZone.classList.remove('drag-over');
+      }, false);
+    });
+    
+    dropZone.addEventListener('drop', (e) => {
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        const fileNames = Array.from(files).map(f => f.name).join(', ');
+        alert(`Files detected: ${fileNames}\n\nTo add these modules, please commit them to the repository at:\nsite/math-toolkit/modules/\n\nThe page will auto-update within 30-60 seconds after pushing to GitHub.`);
+      }
+    });
   </script>
 </body>
 </html>
