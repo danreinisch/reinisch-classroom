@@ -65,19 +65,22 @@
   const makeCard = document.getElementById('makeCard');
   const copyCard = document.getElementById('copyCard');
   const downloadCard = document.getElementById('downloadCard');
+
+  function parseImages(){
+    const lines = (imagesEl && imagesEl.value ? imagesEl.value : '')
+      .split(/\r?\n/)
+      .map(s => s.trim())
+      .filter(Boolean)
+      .slice(0, 12);
+    return lines;
+  }
+
   function buildCard() {
     const obj = { title: (titleEl.value || '').trim() };
     if ((descEl.value || '').trim()) obj.description = descEl.value.trim();
-    // images: one per line, up to 12
-    if (imagesEl && imagesEl.value) {
-      const lines = imagesEl.value.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
-      const unique = [];
-      for (const p of lines) {
-        if (!unique.includes(p)) unique.push(p);
-        if (unique.length >= 12) break;
-      }
-      if (unique.length) obj.images = unique;
-    }
+    const imgs = parseImages();
+    if (imgs.length) obj.images = imgs;
+    // Keep conventional thumbnail name; index pages will fall back to images[0] if missing
     obj.thumbnail = 'thumbnail.png';
     return JSON.stringify(obj, null, 2);
   }

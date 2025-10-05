@@ -5,128 +5,116 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Module Viewer</title>
   <style>
-    :root { --ink:#0b1021; --bg:#0a0f1c; --accent:#0b5fff; }
-    * { box-sizing:border-box; }
-    html,body { height:100%; }
-    body { margin:0; background:var(--bg); color:#e6eefc; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
-    .wrap { position:relative; height:100%; }
-    .stage { position:absolute; inset:0; }
-    .bg { position:absolute; inset:0; overflow:hidden; }
-    .bg-layer { position:absolute; inset:0; background-position:center center; background-size:cover; opacity:0; transition:opacity 1.2s ease; filter: saturate(1.05) contrast(1.05) brightness(0.9); }
-    .bg-layer.active { opacity:0.35; }
-    .glass { position:absolute; top:0; left:0; right:0; height:54px; display:flex; align-items:center; justify-content:space-between; gap:.75rem; padding:.5rem .75rem; backdrop-filter: blur(8px); background: rgba(10, 15, 28, 0.45); border-bottom: 1px solid rgba(255,255,255,0.08); z-index:5; }
-    .title { margin:0; font-size:15px; color:#dbe7ff; }
-    .controls { display:flex; gap:.5rem; align-items:center; }
-    .btn { display:inline-flex; align-items:center; gap:.4rem; padding:.45rem .7rem; border-radius:8px; border:1px solid rgba(255,255,255,.12); color:#dbe7ff; background:rgba(0,0,0,.2); cursor:pointer; text-decoration:none; }
-    .btn:hover { filter: brightness(1.05); }
-    iframe { position:absolute; inset:54px 0 0 0; width:100%; height:calc(100% - 54px); border:0; background:#fff; }
-    .hint { color:#aac2ff; font-size:12px; }
+    :root{ --ink:#0b1021; --muted:#5b6477; --accent:#0b5fff; }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; color:var(--ink); background:#0b1021;}
+    header{position:relative; z-index:3; display:flex; align-items:center; justify-content:space-between; gap:.75rem; padding:.75rem 1rem; background:rgba(255,255,255,.85); border-bottom:1px solid #e5e7eb; backdrop-filter:saturate(1.2) blur(6px)}
+    header .title{margin:0; font-size:16px}
+    header a{color:var(--accent); text-decoration:none}
+    main{position:relative; height:calc(100% - 52px)}
+    .stage{position:absolute; inset:0; display:flex}
+    iframe{width:100%; height:100%; border:0; background:#fff; box-shadow: 0 10px 30px rgba(0,0,0,.25);}
+    .bg, .bg-next{position:absolute; inset:0; background-size:cover; background-position:center; opacity:.15; transition: opacity 1.25s ease-in-out;}
+    .bg-next{opacity:0}
+    .vignette{position:absolute; inset:0; pointer-events:none; background:radial-gradient(ellipse at center, rgba(255,255,255,0) 40%, rgba(0,0,0,.35) 100%)}
+    .overlay{position:absolute; inset:0; background:linear-gradient(180deg, rgba(255,255,255,.35), rgba(255,255,255,.1)); pointer-events:none}
+    .hidden{display:none}
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="bg">
-      <div class="bg-layer" id="bgA" aria-hidden="true"></div>
-      <div class="bg-layer" id="bgB" aria-hidden="true"></div>
+  <header>
+    <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;">
+      <a href="javascript:history.back()">← Back</a>
+      <h1 class="title" id="title">Module</h1>
     </div>
-    <div class="glass">
-      <div class="left">
-        <a class="btn" href="./" aria-label="Back">← Back</a>
-        <strong class="title" id="title">Loading…</strong>
-      </div>
-      <div class="controls">
-        <span class="hint" id="imgCount" hidden>0 images</span>
-        <a class="btn" id="openRaw" href="#" target="_blank" rel="noopener">Open Raw</a>
-      </div>
+    <div style="display:flex;gap:.5rem;align-items:center;">
+      <a id="openRaw" class="btn" href="#" target="_blank" rel="noopener" style="padding:.4rem .7rem; border:1px solid #e5e7eb; border-radius:8px; background:#fff;">Open raw</a>
     </div>
-    <iframe id="frame" title="Module"></iframe>
-  </div>
-
+  </header>
+  <main>
+    <div class="stage">
+      <div class="bg" id="bg"></div>
+      <div class="bg-next" id="bgNext"></div>
+      <div class="vignette"></div>
+      <div class="overlay"></div>
+      <iframe id="frame" src="about:blank" title="Module"></iframe>
+    </div>
+  </main>
   <script>
     (function(){
-      const params = new URLSearchParams(location.search);
-      const p = params.get('p') || '';
-      if (!p) {
-        document.getElementById('title').textContent = 'No module URL provided';
-        document.getElementById('imgCount').hidden = true;
-        return;
-      }
+      function q(name){ const u=new URL(location.href); return u.searchParams.get(name) || ''; }
+      const moduleUrl = q('p');
+      const titleEl = document.getElementById('title');
       const frame = document.getElementById('frame');
       const openRaw = document.getElementById('openRaw');
-      frame.src = p;
-      try { openRaw.href = p; } catch {}
+      const bg = document.getElementById('bg');
+      const bgNext = document.getElementById('bgNext');
 
-      // Derive card.json next to the module URL
-      let cardUrl;
-      try {
-        const u = new URL(p, location.href);
-        cardUrl = new URL('card.json', u).toString();
-      } catch {
-        cardUrl = null;
+      if (!moduleUrl) {
+        titleEl.textContent = 'No module specified';
+        document.body.style.background = '#fff';
+        return;
       }
 
-      const titleEl = document.getElementById('title');
-      const countEl = document.getElementById('imgCount');
-      const bgA = document.getElementById('bgA');
-      const bgB = document.getElementById('bgB');
+      // Set iframe and link
+      frame.src = moduleUrl;
+      openRaw.href = moduleUrl;
 
-      function setTitle(t){ if (t) { titleEl.textContent = t; document.title = t + ' — Module Viewer'; } }
+      // Derive base for assets
+      let base;
+      try { base = new URL(moduleUrl, location.origin).toString(); } catch { base = moduleUrl; }
+      function join(p){ try { return new URL(p, base).toString(); } catch { return p; }
+      }
+      function dirname(url){ try { const u=new URL(url); u.pathname = u.pathname.replace(/[^/]+$/, ''); return u.toString(); } catch { return url.replace(/[^/]+$/, ''); }
+      }
+      const modBase = dirname(base);
 
-      function startShow(urls){
-        const imgs = (urls || []).slice(0, 12);
-        if (!imgs.length) return;
-        countEl.hidden = false; countEl.textContent = imgs.length + ' image' + (imgs.length>1?'s':'');
-        // Preload
-        imgs.forEach(src => { const im = new Image(); im.src = src; });
-        let i = 0, activeA = true;
-        function apply(){
-          const url = imgs[i % imgs.length];
-          if (activeA) {
-            bgB.style.backgroundImage = `url('${url}')`;
-            bgB.classList.add('active');
-            bgA.classList.remove('active');
-          } else {
-            bgA.style.backgroundImage = `url('${url}')`;
-            bgA.classList.add('active');
-            bgB.classList.remove('active');
-          }
-          activeA = !activeA;
-          i++;
-        }
-        // Seed both layers to avoid flash
-        bgA.style.backgroundImage = `url('${imgs[0]}')`;
-        bgA.classList.add('active');
-        if (imgs[1]) bgB.style.backgroundImage = `url('${imgs[1]}')`;
-        let firstTick = true;
+      // Fetch card.json for metadata and images
+      async function fetchCard(){
+        try {
+          const res = await fetch(join('card.json'), { cache: 'no-store' });
+          if (!res.ok) return null;
+          return await res.json();
+        } catch { return null; }
+      }
+
+      function rotateBackground(urls){
+        if (!urls || !urls.length) return;
+        const imgs = urls.slice(0,12).map(u => join(u));
+        let i = 0;
+        function setBG(el, src){ el.style.backgroundImage = `url('${src}')`; }
+        setBG(bg, imgs[0]);
+        if (imgs.length === 1) return; // no rotation needed
+        i = 1;
         setInterval(() => {
-          // delay first transition a bit longer for initial load
-          apply();
+          setBG(bgNext, imgs[i]);
+          // fade
+          bgNext.style.opacity = '0.15';
+          bg.style.opacity = '0';
+          setTimeout(() => {
+            // swap roles
+            const tmp = bg.style.backgroundImage;
+            bg.style.backgroundImage = bgNext.style.backgroundImage;
+            bg.style.opacity = '0.15';
+            bgNext.style.backgroundImage = tmp;
+            bgNext.style.opacity = '0';
+          }, 1300);
+          i = (i + 1) % imgs.length;
         }, 6000);
       }
 
-      async function loadCard(){
-        if (!cardUrl) return;
-        try {
-          const res = await fetch(cardUrl + '?' + Date.now(), { cache: 'no-store' });
-          if (!res.ok) return;
-          const card = await res.json();
-          setTitle(card.title || 'Module');
-          const imgs = Array.isArray(card.images) ? card.images.map(x => {
-            try { return new URL(x, new URL(p, location.href)).toString(); } catch { return x; }
-          }) : [];
-          if (imgs.length) startShow(imgs);
-        } catch (e) { /* no-op */ }
-      }
-
-      // Try using the document title from inside the iframe when loaded
-      frame.addEventListener('load', () => {
-        try {
-          const t = frame.contentDocument && frame.contentDocument.title;
-          if (t) setTitle(t);
-        } catch {/* cross-origin or blocked */}
-      });
-
-      loadCard();
+      (async function init(){
+        const card = await fetchCard();
+        if (card) {
+          const t = card.title || 'Module';
+          titleEl.textContent = t;
+          document.title = t + ' • Module Viewer';
+          if (Array.isArray(card.images) && card.images.length) {
+            rotateBackground(card.images);
+          }
+        }
+      })();
     })();
   </script>
 </body>

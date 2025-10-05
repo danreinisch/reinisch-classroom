@@ -23,10 +23,10 @@
     .thumb { width: 100%; aspect-ratio: 16/9; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); background: #f8fafc; }
     .btn { display: inline-block; padding: 0.55rem 0.9rem; border-radius: 8px; background: var(--accent); color: #fff; }
     .muted { color: #667; font-size: 0.9rem; }
+    .badge { display:inline-block; font-size: 12px; padding: 2px 6px; border-radius: 999px; background: #eef2ff; color:#334155; border:1px solid #e5e7eb; }
+    .meta { display:flex;justify-content:space-between;align-items:center;gap:.5rem;flex-wrap:wrap;margin-top:.25rem; }
     .empty { border: 1px dashed var(--border); border-radius: 10px; padding: 1rem; background: #fbfdff; }
     code { background: #eef3ff; padding: 0 0.3rem; border-radius: 4px; }
-    .badges { display:flex; gap:.5rem; align-items:center; flex-wrap:wrap; }
-    .badge { font-size:.8rem; color:#334; background:#eef3ff; border:1px solid #dbe5ff; padding:.15rem .45rem; border-radius:999px; }
   </style>
 
   <script>
@@ -65,7 +65,7 @@
 
   <footer>
     <div style="max-width:1100px;margin:0 auto;padding:1rem;">
-      <p class="muted">Tip: Add metadata in your module for better cards: <code>&lt;title&gt;</code>, <code>&lt;meta name="description" ...&gt;</code>, <code>&lt;meta property="og:image" ...&gt;</code>. To enable rotating backgrounds in the viewer, add an <code>images</code> array in <code>card.json</code>.</p>
+      <p class="muted">Tip: Add metadata in your module for better cards: <code>&lt;title&gt;</code>, <code>&lt;meta name="description" ...&gt;</code>, <code>&lt;meta property="og:image" ...&gt;</code>.</p>
     </div>
   </footer>
 
@@ -75,23 +75,26 @@
     const searchEl = document.getElementById('search');
     let allModules = [];
 
+    function toAbs(path, base){
+      try { return new URL(path, base).toString(); } catch { return path; }
+    }
+
     function cardTemplate(m) {
-      const firstImage = Array.isArray(m.images) && m.images.length ? m.images[0] : '';
-      const thumbSrc = m.thumbnail || firstImage || '';
-      const thumb = thumbSrc ? `<img class="thumb" src="${thumbSrc}" alt="" loading="lazy" decoding="async">` : '';
+      const imageCount = Array.isArray(m.images) ? m.images.length : 0;
+      const thumbPath = m.thumbnail || (imageCount ? m.images[0] : '');
+      const thumb = thumbPath ? `<img class="thumb" src="${toAbs(thumbPath, m.url)}" alt="" loading="lazy" decoding="async">` : '';
       const desc = m.description ? `<p>${m.description}</p>` : '<p class="muted">No description provided.</p>';
       const when = m.lastModified ? new Date(m.lastModified).toLocaleDateString() : '';
-      const meta = when ? `<span class="muted">Updated ${when}</span>` : '';
-      const count = Array.isArray(m.images) ? m.images.length : 0;
-      const imgsBadge = count > 0 ? `<span class="badge" title="Background images available">${count} image${count>1?'s':''}</span>` : '';
+      const metaDate = when ? `<span class="muted">Updated ${when}</span>` : '';
+      const metaImgs = imageCount ? `<span class="badge">${imageCount} image${imageCount>1?'s':''}</span>` : '';
       const viewerURL = `./viewer.html?p=${encodeURIComponent(m.url)}`;
       return `
         <article class="card" role="listitem">
           ${thumb}
           <h3>${m.title}</h3>
           ${desc}
-          <div style="display:flex;justify-content:space-between;align-items:center;gap:.5rem;flex-wrap:wrap;margin-top:.25rem;">
-            <span class="badges">${meta}${imgsBadge}</span>
+          <div class="meta">
+            <span style="display:flex;gap:.5rem;align-items:center;">${metaDate}${metaImgs ? ' ' + metaImgs : ''}</span>
             <a class="btn" href="${viewerURL}" rel="noopener">Open Module</a>
           </div>
         </article>
