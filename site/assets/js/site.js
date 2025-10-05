@@ -6,13 +6,18 @@
       h1, h2, h3, h4 { text-align: center; line-height: 1.2; margin: 0.6em 0; }
       /* Back button styles (clear and accessible) */
       .back-nav { display: flex; justify-content: center; margin: 0.5rem 0 1rem; }
-      .back-button { display: inline-flex; align-items: center; gap:.5rem; padding:.6rem 1rem; border:1px solid #1a73e8; border-radius:.5rem; background:#1a73e8; color:#ffffff; text-decoration:none; font-weight:700; letter-spacing:.2px; box-shadow:0 1px 2px rgba(0,0,0,.08); }
+      .back-button { display: inline-flex; align-items: center; gap:.5rem; padding:.6rem 1rem; border:1px solid #1a73e8; border-radius:.5rem; background:#1a73e8; color:#ffffff; text-decoration:none }
       .back-button:hover { filter: brightness(1.05); }
 
       /* Background video and overlay (duplicated here as a safety net if CSS fails to load) */
       .bg-video{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;z-index:-2}
       .bg-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:-1}
       @media (prefers-reduced-motion: reduce){ .bg-video{display:none} }
+
+      /* Home quick links (Math Toolkit, Teacher Tools) */
+      .home-quick-links { display:flex; flex-wrap:wrap; gap:.6rem; justify-content:center; margin: 1rem 0; }
+      .home-quick-links a { display:inline-flex; align-items:center; gap:.45rem; padding:.6rem .9rem; border:1px solid #1a73e8; border-radius:.55rem; background:#1a73e8; color:#fff; text-decoration:none; }
+      .home-quick-links a:hover { filter:brightness(1.05); }
     `;
     const style = document.createElement('style');
     style.id = 'copilot-inline-site-css';
@@ -124,6 +129,58 @@
     v.play && v.play().catch(function(){});
   }
 
+  // NEW: Add quick links to home pages for Math Toolkit and Teacher Tools
+  function addHomeQuickLinks() {
+    const p = location.pathname.replace(/index\.html$/i, '');
+    const isRootHome = (p === '/' || p === '');
+    const isSubSiteHome = (p === '/site/' || p === '/site');
+
+    if (!isRootHome && !isSubSiteHome) return;
+
+    // Avoid duplicates if links already exist anywhere on the page
+    const hasMT = !!document.querySelector('a[href="/site/math-toolkit/"]');
+    const hasTT = !!document.querySelector('a[href="/site/teacher-tools/"]');
+    if (hasMT && hasTT) return;
+
+    // Choose a sensible mount point
+    const container =
+      document.querySelector('.centered nav') ||
+      document.querySelector('main nav') ||
+      document.querySelector('.centered header') ||
+      document.querySelector('header') ||
+      document.querySelector('main') ||
+      document.body;
+
+    const bar = document.createElement('div');
+    bar.className = 'home-quick-links';
+    // Build anchors only if missing to avoid duplication
+    const parts = [];
+    if (!hasMT) {
+      const a = document.createElement('a');
+      a.href = '/site/math-toolkit/';
+      a.textContent = 'Math Toolkit';
+      a.setAttribute('aria-label', 'Open Math Toolkit');
+      parts.push(a);
+    }
+    if (!hasTT) {
+      const a = document.createElement('a');
+      a.href = '/site/teacher-tools/';
+      a.textContent = 'Teacher Tools';
+      a.setAttribute('aria-label', 'Open Teacher Tools');
+      parts.push(a);
+    }
+    if (!parts.length) return;
+
+    parts.forEach(a => bar.appendChild(a));
+
+    // Insert near the top of main content
+    if (container.firstChild) {
+      container.insertBefore(bar, container.firstChild.nextSibling);
+    } else {
+      container.appendChild(bar);
+    }
+  }
+
   function init() {
     injectMinimalStyles();
     injectBackgroundVideo();
@@ -131,6 +188,7 @@
     insertBackButton(section);
     centerHeadings();
     updateADITLinks();
+    addHomeQuickLinks(); // <- ensure buttons appear on home pages
   }
 
   if (document.readyState === 'loading') {
