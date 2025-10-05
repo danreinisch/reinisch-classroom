@@ -6,8 +6,22 @@
     <title>Homepage with Background Video</title>
     <link rel="stylesheet" href="styles.css" />
     <style>
-      /* Minimal layout helper so both CTAs sit nicely */
+      /* Layout for the CTA row */
       .cta-row { display: inline-flex; gap: 0.75rem; flex-wrap: wrap; }
+
+      /* Ensure glass styling for CTAs (fallback in case styles.css doesn't define it) */
+      .cta {
+        background: rgba(255,255,255,.14);
+        border: 1px solid rgba(255,255,255,.28);
+        color: #ffffff;
+        padding: .6rem 1rem;
+        border-radius: .6rem;
+        text-decoration: none;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        transition: background .2s, transform .2s;
+      }
+      .cta:hover { background: rgba(255,255,255,.24); transform: translateY(-1px); }
     </style>
   </head>
   <body>
@@ -27,20 +41,24 @@
       Your browser does not support the HTML5 Video element.
     </video>
 
-    <!-- Optional: a subtle overlay to improve text contrast -->
+    <!-- Subtle overlay to improve text contrast -->
     <div class="bg-overlay" aria-hidden="true"></div>
 
-    <!-- Your page content -->
+    <!-- Page content -->
     <main class="content">
       <h1>Welcome to Reinisch Classroom</h1>
-      <p>Explore Language Arts and Life Skills units, presentations and tools to help students learn and grow.</p>
-      <div class="cta-row">
-        <a class="cta" href="#learn-more">Learn more</a>
+      <p>Explore Language Arts and Life Skills units, presentations, and tools to help students learn and grow.</p>
+
+      <!-- Four glass buttons -->
+      <div class="cta-row" role="navigation" aria-label="Main sections">
+        <a class="cta" href="/language-arts/">Language Arts</a>
+        <a class="cta" href="/life-skills/">Life Skills</a>
         <a class="cta" href="/site/math-toolkit/">Math Toolkit</a>
+        <a class="cta" id="teacher-tools-link" href="/site/teacher-tools/">Teacher Tools</a>
       </div>
     </main>
 
-    <!-- Ensure reliable video looping -->
+    <!-- Video looping and Teacher Tools password gate -->
     <script>
       (function() {
         const video = document.getElementById('bg-video');
@@ -53,6 +71,24 @@
             console.log('Video autoplay failed:', error);
           });
         }
+      })();
+
+      // Client-side password check (deterrent only; real upload rights require GitHub access)
+      (function(){
+        const TEACHER_PASSWORD = 'Tool46&2!';
+        const link = document.getElementById('teacher-tools-link');
+        if (!link) return;
+        link.addEventListener('click', function(e){
+          e.preventDefault();
+          const pwd = prompt('Enter teacher password');
+          if (!pwd) return;
+          if (pwd === TEACHER_PASSWORD) {
+            localStorage.setItem('teacher-tools-ok', '1');
+            location.href = link.getAttribute('href');
+          } else {
+            alert('Incorrect password.');
+          }
+        });
       })();
     </script>
   </body>
