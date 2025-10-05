@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Module Viewer | Math Toolkit</title>
+  <style>
+    :root { --glass: rgba(255,255,255,.14); --glass-brd: rgba(255,255,255,.28); --ink: #e8edf5; }
+    * { box-sizing: border-box; } html, body { height: 100%; }
+    body { margin: 0; color: var(--ink); font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background: transparent; }
+    .btn{background:var(--glass); border:1px solid var(--glass-brd); color:#fff; padding:.6rem 1rem; border-radius:.6rem; text-decoration:none; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); transition: background .2s, transform .2s}
+    .btn:hover{background:rgba(255,255,255,.24); transform: translateY(-1px)}
+    .topbar { position: fixed; top: 1rem; left: 1rem; z-index: 2; display: flex; gap: .5rem; align-items: center; }
+    .frame-wrap { position: fixed; inset: 0; padding-top: 4rem; }
+    iframe { width: 100%; height: 100%; border: 0; background: #fff; }
+  </style>
+  <script>
+    (function(){
+      var root = location.pathname.indexOf('/site/') >= 0
+        ? location.pathname.slice(0, location.pathname.indexOf('/site/') + 6)
+        : '/';
+      function addCSS(href){ var l=document.createElement('link'); l.rel='stylesheet'; l.href=href; document.head.appendChild(l); }
+      function addJS(src){ var s=document.createElement('script'); s.defer=true; s.src=src; document.head.appendChild(s); }
+      addCSS(root + 'assets/css/site.css');
+      addJS(root + 'assets/js/site.js');
+    })();
+  </script>
+</head>
+<body>
+  <div class="bg"></div>
+  <div class="topbar">
+    <a class="btn" href="./">← Math Toolkit</a>
+  </div>
+  <div class="frame-wrap">
+    <iframe id="frame" title="Math Module"></iframe>
+  </div>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const p = params.get('p') || '';
+    const frame = document.getElementById('frame');
+    if (!p) {
+      frame.srcdoc = '<!doctype html><title>No module</title><body style="font-family:system-ui;padding:1rem">No module specified.</body>';
+    } else {
+      frame.src = p;
+    }
+  </script>
+</body>
+</html>
