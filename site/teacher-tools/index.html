@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Teacher Tools | Reinisch Classroom</title>
+  <link rel="stylesheet" href="/site/assets/css/admin.css" />
+</head>
+<body>
+  <div class="app">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <h1>Teacher Tools</h1>
+      </div>
+      <nav class="nav">
+        <a href="#publish" class="active"><svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z" stroke="currentColor" stroke-width="1.5"/></svg><span>Publish</span></a>
+        <a href="#upload"><svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M12 16V4m0 0l-4 4m4-4l4 4M4 20h16" stroke="currentColor" stroke-width="1.5"/></svg><span>Upload</span></a>
+        <a href="#indexes"><svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="1.5"/></svg><span>Indexes</span></a>
+        <a href="#help"><svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M12 17h.01M9.09 9a3 3 0 015.82 1c0 2-3 2-3 4" stroke="currentColor" stroke-width="1.5"/></svg><span>Help</span></a>
+      </nav>
+      <div class="footer">Only teachers with GitHub access can upload.</div>
+    </aside>
+
+    <!-- Topbar -->
+    <header class="topbar">
+      <div class="crumbs">Home / Teacher Tools</div>
+      <div class="tools">
+        <a class="btn ghost" href="/">Home</a>
+        <span class="badge">Password gated</span>
+      </div>
+    </header>
+
+    <!-- Main -->
+    <main class="main">
+      <section class="grid" id="publish">
+        <div class="card">
+          <h2>Destination</h2>
+          <div id="dest-seg" class="segment" role="tablist" aria-label="Destination">
+            <label class="active"><input type="radio" name="dest" value="la" checked> LA</label>
+            <label><input type="radio" name="dest" value="ls"> LS</label>
+            <label><input type="radio" name="dest" value="mt"> Math Toolkit</label>
+            <label><input type="radio" name="dest" value="lat"> LA Toolkit</label>
+          </div>
+
+          <div class="row">
+            <div style="flex:2; min-width:260px">
+              <label class="hint">Title</label>
+              <input id="title" type="text" placeholder="Card title (required)" />
+            </div>
+            <div style="flex:3; min-width:280px">
+              <label class="hint">Description</label>
+              <textarea id="desc" placeholder="Short description (optional)"></textarea>
+            </div>
+          </div>
+
+          <div class="row">
+            <button class="btn accent" id="makeCard">
+              <span class="dot" style="background:var(--accent-2)"></span>
+              Generate card.json
+            </button>
+            <button class="btn" id="copyCard">Copy</button>
+            <a class="btn" id="downloadCard" href="#" download="card.json">Download</a>
+            <span class="hint">Place thumbnail.png in your module folder.</span>
+          </div>
+
+          <pre class="card" id="cardOut" style="overflow:auto; margin-top:.75rem">{}</pre>
+        </div>
+
+        <div class="card">
+          <h2>Upload</h2>
+          <div id="drop" class="drop">
+            <p>Drag and drop your module folder here to list files (optional).</p>
+          </div>
+          <ul id="filelist" class="filelist"></ul>
+          <div class="row" style="margin-top:.5rem">
+            <a class="btn primary" id="openUpload" href="#" target="_blank" rel="noopener">
+              Open GitHub Upload
+            </a>
+            <span class="hint">Upload your folder with index.html, card.json, and thumbnail.png.</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>At a glance</h2>
+          <div class="stats">
+            <div class="stat"><div class="hint">Language Arts</div><div class="num" id="stat-la">—</div></div>
+            <div class="stat"><div class="hint">Life Skills</div><div class="num" id="stat-ls">—</div></div>
+            <div class="stat"><div class="hint">Math Toolkit</div><div class="num" id="stat-mt">—</div></div>
+            <div class="stat"><div class="hint">LA Toolkit</div><div class="num" id="stat-lat">—</div></div>
+          </div>
+          <div class="row" style="margin-top:.75rem">
+            <a class="btn" href="/language-arts/">Open LA</a>
+            <a class="btn" href="/life-skills/">Open LS</a>
+            <a class="btn" href="/site/math-toolkit/">Open Math Toolkit</a>
+            <a class="btn" href="/site/language-arts-toolkit/">Open LA Toolkit</a>
+          </div>
+        </div>
+
+        <div class="card" id="help">
+          <h2>Help</h2>
+          <ol style="margin:.25rem 0 0; padding-left:1.25rem; color:#cfe3ff">
+            <li>Select a destination.</li>
+            <li>Enter Title/Description; click Generate card.json.</li>
+            <li>Prepare folder: index.html, card.json, thumbnail.png.</li>
+            <li>Click Open GitHub Upload and upload the folder.</li>
+            <li>Within ~30–60s after commit, the page index updates.</li>
+          </ol>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Password Gate -->
+  <div class="gate" id="gate">
+    <div class="gate-card">
+      <h2 style="margin:0 0 .25rem">Enter Teacher Password</h2>
+      <p class="hint" style="margin:.25rem 0 .5rem">This protects the tools from casual access. Uploads still require teacher GitHub permissions.</p>
+      <input type="password" id="pass" placeholder="Password" />
+      <div class="row" style="justify-content:flex-end; margin-top:.5rem">
+        <button class="btn accent" id="enter">Enter</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/site/assets/js/teacher-tools.js" defer></script>
+</body>
+</html>

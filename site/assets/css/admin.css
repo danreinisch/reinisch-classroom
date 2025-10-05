@@ -44,7 +44,7 @@ a:hover{opacity:.9}
 .nav .icon{width:18px; height:18px; opacity:.9}
 .sidebar .footer{margin-top:auto; color:var(--muted); font-size:12px; opacity:.9}
 
-topbar{
+.topbar{
   grid-area: topbar; background:rgba(255,255,255,.02); border-bottom:1px solid var(--border);
   display:flex; align-items:center; justify-content:space-between; padding:0 .75rem 0 1rem;
 }

@@ -78,6 +78,7 @@
       const desc = m.description ? `<p>${m.description}</p>` : '<p class="muted">No description provided.</p>';
       const when = m.lastModified ? new Date(m.lastModified).toLocaleDateString() : '';
       const meta = when ? `<span class="muted">Updated ${when}</span>` : '';
+      const viewerURL = `./viewer.html?p=${encodeURIComponent(m.url)}`;
       return `
         <article class="card" role="listitem">
           ${thumb}
@@ -85,7 +86,7 @@
           ${desc}
           <div style="display:flex;justify-content:space-between;align-items:center;gap:.5rem;flex-wrap:wrap;margin-top:.25rem;">
             ${meta}
-            <a class="btn" href="${m.url}" rel="noopener">Open Module</a>
+            <a class="btn" href="${viewerURL}" rel="noopener">Open Module</a>
           </div>
         </article>
       `;
