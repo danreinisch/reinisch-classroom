@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Module Viewer</title>
+  <style>
+    :root { --ink:#e6eefc; --muted:#9fb0cf; --bg:#0b1220; --accent:#00b3ff; --panel:rgba(9,14,26,.55); --border:rgba(255,255,255,.1); }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;color:var(--ink);background:var(--bg);font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;overflow:hidden}
+    .bg{position:fixed;inset:0;z-index:0;background:radial-gradient(1200px 600px at 10% -10%, rgba(0,179,255,.08), transparent), radial-gradient(1200px 600px at 110% 110%, rgba(0,227,162,.08), transparent)}
+    .bg img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 1.2s ease-in-out;filter:saturate(1.05) contrast(1.05) brightness(.8) blur(0)}
+    .bg img.active{opacity:.35}
+    .chrome{position:fixed;inset:0;display:grid;grid-template-rows:auto 1fr;z-index:2}
+    header{display:flex;align-items:center;justify-content:space-between;gap:.75rem;padding:.6rem .8rem;backdrop-filter:blur(6px);background:var(--panel);border-bottom:1px solid var(--border)}
+    header .left{display:flex;align-items:center;gap:.6rem;min-width:0}
+    header .title{margin:0;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    header .desc{margin:0;color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    header .controls{display:flex;align-items:center;gap:.5rem}
+    .btn{color:var(--ink);text-decoration:none;border:1px solid var(--border);padding:.35rem .6rem;border-radius:8px;background:rgba(255,255,255,.05)}
+    .btn:hover{background:rgba(255,255,255,.08)}
+    main{position:relative;padding:.6rem;overflow:hidden}
+    .framewrap{position:relative;height:calc(100vh - 52px);width:100%;border-radius:10px;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,.35);border:1px solid var(--border);background:rgba(10,16,28,.6)}
+    iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#fff}
+    .badge{font-size:12px;color:var(--muted);border:1px solid var(--border);border-radius:999px;padding:.1rem .45rem;background:rgba(255,255,255,.04)}
+    @media (max-width:680px){ header .desc{display:none} }
+  </style>
+</head>
+<body>
+  <div class="bg" id="bg"></div>
+  <div class="chrome">
+    <header>
+      <div class="left">
+        <a class="btn" href="javascript:history.back()">← Back</a>
+        <div style="display:flex; flex-direction:column; min-width:0;">
+          <h1 class="title" id="title">Module</h1>
+          <p class="desc" id="desc"></p>
+        </div>
+      </div>
+      <div class="controls">
+        <span class="badge" id="imgCount" hidden>0 images</span>
+        <a class="btn" id="openRaw" href="#" target="_blank" rel="noopener">Open original</a>
+      </div>
+    </header>
+    <main>
+      <div class="framewrap">
+        <iframe id="frame" src="about:blank" allow="fullscreen"></iframe>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    (function(){
+      function qs(n){const u=new URL(location.href);return u.searchParams.get(n)}
+      function toAbs(p,b){try{return new URL(p,b).href}catch{return p}}
+
+      const p = qs('p');
+      if (!p) {
+        document.getElementById('title').textContent = 'Missing module URL';
+        document.getElementById('desc').textContent = 'Add ?p=/path/to/module/index.html to the URL.';
+        document.getElementById('openRaw').style.display = 'none';
+        return;
+      }
+
+      const moduleURL = toAbs(p, location.href);
+      const frame = document.getElementById('frame');
+      const openRaw = document.getElementById('openRaw');
+      const titleEl = document.getElementById('title');
+      const descEl = document.getElementById('desc');
+      const imgCountEl = document.getElementById('imgCount');
+      frame.src = moduleURL; openRaw.href = moduleURL;
+
+      const cardURL = toAbs('card.json', moduleURL);
+      fetch(cardURL + '?' + Date.now(), { cache: 'no-store' })
+        .then(r => r.ok ? r.json() : null)
+        .then(card => {
+          if (!card) return;
+          if (card.title) { titleEl.textContent = card.title; document.title = card.title + ' | Module Viewer'; }
+          if (card.description) descEl.textContent = card.description;
+
+          const images = Array.isArray(card.images) ? card.images.slice(0, 12) : [];
+          if (!images.length) return;
+
+          const abs = images.map(src => toAbs(src, moduleURL));
+          const bg = document.getElementById('bg');
+          const nodes = abs.map(src => {
+            const img = new Image();
+            img.decoding = 'async';
+            img.loading = 'eager';
+            img.src = src;
+            img.alt = '';
+            img.setAttribute('aria-hidden', 'true');
+            bg.appendChild(img);
+            return img;
+          });
+
+          imgCountEl.hidden = false;
+          imgCountEl.textContent = images.length + ' image' + (images.length > 1 ? 's' : '');
+
+          let idx = -1;
+          function showNext(){ const prev = nodes[idx] || null; idx = (idx + 1) % nodes.length; const cur = nodes[idx]; if (prev) prev.classList.remove('active'); cur.classList.add('active'); }
+
+          const starter = new Image();
+          starter.onload = () => { showNext(); setInterval(showNext, 6000); };
+          starter.onerror = () => { showNext(); setInterval(showNext, 6000); };
+          starter.src = abs[0];
+        })
+        .catch(() => {});
+    })();
+  </script>
+</body>
+</html>
