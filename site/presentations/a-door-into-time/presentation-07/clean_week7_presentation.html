@@ -340,10 +340,10 @@
     </div>
     
     <div class="presentation-container">
-        <a href="https://reinischclassroom.com/language-arts" class="back-nav">Return to Language Arts</a>
+        <a href="/language-arts/" class="back-nav">Return to Language Arts</a>
         
         <div class="slide-counter">
-            Slide <span id="current">1</span> of <span id="total">21</span>
+            Slide <span id="current">1</span> of <span id="total">25</span>
         </div>
 
         <!-- DAY 1 SLIDES -->
@@ -541,6 +541,75 @@
                     <li>The ending part _____ means...</li>
                     <li>In this sentence, the word _____ is a...</li>
                 </ul>
+            </div>
+        </div>
+
+        <!-- DAY 2 VOCABULARY SLIDES -->
+        <div class="slide">
+            <div class="day-header">DAY 2 - VOCABULARY</div>
+            <div class="vocab-word">HYPOTHERMIA</div>
+            <div class="example-box" style="max-width: 900px;">
+                <h3>Part of Speech: <span style="color: #2a9d8f;">Noun</span></h3>
+                <h3>Syllables: hy-po-ther-mi-a (5 syllables)</h3>
+                <h3 style="margin-top: 20px;">Definition:</h3>
+                <p>A dangerous medical condition where a person's body temperature drops too low because of extreme cold</p>
+                
+                <h3 style="margin-top: 20px;">From Chapter 21:</h3>
+                <p style="font-style: italic; font-size: 1.3em;">"Without proper shelter or warm clothing, Alex knew that hypothermia was a real danger in the freezing mountain nights."</p>
+                
+                <h3 style="margin-top: 20px;">Why This Word Matters:</h3>
+                <p>Shows the serious physical dangers Alex faces in this primitive time</p>
+            </div>
+        </div>
+
+        <div class="slide">
+            <div class="day-header">DAY 2 - VOCABULARY</div>
+            <div class="vocab-word">SURVIVAL</div>
+            <div class="example-box" style="max-width: 900px;">
+                <h3>Part of Speech: <span style="color: #2a9d8f;">Noun</span></h3>
+                <h3>Syllables: sur-viv-al (3 syllables)</h3>
+                <h3 style="margin-top: 20px;">Definition:</h3>
+                <p>The state of continuing to live or exist, especially in difficult conditions</p>
+                
+                <h3 style="margin-top: 20px;">From Chapter 21:</h3>
+                <p style="font-style: italic; font-size: 1.3em;">"Survival became Alex's only focus as he worked from dawn to dusk, trying to prove his worth to the village leaders."</p>
+                
+                <h3 style="margin-top: 20px;">Why This Word Matters:</h3>
+                <p>Shows how Alex's goals have changed from exploring to just staying alive</p>
+            </div>
+        </div>
+
+        <div class="slide">
+            <div class="day-header">DAY 2 - VOCABULARY</div>
+            <div class="vocab-word">DESPERATE</div>
+            <div class="example-box" style="max-width: 900px;">
+                <h3>Part of Speech: <span style="color: #2a9d8f;">Adjective</span></h3>
+                <h3>Syllables: des-per-ate (3 syllables)</h3>
+                <h3 style="margin-top: 20px;">Definition:</h3>
+                <p>Feeling or showing extreme worry, sadness, or need; willing to do anything to change a bad situation</p>
+                
+                <h3 style="margin-top: 20px;">From Chapter 21:</h3>
+                <p style="font-style: italic; font-size: 1.3em;">"Alex felt desperate as he watched the guards approach, knowing he had nowhere to run and no way to explain who he really was."</p>
+                
+                <h3 style="margin-top: 20px;">Why This Word Matters:</h3>
+                <p>Describes Alex's emotional state when he feels trapped and helpless</p>
+            </div>
+        </div>
+
+        <div class="slide">
+            <div class="day-header">DAY 2 - VOCABULARY</div>
+            <div class="vocab-word">EXHAUSTED</div>
+            <div class="example-box" style="max-width: 900px;">
+                <h3>Part of Speech: <span style="color: #2a9d8f;">Adjective</span></h3>
+                <h3>Syllables: ex-haust-ed (3 syllables)</h3>
+                <h3 style="margin-top: 20px;">Definition:</h3>
+                <p>Extremely tired; having no energy left after hard work or difficult experiences</p>
+                
+                <h3 style="margin-top: 20px;">From Chapter 21:</h3>
+                <p style="font-style: italic; font-size: 1.3em;">"By nightfall, Alex was completely exhausted from carrying heavy loads and digging in the hard, frozen ground all day."</p>
+                
+                <h3 style="margin-top: 20px;">Why This Word Matters:</h3>
+                <p>Shows the physical toll that life in this time period takes on Alex's body</p>
             </div>
         </div>
 
@@ -746,12 +815,10 @@
         setInterval(rotateBackground, 8000);
     </script>
     <script>
-        // Same-origin back-link script
+        // Ensure Return link always points to same-origin /language-arts/
         (function() {
-            var languageArtsLinks = document.querySelectorAll('a[href*="language-arts"]');
-            languageArtsLinks.forEach(function(link) {
-                link.href = window.location.origin + '/language-arts/';
-            });
+            var link = document.querySelector('a.back-nav');
+            if (link) link.href = window.location.origin + '/language-arts/';
         })();
     </script>
 </body>
