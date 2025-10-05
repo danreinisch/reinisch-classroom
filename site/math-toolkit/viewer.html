@@ -5,116 +5,191 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Module Viewer</title>
   <style>
-    :root{ --ink:#0b1021; --muted:#5b6477; --accent:#0b5fff; }
+    :root {
+      --ink: #e6eefc;
+      --muted: #9fb0cf;
+      --bg: #0b1220;
+      --accent: #00b3ff;
+      --panel: rgba(9, 14, 26, 0.55);
+      --border: rgba(255,255,255,0.1);
+    }
     *{box-sizing:border-box}
-    html,body{height:100%}
-    body{margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; color:var(--ink); background:#0b1021;}
-    header{position:relative; z-index:3; display:flex; align-items:center; justify-content:space-between; gap:.75rem; padding:.75rem 1rem; background:rgba(255,255,255,.85); border-bottom:1px solid #e5e7eb; backdrop-filter:saturate(1.2) blur(6px)}
-    header .title{margin:0; font-size:16px}
-    header a{color:var(--accent); text-decoration:none}
-    main{position:relative; height:calc(100% - 52px)}
-    .stage{position:absolute; inset:0; display:flex}
-    iframe{width:100%; height:100%; border:0; background:#fff; box-shadow: 0 10px 30px rgba(0,0,0,.25);}
-    .bg, .bg-next{position:absolute; inset:0; background-size:cover; background-position:center; opacity:.15; transition: opacity 1.25s ease-in-out;}
-    .bg-next{opacity:0}
-    .vignette{position:absolute; inset:0; pointer-events:none; background:radial-gradient(ellipse at center, rgba(255,255,255,0) 40%, rgba(0,0,0,.35) 100%)}
-    .overlay{position:absolute; inset:0; background:linear-gradient(180deg, rgba(255,255,255,.35), rgba(255,255,255,.1)); pointer-events:none}
-    .hidden{display:none}
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--bg);
+      font: 14px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      overflow: hidden;
+    }
+    .bg {
+      position: fixed; inset: 0;
+      z-index: 0;
+      background: radial-gradient(1200px 600px at 10% -10%, rgba(0,179,255,0.08), transparent), radial-gradient(1200px 600px at 110% 110%, rgba(0,227,162,0.08), transparent);
+    }
+    .bg img {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+      opacity: 0;
+      transition: opacity 1.2s ease-in-out;
+      filter: saturate(1.05) contrast(1.05) brightness(0.8) blur(0px);
+    }
+    .bg img.active { opacity: 0.35; }
+
+    .chrome {
+      position: fixed; inset: 0;
+      display: grid; grid-template-rows: auto 1fr;
+      z-index: 2;
+    }
+    header {
+      display: flex; align-items: center; justify-content: space-between; gap: .75rem;
+      padding: .6rem .8rem;
+      backdrop-filter: blur(6px);
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+    }
+    header .left { display: flex; align-items: center; gap: .6rem; min-width: 0; }
+    header .title { margin: 0; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    header .desc { margin: 0; color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    header .controls { display:flex; align-items:center; gap:.5rem; }
+    .btn { color: var(--ink); text-decoration: none; border: 1px solid var(--border); padding: .35rem .6rem; border-radius: 8px; background: rgba(255,255,255,0.05); }
+    .btn:hover { background: rgba(255,255,255,0.08); }
+
+    main {
+      position: relative;
+      padding: .6rem;
+      overflow: hidden;
+    }
+    .framewrap {
+      position: relative;
+      height: calc(100vh - 52px);
+      width: 100%;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.35);
+      border: 1px solid var(--border);
+      background: rgba(10, 16, 28, 0.6);
+    }
+    iframe {
+      position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #fff;
+    }
+    .badge {
+      font-size: 12px; color: var(--muted);
+      border: 1px solid var(--border); border-radius: 999px; padding: .1rem .45rem; background: rgba(255,255,255,0.04);
+    }
+    @media (max-width: 680px) {
+      header .desc { display: none; }
+    }
   </style>
 </head>
 <body>
-  <header>
-    <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;">
-      <a href="javascript:history.back()">← Back</a>
-      <h1 class="title" id="title">Module</h1>
-    </div>
-    <div style="display:flex;gap:.5rem;align-items:center;">
-      <a id="openRaw" class="btn" href="#" target="_blank" rel="noopener" style="padding:.4rem .7rem; border:1px solid #e5e7eb; border-radius:8px; background:#fff;">Open raw</a>
-    </div>
-  </header>
-  <main>
-    <div class="stage">
-      <div class="bg" id="bg"></div>
-      <div class="bg-next" id="bgNext"></div>
-      <div class="vignette"></div>
-      <div class="overlay"></div>
-      <iframe id="frame" src="about:blank" title="Module"></iframe>
-    </div>
-  </main>
+  <div class="bg" id="bg"></div>
+  <div class="chrome">
+    <header>
+      <div class="left">
+        <a class="btn" href="javascript:history.back()">← Back</a>
+        <div style="display:flex; flex-direction:column; min-width:0;">
+          <h1 class="title" id="title">Module</h1>
+          <p class="desc" id="desc"></p>
+        </div>
+      </div>
+      <div class="controls">
+        <span class="badge" id="imgCount" hidden>0 images</span>
+        <a class="btn" id="openRaw" href="#" target="_blank" rel="noopener">Open original</a>
+      </div>
+    </header>
+    <main>
+      <div class="framewrap">
+        <iframe id="frame" src="about:blank" allow="fullscreen"></iframe>
+      </div>
+    </main>
+  </div>
+
   <script>
     (function(){
-      function q(name){ const u=new URL(location.href); return u.searchParams.get(name) || ''; }
-      const moduleUrl = q('p');
-      const titleEl = document.getElementById('title');
-      const frame = document.getElementById('frame');
-      const openRaw = document.getElementById('openRaw');
-      const bg = document.getElementById('bg');
-      const bgNext = document.getElementById('bgNext');
+      function qs(name){
+        const u = new URL(location.href);
+        return u.searchParams.get(name);
+      }
+      function toAbs(path, base){
+        try { return new URL(path, base).href; } catch { return path; }
+      }
 
-      if (!moduleUrl) {
-        titleEl.textContent = 'No module specified';
-        document.body.style.background = '#fff';
+      const p = qs('p');
+      if (!p) {
+        document.getElementById('title').textContent = 'Missing module URL';
+        document.getElementById('desc').textContent = 'Add ?p=/path/to/module/index.html to the URL.';
+        document.getElementById('openRaw').style.display = 'none';
         return;
       }
 
-      // Set iframe and link
-      frame.src = moduleUrl;
-      openRaw.href = moduleUrl;
+      const moduleURL = toAbs(p, location.href);
+      const frame = document.getElementById('frame');
+      const openRaw = document.getElementById('openRaw');
+      const titleEl = document.getElementById('title');
+      const descEl = document.getElementById('desc');
+      const imgCountEl = document.getElementById('imgCount');
+      frame.src = moduleURL;
+      openRaw.href = moduleURL;
 
-      // Derive base for assets
-      let base;
-      try { base = new URL(moduleUrl, location.origin).toString(); } catch { base = moduleUrl; }
-      function join(p){ try { return new URL(p, base).toString(); } catch { return p; }
-      }
-      function dirname(url){ try { const u=new URL(url); u.pathname = u.pathname.replace(/[^/]+$/, ''); return u.toString(); } catch { return url.replace(/[^/]+$/, ''); }
-      }
-      const modBase = dirname(base);
+      // Try to load card.json from the same folder as the module URL
+      const cardURL = toAbs('card.json', moduleURL);
+      fetch(cardURL + '?' + Date.now(), { cache: 'no-store' })
+        .then(r => r.ok ? r.json() : null)
+        .then(card => {
+          if (!card) return;
 
-      // Fetch card.json for metadata and images
-      async function fetchCard(){
-        try {
-          const res = await fetch(join('card.json'), { cache: 'no-store' });
-          if (!res.ok) return null;
-          return await res.json();
-        } catch { return null; }
-      }
-
-      function rotateBackground(urls){
-        if (!urls || !urls.length) return;
-        const imgs = urls.slice(0,12).map(u => join(u));
-        let i = 0;
-        function setBG(el, src){ el.style.backgroundImage = `url('${src}')`; }
-        setBG(bg, imgs[0]);
-        if (imgs.length === 1) return; // no rotation needed
-        i = 1;
-        setInterval(() => {
-          setBG(bgNext, imgs[i]);
-          // fade
-          bgNext.style.opacity = '0.15';
-          bg.style.opacity = '0';
-          setTimeout(() => {
-            // swap roles
-            const tmp = bg.style.backgroundImage;
-            bg.style.backgroundImage = bgNext.style.backgroundImage;
-            bg.style.opacity = '0.15';
-            bgNext.style.backgroundImage = tmp;
-            bgNext.style.opacity = '0';
-          }, 1300);
-          i = (i + 1) % imgs.length;
-        }, 6000);
-      }
-
-      (async function init(){
-        const card = await fetchCard();
-        if (card) {
-          const t = card.title || 'Module';
-          titleEl.textContent = t;
-          document.title = t + ' • Module Viewer';
-          if (Array.isArray(card.images) && card.images.length) {
-            rotateBackground(card.images);
+          // Title/description
+          if (card.title) {
+            titleEl.textContent = card.title;
+            document.title = card.title + ' | Module Viewer';
           }
-        }
-      })();
+          if (card.description) descEl.textContent = card.description;
+
+          // Background images (up to 12)
+          const images = Array.isArray(card.images) ? card.images.slice(0, 12) : [];
+          if (!images.length) return;
+
+          const abs = images.map(src => toAbs(src, moduleURL));
+          const bg = document.getElementById('bg');
+          const nodes = abs.map(src => {
+            const img = new Image();
+            img.decoding = 'async';
+            img.loading = 'eager';
+            img.src = src;
+            img.alt = '';
+            img.setAttribute('aria-hidden', 'true');
+            bg.appendChild(img);
+            return img;
+          });
+
+          imgCountEl.hidden = false;
+          imgCountEl.textContent = images.length + ' image' + (images.length > 1 ? 's' : '');
+
+          let idx = -1;
+          function showNext() {
+            const prev = nodes[idx] || null;
+            idx = (idx + 1) % nodes.length;
+            const cur = nodes[idx];
+            if (prev) prev.classList.remove('active');
+            cur.classList.add('active');
+          }
+
+          // Start rotation once first image is loaded
+          const starter = new Image();
+          starter.onload = () => {
+            showNext();
+            setInterval(showNext, 6000);
+          };
+          starter.onerror = () => {
+            // If preload fails, still attempt to rotate
+            showNext();
+            setInterval(showNext, 6000);
+          };
+          starter.src = abs[0];
+        })
+        .catch(() => { /* ignore failures; viewer still works */ });
     })();
   </script>
 </body>

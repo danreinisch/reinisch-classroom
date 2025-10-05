@@ -56,11 +56,10 @@
           </div>
 
           <div class="row">
-            <div style="flex:1; min-width:280px">
-              <label class="hint">Images (up to 12, one path per line)</label>
-              <textarea id="images" placeholder="images/bg-01.jpg
-images/bg-02.jpg
-images/bg-03.jpg"></textarea>
+            <div style="flex:1; min-width:260px">
+              <label class="hint">Images (one relative path per line, up to 12)</label>
+              <textarea id="images" placeholder="images/bg-01.jpg&#10;images/bg-02.jpg&#10;..."></textarea>
+              <div class="hint" style="margin-top:.25rem">If no thumbnail is set, the first image will be used as the card thumbnail.</div>
             </div>
           </div>
 
@@ -71,7 +70,7 @@ images/bg-03.jpg"></textarea>
             </button>
             <button class="btn" id="copyCard">Copy</button>
             <a class="btn" id="downloadCard" href="#" download="card.json">Download</a>
-            <span class="hint">Place thumbnail.png and your images inside your module folder.</span>
+            <span class="hint">Place thumbnail.png and images/ in your module folder.</span>
           </div>
 
           <pre class="card" id="cardOut" style="overflow:auto; margin-top:.75rem">{}</pre>
@@ -87,7 +86,7 @@ images/bg-03.jpg"></textarea>
             <a class="btn primary" id="openUpload" href="#" target="_blank" rel="noopener">
               Open GitHub Upload
             </a>
-            <span class="hint">Upload your folder with index.html, card.json, thumbnail.png, and any images.</span>
+            <span class="hint">Upload your folder with index.html, card.json, thumbnail.png, and images/.</span>
           </div>
         </div>
 
@@ -111,9 +110,9 @@ images/bg-03.jpg"></textarea>
           <h2>Help</h2>
           <ol style="margin:.25rem 0 0; padding-left:1.25rem; color:#cfe3ff">
             <li>Select a destination.</li>
-            <li>Enter Title/Description; add Images (optional, up to 12, one per line).</li>
-            <li>Generate and include card.json in your module folder.</li>
-            <li>Prepare folder: index.html, card.json, thumbnail.png, images/...</li>
+            <li>Enter Title/Description; add Images (paths relative to your module folder; up to 12).</li>
+            <li>Generate card.json.</li>
+            <li>Prepare folder: index.html, card.json, thumbnail.png (optional), images/ (optional).</li>
             <li>Click Open GitHub Upload and upload the folder.</li>
             <li>Within ~30–60s after commit, the page index updates.</li>
           </ol>

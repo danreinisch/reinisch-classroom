@@ -66,21 +66,20 @@
   const copyCard = document.getElementById('copyCard');
   const downloadCard = document.getElementById('downloadCard');
 
-  function parseImages(){
-    const lines = (imagesEl && imagesEl.value ? imagesEl.value : '')
+  function parseImages(value) {
+    const arr = (value || '')
       .split(/\r?\n/)
       .map(s => s.trim())
       .filter(Boolean)
       .slice(0, 12);
-    return lines;
+    return arr;
   }
 
   function buildCard() {
     const obj = { title: (titleEl.value || '').trim() };
     if ((descEl.value || '').trim()) obj.description = descEl.value.trim();
-    const imgs = parseImages();
+    const imgs = parseImages(imagesEl ? imagesEl.value : '');
     if (imgs.length) obj.images = imgs;
-    // Keep conventional thumbnail name; index pages will fall back to images[0] if missing
     obj.thumbnail = 'thumbnail.png';
     return JSON.stringify(obj, null, 2);
   }
