@@ -4,7 +4,7 @@
     const css = `
       h1, h2, h3, h4 { text-align: center; line-height: 1.2; margin: 0.6em 0; }
       .back-nav { display: flex; justify-content: center; margin: 0.5rem 0 1rem; }
-      .back-button { display: inline-flex; align-items: center; gap:.5rem; padding:.6rem 1rem; border:1px solid #1a73e8; border-radius:.5rem; background:#1a73e8; color:#ffffff; text-decoration:none; font-weight:700; letter-spacing:.2px; box-shadow:0 1px 2px rgba(0,0,0,.08); }
+      .back-button { display: inline-flex; align-items: center; gap:.5rem; padding:.6rem 1rem; border:1px solid #1a73e8; border-radius:.5rem; background:#1a73e8; color:#ffffff; text-decoration:none }
       .back-button:hover { filter: brightness(1.05); }
       .bg-video{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;z-index:-2}
       .bg-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:-1}
@@ -14,10 +14,11 @@
       .injected-grid { max-width:1100px; margin: 1rem auto 2rem; padding: 0 1rem; }
       .injected-grid h2 { text-align:left; margin:.25rem 0 .5rem; color:#e8edf5 }
       .ig-grid { display:grid; gap:1rem; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); }
-      .ig-card { display:block; text-decoration:none; color:#e8edf5; background: rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.28); border-radius:1rem; overflow:hidden; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); transition: background .2s, transform .2s }
+      .ig-card { display:block; text-decoration:none; color:#e8edf5; background: rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.28); border-radius:1rem; overflow:hidden; backdrop-filter: blur(10px); transition: transform .15s ease, background .15s ease }
       .ig-card:hover{ background:rgba(255,255,255,.22); transform: translateY(-2px) }
       .ig-thumb { width:100%; aspect-ratio:16/9; object-fit:cover; display:block; background:rgba(0,0,0,.25) }
       .ig-title { padding:.75rem 1rem }
+      .ig-title .ig-badge { margin-left:.5rem; font-size:12px; color:#cfd8e6; border:1px solid rgba(255,255,255,.28); border-radius:999px; padding:.1rem .4rem; background: rgba(255,255,255,0.08); }
     `;
     const style = document.createElement('style');
     style.id = 'copilot-inline-site-css';
@@ -122,8 +123,8 @@
   async function injectSectionGrid() {
     const p = location.pathname.replace(/index\.html$/i, '').toLowerCase();
     let section = null, jsonPath = null, title = 'Modules & Presentations';
-    if (p === '/language-arts/') { section = 'language-arts'; jsonPath = '/language-arts/modules.json'; }
-    if (p === '/life-skills/') { section = 'life-skills'; jsonPath = '/life-skills/modules.json'; }
+    if (p === '/language-arts/' || p === '/site/language-arts/') { section = 'language-arts'; jsonPath = '/language-arts/modules.json'; }
+    if (p === '/life-skills/' || p === '/site/life-skills/') { section = 'life-skills'; jsonPath = '/life-skills/modules.json'; }
     if (!section) return;
 
     try {
@@ -140,9 +141,16 @@
       mount.appendChild(container);
 
       const grid = container.querySelector('#ig-grid');
+      const sitePrefix = location.pathname.indexOf('/site/') >= 0 ? '/site/' : '/';
+      const viewerBase = sitePrefix + (section === 'language-arts' ? 'language-arts' : 'life-skills') + '/viewer.html';
+
       grid.innerHTML = items.map(m => {
-        const thumb = m.thumbnail ? `<img class="ig-thumb" src="${m.thumbnail}" alt="">` : `<div class="ig-thumb" aria-hidden="true"></div>`;
-        return `<a class="ig-card" href="${m.url}">${thumb}<div class="ig-title">${m.title || 'Item'}</div></a>`;
+        const primaryThumb = (!m.thumbnail && Array.isArray(m.images) && m.images.length) ? m.images[0] : m.thumbnail;
+        const thumb = primaryThumb ? `<img class="ig-thumb" src="${primaryThumb}" alt="">` : `<div class="ig-thumb" aria-hidden="true"></div>`;
+        const imgCount = Array.isArray(m.images) ? m.images.length : 0;
+        const imgBadge = imgCount > 0 ? `<span class="ig-badge" title="${imgCount} background image${imgCount>1?'s':''}">${imgCount} image${imgCount>1?'s':''}</span>` : '';
+        const href = viewerBase + '?p=' + encodeURIComponent(m.url);
+        return `<a class="ig-card" href="${href}">${thumb}<div class="ig-title">${m.title || 'Item'}${imgBadge}</div></a>`;
       }).join('');
     } catch {}
   }
