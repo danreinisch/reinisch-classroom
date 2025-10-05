@@ -60,13 +60,23 @@
   // card.json helper
   const titleEl = document.getElementById('title');
   const descEl  = document.getElementById('desc');
+  const imagesEl = document.getElementById('images');
   const cardOut = document.getElementById('cardOut');
   const makeCard = document.getElementById('makeCard');
   const copyCard = document.getElementById('copyCard');
   const downloadCard = document.getElementById('downloadCard');
+  function parseImages(input){
+    if (!input) return [];
+    return (input.split(/\r?\n/g) || [])
+      .map(s => s.trim())
+      .filter(Boolean)
+      .slice(0, 12);
+  }
   function buildCard() {
     const obj = { title: (titleEl.value || '').trim() };
     if ((descEl.value || '').trim()) obj.description = descEl.value.trim();
+    const imgs = parseImages(imagesEl ? imagesEl.value : '');
+    if (imgs.length) obj.images = imgs;
     obj.thumbnail = 'thumbnail.png';
     return JSON.stringify(obj, null, 2);
   }

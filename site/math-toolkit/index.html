@@ -25,6 +25,8 @@
     .muted { color: #667; font-size: 0.9rem; }
     .empty { border: 1px dashed var(--border); border-radius: 10px; padding: 1rem; background: #fbfdff; }
     code { background: #eef3ff; padding: 0 0.3rem; border-radius: 4px; }
+    .badges { display:flex; gap:.5rem; align-items:center; flex-wrap:wrap; }
+    .badge { font-size:.8rem; color:#334; background:#eef3ff; border:1px solid #dbe5ff; padding:.15rem .45rem; border-radius:999px; }
   </style>
 
   <script>
@@ -63,7 +65,7 @@
 
   <footer>
     <div style="max-width:1100px;margin:0 auto;padding:1rem;">
-      <p class="muted">Tip: Add metadata in your module for better cards: <code>&lt;title&gt;</code>, <code>&lt;meta name="description" ...&gt;</code>, <code>&lt;meta property="og:image" ...&gt;</code>.</p>
+      <p class="muted">Tip: Add metadata in your module for better cards: <code>&lt;title&gt;</code>, <code>&lt;meta name="description" ...&gt;</code>, <code>&lt;meta property="og:image" ...&gt;</code>. To enable rotating backgrounds in the viewer, add an <code>images</code> array in <code>card.json</code>.</p>
     </div>
   </footer>
 
@@ -74,10 +76,14 @@
     let allModules = [];
 
     function cardTemplate(m) {
-      const thumb = m.thumbnail ? `<img class="thumb" src="${m.thumbnail}" alt="" loading="lazy" decoding="async">` : '';
+      const firstImage = Array.isArray(m.images) && m.images.length ? m.images[0] : '';
+      const thumbSrc = m.thumbnail || firstImage || '';
+      const thumb = thumbSrc ? `<img class="thumb" src="${thumbSrc}" alt="" loading="lazy" decoding="async">` : '';
       const desc = m.description ? `<p>${m.description}</p>` : '<p class="muted">No description provided.</p>';
       const when = m.lastModified ? new Date(m.lastModified).toLocaleDateString() : '';
       const meta = when ? `<span class="muted">Updated ${when}</span>` : '';
+      const count = Array.isArray(m.images) ? m.images.length : 0;
+      const imgsBadge = count > 0 ? `<span class="badge" title="Background images available">${count} image${count>1?'s':''}</span>` : '';
       const viewerURL = `./viewer.html?p=${encodeURIComponent(m.url)}`;
       return `
         <article class="card" role="listitem">
@@ -85,7 +91,7 @@
           <h3>${m.title}</h3>
           ${desc}
           <div style="display:flex;justify-content:space-between;align-items:center;gap:.5rem;flex-wrap:wrap;margin-top:.25rem;">
-            ${meta}
+            <span class="badges">${meta}${imgsBadge}</span>
             <a class="btn" href="${viewerURL}" rel="noopener">Open Module</a>
           </div>
         </article>

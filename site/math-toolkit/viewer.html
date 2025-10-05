@@ -3,46 +3,131 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Module Viewer | Math Toolkit</title>
+  <title>Module Viewer</title>
   <style>
-    :root { --glass: rgba(255,255,255,.14); --glass-brd: rgba(255,255,255,.28); --ink: #e8edf5; }
-    * { box-sizing: border-box; } html, body { height: 100%; }
-    body { margin: 0; color: var(--ink); font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background: transparent; }
-    .btn{background:var(--glass); border:1px solid var(--glass-brd); color:#fff; padding:.6rem 1rem; border-radius:.6rem; text-decoration:none; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); transition: background .2s, transform .2s}
-    .btn:hover{background:rgba(255,255,255,.24); transform: translateY(-1px)}
-    .topbar { position: fixed; top: 1rem; left: 1rem; z-index: 2; display: flex; gap: .5rem; align-items: center; }
-    .frame-wrap { position: fixed; inset: 0; padding-top: 4rem; }
-    iframe { width: 100%; height: 100%; border: 0; background: #fff; }
+    :root { --ink:#0b1021; --bg:#0a0f1c; --accent:#0b5fff; }
+    * { box-sizing:border-box; }
+    html,body { height:100%; }
+    body { margin:0; background:var(--bg); color:#e6eefc; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+    .wrap { position:relative; height:100%; }
+    .stage { position:absolute; inset:0; }
+    .bg { position:absolute; inset:0; overflow:hidden; }
+    .bg-layer { position:absolute; inset:0; background-position:center center; background-size:cover; opacity:0; transition:opacity 1.2s ease; filter: saturate(1.05) contrast(1.05) brightness(0.9); }
+    .bg-layer.active { opacity:0.35; }
+    .glass { position:absolute; top:0; left:0; right:0; height:54px; display:flex; align-items:center; justify-content:space-between; gap:.75rem; padding:.5rem .75rem; backdrop-filter: blur(8px); background: rgba(10, 15, 28, 0.45); border-bottom: 1px solid rgba(255,255,255,0.08); z-index:5; }
+    .title { margin:0; font-size:15px; color:#dbe7ff; }
+    .controls { display:flex; gap:.5rem; align-items:center; }
+    .btn { display:inline-flex; align-items:center; gap:.4rem; padding:.45rem .7rem; border-radius:8px; border:1px solid rgba(255,255,255,.12); color:#dbe7ff; background:rgba(0,0,0,.2); cursor:pointer; text-decoration:none; }
+    .btn:hover { filter: brightness(1.05); }
+    iframe { position:absolute; inset:54px 0 0 0; width:100%; height:calc(100% - 54px); border:0; background:#fff; }
+    .hint { color:#aac2ff; font-size:12px; }
   </style>
-  <script>
-    (function(){
-      var root = location.pathname.indexOf('/site/') >= 0
-        ? location.pathname.slice(0, location.pathname.indexOf('/site/') + 6)
-        : '/';
-      function addCSS(href){ var l=document.createElement('link'); l.rel='stylesheet'; l.href=href; document.head.appendChild(l); }
-      function addJS(src){ var s=document.createElement('script'); s.defer=true; s.src=src; document.head.appendChild(s); }
-      addCSS(root + 'assets/css/site.css');
-      addJS(root + 'assets/js/site.js');
-    })();
-  </script>
 </head>
 <body>
-  <div class="bg"></div>
-  <div class="topbar">
-    <a class="btn" href="./">← Math Toolkit</a>
+  <div class="wrap">
+    <div class="bg">
+      <div class="bg-layer" id="bgA" aria-hidden="true"></div>
+      <div class="bg-layer" id="bgB" aria-hidden="true"></div>
+    </div>
+    <div class="glass">
+      <div class="left">
+        <a class="btn" href="./" aria-label="Back">← Back</a>
+        <strong class="title" id="title">Loading…</strong>
+      </div>
+      <div class="controls">
+        <span class="hint" id="imgCount" hidden>0 images</span>
+        <a class="btn" id="openRaw" href="#" target="_blank" rel="noopener">Open Raw</a>
+      </div>
+    </div>
+    <iframe id="frame" title="Module"></iframe>
   </div>
-  <div class="frame-wrap">
-    <iframe id="frame" title="Math Module"></iframe>
-  </div>
+
   <script>
-    const params = new URLSearchParams(location.search);
-    const p = params.get('p') || '';
-    const frame = document.getElementById('frame');
-    if (!p) {
-      frame.srcdoc = '<!doctype html><title>No module</title><body style="font-family:system-ui;padding:1rem">No module specified.</body>';
-    } else {
+    (function(){
+      const params = new URLSearchParams(location.search);
+      const p = params.get('p') || '';
+      if (!p) {
+        document.getElementById('title').textContent = 'No module URL provided';
+        document.getElementById('imgCount').hidden = true;
+        return;
+      }
+      const frame = document.getElementById('frame');
+      const openRaw = document.getElementById('openRaw');
       frame.src = p;
-    }
+      try { openRaw.href = p; } catch {}
+
+      // Derive card.json next to the module URL
+      let cardUrl;
+      try {
+        const u = new URL(p, location.href);
+        cardUrl = new URL('card.json', u).toString();
+      } catch {
+        cardUrl = null;
+      }
+
+      const titleEl = document.getElementById('title');
+      const countEl = document.getElementById('imgCount');
+      const bgA = document.getElementById('bgA');
+      const bgB = document.getElementById('bgB');
+
+      function setTitle(t){ if (t) { titleEl.textContent = t; document.title = t + ' — Module Viewer'; } }
+
+      function startShow(urls){
+        const imgs = (urls || []).slice(0, 12);
+        if (!imgs.length) return;
+        countEl.hidden = false; countEl.textContent = imgs.length + ' image' + (imgs.length>1?'s':'');
+        // Preload
+        imgs.forEach(src => { const im = new Image(); im.src = src; });
+        let i = 0, activeA = true;
+        function apply(){
+          const url = imgs[i % imgs.length];
+          if (activeA) {
+            bgB.style.backgroundImage = `url('${url}')`;
+            bgB.classList.add('active');
+            bgA.classList.remove('active');
+          } else {
+            bgA.style.backgroundImage = `url('${url}')`;
+            bgA.classList.add('active');
+            bgB.classList.remove('active');
+          }
+          activeA = !activeA;
+          i++;
+        }
+        // Seed both layers to avoid flash
+        bgA.style.backgroundImage = `url('${imgs[0]}')`;
+        bgA.classList.add('active');
+        if (imgs[1]) bgB.style.backgroundImage = `url('${imgs[1]}')`;
+        let firstTick = true;
+        setInterval(() => {
+          // delay first transition a bit longer for initial load
+          apply();
+        }, 6000);
+      }
+
+      async function loadCard(){
+        if (!cardUrl) return;
+        try {
+          const res = await fetch(cardUrl + '?' + Date.now(), { cache: 'no-store' });
+          if (!res.ok) return;
+          const card = await res.json();
+          setTitle(card.title || 'Module');
+          const imgs = Array.isArray(card.images) ? card.images.map(x => {
+            try { return new URL(x, new URL(p, location.href)).toString(); } catch { return x; }
+          }) : [];
+          if (imgs.length) startShow(imgs);
+        } catch (e) { /* no-op */ }
+      }
+
+      // Try using the document title from inside the iframe when loaded
+      frame.addEventListener('load', () => {
+        try {
+          const t = frame.contentDocument && frame.contentDocument.title;
+          if (t) setTitle(t);
+        } catch {/* cross-origin or blocked */}
+      });
+
+      loadCard();
+    })();
   </script>
 </body>
 </html>

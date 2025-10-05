@@ -56,13 +56,23 @@
           </div>
 
           <div class="row">
+            <div style="flex:1; min-width:260px">
+              <label class="hint">Images (optional, up to 12) — one relative path per line</label>
+              <textarea id="images" placeholder="images/bg-01.jpg
+images/bg-02.jpg
+images/bg-03.jpg"></textarea>
+              <div class="hint">Tip: Place images inside your module folder. JPG/WEBP, 1600–2400px wide recommended.</div>
+            </div>
+          </div>
+
+          <div class="row">
             <button class="btn accent" id="makeCard">
               <span class="dot" style="background:var(--accent-2)"></span>
               Generate card.json
             </button>
             <button class="btn" id="copyCard">Copy</button>
             <a class="btn" id="downloadCard" href="#" download="card.json">Download</a>
-            <span class="hint">Place thumbnail.png in your module folder.</span>
+            <span class="hint">Place thumbnail.png in your module folder, or leave it off to use the first image.</span>
           </div>
 
           <pre class="card" id="cardOut" style="overflow:auto; margin-top:.75rem">{}</pre>
@@ -78,7 +88,7 @@
             <a class="btn primary" id="openUpload" href="#" target="_blank" rel="noopener">
               Open GitHub Upload
             </a>
-            <span class="hint">Upload your folder with index.html, card.json, and thumbnail.png.</span>
+            <span class="hint">Upload your folder with index.html, card.json, thumbnail.png (optional), and any images/ assets.</span>
           </div>
         </div>
 
@@ -102,8 +112,8 @@
           <h2>Help</h2>
           <ol style="margin:.25rem 0 0; padding-left:1.25rem; color:#cfe3ff">
             <li>Select a destination.</li>
-            <li>Enter Title/Description; click Generate card.json.</li>
-            <li>Prepare folder: index.html, card.json, thumbnail.png.</li>
+            <li>Enter Title/Description; add optional image paths; click Generate card.json.</li>
+            <li>Prepare folder: index.html, card.json, thumbnail.png (optional), images/ (optional).</li>
             <li>Click Open GitHub Upload and upload the folder.</li>
             <li>Within ~30–60s after commit, the page index updates.</li>
           </ol>
