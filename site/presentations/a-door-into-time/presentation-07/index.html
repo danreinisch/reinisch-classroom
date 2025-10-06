@@ -144,23 +144,43 @@
             top: 20px;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(255, 255, 255, 0.2);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
+            background: linear-gradient(135deg, 
+                rgba(255, 255, 255, 0.15),
+                rgba(255, 255, 255, 0.05));
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top: 2px solid rgba(255, 255, 255, 0.5);
+            border-left: 2px solid rgba(255, 255, 255, 0.4);
             border-radius: 20px;
-            padding: 12px 24px;
+            padding: 10px 24px;
             text-decoration: none;
             color: #fff;
-            font-weight: bold;
-            font-size: 1em;
+            font-weight: 600;
+            font-size: 0.95em;
             transition: all 0.4s ease;
             z-index: 3;
             box-shadow: 
-                0 10px 25px rgba(0, 0, 0, 0.2),
-                inset 0 1px 0 rgba(255, 255, 255, 0.2);
-            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+                0 8px 32px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.4),
+                inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
             position: relative;
+            overflow: hidden;
+        }
+        
+        .back-nav::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg,
+                transparent,
+                rgba(255, 255, 255, 0.3),
+                transparent);
+            transition: left 0.6s ease;
         }
         
         .back-nav::after {
@@ -171,21 +191,30 @@
             right: 0;
             bottom: 0;
             background: linear-gradient(135deg, 
-                rgba(255, 255, 255, 0.1) 0%, 
-                transparent 50%, 
-                rgba(255, 255, 255, 0.05) 100%);
-            border-radius: 20px;
+                rgba(255, 255, 255, 0.2) 0%, 
+                transparent 40%, 
+                rgba(0, 0, 0, 0.05) 100%);
+            border-radius: 25px;
             pointer-events: none;
         }
         
         .back-nav:hover {
-            background: rgba(255, 255, 255, 0.3);
-            border-color: rgba(255, 255, 255, 0.4);
+            background: linear-gradient(135deg, 
+                rgba(255, 255, 255, 0.25),
+                rgba(255, 255, 255, 0.1));
+            border-color: rgba(255, 255, 255, 0.5);
+            border-top-color: rgba(255, 255, 255, 0.7);
+            border-left-color: rgba(255, 255, 255, 0.6);
             color: #fff;
             box-shadow: 
-                0 15px 35px rgba(0, 0, 0, 0.3),
-                inset 0 1px 0 rgba(255, 255, 255, 0.3);
-            transform: translateX(-50%) translateY(-2px);
+                0 12px 40px rgba(0, 0, 0, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.5),
+                inset 0 -1px 0 rgba(0, 0, 0, 0.15);
+            transform: translateX(-50%) translateY(-3px);
+        }
+        
+        .back-nav:hover::before {
+            left: 100%;
         }
         
         .slide-counter {
@@ -340,10 +369,10 @@
     </div>
     
     <div class="presentation-container">
-        <a href="https://reinischclassroom.com/language-arts" class="back-nav">Return to Language Arts</a>
+        <a href="/language-arts/" class="back-nav">Return to Language Arts</a>
         
         <div class="slide-counter">
-            Slide <span id="current">1</span> of <span id="total">21</span>
+            Slide <span id="current">1</span> of <span id="total">25</span>
         </div>
 
         <!-- DAY 1 SLIDES -->
@@ -522,7 +551,7 @@
             </div>
             <div class="example-box" style="margin-top: 20px;">
                 <p><strong>Example:</strong> "Alex walked <em>slowly</em> toward the <em>scary</em> building."</p>
-                <p>walked = verb (action word) • slowly = adverb (word that tells how) • scary = adjective (describing word) • building = noun (naming word)</p>
+                <p>walked = verb • slowly = adverb • scary = adjective • building = noun</p>
             </div>
         </div>
 
@@ -541,6 +570,75 @@
                     <li>The ending part _____ means...</li>
                     <li>In this sentence, the word _____ is a...</li>
                 </ul>
+            </div>
+        </div>
+
+        <!-- DAY 2 VOCABULARY SLIDES -->
+        <div class="slide">
+            <div class="day-header">DAY 2 - VOCABULARY</div>
+            <div class="vocab-word">HYPOTHERMIA</div>
+            <div class="example-box" style="max-width: 900px;">
+                <h3>Part of Speech: <span style="color: #2a9d8f;">Noun</span></h3>
+                <h3>Syllables: hy-po-ther-mi-a (5 syllables)</h3>
+                <h3 style="margin-top: 20px;">Definition:</h3>
+                <p>A dangerous medical condition where a person's body temperature drops too low because of extreme cold</p>
+                
+                <h3 style="margin-top: 20px;">From Chapter 21:</h3>
+                <p style="font-style: italic; font-size: 1.3em;">"Without proper shelter or warm clothing, Alex knew that hypothermia was a real danger in the freezing mountain nights."</p>
+                
+                <h3 style="margin-top: 20px;">Why This Word Matters:</h3>
+                <p>Shows the serious physical dangers Alex faces in this primitive time</p>
+            </div>
+        </div>
+
+        <div class="slide">
+            <div class="day-header">DAY 2 - VOCABULARY</div>
+            <div class="vocab-word">SURVIVAL</div>
+            <div class="example-box" style="max-width: 900px;">
+                <h3>Part of Speech: <span style="color: #2a9d8f;">Noun</span></h3>
+                <h3>Syllables: sur-viv-al (3 syllables)</h3>
+                <h3 style="margin-top: 20px;">Definition:</h3>
+                <p>The state of continuing to live or exist, especially in difficult conditions</p>
+                
+                <h3 style="margin-top: 20px;">From Chapter 21:</h3>
+                <p style="font-style: italic; font-size: 1.3em;">"Survival became Alex's only focus as he worked from dawn to dusk, trying to prove his worth to the village leaders."</p>
+                
+                <h3 style="margin-top: 20px;">Why This Word Matters:</h3>
+                <p>Shows how Alex's goals have changed from exploring to just staying alive</p>
+            </div>
+        </div>
+
+        <div class="slide">
+            <div class="day-header">DAY 2 - VOCABULARY</div>
+            <div class="vocab-word">DESPERATE</div>
+            <div class="example-box" style="max-width: 900px;">
+                <h3>Part of Speech: <span style="color: #2a9d8f;">Adjective</span></h3>
+                <h3>Syllables: des-per-ate (3 syllables)</h3>
+                <h3 style="margin-top: 20px;">Definition:</h3>
+                <p>Feeling or showing extreme worry, sadness, or need; willing to do anything to change a bad situation</p>
+                
+                <h3 style="margin-top: 20px;">From Chapter 21:</h3>
+                <p style="font-style: italic; font-size: 1.3em;">"Alex felt desperate as he watched the guards approach, knowing he had nowhere to run and no way to explain who he really was."</p>
+                
+                <h3 style="margin-top: 20px;">Why This Word Matters:</h3>
+                <p>Describes Alex's emotional state when he feels trapped and helpless</p>
+            </div>
+        </div>
+
+        <div class="slide">
+            <div class="day-header">DAY 2 - VOCABULARY</div>
+            <div class="vocab-word">EXHAUSTED</div>
+            <div class="example-box" style="max-width: 900px;">
+                <h3>Part of Speech: <span style="color: #2a9d8f;">Adjective</span></h3>
+                <h3>Syllables: ex-haust-ed (3 syllables)</h3>
+                <h3 style="margin-top: 20px;">Definition:</h3>
+                <p>Extremely tired; having no energy left after hard work or difficult experiences</p>
+                
+                <h3 style="margin-top: 20px;">From Chapter 21:</h3>
+                <p style="font-style: italic; font-size: 1.3em;">"By nightfall, Alex was completely exhausted from carrying heavy loads and digging in the hard, frozen ground all day."</p>
+                
+                <h3 style="margin-top: 20px;">Why This Word Matters:</h3>
+                <p>Shows the physical toll that life in this time period takes on Alex's body</p>
             </div>
         </div>
 
@@ -686,11 +784,11 @@
                 </ul>
             </div>
         </div>
-    </div>
 
-    <div class="navigation">
-        <button class="nav-btn" onclick="changeSlide(-1)" id="prevBtn">← Previous</button>
-        <button class="nav-btn" onclick="changeSlide(1)" id="nextBtn">Next →</button>
+        <div class="navigation">
+            <button class="nav-btn" id="prevBtn" onclick="changeSlide(-1)">Previous</button>
+            <button class="nav-btn" id="nextBtn" onclick="changeSlide(1)">Next</button>
+        </div>
     </div>
 
     <script>
@@ -745,14 +843,18 @@
         // Auto-rotate background images every 8 seconds
         setInterval(rotateBackground, 8000);
     </script>
+
     <script>
-        // Same-origin back-link script
-        (function() {
-            var languageArtsLinks = document.querySelectorAll('a[href*="language-arts"]');
-            languageArtsLinks.forEach(function(link) {
-                link.href = window.location.origin + '/language-arts/';
-            });
-        })();
+      // Same-origin safeguard for back links to Language Arts
+      (function () {
+        try {
+          document.querySelectorAll('a[href="/language-arts/"]').forEach(function(a){
+            if (window.location && window.location.origin) {
+              a.href = window.location.origin + '/language-arts/';
+            }
+          });
+        } catch (_) {}
+      })();
     </script>
 </body>
 </html>
