@@ -14,10 +14,25 @@
       .bg-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:-1}
       @media (prefers-reduced-motion: reduce){ .bg-video{display:none} }
 
-      /* Home quick links (Math Toolkit, Teacher Tools) */
+      /* Home quick links (Math Toolkit, Teacher Tools) - Glass style */
       .home-quick-links { display:flex; flex-wrap:wrap; gap:.6rem; justify-content:center; margin: 1rem 0; }
-      .home-quick-links a { display:inline-flex; align-items:center; gap:.45rem; padding:.6rem .9rem; border:1px solid #1a73e8; border-radius:.55rem; background:#1a73e8; color:#fff; text-decoration:none; }
-      .home-quick-links a:hover { filter:brightness(1.05); }
+      .home-quick-links a { 
+        display:inline-flex; 
+        align-items:center; 
+        gap:.45rem; 
+        padding:.6rem .9rem; 
+        border:1px solid rgba(255,255,255,.28);
+        border-radius:.55rem; 
+        background:rgba(255,255,255,.14);
+        backdrop-filter:blur(12px);
+        color:#fff; 
+        text-decoration:none;
+        transition: all 0.2s;
+      }
+      .home-quick-links a:hover { 
+        background:rgba(255,255,255,.22);
+        transform: translateY(-1px);
+      }
     `;
     const style = document.createElement('style');
     style.id = 'copilot-inline-site-css';
@@ -137,9 +152,12 @@
 
     if (!isRootHome && !isSubSiteHome) return;
 
+    // Determine relative base path
+    const relativePath = isRootHome ? 'site/' : './';
+
     // Avoid duplicates if links already exist anywhere on the page
-    const hasMT = !!document.querySelector('a[href="/site/math-toolkit/"]');
-    const hasTT = !!document.querySelector('a[href="/site/teacher-tools/"]');
+    const hasMT = !!document.querySelector('a[href*="math-toolkit"]');
+    const hasTT = !!document.querySelector('a[href*="teacher-tools"]');
     if (hasMT && hasTT) return;
 
     // Choose a sensible mount point
@@ -157,14 +175,14 @@
     const parts = [];
     if (!hasMT) {
       const a = document.createElement('a');
-      a.href = '/site/math-toolkit/';
+      a.href = relativePath + 'math-toolkit/';
       a.textContent = 'Math Toolkit';
       a.setAttribute('aria-label', 'Open Math Toolkit');
       parts.push(a);
     }
     if (!hasTT) {
       const a = document.createElement('a');
-      a.href = '/site/teacher-tools/';
+      a.href = relativePath + 'teacher-tools/';
       a.textContent = 'Teacher Tools';
       a.setAttribute('aria-label', 'Open Teacher Tools');
       parts.push(a);
