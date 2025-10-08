@@ -1,5 +1,5 @@
 /assets/HomePageBackground.mp4
   Cache-Control: public, max-age=31536000, immutable
 
-/life-skills/presentations/presentation-03/*
+/life-skills/presentations/presentation-03/index.html
   Content-Type: text/html; charset=utf-8
