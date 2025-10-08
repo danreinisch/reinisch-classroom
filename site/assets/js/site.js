@@ -160,42 +160,67 @@
     const hasTT = !!document.querySelector('a[href*="teacher-tools"]');
     if (hasMT && hasTT) return;
 
-    // Choose a sensible mount point
-    const container =
-      document.querySelector('.centered nav') ||
-      document.querySelector('main nav') ||
-      document.querySelector('.centered header') ||
-      document.querySelector('header') ||
-      document.querySelector('main') ||
-      document.body;
-
-    const bar = document.createElement('div');
-    bar.className = 'home-quick-links';
-    // Build anchors only if missing to avoid duplication
-    const parts = [];
-    if (!hasMT) {
-      const a = document.createElement('a');
-      a.href = relativePath + 'math-toolkit/';
-      a.textContent = 'Math Toolkit';
-      a.setAttribute('aria-label', 'Open Math Toolkit');
-      parts.push(a);
-    }
-    if (!hasTT) {
-      const a = document.createElement('a');
-      a.href = relativePath + 'teacher-tools/';
-      a.textContent = 'Teacher Tools';
-      a.setAttribute('aria-label', 'Open Teacher Tools');
-      parts.push(a);
-    }
-    if (!parts.length) return;
-
-    parts.forEach(a => bar.appendChild(a));
-
-    // Insert near the top of main content
-    if (container.firstChild) {
-      container.insertBefore(bar, container.firstChild.nextSibling);
+    // Try to find the .buttons grid first (for /site/ home)
+    const buttonsGrid = document.querySelector('.buttons');
+    
+    if (buttonsGrid) {
+      // Append directly to the .buttons grid as btn elements
+      if (!hasMT) {
+        const a = document.createElement('a');
+        a.className = 'btn';
+        a.href = relativePath + 'math-toolkit/';
+        a.textContent = 'Math Toolkit';
+        a.setAttribute('aria-label', 'Open Math Toolkit');
+        buttonsGrid.appendChild(a);
+      }
+      if (!hasTT) {
+        const a = document.createElement('a');
+        a.className = 'btn';
+        a.href = relativePath + 'teacher-tools/';
+        a.textContent = 'Teacher Center';
+        a.setAttribute('aria-label', 'Open Teacher Center');
+        buttonsGrid.appendChild(a);
+      }
     } else {
-      container.appendChild(bar);
+      // Fallback: create a separate bar if .buttons doesn't exist (e.g., on root home)
+      const container =
+        document.querySelector('.centered nav') ||
+        document.querySelector('main nav') ||
+        document.querySelector('.centered header') ||
+        document.querySelector('header') ||
+        document.querySelector('main') ||
+        document.body;
+
+      const bar = document.createElement('div');
+      bar.className = 'home-quick-links';
+      // Build anchors only if missing to avoid duplication
+      const parts = [];
+      if (!hasMT) {
+        const a = document.createElement('a');
+        a.className = 'btn';
+        a.href = relativePath + 'math-toolkit/';
+        a.textContent = 'Math Toolkit';
+        a.setAttribute('aria-label', 'Open Math Toolkit');
+        parts.push(a);
+      }
+      if (!hasTT) {
+        const a = document.createElement('a');
+        a.className = 'btn';
+        a.href = relativePath + 'teacher-tools/';
+        a.textContent = 'Teacher Center';
+        a.setAttribute('aria-label', 'Open Teacher Center');
+        parts.push(a);
+      }
+      if (!parts.length) return;
+
+      parts.forEach(a => bar.appendChild(a));
+
+      // Insert near the top of main content
+      if (container.firstChild) {
+        container.insertBefore(bar, container.firstChild.nextSibling);
+      } else {
+        container.appendChild(bar);
+      }
     }
   }
 
