@@ -3,270 +3,1411 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Life Skills Training: Employment & Independent Living</title>
+    <title>Life Skills Presentation: Employment & Independent Living</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
         body {
             font-family: 'Arial', sans-serif;
-            background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
-            color: #fff;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
             overflow: hidden;
-            position: relative;
         }
         
         .presentation-container {
             width: 100vw;
             height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             position: relative;
-            z-index: 2;
         }
         
         .slide {
             display: none;
-            width: 100%;
-            height: 100%;
+            width: 90%;
+            max-width: 1000px;
+            height: 80%;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
             padding: 40px;
-            position: absolute;
-            top: 0;
-            left: 0;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-            z-index: 2;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            color: #333;
             overflow-y: auto;
-            padding-bottom: 100px;
+            animation: slideIn 0.5s ease-in-out;
         }
         
         .slide.active {
-            display: flex;
+            display: block;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         
         .slide h1 {
-            font-size: 3.5em;
-            margin-bottom: 20px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-            color: #f4a261;
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
         }
         
         .slide h2 {
-            font-size: 2.5em;
-            margin-bottom: 30px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-            color: #2a9d8f;
+            color: #764ba2;
+            border-bottom: 3px solid #FFE066;
+            padding-bottom: 10px;
+            margin-top: 30px;
+            font-size: 2em;
         }
         
-        .slide p, .slide li {
+        .slide h3 {
+            color: #667eea;
             font-size: 1.5em;
-            line-height: 1.8;
-            margin-bottom: 15px;
-            max-width: 900px;
+            margin-top: 25px;
         }
         
-        .slide ul {
-            text-align: left;
-            margin: 20px auto;
+        .slide-content {
+            font-size: 1.2em;
+            line-height: 1.6;
         }
         
-        .back-nav {
+        .icons-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .icon-item {
+            text-align: center;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            border: 3px solid #667eea;
+            transition: transform 0.3s;
+        }
+        
+        .icon-item:hover {
+            transform: scale(1.05);
+        }
+        
+        .icon-item .emoji {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+        
+        .icon-item h4 {
+            color: #667eea;
+            margin: 10px 0;
+        }
+        
+        .bullet-points {
+            background: #e8f4f8;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 5px solid #667eea;
+            margin: 20px 0;
+        }
+        
+        .bullet-points ul {
+            font-size: 1.1em;
+            color: #333;
+        }
+        
+        .bullet-points li {
+            margin: 10px 0;
+            padding-left: 10px;
+        }
+        
+        .highlight-box {
+            background: linear-gradient(135deg, #FFE066 0%, #FFA000 100%);
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            margin: 20px 0;
+            color: #333;
+            font-weight: bold;
+            font-size: 1.3em;
+        }
+        
+        .example-box {
+            background: #f0fff0;
+            border: 2px solid #4CAF50;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        .example-box h4 {
+            color: #4CAF50;
+            margin-top: 0;
+        }
+        
+        .community-box {
+            background: #fff3e0;
+            border: 2px solid #ff9800;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        .community-box h4 {
+            color: #ff9800;
+            margin-top: 0;
+        }
+        
+        /* Glass-style navigation */
+        .top-nav {
             position: fixed;
             top: 20px;
             left: 50%;
             transform: translateX(-50%);
+            z-index: 1000;
+        }
+        
+        .return-btn {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
             padding: 12px 30px;
-            background: linear-gradient(145deg, #2a9d8f, #238276);
-            color: white;
-            text-decoration: none;
-            border-radius: 50px;
-            font-size: 1.1em;
-            font-weight: 600;
-            z-index: 3;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            box-shadow: 
-                0 8px 30px rgba(0, 0, 0, 0.3),
-                inset 0 1px 0 rgba(255, 255, 255, 0.4);
-            transition: all 0.3s ease;
-            overflow: hidden;
-        }
-        
-        .back-nav::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-            transition: left 0.5s;
-        }
-        
-        .back-nav:hover {
-            background: linear-gradient(145deg, #238276, #1d6b60);
-            box-shadow: 
-                0 12px 40px rgba(0, 0, 0, 0.4),
-                inset 0 1px 0 rgba(255, 255, 255, 0.5),
-                inset 0 -1px 0 rgba(0, 0, 0, 0.15);
-            transform: translateX(-50%) translateY(-3px);
-        }
-        
-        .back-nav:hover::before {
-            left: 100%;
-        }
-        
-        .slide-counter {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(42, 157, 143, 0.8);
-            padding: 10px 15px;
-            border-radius: 5px;
+            border-radius: 25px;
+            cursor: pointer;
             font-size: 1em;
-            z-index: 3;
+            font-weight: bold;
+            color: white;
+            transition: all 0.3s;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .return-btn:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: translateY(-2px);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.2);
         }
         
         .navigation {
-            position: absolute;
+            position: fixed;
             bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
             display: flex;
-            gap: 20px;
-            z-index: 3;
+            gap: 15px;
+            z-index: 1000;
         }
         
         .nav-btn {
-            padding: 12px 30px;
-            font-size: 1.1em;
-            background: linear-gradient(145deg, #2a9d8f, #238276);
-            color: white;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50px;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 15px 25px;
+            border-radius: 25px;
             cursor: pointer;
-            transition: all 0.3s ease;
-            font-weight: 600;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            font-size: 1.1em;
+            font-weight: bold;
+            color: white;
+            transition: all 0.3s;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
         }
         
         .nav-btn:hover:not(:disabled) {
-            background: linear-gradient(145deg, #238276, #1d6b60);
+            background: rgba(255, 255, 255, 0.25);
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.2);
         }
         
         .nav-btn:disabled {
-            opacity: 0.5;
+            opacity: 0.3;
             cursor: not-allowed;
+        }
+        
+        .slide-counter {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 10px 20px;
+            border-radius: 20px;
+            color: white;
+            font-weight: bold;
+            z-index: 1000;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+        
+        .intro-slide {
+            text-align: center;
+        }
+        
+        .intro-slide .main-title {
+            font-size: 3.5em;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .intro-slide .subtitle {
+            font-size: 1.8em;
+            color: #764ba2;
+            margin-bottom: 40px;
+        }
+        
+        .skills-showcase {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .skill-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+        }
+        
+        .skill-card .skill-emoji {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .resource-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .resource-card {
+            background: #f8f9fa;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            padding: 20px;
+        }
+        
+        .resource-card h4 {
+            color: #667eea;
+            margin-top: 0;
+        }
+        
+        .goal-setting-visual {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .goal-steps {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            margin: 20px 0;
+        }
+        
+        .goal-step {
+            background: white;
+            color: #4CAF50;
+            padding: 20px;
+            border-radius: 50%;
+            width: 120px;
+            height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-weight: bold;
+            margin: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
         }
     </style>
 </head>
 <body>
-    <a href="https://reinischclassroom.com/life-skills/" class="back-nav">Back</a>
-    
-    <div class="slide-counter">
-        <span id="current">1</span> / <span id="total">1</span>
+    <div class="top-nav">
+        <a href="https://reinischclassroom.com/life-skills/" class="return-btn">← Return to Life Skills</a>
     </div>
 
     <div class="presentation-container">
-        <div class="slide active">
-            <h1>Life Skills Training</h1>
-            <h2>Employment & Independent Living</h2>
-            <p>Building skills for success in work and life</p>
+        <!-- Slide 1: Title Slide -->
+        <div class="slide active intro-slide">
+            <h1 class="main-title">Life Skills Training</h1>
+            <div class="subtitle">Employment & Independent Living</div>
+            <div class="highlight-box">
+                Building Skills for Success and Independence
+            </div>
+            <div class="icons-grid">
+                <div class="icon-item">
+                    <div class="emoji">💼</div>
+                    <h4>Employment Skills</h4>
+                </div>
+                <div class="icon-item">
+                    <div class="emoji">🏠</div>
+                    <h4>Independent Living</h4>
+                </div>
+                <div class="icon-item">
+                    <div class="emoji">🌟</div>
+                    <h4>Personal Growth</h4>
+                </div>
+                <div class="icon-item">
+                    <div class="emoji">🤝</div>
+                    <h4>Community Connection</h4>
+                </div>
+            </div>
         </div>
 
+        <!-- Slide 2: Program Overview -->
         <div class="slide">
-            <h2>Course Overview</h2>
-            <ul>
-                <li>Employment preparation and job search strategies</li>
-                <li>Workplace communication and professionalism</li>
-                <li>Financial literacy and budgeting</li>
-                <li>Independent living skills</li>
-                <li>Time management and organization</li>
-            </ul>
+            <h1>6-Day Program Overview</h1>
+            <div class="slide-content">
+                <div class="skills-showcase">
+                    <div class="skill-card">
+                        <div class="skill-emoji">🤝</div>
+                        <h3>Day 1</h3>
+                        <p>Finding Employment Help</p>
+                    </div>
+                    <div class="skill-card">
+                        <div class="skill-emoji">💼</div>
+                        <h3>Day 2</h3>
+                        <p>Jobs in My Community</p>
+                    </div>
+                    <div class="skill-card">
+                        <div class="skill-emoji">⚡</div>
+                        <h3>Day 3</h3>
+                        <p>Workplace Skills</p>
+                    </div>
+                    <div class="skill-card">
+                        <div class="skill-emoji">🎤</div>
+                        <h3>Day 4</h3>
+                        <p>Interview Skills</p>
+                    </div>
+                    <div class="skill-card">
+                        <div class="skill-emoji">🏢</div>
+                        <h3>Day 5</h3>
+                        <p>Community Resources</p>
+                    </div>
+                    <div class="skill-card">
+                        <div class="skill-emoji">🎯</div>
+                        <h3>Day 6</h3>
+                        <p>Independence Planning</p>
+                    </div>
+                </div>
+            </div>
         </div>
 
+        <!-- DAY 1 SLIDES -->
+        <!-- Slide 3: Day 1 - Learning Goals -->
         <div class="slide">
-            <h2>Employment Skills</h2>
-            <ul>
-                <li>Creating effective resumes and cover letters</li>
-                <li>Job search techniques and resources</li>
-                <li>Interview preparation and practice</li>
-                <li>Understanding workplace expectations</li>
-                <li>Professional communication</li>
-            </ul>
+            <h1>Day 1: Finding Employment Help - Learning Goals</h1>
+            <div class="slide-content">
+                <h2>What Students Will Learn</h2>
+                <div class="bullet-points">
+                    <ul>
+                        <li>Understand different types of employment support available</li>
+                        <li>Learn when and how to ask for help appropriately</li>
+                        <li>Identify personal strengths and support needs</li>
+                        <li>Recognize that asking for help is a sign of wisdom, not weakness</li>
+                    </ul>
+                </div>
+
+                <h2>Key Concepts to Teach</h2>
+                <div class="example-box">
+                    <h4>Support People and Their Roles:</h4>
+                    <ul>
+                        <li><strong>Job Coaches:</strong> Help you learn job skills and succeed at work</li>
+                        <li><strong>Employment Counselors:</strong> Help you find jobs and prepare for interviews</li>
+                        <li><strong>Skills Trainers:</strong> Teach you new skills for work</li>
+                        <li><strong>Transportation Services:</strong> Help you get to work</li>
+                        <li><strong>Benefits Counselors:</strong> Help with understanding work and benefits</li>
+                    </ul>
+                </div>
+
+                <div class="highlight-box">
+                    Today's Focus: Everyone needs help sometimes - successful people know how to find and use support!
+                </div>
+            </div>
         </div>
 
+        <!-- Slide 4: Day 1 - Teaching Strategies -->
         <div class="slide">
-            <h2>Workplace Success</h2>
-            <ul>
-                <li>Being punctual and reliable</li>
-                <li>Following instructions and asking questions</li>
-                <li>Working effectively with others</li>
-                <li>Problem-solving in the workplace</li>
-                <li>Handling feedback and constructive criticism</li>
-            </ul>
+            <h1>Day 1: Teaching Strategies</h1>
+            <div class="slide-content">
+                <h2>How to Make Employment Support Real</h2>
+                
+                <h3>🎯 Mini-Lesson Approach (15 minutes)</h3>
+                <div class="example-box">
+                    <h4>Start with Personal Connections:</h4>
+                    <ul>
+                        <li><strong>Opening Question:</strong> "When you learned to drive, who helped you? That's like a job coach!"</li>
+                        <li><strong>Visual Supports:</strong> Show pictures of different support people at work</li>
+                        <li><strong>Real Examples:</strong> "Who helps you learn new things right now in school?"</li>
+                        <li><strong>Normalize Help-Seeking:</strong> Share how adults get help with work challenges</li>
+                    </ul>
+                </div>
+
+                <h3>📋 Worksheet Preparation</h3>
+                <div class="bullet-points">
+                    <ul>
+                        <li><strong>Pre-Activity:</strong> Read each scenario aloud and discuss as a group</li>
+                        <li><strong>Model One:</strong> Work through one matching example together</li>
+                        <li><strong>Encourage Reflection:</strong> "Think about times you've needed help"</li>
+                        <li><strong>Support During Work:</strong> Circulate to provide individual guidance</li>
+                    </ul>
+                </div>
+
+                <h3>🗣️ Discussion Prompts</h3>
+                <div class="highlight-box">
+                    "Tell me about a time someone helped you learn something new" | "What makes asking for help hard sometimes?" | "Who are helpful people in your life?"
+                </div>
+            </div>
         </div>
 
+        <!-- Slide 5: Day 1 - Community Connection -->
         <div class="slide">
-            <h2>Financial Management</h2>
-            <ul>
-                <li>Creating and maintaining a budget</li>
-                <li>Understanding paychecks and deductions</li>
-                <li>Banking basics: checking and savings accounts</li>
-                <li>Managing expenses and avoiding debt</li>
-                <li>Planning for future financial goals</li>
-            </ul>
+            <h1>Day 1: Community Connection</h1>
+            <div class="slide-content">
+                <h2>Connecting Students to Local Employment Support</h2>
+                
+                <div class="community-box">
+                    <h4>Community Opportunities Employment Services</h4>
+                    <ul>
+                        <li><strong>Supported Employment:</strong> Job coaching and on-site training</li>
+                        <li><strong>Job Development:</strong> Finding jobs that match student abilities</li>
+                        <li><strong>Skills Assessment:</strong> Evaluating strengths and support needs</li>
+                        <li><strong>Advocacy:</strong> Helping navigate workplace challenges</li>
+                    </ul>
+                </div>
+
+                <h3>🌉 Building Real Connections</h3>
+                <div class="bullet-points">
+                    <ul>
+                        <li><strong>Invite Guest Speakers:</strong> Ask job coaches to visit and share their work</li>
+                        <li><strong>Agency Tours:</strong> Visit local employment service offices</li>
+                        <li><strong>Transition Planning:</strong> Start connecting students by age 16</li>
+                        <li><strong>Family Involvement:</strong> Help families understand available services</li>
+                    </ul>
+                </div>
+
+                <h3>📞 Making First Contact</h3>
+                <div class="example-box">
+                    <h4>Teacher Action Steps:</h4>
+                    <ul>
+                        <li>Contact Community Opportunities to discuss student needs</li>
+                        <li>Schedule informational meetings for interested families</li>
+                        <li>Document which students might benefit from services</li>
+                        <li>Create referral timeline for graduating students</li>
+                    </ul>
+                </div>
+            </div>
         </div>
 
+        <!-- Slide 6: Day 1 - Assessment & Wrap-Up -->
         <div class="slide">
-            <h2>Independent Living</h2>
-            <ul>
-                <li>Finding and maintaining housing</li>
-                <li>Basic cooking and meal planning</li>
-                <li>Household management and chores</li>
-                <li>Transportation options and planning</li>
-                <li>Healthcare and personal wellness</li>
-            </ul>
+            <h1>Day 1: Assessment & Wrap-Up</h1>
+            <div class="slide-content">
+                <h2>How to Assess Understanding</h2>
+                
+                <h3>✅ Quick Checks During Class</h3>
+                <div class="bullet-points">
+                    <ul>
+                        <li><strong>Exit Ticket:</strong> "Name one person who can help you find a job"</li>
+                        <li><strong>Thumbs Up/Down:</strong> "Is it okay to ask for help at work?"</li>
+                        <li><strong>Partner Share:</strong> Students tell a partner about their strengths</li>
+                        <li><strong>Reflection:</strong> "What's one thing you learned about getting help?"</li>
+                    </ul>
+                </div>
+
+                <h3>📊 Worksheet Assessment</h3>
+                <div class="example-box">
+                    <h4>Look For:</h4>
+                    <ul>
+                        <li>Correct matching of situations to support people</li>
+                        <li>Identification of personal strengths (any positive responses)</li>
+                        <li>Recognition of support needs (realistic self-assessment)</li>
+                        <li>Thoughtful reflection responses</li>
+                    </ul>
+                </div>
+
+                <h3>🔄 Preparing for Day 2</h3>
+                <div class="highlight-box">
+                    Preview: "Tomorrow we'll explore different jobs in our community. Think about what type of work interests you!"
+                </div>
+
+                <div class="goal-setting-visual" style="background: #667eea;">
+                    <h3>Today's Success: Students understand that help is available and normal to seek!</h3>
+                </div>
+            </div>
         </div>
 
+        <!-- DAY 2 SLIDES -->
+        <!-- Slide 7: Day 2 - Learning Goals -->
         <div class="slide">
-            <h2>Time Management</h2>
-            <ul>
-                <li>Setting goals and priorities</li>
-                <li>Creating effective schedules</li>
-                <li>Balancing work, home, and personal time</li>
-                <li>Using calendars and planning tools</li>
-                <li>Avoiding procrastination</li>
-            </ul>
+            <h1>Day 2: Jobs in My Community - Learning Goals</h1>
+            <div class="slide-content">
+                <h2>What Students Will Learn</h2>
+                <div class="bullet-points">
+                    <ul>
+                        <li>Identify different types of jobs available locally</li>
+                        <li>Understand the concept of entry-level employment</li>
+                        <li>Match personal interests and skills to job types</li>
+                        <li>Explore work environments and job requirements</li>
+                    </ul>
+                </div>
+
+                <h2>Job Categories to Explore</h2>
+                <div class="icons-grid">
+                    <div class="icon-item">
+                        <div class="emoji">🛒</div>
+                        <h4>Retail</h4>
+                        <p>Customer service, stocking, cashier</p>
+                    </div>
+                    <div class="icon-item">
+                        <div class="emoji">🍔</div>
+                        <h4>Food Service</h4>
+                        <p>Food prep, serving, cleaning</p>
+                    </div>
+                    <div class="icon-item">
+                        <div class="emoji">🧹</div>
+                        <h4>Cleaning</h4>
+                        <p>Janitorial, maintenance, housekeeping</p>
+                    </div>
+                    <div class="icon-item">
+                        <div class="emoji">📦</div>
+                        <h4>Warehouse</h4>
+                        <p>Sorting, packaging, organizing</p>
+                    </div>
+                </div>
+
+                <div class="highlight-box">
+                    Today's Focus: There are many job options, and everyone can find work that matches their abilities!
+                </div>
+            </div>
         </div>
 
+        <!-- Slide 8: Day 2 - Teaching Strategies -->
         <div class="slide">
-            <h2>Communication Skills</h2>
-            <ul>
-                <li>Active listening and understanding others</li>
-                <li>Expressing yourself clearly and respectfully</li>
-                <li>Professional email and phone etiquette</li>
-                <li>Resolving conflicts constructively</li>
-                <li>Building positive relationships</li>
-            </ul>
+            <h1>Day 2: Teaching Strategies</h1>
+            <div class="slide-content">
+                <h2>Making Jobs Real and Accessible</h2>
+                
+                <h3>🏪 Virtual Community Tour</h3>
+                <div class="example-box">
+                    <h4>Before Using the Worksheet:</h4>
+                    <ul>
+                        <li><strong>Google Street View:</strong> "Visit" local businesses students know</li>
+                        <li><strong>Local Connections:</strong> "Where do your family members work?"</li>
+                        <li><strong>Job Spotting:</strong> Look at photos and identify different jobs</li>
+                        <li><strong>Skills Inventory:</strong> "What are you good at that helps in this job?"</li>
+                    </ul>
+                </div>
+
+                <h3>📋 Making Matching Meaningful</h3>
+                <div class="bullet-points">
+                    <ul>
+                        <li><strong>Use Real Business Names:</strong> McDonald's, Walmart, local stores students know</li>
+                        <li><strong>Connect to Interests:</strong> "You like helping people - what jobs do that?"</li>
+                        <li><strong>Reality Check:</strong> Discuss both good parts and challenges of jobs</li>
+                        <li><strong>Progression Planning:</strong> "This could be your first job, then later..."</li>
+                    </ul>
+                </div>
+
+                <h3>🎯 Dream Job to Reality Bridge</h3>
+                <div class="highlight-box">
+                    Help students connect their interests to achievable first steps: "You want to work with animals? Let's look at pet store jobs!"
+                </div>
+            </div>
         </div>
 
+        <!-- Slide 9: Day 2 - Community Connection -->
         <div class="slide">
-            <h2>Your Path Forward</h2>
-            <p>Remember: Building these skills takes time and practice.</p>
-            <p>Set small, achievable goals and celebrate your progress.</p>
-            <p>Seek support when you need it, and keep moving forward.</p>
-            <p style="margin-top: 30px; font-weight: bold;">You've got this!</p>
+            <h1>Day 2: Community Connection</h1>
+            <div class="slide-content">
+                <h2>Local Job Development Opportunities</h2>
+                
+                <div class="community-box">
+                    <h4>Community Opportunities Job Development</h4>
+                    <ul>
+                        <li><strong>Employer Partnerships:</strong> Relationships with local businesses</li>
+                        <li><strong>Customized Employment:</strong> Jobs designed around student strengths</li>
+                        <li><strong>Job Carving:</strong> Creating positions that match abilities</li>
+                        <li><strong>Natural Supports:</strong> Training coworkers to provide ongoing help</li>
+                    </ul>
+                </div>
+
+                <h3>🏢 Building Employer Relationships</h3>
+                <div class="bullet-points">
+                    <ul>
+                        <li><strong>Field Trip Planning:</strong> Visit businesses to see jobs in action</li>
+                        <li><strong>Guest Speakers:</strong> Invite local employers to share about entry-level jobs</li>
+                        <li><strong>Job Shadow Setup:</strong> Arrange observation opportunities</li>
+                        <li><strong>Volunteer Connections:</strong> Start with unpaid experience to build skills</li>
+                    </ul>
+                </div>
+
+                <h3>🗺️ Local Business Mapping</h3>
+                <div class="example-box">
+                    <h4>Create a Community Job Map:</h4>
+                    <ul>
+                        <li>Identify walking-distance employment options</li>
+                        <li>Map transportation routes to major employers</li>
+                        <li>Note which businesses hire entry-level workers</li>
+                        <li>Track which employers work with disability services</li>
+                    </ul>
+                </div>
+            </div>
         </div>
 
-        <div class="navigation">
-            <button class="nav-btn" id="prevBtn" onclick="changeSlide(-1)">Previous</button>
-            <button class="nav-btn" id="nextBtn" onclick="changeSlide(1)">Next</button>
+        <!-- Slide 10: Day 2 - Assessment & Wrap-Up -->
+        <div class="slide">
+            <h1>Day 2: Assessment & Wrap-Up</h1>
+            <div class="slide-content">
+                <h2>Checking Job Exploration Understanding</h2>
+                
+                <h3>✅ Quick Assessment Activities</h3>
+                <div class="bullet-points">
+                    <ul>
+                        <li><strong>Job Sort:</strong> Students categorize jobs by work environment</li>
+                        <li><strong>Interest Inventory:</strong> "Point to jobs that interest you and explain why"</li>
+                        <li><strong>Skills Match:</strong> "Which jobs use skills you already have?"</li>
+                        <li><strong>Next Step Planning:</strong> "What would help you get ready for that job?"</li>
+                    </ul>
+                </div>
+
+                <h3>📊 Worksheet Assessment</h3>
+                <div class="example-box">
+                    <h4>Look For:</h4>
+                    <ul>
+                        <li>Accurate job-to-environment matching</li>
+                        <li>Realistic skill assessments for different job types</li>
+                        <li>Thoughtful dream job descriptions</li>
+                        <li>Connection between interests and job choices</li>
+                    </ul>
+                </div>
+
+                <h3>🔄 Preparing for Day 3</h3>
+                <div class="highlight-box">
+                    Preview: "Tomorrow we'll look at the skills you need to be successful at any job. We'll see what you're already good at!"
+                </div>
+
+                <div class="goal-setting-visual" style="background: #2196F3;">
+                    <h3>Today's Success: Students can identify job options and connect them to their interests!</h3>
+                </div>
+            </div>
         </div>
+
+        <!-- DAY 3 SLIDES -->
+        <!-- Slide 11: Day 3 - Learning Goals -->
+        <div class="slide">
+            <h1>Day 3: Workplace Skills - Learning Goals</h1>
+            <div class="slide-content">
+                <h2>What Students Will Learn</h2>
+                <div class="bullet-points">
+                    <ul>
+                        <li>Identify essential workplace skills across all job types</li>
+                        <li>Complete honest self-assessment of current abilities</li>
+                        <li>Set realistic goals for skill development</li>
+                        <li>Understand that skills can be learned and improved</li>
+                    </ul>
+                </div>
+
+                <h2>Core Workplace Skills</h2>
+                <div class="resource-grid">
+                    <div class="resource-card">
+                        <h4>🕐 Time & Attendance</h4>
+                        <ul>
+                            <li>Arriving on time consistently</li>
+                            <li>Staying for complete work shifts</li>
+                            <li>Taking appropriate breaks</li>
+                        </ul>
+                    </div>
+                    <div class="resource-card">
+                        <h4>💬 Communication</h4>
+                        <ul>
+                            <li>Speaking politely to customers</li>
+                            <li>Asking questions when needed</li>
+                            <li>Working cooperatively with teams</li>
+                        </ul>
+                    </div>
+                    <div class="resource-card">
+                        <h4>⚡ Task Completion</h4>
+                        <ul>
+                            <li>Following directions accurately</li>
+                            <li>Staying focused on work</li>
+                            <li>Working safely at all times</li>
+                        </ul>
+                    </div>
+                    <div class="resource-card">
+                        <h4>👔 Professionalism</h4>
+                        <ul>
+                            <li>Dressing appropriately</li>
+                            <li>Maintaining good hygiene</li>
+                            <li>Showing respect to everyone</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="highlight-box">
+                    Today's Focus: Everyone has strengths to build on and areas to improve - that's normal and positive!
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 12: Day 3 - Teaching Strategies -->
+        <div class="slide">
+            <h1>Day 3: Teaching Strategies</h1>
+            <div class="slide-content">
+                <h2>Strengths-Based Skills Assessment</h2>
+                
+                <h3>⭐ Creating a Safe Assessment Environment</h3>
+                <div class="example-box">
+                    <h4>Before Self-Rating Activities:</h4>
+                    <ul>
+                        <li><strong>Model Honesty:</strong> "I'm still working on being on time every day too!"</li>
+                        <li><strong>Emphasize Growth:</strong> "Rating yourself a '2' means you're learning - that's great!"</li>
+                        <li><strong>Real Examples:</strong> "When have you shown good teamwork at school?"</li>
+                        <li><strong>Future Focus:</strong> "What skill would help you most in a job you want?"</li>
+                    </ul>
+                </div>
+
+                <h3>🎯 Making Skill Development Concrete</h3>
+                <div class="bullet-points">
+                    <ul>
+                        <li><strong>Break It Down:</strong> "Better communication" becomes "practice saying 'good morning'"</li>
+                        <li><strong>Practice Opportunities:</strong> How can they practice these skills at school/home?</li>
+                        <li><strong>Support Connections:</strong> Who can help them practice each skill?</li>
+                        <li><strong>Celebrate Current Strengths:</strong> Acknowledge any skill they rate as 3 or 4</li>
+                    </ul>
+                </div>
+
+                <h3>📋 Goal Setting That Works</h3>
+                <div class="highlight-box">
+                    Help students choose goals they can work on this week, not just distant dreams: "Practice arriving 5 minutes early to class"
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 13: Day 3 - Community Connection -->
+        <div class="slide">
+            <h1>Day 3: Community Connection</h1>
+            <div class="slide-content">
+                <h2>Skill Building Through Community Programs</h2>
+                
+                <div class="community-box">
+                    <h4>Community Opportunities Skill Development</h4>
+                    <ul>
+                        <li><strong>Work Readiness Training:</strong> Structured programs to build job skills</li>
+                        <li><strong>Social Skills Groups:</strong> Practice communication and teamwork</li>
+                        <li><strong>Independent Living Skills:</strong> Daily living and self-care training</li>
+                        <li><strong>Community Integration:</strong> Real-world practice opportunities</li>
+                    </ul>
+                </div>
+
+                <h3>🏋️ Skill Building Opportunities</h3>
+                <div class="bullet-points">
+                    <ul>
+                        <li><strong>Volunteer Programs:</strong> Practice workplace skills in low-pressure settings</li>
+                        <li><strong>Internship Preparation:</strong> Build skills before job placement</li>
+                        <li><strong>Peer Mentoring:</strong> Learn from others who've developed similar skills</li>
+                        <li><strong>Family Training:</strong> Help families support skill development at home</li>
+                    </ul>
+                </div>
+
+                <h3>📚 Community-Based Learning</h3>
+                <div class="example-box">
+                    <h4>Real-World Practice Settings:</h4>
+                    <ul>
+                        <li>Practice customer service at community events</li>
+                        <li>Develop time management through volunteer schedules</li>
+                        <li>Build teamwork skills in group volunteer projects</li>
+                        <li>Practice professional behavior in public settings</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 14: Day 3 - Assessment & Wrap-Up -->
+        <div class="slide">
+            <h1>Day 3: Assessment & Wrap-Up</h1>
+            <div class="slide-content">
+                <h2>Assessing Skills Understanding</h2>
+                
+                <h3>✅ Skills Demonstration Activities</h3>
+                <div class="bullet-points">
+                    <ul>
+                        <li><strong>Role Play:</strong> Students demonstrate workplace communication</li>
+                        <li><strong>Problem Solving:</strong> "What would you do if you're running late to work?"</li>
+                        <li><strong>Goal Sharing:</strong> Students present their skill development goals</li>
+                        <li><strong>Strength Recognition:</strong> Peer compliments on observed strengths</li>
+                    </ul>
+                </div>
+
+                <h3>📊 Worksheet Assessment</h3>
+                <div class="example-box">
+                    <h4>Look For:</h4>
+                    <ul>
+                        <li>Honest self-assessment across multiple skill areas</li>
+                        <li>Realistic goal setting with concrete action steps</li>
+                        <li>Understanding of how skills connect to job success</li>
+                        <li>Identification of support people and resources</li>
+                    </ul>
+                </div>
+
+                <h3>🔄 Preparing for Day 4</h3>
+                <div class="highlight-box">
+                    Preview: "Tomorrow we'll practice job interviews and learn how to show employers your best self!"
+                </div>
+
+                <div class="goal-setting-visual" style="background: #9C27B0;">
+                    <h3>Today's Success: Students understand their skills and have plans to improve!</h3>
+                </div>
+            </div>
+        </div>
+
+        <!-- DAY 4 SLIDES -->
+        <!-- Slide 15: Day 4 - Learning Goals -->
+        <div class="slide">
+            <h1>Day 4: Interview Skills & Workplace Behavior - Learning Goals</h1>
+            <div class="slide-content">
+                <h2>What Students Will Learn</h2>
+                <div class="bullet-points">
+                    <ul>
+                        <li>Prepare for and participate in job interviews</li>
+                        <li>Practice appropriate responses to common interview questions</li>
+                        <li>Understand professional workplace behavior expectations</li>
+                        <li>Learn to handle workplace challenges appropriately</li>
+                    </ul>
+                </div>
+
+                <h2>Interview Preparation Components</h2>
+                <div class="icons-grid">
+                    <div class="icon-item">
+                        <div class="emoji">👔</div>
+                        <h4>Professional Appearance</h4>
+                        <p>Appropriate dress and grooming</p>
+                    </div>
+                    <div class="icon-item">
+                        <div class="emoji">💬</div>
+                        <h4>Communication Skills</h4>
+                        <p>Eye contact, clear speech, listening</p>
+                    </div>
+                    <div class="icon-item">
+                        <div class="emoji">❓</div>
+                        <h4>Question Preparation</h4>
+                        <p>Practicing answers and asking questions</p>
+                    </div>
+                    <div class="icon-item">
+                        <div class="emoji">🤝</div>
+                        <h4>Professional Behavior</h4>
+                        <p>Respect, honesty, problem-solving</p>
+                    </div>
+                </div>
+
+                <div class="highlight-box">
+                    Today's Focus: Interviews are conversations where you show who you are - be yourself and be prepared!
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 16: Day 4 - Teaching Strategies -->
+        <div class="slide">
+            <h1>Day 4: Teaching Strategies</h1>
+            <div class="slide-content">
+                <h2>Making Interviews Feel Safe and Manageable</h2>
+                
+                <h3>🎭 Progressive Practice Approach</h3>
+                <div class="example-box">
+                    <h4>Building Interview Confidence:</h4>
+                    <ul>
+                        <li><strong>Step 1:</strong> Practice answers with a peer partner (casual setting)</li>
+                        <li><strong>Step 2:</strong> Mock interview with teacher in classroom</li>
+                        <li><strong>Step 3:</strong> "Formal" mock interview in office-like setting</li>
+                        <li><strong>Step 4:</strong> Video record practice (if comfortable) to review</li>
+                    </ul>
+                </div>
+
+                <h3>💼 Scenario-Based Learning</h3>
+                <div class="bullet-points">
+                    <ul>
+                        <li><strong>Act Out Problems:</strong> Role-play each workplace scenario before worksheet</li>
+                        <li><strong>Multiple Solutions:</strong> "What's another way you could handle this?"</li>
+                        <li><strong>Real Consequences:</strong> Discuss what actually happens with poor choices</li>
+                        <li><strong>Success Stories:</strong> Share examples of good problem-solving</li>
+                    </ul>
+                </div>
+
+                <h3>👗 Professional Appearance Practice</h3>
+                <div class="highlight-box">
+                    Bring clothing examples or have a "professional dress" day to practice appropriate work appearance
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 17: Day 4 - Community Connection -->
+        <div class="slide">
+            <h1>Day 4: Community Connection</h1>
+            <div class="slide-content">
+                <h2>Interview Support and Workplace Integration</h2>
+                
+                <div class="community-box">
+                    <h4>Community Opportunities Interview Support</h4>
+                    <ul>
+                        <li><strong>Interview Coaching:</strong> One-on-one preparation and practice</li>
+                        <li><strong>Job Matching:</strong> Finding positions that fit student abilities</li>
+                        <li><strong>Employer Education:</strong> Helping employers understand disability</li>
+                        <li><strong>Ongoing Support:</strong> Job coaching after hiring</li>
+                    </ul>
+                </div>
+
+                <h3>🤝 Building Employer Partnerships</h3>
+                <div class="bullet-points">
+                    <ul>
+                        <li><strong>Mock Interview Panel:</strong> Invite local employers to conduct practice interviews</li>
+                        <li><strong>Employer Education:</strong> Help businesses understand how to interview people with disabilities</li>
+                        <li><strong>Success Stories:</strong> Share examples of successful employee placements</li>
+                        <li><strong>Ongoing Relationships:</strong> Maintain connections with supportive employers</li>
+                    </ul>
+                </div>
+
+                <h3>🏢 Workplace Integration Support</h3>
+                <div class="example-box">
+                    <h4>On-the-Job Support Services:</h4>
+                    <ul>
+                        <li>Job coaching during initial employment period</li>
+                        <li>Coworker training to create natural supports</li>
+                        <li>Problem-solving support for workplace challenges</li>
+                        <li>Career advancement planning and support</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 18: Day 4 - Assessment & Wrap-Up -->
+        <div class="slide">
+            <h1>Day 4: Assessment & Wrap-Up</h1>
+            <div class="slide-content">
+                <h2>Assessing Interview Readiness</h2>
+                
+                <h3>✅ Interview Skills Check</h3>
+                <div class="bullet-points">
+                    <ul>
+                        <li><strong>Mini Mock Interviews:</strong> 5-minute practice sessions with feedback</li>
+                        <li><strong>Scenario Solutions:</strong> Students explain how they'd handle workplace problems</li>
+                        <li><strong>Professional Dress Check:</strong> Students identify appropriate work clothing</li>
+                        <li><strong>Confidence Building:</strong> Students share one thing they're good at</li>
+                    </ul>
+                </div>
+
+                <h3>📊 Worksheet Assessment</h3>
+                <div class="example-box">
+                    <h4>Look For:</h4>
+                    <ul>
+                        <li>Thoughtful responses to practice interview questions</li>
+                        <li>Appropriate solutions to workplace scenario problems</li>
+                        <li>Understanding of professional behavior expectations</li>
+                        <li>Self-reflection on interview preparation needs</li>
+                    </ul>
+                </div>
+
+                <h3>🔄 Preparing for Day 5</h3>
+                <div class="highlight-box">
+                    Preview: "Tomorrow we'll learn about all the helpful services available in our community to support your goals!"
+                </div>
+
+                <div class="goal-setting-visual" style="background: #FF5722;">
+                    <h3>Today's Success: Students are prepared to present themselves professionally in interviews!</h3>
+                </div>
+            </div>
+        </div>
+
+        <!-- DAY 5 SLIDES -->
+        <!-- Slide 19: Day 5 - Learning Goals -->
+        <div class="slide">
+            <h1>Day 5: Community Resources - Learning Goals</h1>
+            <div class="slide-content">
+                <h2>What Students Will Learn</h2>
+                <div class="bullet-points">
+                    <ul>
+                        <li>Identify types of community support services available</li>
+                        <li>Learn how to research and contact service agencies</li>
+                        <li>Practice making professional phone calls for information</li>
+                        <li>Create a personal directory of helpful resources</li>
+                    </ul>
+                </div>
+
+                <h2>Types of Community Support</h2>
+                <div class="icons-grid">
+                    <div class="icon-item">
+                        <div class="emoji">🚌</div>
+                        <h4>Transportation</h4>
+                        <p>Public transit, paratransit, ride programs</p>
+                    </div>
+                    <div class="icon-item">
+                        <div class="emoji">🏠</div>
+                        <h4>Housing</h4>
+                        <p>Affordable housing, independent living support</p>
+                    </div>
+                    <div class="icon-item">
+                        <div class="emoji">⚕️</div>
+                        <h4>Healthcare</h4>
+                        <p>Community health centers, mental health services</p>
+                    </div>
+                    <div class="icon-item">
+                        <div class="emoji">💼</div>
+                        <h4>Employment</h4>
+                        <p>Job placement, vocational rehabilitation</p>
+                    </div>
+                    <div class="icon-item">
+                        <div class="emoji">🍎</div>
+                        <h4>Basic Needs</h4>
+                        <p>Food assistance, financial help</p>
+                    </div>
+                    <div class="icon-item">
+                        <div class="emoji">📚</div>
+                        <h4>Education</h4>
+                        <p>Adult education, skills training</p>
+                    </div>
+                </div>
+
+                <div class="highlight-box">
+                    Today's Focus: Many people and organizations want to help you succeed - learn how to find and use them!
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 20: Day 5 - Teaching Strategies -->
+        <div class="slide">
+            <h1>Day 5: Teaching Strategies</h1>
+            <div class="slide-content">
+                <h2>Building Resource Navigation Skills</h2>
+                
+                <h3>📞 Phone Practice Preparation</h3>
+                <div class="example-box">
+                    <h4>Before Students Make Calls:</h4>
+                    <ul>
+                        <li><strong>Script Practice:</strong> Read through phone scripts together multiple times</li>
+                        <li><strong>Mock Calls:</strong> Practice with teacher or peers before real calls</li>
+                        <li><strong>Information Gathering:</strong> Help students prepare needed personal information</li>
+                        <li><strong>Question Preparation:</strong> Write down questions before calling</li>
+                    </ul>
+                </div>
+
+                <h3>🗺️ Local Resource Mapping</h3>
+                <div class="bullet-points">
+                    <ul>
+                        <li><strong>Visual Community Map:</strong> Show where services are located locally</li>
+                        <li><strong>Transportation Planning:</strong> How would students get to each service?</li>
+                        <li><strong>Real Contact Information:</strong> Use actual phone numbers and addresses</li>
+                        <li><strong>Success Stories:</strong> Share examples of students who used these services</li>
+                    </ul>
+                </div>
+
+                <h3>📋 Making Directory Building Meaningful</h3>
+                <div class="highlight-box">
+                    Help students focus on services they might actually need, not just filling in blanks: "What kind of help might you need next year?"
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 21: Day 5 - Community Connection -->
+        <div class="slide">
+            <h1>Day 5: Community Connection</h1>
+            <div class="slide-content">
+                <h2>Comprehensive Community Support Network</h2>
+                
+                <div class="community-box">
+                    <h4>Community Opportunities Full Service Array</h4>
+                    <ul>
+                        <li><strong>Case Management:</strong> Coordinating all aspects of support</li>
+                        <li><strong>Family Support:</strong> Helping families navigate services</li>
+                        <li><strong>Residential Services:</strong> From group homes to independent living</li>
+                        <li><strong>Day Programs:</strong> Community integration and skill building</li>
+                        <li><strong>Advocacy:</strong> Ensuring people get needed services</li>
+                    </ul>
+                </div>
+
+                <h3>🌐 Building a Support Network</h3>
+                <div class="bullet-points">
+                    <ul>
+                        <li><strong>Service Coordination:</strong> Help students understand how services work together</li>
+                        <li><strong>Transition Planning:</strong> Connect students to adult services before graduation</li>
+                        <li><strong>Family Education:</strong> Help families understand available options</li>
+                        <li><strong>Self-Advocacy Training:</strong> Teach students to speak up for their needs</li>
+                    </ul>
+                </div>
+
+                <h3>📱 Modern Resource Access</h3>
+                <div class="example-box">
+                    <h4>Teaching Digital Navigation:</h4>
+                    <ul>
+                        <li>Using 211 website and phone service</li>
+                        <li>Searching for local services online</li>
+                        <li>Using public transportation apps</li>
+                        <li>Accessing online benefit applications</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 22: Day 5 - Assessment & Wrap-Up -->
+        <div class="slide">
+            <h1>Day 5: Assessment & Wrap-Up</h1>
+            <div class="slide-content">
+                <h2>Assessing Resource Navigation Skills</h2>
+                
+                <h3>✅ Resource Knowledge Check</h3>
+                <div class="bullet-points">
+                    <ul>
+                        <li><strong>Service Matching:</strong> Students connect needs to appropriate resources</li>
+                        <li><strong>Phone Practice:</strong> Students demonstrate calling for information</li>
+                        <li><strong>Directory Review:</strong> Students explain why they chose specific resources</li>
+                        <li><strong>Problem Solving:</strong> "Where would you go if you needed help with..."
+                        </li>
+                    </ul>
+                </div>
+
+                <h3>📊 Worksheet Assessment</h3>
+                <div class="example-box">
+                    <h4>Look For:</h4>
+                    <ul>
+                        <li>Accurate matching of needs to appropriate resources</li>
+                        <li>Completed personal resource directory with relevant services</li>
+                        <li>Understanding of how to contact and access services</li>
+                        <li>Realistic reflection on personal support needs</li>
+                    </ul>
+                </div>
+
+                <h3>🔄 Preparing for Day 6</h3>
+                <div class="highlight-box">
+                    Preview: "Tomorrow we'll put everything together and create your personal plan for independence!"
+                </div>
+
+                <div class="goal-setting-visual" style="background: #607D8B;">
+                    <h3>Today's Success: Students know how to find and access community support when needed!</h3>
+                </div>
+            </div>
+        </div>
+
+        <!-- DAY 6 SLIDES -->
+        <!-- Slide 23: Day 6 - Learning Goals -->
+        <div class="slide">
+            <h1>Day 6: Independence Planning - Learning Goals</h1>
+            <div class="slide-content">
+                <h2>What Students Will Learn</h2>
+                <div class="bullet-points">
+                    <ul>
+                        <li>Understand what independence means in different life areas</li>
+                        <li>Set realistic, achievable goals for their future</li>
+                        <li>Create specific action plans with timelines</li>
+                        <li>Identify support people and resources for each goal</li>
+                    </ul>
+                </div>
+
+                <h2>Areas of Independent Living</h2>
+                <div class="resource-grid">
+                    <div class="resource-card">
+                        <h4>💼 Employment</h4>
+                        <p>Career goals, job skills, financial independence</p>
+                    </div>
+                    <div class="resource-card">
+                        <h4>🏠 Daily Living</h4>
+                        <p>Cooking, cleaning, personal care, home management</p>
+                    </div>
+                    <div class="resource-card">
+                        <h4>🚌 Mobility</h4>
+                        <p>Transportation, getting around the community</p>
+                    </div>
+                    <div class="resource-card">
+                        <h4>👥 Relationships</h4>
+                        <p>Family connections, friendships, social activities</p>
+                    </div>
+                    <div class="resource-card">
+                        <h4>⚕️ Health</h4>
+                        <p>Medical care, mental health, wellness habits</p>
+                    </div>
+                    <div class="resource-card">
+                        <h4>💰 Money</h4>
+                        <p>Budgeting, banking, paying bills, saving</p>
+                    </div>
+                </div>
+
+                <div class="highlight-box">
+                    Today's Focus: Independence means making your own choices and knowing when to ask for help - it's different for everyone!
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 24: Day 6 - Teaching Strategies -->
+        <div class="slide">
+            <h1>Day 6: Teaching Strategies</h1>
+            <div class="slide-content">
+                <h2>Making Goal Setting Concrete and Achievable</h2>
+                
+                <h3>🎯 SMART Goals for Life Skills</h3>
+                <div class="example-box">
+                    <h4>Help Students Make Goals Specific:</h4>
+                    <ul>
+                        <li><strong>Specific:</strong> "Learn to cook" becomes "learn to make 3 simple meals"</li>
+                        <li><strong>Measurable:</strong> "Get better at work" becomes "arrive on time 4 out of 5 days"</li>
+                        <li><strong>Achievable:</strong> Start with what they can accomplish in 3-6 months</li>
+                        <li><strong>Relevant:</strong> Connect to their actual interests and life situation</li>
+                        <li><strong>Time-bound:</strong> "By the end of this school year" or "in 6 months"</li>
+                    </ul>
+                </div>
+
+                <h3>📅 Timeline Reality Check</h3>
+                <div class="bullet-points">
+                    <ul>
+                        <li><strong>Break Down Big Goals:</strong> "Living independently" needs 20+ smaller steps</li>
+                        <li><strong>Next Week Action:</strong> What can they do immediately to start?</li>
+                        <li><strong>Support Identification:</strong> Who will help them with each step?</li>
+                        <li><strong>Obstacle Planning:</strong> What might get in the way and how to handle it?</li>
+                    </ul>
+                </div>
+
+                <h3>📋 Using Previous Assessments</h3>
+                <div class="highlight-box">
+                    Reference their skills checklist from Day 3 to identify priority areas for goal setting and growth
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 25: Day 6 - Community Connection -->
+        <div class="slide">
+            <h1>Day 6: Community Connection</h1>
+            <div class="slide-content">
+                <h2>Transition to Adult Services and Lifelong Support</h2>
+                
+                <div class="community-box">
+                    <h4>Community Opportunities Transition Support</h4>
+                    <ul>
+                        <li><strong>Person-Centered Planning:</strong> Goals based on individual dreams and preferences</li>
+                        <li><strong>Transition Coordination:</strong> Smooth movement from school to adult services</li>
+                        <li><strong>Lifelong Learning:</strong> Ongoing skill development opportunities</li>
+                        <li><strong>Self-Determination:</strong> Training in making choices and directing services</li>
+                    </ul>
+                </div>
+
+                <h3>🌉 Building Transition Partnerships</h3>
+                <div class="bullet-points">
+                    <ul>
+                        <li><strong>IEP Integration:</strong> Align school goals with adult service planning</li>
+                        <li><strong>Family Engagement:</strong> Include families in transition planning process</li>
+                        <li><strong>Service Coordination:</strong> Connect multiple agencies for comprehensive support</li>
+                        <li><strong>Advocacy Training:</strong> Teach students to speak up for their needs and wants</li>
+                    </ul>
+                </div>
+
+                <h3>🎯 Long-Term Success Planning</h3>
+                <div class="example-box">
+                    <h4>Supporting Individual Goals:</h4>
+                    <ul>
+                        <li>Employment goals matched to interests and abilities</li>
+                        <li>Living arrangements that promote maximum independence</li>
+                        <li>Community integration and social connections</li>
+                        <li>Ongoing skill development and personal growth</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 26: Day 6 - Assessment & Celebration -->
+        <div class="slide">
+            <h1>Day 6: Assessment & Celebration</h1>
+            <div class="slide-content">
+                <h2>Celebrating Growth and Planning Next Steps</h2>
+                
+                <h3>🎉 Program Completion Assessment</h3>
+                <div class="bullet-points">
+                    <ul>
+                        <li><strong>Goal Presentation:</strong> Students share their independence plans with the class</li>
+                        <li><strong>Skills Recognition:</strong> Acknowledge growth from Day 1 to Day 6</li>
+                        <li><strong>Resource Review:</strong> Students explain how they'll use community resources</li>
+                        <li><strong>Next Step Commitment:</strong> Each student commits to one action this week</li>
+                    </ul>
+                </div>
+
+                <h3>📊 Comprehensive Assessment</h3>
+                <div class="example-box">
+                    <h4>Look For:</h4>
+                    <ul>
+                        <li>Realistic and specific goals across multiple life areas</li>
+                        <li>Concrete action plans with identified support people</li>
+                        <li>Understanding of the connection between skills, employment, and independence</li>
+                        <li>Confidence in ability to access help and resources when needed</li>
+                    </ul>
+                </div>
+
+                <h3>🏆 Celebrating Success</h3>
+                <div class="goal-setting-visual">
+                    <h3>🎊 Program Completion Celebration! 🎊</h3>
+                    <div class="goal-steps">
+                        <div class="goal-step">Self-Awareness</div>
+                        <div class="goal-step">Goal Setting</div>
+                        <div class="goal-step">Resource Knowledge</div>
+                        <div class="goal-step">Action Planning</div>
+                    </div>
+                </div>
+
+                <div class="highlight-box">
+                    Every student is now equipped with knowledge, skills, and connections to work toward their independence goals!
+                </div>
+            </div>
+        </div>
+
+        <!-- Final Implementation Slide -->
+        <div class="slide">
+            <h1>Program Implementation Success</h1>
+            <div class="slide-content">
+                <h2>You've Created Something Powerful</h2>
+                
+                <div class="goal-setting-visual">
+                    <h3>What Your Students Have Gained:</h3>
+                    <div style="background: white; color: #4CAF50; padding: 20px; border-radius: 15px; margin: 20px 0;">
+                        <div class="bullet-points" style="background: transparent;">
+                            <ul style="font-size: 1.3em;">
+                                <li>Knowledge of employment support services and how to access them</li>
+                                <li>Understanding of local job opportunities and requirements</li>
+                                <li>Self-awareness of personal skills and areas for growth</li>
+                                <li>Confidence in interview and workplace behavior skills</li>
+                                <li>Ability to navigate community resources independently</li>
+                                <li>Realistic, actionable plans for their future independence</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <h2>Continuing the Journey</h2>
+                <div class="example-box">
+                    <h4>Next Steps for Teachers:</h4>
+                    <ul>
+                        <li>Follow up on student goals monthly</li>
+                        <li>Maintain connections with Community Opportunities and other local services</li>
+                        <li>Share student success stories to build program support</li>
+                        <li>Continue developing employer partnerships</li>
+                        <li>Adapt materials based on student feedback and outcomes</li>
+                    </ul>
+                </div>
+
+                <div class="highlight-box">
+                    Remember: You've given your students tools for lifelong success and the confidence to use them!
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="slide-counter">
+        <span id="current-slide">1</span> / <span id="total-slides">28</span>
+    </div>
+
+    <div class="navigation">
+        <button class="nav-btn" id="prev-btn" onclick="previousSlide()">← Previous</button>
+        <button class="nav-btn" id="next-btn" onclick="nextSlide()">Next →</button>
     </div>
 
     <script>
@@ -274,22 +1415,42 @@
         const slides = document.querySelectorAll('.slide');
         const totalSlides = slides.length;
 
-        document.getElementById('total').textContent = totalSlides;
+        document.getElementById('total-slides').textContent = totalSlides;
 
         function showSlide(n) {
             slides[currentSlide].classList.remove('active');
             currentSlide = (n + totalSlides) % totalSlides;
             slides[currentSlide].classList.add('active');
             
-            document.getElementById('current').textContent = currentSlide + 1;
+            document.getElementById('current-slide').textContent = currentSlide + 1;
             
-            document.getElementById('prevBtn').disabled = currentSlide === 0;
-            document.getElementById('nextBtn').disabled = currentSlide === totalSlides - 1;
+            // Update navigation buttons
+            document.getElementById('prev-btn').disabled = currentSlide === 0;
+            document.getElementById('next-btn').disabled = currentSlide === totalSlides - 1;
         }
 
-        function changeSlide(direction) {
-            showSlide(currentSlide + direction);
+        function nextSlide() {
+            if (currentSlide < totalSlides - 1) {
+                showSlide(currentSlide + 1);
+            }
         }
+
+        function previousSlide() {
+            if (currentSlide > 0) {
+                showSlide(currentSlide - 1);
+            }
+        }
+
+        // Keyboard navigation
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                e.preventDefault();
+                nextSlide();
+            } else if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                previousSlide();
+            }
+        });
 
         // Initialize
         showSlide(0);
