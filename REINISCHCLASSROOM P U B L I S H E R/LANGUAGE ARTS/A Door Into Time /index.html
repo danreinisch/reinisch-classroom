@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>A Door Into Time - Weekly Presentations</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      background: #f5f5f5;
+      padding: 2rem 1rem;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 2rem;
+      color: #2c3e50;
+      font-size: 2.5rem;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1.5rem;
+      margin-top: 2rem;
+    }
+    .card {
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      transition: transform 0.2s, box-shadow 0.2s;
+      display: flex;
+      flex-direction: column;
+    }
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    }
+    .card-image {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    .card-content {
+      padding: 1.5rem;
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    .card-week {
+      font-size: 0.875rem;
+      color: #667eea;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+    .card-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #2c3e50;
+      margin-bottom: 0.5rem;
+      line-height: 1.4;
+    }
+    .card-date {
+      font-size: 0.875rem;
+      color: #7f8c8d;
+      margin-bottom: 1rem;
+    }
+    .card-summary {
+      font-size: 0.9375rem;
+      color: #555;
+      margin-bottom: 1rem;
+      flex-grow: 1;
+    }
+    .card-link {
+      display: inline-block;
+      padding: 0.75rem 1.5rem;
+      background: #667eea;
+      color: white;
+      text-decoration: none;
+      border-radius: 4px;
+      text-align: center;
+      font-weight: 500;
+      transition: background 0.2s;
+    }
+    .card-link:hover {
+      background: #5568d3;
+    }
+    .error {
+      background: #fee;
+      border: 1px solid #fcc;
+      border-radius: 4px;
+      padding: 1rem;
+      color: #c33;
+      text-align: center;
+    }
+    .loading {
+      text-align: center;
+      padding: 2rem;
+      color: #7f8c8d;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>A Door Into Time</h1>
+    <div id="content" class="loading">Loading presentations...</div>
+  </div>
+
+  <script>
+    (async function() {
+      const contentEl = document.getElementById('content');
+      
+      try {
+        const response = await fetch('presentations.json');
+        if (!response.ok) {
+          throw new Error(`Failed to load presentations: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        const items = data.items || [];
+        
+        if (items.length === 0) {
+          contentEl.innerHTML = '<p class="loading">No presentations available yet.</p>';
+          return;
+        }
+        
+        // Sort by week descending (newest first) for display
+        const sorted = [...items].sort((a, b) => b.week - a.week);
+        
+        const grid = document.createElement('div');
+        grid.className = 'grid';
+        
+        sorted.forEach(item => {
+          const card = document.createElement('div');
+          card.className = 'card';
+          
+          const hasHero = item.hero && item.hero.trim() !== '';
+          
+          card.innerHTML = `
+            ${hasHero ? `<img src="${item.hero}" alt="${item.title}" class="card-image" onerror="this.style.display='none'">` : '<div class="card-image"></div>'}
+            <div class="card-content">
+              <div class="card-week">Week ${item.week}</div>
+              <div class="card-title">${item.title}</div>
+              <div class="card-date">${item.date}</div>
+              ${item.summary ? `<div class="card-summary">${item.summary}</div>` : ''}
+              <a href="${item.page}" class="card-link">View Presentation</a>
+            </div>
+          `;
+          
+          grid.appendChild(card);
+        });
+        
+        contentEl.innerHTML = '';
+        contentEl.appendChild(grid);
+        
+      } catch (error) {
+        contentEl.innerHTML = `<div class="error">Error loading presentations: ${error.message}</div>`;
+        console.error('Failed to load presentations:', error);
+      }
+    })();
+  </script>
+</body>
+</html>
