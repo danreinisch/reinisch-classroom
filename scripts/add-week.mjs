@@ -35,11 +35,11 @@ function parseArgs() {
   for (let i = 0; i < args.length; i++) {
     if (args[i].startsWith('--')) {
       const key = args[i].substring(2);
-      const value = args[i + 1];
-      if (!value || value.startsWith('--')) {
+      if (i + 1 >= args.length) {
         console.error(`Missing value for argument: ${args[i]}`);
         process.exit(1);
       }
+      const value = args[i + 1];
       parsed[key] = value;
       i++;
     }
@@ -123,7 +123,7 @@ async function main() {
     if (error.code === 'ENOENT') {
       console.log('presentations.json not found, creating new file...');
       presentations = {
-        series: path.basename(seriesDir),
+        series: path.basename(seriesDir).trim(),
         items: []
       };
     } else {
