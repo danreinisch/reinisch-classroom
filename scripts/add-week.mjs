@@ -25,6 +25,18 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT = process.cwd();
 
+// HTML escape function to prevent XSS
+function escapeHtml(text) {
+  const map = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  };
+  return text.replace(/[&<>"']/g, m => map[m]);
+}
+
 // Parse command line arguments
 function parseArgs(args) {
   const parsed = {};
@@ -82,8 +94,8 @@ async function main() {
   }
   
   const weekNum = parseInt(args.week, 10);
-  if (isNaN(weekNum) || weekNum < 1) {
-    console.error('Error: --week must be a positive integer');
+  if (isNaN(weekNum) || weekNum < 1 || weekNum > 52) {
+    console.error('Error: --week must be a positive integer between 1 and 52');
     process.exit(1);
   }
   
@@ -192,12 +204,13 @@ async function main() {
   
   // Create index.html if it doesn't exist
   if (!(await fileExists(weekIndexPath))) {
+    const escapedTitle = escapeHtml(title);
     const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${title}</title>
+  <title>${escapedTitle}</title>
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -214,7 +227,7 @@ async function main() {
   </style>
 </head>
 <body>
-  <h1>${title}</h1>
+  <h1>${escapedTitle}</h1>
   <p>Drop your background images into <code>img/</code> and replace this page with your actual presentation markup.</p>
 </body>
 </html>

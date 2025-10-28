@@ -125,7 +125,7 @@
           hero.src = item.hero || '';
           hero.alt = item.title || '';
           hero.onerror = function() {
-            // Show gradient background if image fails to load
+            // Hide broken image; gradient background is already shown via CSS
             this.style.display = 'none';
           };
           
