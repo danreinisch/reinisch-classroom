@@ -1,0 +1,7 @@
+[build]
+  publish = "site"
+  functions = "netlify/functions"
+
+# Optional: ensure Functions use Node 18+ (Netlify default is fine)
+[functions]
+  node_bundler = "esbuild"
