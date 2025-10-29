@@ -6,7 +6,7 @@
       h1, h2, h3, h4 { text-align: center; line-height: 1.2; margin: 0.6em 0; }
       /* Back button styles (clear and accessible) */
       .back-nav { display: flex; justify-content: center; margin: 0.5rem 0 1rem; }
-      .back-button { display: inline-flex; align-items: center; gap:.5rem; padding:.6rem 1rem; border:1px solid #1a73e8; border-radius:.5rem; background:#1a73e8; color:#ffffff; text-decoration:none }
+      .back-button { display: inline-flex; align-items: center; gap:.5rem; padding:.6rem 1rem; border:1px solid #1a73e8; border-radius:.5rem; background:#1a73e8; color:#ffffff; text-decoration:none; transition: filter .15s }
       .back-button:hover { filter: brightness(1.05); }
 
       /* Background video and overlay (duplicated here as a safety net if CSS fails to load) */
@@ -33,6 +33,17 @@
         background:rgba(255,255,255,.22);
         transform: translateY(-1px);
       }
+
+      /* Admin link (top-right on home page) */
+      .admin-link{
+        position:fixed; top:1rem; right:1rem; z-index:1000;
+        color:#fff; background:rgba(255,255,255,.12);
+        border:1px solid rgba(255,255,255,.25);
+        padding:.6rem 1rem; border-radius:.6rem; text-decoration:none;
+        backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+        transition:background .2s, transform .2s;
+      }
+      .admin-link:hover{ background:rgba(255,255,255,.22); transform:translateY(-1px); }
     `;
     const style = document.createElement('style');
     style.id = 'copilot-inline-site-css';
@@ -108,7 +119,6 @@
 
   // Inject a full-bleed background video behind the content
   function injectBackgroundVideo() {
-    // Respect reduced-motion
     if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     if (document.querySelector('.bg-video')) return; // already present
 
@@ -125,7 +135,6 @@
     s.src = src; s.type = 'video/mp4';
     v.appendChild(s);
 
-    // Insert before the static .bg so the z-index stack is clean
     var bg = document.querySelector('.bg');
     if (bg && bg.parentNode) {
       bg.parentNode.insertBefore(v, bg);
@@ -139,12 +148,10 @@
       document.body.insertBefore(overlay2, document.body.firstChild.nextSibling);
     }
 
-    // Robust looping and autoplay kick
     v.addEventListener('ended', function(){ this.currentTime = 0; this.play().catch(function(){}) });
     v.play && v.play().catch(function(){});
   }
 
-  // NEW: Add quick links to home pages for Math Toolkit and Teacher Tools
   function addHomeQuickLinks() {
     const p = location.pathname.replace(/index\.html$/i, '');
     const isRootHome = (p === '/' || p === '');
@@ -152,19 +159,15 @@
 
     if (!isRootHome && !isSubSiteHome) return;
 
-    // Determine relative base path
     const relativePath = isRootHome ? 'site/' : './';
 
-    // Avoid duplicates if links already exist anywhere on the page
     const hasMT = !!document.querySelector('a[href*="math-toolkit"]');
     const hasTT = !!document.querySelector('a[href*="teacher-tools"]');
     if (hasMT && hasTT) return;
 
-    // Try to find the .buttons grid first (for /site/ home)
     const buttonsGrid = document.querySelector('.buttons');
     
     if (buttonsGrid) {
-      // Append directly to the .buttons grid as btn elements
       if (!hasMT) {
         const a = document.createElement('a');
         a.className = 'btn';
@@ -182,7 +185,6 @@
         buttonsGrid.appendChild(a);
       }
     } else {
-      // Fallback: create a separate bar if .buttons doesn't exist (e.g., on root home)
       const container =
         document.querySelector('.centered nav') ||
         document.querySelector('main nav') ||
@@ -193,7 +195,6 @@
 
       const bar = document.createElement('div');
       bar.className = 'home-quick-links';
-      // Build anchors only if missing to avoid duplication
       const parts = [];
       if (!hasMT) {
         const a = document.createElement('a');
@@ -215,13 +216,28 @@
 
       parts.forEach(a => bar.appendChild(a));
 
-      // Insert near the top of main content
       if (container.firstChild) {
         container.insertBefore(bar, container.firstChild.nextSibling);
       } else {
         container.appendChild(bar);
       }
     }
+  }
+
+  // NEW: Add an Admin link at top-right on home page
+  function addAdminLink() {
+    const p = location.pathname.replace(/index\.html$/i, '');
+    const isRootHome = (p === '/' || p === '');
+    const isSubSiteHome = (p === '/site/' || p === '/site');
+    if (!isRootHome && !isSubSiteHome) return;
+    if (document.querySelector('.admin-link')) return;
+
+    const a = document.createElement('a');
+    a.className = 'admin-link';
+    a.href = '/admin/';
+    a.textContent = 'Admin';
+    a.setAttribute('aria-label', 'Open Admin Uploader');
+    document.body.appendChild(a);
   }
 
   function init() {
@@ -231,7 +247,8 @@
     insertBackButton(section);
     centerHeadings();
     updateADITLinks();
-    addHomeQuickLinks(); // <- ensure buttons appear on home pages
+    addHomeQuickLinks();
+    addAdminLink();
   }
 
   if (document.readyState === 'loading') {
