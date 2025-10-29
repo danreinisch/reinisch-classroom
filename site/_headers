@@ -3,3 +3,13 @@
 
 /life-skills/presentations/presentation-03/index.html
   Content-Type: text/html; charset=utf-8
+
+# Admin UI (only this path is protected)
+# Username: dreinisch
+# Password: Tool462
+/admin/*
+  Basic-Auth: dreinisch:Tool462
+
+# Function endpoint (double-protect the deploy API)
+/.netlify/functions/incremental-deploy
+  Basic-Auth: dreinisch:Tool462
