@@ -19,7 +19,7 @@
     input[type=file]{display:block;width:100%;padding:10px;border-radius:8px;border:1px dashed rgba(255,255,255,.3);background:rgba(255,255,255,.06);color:#fff}
     button{margin-top:16px;padding:10px 16px;border-radius:10px;border:1px solid var(--accent1);background:linear-gradient(180deg,var(--accent1),var(--accent2));color:#fff;cursor:pointer}
     .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    .log{margin-top:16px;background:#0e1629;border:1px solid rgba(255,255,255,.14);border-radius:10px;padding:10px;height:200px;overflow:auto;font:12px ui-monospace,Menlo,Consolas,monospace;color:#dbeafe;white-space:pre-wrap}
+    .log{margin-top:16px;background:#0e1629;border:1px solid rgba(255,255,255,.14);border-radius:10px;padding:10px;height:220px;overflow:auto;font:12px ui-monospace,Menlo,Consolas,monospace;color:#dbeafe;white-space:pre-wrap}
     small{color:var(--muted)}
     .hstack{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
   </style>
@@ -33,7 +33,6 @@
       <div>
         <label for="cat">Category</label>
         <select id="cat">
-          <!-- Values MUST be IDs recognized by the function -->
           <option value="toolkit">Language Arts Toolkit</option>
           <option value="adit">A Door Into Time</option>
           <option value="lik">Lost in Kragdon-ah</option>
@@ -75,84 +74,90 @@
 
 <script>
 (function(){
-  // Category metadata (IDs must match what the function expects)
   const catMeta = {
-    toolkit: { slots: 8,  baseOut: 'language-arts/toolkit/presentations', section: 'language-arts', back: '/language-arts/toolkit/index.html' },
-    adit:    { slots: 16, baseOut: 'presentations/a-door-into-time',      section: 'language-arts', back: '/language-arts/a-door-into-time/index.html' },
-    lik:     { slots: 16, baseOut: 'presentations/lost-in-kragdon-ah',     section: 'language-arts', back: '/language-arts/lost-in-kragdon-ah/index.html' },
-    rfk:     { slots: 16, baseOut: 'presentations/return-from-kragdon-ah', section: 'language-arts', back: '/language-arts/return-from-kragdon-ah/index.html' },
-    wok:     { slots: 16, baseOut: 'presentations/warrior-of-kragdon-ah',  section: 'language-arts', back: '/language-arts/warrior-of-kragdon-ah/index.html' },
-    life:    { slots: 32, baseOut: 'life-skills/presentations',            section: 'life-skills',   back: '/life-skills/index.html' }
+    toolkit: { slots: 8 }, adit:{ slots:16 }, lik:{ slots:16 }, rfk:{ slots:16 }, wok:{ slots:16 }, life:{ slots:32 }
   };
 
-  // Helper logging
-  function log(){ const el = document.getElementById('log'); el.textContent += Array.from(arguments).join(' ') + '\n'; el.scrollTop = el.scrollHeight; }
+  function log(){ const el = document.getElementById('log'); el.textContent += Array.from(arguments).join(' ') + '\\n'; el.scrollTop = el.scrollHeight; }
 
-  // Fetch current state (or initialize)
   async function loadState(){
     try{
-      const res = await fetch('/assets/data/site-state.json', { cache: 'no-store' });
+      const res = await fetch('/assets/data/site-state.json', { cache:'no-store' });
       if(!res.ok) throw new Error('missing');
       return await res.json();
     }catch{
-      return { version:'v1', updated:'', categories:Object.fromEntries(Object.entries(catMeta).map(([id,m])=>[id,{slots:m.slots,titles:[],links:[]}])) };
+      return { version:'v1', updated:'', categories:{
+        toolkit:{slots:8,titles:[],links:[]}, adit:{slots:16,titles:[],links:[]}, lik:{slots:16,titles:[],links:[]},
+        rfk:{slots:16,titles:[],links:[]}, wok:{slots:16,titles:[],links:[]}, life:{slots:32,titles:[],links:[]}
+      }};
     }
   }
 
-  // Fill slot selector with titles and mark first empty
   function fillSlots(catId, state){
     const sel = document.getElementById('slot'); sel.innerHTML = '';
-    const total = catMeta[catId].slots;
-    const titles = state.categories[catId]?.titles || [];
+    const total = catMeta[catId].slots; const titles = state.categories[catId]?.titles || [];
     let firstEmpty = 1;
     for(let i=1;i<=total;i++){
-      const title = titles[i-1] || '';
-      if(!title && firstEmpty===1) firstEmpty = i;
+      const t = titles[i-1] || '';
+      if(!t && firstEmpty===1) firstEmpty = i;
       const opt = document.createElement('option');
       opt.value = String(i);
-      opt.textContent = '#'+String(i).padStart(2,'0') + (title ? ` — ${title}` : ' (empty)');
+      opt.textContent = '#'+String(i).padStart(2,'0') + (t?` — ${t}`:' (empty)');
       sel.appendChild(opt);
     }
     sel.value = String(firstEmpty);
     document.getElementById('slotHelp').textContent = 'First empty suggested. You can override.';
   }
 
-  // Path within folder selection
   function relPath(file){
     if(file.webkitRelativePath){
       const parts = file.webkitRelativePath.split('/');
-      return parts.slice(1).join('/'); // drop the top-level folder name
+      return parts.slice(1).join('/'); // drop top folder
     }
     return file.name;
   }
 
-  // Encode file as base64 (chunk-safe)
   async function toBase64(file){
-    const buf = await file.arrayBuffer();
-    let binary=''; const bytes = new Uint8Array(buf); const chunk=0x8000;
-    for(let i=0;i<bytes.length;i+=chunk){ binary += String.fromCharCode.apply(null, bytes.subarray(i, i+chunk)); }
+    const buf = await file.arrayBuffer(); let binary=''; const bytes=new Uint8Array(buf), chunk=0x8000;
+    for(let i=0;i<bytes.length;i+=chunk){ binary += String.fromCharCode.apply(null, bytes.subarray(i,i+chunk)); }
     return btoa(binary);
   }
 
-  // Compute approximate request payload size
-  function approxPayloadSize(files){
-    // base64 adds ~33%, plus JSON overhead; rough estimate
-    const totalBytes = files.reduce((s,f)=> s + (f.size || 0), 0);
-    const inflated = Math.round(totalBytes * 1.35);
-    return inflated;
-  }
-  function prettySize(bytes){
-    if(bytes > 1024*1024) return (bytes/1024/1024).toFixed(1)+' MB';
-    if(bytes > 1024) return (bytes/1024).toFixed(1)+' KB';
-    return bytes + ' B';
+  // Estimate base64 payload size (~+37% with overhead)
+  function estimateB64Size(bytes){ return Math.floor(bytes * 1.37); }
+  function prettySize(bytes){ return bytes>1024*1024 ? (bytes/1048576).toFixed(1)+' MB' : (bytes/1024).toFixed(1)+' KB'; }
+
+  // Plan batches so each POST stays well under common limits (~3 MB target)
+  function planBatches(files, targetBytes=3*1024*1024){
+    const batches=[]; let current=[]; let used=0;
+    for(const f of files){
+      const est = estimateB64Size(f.size||0);
+      if(est > targetBytes){ // huge single file: put alone
+        if(current.length) { batches.push(current); current=[]; used=0; }
+        batches.push([f]); continue;
+      }
+      if(used + est > targetBytes && current.length){ batches.push(current); current=[f]; used=est; }
+      else { current.push(f); used += est; }
+    }
+    if(current.length) batches.push(current);
+    return batches;
   }
 
-  // Optional: preflight GET to the function (harmless if not protected)
-  async function preflightFunctionAuth(){
-    try { await fetch('/.netlify/functions/incremental-deploy', { method:'GET', cache:'no-store' }); } catch {}
+  function gatherChosenFiles(folderEl, filesEl, bgsEl){
+    const main = [];
+    if(folderEl.files?.length){ for(const f of folderEl.files) main.push({ file:f, path: relPath(f) }); }
+    else if(filesEl.files?.length){ for(const f of filesEl.files) main.push({ file:f, path: f.name }); }
+    const extras = [];
+    if(bgsEl.files?.length){ for(const f of bgsEl.files) extras.push({ file:f, path:'assets/images/'+f.name }); }
+    return { main, extras };
   }
 
-  // Initialize UI and handlers
+  function approxTotalBytes(main, extras){
+    const all = [...main, ...extras];
+    const raw = all.reduce((s,x)=> s + (x.file.size||0), 0);
+    return estimateB64Size(raw);
+  }
+
   async function run(){
     const state = await loadState();
     const catEl = document.getElementById('cat');
@@ -163,89 +168,90 @@
     const bgsEl    = document.getElementById('bgs');
     const sizeHint = document.getElementById('sizeHint');
 
-    // Populate slots for initial category and on change
     fillSlots(catEl.value, state);
     catEl.addEventListener('change', ()=> fillSlots(catEl.value, state));
 
-    // Show approximate payload size as user selects
     function updateSizeHint(){
-      const combined = [];
-      if(folderEl.files?.length){ for(const f of folderEl.files) combined.push(f); }
-      if(filesEl.files?.length){ for(const f of filesEl.files) combined.push(f); }
-      if(bgsEl.files?.length){ for(const f of bgsEl.files) combined.push(f); }
-      const bytes = approxPayloadSize(combined);
-      sizeHint.textContent = combined.length ? `Approx upload size: ${prettySize(bytes)} (${combined.length} files)` : '';
+      const { main, extras } = gatherChosenFiles(folderEl, filesEl, bgsEl);
+      const est = approxTotalBytes(main, extras);
+      const count = main.length + extras.length;
+      sizeHint.textContent = count ? `Approx upload size: ${prettySize(est)} (${count} files)` : '';
     }
     folderEl.addEventListener('change', updateSizeHint);
     filesEl.addEventListener('change', updateSizeHint);
     bgsEl.addEventListener('change', updateSizeHint);
 
     document.getElementById('go').addEventListener('click', async ()=>{
-      const rawCat = (catEl.value || '').trim();
-      const cat = rawCat.toLowerCase(); // must be one of toolkit/adit/lik/rfk/wok/life
+      const category = (catEl.value||'').trim().toLowerCase();
       const slot = Number(slotEl.value);
-      const title = (titleEl.value || '').trim();
-
-      const folderFiles = folderEl.files || [];
-      const pickedFiles = filesEl.files || [];
-      const usingFolder = folderFiles.length > 0;
-      const usingFiles  = pickedFiles.length > 0;
-
-      if(!usingFolder && !usingFiles) return log('Please choose a presentation folder (preferred) or select files.');
+      const title = (titleEl.value||'').trim();
+      if(!category || !catMeta[category]) return log('Invalid category selection.');
+      if(!slot || slot<1 || slot>catMeta[category].slots) return log('Invalid slot number for category.');
       if(!title) return log('Please enter a title.');
-      if(!catMeta[cat]) return log('Invalid category id selected:', cat);
 
-      // Build outgoing files list
-      const outgoing = [];
-      if(usingFolder){
-        for(const f of folderFiles){
-          outgoing.push({ path: relPath(f), base64: await toBase64(f) });
+      const { main, extras } = gatherChosenFiles(folderEl, filesEl, bgsEl);
+      if(main.length===0 && extras.length===0) return log('Please choose a folder or select files.');
+
+      // Build batches from MAIN files first (preserve folder structure if provided)
+      const mainFiles = main.map(x=>x.file);
+      const batches = planBatches(mainFiles, 3*1024*1024);
+      const totalBatches = batches.length + (extras.length ? 1 : 0);
+
+      log('[debug] category=', category, 'slot=', slot, 'titleLen=', title.length, 'main=', main.length, 'extras=', extras.length, 'batches=', totalBatches);
+
+      let lastDeployUrl = null, lastDeployId = null;
+
+      // Send batches sequentially (merge=true so the function keeps prior batch files)
+      for(let i=0; i<batches.length; i++){
+        const group = batches[i];
+        log(`Sending batch ${i+1} of ${totalBatches} (${group.length} file[s])...`);
+        const payloadFiles = [];
+        for(const f of group){
+          const p = relPath(f);
+          payloadFiles.push({ path: p, base64: await toBase64(f) });
         }
-      }else{
-        // fallback: no subfolders preserved
-        for(const f of pickedFiles){
-          outgoing.push({ path: f.name, base64: await toBase64(f) });
-        }
-      }
-      for(const f of (bgsEl.files || [])){
-        outgoing.push({ path: 'assets/images/' + f.name, base64: await toBase64(f) });
-      }
-
-      // Debug info prior to sending
-      log('[debug] category=', cat, 'slot=', slot, 'titleLen=', title.length, 'files=', outgoing.length);
-
-      // Preflight GET (no-op if not protected)
-      await preflightFunctionAuth();
-
-      // POST to the function
-      log(`Uploading ${outgoing.length} file(s)...`);
-      let res, text = '';
-      try{
-        res = await fetch('/.netlify/functions/incremental-deploy', {
+        const res = await fetch('/.netlify/functions/incremental-deploy', {
           method:'POST',
           headers:{ 'Content-Type':'application/json' },
-          body: JSON.stringify({ category: cat, slot, title, files: outgoing })
+          body: JSON.stringify({ category, slot, title, files: payloadFiles, merge: true })
         });
-        text = await res.text();
-      }catch(e){
-        return log('Network error:', e && e.message ? e.message : String(e));
+        const text = await res.text().catch(()=> '');
+        let detail = ''; try { detail = JSON.parse(text)?.message || ''; } catch { detail = text?.slice(0,500); }
+        if(!res.ok){ log('Deploy error (batch', i+1, '):', res.status, detail || res.statusText || '(no detail)'); return; }
+        try {
+          const json = JSON.parse(text||'{}');
+          lastDeployUrl = json.deploy_url || lastDeployUrl;
+          lastDeployId  = json.deploy_id  || lastDeployId;
+        } catch {}
       }
 
-      // Parse response
-      let detail = '';
-      try{ detail = JSON.parse(text)?.message || ''; }catch{ detail = text?.slice(0,500); }
-
-      if(res.ok){
-        let json = {};
-        try{ json = JSON.parse(text || '{}'); }catch{}
-        log('Success! Deployed:', json.deploy_url || '(no url)', 'deploy_id=', json.deploy_id || '(n/a)');
-      }else{
-        log('Deploy error:', res.status, detail || res.statusText || '(no detail)');
+      // Send EXTRAS (backgrounds) as last batch if any
+      if(extras.length){
+        log(`Sending backgrounds batch (${extras.length} file[s])...`);
+        const payloadFiles = [];
+        for(const x of extras){
+          payloadFiles.push({ path: x.path, base64: await toBase64(x.file) });
+        }
+        const res = await fetch('/.netlify/functions/incremental-deploy', {
+          method:'POST',
+          headers:{ 'Content-Type':'application/json' },
+          body: JSON.stringify({ category, slot, title, files: payloadFiles, merge: true })
+        });
+        const text = await res.text().catch(()=> '');
+        let detail = ''; try { detail = JSON.parse(text)?.message || ''; } catch { detail = text?.slice(0,500); }
+        if(!res.ok){ log('Deploy error (backgrounds):', res.status, detail || res.statusText || '(no detail)'); return; }
+        try {
+          const json = JSON.parse(text||'{}');
+          lastDeployUrl = json.deploy_url || lastDeployUrl;
+          lastDeployId  = json.deploy_id  || lastDeployId;
+        } catch {}
       }
+
+      log('Success! Last deploy:', lastDeployUrl || '(no url)', 'deploy_id=', lastDeployId || '(n/a)');
     });
   }
 
-  run().catch(err => log('Init error:', err && err.message ? err.message : String(err)));
+  run().catch(err => log('Init error:', err?.message || String(err)));
 })();
 </script>
 </body>
