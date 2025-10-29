@@ -1,0 +1,12 @@
+{
+  "version": "v1",
+  "updated": "",
+  "categories": {
+    "toolkit": { "slots": 8,  "titles": [], "links": [] },
+    "adit":    { "slots": 16, "titles": [], "links": [] },
+    "lik":     { "slots": 16, "titles": [], "links": [] },
+    "rfk":     { "slots": 16, "titles": [], "links": [] },
+    "wok":     { "slots": 16, "titles": [], "links": [] },
+    "life":    { "slots": 32, "titles": [], "links": [] }
+  }
+}
