@@ -12,14 +12,14 @@
     input[type=file]{display:block;width:100%;padding:10px;border-radius:8px;border:1px dashed rgba(255,255,255,.3);background:rgba(255,255,255,.06);color:#fff}
     button{margin-top:16px;padding:10px 16px;border-radius:10px;border:1px solid #60a5fa;background:linear-gradient(180deg,#60a5fa,#2563eb);color:#fff;cursor:pointer}
     .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    .log{margin-top:16px;background:#0e1629;border:1px solid rgba(255,255,255,.14);border-radius:10px;padding:10px;height:160px;overflow:auto;font:12px ui-monospace,Menlo,Consolas,monospace;color:#dbeafe}
+    .log{margin-top:16px;background:#0e1629;border:1px solid rgba(255,255,255,.14);border-radius:10px;padding:10px;height:160px;overflow:auto;font:12px ui-monospace,Menlo,Consolas,monospace;color:#dbeafe;white-space:pre-wrap}
     small{color:#b8c1d9}
   </style>
 </head>
 <body>
   <div class="wrap">
     <h1>Admin Uploader</h1>
-    <p>Upload a new presentation/module without re-uploading the whole site.</p>
+    <p>Select the presentation folder (preferred). If your browser won’t allow folder selection, use “Select files (fallback)”.</p>
 
     <div class="row">
       <div>
@@ -43,9 +43,13 @@
     <label>Title</label>
     <input id="title" type="text" placeholder="Presentation title"/>
 
-    <label>Presentation folder</label>
+    <label>Presentation folder (preferred)</label>
     <input id="folder" type="file" webkitdirectory directory multiple />
-    <small>Choose the folder for this presentation. The index.html (if present) will be auto-linked.</small>
+    <small>Tip: In the chooser, go up one level and click the presentation folder name once (don’t open it), then Choose.</small>
+
+    <label>Or select files (fallback)</label>
+    <input id="files" type="file" multiple />
+    <small>If you use this, make sure all presentation files are selected. Subfolders won’t be captured.</small>
 
     <label>Optional background image(s) to add/replace</label>
     <input id="bgs" type="file" multiple accept="image/*"/>
@@ -106,25 +110,37 @@ async function run(){
   const state=await loadState(); const catEl=document.getElementById('cat');
   fillSlots(catEl.value,state); catEl.addEventListener('change',()=>fillSlots(catEl.value,state));
 
+  const folderEl = document.getElementById('folder');
+  const filesEl  = document.getElementById('files');
+  const bgsEl    = document.getElementById('bgs');
+
   document.getElementById('go').addEventListener('click', async ()=>{
     const cat=document.getElementById('cat').value;
     const slot=Number(document.getElementById('slot').value);
     const title=document.getElementById('title').value.trim();
-    const folder=document.getElementById('folder').files;
-    const bgs=document.getElementById('bgs').files;
 
-    if(!folder || folder.length===0) return log('Please choose a presentation folder.');
+    const folderFiles = folderEl.files || [];
+    const pickedFiles = filesEl.files || [];
+    const usingFolder = folderFiles.length > 0;
+    const usingFiles  = pickedFiles.length > 0;
+
+    if(!usingFolder && !usingFiles) return log('Please choose a presentation folder (preferred) or select files.');
     if(!title) return log('Please enter a title.');
 
-    log('Preparing files...');
-    const files=[];
-    for(const f of folder) files.push({ path: relPath(f), base64: await toBase64(f) });
-    for(const f of bgs) files.push({ path: 'assets/images/' + f.name, base64: await toBase64(f) });
+    const all = [];
+    if(usingFolder){
+      for(const f of folderFiles) all.push({ path: relPath(f), base64: await toBase64(f) });
+    } else {
+      // Fallback: no subfolder structure captured; files go into the slot root
+      for(const f of pickedFiles) all.push({ path: f.name, base64: await toBase64(f) });
+    }
+    for(const f of (bgsEl.files||[])) all.push({ path: 'assets/images/' + f.name, base64: await toBase64(f) });
 
+    log(`Uploading ${all.length} file(s)...`);
     const res=await fetch('/.netlify/functions/incremental-deploy', {
       method:'POST',
       headers:{ 'Content-Type':'application/json' },
-      body: JSON.stringify({ category:cat, slot, title, files })
+      body: JSON.stringify({ category:cat, slot, title, files: all })
     });
 
     const json = await res.json().catch(()=>({}));
