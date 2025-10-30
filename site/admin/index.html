@@ -29,7 +29,7 @@
       <div class="left"><h1 style="margin:0">Admin Uploader</h1></div>
       <div class="right">
         <button id="refreshState" class="pill">Refresh state</button>
-        <button id="backfillState" class="pill" title="Scan live site and populate state">Backfill from live site</button>
+        <button id="backfillState" class="pill" title="Scan repository and populate state">Backfill from repo</button>
         <button id="checkEnv" class="pill">Check server</button>
         <button id="changeKey" class="pill">Admin key</button>
       </div>
@@ -72,8 +72,8 @@
     <small>Only include if you want to add/replace images under assets/images/</small>
 
     <div class="bar" style="margin-top:8px">
-      <button id="go">Upload & Deploy (Incremental)</button>
-      <small id="sizeHint">Only changed files are uploaded.</small>
+      <button id="go">Upload & Commit</button>
+      <small id="sizeHint">Only changed files are committed. Larger batches reduce the number of commits.</small>
     </div>
 
     <div id="log" class="log" aria-live="polite"></div>
@@ -110,10 +110,18 @@
   async function toBase64(f){ const buf=await f.arrayBuffer(); let bin=''; const b=new Uint8Array(buf), ch=0x8000; for(let i=0;i<b.length;i+=ch){ bin+=String.fromCharCode.apply(null,b.subarray(i,i+ch)); } return btoa(bin); }
   function estimateB64Size(n){ return Math.floor(n*1.37); }
   function prettySize(n){ return n>1048576?(n/1048576).toFixed(1)+' MB':(n/1024).toFixed(1)+' KB'; }
-  function planBatches(files,target=3*1024*1024){ const out=[]; let cur=[], used=0; for(const f of files){ const est=estimateB64Size(f.size||0);
-      if(est>target){ if(cur.length){out.push(cur);cur=[];used=0;} out.push([f]); continue; }
-      if(used+est>target && cur.length){ out.push(cur); cur=[f]; used=est; } else { cur.push(f); used+=est; } }
-    if(cur.length) out.push(cur); return out; }
+
+  // Larger target to reduce number of commits (~8 MB per batch)
+  function planBatches(files,target=8*1024*1024){
+    const batches=[]; let current=[]; let used=0;
+    for(const f of files){
+      const est=estimateB64Size(f.size||0);
+      if(est>target){ if(current.length){ batches.push(current); current=[]; used=0; } batches.push([f]); continue; }
+      if(used+est>target && current.length){ batches.push(current); current=[f]; used=est; } else { current.push(f); used+=est; }
+    }
+    if(current.length) batches.push(current);
+    return batches;
+  }
 
   function gather(folderEl, filesEl, bgsEl){
     const main=[]; if(folderEl.files?.length){ for(const f of folderEl.files) main.push({file:f,path:relPath(f)}); }
@@ -122,7 +130,7 @@
     return {main,extras};
   }
 
-  function approxBytes(main,extras){ const all=[...main,...extras]; const raw=all.reduce((s,x)=>s+(x.file.size||0),0); return estimateB64Size(raw); }
+  function approxBytes(main,extras){ const all=[...main,...extras]; const raw=all.reduce((s,x)=>s+(x.file.size||0),0); return Math.floor(raw*1.37); }
 
   function getKey(){ return localStorage.getItem('rc_admin_key')||''; }
   function setKey(v){ if(v) localStorage.setItem('rc_admin_key',v); }
@@ -138,14 +146,14 @@
     fillSlots(catEl.value, st); catEl.addEventListener('change', ()=>fillSlots(catEl.value, st));
 
     function updateHint(){ const {main,extras}=gather(folderEl,filesEl,bgsEl); const est=approxBytes(main,extras); const count=main.length+extras.length;
-      sizeHint.textContent=count?`Approx upload size: ${prettySize(est)} (${count} files)`:'Only changed files are uploaded.'; }
+      sizeHint.textContent=count?`Approx upload size: ${prettySize(est)} (${count} files)`:'Only changed files are committed.'; }
     folderEl.addEventListener('change', updateHint); filesEl.addEventListener('change', updateHint); bgsEl.addEventListener('change', updateHint);
 
     document.getElementById('changeKey').addEventListener('click',()=>{ const k=prompt('Enter new Admin Key'); if(k) setKey(k); });
     document.getElementById('checkEnv').addEventListener('click', async ()=>{ const r=await fetch('/.netlify/functions/incremental-deploy?action=diagnostics',{cache:'no-store'}); const t=await r.text().catch(()=> ''); log('GET diagnostics ->', r.status, t.slice(0,300)); });
     document.getElementById('refreshState').addEventListener('click', refreshStateUI);
     document.getElementById('backfillState').addEventListener('click', async ()=>{ const key=ensureKey(); if(!key) return log('Admin Key is required.');
-      log('Starting backfill...'); const r=await fetch('/.netlify/functions/incremental-deploy?action=backfill',{headers:{'x-admin-key':key},cache:'no-store'}); const t=await r.text().catch(()=> '');
+      log('Starting backfill from repo...'); const r=await fetch('/.netlify/functions/incremental-deploy?action=backfill',{headers:{'x-admin-key':key},cache:'no-store'}); const t=await r.text().catch(()=> '');
       log('Backfill ->', r.status, t.slice(0,300)); if(r.ok) await refreshStateUI(); });
 
     document.getElementById('go').addEventListener('click', async ()=>{
@@ -154,19 +162,20 @@
       const {main,extras}=gather(folderEl,filesEl,bgsEl); if(main.length===0&&extras.length===0) return log('Please choose a folder or select files.');
       const key=ensureKey(); if(!key) return log('Admin Key is required.');
 
-      const mainFiles=main.map(x=>x.file); const batches=planBatches(mainFiles, 3*1024*1024);
+      const mainFiles=main.map(x=>x.file); const batches=planBatches(mainFiles, 8*1024*1024);
       const totalBatches=batches.length + (extras.length?1:0);
       log('[debug] category=',category,'slot=',slot,'titleLen=',title.length,'main=',main.length,'extras=',extras.length,'batches=',totalBatches);
 
-      let lastUrl=null,lastId=null;
+      let lastCommit=null;
+
       for(let i=0;i<batches.length;i++){
         const group=batches[i]; const isFinal = (i===batches.length-1 && extras.length===0);
         log(`Sending batch ${i+1} of ${totalBatches} (${group.length} file[s])...`);
         const payload=[]; for(const f of group){ payload.push({ path: relPath(f), base64: await toBase64(f) }); }
         const r=await fetch('/.netlify/functions/incremental-deploy',{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':key},body:JSON.stringify({category,slot,title,files:payload,merge:true,final:isFinal})});
         const txt=await r.text().catch(()=> ''); let detail=''; try{ detail=JSON.parse(txt)?.message||'';}catch{ detail=txt?.slice(0,500);}
-        if(!r.ok) return log('Deploy error (batch',i+1,'):', r.status, detail||r.statusText||'(no detail)');
-        try{ const js=JSON.parse(txt||'{}'); lastUrl=js.deploy_url||lastUrl; lastId=js.deploy_id||lastId; }catch{}
+        if(!r.ok) return log('Commit error (batch',i+1,'):', r.status, detail||r.statusText||'(no detail)');
+        try{ const js=JSON.parse(txt||'{}'); lastCommit=js.commit||lastCommit; }catch{}
       }
 
       if(extras.length){
@@ -174,11 +183,12 @@
         const payload=[]; for(const x of extras){ payload.push({ path: x.path, base64: await toBase64(x.file) }); }
         const r=await fetch('/.netlify/functions/incremental-deploy',{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':key},body:JSON.stringify({category,slot,title,files:payload,merge:true,final:true})});
         const txt=await r.text().catch(()=> ''); let detail=''; try{ detail=JSON.parse(txt)?.message||'';}catch{ detail=txt?.slice(0,500);}
-        if(!r.ok) return log('Deploy error (backgrounds):', r.status, detail||r.statusText||'(no detail)');
-        try{ const js=JSON.parse(txt||'{}'); lastUrl=js.deploy_url||lastUrl; lastId=js.deploy_id||lastId; }catch{}
+        if(!r.ok) return log('Commit error (backgrounds):', r.status, detail||r.statusText||'(no detail)');
+        try{ const js=JSON.parse(txt||'{}'); lastCommit=js.commit||lastCommit; }catch{}
       }
 
-      log('Success! Last deploy:', lastUrl||'(no url)', 'deploy_id=', lastId||'(n/a)');
+      log('Success! Pushed commit:', lastCommit || '(unknown)'); 
+      log('Netlify will build the site automatically in ~1–3 minutes.');
       await refreshStateUI();
     });
   }
