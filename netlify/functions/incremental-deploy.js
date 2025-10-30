@@ -1,5 +1,6 @@
-// Netlify Function: Incremental Deploy with batch "merge" support
-// Env: NETLIFY_TOKEN, SITE_ID, PUBLIC_SITE_URL
+// Netlify Function: Incremental Deploy with batch "merge" support + diagnostics + in-function auth
+// Required env: NETLIFY_TOKEN, PUBLIC_SITE_URL, (SITE_ID is auto-provided by Netlify)
+// Optional env: ADMIN_KEY (if set, requests must include header x-admin-key: <value>)
 const crypto = require('crypto');
 
 const CAT_META = {
@@ -15,7 +16,28 @@ const API = 'https://api.netlify.com/api/v1';
 
 exports.handler = async (event) => {
   try {
+    // Diagnostics endpoint (GET) to verify envs are visible at runtime
+    if (event.httpMethod === 'GET') {
+      return json(200, {
+        ok: true,
+        method: 'GET',
+        hasToken: !!process.env.NETLIFY_TOKEN,
+        hasSiteId: !!getSiteId(),
+        hasPublicSiteUrl: !!process.env.PUBLIC_SITE_URL
+      });
+    }
+
     if (event.httpMethod !== 'POST') return json(405, { message: 'Method not allowed' });
+
+    // Optional in-function auth
+    const requiredKey = process.env.ADMIN_KEY;
+    if (requiredKey) {
+      const hdrs = event.headers || {};
+      const sentKey = hdrs['x-admin-key'] || hdrs['X-Admin-Key'] || hdrs['x-Admin-Key'];
+      if (!sentKey || sentKey !== requiredKey) {
+        return json(401, { message: 'Unauthorized (invalid admin key)' });
+      }
+    }
 
     const body = JSON.parse(event.body || '{}');
     const { category, slot, title, files, merge } = body;
@@ -25,9 +47,10 @@ exports.handler = async (event) => {
     if (!slot || slot < 1 || slot > cat.slots) return json(400, { message: 'Invalid slot' });
     if (!title || !Array.isArray(files) || files.length === 0) return json(400, { message: 'Missing title/files' });
 
-    const token = process.env.NETLIFY_TOKEN;
-    const siteId = process.env.SITE_ID;
-    if (!token || !siteId) return json(500, { message: 'Server not configured (token/site id)' });
+    const missing = [];
+    const token = process.env.NETLIFY_TOKEN; if (!token) missing.push('NETLIFY_TOKEN');
+    const siteId = getSiteId();              if (!siteId) missing.push('SITE_ID');
+    if (missing.length) return json(500, { message: `Server not configured: missing ${missing.join(', ')}` });
 
     // 1) Latest deploy
     const deploy = await apiGET(`${API}/sites/${siteId}/deploys?per_page=1`, token).then(a => a[0]);
@@ -53,7 +76,6 @@ exports.handler = async (event) => {
     }
 
     // 4) Choose entry HTML among provided files in this (or previous) batches
-    // Try from the current batch first; if not present, fall back to prev manifest
     let entryRel = null;
     const currentHtmls = Array.from(newBlobs.keys()).filter(p => p.startsWith('/' + slotDir + '/') && p.toLowerCase().endsWith('.html'));
     if (currentHtmls.length) {
@@ -65,7 +87,6 @@ exports.handler = async (event) => {
       });
       entryRel = currentHtmls[0].replace('/' + slotDir + '/', '');
     } else {
-      // Look into previous manifest for an existing HTML file
       const prevHtmls = Array.from(prevFiles.keys()).filter(p => p.startsWith('/' + slotDir + '/') && p.toLowerCase().endsWith('.html'));
       if (prevHtmls.length) {
         prevHtmls.sort((a,b) => {
@@ -85,7 +106,7 @@ exports.handler = async (event) => {
     newBlobs.set(redirectPath, redirectBuf);
     newShas.set(redirectPath, sha1(redirectBuf));
 
-    // 6) Update site state and (re)generate category index
+    // 6) Update site state and category index
     let state = await fetchState();
     if (!state.categories) {
       state = {
@@ -124,8 +145,6 @@ exports.handler = async (event) => {
 
     // 7) Merge previous manifest with this batch
     const filesMap = new Map(prevFiles); // path -> sha
-    // If merge === true, keep existing slotDir files and just overwrite changed ones.
-    // If merge !== true, wipe the slot and rebuild from this payload (original behavior).
     if (merge !== true) {
       for (const p of Array.from(filesMap.keys())) {
         if (p.startsWith('/' + slotDir + '/')) filesMap.delete(p);
@@ -139,11 +158,11 @@ exports.handler = async (event) => {
       draft: false
     });
 
-    // 9) Upload only required files for this deploy (usually this batch + regenerated items)
+    // 9) Upload only required files for this deploy
     const required = deployRes?.required || [];
     for (const p of required) {
       const buf = newBlobs.get(p);
-      if (!buf) continue; // required might include files already present from previous manifests
+      if (!buf) continue;
       await rawPUT(`${API}/deploys/${deployRes.id}/files${p}`, token, buf);
     }
 
@@ -159,6 +178,10 @@ exports.handler = async (event) => {
 };
 
 // ----- helpers -----
+function getSiteId(){
+  return process.env.SITE_ID || process.env.NETLIFY_SITE_ID || process.env.site_id || null;
+}
+
 function redirectIndexHtml(title, targetRel, backHref, section) {
   const getSectionReturn = (section) => {
     if (section === 'language-arts' || section === 'toolkit') return '/language-arts/index.html';
@@ -217,7 +240,6 @@ async function rawPUT(url, token, buf){
   });
   if (!res.ok) throw new Error(`PUT ${url} ${res.status} ${await res.text()}`);
 }
-
 async function listDeployFiles(deployId, token){
   let page=1; const result=new Map();
   while(true){
@@ -233,7 +255,6 @@ async function listDeployFiles(deployId, token){
   }
   return result;
 }
-
 async function fetchState(){
   const base = process.env.PUBLIC_SITE_URL;
   if (!base) return {};
@@ -245,7 +266,6 @@ async function fetchState(){
     return {};
   }
 }
-
 function json(status, data){
   return { statusCode: status, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) };
 }
