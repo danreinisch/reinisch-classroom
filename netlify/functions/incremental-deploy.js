@@ -6,7 +6,7 @@
 // - GITHUB_TOKEN     (classic PAT with repo scope, or fine‑grained with Contents RW on the repo)
 // - GH_REPO          (e.g., "danreinisch/reinisch-classroom")
 // - GH_BRANCH        (e.g., "main")  [optional; defaults to repo default branch]
-// - PUBLIC_SITE_URL  (https://reinischclassroom.com)
+// - PUBLIC_SITE_URL  (e.g., "https://reinischclassroom.com")
 // Optional:
 // - ADMIN_KEY        (if set, requests must send header x-admin-key: <value>)
 
