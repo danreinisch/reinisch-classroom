@@ -1,7 +1,5 @@
 export default async (request, context) => {
-  // Rotate ADMIN_REALM in Netlify env to force browsers to prompt again if they cached credentials
   const realm = context.env?.ADMIN_REALM || 'Reinisch Classroom Admin';
-
   const expectedUser = context.env?.ADMIN_USER || '';
   const expectedPass = context.env?.ADMIN_PASS || '';
 
@@ -15,21 +13,16 @@ export default async (request, context) => {
   if (scheme !== 'Basic' || !encoded) return unauthorized(realm);
 
   try {
-    // Decode "username:password"
     const decoded = atob(encoded);
     const idx = decoded.indexOf(':');
     if (idx === -1) return unauthorized(realm);
     const user = decoded.slice(0, idx);
     const pass = decoded.slice(idx + 1);
-
-    if (user !== expectedUser || pass !== expectedPass) {
-      return unauthorized(realm);
-    }
+    if (user !== expectedUser || pass !== expectedPass) return unauthorized(realm);
   } catch {
     return unauthorized(realm);
   }
 
-  // Auth OK → continue to /admin resources
   return context.next();
 };
 
