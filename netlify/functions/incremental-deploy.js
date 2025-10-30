@@ -1,7 +1,15 @@
 // Incremental Deploy (GitHub commits version) + diagnostics + backfill + publisher migration
-// Now with clearer error messages and server-side logging.
-// Required envs: GITHUB_TOKEN, GH_REPO, GH_BRANCH (or default branch), PUBLIC_SITE_URL
-// Optional env: ADMIN_KEY (enforces x-admin-key)
+// With clearer error messages, server-side logging, and requireAdmin authorization.
+//
+// Required envs (Netlify → Project configuration → Environment variables):
+// - GITHUB_TOKEN   (classic PAT with repo scope, or fine-grained with Contents RW on the repo)
+// - GH_REPO        (e.g., "danreinisch/reinisch-classroom")
+// - GH_BRANCH      (e.g., "main")  [optional; defaults to repo default branch]
+// - PUBLIC_SITE_URL (https://reinischclassroom.com)
+// Optional:
+// - ADMIN_KEY      (if set, requests must send header x-admin-key: <value>)
+//
+// This function commits uploaded files into your repo under site/... so they persist across deploys.
 
 const crypto = require('crypto');
 
@@ -31,23 +39,27 @@ exports.handler = async (event) => {
           hasPublicSiteUrl: !!process.env.PUBLIC_SITE_URL
         });
       }
+
       if (action === 'backfill') {
         await requireAdmin(event);
         return await handleBackfill();
       }
+
       if (action === 'migrate_publisher') {
         await requireAdmin(event);
         return await handleMigratePublisher();
       }
+
       return json(200, { ok: true, message: 'Use POST to upload; GET ?action=diagnostics|backfill|migrate_publisher' });
     }
 
     if (event.httpMethod !== 'POST') return json(405, { message: 'Method not allowed' });
+
     await requireAdmin(event);
 
     let body;
     try { body = JSON.parse(event.body || '{}'); }
-    catch (e) { return json(400, { message: 'Invalid JSON body' }); }
+    catch { return json(400, { message: 'Invalid JSON body' }); }
 
     const { category, slot, title, files, merge, final } = body;
 
@@ -59,6 +71,7 @@ exports.handler = async (event) => {
     const { owner, repo } = parseRepo();
     const branch = await getBranch();
 
+    // Prepare blobs: uploaded files -> site/...
     const slotDir = `site/${cat.baseOut}/presentation-${String(slot).padStart(2, '0')}`;
     const blobs = new Map();
 
@@ -71,10 +84,12 @@ exports.handler = async (event) => {
       blobs.set(outPath, buf);
     }
 
+    // Redirect index.html
     const entryRel = await pickEntryHtml(owner, repo, branch, blobs, slotDir);
     const redirectHtml = redirectIndexHtml(title, entryRel, cat.back, cat.section);
     blobs.set(`${slotDir}/index.html`, Buffer.from(redirectHtml));
 
+    // Update site-state.json + category page
     const state = await fetchStateFromLiveOrRepo(owner, repo, branch);
     ensureStateShape(state);
     ensureArraySize(state.categories[category].titles, cat.slots);
@@ -107,7 +122,7 @@ exports.handler = async (event) => {
   }
 };
 
-// --------- Actions (GET) ---------
+// ---------- GET actions ----------
 async function handleBackfill(){
   const { owner, repo } = parseRepo();
   const branch = await getBranch();
@@ -133,6 +148,7 @@ async function handleMigratePublisher(){
   const headTree = await getHeadTree(owner, repo, branch);
   const nodes = headTree.tree || [];
 
+  // Legacy source: REINISCHCLASSROOM P U B L I S H E R/LANGUAGE ARTS/A Door Into Time/Week X - ...
   const publisherRoot = 'REINISCHCLASSROOM P U B L I S H E R/LANGUAGE ARTS/A Door Into Time';
   const weekDirs = new Set(
     nodes
@@ -162,9 +178,7 @@ async function handleMigratePublisher(){
     }
   }
 
-  if (toCopy.length === 0) {
-    return json(200, { ok: true, message: 'no-publisher-files-found' });
-  }
+  if (toCopy.length === 0) return json(200, { ok: true, message: 'no-publisher-files-found' });
 
   const blobs = new Map();
   for (const { src, dst } of toCopy) {
@@ -197,7 +211,18 @@ async function handleMigratePublisher(){
   return json(200, { ok: true, message: 'migrate-complete', commit: commitSha, migrated: Object.keys(titlesBySlot).length });
 }
 
-// --------- GitHub helpers ---------
+// ---------- Auth helper (this was missing) ----------
+async function requireAdmin(event){
+  const requiredKey = process.env.ADMIN_KEY;
+  if (!requiredKey) return; // no auth configured
+  const hdrs = event.headers || {};
+  const sentKey = hdrs['x-admin-key'] || hdrs['X-Admin-Key'] || hdrs['x-Admin-Key'];
+  if (!sentKey || sentKey !== requiredKey) {
+    throw new Error('Unauthorized (invalid admin key)');
+  }
+}
+
+// ---------- GitHub helpers ----------
 function parseRepo() {
   const slug = process.env.GH_REPO || '';
   if (!slug || !slug.includes('/')) throw new Error('GH_REPO must be "owner/repo"');
@@ -215,8 +240,7 @@ async function commitTreeWithRetry(owner, repo, branch, pathToBufferMap, message
   try { return await commitTree(owner, repo, branch, pathToBufferMap, message); }
   catch (err) {
     const msg = String(err && err.message || '');
-    if (attempt < 1 && (msg.includes('not a fast forward') || msg.includes('/git/refs/heads') && msg.includes('422'))) {
-      // refresh head and retry once
+    if (attempt < 1 && (msg.includes('not a fast forward') || (msg.includes('/git/refs/heads') && msg.includes('422')))) {
       return await commitTreeWithRetry(owner, repo, branch, pathToBufferMap, message, attempt+1);
     }
     throw err;
@@ -283,7 +307,7 @@ async function getHeadTree(owner, repo, branch) {
   return ghGET(`/repos/${owner}/${repo}/git/trees/${commit.tree.sha}?recursive=1`);
 }
 
-// --------- State and page helpers ---------
+// ---------- State and page helpers ----------
 async function fetchStateFromLiveOrRepo(owner, repo, branch) {
   try {
     const base = process.env.PUBLIC_SITE_URL;
