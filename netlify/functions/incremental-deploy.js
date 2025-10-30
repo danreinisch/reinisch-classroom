@@ -1,7 +1,14 @@
-// Incremental Deploy Function: batching, diagnostics, in-function auth, backfill, and "final publish" toggle
-// Required env: NETLIFY_TOKEN, PUBLIC_SITE_URL
-// SITE_ID is provided automatically by Netlify (NETLIFY_SITE_ID)
-// Optional env: ADMIN_KEY for x-admin-key header auth
+// Incremental Deploy (GitHub commits version)
+// - Commits uploaded files into your repo so they persist across deploys
+// - Still supports batching from the Admin UI (fewer, larger batches)
+// Env vars required:
+//   GITHUB_TOKEN  (classic PAT with repo scope)
+//   GH_REPO       (e.g., "danreinisch/reinisch-classroom")
+//   GH_BRANCH     (e.g., "main")
+//   ADMIN_KEY     (optional; if set, require 'x-admin-key' header)
+//   PUBLIC_SITE_URL (for reading/writing state if needed)
+// Note: Do NOT add SITE_ID in Netlify. Not required for GitHub commits.
+
 const crypto = require('crypto');
 
 const CAT_META = {
@@ -13,82 +20,72 @@ const CAT_META = {
   life:    { slots: 32, baseOut: 'life-skills/presentations',            section: 'life-skills',   back: '/life-skills/index.html' }
 };
 
-const API = 'https://api.netlify.com/api/v1';
+const GH_API = 'https://api.github.com';
 
 exports.handler = async (event) => {
   try {
     const action = (event.queryStringParameters && event.queryStringParameters.action) || '';
-
-    // Diagnostics/backfill via GET
     if (event.httpMethod === 'GET') {
       if (action === 'diagnostics') {
         return json(200, {
           ok: true,
-          hasToken: !!process.env.NETLIFY_TOKEN,
-          hasSiteId: !!getSiteId(),
+          hasGithubToken: !!process.env.GITHUB_TOKEN,
+          ghRepo: process.env.GH_REPO || '',
+          ghBranch: process.env.GH_BRANCH || '',
           hasPublicSiteUrl: !!process.env.PUBLIC_SITE_URL
         });
       }
       if (action === 'backfill') {
+        // Optional in-function auth
         const requiredKey = process.env.ADMIN_KEY;
         if (requiredKey) {
           const hdrs = event.headers || {};
           const sentKey = hdrs['x-admin-key'] || hdrs['X-Admin-Key'] || hdrs['x-Admin-Key'];
           if (!sentKey || sentKey !== requiredKey) return json(401, { message: 'Unauthorized (invalid admin key)' });
         }
-        const token = process.env.NETLIFY_TOKEN, siteId = getSiteId(), baseUrl = process.env.PUBLIC_SITE_URL;
-        if (!token || !siteId || !baseUrl) return json(500, { message: 'Server not configured for backfill' });
-        const latest = await apiGET(`${API}/sites/${siteId}/deploys?per_page=1`, token).then(a => a[0]);
-        if (!latest) return json(500, { message: 'No existing deploy found' });
-        const prevFiles = await listDeployFiles(latest.id, token);
+        const { owner, repo } = parseRepo();
+        const branch = await getBranch();
+        const head = await ghGET(`/repos/${owner}/${repo}/git/ref/heads/${encodeURIComponent(branch)}`);
+        const commitSha = head.object.sha;
+        const commit = await ghGET(`/repos/${owner}/${repo}/git/commits/${commitSha}`);
+        const baseTreeSha = commit.tree.sha;
 
-        const state = { version:'v1', updated:new Date().toISOString(), categories:{} };
-        for (const [catId, meta] of Object.entries(CAT_META)) {
-          const titles = new Array(meta.slots).fill('');
-          const links  = new Array(meta.slots).fill('');
-          for (let i=1; i<=meta.slots; i++) {
-            const slotDir = `/${meta.baseOut}/presentation-${String(i).padStart(2,'0')}/`;
-            if (!hasPathPrefix(prevFiles, slotDir)) continue;
-            links[i-1] = slotDir;
-            try {
-              const res = await fetch(`${baseUrl}${slotDir}index.html`, { headers: { 'Cache-Control':'no-cache' } });
-              if (res.ok) {
-                const html = await res.text();
-                const m = html.match(/<title>\s*([^<]+)\s*<\/title>/i) || html.match(/<h1[^>]*>\s*([^<]+)\s*<\/h1>/i);
-                titles[i-1] = m ? decodeHtml(m[1]).trim() : titles[i-1];
-              }
-            } catch {}
-            if (!titles[i-1]) titles[i-1] = `Presentation ${i}`;
-          }
-          state.categories[catId] = { slots: meta.slots, titles, links };
-        }
+        // Scan the tree for existing presentations
+        const tree = await ghGET(`/repos/${owner}/${repo}/git/trees/${baseTreeSha}?recursive=1`);
+        const paths = (tree.tree || []).map(n => n.path);
+        const state = buildStateFromPaths(paths);
 
-        const newBlobs = new Map(), newShas = new Map();
-        const statePath = '/assets/data/site-state.json';
+        // Try to read titles from slot index.html files in repo (best effort)
+        await enrichTitlesFromRepo(state, owner, repo, branch);
+
+        // Write state + regenerate category pages
+        const blobs = new Map(); // path -> content Buffer
+        const shas  = new Map(); // path -> sha
+        const statePath = 'site/assets/data/site-state.json';
         const stateBuf  = Buffer.from(JSON.stringify(state, null, 2));
-        newBlobs.set(statePath, stateBuf); newShas.set(statePath, sha1(stateBuf));
+        blobs.set(statePath, stateBuf);
+        shas.set(statePath, sha1(stateBuf));
+
         for (const catId of Object.keys(CAT_META)) {
           const catIndexPath = categoryIndexPath(catId);
-          if (catIndexPath) {
-            const catHtml = generateCategoryIndex(catId, state);
-            const catBuf  = Buffer.from(catHtml);
-            newBlobs.set(catIndexPath, catBuf); newShas.set(catIndexPath, sha1(catBuf));
-          }
+          if (!catIndexPath) continue;
+          const html = generateCategoryIndex(catId, state);
+          const buf = Buffer.from(html);
+          const fullPath = `site${catIndexPath}`;
+          blobs.set(fullPath, buf);
+          shas.set(fullPath, sha1(buf));
         }
 
-        const filesMap = new Map(prevFiles);
-        for (const [p, sha] of newShas.entries()) filesMap.set(p, sha);
-        const deployRes = await apiPOST(`${API}/sites/${siteId}/deploys`, token, { files: Object.fromEntries(filesMap.entries()), draft:false });
-        const required = deployRes?.required || [];
-        for (const p of required) { const buf = newBlobs.get(p); if (buf) await rawPUT(`${API}/deploys/${deployRes.id}/files${p}`, token, buf); }
-        return json(200, { ok:true, message:'backfill-complete', updated: state.updated, deploy_id: deployRes.id });
+        const newCommitSha = await commitTree(owner, repo, branch, blobs, `Backfill state from repository (${new Date().toISOString()})`);
+        return json(200, { ok: true, message: 'backfill-complete', commit: newCommitSha, updated: state.updated });
       }
-      return json(200, { ok:true, message:'Use POST for uploads or action=diagnostics/backfill for GET.' });
+
+      return json(200, { ok: true, message: 'Use POST to upload; or GET ?action=diagnostics|backfill' });
     }
 
     if (event.httpMethod !== 'POST') return json(405, { message: 'Method not allowed' });
 
-    // In-function auth
+    // Optional in-function auth
     const requiredKey = process.env.ADMIN_KEY;
     if (requiredKey) {
       const hdrs = event.headers || {};
@@ -104,149 +101,320 @@ exports.handler = async (event) => {
     if (!slot || slot < 1 || slot > cat.slots) return json(400, { message: 'Invalid slot' });
     if (!title || !Array.isArray(files) || files.length === 0) return json(400, { message: 'Missing title/files' });
 
-    const token = process.env.NETLIFY_TOKEN, siteId = getSiteId();
-    const missing = [];
-    if (!token) missing.push('NETLIFY_TOKEN');
-    if (!siteId) missing.push('SITE_ID');
-    if (missing.length) return json(500, { message: `Server not configured: missing ${missing.join(', ')}` });
+    if (!process.env.GITHUB_TOKEN) return json(500, { message: 'Server not configured: missing GITHUB_TOKEN' });
+    const { owner, repo } = parseRepo();
+    const branch = await getBranch();
 
-    // 1) Latest deploy
-    const latest = await apiGET(`${API}/sites/${siteId}/deploys?per_page=1`, token).then(a => a[0]);
-    if (!latest) return json(500, { message: 'No existing deploy found' });
+    // Build file map to commit
+    const slotDir = `site/${cat.baseOut}/presentation-${String(slot).padStart(2, '0')}`;
+    const blobs = new Map(); // path -> Buffer
 
-    // 2) Previous files map
-    const prevFiles = await listDeployFiles(latest.id, token);
-
-    // 3) Build new file blobs for this batch
-    const slotDir = `${cat.baseOut}/presentation-${String(slot).padStart(2,'0')}`;
-    const newBlobs = new Map(), newShas = new Map();
     for (const f of files) {
       if (!f.path || !f.base64) continue;
       const buf = Buffer.from(f.base64, 'base64');
-      const sha = sha1(buf);
-      let path = (f.path || '').replace(/^\/+/, '');
-      if (!path.startsWith('assets/images/')) path = `${slotDir}/${path}`;
-      const full = '/' + path;
-      newBlobs.set(full, buf);
-      newShas.set(full, sha);
-    }
-
-    // 4) Determine entry HTML (current or previous)
-    let entryRel = null;
-    const currentHtmls = Array.from(newBlobs.keys()).filter(p => p.startsWith('/' + slotDir + '/') && p.toLowerCase().endsWith('.html'));
-    if (currentHtmls.length) {
-      currentHtmls.sort((a,b)=> ( /\/index\.html?$/i.test(a) ? -1:0 ) - ( /\/index\.html?$/i.test(b) ? -1:0 ) || (a.length-b.length) );
-      entryRel = currentHtmls[0].replace('/' + slotDir + '/', '');
-    } else {
-      const prevHtmls = Array.from(prevFiles.keys()).filter(p => p.startsWith('/' + slotDir + '/') && p.toLowerCase().endsWith('.html'));
-      if (prevHtmls.length) {
-        prevHtmls.sort((a,b)=> ( /\/index\.html?$/i.test(a) ? -1:0 ) - ( /\/index\.html?$/i.test(b) ? -1:0 ) || (a.length-b.length) );
-        entryRel = prevHtmls[0].replace('/' + slotDir + '/', '');
+      let outPath = (f.path || '').replace(/^\/+/, '');
+      if (outPath.startsWith('assets/images/')) {
+        outPath = `site/${outPath}`;
+      } else {
+        outPath = `${slotDir}/${outPath}`;
       }
+      blobs.set(outPath, buf);
     }
 
-    // 5) Redirect index and state/category pages
+    // Always include redirect index and state/index regeneration (keeps site consistent even if user stops mid-batches)
+    const entryRel = await pickEntryHtml(owner, repo, branch, blobs, slotDir);
     const redirectHtml = redirectIndexHtml(title, entryRel, cat.back, cat.section);
-    const redirectPath = '/' + slotDir + '/index.html';
-    const redirectBuf  = Buffer.from(redirectHtml);
-    newBlobs.set(redirectPath, redirectBuf); newShas.set(redirectPath, sha1(redirectBuf));
+    blobs.set(`${slotDir}/index.html`, Buffer.from(redirectHtml));
 
-    let state = await fetchState();
-    if (!state.categories) {
-      state = { version:'v1', updated:'', categories:Object.fromEntries(Object.entries(CAT_META).map(([id,m])=>[id,{slots:m.slots,titles:[],links:[]}] )) };
-    }
+    // Update state.json and the category index page
+    const state = await fetchStateFromLiveOrRepo(owner, repo, branch);
+    ensureStateShape(state);
     ensureArraySize(state.categories[category].titles, cat.slots);
     ensureArraySize(state.categories[category].links,  cat.slots);
-    state.categories[category].titles[slot-1]=title;
-    state.categories[category].links[slot-1]=`/${slotDir}/`;
+    state.categories[category].titles[slot - 1] = title;
+    state.categories[category].links[slot - 1]  = `/${cat.baseOut}/presentation-${String(slot).padStart(2, '0')}/`;
     state.updated = new Date().toISOString();
 
-    const statePath='/assets/data/site-state.json';
-    const stateBuf = Buffer.from(JSON.stringify(state,null,2));
-    newBlobs.set(statePath,stateBuf); newShas.set(statePath, sha1(stateBuf));
+    blobs.set('site/assets/data/site-state.json', Buffer.from(JSON.stringify(state, null, 2)));
 
-    const catIndexPath = categoryIndexPath(category);
+    const catIndexPath = `site${categoryIndexPath(category)}`;
     if (catIndexPath) {
       const catHtml = generateCategoryIndex(category, state);
-      const catBuf  = Buffer.from(catHtml);
-      newBlobs.set(catIndexPath, catBuf); newShas.set(catIndexPath, sha1(catBuf));
+      blobs.set(catIndexPath, Buffer.from(catHtml));
     }
 
-    // 6) Merge with previous manifest (wipe slot only if merge !== true)
-    const filesMap = new Map(prevFiles);
-    if (merge !== true) {
-      for (const p of Array.from(filesMap.keys())) if (p.startsWith('/' + slotDir + '/')) filesMap.delete(p);
-    }
-    for (const [p,sha] of newShas.entries()) filesMap.set(p, sha);
+    // Commit
+    const message = final
+      ? `Upload presentation ${category} #${slot} (final batch)`
+      : `Upload presentation ${category} #${slot} (batch, merge=${!!merge})`;
 
-    // 7) Create deploy: draft for intermediate batches, published on final
-    const deployRes = await apiPOST(`${API}/sites/${siteId}/deploys`, token, {
-      files: Object.fromEntries(filesMap.entries()),
-      draft: final ? false : true
-    });
+    const newCommitSha = await commitTree(owner, repo, branch, blobs, message);
 
-    // 8) Upload required files for this deploy
-    const required = deployRes?.required || [];
-    for (const p of required) {
-      const buf = newBlobs.get(p);
-      if (!buf) continue;
-      await rawPUT(`${API}/deploys/${deployRes.id}/files${p}`, token, buf);
-    }
-
+    // Return a URL that will be published by Netlify soon after the GitHub commit
     return json(200, {
-      ok:true,
-      deploy_id: deployRes.id,
-      deploy_url: deployRes.deploy_ssl_url || deployRes.ssl_url || deployRes.deploy_url || null,
+      ok: true,
+      commit: newCommitSha,
+      // This is the site URL; Netlify will build and publish shortly after commit
+      deploy_url: process.env.PUBLIC_SITE_URL || null,
       final: !!final
     });
-
   } catch (e) {
     return json(500, { message: e?.message || 'Server error' });
   }
 };
 
-// Helpers
-function getSiteId(){ return process.env.SITE_ID || process.env.NETLIFY_SITE_ID || process.env.site_id || null; }
-function categoryIndexPath(category){
-  return category==='toolkit' ? '/language-arts/toolkit/index.html'
-    : category==='life' ? '/life-skills/index.html'
-    : ({adit:'/language-arts/a-door-into-time/index.html',lik:'/language-arts/lost-in-kragdon-ah/index.html',rfk:'/language-arts/return-from-kragdon-ah/index.html',wok:'/language-arts/warrior-of-kragdon-ah/index.html'})[category];
+// ---------- GitHub utilities ----------
+function parseRepo() {
+  const slug = process.env.GH_REPO || '';
+  if (!slug || !slug.includes('/')) throw new Error('GH_REPO must be set to "owner/repo"');
+  const [owner, repo] = slug.split('/');
+  return { owner, repo };
 }
-function redirectIndexHtml(title, targetRel, backHref, section){
-  const getSectionReturn = s => (s==='life-skills' ? '/life-skills/index.html' : '/language-arts/index.html');
+async function getBranch() {
+  return process.env.GH_BRANCH || await getRepoDefaultBranch();
+}
+async function getRepoDefaultBranch() {
+  const { owner, repo } = parseRepo();
+  const info = await ghGET(`/repos/${owner}/${repo}`);
+  return info.default_branch || 'main';
+}
+async function commitTree(owner, repo, branch, pathToBufferMap, message) {
+  // 1) Get HEAD commit and base tree
+  const head = await ghGET(`/repos/${owner}/${repo}/git/ref/heads/${encodeURIComponent(branch)}`);
+  const commitSha = head.object.sha;
+  const commit = await ghGET(`/repos/${owner}/${repo}/git/commits/${commitSha}`);
+  const baseTreeSha = commit.tree.sha;
+
+  // 2) Create blobs for each file
+  const entries = [];
+  for (const [path, buf] of pathToBufferMap.entries()) {
+    const blob = await ghPOST(`/repos/${owner}/${repo}/git/blobs`, {
+      content: buf.toString('base64'),
+      encoding: 'base64'
+    });
+    entries.push({ path, mode: '100644', type: 'blob', sha: blob.sha });
+  }
+
+  // 3) Create a new tree
+  const tree = await ghPOST(`/repos/${owner}/${repo}/git/trees`, {
+    base_tree: baseTreeSha,
+    tree: entries
+  });
+
+  // 4) Create a commit pointing to the new tree
+  const newCommit = await ghPOST(`/repos/${owner}/${repo}/git/commits`, {
+    message,
+    tree: tree.sha,
+    parents: [commitSha]
+  });
+
+  // 5) Move the branch ref to the new commit
+  await ghPATCH(`/repos/${owner}/${repo}/git/refs/heads/${encodeURIComponent(branch)}`, {
+    sha: newCommit.sha,
+    force: false
+  });
+
+  return newCommit.sha;
+}
+async function ghGET(path) {
+  const res = await fetch(`${GH_API}${path}`, {
+    headers: ghHeaders()
+  });
+  if (!res.ok) throw new Error(`GitHub GET ${path} ${res.status}`);
+  return res.json();
+}
+async function ghPOST(path, body) {
+  const res = await fetch(`${GH_API}${path}`, {
+    method: 'POST',
+    headers: ghHeaders(),
+    body: JSON.stringify(body || {})
+  });
+  if (!res.ok) throw new Error(`GitHub POST ${path} ${res.status} ${await res.text()}`);
+  return res.json();
+}
+async function ghPATCH(path, body) {
+  const res = await fetch(`${GH_API}${path}`, {
+    method: 'PATCH',
+    headers: ghHeaders(),
+    body: JSON.stringify(body || {})
+  });
+  if (!res.ok) throw new Error(`GitHub PATCH ${path} ${res.status} ${await res.text()}`);
+  return res.json();
+}
+function ghHeaders() {
+  const token = process.env.GITHUB_TOKEN;
+  if (!token) throw new Error('Missing GITHUB_TOKEN');
+  return {
+    Authorization: `Bearer ${token}`,
+    'Content-Type': 'application/json',
+    'User-Agent': 'reinisch-uploader',
+    Accept: 'application/vnd.github+json'
+  };
+}
+
+// ---------- State, pages, and helpers ----------
+async function fetchStateFromLiveOrRepo(owner, repo, branch) {
+  // Prefer the live site state.json (if present), else read from repo, else start fresh
+  try {
+    const base = process.env.PUBLIC_SITE_URL;
+    if (base) {
+      const res = await fetch(`${base}/assets/data/site-state.json`, { headers: { 'Cache-Control': 'no-cache' } });
+      if (res.ok) return await res.json();
+    }
+  } catch {}
+  try {
+    // Read from repo
+    const res = await fetch(`${GH_API}/repos/${owner}/${repo}/contents/site/assets/data/site-state.json?ref=${encodeURIComponent(branch)}`, {
+      headers: ghHeaders()
+    });
+    if (res.ok) {
+      const json = await res.json();
+      const content = Buffer.from(json.content || '', 'base64').toString('utf8');
+      return JSON.parse(content);
+    }
+  } catch {}
+  // Fresh blank state
+  const state = { version: 'v1', updated: '', categories: {} };
+  for (const [id, meta] of Object.entries(CAT_META)) {
+    state.categories[id] = { slots: meta.slots, titles: [], links: [] };
+  }
+  return state;
+}
+
+function buildStateFromPaths(paths) {
+  const state = { version: 'v1', updated: new Date().toISOString(), categories: {} };
+  for (const [id, meta] of Object.entries(CAT_META)) {
+    const titles = new Array(meta.slots).fill('');
+    const links  = new Array(meta.slots).fill('');
+    for (let i = 1; i <= meta.slots; i++) {
+      const slotDir = `site/${meta.baseOut}/presentation-${String(i).padStart(2, '0')}/`;
+      const hasAny = paths.some(p => p.startsWith(slotDir));
+      if (hasAny) {
+        links[i - 1] = `/${meta.baseOut}/presentation-${String(i).padStart(2, '0')}/`;
+        if (!titles[i - 1]) titles[i - 1] = `Presentation ${i}`;
+      }
+    }
+    state.categories[id] = { slots: meta.slots, titles, links };
+  }
+  return state;
+}
+
+async function enrichTitlesFromRepo(state, owner, repo, branch) {
+  // Try to read <title> from each present slot's index.html
+  const promises = [];
+  for (const [id, meta] of Object.entries(CAT_META)) {
+    const titles = state.categories[id].titles;
+    const links  = state.categories[id].links;
+    for (let i = 1; i <= meta.slots; i++) {
+      if (!links[i - 1]) continue;
+      const idxPath = `site/${meta.baseOut}/presentation-${String(i).padStart(2, '0')}/index.html`;
+      promises.push((async () => {
+        try {
+          const r = await fetch(`${GH_API}/repos/${owner}/${repo}/contents/${encodeURIComponent(idxPath)}?ref=${encodeURIComponent(branch)}`, {
+            headers: ghHeaders()
+          });
+          if (!r.ok) return;
+          const j = await r.json();
+          const html = Buffer.from(j.content || '', 'base64').toString('utf8');
+          const m = html.match(/<title>\s*([^<]+)\s*<\/title>/i) || html.match(/<h1[^>]*>\s*([^<]+)\s*<\/h1>/i);
+          if (m) titles[i - 1] = m[1].trim();
+        } catch {}
+      })());
+    }
+  }
+  await Promise.all(promises);
+  state.updated = new Date().toISOString();
+}
+
+async function pickEntryHtml(owner, repo, branch, incomingBlobs, slotDir) {
+  // Prefer an .html in this batch; otherwise check repo for an existing one
+  const candidates = [];
+  for (const [p] of incomingBlobs.entries()) {
+    if (p.startsWith(`${slotDir}/`) && p.toLowerCase().endsWith('.html') && p !== `${slotDir}/index.html`) {
+      candidates.push(p);
+    }
+  }
+  if (candidates.length) {
+    candidates.sort((a, b) => (a.toLowerCase().endsWith('/index.html') ? -1 : 0) - (b.toLowerCase().endsWith('/index.html') ? -1 : 0) || (a.length - b.length));
+    return candidates[0].replace(`${slotDir}/`, '');
+  }
+  // Look in repo
+  try {
+    const tree = await getHeadTree(owner, repo, branch);
+    const paths = (tree.tree || []).map(n => n.path);
+    const htmls = paths.filter(p => p.startsWith(`${slotDir}/`) && p.toLowerCase().endsWith('.html') && p !== `${slotDir}/index.html`);
+    if (htmls.length) {
+      htmls.sort((a, b) => (a.toLowerCase().endsWith('/index.html') ? -1 : 0) - (b.toLowerCase().endsWith('/index.html') ? -1 : 0) || (a.length - b.length));
+      return htmls[0].replace(`${slotDir}/`, '');
+    }
+  } catch {}
+  return null;
+}
+
+async function getHeadTree(owner, repo, branch) {
+  const head = await ghGET(`/repos/${owner}/${repo}/git/ref/heads/${encodeURIComponent(branch)}`);
+  const commit = await ghGET(`/repos/${owner}/${repo}/git/commits/${head.object.sha}`);
+  return ghGET(`/repos/${owner}/${repo}/git/trees/${commit.tree.sha}?recursive=1`);
+}
+
+function categoryIndexPath(category) {
+  return category === 'toolkit'
+    ? '/language-arts/toolkit/index.html'
+    : category === 'life'
+      ? '/life-skills/index.html'
+      : {
+          adit: '/language-arts/a-door-into-time/index.html',
+          lik:  '/language-arts/lost-in-kragdon-ah/index.html',
+          rfk:  '/language-arts/return-from-kragdon-ah/index.html',
+          wok:  '/language-arts/warrior-of-kragdon-ah/index.html'
+        }[category] || null;
+}
+
+function redirectIndexHtml(title, targetRel, backHref, section) {
+  const getSectionReturn = (section) => {
+    if (section === 'life-skills') return '/life-skills/index.html';
+    return '/language-arts/index.html';
+  };
   const navHtml = `<div style="position:fixed;top:1rem;left:1rem;right:1rem;display:flex;justify-content:space-between;z-index:100">
     <a href="/" style="color:#fff;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);padding:.6rem 1rem;border-radius:.6rem;text-decoration:none">Home</a>
-    <a href="${getSectionReturn(section)}" style="color:#fff;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);padding:.6rem 1rem;border-radius:.6rem;text-decoration:none">${section==='life-skills'?'Life Skills':'Language Arts'}</a>
+    <a href="${getSectionReturn(section)}" style="color:#fff;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);padding:.6rem 1rem;border-radius:.6rem;text-decoration:none">${section === 'life-skills' ? 'Life Skills' : 'Language Arts'}</a>
   </div>`;
-  if(!targetRel){
+  if (!targetRel) {
     return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>${escapeHtml(title)}</title></head><body>${navHtml}<div style="display:grid;place-items:center;height:100vh;color:#e8edf5"><div><h1>${escapeHtml(title)}</h1><p>No HTML file was found in this presentation folder.</p><p><a href="${backHref}">Back</a></p></div></div></body></html>`;
   }
-  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta http-equiv="refresh" content="0; url=${targetRel}"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>${escapeHtml(title)}</title><script>location.replace(${JSON.stringify(targetRel)});</`+'script></head><body>'+navHtml+'</body></html>';
+  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta http-equiv="refresh" content="0; url=${targetRel}"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>${escapeHtml(title)}</title><script>location.replace(${JSON.stringify(targetRel)});</` + `script></head><body>${navHtml}</body></html>`;
 }
-function generateCategoryIndex(catId,state){
-  const cat=CAT_META[catId]; const titles=(state.categories[catId]?.titles||[]).slice(0,cat.slots); const links=(state.categories[catId]?.links||[]).slice(0,cat.slots);
-  const cards=titles.map((t,i)=>{ const title=t||`Presentation ${i+1}`; const href=links[i]||'#'; const sub=href&&href!=='#'?'Open presentation':'Placeholder';
-    return `<a class="card" href="${href}"><strong>${escapeHtml(title)}</strong><small>${sub}</small></a>`; }).join('');
-  const pageTitle = catId==='toolkit'?'Language Arts Toolkit' : catId==='life'?'Life Skills' : ({adit:'A Door Into Time',lik:'Lost in Kragdon-ah',rfk:'Return from Kragdon-ah',wok:'Warrior of Kragdon-ah'})[catId]||'Language Arts';
+
+function generateCategoryIndex(catId, state) {
+  const cat = CAT_META[catId];
+  const titles = (state.categories[catId]?.titles || []).slice(0, cat.slots);
+  const links  = (state.categories[catId]?.links  || []).slice(0, cat.slots);
+  const cards = titles.map((t, i) => {
+    const title = t || `Presentation ${i+1}`;
+    const href = links[i] || '#';
+    const sub = href && href !== '#' ? 'Open presentation' : 'Placeholder';
+    return `<a class="card" href="${href}"><strong>${escapeHtml(title)}</strong><small>${sub}</small></a>`;
+  }).join('');
+  const pageTitle = catId === 'toolkit' ? 'Language Arts Toolkit'
+                   : catId === 'life' ? 'Life Skills'
+                   : ({ adit:'A Door Into Time', lik:'Lost in Kragdon-ah', rfk:'Return from Kragdon-ah', wok:'Warrior of Kragdon-ah' }[catId] || 'Language Arts');
   return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>${escapeHtml(pageTitle)} – Reinisch Classroom</title><style>*{box-sizing:border-box;margin:0;padding:0}:root{--glass:rgba(255,255,255,.14);--glass-brd:rgba(255,255,255,.28);--text:#e8edf5}body{min-height:100vh;font-family:Segoe UI,Roboto,Arial,sans-serif;color:var(--text);background:#0b1220;display:flex;flex-direction:column;align-items:center;text-align:center;padding:2rem}.grid{width:100%;max-width:1100px;display:grid;gap:1rem;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}.card{background:var(--glass);border:1px solid var(--glass-brd);border-radius:1rem;padding:1rem 1.25rem;color:var(--text);text-decoration:none;min-height:86px;display:flex;flex-direction:column;justify-content:center;align-items:center;box-shadow:0 10px 30px rgba(0,0,0,.15)}</style></head><body><header><h1>${escapeHtml(pageTitle)}</h1><p style="opacity:.9;margin:14px 0 22px">Unit hub</p></header><section class="grid">${cards}</section></body></html>`;
 }
-function hasPathPrefix(map,prefix){ for(const k of map.keys()) if(k.startsWith(prefix)) return true; return false; }
-function decodeHtml(s){ return s.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'"); }
-function escapeHtml(s=''){ return s.replace(/[&<>"]/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+function ensureStateShape(state) {
+  if (!state || typeof state !== 'object') {
+    state = { version: 'v1', updated: '', categories: {} };
+  }
+  if (!state.categories) state.categories = {};
+  for (const [id, meta] of Object.entries(CAT_META)) {
+    if (!state.categories[id]) state.categories[id] = { slots: meta.slots, titles: [], links: [] };
+  }
+}
+
+function escapeHtml(s=''){return s.replace(/[&<>"]/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 function sha1(buf){ return crypto.createHash('sha1').update(buf).digest('hex'); }
 function ensureArraySize(arr,n){ while(arr.length<n) arr.push(''); }
-async function apiGET(url,token){ const r=await fetch(url,{headers:{Authorization:`Bearer ${token}`}}); if(!r.ok) throw new Error(`GET ${url} ${r.status}`); return r.json(); }
-async function apiPOST(url,token,body){ const r=await fetch(url,{method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify(body)}); if(!r.ok) throw new Error(`POST ${url} ${r.status} ${await r.text()}`); return r.json(); }
-async function rawPUT(url,token,buf){ const r=await fetch(url,{method:'PUT',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/octet-stream'},body:buf}); if(!r.ok) throw new Error(`PUT ${url} ${r.status} ${await r.text()}`); }
-async function listDeployFiles(deployId,token){
-  let page=1; const out=new Map();
-  while(true){ const arr=await apiGET(`${API}/deploys/${deployId}/files?per_page=10000&page=${page}`,token); if(!Array.isArray(arr)||arr.length===0) break;
-    for(const f of arr){ if(f?.path && f?.sha){ out.set(f.path.startsWith('/')?f.path:'/'+f.path, f.sha); } }
-    if(arr.length<10000) break; page++; }
-  return out;
+
+function json(status, data) {
+  return { statusCode: status, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) };
 }
-async function fetchState(){
-  const base=process.env.PUBLIC_SITE_URL; if(!base) return {};
-  try{ const r=await fetch(`${base}/assets/data/site-state.json`,{headers:{'Cache-Control':'no-cache'}}); if(!r.ok) return {}; return await r.json(); }catch{ return {}; }
-}
-function json(status,data){ return { statusCode:status, headers:{'Content-Type':'application/json'}, body: JSON.stringify(data) }; }
