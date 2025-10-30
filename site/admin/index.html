@@ -74,7 +74,7 @@
 
     <div class="bar" style="margin-top:8px">
       <button id="go">Upload & Commit</button>
-      <small id="sizeHint">Only changed files are committed. Larger batches reduce the number of commits.</small>
+      <small id="sizeHint">Only changed files are committed. Smaller batches improve reliability.</small>
     </div>
 
     <div id="log" class="log" aria-live="polite"></div>
@@ -112,7 +112,8 @@
   function estimateB64Size(n){ return Math.floor(n*1.37); }
   function prettySize(n){ return n>1048576?(n/1048576).toFixed(1)+' MB':(n/1024).toFixed(1)+' KB'; }
 
-  function planBatches(files,target=8*1024*1024){
+  // Reduce per-request size target to ~3 MB for Netlify reliability
+  function planBatches(files,target=3*1024*1024){
     const batches=[]; let current=[]; let used=0;
     for(const f of files){
       const est=estimateB64Size(f.size||0);
@@ -164,7 +165,7 @@
       const r=await fetch('/.netlify/functions/incremental-deploy?action=backfill',{headers:{'x-admin-key':key},cache:'no-store'});
       const t=await r.text().catch(()=> '');
       log('Backfill ->', r.status, t.slice(0,400));
-      if(r.ok) setTimeout(refreshStateUI, 8000); // give Netlify a moment to build
+      if(r.ok) setTimeout(refreshStateUI, 8000);
     });
 
     document.getElementById('migratePublisher').addEventListener('click', async ()=>{
@@ -174,7 +175,7 @@
       const r=await fetch('/.netlify/functions/incremental-deploy?action=migrate_publisher',{headers:{'x-admin-key':key},cache:'no-store'});
       const t=await r.text().catch(()=> '');
       log('Migrate ->', r.status, t.slice(0,500));
-      if(r.ok) setTimeout(refreshStateUI, 12000); // allow build time
+      if(r.ok) setTimeout(refreshStateUI, 12000);
     });
 
     document.getElementById('go').addEventListener('click', async ()=>{
@@ -183,7 +184,7 @@
       const {main,extras}=gather(folderEl,filesEl,bgsEl); if(main.length===0&&extras.length===0) return log('Please choose a folder or select files.');
       const key=ensureKey(); if(!key) return log('Admin Key is required.');
 
-      const mainFiles=main.map(x=>x.file); const batches=planBatches(mainFiles, 8*1024*1024);
+      const mainFiles=main.map(x=>x.file); const batches=planBatches(mainFiles, 3*1024*1024); // 3 MB target
       const totalBatches=batches.length + (extras.length?1:0);
       log('[debug] category=',category,'slot=',slot,'titleLen=',title.length,'main=',main.length,'extras=',extras.length,'batches=',totalBatches);
 
