@@ -1,6 +1,7 @@
-// Netlify Function: Incremental Deploy with batch "merge" support + diagnostics + in-function auth
-// Required env: NETLIFY_TOKEN, PUBLIC_SITE_URL, (SITE_ID is auto-provided by Netlify)
-// Optional env: ADMIN_KEY (if set, requests must include header x-admin-key: <value>)
+// Incremental Deploy Function with: batching, diagnostics, in-function auth, and "backfill" action
+// Required env: NETLIFY_TOKEN, PUBLIC_SITE_URL
+// SITE_ID is provided automatically by Netlify (via NETLIFY_SITE_ID)
+// Optional env: ADMIN_KEY for x-admin-key header auth
 const crypto = require('crypto');
 
 const CAT_META = {
@@ -16,15 +17,101 @@ const API = 'https://api.netlify.com/api/v1';
 
 exports.handler = async (event) => {
   try {
-    // Diagnostics endpoint (GET) to verify envs are visible at runtime
+    const action = (event.queryStringParameters && event.queryStringParameters.action) || '';
+
     if (event.httpMethod === 'GET') {
-      return json(200, {
-        ok: true,
-        method: 'GET',
-        hasToken: !!process.env.NETLIFY_TOKEN,
-        hasSiteId: !!getSiteId(),
-        hasPublicSiteUrl: !!process.env.PUBLIC_SITE_URL
-      });
+      if (action === 'diagnostics') {
+        return json(200, {
+          ok: true,
+          method: 'GET',
+          hasToken: !!process.env.NETLIFY_TOKEN,
+          hasSiteId: !!getSiteId(),
+          hasPublicSiteUrl: !!process.env.PUBLIC_SITE_URL
+        });
+      }
+      if (action === 'backfill') {
+        // protect backfill
+        const requiredKey = process.env.ADMIN_KEY;
+        if (requiredKey) {
+          const hdrs = event.headers || {};
+          const sentKey = hdrs['x-admin-key'] || hdrs['X-Admin-Key'] || hdrs['x-Admin-Key'];
+          if (!sentKey || sentKey !== requiredKey) {
+            return json(401, { message: 'Unauthorized (invalid admin key)' });
+          }
+        }
+        const token = process.env.NETLIFY_TOKEN;
+        const siteId = getSiteId();
+        const baseUrl = process.env.PUBLIC_SITE_URL;
+        if (!token || !siteId || !baseUrl) {
+          return json(500, { message: 'Server not configured for backfill' });
+        }
+        // Build state by scanning current deploy manifest
+        const latest = await apiGET(`${API}/sites/${siteId}/deploys?per_page=1`, token).then(a => a[0]);
+        if (!latest) return json(500, { message: 'No existing deploy found' });
+        const prevFiles = await listDeployFiles(latest.id, token);
+
+        const state = { version: 'v1', updated: new Date().toISOString(), categories: {} };
+        for (const [catId, meta] of Object.entries(CAT_META)) {
+          const titles = new Array(meta.slots).fill('');
+          const links  = new Array(meta.slots).fill('');
+          for (let i=1; i<=meta.slots; i++) {
+            const slotDir = `/${meta.baseOut}/presentation-${String(i).padStart(2,'0')}/`;
+            // If any file exists under this slot directory, consider it present
+            const hasAny = hasPathPrefix(prevFiles, slotDir);
+            if (!hasAny) continue;
+            links[i-1] = slotDir; // link to slot root
+            // Try to fetch title from the slot's index.html on the live site
+            try {
+              const res = await fetch(`${baseUrl}${slotDir}index.html`, { headers: { 'Cache-Control': 'no-cache' }});
+              if (res.ok) {
+                const html = await res.text();
+                const m = html.match(/<title>\s*([^<]+)\s*<\/title>/i) || html.match(/<h1[^>]*>\s*([^<]+)\s*<\/h1>/i);
+                titles[i-1] = m ? decodeHtml(m[1]).trim() : titles[i-1];
+              }
+            } catch {}
+            if (!titles[i-1]) titles[i-1] = `Presentation ${i}`;
+          }
+          state.categories[catId] = { slots: meta.slots, titles, links };
+        }
+
+        // Prepare updated files: state JSON + regenerated category index pages
+        const newBlobs = new Map();
+        const newShas  = new Map();
+
+        const statePath = '/assets/data/site-state.json';
+        const stateBuf  = Buffer.from(JSON.stringify(state, null, 2));
+        newBlobs.set(statePath, stateBuf); newShas.set(statePath, sha1(stateBuf));
+
+        for (const catId of Object.keys(CAT_META)) {
+          const catIndexPath = categoryIndexPath(catId);
+          if (catIndexPath) {
+            const catHtml = generateCategoryIndex(catId, state);
+            const catBuf  = Buffer.from(catHtml);
+            newBlobs.set(catIndexPath, catBuf); newShas.set(catIndexPath, sha1(catBuf));
+          }
+        }
+
+        // Merge with previous manifest (no deletions)
+        const filesMap = new Map(prevFiles);
+        for (const [p, sha] of newShas.entries()) filesMap.set(p, sha);
+
+        const deployRes = await apiPOST(`${API}/sites/${siteId}/deploys`, token, {
+          files: Object.fromEntries(filesMap.entries()),
+          draft: false
+        });
+
+        const required = deployRes?.required || [];
+        for (const p of required) {
+          const buf = newBlobs.get(p);
+          if (!buf) continue;
+          await rawPUT(`${API}/deploys/${deployRes.id}/files${p}`, token, buf);
+        }
+
+        return json(200, { ok:true, message:'backfill-complete', updated: state.updated, deploy_id: deployRes.id });
+      }
+
+      // Default GET without action: simple allow
+      return json(200, { ok:true, message:'Use POST for uploads or action=diagnostics/backfill for GET.' });
     }
 
     if (event.httpMethod !== 'POST') return json(405, { message: 'Method not allowed' });
@@ -75,7 +162,7 @@ exports.handler = async (event) => {
       newShas.set(full, sha);
     }
 
-    // 4) Choose entry HTML among provided files in this (or previous) batches
+    // 4) Choose entry HTML among provided or existing files
     let entryRel = null;
     const currentHtmls = Array.from(newBlobs.keys()).filter(p => p.startsWith('/' + slotDir + '/') && p.toLowerCase().endsWith('.html'));
     if (currentHtmls.length) {
@@ -99,14 +186,13 @@ exports.handler = async (event) => {
       }
     }
 
-    // 5) Generate redirect index.html and add to batch
+    // 5) Redirect index.html
     const redirectHtml = redirectIndexHtml(title, entryRel, cat.back, cat.section);
     const redirectPath = '/' + slotDir + '/index.html';
     const redirectBuf  = Buffer.from(redirectHtml);
-    newBlobs.set(redirectPath, redirectBuf);
-    newShas.set(redirectPath, sha1(redirectBuf));
+    newBlobs.set(redirectPath, redirectBuf); newShas.set(redirectPath, sha1(redirectBuf));
 
-    // 6) Update site state and category index
+    // 6) Update state and category index
     let state = await fetchState();
     if (!state.categories) {
       state = {
@@ -123,28 +209,17 @@ exports.handler = async (event) => {
 
     const statePath = '/assets/data/site-state.json';
     const stateBuf  = Buffer.from(JSON.stringify(state, null, 2));
-    newBlobs.set(statePath, stateBuf);
-    newShas.set(statePath, sha1(stateBuf));
+    newBlobs.set(statePath, stateBuf); newShas.set(statePath, sha1(stateBuf));
 
-    const catIndexPath = category === 'toolkit'
-      ? '/language-arts/toolkit/index.html'
-      : category === 'life'
-        ? '/life-skills/index.html'
-        : {
-            adit: '/language-arts/a-door-into-time/index.html',
-            lik:  '/language-arts/lost-in-kragdon-ah/index.html',
-            rfk:  '/language-arts/return-from-kragdon-ah/index.html',
-            wok:  '/language-arts/warrior-of-kragdon-ah/index.html'
-          }[category];
+    const catIndexPath = categoryIndexPath(category);
     if (catIndexPath) {
       const catHtml = generateCategoryIndex(category, state);
       const catBuf  = Buffer.from(catHtml);
-      newBlobs.set(catIndexPath, catBuf);
-      newShas.set(catIndexPath, sha1(catBuf));
+      newBlobs.set(catIndexPath, catBuf); newShas.set(catIndexPath, sha1(catBuf));
     }
 
     // 7) Merge previous manifest with this batch
-    const filesMap = new Map(prevFiles); // path -> sha
+    const filesMap = new Map(prevFiles);
     if (merge !== true) {
       for (const p of Array.from(filesMap.keys())) {
         if (p.startsWith('/' + slotDir + '/')) filesMap.delete(p);
@@ -152,13 +227,12 @@ exports.handler = async (event) => {
     }
     for (const [p, sha] of newShas.entries()) filesMap.set(p, sha);
 
-    // 8) Create deploy referencing complete manifest so far
+    // 8) Create deploy and upload required files
     const deployRes = await apiPOST(`${API}/sites/${siteId}/deploys`, token, {
       files: Object.fromEntries(filesMap.entries()),
       draft: false
     });
 
-    // 9) Upload only required files for this deploy
     const required = deployRes?.required || [];
     for (const p of required) {
       const buf = newBlobs.get(p);
@@ -181,7 +255,16 @@ exports.handler = async (event) => {
 function getSiteId(){
   return process.env.SITE_ID || process.env.NETLIFY_SITE_ID || process.env.site_id || null;
 }
-
+function categoryIndexPath(category){
+  return category === 'toolkit'
+    ? '/language-arts/toolkit/index.html'
+    : category === 'life'
+      ? '/life-skills/index.html'
+      : { adit:'/language-arts/a-door-into-time/index.html',
+          lik:'/language-arts/lost-in-kragdon-ah/index.html',
+          rfk:'/language-arts/return-from-kragdon-ah/index.html',
+          wok:'/language-arts/warrior-of-kragdon-ah/index.html' }[category];
+}
 function redirectIndexHtml(title, targetRel, backHref, section) {
   const getSectionReturn = (section) => {
     if (section === 'language-arts' || section === 'toolkit') return '/language-arts/index.html';
@@ -197,7 +280,6 @@ function redirectIndexHtml(title, targetRel, backHref, section) {
   }
   return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta http-equiv="refresh" content="0; url=${targetRel}"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>${escapeHtml(title)}</title><script>location.replace(${JSON.stringify(targetRel)});</` + `script></head><body>${navHtml}</body></html>`;
 }
-
 function generateCategoryIndex(catId, state) {
   const cat = CAT_META[catId];
   const titles = (state.categories[catId]?.titles || []).slice(0, cat.slots);
@@ -213,7 +295,13 @@ function generateCategoryIndex(catId, state) {
                    : ({ adit:'A Door Into Time', lik:'Lost in Kragdon-ah', rfk:'Return from Kragdon-ah', wok:'Warrior of Kragdon-ah' }[catId] || 'Language Arts');
   return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>${escapeHtml(pageTitle)} – Reinisch Classroom</title><style>*{box-sizing:border-box;margin:0;padding:0}:root{--glass:rgba(255,255,255,.14);--glass-brd:rgba(255,255,255,.28);--text:#e8edf5}body{min-height:100vh;font-family:Segoe UI,Roboto,Arial,sans-serif;color:var(--text);background:#0b1220;display:flex;flex-direction:column;align-items:center;text-align:center;padding:2rem}.grid{width:100%;max-width:1100px;display:grid;gap:1rem;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}.card{background:var(--glass);border:1px solid var(--glass-brd);border-radius:1rem;padding:1rem 1.25rem;color:var(--text);text-decoration:none;min-height:86px;display:flex;flex-direction:column;justify-content:center;align-items:center;box-shadow:0 10px 30px rgba(0,0,0,.15)}</style></head><body><header><h1>${escapeHtml(pageTitle)}</h1><p style="opacity:.9;margin:14px 0 22px">Unit hub</p></header><section class="grid">${cards}</section></body></html>`;
 }
-
+function hasPathPrefix(map, prefix){
+  for (const k of map.keys()) if (k.startsWith(prefix)) return true;
+  return false;
+}
+function decodeHtml(str){
+  return str.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'");
+}
 function escapeHtml(s=''){return s.replace(/[&<>"]/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 function sha1(buf){ return crypto.createHash('sha1').update(buf).digest('hex'); }
 function ensureArraySize(arr,n){ while(arr.length<n) arr.push(''); }
