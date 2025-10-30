@@ -19,14 +19,26 @@
     input[type=file]{display:block;width:100%;padding:10px;border-radius:8px;border:1px dashed rgba(255,255,255,.3);background:rgba(255,255,255,.06);color:#fff}
     button{margin-top:16px;padding:10px 16px;border-radius:10px;border:1px solid var(--accent1);background:linear-gradient(180deg,var(--accent1),var(--accent2));color:#fff;cursor:pointer}
     .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    .log{margin-top:16px;background:#0e1629;border:1px solid rgba(255,255,255,.14);border-radius:10px;padding:10px;height:220px;overflow:auto;font:12px ui-monospace,Menlo,Consolas,monospace;color:#dbeafe;white-space:pre-wrap}
+    .bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:space-between;margin-bottom:8px}
+    .right{display:flex;gap:8px;align-items:center}
+    .pill{font-size:12px;border:1px solid rgba(255,255,255,.2);padding:.25rem .5rem;border-radius:999px;background:rgba(255,255,255,.08);cursor:pointer}
+    .log{margin-top:16px;background:#0e1629;border:1px solid rgba(255,255,255,.14);border-radius:10px;padding:10px;height:240px;overflow:auto;font:12px ui-monospace,Menlo,Consolas,monospace;color:#dbeafe;white-space:pre-wrap}
     small{color:var(--muted)}
-    .hstack{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
   </style>
 </head>
 <body>
   <div class="wrap">
-    <h1>Admin Uploader</h1>
+    <div class="bar">
+      <div class="left">
+        <h1 style="margin:0">Admin Uploader</h1>
+      </div>
+      <div class="right">
+        <button id="refreshState" class="pill" title="Re-read state from the live site">Refresh state</button>
+        <button id="backfillState" class="pill" title="Scan the live site and populate state">Backfill from live site</button>
+        <button id="checkEnv" class="pill" title="Verify server config">Check server</button>
+        <button id="changeKey" class="pill" title="Change Admin Key">Admin key</button>
+      </div>
+    </div>
     <p>Select the presentation folder (preferred). If your browser won’t allow folder selection, use “Select files (fallback)”.</p>
 
     <div class="row">
@@ -63,10 +75,9 @@
     <input id="bgs" type="file" multiple accept="image/*"/>
     <small>Only include if you want to add/replace images under assets/images/</small>
 
-    <div class="hstack">
+    <div class="bar" style="margin-top:8px">
       <button id="go">Upload & Deploy (Incremental)</button>
-      <small>Only changed files are uploaded.</small>
-      <small id="sizeHint"></small>
+      <small id="sizeHint">Only changed files are uploaded.</small>
     </div>
 
     <div id="log" class="log" aria-live="polite"></div>
@@ -123,17 +134,15 @@
     return btoa(binary);
   }
 
-  // Estimate base64 payload size (~+37% with overhead)
   function estimateB64Size(bytes){ return Math.floor(bytes * 1.37); }
   function prettySize(bytes){ return bytes>1024*1024 ? (bytes/1048576).toFixed(1)+' MB' : (bytes/1024).toFixed(1)+' KB'; }
 
-  // Plan batches so each POST stays well under common limits (~3 MB target)
   function planBatches(files, targetBytes=3*1024*1024){
     const batches=[]; let current=[]; let used=0;
     for(const f of files){
       const est = estimateB64Size(f.size||0);
-      if(est > targetBytes){ // huge single file: put alone
-        if(current.length) { batches.push(current); current=[]; used=0; }
+      if(est > targetBytes){
+        if(current.length){ batches.push(current); current=[]; used=0; }
         batches.push([f]); continue;
       }
       if(used + est > targetBytes && current.length){ batches.push(current); current=[f]; used=est; }
@@ -158,6 +167,17 @@
     return estimateB64Size(raw);
   }
 
+  function getKey(){ return localStorage.getItem('rc_admin_key') || ''; }
+  function setKey(v){ if(v) localStorage.setItem('rc_admin_key', v); }
+  function ensureKey(){ let k=getKey(); if(!k){ k = prompt('Enter Admin Key'); if(k) setKey(k); } return k; }
+
+  async function refreshStateUI(){
+    const state = await loadState();
+    const catEl = document.getElementById('cat');
+    fillSlots(catEl.value, state);
+    log('State refreshed. Updated:', state.updated || '(unknown)');
+  }
+
   async function run(){
     const state = await loadState();
     const catEl = document.getElementById('cat');
@@ -175,11 +195,36 @@
       const { main, extras } = gatherChosenFiles(folderEl, filesEl, bgsEl);
       const est = approxTotalBytes(main, extras);
       const count = main.length + extras.length;
-      sizeHint.textContent = count ? `Approx upload size: ${prettySize(est)} (${count} files)` : '';
+      sizeHint.textContent = count ? `Approx upload size: ${prettySize(est)} (${count} files)` : 'Only changed files are uploaded.';
     }
     folderEl.addEventListener('change', updateSizeHint);
     filesEl.addEventListener('change', updateSizeHint);
     bgsEl.addEventListener('change', updateSizeHint);
+
+    document.getElementById('changeKey').addEventListener('click', ()=>{
+      const newKey = prompt('Enter new Admin Key'); if(newKey) setKey(newKey);
+    });
+
+    document.getElementById('checkEnv').addEventListener('click', async ()=>{
+      const r = await fetch('/.netlify/functions/incremental-deploy?action=diagnostics', { method:'GET', cache:'no-store' });
+      const t = await r.text().catch(()=> '');
+      log('GET diagnostics ->', r.status, t.slice(0,300));
+    });
+
+    document.getElementById('refreshState').addEventListener('click', refreshStateUI);
+
+    document.getElementById('backfillState').addEventListener('click', async ()=>{
+      const key = ensureKey(); if(!key) return log('Admin Key is required.');
+      log('Starting backfill...');
+      const r = await fetch('/.netlify/functions/incremental-deploy?action=backfill', {
+        method:'GET',
+        headers: { 'x-admin-key': key },
+        cache:'no-store'
+      });
+      const t = await r.text().catch(()=> '');
+      log('Backfill ->', r.status, t.slice(0,300));
+      if (r.ok) await refreshStateUI();
+    });
 
     document.getElementById('go').addEventListener('click', async ()=>{
       const category = (catEl.value||'').trim().toLowerCase();
@@ -192,7 +237,9 @@
       const { main, extras } = gatherChosenFiles(folderEl, filesEl, bgsEl);
       if(main.length===0 && extras.length===0) return log('Please choose a folder or select files.');
 
-      // Build batches from MAIN files first (preserve folder structure if provided)
+      const key = ensureKey();
+      if(!key) return log('Admin Key is required.');
+
       const mainFiles = main.map(x=>x.file);
       const batches = planBatches(mainFiles, 3*1024*1024);
       const totalBatches = batches.length + (extras.length ? 1 : 0);
@@ -201,53 +248,39 @@
 
       let lastDeployUrl = null, lastDeployId = null;
 
-      // Send batches sequentially (merge=true so the function keeps prior batch files)
       for(let i=0; i<batches.length; i++){
         const group = batches[i];
         log(`Sending batch ${i+1} of ${totalBatches} (${group.length} file[s])...`);
         const payloadFiles = [];
-        for(const f of group){
-          const p = relPath(f);
-          payloadFiles.push({ path: p, base64: await toBase64(f) });
-        }
+        for(const f of group){ payloadFiles.push({ path: relPath(f), base64: await toBase64(f) }); }
         const res = await fetch('/.netlify/functions/incremental-deploy', {
           method:'POST',
-          headers:{ 'Content-Type':'application/json' },
+          headers:{ 'Content-Type':'application/json', 'x-admin-key': key },
           body: JSON.stringify({ category, slot, title, files: payloadFiles, merge: true })
         });
         const text = await res.text().catch(()=> '');
         let detail = ''; try { detail = JSON.parse(text)?.message || ''; } catch { detail = text?.slice(0,500); }
         if(!res.ok){ log('Deploy error (batch', i+1, '):', res.status, detail || res.statusText || '(no detail)'); return; }
-        try {
-          const json = JSON.parse(text||'{}');
-          lastDeployUrl = json.deploy_url || lastDeployUrl;
-          lastDeployId  = json.deploy_id  || lastDeployId;
-        } catch {}
+        try { const json = JSON.parse(text||'{}'); lastDeployUrl = json.deploy_url || lastDeployUrl; lastDeployId = json.deploy_id || lastDeployId; } catch {}
       }
 
-      // Send EXTRAS (backgrounds) as last batch if any
       if(extras.length){
         log(`Sending backgrounds batch (${extras.length} file[s])...`);
         const payloadFiles = [];
-        for(const x of extras){
-          payloadFiles.push({ path: x.path, base64: await toBase64(x.file) });
-        }
+        for(const x of extras){ payloadFiles.push({ path: x.path, base64: await toBase64(x.file) }); }
         const res = await fetch('/.netlify/functions/incremental-deploy', {
           method:'POST',
-          headers:{ 'Content-Type':'application/json' },
+          headers:{ 'Content-Type':'application/json', 'x-admin-key': key },
           body: JSON.stringify({ category, slot, title, files: payloadFiles, merge: true })
         });
         const text = await res.text().catch(()=> '');
         let detail = ''; try { detail = JSON.parse(text)?.message || ''; } catch { detail = text?.slice(0,500); }
         if(!res.ok){ log('Deploy error (backgrounds):', res.status, detail || res.statusText || '(no detail)'); return; }
-        try {
-          const json = JSON.parse(text||'{}');
-          lastDeployUrl = json.deploy_url || lastDeployUrl;
-          lastDeployId  = json.deploy_id  || lastDeployId;
-        } catch {}
+        try { const json = JSON.parse(text||'{}'); lastDeployUrl = json.deploy_url || lastDeployUrl; lastDeployId = json.deploy_id || lastDeployId; } catch {}
       }
 
       log('Success! Last deploy:', lastDeployUrl || '(no url)', 'deploy_id=', lastDeployId || '(n/a)');
+      await refreshStateUI();
     });
   }
 
