@@ -14,7 +14,7 @@ function = "admin-basic-auth"
 path = "/admin/*"
 function = "admin-basic-auth"
 
-# Optional: also protect the function URL itself (extra layer in addition to ADMIN_KEY)
+# Also protect the function URL itself (extra layer in addition to ADMIN_KEY)
 [[edge_functions]]
 path = "/.netlify/functions/incremental-deploy"
 function = "admin-basic-auth"
