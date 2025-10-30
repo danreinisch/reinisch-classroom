@@ -1,11 +1,11 @@
 export default async (request, context) => {
   const realm = 'Reinisch Classroom Admin';
 
-  // Read credentials from environment (set these in Netlify → Project configuration → Environment variables)
-  const expectedUser = (context.env && context.env.ADMIN_USER) || '';
-  const expectedPass = (context.env && context.env.ADMIN_PASS) || '';
+  // Read credentials from Netlify env (Project configuration → Environment variables)
+  const expectedUser = context.env?.ADMIN_USER || '';
+  const expectedPass = context.env?.ADMIN_PASS || '';
 
-  // If not configured, deny by default (prevents accidental exposure)
+  // Fail closed if not configured
   if (!expectedUser || !expectedPass) {
     return unauthorized(realm);
   }
@@ -33,7 +33,7 @@ export default async (request, context) => {
     return unauthorized(realm);
   }
 
-  // Auth OK → continue to /admin resources
+  // Auth OK → continue to /admin assets
   return context.next();
 };
 
