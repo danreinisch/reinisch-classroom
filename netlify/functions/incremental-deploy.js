@@ -1,18 +1,17 @@
-// Incremental Deploy (GitHub commits version)
-// - Commits uploaded files into your repo so they persist across deploys
-// - Still supports batching from the Admin UI (fewer, larger batches)
+// Incremental Deploy (GitHub commits version) + diagnostics + repo backfill + publisher migration + safe ref update retry
 // Env vars required:
-//   GITHUB_TOKEN  (classic PAT with repo scope)
+//   GITHUB_TOKEN  (classic PAT with repo scope, or fine-grained with Contents RW on the repo)
 //   GH_REPO       (e.g., "danreinisch/reinisch-classroom")
 //   GH_BRANCH     (e.g., "main")
-//   ADMIN_KEY     (optional; if set, require 'x-admin-key' header)
-//   PUBLIC_SITE_URL (for reading/writing state if needed)
-// Note: Do NOT add SITE_ID in Netlify. Not required for GitHub commits.
+//   ADMIN_KEY     (optional; if set, require 'x-admin-key' header on mutating actions)
+//   PUBLIC_SITE_URL (for reading/writing state on the live site when useful)
+//
+// IMPORTANT: This function now commits content into your repository, so it persists across all deploys.
 
 const crypto = require('crypto');
 
 const CAT_META = {
-  toolkit: { slots: 8,  baseOut: 'language-arts/toolkit/presentations', section: 'language-arts', back: '/language-arts/toolkit/index.html' },
+  toolkit: { slots: 8,  baseOut: 'presentations/language-arts-toolkit', section: 'language-arts', back: '/language-arts/toolkit/index.html' },
   adit:    { slots: 16, baseOut: 'presentations/a-door-into-time',      section: 'language-arts', back: '/language-arts/a-door-into-time/index.html' },
   lik:     { slots: 16, baseOut: 'presentations/lost-in-kragdon-ah',     section: 'language-arts', back: '/language-arts/lost-in-kragdon-ah/index.html' },
   rfk:     { slots: 16, baseOut: 'presentations/return-from-kragdon-ah', section: 'language-arts', back: '/language-arts/return-from-kragdon-ah/index.html' },
@@ -24,7 +23,10 @@ const GH_API = 'https://api.github.com';
 
 exports.handler = async (event) => {
   try {
-    const action = (event.queryStringParameters && event.queryStringParameters.action) || '';
+    const qs = event.queryStringParameters || {};
+    const action = qs.action || '';
+
+    // Diagnostics / GET actions
     if (event.httpMethod === 'GET') {
       if (action === 'diagnostics') {
         return json(200, {
@@ -35,63 +37,122 @@ exports.handler = async (event) => {
           hasPublicSiteUrl: !!process.env.PUBLIC_SITE_URL
         });
       }
+
+      // Backfill state by scanning the repo's site/ tree
       if (action === 'backfill') {
-        // Optional in-function auth
-        const requiredKey = process.env.ADMIN_KEY;
-        if (requiredKey) {
-          const hdrs = event.headers || {};
-          const sentKey = hdrs['x-admin-key'] || hdrs['X-Admin-Key'] || hdrs['x-Admin-Key'];
-          if (!sentKey || sentKey !== requiredKey) return json(401, { message: 'Unauthorized (invalid admin key)' });
-        }
+        await requireAdmin(event);
         const { owner, repo } = parseRepo();
         const branch = await getBranch();
-        const head = await ghGET(`/repos/${owner}/${repo}/git/ref/heads/${encodeURIComponent(branch)}`);
-        const commitSha = head.object.sha;
-        const commit = await ghGET(`/repos/${owner}/${repo}/git/commits/${commitSha}`);
-        const baseTreeSha = commit.tree.sha;
-
-        // Scan the tree for existing presentations
-        const tree = await ghGET(`/repos/${owner}/${repo}/git/trees/${baseTreeSha}?recursive=1`);
-        const paths = (tree.tree || []).map(n => n.path);
+        const headTree = await getHeadTree(owner, repo, branch);
+        const paths = (headTree.tree || []).map(n => n.path);
         const state = buildStateFromPaths(paths);
-
-        // Try to read titles from slot index.html files in repo (best effort)
         await enrichTitlesFromRepo(state, owner, repo, branch);
 
-        // Write state + regenerate category pages
-        const blobs = new Map(); // path -> content Buffer
-        const shas  = new Map(); // path -> sha
+        const blobs = new Map();
         const statePath = 'site/assets/data/site-state.json';
         const stateBuf  = Buffer.from(JSON.stringify(state, null, 2));
         blobs.set(statePath, stateBuf);
-        shas.set(statePath, sha1(stateBuf));
 
         for (const catId of Object.keys(CAT_META)) {
           const catIndexPath = categoryIndexPath(catId);
           if (!catIndexPath) continue;
           const html = generateCategoryIndex(catId, state);
-          const buf = Buffer.from(html);
-          const fullPath = `site${catIndexPath}`;
-          blobs.set(fullPath, buf);
-          shas.set(fullPath, sha1(buf));
+          blobs.set(`site${catIndexPath}`, Buffer.from(html));
         }
 
-        const newCommitSha = await commitTree(owner, repo, branch, blobs, `Backfill state from repository (${new Date().toISOString()})`);
-        return json(200, { ok: true, message: 'backfill-complete', commit: newCommitSha, updated: state.updated });
+        const commitSha = await commitTreeWithRetry(owner, repo, branch, blobs, `Backfill site state from repo (${new Date().toISOString()})`);
+        return json(200, { ok: true, message: 'backfill-complete', commit: commitSha, updated: state.updated });
       }
 
-      return json(200, { ok: true, message: 'Use POST to upload; or GET ?action=diagnostics|backfill' });
+      // One-time migration from the legacy publisher folders into site/presentations/*
+      if (action === 'migrate_publisher') {
+        await requireAdmin(event);
+        const { owner, repo } = parseRepo();
+        const branch = await getBranch();
+
+        // Scan full repo tree
+        const headTree = await getHeadTree(owner, repo, branch);
+        const nodes = headTree.tree || [];
+
+        // Only implement A Door Into Time for now (extendable)
+        const publisherRoot = 'REINISCHCLASSROOM P U B L I S H E R/LANGUAGE ARTS/A Door Into Time';
+        const weekDirs = new Set(
+          nodes
+            .filter(n => n.type === 'blob' && n.path.startsWith(publisherRoot + '/'))
+            .map(n => {
+              const parts = n.path.split('/');
+              return parts.slice(0, publisherRoot.split('/').length + 1).join('/'); // up to Week ... folder
+            })
+        );
+
+        const toCopy = []; // { src, dst }
+        const titlesBySlot = {}; // slot -> title
+
+        for (const weekDir of Array.from(weekDirs)) {
+          // weekDir ends with "Week X - Title"
+          const leaf = weekDir.split('/').pop() || '';
+          const weekMatch = leaf.match(/Week\s+(\d+)/i);
+          if (!weekMatch) continue;
+          const slot = Number(weekMatch[1]);
+          if (!slot || slot < 1 || slot > CAT_META.adit.slots) continue;
+
+          // Title for this slot
+          titlesBySlot[slot] = leaf;
+
+          // Collect files inside this week folder
+          const files = nodes.filter(n => n.type === 'blob' && n.path.startsWith(weekDir + '/'));
+          for (const f of files) {
+            const filename = f.path.substring(weekDir.length + 1);
+            const dest = `site/${CAT_META.adit.baseOut}/presentation-${String(slot).padStart(2, '0')}/${filename}`;
+            toCopy.push({ src: f.path, dst: dest });
+          }
+        }
+
+        if (toCopy.length === 0) {
+          return json(200, { ok: true, message: 'no-publisher-files-found' });
+        }
+
+        // Fetch file contents and prepare blobs
+        const blobs = new Map();
+        for (const { src, dst } of toCopy) {
+          const content = await fetchRepoFile(owner, repo, branch, src); // Buffer
+          blobs.set(dst, content);
+        }
+
+        // Add redirect index.html for each slot we touched
+        for (const slotStr of Object.keys(titlesBySlot)) {
+          const slot = Number(slotStr);
+          const entryRel = await pickEntryHtmlFromRepo(owner, repo, branch, `${CAT_META.adit.baseOut}/presentation-${String(slot).padStart(2,'0')}`);
+          const redirectHtml = redirectIndexHtml(titlesBySlot[slot] || `Presentation ${slot}`, entryRel, CAT_META.adit.back, CAT_META.adit.section);
+          blobs.set(`site/${CAT_META.adit.baseOut}/presentation-${String(slot).padStart(2,'0')}/index.html`, Buffer.from(redirectHtml));
+        }
+
+        // Update state + category page
+        const state = await fetchStateFromLiveOrRepo(owner, repo, branch);
+        ensureStateShape(state);
+        ensureArraySize(state.categories.adit.titles, CAT_META.adit.slots);
+        ensureArraySize(state.categories.adit.links,  CAT_META.adit.slots);
+        for (let i = 1; i <= CAT_META.adit.slots; i++) {
+          if (titlesBySlot[i]) {
+            state.categories.adit.titles[i-1] = titlesBySlot[i];
+            state.categories.adit.links[i-1]  = `/${CAT_META.adit.baseOut}/presentation-${String(i).padStart(2,'0')}/`;
+          }
+        }
+        state.updated = new Date().toISOString();
+        blobs.set('site/assets/data/site-state.json', Buffer.from(JSON.stringify(state, null, 2)));
+        const catHtml = generateCategoryIndex('adit', state);
+        blobs.set(`site${categoryIndexPath('adit')}`, Buffer.from(catHtml));
+
+        const commitSha = await commitTreeWithRetry(owner, repo, branch, blobs, `Migrate publisher content to site structure (ADIT)`);
+        return json(200, { ok: true, message: 'migrate-complete', commit: commitSha, migrated: Object.keys(titlesBySlot).length });
+      }
+
+      return json(200, { ok: true, message: 'Use POST to upload; GET ?action=diagnostics|backfill|migrate_publisher' });
     }
 
+    // Upload (POST) — commits files to GitHub
     if (event.httpMethod !== 'POST') return json(405, { message: 'Method not allowed' });
-
-    // Optional in-function auth
-    const requiredKey = process.env.ADMIN_KEY;
-    if (requiredKey) {
-      const hdrs = event.headers || {};
-      const sentKey = hdrs['x-admin-key'] || hdrs['X-Admin-Key'] || hdrs['x-Admin-Key'];
-      if (!sentKey || sentKey !== requiredKey) return json(401, { message: 'Unauthorized (invalid admin key)' });
-    }
+    await requireAdmin(event);
 
     const body = JSON.parse(event.body || '{}');
     const { category, slot, title, files, merge, final } = body;
@@ -101,13 +162,12 @@ exports.handler = async (event) => {
     if (!slot || slot < 1 || slot > cat.slots) return json(400, { message: 'Invalid slot' });
     if (!title || !Array.isArray(files) || files.length === 0) return json(400, { message: 'Missing title/files' });
 
-    if (!process.env.GITHUB_TOKEN) return json(500, { message: 'Server not configured: missing GITHUB_TOKEN' });
     const { owner, repo } = parseRepo();
     const branch = await getBranch();
 
-    // Build file map to commit
+    // Build the commit payload
     const slotDir = `site/${cat.baseOut}/presentation-${String(slot).padStart(2, '0')}`;
-    const blobs = new Map(); // path -> Buffer
+    const blobs = new Map();
 
     for (const f of files) {
       if (!f.path || !f.base64) continue;
@@ -121,12 +181,11 @@ exports.handler = async (event) => {
       blobs.set(outPath, buf);
     }
 
-    // Always include redirect index and state/index regeneration (keeps site consistent even if user stops mid-batches)
+    // Redirect index + state + category page
     const entryRel = await pickEntryHtml(owner, repo, branch, blobs, slotDir);
     const redirectHtml = redirectIndexHtml(title, entryRel, cat.back, cat.section);
     blobs.set(`${slotDir}/index.html`, Buffer.from(redirectHtml));
 
-    // Update state.json and the category index page
     const state = await fetchStateFromLiveOrRepo(owner, repo, branch);
     ensureStateShape(state);
     ensureArraySize(state.categories[category].titles, cat.slots);
@@ -136,37 +195,35 @@ exports.handler = async (event) => {
     state.updated = new Date().toISOString();
 
     blobs.set('site/assets/data/site-state.json', Buffer.from(JSON.stringify(state, null, 2)));
-
     const catIndexPath = `site${categoryIndexPath(category)}`;
     if (catIndexPath) {
       const catHtml = generateCategoryIndex(category, state);
       blobs.set(catIndexPath, Buffer.from(catHtml));
     }
 
-    // Commit
     const message = final
-      ? `Upload presentation ${category} #${slot} (final batch)`
-      : `Upload presentation ${category} #${slot} (batch, merge=${!!merge})`;
+      ? `Upload ${category} #${slot} (final batch)`
+      : `Upload ${category} #${slot} (batch, merge=${!!merge})`;
 
-    const newCommitSha = await commitTree(owner, repo, branch, blobs, message);
+    const commitSha = await commitTreeWithRetry(owner, repo, branch, blobs, message);
 
-    // Return a URL that will be published by Netlify soon after the GitHub commit
     return json(200, {
       ok: true,
-      commit: newCommitSha,
-      // This is the site URL; Netlify will build and publish shortly after commit
+      commit: commitSha,
       deploy_url: process.env.PUBLIC_SITE_URL || null,
       final: !!final
     });
+
   } catch (e) {
     return json(500, { message: e?.message || 'Server error' });
   }
 };
 
-// ---------- GitHub utilities ----------
+// ---------------- GitHub helpers and utils ----------------
+
 function parseRepo() {
   const slug = process.env.GH_REPO || '';
-  if (!slug || !slug.includes('/')) throw new Error('GH_REPO must be set to "owner/repo"');
+  if (!slug || !slug.includes('/')) throw new Error('GH_REPO must be "owner/repo"');
   const [owner, repo] = slug.split('/');
   return { owner, repo };
 }
@@ -178,8 +235,21 @@ async function getRepoDefaultBranch() {
   const info = await ghGET(`/repos/${owner}/${repo}`);
   return info.default_branch || 'main';
 }
+
+async function commitTreeWithRetry(owner, repo, branch, pathToBufferMap, message, attempt = 0) {
+  try {
+    return await commitTree(owner, repo, branch, pathToBufferMap, message);
+  } catch (err) {
+    // Retry once if ref update fails due to not fast-forward (422)
+    if (attempt < 1 && String(err.message || '').includes('PATCH /git/refs/heads') && String(err.message).includes('422')) {
+      return await commitTreeWithRetry(owner, repo, branch, pathToBufferMap, message, attempt + 1);
+    }
+    throw err;
+  }
+}
+
 async function commitTree(owner, repo, branch, pathToBufferMap, message) {
-  // 1) Get HEAD commit and base tree
+  // 1) Get current HEAD and base tree
   const head = await ghGET(`/repos/${owner}/${repo}/git/ref/heads/${encodeURIComponent(branch)}`);
   const commitSha = head.object.sha;
   const commit = await ghGET(`/repos/${owner}/${repo}/git/commits/${commitSha}`);
@@ -195,7 +265,7 @@ async function commitTree(owner, repo, branch, pathToBufferMap, message) {
     entries.push({ path, mode: '100644', type: 'blob', sha: blob.sha });
   }
 
-  // 3) Create a new tree
+  // 3) Create a new tree from base
   const tree = await ghPOST(`/repos/${owner}/${repo}/git/trees`, {
     base_tree: baseTreeSha,
     tree: entries
@@ -208,7 +278,7 @@ async function commitTree(owner, repo, branch, pathToBufferMap, message) {
     parents: [commitSha]
   });
 
-  // 5) Move the branch ref to the new commit
+  // 5) Move the branch ref to the new commit; retry logic above handles non-FF
   await ghPATCH(`/repos/${owner}/${repo}/git/refs/heads/${encodeURIComponent(branch)}`, {
     sha: newCommit.sha,
     force: false
@@ -216,10 +286,9 @@ async function commitTree(owner, repo, branch, pathToBufferMap, message) {
 
   return newCommit.sha;
 }
+
 async function ghGET(path) {
-  const res = await fetch(`${GH_API}${path}`, {
-    headers: ghHeaders()
-  });
+  const res = await fetch(`${GH_API}${path}`, { headers: ghHeaders() });
   if (!res.ok) throw new Error(`GitHub GET ${path} ${res.status}`);
   return res.json();
 }
@@ -252,9 +321,25 @@ function ghHeaders() {
   };
 }
 
-// ---------- State, pages, and helpers ----------
+// Fetch a repo file as Buffer
+async function fetchRepoFile(owner, repo, branch, path) {
+  const res = await fetch(`${GH_API}/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}?ref=${encodeURIComponent(branch)}`, {
+    headers: ghHeaders()
+  });
+  if (!res.ok) throw new Error(`GitHub contents GET ${path} ${res.status}`);
+  const j = await res.json();
+  return Buffer.from(j.content || '', 'base64');
+}
+
+async function getHeadTree(owner, repo, branch) {
+  const head = await ghGET(`/repos/${owner}/${repo}/git/ref/heads/${encodeURIComponent(branch)}`);
+  const commit = await ghGET(`/repos/${owner}/${repo}/git/commits/${head.object.sha}`);
+  return ghGET(`/repos/${owner}/${repo}/git/trees/${commit.tree.sha}?recursive=1`);
+}
+
+// ------------- State and page helpers -------------
+
 async function fetchStateFromLiveOrRepo(owner, repo, branch) {
-  // Prefer the live site state.json (if present), else read from repo, else start fresh
   try {
     const base = process.env.PUBLIC_SITE_URL;
     if (base) {
@@ -263,7 +348,6 @@ async function fetchStateFromLiveOrRepo(owner, repo, branch) {
     }
   } catch {}
   try {
-    // Read from repo
     const res = await fetch(`${GH_API}/repos/${owner}/${repo}/contents/site/assets/data/site-state.json?ref=${encodeURIComponent(branch)}`, {
       headers: ghHeaders()
     });
@@ -273,7 +357,7 @@ async function fetchStateFromLiveOrRepo(owner, repo, branch) {
       return JSON.parse(content);
     }
   } catch {}
-  // Fresh blank state
+  // Fresh state
   const state = { version: 'v1', updated: '', categories: {} };
   for (const [id, meta] of Object.entries(CAT_META)) {
     state.categories[id] = { slots: meta.slots, titles: [], links: [] };
@@ -300,15 +384,14 @@ function buildStateFromPaths(paths) {
 }
 
 async function enrichTitlesFromRepo(state, owner, repo, branch) {
-  // Try to read <title> from each present slot's index.html
-  const promises = [];
+  const tasks = [];
   for (const [id, meta] of Object.entries(CAT_META)) {
     const titles = state.categories[id].titles;
     const links  = state.categories[id].links;
     for (let i = 1; i <= meta.slots; i++) {
       if (!links[i - 1]) continue;
       const idxPath = `site/${meta.baseOut}/presentation-${String(i).padStart(2, '0')}/index.html`;
-      promises.push((async () => {
+      tasks.push((async () => {
         try {
           const r = await fetch(`${GH_API}/repos/${owner}/${repo}/contents/${encodeURIComponent(idxPath)}?ref=${encodeURIComponent(branch)}`, {
             headers: ghHeaders()
@@ -322,12 +405,11 @@ async function enrichTitlesFromRepo(state, owner, repo, branch) {
       })());
     }
   }
-  await Promise.all(promises);
+  await Promise.all(tasks);
   state.updated = new Date().toISOString();
 }
 
 async function pickEntryHtml(owner, repo, branch, incomingBlobs, slotDir) {
-  // Prefer an .html in this batch; otherwise check repo for an existing one
   const candidates = [];
   for (const [p] of incomingBlobs.entries()) {
     if (p.startsWith(`${slotDir}/`) && p.toLowerCase().endsWith('.html') && p !== `${slotDir}/index.html`) {
@@ -338,23 +420,19 @@ async function pickEntryHtml(owner, repo, branch, incomingBlobs, slotDir) {
     candidates.sort((a, b) => (a.toLowerCase().endsWith('/index.html') ? -1 : 0) - (b.toLowerCase().endsWith('/index.html') ? -1 : 0) || (a.length - b.length));
     return candidates[0].replace(`${slotDir}/`, '');
   }
-  // Look in repo
-  try {
-    const tree = await getHeadTree(owner, repo, branch);
-    const paths = (tree.tree || []).map(n => n.path);
-    const htmls = paths.filter(p => p.startsWith(`${slotDir}/`) && p.toLowerCase().endsWith('.html') && p !== `${slotDir}/index.html`);
-    if (htmls.length) {
-      htmls.sort((a, b) => (a.toLowerCase().endsWith('/index.html') ? -1 : 0) - (b.toLowerCase().endsWith('/index.html') ? -1 : 0) || (a.length - b.length));
-      return htmls[0].replace(`${slotDir}/`, '');
-    }
-  } catch {}
-  return null;
+  return await pickEntryHtmlFromRepo(owner, repo, branch, slotDir.replace(/^site\//,''));
 }
 
-async function getHeadTree(owner, repo, branch) {
-  const head = await ghGET(`/repos/${owner}/${repo}/git/ref/heads/${encodeURIComponent(branch)}`);
-  const commit = await ghGET(`/repos/${owner}/${repo}/git/commits/${head.object.sha}`);
-  return ghGET(`/repos/${owner}/${repo}/git/trees/${commit.tree.sha}?recursive=1`);
+async function pickEntryHtmlFromRepo(owner, repo, branch, slotDirNoSitePrefix) {
+  const tree = await getHeadTree(owner, repo, branch);
+  const paths = (tree.tree || []).map(n => n.path);
+  const prefix = `site/${slotDirNoSitePrefix}/`;
+  const htmls = paths.filter(p => p.startsWith(prefix) && p.toLowerCase().endsWith('.html') && p !== `${prefix}index.html`);
+  if (htmls.length) {
+    htmls.sort((a, b) => (a.toLowerCase().endsWith('/index.html') ? -1 : 0) - (b.toLowerCase().endsWith('/index.html') ? -1 : 0) || (a.length - b.length));
+    return htmls[0].replace(prefix, '');
+  }
+  return null;
 }
 
 function categoryIndexPath(category) {
@@ -415,6 +493,27 @@ function escapeHtml(s=''){return s.replace(/[&<>"]/g,c=>({ '&':'&amp;','<':'&lt;
 function sha1(buf){ return crypto.createHash('sha1').update(buf).digest('hex'); }
 function ensureArraySize(arr,n){ while(arr.length<n) arr.push(''); }
 
+function ghHeaders() {
+  const token = process.env.GITHUB_TOKEN;
+  if (!token) throw new Error('Missing GITHUB_TOKEN');
+  return {
+    Authorization: `Bearer ${token}`,
+    'Content-Type': 'application/json',
+    'User-Agent': 'reinisch-uploader',
+    Accept: 'application/vnd.github+json'
+  };
+}
+
 function json(status, data) {
   return { statusCode: status, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) };
+}
+
+async function requireAdmin(event){
+  const requiredKey = process.env.ADMIN_KEY;
+  if (!requiredKey) return;
+  const hdrs = event.headers || {};
+  const sentKey = hdrs['x-admin-key'] || hdrs['X-Admin-Key'] || hdrs['x-Admin-Key'];
+  if (!sentKey || sentKey !== requiredKey) {
+    throw new Error('Unauthorized (invalid admin key)');
+  }
 }
