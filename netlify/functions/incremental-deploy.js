@@ -1,15 +1,14 @@
 // Incremental Deploy (GitHub commits version) + diagnostics + backfill + publisher migration
 // With clearer error messages, server-side logging, and requireAdmin authorization.
+// Commits uploaded files into your repo under site/... so they persist across deploys.
 //
 // Required envs (Netlify → Project configuration → Environment variables):
-// - GITHUB_TOKEN   (classic PAT with repo scope, or fine-grained with Contents RW on the repo)
-// - GH_REPO        (e.g., "danreinisch/reinisch-classroom")
-// - GH_BRANCH      (e.g., "main")  [optional; defaults to repo default branch]
-// - PUBLIC_SITE_URL (https://reinischclassroom.com)
+// - GITHUB_TOKEN     (classic PAT with repo scope, or fine‑grained with Contents RW on the repo)
+// - GH_REPO          (e.g., "danreinisch/reinisch-classroom")
+// - GH_BRANCH        (e.g., "main")  [optional; defaults to repo default branch]
+// - PUBLIC_SITE_URL  (https://reinischclassroom.com)
 // Optional:
-// - ADMIN_KEY      (if set, requests must send header x-admin-key: <value>)
-//
-// This function commits uploaded files into your repo under site/... so they persist across deploys.
+// - ADMIN_KEY        (if set, requests must send header x-admin-key: <value>)
 
 const crypto = require('crypto');
 
@@ -29,6 +28,7 @@ exports.handler = async (event) => {
     const qs = event.queryStringParameters || {};
     const action = qs.action || '';
 
+    // Diagnostics and maintenance (GET)
     if (event.httpMethod === 'GET') {
       if (action === 'diagnostics') {
         return json(200, {
@@ -53,8 +53,8 @@ exports.handler = async (event) => {
       return json(200, { ok: true, message: 'Use POST to upload; GET ?action=diagnostics|backfill|migrate_publisher' });
     }
 
+    // Main upload (POST)
     if (event.httpMethod !== 'POST') return json(405, { message: 'Method not allowed' });
-
     await requireAdmin(event);
 
     let body;
@@ -71,10 +71,10 @@ exports.handler = async (event) => {
     const { owner, repo } = parseRepo();
     const branch = await getBranch();
 
-    // Prepare blobs: uploaded files -> site/...
     const slotDir = `site/${cat.baseOut}/presentation-${String(slot).padStart(2, '0')}`;
     const blobs = new Map();
 
+    // Add uploaded files
     for (const f of files) {
       if (!f.path || !f.base64) continue;
       const buf = Buffer.from(f.base64, 'base64');
@@ -84,12 +84,12 @@ exports.handler = async (event) => {
       blobs.set(outPath, buf);
     }
 
-    // Redirect index.html
+    // Add redirect index.html
     const entryRel = await pickEntryHtml(owner, repo, branch, blobs, slotDir);
     const redirectHtml = redirectIndexHtml(title, entryRel, cat.back, cat.section);
     blobs.set(`${slotDir}/index.html`, Buffer.from(redirectHtml));
 
-    // Update site-state.json + category page
+    // Update site-state.json and category index page
     const state = await fetchStateFromLiveOrRepo(owner, repo, branch);
     ensureStateShape(state);
     ensureArraySize(state.categories[category].titles, cat.slots);
@@ -99,8 +99,12 @@ exports.handler = async (event) => {
     state.updated = new Date().toISOString();
 
     blobs.set('site/assets/data/site-state.json', Buffer.from(JSON.stringify(state, null, 2)));
+
     const catIndexPath = `site${categoryIndexPath(category)}`;
-    if (catIndexPath) blobs.set(catIndexPath, Buffer.from(generateCategoryIndex(category, state)));
+    if (catIndexPath) {
+      const html = generateCategoryIndex(category, state);
+      blobs.set(catIndexPath, Buffer.from(html));
+    }
 
     const message = final
       ? `Upload ${category} #${slot} (final batch)`
@@ -115,14 +119,13 @@ exports.handler = async (event) => {
     }
 
     return json(200, { ok: true, commit: commitSha, deploy_url: process.env.PUBLIC_SITE_URL || null, final: !!final });
-
   } catch (e) {
     console.error('Top-level error:', e && e.stack ? e.stack : e);
     return json(500, { message: shortErr(e) });
   }
 };
 
-// ---------- GET actions ----------
+// ------------ GET actions ------------
 async function handleBackfill(){
   const { owner, repo } = parseRepo();
   const branch = await getBranch();
@@ -148,7 +151,7 @@ async function handleMigratePublisher(){
   const headTree = await getHeadTree(owner, repo, branch);
   const nodes = headTree.tree || [];
 
-  // Legacy source: REINISCHCLASSROOM P U B L I S H E R/LANGUAGE ARTS/A Door Into Time/Week X - ...
+  // Legacy source path (A Door Into Time)
   const publisherRoot = 'REINISCHCLASSROOM P U B L I S H E R/LANGUAGE ARTS/A Door Into Time';
   const weekDirs = new Set(
     nodes
@@ -211,7 +214,7 @@ async function handleMigratePublisher(){
   return json(200, { ok: true, message: 'migrate-complete', commit: commitSha, migrated: Object.keys(titlesBySlot).length });
 }
 
-// ---------- Auth helper (this was missing) ----------
+// ------------ Auth helper ------------
 async function requireAdmin(event){
   const requiredKey = process.env.ADMIN_KEY;
   if (!requiredKey) return; // no auth configured
@@ -222,7 +225,7 @@ async function requireAdmin(event){
   }
 }
 
-// ---------- GitHub helpers ----------
+// ------------ GitHub helpers ------------
 function parseRepo() {
   const slug = process.env.GH_REPO || '';
   if (!slug || !slug.includes('/')) throw new Error('GH_REPO must be "owner/repo"');
@@ -241,29 +244,35 @@ async function commitTreeWithRetry(owner, repo, branch, pathToBufferMap, message
   catch (err) {
     const msg = String(err && err.message || '');
     if (attempt < 1 && (msg.includes('not a fast forward') || (msg.includes('/git/refs/heads') && msg.includes('422')))) {
+      // refresh and retry once
       return await commitTreeWithRetry(owner, repo, branch, pathToBufferMap, message, attempt+1);
     }
     throw err;
   }
 }
+
 async function commitTree(owner, repo, branch, pathToBufferMap, message) {
-  const head = await ghGET(`/repos/${owner}/${repo}/git/ref/heads/${encodeURIComponent(branch)}`);
-  const commitSha = head.object.sha;
-  const commit = await ghGET(`/repos/${owner}/${repo}/git/commits/${commitSha}`);
+  // 1) Head and base tree
+  const head   = await ghGET(`/repos/${owner}/${repo}/git/ref/heads/${encodeURIComponent(branch)}`);
+  const commit = await ghGET(`/repos/${owner}/${repo}/git/commits/${head.object.sha}`);
   const baseTreeSha = commit.tree.sha;
 
+  // 2) Create blobs
   const entries = [];
   for (const [path, buf] of pathToBufferMap.entries()) {
-    const blob = await ghPOST(`/repos/${owner}/${repo}/git/blobs`, {
-      content: buf.toString('base64'),
-      encoding: 'base64'
-    });
+    const blob = await ghPOST(`/repos/${owner}/${repo}/git/blobs`, { content: buf.toString('base64'), encoding: 'base64' });
     entries.push({ path, mode: '100644', type: 'blob', sha: blob.sha });
   }
 
+  // 3) Create tree
   const tree = await ghPOST(`/repos/${owner}/${repo}/git/trees`, { base_tree: baseTreeSha, tree: entries });
-  const newCommit = await ghPOST(`/repos/${owner}/${repo}/git/commits`, { message, tree: tree.sha, parents: [commitSha] });
+
+  // 4) Create commit
+  const newCommit = await ghPOST(`/repos/${owner}/${repo}/git/commits`, { message, tree: tree.sha, parents: [head.object.sha] });
+
+  // 5) Move ref
   await ghPATCH(`/repos/${owner}/${repo}/git/refs/heads/${encodeURIComponent(branch)}`, { sha: newCommit.sha, force: false });
+
   return newCommit.sha;
 }
 
@@ -302,12 +311,12 @@ async function fetchRepoFile(owner, repo, branch, path) {
 }
 
 async function getHeadTree(owner, repo, branch) {
-  const head = await ghGET(`/repos/${owner}/${repo}/git/ref/heads/${encodeURIComponent(branch)}`);
+  const head   = await ghGET(`/repos/${owner}/${repo}/git/ref/heads/${encodeURIComponent(branch)}`);
   const commit = await ghGET(`/repos/${owner}/${repo}/git/commits/${head.object.sha}`);
   return ghGET(`/repos/${owner}/${repo}/git/trees/${commit.tree.sha}?recursive=1`);
 }
 
-// ---------- State and page helpers ----------
+// ------------ State and page helpers ------------
 async function fetchStateFromLiveOrRepo(owner, repo, branch) {
   try {
     const base = process.env.PUBLIC_SITE_URL;
@@ -325,7 +334,9 @@ async function fetchStateFromLiveOrRepo(owner, repo, branch) {
     }
   } catch {}
   const state = { version: 'v1', updated: '', categories: {} };
-  for (const [id, meta] of Object.entries(CAT_META)) state.categories[id] = { slots: meta.slots, titles: [], links: [] };
+  for (const [id, meta] of Object.entries(CAT_META)) {
+    state.categories[id] = { slots: meta.slots, titles: [], links: [] };
+  }
   return state;
 }
 
@@ -382,6 +393,7 @@ async function pickEntryHtml(owner, repo, branch, incomingBlobs, slotDir){
   }
   return await pickEntryHtmlFromRepo(owner, repo, branch, slotDir.replace(/^site\//,''));
 }
+
 async function pickEntryHtmlFromRepo(owner, repo, branch, slotDirNoSitePrefix){
   const tree = await getHeadTree(owner, repo, branch);
   const paths = (tree.tree || []).map(n => n.path);
@@ -412,20 +424,32 @@ function redirectIndexHtml(title, targetRel, backHref, section){
   return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta http-equiv="refresh" content="0; url=${targetRel}"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>${escapeHtml(title)}</title><script>location.replace(${JSON.stringify(targetRel)});</`+'script></head><body>'+navHtml+'</body></html>';
 }
 
+function generateCategoryIndex(catId, state) {
+  const cat = CAT_META[catId];
+  const titles = (state.categories[catId]?.titles || []).slice(0, cat.slots);
+  const links  = (state.categories[catId]?.links  || []).slice(0, cat.slots);
+  const cards = titles.map((t, i) => {
+    const title = t || `Presentation ${i+1}`;
+    const href = links[i] || '#';
+    const sub = href && href !== '#' ? 'Open presentation' : 'Placeholder';
+    return `<a class="card" href="${href}"><strong>${escapeHtml(title)}</strong><small>${sub}</small></a>`;
+  }).join('');
+  const pageTitle = catId === 'toolkit' ? 'Language Arts Toolkit'
+                   : catId === 'life' ? 'Life Skills'
+                   : ({ adit:'A Door Into Time', lik:'Lost in Kragdon-ah', rfk:'Return from Kragdon-ah', wok:'Warrior of Kragdon-ah' }[catId] || 'Language Arts');
+  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>${escapeHtml(pageTitle)} – Reinisch Classroom</title><style>*{box-sizing:border-box;margin:0;padding:0}:root{--glass:rgba(255,255,255,.14);--glass-brd:rgba(255,255,255,.28);--text:#e8edf5}body{min-height:100vh;font-family:Segoe UI,Roboto,Arial,sans-serif;color:var(--text);background:#0b1220;display:flex;flex-direction:column;align-items:center;text-align:center;padding:2rem}.grid{width:100%;max-width:1100px;display:grid;gap:1rem;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}.card{background:var(--glass);border:1px solid var(--glass-brd);border-radius:1rem;padding:1rem 1.25rem;color:var(--text);text-decoration:none;min-height:86px;display:flex;flex-direction:column;justify-content:center;align-items:center;box-shadow:0 10px 30px rgba(0,0,0,.15)}</style></head><body><header><h1>${escapeHtml(pageTitle)}</h1><p style="opacity:.9;margin:14px 0 22px">Unit hub</p></header><section class="grid">${cards}</section></body></html>`;
+}
+
+// ------------ small helpers ------------
 function ensureStateShape(state){ if(!state||typeof state!=='object') state={version:'v1',updated:'',categories:{}}; if(!state.categories) state.categories={}; for(const [id, meta] of Object.entries(CAT_META)){ if(!state.categories[id]) state.categories[id]={slots:meta.slots,titles:[],links:[]}; } }
 function escapeHtml(s=''){return s.replace(/[&<>"]/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
-function sha1(buf){ return crypto.createHash('sha1').update(buf).digest('hex'); }
 function ensureArraySize(arr,n){ while(arr.length<n) arr.push(''); }
-
-function shortErr(e){
-  const msg = e && e.message ? e.message : String(e);
-  return (msg || 'Server error').slice(0, 600);
-}
+function shortErr(e){ const msg = e && e.message ? e.message : String(e); return (msg || 'Server error').slice(0, 600); }
 
 function ghHeaders(){
   const token = process.env.GITHUB_TOKEN;
   if(!token) throw new Error('Missing GITHUB_TOKEN');
   return { Authorization:`Bearer ${token}`, 'Content-Type':'application/json', 'User-Agent':'reinisch-uploader', Accept:'application/vnd.github+json' };
 }
-
+async function safeText(res){ try{ return await res.text(); } catch{ return ''; } }
 function json(status,data){ return { statusCode:status, headers:{'Content-Type':'application/json'}, body: JSON.stringify(data) }; }
