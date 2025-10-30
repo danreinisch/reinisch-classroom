@@ -112,7 +112,7 @@
   function estimateB64Size(n){ return Math.floor(n*1.37); }
   function prettySize(n){ return n>1048576?(n/1048576).toFixed(1)+' MB':(n/1024).toFixed(1)+' KB'; }
 
-  // Reduce per-request size target to ~3 MB for Netlify reliability
+  // Reduce per-request size to ~3 MB for reliability
   function planBatches(files,target=3*1024*1024){
     const batches=[]; let current=[]; let used=0;
     for(const f of files){
@@ -184,7 +184,7 @@
       const {main,extras}=gather(folderEl,filesEl,bgsEl); if(main.length===0&&extras.length===0) return log('Please choose a folder or select files.');
       const key=ensureKey(); if(!key) return log('Admin Key is required.');
 
-      const mainFiles=main.map(x=>x.file); const batches=planBatches(mainFiles, 3*1024*1024); // 3 MB target
+      const mainFiles=main.map(x=>x.file); const batches=planBatches(mainFiles, 3*1024*1024); // ~3 MB target
       const totalBatches=batches.length + (extras.length?1:0);
       log('[debug] category=',category,'slot=',slot,'titleLen=',title.length,'main=',main.length,'extras=',extras.length,'batches=',totalBatches);
 
