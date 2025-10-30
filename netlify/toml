@@ -2,6 +2,22 @@
   publish = "site"
   functions = "netlify/functions"
 
-# Optional: ensure Functions use Node 18+ (Netlify default is fine)
 [functions]
   node_bundler = "esbuild"
+
+# Protect /admin with Basic Auth via an Edge Function
+# Add both exact and wildcard paths to cover /admin and /admin/...
+[[edge_functions]]
+path = "/admin"
+function = "admin-basic-auth"
+
+[[edge_functions]]
+path = "/admin/*"
+function = "admin-basic-auth"
+
+# Optional: also require the same Basic Auth when someone hits the function URL directly.
+# Your function itself still checks ADMIN_KEY; this is extra protection at the edge.
+# Uncomment if desired:
+# [[edge_functions]]
+# path = "/.netlify/functions/incremental-deploy"
+# function = "admin-basic-auth"
