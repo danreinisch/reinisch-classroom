@@ -5,21 +5,21 @@
 [functions]
   node_bundler = "esbuild"
 
-# Edge guard for admin pages and the upload function (requires session cookie)
+# TEMP: hard-block /admin to prove edge routing is active
 [[edge_functions]]
 path = "/admin"
-function = "admin-auth-guard"
+function = "admin-hardblock"
 
 [[edge_functions]]
 path = "/admin/*"
-function = "admin-auth-guard"
+function = "admin-hardblock"
 
-# Also protect direct function hits in addition to ADMIN_KEY inside the function
+# Also block direct function hits (optional, but good test)
 [[edge_functions]]
 path = "/.netlify/functions/incremental-deploy"
-function = "admin-auth-guard"
+function = "admin-hardblock"
 
-# Simple route to verify Edge Functions are active
+# Health check to prove Edge Functions are live
 [[edge_functions]]
 path = "/edge-ping"
 function = "edge-ping"
