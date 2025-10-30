@@ -11,22 +11,16 @@ export default async (request, context) => {
 
   const auth = request.headers.get('authorization') || '';
   const [scheme, encoded] = auth.split(' ');
-
-  if (scheme !== 'Basic' || !encoded) {
-    return unauthorized(realm);
-  }
+  if (scheme !== 'Basic' || !encoded) return unauthorized(realm);
 
   try {
     const decoded = atob(encoded);
     const idx = decoded.indexOf(':');
     if (idx === -1) return unauthorized(realm);
-
     const user = decoded.slice(0, idx);
     const pass = decoded.slice(idx + 1);
 
-    if (user !== expectedUser || pass !== expectedPass) {
-      return unauthorized(realm);
-    }
+    if (user !== expectedUser || pass !== expectedPass) return unauthorized(realm);
   } catch {
     return unauthorized(realm);
   }
