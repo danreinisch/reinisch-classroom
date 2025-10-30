@@ -1,6 +1,5 @@
-// Incremental Deploy (GitHub commits version) + diagnostics + backfill + publisher migration
-// With clearer error messages, server-side logging, and requireAdmin authorization.
-// Commits uploaded files into your repo under site/... so they persist across deploys.
+// Incremental Deploy (GitHub commits) + diagnostics + backfill + publisher migration
+// Uses ADMIN_KEY (env) for function authorization; no credentials are hard-coded here.
 //
 // Required envs (Netlify → Project configuration → Environment variables):
 // - GITHUB_TOKEN     (classic PAT with repo scope, or fine‑grained with Contents RW on the repo)
@@ -424,23 +423,6 @@ function redirectIndexHtml(title, targetRel, backHref, section){
   return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta http-equiv="refresh" content="0; url=${targetRel}"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>${escapeHtml(title)}</title><script>location.replace(${JSON.stringify(targetRel)});</`+'script></head><body>'+navHtml+'</body></html>';
 }
 
-function generateCategoryIndex(catId, state) {
-  const cat = CAT_META[catId];
-  const titles = (state.categories[catId]?.titles || []).slice(0, cat.slots);
-  const links  = (state.categories[catId]?.links  || []).slice(0, cat.slots);
-  const cards = titles.map((t, i) => {
-    const title = t || `Presentation ${i+1}`;
-    const href = links[i] || '#';
-    const sub = href && href !== '#' ? 'Open presentation' : 'Placeholder';
-    return `<a class="card" href="${href}"><strong>${escapeHtml(title)}</strong><small>${sub}</small></a>`;
-  }).join('');
-  const pageTitle = catId === 'toolkit' ? 'Language Arts Toolkit'
-                   : catId === 'life' ? 'Life Skills'
-                   : ({ adit:'A Door Into Time', lik:'Lost in Kragdon-ah', rfk:'Return from Kragdon-ah', wok:'Warrior of Kragdon-ah' }[catId] || 'Language Arts');
-  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>${escapeHtml(pageTitle)} – Reinisch Classroom</title><style>*{box-sizing:border-box;margin:0;padding:0}:root{--glass:rgba(255,255,255,.14);--glass-brd:rgba(255,255,255,.28);--text:#e8edf5}body{min-height:100vh;font-family:Segoe UI,Roboto,Arial,sans-serif;color:var(--text);background:#0b1220;display:flex;flex-direction:column;align-items:center;text-align:center;padding:2rem}.grid{width:100%;max-width:1100px;display:grid;gap:1rem;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}.card{background:var(--glass);border:1px solid var(--glass-brd);border-radius:1rem;padding:1rem 1.25rem;color:var(--text);text-decoration:none;min-height:86px;display:flex;flex-direction:column;justify-content:center;align-items:center;box-shadow:0 10px 30px rgba(0,0,0,.15)}</style></head><body><header><h1>${escapeHtml(pageTitle)}</h1><p style="opacity:.9;margin:14px 0 22px">Unit hub</p></header><section class="grid">${cards}</section></body></html>`;
-}
-
-// ------------ small helpers ------------
 function ensureStateShape(state){ if(!state||typeof state!=='object') state={version:'v1',updated:'',categories:{}}; if(!state.categories) state.categories={}; for(const [id, meta] of Object.entries(CAT_META)){ if(!state.categories[id]) state.categories[id]={slots:meta.slots,titles:[],links:[]}; } }
 function escapeHtml(s=''){return s.replace(/[&<>"]/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 function ensureArraySize(arr,n){ while(arr.length<n) arr.push(''); }
