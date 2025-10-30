@@ -5,14 +5,19 @@
 [functions]
   node_bundler = "esbuild"
 
-# Protect /admin with Basic Auth via Edge Function (uses ADMIN_USER/ADMIN_PASS env vars)
+# Edge guard for admin pages and the upload function (requires session cookie)
 [[edge_functions]]
 path = "/admin"
-function = "admin-basic-auth"
+function = "admin-auth-guard"
 
 [[edge_functions]]
 path = "/admin/*"
-function = "admin-basic-auth"
+function = "admin-auth-guard"
+
+# Also protect direct function hits in addition to ADMIN_KEY inside the function
+[[edge_functions]]
+path = "/.netlify/functions/incremental-deploy"
+function = "admin-auth-guard"
 
 # Simple route to verify Edge Functions are active
 [[edge_functions]]
