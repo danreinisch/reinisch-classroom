@@ -145,7 +145,9 @@
     life:    { slots: 32, baseOut: 'life-skills/presentations' }
   };
 
-  const BATCH_TARGET = 4.5 * 1024 * 1024; // ~4.5 MB per request to stay under function limits
+  // Keep batches small to avoid provider limits but support arbitrarily large uploads
+  const BATCH_TARGET = 1.8 * 1024 * 1024; // ~1.8 MB per request
+
   const catEl = document.getElementById('cat');
   const slotSel = document.getElementById('slotSel');
   const slotWarn = document.getElementById('slotWarn');
@@ -162,7 +164,7 @@
   let queue = [];
   let siteState = null;
 
-  function log(){ logEl.textContent += Array.from(arguments).join(' ') + '\\n'; logEl.scrollTop = logEl.scrollHeight; }
+  function log(){ logEl.textContent += Array.from(arguments).join(' ') + '\n'; logEl.scrollTop = logEl.scrollHeight; }
   function fmtBytes(n){ if(!n && n!==0) return ''; const u=['B','KB','MB','GB']; let i=0; while(n>1024&&i<u.length-1){n/=1024;i++} return n.toFixed(1)+' '+u[i]; }
 
   async function loadState(){
@@ -245,7 +247,7 @@
 
   function renderList(){
     if (!queue.length) { listEl.textContent = '(no files selected)'; return; }
-    const items = queue.map(q => `• ${q.path} (${fmtBytes(q.file.size)})`).join('\\n');
+    const items = queue.map(q => `• ${q.path} (${fmtBytes(q.file.size)})`).join('\n');
     listEl.textContent = items;
   }
 
@@ -324,7 +326,8 @@
           body
         });
         const text = await res.text().catch(()=> '');
-        log(`Batch ${i+1}/${batches.length} -> ${res.status} ${text.slice(0, 800)}`);
+        log(`Batch ${i+1}/${batches.length} -> ${res.status} ${text}`);
+        if (res.status === 401) { alert('Session expired. Please sign in again.'); location.replace('/admin-login'); return; }
         if (!res.ok) { alert('Upload failed: ' + res.status); return; }
       }
 
@@ -358,7 +361,8 @@
         body: JSON.stringify({ action:'delete', category, slot })
       });
       const text = await res.text().catch(()=> '');
-      log(`Delete response ${res.status} -> ${text.slice(0, 800)}`);
+      log(`Delete response ${res.status} -> ${text}`);
+      if (res.status === 401) { alert('Session expired. Please sign in again.'); location.replace('/admin-login'); return; }
       if (!res.ok) { alert('Delete failed: ' + res.status); return; }
 
       if (siteState?.categories?.[category]) {
@@ -381,7 +385,7 @@
     renderList();
     try{
       const r=await fetch('/.netlify/functions/incremental-deploy?action=diagnostics',{cache:'no-store', credentials:'same-origin'});
-      const t=await r.text().catch(()=> ''); log('GET diagnostics ->', r.status, t.slice(0,300));
+      const t=await r.text().catch(()=> ''); log('GET diagnostics ->', r.status, t);
     }catch(e){ log('Diagnostics failed', e?.message||String(e)); }
   })();
 })();
