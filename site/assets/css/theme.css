@@ -12,43 +12,59 @@
   --glass-brd-hover:rgba(255,255,255,.38);
 }
 
+/* Global foundation */
 *{box-sizing:border-box}
-
 html,body{min-height:100%}
 body{
   margin:0;
   color:var(--text);
   background: var(--bg);
+  /* Animated, subtle layered gradients (matches home look) */
   background-image:
-    radial-gradient(1200px 600px at 10% -10%, rgba(255,255,255,.04), transparent 55%),
-    radial-gradient(1000px 500px at 90% -10%, rgba(255,255,255,.03), transparent 60%);
+    radial-gradient(1200px 600px at 15% -15%, rgba(255,255,255,.050), transparent 55%),
+    radial-gradient(1400px 650px at 85% -20%, rgba(255,255,255,.040), transparent 60%),
+    radial-gradient(900px 600px at -10% 120%, rgba(255,255,255,.035), transparent 55%),
+    radial-gradient(1100px 700px at 110% 120%, rgba(255,255,255,.030), transparent 55%);
+  background-repeat:no-repeat;
+  background-attachment: fixed, fixed, fixed, fixed;
+  background-size: 120% 120%, 140% 140%, 120% 120%, 140% 140%;
+  background-position: 0% 0%, 100% 0%, 0% 100%, 100% 100%;
+  animation: bgDrift 28s ease-in-out infinite alternate;
   font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
   -webkit-font-smoothing:antialiased;
   -moz-osx-font-smoothing:grayscale;
 }
+@keyframes bgDrift{
+  0%   { background-position: 0% 0%, 100% 0%, 0% 100%, 100% 100%; }
+  100% { background-position: 10% 5%, 90% 8%, 4% 95%, 96% 92%; }
+}
 
-/* Glass buttons (apply to any .btn or .glass-btn anchor/button) */
+/* Content panels (optional helper) */
+.panel{
+  background:var(--panel);
+  border:1px solid var(--panel-brd);
+  border-radius:12px;
+}
+
+/* Glass buttons (use .btn anywhere) */
 a.btn, button.btn, .glass-btn{
-  display:inline-flex; align-items:center; justify-content:center;
-  gap:.4rem;
+  display:inline-flex; align-items:center; justify-content:center; gap:.4rem;
   color:#fff; text-decoration:none; font-weight:600;
   background:var(--glass-bg);
   border:1px solid var(--glass-brd);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   padding:.55rem .9rem; border-radius:.65rem;
-  transition: background .12s ease, border-color .12s ease, transform .06s ease;
-  box-shadow: 0 4px 12px var(--shadow);
+  transition: background .12s ease, border-color .12s ease, transform .06s ease, box-shadow .12s ease;
+  box-shadow: 0 6px 18px var(--shadow);
 }
 a.btn:hover, button.btn:hover, .glass-btn:hover{
   background:var(--glass-bg-hover);
   border-color:var(--glass-brd-hover);
 }
-a.btn:active, button.btn:active, .glass-btn:active{
-  transform: translateY(1px);
-}
+a.btn:active, button.btn:active, .glass-btn:active{ transform: translateY(1px); }
 
-/* Top navigation bar injected on subpages */
+/* Top, sticky glass navigation that can be injected by JS */
 .glass-nav{
   position:sticky; top:0; z-index:100;
   display:flex; justify-content:space-between; align-items:center;
@@ -56,13 +72,7 @@ a.btn:active, button.btn:active, .glass-btn:active{
   background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
   border-bottom:1px solid rgba(255,255,255,.12);
   backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
 }
 .glass-nav .left, .glass-nav .right{ display:flex; gap:.6rem; align-items:center }
 .glass-nav a.btn{ box-shadow:none } /* flatter look for the top chrome */
-
-/* Utility containers for content panels (optional) */
-.panel{
-  background:var(--panel);
-  border:1px solid var(--panel-brd);
-  border-radius:12px;
-}
