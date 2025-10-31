@@ -11,19 +11,16 @@
   function isSubpath(path, base){
     const clean = (s)=> s.replace(/index\.html$/,'').replace(/\/+$/,'/') || '/';
     const p = clean(path), b = clean(base);
-    if (p === b) return false;   // exact folder index is not treated as "sub"
+    if (p === b) return false;
     return p.startsWith(b);
   }
-
   function sectionFor(pathname){
     if (pathname.startsWith('/language-arts/')) return 'language-arts';
     if (pathname.startsWith('/life-skills/'))   return 'life-skills';
     if (pathname.startsWith('/admin') || pathname.startsWith('/admin-login')) return 'admin';
     return '';
   }
-
   function addThemeOnce(){
-    // Ensure theme is attached even if the page didn't link it explicitly
     const hasTheme = Array.from(document.styleSheets).some(s => (s.href||'').includes('/assets/css/theme.css'));
     if (!hasTheme){
       const link = document.createElement('link');
@@ -36,7 +33,6 @@
   function ensureNav(){
     const sec = sectionFor(location.pathname);
     if (!sec) return;
-
     if (document.querySelector('.glass-nav')) return;
 
     const nav = makeEl('div', 'glass-nav');
@@ -52,11 +48,9 @@
     } else if (sec === 'life-skills'){
       const backLS = makeEl('a', 'btn', 'Back to Life Skills'); backLS.href = '/life-skills/';
       left.appendChild(backLS);
-    } else if (sec === 'admin'){
-      // Admin gets only Home on the left (Sign out is page-specific)
     }
 
-    // Optional "Back to unit" if the page sets window.UNIT_PAGE.pagePath
+    // Optional “Back to unit” if the page sets window.UNIT_PAGE.pagePath
     try{
       const unitPath = (window.UNIT_PAGE && window.UNIT_PAGE.pagePath) || '';
       if (unitPath && isSubpath(location.pathname, unitPath)) {
@@ -67,10 +61,8 @@
 
     nav.appendChild(left);
     nav.appendChild(right);
-
     const first = document.body.firstElementChild;
-    if (first) document.body.insertBefore(nav, first);
-    else document.body.appendChild(nav);
+    if (first) document.body.insertBefore(nav, first); else document.body.appendChild(nav);
   }
 
   document.addEventListener('DOMContentLoaded', function(){
