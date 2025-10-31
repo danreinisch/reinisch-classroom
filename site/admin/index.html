@@ -305,7 +305,7 @@
       try{
         const j = JSON.parse(text);
         if (j && j.ok) {
-          // Update dropdown state immediately
+          // Reflect immediately in dropdown
           if (siteState?.categories?.[category]?.titles) {
             const titles = siteState.categories[category].titles;
             while (titles.length < total) titles.push('');
