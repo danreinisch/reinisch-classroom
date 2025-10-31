@@ -64,7 +64,6 @@ exports.handler = async (event) => {
   return {
     statusCode: 302,
     headers: {
-      // If you want “login every time,” you can redirect to /admin/?s=1 as discussed earlier.
       Location: '/admin/',
       'Set-Cookie': serializeCookie(COOKIE_NAME, token, {
         httpOnly: true,
