@@ -12,34 +12,28 @@
     #app{display:none}
   </style>
   <script>
-  // Force login every visit:
-  // - /admin (without ?s=1) → redirect to /admin-login
-  // - After login, server redirects to /admin/?s=1
-  // - When s=1 is present, render the app once and strip the parameter
+  // Gate: verify session on the server. If not logged in → redirect to /admin-login.
   (function(){
-    const url = new URL(location.href);
-    const signal = url.searchParams.get('s');
     function showApp(){
       const app = document.getElementById('app');
       const gate = document.getElementById('gate');
       if (app) app.style.display = 'block';
       if (gate) gate.style.display = 'none';
-      // Clean the one-time signal from the URL
-      if (signal === '1') {
-        url.searchParams.delete('s');
-        history.replaceState({}, '', url.pathname + (url.search ? ('?' + url.searchParams.toString()) : '') + url.hash);
+    }
+    async function check(){
+      try{
+        const r = await fetch('/.netlify/functions/admin-session-check', { cache:'no-store' });
+        if (!r.ok) { location.replace('/admin-login'); return; }
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', showApp, { once:true });
+        } else {
+          showApp();
+        }
+      }catch{
+        location.replace('/admin-login');
       }
     }
-    if (signal !== '1') {
-      // Always require login first
-      location.replace('/admin-login');
-      return;
-    }
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', showApp, { once:true });
-    } else {
-      showApp();
-    }
+    check();
   })();
   </script>
 </head>
@@ -52,7 +46,6 @@
         <h1 style="margin:0">Admin Uploader</h1>
         <div>
           <a href="/.netlify/functions/admin-logout" style="color:#fff;border:1px solid #fff;padding:.4rem .7rem;border-radius:.5rem;text-decoration:none">Sign out</a>
-          <button id="changeKey" style="margin-left:8px">Admin key</button>
         </div>
       </div>
       <div id="uploader-root"></div>
@@ -62,9 +55,6 @@
     <script>
     // Minimal diagnostics
     function log(){ const el=document.getElementById('log'); el.textContent+=Array.from(arguments).join(' ')+'\\n'; el.scrollTop=el.scrollHeight; }
-    function getKey(){ return localStorage.getItem('rc_admin_key')||''; }
-    function setKey(v){ if(v) localStorage.setItem('rc_admin_key',v); }
-    document.getElementById('changeKey').addEventListener('click',()=>{ const k=prompt('Enter Admin Key'); if(k) setKey(k); });
     (async()=>{
       try{
         const r=await fetch('/.netlify/functions/incremental-deploy?action=diagnostics',{cache:'no-store'});
