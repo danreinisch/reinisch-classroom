@@ -53,11 +53,13 @@ exports.handler = async (event) => {
   const signature = crypto.createHmac('sha256', secret).update(payloadBuf).digest();
   const token = b64url(payloadBuf) + '.' + b64url(signature);
 
-  // Set HttpOnly session cookie and redirect to /admin
+  // IMPORTANT: Redirect to /admin with a one-time signal (?s=1)
+  // We still set a session cookie, but the UI will ONLY render when it sees s=1.
+  // Any later visit to /admin (without s=1) will force a new login.
   return {
     statusCode: 302,
     headers: {
-      Location: '/admin/',
+      Location: '/admin/?s=1',
       'Set-Cookie': serializeCookie(COOKIE_NAME, token, {
         httpOnly: true,
         secure: true,
