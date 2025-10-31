@@ -1,10 +1,10 @@
 // Login endpoint: verifies ADMIN_USER/ADMIN_PASS and sets a signed session cookie.
-// POST either application/x-www-form-urlencoded or JSON { username, password }
+// Accepts POST as application/x-www-form-urlencoded or JSON { username, password }.
 //
-// Required env vars:
-// - ADMIN_USER
-// - ADMIN_PASS
-// - ADMIN_SESSION_SECRET
+// Required env vars (Netlify → Environment variables):
+// - ADMIN_USER (Secret ON, All scopes)
+// - ADMIN_PASS (Secret ON, All scopes)
+// - ADMIN_SESSION_SECRET (Secret ON, All scopes; random 32+ chars)
 //
 // Optional: MAX_AGE_HOURS (default 12)
 
@@ -14,14 +14,9 @@ const COOKIE_NAME = 'rc_admin_session';
 const MAX_AGE_HOURS = Number(process.env.MAX_AGE_HOURS || 12);
 
 exports.handler = async (event) => {
-  // CORS preflight support if needed
   if (event.httpMethod === 'OPTIONS') {
-    return {
-      statusCode: 204,
-      headers: corsHeaders()
-    };
+    return { statusCode: 204, headers: corsHeaders() };
   }
-
   if (event.httpMethod !== 'POST') {
     return json(405, { message: 'Method not allowed' });
   }
@@ -29,7 +24,6 @@ exports.handler = async (event) => {
   const user = process.env.ADMIN_USER || '';
   const pass = process.env.ADMIN_PASS || '';
   const secret = process.env.ADMIN_SESSION_SECRET || '';
-
   if (!user || !pass || !secret) {
     return json(503, { message: 'Admin not configured' });
   }
@@ -48,7 +42,6 @@ exports.handler = async (event) => {
 
   const inUser = (body.username || '').trim();
   const inPass = (body.password || '').trim();
-
   if (inUser !== user || inPass !== pass) {
     return json(401, { message: 'Invalid credentials' });
   }
@@ -80,7 +73,6 @@ exports.handler = async (event) => {
 function b64url(buf) {
   return Buffer.from(buf).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
 }
-
 function serializeCookie(name, value, opts = {}) {
   const parts = [`${name}=${value}`];
   if (opts.maxAge) parts.push(`Max-Age=${opts.maxAge}`);
@@ -92,7 +84,6 @@ function serializeCookie(name, value, opts = {}) {
   if (opts.sameSite) parts.push(`SameSite=${opts.sameSite}`);
   return parts.join('; ');
 }
-
 function corsHeaders() {
   return {
     'Access-Control-Allow-Origin': '*',
@@ -100,11 +91,6 @@ function corsHeaders() {
     'Access-Control-Allow-Headers': 'Content-Type'
   };
 }
-
 function json(status, data) {
-  return {
-    statusCode: status,
-    headers: { 'Content-Type': 'application/json', ...corsHeaders() },
-    body: JSON.stringify(data)
-  };
+  return { statusCode: status, headers: { 'Content-Type': 'application/json', ...corsHeaders() }, body: JSON.stringify(data) };
 }
