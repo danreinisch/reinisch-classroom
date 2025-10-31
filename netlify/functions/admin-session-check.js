@@ -3,11 +3,11 @@
 
 const crypto = require('crypto');
 
-const COOKIE_NAME = 'rc_admin_session';
+const COOKIE_NAME = 'rc_admin_session_v2'; // match the new cookie name
 
 exports.handler = async (event) => {
   try {
-    const secret = process.env.ADMIN_SESSION_SECRET || '';
+    const secret = (process.env.ADMIN_SESSION_SECRET || '').trim();
     if (!secret) return json(503, { ok: false, message: 'Admin not configured' });
 
     const cookieHeader = event.headers.cookie || event.headers.Cookie || '';
