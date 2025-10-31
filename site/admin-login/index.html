@@ -16,10 +16,9 @@
   </style>
 </head>
 <body>
-  <!-- glass top-nav is injected; includes a Home button -->
   <main class="wrap">
     <h1>Admin Login</h1>
-    <form method="post" action="/.netlify/functions/admin-login">
+    <form method="post" action="/.netlify/functions/admin-session">
       <label>Username</label>
       <input name="username" autocomplete="username" required/>
       <label>Password</label>
@@ -29,7 +28,7 @@
         <a class="btn" href="/">Home</a>
       </div>
     </form>
-    <p class="muted" style="margin-top:8px">Use your assigned admin credentials to access the uploader.</p>
+    <p class="muted" style="margin-top:8px">Use your admin credentials to access the uploader.</p>
   </main>
 </body>
 </html>
