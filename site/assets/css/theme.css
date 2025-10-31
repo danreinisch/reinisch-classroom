@@ -1,0 +1,68 @@
+:root{
+  --bg:#0b1220;
+  --panel:rgba(255,255,255,.06);
+  --panel-brd:rgba(255,255,255,.18);
+  --text:#e8edf5;
+  --muted:#b8c1d9;
+  --link:#dbeafe;
+  --shadow:rgba(0,0,0,.35);
+  --glass-bg:rgba(255,255,255,.10);
+  --glass-bg-hover:rgba(255,255,255,.16);
+  --glass-brd:rgba(255,255,255,.28);
+  --glass-brd-hover:rgba(255,255,255,.38);
+}
+
+*{box-sizing:border-box}
+
+html,body{min-height:100%}
+body{
+  margin:0;
+  color:var(--text);
+  background: var(--bg);
+  background-image:
+    radial-gradient(1200px 600px at 10% -10%, rgba(255,255,255,.04), transparent 55%),
+    radial-gradient(1000px 500px at 90% -10%, rgba(255,255,255,.03), transparent 60%);
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
+
+/* Glass buttons (apply to any .btn or .glass-btn anchor/button) */
+a.btn, button.btn, .glass-btn{
+  display:inline-flex; align-items:center; justify-content:center;
+  gap:.4rem;
+  color:#fff; text-decoration:none; font-weight:600;
+  background:var(--glass-bg);
+  border:1px solid var(--glass-brd);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  padding:.55rem .9rem; border-radius:.65rem;
+  transition: background .12s ease, border-color .12s ease, transform .06s ease;
+  box-shadow: 0 4px 12px var(--shadow);
+}
+a.btn:hover, button.btn:hover, .glass-btn:hover{
+  background:var(--glass-bg-hover);
+  border-color:var(--glass-brd-hover);
+}
+a.btn:active, button.btn:active, .glass-btn:active{
+  transform: translateY(1px);
+}
+
+/* Top navigation bar injected on subpages */
+.glass-nav{
+  position:sticky; top:0; z-index:100;
+  display:flex; justify-content:space-between; align-items:center;
+  padding:.8rem 1rem;
+  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+  border-bottom:1px solid rgba(255,255,255,.12);
+  backdrop-filter: blur(6px);
+}
+.glass-nav .left, .glass-nav .right{ display:flex; gap:.6rem; align-items:center }
+.glass-nav a.btn{ box-shadow:none } /* flatter look for the top chrome */
+
+/* Utility containers for content panels (optional) */
+.panel{
+  background:var(--panel);
+  border:1px solid var(--panel-brd);
+  border-radius:12px;
+}
