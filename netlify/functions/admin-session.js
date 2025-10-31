@@ -2,9 +2,9 @@
 // Accepts POST as application/x-www-form-urlencoded or JSON { username, password }.
 //
 // Required env vars (Netlify → Environment variables):
-// - ADMIN_USER (Secret ON, All scopes)
-// - ADMIN_PASS (Secret ON, All scopes)
-// - ADMIN_SESSION_SECRET (Secret ON, All scopes; random 32+ chars)
+// - ADMIN_USER (Secret ON, Functions + Runtime scopes)
+// - ADMIN_PASS (Secret ON, Functions + Runtime scopes)
+// - ADMIN_SESSION_SECRET (Secret ON, Functions + Runtime scopes; random 32+ chars)
 //
 // Optional: MAX_AGE_HOURS (default 12)
 
@@ -30,21 +30,29 @@ exports.handler = async (event) => {
     return json(503, { message: 'Admin not configured' });
   }
 
-  let body = {};
+  // Robust body parsing: handle base64-encoded bodies and both form and JSON payloads
+  let inUser = '';
+  let inPass = '';
   try {
     const ctype = (event.headers['content-type'] || event.headers['Content-Type'] || '').toLowerCase();
+    let raw = event.body || '';
+    if (event.isBase64Encoded) {
+      try { raw = Buffer.from(raw, 'base64').toString('utf8'); } catch {}
+    }
     if (ctype.includes('application/x-www-form-urlencoded')) {
-      body = Object.fromEntries(new URLSearchParams(event.body || ''));
+      const obj = Object.fromEntries(new URLSearchParams(raw || ''));
+      inUser = (obj.username || '').trim();
+      inPass = (obj.password || '').trim();
     } else {
-      body = JSON.parse(event.body || '{}');
+      const obj = JSON.parse(raw || '{}');
+      inUser = (obj.username || '').trim();
+      inPass = (obj.password || '').trim();
     }
   } catch {
     return json(400, { message: 'Invalid request body' });
   }
 
-  const inUser = (body.username || '').trim();
-  const inPass = (body.password || '').trim();
-
+  // Constant-time compare
   if (!safeEqual(inUser, userEnv) || !safeEqual(inPass, passEnv)) {
     // Safe diagnostic (no secrets): log only lengths
     console.log('admin-session invalid credentials', {
@@ -106,5 +114,5 @@ function corsHeaders() {
   };
 }
 function json(status, data) {
-  return { statusCode: status, headers: { 'Content-Type': 'application/json', ...corsHeaders() }, body: JSON.stringify(data) };
+  return { statusCode: status, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) };
 }
