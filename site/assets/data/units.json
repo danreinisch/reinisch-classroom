@@ -1,0 +1,54 @@
+{
+  "units": [
+    {
+      "id": "toolkit",
+      "title": "Language Arts Toolkit",
+      "section": "language-arts",
+      "baseOut": "presentations/language-arts-toolkit",
+      "slots": 8,
+      "pagePath": "/language-arts/toolkit/"
+    },
+    {
+      "id": "adit",
+      "title": "A Door Into Time",
+      "section": "language-arts",
+      "baseOut": "presentations/a-door-into-time",
+      "slots": 16,
+      "pagePath": "/language-arts/a-door-into-time/"
+    },
+    {
+      "id": "lik",
+      "title": "Lost in Kragdon‑Ah",
+      "section": "language-arts",
+      "baseOut": "presentations/lost-in-kragdon-ah",
+      "slots": 16,
+      "pagePath": "/language-arts/lost-in-kragdon-ah/"
+    },
+    {
+      "id": "rfk",
+      "title": "Return from Kragdon‑Ah",
+      "section": "language-arts",
+      "baseOut": "presentations/return-from-kragdon-ah",
+      "slots": 16,
+      "pagePath": "/language-arts/return-from-kragdon-ah/"
+    },
+    {
+      "id": "wok",
+      "title": "Warrior of Kragdon‑Ah",
+      "section": "language-arts",
+      "baseOut": "presentations/warrior-of-kragdon-ah",
+      "slots": 16,
+      "pagePath": "/language-arts/warrior-of-kragdon-ah/"
+    },
+    {
+      "id": "life",
+      "title": "Life Skills",
+      "section": "life-skills",
+      "baseOut": "life-skills/presentations",
+      "slots": 32,
+      "pagePath": "/life-skills/"
+    }
+  ],
+  "updated": "2025-10-31T00:00:00Z",
+  "version": "v1"
+}
