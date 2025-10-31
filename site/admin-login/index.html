@@ -3,46 +3,33 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Admin Login</title>
+  <title>Admin Login — Reinisch Classroom</title>
+  <link rel="stylesheet" href="/assets/css/theme.css"/>
+  <script src="/assets/js/section-nav.js" defer></script>
   <style>
-    :root{--bg:#0b1220;--panel:rgba(255,255,255,.06);--panel-brd:rgba(255,255,255,.18);--text:#e8edf5;--muted:#b8c1d9;--accent1:#60a5fa;--accent2:#2563eb}
-    *{box-sizing:border-box}
-    body{margin:0;min-height:100vh;display:grid;place-items:center;background:var(--bg);color:var(--text);font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif}
-    .card{width:min(560px,92vw);background:var(--panel);border:1px solid var(--panel-brd);border-radius:14px;padding:22px}
-    h1{margin:0 0 10px}
-    label{display:block;margin:12px 0 6px}
-    input{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff}
-    button{margin-top:16px;padding:10px 16px;border-radius:10px;border:1px solid var(--accent1);background:linear-gradient(180deg,var(--accent1),var(--accent2));color:#fff;cursor:pointer;width:100%}
-    .err{color:#fecaca;min-height:18px}
+    .wrap{max-width:520px;margin:80px auto;padding:24px;background:var(--panel);border:1px solid var(--panel-brd);border-radius:14px}
+    h1{margin:0 0 12px 0}
+    label{display:block;margin:10px 0 6px 0;font-weight:600;color:var(--muted)}
+    input{width:100%;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff}
+    .actions{margin-top:16px;display:flex;gap:.6rem;align-items:center}
+    .muted{font-size:12px;color:var(--muted)}
   </style>
 </head>
 <body>
-  <div class="card">
+  <!-- glass top-nav is injected; includes a Home button -->
+  <main class="wrap">
     <h1>Admin Login</h1>
-    <p class="err" id="err"></p>
-
-    <!-- Plain HTML form post; the function redirects on success or back here with ?e=1 on failure -->
-    <form method="post" action="/.netlify/functions/admin-session">
-      <label for="u">Username</label>
-      <input id="u" name="username" autocomplete="username" required />
-      <label for="p">Password</label>
-      <input id="p" name="password" type="password" autocomplete="current-password" required />
-      <button type="submit">Sign in</button>
+    <form method="post" action="/.netlify/functions/admin-login">
+      <label>Username</label>
+      <input name="username" autocomplete="username" required/>
+      <label>Password</label>
+      <input name="password" type="password" autocomplete="current-password" required/>
+      <div class="actions">
+        <button class="btn" type="submit" style="border:1px solid #5aa9ff;background:linear-gradient(180deg,#90c4ff,#5aa9ff)">Sign in</button>
+        <a class="btn" href="/">Home</a>
+      </div>
     </form>
-
-    <p style="margin-top:10px"><a href="/">Back to site</a></p>
-  </div>
-
-  <script>
-    // Show "Login failed" when redirected back with ?e=1
-    (function(){
-      const url = new URL(location.href);
-      if (url.searchParams.get('e') === '1') {
-        document.getElementById('err').textContent = 'Login failed';
-        url.searchParams.delete('e');
-        history.replaceState({}, '', url.pathname + (url.search ? '?' + url.searchParams.toString() : '') + url.hash);
-      }
-    })();
-  </script>
+    <p class="muted" style="margin-top:8px">Use your assigned admin credentials to access the uploader.</p>
+  </main>
 </body>
 </html>
