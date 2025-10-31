@@ -34,10 +34,11 @@ document.getElementById('f').addEventListener('submit', async (e) => {
   e.preventDefault();
   const err = document.getElementById('err'); err.textContent = '';
   const fd = new FormData(e.target);
+  const payload = { username: fd.get('username') || '', password: fd.get('password') || '' };
   const r = await fetch('/.netlify/functions/admin-session', {
     method: 'POST',
-    body: new URLSearchParams(fd),
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: JSON.stringify(payload),
+    headers: { 'Content-Type': 'application/json' },
     redirect: 'manual',
     cache: 'no-store'
   });
