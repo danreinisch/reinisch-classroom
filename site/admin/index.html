@@ -5,11 +5,34 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Reinisch Classroom — Admin</title>
   <style>
-    :root{--bg:#0b1220;--panel:rgba(255,255,255,.06);--panel-brd:rgba(255,255,255,.18);--text:#e8edf5}
+    :root{
+      --bg:#0b1220;--panel:rgba(255,255,255,.06);--panel-brd:rgba(255,255,255,.18);
+      --text:#e8edf5;--muted:#b8c1d9;--accent:#60a5fa;--accent2:#2563eb
+    }
     *{box-sizing:border-box}
     body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif}
     #gate{min-height:100vh;display:grid;place-items:center}
     #app{display:none}
+    .wrap{max-width:1100px;margin:32px auto;padding:20px;background:var(--panel);border:1px solid var(--panel-brd);border-radius:12px}
+    .row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+    .row > *{flex:1 1 220px}
+    label{display:block;margin-bottom:6px;font-weight:600;color:var(--muted)}
+    input,select,button,textarea{
+      width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.2);
+      background:rgba(255,255,255,.08);color:#fff
+    }
+    button.primary{
+      border:1px solid var(--accent);background:linear-gradient(180deg,var(--accent),var(--accent2));cursor:pointer
+    }
+    .bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+    .drop{
+      border:2px dashed rgba(255,255,255,.25);padding:18px;border-radius:12px;text-align:center;color:var(--muted)
+    }
+    .drop.drag{border-color:var(--accent);color:#fff;background:rgba(96,165,250,.08)}
+    .list{max-height:220px;overflow:auto;background:#0e1629;border:1px solid rgba(255,255,255,.14);border-radius:10px;padding:8px;font:12px ui-monospace,Menlo,Consolas,monospace}
+    .log{margin-top:16px;background:#0e1629;border:1px solid rgba(255,255,255,.14);border-radius:10px;padding:10px;height:240px;overflow:auto;font:12px ui-monospace,Menlo,Consolas,monospace;color:#dbeafe;white-space:pre-wrap}
+    .sp{flex:1}
+    a.btn{color:#fff;border:1px solid #fff;padding:.4rem .7rem;border-radius:.5rem;text-decoration:none}
   </style>
   <script>
   // Gate: verify session on the server. If not logged in → redirect to /admin-login.
@@ -22,16 +45,11 @@
     }
     async function check(){
       try{
-        const r = await fetch('/.netlify/functions/admin-session-check', { cache:'no-store' });
+        const r = await fetch('/.netlify/functions/admin-session-check', { cache:'no-store', credentials:'same-origin' });
         if (!r.ok) { location.replace('/admin-login'); return; }
-        if (document.readyState === 'loading') {
-          document.addEventListener('DOMContentLoaded', showApp, { once:true });
-        } else {
-          showApp();
-        }
-      }catch{
-        location.replace('/admin-login');
-      }
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', showApp, { once:true });
+        else showApp();
+      }catch{ location.replace('/admin-login'); }
     }
     check();
   })();
@@ -41,27 +59,202 @@
   <div id="gate">Checking session…</div>
 
   <div id="app">
-    <div style="max-width:960px;margin:40px auto;padding:20px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.18);border-radius:12px">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+    <div class="wrap">
+      <div class="bar">
         <h1 style="margin:0">Admin Uploader</h1>
-        <div>
-          <a href="/.netlify/functions/admin-logout" style="color:#fff;border:1px solid #fff;padding:.4rem .7rem;border-radius:.5rem;text-decoration:none">Sign out</a>
+        <div style="display:flex;gap:8px;align-items:center">
+          <a class="btn" href="/.netlify/functions/admin-logout">Sign out</a>
         </div>
       </div>
-      <div id="uploader-root"></div>
-      <div id="log" style="margin-top:16px;background:#0e1629;border:1px solid rgba(255,255,255,.14);border-radius:10px;padding:10px;height:260px;overflow:auto;font:12px ui-monospace,Menlo,Consolas,monospace;color:#dbeafe;white-space:pre-wrap"></div>
-    </div>
 
-    <script>
-    // Minimal diagnostics
-    function log(){ const el=document.getElementById('log'); el.textContent+=Array.from(arguments).join(' ')+'\\n'; el.scrollTop=el.scrollHeight; }
-    (async()=>{
-      try{
-        const r=await fetch('/.netlify/functions/incremental-deploy?action=diagnostics',{cache:'no-store'});
-        const t=await r.text().catch(()=> ''); log('GET diagnostics ->', r.status, t.slice(0,300));
-      }catch(e){ log('Diagnostics failed', e?.message||String(e)); }
-    })();
-    </script>
+      <div class="row">
+        <div>
+          <label for="cat">Category</label>
+          <select id="cat">
+            <option value="toolkit">Language Arts Toolkit (8)</option>
+            <option value="adit">A Door Into Time (16)</option>
+            <option value="lik">Lost in Kragdon‑Ah (16)</option>
+            <option value="rfk">Return from Kragdon‑Ah (16)</option>
+            <option value="wok">Warrior of Kragdon‑Ah (16)</option>
+            <option value="life">Life Skills (32)</option>
+          </select>
+        </div>
+        <div>
+          <label for="slot">Slot</label>
+          <input id="slot" type="number" min="1" max="16" value="1" />
+        </div>
+        <div class="sp">
+          <label for="title">Title</label>
+          <input id="title" placeholder="Presentation title" />
+        </div>
+      </div>
+
+      <div class="row">
+        <div style="flex:1 1 320px">
+          <div class="drop" id="drop">Drop files here, or use the pickers below</div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label>Add files</label>
+          <input id="files" type="file" multiple />
+        </div>
+        <div>
+          <label>Add a folder (optional)</label>
+          <input id="folder" type="file" webkitdirectory directory multiple />
+        </div>
+        <div>
+          <label>&nbsp;</label>
+          <button class="primary" id="upload">Upload</button>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="sp">
+          <label>Selected files</label>
+          <div class="list" id="list"></div>
+        </div>
+      </div>
+
+      <div class="log" id="log"></div>
+    </div>
   </div>
+
+<script>
+(function(){
+  const CAT_SLOTS = { toolkit:8, adit:16, lik:16, rfk:16, wok:16, life:32 };
+  const catEl = document.getElementById('cat');
+  const slotEl = document.getElementById('slot');
+  const titleEl = document.getElementById('title');
+  const filesEl = document.getElementById('files');
+  const folderEl = document.getElementById('folder');
+  const dropEl = document.getElementById('drop');
+  const listEl = document.getElementById('list');
+  const logEl = document.getElementById('log');
+  const uploadBtn = document.getElementById('upload');
+
+  let queue = [];
+
+  function log(){ logEl.textContent += Array.from(arguments).join(' ') + '\\n'; logEl.scrollTop = logEl.scrollHeight; }
+  function fmtBytes(n){ if(!n && n!==0) return ''; const u=['B','KB','MB','GB']; let i=0; while(n>1024&&i<u.length-1){n/=1024;i++} return n.toFixed(1)+' '+u[i]; }
+
+  function refreshSlotMax(){
+    const max = CAT_SLOTS[catEl.value] || 16;
+    slotEl.max = String(max);
+    if (Number(slotEl.value) < 1) slotEl.value = '1';
+    if (Number(slotEl.value) > max) slotEl.value = String(max);
+  }
+  catEl.addEventListener('change', refreshSlotMax);
+  refreshSlotMax();
+
+  function addFiles(fileList){
+    for (const f of fileList) {
+      // Use folder path if present, else just filename
+      const path = f.webkitRelativePath ? f.webkitRelativePath.replace(/^.*?\\//,'').replace(/^.*?\\//,'') || f.name : f.name;
+      queue.push({ file:f, path });
+    }
+    renderList();
+  }
+
+  function renderList(){
+    if (!queue.length) { listEl.textContent = '(no files selected)'; return; }
+    const items = queue.map(q => `• ${q.path} (${fmtBytes(q.file.size)})`).join('\\n');
+    listEl.textContent = items;
+  }
+
+  filesEl.addEventListener('change', (e)=> addFiles(e.target.files||[]));
+  folderEl.addEventListener('change', (e)=> addFiles(e.target.files||[]));
+
+  ;['dragenter','dragover'].forEach(ev => dropEl.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); dropEl.classList.add('drag'); }));
+  ;['dragleave','drop'].forEach(ev => dropEl.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); dropEl.classList.remove('drag'); }));
+  dropEl.addEventListener('drop', e => {
+    const dt = e.dataTransfer;
+    if (dt && dt.files) addFiles(dt.files);
+  });
+
+  async function toBase64(f){
+    return new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(btoa(String.fromCharCode(...new Uint8Array(r.result))));
+      r.onerror = () => rej(r.error||new Error('read error'));
+      r.readAsArrayBuffer(f);
+    });
+  }
+
+  uploadBtn.addEventListener('click', async () => {
+    try{
+      const category = catEl.value;
+      const slot = Number(slotEl.value);
+      const title = (titleEl.value||'').trim();
+      const max = CAT_SLOTS[category] || 16;
+      if (!category || !slot || slot<1 || slot>max) { alert('Please choose a valid category and slot'); return; }
+      if (!title) { alert('Please enter a title'); return; }
+      if (!queue.length) { alert('Please add at least one file'); return; }
+
+      log('Preparing files…');
+      const files = [];
+      let totalBytes = 0, doneBytes = 0;
+
+      for (const q of queue) totalBytes += q.file.size;
+      for (const q of queue) {
+        const b64 = await toBase64(q.file);
+        doneBytes += q.file.size;
+        files.push({ path: q.path, base64: b64 });
+        log(`Encoded ${q.path} (${fmtBytes(q.file.size)})  [${fmtBytes(doneBytes)}/${fmtBytes(totalBytes)}]`);
+      }
+
+      log('Uploading…');
+      const body = JSON.stringify({ category, slot, title, files, final: true });
+      const res = await fetch('/.netlify/functions/incremental-deploy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin', // include session cookie
+        body
+      });
+
+      const text = await res.text().catch(()=> '');
+      log(`Response ${res.status} -> ${text.slice(0, 1000)}`);
+
+      if (!res.ok) { alert('Upload failed: ' + res.status); return; }
+
+      try{
+        const j = JSON.parse(text);
+        if (j && j.ok && j.deploy_url) {
+          // Try to guess the new page URL using the category/slot pattern
+          const slug = String(slot).padStart(2,'0');
+          const baseMap = {
+            toolkit: 'presentations/language-arts-toolkit',
+            adit:    'presentations/a-door-into-time',
+            lik:     'presentations/lost-in-kragdon-ah',
+            rfk:     'presentations/return-from-kragdon-ah',
+            wok:     'presentations/warrior-of-kragdon-ah',
+            life:    'life-skills/presentations'
+          };
+          const rel = `/${baseMap[category]}/presentation-${slug}/`;
+          log('View page: ' + rel);
+        }
+      }catch{}
+
+      alert('Upload complete');
+      // keep list so you can upload again if needed
+    }catch(e){
+      console.error(e);
+      log('Error:', e && e.message ? e.message : String(e));
+      alert('Error: ' + (e && e.message ? e.message : String(e)));
+    }
+  });
+
+  renderList();
+
+  // Quick diagnostics (optional)
+  (async()=>{
+    try{
+      const r=await fetch('/.netlify/functions/incremental-deploy?action=diagnostics',{cache:'no-store', credentials:'same-origin'});
+      const t=await r.text().catch(()=> ''); log('GET diagnostics ->', r.status, t.slice(0,300));
+    }catch(e){ log('Diagnostics failed', e?.message||String(e)); }
+  })();
+})();
+</script>
 </body>
 </html>
