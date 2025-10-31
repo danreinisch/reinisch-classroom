@@ -379,6 +379,34 @@ function redirectIndexHtml(title, targetRel, backHref, section){
   return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta http-equiv="refresh" content="0; url=${targetRel}"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>${escapeHtml(title)}</title></head><body style="background:#0b1220;color:#e8edf5;font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif">${navHtml}<p style="color:#fff;padding:1rem">Redirecting…</p></body></html>`;
 }
 
+// Choose which HTML to link to from index.html for a slot
+function pickEntryHtml(owner, repo, branch, incomingBlobs, slotDir){
+  const candidates = [];
+  for (const [p] of incomingBlobs.entries()) {
+    if (p.startsWith(`${slotDir}/`) && p.toLowerCase().endsWith('.html') && p !== `${slotDir}/index.html`) {
+      candidates.push(p);
+    }
+  }
+  if (candidates.length) {
+    candidates.sort((a,b)=> (a.toLowerCase().endsWith('/index.html')?-1:0) - (b.toLowerCase().endsWith('/index.html')?-1:0) || (a.length-b.length));
+    return candidates[0].replace(`${slotDir}/`, '');
+  }
+  // If this batch didn’t include an HTML, try to find one already in the repo for this slot
+  return pickEntryHtmlFromRepo(owner, repo, branch, slotDir.replace(/^site\//,''));
+}
+
+async function pickEntryHtmlFromRepo(owner, repo, branch, slotDirNoSitePrefix){
+  const tree = await getHeadTree(owner, repo, branch);
+  const paths = (tree.tree || []).map(n => n.path);
+  const prefix = `site/${slotDirNoSitePrefix}/`;
+  const htmls = paths.filter(p => p.startsWith(prefix) && p.toLowerCase().endsWith('.html') && p !== `${prefix}index.html`);
+  if (htmls.length) {
+    htmls.sort((a,b)=> (a.toLowerCase().endsWith('/index.html')?-1:0) - (b.toLowerCase().endsWith('/index.html')?-1:0) || (a.length-b.length));
+    return htmls[0].replace(prefix,'');
+  }
+  return null;
+}
+
 function ensureStateShape(state){
   if(!state||typeof state!=='object') state={version:'v1',updated:'',categories:{}};
   if(!state.categories) state.categories={};
