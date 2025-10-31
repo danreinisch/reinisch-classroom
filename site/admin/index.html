@@ -5,10 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Reinisch Classroom — Admin</title>
   <style>
-    :root{
-      --bg:#0b1220;--panel:rgba(255,255,255,.06);--panel-brd:rgba(255,255,255,.18);
-      --text:#e8edf5;--muted:#b8c1d9;--accent:#60a5fa;--accent2:#2563eb
-    }
+    :root{ --bg:#0b1220; --panel:rgba(255,255,255,.06); --panel-brd:rgba(255,255,255,.18);
+           --text:#e8edf5; --muted:#b8c1d9; --accent:#60a5fa; --accent2:#2563eb }
     *{box-sizing:border-box}
     body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif}
     #gate{min-height:100vh;display:grid;place-items:center}
@@ -17,20 +15,11 @@
     .row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px}
     .row > *{flex:1 1 220px}
     label{display:block;margin-bottom:6px;font-weight:600;color:var(--muted)}
-    input,select,button,textarea{
-      width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.2);
-      background:rgba(255,255,255,.08);color:#fff
-    }
-    button.primary{
-      border:1px solid var(--accent);background:linear-gradient(180deg,var(--accent),var(--accent2));cursor:pointer
-    }
-    button.warn{
-      border:1px solid #f59e0b;background:linear-gradient(180deg,#fbbf24,#f59e0b);cursor:pointer;color:#1b2437
-    }
+    input,select,button,textarea{width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff}
+    button.primary{border:1px solid var(--accent);background:linear-gradient(180deg,var(--accent),var(--accent2));cursor:pointer}
+    button.warn{border:1px solid #f59e0b;background:linear-gradient(180deg,#fbbf24,#f59e0b);cursor:pointer;color:#1b2437}
     .bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
-    .drop{
-      border:2px dashed rgba(255,255,255,.25);padding:18px;border-radius:12px;text-align:center;color:var(--muted)
-    }
+    .drop{border:2px dashed rgba(255,255,255,.25);padding:18px;border-radius:12px;text-align:center;color:var(--muted)}
     .drop.drag{border-color:var(--accent);color:#fff;background:rgba(96,165,250,.08)}
     .list{max-height:220px;overflow:auto;background:#0e1629;border:1px solid rgba(255,255,255,.14);border-radius:10px;padding:8px;font:12px ui-monospace,Menlo,Consolas,monospace}
     .log{margin-top:16px;background:#0e1629;border:1px solid rgba(255,255,255,.14);border-radius:10px;padding:10px;height:260px;overflow:auto;font:12px ui-monospace,Menlo,Consolas,monospace;color:#dbeafe;white-space:pre-wrap}
@@ -40,24 +29,18 @@
     .taken-note{font-size:12px;color:#fde68a;margin-top:4px}
   </style>
   <script>
-  // Gate: verify session on the server. If not logged in → redirect to /admin-login.
-  (function(){
-    function showApp(){
-      const app = document.getElementById('app');
-      const gate = document.getElementById('gate');
-      if (app) app.style.display = 'block';
-      if (gate) gate.style.display = 'none';
-    }
-    async function check(){
-      try{
-        const r = await fetch('/.netlify/functions/admin-session-check', { cache:'no-store', credentials:'same-origin' });
-        if (!r.ok) { location.replace('/admin-login'); return; }
-        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', showApp, { once:true });
-        else showApp();
-      }catch{ location.replace('/admin-login'); }
-    }
-    check();
-  })();
+    (function(){
+      async function gate(){
+        try{
+          const r = await fetch('/.netlify/functions/admin-session-check', { cache:'no-store', credentials:'same-origin' });
+          if (!r.ok) { location.replace('/admin-login'); return; }
+          const app = document.getElementById('app');
+          const gate = document.getElementById('gate');
+          app.style.display = 'block'; gate.style.display = 'none';
+        }catch{ location.replace('/admin-login'); }
+      }
+      gate();
+    })();
   </script>
 </head>
 <body>
@@ -75,14 +58,7 @@
       <div class="row">
         <div>
           <label for="cat">Category</label>
-          <select id="cat">
-            <option value="toolkit">Language Arts Toolkit (8)</option>
-            <option value="adit">A Door Into Time (16)</option>
-            <option value="lik">Lost in Kragdon‑Ah (16)</option>
-            <option value="rfk">Return from Kragdon‑Ah (16)</option>
-            <option value="wok">Warrior of Kragdon‑Ah (16)</option>
-            <option value="life">Life Skills (32)</option>
-          </select>
+          <select id="cat"></select>
         </div>
 
         <div>
@@ -136,18 +112,7 @@
 
 <script>
 (function(){
-  const CAT_META = {
-    toolkit: { slots: 8,  baseOut: 'presentations/language-arts-toolkit' },
-    adit:    { slots: 16, baseOut: 'presentations/a-door-into-time' },
-    lik:     { slots: 16, baseOut: 'presentations/lost-in-kragdon-ah' },
-    rfk:     { slots: 16, baseOut: 'presentations/return-from-kragdon-ah' },
-    wok:     { slots: 16, baseOut: 'presentations/warrior-of-kragdon-ah' },
-    life:    { slots: 32, baseOut: 'life-skills/presentations' }
-  };
-
-  // Larger batches (safe for Netlify) to reduce round trips; uploads still split as needed
   const BATCH_TARGET = 3.5 * 1024 * 1024; // ~3.5 MB per request
-
   const catEl = document.getElementById('cat');
   const slotSel = document.getElementById('slotSel');
   const slotWarn = document.getElementById('slotWarn');
@@ -163,63 +128,72 @@
 
   let queue = [];
   let siteState = null;
+  let units = [];
 
   function log(){ logEl.textContent += Array.from(arguments).join(' ') + '\n'; logEl.scrollTop = logEl.scrollHeight; }
   function fmtBytes(n){ if(!n && n!==0) return ''; const u=['B','KB','MB','GB']; let i=0; while(n>1024&&i<u.length-1){n/=1024;i++} return n.toFixed(1)+' '+u[i]; }
+  function ensureArraySize(arr,n){ while(arr.length<n) arr.push(''); }
+  function num(n){ return String(n).padStart(2,'0'); }
 
+  async function loadUnits(){
+    try{
+      const r = await fetch('/assets/data/units.json', { cache:'no-store' });
+      if (r.ok) {
+        const j = await r.json();
+        units = Array.isArray(j.units) ? j.units : [];
+        return;
+      }
+    }catch{}
+    units = [];
+  }
   async function loadState(){
     try{
       const r = await fetch('/assets/data/site-state.json', { cache:'no-store' });
       if (r.ok) { siteState = await r.json(); return; }
     } catch {}
     siteState = { version:'v1', updated:'', categories:{} };
-    for (const [id, meta] of Object.entries(CAT_META)) {
-      siteState.categories[id] = { slots: meta.slots, titles: [], links: [] };
-    }
   }
 
-  function firstOpenSlot(titles=[], total=1){
-    for (let i=0;i<total;i++){
-      const t = (titles[i]||'').trim();
-      if (!t) return i+1;
+  function renderCategories(){
+    catEl.innerHTML = '';
+    for (const u of units){
+      const opt = document.createElement('option');
+      opt.value = u.id;
+      opt.textContent = `${u.title} (${u.slots})`;
+      catEl.appendChild(opt);
     }
-    return 1;
   }
 
   function renderSlots(){
-    const cat = catEl.value;
-    const meta = CAT_META[cat];
-    const titles = (siteState && siteState.categories && siteState.categories[cat] && siteState.categories[cat].titles) || [];
-    const total = meta.slots;
+    const id = catEl.value;
+    const unit = units.find(u => u.id === id);
+    const total = Number(unit?.slots || 0);
+
+    const titles = (siteState && siteState.categories && siteState.categories[id] && siteState.categories[id].titles) || [];
+    ensureArraySize(titles, total);
 
     const prev = Number(slotSel.value) || 0;
-
     slotSel.innerHTML = '';
-    for (let i=1; i<=total; i++){
+    for (let i=1;i<=total;i++){
       const title = (titles[i-1]||'').trim();
       const opt = document.createElement('option');
-      const num = String(i).padStart(2,'0');
       opt.value = String(i);
-      opt.textContent = title ? `${num} — ${title}` : `${num} — Open`;
+      opt.textContent = title ? `${num(i)} — ${title}` : `${num(i)} — Open`;
       slotSel.appendChild(opt);
     }
-
-    let defaultSlot = firstOpenSlot(titles, total);
-    if (prev>=1 && prev<=total) defaultSlot = prev;
-    slotSel.value = String(defaultSlot);
-
+    let def = prev>=1 && prev<=total ? prev : Math.max(1, titles.findIndex(t => !(t||'').trim()) + 1);
+    slotSel.value = String(def);
     updateSlotWarningAndTitle();
   }
 
   function updateSlotWarningAndTitle(){
-    const cat = catEl.value;
-    const titles = (siteState && siteState.categories && siteState.categories[cat] && siteState.categories[cat].titles) || [];
+    const id = catEl.value;
     const s = Number(slotSel.value)||1;
+    const titles = (siteState && siteState.categories && siteState.categories[id] && siteState.categories[id].titles) || [];
     const existing = (titles[s-1]||'').trim();
-
     if (existing) {
       slotWarn.style.display = '';
-      slotWarn.textContent = `Note: Slot ${String(s).padStart(2,'0')} is already used (“${existing}”). Uploading will replace its files and title.`;
+      slotWarn.textContent = `Note: Slot ${num(s)} is already used (“${existing}”). Uploading will replace its files and title.`;
       deleteBtn.disabled = false;
       if (!(titleEl.value||'').trim()) titleEl.value = existing;
     } else {
@@ -233,7 +207,6 @@
 
   function addFiles(fileList){
     for (const f of fileList) {
-      // Skip hidden files like .DS_Store
       if (String(f.name||'').startsWith('.')) continue;
       let path = f.webkitRelativePath || f.name;
       if (path.includes('/')) {
@@ -244,47 +217,39 @@
     }
     renderList();
   }
-
   function renderList(){
     if (!queue.length) { listEl.textContent = '(no files selected)'; return; }
     const items = queue.map(q => `• ${q.path} (${fmtBytes(q.file.size)})`).join('\n');
     listEl.textContent = items;
   }
-
   filesEl.addEventListener('change', (e)=> addFiles(e.target.files||[]));
   folderEl.addEventListener('change', (e)=> addFiles(e.target.files||[]));
-
   ;['dragenter','dragover'].forEach(ev => dropEl.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); dropEl.classList.add('drag'); }));
   ;['dragleave','drop'].forEach(ev => dropEl.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); dropEl.classList.remove('drag'); }));
-  dropEl.addEventListener('drop', e => {
-    const dt = e.dataTransfer;
-    if (dt && dt.files) addFiles(dt.files);
-  });
+  dropEl.addEventListener('drop', e => { const dt = e.dataTransfer; if (dt && dt.files) addFiles(dt.files); });
 
-  // Robust base64 for large files: use readAsDataURL and strip the prefix
   async function toBase64(f){
     return new Promise((res, rej) => {
       const r = new FileReader();
       r.onload = () => {
-        try {
-          const s = String(r.result||'');
-          const i = s.indexOf('base64,');
-          res(i >= 0 ? s.slice(i+7) : s);
-        } catch(e){ rej(e); }
+        try{
+          const s = String(r.result||''); const i = s.indexOf('base64,'); res(i>=0 ? s.slice(i+7) : s);
+        }catch(e){ rej(e); }
       };
       r.onerror = () => rej(r.error||new Error('read error'));
       r.readAsDataURL(f);
     });
   }
-
   function estimateB64Size(bytes){ return Math.ceil(bytes * 4 / 3); }
 
   uploadBtn.addEventListener('click', async () => {
     try{
       const category = catEl.value;
+      const unit = units.find(u => u.id === category);
+      if (!unit) { alert('Choose a category'); return; }
       const slot = Number(slotSel.value);
       const title = (titleEl.value||'').trim();
-      const total = CAT_META[category].slots;
+      const total = Number(unit.slots||0);
       if (!category || !slot || slot<1 || slot>total) { alert('Please choose a valid category and slot'); return; }
       if (!title) { alert('Please enter a title'); return; }
       if (!queue.length) { alert('Please add at least one file'); return; }
@@ -302,7 +267,6 @@
         log(`Encoded ${q.path} (${fmtBytes(q.file.size)})  [${fmtBytes(doneBytes)}/${fmtBytes(totalBytes)}]`);
       }
 
-      // Batch into multiple small requests
       const batches = [];
       let cur = [], curSize = 0;
       for (const e of encoded) {
@@ -331,7 +295,6 @@
         if (!res.ok) { alert(`Upload failed: ${res.status}\n${(text||'').slice(0,400)}`); return; }
       }
 
-      // Update dropdown state immediately
       if (siteState?.categories?.[category]?.titles) {
         const titles = siteState.categories[category].titles;
         while (titles.length < total) titles.push('');
@@ -380,7 +343,9 @@
   });
 
   (async()=>{
+    await loadUnits();
     await loadState();
+    renderCategories();
     renderSlots();
     renderList();
     try{
