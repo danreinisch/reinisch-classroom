@@ -20,33 +20,29 @@
   <div class="card">
     <h1>Admin Login</h1>
     <p class="err" id="err"></p>
-    <form id="f" method="post" action="/.netlify/functions/admin-session">
+
+    <!-- Plain HTML form post; the function redirects on success or back here with ?e=1 on failure -->
+    <form method="post" action="/.netlify/functions/admin-session">
       <label for="u">Username</label>
       <input id="u" name="username" autocomplete="username" required />
       <label for="p">Password</label>
       <input id="p" name="password" type="password" autocomplete="current-password" required />
       <button type="submit">Sign in</button>
     </form>
+
     <p style="margin-top:10px"><a href="/">Back to site</a></p>
   </div>
-<script>
-document.getElementById('f').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const err = document.getElementById('err'); err.textContent = '';
-  const fd = new FormData(e.target);
-  const payload = { username: fd.get('username') || '', password: fd.get('password') || '' };
-  const r = await fetch('/.netlify/functions/admin-session', {
-    method: 'POST',
-    body: JSON.stringify(payload),
-    headers: { 'Content-Type': 'application/json' },
-    redirect: 'manual',
-    cache: 'no-store'
-  });
-  if (r.status === 302) { location.replace('/admin/'); return; }
-  let msg = 'Login failed';
-  try { const j = await r.json(); if (j && j.message) msg = j.message; } catch {}
-  err.textContent = msg;
-});
-</script>
+
+  <script>
+    // Show "Login failed" when redirected back with ?e=1
+    (function(){
+      const url = new URL(location.href);
+      if (url.searchParams.get('e') === '1') {
+        document.getElementById('err').textContent = 'Login failed';
+        url.searchParams.delete('e');
+        history.replaceState({}, '', url.pathname + (url.search ? '?' + url.searchParams.toString() : '') + url.hash);
+      }
+    })();
+  </script>
 </body>
 </html>
