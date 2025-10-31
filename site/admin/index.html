@@ -315,10 +315,11 @@
       if (cur.length) batches.push(cur);
 
       log(`Uploading in ${batches.length} batch(es)…`);
+      let lastText = '';
       for (let i=0;i<batches.length;i++){
         const files = batches[i];
         const isFinal = (i === batches.length - 1);
-        const body = JSON.stringify({ category, slot, title, files, merge: !isFinal, final: isFinal });
+        const body = JSON.stringify({ category, slot, title, files, final: isFinal });
         const res = await fetch('/.netlify/functions/incremental-deploy', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -326,9 +327,10 @@
           body
         });
         const text = await res.text().catch(()=> '');
+        lastText = text;
         log(`Batch ${i+1}/${batches.length} -> ${res.status} ${text}`);
         if (res.status === 401) { alert('Session expired. Please sign in again.'); location.replace('/admin-login'); return; }
-        if (!res.ok) { alert('Upload failed: ' + res.status); return; }
+        if (!res.ok) { alert(`Upload failed: ${res.status}\n${(text||'').slice(0,400)}`); return; }
       }
 
       // Update dropdown state immediately
@@ -363,7 +365,7 @@
       const text = await res.text().catch(()=> '');
       log(`Delete response ${res.status} -> ${text}`);
       if (res.status === 401) { alert('Session expired. Please sign in again.'); location.replace('/admin-login'); return; }
-      if (!res.ok) { alert('Delete failed: ' + res.status); return; }
+      if (!res.ok) { alert(`Delete failed: ${res.status}\n${(text||'').slice(0,400)}`); return; }
 
       if (siteState?.categories?.[category]) {
         const titles = siteState.categories[category].titles || [];
