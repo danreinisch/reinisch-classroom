@@ -12,13 +12,34 @@
     #app{display:none}
   </style>
   <script>
-  // Gate: before rendering, check session on the server. If not logged in → redirect to /admin-login
-  (async function(){
-    try{
-      const r = await fetch('/.netlify/functions/admin-session-check', { cache:'no-store' });
-      if(!r.ok){ location.replace('/admin-login'); return; }
-      document.addEventListener('DOMContentLoaded', ()=>{ document.getElementById('app').style.display='block'; document.getElementById('gate').style.display='none'; });
-    }catch{ location.replace('/admin-login'); }
+  // Gate: verify session on the server. If not logged in → redirect to /admin-login.
+  (function(){
+    function showApp(){
+      const app = document.getElementById('app');
+      const gate = document.getElementById('gate');
+      if (app) app.style.display = 'block';
+      if (gate) gate.style.display = 'none';
+    }
+    async function check(){
+      try{
+        const r = await fetch('/.netlify/functions/admin-session-check', { cache:'no-store' });
+        if (!r.ok) {
+          // Not authenticated → go to login
+          location.replace('/admin-login');
+          return;
+        }
+        // Authenticated → reveal UI now if DOM is ready, otherwise after DOMContentLoaded
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', showApp, { once:true });
+        } else {
+          showApp();
+        }
+      }catch(err){
+        console.error('admin gate error:', err);
+        location.replace('/admin-login');
+      }
+    }
+    check();
   })();
   </script>
 </head>
@@ -26,7 +47,6 @@
   <div id="gate">Checking session…</div>
 
   <div id="app">
-    <!-- Your existing Admin Uploader UI goes here. If you prefer, paste the full UI we used earlier. -->
     <div style="max-width:960px;margin:40px auto;padding:20px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.18);border-radius:12px">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
         <h1 style="margin:0">Admin Uploader</h1>
@@ -40,12 +60,11 @@
     </div>
 
     <script>
-    // Minimal glue so you can enter the function ADMIN_KEY and verify diagnostics
+    // Minimal diagnostics
     function log(){ const el=document.getElementById('log'); el.textContent+=Array.from(arguments).join(' ')+'\\n'; el.scrollTop=el.scrollHeight; }
     function getKey(){ return localStorage.getItem('rc_admin_key')||''; }
     function setKey(v){ if(v) localStorage.setItem('rc_admin_key',v); }
     document.getElementById('changeKey').addEventListener('click',()=>{ const k=prompt('Enter Admin Key'); if(k) setKey(k); });
-    // Quick server check
     (async()=>{
       try{
         const r=await fetch('/.netlify/functions/incremental-deploy?action=diagnostics',{cache:'no-store'});
