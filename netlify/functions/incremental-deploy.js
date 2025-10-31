@@ -69,7 +69,7 @@ async function handleUpload(body){
   if (!CAT_META[category]) return json(400, { message: 'Unknown category' });
   const cat = CAT_META[category];
   if (!slot || slot < 1 || slot > cat.slots) return json(400, { message: 'Invalid slot' });
-  if (!title || !Array.isArray(files) || files.length === 0) return json(400, { message: 'Missing title/files' });
+  if (!Array.isArray(files) || files.length === 0) return json(400, { message: 'Missing files' });
 
   const { owner, repo } = parseRepo();
   const branch = await getBranch();
@@ -77,7 +77,7 @@ async function handleUpload(body){
   const slotDir = `site/${cat.baseOut}/presentation-${String(slot).padStart(2, '0')}`;
   const blobs = new Map();
 
-  // Add uploaded files
+  // Always add the uploaded files
   for (const f of files) {
     if (!f.path || !f.base64) continue;
     const buf = Buffer.from(f.base64, 'base64');
@@ -87,32 +87,37 @@ async function handleUpload(body){
     blobs.set(outPath, buf);
   }
 
-  // Add redirect index.html
-  const entryRel = await pickEntryHtml(owner, repo, branch, blobs, slotDir);
-  const redirectHtml = redirectIndexHtml(title, entryRel, cat.back, cat.section);
-  blobs.set(`${slotDir}/index.html`, Buffer.from(redirectHtml));
+  // Only on final batch do we add redirect + update state pages.
+  if (final) {
+    if (!title || !String(title).trim()) return json(400, { message: 'Missing title for final batch' });
 
-  // Update site-state.json and category index page
-  const state = await fetchStateFromLiveOrRepo(owner, repo, branch);
-  ensureStateShape(state);
-  ensureArraySize(state.categories[category].titles, cat.slots);
-  ensureArraySize(state.categories[category].links,  cat.slots);
-  state.categories[category].titles[slot - 1] = title;
-  state.categories[category].links[slot - 1]  = `/${cat.baseOut}/presentation-${String(slot).padStart(2, '0')}/`;
-  state.updated = new Date().toISOString();
+    const entryRel = await pickEntryHtml(owner, repo, branch, blobs, slotDir);
+    const redirectHtml = redirectIndexHtml(title, entryRel, cat.back, cat.section);
+    blobs.set(`${slotDir}/index.html`, Buffer.from(redirectHtml));
 
-  blobs.set('site/assets/data/site-state.json', Buffer.from(JSON.stringify(state, null, 2)));
+    const state = await fetchStateFromLiveOrRepo(owner, repo, branch);
+    ensureStateShape(state);
+    ensureArraySize(state.categories[category].titles, cat.slots);
+    ensureArraySize(state.categories[category].links,  cat.slots);
+    state.categories[category].titles[slot - 1] = title;
+    state.categories[category].links[slot - 1]  = `/${cat.baseOut}/presentation-${String(slot).padStart(2, '0')}/`;
+    state.updated = new Date().toISOString();
 
-  const catIndexPath = `site${categoryIndexPath(category)}`;
-  if (catIndexPath) {
-    const html = generateCategoryIndex(category, state);
-    blobs.set(catIndexPath, Buffer.from(html));
+    blobs.set('site/assets/data/site-state.json', Buffer.from(JSON.stringify(state, null, 2)));
+
+    const catIndexPath = `site${categoryIndexPath(category)}`;
+    if (catIndexPath) {
+      const html = generateCategoryIndex(category, state);
+      blobs.set(catIndexPath, Buffer.from(html));
+    }
   }
 
-  const message = final ? `Upload ${category} #${slot} (final batch)` : `Upload ${category} #${slot} (batch, merge=${!!merge})`;
+  const message = final
+    ? `Upload ${category} #${slot} (final batch)`
+    : `Upload ${category} #${slot} (batch)`;
 
   const commitSha = await commitTreeWithRetry(owner, repo, branch, blobs, message);
-  return json(200, { ok: true, commit: commitSha, deploy_url: process.env.PUBLIC_SITE_URL || null, final: !!final });
+  return json(200, { ok: true, commit: commitSha, final: !!final, files: files.length });
 }
 
 // ---------- Delete ----------
@@ -129,7 +134,6 @@ async function handleDelete(body){
   const slotDirRel = `${cat.baseOut}/presentation-${String(slot).padStart(2, '0')}/`;
   const slotDir = `site/${slotDirRel}`;
 
-  // Collect all paths currently under this slot directory in the repo
   const headTree = await getHeadTree(owner, repo, branch);
   const paths = (headTree.tree || []).map(n => n.path);
   const toDelete = paths.filter(p => p.startsWith(slotDir));
@@ -139,7 +143,6 @@ async function handleDelete(body){
     blobs.set(p, DELETE);
   }
 
-  // Update state (clear title/link) and category index
   const state = await fetchStateFromLiveOrRepo(owner, repo, branch);
   ensureStateShape(state);
   ensureArraySize(state.categories[category].titles, cat.slots);
