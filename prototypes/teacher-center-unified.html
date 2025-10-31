@@ -384,6 +384,7 @@
     // Configuration
     const TEACHER_PASSWORD_KEY = 'rc_unified_teacher_password';
     const DEFAULT_TEACHER_PASSWORD = 'teacher123';
+    const ASSIGNMENT_STATUS_ASSIGNED = 'assigned';
 
     // DOM elements
     const passwordModal = document.getElementById('passwordModal');
@@ -436,10 +437,8 @@
         return;
       }
 
-      // Verify password (localStorage only for now)
-      const storedPassword = isRemote 
-        ? DEFAULT_TEACHER_PASSWORD 
-        : (localStorage.getItem(TEACHER_PASSWORD_KEY) || DEFAULT_TEACHER_PASSWORD);
+      // Verify password (localStorage only for now - remote auth not yet implemented)
+      const storedPassword = localStorage.getItem(TEACHER_PASSWORD_KEY) || DEFAULT_TEACHER_PASSWORD;
 
       if (enteredPassword === storedPassword) {
         sessionStorage.setItem('teacher_authenticated', 'true');
@@ -491,7 +490,7 @@
 
         // Load assignment instances for pending count
         const instances = await db.listAssignmentInstances();
-        const pending = instances.filter(i => i.status === 'assigned').length;
+        const pending = instances.filter(i => i.status === ASSIGNMENT_STATUS_ASSIGNED).length;
         document.getElementById('kpiPending').textContent = pending;
 
         // Load events
@@ -516,9 +515,8 @@
       }
     }
 
-    // Log adapter mode
+    // Log adapter mode (for debugging)
     console.log('Data adapter mode:', isRemote ? 'Supabase (remote)' : 'localStorage (local)');
-    console.log('Default teacher password:', DEFAULT_TEACHER_PASSWORD);
 
     // Initialize
     checkAuth();
