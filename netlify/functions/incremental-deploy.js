@@ -1,23 +1,21 @@
-// Incremental Deploy (GitHub commits) + diagnostics + delete + (stubs for maintenance ops)
+// Incremental Deploy (GitHub commits) + diagnostics + delete
 // Auth: Allows if EITHER a valid admin session cookie is present OR the legacy ADMIN_KEY matches.
 // If ADMIN_KEY is not set, only session-based auth works.
 //
 // Required envs (Netlify → Project configuration → Environment variables):
 // - GITHUB_TOKEN     (classic PAT with repo scope, or fine‑grained with Contents RW on the repo)
 // - GH_REPO          (e.g., "danreinisch/reinisch-classroom")
-// - GH_BRANCH        (e.g., "main")  [optional; defaults to repo default branch]
+// - GH_BRANCH        (optional; defaults to repo default branch)
 // - PUBLIC_SITE_URL  (e.g., "https://reinischclassroom.com")
-// - ADMIN_SESSION_SECRET (required for session-based auth; same value used by login)
+// - ADMIN_SESSION_SECRET (same as the login function)
 //
 // Optional:
-// - ADMIN_KEY        (legacy; if set, requests may also send header x-admin-key: <value>)
+// - ADMIN_KEY        (legacy; if present, requests may also send header x-admin-key: <value>)
 
 const crypto = require('crypto');
 
 const GH_API = 'https://api.github.com';
 const SESSION_COOKIE_NAMES = ['rc_admin_session_v2', 'rc_admin_session'];
-
-// Special marker for deletions inside our in-memory "blobs" map
 const DELETE = Symbol('DELETE');
 
 exports.handler = async (event) => {
@@ -36,19 +34,11 @@ exports.handler = async (event) => {
           hasPublicSiteUrl: !!process.env.PUBLIC_SITE_URL
         });
       }
-      if (actionQS === 'backfill') {
-        await requireAdmin(event);
-        return json(501, { ok: false, message: 'backfill not implemented in this build' });
-      }
-      if (actionQS === 'migrate_publisher') {
-        await requireAdmin(event);
-        return json(501, { ok: false, message: 'migrate_publisher not implemented in this build' });
-      }
       return json(200, { ok: true, message: 'Use POST to upload or delete; GET ?action=diagnostics' });
     }
 
-    // Upload or delete (POST)
     if (event.httpMethod !== 'POST') return json(405, { message: 'Method not allowed' });
+
     await requireAdmin(event);
 
     let body = {};
@@ -56,6 +46,7 @@ exports.handler = async (event) => {
     catch { return json(400, { message: 'Invalid JSON body' }); }
 
     const { action } = body;
+
     if (action === 'delete') {
       return await handleDelete(body);
     } else {
@@ -70,7 +61,7 @@ exports.handler = async (event) => {
   }
 };
 
-// ------------ Upload ------------
+// ---------- Upload ----------
 async function handleUpload(body){
   const { category, slot, title, files, merge, final } = body;
 
@@ -96,7 +87,7 @@ async function handleUpload(body){
     blobs.set(outPath, buf);
   }
 
-  // Add redirect index.html based on best entry page
+  // Add redirect index.html
   const entryRel = await pickEntryHtml(owner, repo, branch, blobs, slotDir);
   const redirectHtml = redirectIndexHtml(title, entryRel, cat.back, cat.section);
   blobs.set(`${slotDir}/index.html`, Buffer.from(redirectHtml));
@@ -124,7 +115,7 @@ async function handleUpload(body){
   return json(200, { ok: true, commit: commitSha, deploy_url: process.env.PUBLIC_SITE_URL || null, final: !!final });
 }
 
-// ------------ Delete ------------
+// ---------- Delete ----------
 async function handleDelete(body){
   const { category, slot } = body || {};
   const CAT_META = getCatMeta();
@@ -138,22 +129,17 @@ async function handleDelete(body){
   const slotDirRel = `${cat.baseOut}/presentation-${String(slot).padStart(2, '0')}/`;
   const slotDir = `site/${slotDirRel}`;
 
-  // Find all paths currently under this slot directory in the repo
+  // Collect all paths currently under this slot directory in the repo
   const headTree = await getHeadTree(owner, repo, branch);
   const paths = (headTree.tree || []).map(n => n.path);
   const toDelete = paths.filter(p => p.startsWith(slotDir));
-
-  if (toDelete.length === 0) {
-    // Nothing to delete is fine; still clear state.
-    console.log(`No files found under ${slotDir}, proceeding to clear state.`);
-  }
 
   const blobs = new Map();
   for (const p of toDelete) {
     blobs.set(p, DELETE);
   }
 
-  // Update site-state.json and category index page (clear entry)
+  // Update state (clear title/link) and category index
   const state = await fetchStateFromLiveOrRepo(owner, repo, branch);
   ensureStateShape(state);
   ensureArraySize(state.categories[category].titles, cat.slots);
@@ -174,7 +160,7 @@ async function handleDelete(body){
   return json(200, { ok: true, deleted: true, commit: commitSha });
 }
 
-// ------------ Auth helper (session cookie OR ADMIN_KEY) ------------
+// ---------- Auth helper (session cookie OR ADMIN_KEY) ----------
 async function requireAdmin(event){
   const secret = (process.env.ADMIN_SESSION_SECRET || '').trim();
   if (secret && verifySessionCookie(event.headers || {}, secret)) return;
@@ -217,26 +203,12 @@ function verifySessionCookie(headers, secret){
 
     const expected = crypto.createHmac('sha256', secret).update(payloadBuf).digest();
     const actual = b64urlDecode(sigB64);
-
     if (expected.length !== actual.length) return false;
     return crypto.timingSafeEqual(expected, actual);
   } catch { return false; }
 }
 
-function getCookie(header, name) {
-  for (const part of header.split(/;\s*/)) {
-    const [k, ...v] = part.split('=');
-    if (k === name) return v.join('=');
-  }
-  return '';
-}
-function b64urlDecode(str) {
-  str = str.replace(/-/g, '+').replace(/_/g, '/');
-  const pad = str.length % 4; if (pad) str += '='.repeat(4 - pad);
-  return Buffer.from(str, 'base64');
-}
-
-// ------------ GitHub helpers ------------
+// ---------- GitHub helpers ----------
 function parseRepo() {
   const slug = process.env.GH_REPO || '';
   if (!slug || !slug.includes('/')) throw new Error('GH_REPO must be "owner/repo"');
@@ -255,7 +227,6 @@ async function commitTreeWithRetry(owner, repo, branch, pathToBufferMap, message
   catch (err) {
     const msg = String(err && err.message || '');
     if (attempt < 1 && (msg.includes('not a fast forward') || (msg.includes('/git/refs/heads') && msg.includes('422')))) {
-      // refresh and retry once
       return await commitTreeWithRetry(owner, repo, branch, pathToBufferMap, message, attempt+1);
     }
     throw err;
@@ -272,10 +243,9 @@ async function commitTree(owner, repo, branch, pathToBufferMap, message) {
   const entries = [];
   for (const [path, value] of pathToBufferMap.entries()) {
     if (value === DELETE) {
-      // Deletion entry
       entries.push({ path, mode: '100644', type: 'blob', sha: null });
     } else {
-      const buf = value; // Buffer
+      const buf = value;
       const blob = await ghPOST(`/repos/${owner}/${repo}/git/blobs`, { content: buf.toString('base64'), encoding: 'base64' });
       entries.push({ path, mode: '100644', type: 'blob', sha: blob.sha });
     }
@@ -320,7 +290,7 @@ function ghHeaders() {
 }
 async function safeText(res){ try{ return await res.text(); } catch{ return ''; } }
 
-// ------------ State and page helpers ------------
+// ---------- State and page helpers ----------
 function getCatMeta(){
   return {
     toolkit: { slots: 8,  baseOut: 'presentations/language-arts-toolkit', section: 'language-arts', back: '/language-arts/toolkit/index.html' },
@@ -417,3 +387,17 @@ function escapeHtml(s=''){return s.replace(/[&<>"]/g,c=>({ '&':'&amp;','<':'&lt;
 function ensureArraySize(arr,n){ while(arr.length<n) arr.push(''); }
 function shortErr(e){ const msg = e && e.message ? e.message : String(e); return (msg || 'Server error').slice(0, 600); }
 function json(status,data){ return { statusCode:status, headers:{'Content-Type':'application/json','Cache-Control':'no-store'}, body: JSON.stringify(data) }; }
+
+// ---------- Small helpers ----------
+function getCookie(header, name) {
+  for (const part of header.split(/;\s*/)) {
+    const [k, ...v] = part.split('=');
+    if (k === name) return v.join('=');
+  }
+  return '';
+}
+function b64urlDecode(str) {
+  str = str.replace(/-/g, '+').replace(/_/g, '/');
+  const pad = str.length % 4; if (pad) str += '='.repeat(4 - pad);
+  return Buffer.from(str, 'base64');
+}
