@@ -12,34 +12,34 @@
     #app{display:none}
   </style>
   <script>
-  // Gate: verify session on the server. If not logged in → redirect to /admin-login.
+  // Force login every visit:
+  // - /admin (without ?s=1) → redirect to /admin-login
+  // - After login, server redirects to /admin/?s=1
+  // - When s=1 is present, render the app once and strip the parameter
   (function(){
+    const url = new URL(location.href);
+    const signal = url.searchParams.get('s');
     function showApp(){
       const app = document.getElementById('app');
       const gate = document.getElementById('gate');
       if (app) app.style.display = 'block';
       if (gate) gate.style.display = 'none';
-    }
-    async function check(){
-      try{
-        const r = await fetch('/.netlify/functions/admin-session-check', { cache:'no-store' });
-        if (!r.ok) {
-          // Not authenticated → go to login
-          location.replace('/admin-login');
-          return;
-        }
-        // Authenticated → reveal UI now if DOM is ready, otherwise after DOMContentLoaded
-        if (document.readyState === 'loading') {
-          document.addEventListener('DOMContentLoaded', showApp, { once:true });
-        } else {
-          showApp();
-        }
-      }catch(err){
-        console.error('admin gate error:', err);
-        location.replace('/admin-login');
+      // Clean the one-time signal from the URL
+      if (signal === '1') {
+        url.searchParams.delete('s');
+        history.replaceState({}, '', url.pathname + (url.search ? ('?' + url.searchParams.toString()) : '') + url.hash);
       }
     }
-    check();
+    if (signal !== '1') {
+      // Always require login first
+      location.replace('/admin-login');
+      return;
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', showApp, { once:true });
+    } else {
+      showApp();
+    }
   })();
   </script>
 </head>
