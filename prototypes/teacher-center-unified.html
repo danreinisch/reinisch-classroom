@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Reinisch Classroom — Unified Teacher Center (WIP)</title>
+<style>
+  :root{ --base:#0b0f14; --ink:#e7ecf2; --muted:#9aa6b2; --line:rgba(255,255,255,.08); --brand:#22c55e; }
+  *{box-sizing:border-box} html,body{height:100%}
+  body{margin:0;background:linear-gradient(180deg,#0b0f14,#0e131a);color:var(--ink);font-family:ui-sans-serif,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial}
+  .header{position:sticky;top:0;z-index:40;padding:10px 0;background:linear-gradient(180deg, rgba(34,197,94,.9), rgba(22,163,74,.9));border-bottom:1px solid rgba(255,255,255,.18)}
+  .bar{max-width:1700px;margin:0 auto;padding:0 12px;display:flex;gap:12px;align-items:center}
+  .brand{font-weight:900;letter-spacing:.2px;margin-right:auto;color:#031f11}
+  .chip{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.18);color:#062513;font-weight:800}
+  .btn{border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--ink);padding:10px 14px;border-radius:10px;font-weight:800;cursor:pointer}
+  .btn.primary{background:linear-gradient(180deg,rgba(34,197,94,.96),rgba(22,163,74,.96));color:#032313;border:0}
+  .btn.small{padding:6px 10px}
+  .layout{display:grid;grid-template-columns: 220px minmax(0,1fr) 300px;gap:14px;max-width:1700px;margin:0 auto;padding:14px}
+  @media (max-width:1100px){.layout{grid-template-columns:1fr}.rightpanel,.sidebar{display:none}}
+  .card{background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,.25);padding:14px}
+  .card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-weight:900}
+  .nav a{display:block;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--ink);font-weight:800;margin-bottom:8px;text-decoration:none}
+  .nav a.active{outline:2px solid rgba(34,197,94,.35)}
+  .subtle{color:var(--muted);font-size:13px}
+  .table{width:100%;border-collapse:collapse}
+  .table th,.table td{padding:10px;border-bottom:1px solid var(--line);text-align:left;font-size:14px}
+  .scroll{max-height:56vh;overflow:auto}
+  input,select,textarea{width:100%;background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:10px;color:var(--ink);padding:8px 10px}
+  label{display:block;margin:8px 0 6px 0;font-weight:700}
+  .badge{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.08);font-size:12px}
+  .goal-item{display:flex;gap:10px;align-items:flex-start;padding:10px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.04)}
+  .modal-backdrop{position:fixed;inset:0;background:rgba(5,7,9,.6);display:none;align-items:center;justify-content:center;z-index:60}
+  .modal{padding:16px;min-width:320px;width:92%;max-width:900px}
+  .show{display:flex}
+</style>
+</head>
+<body>
+  <div class="header">
+    <div class="bar">
+      <div class="brand">Reinisch Classroom — Unified</div>
+      <span id="currentUserChip" class="chip">Signed out</span>
+      <button class="btn small" id="btnStudent">Student Portal</button>
+      <button class="btn primary small" id="btnTeacher">Teacher Center 🔒</button>
+    </div>
+  </div>
+
+  <section id="view-teacher" class="layout" style="display:none">
+    <aside class="sidebar card">
+      <div class="card-header" style="margin:0"><div>Teacher Tools</div></div>
+      <div class="nav" id="tTabs">
+        <a href="#" class="active" data-tab="studentPortal">Student Portal</a>
+        <a href="#" data-tab="iepProgress">IEP Progress</a>
+        <a href="#" data-tab="events">IEP & Evaluations</a>
+        <a href="#" data-tab="passwords">Passwords</a>
+        <a href="#" data-tab="assignments">Assignments</a>
+        <a href="#" data-tab="results">Results</a>
+        <a href="#" data-tab="hub">Assignment Hub</a>
+        <a href="#" data-tab="classes">Classes</a>
+        <a href="#" data-tab="upload">Upload</a>
+        <a href="#" data-tab="data">Data Import/Export</a>
+        <a href="#" data-tab="settings">Settings</a>
+      </div>
+    </aside>
+
+    <main class="content">
+      <div class="card ttab" data-tab="studentPortal">
+        <div class="card-header"><div>🧑 Student Portal Manager</div></div>
+        <div class="subtle">WIP: This will show students, goals, and per-student portal details.</div>
+      </div>
+
+      <div class="card ttab" data-tab="iepProgress" style="display:none">
+        <div class="card-header"><div>🎯 IEP Goal Progress</div></div>
+        <div class="subtle">WIP: Table of students + goals + quick add modal.</div>
+      </div>
+
+      <div class="card ttab" data-tab="events" style="display:none">
+        <div class="card-header"><div>📅 IEP & Evaluations</div></div>
+        <div class="subtle">WIP: Create/list events. Porting from v6.1.</div>
+      </div>
+
+      <div class="card ttab" data-tab="passwords" style="display:none">
+        <div class="card-header"><div>🔐 Passwords</div></div>
+        <div class="subtle">WIP: Local-only passwords first; Supabase RPC later.</div>
+      </div>
+
+      <div class="card ttab" data-tab="assignments" style="display:none">
+        <div class="card-header"><div>📝 Assignments</div></div>
+        <div class="subtle">WIP: Porting from v8.2.</div>
+      </div>
+
+      <div class="card ttab" data-tab="results" style="display:none">
+        <div class="card-header"><div>🧪 Results</div></div>
+        <div class="subtle">WIP: Porting from v8.2.</div>
+      </div>
+
+      <div class="card ttab" data-tab="hub" style="display:none">
+        <div class="card-header"><div>🛠 Assignment Hub</div></div>
+        <div class="subtle">WIP: Porting from v8.2.</div>
+      </div>
+
+      <div class="card ttab" data-tab="classes" style="display:none">
+        <div class="card-header"><div>👥 Classes</div></div>
+        <div class="subtle">WIP: Porting from v8.2.</div>
+      </div>
+
+      <div class="card ttab" data-tab="upload" style="display:none">
+        <div class="card-header"><div>📦 Upload</div></div>
+        <div class="subtle">WIP: Porting from v8.2.</div>
+      </div>
+
+      <div class="card ttab" data-tab="data" style="display:none">
+        <div class="card-header"><div>📁 Data Import/Export</div></div>
+        <div class="subtle">WIP: CSV import/export (local bootstrap).</div>
+      </div>
+
+      <div class="card ttab" data-tab="settings" style="display:none">
+        <div class="card-header"><div>⚙️ Settings</div></div>
+        <div class="subtle">WIP: Profile, share PIN, notifications.</div>
+      </div>
+    </main>
+
+    <aside class="rightpanel card">
+      <div class="card"><div class="card-header"><div>KPIs</div></div>
+        <div style="display:flex;justify-content:space-between;margin:6px 0"><div>IEP Goals</div><div style="font-weight:900;font-size:28px" id="kGoals">0</div></div>
+        <div style="display:flex;justify-content:space-between;margin:6px 0"><div>Manual/Share Updates</div><div style="font-weight:900;font-size:28px" id="kUpdates">0</div></div>
+      </div>
+      <div class="card"><div class="card-header"><div>Notifications</div><span class="badge" id="notifCount">0</span></div><ul id="notifList" class="subtle" style="margin:0 0 0 16px"><li>No alerts</li></ul></div>
+    </aside>
+  </section>
+
+  <div class="modal-backdrop" id="teachModal">
+    <div class="modal card">
+      <div class="card-header"><div>Teacher Center — Password</div></div>
+      <label>Password<input id="teachPass" type="password" placeholder="Enter teacher password"></label>
+      <div class="subtle" id="teachMsg" style="min-height:18px;margin-top:6px">Default: <code>teacher123</code> (local dev).</div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:10px">
+        <button class="btn small" id="teachCancel">Cancel</button>
+        <button class="btn primary small" id="teachGo">Unlock</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { db, isRemote, localStore } from '../web/data-adapter.js';
+
+    const TEACHER_PW_LOCAL = 'teacher123';
+    const qs = s => document.querySelector(s);
+    const qsa = s => Array.from(document.querySelectorAll(s));
+
+    function showTeacher(){ qs('#view-teacher').style.display='grid'; }
+    function hideTeacher(){ qs('#view-teacher').style.display='none'; }
+
+    qs('#btnTeacher').addEventListener('click', ()=>{ qs('#teachModal').classList.add('show'); qs('#teachPass').focus(); });
+    qs('#teachCancel').addEventListener('click', ()=> qs('#teachModal').classList.remove('show'));
+    qs('#teachGo').addEventListener('click', ()=>{
+      const input = qs('#teachPass').value;
+      if (input === TEACHER_PW_LOCAL) {
+        qs('#teachModal').classList.remove('show');
+        showTeacher();
+        qs('#currentUserChip').textContent = 'Teacher';
+      } else {
+        qs('#teachMsg').innerHTML = '<span style="color:#fecaca">Wrong password</span>';
+      }
+    });
+
+    // Tabs
+    qs('#tTabs').addEventListener('click', e=>{
+      if (e.target.tagName !== 'A') return; e.preventDefault();
+      qsa('#tTabs a').forEach(a=>a.classList.remove('active'));
+      e.target.classList.add('active');
+      const tab = e.target.getAttribute('data-tab');
+      qsa('.ttab').forEach(t=> t.style.display = (t.getAttribute('data-tab')===tab)?'block':'none');
+    });
+
+    function renderKPIs(){
+      const goals = Object.values(localStore.get('iepGoals', {})).reduce((n,arr)=> n+(arr?.length||0), 0);
+      const updates = (localStore.get('progressEntries', [])||[]).filter(p=> (p.via==='manual'||p.via==='share')).length;
+      qs('#kGoals').textContent = goals;
+      qs('#kUpdates').textContent = updates;
+    }
+
+    function renderNotifications(){
+      const list = qs('#notifList'); const count = qs('#notifCount');
+      const n = localStore.get('notifications', []);
+      count.textContent = n.length;
+      list.innerHTML = n.length
+        ? n.slice(0,8).map(x=>`<li>${x.text} <span class="subtle">— ${new Date(x.time).toLocaleString()}</span></li>`).join('')
+        : '<li>No alerts</li>';
+    }
+
+    renderKPIs();
+    renderNotifications();
+  </script>
+</body>
+</html>
