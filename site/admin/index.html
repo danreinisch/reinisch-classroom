@@ -33,7 +33,7 @@
     }
     .drop.drag{border-color:var(--accent);color:#fff;background:rgba(96,165,250,.08)}
     .list{max-height:220px;overflow:auto;background:#0e1629;border:1px solid rgba(255,255,255,.14);border-radius:10px;padding:8px;font:12px ui-monospace,Menlo,Consolas,monospace}
-    .log{margin-top:16px;background:#0e1629;border:1px solid rgba(255,255,255,.14);border-radius:10px;padding:10px;height:240px;overflow:auto;font:12px ui-monospace,Menlo,Consolas,monospace;color:#dbeafe;white-space:pre-wrap}
+    .log{margin-top:16px;background:#0e1629;border:1px solid rgba(255,255,255,.14);border-radius:10px;padding:10px;height:260px;overflow:auto;font:12px ui-monospace,Menlo,Consolas,monospace;color:#dbeafe;white-space:pre-wrap}
     .sp{flex:1}
     a.btn{color:#fff;border:1px solid #fff;padding:.4rem .7rem;border-radius:.5rem;text-decoration:none}
     .hint{font-size:12px;color:var(--muted);margin-top:4px}
@@ -145,6 +145,7 @@
     life:    { slots: 32, baseOut: 'life-skills/presentations' }
   };
 
+  const BATCH_TARGET = 4.5 * 1024 * 1024; // ~4.5 MB per request to stay under function limits
   const catEl = document.getElementById('cat');
   const slotSel = document.getElementById('slotSel');
   const slotWarn = document.getElementById('slotWarn');
@@ -258,14 +259,23 @@
     if (dt && dt.files) addFiles(dt.files);
   });
 
+  // Robust base64 for large files: use readAsDataURL and strip the prefix
   async function toBase64(f){
     return new Promise((res, rej) => {
       const r = new FileReader();
-      r.onload = () => res(btoa(String.fromCharCode(...new Uint8Array(r.result))));
+      r.onload = () => {
+        try {
+          const s = String(r.result||'');
+          const i = s.indexOf('base64,');
+          res(i >= 0 ? s.slice(i+7) : s);
+        } catch(e){ rej(e); }
+      };
       r.onerror = () => rej(r.error||new Error('read error'));
-      r.readAsArrayBuffer(f);
+      r.readAsDataURL(f);
     });
   }
+
+  function estimateB64Size(bytes){ return Math.ceil(bytes * 4 / 3); }
 
   uploadBtn.addEventListener('click', async () => {
     try{
@@ -278,42 +288,53 @@
       if (!queue.length) { alert('Please add at least one file'); return; }
 
       log('Preparing files…');
-      const files = [];
+      const encoded = [];
       let totalBytes = 0, doneBytes = 0;
-
       for (const q of queue) totalBytes += q.file.size;
+
       for (const q of queue) {
         const b64 = await toBase64(q.file);
+        const encSize = estimateB64Size(q.file.size);
         doneBytes += q.file.size;
-        files.push({ path: q.path, base64: b64 });
+        encoded.push({ path: q.path, base64: b64, encSize });
         log(`Encoded ${q.path} (${fmtBytes(q.file.size)})  [${fmtBytes(doneBytes)}/${fmtBytes(totalBytes)}]`);
       }
 
-      log('Uploading…');
-      const body = JSON.stringify({ category, slot, title, files, final: true });
-      const res = await fetch('/.netlify/functions/incremental-deploy', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
-        body
-      });
-
-      const text = await res.text().catch(()=> '');
-      log(`Response ${res.status} -> ${text.slice(0, 1000)}`);
-      if (!res.ok) { alert('Upload failed: ' + res.status); return; }
-
-      try{
-        const j = JSON.parse(text);
-        if (j && j.ok) {
-          // Reflect immediately in dropdown
-          if (siteState?.categories?.[category]?.titles) {
-            const titles = siteState.categories[category].titles;
-            while (titles.length < total) titles.push('');
-            titles[slot-1] = title;
-          }
-          renderSlots();
+      // Batch into multiple small requests
+      const batches = [];
+      let cur = [], curSize = 0;
+      for (const e of encoded) {
+        if (curSize + e.encSize > BATCH_TARGET && cur.length) {
+          batches.push(cur); cur = []; curSize = 0;
         }
-      }catch{}
+        cur.push({ path:e.path, base64:e.base64 });
+        curSize += e.encSize;
+      }
+      if (cur.length) batches.push(cur);
+
+      log(`Uploading in ${batches.length} batch(es)…`);
+      for (let i=0;i<batches.length;i++){
+        const files = batches[i];
+        const isFinal = (i === batches.length - 1);
+        const body = JSON.stringify({ category, slot, title, files, merge: !isFinal, final: isFinal });
+        const res = await fetch('/.netlify/functions/incremental-deploy', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body
+        });
+        const text = await res.text().catch(()=> '');
+        log(`Batch ${i+1}/${batches.length} -> ${res.status} ${text.slice(0, 800)}`);
+        if (!res.ok) { alert('Upload failed: ' + res.status); return; }
+      }
+
+      // Update dropdown state immediately
+      if (siteState?.categories?.[category]?.titles) {
+        const titles = siteState.categories[category].titles;
+        while (titles.length < total) titles.push('');
+        titles[slot-1] = title;
+      }
+      renderSlots();
       alert('Upload complete');
     }catch(e){
       console.error(e);
@@ -337,10 +358,9 @@
         body: JSON.stringify({ action:'delete', category, slot })
       });
       const text = await res.text().catch(()=> '');
-      log(`Delete response ${res.status} -> ${text.slice(0, 1000)}`);
+      log(`Delete response ${res.status} -> ${text.slice(0, 800)}`);
       if (!res.ok) { alert('Delete failed: ' + res.status); return; }
 
-      // Update local state
       if (siteState?.categories?.[category]) {
         const titles = siteState.categories[category].titles || [];
         const links  = siteState.categories[category].links  || [];
