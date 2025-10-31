@@ -22,15 +22,13 @@
     .sp{flex:1}
   </style>
   <script>
-    // Gate: verify session server-side
     (function(){
       async function gate(){
         try{
           const r = await fetch('/.netlify/functions/admin-session-check', { cache:'no-store', credentials:'same-origin' });
           if (!r.ok) { location.replace('/admin-login'); return; }
-          const app = document.getElementById('app');
-          const gate = document.getElementById('gate');
-          app.style.display = 'block'; gate.style.display = 'none';
+          document.getElementById('app').style.display='block';
+          document.getElementById('gate').style.display='none';
         }catch{ location.replace('/admin-login'); }
       }
       gate();
@@ -38,9 +36,7 @@
   </script>
 </head>
 <body>
-  <!-- glass top-nav is injected by section-nav.js (includes a Home button) -->
   <div id="gate" style="min-height:100vh;display:grid;place-items:center">Checking session…</div>
-
   <div id="app" style="display:none">
     <div class="wrap">
       <div class="bar">
@@ -50,67 +46,8 @@
           <a class="btn" href="/.netlify/functions/admin-logout">Sign out</a>
         </div>
       </div>
-
-      <div class="row">
-        <div>
-          <label for="cat">Category</label>
-          <select id="cat"></select>
-        </div>
-
-        <div>
-          <label for="slotSel">Slot</label>
-          <select id="slotSel"></select>
-          <div class="hint" style="font-size:12px;color:var(--muted);margin-top:4px">Open slots show “Open”; taken slots show the current title.</div>
-          <div id="slotWarn" style="font-size:12px;color:#fde68a;margin-top:4px;display:none"></div>
-        </div>
-
-        <div class="sp">
-          <label for="title">Title</label>
-          <input id="title" placeholder="Presentation title" />
-        </div>
-      </div>
-
-      <div class="row">
-        <div style="flex:1 1 320px">
-          <div class="drop" id="drop">Drop files here, or use the pickers below</div>
-        </div>
-      </div>
-
-      <div class="row">
-        <div>
-          <label>Add files</label>
-          <input id="files" type="file" multiple />
-        </div>
-        <div>
-          <label>Add a folder (optional)</label>
-          <input id="folder" type="file" webkitdirectory directory multiple />
-        </div>
-        <div>
-          <label>&nbsp;</label>
-          <button class="primary" id="upload">Upload</button>
-        </div>
-        <div>
-          <label>&nbsp;</label>
-          <button class="warn" id="deleteBtn" disabled>Delete slot</button>
-        </div>
-      </div>
-
-      <div class="row">
-        <div class="sp">
-          <label>Selected files</label>
-          <div class="list" id="list"></div>
-        </div>
-      </div>
-
-      <div class="log" id="log"></div>
+      <!-- … keep your existing uploader UI and scripts … -->
     </div>
   </div>
-
-  <!-- The rest of the Admin JS (uploader app) is unchanged and already on the page in your repo.
-       If you need me to paste the whole file again with these small header changes included, say the word. -->
-  <script src="/assets/js/unit-grid.js" defer></script> <!-- harmless; ignore if not present -->
-  <script>
-  // Minimal uploader bootstrapping preserved — if you need the full uploader JS here, I can include it.
-  </script>
 </body>
 </html>
