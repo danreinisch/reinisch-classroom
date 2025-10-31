@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Unified Teacher Center (WIP)</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: #f5f5f5;
+      color: #333;
+    }
+
+    /* Password Modal */
+    #passwordModal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+
+    #passwordModal.hidden {
+      display: none;
+    }
+
+    .modal-content {
+      background: white;
+      padding: 32px;
+      border-radius: 8px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+      max-width: 400px;
+      width: 90%;
+    }
+
+    .modal-content h2 {
+      margin-bottom: 16px;
+      color: #2563eb;
+    }
+
+    .modal-content input {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 16px;
+      margin-bottom: 16px;
+    }
+
+    .modal-content button {
+      width: 100%;
+      padding: 12px;
+      background: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    .modal-content button:hover {
+      background: #1d4ed8;
+    }
+
+    .error {
+      color: #dc2626;
+      font-size: 14px;
+      margin-top: -8px;
+      margin-bottom: 8px;
+    }
+
+    /* Main App */
+    #app {
+      display: none;
+    }
+
+    #app.visible {
+      display: block;
+    }
+
+    header {
+      background: white;
+      padding: 16px 24px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    header h1 {
+      color: #2563eb;
+      font-size: 24px;
+    }
+
+    header .user-info {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    header button {
+      padding: 8px 16px;
+      background: #ef4444;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    header button:hover {
+      background: #dc2626;
+    }
+
+    /* Tabs */
+    .tabs {
+      background: white;
+      padding: 0 24px;
+      display: flex;
+      gap: 8px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .tab {
+      padding: 12px 24px;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+      color: #6b7280;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .tab:hover {
+      color: #2563eb;
+    }
+
+    .tab.active {
+      color: #2563eb;
+      border-bottom-color: #2563eb;
+    }
+
+    /* Content Area */
+    .content {
+      padding: 24px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .tab-content {
+      display: none;
+      background: white;
+      padding: 24px;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .tab-content h2 {
+      margin-bottom: 16px;
+      color: #1f2937;
+    }
+
+    /* KPI Cards */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .kpi-card {
+      background: #f9fafb;
+      padding: 20px;
+      border-radius: 8px;
+      border-left: 4px solid #2563eb;
+    }
+
+    .kpi-card h3 {
+      font-size: 14px;
+      color: #6b7280;
+      margin-bottom: 8px;
+    }
+
+    .kpi-card .value {
+      font-size: 32px;
+      font-weight: bold;
+      color: #1f2937;
+    }
+
+    /* Notifications */
+    .notifications {
+      margin-top: 24px;
+    }
+
+    .notification {
+      background: #fef3c7;
+      border-left: 4px solid #f59e0b;
+      padding: 16px;
+      margin-bottom: 12px;
+      border-radius: 4px;
+    }
+
+    .notification.info {
+      background: #dbeafe;
+      border-left-color: #3b82f6;
+    }
+
+    .notification.success {
+      background: #d1fae5;
+      border-left-color: #10b981;
+    }
+
+    /* Placeholder content */
+    .placeholder {
+      color: #6b7280;
+      font-style: italic;
+      padding: 40px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Password Modal -->
+  <div id="passwordModal">
+    <div class="modal-content">
+      <h2>Teacher Center Login</h2>
+      <p style="margin-bottom: 16px; color: #6b7280;">Enter your teacher password to continue</p>
+      <input type="password" id="passwordInput" placeholder="Password" autofocus>
+      <div id="passwordError" class="error"></div>
+      <button id="loginBtn">Login</button>
+    </div>
+  </div>
+
+  <!-- Main App -->
+  <div id="app">
+    <header>
+      <h1>Unified Teacher Center</h1>
+      <div class="user-info">
+        <span>Teacher</span>
+        <button id="logoutBtn">Logout</button>
+      </div>
+    </header>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="hub">Hub</button>
+      <button class="tab" data-tab="assignments">Assignments</button>
+      <button class="tab" data-tab="results">Results</button>
+      <button class="tab" data-tab="classes">Classes</button>
+      <button class="tab" data-tab="iep-progress">IEP Progress</button>
+      <button class="tab" data-tab="events">Events</button>
+      <button class="tab" data-tab="student-portal">Student Portal</button>
+      <button class="tab" data-tab="upload">Upload</button>
+      <button class="tab" data-tab="settings">Settings</button>
+    </div>
+
+    <div class="content">
+      <!-- Hub Tab -->
+      <div class="tab-content active" data-tab="hub">
+        <h2>Dashboard</h2>
+        
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <h3>Total Students</h3>
+            <div class="value" id="kpiStudents">0</div>
+          </div>
+          <div class="kpi-card">
+            <h3>Active Assignments</h3>
+            <div class="value" id="kpiAssignments">0</div>
+          </div>
+          <div class="kpi-card">
+            <h3>Pending Submissions</h3>
+            <div class="value" id="kpiPending">0</div>
+          </div>
+          <div class="kpi-card">
+            <h3>Upcoming Events</h3>
+            <div class="value" id="kpiEvents">0</div>
+          </div>
+        </div>
+
+        <div class="notifications">
+          <h3 style="margin-bottom: 12px;">Recent Notifications</h3>
+          <div class="notification info">
+            <strong>System:</strong> LocalStorage mode active. All data is stored locally.
+          </div>
+          <div class="notification success">
+            <strong>Welcome!</strong> Teacher Center is ready to use.
+          </div>
+        </div>
+      </div>
+
+      <!-- Assignments Tab -->
+      <div class="tab-content" data-tab="assignments">
+        <h2>Assignments</h2>
+        <div class="placeholder">
+          Assignments management will be implemented here.<br>
+          (Porting from v8.2)
+        </div>
+      </div>
+
+      <!-- Results Tab -->
+      <div class="tab-content" data-tab="results">
+        <h2>Results</h2>
+        <div class="placeholder">
+          Student results and progress tracking will be implemented here.<br>
+          (Porting from v8.2)
+        </div>
+      </div>
+
+      <!-- Classes Tab -->
+      <div class="tab-content" data-tab="classes">
+        <h2>Classes</h2>
+        <div class="placeholder">
+          Class and student management will be implemented here.<br>
+          (Porting from v8.2)
+        </div>
+      </div>
+
+      <!-- IEP Progress Tab -->
+      <div class="tab-content" data-tab="iep-progress">
+        <h2>IEP Progress</h2>
+        <div class="placeholder">
+          IEP goal tracking and progress entries will be implemented here.<br>
+          (Wired to data-adapter.js)
+        </div>
+      </div>
+
+      <!-- Events Tab -->
+      <div class="tab-content" data-tab="events">
+        <h2>Events</h2>
+        <div class="placeholder">
+          IEP meetings and evaluations scheduling will be implemented here.<br>
+          (From v6.1)
+        </div>
+      </div>
+
+      <!-- Student Portal Tab -->
+      <div class="tab-content" data-tab="student-portal">
+        <h2>Student Portal Manager</h2>
+        <div class="placeholder">
+          Student password management and share links will be implemented here.<br>
+          (From v6.1)
+        </div>
+      </div>
+
+      <!-- Upload Tab -->
+      <div class="tab-content" data-tab="upload">
+        <h2>Upload</h2>
+        <div class="placeholder">
+          Resource upload and management will be implemented here.<br>
+          (Porting from v8.2)
+        </div>
+      </div>
+
+      <!-- Settings Tab -->
+      <div class="tab-content" data-tab="settings">
+        <h2>Settings</h2>
+        <div class="placeholder">
+          Teacher profile, share PIN, and notification preferences will be implemented here.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    // Import data adapter (defaults to localStorage, uses Supabase if available)
+    import { db, isRemote, localStore } from '../web/data-adapter.js';
+
+    // Configuration
+    const TEACHER_PASSWORD_KEY = 'rc_unified_teacher_password';
+    const DEFAULT_TEACHER_PASSWORD = 'teacher123';
+
+    // DOM elements
+    const passwordModal = document.getElementById('passwordModal');
+    const passwordInput = document.getElementById('passwordInput');
+    const passwordError = document.getElementById('passwordError');
+    const loginBtn = document.getElementById('loginBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const app = document.getElementById('app');
+
+    // Initialize teacher password if not set (localStorage only)
+    if (!isRemote && !localStorage.getItem(TEACHER_PASSWORD_KEY)) {
+      localStorage.setItem(TEACHER_PASSWORD_KEY, DEFAULT_TEACHER_PASSWORD);
+    }
+
+    // Check if already logged in
+    function checkAuth() {
+      const isAuthenticated = sessionStorage.getItem('teacher_authenticated') === 'true';
+      if (isAuthenticated) {
+        showApp();
+      } else {
+        showPasswordModal();
+      }
+    }
+
+    function showPasswordModal() {
+      passwordModal.classList.remove('hidden');
+      app.classList.remove('visible');
+      passwordInput.value = '';
+      passwordError.textContent = '';
+      passwordInput.focus();
+    }
+
+    function showApp() {
+      passwordModal.classList.add('hidden');
+      app.classList.add('visible');
+      loadDashboardData();
+    }
+
+    // Login handler
+    loginBtn.addEventListener('click', handleLogin);
+    passwordInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') handleLogin();
+    });
+
+    async function handleLogin() {
+      const enteredPassword = passwordInput.value;
+      
+      if (!enteredPassword) {
+        passwordError.textContent = 'Please enter a password';
+        return;
+      }
+
+      // Verify password (localStorage only for now)
+      const storedPassword = isRemote 
+        ? DEFAULT_TEACHER_PASSWORD 
+        : (localStorage.getItem(TEACHER_PASSWORD_KEY) || DEFAULT_TEACHER_PASSWORD);
+
+      if (enteredPassword === storedPassword) {
+        sessionStorage.setItem('teacher_authenticated', 'true');
+        showApp();
+      } else {
+        passwordError.textContent = 'Incorrect password';
+        passwordInput.value = '';
+        passwordInput.focus();
+      }
+    }
+
+    // Logout handler
+    logoutBtn.addEventListener('click', () => {
+      sessionStorage.removeItem('teacher_authenticated');
+      showPasswordModal();
+    });
+
+    // Tab switching
+    const tabs = document.querySelectorAll('.tab');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        const tabName = tab.dataset.tab;
+        
+        // Update active states
+        tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        
+        tabContents.forEach(content => {
+          content.classList.remove('active');
+          if (content.dataset.tab === tabName) {
+            content.classList.add('active');
+          }
+        });
+      });
+    });
+
+    // Load dashboard data
+    async function loadDashboardData() {
+      try {
+        // Load students
+        const students = await db.listStudents();
+        document.getElementById('kpiStudents').textContent = students.length;
+
+        // Load assignments
+        const assignments = await db.listAssignments();
+        document.getElementById('kpiAssignments').textContent = assignments.length;
+
+        // Load assignment instances for pending count
+        const instances = await db.listAssignmentInstances();
+        const pending = instances.filter(i => i.status === 'assigned').length;
+        document.getElementById('kpiPending').textContent = pending;
+
+        // Load events
+        const events = await db.listEvents();
+        const upcoming = events.filter(e => {
+          if (!e.date) return false;
+          const eventDate = new Date(e.date);
+          const now = new Date();
+          return eventDate >= now;
+        }).length;
+        document.getElementById('kpiEvents').textContent = upcoming;
+
+        console.log('Dashboard data loaded:', { 
+          students: students.length, 
+          assignments: assignments.length,
+          pending,
+          upcoming,
+          mode: isRemote ? 'Supabase' : 'localStorage'
+        });
+      } catch (error) {
+        console.error('Error loading dashboard data:', error);
+      }
+    }
+
+    // Log adapter mode
+    console.log('Data adapter mode:', isRemote ? 'Supabase (remote)' : 'localStorage (local)');
+    console.log('Default teacher password:', DEFAULT_TEACHER_PASSWORD);
+
+    // Initialize
+    checkAuth();
+  </script>
+
+</body>
+</html>
