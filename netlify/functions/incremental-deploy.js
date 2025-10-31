@@ -23,7 +23,7 @@ exports.handler = async (event) => {
     const qs = event.queryStringParameters || {};
     const actionQS = qs.action || '';
 
-    // Diagnostics and maintenance (GET)
+    // Diagnostics (GET)
     if (event.httpMethod === 'GET') {
       if (actionQS === 'diagnostics') {
         return json(200, {
@@ -63,7 +63,7 @@ exports.handler = async (event) => {
 
 // ---------- Upload ----------
 async function handleUpload(body){
-  const { category, slot, title, files, merge, final } = body;
+  const { category, slot, title, files, final } = body;
 
   const CAT_META = getCatMeta();
   if (!CAT_META[category]) return json(400, { message: 'Unknown category' });
@@ -139,9 +139,7 @@ async function handleDelete(body){
   const toDelete = paths.filter(p => p.startsWith(slotDir));
 
   const blobs = new Map();
-  for (const p of toDelete) {
-    blobs.set(p, DELETE);
-  }
+  for (const p of toDelete) blobs.set(p, DELETE);
 
   const state = await fetchStateFromLiveOrRepo(owner, repo, branch);
   ensureStateShape(state);
@@ -154,10 +152,7 @@ async function handleDelete(body){
   blobs.set('site/assets/data/site-state.json', Buffer.from(JSON.stringify(state, null, 2)));
 
   const catIndexPath = `site${categoryIndexPath(category)}`;
-  if (catIndexPath) {
-    const html = generateCategoryIndex(category, state);
-    blobs.set(catIndexPath, Buffer.from(html));
-  }
+  if (catIndexPath) blobs.set(catIndexPath, Buffer.from(generateCategoryIndex(category, state)));
 
   const commitSha = await commitTreeWithRetry(owner, repo, branch, blobs, `Delete ${category} #${slot}`);
   return json(200, { ok: true, deleted: true, commit: commitSha });
@@ -185,10 +180,7 @@ function verifySessionCookie(headers, secret){
     const cookieHeader = headers.cookie || headers.Cookie || '';
     if (!cookieHeader) return false;
     let token = '';
-    for (const n of SESSION_COOKIE_NAMES) {
-      token = getCookie(cookieHeader, n);
-      if (token) break;
-    }
+    for (const n of SESSION_COOKIE_NAMES) { token = getCookie(cookieHeader, n); if (token) break; }
     if (!token) return false;
 
     const dot = token.indexOf('.');
@@ -197,8 +189,7 @@ function verifySessionCookie(headers, secret){
     const sigB64 = token.slice(dot + 1);
 
     const payloadBuf = b64urlDecode(payloadB64);
-    let data;
-    try { data = JSON.parse(payloadBuf.toString('utf8')); } catch { return false; }
+    let data; try { data = JSON.parse(payloadBuf.toString('utf8')); } catch { return false; }
     if (!data || typeof data.exp !== 'number') return false;
 
     const now = Math.floor(Date.now() / 1000);
@@ -226,21 +217,32 @@ async function getRepoDefaultBranch() {
 }
 
 async function commitTreeWithRetry(owner, repo, branch, pathToBufferMap, message, attempt=0) {
-  try { return await commitTree(owner, repo, branch, pathToBufferMap, message); }
-  catch (err) {
+  try {
+    return await commitTree(owner, repo, branch, pathToBufferMap, message);
+  } catch (err) {
     const msg = String(err && err.message || '');
-    if (attempt < 1 && (msg.includes('not a fast forward') || (msg.includes('/git/refs/heads') && msg.includes('422')))) {
-      return await commitTreeWithRetry(owner, repo, branch, pathToBufferMap, message, attempt+1);
+    const status = err && (err.status || err.statusCode);
+    const isNAFF = msg.includes('not a fast forward') || (status === 409) || (status === 422 && msg.includes('/git/refs/heads'));
+    const isRate = status === 403 && /secondary rate/i.test(msg);
+    const is5xx  = status && status >= 500;
+    const isGateway = status === 502 || status === 503 || status === 504;
+
+    if (attempt < 3 && (isNAFF || isRate || is5xx || isGateway)) {
+      const backoffMs = Math.min(2000 * (attempt + 1), 6000);
+      await sleep(backoffMs);
+      return await commitTreeWithRetry(owner, repo, branch, pathToBufferMap, message, attempt + 1);
     }
     throw err;
   }
 }
 
 async function commitTree(owner, repo, branch, pathToBufferMap, message) {
+  // 1) Head and base tree
   const head   = await ghGET(`/repos/${owner}/${repo}/git/ref/heads/${encodeURIComponent(branch)}`);
   const commit = await ghGET(`/repos/${owner}/${repo}/git/commits/${head.object.sha}`);
   const baseTreeSha = commit.tree.sha;
 
+  // 2) Create blobs and entries (support deletions)
   const entries = [];
   for (const [path, value] of pathToBufferMap.entries()) {
     if (value === DELETE) {
@@ -252,26 +254,32 @@ async function commitTree(owner, repo, branch, pathToBufferMap, message) {
     }
   }
 
+  // 3) Create tree
   const tree = await ghPOST(`/repos/${owner}/${repo}/git/trees`, { base_tree: baseTreeSha, tree: entries });
+
+  // 4) Create commit
   const newCommit = await ghPOST(`/repos/${owner}/${repo}/git/commits`, { message, tree: tree.sha, parents: [head.object.sha] });
+
+  // 5) Move ref
   await ghPATCH(`/repos/${owner}/${repo}/git/refs/heads/${encodeURIComponent(branch)}`, { sha: newCommit.sha, force: false });
 
   return newCommit.sha;
 }
 
+// GitHub API wrappers with rich errors (status on Error)
 async function ghGET(path) {
   const res = await fetch(`${GH_API}${path}`, { headers: ghHeaders() });
-  if (!res.ok) throw new Error(`GitHub GET ${path} ${res.status} ${await safeText(res)}`);
+  if (!res.ok) { const txt = await safeText(res); const e = new Error(`GitHub GET ${path} ${res.status} ${txt}`); e.status = res.status; throw e; }
   return res.json();
 }
 async function ghPOST(path, body) {
   const res = await fetch(`${GH_API}${path}`, { method:'POST', headers: ghHeaders(), body: JSON.stringify(body||{}) });
-  if (!res.ok) throw new Error(`GitHub POST ${path} ${res.status} ${await safeText(res)}`);
+  if (!res.ok) { const txt = await safeText(res); const e = new Error(`GitHub POST ${path} ${res.status} ${txt}`); e.status = res.status; throw e; }
   return res.json();
 }
 async function ghPATCH(path, body) {
   const res = await fetch(`${GH_API}${path}`, { method:'PATCH', headers: ghHeaders(), body: JSON.stringify(body||{}) });
-  if (!res.ok) throw new Error(`GitHub PATCH ${path} ${res.status} ${await safeText(res)}`);
+  if (!res.ok) { const txt = await safeText(res); const e = new Error(`GitHub PATCH ${path} ${res.status} ${txt}`); e.status = res.status; throw e; }
   return res.json();
 }
 function ghHeaders() {
@@ -397,3 +405,4 @@ function b64urlDecode(str) {
   const pad = str.length % 4; if (pad) str += '='.repeat(4 - pad);
   return Buffer.from(str, 'base64');
 }
+function sleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
