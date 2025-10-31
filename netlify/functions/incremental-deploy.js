@@ -2,12 +2,15 @@
 // Auth: Allows if EITHER a valid admin session cookie is present OR the legacy ADMIN_KEY matches.
 // If ADMIN_KEY is not set, only session-based auth works.
 //
-// Required envs:
-// - GITHUB_TOKEN, GH_REPO, (optional GH_BRANCH), PUBLIC_SITE_URL
-// - ADMIN_SESSION_SECRET (same as the login function)
+// Required envs (Netlify → Project configuration → Environment variables):
+// - GITHUB_TOKEN     (classic PAT with repo scope, or fine‑grained with Contents RW on the repo)
+// - GH_REPO          (e.g., "danreinisch/reinisch-classroom")
+// - GH_BRANCH        (e.g., "main")  [optional; defaults to repo default branch]
+// - PUBLIC_SITE_URL  (e.g., "https://reinischclassroom.com")
+// - ADMIN_SESSION_SECRET (required for session-based auth; same value used by login)
 //
 // Optional:
-// - ADMIN_KEY (legacy; if present, requests may also send x-admin-key header)
+// - ADMIN_KEY        (if set, requests may also send header x-admin-key: <value>)
 
 const crypto = require('crypto');
 
@@ -19,7 +22,7 @@ exports.handler = async (event) => {
     const qs = event.queryStringParameters || {};
     const action = qs.action || '';
 
-    // Diagnostics/maintenance (GET)
+    // Diagnostics and maintenance (GET)
     if (event.httpMethod === 'GET') {
       if (action === 'diagnostics') {
         return json(200, {
@@ -30,12 +33,21 @@ exports.handler = async (event) => {
           hasPublicSiteUrl: !!process.env.PUBLIC_SITE_URL
         });
       }
-      if (action === 'backfill') { await requireAdmin(event); return await handleBackfill(); }
-      if (action === 'migrate_publisher') { await requireAdmin(event); return await handleMigratePublisher(); }
+
+      if (action === 'backfill') {
+        await requireAdmin(event);
+        return await handleBackfill();
+      }
+
+      if (action === 'migrate_publisher') {
+        await requireAdmin(event);
+        return await handleMigratePublisher();
+      }
+
       return json(200, { ok: true, message: 'Use POST to upload; GET ?action=diagnostics|backfill|migrate_publisher' });
     }
 
-    // Upload (POST)
+    // Main upload (POST)
     if (event.httpMethod !== 'POST') return json(405, { message: 'Method not allowed' });
     await requireAdmin(event);
 
@@ -65,7 +77,7 @@ exports.handler = async (event) => {
     const slotDir = `site/${cat.baseOut}/presentation-${String(slot).padStart(2, '0')}`;
     const blobs = new Map();
 
-    // Add files
+    // Add uploaded files
     for (const f of files) {
       if (!f.path || !f.base64) continue;
       const buf = Buffer.from(f.base64, 'base64');
@@ -75,12 +87,12 @@ exports.handler = async (event) => {
       blobs.set(outPath, buf);
     }
 
-    // Entry + redirect
+    // Add redirect index.html
     const entryRel = await pickEntryHtml(owner, repo, branch, blobs, slotDir);
     const redirectHtml = redirectIndexHtml(title, entryRel, cat.back, cat.section);
     blobs.set(`${slotDir}/index.html`, Buffer.from(redirectHtml));
 
-    // Update site-state + category index
+    // Update site-state.json and category index page
     const state = await fetchStateFromLiveOrRepo(owner, repo, branch);
     ensureStateShape(state);
     ensureArraySize(state.categories[category].titles, cat.slots);
@@ -88,6 +100,7 @@ exports.handler = async (event) => {
     state.categories[category].titles[slot - 1] = title;
     state.categories[category].links[slot - 1]  = `/${cat.baseOut}/presentation-${String(slot).padStart(2, '0')}/`;
     state.updated = new Date().toISOString();
+
     blobs.set('site/assets/data/site-state.json', Buffer.from(JSON.stringify(state, null, 2)));
 
     const catIndexPath = `site${categoryIndexPath(category)}`;
@@ -96,23 +109,30 @@ exports.handler = async (event) => {
       blobs.set(catIndexPath, Buffer.from(html));
     }
 
-    const message = final ? `Upload ${category} #${slot} (final batch)` : `Upload ${category} #${slot} (batch, merge=${!!merge})`;
+    const message = final
+      ? `Upload ${category} #${slot} (final batch)`
+      : `Upload ${category} #${slot} (batch, merge=${!!merge})`;
 
     const commitSha = await commitTreeWithRetry(owner, repo, branch, blobs, message);
     return json(200, { ok: true, commit: commitSha, deploy_url: process.env.PUBLIC_SITE_URL || null, final: !!final });
   } catch (e) {
     console.error('Top-level error:', e && e.stack ? e.stack : e);
-    const msg = e?.message ? String(e.message) : '';
-    const status = e?.status || e?.statusCode || (msg.toLowerCase().startsWith('unauthorized') ? 401 : 500);
+    const msg = e && e.message ? String(e.message) : '';
+    const status = (e && (e.status || e.statusCode)) ? (e.status || e.statusCode)
+                  : (msg.toLowerCase().startsWith('unauthorized') ? 401 : 500);
     return json(status, { message: shortErr(e) });
   }
 };
 
-// ---------- Auth helper (session cookie OR ADMIN_KEY) ----------
+// ------------ Auth helper (session cookie OR ADMIN_KEY) ------------
 async function requireAdmin(event){
+  // 1) Prefer session-based auth
   const secret = (process.env.ADMIN_SESSION_SECRET || '').trim();
-  if (secret && verifySessionCookie(event.headers || {}, secret)) return;
+  if (secret && verifySessionCookie(event.headers || {}, secret)) {
+    return;
+  }
 
+  // 2) Backward compatibility: allow ADMIN_KEY if set and matches header
   const requiredKey = process.env.ADMIN_KEY;
   if (requiredKey) {
     const hdrs = event.headers || {};
@@ -129,10 +149,10 @@ function verifySessionCookie(headers, secret){
   try {
     const cookieHeader = headers.cookie || headers.Cookie || '';
     if (!cookieHeader) return false;
-    const names = ['rc_admin_session_v2','rc_admin_session'];
+
     let token = '';
-    for (const n of names) {
-      token = getCookie(cookieHeader, n);
+    for (const name of SESSION_COOKIE_NAMES) {
+      token = getCookie(cookieHeader, name);
       if (token) break;
     }
     if (!token) return false;
@@ -150,11 +170,14 @@ function verifySessionCookie(headers, secret){
     const now = Math.floor(Date.now() / 1000);
     if (data.exp <= now) return false;
 
-    const expected = require('crypto').createHmac('sha256', secret).update(payloadBuf).digest();
+    const expected = crypto.createHmac('sha256', secret).update(payloadBuf).digest();
     const actual = b64urlDecode(sigB64);
+
     if (expected.length !== actual.length) return false;
-    return require('crypto').timingSafeEqual(expected, actual);
-  } catch { return false; }
+    return crypto.timingSafeEqual(expected, actual);
+  } catch {
+    return false;
+  }
 }
 
 function getCookie(header, name) {
@@ -164,12 +187,174 @@ function getCookie(header, name) {
   }
   return '';
 }
+
 function b64urlDecode(str) {
   str = str.replace(/-/g, '+').replace(/_/g, '/');
-  const pad = str.length % 4; if (pad) str += '='.repeat(4 - pad);
+  const pad = str.length % 4;
+  if (pad) str += '='.repeat(4 - pad);
   return Buffer.from(str, 'base64');
 }
 
-// ---------- GitHub helpers + existing code (unchanged) ----------
-/* ... keep the rest of your existing helpers (parseRepo, getBranch, commitTree*, gh* helpers,
-   fetchStateFromLiveOrRepo, categoryIndexPath, redirectIndexHtml, pickEntryHtml*, ensure*, json) ... */
+// ------------ GitHub helpers ------------
+function parseRepo() {
+  const slug = process.env.GH_REPO || '';
+  if (!slug || !slug.includes('/')) throw new Error('GH_REPO must be "owner/repo"');
+  const [owner, repo] = slug.split('/');
+  return { owner, repo };
+}
+async function getBranch() { return process.env.GH_BRANCH || await getRepoDefaultBranch(); }
+async function getRepoDefaultBranch() {
+  const { owner, repo } = parseRepo();
+  const info = await ghGET(`/repos/${owner}/${repo}`);
+  return info.default_branch || 'main';
+}
+
+async function commitTreeWithRetry(owner, repo, branch, pathToBufferMap, message, attempt=0) {
+  try { return await commitTree(owner, repo, branch, pathToBufferMap, message); }
+  catch (err) {
+    const msg = String(err && err.message || '');
+    if (attempt < 1 && (msg.includes('not a fast forward') || (msg.includes('/git/refs/heads') && msg.includes('422')))) {
+      // refresh and retry once
+      return await commitTreeWithRetry(owner, repo, branch, pathToBufferMap, message, attempt+1);
+    }
+    throw err;
+  }
+}
+
+async function commitTree(owner, repo, branch, pathToBufferMap, message) {
+  // 1) Head and base tree
+  const head   = await ghGET(`/repos/${owner}/${repo}/git/ref/heads/${encodeURIComponent(branch)}`);
+  const commit = await ghGET(`/repos/${owner}/${repo}/git/commits/${head.object.sha}`);
+  const baseTreeSha = commit.tree.sha;
+
+  // 2) Create blobs
+  const entries = [];
+  for (const [path, buf] of pathToBufferMap.entries()) {
+    const blob = await ghPOST(`/repos/${owner}/${repo}/git/blobs`, { content: buf.toString('base64'), encoding: 'base64' });
+    entries.push({ path, mode: '100644', type: 'blob', sha: blob.sha });
+  }
+
+  // 3) Create tree
+  const tree = await ghPOST(`/repos/${owner}/${repo}/git/trees`, { base_tree: baseTreeSha, tree: entries });
+
+  // 4) Create commit
+  const newCommit = await ghPOST(`/repos/${owner}/${repo}/git/commits`, { message, tree: tree.sha, parents: [head.object.sha] });
+
+  // 5) Move ref
+  await ghPATCH(`/repos/${owner}/${repo}/git/refs/heads/${encodeURIComponent(branch)}`, { sha: newCommit.sha, force: false });
+
+  return newCommit.sha;
+}
+
+async function ghGET(path) {
+  const res = await fetch(`${GH_API}${path}`, { headers: ghHeaders() });
+  if (!res.ok) throw new Error(`GitHub GET ${path} ${res.status} ${await safeText(res)}`);
+  return res.json();
+}
+async function ghPOST(path, body) {
+  const res = await fetch(`${GH_API}${path}`, { method:'POST', headers: ghHeaders(), body: JSON.stringify(body||{}) });
+  if (!res.ok) throw new Error(`GitHub POST ${path} ${res.status} ${await safeText(res)}`);
+  return res.json();
+}
+async function ghPATCH(path, body) {
+  const res = await fetch(`${GH_API}${path}`, { method:'PATCH', headers: ghHeaders(), body: JSON.stringify(body||{}) });
+  if (!res.ok) throw new Error(`GitHub PATCH ${path} ${res.status} ${await safeText(res)}`);
+  return res.json();
+}
+function ghHeaders() {
+  const token = process.env.GITHUB_TOKEN;
+  if (!token) throw new Error('Missing GITHUB_TOKEN');
+  return {
+    Authorization: `Bearer ${token}`,
+    'Content-Type': 'application/json',
+    'User-Agent': 'reinisch-uploader',
+    Accept: 'application/vnd.github+json'
+  };
+}
+async function safeText(res){ try{ return await res.text(); } catch{ return ''; } }
+
+// ------------ State and page helpers ------------
+async function fetchStateFromLiveOrRepo(owner, repo, branch) {
+  try {
+    const base = process.env.PUBLIC_SITE_URL;
+    if (base) {
+      const res = await fetch(`${base}/assets/data/site-state.json`, { headers: { 'Cache-Control':'no-cache' } });
+      if (res.ok) return await res.json();
+    }
+  } catch {}
+  try {
+    const res = await fetch(`${GH_API}/repos/${owner}/${repo}/contents/site/assets/data/site-state.json?ref=${encodeURIComponent(branch)}`, { headers: ghHeaders() });
+    if (res.ok) {
+      const json = await res.json();
+      const content = Buffer.from(json.content || '', 'base64').toString('utf8');
+      return JSON.parse(content);
+    }
+  } catch {}
+  const state = { version: 'v1', updated: '', categories: {} };
+  for (const [id, meta] of Object.entries({ toolkit:{slots:8}, adit:{slots:16}, lik:{slots:16}, rfk:{slots:16}, wok:{slots:16}, life:{slots:32} })) {
+    state.categories[id] = { slots: meta.slots, titles: [], links: [] };
+  }
+  return state;
+}
+
+async function getHeadTree(owner, repo, branch) {
+  const head   = await ghGET(`/repos/${owner}/${repo}/git/ref/heads/${encodeURIComponent(branch)}`);
+  const commit = await ghGET(`/repos/${owner}/${repo}/git/commits/${head.object.sha}`);
+  return ghGET(`/repos/${owner}/${repo}/git/trees/${commit.tree.sha}?recursive=1`);
+}
+
+function categoryIndexPath(category){
+  return category==='toolkit' ? '/language-arts/toolkit/index.html'
+    : category==='life' ? '/life-skills/index.html'
+    : ({ adit:'/language-arts/a-door-into-time/index.html', lik:'/language-arts/lost-in-kragdon-ah/index.html', rfk:'/language-arts/return-from-kragdon-ah/index.html', wok:'/language-arts/warrior-of-kragdon-ah/index.html' }[category] || '');
+}
+
+function redirectIndexHtml(title, targetRel, backHref, section){
+  const getSectionReturn = (s) => s==='life-skills' ? '/life-skills/index.html' : '/language-arts/index.html';
+  const navHtml = `<div style="position:fixed;top:1rem;left:1rem;right:1rem;display:flex;justify-content:space-between;z-index:100">
+    <a href="/" style="color:#fff;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);padding:.6rem 1rem;border-radius:.6rem;text-decoration:none">Home</a>
+    <a href="${getSectionReturn(section)}" style="color:#fff;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);padding:.6rem 1rem;border-radius:.6rem;text-decoration:none">Back to ${section==='life-skills'?'Life Skills':'Language Arts'}</a>
+    <a href="${backHref}" style="color:#fff;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);padding:.6rem 1rem;border-radius:.6rem;text-decoration:none">Back to unit</a>
+  </div>`;
+  if(!targetRel){
+    return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>${escapeHtml(title)}</title></head><body>${navHtml}<div style="max-width:960px;margin:6rem auto 2rem;padding:1rem;color:#fff">No entry HTML found in this slot yet.</div></body></html>`;
+  }
+  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta http-equiv="refresh" content="0; url=${targetRel}"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>${escapeHtml(title)}</title></head><body>${navHtml}<p style="color:#fff;padding:1rem">Redirecting…</p></body></html>`;
+}
+
+function pickEntryHtml(owner, repo, branch, incomingBlobs, slotDir){
+  const candidates = [];
+  for (const [p] of incomingBlobs.entries()) {
+    if (p.startsWith(`${slotDir}/`) && p.toLowerCase().endsWith('.html') && p !== `${slotDir}/index.html`) candidates.push(p);
+  }
+  if (candidates.length) {
+    candidates.sort((a,b)=> (a.toLowerCase().endsWith('/index.html')?-1:0) - (b.toLowerCase().endsWith('/index.html')?-1:0) || (a.length-b.length));
+    return candidates[0].replace(`${slotDir}/`, '');
+  }
+  return pickEntryHtmlFromRepo(owner, repo, branch, slotDir.replace(/^site\//,''));
+}
+
+async function pickEntryHtmlFromRepo(owner, repo, branch, slotDirNoSitePrefix){
+  const tree = await getHeadTree(owner, repo, branch);
+  const paths = (tree.tree || []).map(n => n.path);
+  const prefix = `site/${slotDirNoSitePrefix}/`;
+  const htmls = paths.filter(p => p.startsWith(prefix) && p.toLowerCase().endsWith('.html') && p !== `${prefix}index.html`);
+  if (htmls.length) {
+    htmls.sort((a,b)=> (a.toLowerCase().endsWith('/index.html')?-1:0) - (b.toLowerCase().endsWith('/index.html')?-1:0) || (a.length-b.length));
+    return htmls[0].replace(prefix,'');
+  }
+  return null;
+}
+
+function ensureStateShape(state){
+  if(!state||typeof state!=='object') state={version:'v1',updated:'',categories:{}};
+  if(!state.categories) state.categories={};
+  for(const [id, meta] of Object.entries({toolkit:{slots:8},adit:{slots:16},lik:{slots:16},rfk:{slots:16},wok:{slots:16},life:{slots:32}})){
+    if(!state.categories[id]) state.categories[id] = { slots: meta.slots, titles: [], links: [] };
+  }
+}
+function escapeHtml(s=''){return s.replace(/[&<>"]/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function ensureArraySize(arr,n){ while(arr.length<n) arr.push(''); }
+function shortErr(e){ const msg = e && e.message ? e.message : String(e); return (msg || 'Server error').slice(0, 600); }
+
+function json(status,data){ return { statusCode:status, headers:{'Content-Type':'application/json','Cache-Control':'no-store'}, body: JSON.stringify(data) }; }
