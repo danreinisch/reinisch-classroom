@@ -1,10 +1,10 @@
 // Login endpoint: verifies ADMIN_USER/ADMIN_PASS and sets a signed session cookie.
 // Accepts POST as application/x-www-form-urlencoded or JSON { username, password }.
 //
-// Required env vars (Netlify → Environment variables):
-// - ADMIN_USER (Secret ON, Functions + Runtime scopes)
-// - ADMIN_PASS (Secret ON, Functions + Runtime scopes)
-// - ADMIN_SESSION_SECRET (Secret ON, Functions + Runtime scopes; random 32+ chars)
+// Required env vars (Netlify → Environment variables; Functions + Runtime scopes):
+// - ADMIN_USER (Secret ON)
+// - ADMIN_PASS (Secret ON)
+// - ADMIN_SESSION_SECRET (Secret ON; random 32+ chars)
 //
 // Optional: MAX_AGE_HOURS (default 12)
 
@@ -14,11 +14,14 @@ const COOKIE_NAME = 'rc_admin_session';
 const MAX_AGE_HOURS = Number(process.env.MAX_AGE_HOURS || 12);
 
 exports.handler = async (event) => {
+  // Allow preflight
   if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 204, headers: corsHeaders() };
+    return { statusCode: 204, headers: { 'Cache-Control': 'no-store' } };
   }
+
+  // Redirect non-POST back to login
   if (event.httpMethod !== 'POST') {
-    return json(405, { message: 'Method not allowed' });
+    return redirect('/admin-login');
   }
 
   // Trim env values to avoid hidden whitespace mismatches
@@ -27,7 +30,8 @@ exports.handler = async (event) => {
   const secret = (process.env.ADMIN_SESSION_SECRET || '').trim();
 
   if (!userEnv || !passEnv || !secret) {
-    return json(503, { message: 'Admin not configured' });
+    // Send back to login with error
+    return redirect('/admin-login?e=1');
   }
 
   // Robust body parsing: handle base64-encoded bodies and both form and JSON payloads
@@ -49,17 +53,17 @@ exports.handler = async (event) => {
       inPass = (obj.password || '').trim();
     }
   } catch {
-    return json(400, { message: 'Invalid request body' });
+    return redirect('/admin-login?e=1');
   }
 
-  // Constant-time compare
+  // Constant-time compare (avoids timing side channels)
   if (!safeEqual(inUser, userEnv) || !safeEqual(inPass, passEnv)) {
-    // Safe diagnostic (no secrets): log only lengths
+    // Safe diagnostic: only lengths to Function logs (no secrets)
     console.log('admin-session invalid credentials', {
       uLen: inUser.length, envULen: userEnv.length,
       pLen: inPass.length, envPLen: passEnv.length
     });
-    return json(401, { message: 'Invalid credentials' });
+    return redirect('/admin-login?e=1');
   }
 
   // Create signed session token valid for MAX_AGE_HOURS
@@ -69,6 +73,7 @@ exports.handler = async (event) => {
   const signature = crypto.createHmac('sha256', secret).update(payloadBuf).digest();
   const token = b64url(payloadBuf) + '.' + b64url(signature);
 
+  // Set HttpOnly session cookie and redirect to /admin
   return {
     statusCode: 302,
     headers: {
@@ -80,10 +85,14 @@ exports.handler = async (event) => {
         path: '/',
         maxAge: Math.max(1, MAX_AGE_HOURS) * 3600
       }),
-      ...corsHeaders()
+      'Cache-Control': 'no-store'
     }
   };
 };
+
+function redirect(to) {
+  return { statusCode: 302, headers: { Location: to, 'Cache-Control': 'no-store' } };
+}
 
 function safeEqual(a, b) {
   const ab = Buffer.from(a, 'utf8');
@@ -95,6 +104,7 @@ function safeEqual(a, b) {
 function b64url(buf) {
   return Buffer.from(buf).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
 }
+
 function serializeCookie(name, value, opts = {}) {
   const parts = [`${name}=${value}`];
   if (opts.maxAge) parts.push(`Max-Age=${opts.maxAge}`);
@@ -105,14 +115,4 @@ function serializeCookie(name, value, opts = {}) {
   if (opts.secure) parts.push('Secure');
   if (opts.sameSite) parts.push(`SameSite=${opts.sameSite}`);
   return parts.join('; ');
-}
-function corsHeaders() {
-  return {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type'
-  };
-}
-function json(status, data) {
-  return { statusCode: status, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) };
 }
