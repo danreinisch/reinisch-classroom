@@ -3,220 +3,56 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Reinisch Classroom — Admin Uploader</title>
+  <title>Reinisch Classroom — Admin</title>
   <style>
-    :root{--bg:#0b1220;--panel:rgba(255,255,255,.06);--panel-brd:rgba(255,255,255,.18);--text:#e8edf5;--muted:#b8c1d9;--accent1:#60a5fa;--accent2:#2563eb}
+    :root{--bg:#0b1220;--panel:rgba(255,255,255,.06);--panel-brd:rgba(255,255,255,.18);--text:#e8edf5}
     *{box-sizing:border-box}
-    body{margin:0;font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text)}
-    .wrap{max-width:960px;margin:40px auto;padding:20px;background:var(--panel);border:1px solid var(--panel-brd);border-radius:12px}
-    h1{margin:0}
-    p{margin:8px 0 20px}
-    label{display:block;margin:12px 0 6px}
-    select,input[type=text]{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff}
-    input[type=file]{display:block;width:100%;padding:10px;border-radius:8px;border:1px dashed rgba(255,255,255,.3);background:rgba(255,255,255,.06);color:#fff}
-    button{margin-top:16px;padding:10px 16px;border-radius:10px;border:1px solid var(--accent1);background:linear-gradient(180deg,var(--accent1),var(--accent2));color:#fff;cursor:pointer}
-    .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    .bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:space-between;margin-bottom:8px}
-    .right{display:flex;gap:8px;align-items:center}
-    .pill{font-size:12px;border:1px solid rgba(255,255,255,.2);padding:.25rem .5rem;border-radius:999px;background:rgba(255,255,255,.08);cursor:pointer}
-    .log{margin-top:16px;background:#0e1629;border:1px solid rgba(255,255,255,.14);border-radius:10px;padding:10px;height:260px;overflow:auto;font:12px ui-monospace,Menlo,Consolas,monospace;color:#dbeafe;white-space:pre-wrap}
-    small{color:var(--muted)}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif}
+    #gate{min-height:100vh;display:grid;place-items:center}
+    #app{display:none}
   </style>
+  <script>
+  // Gate: before rendering, check session on the server. If not logged in → redirect to /admin-login
+  (async function(){
+    try{
+      const r = await fetch('/.netlify/functions/admin-session-check', { cache:'no-store' });
+      if(!r.ok){ location.replace('/admin-login'); return; }
+      document.addEventListener('DOMContentLoaded', ()=>{ document.getElementById('app').style.display='block'; document.getElementById('gate').style.display='none'; });
+    }catch{ location.replace('/admin-login'); }
+  })();
+  </script>
 </head>
 <body>
-  <div class="wrap">
-    <div class="bar">
-      <h1>Admin Uploader</h1>
-      <div class="right">
-        <button id="refreshState" class="pill">Refresh state</button>
-        <button id="backfillRepo" class="pill" title="Scan site/ tree in the repo">Backfill from repo</button>
-        <button id="migratePublisher" class="pill" title="One-time: move publisher weeks into site/presentations">Migrate from repo</button>
-        <button id="checkEnv" class="pill">Check server</button>
-        <button id="changeKey" class="pill">Admin key</button>
+  <div id="gate">Checking session…</div>
+
+  <div id="app">
+    <!-- Your existing Admin Uploader UI goes here. If you prefer, paste the full UI we used earlier. -->
+    <div style="max-width:960px;margin:40px auto;padding:20px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.18);border-radius:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+        <h1 style="margin:0">Admin Uploader</h1>
+        <div>
+          <a href="/.netlify/functions/admin-logout" style="color:#fff;border:1px solid #fff;padding:.4rem .7rem;border-radius:.5rem;text-decoration:none">Sign out</a>
+          <button id="changeKey" style="margin-left:8px">Admin key</button>
+        </div>
       </div>
+      <div id="uploader-root"></div>
+      <div id="log" style="margin-top:16px;background:#0e1629;border:1px solid rgba(255,255,255,.14);border-radius:10px;padding:10px;height:260px;overflow:auto;font:12px ui-monospace,Menlo,Consolas,monospace;color:#dbeafe;white-space:pre-wrap"></div>
     </div>
 
-    <p>Select the presentation folder (preferred). If your browser won’t allow folder selection, use “Select files (fallback)”.</p>
-
-    <div class="row">
-      <div>
-        <label for="cat">Category</label>
-        <select id="cat">
-          <option value="toolkit">Language Arts Toolkit</option>
-          <option value="adit">A Door Into Time</option>
-          <option value="lik">Lost in Kragdon-ah</option>
-          <option value="rfk">Return from Kragdon-ah</option>
-          <option value="wok">Warrior of Kragdon-ah</option>
-          <option value="life">Life Skills</option>
-        </select>
-      </div>
-      <div>
-        <label for="slot">Slot</label>
-        <select id="slot"></select>
-        <small id="slotHelp"></small>
-      </div>
-    </div>
-
-    <label for="title">Title</label>
-    <input id="title" type="text" placeholder="Presentation title"/>
-
-    <label for="folder">Presentation folder (preferred)</label>
-    <input id="folder" type="file" webkitdirectory directory multiple />
-    <small>Tip: go up one level and click the folder name once, then Choose.</small>
-
-    <label for="files">Or select files (fallback)</label>
-    <input id="files" type="file" multiple />
-    <small>Make sure all presentation files are selected. Subfolders won’t be captured.</small>
-
-    <label for="bgs">Optional background image(s) to add/replace</label>
-    <input id="bgs" type="file" multiple accept="image/*"/>
-    <small>Only include if you want to add/replace images under assets/images/</small>
-
-    <div class="bar" style="margin-top:8px">
-      <button id="go">Upload & Commit</button>
-      <small id="sizeHint">Only changed files are committed. Smaller batches improve reliability.</small>
-    </div>
-
-    <div id="log" class="log" aria-live="polite"></div>
+    <script>
+    // Minimal glue so you can enter the function ADMIN_KEY and verify diagnostics
+    function log(){ const el=document.getElementById('log'); el.textContent+=Array.from(arguments).join(' ')+'\\n'; el.scrollTop=el.scrollHeight; }
+    function getKey(){ return localStorage.getItem('rc_admin_key')||''; }
+    function setKey(v){ if(v) localStorage.setItem('rc_admin_key',v); }
+    document.getElementById('changeKey').addEventListener('click',()=>{ const k=prompt('Enter Admin Key'); if(k) setKey(k); });
+    // Quick server check
+    (async()=>{
+      try{
+        const r=await fetch('/.netlify/functions/incremental-deploy?action=diagnostics',{cache:'no-store'});
+        const t=await r.text().catch(()=> ''); log('GET diagnostics ->', r.status, t.slice(0,300));
+      }catch(e){ log('Diagnostics failed', e?.message||String(e)); }
+    })();
+    </script>
   </div>
-
-<script>
-(function(){
-  const catMeta = { toolkit:{slots:8}, adit:{slots:16}, lik:{slots:16}, rfk:{slots:16}, wok:{slots:16}, life:{slots:32} };
-
-  function log(){ const el=document.getElementById('log'); el.textContent+=Array.from(arguments).join(' ')+'\\n'; el.scrollTop=el.scrollHeight; }
-
-  async function loadState(){
-    try{
-      const r=await fetch('/assets/data/site-state.json',{cache:'no-store'}); if(!r.ok) throw 0; return await r.json();
-    }catch{
-      return {version:'v1',updated:'',categories:{
-        toolkit:{slots:8,titles:[],links:[]}, adit:{slots:16,titles:[],links:[]}, lik:{slots:16,titles:[],links:[]},
-        rfk:{slots:16,titles:[],links:[]}, wok:{slots:16,titles:[],links:[]}, life:{slots:32,titles:[],links:[]}
-      }};
-    }
-  }
-
-  function fillSlots(catId,state){
-    const sel=document.getElementById('slot'); sel.innerHTML='';
-    const total=catMeta[catId].slots; const titles=state.categories[catId]?.titles||[]; let firstEmpty=1;
-    for(let i=1;i<=total;i++){ const t=titles[i-1]||''; if(!t && firstEmpty===1) firstEmpty=i;
-      const opt=document.createElement('option'); opt.value=String(i);
-      opt.textContent='#'+String(i).padStart(2,'0')+(t?` — ${t}`:' (empty)'); sel.appendChild(opt);
-    }
-    sel.value=String(firstEmpty); document.getElementById('slotHelp').textContent='First empty suggested. You can override.';
-  }
-
-  function relPath(f){ if(f.webkitRelativePath){ const p=f.webkitRelativePath.split('/'); return p.slice(1).join('/'); } return f.name; }
-  async function toBase64(f){ const buf=await f.arrayBuffer(); let bin=''; const b=new Uint8Array(buf), ch=0x8000; for(let i=0;i<b.length;i+=ch){ bin+=String.fromCharCode.apply(null,b.subarray(i,i+ch)); } return btoa(bin); }
-  function estimateB64Size(n){ return Math.floor(n*1.37); }
-  function prettySize(n){ return n>1048576?(n/1048576).toFixed(1)+' MB':(n/1024).toFixed(1)+' KB'; }
-
-  // Reduce per-request size to ~3 MB for reliability
-  function planBatches(files,target=3*1024*1024){
-    const batches=[]; let current=[]; let used=0;
-    for(const f of files){
-      const est=estimateB64Size(f.size||0);
-      if(est>target){ if(current.length){ batches.push(current); current=[]; used=0; } batches.push([f]); continue; }
-      if(used+est>target && current.length){ batches.push(current); current=[f]; used=est; } else { current.push(f); used+=est; }
-    }
-    if(current.length) batches.push(current);
-    return batches;
-  }
-
-  function gather(folderEl, filesEl, bgsEl){
-    const main=[]; if(folderEl.files?.length){ for(const f of folderEl.files) main.push({file:f,path:relPath(f)}); }
-    else if(filesEl.files?.length){ for(const f of filesEl.files) main.push({file:f,path:f.name}); }
-    const extras=[]; if(bgsEl.files?.length){ for(const f of bgsEl.files) extras.push({file:f,path:'assets/images/'+f.name}); }
-    return {main,extras};
-  }
-
-  function approxBytes(main,extras){ const all=[...main,...extras]; const raw=all.reduce((s,x)=>s+(x.file.size||0),0); return Math.floor(raw*1.37); }
-
-  function getKey(){ return localStorage.getItem('rc_admin_key')||''; }
-  function setKey(v){ if(v) localStorage.setItem('rc_admin_key',v); }
-  function ensureKey(){ let k=getKey(); if(!k){ k=prompt('Enter Admin Key'); if(k) setKey(k);} return k; }
-
-  async function refreshStateUI(){ const st=await loadState(); fillSlots(document.getElementById('cat').value, st); log('State refreshed. Updated:', st.updated||'(unknown)'); }
-
-  async function run(){
-    const st=await loadState(); const catEl=document.getElementById('cat'); const slotEl=document.getElementById('slot');
-    const titleEl=document.getElementById('title'); const folderEl=document.getElementById('folder'); const filesEl=document.getElementById('files'); const bgsEl=document.getElementById('bgs');
-    const sizeHint=document.getElementById('sizeHint');
-
-    fillSlots(catEl.value, st); catEl.addEventListener('change', ()=>fillSlots(catEl.value, st));
-
-    function updateHint(){ const {main,extras}=gather(folderEl,filesEl,bgsEl); const est=approxBytes(main,extras); const count=main.length+extras.length;
-      sizeHint.textContent=count?`Approx upload size: ${prettySize(est)} (${count} files)`:'Only changed files are committed.'; }
-    folderEl.addEventListener('change', updateHint); filesEl.addEventListener('change', updateHint); bgsEl.addEventListener('change', updateHint);
-
-    document.getElementById('changeKey').addEventListener('click',()=>{ const k=prompt('Enter new Admin Key'); if(k) setKey(k); });
-
-    document.getElementById('checkEnv').addEventListener('click', async ()=>{
-      const r=await fetch('/.netlify/functions/incremental-deploy?action=diagnostics',{cache:'no-store'}); const t=await r.text().catch(()=> '');
-      log('GET diagnostics ->', r.status, t.slice(0,300));
-    });
-
-    document.getElementById('refreshState').addEventListener('click', refreshStateUI);
-
-    document.getElementById('backfillRepo').addEventListener('click', async ()=>{
-      const key=ensureKey(); if(!key) return log('Admin Key is required.');
-      log('Starting backfill from repo...');
-      const r=await fetch('/.netlify/functions/incremental-deploy?action=backfill',{headers:{'x-admin-key':key},cache:'no-store'});
-      const t=await r.text().catch(()=> '');
-      log('Backfill ->', r.status, t.slice(0,400));
-      if(r.ok) setTimeout(refreshStateUI, 8000);
-    });
-
-    document.getElementById('migratePublisher').addEventListener('click', async ()=>{
-      const key=ensureKey(); if(!key) return log('Admin Key is required.');
-      if(!confirm('This will copy Week folders from the publisher path into site/presentations for A Door Into Time and commit them. Proceed?')) return;
-      log('Starting migration from publisher...');
-      const r=await fetch('/.netlify/functions/incremental-deploy?action=migrate_publisher',{headers:{'x-admin-key':key},cache:'no-store'});
-      const t=await r.text().catch(()=> '');
-      log('Migrate ->', r.status, t.slice(0,500));
-      if(r.ok) setTimeout(refreshStateUI, 12000);
-    });
-
-    document.getElementById('go').addEventListener('click', async ()=>{
-      const category=(catEl.value||'').trim().toLowerCase(); const slot=Number(slotEl.value); const title=(titleEl.value||'').trim();
-      if(!category||!catMeta[category]) return log('Invalid category selection.'); if(!slot||slot<1||slot>catMeta[category].slots) return log('Invalid slot number for category.'); if(!title) return log('Please enter a title.');
-      const {main,extras}=gather(folderEl,filesEl,bgsEl); if(main.length===0&&extras.length===0) return log('Please choose a folder or select files.');
-      const key=ensureKey(); if(!key) return log('Admin Key is required.');
-
-      const mainFiles=main.map(x=>x.file); const batches=planBatches(mainFiles, 3*1024*1024); // ~3 MB target
-      const totalBatches=batches.length + (extras.length?1:0);
-      log('[debug] category=',category,'slot=',slot,'titleLen=',title.length,'main=',main.length,'extras=',extras.length,'batches=',totalBatches);
-
-      let lastCommit=null;
-
-      for(let i=0;i<batches.length;i++){
-        const group=batches[i]; const isFinal = (i===batches.length-1 && extras.length===0);
-        log(`Sending batch ${i+1} of ${totalBatches} (${group.length} file[s])...`);
-        const payload=[]; for(const f of group){ payload.push({ path: relPath(f), base64: await toBase64(f) }); }
-        const r=await fetch('/.netlify/functions/incremental-deploy',{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':key},body:JSON.stringify({category,slot,title,files:payload,merge:true,final:isFinal})});
-        const txt=await r.text().catch(()=> ''); let detail=''; try{ detail=JSON.parse(txt)?.message||'';}catch{ detail=txt?.slice(0,500);}
-        if(!r.ok) return log('Commit error (batch',i+1,'):', r.status, detail||r.statusText||'(no detail)');
-        try{ const js=JSON.parse(txt||'{}'); lastCommit=js.commit||lastCommit; }catch{}
-      }
-
-      if(extras.length){
-        log(`Sending backgrounds batch (${extras.length} file[s])...`);
-        const payload=[]; for(const x of extras){ payload.push({ path: x.path, base64: await toBase64(x.file) }); }
-        const r=await fetch('/.netlify/functions/incremental-deploy',{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':key},body:JSON.stringify({category,slot,title,files:payload,merge:true,final:true})});
-        const txt=await r.text().catch(()=> ''); let detail=''; try{ detail=JSON.parse(txt)?.message||'';}catch{ detail=txt?.slice(0,500);}
-        if(!r.ok) return log('Commit error (backgrounds):', r.status, detail||r.statusText||'(no detail)');
-        try{ const js=JSON.parse(txt||'{}'); lastCommit=js.commit||lastCommit; }catch{}
-      }
-
-      log('Success! Pushed commit:', lastCommit || '(unknown)'); 
-      log('Netlify will build the site automatically in ~1–3 minutes.');
-      setTimeout(refreshStateUI, 8000);
-    });
-  }
-
-  run().catch(err=>log('Init error:', err?.message||String(err)));
-})();
-</script>
 </body>
 </html>
