@@ -12,6 +12,8 @@
 // Optional:
 // - ADMIN_KEY        (legacy; if present, requests may also send header x-admin-key: <value>)
 
+'use strict';
+
 const crypto = require('crypto');
 
 const GH_API = 'https://api.github.com';
