@@ -145,8 +145,8 @@
     life:    { slots: 32, baseOut: 'life-skills/presentations' }
   };
 
-  // Keep batches small to avoid provider limits but support arbitrarily large uploads
-  const BATCH_TARGET = 1.8 * 1024 * 1024; // ~1.8 MB per request
+  // Larger batches (safe for Netlify) to reduce round trips; uploads still split as needed
+  const BATCH_TARGET = 3.5 * 1024 * 1024; // ~3.5 MB per request
 
   const catEl = document.getElementById('cat');
   const slotSel = document.getElementById('slotSel');
@@ -315,7 +315,6 @@
       if (cur.length) batches.push(cur);
 
       log(`Uploading in ${batches.length} batch(es)…`);
-      let lastText = '';
       for (let i=0;i<batches.length;i++){
         const files = batches[i];
         const isFinal = (i === batches.length - 1);
@@ -327,7 +326,6 @@
           body
         });
         const text = await res.text().catch(()=> '');
-        lastText = text;
         log(`Batch ${i+1}/${batches.length} -> ${res.status} ${text}`);
         if (res.status === 401) { alert('Session expired. Please sign in again.'); location.replace('/admin-login'); return; }
         if (!res.ok) { alert(`Upload failed: ${res.status}\n${(text||'').slice(0,400)}`); return; }
