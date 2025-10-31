@@ -234,12 +234,10 @@ async function commitTreeWithRetry(owner, repo, branch, pathToBufferMap, message
 }
 
 async function commitTree(owner, repo, branch, pathToBufferMap, message) {
-  // 1) Head and base tree
   const head   = await ghGET(`/repos/${owner}/${repo}/git/ref/heads/${encodeURIComponent(branch)}`);
   const commit = await ghGET(`/repos/${owner}/${repo}/git/commits/${head.object.sha}`);
   const baseTreeSha = commit.tree.sha;
 
-  // 2) Create blobs and entries (support deletions)
   const entries = [];
   for (const [path, value] of pathToBufferMap.entries()) {
     if (value === DELETE) {
@@ -251,13 +249,8 @@ async function commitTree(owner, repo, branch, pathToBufferMap, message) {
     }
   }
 
-  // 3) Create tree
   const tree = await ghPOST(`/repos/${owner}/${repo}/git/trees`, { base_tree: baseTreeSha, tree: entries });
-
-  // 4) Create commit
   const newCommit = await ghPOST(`/repos/${owner}/${repo}/git/commits`, { message, tree: tree.sha, parents: [head.object.sha] });
-
-  // 5) Move ref
   await ghPATCH(`/repos/${owner}/${repo}/git/refs/heads/${encodeURIComponent(branch)}`, { sha: newCommit.sha, force: false });
 
   return newCommit.sha;
