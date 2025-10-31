@@ -38,14 +38,10 @@ document.getElementById('f').addEventListener('submit', async (e) => {
     method: 'POST',
     body: new URLSearchParams(fd),
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    redirect: 'manual'
+    redirect: 'manual',
+    cache: 'no-store'
   });
-  if (r.status === 302) {
-    const loc = r.headers.get('Location') || '/admin/';
-    location.replace(loc);
-    return;
-  }
-  if (r.status === 200 || r.status === 204) { location.replace('/admin/'); return; }
+  if (r.status === 302) { location.replace('/admin/'); return; }
   let msg = 'Login failed';
   try { const j = await r.json(); if (j && j.message) msg = j.message; } catch {}
   err.textContent = msg;
