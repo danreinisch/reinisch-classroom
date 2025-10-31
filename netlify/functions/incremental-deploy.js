@@ -1,24 +1,16 @@
-// Incremental Deploy (GitHub commits) + diagnostics + delete
-// Auth: Allows if EITHER a valid admin session cookie is present OR the legacy ADMIN_KEY matches.
-// If ADMIN_KEY is not set, only session-based auth works.
-//
-// Required envs (Netlify → Project configuration → Environment variables):
-// - GITHUB_TOKEN     (classic PAT with repo scope, or fine‑grained with Contents RW on the repo)
-// - GH_REPO          (e.g., "danreinisch/reinisch-classroom")
-// - GH_BRANCH        (optional; defaults to repo default branch)
-// - PUBLIC_SITE_URL  (e.g., "https://reinischclassroom.com")
-// - ADMIN_SESSION_SECRET (same as the login function)
-//
-// Optional:
-// - ADMIN_KEY        (legacy; if present, requests may also send header x-admin-key: <value>)
-
 'use strict';
+
+// Incremental Deploy (GitHub commits) + diagnostics + delete
+// Auth: session-cookie OR legacy ADMIN_KEY (if still present). Recommended: session only.
+// Default behavior: DO NOT regenerate category index pages (preserves your hand‑crafted pages).
+// To re-enable regeneration later, set REGENERATE_CATEGORY_INDEX=1 in your environment and redeploy.
 
 const crypto = require('crypto');
 
 const GH_API = 'https://api.github.com';
 const SESSION_COOKIE_NAMES = ['rc_admin_session_v2', 'rc_admin_session'];
 const DELETE = Symbol('DELETE');
+const REGENERATE_CATEGORY_INDEX = String(process.env.REGENERATE_CATEGORY_INDEX || '').trim() === '1';
 
 exports.handler = async (event) => {
   try {
@@ -89,7 +81,7 @@ async function handleUpload(body){
     blobs.set(outPath, buf);
   }
 
-  // Only on final batch do we add redirect + update state pages.
+  // Only on final batch: add redirect index.html and update site-state.json
   if (final) {
     if (!title || !String(title).trim()) return json(400, { message: 'Missing title for final batch' });
 
@@ -107,10 +99,13 @@ async function handleUpload(body){
 
     blobs.set('site/assets/data/site-state.json', Buffer.from(JSON.stringify(state, null, 2)));
 
-    const catIndexPath = `site${categoryIndexPath(category)}`;
-    if (catIndexPath) {
-      const html = generateCategoryIndex(category, state);
-      blobs.set(catIndexPath, Buffer.from(html));
+    // IMPORTANT: By default we DO NOT regenerate category index pages to preserve your design.
+    if (REGENERATE_CATEGORY_INDEX) {
+      const catIndexPath = `site${categoryIndexPath(category)}`;
+      if (catIndexPath) {
+        const html = generateCategoryIndex(category, state);
+        blobs.set(catIndexPath, Buffer.from(html));
+      }
     }
   }
 
@@ -153,8 +148,11 @@ async function handleDelete(body){
 
   blobs.set('site/assets/data/site-state.json', Buffer.from(JSON.stringify(state, null, 2)));
 
-  const catIndexPath = `site${categoryIndexPath(category)}`;
-  if (catIndexPath) blobs.set(catIndexPath, Buffer.from(generateCategoryIndex(category, state)));
+  // IMPORTANT: Keep your category pages intact unless explicitly opting in.
+  if (REGENERATE_CATEGORY_INDEX) {
+    const catIndexPath = `site${categoryIndexPath(category)}`;
+    if (catIndexPath) blobs.set(catIndexPath, Buffer.from(generateCategoryIndex(category, state)));
+  }
 
   const commitSha = await commitTreeWithRetry(owner, repo, branch, blobs, `Delete ${category} #${slot}`);
   return json(200, { ok: true, deleted: true, commit: commitSha });
@@ -188,7 +186,7 @@ function verifySessionCookie(headers, secret){
     const dot = token.indexOf('.');
     if (dot <= 0) return false;
     const payloadB64 = token.slice(0, dot);
-    const sigB64 = token.slice(dot + 1);
+    const sigB64 = token.slice(1 + dot);
 
     const payloadBuf = b64urlDecode(payloadB64);
     let data; try { data = JSON.parse(payloadBuf.toString('utf8')); } catch { return false; }
@@ -204,7 +202,7 @@ function verifySessionCookie(headers, secret){
   } catch { return false; }
 }
 
-// ---------- GitHub helpers ----------
+// ---------- GitHub helpers (resilient with retries) ----------
 function parseRepo() {
   const slug = process.env.GH_REPO || '';
   if (!slug || !slug.includes('/')) throw new Error('GH_REPO must be "owner/repo"');
@@ -239,12 +237,10 @@ async function commitTreeWithRetry(owner, repo, branch, pathToBufferMap, message
 }
 
 async function commitTree(owner, repo, branch, pathToBufferMap, message) {
-  // 1) Head and base tree
   const head   = await ghGET(`/repos/${owner}/${repo}/git/ref/heads/${encodeURIComponent(branch)}`);
   const commit = await ghGET(`/repos/${owner}/${repo}/git/commits/${head.object.sha}`);
   const baseTreeSha = commit.tree.sha;
 
-  // 2) Create blobs and entries (support deletions)
   const entries = [];
   for (const [path, value] of pathToBufferMap.entries()) {
     if (value === DELETE) {
@@ -256,13 +252,8 @@ async function commitTree(owner, repo, branch, pathToBufferMap, message) {
     }
   }
 
-  // 3) Create tree
   const tree = await ghPOST(`/repos/${owner}/${repo}/git/trees`, { base_tree: baseTreeSha, tree: entries });
-
-  // 4) Create commit
   const newCommit = await ghPOST(`/repos/${owner}/${repo}/git/commits`, { message, tree: tree.sha, parents: [head.object.sha] });
-
-  // 5) Move ref
   await ghPATCH(`/repos/${owner}/${repo}/git/refs/heads/${encodeURIComponent(branch)}`, { sha: newCommit.sha, force: false });
 
   return newCommit.sha;
@@ -344,6 +335,7 @@ function categoryIndexPath(category){
     : ({ adit:'/language-arts/a-door-into-time/index.html', lik:'/language-arts/lost-in-kragdon-ah/index.html', rfk:'/language-arts/return-from-kragdon-ah/index.html', wok:'/language-arts/warrior-of-kragdon-ah/index.html' }[category] || '');
 }
 
+// Minimal generator (kept for optional future use; OFF by default)
 function generateCategoryIndex(category, state){
   const meta = getCatMeta()[category];
   const titles = state?.categories?.[category]?.titles || [];
@@ -409,6 +401,7 @@ async function pickEntryHtmlFromRepo(owner, repo, branch, slotDirNoSitePrefix){
   return null;
 }
 
+// ---------- Utilities ----------
 function ensureStateShape(state){
   if(!state||typeof state!=='object') state={version:'v1',updated:'',categories:{}};
   if(!state.categories) state.categories={};
@@ -422,7 +415,6 @@ function ensureArraySize(arr,n){ while(arr.length<n) arr.push(''); }
 function shortErr(e){ const msg = e && e.message ? e.message : String(e); return (msg || 'Server error').slice(0, 600); }
 function json(status,data){ return { statusCode:status, headers:{'Content-Type':'application/json','Cache-Control':'no-store'}, body: JSON.stringify(data) }; }
 
-// ---------- Small helpers ----------
 function getCookie(header, name) {
   for (const part of header.split(/;\s*/)) {
     const [k, ...v] = part.split('=');
