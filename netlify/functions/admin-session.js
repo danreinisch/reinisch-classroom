@@ -21,10 +21,12 @@ exports.handler = async (event) => {
     return json(405, { message: 'Method not allowed' });
   }
 
-  const user = process.env.ADMIN_USER || '';
-  const pass = process.env.ADMIN_PASS || '';
-  const secret = process.env.ADMIN_SESSION_SECRET || '';
-  if (!user || !pass || !secret) {
+  // Trim env values to avoid hidden whitespace mismatches
+  const userEnv = (process.env.ADMIN_USER || '').trim();
+  const passEnv = (process.env.ADMIN_PASS || '').trim();
+  const secret = (process.env.ADMIN_SESSION_SECRET || '').trim();
+
+  if (!userEnv || !passEnv || !secret) {
     return json(503, { message: 'Admin not configured' });
   }
 
@@ -42,24 +44,28 @@ exports.handler = async (event) => {
 
   const inUser = (body.username || '').trim();
   const inPass = (body.password || '').trim();
-  if (inUser !== user || inPass !== pass) {
+
+  if (!safeEqual(inUser, userEnv) || !safeEqual(inPass, passEnv)) {
+    // Safe diagnostic (no secrets): log only lengths
+    console.log('admin-session invalid credentials', {
+      uLen: inUser.length, envULen: userEnv.length,
+      pLen: inPass.length, envPLen: passEnv.length
+    });
     return json(401, { message: 'Invalid credentials' });
   }
 
   // Create signed session token valid for MAX_AGE_HOURS
   const exp = Math.floor(Date.now() / 1000) + Math.max(1, MAX_AGE_HOURS) * 3600;
-  const payload = { u: user, exp, n: crypto.randomBytes(8).toString('hex') };
+  const payload = { u: userEnv, exp, n: crypto.randomBytes(8).toString('hex') };
   const payloadBuf = Buffer.from(JSON.stringify(payload), 'utf8');
   const signature = crypto.createHmac('sha256', secret).update(payloadBuf).digest();
   const token = b64url(payloadBuf) + '.' + b64url(signature);
 
-  // IMPORTANT: Redirect to /admin with a one-time signal (?s=1)
-  // We still set a session cookie, but the UI will ONLY render when it sees s=1.
-  // Any later visit to /admin (without s=1) will force a new login.
   return {
     statusCode: 302,
     headers: {
-      Location: '/admin/?s=1',
+      // If you want “login every time,” you can redirect to /admin/?s=1 as discussed earlier.
+      Location: '/admin/',
       'Set-Cookie': serializeCookie(COOKIE_NAME, token, {
         httpOnly: true,
         secure: true,
@@ -71,6 +77,13 @@ exports.handler = async (event) => {
     }
   };
 };
+
+function safeEqual(a, b) {
+  const ab = Buffer.from(a, 'utf8');
+  const bb = Buffer.from(b, 'utf8');
+  if (ab.length !== bb.length) return false;
+  return crypto.timingSafeEqual(ab, bb);
+}
 
 function b64url(buf) {
   return Buffer.from(buf).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
