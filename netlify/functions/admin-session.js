@@ -6,12 +6,13 @@
 // - ADMIN_PASS (Secret ON)
 // - ADMIN_SESSION_SECRET (Secret ON; random 32+ chars)
 //
-// Optional: MAX_AGE_HOURS (default 12)
+// Optional:
+// - MAX_AGE_SECONDS (defaults to 5) — how long the session cookie lasts. Keep it very short to force login each visit.
 
 const crypto = require('crypto');
 
-const COOKIE_NAME = 'rc_admin_session';
-const MAX_AGE_HOURS = Number(process.env.MAX_AGE_HOURS || 12);
+const COOKIE_NAME = 'rc_admin_session_v2'; // new name to invalidate any old sessions
+const MAX_AGE_SECONDS = Number(process.env.MAX_AGE_SECONDS || 5);
 
 exports.handler = async (event) => {
   // Allow preflight
@@ -24,19 +25,15 @@ exports.handler = async (event) => {
     return redirect('/admin-login');
   }
 
-  // Trim env values to avoid hidden whitespace mismatches
+  // Trim env values
   const userEnv = (process.env.ADMIN_USER || '').trim();
   const passEnv = (process.env.ADMIN_PASS || '').trim();
-  const secret = (process.env.ADMIN_SESSION_SECRET || '').trim();
+  const secret  = (process.env.ADMIN_SESSION_SECRET || '').trim();
 
-  if (!userEnv || !passEnv || !secret) {
-    // Send back to login with error
-    return redirect('/admin-login?e=1');
-  }
+  if (!userEnv || !passEnv || !secret) return redirect('/admin-login?e=1');
 
-  // Robust body parsing: handle base64-encoded bodies and both form and JSON payloads
-  let inUser = '';
-  let inPass = '';
+  // Robust body parsing (handles base64, form, and JSON)
+  let inUser = '', inPass = '';
   try {
     const ctype = (event.headers['content-type'] || event.headers['Content-Type'] || '').toLowerCase();
     let raw = event.body || '';
@@ -56,9 +53,8 @@ exports.handler = async (event) => {
     return redirect('/admin-login?e=1');
   }
 
-  // Constant-time compare (avoids timing side channels)
   if (!safeEqual(inUser, userEnv) || !safeEqual(inPass, passEnv)) {
-    // Safe diagnostic: only lengths to Function logs (no secrets)
+    // Safe diagnostics (no secrets)
     console.log('admin-session invalid credentials', {
       uLen: inUser.length, envULen: userEnv.length,
       pLen: inPass.length, envPLen: passEnv.length
@@ -66,14 +62,13 @@ exports.handler = async (event) => {
     return redirect('/admin-login?e=1');
   }
 
-  // Create signed session token valid for MAX_AGE_HOURS
-  const exp = Math.floor(Date.now() / 1000) + Math.max(1, MAX_AGE_HOURS) * 3600;
+  // Create signed session token with very short lifetime
+  const exp = Math.floor(Date.now() / 1000) + Math.max(1, MAX_AGE_SECONDS);
   const payload = { u: userEnv, exp, n: crypto.randomBytes(8).toString('hex') };
   const payloadBuf = Buffer.from(JSON.stringify(payload), 'utf8');
   const signature = crypto.createHmac('sha256', secret).update(payloadBuf).digest();
   const token = b64url(payloadBuf) + '.' + b64url(signature);
 
-  // Set HttpOnly session cookie and redirect to /admin
   return {
     statusCode: 302,
     headers: {
@@ -83,7 +78,7 @@ exports.handler = async (event) => {
         secure: true,
         sameSite: 'Lax',
         path: '/',
-        maxAge: Math.max(1, MAX_AGE_HOURS) * 3600
+        maxAge: Math.max(1, MAX_AGE_SECONDS) // keep tiny to force login each visit
       }),
       'Cache-Control': 'no-store'
     }
@@ -104,15 +99,14 @@ function safeEqual(a, b) {
 function b64url(buf) {
   return Buffer.from(buf).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
 }
-
 function serializeCookie(name, value, opts = {}) {
   const parts = [`${name}=${value}`];
-  if (opts.maxAge) parts.push(`Max-Age=${opts.maxAge}`);
-  if (opts.domain) parts.push(`Domain=${opts.domain}`);
-  if (opts.path) parts.push(`Path=${opts.path}`);
-  if (opts.expires) parts.push(`Expires=${opts.expires.toUTCString()}`);
+  if (opts.maxAge)   parts.push(`Max-Age=${opts.maxAge}`);
+  if (opts.domain)   parts.push(`Domain=${opts.domain}`);
+  if (opts.path)     parts.push(`Path=${opts.path}`);
+  if (opts.expires)  parts.push(`Expires=${opts.expires.toUTCString()}`);
   if (opts.httpOnly) parts.push('HttpOnly');
-  if (opts.secure) parts.push('Secure');
+  if (opts.secure)   parts.push('Secure');
   if (opts.sameSite) parts.push(`SameSite=${opts.sameSite}`);
   return parts.join('; ');
 }
