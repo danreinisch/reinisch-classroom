@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Admin Login</title>
+  <style>
+    :root{--bg:#0b1220;--panel:rgba(255,255,255,.06);--panel-brd:rgba(255,255,255,.18);--text:#e8edf5;--muted:#b8c1d9;--accent1:#60a5fa;--accent2:#2563eb}
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;display:grid;place-items:center;background:var(--bg);color:var(--text);font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif}
+    .card{width:min(560px,92vw);background:var(--panel);border:1px solid var(--panel-brd);border-radius:14px;padding:22px}
+    h1{margin:0 0 10px}
+    label{display:block;margin:12px 0 6px}
+    input{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff}
+    button{margin-top:16px;padding:10px 16px;border-radius:10px;border:1px solid var(--accent1);background:linear-gradient(180deg,var(--accent1),var(--accent2));color:#fff;cursor:pointer;width:100%}
+    .err{color:#fecaca;min-height:18px}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Admin Login</h1>
+    <p class="err" id="err"></p>
+    <form id="f" method="post" action="/.netlify/functions/admin-session">
+      <label for="u">Username</label>
+      <input id="u" name="username" autocomplete="username" required />
+      <label for="p">Password</label>
+      <input id="p" name="password" type="password" autocomplete="current-password" required />
+      <button type="submit">Sign in</button>
+    </form>
+    <p style="margin-top:10px"><a href="/">Back to site</a></p>
+  </div>
+<script>
+document.getElementById('f').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const err = document.getElementById('err'); err.textContent = '';
+  const fd = new FormData(e.target);
+  const r = await fetch('/.netlify/functions/admin-session', {
+    method: 'POST',
+    body: new URLSearchParams(fd),
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    redirect: 'manual',
+    cache: 'no-store'
+  });
+  if (r.status === 302) { location.replace('/admin/'); return; }
+  let msg = 'Login failed';
+  try { const j = await r.json(); if (j && j.message) msg = j.message; } catch {}
+  err.textContent = msg;
+});
+</script>
+</body>
+</html>
