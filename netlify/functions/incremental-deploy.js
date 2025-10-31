@@ -199,17 +199,12 @@ function verifySessionCookie(headers, secret){
 // ---------- Units loader ----------
 async function loadUnits(){
   const liveUrl = (process.env.PUBLIC_SITE_URL || '').replace(/\/$/,'');
-  // Prefer live units.json
   try{
     if (liveUrl) {
       const r = await fetch(`${liveUrl}/assets/data/units.json`, { headers:{ 'Cache-Control':'no-cache' } });
-      if (r.ok) {
-        const j = await r.json();
-        return normalizeUnits(j);
-      }
+      if (r.ok) return normalizeUnits(await r.json());
     }
   }catch{}
-  // Fallback to GitHub contents
   try{
     const { owner, repo } = parseRepo();
     const res = await fetch(`${GH_API}/repos/${owner}/${repo}/contents/site/assets/data/units.json`, { headers: ghHeaders() });
@@ -219,7 +214,6 @@ async function loadUnits(){
       return normalizeUnits(JSON.parse(content));
     }
   }catch{}
-  // Hard fallback to an empty shape (should not happen)
   return normalizeUnits({ units: [] });
 }
 function normalizeUnits(data){
@@ -350,17 +344,48 @@ function ensureStateShape(state, units){
     if(!state.categories[u.id]) state.categories[u.id] = { slots: Number(u.slots)||0, titles: [], links: [] };
   }
 }
-function redirectIndexHtml(title, targetRel, backHref, section){
-  const getSectionReturn = (s) => s==='life-skills' ? '/life-skills/index.html' : '/language-arts/index.html';
-  const navHtml = `<div style="position:fixed;top:1rem;left:1rem;right:1rem;display:flex;justify-content:space-between;z-index:100">
-    <a href="/" style="color:#fff;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);padding:.6rem 1rem;border-radius:.6rem;text-decoration:none">Home</a>
-    <a href="${getSectionReturn(section)}" style="color:#fff;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);padding:.6rem 1rem;border-radius:.6rem;text-decoration:none">Back to ${section==='life-skills'?'Life Skills':'Language Arts'}</a>
-    <a href="${backHref}" style="color:#fff;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);padding:.6rem 1rem;border-radius:.6rem;text-decoration:none">Back to unit</a>
+function redirectIndexHtml(title, targetRel, unitPagePath, section){
+  // Use shared theme + nav injection; also render an inline nav as fallback using glass buttons
+  const secReturn = section==='life-skills' ? '/life-skills/' : '/language-arts/';
+  const unitHref = (unitPagePath || '').replace(/\/?$/,'/');
+
+  const head = `
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>${escapeHtml(title)}</title>
+  <link rel="stylesheet" href="/assets/css/theme.css"/>
+  <script src="/assets/js/section-nav.js" defer></script>`;
+
+  const nav = `
+  <div class="glass-nav">
+    <div class="left">
+      <a class="btn" href="/">Home</a>
+      <a class="btn" href="${secReturn}">Back to ${section==='life-skills'?'Life Skills':'Language Arts'}</a>
+    </div>
+    <div class="right">
+      <a class="btn" href="${unitHref}">Back to unit</a>
+    </div>
   </div>`;
+
   if(!targetRel){
-    return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>${escapeHtml(title)}</title></head><body style="background:#0b1220;color:#e8edf5;font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif">${navHtml}<div style="max-width:960px;margin:6rem auto 2rem;padding:1rem;color:#fff">No entry HTML found in this slot yet.</div></body></html>`;
+    return `<!DOCTYPE html><html lang="en"><head>${head}</head>
+    <body>
+      ${nav}
+      <main style="max-width:960px;margin:6rem auto 2rem;padding:1rem;color:#fff">
+        No entry HTML found in this slot yet.
+      </main>
+    </body></html>`;
   }
-  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta http-equiv="refresh" content="0; url=${targetRel}"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>${escapeHtml(title)}</title></head><body style="background:#0b1220;color:#e8edf5;font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif">${navHtml}<p style="color:#fff;padding:1rem">Redirecting…</p></body></html>`;
+
+  // Meta refresh redirect; we still show a small message so users see something if it’s slow.
+  return `<!DOCTYPE html><html lang="en"><head>
+    ${head}
+    <meta http-equiv="refresh" content="0; url=${targetRel}"/>
+  </head>
+  <body>
+    ${nav}
+    <p style="color:#fff;padding:1rem">Redirecting…</p>
+  </body></html>`;
 }
 
 // Optional minimal generator (OFF by default)
