@@ -16,12 +16,10 @@
 
   function inferUnitId(units, pathname){
     const clean = pathname.replace(/index\.html$/,'').replace(/\/+$/,'/') || '/';
-    // Match by pagePath in units.json
     for (const u of units){
       const pp = String(u.pagePath||'').replace(/\/+$/,'/') || '/';
       if (pp && clean === pp) return u.id;
     }
-    // Fallback: try contains (handles trailing segments)
     for (const u of units){
       const pp = String(u.pagePath||'').replace(/\/+$/,'/');
       if (pp && clean.startsWith(pp)) return u.id;
@@ -69,20 +67,12 @@
     const grid = qs('#grid');
     if (!grid) return;
 
-    const meta = window.UNIT_PAGE || {};
-    let unitId = String(meta.id || '');
-
     const unitsData = await loadUnits();
     const units = Array.isArray(unitsData.units) ? unitsData.units : [];
 
-    if (!unitId) {
-      unitId = inferUnitId(units, location.pathname);
-    }
+    const unitId = inferUnitId(units, location.pathname);
     const unit = units.find(u => u.id === unitId);
     if (!unit) return;
-
-    // Update header if page puts placeholders
-    const hdr = qs('h1'); if (hdr && !hdr.textContent.trim()) hdr.textContent = unit.title;
 
     const state = await loadState();
     buildGrid(grid, unit, state);
