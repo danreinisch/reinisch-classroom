@@ -1449,7 +1449,8 @@
         const errors = [];
         
         // Parse student code from goal code
-        // Pattern: /^([A-Za-z]+\d{3})/ handles S001, S009, etc.
+        // Pattern: /^([A-Za-z]+\d{3})/ captures first letter(s) + 3 digits
+        // Examples: S001 from S001.11.1, S009 from S009.11.4-2 or S00911.2
         function parseStudentCode(goalCode) {
           const match = goalCode.match(/^([A-Za-z]+\d{3})/);
           return match ? match[1] : null;
@@ -1516,7 +1517,8 @@
         
         if (errors.length > 0) {
           console.warn('CSV import errors:', errors);
-          showToolsStatus('Import Complete (with errors)', summary, errorSummary, errors.length > rowsProcessed / 2);
+          const hasSignificantErrors = errors.length > rowsProcessed / 2;
+          showToolsStatus('Import Complete (with errors)', summary, errorSummary, hasSignificantErrors);
         } else {
           showToolsStatus('Import Complete', summary, 'All rows processed successfully.');
         }
