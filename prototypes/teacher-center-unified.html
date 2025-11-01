@@ -355,7 +355,37 @@
 
       <div class="card ttab" data-tab="settings" style="display:none">
         <div class="card-header"><div>⚙️ Settings</div></div>
-        <div class="subtle">WIP: Profile, share PIN, notifications.</div>
+        
+        <div class="card" style="margin-top:12px">
+          <div class="card-header"><div>Supabase Configuration</div></div>
+          
+          <label for="supabaseUrl">Supabase URL
+            <input id="supabaseUrl" type="text" placeholder="https://your-project.supabase.co" />
+          </label>
+          
+          <label for="supabaseKey">Supabase Anon Key
+            <div style="position:relative">
+              <input id="supabaseKey" type="password" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." />
+              <button id="toggleKeyVisibility" class="btn small" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);padding:4px 8px" type="button">👁️</button>
+            </div>
+          </label>
+          
+          <label style="display:flex;align-items:center;gap:10px;margin-top:12px">
+            <input id="useSupabase" type="checkbox" style="width:auto" />
+            <span style="font-weight:700">Use Supabase (remote storage)</span>
+          </label>
+          <div class="subtle" style="margin-top:4px;margin-left:24px">When enabled, the app will attempt to use Supabase. If connection fails, it falls back to local storage.</div>
+          
+          <div style="display:flex;gap:10px;margin-top:16px;align-items:center">
+            <button id="btnSaveSettings" class="btn primary small">Save Settings</button>
+            <button id="btnTestConnection" class="btn small">Test Connection</button>
+            <span id="connectionStatus" class="badge" style="margin-left:8px">Local only</span>
+          </div>
+          
+          <div class="subtle" style="margin-top:12px;padding:10px;background:rgba(255,255,255,.04);border-radius:8px;border:1px solid var(--line)">
+            <strong>Note:</strong> Your Supabase credentials are stored securely in your browser's localStorage and are never committed to the repository. Each user must configure their own connection.
+          </div>
+        </div>
       </div>
     </main>
 
@@ -1051,6 +1081,128 @@
 
     // Optional: auto-open Teacher Center for local dev
     // showTeacher(); initIEP();
+
+    // =======================
+    // Settings: Supabase Configuration
+    // =======================
+    
+    // Load settings from localStorage
+    function loadSettings() {
+      const url = localStorage.getItem(NS + 'supabase_url') || '';
+      const key = localStorage.getItem(NS + 'supabase_key') || '';
+      const useRemote = localStorage.getItem(NS + 'use_remote') === 'true';
+      
+      qs('#supabaseUrl').value = url;
+      qs('#supabaseKey').value = key;
+      qs('#useSupabase').checked = useRemote;
+      
+      updateConnectionStatus();
+    }
+    
+    // Save settings to localStorage
+    function saveSettings() {
+      const url = qs('#supabaseUrl').value.trim();
+      const key = qs('#supabaseKey').value.trim();
+      const useRemote = qs('#useSupabase').checked;
+      
+      localStorage.setItem(NS + 'supabase_url', url);
+      localStorage.setItem(NS + 'supabase_key', key);
+      localStorage.setItem(NS + 'use_remote', useRemote.toString());
+      
+      addNotif('Settings saved. Reload the page to apply changes.', { type: 'success' });
+      updateConnectionStatus();
+    }
+    
+    // Test connection
+    async function testSupabaseConnection() {
+      const statusChip = qs('#connectionStatus');
+      statusChip.textContent = 'Testing...';
+      statusChip.style.background = 'rgba(255,255,255,.18)';
+      
+      // Dynamically import and test
+      try {
+        const { testConnection } = await import('../web/supabase-client.js');
+        const result = await testConnection();
+        
+        if (result.ok) {
+          statusChip.textContent = 'Remote: OK';
+          statusChip.style.background = 'linear-gradient(180deg, rgba(34,197,94,.8), rgba(22,163,74,.8))';
+          statusChip.style.color = '#fff';
+          addNotif('Supabase connection successful!', { type: 'success' });
+        } else {
+          statusChip.textContent = `Remote: Error (${result.error})`;
+          statusChip.style.background = 'linear-gradient(180deg, rgba(239,68,68,.8), rgba(220,38,38,.8))';
+          statusChip.style.color = '#fff';
+          addNotif(`Supabase connection failed: ${result.error}`, { type: 'error' });
+        }
+      } catch (err) {
+        statusChip.textContent = 'Remote: Error (failed to load)';
+        statusChip.style.background = 'linear-gradient(180deg, rgba(239,68,68,.8), rgba(220,38,38,.8))';
+        statusChip.style.color = '#fff';
+        addNotif(`Failed to test connection: ${err.message}`, { type: 'error' });
+      }
+    }
+    
+    // Update connection status display
+    function updateConnectionStatus() {
+      const url = localStorage.getItem(NS + 'supabase_url') || '';
+      const key = localStorage.getItem(NS + 'supabase_key') || '';
+      const useRemote = localStorage.getItem(NS + 'use_remote') === 'true';
+      const statusChip = qs('#connectionStatus');
+      
+      if (!useRemote || !url || !key) {
+        statusChip.textContent = 'Local only';
+        statusChip.style.background = 'rgba(255,255,255,.18)';
+        statusChip.style.color = 'var(--ink)';
+      } else {
+        statusChip.textContent = 'Remote (configured)';
+        statusChip.style.background = 'linear-gradient(180deg, rgba(6,182,212,.8), rgba(8,145,178,.8))';
+        statusChip.style.color = '#fff';
+      }
+    }
+    
+    // Toggle key visibility
+    qs('#toggleKeyVisibility').addEventListener('click', () => {
+      const input = qs('#supabaseKey');
+      const btn = qs('#toggleKeyVisibility');
+      if (input.type === 'password') {
+        input.type = 'text';
+        btn.textContent = '🙈';
+      } else {
+        input.type = 'password';
+        btn.textContent = '👁️';
+      }
+    });
+    
+    // Save settings button
+    qs('#btnSaveSettings').addEventListener('click', () => {
+      saveSettings();
+    });
+    
+    // Test connection button
+    qs('#btnTestConnection').addEventListener('click', () => {
+      testSupabaseConnection();
+    });
+    
+    // Toggle checkbox listener
+    qs('#useSupabase').addEventListener('change', () => {
+      updateConnectionStatus();
+    });
+    
+    // Initialize settings UI
+    function initSettings() {
+      loadSettings();
+    }
+    
+    // Update tab switcher to initialize settings
+    const settingsTabHandler = qs('#tTabs').addEventListener('click', async (e) => {
+      if (e.target.tagName !== 'A') return;
+      const tab = e.target.getAttribute('data-tab');
+      if (tab === 'settings') initSettings();
+    });
+    
+    // Load settings on initial page load
+    loadSettings();
   </script>
 </body>
 </html>
