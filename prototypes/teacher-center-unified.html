@@ -746,8 +746,7 @@
       const agg = {}; // key: student|goal -> { sum, n, lastDate }
       for (const p of progress){
         if (p.percent==null) continue;
-        const key = \
-`${p.student_code}|${p.goal_id}`;
+        const key = `${p.student_code}|${p.goal_id}`;
         if (!agg[key]) agg[key]={ sum:0, n:0, lastDate:'' };
         agg[key].sum += Number(p.percent)||0; agg[key].n += 1; agg[key].lastDate = !agg[key].lastDate || (p.date||'')>agg[key].lastDate ? (p.date||'') : agg[key].lastDate;
       }
