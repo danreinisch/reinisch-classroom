@@ -1,6 +1,5 @@
 // Minimal client. If no env keys are provided, this module logs a warning and does nothing.
 // Downstream code should feature-detect and fall back to localStorage when supabase is null.
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 // Read config from localStorage
 const NS = 'rc_unified_';
@@ -12,15 +11,28 @@ const useRemote = localStorage.getItem(NS + 'use_remote') === 'true';
 const url = window.SUPABASE_URL || storedUrl;
 const key = window.SUPABASE_ANON_KEY || storedKey;
 
-export const supabase = (url && key && useRemote)
-  ? createClient(url, key, {
-      auth: { persistSession: true, autoRefreshToken: true }
-    })
-  : null;
+let supabase = null;
 
-if (!supabase) {
-  console.warn('Supabase env not detected; app will use localStorage backend.');
-}
+// Lazy-load Supabase client only when configured, so a blocked CDN import doesn't break the entire app on first load
+(async () => {
+  if (url && key && useRemote) {
+    try {
+      const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+      supabase = createClient(url, key, {
+        auth: { persistSession: true, autoRefreshToken: true }
+      });
+    } catch (err) {
+      console.warn('Failed to load Supabase client from CDN:', err.message);
+      supabase = null;
+    }
+  }
+
+  if (!supabase) {
+    console.warn('Supabase env not detected; app will use localStorage backend.');
+  }
+})();
+
+export { supabase };
 
 // Helper to test connection
 export async function testConnection() {

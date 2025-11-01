@@ -561,14 +561,16 @@
     const NS = 'rc_unified_';
     const qs = s => document.querySelector(s);
     const qsa = s => Array.from(document.querySelectorAll(s));
+    // Guard optional event listeners so missing elements don't throw and stop the script
+    const on = (sel, evt, fn) => { const el = document.querySelector(sel); if (el) el.addEventListener(evt, fn); };
 
     function showTeacher(){ qs('#view-teacher').style.display='grid'; }
     function hideTeacher(){ qs('#view-teacher').style.display='none'; }
 
     // Teacher auth
-    qs('#btnTeacher').addEventListener('click', ()=>{ qs('#teachModal').classList.add('show'); qs('#teachPass').focus(); });
-    qs('#teachCancel').addEventListener('click', ()=> qs('#teachModal').classList.remove('show'));
-    qs('#teachGo').addEventListener('click', ()=>{
+    on('#btnTeacher', 'click', ()=>{ qs('#teachModal').classList.add('show'); qs('#teachPass').focus(); });
+    on('#teachCancel', 'click', ()=> qs('#teachModal').classList.remove('show'));
+    on('#teachGo', 'click', ()=>{
       const input = qs('#teachPass').value;
       if (input === TEACHER_PW_LOCAL) {
         qs('#teachModal').classList.remove('show');
@@ -580,7 +582,7 @@
     });
 
     // Tabs
-    qs('#tTabs').addEventListener('click', e=>{
+    on('#tTabs', 'click', e=>{
       if (e.target.tagName !== 'A') return; e.preventDefault();
       qsa('#tTabs a').forEach(a=>a.classList.remove('active'));
       e.target.classList.add('active');
@@ -719,8 +721,8 @@
       qs('#pNotes').value = '';
       openModal('#progModal');
     }
-    qs('#pCancel').addEventListener('click', ()=> closeModal('#progModal'));
-    qs('#pSave').addEventListener('click', async ()=>{
+    on('#pCancel', 'click', ()=> closeModal('#progModal'));
+    on('#pSave', 'click', async ()=>{
       const student_code = qs('#pStudent').value;
       const goal_id = qs('#pGoal').value;
       const date = qs('#pDate').value;
@@ -747,12 +749,12 @@
       qs('#slOut').value = '';
       openModal('#shareLinkModal');
     }
-    qs('#slClose').addEventListener('click', ()=> closeModal('#shareLinkModal'));
-    qs('#slCopy').addEventListener('click', async ()=>{
+    on('#slClose', 'click', ()=> closeModal('#shareLinkModal'));
+    on('#slCopy', 'click', async ()=>{
       const v = qs('#slOut').value; if (!v) return;
       try { await navigator.clipboard.writeText(v); addNotif('Share link copied'); } catch {}
     });
-    qs('#slCreate').addEventListener('click', ()=>{
+    on('#slCreate', 'click', ()=>{
       const student_code = qs('#slStudent').value;
       const days = Number(qs('#slExpire').value||0);
       const require_pin = qs('#slLimitPin').checked;
@@ -788,9 +790,9 @@
       }).join('') || '<tr><td colspan="7" class="subtle">No progress entries.</td></tr>';
       openModal('#allModal');
     }
-    qs('#allClose').addEventListener('click', ()=> closeModal('#allModal'));
-    qs('#btnIEPAll').addEventListener('click', openAllModal);
-    qs('#allExport').addEventListener('click', ()=>{
+    on('#allClose', 'click', ()=> closeModal('#allModal'));
+    on('#btnIEPAll', 'click', openAllModal);
+    on('#allExport', 'click', ()=>{
       const rows = [['Date','Student','Goal','Method','Percent','By','Notes']];
       const progress = getProgress().slice().sort((a,b)=> (b.date||'').localeCompare(a.date||''));
       const mapName = Object.fromEntries(STUDENTS.map(s=> [s.code, s.name||s.code]));
@@ -829,8 +831,8 @@
       }</tbody></table>`;
       openModal('#sumModal');
     }
-    qs('#sumClose').addEventListener('click', ()=> closeModal('#sumModal'));
-    qs('#btnIEPSummary').addEventListener('click', openSummary);
+    on('#sumClose', 'click', ()=> closeModal('#sumModal'));
+    on('#btnIEPSummary', 'click', openSummary);
 
     // Events (IEP & Evaluations)
     async function renderEventsTable(){
@@ -852,8 +854,8 @@
       sel.innerHTML = STUDENTS.map(s=> `<option value="${s.code}">${s.name||s.code} (${s.code})</option>`).join('');
       await renderEventsTable();
     }
-    qs('#evSearch')?.addEventListener('input', ()=> renderEventsTable());
-    qs('#evSave')?.addEventListener('click', async ()=>{
+    on('#evSearch', 'input', ()=> renderEventsTable());
+    on('#evSave', 'click', async ()=>{
       const type = qs('#evType').value;
       const student_code = qs('#evStudent').value;
       const date = qs('#evDate').value || null;
@@ -869,7 +871,7 @@
     async function initIEP(){
       await loadStudents();
       // inputs
-      qs('#iepSearch').addEventListener('input', renderIEPTable);
+      on('#iepSearch', 'input', renderIEPTable);
       await renderIEPTable();
       // default selection
       if (!SELECTED && STUDENTS.length) setSelected(STUDENTS[0].code);
@@ -1068,12 +1070,12 @@
     }
 
     // Modal controls
-    qs('#btnImportLibrary').addEventListener('click', openImportLibraryModal);
-    qs('#libCancel').addEventListener('click', () => closeModal('#importLibraryModal'));
-    qs('#libImport').addEventListener('click', importSelectedItems);
-    qs('#libSearch').addEventListener('input', renderLibraryItems);
+    on('#btnImportLibrary', 'click', openImportLibraryModal);
+    on('#libCancel', 'click', () => closeModal('#importLibraryModal'));
+    on('#libImport', 'click', importSelectedItems);
+    on('#libSearch', 'input', renderLibraryItems);
     
-    qs('#libSelectAll').addEventListener('click', () => {
+    on('#libSelectAll', 'click', () => {
       const searchTerm = (qs('#libSearch')?.value || '').toLowerCase();
       const filtered = filterLibraryItems(libraryItems, searchTerm);
       const filteredKeys = filtered.map(item => getItemKey(item));
@@ -1108,7 +1110,7 @@
     }
 
     // Update tab switcher to initialize assignments
-    qs('#tTabs').addEventListener('click', async (e) => {
+    on('#tTabs', 'click', async (e) => {
       if (e.target.tagName !== 'A') return;
       const tab = e.target.getAttribute('data-tab');
       if (tab === 'assignments') await initAssignments();
@@ -1197,7 +1199,7 @@
     }
     
     // Toggle key visibility
-    qs('#toggleKeyVisibility').addEventListener('click', () => {
+    on('#toggleKeyVisibility', 'click', () => {
       const input = qs('#supabaseKey');
       const btn = qs('#toggleKeyVisibility');
       if (input.type === 'password') {
@@ -1210,17 +1212,17 @@
     });
     
     // Save settings button
-    qs('#btnSaveSettings').addEventListener('click', () => {
+    on('#btnSaveSettings', 'click', () => {
       saveSettings();
     });
     
     // Test connection button
-    qs('#btnTestConnection').addEventListener('click', () => {
+    on('#btnTestConnection', 'click', () => {
       testSupabaseConnection();
     });
     
     // Toggle checkbox listener
-    qs('#useSupabase').addEventListener('change', () => {
+    on('#useSupabase', 'change', () => {
       updateConnectionStatus();
     });
     
@@ -1230,7 +1232,7 @@
     }
     
     // Update tab switcher to initialize settings
-    const settingsTabHandler = qs('#tTabs').addEventListener('click', async (e) => {
+    on('#tTabs', 'click', async (e) => {
       if (e.target.tagName !== 'A') return;
       const tab = e.target.getAttribute('data-tab');
       if (tab === 'settings') initSettings();
@@ -1560,9 +1562,9 @@
     }
     
     // Bind buttons
-    qs('#btnSeedSupabase').addEventListener('click', seedToSupabase);
-    qs('#btnPullSupabase').addEventListener('click', pullFromSupabase);
-    qs('#btnImportCSV').addEventListener('click', importCSV);
+    on('#btnSeedSupabase', 'click', seedToSupabase);
+    on('#btnPullSupabase', 'click', pullFromSupabase);
+    on('#btnImportCSV', 'click', importCSV);
   </script>
 </body>
 </html>
