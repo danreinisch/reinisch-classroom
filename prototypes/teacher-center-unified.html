@@ -651,7 +651,7 @@
         const openBtn = `<button class='btn small' data-act='select' data-code='${s.code}'>Open</button>`;
         const addBtn  = `<button class='btn small' data-act='add' data-code='${s.code}'>Add Progress</button>`;
         const shareBtn= `<button class='btn small' data-act='share' data-code='${s.code}'>Share Link</button>`;
-        return `<tr data-code="${s.code}"><td>${s.name||s.code} <span class="subtle">(${s.code})</span></td><td>${goals.length}</td><td>${last?fmtDate(last):'<span class=subtle'>—</span>'}</td><td>${openBtn} ${addBtn} ${shareBtn}</td></tr>`;
+        return `<tr data-code="${s.code}"><td>${s.name||s.code} <span class="subtle">(${s.code})</span></td><td>${goals.length}</td><td>${last?fmtDate(last):'<span class="subtle">—</span>'}</td><td>${openBtn} ${addBtn} ${shareBtn}</td></tr>`;
       }));
       tbody.innerHTML = rows.join('') || `<tr><td colspan="4" class="subtle">No students</td></tr>`;
       tbody.querySelectorAll('button[data-act="select"]').forEach(btn=> btn.addEventListener('click', ()=> selectStudent(btn.dataset.code)));
