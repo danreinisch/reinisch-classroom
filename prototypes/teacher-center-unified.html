@@ -818,7 +818,22 @@
     // Import from Library
     // =======================
     let libraryItems = [];
-    let selectedLibraryItems = new Set();
+    let selectedLibraryItems = new Set(); // Stores item slugs or unique IDs
+
+    // Filter items by search term
+    function filterLibraryItems(items, searchTerm) {
+      return items.filter(item => {
+        const title = (item.title || '').toLowerCase();
+        const slug = (item.slug || '').toLowerCase();
+        const week = String(item.week || '').toLowerCase();
+        return title.includes(searchTerm) || slug.includes(searchTerm) || week.includes(searchTerm);
+      });
+    }
+
+    // Get unique key for an item
+    function getItemKey(item) {
+      return item.slug || `${item.title}-${item.series}`;
+    }
 
     // Render assignments list
     async function renderAssignmentsList() {
@@ -883,12 +898,7 @@
     // Render library items list with search filter
     function renderLibraryItems() {
       const searchTerm = (qs('#libSearch')?.value || '').toLowerCase();
-      const filtered = libraryItems.filter(item => {
-        const title = (item.title || '').toLowerCase();
-        const slug = (item.slug || '').toLowerCase();
-        const week = String(item.week || '').toLowerCase();
-        return title.includes(searchTerm) || slug.includes(searchTerm) || week.includes(searchTerm);
-      });
+      const filtered = filterLibraryItems(libraryItems, searchTerm);
       
       qs('#libItemCount').textContent = `${filtered.length} item${filtered.length !== 1 ? 's' : ''}`;
       
@@ -898,8 +908,9 @@
         return;
       }
       
-      const items = filtered.map((item, idx) => {
-        const isChecked = selectedLibraryItems.has(idx);
+      const items = filtered.map((item) => {
+        const itemKey = getItemKey(item);
+        const isChecked = selectedLibraryItems.has(itemKey);
         const heroThumb = item.hero 
           ? `<img src="../${item.hero}" style="width:60px;height:60px;object-fit:cover;border-radius:8px" alt="">` 
           : '<div style="width:60px;height:60px;background:rgba(255,255,255,.06);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:24px">📄</div>';
@@ -908,8 +919,8 @@
         const dateLabel = item.date ? `<span class="subtle">${new Date(item.date).toLocaleDateString()}</span>` : '';
         
         return `
-          <div class="goal-item" style="cursor:pointer;transition:.15s" data-idx="${idx}">
-            <input type="checkbox" ${isChecked ? 'checked' : ''} style="width:auto;margin-top:10px" data-idx="${idx}">
+          <div class="goal-item" style="cursor:pointer;transition:.15s" data-key="${itemKey}">
+            <input type="checkbox" ${isChecked ? 'checked' : ''} style="width:auto;margin-top:10px" data-key="${itemKey}">
             <div style="margin-right:12px">${heroThumb}</div>
             <div style="flex:1">
               <div style="font-weight:800;margin-bottom:4px">${item.title || 'Untitled'}</div>
@@ -930,11 +941,11 @@
       wrap.querySelectorAll('input[type="checkbox"]').forEach(cb => {
         cb.addEventListener('change', (e) => {
           e.stopPropagation();
-          const idx = parseInt(cb.dataset.idx);
+          const key = cb.dataset.key;
           if (cb.checked) {
-            selectedLibraryItems.add(idx);
+            selectedLibraryItems.add(key);
           } else {
-            selectedLibraryItems.delete(idx);
+            selectedLibraryItems.delete(key);
           }
         });
       });
@@ -942,13 +953,13 @@
       wrap.querySelectorAll('.goal-item').forEach(item => {
         item.addEventListener('click', (e) => {
           if (e.target.tagName === 'INPUT') return; // Skip if clicking checkbox directly
-          const idx = parseInt(item.dataset.idx);
+          const key = item.dataset.key;
           const cb = item.querySelector('input[type="checkbox"]');
           cb.checked = !cb.checked;
           if (cb.checked) {
-            selectedLibraryItems.add(idx);
+            selectedLibraryItems.add(key);
           } else {
-            selectedLibraryItems.delete(idx);
+            selectedLibraryItems.delete(key);
           }
         });
       });
@@ -962,11 +973,11 @@
       }
       
       const rootPath = qs('#libRootPath').value.trim();
-      const selectedIndices = Array.from(selectedLibraryItems);
-      const items = selectedIndices.map(idx => libraryItems[idx]).filter(Boolean);
+      // Convert selected keys back to items
+      const selectedItems = libraryItems.filter(item => selectedLibraryItems.has(getItemKey(item)));
       
       let imported = 0;
-      for (const item of items) {
+      for (const item of selectedItems) {
         try {
           await db.createAssignment({
             title: item.title,
@@ -998,19 +1009,15 @@
     
     qs('#libSelectAll').addEventListener('click', () => {
       const searchTerm = (qs('#libSearch')?.value || '').toLowerCase();
-      const filtered = libraryItems.map((item, idx) => ({ item, idx })).filter(({ item }) => {
-        const title = (item.title || '').toLowerCase();
-        const slug = (item.slug || '').toLowerCase();
-        const week = String(item.week || '').toLowerCase();
-        return title.includes(searchTerm) || slug.includes(searchTerm) || week.includes(searchTerm);
-      });
+      const filtered = filterLibraryItems(libraryItems, searchTerm);
+      const filteredKeys = filtered.map(item => getItemKey(item));
       
-      if (selectedLibraryItems.size === filtered.length) {
-        // Deselect all
-        filtered.forEach(({ idx }) => selectedLibraryItems.delete(idx));
+      if (selectedLibraryItems.size === filteredKeys.length && filteredKeys.every(key => selectedLibraryItems.has(key))) {
+        // Deselect all filtered items
+        filteredKeys.forEach(key => selectedLibraryItems.delete(key));
       } else {
-        // Select all filtered
-        filtered.forEach(({ idx }) => selectedLibraryItems.add(idx));
+        // Select all filtered items
+        filteredKeys.forEach(key => selectedLibraryItems.add(key));
       }
       renderLibraryItems();
     });
