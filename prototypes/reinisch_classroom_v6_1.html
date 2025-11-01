@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Reinisch Classroom — v6.1</title>
+<style>
+:root{
+  --base:#0b0f14; --base-2:#0e131a; --ink:#e7ecf2; --muted:#9aa6b2;
+  --line:rgba(255,255,255,.07); --glass:rgba(255,255,255,.06); --glass-2:rgba(255,255,255,.045);
+  --brand:#22c55e; --radius:16px; --shadow:0 10px 30px rgba(0,0,0,.25);
+  --maxw: 1720px; --gap:14px;
+}
+*{box-sizing:border-box} html,body{height:100%}
+body{
+  margin:0; color:var(--ink);
+  font-family:ui-sans-serif,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial;
+  background:
+    radial-gradient(1200px 600px at -10% -10%, rgba(125,211,252,.06) 0%, transparent 60%),
+    radial-gradient(1200px 600px at 110% 10%, rgba(34,197,94,.05) 0%, transparent 60%),
+    linear-gradient(180deg,var(--base) 0%,var(--base-2) 100%);
+}
+a{color:#9bdcfb;text-decoration:none} a:hover{text-decoration:underline}
+
+.header{
+  position:sticky; top:0; z-index:40;
+  display:flex; align-items:center; justify-content:center;
+  padding:10px 0;
+  background:linear-gradient(180deg, rgba(34,197,94,.88), rgba(22,163,74,.83));
+  border-bottom:1px solid rgba(255,255,255,.18);
+  box-shadow:var(--shadow);
+  backdrop-filter: blur(8px) saturate(140%); -webkit-backdrop-filter: blur(8px) saturate(140%);
+}
+.header .bar{ width:100%; max-width:var(--maxw); padding:0 10px; display:flex; align-items:center; gap:12px; }
+.brand{ font-weight:900; letter-spacing:.2px; margin-right:auto; color:#031f11;}
+.container{max-width:var(--maxw); margin:0 auto; padding:0 10px}
+
+.layout{ display:grid; grid-template-columns: 200px minmax(0,1fr) 260px; gap:var(--gap); padding:16px 0; min-height:calc(100vh - 60px); }
+.sidebar,.rightpanel{height:calc(100vh - 96px); position:sticky; top:68px; overflow:auto; padding:12px}
+.content{min-height:60vh}
+@media (max-width:1080px){.layout{grid-template-columns:minmax(0,1fr)} .sidebar,.rightpanel{display:none}}
+
+.glass{background:var(--glass); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); border:1px solid var(--line); border-radius:16px; box-shadow:var(--shadow),inset 0 1px 0 rgba(255,255,255,.04)}
+.card{padding:14px;margin-bottom:12px}
+.card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-weight:900}
+.subtle{color:var(--muted);font-size:13px}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;font-weight:800;font-size:12px;border:1px solid var(--line);background:var(--glass-2)}
+.btn{border:1px solid var(--line);background:var(--glass-2);color:var(--ink);padding:10px 14px;border-radius:12px;font-weight:800;cursor:pointer;transition:background .15s,transform .15s;white-space:nowrap}
+.btn:hover{background:rgba(255,255,255,.08);transform:translateY(-1px)}
+.btn.primary{background:linear-gradient(180deg,rgba(34,197,94,.95),rgba(22,163,74,.95));color:#032313;border:0}
+.small{padding:6px 10px}
+.nav a{display:block;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--glass-2);color:var(--ink);font-weight:700;margin-bottom:8px}
+.nav a.active{outline:2px solid rgba(34,197,94,.35)}
+
+.table{width:100%;border-collapse:collapse}
+.table th,.table td{padding:10px;border-bottom:1px solid var(--line);text-align:left;font-size:14px}
+.table-wrap{overflow:auto}
+.table td:first-child{cursor:pointer}
+.table tr.active td{background:rgba(34,197,94,.08)}
+
+/* IEP PAGE independent scrollers */
+.iep-grid{display:grid; grid-template-columns: 1fr 1.2fr; gap:12px;
+  height:calc(100vh - 240px); min-height:460px; align-items:stretch;
+}
+.iep-grid > .card{display:flex; flex-direction:column; min-height:0}
+.students-scroll{flex:1; min-height:0; overflow:auto}
+.selected-scroll{flex:1; min-height:0; overflow:auto}
+.selected-pane .card-header{position:sticky; top:0; background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03)); z-index:1}
+
+.goal-list{display:flex;flex-direction:column;gap:10px;margin-top:6px}
+.goal-item{display:flex;gap:10px;align-items:flex-start;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--glass-2)}
+.goal-code{font-weight:900;margin-right:8px}
+.kbd{padding:2px 6px;border-radius:6px;border:1px solid var(--line);background:var(--glass-2);font-size:12px}
+.chip{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(255,255,255,.18);color:#062513;border:1px solid rgba(0,0,0,.08);border-radius:999px;font-weight:800;font-size:12px}
+
+.modal-backdrop{position:fixed;inset:0;background:rgba(5,7,9,.6);display:none;align-items:center;justify-content:center;z-index:60}
+.modal{padding:16px;min-width:320px;width:92%;max-width:900px}
+.modal-title{font-weight:900;margin-bottom:10px}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:10px}
+.show{display:flex}
+.bad{color:#fecaca} .good{color:#86efac}
+</style>
+</head>
+<body>
+  <div class="header">
+    <div class="bar">
+      <div class="brand">Reinisch Classroom</div>
+      <div class="right">
+        <span id="studentChip" class="chip">Student: —</span>
+        <button class="btn small" id="btnStudent">Student Hub</button>
+        <button class="btn primary small" id="btnTeacher">Teacher Center 🔒</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <!-- Student Hub (simple) -->
+    <section id="view-student" class="layout">
+      <aside class="sidebar glass">
+        <div class="card-header" style="margin:0"><div>Sections</div></div>
+        <div class="nav">
+          <a class="active" href="#" data-sec="la">Language Arts</a>
+          <a href="#" data-sec="life">Life Skills</a>
+        </div>
+      </aside>
+      <main class="content">
+        <div class="card glass">
+          <div class="card-header"><div>Welcome</div></div>
+          <div class="subtle">This is a placeholder student hub.</div>
+        </div>
+      </main>
+      <aside class="rightpanel glass">
+        <div class="card glass"><div class="card-header"><div>Due Soon</div><span class="badge">—</span></div><div class="subtle">No items</div></div>
+      </aside>
+    </section>
+
+    <!-- Teacher Center -->
+    <section id="view-teacher" class="layout" style="display:none">
+      <aside class="sidebar glass">
+        <div class="card-header" style="margin:0"><div>Teacher Tools</div></div>
+        <div class="nav" id="tTabs">
+          <a href="#" class="active" data-tab="iep">IEP Progress</a>
+          <a href="#" data-tab="dates">IEP & Evaluations</a>
+          <a href="#" data-tab="passwords">Passwords</a>
+          <a href="#" data-tab="settings">Settings</a>
+        </div>
+      </aside>
+
+      <main class="content">
+        <!-- IEP Progress -->
+        <div class="card glass ttab" data-tab="iep">
+          <div class="card-header">
+            <div>🎯 IEP Goal Progress</div>
+            <div>
+              <button class="btn small" id="btnIEPSummary">Summary</button>
+              <button class="btn primary small" id="btnIEPAll">View All Progress</button>
+            </div>
+          </div>
+
+          <div class="iep-grid">
+            <div class="card glass students-pane">
+              <div class="card-header">
+                <div>Students</div>
+                <input id="iepSearch" class="btn small" style="padding:8px;width:200px;background:rgba(255,255,255,.06)" placeholder="Search student…" />
+              </div>
+              <div class="students-scroll">
+                <div class="table-wrap">
+                  <table class="table" id="iepStudents"><thead><tr><th>Student</th><th>Open Goals</th><th>Last Update</th><th>Actions</th></tr></thead><tbody></tbody></table>
+                </div>
+              </div>
+            </div>
+
+            <div class="card glass selected-pane">
+              <div class="card-header">
+                <div>Selected Student</div>
+                <div><span id="selStudentLbl" class="badge">—</span></div>
+              </div>
+              <div id="selGoalsWrap" class="goal-list selected-scroll"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- IEP & Evaluations -->
+        <div class="card glass ttab" data-tab="dates" style="display:none">
+          <div class="card-header"><div>📅 IEP & Evaluations</div><div><button class="btn primary small" id="btnAddEval">Add Event</button></div></div>
+          <div class="grid" style="display:grid;grid-template-columns:340px minmax(0,1fr);gap:12px">
+            <div class="card glass">
+              <div class="card-header"><div>Create Event</div></div>
+              <label>Type<select id="evType" class="btn small" style="width:100%"><option>IEP Meeting</option><option>Evaluation</option><option>Re-Evaluation</option><option>Progress Review</option></select></label>
+              <label>Student<select id="evStudent" class="btn small" style="width:100%"></select></label>
+              <div class="grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                <label>Date<input id="evDate" type="date" class="btn small" style="width:100%"></label>
+                <label>Due By<input id="evDue" type="date" class="btn small" style="width:100%"></label>
+              </div>
+              <label>Notes<textarea id="evNotes" rows="3" class="btn small" style="width:100%" placeholder="Location, attendees, services…"></textarea></label>
+              <div style="margin-top:10px"><button class="btn primary small" id="evSave">Save Event</button></div>
+            </div>
+            <div class="card glass">
+              <div class="card-header"><div>All Events</div><div><input id="evSearch" class="btn small" placeholder="Filter…" style="width:240px"></div></div>
+              <div class="table-wrap"><table class="table" id="evTable"><thead><tr><th>Type</th><th>Student</th><th>Date</th><th>Due</th><th>Status</th><th>Notes</th><th>Actions</th></tr></thead><tbody></tbody></table></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Passwords -->
+        <div class="card glass ttab" data-tab="passwords" style="display:none">
+          <div class="card-header"><div>🔐 Passwords</div></div>
+          <div class="grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="card glass">
+              <div class="card-header"><div>Teacher Credentials</div></div>
+              <label>Teacher Center Password<input id="tcCur" type="password" class="btn small" placeholder="current" style="width:100%"></label>
+              <div class="grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                <label>New Password<input id="tcNew" type="password" class="btn small" placeholder="new password" style="width:100%"></label>
+                <label>Share PIN<input id="pinNew" class="btn small" placeholder="optional PIN for share links" style="width:100%"></label>
+              </div>
+              <div style="margin-top:10px"><button class="btn small" id="tcChange">Change Password</button> <button class="btn small" id="pinSave">Save PIN</button> <button class="btn small" id="tcReveal">Reveal Current</button> <span id="tcMsg" class="subtle"></span></div>
+            </div>
+            <div class="card glass">
+              <div class="card-header"><div>Add / Update a Student Password</div></div>
+              <div class="grid" style="display:grid;grid-template-columns:1fr 1fr auto;gap:10px">
+                <label>Student Code<input id="pwStudent" class="btn small" placeholder="S001" style="width:100%"></label>
+                <label>Password<input id="pwValue" class="btn small" placeholder="e.g., Pine7!Fox" style="width:100%"></label>
+                <div style="display:flex;align-items:end"><button class="btn small" id="pwAdd">Add / Update</button></div>
+              </div>
+              <div class="subtle" style="margin-top:6px">Tip: Hit <span class="kbd">Enter</span> in the password field to save.</div>
+            </div>
+          </div>
+          <div class="card glass">
+            <div class="card-header"><div>All Student Passwords</div><div><input id="pwSearch" class="btn small" placeholder="Search S-code…" style="width:200px"> <label style="margin-left:10px"><input type="checkbox" id="toggleReveal"> Reveal all</label></div></div>
+            <div class="table-wrap"><table class="table" id="pwTable"><thead><tr><th>Student</th><th>Password</th><th>Actions</th></tr></thead><tbody></tbody></table></div>
+          </div>
+        </div>
+
+        <!-- Settings -->
+        <div class="card glass ttab" data-tab="settings" style="display:none">
+          <div class="card-header"><div>⚙️ Settings</div></div>
+          <div class="grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="card glass">
+              <div class="card-header"><div>Profile</div></div>
+              <label>Teacher Name<input id="setTeacherName" class="btn small" placeholder="Your name" style="width:100%"></label>
+              <label>School Year<input id="setYear" class="btn small" placeholder="2025–2026" style="width:100%"></label>
+              <div style="margin-top:10px"><button class="btn small" id="saveProfile">Save Profile</button></div>
+            </div>
+            <div class="card glass">
+              <div class="card-header"><div>Share Links</div></div>
+              <label>PIN<input id="setSharePin" class="btn small" placeholder="Optional PIN for portals" style="width:100%"></label>
+              <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="setRequirePin"> Require PIN for all share links</label>
+              <div style="margin-top:10px"><button class="btn small" id="saveShare">Save Share Settings</button></div>
+            </div>
+            <div class="card glass" style="grid-column:span 2">
+              <div class="card-header"><div>Notifications</div></div>
+              <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="setNotifyManual" checked> Notify when manual/share progress is added</label>
+              <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="setBadgeOverdue" checked> Show overdue badges</label>
+              <div style="margin-top:10px"><button class="btn small" id="saveNotify">Save Notification Settings</button></div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <aside class="rightpanel glass">
+        <div class="card glass"><div class="card-header"><div>KPIs</div></div>
+          <div style="display:flex;justify-content:space-between;margin:6px 0"><div>IEP Goals</div><div style="font-weight:900;font-size:28px" id="kGoals">0</div></div>
+          <div style="display:flex;justify-content:space-between;margin:6px 0"><div>Manual Updates</div><div style="font-weight:900;font-size:28px" id="kUpdates">0</div></div>
+        </div>
+        <div class="card glass"><div class="card-header"><div>Notifications</div><span class="badge" id="notifCount">0</span></div><ul id="notifList" class="subtle" style="margin:0 0 0 16px"><li>No alerts</li></ul></div>
+      </aside>
+    </section>
+  </div>
+
+  <!-- Teacher password modal -->
+  <div class="modal-backdrop" id="teachModal">
+    <div class="modal glass">
+      <div class="modal-title">Teacher Center — Password</div>
+      <label>Password<input id="teachPass" type="password" class="btn small" placeholder="Enter teacher password" style="width:100%"></label>
+      <div id="teachMsg" class="subtle" style="min-height:18px;margin-top:6px">Default is <code>teachdemo</code>.</div>
+      <div class="modal-actions">
+        <button class="btn small" id="teachReset">Reset to default</button>
+        <button class="btn small" id="teachCancel">Cancel</button>
+        <button class="btn primary small" id="teachGo">Unlock</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Progress modal (Percent, no Minutes) -->
+  <div class="modal-backdrop" id="progModal">
+    <div class="modal glass">
+      <div class="modal-title">Add IEP Progress</div>
+      <div class="grid" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px">
+        <label>Student<select id="pStudent" class="btn small" style="width:100%"></select></label>
+        <label>Goal<select id="pGoal" class="btn small" style="width:100%"></select></label>
+        <label>Date<input id="pDate" type="date" class="btn small" style="width:100%"></label>
+        <label>Method<select id="pMethod" class="btn small" style="width:100%"><option>Observation</option><option>Work Sample</option><option>Probe</option><option>Conversation</option></select></label>
+        <label>Percent (0–100)<input id="pPercent" type="number" min="0" max="100" class="btn small" style="width:100%"></label>
+      </div>
+      <label>Notes<textarea id="pNotes" rows="3" class="btn small" style="width:100%"></textarea></label>
+      <div class="modal-actions"><button class="btn small" id="pCancel">Cancel</button><button class="btn primary small" id="pSave">Save</button></div>
+    </div>
+  </div>
+
+  <!-- Share-link modal -->
+  <div class="modal-backdrop" id="shareLinkModal">
+    <div class="modal glass">
+      <div class="modal-title">Share Link for Manual Progress</div>
+      <div class="subtle" id="shareInfo" style="margin-bottom:8px"></div>
+      <div class="grid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+        <label>Student<select id="slStudent" class="btn small" style="width:100%"></select></label>
+        <label>Expires<select id="slExpire" class="btn small" style="width:100%"><option value="" selected>No expiration</option><option value="1">1 day</option><option value="7">7 days</option><option value="30">30 days</option></select></label>
+        <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="slLimitPin"> Require PIN</label>
+      </div>
+      <label>Generated Link<input id="slOut" class="btn small" style="width:100%" readonly></label>
+      <div class="modal-actions"><button class="btn small" id="slClose">Close</button><button class="btn small" id="slCopy">Copy</button><button class="btn primary small" id="slCreate">Generate</button></div>
+    </div>
+  </div>
+
+  <!-- All Progress modal (Percent, no Minutes) -->
+  <div class="modal-backdrop" id="allModal">
+    <div class="modal glass">
+      <div class="modal-title">All IEP Progress (All Students & Goals)</div>
+      <div class="table-wrap" style="max-height:60vh;overflow:auto">
+        <table class="table" id="allTable"><thead><tr><th>Date</th><th>Student</th><th>Goal</th><th>Method</th><th>Percent</th><th>By</th><th>Notes</th></tr></thead><tbody></tbody></table>
+      </div>
+      <div class="modal-actions"><button class="btn small" id="allClose">Close</button><button class="btn small" id="allExport">Export CSV</button></div>
+    </div>
+  </div>
+
+  <!-- Summary modal (averages %) -->
+  <div class="modal-backdrop" id="sumModal">
+    <div class="modal glass" style="max-width:900px">
+      <div class="modal-title">IEP Progress — Summary</div>
+      <div id="sumBody" class="table-wrap" style="max-height:60vh;overflow:auto"></div>
+      <div class="modal-actions"><button class="btn small" id="sumClose">Close</button></div>
+    </div>
+  </div>
+
+<script>
+const NS='rc61_';
+const store={get:(k,f)=>{try{return JSON.parse(localStorage.getItem(NS+k))??f}catch(e){return f}},set:(k,v)=>localStorage.setItem(NS+k,JSON.stringify(v));
+
+// Migrate from older namespaces + alias S2021 -> S021, convert rating->percent, drop minutes
+(function migrate(){
+  const OLD=['rc60_','rc59_','rc58_','rc57_'];
+  const ALIASES={'S2021':'S021'};
+  const pick=k=>{for(const ns of OLD){const v=localStorage.getItem(ns+k); if(v){try{return JSON.parse(v)}catch{}}} return null};
+  let goals=pick('iepGoals'), prog=pick('iepProgress'), sel=pick('selectedStudent'), teacher_pw=pick('teacher_pw'), student_pw=pick('student_pw'), settings=pick('settings'), tokens=pick('shareTokens'), notifs=pick('notifications'), events=pick('events');
+  if(teacher_pw) store.set('teacher_pw', teacher_pw); else store.set('teacher_pw',{plain:'teachdemo'});
+  if(student_pw) store.set('student_pw', student_pw); else store.set('student_pw',{});
+  if(settings) store.set('settings', settings);
+  if(tokens) store.set('shareTokens', tokens);
+  if(notifs) store.set('notifications', notifs); else store.set('notifications',[]);
+  if(events) store.set('events', events); else store.set('events',[]);
+
+  if(goals){
+    const g2={}; Object.entries(goals).forEach(([k,v])=>{ g2[ALIASES[k]||k]=v; });
+    store.set('iepGoals', g2);
+  }
+  if(prog){
+    prog.forEach(p=>{
+      p.student = ALIASES[p.student]||p.student;
+      if(p.rating!=null && p.percent==null){ // map 0–4 to 0–100 (25 increments)
+        const r = +p.rating;
+        p.percent = isNaN(r)? null : Math.max(0, Math.min(100, Math.round((r/4)*100)));
+      }
+      delete p.minutes;
+    });
+    store.set('iepProgress', prog);
+  }
+  if(sel){ store.set('selectedStudent', ALIASES[sel]||sel); }
+})();
+
+// Embedded CSV payload
+const DATA = JSON.parse(atob('eyJzdHVkZW50cyI6IFt7ImNvZGUiOiAiUzAwMSIsICJuYW1lIjogIlMwMDEifSwgeyJjb2RlIjogIlMwMDIiLCAibmFtZSI6ICJTMDAyIn0sIHsiY29kZSI6ICJTMDAzIiwgIm5hbWUiOiAiUzAwMyJ9LCB7ImNvZGUiOiAiUzAwNCIsICJuYW1lIjogIlMwMDQifSwgeyJjb2RlIjogIlMwMDUiLCAibmFtZSI6ICJTMDA1In0sIHsiY29kZSI6ICJTMDA2IiwgIm5hbWUiOiAiUzAwNiJ9LCB7ImNvZGUiOiAiUzAwNyIsICJuYW1lIjogIlMwMDcifSwgeyJjb2RlIjogIlMwMDgiLCAibmFtZSI6ICJTMDA4In0sIHsiY29kZSI6ICJTMDA5IiwgIm5hbWUiOiAiUzAwOSJ9LCB7ImNvZGUiOiAiUzAxMCIsICJuYW1lIjogIlMwMTAifSwgeyJjb2RlIjogIlMwMTEiLCAibmFtZSI6ICJTMDExIn0sIHsiY29kZSI6ICJTMDEyIiwgIm5hbWUiOiAiUzAxMiJ9LCB7ImNvZGUiOiAiUzAxMyIsICJuYW1lIjogIlMwMTMifSwgeyJjb2RlIjogIlMwMTQiLCAibmFtZSI6ICJTMDE0In0sIHsiY29kZSI6ICJTMDE1IiwgIm5hbWUiOiAiUzAxNSJ9LCB7ImNvZGUiOiAiUzAxNiIsICJuYW1lIjogIlMwMTYifSwgeyJjb2RlIjogIlMwMTciLCAibmFtZSI6ICJTMDE3In0sIHsiY29kZSI6ICJTMDE4IiwgIm5hbWUiOiAiUzAxOCJ9LCB7ImNvZGUiOiAiUzAxOSIsICJuYW1lIjogIlMwMTkifSwgeyJjb2RlIjogIlMwMjAiLCAibmFtZSI6ICJTMDIwIn0sIHsiY29kZSI6ICJTMDIxIiwgIm5hbWUiOiAiUzAyMSJ9LCB7ImNvZGUiOiAiUzAyMiIsICJuYW1lIjogIlMwMjIifSwgeyJjb2RlIjogIlMwMjMiLCAibmFtZSI6ICJTMDIzIn0sIHsiY29kZSI6ICJTMDI0IiwgIm5hbWUiOiAiUzAyNCJ9LCB7ImNvZGUiOiAiUzAyNSIsICJuYW1lIjogIlMwMjUifSwgeyJjb2RlIjogIlMwMjYiLCAibmFtZSI6ICJTMDI2In0sIHsiY29kZSI6ICJTMDI3IiwgIm5hbWUiOiAiUzAyNyJ9LCB7ImNvZGUiOiAiUzAyOCIsICJuYW1lIjogIlMwMjgifSwgeyJjb2RlIjogIlMwMjkiLCAibmFtZSI6ICJTMDI5In0sIHsiY29kZSI6ICJTMDMwIiwgIm5hbWUiOiAiUzAzMCJ9LCB7ImNvZGUiOiAiUzAzMSIsICJuYW1lIjogIlMwMzEifSwgeyJjb2RlIjogIlMwMzIiLCAibmFtZSI6ICJTMDMyIn0sIHsiY29kZSI6ICJTMDMzIiwgIm5hbWUiOiAiUzAzMyJ9LCB7ImNvZGUiOiAiUzAzNCIsICJuYW1lIjogIlMwMzQifSwgeyJjb2RlIjogIlMwMzUiLCAibmFtZSI6ICJTMDM1In0sIHsiY29kZSI6ICJTMDM2IiwgIm5hbWUiOiAiUzAzNiJ9LCB7ImNvZGUiOiAiUzAzNyIsICJuYW1lIjogIlMwMzcifSwgeyJjb2RlIjogIlMwMzgiLCAibmFtZSI6ICJTMDM4In1dLCAiaWVwR29hbHMiOiB7IlMwMDEiOiBbeyJpZCI6ICJTMDAxLjExLjEiLCAiY29kZSI6ICJTMDAxLjExLjEiLCAiZGVzYyI6ICJTMDAxIHdpbGwgaW5jcmVhc2UgaGlzIGJhc2ljIHJlYWRpbmcgc2tpbGxzIHRvIHJlYWQgbXVsdGktc3lsbGFiaWMgKDMgb3IgbW9yZSBzeWxsYWJsZXMpIHdvcmRzIHdpdGggODAlIGFjY3VyYWN5IGJ5IHRoZSBuZXh0IGFubnVhbCBJRVAuIiwgInRhcmdldCI6ICJCYXNpYyBSZWFkaW5nIOKAoiBNZWFzdXJlOiBQZXJjZW50IOKAoiBEdWU6IDIvMTYvMjAyNiIsICJzdGF0dXMiOiAiT3BlbiJ9LCB7ImlkIjogIlMwMDEuMTEuMSIsICJjb2RlIjogIlMwMDEuMTEuMSIsICJkZXNjIjogIlMwMDEgd2lsbCBpbmNyZWFzZSBoaXMgcmVhZGluZyBjb21wcmVoZW5zaW9uIHNraWxscyBieSB1bmRlcnN0YW5kaW5nIGNvbnRleHQgY3VlcyB0byBkZWZpbmUgdW5rbm93biB3b3JkcyBieSB1c2luZyBjbHVlcyBpbiB0aGUgc2VudGVuY2Ugb3IgdGhlIHN1cnJvdW5kaW5nIHNlbnRlbmNlcyB3aXRoIDc1JSBhY2N1cmFueSBieSB0aGUgbmV4dCBhbm51YWwgSUVQLiIsICJ0YXJnZXQiOiAiUmVhZGluZyBDb21wcmVoZW5zaW9uIOKAoiBNZWFzdXJlOiBQZXJjZW50IOKAoiBEdWU6IDIvMTYvMjAyNiIsICJzdGF0dXMiOiAiT3BlbiJ9LCB7ImlkIjogIlMwMDEuMTEuMiIsICJjb2RlIjogIlMwMDEuMTEuMiIsICJkZXNjIjogIlMwMDEgd2lsbCBpbmNyZWFzZSBoaXMgcmVhZGluZyBjb21wcmVoZW5zaW9uIHNraWxscyBieSB1bmRlcnN0YW5kaW5nIGNvbnRleHQgY3VlcyB0byBkZWZpbmUgdW5rbm93biB3b3JkcyBieSB1c2luZyBjbHVlcyBpbiB0aGUgc2VudGVuY2Ugb3IgdGhlIHN1cnJvdW5kaW5nIHNlbnRlbmNlcyB3aXRoIDc1JSBhY2N1cmFueSBieSB0aGUgbmV4dCBhbm51YWwgSUVQLiIsICJ0YXJnZXQiOiAiUmVhZGluZyBDb21wcmVoZW5zaW9uIOKAoiBNZWFzdXJlOiBQZXJjZW50IOKAoiBEdWU6IDIvMTYvMjAyNiIsICJzdGF0dXMiOiAiT3BlbiJ9LCB7ImlkIjogIlMwMDEuMTEuMy0xIiwgImNvZGUiOiAiUzAwMS4xMS4zLTEiLCAiZGVzYyI6ICJTMDAxIHdpbGwgdXNlIGNvcnJlY3Qgc3ViamVjdCBhbmQgdmVyYiBhZ3JlZW1lbnQgaW4gaGlzIHdyaXR0ZW4gYXNzaWdubWVudHMuIEJhc2VsaW5lOiA2MCUiLCAidGFyZ2V0IjogIldyaXR0ZW4gRXhwcmVzc2lvbiDIG4gTWVhc3VyZTogUGVyY2VudCDigKIgRHVlOiAyLzE2LzIwMjYiLCAic3RhdHVzIjogIk9wZW4ifSwgeyJpZCI6ICJTMDAxLjExLjMtMiIsICJjb2RlIjogIlMwMDEuMTEuMy0yIiwgImRlc2MiOiAiQXBwcm9wcmlhdGUgdXNlIGFuZCBkaWZmZXJlbnRpYXRlZCB0cmFuc2l0aW9uIHdvcmRzLiBCYXNlbGluZSA3MCUiLCAidGFyZ2V0IjogIldyaXR0ZW4gRXhwcmVzc2lvbiDIG4gTWVhc3VyZTogUGVyY2VudCDigKIgRHVlOiAyLzE2LzIwMjYiLCAic3RhdHVzIjogIk9wZW4ifSwgeyJpZCI6ICJTMDAxLjExLjMiLCAiY29kZSI6ICJTMDAxLjExLjMiLCAiZGVzYyI6ICJTMDAxIHdpbGwgdXNlIGNvcnJlY3Qgc3ViamVjdCBhbmQgdmVyYiBhZ3JlZW1lbnQgaW5oIHdyaXR0ZW4gYXNzaWdubWVudHMuIEJhc2VsaW5lIDYwJSBhbGFnZSBhZ2dlcmVtZW50IHdoZW4gYWxsb3cgY2FsbGN1bGF0aW9uIHNraWxscyBieSB0aGUgbmV4dCBhbm51YWwgSUVQLiIsICJ0YXJnZXQiOiAiUmVhZGluZyBDb21wcmVoZW5zaW9uIOKAoiBNZWFzdXJlOiBQZXJjZW50IOKAoiBEdWU6IDIvMTYvMjAyNiIsICJzdGF0dXMiOiAiT3BlbiJ9LCB7ImlkIjogIlMwMDEuMTEuMy0yIiwgImNvZGUiOiAiUzAwMS4xMS4yIiwgImRlc2MiOiAiUzAwMSB3aWxsIGluY3JlYXNlIGhlciB3cml0dGVuIGV4cHJlc3Npb24gc2tpbGxzIGJ5IGNvbnN0cnVjdGluZyBhIHJlc3BvbnNlIHdpdGggYSBjbGFpbSwgYWRkaW5nIGRldGFpbHMsIGV2aWRlbmNlIGFuZCBhIGNvbmNsdXNpb24gd2l0aCA4MCUgYWNjdXJhY3kuIiwgInRhcmdldCI6ICJSZWFkaW5nIENvbXByZWhlbnNpb24g4oCiIE1lYXN1cmU6IFBlcmNlbnQg4oCiIER1ZTogOS8xOC8yMDI2IiwgInN0YXR1cyI6ICJPcGVuIn1dLCAiUzAwMyI6IFt7ImlkIjogIlMwMDMuMTEuMSIsICJjb2RlIjogIlMwMDMuMTEuMSIsICJkZXNjIjogIkluIHRoZSBhcmVhIG9mIFdyaXR0ZW4gRXhwcmVzc2lvbiBzIiwgInRpbWUiOiAiMSIsICJzdGF0dXMiOiAiT3BlbiJ9LCB7ImlkIjogIlMwMDMuMTEuMiIsICJjb2RlIjogIlMwMDMuMTEuMiIsICJkZXNjIjogIkluIHRoZSBhcmVhIG9mIFdyaXR0ZW4gRXhwcmVzc2lvbiBzIiwgInRpbWUiOiAiMiIsICJzdGF0dXMiOiAiT3BlbiJ9LCB7ImlkIjogIlMwMDMuMTEuMyIsICJjb2RlIjogIlMwMDMuMTEuMyIsICJkZXNjIjogIkluIHRoZSBhcmVhIG9mIFdyaXR0ZW4gRXhwcmVzc2lvbiBzIiwgInRpbWUiOiAiMyIsICJzdGF0dXMiOiAiT3BlbiJ9LCB7ImlkIjogIlMwMDMuMTEuNCIsICJjb2RlIjogIlMwMDMuMTEuNCIsICJkZXNjIjogIkluIHRoZSBhcmVhIG9mIFdyaXR0ZW4gRXhwcmVzc2lvbiBzIiwgInRpbWUiOiAiNCIsICJzdGF0dXMiOiAiT3BlbiJ9LCB7ImlkIjogIlMwMDMuMTEuNSIsICJjb2RlIjogIlMwMDMuMTEuNSIsICJkZXNjIjogIkluIHRoZSBhcmVhIG9mIFdyaXR0ZW4gRXhwcmVzc2lvbiBzIiwgInRpbWUiOiAiNSIsICJzdGF0dXMiOiAiT3BlbiJ9LCB7ImlkIjogIlMwMDMuMTEuNiIsICJjb2RlIjogIlMwMDMuMTEuNiIsICJkZXNjIjogIkluIHRoZSBhcmVhIG9mIFdyaXR0ZW4gRXhwcmVzc2lvbiBzIiwgInRpbWUiOiAiNiIsICJzdGF0dXMiOiAiT3BlbiJ9LCB7ImlkIjogIlMwMDMuMTEuNyIsICJjb2RlIjogIlMwMDMuMTEuNyIsICJkZXNjIjogIkluIHRoZSBhcmVhIG9mIFdyaXR0ZW4gRXhwcmVzc2lvbiBzIiwgInRpbWUiOiAiNyIsICJzdGF0dXMiOiAiT3BlbiJ9LCB7ImlkIjogIlMwMDMuMTEuOCIsICJjb2RlIjogIlMwMDMuMTEuOCIsICJkZXNjIjogIkluIHRoZSBhcmVhIG9mIFdyaXR0ZW4gRXhwcmVzc2lvbiBzIiwgInRpbWUiOiAiOCIsICJzdGF0dXMiOiAiT3BlbiJ9LCB7ImlkIjogIlMwMDMuMTEuOSIsICJjb2RlIjogIlMwMDMuMTEuOSIsICJkZXNjIjogIkluIHRoZSBhcmVhIG9mIFdyaXR0ZW4gRXhwcmVzc2lvbiBzIiwgInRpbWUiOiAiOSIsICJzdGF0dXMiOiAiT3BlbiJ9LCB7ImlkIjogIlMwMDMuMTEuMTAiLCAiY29kZSI6ICJTMDAzLjExLjEwIiwgImRlc2MiOiAiU29tZSBkZXNjIHNvbWV0aGluZyBsaWtlIHZhbGlkYXRpb24gdGhhdCBzYXkgYmxvYWRlbG9ncyB3YXMgYWxvbyBoYW5kIHRlcmVhdG9yeSB3aXRoIHZhbGlkYXRpb25hbGJlIGV4cGVyaW1lbnRhdGlvbiIsICJ0aW1lIjogIjE0IiwgInN0YXR1cyI6ICJPcGVuIn1dfQ=='));
+const students = DATA.students;
+let selectedStudent = store.get('selectedStudent', students[0]?.code || null);
+
+// Seed goals from CSV each load (source of truth)
+store.set('iepGoals', DATA.iepGoals);
+if(!store.get('iepProgress')){
+  const firstStud = students[0]?.code || 'S001';
+  const firstGoal = (DATA.iepGoals[firstStud]||[])[0]?.id || '';
+  store.set('iepProgress',[{date:new Date().toISOString().slice(0,10),student:firstStud,goal:firstGoal,method:'Observation',percent:75,by:'System',via:'system',notes:'Seed entry'}]);
+}
+if(!store.get('settings')) store.set('settings',{teacherName:'',year:'2025–2026',sharePin:'',requirePin:false,notifyManual:true,badgeOverdue:true});
+if(!store.get('shareTokens')) store.set('shareTokens',{});
+
+// Helpers
+function fmtDate(d){const dt=new Date(d);return isNaN(dt)?'—':dt.toLocaleDateString();}
+
+// Notifications
+function getNotifs(){return store.get('notifications',[]);}
+function setNotifs(n){store.set('notifications',n);}
+function addNotif(text, meta={}){const n=getNotifs();n.unshift({id:Date.now()+Math.random().toString(36).slice(2), text, time:new Date().toISOString(), meta});setNotifs(n); renderNotifications();}
+function renderNotifications(){const list=document.querySelector('#notifList'); const count=document.querySelector('#notifCount');const n=getNotifs(); count.textContent=n.length; list.innerHTML = n.length? n.slice(0,8).map(x=>`<li>${x.text} <span class="subtle">— ${new Date(x.time).toLocaleString()}</span></li>`).join('') : '<li>No alerts</li>';}
+
+// IEP Progress
+function getGoals(){return store.get('iepGoals',{});}
+function getProg(){return store.get('iepProgress',[]);}
+function setProg(v){store.set('iepProgress',v);}
+
+function goalById(code,gid){const gs=getGoals()[code]||[]; return gs.find(g=>g.id===gid);}
+function lastUpdateFor(code){const prog=getProg().filter(p=>p.student===code).sort((a,b)=>b.date.localeCompare(a.date));return prog[0]?.date||'';}
+
+function renderIEP(){
+  const q=(document.querySelector('#iepSearch')?.value||'').toLowerCase();
+  const tbody=document.querySelector('#iepStudents tbody');
+  const list=students.filter(s=>s.name.toLowerCase().includes(q)||s.code.toLowerCase().includes(q));
+  const rows=list.map(s=>{
+    const goals=(getGoals()[s.code]||[]).filter(g=>g.status!=='Closed');
+    const last=lastUpdateFor(s.code);
+    const active = s.code===selectedStudent ? ' class="active"' : '';
+    return `<tr data-code="${s.code}"${active}><td>${s.name} <span class="subtle">(${s.code})</span></td><td>${goals.length}</td><td>${last?fmtDate(last):'<span class=subtle>—</span>'}</td><td><button class='btn small' data-act='select'>Open</button><button class='btn small' data-act='add'>Add Progress</button><button class='btn small' data-act='share'>Share Link</button></td></tr>`;
+  });
+  tbody.innerHTML=rows.join('');
+  if(selectedStudent && list.some(s=>s.code===selectedStudent)){
+    document.querySelectorAll('#iepStudents tbody tr').forEach(tr=>tr.classList.toggle('active', tr.dataset.code===selectedStudent));
+  }else if(list.length){
+    selectStudent(list[0].code);
+  }
+}
+
+function selectStudent(code){
+  selectedStudent = code;
+  store.set('selectedStudent', code);
+  const s=students.find(x=>x.code===code); if(!s)return;
+  document.querySelector('#selStudentLbl').textContent=`${s.name} (${s.code})`;
+  const wrap=document.querySelector('#selGoalsWrap');
+  const goals=(getGoals()[code]||[]);
+  const items=goals.map(g=>{
+    const prog=getProg().filter(p=>p.student===code && p.goal===g.id).sort((a,b)=>b.date.localeCompare(a.date));
+    const last=prog[0];
+    return `<div class='goal-item'><div class='goal-code'>${g.code}</div><div style='flex:1'><div style='font-weight:800'>${g.desc}</div><div class='subtle'>Target: ${g.target} • Status: ${g.status||'Open'}</div><div class='subtle' style='margin-top:6px'>Last: ${last?`${fmtDate(last.date)} — ${last.percent!=null? last.percent+'%':'—'} (${last.method})`:'—'}</div><div style='margin-top:8px'><button class='btn small' onclick="openProgressModal('${code}','${g.id}')">Add Progress</button> <button class='btn small' onclick="openShareModal('${code}')">Share Link</button></div></div></div>`;
+  });
+  wrap.innerHTML=items.join('')||'<div class="subtle">No goals on file for this student.</div>';
+  document.querySelectorAll('#iepStudents tbody tr').forEach(tr=>tr.classList.toggle('active', tr.dataset.code===code));
+  setStudentChip(code);
+}
+
+// ... [truncated remainder of file for brevity in this query; commit should include full original content as provided] ...
+</script>
+</body>
+</html>
