@@ -32,6 +32,178 @@
   .modal-backdrop{position:fixed;inset:0;background:rgba(5,7,9,.6);display:none;align-items:center;justify-content:center;z-index:60}
   .modal{padding:16px;min-width:320px;width:92%;max-width:900px}
   .show{display:flex}
+  .grid-iep{display:grid;grid-template-columns: 1fr 1.2fr; gap:12px}
+  .table-wrap{overflow:auto}
+  .kbd{padding:2px 6px;border-radius:6px;border:1px solid var(--line);background:rgba(255,255,255,.06);font-size:12px}
+</style>
+
+<!-- UI Polish: modal readability + dark dashboard aesthetic -->
+<style>
+  /* Palette & tokens aligned to the reference dashboard */
+  :root{
+    /* Base surfaces and ink */
+    --base:#0b1220;            /* page background */
+    --panel:#0f172a;           /* card surface */
+    --panel-2:#111827;         /* darker surface for nav/headers */
+    --edge:#0b1220;            /* header/table head */
+    --ink:#e6edf3;             /* primary text */
+    --ink-dim:#cbd5e1;         /* secondary text */
+    --muted:#94a3b8;           /* tertiary text */
+    --line:rgba(255,255,255,.08);
+    --line-strong:rgba(255,255,255,.14);
+
+    /* Accents (green primary, cyan secondary) */
+    --brand:#22c55e;           /* primary accent (green) */
+    --brand-2:#06b6d4;         /* secondary accent (cyan) */
+
+    /* Elevation */
+    --shadow-1:0 6px 28px rgba(0,0,0,.35);
+    --shadow-2:0 14px 48px rgba(0,0,0,.45);
+    --inset-top:inset 0 1px 0 rgba(255,255,255,.03);
+  }
+
+  /* Base background */
+  body{
+    background: radial-gradient(1200px 800px at 20% -10%, rgba(34,197,94,.08), transparent 50%),
+                radial-gradient(1200px 800px at 120% 20%, rgba(6,182,212,.06), transparent 50%),
+                linear-gradient(180deg, #0b1220, #0c1322 60%, #0b0f14);
+    color:var(--ink);
+  }
+
+  /* Cards and layout panels */
+  .card{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:14px;
+    box-shadow:var(--shadow-1), var(--inset-top);
+  }
+  .card-header{
+    background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(0,0,0,.02));
+    border-bottom:1px solid rgba(255,255,255,.06);
+    padding-bottom:10px;
+  }
+
+  /* Header bar */
+  .header{
+    background:linear-gradient(180deg, rgba(34,197,94,.92), rgba(22,163,74,.92));
+    border-bottom:1px solid rgba(255,255,255,.18);
+    backdrop-filter:saturate(1.1);
+  }
+  .brand{ color:#031f11 }
+
+  /* Navigation (left sidebar) */
+  .sidebar.card{ background:var(--panel-2) }
+  .nav a{
+    background:var(--panel);
+    border-color:rgba(255,255,255,.08);
+    color:var(--ink);
+    font-weight:800;
+    position:relative;
+  }
+  .nav a.active{
+    background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(0,0,0,.03));
+    outline:none;
+    border-color:rgba(34,197,94,.35);
+    box-shadow:inset 3px 0 0 var(--brand);
+  }
+  .nav a:hover{ border-color:rgba(255,255,255,.18) }
+
+  /* Buttons */
+  .btn{
+    background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.12);
+    color:var(--ink);
+    font-weight:800;
+    transition:.15s ease-in-out;
+  }
+  .btn:hover{ border-color:rgba(255,255,255,.2) }
+  .btn.primary{
+    background:linear-gradient(180deg, rgba(34,197,94,.98), rgba(22,163,74,.98));
+    color:#032313;
+    border:0;
+    box-shadow:0 4px 16px rgba(34,197,94,.25);
+  }
+  .btn.primary:hover{
+    filter:brightness(1.02);
+    box-shadow:0 6px 22px rgba(34,197,94,.32);
+  }
+
+  /* Inputs */
+  input,select,textarea{
+    background:#1f2937;
+    border:1px solid rgba(255,255,255,.14);
+    color:var(--ink);
+  }
+  input:focus,select:focus,textarea:focus{
+    outline:2px solid rgba(34,197,94,.35);
+    border-color:rgba(34,197,94,.45);
+    box-shadow:0 0 0 3px rgba(34,197,94,.18);
+  }
+  label{ color:var(--ink) }
+
+  /* Tables */
+  .table th{
+    background:var(--edge);
+    color:var(--ink);
+    border-bottom:1px solid rgba(255,255,255,.08);
+    font-weight:800;
+  }
+  .table td{
+    color:var(--ink-dim);
+  }
+  .table tbody tr:hover{
+    background:rgba(255,255,255,.03);
+  }
+
+  /* KPI / Badges */
+  .badge{
+    background:rgba(255,255,255,.10);
+    border:1px solid rgba(255,255,255,.14);
+    color:var(--ink);
+  }
+
+  /* Goal item surface */
+  .goal-item{
+    background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(0,0,0,.03));
+    border:1px solid rgba(255,255,255,.10);
+  }
+
+  /* Scroll areas */
+  .scroll{
+    background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(0,0,0,.02));
+    border:1px solid rgba(255,255,255,.06);
+    border-radius:12px;
+  }
+  /* nicer scrollbars (WebKit/Chromium) */
+  .scroll::-webkit-scrollbar{ height:10px; width:10px }
+  .scroll::-webkit-scrollbar-thumb{ background:rgba(255,255,255,.14); border-radius:999px }
+  .scroll::-webkit-scrollbar-thumb:hover{ background:rgba(255,255,255,.22) }
+
+  /* Modal readability fixes */
+  .modal-backdrop{ background:rgba(5,7,9,.75) }
+  .modal.card{
+    background:rgba(15,23,42,.98);
+    border:1px solid var(--line-strong);
+    box-shadow:var(--shadow-2);
+  }
+  .modal .card-header{ background:transparent; border-bottom:1px solid rgba(255,255,255,.08) }
+  .modal input,.modal select,.modal textarea{
+    background:#1f2937;
+    border:1px solid rgba(255,255,255,.22);
+    color:var(--ink);
+  }
+  .modal label{ margin-top:10px }
+
+  /* Students table “selected row” highlight to match accent */
+  #iepStudents tbody tr[style*="rgba(34,197,94,.08)"]{
+    background:linear-gradient(90deg, rgba(34,197,94,.08), rgba(6,182,212,.06));
+  }
+
+  /* Top header chips */
+  .chip{
+    background:linear-gradient(180deg, rgba(255,255,255,.25), rgba(255,255,255,.18));
+    color:#062513;
+  }
 </style>
 </head>
 <body>
@@ -63,26 +235,89 @@
     </aside>
 
     <main class="content">
+      <!-- Student Portal Manager (placeholder) -->
       <div class="card ttab" data-tab="studentPortal">
         <div class="card-header"><div>🧑 Student Portal Manager</div></div>
         <div class="subtle">WIP: This will show students, goals, and per-student portal details.</div>
       </div>
 
+      <!-- IEP Progress: Two-pane UI + actions -->
       <div class="card ttab" data-tab="iepProgress" style="display:none">
-        <div class="card-header"><div>🎯 IEP Goal Progress</div></div>
-        <div class="subtle">WIP: Table of students + goals + quick add modal.</div>
+        <div class="card-header">
+          <div>🎯 IEP Goal Progress</div>
+          <div>
+            <button class="btn small" id="btnIEPSummary">Summary</button>
+            <button class="btn primary small" id="btnIEPAll">View All Progress</button>
+          </div>
+        </div>
+
+        <div class="grid-iep">
+          <div class="card">
+            <div class="card-header">
+              <div>Students</div>
+              <input id="iepSearch" class="btn small" style="padding:8px;width:200px" placeholder="Search student…" />
+            </div>
+            <div class="table-wrap scroll">
+              <table class="table" id="iepStudents">
+                <thead><tr><th>Student</th><th>Open Goals</th><th>Last Update</th><th>Actions</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div>Selected Student</div>
+              <div><span id="selStudentLbl" class="badge">—</span></div>
+            </div>
+            <div id="selGoalsWrap" class="scroll" style="display:flex;flex-direction:column;gap:10px"></div>
+          </div>
+        </div>
       </div>
 
+      <!-- IEP & Evaluations (Events) -->
       <div class="card ttab" data-tab="events" style="display:none">
-        <div class="card-header"><div>📅 IEP & Evaluations</div></div>
-        <div class="subtle">WIP: Create/list events. Porting from v6.1.</div>
+        <div class="card-header"><div>📅 IEP & Evaluations</div><div><button class="btn primary small" id="evSave">Save Event</button></div></div>
+        <div style="display:grid;grid-template-columns:320px minmax(0,1fr);gap:12px">
+          <div class="card">
+            <div class="card-header"><div>Create Event</div></div>
+            <label>Type
+              <select id="evType" class="btn small">
+                <option>IEP Meeting</option>
+                <option>Evaluation</option>
+                <option>Re-Evaluation</option>
+                <option>Progress Review</option>
+              </select>
+            </label>
+            <label>Student<select id="evStudent" class="btn small"></select></label>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <label>Date<input id="evDate" type="date" class="btn small"></label>
+              <label>Due By<input id="evDue" type="date" class="btn small"></label>
+            </div>
+            <label>Notes<textarea id="evNotes" rows="3" class="btn small" placeholder="Location, attendees, services…"></textarea></label>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <div>All Events</div>
+              <div><input id="evSearch" class="btn small" placeholder="Filter…" style="width:240px"></div>
+            </div>
+            <div class="table-wrap scroll">
+              <table class="table" id="evTable">
+                <thead><tr><th>Type</th><th>Student</th><th>Date</th><th>Due</th><th>Notes</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       </div>
 
+      <!-- Passwords (placeholder) -->
       <div class="card ttab" data-tab="passwords" style="display:none">
         <div class="card-header"><div>🔐 Passwords</div></div>
         <div class="subtle">WIP: Local-only passwords first; Supabase RPC later.</div>
       </div>
 
+      <!-- Other tabs (placeholders) -->
       <div class="card ttab" data-tab="assignments" style="display:none">
         <div class="card-header"><div>📝 Assignments</div></div>
         <div class="subtle">WIP: Porting from v8.2.</div>
@@ -128,6 +363,7 @@
     </aside>
   </section>
 
+  <!-- Teacher password modal -->
   <div class="modal-backdrop" id="teachModal">
     <div class="modal card">
       <div class="card-header"><div>Teacher Center — Password</div></div>
@@ -140,16 +376,88 @@
     </div>
   </div>
 
+  <!-- Add Progress modal -->
+  <div class="modal-backdrop" id="progModal">
+    <div class="modal card">
+      <div class="card-header"><div>Add IEP Progress</div></div>
+      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px">
+        <label>Student<select id="pStudent" class="btn small"></select></label>
+        <label>Goal<select id="pGoal" class="btn small"></select></label>
+        <label>Date<input id="pDate" type="date" class="btn small"></label>
+        <label>Method<select id="pMethod" class="btn small">
+          <option>Observation</option><option>Work Sample</option><option>Probe</option><option>Conversation</option>
+        </select></label>
+        <label>Percent (0–100)<input id="pPercent" type="number" min="0" max="100" class="btn small"></label>
+      </div>
+      <label>Notes<textarea id="pNotes" rows="3" class="btn small"></textarea></label>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:10px">
+        <button class="btn small" id="pCancel">Cancel</button>
+        <button class="btn primary small" id="pSave">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Share Link modal -->
+  <div class="modal-backdrop" id="shareLinkModal">
+    <div class="modal card">
+      <div class="card-header"><div>Share Link for Manual Progress</div></div>
+      <div class="subtle" id="shareInfo" style="margin-bottom:8px">Generate a local-only token for this student.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+        <label>Student<select id="slStudent" class="btn small"></select></label>
+        <label>Expires<select id="slExpire" class="btn small">
+          <option value="" selected>No expiration</option><option value="1">1 day</option><option value="7">7 days</option><option value="30">30 days</option>
+        </select></label>
+        <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="slLimitPin"> Require PIN</label>
+      </div>
+      <label>Generated Link<input id="slOut" class="btn small" readonly></label>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:10px">
+        <button class="btn small" id="slClose">Close</button>
+        <button class="btn small" id="slCopy">Copy</button>
+        <button class="btn small primary" id="slCreate">Generate</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- All Progress modal -->
+  <div class="modal-backdrop" id="allModal">
+    <div class="modal card">
+      <div class="card-header"><div>All IEP Progress (All Students & Goals)</div></div>
+      <div class="table-wrap" style="max-height:60vh;overflow:auto">
+        <table class="table" id="allTable">
+          <thead><tr><th>Date</th><th>Student</th><th>Goal</th><th>Method</th><th>Percent</th><th>By</th><th>Notes</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:10px">
+        <button class="btn small" id="allClose">Close</button>
+        <button class="btn small" id="allExport">Export CSV</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Summary modal -->
+  <div class="modal-backdrop" id="sumModal">
+    <div class="modal card" style="max-width:900px">
+      <div class="card-header"><div>IEP Progress — Summary</div></div>
+      <div id="sumBody" class="table-wrap" style="max-height:60vh;overflow:auto"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:10px">
+        <button class="btn small" id="sumClose">Close</button>
+      </div>
+    </div>
+  </div>
+
   <script type="module">
     import { db, isRemote, localStore } from '../web/data-adapter.js';
 
     const TEACHER_PW_LOCAL = 'teacher123';
+    const NS = 'rc_unified_';
     const qs = s => document.querySelector(s);
     const qsa = s => Array.from(document.querySelectorAll(s));
 
     function showTeacher(){ qs('#view-teacher').style.display='grid'; }
     function hideTeacher(){ qs('#view-teacher').style.display='none'; }
 
+    // Teacher auth
     qs('#btnTeacher').addEventListener('click', ()=>{ qs('#teachModal').classList.add('show'); qs('#teachPass').focus(); });
     qs('#teachCancel').addEventListener('click', ()=> qs('#teachModal').classList.remove('show'));
     qs('#teachGo').addEventListener('click', ()=>{
@@ -170,26 +478,303 @@
       e.target.classList.add('active');
       const tab = e.target.getAttribute('data-tab');
       qsa('.ttab').forEach(t=> t.style.display = (t.getAttribute('data-tab')===tab)?'block':'none');
+      if (tab === 'iepProgress') initIEP();
+      if (tab === 'events') initEvents();
     });
 
+    // KPIs and notifications
     function renderKPIs(){
       const goals = Object.values(localStore.get('iepGoals', {})).reduce((n,arr)=> n+(arr?.length||0), 0);
       const updates = (localStore.get('progressEntries', [])||[]).filter(p=> (p.via==='manual'||p.via==='share')).length;
       qs('#kGoals').textContent = goals;
       qs('#kUpdates').textContent = updates;
     }
-
+    function getNotifs(){ return localStore.get('notifications', []); }
+    function setNotifs(n){ localStore.set('notifications', n); }
+    function addNotif(text, meta={}){ const n=getNotifs(); n.unshift({ id: Date.now()+Math.random().toString(36).slice(2), text, time:new Date().toISOString(), meta }); setNotifs(n); renderNotifications(); }
     function renderNotifications(){
       const list = qs('#notifList'); const count = qs('#notifCount');
-      const n = localStore.get('notifications', []);
+      const n = getNotifs();
       count.textContent = n.length;
       list.innerHTML = n.length
         ? n.slice(0,8).map(x=>`<li>${x.text} <span class="subtle">— ${new Date(x.time).toLocaleString()}</span></li>`).join('')
         : '<li>No alerts</li>';
     }
 
+    // IEP Progress
+    let STUDENTS = [];
+    let SELECTED = localStorage.getItem(NS+'selectedStudent') || null;
+
+    async function loadStudents(){
+      let list = await db.listStudents();
+      // Bootstrap from iepGoals if students empty
+      if (!list || list.length === 0) {
+        const goalsMap = localStore.get('iepGoals', {});
+        const codes = Object.keys(goalsMap);
+        list = codes.map(code => ({ code, name: code }));
+        if (list.length) {
+          // cache students for convenience
+          for (const s of list) await (db.upsertStudent ? db.upsertStudent(s) : s);
+        }
+      }
+      STUDENTS = list || [];
+      return STUDENTS;
+    }
+    async function goalsFor(code){ return await db.listGoalsByStudentCode(code) || []; }
+    function getProgress(){ return localStore.get('progressEntries', []) || []; }
+    function setSelected(code){ SELECTED = code; localStorage.setItem(NS+'selectedStudent', code); }
+
+    function fmtDate(d){ const dt=new Date(d); return isNaN(dt)?'—':dt.toLocaleDateString(); }
+
+    function lastUpdateFor(code){
+      const prog = getProgress().filter(p=>p.student_code===code).sort((a,b)=> (b.date||'').localeCompare(a.date||''));
+      return prog[0]?.date || '';
+    }
+
+    async function renderIEPTable(){
+      const q = (qs('#iepSearch')?.value||'').toLowerCase();
+      const tbody = qs('#iepStudents tbody');
+      const list = STUDENTS.filter(s=> (s.name||'').toLowerCase().includes(q) || (s.code||'').toLowerCase().includes(q));
+      const rows = await Promise.all(list.map(async s=>{
+        const goals = (await goalsFor(s.code)).filter(g=> (g.status||'Open')!=='Closed');
+        const last = lastUpdateFor(s.code);
+        const openBtn = `<button class='btn small' data-act='select' data-code='${s.code}'>Open</button>`;
+        const addBtn  = `<button class='btn small' data-act='add' data-code='${s.code}'>Add Progress</button>`;
+        const shareBtn= `<button class='btn small' data-act='share' data-code='${s.code}'>Share Link</button>`;
+        return `<tr data-code="${s.code}"><td>${s.name||s.code} <span class="subtle">(${s.code})</span></td><td>${goals.length}</td><td>${last?fmtDate(last):'<span class=subtle'>—</span>'}</td><td>${openBtn} ${addBtn} ${shareBtn}</td></tr>`;
+      }));
+      tbody.innerHTML = rows.join('') || `<tr><td colspan="4" class="subtle">No students</td></tr>`;
+      tbody.querySelectorAll('button[data-act="select"]').forEach(btn=> btn.addEventListener('click', ()=> selectStudent(btn.dataset.code)));
+      tbody.querySelectorAll('button[data-act="add"]').forEach(btn=> btn.addEventListener('click', ()=> openProgressModal(btn.dataset.code)));
+      tbody.querySelectorAll('button[data-act="share"]').forEach(btn=> btn.addEventListener('click', ()=> openShareModal(btn.dataset.code)));
+      // highlight selected
+      qsa('#iepStudents tbody tr').forEach(tr=> tr.style.background = (tr.dataset.code===SELECTED)?'rgba(34,197,94,.08)':'transparent');
+    }
+
+    async function selectStudent(code){
+      setSelected(code);
+      const s = STUDENTS.find(x=>x.code===code);
+      qs('#selStudentLbl').textContent = s ? `${s.name||s.code} (${s.code})` : code;
+      const wrap = qs('#selGoalsWrap');
+      const goals = await goalsFor(code);
+      const items = goals.map(g=>{
+        const prog = getProgress().filter(p=>p.student_code===code && (p.goal_id===g.id || p.goal_id===g.code)).sort((a,b)=> (b.date||'').localeCompare(a.date||''));
+        const last = prog[0];
+        const lastStr = last ? `${fmtDate(last.date)} — ${last.percent!=null? (last.percent+'%'):'—'} (${last.method||'—'})` : '—';
+        return `<div class="goal-item">
+          <div style="font-weight:900;min-width:64px">${g.code||g.id}</div>
+          <div style="flex:1">
+            <div style="font-weight:800">${g.desc||g.description||''}</div>
+            <div class="subtle">Target: ${g.target||''} • Status: ${g.status||'Open'}</div>
+            <div class="subtle" style="margin-top:6px">Last: ${lastStr}</div>
+            <div style="margin-top:8px">
+              <button class="btn small" data-gid="${g.id||g.code}" data-act="addProg">Add Progress</button>
+              <button class="btn small" data-act="shareStud">Share Link</button>
+            </div>
+          </div>
+        </div>`;
+      });
+      wrap.innerHTML = items.join('') || '<div class="subtle">No goals on file for this student.</div>';
+      // bind buttons
+      wrap.querySelectorAll('button[data-act="addProg"]').forEach(btn=>{
+        btn.addEventListener('click', ()=> openProgressModal(code, btn.dataset.gid));
+      });
+      wrap.querySelectorAll('button[data-act="shareStud"]').forEach(btn=>{
+        btn.addEventListener('click', ()=> openShareModal(code));
+      });
+      // highlight selected row
+      qsa('#iepStudents tbody tr').forEach(tr=> tr.style.background = (tr.dataset.code===code)?'rgba(34,197,94,.08)':'transparent');
+    }
+
+    // Modals helpers
+    function openModal(id){ qs(id).classList.add('show'); }
+    function closeModal(id){ qs(id).classList.remove('show'); }
+
+    // Progress modal
+    async function openProgressModal(code=null, goalId=null){
+      const pStudent = qs('#pStudent'), pGoal = qs('#pGoal');
+      // populate students
+      pStudent.innerHTML = STUDENTS.map(s=> `<option value="${s.code}">${s.name||s.code} (${s.code})</option>`).join('');
+      if (code) pStudent.value = code;
+      // populate goals based on selected student
+      async function loadGoalsFor(studentCode){
+        const gs = await goalsFor(studentCode);
+        pGoal.innerHTML = gs.map(g=> `<option value="${g.id||g.code}">${g.code||g.id} — ${(g.desc||'').slice(0,80)}</option>`).join('');
+        if (goalId) pGoal.value = goalId;
+      }
+      await loadGoalsFor(pStudent.value);
+      pStudent.onchange = async () => { await loadGoalsFor(pStudent.value); };
+      // date default
+      qs('#pDate').value = new Date().toISOString().slice(0,10);
+      qs('#pPercent').value = '';
+      qs('#pMethod').value = 'Observation';
+      qs('#pNotes').value = '';
+      openModal('#progModal');
+    }
+    qs('#pCancel').addEventListener('click', ()=> closeModal('#progModal'));
+    qs('#pSave').addEventListener('click', async ()=>{
+      const student_code = qs('#pStudent').value;
+      const goal_id = qs('#pGoal').value;
+      const date = qs('#pDate').value;
+      const method = qs('#pMethod').value;
+      const percent = Math.max(0, Math.min(100, Number(qs('#pPercent').value||0)));
+      const notes = qs('#pNotes').value||'';
+      await db.addProgress({ student_code, goal_id, date, percent, method, by_name:'Teacher', via:'manual', notes });
+      addNotif(`Progress added for ${student_code}`, { student_code, goal_id });
+      closeModal('#progModal');
+      renderKPIs();
+      // rerender selected panel + table
+      if (SELECTED===student_code) await selectStudent(student_code);
+      await renderIEPTable();
+    });
+
+    // Share Link modal (local-only token)
+    function buildShareURL(token){ return location.origin + location.pathname + `?share=${encodeURIComponent(token)}`; }
+    function openShareModal(code=null){
+      const slStudent = qs('#slStudent');
+      slStudent.innerHTML = STUDENTS.map(s=> `<option value="${s.code}">${s.name||s.code} (${s.code})</option>`).join('');
+      if (code) slStudent.value = code;
+      qs('#slExpire').value = '';
+      qs('#slLimitPin').checked = false;
+      qs('#slOut').value = '';
+      openModal('#shareLinkModal');
+    }
+    qs('#slClose').addEventListener('click', ()=> closeModal('#shareLinkModal'));
+    qs('#slCopy').addEventListener('click', async ()=>{
+      const v = qs('#slOut').value; if (!v) return;
+      try { await navigator.clipboard.writeText(v); addNotif('Share link copied'); } catch {}
+    });
+    qs('#slCreate').addEventListener('click', ()=>{
+      const student_code = qs('#slStudent').value;
+      const days = Number(qs('#slExpire').value||0);
+      const require_pin = qs('#slLimitPin').checked;
+      const pin = (localStore.get('settings', {})||{}).sharePin || '';
+      const expires_at = days ? new Date(Date.now()+days*24*3600*1000).toISOString() : null;
+      // store token
+      const token = 'tok_' + Math.random().toString(36).slice(2,10);
+      const tokens = localStore.get('shareTokens', {});
+      tokens[token] = { id: token, student_code, require_pin, pin: require_pin? pin: '', expires_at, created_at: new Date().toISOString() };
+      localStore.set('shareTokens', tokens);
+      const url = buildShareURL(token);
+      qs('#slOut').value = url;
+      addNotif(`Share link created for ${student_code}`, { student_code, token });
+    });
+
+    // All progress modal
+    function openAllModal(){
+      const tbody = qs('#allTable tbody');
+      const progress = getProgress().slice().sort((a,b)=> (b.date||'').localeCompare(a.date||''));
+      const mapName = Object.fromEntries(STUDENTS.map(s=> [s.code, s.name||s.code]));
+      function goalLabel(code, gid){ const gs = localStore.get('iepGoals', {})[code]||[]; const g = gs.find(x=> (x.id===gid||x.code===gid)); return g ? (g.code||g.id) : gid; }
+      tbody.innerHTML = progress.map(p=>{
+        const sname = mapName[p.student_code] || p.student_code;
+        return `<tr>
+          <td>${fmtDate(p.date)}</td>
+          <td>${sname} (${p.student_code})</td>
+          <td>${goalLabel(p.student_code, p.goal_id)}</td>
+          <td>${p.method||'—'}</td>
+          <td>${p.percent!=null? (p.percent+'%'):'—'}</td>
+          <td>${p.by_name||'—'}</td>
+          <td>${(p.notes||'').replace(/</g,'&lt;')}</td>
+        </tr>`;
+      }).join('') || '<tr><td colspan="7" class="subtle">No progress entries.</td></tr>';
+      openModal('#allModal');
+    }
+    qs('#allClose').addEventListener('click', ()=> closeModal('#allModal'));
+    qs('#btnIEPAll').addEventListener('click', openAllModal);
+    qs('#allExport').addEventListener('click', ()=>{
+      const rows = [['Date','Student','Goal','Method','Percent','By','Notes']];
+      const progress = getProgress().slice().sort((a,b)=> (b.date||'').localeCompare(a.date||''));
+      const mapName = Object.fromEntries(STUDENTS.map(s=> [s.code, s.name||s.code]));
+      const goalLabel = (code, gid)=>{ const gs = localStore.get('iepGoals', {})[code]||[]; const g = gs.find(x=> (x.id===gid||x.code===gid)); return g ? (g.code||g.id) : gid; };
+      for (const p of progress){
+        rows.push([p.date||'', `${mapName[p.student_code]||p.student_code} (${p.student_code})`, goalLabel(p.student_code,p.goal_id), p.method||'', (p.percent!=null? p.percent:''), p.by_name||'', (p.notes||'').replace(/\n/g,' ')]);
+      }
+      const csv = rows.map(r=> r.map(f=> `"${String(f).replace(/"/g,'""')}"`).join(',')).join('\n');
+      const blob = new Blob([csv], { type:'text/csv;charset=utf-8;' });
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'iep_progress.csv'; a.click();
+    });
+
+    // Summary modal
+    function openSummary(){
+      const wrap = qs('#sumBody');
+      const progress = getProgress();
+      const goalsMap = localStore.get('iepGoals', {});
+      // Build averages by student + goal
+      const agg = {}; // key: student|goal -> { sum, n, lastDate }
+      for (const p of progress){
+        if (p.percent==null) continue;
+        const key = \
+`${p.student_code}|${p.goal_id}`;
+        if (!agg[key]) agg[key]={ sum:0, n:0, lastDate:'' };
+        agg[key].sum += Number(p.percent)||0; agg[key].n += 1; agg[key].lastDate = !agg[key].lastDate || (p.date||'')>agg[key].lastDate ? (p.date||'') : agg[key].lastDate;
+      }
+      const mapName = Object.fromEntries(STUDENTS.map(s=> [s.code, s.name||s.code]));
+      const rows = [['Student','Goal','Avg %','Entries','Last Date']];
+      for (const [key,val] of Object.entries(agg)){
+        const [code,gid] = key.split('|');
+        const goal = (goalsMap[code]||[]).find(g=> (g.id===gid||g.code===gid));
+        rows.push([`${mapName[code]||code} (${code})`, goal?(goal.code||goal.id):gid, (val.n? Math.round(val.sum/val.n):'—'), val.n, val.lastDate? fmtDate(val.lastDate):'—']);
+      }
+      // Render as table
+      wrap.innerHTML = `<table class="table"><thead><tr>${rows[0].map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${
+        rows.slice(1).map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('') || '<tr><td class="subtle">No data</td></tr>'
+      }</tbody></table>`;
+      openModal('#sumModal');
+    }
+    qs('#sumClose').addEventListener('click', ()=> closeModal('#sumModal'));
+    qs('#btnIEPSummary').addEventListener('click', openSummary);
+
+    // Events (IEP & Evaluations)
+    async function renderEventsTable(){
+      const tbody = qs('#evTable tbody');
+      const filter = (qs('#evSearch')?.value||'').toLowerCase();
+      const events = await db.listEvents();
+      const mapName = Object.fromEntries(STUDENTS.map(s=> [s.code, s.name||s.code]));
+      const rows = (events||[]).filter(e=>{
+        const s = (mapName[e.student_code]||e.student_code||'').toLowerCase();
+        return !filter || s.includes(filter) || (e.type||'').toLowerCase().includes(filter);
+      }).map(e=>{
+        return `<tr><td>${e.type||''}</td><td>${mapName[e.student_code]||e.student_code||''}</td><td>${fmtDate(e.date)}</td><td>${fmtDate(e.due)}</td><td>${(e.notes||'').replace(/</g,'&lt;')}</td></tr>`;
+      });
+      tbody.innerHTML = rows.join('') || '<tr><td colspan="5" class="subtle">No events</td></tr>';
+    }
+    async function initEvents(){
+      // populate student select
+      const sel = qs('#evStudent');
+      sel.innerHTML = STUDENTS.map(s=> `<option value="${s.code}">${s.name||s.code} (${s.code})</option>`).join('');
+      await renderEventsTable();
+    }
+    qs('#evSearch')?.addEventListener('input', ()=> renderEventsTable());
+    qs('#evSave')?.addEventListener('click', async ()=>{
+      const type = qs('#evType').value;
+      const student_code = qs('#evStudent').value;
+      const date = qs('#evDate').value || null;
+      const due = qs('#evDue').value || null;
+      const notes = qs('#evNotes').value || '';
+      await db.addEvent({ type, student_code, date, due, notes });
+      addNotif(`Event added for ${student_code}`, { type, student_code });
+      qs('#evNotes').value = '';
+      await renderEventsTable();
+    });
+
+    // IEP init
+    async function initIEP(){
+      await loadStudents();
+      // inputs
+      qs('#iepSearch').addEventListener('input', renderIEPTable);
+      await renderIEPTable();
+      // default selection
+      if (!SELECTED && STUDENTS.length) setSelected(STUDENTS[0].code);
+      if (SELECTED) await selectStudent(SELECTED);
+    }
+
+    // Initial dashboards
     renderKPIs();
     renderNotifications();
+
+    // Optional: auto-open Teacher Center for local dev
+    // showTeacher(); initIEP();
   </script>
 </body>
 </html>
