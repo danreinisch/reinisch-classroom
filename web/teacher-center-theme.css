@@ -24,6 +24,9 @@
   --panel-darker: rgba(11, 18, 32, 0.82);    /* sidebar/nav background */
   --modal-dense: rgba(15, 23, 42, 0.86);     /* modals, ~0.86 alpha */
   
+  /* Brand color (ensure it's defined for use in theme) */
+  --brand: #22c55e;                          /* primary green accent */
+  
   /* Accent refinements */
   --brand-glow: rgba(34, 197, 94, 0.3);      /* active state glow */
   --cyan-accent: rgba(6, 182, 212, 0.15);    /* subtle cyan depth */
