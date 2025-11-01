@@ -24,6 +24,30 @@ const local = {
     const map = store.get('iepGoals', {});
     return map[code] || [];
   },
+  async upsertGoal({ student_code, code, desc, target = null, status = 'Open' }) {
+    const map = store.get('iepGoals', {});
+    const goals = map[student_code] || [];
+    const idx = goals.findIndex(g => g.code === code);
+    const goal = { code, desc, target, status };
+    if (idx >= 0) {
+      goals[idx] = { ...goals[idx], ...goal };
+    } else {
+      goals.push(goal);
+    }
+    map[student_code] = goals;
+    store.set('iepGoals', map);
+    return { student_code, ...goal };
+  },
+  async listGoalsAll() {
+    const map = store.get('iepGoals', {});
+    const result = [];
+    for (const [student_code, goals] of Object.entries(map)) {
+      for (const goal of goals) {
+        result.push({ student_code, ...goal });
+      }
+    }
+    return result;
+  },
 
   // Progress
   async addProgress(p) {
@@ -90,6 +114,35 @@ const remote = supabase && {
     if (e1) throw e1;
     const { data, error } = await supabase.from('goals').select('id, code, desc, target, status').eq('student_id', stu.id).order('code');
     if (error) throw error; return data;
+  },
+  async upsertGoal({ student_code, code, desc, target = null, status = 'Open' }) {
+    // Lookup student by code
+    const { data: stu, error: e1 } = await supabase.from('students').select('id').eq('code', student_code).single();
+    if (e1) throw e1;
+    // Upsert goal: unique on (student_id, code)
+    const { data, error } = await supabase.from('goals')
+      .upsert({ student_id: stu.id, code, desc, target, status }, { onConflict: 'student_id,code' })
+      .select()
+      .single();
+    if (error) throw error;
+    return { student_code, ...data };
+  },
+  async listGoalsAll() {
+    // Join students and goals
+    const { data, error } = await supabase
+      .from('goals')
+      .select('id, code, desc, target, status, student_id, students!inner(code)')
+      .order('students.code');
+    if (error) throw error;
+    // Flatten to include student_code at top level
+    return (data || []).map(g => ({
+      id: g.id,
+      student_code: g.students.code,
+      code: g.code,
+      desc: g.desc,
+      target: g.target,
+      status: g.status
+    }));
   },
   async addProgress({ student_code, goal_id, date, points = '', percent = null, method = '', by_name = 'Teacher', via = 'manual', notes = '' }) {
     const { data: stu, error: e1 } = await supabase.from('students').select('id').eq('code', student_code).single();

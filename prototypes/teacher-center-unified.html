@@ -386,6 +386,42 @@
             <strong>Note:</strong> Your Supabase credentials are stored securely in your browser's localStorage and are never committed to the repository. Each user must configure their own connection.
           </div>
         </div>
+
+        <div class="card" style="margin-top:12px">
+          <div class="card-header"><div>Data Migration & Import Tools</div></div>
+          
+          <div style="margin-top:12px">
+            <div style="font-weight:800;margin-bottom:8px">Seed → Supabase (Students & Goals)</div>
+            <div class="subtle" style="margin-bottom:8px">Push local Students and Goals to Supabase (requires remote connection).</div>
+            <button id="btnSeedSupabase" class="btn small">Seed to Supabase</button>
+          </div>
+
+          <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--line)">
+            <div style="font-weight:800;margin-bottom:8px">Pull ← Supabase (Students & Goals)</div>
+            <div class="subtle" style="margin-bottom:8px">Import Students and Goals from Supabase into local storage.</div>
+            <label style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+              <input id="pullMerge" type="checkbox" style="width:auto" />
+              <span>Merge instead of overwrite</span>
+            </label>
+            <button id="btnPullSupabase" class="btn small">Pull from Supabase</button>
+          </div>
+
+          <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--line)">
+            <div style="font-weight:800;margin-bottom:8px">CSV Import (Goals)</div>
+            <div class="subtle" style="margin-bottom:8px">Import goals from a two-column CSV: Goal Description, Goal Code (e.g., S001.11.1).</div>
+            <label style="display:flex;align-items:center;gap:10px;margin-top:8px">
+              <span style="font-weight:700;min-width:80px">CSV File:</span>
+              <input id="csvFileInput" type="file" accept=".csv,text/csv" style="width:auto;flex:1" />
+            </label>
+            <button id="btnImportCSV" class="btn primary small" style="margin-top:8px">Import CSV</button>
+          </div>
+
+          <div id="toolsStatus" style="margin-top:16px;padding:10px;background:rgba(255,255,255,.04);border-radius:8px;border:1px solid var(--line);display:none">
+            <div style="font-weight:800;margin-bottom:6px" id="toolsStatusTitle">Status</div>
+            <div class="subtle" id="toolsStatusMessage">Ready</div>
+            <div class="subtle" style="margin-top:6px" id="toolsStatusDetails"></div>
+          </div>
+        </div>
       </div>
     </main>
 
@@ -1202,6 +1238,331 @@
     
     // Load settings on initial page load
     loadSettings();
+
+    // =======================
+    // Data Migration Tools: Seed, Pull, CSV Import
+    // =======================
+    
+    // Show status message in the tools section
+    function showToolsStatus(title, message, details = '', isError = false) {
+      const statusDiv = qs('#toolsStatus');
+      const titleEl = qs('#toolsStatusTitle');
+      const messageEl = qs('#toolsStatusMessage');
+      const detailsEl = qs('#toolsStatusDetails');
+      
+      statusDiv.style.display = 'block';
+      titleEl.textContent = title;
+      messageEl.textContent = message;
+      detailsEl.textContent = details;
+      
+      if (isError) {
+        statusDiv.style.borderColor = 'rgba(239,68,68,.5)';
+        statusDiv.style.background = 'rgba(239,68,68,.1)';
+      } else {
+        statusDiv.style.borderColor = 'var(--line)';
+        statusDiv.style.background = 'rgba(255,255,255,.04)';
+      }
+    }
+    
+    // Seed → Supabase: push local students and goals to remote
+    async function seedToSupabase() {
+      if (!isRemote) {
+        showToolsStatus('Error', 'Supabase not enabled. Please configure and enable remote storage first.', '', true);
+        addNotif('Seed failed: Supabase not enabled', { type: 'error' });
+        return;
+      }
+      
+      const btn = qs('#btnSeedSupabase');
+      btn.disabled = true;
+      btn.textContent = 'Seeding...';
+      
+      try {
+        showToolsStatus('Seeding', 'Starting seed operation...', '');
+        
+        // Get local data
+        const localStudents = localStore.get('students', []);
+        const localGoalsMap = localStore.get('iepGoals', {});
+        
+        let studentsUpserted = 0;
+        let goalsUpserted = 0;
+        
+        // Seed students
+        for (const student of localStudents) {
+          try {
+            await db.upsertStudent({ code: student.code, name: student.name || student.code, class_id: student.class_id || null });
+            studentsUpserted++;
+          } catch (err) {
+            console.error('Failed to seed student:', student.code, err);
+          }
+        }
+        
+        // Seed goals
+        for (const [student_code, goals] of Object.entries(localGoalsMap)) {
+          for (const goal of goals) {
+            try {
+              await db.upsertGoal({
+                student_code,
+                code: goal.code,
+                desc: goal.desc || goal.description || '',
+                target: goal.target || null,
+                status: goal.status || 'Open'
+              });
+              goalsUpserted++;
+            } catch (err) {
+              console.error('Failed to seed goal:', student_code, goal.code, err);
+            }
+          }
+        }
+        
+        const summary = `Students: ${studentsUpserted}/${localStudents.length}, Goals: ${goalsUpserted}`;
+        showToolsStatus('Seed Complete', 'Data successfully pushed to Supabase.', summary);
+        addNotif(`Seeded ${studentsUpserted} students and ${goalsUpserted} goals to Supabase`);
+        
+      } catch (err) {
+        console.error('Seed error:', err);
+        showToolsStatus('Seed Failed', 'An error occurred during seeding.', err.message, true);
+        addNotif('Seed failed: ' + err.message, { type: 'error' });
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Seed to Supabase';
+      }
+    }
+    
+    // Pull ← Supabase: import students and goals from remote to local
+    async function pullFromSupabase() {
+      if (!isRemote) {
+        showToolsStatus('Error', 'Supabase not enabled. Please configure and enable remote storage first.', '', true);
+        addNotif('Pull failed: Supabase not enabled', { type: 'error' });
+        return;
+      }
+      
+      const btn = qs('#btnPullSupabase');
+      const mergeMode = qs('#pullMerge').checked;
+      btn.disabled = true;
+      btn.textContent = 'Pulling...';
+      
+      try {
+        showToolsStatus('Pulling', 'Fetching data from Supabase...', '');
+        
+        // Fetch remote data
+        const remoteStudents = await db.listStudents();
+        const remoteGoals = await db.listGoalsAll();
+        
+        // Import into local storage
+        if (mergeMode) {
+          // Merge mode: combine with existing local data
+          const localStudents = localStore.get('students', []);
+          const localGoalsMap = localStore.get('iepGoals', {});
+          
+          // Merge students (by code)
+          const studentMap = new Map(localStudents.map(s => [s.code, s]));
+          for (const rs of remoteStudents) {
+            studentMap.set(rs.code, { ...studentMap.get(rs.code), ...rs });
+          }
+          localStore.set('students', Array.from(studentMap.values()));
+          
+          // Merge goals (by student_code + code)
+          for (const rg of remoteGoals) {
+            const goals = localGoalsMap[rg.student_code] || [];
+            const idx = goals.findIndex(g => g.code === rg.code);
+            const goal = { code: rg.code, desc: rg.desc, target: rg.target, status: rg.status, id: rg.id };
+            if (idx >= 0) {
+              goals[idx] = { ...goals[idx], ...goal };
+            } else {
+              goals.push(goal);
+            }
+            localGoalsMap[rg.student_code] = goals;
+          }
+          localStore.set('iepGoals', localGoalsMap);
+          
+        } else {
+          // Overwrite mode: replace local with remote
+          localStore.set('students', remoteStudents.map(rs => ({
+            code: rs.code,
+            name: rs.name || rs.code,
+            class_id: rs.class_id || null,
+            id: rs.id
+          })));
+          
+          // Rebuild goals map from remote
+          const goalsMap = {};
+          for (const rg of remoteGoals) {
+            if (!goalsMap[rg.student_code]) {
+              goalsMap[rg.student_code] = [];
+            }
+            goalsMap[rg.student_code].push({
+              code: rg.code,
+              desc: rg.desc,
+              target: rg.target,
+              status: rg.status,
+              id: rg.id
+            });
+          }
+          localStore.set('iepGoals', goalsMap);
+        }
+        
+        const mode = mergeMode ? 'merged' : 'overwritten';
+        const summary = `Students: ${remoteStudents.length}, Goals: ${remoteGoals.length} (${mode})`;
+        showToolsStatus('Pull Complete', `Data successfully imported from Supabase (${mode}).`, summary);
+        addNotif(`Pulled ${remoteStudents.length} students and ${remoteGoals.length} goals from Supabase`);
+        
+        // Refresh UI if on IEP tab
+        if (STUDENTS.length) {
+          await loadStudents();
+          await renderIEPTable();
+        }
+        
+      } catch (err) {
+        console.error('Pull error:', err);
+        showToolsStatus('Pull Failed', 'An error occurred during pull.', err.message, true);
+        addNotif('Pull failed: ' + err.message, { type: 'error' });
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Pull from Supabase';
+      }
+    }
+    
+    // CSV Import: parse CSV and create students + goals
+    async function importCSV() {
+      const fileInput = qs('#csvFileInput');
+      const file = fileInput.files[0];
+      
+      if (!file) {
+        showToolsStatus('Error', 'No file selected. Please choose a CSV file.', '', true);
+        return;
+      }
+      
+      const btn = qs('#btnImportCSV');
+      btn.disabled = true;
+      btn.textContent = 'Importing...';
+      
+      try {
+        showToolsStatus('Importing', 'Reading CSV file...', '');
+        
+        // Read file as text
+        const text = await file.text();
+        const lines = text.split(/\r?\n/).map(line => line.trim()).filter(line => line);
+        
+        let rowsProcessed = 0;
+        let studentsCreated = 0;
+        let goalsUpserted = 0;
+        const errors = [];
+        const ERROR_THRESHOLD = 0.5; // Show error state if more than 50% of rows fail
+        
+        // Parse student code from goal code
+        // Pattern: /^([A-Za-z]+\d{3})/ captures:
+        //   - One or more letters ([A-Za-z]+)
+        //   - Followed by exactly 3 digits (\d{3})
+        // Examples: "S001" from "S001.11.1", "S009" from "S009.11.4-2" or "S00911.2"
+        function parseStudentCode(goalCode) {
+          const match = goalCode.match(/^([A-Za-z]+\d{3})/);
+          return match ? match[1] : null;
+        }
+        
+        // Simple CSV parser for two-column format
+        // LIMITATION: This handles basic comma-separated values only.
+        // It does NOT handle escaped quotes or commas within quoted fields (RFC 4180).
+        // For production use with complex CSVs, consider using a proper CSV parsing library.
+        // Current implementation is sufficient for the two-column goal import use case.
+        function parseCSVLine(line) {
+          // Basic split: handles unquoted or simply-quoted fields
+          const parts = line.split(',').map(p => p.trim().replace(/^"|"$/g, ''));
+          return parts;
+        }
+        
+        // Ensure student exists (create if missing)
+        const existingStudents = await db.listStudents();
+        const studentMap = new Map(existingStudents.map(s => [s.code, s]));
+        
+        for (const line of lines) {
+          rowsProcessed++;
+          
+          // Parse CSV line
+          const parts = parseCSVLine(line);
+          if (parts.length < 2) {
+            errors.push(`Row ${rowsProcessed}: Invalid format (needs 2 columns)`);
+            continue;
+          }
+          
+          const goalDesc = parts[0];
+          const goalCode = parts[1];
+          
+          if (!goalDesc || !goalCode) {
+            errors.push(`Row ${rowsProcessed}: Empty goal description or code`);
+            continue;
+          }
+          
+          // Extract student code
+          const studentCode = parseStudentCode(goalCode);
+          if (!studentCode) {
+            errors.push(`Row ${rowsProcessed}: Could not parse student code from '${goalCode}'`);
+            continue;
+          }
+          
+          // Ensure student exists
+          if (!studentMap.has(studentCode)) {
+            try {
+              const newStudent = await db.upsertStudent({ code: studentCode, name: studentCode });
+              studentMap.set(studentCode, newStudent);
+              studentsCreated++;
+            } catch (err) {
+              errors.push(`Row ${rowsProcessed}: Failed to create student ${studentCode}: ${err.message}`);
+              continue;
+            }
+          }
+          
+          // Upsert goal
+          try {
+            await db.upsertGoal({
+              student_code: studentCode,
+              code: goalCode,
+              desc: goalDesc,
+              target: null,
+              status: 'Open'
+            });
+            goalsUpserted++;
+          } catch (err) {
+            errors.push(`Row ${rowsProcessed}: Failed to upsert goal ${goalCode}: ${err.message}`);
+          }
+        }
+        
+        const errorSummary = errors.length > 0 ? `Errors: ${errors.length} (check console)` : '';
+        const summary = `Rows: ${rowsProcessed}, Students created: ${studentsCreated}, Goals upserted: ${goalsUpserted}`;
+        
+        if (errors.length > 0) {
+          console.warn('CSV import errors:', errors);
+          // Only flag as significant error if we processed rows and error rate exceeds threshold
+          const hasSignificantErrors = rowsProcessed > 0 && (errors.length > rowsProcessed * ERROR_THRESHOLD);
+          showToolsStatus('Import Complete (with errors)', summary, errorSummary, hasSignificantErrors);
+        } else {
+          showToolsStatus('Import Complete', summary, 'All rows processed successfully.');
+        }
+        
+        addNotif(`CSV import: ${goalsUpserted} goals imported, ${studentsCreated} students created`);
+        
+        // Clear file input
+        fileInput.value = '';
+        
+        // Refresh UI if on IEP tab
+        if (STUDENTS.length) {
+          await loadStudents();
+          await renderIEPTable();
+        }
+        
+      } catch (err) {
+        console.error('CSV import error:', err);
+        showToolsStatus('Import Failed', 'An error occurred during CSV import.', err.message, true);
+        addNotif('CSV import failed: ' + err.message, { type: 'error' });
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Import CSV';
+      }
+    }
+    
+    // Bind buttons
+    qs('#btnSeedSupabase').addEventListener('click', seedToSupabase);
+    qs('#btnPullSupabase').addEventListener('click', pullFromSupabase);
+    qs('#btnImportCSV').addEventListener('click', importCSV);
   </script>
 </body>
 </html>
