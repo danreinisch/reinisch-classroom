@@ -15,6 +15,11 @@
   --glass-blur: blur(16px);
   --glass-saturate: saturate(1.3);
   
+  /* Green swooping background tweakables */
+  --swoop-green-1: rgba(34, 197, 94, 0.12);
+  --swoop-green-2: rgba(22, 163, 74, 0.08);
+  --swoop-cyan-1: rgba(6, 182, 212, 0.10);
+  
   /* Darker-green branded surfaces */
   --header-start: rgba(20, 83, 45, 0.94);    /* darker green start */
   --header-end: rgba(15, 66, 36, 0.94);      /* darker green end */
@@ -30,6 +35,24 @@
   /* Accent refinements */
   --brand-glow: rgba(34, 197, 94, 0.3);      /* active state glow */
   --cyan-accent: rgba(6, 182, 212, 0.15);    /* subtle cyan depth */
+}
+
+/**
+ * Swooping green background with layered gradients
+ */
+body {
+  background: 
+    /* Swooping green gradient from top-left */
+    radial-gradient(1400px 900px at 15% -5%, var(--swoop-green-1), transparent 55%),
+    /* Cyan accent from right */
+    radial-gradient(1200px 1000px at 95% 15%, var(--swoop-cyan-1), transparent 60%),
+    /* Secondary green swoop from bottom-left */
+    radial-gradient(1000px 800px at 10% 110%, var(--swoop-green-2), transparent 50%),
+    /* Conic gradient for swooping effect */
+    conic-gradient(from 200deg at 25% 40%, transparent 0deg, var(--swoop-green-1) 60deg, transparent 120deg),
+    /* Base dark gradient */
+    linear-gradient(180deg, #0b1220, #0c1322 60%, #0b0f14);
+  background-attachment: fixed;
 }
 
 /**
@@ -225,4 +248,78 @@ input:focus, select:focus, textarea:focus {
 #iepStudents tbody tr[style*="rgba(34,197,94,.08)"] {
   background: linear-gradient(90deg, rgba(34, 197, 94, 0.10), rgba(6, 182, 212, 0.08));
   border-left: 2px solid var(--brand);
+}
+
+/**
+ * Icon rail styling
+ */
+.iconrail.card {
+  background: var(--panel-darker);
+  padding: 10px 8px;
+  position: relative;
+}
+
+.iconrail.card::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: linear-gradient(180deg, 
+    transparent,
+    rgba(34, 197, 94, 0.15) 20%,
+    rgba(6, 182, 212, 0.12) 50%,
+    rgba(34, 197, 94, 0.15) 80%,
+    transparent
+  );
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.2);
+}
+
+.iconrail button {
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: all 0.2s ease;
+}
+
+.iconrail button:hover {
+  background: rgba(15, 23, 42, 0.85);
+  border-color: rgba(255, 255, 255, 0.16);
+  transform: scale(1.05);
+}
+
+.iconrail button:focus {
+  outline: 2px solid rgba(34, 197, 94, 0.4);
+  outline-offset: 2px;
+}
+
+.iconrail button.active {
+  background: linear-gradient(180deg, rgba(34, 197, 94, 0.18), rgba(34, 197, 94, 0.10));
+  border-color: rgba(34, 197, 94, 0.45);
+  box-shadow: 0 4px 20px rgba(34, 197, 94, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  color: #e8f5e9;
+}
+
+/**
+ * Sidebar (submenu) with vertical seam glow
+ */
+.sidebar.card {
+  position: relative;
+}
+
+.sidebar.card::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: linear-gradient(180deg, 
+    transparent,
+    rgba(34, 197, 94, 0.1) 25%,
+    rgba(6, 182, 212, 0.08) 50%,
+    rgba(34, 197, 94, 0.1) 75%,
+    transparent
+  );
+  box-shadow: 0 0 6px rgba(6, 182, 212, 0.15);
 }

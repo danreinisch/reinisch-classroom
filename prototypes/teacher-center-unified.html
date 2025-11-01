@@ -15,8 +15,8 @@
   .btn{border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--ink);padding:10px 14px;border-radius:10px;font-weight:800;cursor:pointer}
   .btn.primary{background:linear-gradient(180deg,rgba(34,197,94,.96),rgba(22,163,74,.96));color:#032313;border:0}
   .btn.small{padding:6px 10px}
-  .layout{display:grid;grid-template-columns: 220px minmax(0,1fr) 300px;gap:14px;max-width:1700px;margin:0 auto;padding:14px}
-  @media (max-width:1100px){.layout{grid-template-columns:1fr}.rightpanel,.sidebar{display:none}}
+  .layout{display:grid;grid-template-columns: 72px 240px minmax(0,1fr) 300px;gap:14px;max-width:1700px;margin:0 auto;padding:14px}
+  @media (max-width:1100px){.layout{grid-template-columns:1fr}.rightpanel,.sidebar,.iconrail{display:none}}
   .card{background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,.25);padding:14px}
   .card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-weight:900}
   .nav a{display:block;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--ink);font-weight:800;margin-bottom:8px;text-decoration:none}
@@ -35,6 +35,10 @@
   .grid-iep{display:grid;grid-template-columns: 1fr 1.2fr; gap:12px}
   .table-wrap{overflow:auto}
   .kbd{padding:2px 6px;border-radius:6px;border:1px solid var(--line);background:rgba(255,255,255,.06);font-size:12px}
+  .iconrail{display:flex;flex-direction:column;gap:8px}
+  .iconrail button{width:56px;height:56px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--ink);font-size:24px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+  .iconrail button.active{background:linear-gradient(180deg,rgba(34,197,94,.12),rgba(34,197,94,.06));border-color:rgba(34,197,94,.4);box-shadow:0 4px 16px rgba(34,197,94,.3)}
+  .iconrail button:hover{border-color:rgba(255,255,255,.18)}
 </style>
 
 <!-- UI Polish: modal readability + dark dashboard aesthetic -->
@@ -218,20 +222,16 @@
   </div>
 
   <section id="view-teacher" class="layout" style="display:none">
+    <aside class="iconrail card">
+      <button class="active" data-area="overview" title="Overview" aria-label="Overview">🏠</button>
+      <button data-area="work" title="Work" aria-label="Work">📝</button>
+      <button data-area="data" title="Data" aria-label="Data">📊</button>
+    </aside>
+
     <aside class="sidebar card">
-      <div class="card-header" style="margin:0"><div>Teacher Tools</div></div>
-      <div class="nav" id="tTabs">
-        <a href="#" class="active" data-tab="studentPortal">Student Portal</a>
-        <a href="#" data-tab="iepProgress">IEP Progress</a>
-        <a href="#" data-tab="events">IEP & Evaluations</a>
-        <a href="#" data-tab="passwords">Passwords</a>
-        <a href="#" data-tab="assignments">Assignments</a>
-        <a href="#" data-tab="results">Results</a>
-        <a href="#" data-tab="hub">Assignment Hub</a>
-        <a href="#" data-tab="classes">Classes</a>
-        <a href="#" data-tab="upload">Upload</a>
-        <a href="#" data-tab="data">Data Import/Export</a>
-        <a href="#" data-tab="settings">Settings</a>
+      <div class="card-header" style="margin:0"><div id="submenuTitle">Overview</div></div>
+      <div class="nav" id="submenu">
+        <!-- Submenu items will be populated by JS -->
       </div>
     </aside>
 
@@ -581,16 +581,91 @@
       }
     });
 
-    // Tabs
-    on('#tTabs', 'click', e=>{
-      if (e.target.tagName !== 'A') return; e.preventDefault();
-      qsa('#tTabs a').forEach(a=>a.classList.remove('active'));
-      e.target.classList.add('active');
-      const tab = e.target.getAttribute('data-tab');
-      qsa('.ttab').forEach(t=> t.style.display = (t.getAttribute('data-tab')===tab)?'block':'none');
+    // Area → Submenu → Tab mapping
+    const AREA_MAP = {
+      overview: [
+        { label: 'Student Portal', tab: 'studentPortal', icon: '🧑' },
+        { label: 'IEP Progress', tab: 'iepProgress', icon: '🎯' },
+        { label: 'IEP & Evaluations', tab: 'events', icon: '📅' }
+      ],
+      work: [
+        { label: 'Assignments', tab: 'assignments', icon: '📝' },
+        { label: 'Results', tab: 'results', icon: '🧪' },
+        { label: 'Assignment Hub', tab: 'hub', icon: '🛠' }
+      ],
+      data: [
+        { label: 'Classes', tab: 'classes', icon: '👥' },
+        { label: 'Upload', tab: 'upload', icon: '📦' },
+        { label: 'Data Import/Export', tab: 'data', icon: '📁' },
+        { label: 'Settings', tab: 'settings', icon: '⚙️' }
+      ]
+    };
+
+    let currentArea = 'overview';
+    
+    // Render submenu for area
+    function renderSubmenu(area) {
+      const submenu = qs('#submenu');
+      const items = AREA_MAP[area] || [];
+      const titleMap = { overview: 'Overview', work: 'Work', data: 'Data' };
+      qs('#submenuTitle').textContent = titleMap[area] || area;
+      
+      submenu.innerHTML = items.map((item, idx) => 
+        `<a href="#" class="${idx === 0 ? 'active' : ''}" data-tab="${item.tab}">${item.icon} ${item.label}</a>`
+      ).join('');
+      
+      // Activate first tab in area
+      if (items.length > 0) {
+        switchTab(items[0].tab);
+      }
+    }
+    
+    // Switch tab
+    function switchTab(tab) {
+      qsa('#submenu a').forEach(a => a.classList.remove('active'));
+      const link = qs(`#submenu a[data-tab="${tab}"]`);
+      if (link) link.classList.add('active');
+      
+      qsa('.ttab').forEach(t => t.style.display = (t.getAttribute('data-tab') === tab) ? 'block' : 'none');
+      
+      // Initialize tab if needed
       if (tab === 'iepProgress') initIEP();
       if (tab === 'events') initEvents();
+      if (tab === 'assignments') initAssignments();
+      if (tab === 'settings') initSettings();
+    }
+    
+    // Icon rail clicks
+    on('.iconrail', 'click', e => {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      
+      const area = btn.getAttribute('data-area');
+      if (!area) return;
+      
+      // Update rail active state
+      qsa('.iconrail button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      
+      // Update submenu and activate first tab
+      currentArea = area;
+      renderSubmenu(area);
     });
+    
+    // Submenu clicks
+    on('#submenu', 'click', e => {
+      if (e.target.tagName !== 'A') return;
+      e.preventDefault();
+      
+      qsa('#submenu a').forEach(a => a.classList.remove('active'));
+      e.target.classList.add('active');
+      
+      const tab = e.target.getAttribute('data-tab');
+      switchTab(tab);
+    });
+    
+    // Initialize with default area
+    renderSubmenu(currentArea);
 
     // KPIs and notifications
     function renderKPIs(){
@@ -1109,13 +1184,6 @@
       await renderAssignmentsList();
     }
 
-    // Update tab switcher to initialize assignments
-    qs('#tTabs').addEventListener('click', async (e) => {
-      if (e.target.tagName !== 'A') return;
-      const tab = e.target.getAttribute('data-tab');
-      if (tab === 'assignments') await initAssignments();
-    });
-
     // Optional: auto-open Teacher Center for local dev
     // showTeacher(); initIEP();
 
@@ -1230,13 +1298,6 @@
     function initSettings() {
       loadSettings();
     }
-    
-    // Update tab switcher to initialize settings
-    const settingsTabHandler = qs('#tTabs').addEventListener('click', async (e) => {
-      if (e.target.tagName !== 'A') return;
-      const tab = e.target.getAttribute('data-tab');
-      if (tab === 'settings') initSettings();
-    });
     
     // Load settings on initial page load
     loadSettings();
