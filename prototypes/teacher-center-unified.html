@@ -561,14 +561,16 @@
     const NS = 'rc_unified_';
     const qs = s => document.querySelector(s);
     const qsa = s => Array.from(document.querySelectorAll(s));
+    // Safe event listener helper: only attach if element exists
+    const on = (sel, evt, fn) => { const el = document.querySelector(sel); if (el) el.addEventListener(evt, fn); };
 
     function showTeacher(){ qs('#view-teacher').style.display='grid'; }
     function hideTeacher(){ qs('#view-teacher').style.display='none'; }
 
     // Teacher auth
-    qs('#btnTeacher').addEventListener('click', ()=>{ qs('#teachModal').classList.add('show'); qs('#teachPass').focus(); });
-    qs('#teachCancel').addEventListener('click', ()=> qs('#teachModal').classList.remove('show'));
-    qs('#teachGo').addEventListener('click', ()=>{
+    on('#btnTeacher', 'click', ()=>{ qs('#teachModal').classList.add('show'); qs('#teachPass').focus(); });
+    on('#teachCancel', 'click', ()=> qs('#teachModal').classList.remove('show'));
+    on('#teachGo', 'click', ()=>{
       const input = qs('#teachPass').value;
       if (input === TEACHER_PW_LOCAL) {
         qs('#teachModal').classList.remove('show');
@@ -580,7 +582,7 @@
     });
 
     // Tabs
-    qs('#tTabs').addEventListener('click', e=>{
+    on('#tTabs', 'click', e=>{
       if (e.target.tagName !== 'A') return; e.preventDefault();
       qsa('#tTabs a').forEach(a=>a.classList.remove('active'));
       e.target.classList.add('active');
@@ -1068,12 +1070,12 @@
     }
 
     // Modal controls
-    qs('#btnImportLibrary').addEventListener('click', openImportLibraryModal);
-    qs('#libCancel').addEventListener('click', () => closeModal('#importLibraryModal'));
-    qs('#libImport').addEventListener('click', importSelectedItems);
-    qs('#libSearch').addEventListener('input', renderLibraryItems);
+    on('#btnImportLibrary', 'click', openImportLibraryModal);
+    on('#libCancel', 'click', () => closeModal('#importLibraryModal'));
+    on('#libImport', 'click', importSelectedItems);
+    on('#libSearch', 'input', renderLibraryItems);
     
-    qs('#libSelectAll').addEventListener('click', () => {
+    on('#libSelectAll', 'click', () => {
       const searchTerm = (qs('#libSearch')?.value || '').toLowerCase();
       const filtered = filterLibraryItems(libraryItems, searchTerm);
       const filteredKeys = filtered.map(item => getItemKey(item));
@@ -1108,7 +1110,7 @@
     }
 
     // Update tab switcher to initialize assignments
-    qs('#tTabs').addEventListener('click', async (e) => {
+    on('#tTabs', 'click', async (e) => {
       if (e.target.tagName !== 'A') return;
       const tab = e.target.getAttribute('data-tab');
       if (tab === 'assignments') await initAssignments();
