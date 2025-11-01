@@ -30,8 +30,10 @@ export async function testConnection() {
   
   try {
     // Attempt a cheap query to test connection
-    const { error } = await supabase.from('students').select('id').limit(1);
+    // Using a simple select that should work on any Supabase project
+    const { error } = await supabase.from('students').select('id', { count: 'exact', head: true });
     if (error) {
+      // If students table doesn't exist, that's also useful info
       return { ok: false, error: error.message };
     }
     return { ok: true };

@@ -1072,7 +1072,6 @@
     }
 
     // Update tab switcher to initialize assignments
-    const originalTabHandler = qs('#tTabs').onclick;
     qs('#tTabs').addEventListener('click', async (e) => {
       if (e.target.tagName !== 'A') return;
       const tab = e.target.getAttribute('data-tab');
