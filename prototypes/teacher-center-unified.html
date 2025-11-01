@@ -1460,8 +1460,10 @@
         }
         
         // Simple CSV parser for two-column format
-        // Note: This handles basic comma-separated values.
-        // For complex CSVs with quoted fields containing commas, use a proper CSV library.
+        // LIMITATION: This handles basic comma-separated values only.
+        // It does NOT handle escaped quotes or commas within quoted fields (RFC 4180).
+        // For production use with complex CSVs, consider using a proper CSV parsing library.
+        // Current implementation is sufficient for the two-column goal import use case.
         function parseCSVLine(line) {
           // Basic split: handles unquoted or simply-quoted fields
           const parts = line.split(',').map(p => p.trim().replace(/^"|"$/g, ''));
@@ -1529,7 +1531,8 @@
         
         if (errors.length > 0) {
           console.warn('CSV import errors:', errors);
-          const hasSignificantErrors = errors.length > rowsProcessed * ERROR_THRESHOLD;
+          // Only flag as significant error if we processed rows and error rate exceeds threshold
+          const hasSignificantErrors = rowsProcessed > 0 && (errors.length > rowsProcessed * ERROR_THRESHOLD);
           showToolsStatus('Import Complete (with errors)', summary, errorSummary, hasSignificantErrors);
         } else {
           showToolsStatus('Import Complete', summary, 'All rows processed successfully.');
