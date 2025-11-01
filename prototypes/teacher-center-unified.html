@@ -395,6 +395,8 @@
     const app = document.getElementById('app');
 
     // Initialize teacher password if not set (localStorage only)
+    // NOTE: Plaintext storage is intentional for local-only development mode.
+    // Production deployments should use Supabase with bcrypt-hashed passwords.
     if (!isRemote && !localStorage.getItem(TEACHER_PASSWORD_KEY)) {
       localStorage.setItem(TEACHER_PASSWORD_KEY, DEFAULT_TEACHER_PASSWORD);
     }
