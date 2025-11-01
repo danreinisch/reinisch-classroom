@@ -319,8 +319,13 @@
 
       <!-- Other tabs (placeholders) -->
       <div class="card ttab" data-tab="assignments" style="display:none">
-        <div class="card-header"><div>📝 Assignments</div></div>
-        <div class="subtle">WIP: Porting from v8.2.</div>
+        <div class="card-header">
+          <div>📝 Assignments</div>
+          <button class="btn primary small" id="btnImportLibrary">Import from Admin Library</button>
+        </div>
+        <div id="assignmentsList" class="scroll" style="margin-top:12px">
+          <!-- Assignments list will be rendered here -->
+        </div>
       </div>
 
       <div class="card ttab" data-tab="results" style="display:none">
@@ -435,6 +440,42 @@
     </div>
   </div>
 
+  <!-- Import from Library modal -->
+  <div class="modal-backdrop" id="importLibraryModal">
+    <div class="modal card" style="max-width:900px">
+      <div class="card-header"><div>Import from Admin Library</div></div>
+      
+      <div style="display:grid;grid-template-columns:1fr 2fr;gap:12px;margin-top:12px">
+        <label>Source Type
+          <select id="libSourceType" class="btn small" disabled>
+            <option value="presentations" selected>Presentations</option>
+          </select>
+        </label>
+        <label>Root Path
+          <input id="libRootPath" type="text" class="btn small" value="REINISCHCLASSROOM P U B L I S H E R/LANGUAGE ARTS/A Door Into Time ">
+        </label>
+      </div>
+      
+      <label style="margin-top:12px">Search
+        <input id="libSearch" type="text" class="btn small" placeholder="Search by title, slug, or week...">
+      </label>
+      
+      <div style="margin-top:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
+        <span class="subtle" id="libItemCount">0 items</span>
+        <button class="btn small" id="libSelectAll">Select All</button>
+      </div>
+      
+      <div id="libItemsList" class="scroll" style="max-height:50vh;overflow:auto;padding:10px">
+        <!-- Library items will be rendered here -->
+      </div>
+      
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px">
+        <button class="btn small" id="libCancel">Cancel</button>
+        <button class="btn primary small" id="libImport">Import Selected</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Summary modal -->
   <div class="modal-backdrop" id="sumModal">
     <div class="modal card" style="max-width:900px">
@@ -448,6 +489,7 @@
 
   <script type="module">
     import { db, isRemote, localStore } from '../web/data-adapter.js';
+    import { listLibraryItems } from '../web/library.js';
 
     const TEACHER_PW_LOCAL = 'teacher123';
     const NS = 'rc_unified_';
@@ -704,8 +746,7 @@
       const agg = {}; // key: student|goal -> { sum, n, lastDate }
       for (const p of progress){
         if (p.percent==null) continue;
-        const key = \
-`${p.student_code}|${p.goal_id}`;
+        const key = `${p.student_code}|${p.goal_id}`;
         if (!agg[key]) agg[key]={ sum:0, n:0, lastDate:'' };
         agg[key].sum += Number(p.percent)||0; agg[key].n += 1; agg[key].lastDate = !agg[key].lastDate || (p.date||'')>agg[key].lastDate ? (p.date||'') : agg[key].lastDate;
       }
@@ -772,6 +813,241 @@
     // Initial dashboards
     renderKPIs();
     renderNotifications();
+
+    // =======================
+    // Import from Library
+    // =======================
+    let libraryItems = [];
+    let selectedLibraryItems = new Set(); // Stores item slugs or unique IDs
+
+    // Filter items by search term
+    function filterLibraryItems(items, searchTerm) {
+      return items.filter(item => {
+        const title = (item.title || '').toLowerCase();
+        const slug = (item.slug || '').toLowerCase();
+        const week = String(item.week || '').toLowerCase();
+        return title.includes(searchTerm) || slug.includes(searchTerm) || week.includes(searchTerm);
+      });
+    }
+
+    // Get unique key for an item
+    function getItemKey(item) {
+      return item.slug || `${item.title}-${item.series}`;
+    }
+
+    // Render assignments list
+    async function renderAssignmentsList() {
+      const wrap = qs('#assignmentsList');
+      const assignments = await db.listAssignments();
+      
+      if (!assignments || assignments.length === 0) {
+        wrap.innerHTML = '<div class="subtle" style="padding:10px">No assignments yet. Use "Import from Admin Library" to get started.</div>';
+        return;
+      }
+      
+      // Build table
+      const rows = assignments.map(a => {
+        const pageLink = a.page ? `<a href="../${a.page}" target="_blank" style="color:var(--brand);text-decoration:none">View</a>` : '—';
+        const heroThumb = a.hero ? `<img src="../${a.hero}" style="width:40px;height:40px;object-fit:cover;border-radius:6px;vertical-align:middle" alt="">` : '';
+        const created = a.created_at ? new Date(a.created_at).toLocaleDateString() : '—';
+        return `<tr>
+          <td>${heroThumb}</td>
+          <td style="font-weight:800">${a.title || '—'}</td>
+          <td>${a.series || '—'}</td>
+          <td>${a.slug || '—'}</td>
+          <td>${pageLink}</td>
+          <td class="subtle">${created}</td>
+        </tr>`;
+      });
+      
+      wrap.innerHTML = `
+        <table class="table">
+          <thead>
+            <tr>
+              <th></th>
+              <th>Title</th>
+              <th>Series</th>
+              <th>Slug</th>
+              <th>Page</th>
+              <th>Created</th>
+            </tr>
+          </thead>
+          <tbody>${rows.join('')}</tbody>
+        </table>
+      `;
+    }
+
+    // Open import modal
+    async function openImportLibraryModal() {
+      selectedLibraryItems.clear();
+      const rootPath = qs('#libRootPath').value.trim();
+      const type = qs('#libSourceType').value;
+      
+      // Load items
+      try {
+        libraryItems = await listLibraryItems({ type, root: rootPath });
+        renderLibraryItems();
+        openModal('#importLibraryModal');
+        qs('#libSearch').focus();
+      } catch (err) {
+        console.error('Failed to load library items:', err);
+        addNotif('Failed to load library: ' + err.message, { type: 'error' });
+      }
+    }
+
+    // Render library items list with search filter
+    function renderLibraryItems() {
+      const searchTerm = (qs('#libSearch')?.value || '').toLowerCase();
+      const filtered = filterLibraryItems(libraryItems, searchTerm);
+      
+      qs('#libItemCount').textContent = `${filtered.length} item${filtered.length !== 1 ? 's' : ''}`;
+      
+      const wrap = qs('#libItemsList');
+      if (filtered.length === 0) {
+        wrap.innerHTML = '<div class="subtle" style="text-align:center;padding:20px">No items found</div>';
+        return;
+      }
+      
+      const items = filtered.map((item) => {
+        const itemKey = getItemKey(item);
+        const isChecked = selectedLibraryItems.has(itemKey);
+        const heroThumb = item.hero 
+          ? `<img src="../${item.hero}" style="width:60px;height:60px;object-fit:cover;border-radius:8px" alt="">` 
+          : '<div style="width:60px;height:60px;background:rgba(255,255,255,.06);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:24px">📄</div>';
+        
+        const weekLabel = item.week ? `<span class="badge">Week ${item.week}</span>` : '';
+        const dateLabel = item.date ? `<span class="subtle">${new Date(item.date).toLocaleDateString()}</span>` : '';
+        
+        return `
+          <div class="goal-item" style="cursor:pointer;transition:.15s" data-key="${itemKey}">
+            <input type="checkbox" ${isChecked ? 'checked' : ''} style="width:auto;margin-top:10px" data-key="${itemKey}">
+            <div style="margin-right:12px">${heroThumb}</div>
+            <div style="flex:1">
+              <div style="font-weight:800;margin-bottom:4px">${item.title || 'Untitled'}</div>
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                ${weekLabel}
+                ${dateLabel}
+                ${item.slug ? `<span class="subtle">Slug: ${item.slug}</span>` : ''}
+              </div>
+              ${item.summary ? `<div class="subtle" style="margin-top:6px;font-size:13px">${item.summary}</div>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+      
+      wrap.innerHTML = items;
+      
+      // Bind checkbox and row click events
+      wrap.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        cb.addEventListener('change', (e) => {
+          e.stopPropagation();
+          const key = cb.dataset.key;
+          if (cb.checked) {
+            selectedLibraryItems.add(key);
+          } else {
+            selectedLibraryItems.delete(key);
+          }
+        });
+      });
+      
+      wrap.querySelectorAll('.goal-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+          if (e.target.tagName === 'INPUT') return; // Skip if clicking checkbox directly
+          const key = item.dataset.key;
+          const cb = item.querySelector('input[type="checkbox"]');
+          cb.checked = !cb.checked;
+          if (cb.checked) {
+            selectedLibraryItems.add(key);
+          } else {
+            selectedLibraryItems.delete(key);
+          }
+        });
+      });
+    }
+
+    // Import selected items
+    async function importSelectedItems() {
+      if (selectedLibraryItems.size === 0) {
+        addNotif('No items selected', { type: 'warning' });
+        return;
+      }
+      
+      const rootPath = qs('#libRootPath').value.trim();
+      // Convert selected keys back to items
+      const selectedItems = libraryItems.filter(item => selectedLibraryItems.has(getItemKey(item)));
+      
+      let imported = 0;
+      for (const item of selectedItems) {
+        try {
+          await db.createAssignment({
+            title: item.title,
+            series: item.series || 'Presentations',
+            slug: item.slug || '',
+            page: item.page || '',
+            hero: item.hero || '',
+            source: 'presentations',
+            library_root: rootPath,
+            created_via: 'import',
+            created_at: new Date().toISOString()
+          });
+          imported++;
+        } catch (err) {
+          console.error('Failed to import item:', item, err);
+        }
+      }
+      
+      addNotif(`Imported ${imported} assignment${imported !== 1 ? 's' : ''} from library`, { count: imported });
+      closeModal('#importLibraryModal');
+      await renderAssignmentsList();
+    }
+
+    // Modal controls
+    qs('#btnImportLibrary').addEventListener('click', openImportLibraryModal);
+    qs('#libCancel').addEventListener('click', () => closeModal('#importLibraryModal'));
+    qs('#libImport').addEventListener('click', importSelectedItems);
+    qs('#libSearch').addEventListener('input', renderLibraryItems);
+    
+    qs('#libSelectAll').addEventListener('click', () => {
+      const searchTerm = (qs('#libSearch')?.value || '').toLowerCase();
+      const filtered = filterLibraryItems(libraryItems, searchTerm);
+      const filteredKeys = filtered.map(item => getItemKey(item));
+      
+      if (selectedLibraryItems.size === filteredKeys.length && filteredKeys.every(key => selectedLibraryItems.has(key))) {
+        // Deselect all filtered items
+        filteredKeys.forEach(key => selectedLibraryItems.delete(key));
+      } else {
+        // Select all filtered items
+        filteredKeys.forEach(key => selectedLibraryItems.add(key));
+      }
+      renderLibraryItems();
+    });
+
+    // Keyboard navigation for import modal
+    document.addEventListener('keydown', (e) => {
+      const modal = qs('#importLibraryModal');
+      if (!modal.classList.contains('show')) return;
+      
+      if (e.key === 'Escape') {
+        closeModal('#importLibraryModal');
+        e.preventDefault();
+      } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        importSelectedItems();
+        e.preventDefault();
+      }
+    });
+
+    // Initialize assignments tab
+    async function initAssignments() {
+      await renderAssignmentsList();
+    }
+
+    // Update tab switcher to initialize assignments
+    const originalTabHandler = qs('#tTabs').onclick;
+    qs('#tTabs').addEventListener('click', async (e) => {
+      if (e.target.tagName !== 'A') return;
+      const tab = e.target.getAttribute('data-tab');
+      if (tab === 'assignments') await initAssignments();
+    });
 
     // Optional: auto-open Teacher Center for local dev
     // showTeacher(); initIEP();
