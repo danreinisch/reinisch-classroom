@@ -1447,13 +1447,25 @@
         let studentsCreated = 0;
         let goalsUpserted = 0;
         const errors = [];
+        const ERROR_THRESHOLD = 0.5; // Show error state if more than 50% of rows fail
         
         // Parse student code from goal code
-        // Pattern: /^([A-Za-z]+\d{3})/ captures first letter(s) + 3 digits
-        // Examples: S001 from S001.11.1, S009 from S009.11.4-2 or S00911.2
+        // Pattern: /^([A-Za-z]+\d{3})/ captures:
+        //   - One or more letters ([A-Za-z]+)
+        //   - Followed by exactly 3 digits (\d{3})
+        // Examples: "S001" from "S001.11.1", "S009" from "S009.11.4-2" or "S00911.2"
         function parseStudentCode(goalCode) {
           const match = goalCode.match(/^([A-Za-z]+\d{3})/);
           return match ? match[1] : null;
+        }
+        
+        // Simple CSV parser for two-column format
+        // Note: This handles basic comma-separated values.
+        // For complex CSVs with quoted fields containing commas, use a proper CSV library.
+        function parseCSVLine(line) {
+          // Basic split: handles unquoted or simply-quoted fields
+          const parts = line.split(',').map(p => p.trim().replace(/^"|"$/g, ''));
+          return parts;
         }
         
         // Ensure student exists (create if missing)
@@ -1463,8 +1475,8 @@
         for (const line of lines) {
           rowsProcessed++;
           
-          // Parse CSV: simple split by comma (handle quoted fields if needed)
-          const parts = line.split(',').map(p => p.trim().replace(/^"|"$/g, ''));
+          // Parse CSV line
+          const parts = parseCSVLine(line);
           if (parts.length < 2) {
             errors.push(`Row ${rowsProcessed}: Invalid format (needs 2 columns)`);
             continue;
@@ -1517,7 +1529,7 @@
         
         if (errors.length > 0) {
           console.warn('CSV import errors:', errors);
-          const hasSignificantErrors = errors.length > rowsProcessed / 2;
+          const hasSignificantErrors = errors.length > rowsProcessed * ERROR_THRESHOLD;
           showToolsStatus('Import Complete (with errors)', summary, errorSummary, hasSignificantErrors);
         } else {
           showToolsStatus('Import Complete', summary, 'All rows processed successfully.');
