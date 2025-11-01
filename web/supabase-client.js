@@ -2,12 +2,42 @@
 // Downstream code should feature-detect and fall back to localStorage when supabase is null.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-export const supabase = (window.SUPABASE_URL && window.SUPABASE_ANON_KEY)
-  ? createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY, {
+// Read config from localStorage
+const NS = 'rc_unified_';
+const storedUrl = localStorage.getItem(NS + 'supabase_url');
+const storedKey = localStorage.getItem(NS + 'supabase_key');
+const useRemote = localStorage.getItem(NS + 'use_remote') === 'true';
+
+// Initialize Supabase client only when both URL and key exist AND use_remote is true
+const url = window.SUPABASE_URL || storedUrl;
+const key = window.SUPABASE_ANON_KEY || storedKey;
+
+export const supabase = (url && key && useRemote)
+  ? createClient(url, key, {
       auth: { persistSession: true, autoRefreshToken: true }
     })
   : null;
 
 if (!supabase) {
   console.warn('Supabase env not detected; app will use localStorage backend.');
+}
+
+// Helper to test connection
+export async function testConnection() {
+  if (!supabase) {
+    return { ok: false, error: 'not-configured' };
+  }
+  
+  try {
+    // Attempt a cheap query to test connection
+    // Using a simple select that should work on any Supabase project
+    const { error } = await supabase.from('students').select('id', { count: 'exact', head: true });
+    if (error) {
+      // If students table doesn't exist, that's also useful info
+      return { ok: false, error: error.message };
+    }
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err.message || 'connection-failed' };
+  }
 }
