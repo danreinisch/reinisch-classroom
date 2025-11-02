@@ -25,6 +25,9 @@
   --glass-modal-alpha: 0.80;     /* modals - intentionally denser */
   --glass-pill-alpha: 0.10;      /* badges, pills, chips */
   --glass-head-alpha: 0.64;      /* table headers, toolbars */
+  --glass-input-alpha: 0.08;     /* input fields, selects, textareas */
+  --glass-input-focus-alpha: 0.12; /* focused input fields */
+  --glass-hover-alpha: 0.06;     /* hover states */
   
   /* Green swooping background tweakables - ENHANCED for v2 */
   --swoop-green-1: rgba(34, 197, 94, 0.18);   /* stronger emerald */
@@ -210,7 +213,7 @@ body {
 }
 
 .table tbody tr:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, var(--glass-hover-alpha));
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
 }
@@ -219,7 +222,7 @@ body {
  * Inputs: True frosted glass with translucent backgrounds - Glass Pass v3
  */
 input, select, textarea {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, var(--glass-input-alpha));
   backdrop-filter: blur(10px) saturate(1.1);
   -webkit-backdrop-filter: blur(10px) saturate(1.1);
   border: 1px solid rgba(255, 255, 255, 0.16);
@@ -234,7 +237,7 @@ input:focus, select:focus, textarea:focus {
   outline: 2px solid rgba(34, 197, 94, 0.4);
   border-color: rgba(34, 197, 94, 0.5);
   box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.15), inset 0 1px 3px rgba(0, 0, 0, 0.3);
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, var(--glass-input-focus-alpha));
   backdrop-filter: blur(12px) saturate(1.2);
   -webkit-backdrop-filter: blur(12px) saturate(1.2);
 }
@@ -405,5 +408,8 @@ input:focus, select:focus, textarea:focus {
     --glass-card-alpha: 0.70;    /* +0.08 for readability */
     --glass-modal-alpha: 0.88;   /* +0.08 for readability */
     --glass-head-alpha: 0.72;    /* +0.08 for readability */
+    --glass-input-alpha: 0.16;   /* +0.08 for readability */
+    --glass-input-focus-alpha: 0.20; /* +0.08 for readability */
+    --glass-hover-alpha: 0.14;   /* +0.08 for readability */
   }
 }
