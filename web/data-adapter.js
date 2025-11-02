@@ -135,6 +135,60 @@ const local = {
     
     return { submission_id: id };
   },
+  
+  // Phase B: Classes and Enrollments (local stub)
+  async listClasses() {
+    // Return stub data for local mode
+    return store.get('classes', [
+      { id: 'CLS1', code: 'CLASS-A', name: 'Class A' },
+      { id: 'CLS2', code: 'CLASS-B', name: 'Class B' }
+    ]);
+  },
+  
+  async listClassEnrollments() {
+    // Return stub enrollments mapping class_id to student codes
+    return store.get('classEnrollments', []);
+  },
+  
+  // Phase B: HTML Package Upload (local stub - stores manifest but not actual files)
+  async uploadAssignmentZip(file, manifest, createdBy = null) {
+    // In local mode, we can't actually store files, so just create assignment with manifest data
+    const id = 'A' + Math.random().toString(36).slice(2, 9).toUpperCase();
+    const arr = store.get('assignments', []);
+    const assignment = {
+      id,
+      title: manifest.title,
+      type: 'html',
+      series: null,
+      page: manifest.page || null,
+      hero: null,
+      meta: {
+        version: manifest.version,
+        questions: manifest.questions || []
+      },
+      created_by: createdBy,
+      created_at: new Date().toISOString()
+    };
+    arr.push(assignment);
+    store.set('assignments', arr);
+    return assignment;
+  },
+  
+  // Phase B: Google Forms metadata
+  async saveFormMeta(assignmentId, meta) {
+    const arr = store.get('assignments', []);
+    const assignment = arr.find(a => a.id === assignmentId);
+    if (!assignment) throw new Error('Assignment not found');
+    assignment.meta = { ...assignment.meta, ...meta };
+    store.set('assignments', arr);
+    return true;
+  },
+  
+  // Phase B: Import responses from CSV (local stub)
+  async importResponsesFromCSV(assignmentId, file, mapping) {
+    // Local mode doesn't support full CSV import, return stub
+    throw new Error('CSV import not supported in local mode. Please enable Supabase.');
+  },
 };
 
 const remote = supabase && {
@@ -322,6 +376,221 @@ const remote = supabase && {
     if (e3) throw e3;
     
     return { submission_id: submission.id };
+  },
+  
+  // Phase B: Classes and Enrollments
+  async listClasses() {
+    const { data, error } = await supabase
+      .from('classes')
+      .select('id, name')
+      .order('name');
+    if (error) throw error;
+    return data || [];
+  },
+  
+  async listClassEnrollments() {
+    // Join students with classes to get class_id -> student mappings
+    const { data, error } = await supabase
+      .from('students')
+      .select('id, code, class_id')
+      .not('class_id', 'is', null);
+    if (error) throw error;
+    
+    // Return array of { class_id, student_id, student_code }
+    return (data || []).map(s => ({
+      class_id: s.class_id,
+      student_id: s.id,
+      student_code: s.code
+    }));
+  },
+  
+  // Phase B: HTML Package Upload with Supabase Storage
+  async uploadAssignmentZip(file, manifest, createdBy = null) {
+    // 1. Create assignment row first
+    const payload = {
+      title: manifest.title,
+      type: 'html',
+      series: manifest.series || null,
+      page: null, // Will be set after upload
+      hero: null,
+      meta: {
+        version: manifest.version,
+        questions: manifest.questions || []
+      },
+      created_by: createdBy
+    };
+    
+    const { data: assignment, error: createErr } = await supabase
+      .from('assignments')
+      .insert(payload)
+      .select()
+      .single();
+    
+    if (createErr) throw createErr;
+    
+    // 2. Upload all files from the zip to storage
+    // Files should be uploaded to: assignments/{assignmentId}/{filename}
+    const basePath = `assignments/${assignment.id}`;
+    
+    try {
+      // NOTE: In a full implementation, this function should:
+      // 1. Extract all files from the ZIP (already done by caller with JSZip)
+      // 2. Iterate through each file and upload to Supabase Storage
+      // 3. For example:
+      //    for (const [path, file] of Object.entries(zipFiles)) {
+      //      const content = await file.async('blob');
+      //      await supabase.storage.from('assignments').upload(`${basePath}/${path}`, content);
+      //    }
+      // 
+      // For now, we construct the expected public URL without actual upload.
+      // The caller must handle file uploads separately if using Supabase Storage.
+      
+      const indexUrl = `${supabase.storage.from('assignments').getPublicUrl(`${basePath}/index.html`).data.publicUrl}`;
+      
+      // 3. Update assignment.page with the public URL
+      const { error: updateErr } = await supabase
+        .from('assignments')
+        .update({ page: indexUrl })
+        .eq('id', assignment.id);
+      
+      if (updateErr) throw updateErr;
+      
+      // Return the updated assignment
+      return { ...assignment, page: indexUrl };
+    } catch (uploadErr) {
+      // If upload fails, delete the assignment to maintain consistency
+      await supabase.from('assignments').delete().eq('id', assignment.id);
+      throw uploadErr;
+    }
+  },
+  
+  // Phase B: Google Forms metadata
+  async saveFormMeta(assignmentId, meta) {
+    // Fetch current meta and merge with new meta
+    const { data: current, error: fetchErr } = await supabase
+      .from('assignments')
+      .select('meta')
+      .eq('id', assignmentId)
+      .single();
+    
+    if (fetchErr) throw fetchErr;
+    
+    // Merge metadata
+    const merged = { ...(current?.meta || {}), ...meta };
+    
+    // Update with properly parameterized query
+    const { error } = await supabase
+      .from('assignments')
+      .update({ meta: merged })
+      .eq('id', assignmentId);
+    
+    if (error) throw error;
+    return true;
+  },
+  
+  // Phase B: Import Google Form responses from CSV
+  async importResponsesFromCSV(assignmentId, csvData, answerKey) {
+    // This is a complex operation that should be done in a transaction
+    // For now, we'll implement a basic version
+    
+    // 1. Parse CSV data (caller should provide parsed rows)
+    // 2. For each row:
+    //    - Match student by code
+    //    - Auto-grade if answer key exists
+    //    - Build per_goal detail from iep_goal_codes
+    //    - Create submission
+    //    - Call process_submission
+    
+    const results = {
+      processed: 0,
+      failed: 0,
+      errors: []
+    };
+    
+    for (const row of csvData) {
+      try {
+        const studentCode = row.student_code || row['Student Code'];
+        if (!studentCode) {
+          results.errors.push('Missing student code in row');
+          results.failed++;
+          continue;
+        }
+        
+        // Get student
+        const { data: students, error: studentErr } = await supabase
+          .from('students')
+          .select('id')
+          .eq('code', studentCode)
+          .single();
+        
+        if (studentErr || !students) {
+          results.errors.push(`Student ${studentCode} not found`);
+          results.failed++;
+          continue;
+        }
+        
+        // Get or create instance
+        const { data: instances, error: instErr } = await supabase
+          .from('assignment_instances')
+          .select('id')
+          .eq('assignment_id', assignmentId)
+          .eq('student_id', students.id)
+          .maybeSingle();
+        
+        let instanceId = instances?.id;
+        
+        if (!instanceId) {
+          // Create instance
+          const { data: newInst, error: newInstErr } = await supabase
+            .from('assignment_instances')
+            .insert({
+              assignment_id: assignmentId,
+              student_id: students.id,
+              status: 'Assigned'
+            })
+            .select('id')
+            .single();
+          
+          if (newInstErr) throw newInstErr;
+          instanceId = newInst.id;
+        }
+        
+        // Build submission (simplified - caller should provide formatted data)
+        const { data: submission, error: subErr } = await supabase
+          .from('submissions')
+          .insert({
+            instance_id: instanceId,
+            answers: row.answers || {},
+            score_auto: row.score_auto || null,
+            score_total: row.score_total || null,
+            detail: row.detail || {}
+          })
+          .select('id')
+          .single();
+        
+        if (subErr) throw subErr;
+        
+        // Call process_submission
+        const { error: processErr } = await supabase.rpc('process_submission', {
+          p_submission_id: submission.id
+        });
+        
+        if (processErr) throw processErr;
+        
+        // Update instance status
+        await supabase
+          .from('assignment_instances')
+          .update({ status: 'Submitted' })
+          .eq('id', instanceId);
+        
+        results.processed++;
+      } catch (err) {
+        results.failed++;
+        results.errors.push(err.message);
+      }
+    }
+    
+    return results;
   }
 };
 

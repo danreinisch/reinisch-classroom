@@ -210,6 +210,12 @@
   }
 </style>
 <link rel="stylesheet" href="../web/teacher-center-theme.css">
+
+<!-- JSZip library for HTML package uploads -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" 
+        integrity="sha512-XMVd28F1oH/O71fzwBnV7HucLxVwtxf26XV8P4wPk26EDxuGZ91N8bsOttmnomcCD3CS5ZMRL50H0GgOHvegtg==" 
+        crossorigin="anonymous" 
+        referrerpolicy="no-referrer"></script>
 </head>
 <body>
   <div class="header">
@@ -352,21 +358,52 @@
             </label>
           </div>
           
-          <label style="margin-top:12px">Page URL (for html type)
-            <input id="aPage" type="text" placeholder="e.g., presentations/week-1/index.html" />
-          </label>
+          <!-- HTML Package Upload Section -->
+          <div id="htmlPackageSection" style="margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.02)">
+            <div style="font-weight:800;margin-bottom:8px">📦 HTML Package Upload</div>
+            
+            <label>ZIP File <span style="color:#f87171">*</span>
+              <input id="aZipFile" type="file" accept=".zip" />
+              <div class="subtle" style="margin-top:4px">Upload a .zip file containing assignment.json manifest and HTML files</div>
+            </label>
+            
+            <div id="zipManifestSummary" style="margin-top:12px;padding:10px;background:rgba(255,255,255,.04);border-radius:8px;border:1px solid var(--line);display:none">
+              <div style="font-weight:800;margin-bottom:6px">Manifest Summary</div>
+              <div id="zipManifestContent" class="subtle"></div>
+            </div>
+            
+            <div id="zipErrorMessage" style="margin-top:12px;padding:10px;background:rgba(239,68,68,.1);border-radius:8px;border:1px solid rgba(239,68,68,.5);color:#fecaca;display:none">
+              <div style="font-weight:800;margin-bottom:6px">⚠️ Error</div>
+              <div id="zipErrorContent"></div>
+            </div>
+          </div>
           
-          <label style="margin-top:12px">Hero Image URL (optional)
-            <input id="aHero" type="text" placeholder="e.g., assets/images/hero.jpg" />
-          </label>
-          
-          <label style="margin-top:12px">Form URL (optional, for google_form type)
-            <input id="aFormUrl" type="text" placeholder="Google Form URL" />
-          </label>
-          
-          <label style="margin-top:12px">Answer Key JSON (optional)
-            <textarea id="aAnswerKey" rows="3" placeholder='{"q1": "answer1", "q2": "answer2"}'></textarea>
-          </label>
+          <!-- Google Form Section -->
+          <div id="googleFormSection" style="margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.02);display:none">
+            <div style="font-weight:800;margin-bottom:8px">📋 Google Form Configuration</div>
+            
+            <label style="margin-top:12px">Page URL (optional, for direct html type)
+              <input id="aPage" type="text" placeholder="e.g., presentations/week-1/index.html" />
+            </label>
+            
+            <label style="margin-top:12px">Hero Image URL (optional)
+              <input id="aHero" type="text" placeholder="e.g., assets/images/hero.jpg" />
+            </label>
+            
+            <label style="margin-top:12px">Form URL <span style="color:#f87171">*</span>
+              <input id="aFormUrl" type="text" placeholder="Google Form URL" />
+            </label>
+            
+            <label style="margin-top:12px">Answer Key JSON (optional)
+              <textarea id="aAnswerKey" rows="3" placeholder='{"q1": "A", "q2": "B", "q3": "C"}'></textarea>
+              <div class="subtle" style="margin-top:4px">JSON format: question IDs mapped to correct answers</div>
+            </label>
+            
+            <label style="margin-top:12px">IEP Goal Codes (optional)
+              <textarea id="aGoalCodes" rows="2" placeholder='["S001.11.1", "S001.12.2"]'></textarea>
+              <div class="subtle" style="margin-top:4px">JSON array of goal codes for progress tracking</div>
+            </label>
+          </div>
           
           <div style="display:flex;gap:10px;margin-top:12px">
             <button class="btn primary" id="btnCreateAssignment">Create Assignment</button>
@@ -384,21 +421,35 @@
             </select>
           </label>
           
-          <label style="margin-top:12px">Target Students
-            <select id="issueStudentsSelect" multiple size="8">
-              <!-- Students will be populated from STUDENTS array -->
-            </select>
-            <div class="subtle" style="margin-top:4px">Hold Ctrl/Cmd to select multiple students</div>
-          </label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">
+            <div>
+              <label>Classes (multi-select)
+                <select id="issueClassesSelect" multiple size="5">
+                  <!-- Classes will be populated from db.listClasses() -->
+                </select>
+                <div class="subtle" style="margin-top:4px">Select classes to auto-add all enrolled students</div>
+              </label>
+              <button class="btn small" id="btnAddClassStudents" style="margin-top:8px;width:100%">Add Students from Selected Classes</button>
+            </div>
+            
+            <div>
+              <label>Target Students
+                <select id="issueStudentsSelect" multiple size="5">
+                  <!-- Students will be populated from STUDENTS array -->
+                </select>
+                <div class="subtle" style="margin-top:4px">Hold Ctrl/Cmd to select multiple students</div>
+              </label>
+              <div style="display:flex;gap:8px;margin-top:8px">
+                <button class="btn small" id="btnSelectAllStudents" style="flex:1">Select All</button>
+                <button class="btn small" id="btnClearStudents" style="flex:1">Clear</button>
+              </div>
+            </div>
+          </div>
           
-          <label style="margin-top:12px">Classes (placeholder - multi-select)
-            <select id="issueClassesSelect" multiple size="3" disabled>
-              <option>Class A</option>
-              <option>Class B</option>
-              <option>Class C</option>
-            </select>
-            <div class="subtle" style="margin-top:4px">Class targeting stubbed for Phase A</div>
-          </label>
+          <div id="selectedStudentsList" style="margin-top:12px;padding:10px;background:rgba(255,255,255,.04);border-radius:8px;border:1px solid var(--line);max-height:150px;overflow:auto">
+            <div style="font-weight:800;margin-bottom:6px">Selected Students: <span id="selectedStudentsCount">0</span></div>
+            <div id="selectedStudentsContent" class="subtle">No students selected</div>
+          </div>
           
           <label style="margin-top:12px">Due Date (optional)
             <input id="issueDueDate" type="date" />
@@ -429,12 +480,44 @@
                   <th>Status</th>
                   <th>Assigned</th>
                   <th>Due</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                <tr><td colspan="5" class="subtle">No instances yet</td></tr>
+                <tr><td colspan="6" class="subtle">No instances yet</td></tr>
               </tbody>
             </table>
+          </div>
+        </div>
+        
+        <!-- D) Submission Simulator (for testing) -->
+        <div class="card" style="margin-top:12px">
+          <div class="card-header"><div>🧪 Submission Simulator (Testing)</div></div>
+          
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px">
+            <label>Instance
+              <select id="simInstanceSelect">
+                <option value="">-- Select an instance --</option>
+              </select>
+            </label>
+            
+            <label>Goal Code
+              <input id="simGoalCode" type="text" placeholder="e.g., S001.11.1" />
+            </label>
+            
+            <label>Score (0-100)
+              <input id="simScore" type="number" min="0" max="100" value="75" />
+            </label>
+          </div>
+          
+          <div style="margin-top:12px">
+            <button class="btn primary" id="btnSimulateSubmission">Simulate Submission</button>
+            <div class="subtle" style="margin-top:8px">This creates a test submission with progress entry for the specified goal code.</div>
+          </div>
+          
+          <div id="simResult" style="margin-top:12px;padding:10px;background:rgba(255,255,255,.04);border-radius:8px;border:1px solid var(--line);display:none">
+            <div style="font-weight:800;margin-bottom:6px">Simulation Result</div>
+            <div id="simResultContent" class="subtle"></div>
           </div>
         </div>
       </div>
@@ -1126,10 +1209,6 @@
       const title = qs('#aTitle').value.trim();
       const type = qs('#aType').value;
       const series = qs('#aSeries').value.trim();
-      const page = qs('#aPage').value.trim();
-      const hero = qs('#aHero').value.trim();
-      const formUrl = qs('#aFormUrl').value.trim();
-      const answerKeyStr = qs('#aAnswerKey').value.trim();
       const createdBy = qs('#aCreatedBy').value.trim();
       
       if (!title) {
@@ -1137,48 +1216,184 @@
         return;
       }
       
-      // Parse answer key JSON if provided
-      let meta = {};
-      if (formUrl) meta.form_url = formUrl;
-      if (answerKeyStr) {
-        try {
-          meta.answer_key = JSON.parse(answerKeyStr);
-        } catch (e) {
-          addNotif('Invalid Answer Key JSON: ' + e.message, { type: 'error' });
-          return;
-        }
-      }
-      
       try {
-        const assignment = await db.createAssignment({
-          title,
-          type,
-          series: series || null,
-          page: page || null,
-          hero: hero || null,
-          meta,
-          created_by: createdBy || null
-        });
+        let assignment;
         
-        addNotif(`Created assignment: "${title}"`, { type: 'success' });
+        if (type === 'html') {
+          // HTML Package Upload
+          const zipFile = qs('#aZipFile').files[0];
+          
+          if (!zipFile) {
+            addNotif('Please select a ZIP file for HTML package', { type: 'error' });
+            return;
+          }
+          
+          // Show loading
+          addNotif('Uploading HTML package...', { type: 'info' });
+          
+          // Unzip and validate manifest
+          const zip = await JSZip.loadAsync(zipFile);
+          
+          // Check for assignment.json
+          const manifestFile = zip.file('assignment.json');
+          if (!manifestFile) {
+            throw new Error('Missing assignment.json manifest in ZIP file');
+          }
+          
+          const manifestText = await manifestFile.async('text');
+          const manifest = JSON.parse(manifestText);
+          
+          // Validate manifest structure
+          if (!manifest.version || !manifest.title) {
+            throw new Error('Invalid manifest: missing version or title');
+          }
+          
+          if (!manifest.questions || !Array.isArray(manifest.questions)) {
+            throw new Error('Invalid manifest: questions array is required');
+          }
+          
+          // Override title with form input
+          manifest.title = title;
+          manifest.series = series;
+          
+          // Upload assignment with manifest
+          assignment = await db.uploadAssignmentZip(zipFile, manifest, createdBy);
+          
+          addNotif(`Uploaded HTML package: "${title}"`, { type: 'success' });
+          
+          // Show manifest summary
+          qs('#zipManifestSummary').style.display = 'block';
+          qs('#zipManifestContent').innerHTML = `
+            <strong>Version:</strong> ${manifest.version}<br>
+            <strong>Questions:</strong> ${manifest.questions.length}<br>
+            <strong>Files:</strong> ${Object.keys(zip.files).length}
+          `;
+          
+        } else if (type === 'google_form') {
+          // Google Form Creation
+          const page = qs('#aPage').value.trim();
+          const hero = qs('#aHero').value.trim();
+          const formUrl = qs('#aFormUrl').value.trim();
+          const answerKeyStr = qs('#aAnswerKey').value.trim();
+          const goalCodesStr = qs('#aGoalCodes').value.trim();
+          
+          if (!formUrl) {
+            addNotif('Form URL is required for Google Form assignments', { type: 'error' });
+            return;
+          }
+          
+          // Parse answer key and goal codes
+          let meta = { form_url: formUrl };
+          
+          if (answerKeyStr) {
+            try {
+              meta.answer_key = JSON.parse(answerKeyStr);
+            } catch (e) {
+              throw new Error('Invalid Answer Key JSON: ' + e.message);
+            }
+          }
+          
+          if (goalCodesStr) {
+            try {
+              meta.iep_goal_codes = JSON.parse(goalCodesStr);
+            } catch (e) {
+              throw new Error('Invalid IEP Goal Codes JSON: ' + e.message);
+            }
+          }
+          
+          // Create assignment
+          assignment = await db.createAssignment({
+            title,
+            type,
+            series: series || null,
+            page: page || null,
+            hero: hero || null,
+            meta,
+            created_by: createdBy || null
+          });
+          
+          addNotif(`Created Google Form assignment: "${title}"`, { type: 'success' });
+        }
         
         // Clear form
-        qs('#aTitle').value = '';
-        qs('#aSeries').value = '';
-        qs('#aPage').value = '';
-        qs('#aHero').value = '';
-        qs('#aFormUrl').value = '';
-        qs('#aAnswerKey').value = '';
-        qs('#aCreatedBy').value = '';
+        clearAssignmentForm();
         
         // Refresh assignment list
         await populateAssignmentSelect();
+        
       } catch (err) {
         console.error('Failed to create assignment:', err);
         addNotif('Failed to create assignment: ' + err.message, { type: 'error' });
+        
+        // Show error in ZIP error area
+        qs('#zipErrorMessage').style.display = 'block';
+        qs('#zipErrorContent').textContent = err.message;
       }
     }
     
+    // Clear assignment form
+    function clearAssignmentForm() {
+      qs('#aTitle').value = '';
+      qs('#aSeries').value = '';
+      qs('#aPage').value = '';
+      qs('#aHero').value = '';
+      qs('#aFormUrl').value = '';
+      qs('#aAnswerKey').value = '';
+      qs('#aGoalCodes').value = '';
+      qs('#aCreatedBy').value = '';
+      qs('#aZipFile').value = '';
+      qs('#zipManifestSummary').style.display = 'none';
+      qs('#zipErrorMessage').style.display = 'none';
+    }
+    
+    // Handle ZIP file selection
+    qs('#aZipFile')?.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      try {
+        qs('#zipErrorMessage').style.display = 'none';
+        qs('#zipManifestSummary').style.display = 'none';
+        
+        // Quick validation: unzip and check manifest
+        const zip = await JSZip.loadAsync(file);
+        const manifestFile = zip.file('assignment.json');
+        
+        if (!manifestFile) {
+          throw new Error('Missing assignment.json in ZIP file');
+        }
+        
+        const manifestText = await manifestFile.async('text');
+        const manifest = JSON.parse(manifestText);
+        
+        // Show preview
+        qs('#zipManifestSummary').style.display = 'block';
+        qs('#zipManifestContent').innerHTML = `
+          <strong>Title:</strong> ${manifest.title || '(not set)'}<br>
+          <strong>Version:</strong> ${manifest.version || '(not set)'}<br>
+          <strong>Questions:</strong> ${(manifest.questions || []).length}<br>
+          <strong>Files in ZIP:</strong> ${Object.keys(zip.files).length}
+        `;
+        
+        // Auto-fill title if empty
+        if (!qs('#aTitle').value && manifest.title) {
+          qs('#aTitle').value = manifest.title;
+        }
+        
+      } catch (err) {
+        qs('#zipErrorMessage').style.display = 'block';
+        qs('#zipErrorContent').textContent = err.message;
+      }
+    });
+    
+    // Toggle form sections based on type
+    qs('#aType')?.addEventListener('change', () => {
+      const type = qs('#aType').value;
+      qs('#htmlPackageSection').style.display = type === 'html' ? 'block' : 'none';
+      qs('#googleFormSection').style.display = type === 'google_form' ? 'block' : 'none';
+    });
+    
+
     // Issue assignment handler
     async function handleIssueAssignment() {
       const assignmentId = qs('#issueAssignmentSelect').value;
@@ -1251,7 +1466,9 @@
         const instances = await db.listAssignmentInstances();
         
         if (!instances || instances.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="5" class="subtle">No instances yet</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="6" class="subtle">No instances yet</td></tr>';
+          // Also update simulator instance select
+          qs('#simInstanceSelect').innerHTML = '<option value="">-- No instances available --</option>';
           return;
         }
         
@@ -1268,19 +1485,198 @@
           const assignmentTitle = assignmentMap[inst.assignment_id] || `ID: ${inst.assignment_id}`;
           const assigned = inst.assigned_at ? new Date(inst.assigned_at).toLocaleDateString() : '—';
           const due = inst.due_at ? new Date(inst.due_at).toLocaleDateString() : '—';
-          return `<tr>
+          return `<tr data-instance-id="${inst.id}">
             <td>${inst.student_code}</td>
             <td>${assignmentTitle}</td>
             <td><span class="badge">${inst.status || 'Assigned'}</span></td>
             <td class="subtle">${assigned}</td>
             <td class="subtle">${due}</td>
+            <td><button class="btn small" data-action="simulate" data-id="${inst.id}">Simulate</button></td>
           </tr>`;
         });
         
         tbody.innerHTML = rows.join('');
+        
+        // Populate simulator instance dropdown
+        const simSelect = qs('#simInstanceSelect');
+        simSelect.innerHTML = '<option value="">-- Select an instance --</option>' +
+          instances.map(inst => {
+            const title = assignmentMap[inst.assignment_id] || `ID: ${inst.assignment_id}`;
+            return `<option value="${inst.id}">${inst.student_code} - ${title}</option>`;
+          }).join('');
+        
+        // Bind simulate buttons
+        tbody.querySelectorAll('button[data-action="simulate"]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const instanceId = btn.dataset.id;
+            qs('#simInstanceSelect').value = instanceId;
+            // Scroll to simulator
+            qs('#simInstanceSelect').scrollIntoView({ behavior: 'smooth', block: 'center' });
+          });
+        });
+        
       } catch (err) {
         console.error('Failed to load instances:', err);
-        tbody.innerHTML = '<tr><td colspan="5" class="subtle">Error loading instances</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="subtle">Error loading instances</td></tr>';
+      }
+    }
+    
+    // Populate classes select
+    async function populateClassesSelect() {
+      try {
+        const classes = await db.listClasses();
+        const select = qs('#issueClassesSelect');
+        if (!classes || classes.length === 0) {
+          select.innerHTML = '<option value="">-- No classes available --</option>';
+          return;
+        }
+        select.innerHTML = classes.map(c => 
+          `<option value="${c.id}">${c.name || c.code || `Class ${c.id}`}</option>`
+        ).join('');
+      } catch (err) {
+        console.error('Failed to load classes:', err);
+        qs('#issueClassesSelect').innerHTML = '<option value="">-- Error loading classes --</option>';
+      }
+    }
+    
+    // Add students from selected classes
+    async function handleAddClassStudents() {
+      try {
+        const selectedClasses = Array.from(qs('#issueClassesSelect').selectedOptions).map(opt => opt.value);
+        if (selectedClasses.length === 0) {
+          addNotif('Please select at least one class', { type: 'warning' });
+          return;
+        }
+        
+        // Get class enrollments
+        const enrollments = await db.listClassEnrollments();
+        
+        // Filter enrollments for selected classes
+        const studentCodes = enrollments
+          .filter(e => selectedClasses.includes(String(e.class_id)))
+          .map(e => e.student_code);
+        
+        if (studentCodes.length === 0) {
+          addNotif('No students found in selected classes', { type: 'warning' });
+          return;
+        }
+        
+        // Select students in the multi-select
+        const select = qs('#issueStudentsSelect');
+        Array.from(select.options).forEach(opt => {
+          if (studentCodes.includes(opt.value)) {
+            opt.selected = true;
+          }
+        });
+        
+        updateSelectedStudentsList();
+        addNotif(`Added ${studentCodes.length} student(s) from ${selectedClasses.length} class(es)`, { type: 'success' });
+        
+      } catch (err) {
+        console.error('Failed to add class students:', err);
+        addNotif('Failed to add students from classes: ' + err.message, { type: 'error' });
+      }
+    }
+    
+    // Update selected students list display
+    function updateSelectedStudentsList() {
+      const selected = Array.from(qs('#issueStudentsSelect').selectedOptions);
+      const count = selected.length;
+      
+      qs('#selectedStudentsCount').textContent = count;
+      
+      if (count === 0) {
+        qs('#selectedStudentsContent').textContent = 'No students selected';
+      } else {
+        const names = selected.map(opt => opt.textContent).slice(0, 10);
+        qs('#selectedStudentsContent').innerHTML = names.join(', ') + 
+          (count > 10 ? ` <em>(and ${count - 10} more)</em>` : '');
+      }
+    }
+    
+    // Select all students
+    function handleSelectAllStudents() {
+      const select = qs('#issueStudentsSelect');
+      Array.from(select.options).forEach(opt => opt.selected = true);
+      updateSelectedStudentsList();
+    }
+    
+    // Clear student selection
+    function handleClearStudents() {
+      const select = qs('#issueStudentsSelect');
+      Array.from(select.options).forEach(opt => opt.selected = false);
+      updateSelectedStudentsList();
+    }
+    
+    // Simulate submission
+    async function handleSimulateSubmission() {
+      const instanceId = qs('#simInstanceSelect').value;
+      const goalCode = qs('#simGoalCode').value.trim();
+      const score = parseInt(qs('#simScore').value, 10);
+      
+      if (!instanceId) {
+        addNotif('Please select an instance', { type: 'error' });
+        return;
+      }
+      
+      if (!goalCode) {
+        addNotif('Please enter a goal code', { type: 'error' });
+        return;
+      }
+      
+      if (isNaN(score) || score < 0 || score > 100) {
+        addNotif('Score must be between 0 and 100', { type: 'error' });
+        return;
+      }
+      
+      try {
+        // Build submission payload
+        const detail = {
+          per_goal: {
+            [goalCode]: score
+          }
+        };
+        
+        const submission = await db.addSubmission({
+          instance_id: instanceId,
+          answers: {},
+          score_auto: score,
+          score_total: score,
+          detail,
+          notes: 'Test submission from simulator'
+        });
+        
+        // Show result
+        qs('#simResult').style.display = 'block';
+        // Escape HTML to prevent XSS
+        const escapeHtml = (str) => String(str).replace(/[&<>"']/g, m => ({
+          '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        })[m]);
+        qs('#simResultContent').innerHTML = `
+          <strong>Success!</strong> Created submission ${escapeHtml(submission.submission_id)}<br>
+          <strong>Goal:</strong> ${escapeHtml(goalCode)}<br>
+          <strong>Score:</strong> ${score}%<br>
+          <em>Progress entry should be created for this goal (if remote/Supabase is enabled).</em>
+        `;
+        
+        addNotif(`Simulated submission for ${goalCode} with score ${score}%`, { type: 'success' });
+        
+        // Refresh instances table
+        await renderInstancesTable();
+        
+        // Clear form
+        qs('#simGoalCode').value = '';
+        qs('#simScore').value = '75';
+        
+      } catch (err) {
+        console.error('Failed to simulate submission:', err);
+        qs('#simResult').style.display = 'block';
+        // Escape error message to prevent XSS
+        const escapeHtml = (str) => String(str).replace(/[&<>"']/g, m => ({
+          '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        })[m]);
+        qs('#simResultContent').innerHTML = `<strong style="color:#fecaca">Error:</strong> ${escapeHtml(err.message)}`;
+        addNotif('Failed to simulate submission: ' + err.message, { type: 'error' });
       }
     }
     
@@ -1289,22 +1685,27 @@
       await loadStudents();
       await populateAssignmentSelect();
       await populateStudentsSelect();
+      await populateClassesSelect();
       await renderInstancesTable();
+      
+      // Listen for student selection changes
+      qs('#issueStudentsSelect')?.addEventListener('change', updateSelectedStudentsList);
+      
+      // Initialize form section visibility
+      const type = qs('#aType').value;
+      qs('#htmlPackageSection').style.display = type === 'html' ? 'block' : 'none';
+      qs('#googleFormSection').style.display = type === 'google_form' ? 'block' : 'none';
     }
     
     // Event listeners for assignments
     on('#btnCreateAssignment', 'click', handleCreateAssignment);
-    on('#btnClearAssignmentForm', 'click', () => {
-      qs('#aTitle').value = '';
-      qs('#aSeries').value = '';
-      qs('#aPage').value = '';
-      qs('#aHero').value = '';
-      qs('#aFormUrl').value = '';
-      qs('#aAnswerKey').value = '';
-      qs('#aCreatedBy').value = '';
-    });
+    on('#btnClearAssignmentForm', 'click', clearAssignmentForm);
     on('#btnIssueAssignment', 'click', handleIssueAssignment);
     on('#btnRefreshInstances', 'click', renderInstancesTable);
+    on('#btnAddClassStudents', 'click', handleAddClassStudents);
+    on('#btnSelectAllStudents', 'click', handleSelectAllStudents);
+    on('#btnClearStudents', 'click', handleClearStudents);
+    on('#btnSimulateSubmission', 'click', handleSimulateSubmission);
 
 
     // Open import modal
