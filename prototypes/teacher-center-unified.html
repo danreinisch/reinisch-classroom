@@ -1212,8 +1212,10 @@
       for (const studentCode of studentCodes) {
         try {
           const student = STUDENTS.find(s => s.code === studentCode);
+          // Convert ID to number only if it's actually numeric (for Supabase)
+          const aid = /^\d+$/.test(assignmentId) ? parseInt(assignmentId, 10) : assignmentId;
           await db.upsertAssignmentInstance({
-            assignment_id: isRemote ? parseInt(assignmentId, 10) : assignmentId,
+            assignment_id: aid,
             student_code: studentCode,
             student_name: student ? student.name : studentCode,
             due_at: dueDate,
