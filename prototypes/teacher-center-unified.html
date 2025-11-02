@@ -212,7 +212,10 @@
 <link rel="stylesheet" href="../web/teacher-center-theme.css">
 
 <!-- JSZip library for HTML package uploads -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" 
+        integrity="sha512-XMVd28F1oH/O71fzwBnV7HucLxVwtxf26XV8P4wPk26EDxuGZ91N8bsOttmnomcCD3CS5ZMRL50H0GgOHvegtg==" 
+        crossorigin="anonymous" 
+        referrerpolicy="no-referrer"></script>
 </head>
 <body>
   <div class="header">
@@ -1645,9 +1648,13 @@
         
         // Show result
         qs('#simResult').style.display = 'block';
+        // Escape HTML to prevent XSS
+        const escapeHtml = (str) => String(str).replace(/[&<>"']/g, m => ({
+          '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        })[m]);
         qs('#simResultContent').innerHTML = `
-          <strong>Success!</strong> Created submission ${submission.submission_id}<br>
-          <strong>Goal:</strong> ${goalCode}<br>
+          <strong>Success!</strong> Created submission ${escapeHtml(submission.submission_id)}<br>
+          <strong>Goal:</strong> ${escapeHtml(goalCode)}<br>
           <strong>Score:</strong> ${score}%<br>
           <em>Progress entry should be created for this goal (if remote/Supabase is enabled).</em>
         `;
@@ -1664,7 +1671,11 @@
       } catch (err) {
         console.error('Failed to simulate submission:', err);
         qs('#simResult').style.display = 'block';
-        qs('#simResultContent').innerHTML = `<strong style="color:#fecaca">Error:</strong> ${err.message}`;
+        // Escape error message to prevent XSS
+        const escapeHtml = (str) => String(str).replace(/[&<>"']/g, m => ({
+          '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        })[m]);
+        qs('#simResultContent').innerHTML = `<strong style="color:#fecaca">Error:</strong> ${escapeHtml(err.message)}`;
         addNotif('Failed to simulate submission: ' + err.message, { type: 'error' });
       }
     }
