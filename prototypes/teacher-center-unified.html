@@ -1472,6 +1472,7 @@
         const summary = `Students: ${remoteStudents.length}, Goals: ${remoteGoals.length} (${mode})`;
         showToolsStatus('Pull Complete', `Data successfully imported from Supabase (${mode}).`, summary);
         addNotif(`Pulled ${remoteStudents.length} students and ${remoteGoals.length} goals from Supabase`);
+        renderKPIs();
         
         // Refresh UI if on IEP tab
         if (STUDENTS.length) {
