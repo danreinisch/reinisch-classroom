@@ -1211,9 +1211,11 @@
       
       for (const studentCode of studentCodes) {
         try {
+          const student = STUDENTS.find(s => s.code === studentCode);
           await db.upsertAssignmentInstance({
-            assignment_id: parseInt(assignmentId, 10),
+            assignment_id: isRemote ? parseInt(assignmentId, 10) : assignmentId,
             student_code: studentCode,
+            student_name: student ? student.name : studentCode,
             due_at: dueDate,
             status: 'Assigned',
             settings: {}

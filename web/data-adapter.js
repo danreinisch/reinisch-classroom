@@ -89,12 +89,35 @@ const local = {
     return { id, ...a };
   },
   async listAssignments() { return store.get('assignments', []); },
-  async listAssignmentInstances() { return store.get('assignmentInstances', []); },
+  async listAssignmentInstances() {
+    const arr = store.get('assignmentInstances', []);
+    // Return with snake_case field names to match remote
+    return arr.map(inst => ({
+      id: inst.id || (inst.assignment_id + '-' + inst.student_code),
+      assignment_id: inst.assignment_id,
+      student_code: inst.student_code,
+      student_name: inst.student_name,
+      assigned_at: inst.assigned_at,
+      due_at: inst.due_at,
+      status: inst.status,
+      settings: inst.settings
+    }));
+  },
   async upsertAssignmentInstance(x) {
     const arr = store.get('assignmentInstances', []);
-    const i = arr.findIndex(ai => ai.assignmentId === x.assignmentId && ai.studentCode === x.studentCode);
-    if (i >= 0) arr[i] = { ...arr[i], ...x };
-    else arr.push(x);
+    const i = arr.findIndex(ai => ai.assignment_id === x.assignment_id && ai.student_code === x.student_code);
+    const instance = {
+      id: x.id || (x.assignment_id + '-' + x.student_code),
+      assignment_id: x.assignment_id,
+      student_code: x.student_code,
+      student_name: x.student_name,
+      assigned_at: x.assigned_at || new Date().toISOString().split('T')[0],
+      due_at: x.due_at,
+      status: x.status || 'Assigned',
+      settings: x.settings || {}
+    };
+    if (i >= 0) arr[i] = instance;
+    else arr.push(instance);
     store.set('assignmentInstances', arr);
     return true;
   },
