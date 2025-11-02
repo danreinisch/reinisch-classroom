@@ -122,6 +122,14 @@ alter table assignment_instances enable row level security;
 alter table submissions enable row level security;
 
 -- RLS policies (authenticated access)
+-- NOTE: These are basic policies for Phase A/B. In production, you should:
+-- 1. Implement user-based access control (filter by created_by or organization)
+-- 2. Add role-based permissions (teacher, admin, student)
+-- 3. Restrict student access to only their own instances/submissions
+-- Example production policy:
+--   create policy assignments_teacher_sel on assignments for select
+--     using (auth.uid() = created_by OR auth.jwt() ->> 'role' = 'admin');
+
 create policy assignments_auth_sel on assignments for select
   using (auth.role() = 'authenticated');
 

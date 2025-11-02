@@ -433,8 +433,18 @@ const remote = supabase && {
     const basePath = `assignments/${assignment.id}`;
     
     try {
-      // Note: In a real implementation, the caller should pass the unzipped files
-      // For now, we just update the page URL to point to the expected location
+      // NOTE: In a full implementation, this function should:
+      // 1. Extract all files from the ZIP (already done by caller with JSZip)
+      // 2. Iterate through each file and upload to Supabase Storage
+      // 3. For example:
+      //    for (const [path, file] of Object.entries(zipFiles)) {
+      //      const content = await file.async('blob');
+      //      await supabase.storage.from('assignments').upload(`${basePath}/${path}`, content);
+      //    }
+      // 
+      // For now, we construct the expected public URL without actual upload.
+      // The caller must handle file uploads separately if using Supabase Storage.
+      
       const indexUrl = `${supabase.storage.from('assignments').getPublicUrl(`${basePath}/index.html`).data.publicUrl}`;
       
       // 3. Update assignment.page with the public URL
@@ -456,11 +466,22 @@ const remote = supabase && {
   
   // Phase B: Google Forms metadata
   async saveFormMeta(assignmentId, meta) {
+    // Fetch current meta and merge with new meta
+    const { data: current, error: fetchErr } = await supabase
+      .from('assignments')
+      .select('meta')
+      .eq('id', assignmentId)
+      .single();
+    
+    if (fetchErr) throw fetchErr;
+    
+    // Merge metadata
+    const merged = { ...(current?.meta || {}), ...meta };
+    
+    // Update with properly parameterized query
     const { error } = await supabase
       .from('assignments')
-      .update({ 
-        meta: supabase.raw(`meta || '${JSON.stringify(meta)}'::jsonb`)
-      })
+      .update({ meta: merged })
       .eq('id', assignmentId);
     
     if (error) throw error;
