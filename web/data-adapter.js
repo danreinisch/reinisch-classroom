@@ -179,7 +179,15 @@ const local = {
     const arr = store.get('assignments', []);
     const assignment = arr.find(a => a.id === assignmentId);
     if (!assignment) throw new Error('Assignment not found');
+    
+    // Merge metadata
     assignment.meta = { ...assignment.meta, ...meta };
+    
+    // If page is provided, update it at top level
+    if (meta.page) {
+      assignment.page = meta.page;
+    }
+    
     store.set('assignments', arr);
     return true;
   },
@@ -478,10 +486,18 @@ const remote = supabase && {
     // Merge metadata
     const merged = { ...(current?.meta || {}), ...meta };
     
+    // Prepare update object
+    const updateData = { meta: merged };
+    
+    // If page is provided, update it at top level
+    if (meta.page) {
+      updateData.page = meta.page;
+    }
+    
     // Update with properly parameterized query
     const { error } = await supabase
       .from('assignments')
-      .update({ meta: merged })
+      .update(updateData)
       .eq('id', assignmentId);
     
     if (error) throw error;
