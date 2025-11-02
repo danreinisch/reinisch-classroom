@@ -360,12 +360,47 @@
           
           <!-- HTML Package Upload Section -->
           <div id="htmlPackageSection" style="margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.02)">
-            <div style="font-weight:800;margin-bottom:8px">📦 HTML Package Upload</div>
+            <div style="font-weight:800;margin-bottom:12px">📦 HTML Assignment Source</div>
             
-            <label>ZIP File <span style="color:#f87171">*</span>
-              <input id="aZipFile" type="file" accept=".zip" />
-              <div class="subtle" style="margin-top:4px">Upload a .zip file containing assignment.json manifest and HTML files</div>
+            <!-- Source Type Selector -->
+            <label>Source Type
+              <select id="htmlSourceType">
+                <option value="zip">ZIP Package (with manifest)</option>
+                <option value="single_html">Single HTML File</option>
+                <option value="url">External URL</option>
+              </select>
             </label>
+            
+            <!-- ZIP Upload Option -->
+            <div id="htmlZipOption" style="margin-top:12px;display:block">
+              <label>ZIP File <span style="color:#f87171">*</span>
+                <input id="aZipFile" type="file" accept=".zip" />
+                <div class="subtle" style="margin-top:4px">Upload a .zip file containing assignment.json manifest and HTML files</div>
+              </label>
+            </div>
+            
+            <!-- Single HTML File Option -->
+            <div id="htmlSingleOption" style="margin-top:12px;display:none">
+              <label>HTML File <span style="color:#f87171">*</span>
+                <input id="aSingleHtml" type="file" accept=".html,.htm" />
+                <div class="subtle" style="margin-top:4px">Upload a single HTML file. Questions will be auto-detected from data-* tags.</div>
+              </label>
+              <div class="subtle" style="margin-top:8px;padding:8px;background:rgba(255,255,255,.04);border-radius:6px">
+                <strong>Tagging spec:</strong><br>
+                • <code>data-question-id</code>: unique ID per question<br>
+                • <code>data-type</code>: mcq | checkbox | order | fr<br>
+                • <code>data-goal-codes</code>: space/comma-separated IEP goal codes<br>
+                • <code>data-correct="true"</code>: mark correct option in MCQs
+              </div>
+            </div>
+            
+            <!-- External URL Option -->
+            <div id="htmlUrlOption" style="margin-top:12px;display:none">
+              <label>HTML Page URL <span style="color:#f87171">*</span>
+                <input id="aHtmlUrl" type="text" placeholder="https://example.com/assignment.html" />
+                <div class="subtle" style="margin-top:4px">Provide URL to a public HTML page. The page will be fetched and stored.</div>
+              </label>
+            </div>
             
             <div id="zipManifestSummary" style="margin-top:12px;padding:10px;background:rgba(255,255,255,.04);border-radius:8px;border:1px solid var(--line);display:none">
               <div style="font-weight:800;margin-bottom:6px">Manifest Summary</div>
@@ -1181,6 +1216,86 @@
     
     let ASSIGNMENTS_CACHE = [];
     
+    // HTML Source Type Handler
+    function updateHtmlSourceOptions() {
+      const sourceType = qs('#htmlSourceType')?.value || 'zip';
+      qs('#htmlZipOption').style.display = sourceType === 'zip' ? 'block' : 'none';
+      qs('#htmlSingleOption').style.display = sourceType === 'single_html' ? 'block' : 'none';
+      qs('#htmlUrlOption').style.display = sourceType === 'url' ? 'block' : 'none';
+      
+      // Clear error messages when switching
+      qs('#zipErrorMessage').style.display = 'none';
+      qs('#zipManifestSummary').style.display = 'none';
+    }
+    
+    // Parse HTML and build manifest from data-* attributes
+    function parseHtmlForManifest(htmlContent, title) {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(htmlContent, 'text/html');
+      
+      // Find all elements with data-question-id
+      const questionElements = doc.querySelectorAll('[data-question-id]');
+      
+      if (questionElements.length === 0) {
+        return {
+          title,
+          version: '1.0',
+          questions: [],
+          warning: 'No questions found with data-question-id attribute'
+        };
+      }
+      
+      const questions = [];
+      const goalCodesSet = new Set();
+      
+      questionElements.forEach((el) => {
+        const questionId = el.getAttribute('data-question-id');
+        const questionType = el.getAttribute('data-type') || 'mcq';
+        const goalCodesStr = el.getAttribute('data-goal-codes') || '';
+        
+        // Parse goal codes (comma or space separated)
+        const goalCodes = goalCodesStr
+          .split(/[,\s]+/)
+          .map(c => c.trim())
+          .filter(c => c.length > 0);
+        
+        // Add to global set
+        goalCodes.forEach(c => goalCodesSet.add(c));
+        
+        // For MCQ, find correct answer
+        let correctAnswer = null;
+        if (questionType === 'mcq') {
+          const correctOption = el.querySelector('[data-correct="true"]');
+          if (correctOption) {
+            // Try to get value or text content
+            correctAnswer = correctOption.getAttribute('value') || 
+                          correctOption.getAttribute('data-value') ||
+                          correctOption.textContent.trim();
+          }
+        }
+        
+        const question = {
+          id: questionId,
+          type: questionType,
+          iep_goal_codes: goalCodes
+        };
+        
+        if (correctAnswer) {
+          question.correct = correctAnswer;
+        }
+        
+        questions.push(question);
+      });
+      
+      return {
+        title,
+        version: '1.0',
+        page: 'index.html',
+        questions,
+        iep_goal_codes: Array.from(goalCodesSet)
+      };
+    }
+    
     // Populate assignment select dropdown
     async function populateAssignmentSelect() {
       ASSIGNMENTS_CACHE = await db.listAssignments();
@@ -1220,54 +1335,240 @@
         let assignment;
         
         if (type === 'html') {
-          // HTML Package Upload
-          const zipFile = qs('#aZipFile').files[0];
+          const sourceType = qs('#htmlSourceType').value;
           
-          if (!zipFile) {
-            addNotif('Please select a ZIP file for HTML package', { type: 'error' });
-            return;
+          if (sourceType === 'zip') {
+            // === ZIP Package Upload (existing flow) ===
+            const zipFile = qs('#aZipFile').files[0];
+            
+            if (!zipFile) {
+              addNotif('Please select a ZIP file for HTML package', { type: 'error' });
+              return;
+            }
+            
+            // Show loading
+            addNotif('Uploading HTML package...', { type: 'info' });
+            
+            // Unzip and validate manifest
+            const zip = await JSZip.loadAsync(zipFile);
+            
+            // Check for assignment.json
+            const manifestFile = zip.file('assignment.json');
+            if (!manifestFile) {
+              throw new Error('Missing assignment.json manifest in ZIP file');
+            }
+            
+            const manifestText = await manifestFile.async('text');
+            const manifest = JSON.parse(manifestText);
+            
+            // Validate manifest structure
+            if (!manifest.version || !manifest.title) {
+              throw new Error('Invalid manifest: missing version or title');
+            }
+            
+            if (!manifest.questions || !Array.isArray(manifest.questions)) {
+              throw new Error('Invalid manifest: questions array is required');
+            }
+            
+            // Override title with form input
+            manifest.title = title;
+            manifest.series = series;
+            
+            // Upload assignment with manifest
+            assignment = await db.uploadAssignmentZip(zipFile, manifest, createdBy);
+            
+            addNotif(`Uploaded HTML package: "${title}"`, { type: 'success' });
+            
+            // Show manifest summary
+            qs('#zipManifestSummary').style.display = 'block';
+            qs('#zipManifestContent').innerHTML = `
+              <strong>Version:</strong> ${manifest.version}<br>
+              <strong>Questions:</strong> ${manifest.questions.length}<br>
+              <strong>Files:</strong> ${Object.keys(zip.files).length}
+            `;
+            
+          } else if (sourceType === 'single_html') {
+            // === Single HTML File Upload (new) ===
+            const htmlFile = qs('#aSingleHtml').files[0];
+            
+            if (!htmlFile) {
+              addNotif('Please select an HTML file', { type: 'error' });
+              return;
+            }
+            
+            addNotif('Processing HTML file...', { type: 'info' });
+            
+            // Read file content
+            const htmlContent = await htmlFile.text();
+            
+            // Parse HTML and build manifest
+            const manifest = parseHtmlForManifest(htmlContent, title);
+            
+            if (manifest.warning) {
+              addNotif(manifest.warning, { type: 'warning' });
+            }
+            
+            // Create assignment first
+            assignment = await db.createAssignment({
+              title,
+              type: 'html',
+              series: series || null,
+              page: null, // Will be set after upload
+              hero: null,
+              meta: {
+                version: manifest.version,
+                questions: manifest.questions,
+                iep_goal_codes: manifest.iep_goal_codes || []
+              },
+              created_by: createdBy || null
+            });
+            
+            // Upload HTML file to storage if Supabase is available
+            if (window.supabase) {
+              try {
+                const blob = new Blob([htmlContent], { type: 'text/html' });
+                const path = `assignments/${assignment.id}/index.html`;
+                
+                const { error: uploadErr } = await supabase.storage
+                  .from('assignments')
+                  .upload(path, blob, { contentType: 'text/html', upsert: true });
+                
+                if (uploadErr) throw uploadErr;
+                
+                // Get public URL
+                const { data: urlData } = supabase.storage
+                  .from('assignments')
+                  .getPublicUrl(path);
+                
+                // Update assignment with page URL
+                await db.saveFormMeta(assignment.id, { page: urlData.publicUrl });
+                assignment.page = urlData.publicUrl;
+                
+              } catch (uploadErr) {
+                console.error('Storage upload failed:', uploadErr);
+                addNotif('Warning: File uploaded but storage failed. Assignment created.', { type: 'warning' });
+              }
+            }
+            
+            addNotif(`Created single HTML assignment: "${title}"`, { type: 'success' });
+            
+            // Show manifest summary
+            qs('#zipManifestSummary').style.display = 'block';
+            qs('#zipManifestContent').innerHTML = `
+              <strong>Questions Detected:</strong> ${manifest.questions.length}<br>
+              <strong>IEP Goal Codes:</strong> ${(manifest.iep_goal_codes || []).length}<br>
+              ${manifest.warning ? `<div style="color:#fbbf24;margin-top:4px">${manifest.warning}</div>` : ''}
+            `;
+            
+          } else if (sourceType === 'url') {
+            // === External URL Ingestion (new) ===
+            const htmlUrl = qs('#aHtmlUrl').value.trim();
+            
+            if (!htmlUrl) {
+              addNotif('Please enter an HTML URL', { type: 'error' });
+              return;
+            }
+            
+            // Validate URL format
+            try {
+              new URL(htmlUrl);
+            } catch {
+              addNotif('Please enter a valid URL', { type: 'error' });
+              return;
+            }
+            
+            addNotif('Fetching HTML from URL...', { type: 'info' });
+            
+            // Fetch HTML via edge function (to bypass CORS)
+            let htmlContent;
+            try {
+              const response = await fetch('/.netlify/functions/fetch-html-url', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: htmlUrl })
+              });
+              
+              if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Failed to fetch URL: ${errorText}`);
+              }
+              
+              const result = await response.json();
+              htmlContent = result.html;
+              
+            } catch (fetchErr) {
+              // Fallback: try direct fetch (will fail if CORS blocks it)
+              console.warn('Edge function failed, trying direct fetch:', fetchErr);
+              try {
+                const directResponse = await fetch(htmlUrl);
+                if (!directResponse.ok) throw new Error(`HTTP ${directResponse.status}`);
+                htmlContent = await directResponse.text();
+              } catch (directErr) {
+                throw new Error(`Cannot fetch URL: ${directErr.message}. URL may be blocked by CORS or unreachable.`);
+              }
+            }
+            
+            // Parse HTML and build manifest
+            const manifest = parseHtmlForManifest(htmlContent, title);
+            
+            if (manifest.warning) {
+              addNotif(manifest.warning, { type: 'warning' });
+            }
+            
+            // Create assignment first
+            assignment = await db.createAssignment({
+              title,
+              type: 'html',
+              series: series || null,
+              page: null, // Will be set after upload
+              hero: null,
+              meta: {
+                version: manifest.version,
+                questions: manifest.questions,
+                iep_goal_codes: manifest.iep_goal_codes || [],
+                source_url: htmlUrl
+              },
+              created_by: createdBy || null
+            });
+            
+            // Upload HTML file to storage if Supabase is available
+            if (window.supabase) {
+              try {
+                const blob = new Blob([htmlContent], { type: 'text/html' });
+                const path = `assignments/${assignment.id}/index.html`;
+                
+                const { error: uploadErr } = await supabase.storage
+                  .from('assignments')
+                  .upload(path, blob, { contentType: 'text/html', upsert: true });
+                
+                if (uploadErr) throw uploadErr;
+                
+                // Get public URL
+                const { data: urlData } = supabase.storage
+                  .from('assignments')
+                  .getPublicUrl(path);
+                
+                // Update assignment with page URL
+                await db.saveFormMeta(assignment.id, { page: urlData.publicUrl });
+                assignment.page = urlData.publicUrl;
+                
+              } catch (uploadErr) {
+                console.error('Storage upload failed:', uploadErr);
+                addNotif('Warning: File uploaded but storage failed. Assignment created.', { type: 'warning' });
+              }
+            }
+            
+            addNotif(`Created assignment from URL: "${title}"`, { type: 'success' });
+            
+            // Show manifest summary
+            qs('#zipManifestSummary').style.display = 'block';
+            qs('#zipManifestContent').innerHTML = `
+              <strong>Source URL:</strong> ${htmlUrl}<br>
+              <strong>Questions Detected:</strong> ${manifest.questions.length}<br>
+              <strong>IEP Goal Codes:</strong> ${(manifest.iep_goal_codes || []).length}<br>
+              ${manifest.warning ? `<div style="color:#fbbf24;margin-top:4px">${manifest.warning}</div>` : ''}
+            `;
           }
-          
-          // Show loading
-          addNotif('Uploading HTML package...', { type: 'info' });
-          
-          // Unzip and validate manifest
-          const zip = await JSZip.loadAsync(zipFile);
-          
-          // Check for assignment.json
-          const manifestFile = zip.file('assignment.json');
-          if (!manifestFile) {
-            throw new Error('Missing assignment.json manifest in ZIP file');
-          }
-          
-          const manifestText = await manifestFile.async('text');
-          const manifest = JSON.parse(manifestText);
-          
-          // Validate manifest structure
-          if (!manifest.version || !manifest.title) {
-            throw new Error('Invalid manifest: missing version or title');
-          }
-          
-          if (!manifest.questions || !Array.isArray(manifest.questions)) {
-            throw new Error('Invalid manifest: questions array is required');
-          }
-          
-          // Override title with form input
-          manifest.title = title;
-          manifest.series = series;
-          
-          // Upload assignment with manifest
-          assignment = await db.uploadAssignmentZip(zipFile, manifest, createdBy);
-          
-          addNotif(`Uploaded HTML package: "${title}"`, { type: 'success' });
-          
-          // Show manifest summary
-          qs('#zipManifestSummary').style.display = 'block';
-          qs('#zipManifestContent').innerHTML = `
-            <strong>Version:</strong> ${manifest.version}<br>
-            <strong>Questions:</strong> ${manifest.questions.length}<br>
-            <strong>Files:</strong> ${Object.keys(zip.files).length}
-          `;
           
         } else if (type === 'google_form') {
           // Google Form Creation
@@ -1342,6 +1643,8 @@
       qs('#aGoalCodes').value = '';
       qs('#aCreatedBy').value = '';
       qs('#aZipFile').value = '';
+      qs('#aSingleHtml').value = '';
+      qs('#aHtmlUrl').value = '';
       qs('#zipManifestSummary').style.display = 'none';
       qs('#zipErrorMessage').style.display = 'none';
     }
@@ -1695,6 +1998,9 @@
       const type = qs('#aType').value;
       qs('#htmlPackageSection').style.display = type === 'html' ? 'block' : 'none';
       qs('#googleFormSection').style.display = type === 'google_form' ? 'block' : 'none';
+      
+      // Initialize HTML source options
+      updateHtmlSourceOptions();
     }
     
     // Event listeners for assignments
@@ -1706,6 +2012,9 @@
     on('#btnSelectAllStudents', 'click', handleSelectAllStudents);
     on('#btnClearStudents', 'click', handleClearStudents);
     on('#btnSimulateSubmission', 'click', handleSimulateSubmission);
+    
+    // HTML source type selector
+    qs('#htmlSourceType')?.addEventListener('change', updateHtmlSourceOptions);
 
 
     // Open import modal
