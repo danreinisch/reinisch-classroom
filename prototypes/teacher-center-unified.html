@@ -1229,6 +1229,10 @@
     }
     
     // Parse HTML and build manifest from data-* attributes
+    // Expected HTML structure for correct answer detection (in priority order):
+    // 1. data-value attribute on the element with data-correct="true"
+    // 2. value attribute on the element with data-correct="true"  
+    // 3. text content of the element with data-correct="true"
     function parseHtmlForManifest(htmlContent, title) {
       const parser = new DOMParser();
       const doc = parser.parseFromString(htmlContent, 'text/html');
@@ -1262,14 +1266,14 @@
         // Add to global set
         goalCodes.forEach(c => goalCodesSet.add(c));
         
-        // For MCQ, find correct answer
+        // For MCQ, find correct answer using priority order
         let correctAnswer = null;
         if (questionType === 'mcq') {
           const correctOption = el.querySelector('[data-correct="true"]');
           if (correctOption) {
-            // Try to get value or text content
-            correctAnswer = correctOption.getAttribute('value') || 
-                          correctOption.getAttribute('data-value') ||
+            // Priority order: data-value > value > textContent
+            correctAnswer = correctOption.getAttribute('data-value') || 
+                          correctOption.getAttribute('value') ||
                           correctOption.textContent.trim();
           }
         }
@@ -1489,23 +1493,31 @@
               });
               
               if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`Failed to fetch URL: ${errorText}`);
+                let errorMsg = 'Failed to fetch URL';
+                try {
+                  const errorData = await response.json();
+                  errorMsg = errorData.error || errorMsg;
+                } catch {
+                  errorMsg = await response.text() || errorMsg;
+                }
+                
+                // Provide more specific error messages
+                if (response.status === 400) {
+                  throw new Error(`Invalid URL: ${errorMsg}`);
+                } else if (response.status === 504) {
+                  throw new Error(`Timeout: The URL took too long to respond. ${errorMsg}`);
+                } else if (response.status === 413) {
+                  throw new Error(`Content too large: ${errorMsg}`);
+                } else {
+                  throw new Error(`Error (${response.status}): ${errorMsg}`);
+                }
               }
               
               const result = await response.json();
               htmlContent = result.html;
               
             } catch (fetchErr) {
-              // Fallback: try direct fetch (will fail if CORS blocks it)
-              console.warn('Edge function failed, trying direct fetch:', fetchErr);
-              try {
-                const directResponse = await fetch(htmlUrl);
-                if (!directResponse.ok) throw new Error(`HTTP ${directResponse.status}`);
-                htmlContent = await directResponse.text();
-              } catch (directErr) {
-                throw new Error(`Cannot fetch URL: ${directErr.message}. URL may be blocked by CORS or unreachable.`);
-              }
+              throw new Error(`Cannot fetch URL: ${fetchErr.message}`);
             }
             
             // Parse HTML and build manifest
