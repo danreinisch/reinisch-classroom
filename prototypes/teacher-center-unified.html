@@ -318,14 +318,124 @@
         <div class="subtle">WIP: Local-only passwords first; Supabase RPC later.</div>
       </div>
 
-      <!-- Other tabs (placeholders) -->
+      <!-- Assignments tab -->
       <div class="card ttab" data-tab="assignments" style="display:none">
         <div class="card-header">
           <div>📝 Assignments</div>
           <button class="btn primary small" id="btnImportLibrary">Import from Admin Library</button>
         </div>
-        <div id="assignmentsList" class="scroll" style="margin-top:12px">
-          <!-- Assignments list will be rendered here -->
+
+        <!-- A) Create Assignment -->
+        <div class="card" style="margin-top:12px">
+          <div class="card-header"><div>Create Assignment</div></div>
+          
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">
+            <label>Title <span style="color:#f87171">*</span>
+              <input id="aTitle" type="text" placeholder="Assignment title" required />
+            </label>
+            
+            <label>Type
+              <select id="aType">
+                <option value="html">HTML Package</option>
+                <option value="google_form">Google Form</option>
+              </select>
+            </label>
+          </div>
+          
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">
+            <label>Series (optional)
+              <input id="aSeries" type="text" placeholder="e.g., Language Arts" />
+            </label>
+            
+            <label>Created By (optional)
+              <input id="aCreatedBy" type="text" placeholder="Teacher name" />
+            </label>
+          </div>
+          
+          <label style="margin-top:12px">Page URL (for html type)
+            <input id="aPage" type="text" placeholder="e.g., presentations/week-1/index.html" />
+          </label>
+          
+          <label style="margin-top:12px">Hero Image URL (optional)
+            <input id="aHero" type="text" placeholder="e.g., assets/images/hero.jpg" />
+          </label>
+          
+          <label style="margin-top:12px">Form URL (optional, for google_form type)
+            <input id="aFormUrl" type="text" placeholder="Google Form URL" />
+          </label>
+          
+          <label style="margin-top:12px">Answer Key JSON (optional)
+            <textarea id="aAnswerKey" rows="3" placeholder='{"q1": "answer1", "q2": "answer2"}'></textarea>
+          </label>
+          
+          <div style="display:flex;gap:10px;margin-top:12px">
+            <button class="btn primary" id="btnCreateAssignment">Create Assignment</button>
+            <button class="btn" id="btnClearAssignmentForm">Clear Form</button>
+          </div>
+        </div>
+
+        <!-- B) Issue Assignment -->
+        <div class="card" style="margin-top:12px">
+          <div class="card-header"><div>Issue Assignment</div></div>
+          
+          <label style="margin-top:12px">Select Assignment
+            <select id="issueAssignmentSelect">
+              <option value="">-- Select an assignment --</option>
+            </select>
+          </label>
+          
+          <label style="margin-top:12px">Target Students
+            <select id="issueStudentsSelect" multiple size="8">
+              <!-- Students will be populated from STUDENTS array -->
+            </select>
+            <div class="subtle" style="margin-top:4px">Hold Ctrl/Cmd to select multiple students</div>
+          </label>
+          
+          <label style="margin-top:12px">Classes (placeholder - multi-select)
+            <select id="issueClassesSelect" multiple size="3" disabled>
+              <option>Class A</option>
+              <option>Class B</option>
+              <option>Class C</option>
+            </select>
+            <div class="subtle" style="margin-top:4px">Class targeting stubbed for Phase A</div>
+          </label>
+          
+          <label style="margin-top:12px">Due Date (optional)
+            <input id="issueDueDate" type="date" />
+          </label>
+          
+          <div style="margin-top:12px">
+            <button class="btn primary" id="btnIssueAssignment">Issue to Selected Students</button>
+          </div>
+          
+          <div id="issueProgress" style="margin-top:12px;display:none;padding:10px;background:rgba(255,255,255,.04);border-radius:8px;border:1px solid var(--line)">
+            <div id="issueProgressText" class="subtle">Processing...</div>
+          </div>
+        </div>
+
+        <!-- C) Issued Instances -->
+        <div class="card" style="margin-top:12px">
+          <div class="card-header">
+            <div>Issued Instances</div>
+            <button class="btn small" id="btnRefreshInstances">Refresh</button>
+          </div>
+          
+          <div class="table-wrap scroll" style="margin-top:12px;max-height:400px">
+            <table class="table" id="instancesTable">
+              <thead>
+                <tr>
+                  <th>Student Code</th>
+                  <th>Assignment</th>
+                  <th>Status</th>
+                  <th>Assigned</th>
+                  <th>Due</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td colspan="5" class="subtle">No instances yet</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
@@ -982,47 +1092,216 @@
       return item.slug || `${item.title}-${item.series}`;
     }
 
-    // Render assignments list
-    async function renderAssignmentsList() {
-      const wrap = qs('#assignmentsList');
-      const assignments = await db.listAssignments();
+    // =======================
+    // Assignments: New Phase A Implementation
+    // =======================
+    
+    let ASSIGNMENTS_CACHE = [];
+    
+    // Populate assignment select dropdown
+    async function populateAssignmentSelect() {
+      ASSIGNMENTS_CACHE = await db.listAssignments();
+      const select = qs('#issueAssignmentSelect');
+      if (!ASSIGNMENTS_CACHE || ASSIGNMENTS_CACHE.length === 0) {
+        select.innerHTML = '<option value="">-- No assignments available --</option>';
+        return;
+      }
+      select.innerHTML = '<option value="">-- Select an assignment --</option>' +
+        ASSIGNMENTS_CACHE.map(a => `<option value="${a.id}">${a.title} (${a.type})</option>`).join('');
+    }
+    
+    // Populate students select dropdown
+    async function populateStudentsSelect() {
+      const select = qs('#issueStudentsSelect');
+      if (!STUDENTS || STUDENTS.length === 0) {
+        await loadStudents();
+      }
+      select.innerHTML = STUDENTS.map(s => 
+        `<option value="${s.code}">${s.name || s.code} (${s.code})</option>`
+      ).join('');
+    }
+    
+    // Create assignment handler
+    async function handleCreateAssignment() {
+      const title = qs('#aTitle').value.trim();
+      const type = qs('#aType').value;
+      const series = qs('#aSeries').value.trim();
+      const page = qs('#aPage').value.trim();
+      const hero = qs('#aHero').value.trim();
+      const formUrl = qs('#aFormUrl').value.trim();
+      const answerKeyStr = qs('#aAnswerKey').value.trim();
+      const createdBy = qs('#aCreatedBy').value.trim();
       
-      if (!assignments || assignments.length === 0) {
-        wrap.innerHTML = '<div class="subtle" style="padding:10px">No assignments yet. Use "Import from Admin Library" to get started.</div>';
+      if (!title) {
+        addNotif('Title is required', { type: 'error' });
         return;
       }
       
-      // Build table
-      const rows = assignments.map(a => {
-        const pageLink = a.page ? `<a href="../${a.page}" target="_blank" style="color:var(--brand);text-decoration:none">View</a>` : '—';
-        const heroThumb = a.hero ? `<img src="../${a.hero}" style="width:40px;height:40px;object-fit:cover;border-radius:6px;vertical-align:middle" alt="">` : '';
-        const created = a.created_at ? new Date(a.created_at).toLocaleDateString() : '—';
-        return `<tr>
-          <td>${heroThumb}</td>
-          <td style="font-weight:800">${a.title || '—'}</td>
-          <td>${a.series || '—'}</td>
-          <td>${a.slug || '—'}</td>
-          <td>${pageLink}</td>
-          <td class="subtle">${created}</td>
-        </tr>`;
-      });
+      // Parse answer key JSON if provided
+      let meta = {};
+      if (formUrl) meta.form_url = formUrl;
+      if (answerKeyStr) {
+        try {
+          meta.answer_key = JSON.parse(answerKeyStr);
+        } catch (e) {
+          addNotif('Invalid Answer Key JSON: ' + e.message, { type: 'error' });
+          return;
+        }
+      }
       
-      wrap.innerHTML = `
-        <table class="table">
-          <thead>
-            <tr>
-              <th></th>
-              <th>Title</th>
-              <th>Series</th>
-              <th>Slug</th>
-              <th>Page</th>
-              <th>Created</th>
-            </tr>
-          </thead>
-          <tbody>${rows.join('')}</tbody>
-        </table>
-      `;
+      try {
+        const assignment = await db.createAssignment({
+          title,
+          type,
+          series: series || null,
+          page: page || null,
+          hero: hero || null,
+          meta,
+          created_by: createdBy || null
+        });
+        
+        addNotif(`Created assignment: "${title}"`, { type: 'success' });
+        
+        // Clear form
+        qs('#aTitle').value = '';
+        qs('#aSeries').value = '';
+        qs('#aPage').value = '';
+        qs('#aHero').value = '';
+        qs('#aFormUrl').value = '';
+        qs('#aAnswerKey').value = '';
+        qs('#aCreatedBy').value = '';
+        
+        // Refresh assignment list
+        await populateAssignmentSelect();
+      } catch (err) {
+        console.error('Failed to create assignment:', err);
+        addNotif('Failed to create assignment: ' + err.message, { type: 'error' });
+      }
     }
+    
+    // Issue assignment handler
+    async function handleIssueAssignment() {
+      const assignmentId = qs('#issueAssignmentSelect').value;
+      const dueDate = qs('#issueDueDate').value || null;
+      const selectedOptions = Array.from(qs('#issueStudentsSelect').selectedOptions);
+      const studentCodes = selectedOptions.map(opt => opt.value);
+      
+      if (!assignmentId) {
+        addNotif('Please select an assignment', { type: 'error' });
+        return;
+      }
+      
+      if (studentCodes.length === 0) {
+        addNotif('Please select at least one student', { type: 'error' });
+        return;
+      }
+      
+      // Find assignment title for notification
+      const assignment = ASSIGNMENTS_CACHE.find(a => String(a.id) === String(assignmentId));
+      const assignmentTitle = assignment ? assignment.title : 'Assignment';
+      
+      // Show progress
+      const progressDiv = qs('#issueProgress');
+      const progressText = qs('#issueProgressText');
+      progressDiv.style.display = 'block';
+      progressText.textContent = `Issuing to ${studentCodes.length} student(s)...`;
+      
+      let issued = 0;
+      let failed = 0;
+      
+      for (const studentCode of studentCodes) {
+        try {
+          await db.upsertAssignmentInstance({
+            assignment_id: parseInt(assignmentId, 10),
+            student_code: studentCode,
+            due_at: dueDate,
+            status: 'Assigned',
+            settings: {}
+          });
+          issued++;
+          progressText.textContent = `Issued ${issued} of ${studentCodes.length}...`;
+        } catch (err) {
+          console.error(`Failed to issue to ${studentCode}:`, err);
+          failed++;
+        }
+      }
+      
+      progressText.textContent = `Complete: ${issued} issued${failed > 0 ? `, ${failed} failed` : ''}`;
+      
+      // Add notification
+      addNotif(`Issued "${assignmentTitle}" to ${issued} student(s)`, { count: issued });
+      
+      // Refresh instances table
+      await renderInstancesTable();
+      
+      // Hide progress after 3 seconds
+      setTimeout(() => {
+        progressDiv.style.display = 'none';
+      }, 3000);
+    }
+    
+    // Render instances table
+    async function renderInstancesTable() {
+      const tbody = qs('#instancesTable tbody');
+      try {
+        const instances = await db.listAssignmentInstances();
+        
+        if (!instances || instances.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" class="subtle">No instances yet</td></tr>';
+          return;
+        }
+        
+        // Build assignment ID -> title map
+        if (ASSIGNMENTS_CACHE.length === 0) {
+          ASSIGNMENTS_CACHE = await db.listAssignments();
+        }
+        const assignmentMap = {};
+        ASSIGNMENTS_CACHE.forEach(a => {
+          assignmentMap[a.id] = a.title;
+        });
+        
+        const rows = instances.map(inst => {
+          const assignmentTitle = assignmentMap[inst.assignment_id] || `ID: ${inst.assignment_id}`;
+          const assigned = inst.assigned_at ? new Date(inst.assigned_at).toLocaleDateString() : '—';
+          const due = inst.due_at ? new Date(inst.due_at).toLocaleDateString() : '—';
+          return `<tr>
+            <td>${inst.student_code}</td>
+            <td>${assignmentTitle}</td>
+            <td><span class="badge">${inst.status || 'Assigned'}</span></td>
+            <td class="subtle">${assigned}</td>
+            <td class="subtle">${due}</td>
+          </tr>`;
+        });
+        
+        tbody.innerHTML = rows.join('');
+      } catch (err) {
+        console.error('Failed to load instances:', err);
+        tbody.innerHTML = '<tr><td colspan="5" class="subtle">Error loading instances</td></tr>';
+      }
+    }
+    
+    // Initialize assignments tab
+    async function initAssignments() {
+      await loadStudents();
+      await populateAssignmentSelect();
+      await populateStudentsSelect();
+      await renderInstancesTable();
+    }
+    
+    // Event listeners for assignments
+    on('#btnCreateAssignment', 'click', handleCreateAssignment);
+    on('#btnClearAssignmentForm', 'click', () => {
+      qs('#aTitle').value = '';
+      qs('#aSeries').value = '';
+      qs('#aPage').value = '';
+      qs('#aHero').value = '';
+      qs('#aFormUrl').value = '';
+      qs('#aAnswerKey').value = '';
+      qs('#aCreatedBy').value = '';
+    });
+    on('#btnIssueAssignment', 'click', handleIssueAssignment);
+    on('#btnRefreshInstances', 'click', renderInstancesTable);
+
 
     // Open import modal
     async function openImportLibraryModal() {
@@ -1145,7 +1424,7 @@
       
       addNotif(`Imported ${imported} assignment${imported !== 1 ? 's' : ''} from library`, { count: imported });
       closeModal('#importLibraryModal');
-      await renderAssignmentsList();
+      await populateAssignmentSelect();
     }
 
     // Modal controls
@@ -1182,11 +1461,6 @@
         e.preventDefault();
       }
     });
-
-    // Initialize assignments tab
-    async function initAssignments() {
-      await renderAssignmentsList();
-    }
 
     // Optional: auto-open Teacher Center for local dev
     // showTeacher(); initIEP();

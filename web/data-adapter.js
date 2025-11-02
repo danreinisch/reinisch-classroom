@@ -98,6 +98,20 @@ const local = {
     store.set('assignmentInstances', arr);
     return true;
   },
+  async addSubmission(payload) {
+    const submissions = store.get('submissions', []);
+    const id = 'SUB' + Math.random().toString(36).slice(2, 9).toUpperCase();
+    submissions.push({ id, ...payload, submitted_at: new Date().toISOString() });
+    store.set('submissions', submissions);
+    
+    // Update instance status to 'Submitted'
+    const arr = store.get('assignmentInstances', []);
+    const inst = arr.find(ai => ai.id === payload.instance_id);
+    if (inst) inst.status = 'Submitted';
+    store.set('assignmentInstances', arr);
+    
+    return { submission_id: id };
+  },
 };
 
 const remote = supabase && {
@@ -168,7 +182,124 @@ const remote = supabase && {
     const { data, error } = await supabase.rpc('verify_student_password', { p_code: code, p_plain: plain });
     if (error) throw error; return !!data;
   },
-  // Assignments / Instances: to be completed as we migrate those tabs
+  
+  // Assignments
+  async createAssignment(a) {
+    const payload = {
+      title: a.title,
+      type: a.type || 'html',
+      series: a.series || null,
+      page: a.page || null,
+      hero: a.hero || null,
+      meta: a.meta || {},
+      created_by: a.created_by || null
+    };
+    const { data, error } = await supabase.from('assignments').insert(payload).select().single();
+    if (error) throw error;
+    return data;
+  },
+  
+  async listAssignments() {
+    const { data, error } = await supabase
+      .from('assignments')
+      .select('id, title, type, series, page, hero, meta, created_at')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  },
+  
+  async listAssignmentInstances() {
+    // Join assignment_instances with students to get student code/name
+    const { data, error } = await supabase
+      .from('assignment_instances')
+      .select(`
+        id,
+        assignment_id,
+        student_id,
+        assigned_at,
+        due_at,
+        status,
+        settings,
+        students!inner(code, name)
+      `);
+    if (error) throw error;
+    
+    // Flatten to include student_code and student_name at top level
+    // Client-side sort by student code since we can't order on joined columns
+    const flattened = (data || []).map(inst => ({
+      id: inst.id,
+      assignment_id: inst.assignment_id,
+      student_id: inst.student_id,
+      student_code: inst.students.code,
+      student_name: inst.students.name,
+      assigned_at: inst.assigned_at,
+      due_at: inst.due_at,
+      status: inst.status,
+      settings: inst.settings
+    }));
+    
+    // Sort by student code
+    flattened.sort((a, b) => (a.student_code || '').localeCompare(b.student_code || ''));
+    return flattened;
+  },
+  
+  async upsertAssignmentInstance(x) {
+    // Lookup student by code to get student_id
+    const { data: stu, error: e1 } = await supabase
+      .from('students')
+      .select('id')
+      .eq('code', x.student_code)
+      .single();
+    if (e1) throw e1;
+    
+    const payload = {
+      assignment_id: x.assignment_id,
+      student_id: stu.id,
+      due_at: x.due_at || null,
+      status: x.status || 'Assigned',
+      settings: x.settings || {}
+    };
+    
+    // Upsert on unique (assignment_id, student_id)
+    const { error } = await supabase
+      .from('assignment_instances')
+      .upsert(payload, { onConflict: 'assignment_id,student_id' });
+    if (error) throw error;
+    return true;
+  },
+  
+  async addSubmission(payload) {
+    // Insert submission
+    const { data: submission, error: e1 } = await supabase
+      .from('submissions')
+      .insert({
+        instance_id: payload.instance_id,
+        answers: payload.answers || {},
+        score_auto: payload.score_auto || null,
+        score_manual: payload.score_manual || null,
+        score_total: payload.score_total || null,
+        detail: payload.detail || {},
+        notes: payload.notes || null
+      })
+      .select('id')
+      .single();
+    if (e1) throw e1;
+    
+    // Call process_submission RPC
+    const { error: e2 } = await supabase.rpc('process_submission', { 
+      p_submission_id: submission.id 
+    });
+    if (e2) throw e2;
+    
+    // Update assignment_instances status to 'Submitted'
+    const { error: e3 } = await supabase
+      .from('assignment_instances')
+      .update({ status: 'Submitted' })
+      .eq('id', payload.instance_id);
+    if (e3) throw e3;
+    
+    return { submission_id: submission.id };
+  }
 };
 
 export const db = remote || local;
