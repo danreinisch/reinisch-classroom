@@ -1473,6 +1473,9 @@
         showToolsStatus('Pull Complete', `Data successfully imported from Supabase (${mode}).`, summary);
         addNotif(`Pulled ${remoteStudents.length} students and ${remoteGoals.length} goals from Supabase`);
         
+        // Refresh KPI badges to reflect pulled data
+        renderKPIs();
+        
         // Refresh UI if on IEP tab
         if (STUDENTS.length) {
           await loadStudents();
