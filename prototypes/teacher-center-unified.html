@@ -709,7 +709,11 @@
     function getProgress(){ return localStore.get('progressEntries', []) || []; }
     function setSelected(code){ SELECTED = code; localStorage.setItem(NS+'selectedStudent', code); }
 
-    function fmtDate(d){ const dt=new Date(d); return isNaN(dt)?'—':dt.toLocaleDateString(); }
+    function fmtDate(d){ 
+      if (!d) return '—'; 
+      const dt = new Date(d); 
+      return isNaN(dt.getTime()) ? '—' : dt.toLocaleDateString(); 
+    }
 
     function lastUpdateFor(code){
       const prog = getProgress().filter(p=>p.student_code===code).sort((a,b)=> (b.date||'').localeCompare(a.date||''));
