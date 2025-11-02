@@ -1272,9 +1272,12 @@
           const correctOption = el.querySelector('[data-correct="true"]');
           if (correctOption) {
             // Priority order: data-value > value > textContent
-            correctAnswer = correctOption.getAttribute('data-value') || 
-                          correctOption.getAttribute('value') ||
-                          correctOption.textContent.trim();
+            // Use nullish coalescing to only fall through on null/undefined
+            const dataValue = correctOption.getAttribute('data-value');
+            const value = correctOption.getAttribute('value');
+            const textContent = correctOption.textContent.trim();
+            
+            correctAnswer = dataValue ?? value ?? textContent;
           }
         }
         
@@ -1473,9 +1476,13 @@
               return;
             }
             
-            // Validate URL format
+            // Validate URL format and protocol
             try {
-              new URL(htmlUrl);
+              const parsedUrl = new URL(htmlUrl);
+              if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+                addNotif('Only HTTP and HTTPS URLs are allowed', { type: 'error' });
+                return;
+              }
             } catch {
               addNotif('Please enter a valid URL', { type: 'error' });
               return;

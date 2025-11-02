@@ -41,24 +41,57 @@ exports.handler = async (event) => {
 
     // Prevent SSRF: Block private network ranges and localhost
     const hostname = parsedUrl.hostname.toLowerCase();
-    const privateRanges = [
-      'localhost', '127.0.0.1', '0.0.0.0',
-      '10.', '192.168.', '172.16.', '172.17.', '172.18.', '172.19.',
-      '172.20.', '172.21.', '172.22.', '172.23.', '172.24.', '172.25.',
-      '172.26.', '172.27.', '172.28.', '172.29.', '172.30.', '172.31.',
-      '169.254.' // link-local
-    ];
     
+    // Block localhost and loopback
     if (hostname === 'localhost' || 
         hostname === '127.0.0.1' || 
         hostname === '0.0.0.0' ||
-        hostname.startsWith('[::1]') ||
-        hostname.startsWith('[0:0:0:0:0:0:0:1]') ||
-        privateRanges.some(range => hostname.startsWith(range))) {
+        /^127\.\d+\.\d+\.\d+$/.test(hostname) || // any 127.x.x.x
+        hostname === '::1' || // IPv6 localhost
+        hostname === '0:0:0:0:0:0:0:1') {
       return {
         statusCode: 400,
-        body: JSON.stringify({ error: 'Private network addresses are not allowed' })
+        body: JSON.stringify({ error: 'Localhost and loopback addresses are not allowed' })
       };
+    }
+    
+    // Block private IPv4 ranges
+    const ipv4Match = hostname.match(/^(\d+)\.(\d+)\.(\d+)\.(\d+)$/);
+    if (ipv4Match) {
+      const octets = ipv4Match.slice(1, 5).map(Number);
+      const [a, b, c, d] = octets;
+      
+      // Validate octets are in valid range
+      if (octets.some(o => o < 0 || o > 255)) {
+        return {
+          statusCode: 400,
+          body: JSON.stringify({ error: 'Invalid IP address format' })
+        };
+      }
+      
+      // Check private ranges
+      if (a === 10 || // 10.0.0.0/8
+          (a === 172 && b >= 16 && b <= 31) || // 172.16.0.0/12
+          (a === 192 && b === 168) || // 192.168.0.0/16
+          (a === 169 && b === 254)) { // 169.254.0.0/16 (link-local)
+        return {
+          statusCode: 400,
+          body: JSON.stringify({ error: 'Private network addresses are not allowed' })
+        };
+      }
+    }
+    
+    // Block IPv6 private ranges (simplified check)
+    if (hostname.includes(':')) {
+      // Check for common private IPv6 patterns
+      if (hostname.startsWith('fc') || // fc00::/7 (unique local)
+          hostname.startsWith('fd') || // fc00::/7 (unique local)
+          hostname.startsWith('fe80')) { // fe80::/10 (link-local)
+        return {
+          statusCode: 400,
+          body: JSON.stringify({ error: 'Private IPv6 addresses are not allowed' })
+        };
+      }
     }
 
     // Fetch the HTML content with timeout
