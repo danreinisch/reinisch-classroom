@@ -132,7 +132,7 @@ const remote = supabase && {
     const { data, error } = await supabase
       .from('goals')
       .select('id, code, desc, target, status, student_id, students!inner(code)')
-      .order('students.code');
+      .order('code', { foreignTable: 'students', ascending: true });
     if (error) throw error;
     // Flatten to include student_code at top level
     return (data || []).map(g => ({
