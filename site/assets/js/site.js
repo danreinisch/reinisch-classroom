@@ -1,4 +1,7 @@
 (function() {
+  // Centralize the Classroom Hub URL here for easy changes later
+  const HUB_URL = '/prototypes/teacher-center-unified.html';
+
   function injectMinimalStyles() {
     if (document.getElementById('copilot-inline-site-css')) return;
     const css = `
@@ -6,7 +9,7 @@
       h1, h2, h3, h4 { text-align: center; line-height: 1.2; margin: 0.6em 0; }
       /* Back button styles (clear and accessible) */
       .back-nav { display: flex; justify-content: center; margin: 0.5rem 0 1rem; }
-      .back-button { display: inline-flex; align-items: center; gap:.5rem; padding:.6rem 1rem; border:1px solid #1a73e8; border-radius:.5rem; background:#1a73e8; color:#ffffff; text-decoration:none; transition: filter .15s }
+      .back-button { display: inline-flex; align-items: center; gap:.5rem; padding:.6rem 1rem; border:1px solid #1a73e8; border-radius:.5rem; background:#1a73e8; color:#ffffff; text-decoration:none; cursor:pointer; }
       .back-button:hover { filter: brightness(1.05); }
 
       /* Background video and overlay (duplicated here as a safety net if CSS fails to load) */
@@ -14,7 +17,7 @@
       .bg-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:-1}
       @media (prefers-reduced-motion: reduce){ .bg-video{display:none} }
 
-      /* Home quick links (Math Toolkit, Teacher Tools) - Glass style */
+      /* Home quick links (Math Toolkit, Classroom Hub) - Glass style */
       .home-quick-links { display:flex; flex-wrap:wrap; gap:.6rem; justify-content:center; margin: 1rem 0; }
       .home-quick-links a { 
         display:inline-flex; 
@@ -96,7 +99,7 @@
     document.querySelectorAll('h1,h2,h3,h4').forEach(h => { h.style.textAlign = 'center'; });
   }
 
-  // New: Wire Week 7/8 links on the A Door Into Time hub page
+  // Wire Week 7/8 links on the A Door Into Time hub page
   function updateADITLinks() {
     if (!location.pathname.toLowerCase().includes('/language-arts/a-door-into-time/')) return;
     const mapping = {
@@ -152,6 +155,27 @@
     v.play && v.play().catch(function(){});
   }
 
+  // Update any existing “Teacher Center” anchors on the page to “Classroom Hub”
+  function updateTeacherCenterToClassroomHub() {
+    document.querySelectorAll('a').forEach(a => {
+      const label = (a.textContent || '').trim().toLowerCase();
+      const aria = (a.getAttribute('aria-label') || '').toLowerCase();
+      const href = a.getAttribute('href') || '';
+      const looksLikeTeacherCenter =
+        label === 'teacher center' ||
+        aria.includes('teacher center') ||
+        /teacher-tools\/??$/i.test(href) ||
+        href.includes('/teacher-tools/');
+
+      if (looksLikeTeacherCenter) {
+        a.textContent = 'Classroom Hub';
+        a.setAttribute('aria-label', 'Open Classroom Hub');
+        a.setAttribute('href', HUB_URL);
+        a.setAttribute('data-role', 'classroom-hub');
+      }
+    });
+  }
+
   function addHomeQuickLinks() {
     const p = location.pathname.replace(/index\.html$/i, '');
     const isRootHome = (p === '/' || p === '');
@@ -159,11 +183,15 @@
 
     if (!isRootHome && !isSubSiteHome) return;
 
+    // prefer an absolute link to the hub so it works from any base
     const relativePath = isRootHome ? 'site/' : './';
 
     const hasMT = !!document.querySelector('a[href*="math-toolkit"]');
-    const hasTT = !!document.querySelector('a[href*="teacher-tools"]');
-    if (hasMT && hasTT) return;
+    // Detect existing hub link by data-role or exact href match
+    const hasHub = !!document.querySelector(
+      'a[data-role="classroom-hub"], a[href="/prototypes/teacher-center-unified.html"]'
+    );
+    if (hasMT && hasHub) return;
 
     const buttonsGrid = document.querySelector('.buttons');
     
@@ -176,12 +204,13 @@
         a.setAttribute('aria-label', 'Open Math Toolkit');
         buttonsGrid.appendChild(a);
       }
-      if (!hasTT) {
+      if (!hasHub) {
         const a = document.createElement('a');
         a.className = 'btn';
-        a.href = relativePath + 'teacher-tools/';
-        a.textContent = 'Teacher Center';
-        a.setAttribute('aria-label', 'Open Teacher Center');
+        a.href = HUB_URL;
+        a.textContent = 'Classroom Hub';
+        a.setAttribute('aria-label', 'Open Classroom Hub');
+        a.setAttribute('data-role', 'classroom-hub');
         buttonsGrid.appendChild(a);
       }
     } else {
@@ -204,12 +233,13 @@
         a.setAttribute('aria-label', 'Open Math Toolkit');
         parts.push(a);
       }
-      if (!hasTT) {
+      if (!hasHub) {
         const a = document.createElement('a');
         a.className = 'btn';
-        a.href = relativePath + 'teacher-tools/';
-        a.textContent = 'Teacher Center';
-        a.setAttribute('aria-label', 'Open Teacher Center');
+        a.href = HUB_URL;
+        a.textContent = 'Classroom Hub';
+        a.setAttribute('aria-label', 'Open Classroom Hub');
+        a.setAttribute('data-role', 'classroom-hub');
         parts.push(a);
       }
       if (!parts.length) return;
@@ -224,7 +254,7 @@
     }
   }
 
-  // NEW: Add an Admin link at top-right on home page
+  // Add an Admin link at top-right on home page
   function addAdminLink() {
     const p = location.pathname.replace(/index\.html$/i, '');
     const isRootHome = (p === '/' || p === '');
@@ -247,7 +277,13 @@
     insertBackButton(section);
     centerHeadings();
     updateADITLinks();
+
+    // First, upgrade any existing “Teacher Center” button to use Classroom Hub
+    updateTeacherCenterToClassroomHub();
+
+    // Then, inject the quick links if they’re missing
     addHomeQuickLinks();
+
     addAdminLink();
   }
 
