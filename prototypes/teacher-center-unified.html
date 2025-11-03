@@ -211,29 +211,36 @@
 </style>
 <link rel="stylesheet" href="../web/teacher-center-theme.css">
 
-<!-- Bold Glass Theme v2: Intensified glassmorphism with stronger emerald mist, inner highlights, and improved button contrast -->
-<style id="glass-bold-theme-v2">
-  /* === Background Image Support (optional) === */
-  /* Use CSS var --bg-image for optional background image (e.g., gradient grid) */
-  /* Falls back gracefully when not set */
+<!-- Bold Glass Theme v3: Subtle soft-grid background with gentle emerald mist, improved readability, and enhanced glassmorphism -->
+<style id="glass-bold-theme-v3">
+  /* === Subtle Soft-Grid Background === */
+  /* Uses CSS var --bg-image to support optional background image (e.g., ../assets/bg/bg5e_soft_grid.png) */
+  /* Falls back to subtle gradient when image not present */
   body.glass-bold {
     background:
-      /* Optional background image */
-      var(--bg-image, none),
-      /* Three large radial gradients with higher intensity emerald mist */
-      radial-gradient(2200px 1600px at 8% -15%, rgba(16,185,129,0.75), transparent 54%),
-      radial-gradient(2000px 1400px at 98% 6%, rgba(34,197,94,0.65), transparent 60%),
-      radial-gradient(1800px 1200px at 48% 112%, rgba(5,150,105,0.58), transparent 52%),
-      /* Vertical wash to lift darkness and add depth */
-      linear-gradient(180deg, rgba(16,185,129,0.12) 0%, transparent 32%, transparent 68%, rgba(5,150,105,0.10) 100%),
-      /* Additional depth with conic and radial accents */
-      conic-gradient(from 210deg at 16% 28%, transparent 0deg, rgba(34,197,94,0.45) 95deg, transparent 160deg),
-      radial-gradient(1200px 900px at 76% 58%, rgba(6,182,212,0.18), transparent 70%),
-      /* Slightly lifted base to prevent crushing blacks */
-      linear-gradient(180deg, #050a0e, #080d12 58%, #040812);
+      /* Soft grid background image with fallback */
+      var(--bg-image, linear-gradient(180deg, #0b1220, #0c1322 60%, #0b0f14)) center/cover no-repeat fixed,
+      /* Gentle bottom vignette for center focus */
+      radial-gradient(1400px 900px at 50% 120%, rgba(0,0,0,0.55), rgba(0,0,0,0));
     background-attachment: fixed;
-    background-size: cover, auto, auto, auto, auto, auto, auto, auto;
-    background-position: center, 8% -15%, 98% 6%, 48% 112%, center, 16% 28%, 76% 58%, center;
+  }
+
+  /* Subtle emerald mist overlay with reduced intensity */
+  body.glass-bold::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: -1;
+    background:
+      /* Three subtle mist gradients moved off-screen */
+      radial-gradient(1400px 1000px at -20% 0%, rgba(16,185,129,0.12), transparent 60%),
+      radial-gradient(1400px 1000px at 120% -10%, rgba(34,197,94,0.14), transparent 60%),
+      radial-gradient(1400px 1000px at 50% 120%, rgba(5,150,105,0.10), transparent 60%),
+      /* Subtle vertical wash for comfortable midtones */
+      linear-gradient(180deg, rgba(16,185,129,0.04) 0%, transparent 35%, transparent 65%, rgba(5,150,105,0.04) 100%);
+    backdrop-filter: blur(20px) saturate(115%);
+    -webkit-backdrop-filter: blur(20px) saturate(115%);
   }
 
   /* Ensure container wrappers are fully transparent so backdrop-filter blur reveals the mist */
