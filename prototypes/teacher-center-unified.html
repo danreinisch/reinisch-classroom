@@ -2281,64 +2281,18 @@
       }
     }
     
-    // Add students from selected classes
-    async function handleAddClassStudents() {
-      try {
-        const selectedClasses = Array.from(qs('#issueClassesSelect').selectedOptions).map(opt => opt.value);
-        if (selectedClasses.length === 0) {
-          addNotif('Please select at least one class', { type: 'warning' });
-          return;
-        }
-        
-        // Get class enrollments - prefer db.listClassEnrollments, fallback to localStorage
-        let enrollments = [];
-        try {
-          enrollments = await db.listClassEnrollments();
-        } catch (err) {
-          console.warn('db.listClassEnrollments failed, falling back to localStorage:', err);
-        }
-        
-        // If db returns empty or fails, try localStorage fallback
-        if (!enrollments || enrollments.length === 0) {
-          enrollments = localStore.get('class_enrollments', []);
-          if (enrollments.length > 0) {
-            console.info('Using localStorage class_enrollments as fallback');
-          }
-        }
-        
-        // Filter enrollments for selected classes
-        const studentCodes = enrollments
-          .filter(e => selectedClasses.includes(String(e.class_id)))
-          .map(e => e.student_code);
-        
-        // Remove duplicates
-        const uniqueStudentCodes = [...new Set(studentCodes)];
-        
-        if (uniqueStudentCodes.length === 0) {
-          addNotif('No students found in selected classes. Please check class enrollments.', { type: 'warning' });
-          return;
-        }
-        
-        // Select students in the multi-select
-        const select = qs('#issueStudentsSelect');
-        Array.from(select.options).forEach(opt => {
-          if (uniqueStudentCodes.includes(opt.value)) {
-            opt.selected = true;
-          }
-        });
-        
-        updateSelectedStudentsList();
-        addNotif(`Added ${uniqueStudentCodes.length} student(s) from ${selectedClasses.length} class(es)`, { type: 'success' });
-        
-      } catch (err) {
-        console.error('Failed to add class students:', err);
-        addNotif('Failed to add students from classes: ' + err.message, { type: 'error' });
-      }
+    // Helper: Get selected values from a multiple select element
+    function getSelectedValues(selectEl) {
+      if (!selectEl) return [];
+      return Array.from(selectEl.selectedOptions).map(opt => opt.value);
     }
     
-    // Update selected students list display
-    function updateSelectedStudentsList() {
-      const selected = Array.from(qs('#issueStudentsSelect').selectedOptions);
+    // Helper: Refresh the Selected Students box display
+    function refreshSelectedStudentsBox() {
+      const select = qs('#issueStudentsSelect');
+      if (!select) return;
+      
+      const selected = Array.from(select.selectedOptions);
       const count = selected.length;
       
       qs('#selectedStudentsCount').textContent = count;
@@ -2352,18 +2306,124 @@
       }
     }
     
-    // Select all students
+    // Get students for selected classes (resolves enrollments)
+    async function getStudentsForClasses(classIds) {
+      if (!classIds || classIds.length === 0) return [];
+      
+      // Get class enrollments - prefer db.listClassEnrollments, fallback to localStorage
+      let enrollments = [];
+      try {
+        enrollments = await db.listClassEnrollments();
+      } catch (err) {
+        console.warn('db.listClassEnrollments failed, falling back to localStorage:', err);
+      }
+      
+      // If db returns empty or fails, try localStorage fallback
+      if (!enrollments || enrollments.length === 0) {
+        enrollments = localStore.get('classEnrollments', []);
+        if (enrollments.length > 0) {
+          console.info('Using localStorage classEnrollments as fallback');
+        }
+      }
+      
+      // Build a Set of allowed class identifiers for fast lookup
+      const allowedClasses = new Set(classIds.map(id => String(id)));
+      
+      // Filter enrollments: match class_id, class_code, or class field
+      const studentCodes = enrollments
+        .filter(e => {
+          const classId = String(e.class_id || e.class_code || e.class || '');
+          return allowedClasses.has(classId);
+        })
+        .map(e => e.student_code || e.student_id || e.student);
+      
+      // Remove duplicates and filter out empty values
+      return [...new Set(studentCodes.filter(Boolean))];
+    }
+    
+    // Add students from selected classes
+    async function handleAddClassStudents() {
+      try {
+        const selectedClasses = getSelectedValues(qs('#issueClassesSelect'));
+        if (selectedClasses.length === 0) {
+          addNotif('Please select at least one class', { type: 'warning' });
+          return;
+        }
+        
+        const studentCodes = await getStudentsForClasses(selectedClasses);
+        
+        if (studentCodes.length === 0) {
+          addNotif('No students found in selected classes. Please check class enrollments.', { type: 'warning' });
+          return;
+        }
+        
+        // Select students in the multi-select
+        const select = qs('#issueStudentsSelect');
+        Array.from(select.options).forEach(opt => {
+          if (studentCodes.includes(opt.value)) {
+            opt.selected = true;
+          }
+        });
+        
+        refreshSelectedStudentsBox();
+        addNotif(`Added ${studentCodes.length} student(s) from ${selectedClasses.length} class(es)`, { type: 'success' });
+        
+      } catch (err) {
+        console.error('Failed to add class students:', err);
+        addNotif('Failed to add students from classes: ' + err.message, { type: 'error' });
+      }
+    }
+    
+    // Handle class filter change (filter Target Students list)
+    async function handleClassFilterChange() {
+      try {
+        const selectedClasses = getSelectedValues(qs('#issueClassesSelect'));
+        const select = qs('#issueStudentsSelect');
+        
+        if (selectedClasses.length === 0) {
+          // Show all students when no class is selected
+          Array.from(select.options).forEach(opt => {
+            opt.style.display = '';
+          });
+        } else {
+          // Get students for selected classes
+          const studentCodes = await getStudentsForClasses(selectedClasses);
+          const studentCodesSet = new Set(studentCodes);
+          
+          // Hide students not in selected classes
+          Array.from(select.options).forEach(opt => {
+            opt.style.display = studentCodesSet.has(opt.value) ? '' : 'none';
+          });
+        }
+        
+        // Update selected students display
+        refreshSelectedStudentsBox();
+      } catch (err) {
+        console.error('Failed to filter students by class:', err);
+      }
+    }
+    
+    // Update selected students list display (wrapper for refreshSelectedStudentsBox)
+    function updateSelectedStudentsList() {
+      refreshSelectedStudentsBox();
+    }
+    
+    // Select all students (only non-hidden options)
     function handleSelectAllStudents() {
       const select = qs('#issueStudentsSelect');
-      Array.from(select.options).forEach(opt => opt.selected = true);
-      updateSelectedStudentsList();
+      Array.from(select.options).forEach(opt => {
+        if (opt.style.display !== 'none') {
+          opt.selected = true;
+        }
+      });
+      refreshSelectedStudentsBox();
     }
     
     // Clear student selection
     function handleClearStudents() {
       const select = qs('#issueStudentsSelect');
       Array.from(select.options).forEach(opt => opt.selected = false);
-      updateSelectedStudentsList();
+      refreshSelectedStudentsBox();
     }
     
     // Simulate submission
@@ -2467,6 +2527,7 @@
     on('#btnSelectAllStudents', 'click', handleSelectAllStudents);
     on('#btnClearStudents', 'click', handleClearStudents);
     on('#btnSimulateSubmission', 'click', handleSimulateSubmission);
+    on('#issueClassesSelect', 'change', handleClassFilterChange);
     
     // HTML source type selector
     qs('#htmlSourceType')?.addEventListener('change', updateHtmlSourceOptions);
