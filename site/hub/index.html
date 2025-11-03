@@ -2026,15 +2026,11 @@
             
             // Show manifest summary
             qs('#zipManifestSummary').style.display = 'block';
-            // Escape HTML to prevent XSS
-            const escapeHtml = (str) => String(str).replace(/[&<>"']/g, m => ({
-              '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-            })[m]);
             qs('#zipManifestContent').innerHTML = `
-              <strong>Source URL:</strong> ${escapeHtml(htmlUrl)}<br>
+              <strong>Source URL:</strong> ${htmlUrl}<br>
               <strong>Questions Detected:</strong> ${manifest.questions.length}<br>
               <strong>IEP Goal Codes:</strong> ${(manifest.iep_goal_codes || []).length}<br>
-              ${manifest.warning ? `<div style="color:#fbbf24;margin-top:4px">${escapeHtml(manifest.warning)}</div>` : ''}
+              ${manifest.warning ? `<div style="color:#fbbf24;margin-top:4px">${manifest.warning}</div>` : ''}
             `;
           }
           
