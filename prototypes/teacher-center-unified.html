@@ -222,9 +222,9 @@
       /* Soft grid background image with fallback gradient */
       var(--bg-image, linear-gradient(180deg, #0b1220, #0c1322 60%, #0b0f14)) center/cover no-repeat fixed,
       /* Gentle bottom vignette for dark center focus */
-      radial-gradient(1400px 900px at 50% 120%, rgba(0,0,0,0.55), rgba(0,0,0,0) 60%),
+      radial-gradient(1400px 900px at 50% 120%, rgba(0,0,0,0.51), rgba(0,0,0,0) 60%),
       /* Gentle top vignette */
-      radial-gradient(1400px 900px at 50% -20%, rgba(0,0,0,0.50), rgba(0,0,0,0) 60%);
+      radial-gradient(1400px 900px at 50% -20%, rgba(0,0,0,0.46), rgba(0,0,0,0) 60%);
     background-attachment: fixed;
   }
 
@@ -243,7 +243,7 @@
       radial-gradient(1600px 1200px at 50% 115%, rgba(5,150,105,0.08), transparent 62%),
       /* Soft green midband - subtle horizontal wash */
       linear-gradient(180deg, transparent 0%, rgba(16,185,129,0.05) 40%, rgba(34,197,94,0.06) 50%, rgba(16,185,129,0.05) 60%, transparent 100%);
-    filter: blur(20px) saturate(112%);
+    filter: blur(22px) saturate(109%);
   }
 
   /* Ensure container wrappers are fully transparent so backdrop-filter blur reveals the mist */
@@ -259,15 +259,15 @@
   /* === Bold glass cards: refined frosted glass effect === */
   body.glass-bold .card {
     position: relative;
-    background: rgba(15,23,42,0.62) !important;
+    background: rgba(15,23,42,0.60) !important;
     border: 1px solid rgba(255,255,255,0.13) !important;
-    backdrop-filter: blur(26px) saturate(165%) !important;
-    -webkit-backdrop-filter: blur(26px) saturate(165%) !important;
+    backdrop-filter: blur(25px) saturate(165%) !important;
+    -webkit-backdrop-filter: blur(25px) saturate(165%) !important;
     box-shadow: 
       0 12px 48px rgba(0,0,0,.50),
-      inset 0 1px 0 rgba(255,255,255,.10),
-      0 0 0 1px rgba(34,197,94,.16),
-      0 0 6px rgba(16,185,129,.12) !important;
+      inset 0 1px 0 rgba(255,255,255,.09),
+      0 0 0 1px rgba(34,197,94,.144),  /* ~10% reduction: 0.16 * 0.9 = 0.144 */
+      0 0 6px rgba(16,185,129,.108) !important;  /* ~10% reduction: 0.12 * 0.9 = 0.108 */
   }
 
   /* Gentle inner highlight overlay on cards for depth and glass feel */
@@ -277,8 +277,8 @@
     inset: 0;
     border-radius: inherit;
     background: 
-      linear-gradient(180deg, rgba(255,255,255,0.06) 0%, transparent 30%),
-      radial-gradient(circle at 50% -20%, rgba(255,255,255,0.08), transparent 50%),
+      linear-gradient(180deg, rgba(255,255,255,0.054) 0%, transparent 30%),  /* ~10% reduction: 0.06 * 0.9 = 0.054 */
+      radial-gradient(circle at 50% -20%, rgba(255,255,255,0.072), transparent 50%),  /* ~10% reduction: 0.08 * 0.9 = 0.072 */
       linear-gradient(180deg, transparent 75%, rgba(0,0,0,0.15) 100%);
     mix-blend-mode: screen;
     pointer-events: none;
@@ -292,7 +292,7 @@
     inset: 0;
     border-radius: inherit;
     padding: 1px;
-    background: linear-gradient(135deg, rgba(255,255,255,0.09), transparent 50%, rgba(16,185,129,0.12));
+    background: linear-gradient(135deg, rgba(255,255,255,0.081), transparent 50%, rgba(16,185,129,0.108));  /* ~10% reduction: 0.09 * 0.9 = 0.081, 0.12 * 0.9 = 0.108 */
     /* Browser compatibility: xor for Safari < 15.4, exclude for modern browsers */
     -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     -webkit-mask-composite: xor;
@@ -877,6 +877,18 @@
             </div>
             
             <div>
+              <!-- Class issuing controls -->
+              <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px;font-size:13px">
+                <label style="display:flex;align-items:center;gap:6px;margin:0">
+                  <input type="checkbox" id="chkOnlyShowFiltered" checked style="width:auto;margin:0" />
+                  <span>Only show filtered students</span>
+                </label>
+                <label style="display:flex;align-items:center;gap:6px;margin:0">
+                  <input type="checkbox" id="chkAutoSelectFiltered" style="width:auto;margin:0" />
+                  <span>Auto-select filtered students</span>
+                </label>
+              </div>
+              
               <label>Target Students
                 <select id="issueStudentsSelect" multiple size="5">
                   <!-- Students will be populated from STUDENTS array -->
@@ -1059,7 +1071,10 @@
             <div class="subtle" style="margin-bottom:8px">
               <strong>Local mode only:</strong> Bootstrap demo classes (ELA101, LA1-LA4, LS, LS-LA) and distribute existing students round-robin across classes. Perfect for testing class-based assignment issuing.
             </div>
-            <button id="btnSeedDemoClasses" class="btn small" style="margin-top:8px">Seed Demo Classes</button>
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <button id="btnSeedDemoClasses" class="btn small" style="flex:1">Seed Demo Classes</button>
+              <button id="btnResetDemoClasses" class="btn small" style="flex:1">Reset Demo Classes</button>
+            </div>
           </div>
 
           <div id="toolsStatus" style="margin-top:16px;padding:10px;background:rgba(255,255,255,.04);border-radius:8px;border:1px solid var(--line);display:none">
@@ -2389,20 +2404,61 @@
       try {
         const selectedClasses = getSelectedValues(qs('#issueClassesSelect'));
         const select = qs('#issueStudentsSelect');
+        const onlyShowFiltered = qs('#chkOnlyShowFiltered')?.checked ?? true;
+        const autoSelectFiltered = qs('#chkAutoSelectFiltered')?.checked ?? false;
+        
+        // Store current selection to preserve it when possible
+        const currentSelection = Array.from(select.selectedOptions).map(opt => opt.value);
         
         if (selectedClasses.length === 0) {
-          // Show all students when no class is selected
-          Array.from(select.options).forEach(opt => {
-            opt.style.display = '';
-          });
+          // No classes selected - show all students
+          if (onlyShowFiltered) {
+            // Rebuild with all students
+            await populateStudentsSelect();
+          } else {
+            // Just unhide all
+            Array.from(select.options).forEach(opt => {
+              opt.style.display = '';
+              opt.hidden = false;
+            });
+          }
         } else {
           // Get students for selected classes
           const studentCodes = await getStudentsForClasses(selectedClasses);
           const studentCodesSet = new Set(studentCodes);
           
-          // Hide students not in selected classes
+          if (onlyShowFiltered) {
+            // Rebuild select with only filtered students
+            if (!STUDENTS || STUDENTS.length === 0) {
+              await loadStudents();
+            }
+            const filteredStudents = STUDENTS.filter(s => studentCodesSet.has(s.code));
+            select.innerHTML = filteredStudents.map(s => 
+              `<option value="${s.code}">${s.name || s.code} (${s.code})</option>`
+            ).join('');
+            
+            // Restore selection where possible
+            Array.from(select.options).forEach(opt => {
+              if (currentSelection.includes(opt.value)) {
+                opt.selected = true;
+              }
+            });
+          } else {
+            // Use hidden attribute instead of display style
+            Array.from(select.options).forEach(opt => {
+              const shouldShow = studentCodesSet.has(opt.value);
+              opt.hidden = !shouldShow;
+              opt.style.display = shouldShow ? '' : 'none';
+            });
+          }
+        }
+        
+        // Auto-select filtered students if enabled
+        if (autoSelectFiltered && selectedClasses.length > 0) {
           Array.from(select.options).forEach(opt => {
-            opt.style.display = studentCodesSet.has(opt.value) ? '' : 'none';
+            if (!opt.hidden && opt.style.display !== 'none') {
+              opt.selected = true;
+            }
           });
         }
         
@@ -2538,6 +2594,8 @@
     on('#btnClearStudents', 'click', handleClearStudents);
     on('#btnSimulateSubmission', 'click', handleSimulateSubmission);
     on('#issueClassesSelect', 'change', handleClassFilterChange);
+    on('#chkOnlyShowFiltered', 'change', handleClassFilterChange);
+    on('#chkAutoSelectFiltered', 'change', handleClassFilterChange);
     
     // HTML source type selector
     qs('#htmlSourceType')?.addEventListener('change', updateHtmlSourceOptions);
@@ -3050,6 +3108,48 @@
       }
     }
     
+    // Reset Demo Classes (Local mode only)
+    function resetDemoClasses() {
+      // Check if in remote mode
+      if (isRemote) {
+        addNotif('Demo reset is Local-only; remote data is not modified.', { type: 'warning' });
+        return;
+      }
+      
+      // Get counts before clearing
+      const get = (k, d) => { try { return JSON.parse(localStorage.getItem(NS + k)) ?? d; } catch { return d; } };
+      const classes = get('classes', []);
+      const enrollments = get('classEnrollments', []);
+      const classCount = classes.length;
+      const enrollmentCount = enrollments.length;
+      
+      // Remove demo data from localStorage directly
+      localStorage.removeItem(NS + 'classes');
+      localStorage.removeItem(NS + 'classEnrollments');
+      
+      // Clear and repopulate the Classes select
+      const classesSelect = qs('#issueClassesSelect');
+      if (classesSelect) {
+        // Check if db.listClasses is available
+        if (typeof db !== 'undefined' && typeof db.listClasses === 'function') {
+          populateClassesSelect();
+        } else {
+          // Just clear if db not available
+          classesSelect.innerHTML = '<option value="">-- Classes cleared --</option>';
+        }
+      }
+      
+      // Clear the students select to reset any filters
+      handleClassFilterChange();
+      
+      // Notify with counts
+      if (classCount > 0 || enrollmentCount > 0) {
+        addNotif(`Reset complete: Cleared ${classCount} classes and ${enrollmentCount} enrollments. Re-seed if needed.`, { type: 'info' });
+      } else {
+        addNotif('No demo data found to reset.', { type: 'info' });
+      }
+    }
+    
     // CSV Import: parse CSV and create students + goals
     async function importCSV() {
       const fileInput = qs('#csvFileInput');
@@ -3192,6 +3292,7 @@
     qs('#btnPullSupabase').addEventListener('click', pullFromSupabase);
     qs('#btnImportCSV').addEventListener('click', importCSV);
     qs('#btnSeedDemoClasses').addEventListener('click', seedDemoClasses);
+    qs('#btnResetDemoClasses').addEventListener('click', resetDemoClasses);
   </script>
 </body>
 </html>
