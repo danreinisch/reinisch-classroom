@@ -266,8 +266,8 @@
     box-shadow: 
       0 12px 48px rgba(0,0,0,.50),
       inset 0 1px 0 rgba(255,255,255,.09),
-      0 0 0 1px rgba(34,197,94,.144),
-      0 0 6px rgba(16,185,129,.108) !important;
+      0 0 0 1px rgba(34,197,94,.144),  /* ~10% reduction: 0.16 * 0.9 = 0.144 */
+      0 0 6px rgba(16,185,129,.108) !important;  /* ~10% reduction: 0.12 * 0.9 = 0.108 */
   }
 
   /* Gentle inner highlight overlay on cards for depth and glass feel */
@@ -277,8 +277,8 @@
     inset: 0;
     border-radius: inherit;
     background: 
-      linear-gradient(180deg, rgba(255,255,255,0.054) 0%, transparent 30%),
-      radial-gradient(circle at 50% -20%, rgba(255,255,255,0.072), transparent 50%),
+      linear-gradient(180deg, rgba(255,255,255,0.054) 0%, transparent 30%),  /* ~10% reduction: 0.06 * 0.9 = 0.054 */
+      radial-gradient(circle at 50% -20%, rgba(255,255,255,0.072), transparent 50%),  /* ~10% reduction: 0.08 * 0.9 = 0.072 */
       linear-gradient(180deg, transparent 75%, rgba(0,0,0,0.15) 100%);
     mix-blend-mode: screen;
     pointer-events: none;
@@ -292,7 +292,7 @@
     inset: 0;
     border-radius: inherit;
     padding: 1px;
-    background: linear-gradient(135deg, rgba(255,255,255,0.081), transparent 50%, rgba(16,185,129,0.108));
+    background: linear-gradient(135deg, rgba(255,255,255,0.081), transparent 50%, rgba(16,185,129,0.108));  /* ~10% reduction: 0.09 * 0.9 = 0.081, 0.12 * 0.9 = 0.108 */
     /* Browser compatibility: xor for Safari < 15.4, exclude for modern browsers */
     -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     -webkit-mask-composite: xor;
@@ -3135,7 +3135,7 @@
           populateClassesSelect();
         } else {
           // Just clear if db not available
-          classesSelect.innerHTML = '<option value="">-- No classes --</option>';
+          classesSelect.innerHTML = '<option value="">-- Classes cleared --</option>';
         }
       }
       
