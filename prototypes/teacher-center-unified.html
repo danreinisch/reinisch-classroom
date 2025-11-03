@@ -285,15 +285,22 @@
     background: linear-gradient(140deg, rgba(255,255,255,0.10), transparent 48%, rgba(16,185,129,0.14));
     -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     -webkit-mask-composite: xor;
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     mask-composite: exclude;
     pointer-events: none;
     z-index: 0;
   }
 
   /* Ensure card content stays above overlays */
-  body.glass-bold .card > *:not(::before):not(::after) {
+  body.glass-bold .card > * {
     position: relative;
     z-index: 1;
+  }
+  
+  /* Keep overlays below content */
+  body.glass-bold .card::before,
+  body.glass-bold .card::after {
+    z-index: 0;
   }
 
   /* === Specific panel overlays for sidebar, rightpanel, and icon rail === */
