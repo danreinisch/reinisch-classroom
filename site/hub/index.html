@@ -1680,6 +1680,8 @@
     // 3. text content of the element with data-correct="true"
     function parseHtmlForManifest(htmlContent, title) {
       const parser = new DOMParser();
+      // Safe: DOMParser creates an isolated document for analysis only.
+      // We extract data attributes but never render the HTML to the page.
       const doc = parser.parseFromString(htmlContent, 'text/html');
       
       // Find all elements with data-question-id
