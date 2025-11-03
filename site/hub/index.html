@@ -214,10 +214,10 @@
 <!-- Bold Glass Theme v3: Subtle soft-grid background with gentle emerald mist, improved readability, and enhanced glassmorphism -->
 <style id="glass-bold-theme-v3">
   /* === Subtle Soft-Grid Background === */
-  /* Uses CSS var --bg-image to support optional background image (assets/bg/bg5e_soft_grid.png) */
+  /* Uses CSS var --bg-image to support optional background image (assets/bg/bg5e_soft_grid.svg) */
   /* Falls back to subtle gradient when image not present */
   body.glass-bold {
-    --bg-image: url('assets/bg/bg5e_soft_grid.png');
+    --bg-image: url('../assets/bg/bg5e_soft_grid.svg');
     background:
       /* Soft grid background image with fallback gradient */
       var(--bg-image, linear-gradient(180deg, #0b1220, #0c1322 60%, #0b0f14)) center/cover no-repeat fixed,
@@ -632,7 +632,7 @@
       <button class="btn small" id="btnThemeToggle" title="Toggle glass theme">Glass: Bold</button>
       <span id="currentUserChip" class="chip">Signed out</span>
       <button class="btn small" id="btnStudent">Student Portal</button>
-      <button class="btn primary small" id="btnTeacher">Classroom Hub 🔒</button>
+      <button class="btn primary small" id="btnTeacher">Teacher Center</button>
     </div>
   </div>
 
