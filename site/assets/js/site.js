@@ -1,6 +1,6 @@
 (function() {
   // Centralize the Classroom Hub URL here for easy changes later
-  const HUB_URL = '/prototypes/teacher-center-unified.html';
+  const HUB_URL = '/hub/';
 
   function injectMinimalStyles() {
     if (document.getElementById('copilot-inline-site-css')) return;
