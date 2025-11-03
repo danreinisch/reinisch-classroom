@@ -221,7 +221,7 @@
   <div class="header">
     <div class="bar">
       <div class="brand">Reinisch Classroom — Unified</div>
-      <button class="btn small" id="btnThemeToggle" title="Toggle glass theme">Normal Glass</button>
+      <button class="btn small" id="btnThemeToggle" title="Toggle glass theme">Glass: Bold</button>
       <span id="currentUserChip" class="chip">Signed out</span>
       <button class="btn small" id="btnStudent">Student Portal</button>
       <button class="btn primary small" id="btnTeacher">Teacher Center 🔒</button>
@@ -797,13 +797,14 @@
     function hideTeacher(){ qs('#view-teacher').style.display='none'; }
 
     // Theme toggle: Bold vs Normal glassmorphism
-    let currentTheme = localStorage.getItem(NS+'theme') || 'bold'; // Default to Bold
+    // Use new key 'tc-glass-style' for persistence
+    let currentTheme = localStorage.getItem('tc-glass-style') || 'bold'; // Default to Bold
     function applyTheme(theme) {
       currentTheme = theme;
-      localStorage.setItem(NS+'theme', theme);
+      localStorage.setItem('tc-glass-style', theme);
       document.body.classList.toggle('glass-bold', theme === 'bold');
       const btn = qs('#btnThemeToggle');
-      if (btn) btn.textContent = theme === 'bold' ? 'Bold Glass' : 'Normal Glass';
+      if (btn) btn.textContent = theme === 'bold' ? 'Glass: Bold' : 'Glass: Normal';
     }
     applyTheme(currentTheme);
     on('#btnThemeToggle', 'click', ()=> applyTheme(currentTheme === 'bold' ? 'normal' : 'bold'));
