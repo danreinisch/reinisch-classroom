@@ -1,4 +1,4 @@
-/* === Glass v3c — clearer glass + greener swoop (append at end) === */
+/* === Glass v4 — Intensified glassmorphism with stronger mist and translucency === */
 :root{
   /* Clarity bump */
   --glass-card-alpha: 0.48;   /* was 0.56 */
@@ -32,165 +32,316 @@ body{
 /* Stronger mist, more pronounced glow, frosted translucency, and inner highlights */
 body.glass-bold {
   background:
-    /* Stronger, more vibrant green mist at top */
-    radial-gradient(1600px 1000px at 15% -8%, rgba(34,197,94,0.48), transparent 50%),
-    /* Brighter cyan accent */
-    radial-gradient(1400px 1100px at 92% 12%, rgba(6,182,212,0.18), transparent 55%),
-    /* Enhanced bottom green glow */
-    radial-gradient(1200px 900px at 8% 115%, rgba(22,163,74,0.36), transparent 48%),
-    /* More pronounced conic gradient */
-    conic-gradient(from 190deg at 22% 35%, transparent 0deg, rgba(34,197,94,0.52) 80deg, transparent 140deg),
-    /* Additional ambient cyan glow */
-    radial-gradient(800px 600px at 75% 60%, rgba(6,182,212,0.16), transparent 65%),
-    /* Slightly lighter base for more contrast */
-    linear-gradient(180deg, #030608, #060a0e 55%, #020508);
+    /* Three large radial gradients with higher intensity */
+    radial-gradient(2000px 1400px at 10% -12%, rgba(16,185,129,0.65), transparent 52%),
+    radial-gradient(1800px 1200px at 95% 8%, rgba(34,197,94,0.55), transparent 58%),
+    radial-gradient(1600px 1000px at 50% 108%, rgba(5,150,105,0.50), transparent 50%),
+    /* Vertical wash to lift darkness */
+    linear-gradient(180deg, rgba(16,185,129,0.08) 0%, transparent 35%, transparent 65%, rgba(5,150,105,0.06) 100%),
+    /* Additional depth with conic and radial accents */
+    conic-gradient(from 200deg at 18% 30%, transparent 0deg, rgba(34,197,94,0.38) 90deg, transparent 150deg),
+    radial-gradient(1000px 800px at 72% 55%, rgba(6,182,212,0.14), transparent 68%),
+    /* Slightly lifted base to prevent crushing */
+    linear-gradient(180deg, #040709, #070b0f 55%, #030609);
 }
 
-/* Bold glass cards: more translucent with frosted effect and inner highlight */
+/* Ensure container wrappers are transparent to show mist */
+body.glass-bold .layout,
+body.glass-bold .content,
+body.glass-bold main,
+body.glass-bold #main,
+body.glass-bold #app {
+  background: transparent;
+}
+
+/* Bold glass cards: stronger translucency with enhanced frosted effect */
 body.glass-bold .card {
-  background: rgba(15,23,42,0.62);
-  border: 1px solid rgba(255,255,255,0.16);
-  backdrop-filter: blur(12px) saturate(1.4);
+  position: relative;
+  background: rgba(15,23,42,0.72);
+  border: 1px solid rgba(255,255,255,0.12);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
   box-shadow: 
-    0 8px 32px rgba(0,0,0,.4),
-    inset 0 1px 0 rgba(255,255,255,.08),
-    0 0 0 1px rgba(34,197,94,.12);
+    0 10px 40px rgba(0,0,0,.45),
+    inset 0 1px 0 rgba(255,255,255,.10),
+    0 0 0 1px rgba(34,197,94,.15),
+    0 0 3px rgba(16,185,129,.12);
+}
+
+/* Inner highlight overlay on cards */
+body.glass-bold .card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: 
+    linear-gradient(180deg, rgba(255,255,255,0.06) 0%, transparent 30%),
+    radial-gradient(circle at 50% -20%, rgba(255,255,255,0.08), transparent 50%),
+    linear-gradient(180deg, transparent 70%, rgba(0,0,0,0.15) 100%);
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+/* Rim glow on cards */
+body.glass-bold .card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.08), transparent 50%, rgba(16,185,129,0.12));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 1;
 }
 
 /* Bold modal backdrop: stronger blur */
 body.glass-bold .modal-backdrop {
   background: rgba(5,7,9,.82);
-  backdrop-filter: blur(6px);
-}
-
-/* Bold modals: enhanced translucency and glow */
-body.glass-bold .modal.card {
-  background: rgba(15,23,42,0.88);
-  border: 1px solid rgba(255,255,255,0.22);
-  backdrop-filter: blur(16px) saturate(1.5);
-  box-shadow: 
-    0 14px 56px rgba(0,0,0,.6),
-    inset 0 1px 0 rgba(255,255,255,.12),
-    0 0 0 1px rgba(34,197,94,.18),
-    0 0 32px rgba(34,197,94,.15);
-}
-
-/* Bold navigation: enhanced glass with stronger highlight */
-body.glass-bold .nav a {
-  background: rgba(15,23,42,.68);
-  border: 1px solid rgba(255,255,255,.12);
   backdrop-filter: blur(8px);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.05);
+  -webkit-backdrop-filter: blur(8px);
 }
 
-body.glass-bold .nav a:hover {
-  background: rgba(15,23,42,.78);
-  border-color: rgba(255,255,255,.20);
+/* Bold modals: enhanced translucency and glow with overlays */
+body.glass-bold .modal.card {
+  position: relative;
+  background: rgba(15,23,42,0.85);
+  border: 1px solid rgba(255,255,255,0.16);
+  backdrop-filter: blur(22px) saturate(150%);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
   box-shadow: 
-    inset 0 1px 0 rgba(255,255,255,.08),
-    0 4px 12px rgba(34,197,94,.12);
+    0 16px 64px rgba(0,0,0,.65),
+    inset 0 1px 0 rgba(255,255,255,.14),
+    0 0 0 1px rgba(34,197,94,.20),
+    0 0 40px rgba(34,197,94,.18);
 }
 
-body.glass-bold .nav a.active {
-  background: rgba(34,197,94,.12);
-  border-color: rgba(34,197,94,.45);
-  box-shadow: 
-    inset 3px 0 0 rgba(34,197,94,.9),
-    inset 0 1px 0 rgba(255,255,255,.10),
-    0 0 16px rgba(34,197,94,.2);
+/* Modal inner highlight */
+body.glass-bold .modal.card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: 
+    linear-gradient(180deg, rgba(255,255,255,0.08) 0%, transparent 25%),
+    radial-gradient(circle at 50% -15%, rgba(255,255,255,0.10), transparent 45%);
+  mix-blend-mode: screen;
+  pointer-events: none;
 }
 
-/* Bold buttons: enhanced glow */
-body.glass-bold .btn {
-  background: rgba(255,255,255,.10);
-  border: 1px solid rgba(255,255,255,.18);
-  backdrop-filter: blur(6px);
+/* Bold navigation: enhanced glass with stronger highlight and overlays */
+body.glass-bold .nav a {
+  position: relative;
+  background: rgba(15,23,42,.70);
+  border: 1px solid rgba(255,255,255,.10);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
 }
 
-body.glass-bold .btn:hover {
-  border-color: rgba(255,255,255,.28);
+/* Nav item inner sheen */
+body.glass-bold .nav a::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+body.glass-bold .nav a:hover {
+  background: rgba(15,23,42,.80);
+  border-color: rgba(255,255,255,.18);
   box-shadow: 
     inset 0 1px 0 rgba(255,255,255,.08),
-    0 4px 12px rgba(255,255,255,.08);
+    0 4px 14px rgba(34,197,94,.14);
+}
+
+body.glass-bold .nav a.active {
+  background: rgba(34,197,94,.14);
+  border-color: rgba(34,197,94,.40);
+  box-shadow: 
+    inset 3px 0 0 rgba(34,197,94,.95),
+    inset 0 1px 0 rgba(255,255,255,.12),
+    0 0 20px rgba(34,197,94,.25);
+}
+
+/* Bold buttons: enhanced glow and gradient */
+body.glass-bold .btn {
+  background: rgba(255,255,255,.12);
+  border: 1px solid rgba(255,255,255,.20);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
+}
+
+body.glass-bold .btn:hover {
+  border-color: rgba(255,255,255,.32);
+  box-shadow: 
+    inset 0 1px 0 rgba(255,255,255,.12),
+    0 4px 16px rgba(255,255,255,.10);
 }
 
 body.glass-bold .btn.primary {
+  background: linear-gradient(180deg, rgba(34,197,94,1.0), rgba(22,163,74,1.0));
   box-shadow: 
-    0 4px 20px rgba(34,197,94,.35),
-    inset 0 1px 0 rgba(255,255,255,.15);
+    0 4px 24px rgba(34,197,94,.40),
+    inset 0 1px 0 rgba(255,255,255,.18),
+    0 0 16px rgba(34,197,94,.25);
 }
 
 body.glass-bold .btn.primary:hover {
+  filter: brightness(1.05);
   box-shadow: 
-    0 6px 28px rgba(34,197,94,.45),
-    inset 0 1px 0 rgba(255,255,255,.20);
+    0 6px 32px rgba(34,197,94,.50),
+    inset 0 1px 0 rgba(255,255,255,.22),
+    0 0 24px rgba(34,197,94,.35);
 }
 
-/* Bold inputs: frosted glass effect */
+/* Bold inputs: darker frosted glass with stronger focus ring */
 body.glass-bold input,
 body.glass-bold select,
 body.glass-bold textarea {
-  background: rgba(31,41,55,0.75);
-  border: 1px solid rgba(255,255,255,.18);
-  backdrop-filter: blur(6px);
-  box-shadow: inset 0 1px 2px rgba(0,0,0,.2);
+  background: rgba(20,30,45,0.85);
+  border: 1px solid rgba(255,255,255,.20);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: inset 0 1px 3px rgba(0,0,0,.25);
 }
 
 body.glass-bold input:focus,
 body.glass-bold select:focus,
 body.glass-bold textarea:focus {
-  border-color: rgba(34,197,94,.55);
+  border-color: rgba(34,197,94,.60);
   box-shadow: 
-    0 0 0 3px rgba(34,197,94,.22),
-    inset 0 1px 2px rgba(0,0,0,.2),
-    0 0 16px rgba(34,197,94,.18);
+    0 0 0 4px rgba(34,197,94,.25),
+    inset 0 1px 3px rgba(0,0,0,.25),
+    0 0 20px rgba(34,197,94,.22);
 }
 
 /* Bold scroll areas: enhanced translucency */
 body.glass-bold .scroll {
-  background: rgba(15,23,42,0.55);
-  border: 1px solid rgba(255,255,255,.10);
-  backdrop-filter: blur(8px);
+  background: rgba(15,23,42,0.65);
+  border: 1px solid rgba(255,255,255,.12);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
-/* Bold goal items and badges: subtle glow */
+/* Bold goal items and badges: subtle glow with overlays */
 body.glass-bold .goal-item {
-  background: rgba(15,23,42,0.62);
-  border: 1px solid rgba(255,255,255,.14);
-  backdrop-filter: blur(6px);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+  position: relative;
+  background: rgba(15,23,42,0.68);
+  border: 1px solid rgba(255,255,255,.12);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.05);
+}
+
+/* Goal item inner sheen */
+body.glass-bold .goal-item::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, transparent 50%);
+  pointer-events: none;
 }
 
 body.glass-bold .badge {
-  background: rgba(255,255,255,.14);
-  border: 1px solid rgba(255,255,255,.20);
-  backdrop-filter: blur(4px);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+  background: rgba(255,255,255,.16);
+  border: 1px solid rgba(255,255,255,.24);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
 }
 
-/* Bold icon rail buttons: enhanced depth */
+/* Bold icon rail buttons: enhanced depth with overlays */
 body.glass-bold .iconrail button {
-  background: rgba(15,23,42,0.68);
+  position: relative;
+  background: rgba(15,23,42,0.75);
   border: 1px solid rgba(255,255,255,.14);
-  backdrop-filter: blur(6px);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   box-shadow: 
-    inset 0 1px 0 rgba(255,255,255,.05),
-    0 2px 8px rgba(0,0,0,.2);
+    inset 0 1px 0 rgba(255,255,255,.06),
+    0 2px 10px rgba(0,0,0,.25);
+}
+
+/* Icon button inner sheen */
+body.glass-bold .iconrail button::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, transparent 50%);
+  pointer-events: none;
 }
 
 body.glass-bold .iconrail button:hover {
-  border-color: rgba(255,255,255,.24);
+  border-color: rgba(255,255,255,.26);
   box-shadow: 
-    inset 0 1px 0 rgba(255,255,255,.08),
-    0 4px 12px rgba(0,0,0,.25);
+    inset 0 1px 0 rgba(255,255,255,.10),
+    0 4px 16px rgba(0,0,0,.30);
 }
 
 body.glass-bold .iconrail button.active {
-  background: rgba(34,197,94,.18);
-  border-color: rgba(34,197,94,.50);
+  background: rgba(34,197,94,.20);
+  border-color: rgba(34,197,94,.55);
   box-shadow: 
-    0 4px 20px rgba(34,197,94,.4),
-    inset 0 1px 0 rgba(255,255,255,.12),
-    0 0 24px rgba(34,197,94,.25);
+    0 4px 24px rgba(34,197,94,.45),
+    inset 0 1px 0 rgba(255,255,255,.14),
+    0 0 28px rgba(34,197,94,.30);
+}
+
+/* Text contrast and readability improvements */
+body.glass-bold {
+  color: #e8eef5;
+}
+
+body.glass-bold .card-header,
+body.glass-bold h1,
+body.glass-bold h2,
+body.glass-bold h3,
+body.glass-bold h4,
+body.glass-bold h5,
+body.glass-bold h6 {
+  color: #f0f6fc;
+  text-shadow: 0 1px 2px rgba(0,0,0,.3);
+}
+
+body.glass-bold .subtle {
+  color: #c5d1de;
+  text-shadow: 0 1px 1px rgba(0,0,0,.2);
+}
+
+body.glass-bold label {
+  color: #e8eef5;
+  text-shadow: 0 1px 1px rgba(0,0,0,.2);
+}
+
+/* Specific panel overlays for sidebar, notifications, assignments */
+body.glass-bold .sidebar.card::after,
+body.glass-bold .rightpanel > .card::after,
+body.glass-bold aside.card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: 
+    linear-gradient(180deg, rgba(255,255,255,0.05) 0%, transparent 25%),
+    radial-gradient(circle at 50% -10%, rgba(255,255,255,0.07), transparent 45%);
+  mix-blend-mode: screen;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Ensure content stays above overlays */
+body.glass-bold .card > *:not(::before):not(::after),
+body.glass-bold .sidebar.card > *,
+body.glass-bold .rightpanel > .card > *,
+body.glass-bold aside.card > * {
+  position: relative;
+  z-index: 1;
 }
