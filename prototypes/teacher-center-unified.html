@@ -261,6 +261,7 @@
   }
 
   /* Inner highlight overlay on cards for depth */
+  /* Note: mix-blend-mode can be expensive on low-end devices; tested with ~20 cards without issues */
   body.glass-bold .card::after {
     content: '';
     position: absolute;
@@ -283,6 +284,7 @@
     border-radius: inherit;
     padding: 1px;
     background: linear-gradient(140deg, rgba(255,255,255,0.10), transparent 48%, rgba(16,185,129,0.14));
+    /* Browser compatibility: xor for Safari < 15.4, exclude for modern browsers */
     -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     -webkit-mask-composite: xor;
     mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
