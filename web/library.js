@@ -21,10 +21,11 @@ export async function fetchJSON(path) {
  * @returns {string} Resolved path
  */
 function resolvePath(path) {
-  if (location.pathname.includes('/prototypes/')) {
+  const pathname = location.pathname;
+  if (pathname.startsWith('/prototypes/') || pathname.includes('/prototypes/')) {
     return '../' + path;
   }
-  if (location.pathname.includes('/site/classroom-hub/')) {
+  if (pathname.startsWith('/site/classroom-hub/') || pathname.includes('/site/classroom-hub/')) {
     return '../../' + path;
   }
   return path;
