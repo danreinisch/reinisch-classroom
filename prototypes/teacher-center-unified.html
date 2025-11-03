@@ -221,6 +221,7 @@
   <div class="header">
     <div class="bar">
       <div class="brand">Reinisch Classroom — Unified</div>
+      <button class="btn small" id="btnThemeToggle" title="Toggle glass theme">Normal Glass</button>
       <span id="currentUserChip" class="chip">Signed out</span>
       <button class="btn small" id="btnStudent">Student Portal</button>
       <button class="btn primary small" id="btnTeacher">Teacher Center 🔒</button>
@@ -794,6 +795,18 @@
 
     function showTeacher(){ qs('#view-teacher').style.display='grid'; }
     function hideTeacher(){ qs('#view-teacher').style.display='none'; }
+
+    // Theme toggle: Bold vs Normal glassmorphism
+    let currentTheme = localStorage.getItem(NS+'theme') || 'bold'; // Default to Bold
+    function applyTheme(theme) {
+      currentTheme = theme;
+      localStorage.setItem(NS+'theme', theme);
+      document.body.classList.toggle('glass-bold', theme === 'bold');
+      const btn = qs('#btnThemeToggle');
+      if (btn) btn.textContent = theme === 'bold' ? 'Bold Glass' : 'Normal Glass';
+    }
+    applyTheme(currentTheme);
+    on('#btnThemeToggle', 'click', ()=> applyTheme(currentTheme === 'bold' ? 'normal' : 'bold'));
 
     // Teacher auth
     on('#btnTeacher', 'click', ()=>{ qs('#teachModal').classList.add('show'); qs('#teachPass').focus(); });

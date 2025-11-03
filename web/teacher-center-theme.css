@@ -27,3 +27,170 @@ body{
 /* Slightly lighter nav glass so the mist reads through the left rail */
 .nav a{ background: rgba(15,23,42,.52) }
 .nav a:hover{ background: rgba(15,23,42,.66) }
+
+/* === Bold Glassmorphism Variant === */
+/* Stronger mist, more pronounced glow, frosted translucency, and inner highlights */
+body.glass-bold {
+  background:
+    /* Stronger, more vibrant green mist at top */
+    radial-gradient(1600px 1000px at 15% -8%, rgba(34,197,94,0.48), transparent 50%),
+    /* Brighter cyan accent */
+    radial-gradient(1400px 1100px at 92% 12%, rgba(6,182,212,0.18), transparent 55%),
+    /* Enhanced bottom green glow */
+    radial-gradient(1200px 900px at 8% 115%, rgba(22,163,74,0.36), transparent 48%),
+    /* More pronounced conic gradient */
+    conic-gradient(from 190deg at 22% 35%, transparent 0deg, rgba(34,197,94,0.52) 80deg, transparent 140deg),
+    /* Additional ambient cyan glow */
+    radial-gradient(800px 600px at 75% 60%, rgba(6,182,212,0.16), transparent 65%),
+    /* Slightly lighter base for more contrast */
+    linear-gradient(180deg, #030608, #060a0e 55%, #020508);
+}
+
+/* Bold glass cards: more translucent with frosted effect and inner highlight */
+body.glass-bold .card {
+  background: rgba(15,23,42,0.62);
+  border: 1px solid rgba(255,255,255,0.16);
+  backdrop-filter: blur(12px) saturate(1.4);
+  box-shadow: 
+    0 8px 32px rgba(0,0,0,.4),
+    inset 0 1px 0 rgba(255,255,255,.08),
+    0 0 0 1px rgba(34,197,94,.12);
+}
+
+/* Bold modal backdrop: stronger blur */
+body.glass-bold .modal-backdrop {
+  background: rgba(5,7,9,.82);
+  backdrop-filter: blur(6px);
+}
+
+/* Bold modals: enhanced translucency and glow */
+body.glass-bold .modal.card {
+  background: rgba(15,23,42,0.88);
+  border: 1px solid rgba(255,255,255,0.22);
+  backdrop-filter: blur(16px) saturate(1.5);
+  box-shadow: 
+    0 14px 56px rgba(0,0,0,.6),
+    inset 0 1px 0 rgba(255,255,255,.12),
+    0 0 0 1px rgba(34,197,94,.18),
+    0 0 32px rgba(34,197,94,.15);
+}
+
+/* Bold navigation: enhanced glass with stronger highlight */
+body.glass-bold .nav a {
+  background: rgba(15,23,42,.68);
+  border: 1px solid rgba(255,255,255,.12);
+  backdrop-filter: blur(8px);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.05);
+}
+
+body.glass-bold .nav a:hover {
+  background: rgba(15,23,42,.78);
+  border-color: rgba(255,255,255,.20);
+  box-shadow: 
+    inset 0 1px 0 rgba(255,255,255,.08),
+    0 4px 12px rgba(34,197,94,.12);
+}
+
+body.glass-bold .nav a.active {
+  background: rgba(34,197,94,.12);
+  border-color: rgba(34,197,94,.45);
+  box-shadow: 
+    inset 3px 0 0 rgba(34,197,94,.9),
+    inset 0 1px 0 rgba(255,255,255,.10),
+    0 0 16px rgba(34,197,94,.2);
+}
+
+/* Bold buttons: enhanced glow */
+body.glass-bold .btn {
+  background: rgba(255,255,255,.10);
+  border: 1px solid rgba(255,255,255,.18);
+  backdrop-filter: blur(6px);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+}
+
+body.glass-bold .btn:hover {
+  border-color: rgba(255,255,255,.28);
+  box-shadow: 
+    inset 0 1px 0 rgba(255,255,255,.08),
+    0 4px 12px rgba(255,255,255,.08);
+}
+
+body.glass-bold .btn.primary {
+  box-shadow: 
+    0 4px 20px rgba(34,197,94,.35),
+    inset 0 1px 0 rgba(255,255,255,.15);
+}
+
+body.glass-bold .btn.primary:hover {
+  box-shadow: 
+    0 6px 28px rgba(34,197,94,.45),
+    inset 0 1px 0 rgba(255,255,255,.20);
+}
+
+/* Bold inputs: frosted glass effect */
+body.glass-bold input,
+body.glass-bold select,
+body.glass-bold textarea {
+  background: rgba(31,41,55,0.75);
+  border: 1px solid rgba(255,255,255,.18);
+  backdrop-filter: blur(6px);
+  box-shadow: inset 0 1px 2px rgba(0,0,0,.2);
+}
+
+body.glass-bold input:focus,
+body.glass-bold select:focus,
+body.glass-bold textarea:focus {
+  border-color: rgba(34,197,94,.55);
+  box-shadow: 
+    0 0 0 3px rgba(34,197,94,.22),
+    inset 0 1px 2px rgba(0,0,0,.2),
+    0 0 16px rgba(34,197,94,.18);
+}
+
+/* Bold scroll areas: enhanced translucency */
+body.glass-bold .scroll {
+  background: rgba(15,23,42,0.55);
+  border: 1px solid rgba(255,255,255,.10);
+  backdrop-filter: blur(8px);
+}
+
+/* Bold goal items and badges: subtle glow */
+body.glass-bold .goal-item {
+  background: rgba(15,23,42,0.62);
+  border: 1px solid rgba(255,255,255,.14);
+  backdrop-filter: blur(6px);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+}
+
+body.glass-bold .badge {
+  background: rgba(255,255,255,.14);
+  border: 1px solid rgba(255,255,255,.20);
+  backdrop-filter: blur(4px);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+}
+
+/* Bold icon rail buttons: enhanced depth */
+body.glass-bold .iconrail button {
+  background: rgba(15,23,42,0.68);
+  border: 1px solid rgba(255,255,255,.14);
+  backdrop-filter: blur(6px);
+  box-shadow: 
+    inset 0 1px 0 rgba(255,255,255,.05),
+    0 2px 8px rgba(0,0,0,.2);
+}
+
+body.glass-bold .iconrail button:hover {
+  border-color: rgba(255,255,255,.24);
+  box-shadow: 
+    inset 0 1px 0 rgba(255,255,255,.08),
+    0 4px 12px rgba(0,0,0,.25);
+}
+
+body.glass-bold .iconrail button.active {
+  background: rgba(34,197,94,.18);
+  border-color: rgba(34,197,94,.50);
+  box-shadow: 
+    0 4px 20px rgba(34,197,94,.4),
+    inset 0 1px 0 rgba(255,255,255,.12),
+    0 0 24px rgba(34,197,94,.25);
+}
