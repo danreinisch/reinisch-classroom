@@ -1223,6 +1223,11 @@
     const qs = s => document.querySelector(s);
     const qsa = s => Array.from(document.querySelectorAll(s));
     const on = (sel, evt, fn) => { const el = document.querySelector(sel); if (el) el.addEventListener(evt, fn); };
+    
+    // HTML escape helper to prevent XSS
+    const escapeHtml = (str) => String(str).replace(/[&<>"']/g, m => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[m]);
 
     function showTeacher(){ qs('#view-teacher').style.display='grid'; }
     function hideTeacher(){ qs('#view-teacher').style.display='none'; }
@@ -2027,10 +2032,10 @@
             // Show manifest summary
             qs('#zipManifestSummary').style.display = 'block';
             qs('#zipManifestContent').innerHTML = `
-              <strong>Source URL:</strong> ${htmlUrl}<br>
+              <strong>Source URL:</strong> ${escapeHtml(htmlUrl)}<br>
               <strong>Questions Detected:</strong> ${manifest.questions.length}<br>
               <strong>IEP Goal Codes:</strong> ${(manifest.iep_goal_codes || []).length}<br>
-              ${manifest.warning ? `<div style="color:#fbbf24;margin-top:4px">${manifest.warning}</div>` : ''}
+              ${manifest.warning ? `<div style="color:#fbbf24;margin-top:4px">${escapeHtml(manifest.warning)}</div>` : ''}
             `;
           }
           
@@ -2532,10 +2537,6 @@
         
         // Show result
         qs('#simResult').style.display = 'block';
-        // Escape HTML to prevent XSS
-        const escapeHtml = (str) => String(str).replace(/[&<>"']/g, m => ({
-          '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-        })[m]);
         qs('#simResultContent').innerHTML = `
           <strong>Success!</strong> Created submission ${escapeHtml(submission.submission_id)}<br>
           <strong>Goal:</strong> ${escapeHtml(goalCode)}<br>
@@ -2556,9 +2557,6 @@
         console.error('Failed to simulate submission:', err);
         qs('#simResult').style.display = 'block';
         // Escape error message to prevent XSS
-        const escapeHtml = (str) => String(str).replace(/[&<>"']/g, m => ({
-          '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-        })[m]);
         qs('#simResultContent').innerHTML = `<strong style="color:#fecaca">Error:</strong> ${escapeHtml(err.message)}`;
         addNotif('Failed to simulate submission: ' + err.message, { type: 'error' });
       }
