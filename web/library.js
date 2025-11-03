@@ -16,12 +16,16 @@ export async function fetchJSON(path) {
 /**
  * Resolve path relative to current page location
  * If we're in /prototypes/, prefix '../' to reach repo root
+ * If we're in /site/classroom-hub/, prefix '../../' to reach repo root
  * @param {string} path - Repo-relative path
  * @returns {string} Resolved path
  */
 function resolvePath(path) {
   if (location.pathname.includes('/prototypes/')) {
     return '../' + path;
+  }
+  if (location.pathname.includes('/site/classroom-hub/')) {
+    return '../../' + path;
   }
   return path;
 }
