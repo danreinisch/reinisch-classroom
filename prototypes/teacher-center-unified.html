@@ -214,33 +214,36 @@
 <!-- Bold Glass Theme v3: Subtle soft-grid background with gentle emerald mist, improved readability, and enhanced glassmorphism -->
 <style id="glass-bold-theme-v3">
   /* === Subtle Soft-Grid Background === */
-  /* Uses CSS var --bg-image to support optional background image (e.g., ../assets/bg/bg5e_soft_grid.png) */
+  /* Uses CSS var --bg-image to support optional background image (assets/bg/bg5e_soft_grid.png) */
   /* Falls back to subtle gradient when image not present */
   body.glass-bold {
+    --bg-image: url('assets/bg/bg5e_soft_grid.png');
     background:
-      /* Soft grid background image with fallback */
+      /* Soft grid background image with fallback gradient */
       var(--bg-image, linear-gradient(180deg, #0b1220, #0c1322 60%, #0b0f14)) center/cover no-repeat fixed,
-      /* Gentle bottom vignette for center focus */
-      radial-gradient(1400px 900px at 50% 120%, rgba(0,0,0,0.55), rgba(0,0,0,0));
+      /* Gentle bottom vignette for dark center focus */
+      radial-gradient(1400px 900px at 50% 120%, rgba(0,0,0,0.55), rgba(0,0,0,0) 60%),
+      /* Gentle top vignette */
+      radial-gradient(1400px 900px at 50% -20%, rgba(0,0,0,0.50), rgba(0,0,0,0) 60%);
     background-attachment: fixed;
   }
 
-  /* Subtle emerald mist overlay with reduced intensity */
+  /* Subtle emerald mist overlay with reduced intensity, soft green midband */
   body.glass-bold::before {
     content: '';
     position: fixed;
     inset: 0;
     pointer-events: none;
     z-index: -1;
+    opacity: 1;
     background:
-      /* Three subtle mist gradients moved off-screen */
-      radial-gradient(1400px 1000px at -20% 0%, rgba(16,185,129,0.12), transparent 60%),
-      radial-gradient(1400px 1000px at 120% -10%, rgba(34,197,94,0.14), transparent 60%),
-      radial-gradient(1400px 1000px at 50% 120%, rgba(5,150,105,0.10), transparent 60%),
-      /* Subtle vertical wash for comfortable midtones */
-      linear-gradient(180deg, rgba(16,185,129,0.04) 0%, transparent 35%, transparent 65%, rgba(5,150,105,0.04) 100%);
-    backdrop-filter: blur(20px) saturate(115%);
-    -webkit-backdrop-filter: blur(20px) saturate(115%);
+      /* Subtle off-screen mist gradients - very low alpha to avoid hotspots */
+      radial-gradient(1600px 1200px at -15% -8%, rgba(16,185,129,0.08), transparent 62%),
+      radial-gradient(1600px 1200px at 115% -12%, rgba(34,197,94,0.10), transparent 62%),
+      radial-gradient(1600px 1200px at 50% 115%, rgba(5,150,105,0.08), transparent 62%),
+      /* Soft green midband - subtle horizontal wash */
+      linear-gradient(180deg, transparent 0%, rgba(16,185,129,0.05) 40%, rgba(34,197,94,0.06) 50%, rgba(16,185,129,0.05) 60%, transparent 100%);
+    filter: blur(20px) saturate(112%);
   }
 
   /* Ensure container wrappers are fully transparent so backdrop-filter blur reveals the mist */
@@ -253,44 +256,43 @@
     background: transparent !important;
   }
 
-  /* === Bold glass cards: stronger translucency with enhanced frosted effect === */
+  /* === Bold glass cards: refined frosted glass effect === */
   body.glass-bold .card {
     position: relative;
-    background: rgba(15,23,42,0.68) !important;
-    border: 1px solid rgba(255,255,255,0.14) !important;
-    backdrop-filter: blur(24px) saturate(160%) !important;
-    -webkit-backdrop-filter: blur(24px) saturate(160%) !important;
+    background: rgba(15,23,42,0.62) !important;
+    border: 1px solid rgba(255,255,255,0.13) !important;
+    backdrop-filter: blur(26px) saturate(165%) !important;
+    -webkit-backdrop-filter: blur(26px) saturate(165%) !important;
     box-shadow: 
       0 12px 48px rgba(0,0,0,.50),
-      inset 0 1px 0 rgba(255,255,255,.12),
-      0 0 0 1px rgba(34,197,94,.18),
-      0 0 6px rgba(16,185,129,.15) !important;
+      inset 0 1px 0 rgba(255,255,255,.10),
+      0 0 0 1px rgba(34,197,94,.16),
+      0 0 6px rgba(16,185,129,.12) !important;
   }
 
-  /* Inner highlight overlay on cards for depth */
-  /* Note: mix-blend-mode can be expensive on low-end devices; tested with ~20 cards without issues */
+  /* Gentle inner highlight overlay on cards for depth and glass feel */
   body.glass-bold .card::after {
     content: '';
     position: absolute;
     inset: 0;
     border-radius: inherit;
     background: 
-      linear-gradient(180deg, rgba(255,255,255,0.08) 0%, transparent 28%),
-      radial-gradient(circle at 50% -18%, rgba(255,255,255,0.10), transparent 48%),
-      linear-gradient(180deg, transparent 72%, rgba(0,0,0,0.18) 100%);
+      linear-gradient(180deg, rgba(255,255,255,0.06) 0%, transparent 30%),
+      radial-gradient(circle at 50% -20%, rgba(255,255,255,0.08), transparent 50%),
+      linear-gradient(180deg, transparent 75%, rgba(0,0,0,0.15) 100%);
     mix-blend-mode: screen;
     pointer-events: none;
     z-index: 0;
   }
 
-  /* Rim glow on cards for subtle edge emphasis */
+  /* Soft rim glow on cards for subtle edge emphasis */
   body.glass-bold .card::before {
     content: '';
     position: absolute;
     inset: 0;
     border-radius: inherit;
     padding: 1px;
-    background: linear-gradient(140deg, rgba(255,255,255,0.10), transparent 48%, rgba(16,185,129,0.14));
+    background: linear-gradient(135deg, rgba(255,255,255,0.09), transparent 50%, rgba(16,185,129,0.12));
     /* Browser compatibility: xor for Safari < 15.4, exclude for modern browsers */
     -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     -webkit-mask-composite: xor;
@@ -318,9 +320,9 @@
   body.glass-bold .iconrail.card,
   body.glass-bold aside.card {
     position: relative;
-    background: rgba(15,23,42,0.70) !important;
-    backdrop-filter: blur(26px) saturate(160%) !important;
-    -webkit-backdrop-filter: blur(26px) saturate(160%) !important;
+    background: rgba(15,23,42,0.64) !important;
+    backdrop-filter: blur(26px) saturate(165%) !important;
+    -webkit-backdrop-filter: blur(26px) saturate(165%) !important;
   }
 
   body.glass-bold .sidebar.card::after,
@@ -332,8 +334,8 @@
     inset: 0;
     border-radius: inherit;
     background: 
-      linear-gradient(180deg, rgba(255,255,255,0.06) 0%, transparent 24%),
-      radial-gradient(circle at 50% -8%, rgba(255,255,255,0.08), transparent 42%);
+      linear-gradient(180deg, rgba(255,255,255,0.05) 0%, transparent 26%),
+      radial-gradient(circle at 50% -10%, rgba(255,255,255,0.07), transparent 45%);
     mix-blend-mode: screen;
     pointer-events: none;
     z-index: 0;
@@ -499,20 +501,20 @@
 
   /* === Bold scroll areas: enhanced translucency === */
   body.glass-bold .scroll {
-    background: rgba(15,23,42,0.68) !important;
-    border: 1px solid rgba(255,255,255,.14) !important;
-    backdrop-filter: blur(12px) !important;
-    -webkit-backdrop-filter: blur(12px) !important;
+    background: rgba(15,23,42,0.62) !important;
+    border: 1px solid rgba(255,255,255,.13) !important;
+    backdrop-filter: blur(22px) saturate(155%) !important;
+    -webkit-backdrop-filter: blur(22px) saturate(155%) !important;
   }
 
   /* === Bold goal items and badges: subtle glow with overlays === */
   body.glass-bold .goal-item {
     position: relative;
-    background: rgba(15,23,42,0.70) !important;
-    border: 1px solid rgba(255,255,255,.14) !important;
-    backdrop-filter: blur(10px) !important;
-    -webkit-backdrop-filter: blur(10px) !important;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.06) !important;
+    background: rgba(15,23,42,0.64) !important;
+    border: 1px solid rgba(255,255,255,.13) !important;
+    backdrop-filter: blur(16px) saturate(155%) !important;
+    -webkit-backdrop-filter: blur(16px) saturate(155%) !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.05) !important;
   }
 
   /* Goal item inner sheen */
@@ -521,7 +523,7 @@
     position: absolute;
     inset: 0;
     border-radius: inherit;
-    background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, transparent 48%);
+    background: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, transparent 50%);
     pointer-events: none;
   }
 
@@ -1050,6 +1052,14 @@
               <input id="csvFileInput" type="file" accept=".csv,text/csv" style="width:auto;flex:1" />
             </label>
             <button id="btnImportCSV" class="btn primary small" style="margin-top:8px">Import CSV</button>
+          </div>
+
+          <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--line)">
+            <div style="font-weight:800;margin-bottom:8px">Demo Data — Classes &amp; Enrollments</div>
+            <div class="subtle" style="margin-bottom:8px">
+              <strong>Local mode only:</strong> Bootstrap demo classes (ELA101, LA1-LA4, LS, LS-LA) and distribute existing students round-robin across classes. Perfect for testing class-based assignment issuing.
+            </div>
+            <button id="btnSeedDemoClasses" class="btn small" style="margin-top:8px">Seed Demo Classes</button>
           </div>
 
           <div id="toolsStatus" style="margin-top:16px;padding:10px;background:rgba(255,255,255,.04);border-radius:8px;border:1px solid var(--line);display:none">
@@ -2994,6 +3004,52 @@
       }
     }
     
+    // Seed Demo Classes (Local mode only)
+    function seedDemoClasses() {
+      const get = (k, d) => { try { return JSON.parse(localStorage.getItem(NS + k)) ?? d; } catch { return d; } };
+      const set = (k, v) => localStorage.setItem(NS + k, JSON.stringify(v));
+      
+      // Define the demo classes
+      const classes = [
+        { id: 'ELA101', name: 'ELA 101' },
+        { id: 'LA1', name: 'Language Arts 1' },
+        { id: 'LA2', name: 'Language Arts 2' },
+        { id: 'LA3', name: 'Language Arts 3' },
+        { id: 'LA4', name: 'Language Arts 4' },
+        { id: 'LS', name: 'Life Skills' },
+        { id: 'LSLA', name: 'LS-LA' }
+      ];
+      
+      // Get existing students
+      const students = get('students', []);
+      if (!students || students.length === 0) {
+        addNotif('No students found to enroll. Import or Pull students first.', { type: 'warn' });
+        return;
+      }
+      
+      // Save classes to localStorage
+      set('classes', classes);
+      
+      // Create round-robin enrollments across LA1-LA4 and LS (leaving ELA101 and LSLA empty for flexibility)
+      const targets = ['LA1', 'LA2', 'LA3', 'LA4', 'LS'];
+      const enrollments = [];
+      students.forEach((s, i) => {
+        const classId = targets[i % targets.length];
+        enrollments.push({ class_id: classId, student_code: s.code });
+      });
+      
+      // Save enrollments to localStorage
+      set('classEnrollments', enrollments);
+      
+      // Show success notification
+      addNotif(`Seeded ${classes.length} classes and ${enrollments.length} enrollments.`, { type: 'info' });
+      
+      // Refresh the classes select if we're on the assignments tab
+      if (typeof populateClassesSelect === 'function') {
+        populateClassesSelect();
+      }
+    }
+    
     // CSV Import: parse CSV and create students + goals
     async function importCSV() {
       const fileInput = qs('#csvFileInput');
@@ -3135,6 +3191,7 @@
     qs('#btnSeedSupabase').addEventListener('click', seedToSupabase);
     qs('#btnPullSupabase').addEventListener('click', pullFromSupabase);
     qs('#btnImportCSV').addEventListener('click', importCSV);
+    qs('#btnSeedDemoClasses').addEventListener('click', seedDemoClasses);
   </script>
 </body>
 </html>
