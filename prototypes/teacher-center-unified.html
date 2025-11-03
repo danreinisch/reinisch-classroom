@@ -3111,7 +3111,7 @@
     // Reset Demo Classes (Local mode only)
     function resetDemoClasses() {
       // Check if in remote mode
-      if (isRemote()) {
+      if (isRemote) {
         addNotif('Demo reset is Local-only; remote data is not modified.', { type: 'warning' });
         return;
       }
