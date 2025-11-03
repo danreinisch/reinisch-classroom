@@ -189,7 +189,7 @@
     const hasMT = !!document.querySelector('a[href*="math-toolkit"]');
     // Detect existing hub link by data-role or exact href match
     const hasHub = !!document.querySelector(
-      'a[data-role="classroom-hub"], a[href="/prototypes/teacher-center-unified.html"]'
+      'a[data-role="classroom-hub"], a[href="/hub/"]'
     );
     if (hasMT && hasHub) return;
 
