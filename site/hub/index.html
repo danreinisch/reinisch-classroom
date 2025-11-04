@@ -670,18 +670,6 @@
   /* Keep the Teacher Center action crisp */
   #btnTeacher { text-shadow: none !important; }
 </style>
-<script>
-  /* Default to Bold theme on first visit; persist preference */
-  (function () {
-    try {
-      const k = 'rc_glass_theme';
-      const pref = localStorage.getItem(k);
-      if (!pref) { document.body.classList.add('glass-bold'); localStorage.setItem(k, 'bold'); }
-      else if (pref === 'bold') { document.body.classList.add('glass-bold'); }
-      else { document.body.classList.remove('glass-bold'); }
-    } catch {}
-  }());
-</script>
 </head>
 <body class="glass-bold">
   <div class="header">
