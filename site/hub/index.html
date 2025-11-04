@@ -66,9 +66,10 @@
     --inset-top:inset 0 1px 0 rgba(255,255,255,.03);
   }
 
-  /* Base background */
+  /* Base background - includes soft-grid by default */
   body{
-    background: radial-gradient(1200px 800px at 20% -10%, rgba(34,197,94,.08), transparent 50%),
+    background: url('/assets/bg/bg5e_soft_grid.png') center/cover no-repeat fixed,
+                radial-gradient(1200px 800px at 20% -10%, rgba(34,197,94,.08), transparent 50%),
                 radial-gradient(1200px 800px at 120% 20%, rgba(6,182,212,.06), transparent 50%),
                 linear-gradient(180deg, #0b1220, #0c1322 60%, #0b0f14);
     color:var(--ink);
@@ -624,6 +625,22 @@
         integrity="sha512-XMVd28F1oH/O71fzwBnV7HucLxVwtxf26XV8P4wPk26EDxuGZ91N8bsOttmnomcCD3CS5ZMRL50H0GgOHvegtg==" 
         crossorigin="anonymous" 
         referrerpolicy="no-referrer"></script>
+
+<!-- Boot script: default to glass-bold theme on first visit -->
+<script>
+(function() {
+  const THEME_KEY = 'rc_glass_theme';
+  const currentTheme = localStorage.getItem(THEME_KEY);
+  
+  // Default to glass-bold on first visit
+  if (!currentTheme) {
+    localStorage.setItem(THEME_KEY, 'glass-bold');
+    document.body.classList.add('glass-bold');
+  } else if (currentTheme === 'glass-bold') {
+    document.body.classList.add('glass-bold');
+  }
+})();
+</script>
 </head>
 <body class="glass-bold">
   <div class="header">
@@ -1262,17 +1279,17 @@
     function hideTeacher(){ qs('#view-teacher').style.display='none'; }
 
     // Theme toggle: Bold vs Normal glassmorphism
-    // Use new key 'tc-glass-style' for persistence
-    let currentTheme = localStorage.getItem('tc-glass-style') || 'bold'; // Default to Bold
+    // Use 'rc_glass_theme' key to match boot script
+    let currentTheme = localStorage.getItem('rc_glass_theme') || 'glass-bold'; // Default to glass-bold
     function applyTheme(theme) {
       currentTheme = theme;
-      localStorage.setItem('tc-glass-style', theme);
-      document.body.classList.toggle('glass-bold', theme === 'bold');
+      localStorage.setItem('rc_glass_theme', theme);
+      document.body.classList.toggle('glass-bold', theme === 'glass-bold');
       const btn = qs('#btnThemeToggle');
-      if (btn) btn.textContent = theme === 'bold' ? 'Glass: Bold' : 'Glass: Normal';
+      if (btn) btn.textContent = theme === 'glass-bold' ? 'Glass: Bold' : 'Glass: Normal';
     }
     applyTheme(currentTheme);
-    on('#btnThemeToggle', 'click', ()=> applyTheme(currentTheme === 'bold' ? 'normal' : 'bold'));
+    on('#btnThemeToggle', 'click', ()=> applyTheme(currentTheme === 'glass-bold' ? 'normal' : 'glass-bold'));
 
     // Teacher auth
     on('#btnTeacher', 'click', ()=>{ qs('#teachModal').classList.add('show'); qs('#teachPass').focus(); });

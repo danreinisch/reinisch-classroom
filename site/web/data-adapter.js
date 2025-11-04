@@ -138,16 +138,40 @@ const local = {
   
   // Phase B: Classes and Enrollments (local stub)
   async listClasses() {
-    // Return stub data for local mode
-    return store.get('classes', [
-      { id: 'CLS1', code: 'CLASS-A', name: 'Class A' },
-      { id: 'CLS2', code: 'CLASS-B', name: 'Class B' }
-    ]);
+    // Prefer stored classes; otherwise derive unique set from students[].class_id
+    const storedClasses = store.get('classes', []);
+    if (storedClasses.length > 0) {
+      return storedClasses;
+    }
+    
+    // Derive from students with class_id
+    const students = store.get('students', []);
+    const uniqueClassIds = [...new Set(students.map(s => s.class_id).filter(Boolean))];
+    
+    // Return each class_id as {id, code, name} all set to the class_id value
+    return uniqueClassIds.map(classId => ({
+      id: classId,
+      code: classId,
+      name: classId
+    }));
   },
   
   async listClassEnrollments() {
-    // Return stub enrollments mapping class_id to student codes
-    return store.get('classEnrollments', []);
+    // Prefer stored enrollments; otherwise derive from students having class_id
+    const storedEnrollments = store.get('classEnrollments', []);
+    if (storedEnrollments.length > 0) {
+      return storedEnrollments;
+    }
+    
+    // Derive from students with class_id
+    const students = store.get('students', []);
+    return students
+      .filter(s => s.class_id)
+      .map(s => ({
+        class_id: s.class_id,
+        student_code: s.code,
+        student_name: s.name || s.code
+      }));
   },
   
   async upsertClass(classData) {
