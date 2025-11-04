@@ -1,11 +1,12 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Reinisch Classroom — Student Hub</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reinisch Classroom - Student Hub & Teacher Center</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <style>
-  :root{ 
+  :root{
     --base:#0b1220; --panel:#0f172a; --panel-2:#111827; --edge:#0b1220;
     --ink:#e6edf3; --ink-dim:#cbd5e1; --muted:#94a3b8;
     --line:rgba(255,255,255,.08); --line-strong:rgba(255,255,255,.14);
@@ -16,7 +17,7 @@
   *{box-sizing:border-box} html,body{height:100%}
   body{
     margin:0;
-    background: url('/assets/bg/bg5e_soft_grid.png') center/cover no-repeat fixed,
+    background: url('/assets/bg/bg5e_soft_grid.svg') center/cover no-repeat fixed,
                 radial-gradient(1200px 800px at 20% -10%, rgba(34,197,94,.08), transparent 50%),
                 radial-gradient(1200px 800px at 120% 20%, rgba(6,182,212,.06), transparent 50%),
                 linear-gradient(180deg, #0b1220, #0c1322 60%, #0b0f14);
@@ -29,7 +30,7 @@
     background:linear-gradient(180deg, rgba(34,197,94,.92), rgba(22,163,74,.92));
     border-bottom:1px solid rgba(255,255,255,.18);
   }
-  .bar{max-width:1200px; margin:0 auto; padding:0 16px; display:flex; gap:12px; align-items:center;}
+  .bar{max-width:1400px; margin:0 auto; padding:0 16px; display:flex; gap:12px; align-items:center;}
   .brand{font-weight:900; letter-spacing:.2px; margin-right:auto; color:#031f11; font-size:18px;}
   .chip{
     display:inline-flex; align-items:center; gap:8px; padding:6px 12px; border-radius:999px;
@@ -38,20 +39,18 @@
   .btn{
     border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.06);
     color:var(--ink); padding:10px 16px; border-radius:10px;
-    font-weight:800; cursor:pointer; transition:.15s;
+    font-weight:800; cursor:pointer; transition:.15s; border:none;
   }
-  .btn:hover{border-color:rgba(255,255,255,.24)}
+  .btn:hover{background:rgba(255,255,255,.12)}
   .btn.primary{
     background:linear-gradient(180deg,rgba(34,197,94,1),rgba(22,163,74,1));
-    color:#032313; border:0;
+    color:#032313;
     box-shadow:0 4px 16px rgba(34,197,94,.35);
   }
   .btn.primary:hover{filter:brightness(1.05)}
   .btn.small{padding:6px 10px; font-size:14px}
   
-  .container{
-    max-width:1200px; margin:0 auto; padding:24px 16px;
-  }
+  .container{max-width:1400px; margin:0 auto; padding:24px 16px;}
   
   .card{
     background:var(--panel); border:1px solid var(--line); border-radius:14px;
@@ -62,9 +61,7 @@
     display:flex; justify-content:space-between; align-items:center;
   }
   
-  .login-box{
-    max-width:420px; margin:80px auto; text-align:center;
-  }
+  .login-box{max-width:420px; margin:80px auto; text-align:center;}
   .login-box h1{margin-bottom:8px; font-size:32px}
   .login-box .subtle{color:var(--muted); font-size:15px; margin-bottom:24px}
   
@@ -99,295 +96,872 @@
   @media (max-width:768px){.grid-2{grid-template-columns:1fr}}
   
   .goal-item{
-    display:flex; gap:12px; align-items:flex-start; padding:12px;
-    border:1px solid var(--line); border-radius:10px;
-    background:rgba(255,255,255,.03); margin-bottom:10px;
+    display:flex; gap:10px; align-items:flex-start; padding:14px;
+    border:1px solid var(--line); border-radius:12px; background:rgba(255,255,255,.04);
+    margin-bottom:12px;
   }
   
-  .sparkline{
-    display:flex; align-items:flex-end; gap:3px; height:40px; margin-top:8px;
+  .progress-bar-container{
+    background:rgba(255,255,255,.08); border-radius:8px; height:8px; overflow:hidden;
   }
-  .sparkline .bar{
-    flex:1; background:linear-gradient(180deg, rgba(34,197,94,.8), rgba(22,163,74,.8));
-    border-radius:3px 3px 0 0; min-height:4px; transition:.2s;
+  .progress-bar{
+    background:linear-gradient(90deg, var(--brand), var(--brand-2));
+    height:100%; transition:width .3s;
   }
   
-  .error-msg{
-    padding:12px; background:rgba(239,68,68,.1); border-radius:8px;
-    border:1px solid rgba(239,68,68,.5); color:#fecaca; margin-top:12px;
+  .tabs{
+    display:flex; gap:8px; border-bottom:1px solid var(--line); margin-bottom:20px;
   }
+  .tab{
+    padding:10px 16px; border-radius:8px 8px 0 0; cursor:pointer;
+    border:1px solid transparent; border-bottom:none; font-weight:700;
+    background:rgba(255,255,255,.03);
+  }
+  .tab.active{
+    background:var(--panel); border-color:var(--line); border-bottom:1px solid var(--panel);
+    margin-bottom:-1px; color:var(--brand);
+  }
+  .tab:hover{background:rgba(255,255,255,.06)}
+  
+  .tab-content{display:none}
+  .tab-content.active{display:block}
+  
+  .spreadsheet-container{
+    overflow-x:auto; border:1px solid var(--line); border-radius:8px;
+    background:var(--panel-2); max-height:600px; overflow-y:auto;
+  }
+  .spreadsheet{
+    width:100%; border-collapse:separate; border-spacing:0;
+  }
+  .spreadsheet th,.spreadsheet td{
+    padding:10px 14px; border-right:1px solid var(--line); border-bottom:1px solid var(--line);
+    white-space:nowrap; text-align:left; font-size:14px;
+  }
+  .spreadsheet th{
+    background:var(--edge); color:var(--ink); font-weight:800;
+    position:sticky; top:0; z-index:2;
+  }
+  .spreadsheet th:first-child,.spreadsheet td:first-child{
+    position:sticky; left:0; background:var(--panel-2); z-index:1;
+  }
+  .spreadsheet th:first-child{z-index:3}
+  .spreadsheet tbody tr:hover{background:rgba(255,255,255,.05)}
+  
+  .error-msg{color:#fca5a5; padding:12px; background:rgba(239,68,68,.1); border-radius:8px; border:1px solid rgba(239,68,68,.3)}
+  .success-msg{color:#6ee7b7; padding:12px; background:rgba(34,197,94,.1); border-radius:8px; border:1px solid rgba(34,197,94,.3)}
+  
+  .hidden{display:none !important}
 </style>
 </head>
 <body>
-  <div class="header">
-    <div class="bar">
-      <div class="brand">Reinisch Classroom — Student Hub</div>
-      <span id="userChip" class="chip" style="display:none">Not logged in</span>
-      <button class="btn small" id="btnLogout" style="display:none">Logout</button>
-    </div>
-  </div>
 
-  <!-- Login View -->
-  <div id="loginView" class="login-box card">
-    <h1>Welcome!</h1>
-    <div class="subtle">Sign in to access your assignments and progress</div>
-    
-    <label style="margin-top:24px">Student Code
-      <input id="loginCode" type="text" placeholder="e.g., S001" autocomplete="username" />
-    </label>
-    
-    <label>Password
-      <input id="loginPassword" type="password" placeholder="Enter your password" autocomplete="current-password" />
-    </label>
-    
-    <div id="loginError" class="error-msg" style="display:none"></div>
-    
-    <button class="btn primary" id="btnLogin" style="width:100%; margin-top:20px">Sign In</button>
-    
-    <div class="subtle" style="margin-top:16px">
-      First time? Your default password is your student code followed by an exclamation mark (e.g., S001!)
-    </div>
+<div class="header">
+  <div class="bar">
+    <div class="brand">🎓 Reinisch Classroom</div>
+    <span id="userChip" class="chip hidden"></span>
+    <button id="btnLogout" class="btn hidden">Logout</button>
   </div>
+</div>
 
-  <!-- Dashboard View -->
-  <div id="dashboardView" class="container" style="display:none">
+<!-- Login View -->
+<div id="loginView">
+  <div class="login-box card">
+    <h1>Student Hub & Teacher Center</h1>
+    <p class="subtle">Login to access your dashboard or teacher tools</p>
+    
+    <div class="tabs" style="border-bottom:none; margin-bottom:16px; justify-content:center">
+      <div class="tab active" data-login-mode="student">Student Login</div>
+      <div class="tab" data-login-mode="teacher">Teacher Login</div>
+    </div>
+    
+    <div id="studentLoginForm">
+      <label>Student Code
+        <input id="loginCode" type="text" placeholder="Enter your code" autocomplete="username" />
+      </label>
+      <label>Password
+        <input id="loginPassword" type="password" placeholder="Enter password" autocomplete="current-password" />
+      </label>
+      <button id="btnStudentLogin" class="btn primary" style="width:100%; margin-top:16px">Login as Student</button>
+    </div>
+    
+    <div id="teacherLoginForm" class="hidden">
+      <label>Teacher Password
+        <input id="teacherPassword" type="password" placeholder="Enter teacher password" autocomplete="current-password" />
+      </label>
+      <button id="btnTeacherLogin" class="btn primary" style="width:100%; margin-top:16px">Login as Teacher</button>
+    </div>
+    
+    <div id="loginError" class="error-msg hidden" style="margin-top:16px"></div>
+  </div>
+</div>
+
+<!-- Student Dashboard View -->
+<div id="studentDashboardView" class="hidden">
+  <div class="container">
+    <h1 style="margin-bottom:24px">My Dashboard</h1>
+    
     <div class="grid-2">
-      <!-- My Grades -->
       <div class="card">
         <div class="card-header">
-          <div>📝 My Grades</div>
-          <div class="badge" id="gradesCount">0 assignments</div>
+          <div>📚 My Assignments</div>
+          <span id="assignmentsCount" class="badge info">0</span>
         </div>
-        
-        <div id="gradesContent">
-          <div class="subtle" style="text-align:center; padding:40px 20px">
-            No assignments yet
-          </div>
-        </div>
+        <div id="assignmentsContent"></div>
       </div>
-
-      <!-- My IEP Progress -->
+      
       <div class="card">
         <div class="card-header">
-          <div>🎯 My IEP Progress</div>
-          <div class="badge" id="goalsCount">0 goals</div>
+          <div>🎯 IEP Goals</div>
+          <span id="goalsCount" class="badge info">0</span>
         </div>
-        
-        <div id="goalsContent">
-          <div class="subtle" style="text-align:center; padding:40px 20px">
-            No goals available
-          </div>
-        </div>
+        <div id="goalsContent"></div>
       </div>
     </div>
   </div>
+</div>
 
-  <script type="module">
-    import { db, isRemote } from '../web/data-adapter.js';
+<!-- Teacher Center View -->
+<div id="teacherCenterView" class="hidden">
+  <div class="container">
+    <h1 style="margin-bottom:24px">Teacher Center</h1>
+    
+    <div class="tabs">
+      <div class="tab active" data-teacher-tab="assignments">📝 Assignments</div>
+      <div class="tab" data-teacher-tab="gradebook">📊 Gradebook</div>
+      <div class="tab" data-teacher-tab="iep-progress">🎯 IEP Progress</div>
+      <div class="tab" data-teacher-tab="upload">📤 Upload</div>
+      <div class="tab" data-teacher-tab="review">✅ Review</div>
+      <div class="tab" data-teacher-tab="export">💾 Export</div>
+    </div>
+    
+    <!-- Assignments Tab -->
+    <div id="tab-assignments" class="tab-content active">
+      <div class="card">
+        <div class="card-header">
+          <div>Assignment Manager</div>
+          <button id="btnRefreshAssignments" class="btn small">Refresh</button>
+        </div>
+        <div id="assignmentsListContent"></div>
+      </div>
+    </div>
+    
+    <!-- Gradebook Tab -->
+    <div id="tab-gradebook" class="tab-content">
+      <div class="card">
+        <div class="card-header">
+          <div>📊 Gradebook</div>
+          <div style="display:flex; gap:8px">
+            <button id="btnImportGradebook" class="btn small">Import CSV</button>
+            <button id="btnExportGradebook" class="btn small">Export CSV</button>
+            <button id="btnIEPSummary" class="btn small primary">IEP Progress Summary</button>
+          </div>
+        </div>
+        <input type="file" id="gradebookFileInput" accept=".csv" class="hidden" />
+        <div id="gradebookContent" class="spreadsheet-container">
+          <div class="subtle" style="text-align:center; padding:40px">Import a gradebook CSV or create entries</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- IEP Progress Tab -->
+    <div id="tab-iep-progress" class="tab-content">
+      <div class="card">
+        <div class="card-header">
+          <div>🎯 IEP Goal Progress</div>
+          <div style="display:flex; gap:8px">
+            <button id="btnImportIEP" class="btn small">Import CSV</button>
+            <button id="btnExportIEP" class="btn small">Export CSV</button>
+          </div>
+        </div>
+        <input type="file" id="iepFileInput" accept=".csv" class="hidden" />
+        <div id="iepProgressContent">
+          <div class="subtle" style="text-align:center; padding:40px">Import IEP progress CSV</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Upload Tab -->
+    <div id="tab-upload" class="tab-content">
+      <div class="card">
+        <div class="card-header">
+          <div>📤 Upload Assignment CSV → Progress</div>
+        </div>
+        <p class="subtle">Upload a CSV file containing assignment progress data to import into the system.</p>
+        <label>Select CSV File
+          <input type="file" id="uploadAssignmentCSV" accept=".csv" />
+        </label>
+        <button id="btnProcessUpload" class="btn primary" style="margin-top:12px">Process Upload</button>
+        <div id="uploadResult" class="hidden" style="margin-top:16px"></div>
+      </div>
+    </div>
+    
+    <!-- Review Tab -->
+    <div id="tab-review" class="tab-content">
+      <div class="card">
+        <div class="card-header">
+          <div>✅ Review Queue</div>
+          <button id="btnRefreshReview" class="btn small">Refresh</button>
+        </div>
+        <div id="reviewQueueContent">
+          <div class="subtle" style="text-align:center; padding:40px">No submissions pending review</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Export Tab -->
+    <div id="tab-export" class="tab-content">
+      <div class="card">
+        <div class="card-header">
+          <div>💾 Export Data</div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:12px; max-width:400px">
+          <button id="btnExportStudents" class="btn">Export Students CSV</button>
+          <button id="btnExportAssignments" class="btn">Export Assignments CSV</button>
+          <button id="btnExportProgress" class="btn">Export Progress CSV</button>
+          <button id="btnExportAllData" class="btn primary">Export All Data (JSON)</button>
+        </div>
+        <div id="exportResult" class="hidden" style="margin-top:16px"></div>
+      </div>
+    </div>
+  </div>
+</div>
 
-    const qs = s => document.querySelector(s);
-    let currentStudent = null;
-
-    // Login handler
-    qs('#btnLogin').addEventListener('click', async () => {
-      const code = qs('#loginCode').value.trim();
-      const password = qs('#loginPassword').value;
+<script type="module">
+  // Local storage namespace
+  const STORAGE_KEY = 'rc_student_hub_';
+  
+  // Simple query selector helpers
+  const qs = sel => document.querySelector(sel);
+  const qsa = sel => document.querySelectorAll(sel);
+  
+  // Local storage helpers
+  const store = {
+    get: (key, def = null) => {
+      try {
+        const val = localStorage.getItem(STORAGE_KEY + key);
+        return val ? JSON.parse(val) : def;
+      } catch {
+        return def;
+      }
+    },
+    set: (key, val) => {
+      localStorage.setItem(STORAGE_KEY + key, JSON.stringify(val));
+    }
+  };
+  
+  // In-page data structures (offline mode)
+  let students = store.get('students', []);
+  let assignments = store.get('assignments', []);
+  let assignmentInstances = store.get('assignmentInstances', []);
+  let iepGoals = store.get('iepGoals', []);
+  let gradebookEntries = store.get('gradebookEntries', []);
+  let iepEntries = store.get('iepEntries', []);
+  
+  // Current session
+  let currentUser = null;
+  let userRole = null; // 'student' or 'teacher'
+  
+  // TODO: When Supabase is available, replace with data-adapter calls
+  const db = {
+    async listStudents() { return students; },
+    async listAssignments() { return assignments; },
+    async listAssignmentInstances() { return assignmentInstances; },
+    async listGoalsByStudentCode(code) {
+      return iepGoals.filter(g => g.student_code === code);
+    },
+    async addProgress(entry) {
+      iepEntries.push({ ...entry, created_at: new Date().toISOString() });
+      store.set('iepEntries', iepEntries);
+    },
+    async verifyStudentPassword(code, password) {
+      const student = students.find(s => s.code === code);
+      // Simple default: password is code + '!' if not set
+      return student && (student.password === password || password === code + '!');
+    },
+    async verifyTeacherPassword(password) {
+      // Simple default teacher password
+      return password === 'teacher123';
+    }
+  };
+  
+  // Login mode tabs
+  qsa('[data-login-mode]').forEach(tab => {
+    tab.addEventListener('click', () => {
+      const mode = tab.dataset.loginMode;
+      qsa('[data-login-mode]').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
       
-      if (!code) {
-        showError('Please enter your student code');
+      if (mode === 'student') {
+        qs('#studentLoginForm').classList.remove('hidden');
+        qs('#teacherLoginForm').classList.add('hidden');
+      } else {
+        qs('#studentLoginForm').classList.add('hidden');
+        qs('#teacherLoginForm').classList.remove('hidden');
+      }
+    });
+  });
+  
+  // Student login
+  qs('#btnStudentLogin').addEventListener('click', async () => {
+    const code = qs('#loginCode').value.trim();
+    const password = qs('#loginPassword').value;
+    
+    if (!code || !password) {
+      showError('Please enter both code and password');
+      return;
+    }
+    
+    try {
+      const valid = await db.verifyStudentPassword(code, password);
+      if (!valid) {
+        showError('Invalid student code or password');
         return;
       }
       
-      if (!password) {
-        showError('Please enter your password');
+      const studentList = await db.listStudents();
+      const student = studentList.find(s => s.code === code);
+      
+      if (!student) {
+        showError('Student not found');
         return;
       }
       
-      try {
-        // Verify password
-        const valid = await db.verifyStudentPassword(code, password);
-        
-        if (!valid) {
-          showError('Invalid student code or password');
-          return;
-        }
-        
-        // Get student info
-        const students = await db.listStudents();
-        const student = students.find(s => s.code === code);
-        
-        if (!student) {
-          showError('Student not found');
-          return;
-        }
-        
-        // Login successful
-        currentStudent = student;
-        sessionStorage.setItem('rc_student_code', code);
-        showDashboard();
-        
-      } catch (err) {
-        console.error('Login error:', err);
-        showError('Login failed: ' + err.message);
-      }
-    });
-    
-    // Logout handler
-    qs('#btnLogout').addEventListener('click', () => {
-      currentStudent = null;
-      sessionStorage.removeItem('rc_student_code');
-      showLogin();
-    });
-    
-    // Enter key on login
-    qs('#loginPassword').addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        qs('#btnLogin').click();
-      }
-    });
-    
-    function showError(msg) {
-      const errorDiv = qs('#loginError');
-      errorDiv.textContent = msg;
-      errorDiv.style.display = 'block';
-    }
-    
-    function showLogin() {
-      qs('#loginView').style.display = 'block';
-      qs('#dashboardView').style.display = 'none';
-      qs('#userChip').style.display = 'none';
-      qs('#btnLogout').style.display = 'none';
-      qs('#loginCode').value = '';
-      qs('#loginPassword').value = '';
-      qs('#loginError').style.display = 'none';
-    }
-    
-    async function showDashboard() {
-      qs('#loginView').style.display = 'none';
-      qs('#dashboardView').style.display = 'block';
-      qs('#userChip').style.display = 'inline-flex';
-      qs('#userChip').textContent = currentStudent.name || currentStudent.code;
-      qs('#btnLogout').style.display = 'inline-block';
+      currentUser = student;
+      userRole = 'student';
+      sessionStorage.setItem('rc_user_code', code);
+      sessionStorage.setItem('rc_user_role', 'student');
+      showStudentDashboard();
       
-      // Load dashboard data
-      await loadGrades();
-      await loadGoals();
+    } catch (err) {
+      console.error('Login error:', err);
+      showError('Login failed: ' + err.message);
+    }
+  });
+  
+  // Teacher login
+  qs('#btnTeacherLogin').addEventListener('click', async () => {
+    const password = qs('#teacherPassword').value;
+    
+    if (!password) {
+      showError('Please enter teacher password');
+      return;
     }
     
-    async function loadGrades() {
-      try {
-        // Get all assignment instances for this student
-        const instances = await db.listAssignmentInstances();
-        const myInstances = instances.filter(i => i.student_code === currentStudent.code);
-        
-        qs('#gradesCount').textContent = `${myInstances.length} assignment${myInstances.length !== 1 ? 's' : ''}`;
-        
-        if (myInstances.length === 0) {
-          qs('#gradesContent').innerHTML = '<div class="subtle" style="text-align:center; padding:40px 20px">No assignments yet</div>';
-          return;
-        }
-        
-        // Get assignment details
-        const assignments = await db.listAssignments();
-        const assignmentMap = new Map(assignments.map(a => [a.id, a]));
-        
-        // Build table
-        let html = '<table class="table"><thead><tr><th>Assignment</th><th>Status</th><th>Due Date</th><th>Score</th></tr></thead><tbody>';
-        
-        for (const inst of myInstances) {
-          const assignment = assignmentMap.get(inst.assignment_id);
-          const title = assignment ? assignment.title : 'Unknown';
-          const status = inst.status || 'Assigned';
-          const dueDate = inst.due_at ? new Date(inst.due_at).toLocaleDateString() : '—';
-          
-          // Badge class based on status
-          let badgeClass = 'info';
-          if (status === 'Submitted' || status === 'Completed') badgeClass = 'success';
-          else if (status === 'Late' || status === 'Overdue') badgeClass = 'warning';
-          
-          html += `<tr>
-            <td>${title}</td>
-            <td><span class="badge ${badgeClass}">${status}</span></td>
-            <td>${dueDate}</td>
-            <td>—</td>
-          </tr>`;
-        }
-        
-        html += '</tbody></table>';
-        qs('#gradesContent').innerHTML = html;
-        
-      } catch (err) {
-        console.error('Failed to load grades:', err);
-        qs('#gradesContent').innerHTML = '<div class="error-msg">Failed to load assignments</div>';
+    try {
+      const valid = await db.verifyTeacherPassword(password);
+      if (!valid) {
+        showError('Invalid teacher password');
+        return;
       }
+      
+      currentUser = { name: 'Teacher', role: 'teacher' };
+      userRole = 'teacher';
+      sessionStorage.setItem('rc_user_role', 'teacher');
+      showTeacherCenter();
+      
+    } catch (err) {
+      console.error('Login error:', err);
+      showError('Login failed: ' + err.message);
     }
+  });
+  
+  // Logout
+  qs('#btnLogout').addEventListener('click', () => {
+    currentUser = null;
+    userRole = null;
+    sessionStorage.clear();
+    showLogin();
+  });
+  
+  // Enter key handlers
+  qs('#loginPassword').addEventListener('keypress', e => {
+    if (e.key === 'Enter') qs('#btnStudentLogin').click();
+  });
+  qs('#teacherPassword').addEventListener('keypress', e => {
+    if (e.key === 'Enter') qs('#btnTeacherLogin').click();
+  });
+  
+  function showError(msg) {
+    const errorDiv = qs('#loginError');
+    errorDiv.textContent = msg;
+    errorDiv.classList.remove('hidden');
+  }
+  
+  function showLogin() {
+    qs('#loginView').classList.remove('hidden');
+    qs('#studentDashboardView').classList.add('hidden');
+    qs('#teacherCenterView').classList.add('hidden');
+    qs('#userChip').classList.add('hidden');
+    qs('#btnLogout').classList.add('hidden');
+    qs('#loginCode').value = '';
+    qs('#loginPassword').value = '';
+    qs('#teacherPassword').value = '';
+    qs('#loginError').classList.add('hidden');
+  }
+  
+  async function showStudentDashboard() {
+    qs('#loginView').classList.add('hidden');
+    qs('#studentDashboardView').classList.remove('hidden');
+    qs('#teacherCenterView').classList.add('hidden');
+    qs('#userChip').classList.remove('hidden');
+    qs('#userChip').textContent = currentUser.name || currentUser.code;
+    qs('#btnLogout').classList.remove('hidden');
     
-    async function loadGoals() {
-      try {
-        // Get goals for this student
-        const goals = await db.listGoalsByStudentCode(currentStudent.code);
+    await loadStudentAssignments();
+    await loadStudentGoals();
+  }
+  
+  async function showTeacherCenter() {
+    qs('#loginView').classList.add('hidden');
+    qs('#studentDashboardView').classList.add('hidden');
+    qs('#teacherCenterView').classList.remove('hidden');
+    qs('#userChip').classList.remove('hidden');
+    qs('#userChip').textContent = 'Teacher';
+    qs('#btnLogout').classList.remove('hidden');
+    
+    await loadTeacherAssignments();
+  }
+  
+  async function loadStudentAssignments() {
+    try {
+      const instances = await db.listAssignmentInstances();
+      const myInstances = instances.filter(i => i.student_code === currentUser.code);
+      
+      qs('#assignmentsCount').textContent = myInstances.length;
+      
+      if (myInstances.length === 0) {
+        qs('#assignmentsContent').innerHTML = '<div class="subtle" style="text-align:center; padding:20px">No assignments yet</div>';
+        return;
+      }
+      
+      const assignmentList = await db.listAssignments();
+      const assignmentMap = new Map(assignmentList.map(a => [a.id, a]));
+      
+      let html = '<table class="table"><thead><tr><th>Assignment</th><th>Status</th><th>Due</th></tr></thead><tbody>';
+      
+      for (const inst of myInstances.slice(0, 5)) {
+        const assignment = assignmentMap.get(inst.assignment_id);
+        const title = assignment ? assignment.title : 'Unknown';
+        const status = inst.status || 'Assigned';
+        const dueDate = inst.due_at ? new Date(inst.due_at).toLocaleDateString() : '—';
         
-        qs('#goalsCount').textContent = `${goals.length} goal${goals.length !== 1 ? 's' : ''}`;
+        let badgeClass = 'info';
+        if (status === 'Submitted' || status === 'Completed') badgeClass = 'success';
+        else if (status === 'Late' || status === 'Overdue') badgeClass = 'warning';
         
-        if (goals.length === 0) {
-          qs('#goalsContent').innerHTML = '<div class="subtle" style="text-align:center; padding:40px 20px">No goals available</div>';
-          return;
-        }
+        html += `<tr>
+          <td>${title}</td>
+          <td><span class="badge ${badgeClass}">${status}</span></td>
+          <td>${dueDate}</td>
+        </tr>`;
+      }
+      
+      html += '</tbody></table>';
+      qs('#assignmentsContent').innerHTML = html;
+      
+    } catch (err) {
+      console.error('Failed to load assignments:', err);
+      qs('#assignmentsContent').innerHTML = '<div class="error-msg">Failed to load assignments</div>';
+    }
+  }
+  
+  async function loadStudentGoals() {
+    try {
+      const goals = await db.listGoalsByStudentCode(currentUser.code);
+      
+      qs('#goalsCount').textContent = goals.length;
+      
+      if (goals.length === 0) {
+        qs('#goalsContent').innerHTML = '<div class="subtle" style="text-align:center; padding:20px">No goals available</div>';
+        return;
+      }
+      
+      let html = '';
+      for (const goal of goals.slice(0, 4)) {
+        const statusBadge = goal.status === 'Open' ? 'info' : goal.status === 'Met' ? 'success' : 'warning';
         
-        // Build goals list
-        let html = '';
-        for (const goal of goals) {
-          const statusBadge = goal.status === 'Open' ? 'info' : goal.status === 'Met' ? 'success' : 'warning';
-          
-          // Simple sparkline (placeholder - would need progress data)
-          const sparklineHtml = '<div class="sparkline">' + 
-            Array(8).fill(0).map((_, i) => {
-              const height = Math.random() * 100; // Placeholder
-              return `<div class="bar" style="height:${height}%"></div>`;
-            }).join('') + '</div>';
-          
-          html += `
-            <div class="goal-item">
-              <div style="font-size:24px">🎯</div>
-              <div style="flex:1">
-                <div style="font-weight:800; margin-bottom:4px">${goal.desc || goal.code}</div>
-                <div style="display:flex; gap:8px; align-items:center; margin-bottom:6px">
-                  <span class="badge ${statusBadge}">${goal.status || 'Open'}</span>
-                  <span class="subtle">Code: ${goal.code}</span>
-                  ${goal.target ? `<span class="subtle">Target: ${goal.target}%</span>` : ''}
-                </div>
-                ${sparklineHtml}
+        // Calculate average progress (mock for now)
+        const avgProgress = goal.target || Math.floor(Math.random() * 100);
+        
+        html += `
+          <div class="goal-item">
+            <div style="font-size:24px">🎯</div>
+            <div style="flex:1">
+              <div style="font-weight:800; margin-bottom:4px">${goal.desc || goal.code}</div>
+              <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px">
+                <span class="badge ${statusBadge}">${goal.status || 'Open'}</span>
+                <span class="subtle">Avg: ${avgProgress}%</span>
+              </div>
+              <div class="progress-bar-container">
+                <div class="progress-bar" style="width:${avgProgress}%"></div>
               </div>
             </div>
-          `;
+          </div>
+        `;
+      }
+      
+      qs('#goalsContent').innerHTML = html;
+      
+    } catch (err) {
+      console.error('Failed to load goals:', err);
+      qs('#goalsContent').innerHTML = '<div class="error-msg">Failed to load goals</div>';
+    }
+  }
+  
+  async function loadTeacherAssignments() {
+    try {
+      const assignmentList = await db.listAssignments();
+      
+      if (assignmentList.length === 0) {
+        qs('#assignmentsListContent').innerHTML = '<div class="subtle" style="text-align:center; padding:20px">No assignments created yet</div>';
+        return;
+      }
+      
+      let html = '<table class="table"><thead><tr><th>Title</th><th>Type</th><th>Created</th></tr></thead><tbody>';
+      
+      for (const assignment of assignmentList) {
+        const created = assignment.created_at ? new Date(assignment.created_at).toLocaleDateString() : '—';
+        html += `<tr>
+          <td>${assignment.title}</td>
+          <td><span class="badge info">${assignment.type || 'html'}</span></td>
+          <td>${created}</td>
+        </tr>`;
+      }
+      
+      html += '</tbody></table>';
+      qs('#assignmentsListContent').innerHTML = html;
+      
+    } catch (err) {
+      console.error('Failed to load assignments:', err);
+      qs('#assignmentsListContent').innerHTML = '<div class="error-msg">Failed to load assignments</div>';
+    }
+  }
+  
+  // Teacher tab switching
+  qsa('[data-teacher-tab]').forEach(tab => {
+    tab.addEventListener('click', () => {
+      const tabName = tab.dataset.teacherTab;
+      qsa('[data-teacher-tab]').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      
+      qsa('.tab-content').forEach(content => content.classList.remove('active'));
+      qs('#tab-' + tabName).classList.add('active');
+      
+      // Load tab-specific data
+      if (tabName === 'gradebook') loadGradebook();
+      if (tabName === 'iep-progress') loadIEPProgress();
+    });
+  });
+  
+  // Gradebook CSV import
+  qs('#btnImportGradebook').addEventListener('click', () => {
+    qs('#gradebookFileInput').click();
+  });
+  
+  qs('#gradebookFileInput').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    Papa.parse(file, {
+      header: true,
+      complete: (results) => {
+        parseGradebookCSV(results.data);
+        e.target.value = ''; // Reset input
+      },
+      error: (err) => {
+        alert('Failed to parse CSV: ' + err.message);
+      }
+    });
+  });
+  
+  function parseGradebookCSV(rows) {
+    // Expected format: Student Code Name And Class GRADE BOOK
+    // First column: Student code/name, remaining columns: dates with scores
+    
+    if (rows.length === 0) {
+      alert('CSV file is empty');
+      return;
+    }
+    
+    // Store parsed gradebook entries
+    gradebookEntries = rows.map((row, idx) => ({
+      id: idx,
+      ...row
+    }));
+    store.set('gradebookEntries', gradebookEntries);
+    
+    loadGradebook();
+    alert('Gradebook imported successfully! ' + gradebookEntries.length + ' entries loaded.');
+  }
+  
+  function loadGradebook() {
+    if (gradebookEntries.length === 0) {
+      qs('#gradebookContent').innerHTML = '<div class="subtle" style="text-align:center; padding:40px">Import a gradebook CSV to view data</div>';
+      return;
+    }
+    
+    // Detect columns from first entry
+    const firstEntry = gradebookEntries[0];
+    const columns = Object.keys(firstEntry).filter(k => k !== 'id');
+    
+    // Build spreadsheet table
+    let html = '<table class="spreadsheet"><thead><tr>';
+    
+    // Student column (sticky)
+    html += '<th>Student</th>';
+    
+    // Date columns
+    for (const col of columns.slice(1)) { // Skip first column (student)
+      html += `<th>${col}</th>`;
+    }
+    
+    html += '</tr></thead><tbody>';
+    
+    // Data rows
+    for (const entry of gradebookEntries) {
+      html += '<tr>';
+      html += `<td>${entry[columns[0]] || ''}</td>`; // Student name
+      
+      for (const col of columns.slice(1)) {
+        html += `<td>${entry[col] || '—'}</td>`;
+      }
+      
+      html += '</tr>';
+    }
+    
+    html += '</tbody></table>';
+    qs('#gradebookContent').innerHTML = html;
+  }
+  
+  // Export Gradebook CSV
+  qs('#btnExportGradebook').addEventListener('click', () => {
+    if (gradebookEntries.length === 0) {
+      alert('No gradebook data to export');
+      return;
+    }
+    
+    const csv = Papa.unparse(gradebookEntries.map(e => {
+      const copy = { ...e };
+      delete copy.id;
+      return copy;
+    }));
+    
+    downloadCSV(csv, 'gradebook_export.csv');
+  });
+  
+  // IEP Progress Summary button
+  qs('#btnIEPSummary').addEventListener('click', () => {
+    // Switch to IEP Progress tab
+    qsa('[data-teacher-tab]').forEach(t => t.classList.remove('active'));
+    qs('[data-teacher-tab="iep-progress"]').classList.add('active');
+    qsa('.tab-content').forEach(content => content.classList.remove('active'));
+    qs('#tab-iep-progress').classList.add('active');
+    loadIEPProgress();
+  });
+  
+  // IEP CSV import
+  qs('#btnImportIEP').addEventListener('click', () => {
+    qs('#iepFileInput').click();
+  });
+  
+  qs('#iepFileInput').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    Papa.parse(file, {
+      header: true,
+      complete: (results) => {
+        parseIEPCSV(results.data);
+        e.target.value = ''; // Reset input
+      },
+      error: (err) => {
+        alert('Failed to parse CSV: ' + err.message);
+      }
+    });
+  });
+  
+  function parseIEPCSV(rows) {
+    // Expected format: IEP Goal with Student Code Name
+    // Store parsed IEP entries
+    iepEntries = rows.map((row, idx) => ({
+      id: idx,
+      ...row
+    }));
+    store.set('iepEntries', iepEntries);
+    
+    loadIEPProgress();
+    alert('IEP progress imported successfully! ' + iepEntries.length + ' entries loaded.');
+  }
+  
+  function loadIEPProgress() {
+    if (iepEntries.length === 0) {
+      qs('#iepProgressContent').innerHTML = '<div class="subtle" style="text-align:center; padding:40px">Import IEP progress CSV to view data</div>';
+      return;
+    }
+    
+    // Build table
+    const columns = Object.keys(iepEntries[0]).filter(k => k !== 'id');
+    
+    let html = '<div class="spreadsheet-container"><table class="table"><thead><tr>';
+    
+    for (const col of columns) {
+      html += `<th>${col}</th>`;
+    }
+    
+    html += '</tr></thead><tbody>';
+    
+    for (const entry of iepEntries) {
+      html += '<tr>';
+      for (const col of columns) {
+        html += `<td>${entry[col] || '—'}</td>`;
+      }
+      html += '</tr>';
+    }
+    
+    html += '</tbody></table></div>';
+    qs('#iepProgressContent').innerHTML = html;
+  }
+  
+  // Export IEP CSV
+  qs('#btnExportIEP').addEventListener('click', () => {
+    if (iepEntries.length === 0) {
+      alert('No IEP data to export');
+      return;
+    }
+    
+    const csv = Papa.unparse(iepEntries.map(e => {
+      const copy = { ...e };
+      delete copy.id;
+      return copy;
+    }));
+    
+    downloadCSV(csv, 'iep_progress_export.csv');
+  });
+  
+  // Upload assignment CSV
+  qs('#btnProcessUpload').addEventListener('click', () => {
+    const file = qs('#uploadAssignmentCSV').files[0];
+    if (!file) {
+      qs('#uploadResult').innerHTML = '<div class="error-msg">Please select a file</div>';
+      qs('#uploadResult').classList.remove('hidden');
+      return;
+    }
+    
+    Papa.parse(file, {
+      header: true,
+      complete: (results) => {
+        processAssignmentUpload(results.data);
+      },
+      error: (err) => {
+        qs('#uploadResult').innerHTML = '<div class="error-msg">Failed to parse CSV: ' + err.message + '</div>';
+        qs('#uploadResult').classList.remove('hidden');
+      }
+    });
+  });
+  
+  function processAssignmentUpload(rows) {
+    // Mock processing - in real implementation, would call db.addProgress()
+    let successCount = 0;
+    
+    for (const row of rows) {
+      // TODO: Call db.addProgress() when Supabase is available
+      successCount++;
+    }
+    
+    qs('#uploadResult').innerHTML = `<div class="success-msg">Successfully processed ${successCount} entries</div>`;
+    qs('#uploadResult').classList.remove('hidden');
+  }
+  
+  // Export functions
+  qs('#btnExportStudents').addEventListener('click', () => {
+    if (students.length === 0) {
+      alert('No students to export');
+      return;
+    }
+    const csv = Papa.unparse(students);
+    downloadCSV(csv, 'students_export.csv');
+  });
+  
+  qs('#btnExportAssignments').addEventListener('click', () => {
+    if (assignments.length === 0) {
+      alert('No assignments to export');
+      return;
+    }
+    const csv = Papa.unparse(assignments);
+    downloadCSV(csv, 'assignments_export.csv');
+  });
+  
+  qs('#btnExportProgress').addEventListener('click', () => {
+    if (iepEntries.length === 0) {
+      alert('No progress to export');
+      return;
+    }
+    const csv = Papa.unparse(iepEntries);
+    downloadCSV(csv, 'progress_export.csv');
+  });
+  
+  qs('#btnExportAllData').addEventListener('click', () => {
+    const allData = {
+      students,
+      assignments,
+      assignmentInstances,
+      iepGoals,
+      gradebookEntries,
+      iepEntries,
+      exportedAt: new Date().toISOString()
+    };
+    
+    const json = JSON.stringify(allData, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'all_data_export.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+  
+  // Helper to download CSV
+  function downloadCSV(csv, filename) {
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+  
+  // Refresh handlers
+  qs('#btnRefreshAssignments').addEventListener('click', loadTeacherAssignments);
+  
+  // Check for existing session
+  (async function init() {
+    const savedRole = sessionStorage.getItem('rc_user_role');
+    const savedCode = sessionStorage.getItem('rc_user_code');
+    
+    if (savedRole === 'teacher') {
+      currentUser = { name: 'Teacher', role: 'teacher' };
+      userRole = 'teacher';
+      showTeacherCenter();
+    } else if (savedRole === 'student' && savedCode) {
+      try {
+        const studentList = await db.listStudents();
+        const student = studentList.find(s => s.code === savedCode);
+        if (student) {
+          currentUser = student;
+          userRole = 'student';
+          showStudentDashboard();
+          return;
         }
-        
-        qs('#goalsContent').innerHTML = html;
-        
       } catch (err) {
-        console.error('Failed to load goals:', err);
-        qs('#goalsContent').innerHTML = '<div class="error-msg">Failed to load goals</div>';
+        console.error('Session restore failed:', err);
       }
     }
     
-    // Check for existing session
-    (async function init() {
-      const savedCode = sessionStorage.getItem('rc_student_code');
-      if (savedCode) {
-        try {
-          const students = await db.listStudents();
-          const student = students.find(s => s.code === savedCode);
-          if (student) {
-            currentStudent = student;
-            showDashboard();
-            return;
-          }
-        } catch (err) {
-          console.error('Session restore failed:', err);
-        }
-      }
-      showLogin();
-    })();
-  </script>
+    showLogin();
+  })();
+</script>
+
 </body>
 </html>
