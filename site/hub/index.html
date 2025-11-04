@@ -641,6 +641,35 @@
   }
 })();
 </script>
+
+<style>
+  /* Hub: always render soft-grid and keep Bold overlays when active */
+  body {
+    --hub-grid-image: url('/assets/bg/bg5e_soft_grid.svg');
+    background:
+      var(--hub-grid-image) center/cover no-repeat fixed,
+      radial-gradient(1400px 900px at 50% 120%, rgba(0,0,0,0.46), rgba(0,0,0,0) 60%),
+      radial-gradient(1400px 900px at 50% -20%, rgba(0,0,0,0.42), rgba(0,0,0,0) 60%),
+      linear-gradient(180deg, #0b1220, #0c1322 60%, #0b0f14) !important;
+    background-attachment: fixed, fixed, fixed, fixed;
+  }
+  /* Sharpen controls under Bold theme */
+  body.glass-bold .btn,
+  body.glass-bold .nav a,
+  body.glass-bold .iconrail button,
+  body.glass-bold .badge {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    text-shadow: none !important;
+  }
+  /* Slightly reduce card blur for crisper feel */
+  body.glass-bold .card {
+    backdrop-filter: blur(12px) saturate(150%) !important;
+    -webkit-backdrop-filter: blur(12px) saturate(150%) !important;
+  }
+  /* Keep the Teacher Center action crisp */
+  #btnTeacher { text-shadow: none !important; }
+</style>
 </head>
 <body class="glass-bold">
   <div class="header">
