@@ -3108,9 +3108,12 @@
       // Show success notification
       addNotif(`Seeded ${classes.length} classes and ${enrollments.length} enrollments.`, { type: 'info' });
       
-      // Refresh the classes select if we're on the assignments tab
+      // Refresh the classes and students selects if we're on the assignments tab
       if (typeof populateClassesSelect === 'function') {
         populateClassesSelect();
+      }
+      if (typeof populateStudentsSelect === 'function') {
+        populateStudentsSelect();
       }
     }
     
