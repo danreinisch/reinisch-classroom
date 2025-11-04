@@ -66,9 +66,10 @@
     --inset-top:inset 0 1px 0 rgba(255,255,255,.03);
   }
 
-  /* Base background */
+  /* Base background - includes soft-grid by default */
   body{
-    background: radial-gradient(1200px 800px at 20% -10%, rgba(34,197,94,.08), transparent 50%),
+    background: url('/assets/bg/bg5e_soft_grid.png') center/cover no-repeat fixed,
+                radial-gradient(1200px 800px at 20% -10%, rgba(34,197,94,.08), transparent 50%),
                 radial-gradient(1200px 800px at 120% 20%, rgba(6,182,212,.06), transparent 50%),
                 linear-gradient(180deg, #0b1220, #0c1322 60%, #0b0f14);
     color:var(--ink);
@@ -624,6 +625,22 @@
         integrity="sha512-XMVd28F1oH/O71fzwBnV7HucLxVwtxf26XV8P4wPk26EDxuGZ91N8bsOttmnomcCD3CS5ZMRL50H0GgOHvegtg==" 
         crossorigin="anonymous" 
         referrerpolicy="no-referrer"></script>
+
+<!-- Boot script: default to glass-bold theme on first visit -->
+<script>
+(function() {
+  const THEME_KEY = 'rc_glass_theme';
+  const currentTheme = localStorage.getItem(THEME_KEY);
+  
+  // Default to glass-bold on first visit
+  if (!currentTheme) {
+    localStorage.setItem(THEME_KEY, 'glass-bold');
+    document.body.classList.add('glass-bold');
+  } else if (currentTheme === 'glass-bold') {
+    document.body.classList.add('glass-bold');
+  }
+})();
+</script>
 </head>
 <body class="glass-bold">
   <div class="header">
@@ -859,7 +876,10 @@
         <div class="card" style="margin-top:12px">
           <div class="card-header">
             <div>Issue Assignment</div>
-            <button class="btn small" id="btnImportClassEnrollments">Import Class Enrollments (CSV)</button>
+            <div style="display:flex;gap:8px">
+              <button class="btn small" id="btnImportClassEnrollments">Import Class Enrollments (CSV)</button>
+              <button class="btn small" id="btnMigrateEnrollments">Migrate CSV to Supabase Enrollments</button>
+            </div>
           </div>
           
           <label style="margin-top:12px">Select Assignment
@@ -984,6 +1004,26 @@
       <div class="card ttab" data-tab="results" style="display:none">
         <div class="card-header"><div>🧪 Results</div></div>
         <div class="subtle">WIP: Porting from v8.2.</div>
+      </div>
+
+      <div class="card ttab" data-tab="gradebook" style="display:none">
+        <div class="card-header">
+          <div>📊 Gradebook</div>
+          <div style="display:flex;gap:10px;align-items:center">
+            <label style="margin:0;font-weight:700;font-size:14px">Filter by Class:
+              <select id="gradebookClassFilter" class="btn small" style="width:200px;margin-left:8px">
+                <option value="">All Classes</option>
+              </select>
+            </label>
+            <button class="btn small" id="btnRefreshGradebook">Refresh</button>
+          </div>
+        </div>
+        
+        <div id="gradebookContent" style="margin-top:12px">
+          <div class="subtle" style="text-align:center;padding:40px">
+            Select a class to view grades, or click Refresh to load all assignments.
+          </div>
+        </div>
       </div>
 
       <div class="card ttab" data-tab="hub" style="display:none">
@@ -1248,6 +1288,44 @@
     </div>
   </div>
 
+  <!-- Migrate Enrollments to Supabase modal -->
+  <div class="modal-backdrop" id="migrateEnrollmentsModal">
+    <div class="modal card" style="max-width:800px">
+      <div class="card-header"><div>Migrate CSV to Supabase Enrollments</div></div>
+      
+      <div class="subtle" style="margin-top:12px;margin-bottom:12px">
+        This tool migrates class enrollment data from a CSV file to your Supabase database.<br>
+        <strong>Requirements:</strong> Supabase must be configured and reachable.<br>
+        <strong>CSV Format:</strong> Student Code, Class (same as Import Class Enrollments)
+      </div>
+      
+      <label style="margin-top:12px">CSV File
+        <input id="migratorCsvFile" type="file" accept=".csv,text/csv" />
+      </label>
+      
+      <label style="display:flex;align-items:center;gap:10px;margin-top:12px">
+        <input id="migratorDryRun" type="checkbox" checked style="width:auto" />
+        <span style="font-weight:700">Dry Run (validate only, don't make changes)</span>
+      </label>
+      <div class="subtle" style="margin-left:34px">Recommended: Run in dry-run mode first to preview changes</div>
+      
+      <div id="migratorProgress" style="margin-top:12px;display:none;padding:10px;background:rgba(255,255,255,.04);border-radius:8px;border:1px solid var(--line)">
+        <div style="font-weight:800;margin-bottom:6px">Migration Progress</div>
+        <div id="migratorProgressText" class="subtle">Processing...</div>
+      </div>
+      
+      <div id="migratorSummary" style="margin-top:12px;display:none;padding:10px;background:rgba(255,255,255,.04);border-radius:8px;border:1px solid var(--line)">
+        <div style="font-weight:800;margin-bottom:6px">Migration Summary</div>
+        <div id="migratorSummaryText" class="subtle"></div>
+      </div>
+      
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px">
+        <button class="btn small" id="migratorCancel">Cancel</button>
+        <button class="btn primary small" id="migratorStart">Start Migration</button>
+      </div>
+    </div>
+  </div>
+
   <script type="module">
     import { db, isRemote, localStore } from '../web/data-adapter.js';
     import { listLibraryItems } from '../web/library.js';
@@ -1262,17 +1340,17 @@
     function hideTeacher(){ qs('#view-teacher').style.display='none'; }
 
     // Theme toggle: Bold vs Normal glassmorphism
-    // Use new key 'tc-glass-style' for persistence
-    let currentTheme = localStorage.getItem('tc-glass-style') || 'bold'; // Default to Bold
+    // Use 'rc_glass_theme' key to match boot script
+    let currentTheme = localStorage.getItem('rc_glass_theme') || 'glass-bold'; // Default to glass-bold
     function applyTheme(theme) {
       currentTheme = theme;
-      localStorage.setItem('tc-glass-style', theme);
-      document.body.classList.toggle('glass-bold', theme === 'bold');
+      localStorage.setItem('rc_glass_theme', theme);
+      document.body.classList.toggle('glass-bold', theme === 'glass-bold');
       const btn = qs('#btnThemeToggle');
-      if (btn) btn.textContent = theme === 'bold' ? 'Glass: Bold' : 'Glass: Normal';
+      if (btn) btn.textContent = theme === 'glass-bold' ? 'Glass: Bold' : 'Glass: Normal';
     }
     applyTheme(currentTheme);
-    on('#btnThemeToggle', 'click', ()=> applyTheme(currentTheme === 'bold' ? 'normal' : 'bold'));
+    on('#btnThemeToggle', 'click', ()=> applyTheme(currentTheme === 'glass-bold' ? 'normal' : 'glass-bold'));
 
     // Teacher auth
     on('#btnTeacher', 'click', ()=>{ qs('#teachModal').classList.add('show'); qs('#teachPass').focus(); });
@@ -1298,6 +1376,7 @@
       work: [
         { label: 'Assignments', tab: 'assignments', icon: '📝' },
         { label: 'Results', tab: 'results', icon: '🧪' },
+        { label: 'Gradebook', tab: 'gradebook', icon: '📊' },
         { label: 'Assignment Hub', tab: 'hub', icon: '🛠' }
       ],
       data: [
@@ -3546,6 +3625,317 @@
       } finally {
         btn.disabled = false;
         btn.textContent = 'Import';
+      }
+    });
+    
+    // =======================
+    // Supabase Enrollment Migrator
+    // =======================
+    
+    // Open migrator modal
+    on('#btnMigrateEnrollments', 'click', () => {
+      openModal('#migrateEnrollmentsModal');
+      qs('#migratorCsvFile').value = '';
+      qs('#migratorDryRun').checked = true;
+      qs('#migratorProgress').style.display = 'none';
+      qs('#migratorSummary').style.display = 'none';
+    });
+    
+    // Cancel migrator modal
+    on('#migratorCancel', 'click', () => {
+      closeModal('#migrateEnrollmentsModal');
+    });
+    
+    // Start migration
+    on('#migratorStart', 'click', async () => {
+      const fileInput = qs('#migratorCsvFile');
+      const file = fileInput.files[0];
+      const dryRun = qs('#migratorDryRun').checked;
+      
+      if (!file) {
+        addNotif('Please select a CSV file', { type: 'error' });
+        return;
+      }
+      
+      // Check if Supabase is available (for execute mode)
+      if (!dryRun && !isRemote) {
+        const summaryDiv = qs('#migratorSummary');
+        const summaryText = qs('#migratorSummaryText');
+        summaryDiv.style.display = 'block';
+        summaryText.innerHTML = `
+          <strong style="color:#fecaca">Supabase Not Available</strong><br><br>
+          The migration cannot be executed because Supabase is not configured or is unreachable.<br>
+          This may be due to a network firewall blocking access.<br><br>
+          <strong>What you can do:</strong><br>
+          • Run in <strong>Dry Run mode</strong> to validate your CSV and see what would be created<br>
+          • Check your Supabase settings in the Settings tab<br>
+          • Retry later when network access is restored<br><br>
+          Your CSV file and validation results will be preserved in this session.
+        `;
+        return;
+      }
+      
+      const btn = qs('#migratorStart');
+      const progressDiv = qs('#migratorProgress');
+      const progressText = qs('#migratorProgressText');
+      const summaryDiv = qs('#migratorSummary');
+      const summaryText = qs('#migratorSummaryText');
+      
+      btn.disabled = true;
+      btn.textContent = dryRun ? 'Validating...' : 'Migrating...';
+      progressDiv.style.display = 'block';
+      summaryDiv.style.display = 'none';
+      progressText.textContent = dryRun ? 'Validating CSV...' : 'Reading CSV...';
+      
+      try {
+        const text = await file.text();
+        const rows = parseEnrollmentCSV(text);
+        
+        if (rows.length === 0) {
+          throw new Error('No valid rows found in CSV');
+        }
+        
+        progressText.textContent = dryRun ? `Validating ${rows.length} rows...` : `Processing ${rows.length} rows...`;
+        
+        // Get existing data from Supabase (or local for dry-run validation)
+        const existingStudents = dryRun ? await db.listStudents() : await db.listStudents();
+        const studentMap = new Map(existingStudents.map(s => [s.code, s]));
+        const existingClasses = dryRun ? await db.listClasses() : await db.listClasses();
+        
+        let studentsToCreate = 0;
+        let studentsMatched = 0;
+        let classesToCreate = 0;
+        let classesMatched = 0;
+        let enrollmentsToCreate = 0;
+        const errors = [];
+        const unmatchedStudents = [];
+        const unmatchedClasses = [];
+        const newClasses = [];
+        const newStudents = [];
+        
+        for (const row of rows) {
+          try {
+            const studentCode = row.studentCode.trim();
+            const className = row.className.trim();
+            
+            if (!studentCode || !className) {
+              errors.push(`Skipping row with empty student code or class name`);
+              continue;
+            }
+            
+            // Check student
+            let student = studentMap.get(studentCode);
+            if (!student) {
+              studentsToCreate++;
+              newStudents.push(studentCode);
+              if (!dryRun) {
+                // Create student
+                student = await db.upsertStudent({ code: studentCode, name: studentCode });
+                studentMap.set(studentCode, student);
+              }
+            } else {
+              studentsMatched++;
+            }
+            
+            // Check class (normalize by removing " SC" suffix)
+            const normalized = normalizeClassName(className);
+            let classObj = existingClasses.find(c => 
+              normalizeClassName(c.name) === normalized || 
+              (c.code && normalizeClassName(c.code) === normalized)
+            );
+            
+            if (!classObj) {
+              classesToCreate++;
+              newClasses.push(className);
+              if (!dryRun) {
+                // Create class
+                const newClass = {
+                  id: 'CLS' + Date.now() + Math.random().toString(36).slice(2, 6),
+                  name: className.trim(),
+                  code: className.trim().toUpperCase().replace(/\s+/g, '_')
+                };
+                classObj = await db.upsertClass(newClass);
+                existingClasses.push(classObj);
+              }
+            } else {
+              classesMatched++;
+            }
+            
+            // Count enrollment (always count in dry-run, create in execute mode)
+            enrollmentsToCreate++;
+            if (!dryRun && classObj && student) {
+              await db.upsertClassEnrollment({
+                class_id: classObj.id,
+                student_code: studentCode,
+                student_id: student.id
+              });
+            }
+            
+          } catch (err) {
+            errors.push(`Failed to process row (${row.studentCode}, ${row.className}): ${err.message}`);
+          }
+        }
+        
+        // Build summary
+        const mode = dryRun ? 'DRY RUN' : 'EXECUTED';
+        const summaryLines = [
+          `<strong>${mode} Results:</strong><br>`,
+          `<strong>Processed:</strong> ${rows.length} rows<br>`,
+          `<strong>Students:</strong> ${studentsMatched} matched, ${studentsToCreate} ${dryRun ? 'would be created' : 'created'}<br>`,
+          `<strong>Classes:</strong> ${classesMatched} matched, ${classesToCreate} ${dryRun ? 'would be created' : 'created'}<br>`,
+          `<strong>Enrollments:</strong> ${enrollmentsToCreate} ${dryRun ? 'would be created' : 'created'}<br>`
+        ];
+        
+        if (newStudents.length > 0 && newStudents.length <= 10) {
+          summaryLines.push(`<br><strong>New Students:</strong> ${newStudents.join(', ')}<br>`);
+        } else if (newStudents.length > 10) {
+          summaryLines.push(`<br><strong>New Students:</strong> ${newStudents.slice(0, 10).join(', ')} ... and ${newStudents.length - 10} more<br>`);
+        }
+        
+        if (newClasses.length > 0 && newClasses.length <= 10) {
+          summaryLines.push(`<br><strong>New Classes:</strong> ${newClasses.join(', ')}<br>`);
+        } else if (newClasses.length > 10) {
+          summaryLines.push(`<br><strong>New Classes:</strong> ${newClasses.slice(0, 10).join(', ')} ... and ${newClasses.length - 10} more<br>`);
+        }
+        
+        if (errors.length > 0) {
+          summaryLines.push(`<br><strong style="color:#fecaca">Errors:</strong> ${errors.length} (check console)<br>`);
+          console.warn('Migration errors:', errors);
+        }
+        
+        if (dryRun) {
+          summaryLines.push(`<br><em>Note: No changes were made. Uncheck "Dry Run" and click "Start Migration" to execute.</em>`);
+        } else {
+          summaryLines.push(`<br><em>Migration complete! Data has been saved to Supabase.</em>`);
+          // Refresh classes and students selects
+          await populateClassesSelect();
+          await populateStudentsSelect();
+        }
+        
+        summaryDiv.style.display = 'block';
+        summaryText.innerHTML = summaryLines.join('');
+        progressDiv.style.display = 'none';
+        
+        addNotif(dryRun ? 'Dry run complete - see summary for details' : `Migrated ${enrollmentsToCreate} enrollments`, 
+                 { type: 'success' });
+        
+      } catch (err) {
+        console.error('Migration error:', err);
+        summaryDiv.style.display = 'block';
+        summaryText.innerHTML = `<strong style="color:#fecaca">Error:</strong> ${err.message}`;
+        progressDiv.style.display = 'none';
+        addNotif('Migration failed: ' + err.message, { type: 'error' });
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Start Migration';
+      }
+    });
+    
+    // =======================
+    // Gradebook
+    // =======================
+    
+    async function initGradebook() {
+      // Populate class filter
+      const classFilter = qs('#gradebookClassFilter');
+      if (classFilter) {
+        const classes = await db.listClasses();
+        const options = classes.map(c => 
+          `<option value="${c.id}">${c.name || c.code || `Class ${c.id}`}</option>`
+        ).join('');
+        classFilter.innerHTML = '<option value="">All Classes</option>' + options;
+      }
+    }
+    
+    async function loadGradebook() {
+      const classFilter = qs('#gradebookClassFilter');
+      const selectedClass = classFilter ? classFilter.value : '';
+      const contentDiv = qs('#gradebookContent');
+      
+      try {
+        contentDiv.innerHTML = '<div class="subtle" style="text-align:center;padding:40px">Loading...</div>';
+        
+        // Get all data
+        const instances = await db.listAssignmentInstances();
+        const assignments = await db.listAssignments();
+        const students = await db.listStudents();
+        
+        // Filter by class if selected
+        let filteredStudents = students;
+        if (selectedClass) {
+          const enrollments = await db.listClassEnrollments();
+          const studentCodes = enrollments
+            .filter(e => String(e.class_id) === String(selectedClass))
+            .map(e => e.student_code);
+          filteredStudents = students.filter(s => studentCodes.includes(s.code));
+        }
+        
+        if (filteredStudents.length === 0) {
+          contentDiv.innerHTML = '<div class="subtle" style="text-align:center;padding:40px">No students found for the selected class.</div>';
+          return;
+        }
+        
+        // Build assignment map
+        const assignmentMap = new Map(assignments.map(a => [a.id, a]));
+        
+        // Build table: Students (rows) × Assignments (columns)
+        let html = '<div class="table-wrap scroll" style="max-height:70vh"><table class="table">';
+        html += '<thead><tr><th>Student</th>';
+        
+        // Assignment headers
+        for (const assignment of assignments.slice(0, 10)) { // Limit to 10 assignments for display
+          html += `<th>${assignment.title}</th>`;
+        }
+        html += '</tr></thead><tbody>';
+        
+        // Student rows
+        for (const student of filteredStudents) {
+          html += `<tr><td>${student.name || student.code}</td>`;
+          
+          // Find instances for this student
+          for (const assignment of assignments.slice(0, 10)) {
+            const instance = instances.find(i => 
+              i.student_code === student.code && i.assignment_id === assignment.id
+            );
+            
+            if (instance) {
+              const status = instance.status || 'Assigned';
+              let badgeClass = '';
+              if (status === 'Submitted' || status === 'Completed') badgeClass = ' success';
+              else if (status === 'Late' || status === 'Overdue') badgeClass = ' warning';
+              
+              html += `<td><span class="badge${badgeClass}">${status}</span></td>`;
+            } else {
+              html += '<td class="subtle">—</td>';
+            }
+          }
+          
+          html += '</tr>';
+        }
+        
+        html += '</tbody></table></div>';
+        
+        if (assignments.length > 10) {
+          html += '<div class="subtle" style="margin-top:12px">Showing first 10 assignments. Total: ' + assignments.length + '</div>';
+        }
+        
+        contentDiv.innerHTML = html;
+        
+      } catch (err) {
+        console.error('Failed to load gradebook:', err);
+        contentDiv.innerHTML = '<div class="subtle" style="text-align:center;padding:40px;color:#fecaca">Failed to load gradebook: ' + err.message + '</div>';
+      }
+    }
+    
+    // Gradebook event handlers
+    on('#btnRefreshGradebook', 'click', loadGradebook);
+    qs('#gradebookClassFilter')?.addEventListener('change', loadGradebook);
+    
+    // Initialize gradebook when switching to the tab
+    document.addEventListener('click', async (e) => {
+      if (e.target.matches('[data-tab="gradebook"]')) {
+        await initGradebook();
+        await loadGradebook();
       }
     });
   </script>
