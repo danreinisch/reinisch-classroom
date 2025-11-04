@@ -150,6 +150,30 @@ const local = {
     return store.get('classEnrollments', []);
   },
   
+  async upsertClass(classData) {
+    const classes = store.get('classes', []);
+    const existing = classes.find(c => c.id === classData.id || c.name === classData.name);
+    if (existing) {
+      Object.assign(existing, classData);
+    } else {
+      classes.push({ id: classData.id || 'CLS' + Date.now(), ...classData });
+    }
+    store.set('classes', classes);
+    return classData;
+  },
+  
+  async upsertClassEnrollment(enrollment) {
+    const enrollments = store.get('classEnrollments', []);
+    const existing = enrollments.find(e => 
+      e.class_id === enrollment.class_id && e.student_code === enrollment.student_code
+    );
+    if (!existing) {
+      enrollments.push(enrollment);
+      store.set('classEnrollments', enrollments);
+    }
+    return enrollment;
+  },
+  
   // Phase B: HTML Package Upload (local stub - stores manifest but not actual files)
   async uploadAssignmentZip(file, manifest, createdBy = null) {
     // In local mode, we can't actually store files, so just create assignment with manifest data
@@ -390,26 +414,80 @@ const remote = supabase && {
   async listClasses() {
     const { data, error } = await supabase
       .from('classes')
-      .select('id, name')
+      .select('id, name, code')
       .order('name');
     if (error) throw error;
     return data || [];
   },
   
   async listClassEnrollments() {
-    // Join students with classes to get class_id -> student mappings
-    const { data, error } = await supabase
-      .from('students')
-      .select('id, code, class_id')
-      .not('class_id', 'is', null);
-    if (error) throw error;
+    // Primary: try class_enrollments table with joins
+    const { data: enrollments, error: enrollError } = await supabase
+      .from('class_enrollments')
+      .select('class_id, student_id, students!inner(code, name), classes!inner(id)');
     
-    // Return array of { class_id, student_id, student_code }
-    return (data || []).map(s => ({
+    if (enrollError) {
+      console.warn('class_enrollments query failed, falling back to students.class_id:', enrollError);
+    }
+    
+    // If we got data from class_enrollments, return it
+    if (enrollments && enrollments.length > 0) {
+      return enrollments.map(e => ({
+        class_id: e.class_id,
+        student_id: e.student_id,
+        student_code: e.students.code,
+        student_name: e.students.name
+      }));
+    }
+    
+    // Fallback: derive from students.class_id
+    const { data: students, error: studentsError } = await supabase
+      .from('students')
+      .select('id, code, name, class_id')
+      .not('class_id', 'is', null);
+    
+    if (studentsError) throw studentsError;
+    
+    // Return array of { class_id, student_id, student_code, student_name }
+    return (students || []).map(s => ({
       class_id: s.class_id,
       student_id: s.id,
-      student_code: s.code
+      student_code: s.code,
+      student_name: s.name
     }));
+  },
+  
+  async upsertClass(classData) {
+    const { data, error } = await supabase
+      .from('classes')
+      .upsert({ name: classData.name, code: classData.code }, { onConflict: 'name' })
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+  
+  async upsertClassEnrollment(enrollment) {
+    // Resolve student_id from student_code if needed
+    let studentId = enrollment.student_id;
+    if (!studentId && enrollment.student_code) {
+      const { data: student, error: studentError } = await supabase
+        .from('students')
+        .select('id')
+        .eq('code', enrollment.student_code)
+        .single();
+      if (studentError) throw studentError;
+      studentId = student.id;
+    }
+    
+    const { error } = await supabase
+      .from('class_enrollments')
+      .upsert(
+        { class_id: enrollment.class_id, student_id: studentId },
+        { onConflict: 'class_id,student_id' }
+      );
+    if (error) throw error;
+    return enrollment;
   },
   
   // Phase B: HTML Package Upload with Supabase Storage
