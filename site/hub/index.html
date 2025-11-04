@@ -1223,8 +1223,8 @@
       <div class="card-header"><div>Import Class Enrollments (CSV)</div></div>
       
       <div class="subtle" style="margin-top:12px;margin-bottom:12px">
-        Import a CSV file with columns: <strong>Student Code Name</strong> (e.g., "S001"), <strong>Class</strong> (e.g., "Language Arts 3 SC").<br>
-        Automatically upserts students, classes, and enrollments.
+        Import a CSV file with columns: <strong>Student Code</strong> (e.g., "S001"), <strong>Class</strong> (e.g., "Language Arts 3 SC").<br>
+        Automatically upserts students, classes, and enrollments. Note: CSV must use simple comma separation without quoted fields.
       </div>
       
       <label style="margin-top:12px">CSV File
@@ -3359,6 +3359,10 @@
       const lines = text.split(/\r?\n/).map(line => line.trim()).filter(line => line);
       const rows = [];
       
+      // LIMITATION: This handles basic comma-separated values only.
+      // It does NOT handle escaped quotes or commas within quoted fields (RFC 4180).
+      // For production use with complex CSVs, consider using a proper CSV parsing library.
+      // Current implementation is sufficient for the two-column enrollment import use case.
       for (const line of lines) {
         // Split by comma, handle basic quoted fields
         const parts = line.split(',').map(p => p.trim().replace(/^"|"$/g, ''));
@@ -3382,11 +3386,11 @@
       
       // Try exact match on name (normalized)
       let match = existingClasses.find(c => normalizeClassName(c.name) === normalized);
-      if (match) return match;
+      if (match) return { class: match, created: false };
       
       // Try match on code (normalized)
       match = existingClasses.find(c => c.code && normalizeClassName(c.code) === normalized);
-      if (match) return match;
+      if (match) return { class: match, created: false };
       
       // Not found - create new class
       const newClass = {
@@ -3398,11 +3402,11 @@
       if (typeof db.upsertClass === 'function') {
         const created = await db.upsertClass(newClass);
         existingClasses.push(created);
-        return created;
+        return { class: created, created: true };
       } else {
         // Fallback: add to local cache
         existingClasses.push(newClass);
-        return newClass;
+        return { class: newClass, created: true };
       }
     }
     
@@ -3474,8 +3478,8 @@
             }
             
             // Find or create class
-            const classObj = await findOrCreateClass(className, existingClasses);
-            if (existingClasses.indexOf(classObj) === existingClasses.length - 1) {
+            const { class: classObj, created: classWasCreated } = await findOrCreateClass(className, existingClasses);
+            if (classWasCreated) {
               classesCreated++;
             } else {
               classesMatched++;
