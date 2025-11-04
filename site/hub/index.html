@@ -1769,7 +1769,7 @@
         await loadStudents();
       }
       select.innerHTML = STUDENTS.map(s => 
-        `<option value="${s.code}">${s.name || s.code} (${s.code})</option>`
+        `<option value="${s.code}">${s.code}</option>`
       ).join('');
     }
     
