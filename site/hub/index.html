@@ -214,10 +214,10 @@
 <!-- Bold Glass Theme v3: Subtle soft-grid background with gentle emerald mist, improved readability, and enhanced glassmorphism -->
 <style id="glass-bold-theme-v3">
   /* === Subtle Soft-Grid Background === */
-  /* Uses CSS var --bg-image to support optional background image (assets/bg/bg5e_soft_grid.svg) */
+  /* Uses CSS var --bg-image to support optional background image (assets/bg/bg5e_soft_grid.png) */
   /* Falls back to subtle gradient when image not present */
   body.glass-bold {
-    --bg-image: url('../assets/bg/bg5e_soft_grid.svg');
+    --bg-image: url('/assets/bg/bg5e_soft_grid.png');
     background:
       /* Soft grid background image with fallback gradient */
       var(--bg-image, linear-gradient(180deg, #0b1220, #0c1322 60%, #0b0f14)) center/cover no-repeat fixed,
@@ -632,7 +632,7 @@
       <button class="btn small" id="btnThemeToggle" title="Toggle glass theme">Glass: Bold</button>
       <span id="currentUserChip" class="chip">Signed out</span>
       <button class="btn small" id="btnStudent">Student Portal</button>
-      <button class="btn primary small" id="btnTeacher">Teacher Center</button>
+      <button class="btn primary small" id="btnTeacher">Teacher Center 🔒</button>
     </div>
   </div>
 
@@ -857,7 +857,10 @@
 
         <!-- B) Issue Assignment -->
         <div class="card" style="margin-top:12px">
-          <div class="card-header"><div>Issue Assignment</div></div>
+          <div class="card-header">
+            <div>Issue Assignment</div>
+            <button class="btn small" id="btnImportClassEnrollments">Import Class Enrollments (CSV)</button>
+          </div>
           
           <label style="margin-top:12px">Select Assignment
             <select id="issueAssignmentSelect">
@@ -1210,6 +1213,37 @@
       <div id="sumBody" class="table-wrap" style="max-height:60vh;overflow:auto"></div>
       <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:10px">
         <button class="btn small" id="sumClose">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Import Class Enrollments modal -->
+  <div class="modal-backdrop" id="importEnrollmentsModal">
+    <div class="modal card" style="max-width:700px">
+      <div class="card-header"><div>Import Class Enrollments (CSV)</div></div>
+      
+      <div class="subtle" style="margin-top:12px;margin-bottom:12px">
+        Import a CSV file with columns: <strong>Student Code Name</strong> (e.g., "S001"), <strong>Class</strong> (e.g., "Language Arts 3 SC").<br>
+        Automatically upserts students, classes, and enrollments.
+      </div>
+      
+      <label style="margin-top:12px">CSV File
+        <input id="enrollmentCsvFile" type="file" accept=".csv,text/csv" />
+      </label>
+      
+      <div id="enrollmentImportProgress" style="margin-top:12px;display:none;padding:10px;background:rgba(255,255,255,.04);border-radius:8px;border:1px solid var(--line)">
+        <div style="font-weight:800;margin-bottom:6px">Import Progress</div>
+        <div id="enrollmentImportProgressText" class="subtle">Processing...</div>
+      </div>
+      
+      <div id="enrollmentImportSummary" style="margin-top:12px;display:none;padding:10px;background:rgba(255,255,255,.04);border-radius:8px;border:1px solid var(--line)">
+        <div style="font-weight:800;margin-bottom:6px">Import Summary</div>
+        <div id="enrollmentImportSummaryText" class="subtle"></div>
+      </div>
+      
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px">
+        <button class="btn small" id="enrollmentImportCancel">Cancel</button>
+        <button class="btn primary small" id="enrollmentImportStart">Import</button>
       </div>
     </div>
   </div>
@@ -3302,6 +3336,214 @@
     qs('#btnImportCSV').addEventListener('click', importCSV);
     qs('#btnSeedDemoClasses').addEventListener('click', seedDemoClasses);
     qs('#btnResetDemoClasses').addEventListener('click', resetDemoClasses);
+    
+    // =======================
+    // Class Enrollment CSV Import
+    // =======================
+    
+    // Open modal
+    on('#btnImportClassEnrollments', 'click', () => {
+      openModal('#importEnrollmentsModal');
+      qs('#enrollmentCsvFile').value = '';
+      qs('#enrollmentImportProgress').style.display = 'none';
+      qs('#enrollmentImportSummary').style.display = 'none';
+    });
+    
+    // Cancel modal
+    on('#enrollmentImportCancel', 'click', () => {
+      closeModal('#importEnrollmentsModal');
+    });
+    
+    // Parse CSV (simple two-column parser)
+    function parseEnrollmentCSV(text) {
+      const lines = text.split(/\r?\n/).map(line => line.trim()).filter(line => line);
+      const rows = [];
+      
+      for (const line of lines) {
+        // Split by comma, handle basic quoted fields
+        const parts = line.split(',').map(p => p.trim().replace(/^"|"$/g, ''));
+        if (parts.length >= 2) {
+          rows.push({ studentCode: parts[0], className: parts[1] });
+        }
+      }
+      
+      return rows;
+    }
+    
+    // Normalize class name for matching
+    function normalizeClassName(name) {
+      // Trim whitespace, lowercase, strip trailing " SC" suffix
+      return name.trim().toLowerCase().replace(/\s+sc$/i, '');
+    }
+    
+    // Find class by name or code
+    async function findOrCreateClass(className, existingClasses) {
+      const normalized = normalizeClassName(className);
+      
+      // Try exact match on name (normalized)
+      let match = existingClasses.find(c => normalizeClassName(c.name) === normalized);
+      if (match) return match;
+      
+      // Try match on code (normalized)
+      match = existingClasses.find(c => c.code && normalizeClassName(c.code) === normalized);
+      if (match) return match;
+      
+      // Not found - create new class
+      const newClass = {
+        id: 'CLS' + Date.now() + Math.random().toString(36).slice(2, 6),
+        name: className.trim(),
+        code: className.trim().toUpperCase().replace(/\s+/g, '_')
+      };
+      
+      if (typeof db.upsertClass === 'function') {
+        const created = await db.upsertClass(newClass);
+        existingClasses.push(created);
+        return created;
+      } else {
+        // Fallback: add to local cache
+        existingClasses.push(newClass);
+        return newClass;
+      }
+    }
+    
+    // Start import
+    on('#enrollmentImportStart', 'click', async () => {
+      const fileInput = qs('#enrollmentCsvFile');
+      const file = fileInput.files[0];
+      
+      if (!file) {
+        addNotif('Please select a CSV file', { type: 'error' });
+        return;
+      }
+      
+      const btn = qs('#enrollmentImportStart');
+      const progressDiv = qs('#enrollmentImportProgress');
+      const progressText = qs('#enrollmentImportProgressText');
+      const summaryDiv = qs('#enrollmentImportSummary');
+      const summaryText = qs('#enrollmentImportSummaryText');
+      
+      btn.disabled = true;
+      btn.textContent = 'Importing...';
+      progressDiv.style.display = 'block';
+      summaryDiv.style.display = 'none';
+      progressText.textContent = 'Reading CSV...';
+      
+      try {
+        const text = await file.text();
+        const rows = parseEnrollmentCSV(text);
+        
+        if (rows.length === 0) {
+          throw new Error('No valid rows found in CSV');
+        }
+        
+        progressText.textContent = `Processing ${rows.length} rows...`;
+        
+        // Get existing data
+        const existingStudents = await db.listStudents();
+        const studentMap = new Map(existingStudents.map(s => [s.code, s]));
+        const existingClasses = await db.listClasses();
+        
+        let studentsCreated = 0;
+        let studentsMatched = 0;
+        let classesCreated = 0;
+        let classesMatched = 0;
+        let enrollmentsCreated = 0;
+        const errors = [];
+        const unmatchedStudents = new Set();
+        const unmatchedClasses = new Set();
+        
+        for (const row of rows) {
+          try {
+            const studentCode = row.studentCode.trim();
+            const className = row.className.trim();
+            
+            if (!studentCode || !className) {
+              errors.push(`Skipping row with empty student code or class name`);
+              continue;
+            }
+            
+            // Find or create student
+            let student = studentMap.get(studentCode);
+            if (!student) {
+              // Create student
+              student = await db.upsertStudent({ code: studentCode, name: studentCode });
+              studentMap.set(studentCode, student);
+              studentsCreated++;
+            } else {
+              studentsMatched++;
+            }
+            
+            // Find or create class
+            const classObj = await findOrCreateClass(className, existingClasses);
+            if (existingClasses.indexOf(classObj) === existingClasses.length - 1) {
+              classesCreated++;
+            } else {
+              classesMatched++;
+            }
+            
+            // Create enrollment
+            if (typeof db.upsertClassEnrollment === 'function') {
+              await db.upsertClassEnrollment({
+                class_id: classObj.id,
+                student_code: studentCode,
+                student_id: student.id
+              });
+              enrollmentsCreated++;
+            } else {
+              // Fallback for local mode without method
+              const enrollments = localStore.get('classEnrollments', []);
+              const exists = enrollments.find(e => 
+                e.class_id === classObj.id && e.student_code === studentCode
+              );
+              if (!exists) {
+                enrollments.push({
+                  class_id: classObj.id,
+                  student_code: studentCode
+                });
+                localStore.set('classEnrollments', enrollments);
+                enrollmentsCreated++;
+              }
+            }
+            
+          } catch (err) {
+            errors.push(`Failed to process row (${row.studentCode}, ${row.className}): ${err.message}`);
+          }
+        }
+        
+        // Build summary
+        const summaryLines = [
+          `<strong>Processed:</strong> ${rows.length} rows`,
+          `<strong>Students:</strong> ${studentsMatched} matched, ${studentsCreated} created`,
+          `<strong>Classes:</strong> ${classesMatched} matched, ${classesCreated} created`,
+          `<strong>Enrollments:</strong> ${enrollmentsCreated} created`
+        ];
+        
+        if (errors.length > 0) {
+          summaryLines.push(`<strong style="color:#fecaca">Errors:</strong> ${errors.length} (check console)`);
+          console.warn('Enrollment import errors:', errors);
+        }
+        
+        summaryDiv.style.display = 'block';
+        summaryText.innerHTML = summaryLines.join('<br>');
+        progressDiv.style.display = 'none';
+        
+        addNotif(`Imported ${enrollmentsCreated} enrollments`, { type: 'success' });
+        
+        // Refresh classes and students selects
+        await populateClassesSelect();
+        await populateStudentsSelect();
+        
+      } catch (err) {
+        console.error('Enrollment import error:', err);
+        summaryDiv.style.display = 'block';
+        summaryText.innerHTML = `<strong style="color:#fecaca">Error:</strong> ${err.message}`;
+        progressDiv.style.display = 'none';
+        addNotif('Import failed: ' + err.message, { type: 'error' });
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Import';
+      }
+    });
   </script>
 </body>
 </html>
