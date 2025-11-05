@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Substitute Center — Reinisch Classroom</title>
+<style>
+  :root {
+    --base:#0b1220;
+    --panel:#0f172a;
+    --ink:#e6edf3;
+    --ink-dim:#cbd5e1;
+    --muted:#94a3b8;
+    --line:rgba(255,255,255,.08);
+    --brand:#22c55e;
+    --brand-2:#06b6d4;
+  }
+  
+  * { box-sizing:border-box }
+  html, body { height:100%; margin:0; }
+  
+  body {
+    background: url('/assets/bg/bg5e_soft_grid.svg') center/cover no-repeat fixed,
+                radial-gradient(1200px 800px at 20% -10%, rgba(34,197,94,.08), transparent 50%),
+                radial-gradient(1200px 800px at 120% 20%, rgba(6,182,212,.06), transparent 50%),
+                linear-gradient(180deg, #0b1220, #0c1322 60%, #0b0f14);
+    color: var(--ink);
+    font-family: ui-sans-serif, -apple-system, Segoe UI, Roboto, Inter, Helvetica, Arial;
+  }
+  
+  .header {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    padding: 16px 0;
+    background: linear-gradient(180deg, rgba(34,197,94,.92), rgba(22,163,74,.92));
+    border-bottom: 1px solid rgba(255,255,255,.18);
+  }
+  
+  .bar {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+    display: flex;
+    gap: 16px;
+    align-items: center;
+  }
+  
+  .brand {
+    font-weight: 900;
+    font-size: 20px;
+    letter-spacing: .3px;
+    color: #031f11;
+  }
+  
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    background: linear-gradient(180deg, rgba(255,255,255,.25), rgba(255,255,255,.18));
+    color: #062513;
+    font-weight: 800;
+    margin-left: auto;
+  }
+  
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 32px 20px;
+  }
+  
+  .card {
+    background: rgba(15,23,42,.60);
+    border: 1px solid rgba(255,255,255,.13);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 24px;
+    box-shadow: 0 12px 48px rgba(0,0,0,.50),
+                inset 0 1px 0 rgba(255,255,255,.09);
+  }
+  
+  .card-header {
+    font-size: 22px;
+    font-weight: 900;
+    margin-bottom: 16px;
+    color: #f0f6fc;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  
+  .section-title {
+    font-size: 18px;
+    font-weight: 800;
+    margin: 20px 0 12px 0;
+    color: var(--brand);
+  }
+  
+  .content-block {
+    margin-bottom: 16px;
+  }
+  
+  .label {
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 4px;
+  }
+  
+  .value {
+    color: var(--ink-dim);
+    line-height: 1.6;
+  }
+  
+  .presentations {
+    list-style: none;
+    padding: 0;
+    margin: 8px 0;
+  }
+  
+  .presentations li {
+    margin: 8px 0;
+  }
+  
+  .presentations a {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 10px;
+    color: var(--brand-2);
+    text-decoration: none;
+    font-weight: 700;
+    transition: .15s ease;
+  }
+  
+  .presentations a:hover {
+    background: rgba(255,255,255,.14);
+    border-color: rgba(255,255,255,.24);
+    transform: translateX(4px);
+  }
+  
+  .empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted);
+    font-size: 16px;
+  }
+  
+  .empty-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+  }
+  
+  .notes-box {
+    background: rgba(255,255,255,.04);
+    border: 1px solid rgba(255,255,255,.10);
+    border-radius: 12px;
+    padding: 16px;
+    margin-top: 12px;
+    white-space: pre-wrap;
+    line-height: 1.7;
+  }
+  
+  .date-display {
+    font-size: 14px;
+    color: var(--muted);
+    margin-top: 8px;
+  }
+  
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: rgba(255,255,255,.10);
+    border: 1px solid rgba(255,255,255,.14);
+    font-size: 13px;
+    font-weight: 700;
+  }
+  
+  .status-badge.offline {
+    background: rgba(251,191,36,.15);
+    border-color: rgba(251,191,36,.35);
+    color: #fcd34d;
+  }
+  
+  @media (max-width: 768px) {
+    .bar {
+      flex-wrap: wrap;
+    }
+    .chip {
+      margin-left: 0;
+      width: 100%;
+      justify-content: center;
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="header">
+    <div class="bar">
+      <div class="brand">📚 Substitute Center</div>
+      <div class="chip" id="userChip">Substitute</div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="card">
+      <div class="card-header">
+        <span>📅</span>
+        <span>Today's Plan</span>
+        <span id="statusBadge" style="margin-left:auto"></span>
+      </div>
+      
+      <div class="date-display" id="dateDisplay">Loading...</div>
+      
+      <div id="planContent">
+        <!-- Plan content will be loaded here -->
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { getTodaysSubPlan } from '../web/sub-plans.js';
+    import { getAuthSession } from '../web/user-auth.js';
+
+    // Check authentication
+    const auth = getAuthSession();
+    if (!auth || auth.role !== 'substitute') {
+      // Not authenticated as substitute, redirect to hub
+      console.warn('[sub] Not authenticated as substitute, redirecting to hub');
+      window.location.href = '/hub/';
+    }
+
+    // Update user chip
+    document.getElementById('userChip').textContent = `👋 ${auth.username}`;
+
+    // Format date
+    function formatDate(date) {
+      const d = new Date(date);
+      return d.toLocaleDateString('en-US', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+    }
+
+    // Format date as YYYY-MM-DD
+    function formatDateYMD(date) {
+      const d = new Date(date);
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    // Render plan
+    function renderPlan(plan) {
+      const contentDiv = document.getElementById('planContent');
+      
+      if (!plan) {
+        contentDiv.innerHTML = `
+          <div class="empty">
+            <div class="empty-icon">📋</div>
+            <div><strong>No plan published for today</strong></div>
+            <div style="margin-top:8px">Check back later or contact the teacher.</div>
+          </div>
+        `;
+        return;
+      }
+
+      let html = '';
+
+      // Language Arts Section
+      html += '<div class="section-title">📖 Language Arts</div>';
+      
+      if (plan.la_lesson || plan.la_book) {
+        if (plan.la_lesson) {
+          html += '<div class="content-block">';
+          html += '<div class="label">Lesson</div>';
+          html += `<div class="value">${escapeHtml(plan.la_lesson)}</div>`;
+          html += '</div>';
+        }
+        
+        if (plan.la_book) {
+          html += '<div class="content-block">';
+          html += '<div class="label">Book</div>';
+          html += `<div class="value">${escapeHtml(plan.la_book)}</div>`;
+          html += '</div>';
+        }
+      } else {
+        html += '<div class="value" style="color:var(--muted)">No lesson details provided</div>';
+      }
+
+      // LA Presentations
+      if (plan.la_presentations && plan.la_presentations.length > 0) {
+        html += '<div class="content-block">';
+        html += '<div class="label">Presentations</div>';
+        html += '<ul class="presentations">';
+        plan.la_presentations.forEach((url, idx) => {
+          const linkText = url.includes('/') ? url.split('/').pop() : url;
+          html += `<li><a href="${escapeHtml(url)}" target="_blank">🔗 ${escapeHtml(linkText)}</a></li>`;
+        });
+        html += '</ul>';
+        html += '</div>';
+      }
+
+      // Life Skills Section
+      html += '<div class="section-title">🌱 Life Skills</div>';
+      
+      if (plan.life_skills_topic) {
+        html += '<div class="content-block">';
+        html += '<div class="label">Topic</div>';
+        html += `<div class="value">${escapeHtml(plan.life_skills_topic)}</div>`;
+        html += '</div>';
+      } else {
+        html += '<div class="value" style="color:var(--muted)">No topic provided</div>';
+      }
+
+      // LS Presentations
+      if (plan.life_skills_presentations && plan.life_skills_presentations.length > 0) {
+        html += '<div class="content-block">';
+        html += '<div class="label">Presentations</div>';
+        html += '<ul class="presentations">';
+        plan.life_skills_presentations.forEach((url, idx) => {
+          const linkText = url.includes('/') ? url.split('/').pop() : url;
+          html += `<li><a href="${escapeHtml(url)}" target="_blank">🔗 ${escapeHtml(linkText)}</a></li>`;
+        });
+        html += '</ul>';
+        html += '</div>';
+      }
+
+      // Notes Section
+      if (plan.notes) {
+        html += '<div class="section-title">📝 Notes</div>';
+        html += `<div class="notes-box">${escapeHtml(plan.notes)}</div>`;
+      }
+
+      contentDiv.innerHTML = html;
+    }
+
+    // Escape HTML to prevent XSS
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Show status badge
+    function showStatus(isOnline) {
+      const badge = document.getElementById('statusBadge');
+      if (isOnline) {
+        badge.innerHTML = '<span class="status-badge">🌐 Online</span>';
+      } else {
+        badge.innerHTML = '<span class="status-badge offline">📱 Offline (Cached)</span>';
+      }
+    }
+
+    // Load today's plan
+    async function loadTodaysPlan() {
+      const today = new Date();
+      const todayStr = formatDateYMD(today);
+      
+      // Update date display
+      document.getElementById('dateDisplay').textContent = formatDate(today);
+
+      try {
+        const plan = await getTodaysSubPlan(todayStr);
+        
+        // Determine if we're online or offline based on whether plan came from cache
+        // (This is a simple heuristic - in production you might check network status more robustly)
+        const isOnline = true; // Assume online if no error
+        showStatus(isOnline);
+        
+        renderPlan(plan);
+      } catch (err) {
+        console.error('[sub] Failed to load plan:', err);
+        
+        // Show offline status
+        showStatus(false);
+        
+        // Try to show a friendly error
+        document.getElementById('planContent').innerHTML = `
+          <div class="empty">
+            <div class="empty-icon">⚠️</div>
+            <div><strong>Unable to load plan</strong></div>
+            <div style="margin-top:8px">${escapeHtml(err.message)}</div>
+            <div style="margin-top:8px;color:var(--muted)">Check your connection or try refreshing.</div>
+          </div>
+        `;
+      }
+    }
+
+    // Initialize
+    loadTodaysPlan();
+
+    // Reload every 5 minutes to catch updates
+    setInterval(loadTodaysPlan, 5 * 60 * 1000);
+  </script>
+</body>
+</html>

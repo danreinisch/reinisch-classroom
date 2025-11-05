@@ -779,6 +779,68 @@
         <div class="subtle">WIP: Local-only passwords first; Supabase RPC later.</div>
       </div>
 
+      <!-- Sub Plans tab -->
+      <div class="card ttab" data-tab="subPlans" style="display:none">
+        <div class="card-header">
+          <div>📚 Sub Plans</div>
+          <button class="btn primary small" id="btnSaveSubPlan">Save Plan</button>
+        </div>
+        
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">
+          <label>Date
+            <input id="subPlanDate" type="date" />
+          </label>
+          
+          <label style="display:flex;align-items:center;gap:10px;margin-top:auto">
+            <input id="subPlanPublished" type="checkbox" style="width:auto" />
+            <span style="font-weight:700">Published (visible to substitute)</span>
+          </label>
+        </div>
+        
+        <div class="card" style="margin-top:12px">
+          <div class="card-header"><div>📖 Language Arts</div></div>
+          
+          <label>Lesson
+            <input id="subPlanLALesson" type="text" placeholder="e.g., Chapter 5: The Journey Begins" />
+          </label>
+          
+          <label style="margin-top:12px">Book
+            <input id="subPlanLABook" type="text" placeholder="e.g., A Door Into Time" />
+          </label>
+          
+          <label style="margin-top:12px">Presentation Links (one per line or comma-separated)
+            <textarea id="subPlanLAPresentations" rows="3" placeholder="e.g., /presentations/a-door-into-time/week-09/"></textarea>
+            <div class="subtle" style="margin-top:4px">Enter URLs or paths, one per line or comma-separated</div>
+          </label>
+        </div>
+        
+        <div class="card" style="margin-top:12px">
+          <div class="card-header"><div>🌱 Life Skills</div></div>
+          
+          <label>Topic
+            <input id="subPlanLSTopic" type="text" placeholder="e.g., Daily Living - Kitchen Safety" />
+          </label>
+          
+          <label style="margin-top:12px">Presentation Links (one per line or comma-separated)
+            <textarea id="subPlanLSPresentations" rows="3" placeholder="e.g., /presentations/life-skills/kitchen-safety/"></textarea>
+            <div class="subtle" style="margin-top:4px">Enter URLs or paths, one per line or comma-separated</div>
+          </label>
+        </div>
+        
+        <div class="card" style="margin-top:12px">
+          <div class="card-header"><div>📝 Notes</div></div>
+          
+          <label>Additional Notes for Substitute
+            <textarea id="subPlanNotes" rows="4" placeholder="Any special instructions, reminders, or important information..."></textarea>
+          </label>
+        </div>
+        
+        <div id="subPlanStatus" style="margin-top:12px;padding:10px;background:rgba(255,255,255,.04);border-radius:8px;border:1px solid var(--line);display:none">
+          <div style="font-weight:800;margin-bottom:6px" id="subPlanStatusTitle">Status</div>
+          <div class="subtle" id="subPlanStatusMessage">Ready</div>
+        </div>
+      </div>
+
       <!-- Assignments tab -->
       <div class="card ttab" data-tab="assignments" style="display:none">
         <div class="card-header">
@@ -1429,6 +1491,7 @@
   <script type="module">
     import { db, isRemote, localStore } from '../web/data-adapter.js';
     import { listLibraryItems } from '../web/library.js';
+    import '../web/auth-modal-extend.js';
 
     const TEACHER_PW_LOCAL = 'teacher123';
     const NS = 'rc_unified_';
@@ -1659,7 +1722,8 @@
       overview: [
         { label: 'Student Portal', tab: 'studentPortal', icon: '🧑' },
         { label: 'IEP Progress', tab: 'iepProgress', icon: '🎯' },
-        { label: 'IEP & Evaluations', tab: 'events', icon: '📅' }
+        { label: 'IEP & Evaluations', tab: 'events', icon: '📅' },
+        { label: 'Sub Plans', tab: 'subPlans', icon: '📚' }
       ],
       work: [
         { label: 'Assignments', tab: 'assignments', icon: '📝' },
@@ -1707,6 +1771,7 @@
       if (tab === 'events') initEvents();
       if (tab === 'assignments') initAssignments();
       if (tab === 'settings') initSettings();
+      if (tab === 'subPlans') initSubPlans();
     }
     
     // Icon rail clicks
@@ -4411,6 +4476,154 @@
         await initGradebook();
         await loadGradebook();
       }
+    });
+
+    // =======================
+    // Sub Plans
+    // =======================
+    
+    // Import sub-plans helper at the top level
+    import { upsertSubPlan, getTodaysSubPlan } from '../web/sub-plans.js';
+    
+    // Format date as YYYY-MM-DD
+    function formatDateYMD(date) {
+      const d = new Date(date);
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+    
+    // Initialize Sub Plans tab
+    function initSubPlans() {
+      // Set default date to today
+      const today = new Date();
+      qs('#subPlanDate').value = formatDateYMD(today);
+      
+      // Try to load existing plan for today
+      loadSubPlanForDate(formatDateYMD(today));
+    }
+    
+    // Load sub plan for specific date
+    async function loadSubPlanForDate(dateStr) {
+      try {
+        const plan = await getTodaysSubPlan(dateStr);
+        
+        if (plan) {
+          // Populate form with existing plan
+          qs('#subPlanLALesson').value = plan.la_lesson || '';
+          qs('#subPlanLABook').value = plan.la_book || '';
+          qs('#subPlanLAPresentations').value = plan.la_presentations ? plan.la_presentations.join('\n') : '';
+          qs('#subPlanLSTopic').value = plan.life_skills_topic || '';
+          qs('#subPlanLSPresentations').value = plan.life_skills_presentations ? plan.life_skills_presentations.join('\n') : '';
+          qs('#subPlanNotes').value = plan.notes || '';
+          qs('#subPlanPublished').checked = plan.published || false;
+          
+          showSubPlanStatus('Plan Loaded', `Loaded existing plan for ${dateStr}`, false);
+        } else {
+          // Clear form for new plan
+          clearSubPlanForm();
+          showSubPlanStatus('New Plan', `No existing plan for ${dateStr}. Fill out the form and save.`, false);
+        }
+      } catch (err) {
+        console.error('[sub-plans] Failed to load plan:', err);
+        showSubPlanStatus('Error', `Failed to load plan: ${err.message}`, true);
+      }
+    }
+    
+    // Clear sub plan form
+    function clearSubPlanForm() {
+      qs('#subPlanLALesson').value = '';
+      qs('#subPlanLABook').value = '';
+      qs('#subPlanLAPresentations').value = '';
+      qs('#subPlanLSTopic').value = '';
+      qs('#subPlanLSPresentations').value = '';
+      qs('#subPlanNotes').value = '';
+      qs('#subPlanPublished').checked = false;
+    }
+    
+    // Show status message
+    function showSubPlanStatus(title, message, isError) {
+      const statusDiv = qs('#subPlanStatus');
+      const titleEl = qs('#subPlanStatusTitle');
+      const messageEl = qs('#subPlanStatusMessage');
+      
+      statusDiv.style.display = 'block';
+      titleEl.textContent = title;
+      messageEl.textContent = message;
+      
+      if (isError) {
+        statusDiv.style.borderColor = 'rgba(239,68,68,.5)';
+        statusDiv.style.background = 'rgba(239,68,68,.1)';
+      } else {
+        statusDiv.style.borderColor = 'var(--line)';
+        statusDiv.style.background = 'rgba(255,255,255,.04)';
+      }
+      
+      // Auto-hide after 5 seconds
+      setTimeout(() => {
+        statusDiv.style.display = 'none';
+      }, 5000);
+    }
+    
+    // Save sub plan
+    async function saveSubPlan() {
+      const btn = qs('#btnSaveSubPlan');
+      btn.disabled = true;
+      btn.textContent = 'Saving...';
+      
+      try {
+        const planDate = qs('#subPlanDate').value;
+        
+        if (!planDate) {
+          showSubPlanStatus('Error', 'Please select a date', true);
+          return;
+        }
+        
+        // Parse presentations (split by newline or comma)
+        const laPresentations = qs('#subPlanLAPresentations').value
+          .split(/[\n,]/)
+          .map(s => s.trim())
+          .filter(s => s);
+        
+        const lsPresentations = qs('#subPlanLSPresentations').value
+          .split(/[\n,]/)
+          .map(s => s.trim())
+          .filter(s => s);
+        
+        const plan = {
+          plan_date: planDate,
+          la_lesson: qs('#subPlanLALesson').value.trim() || null,
+          la_book: qs('#subPlanLABook').value.trim() || null,
+          la_presentations: laPresentations,
+          life_skills_topic: qs('#subPlanLSTopic').value.trim() || null,
+          life_skills_presentations: lsPresentations,
+          notes: qs('#subPlanNotes').value.trim() || null,
+          published: qs('#subPlanPublished').checked,
+          created_by: 'teacher'
+        };
+        
+        const result = await upsertSubPlan(plan);
+        
+        showSubPlanStatus('Success', `Plan saved for ${planDate}. ${plan.published ? 'Published and visible to substitutes.' : 'Draft saved (not yet published).'}`, false);
+        addNotif(`Sub plan for ${planDate} saved successfully`);
+        
+      } catch (err) {
+        console.error('[sub-plans] Failed to save plan:', err);
+        showSubPlanStatus('Error', `Failed to save plan: ${err.message}`, true);
+        addNotif('Failed to save sub plan: ' + err.message, { type: 'error' });
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Save Plan';
+      }
+    }
+    
+    // Bind events
+    on('#btnSaveSubPlan', 'click', saveSubPlan);
+    
+    // Load plan when date changes
+    qs('#subPlanDate')?.addEventListener('change', (e) => {
+      loadSubPlanForDate(e.target.value);
     });
   </script>
 
