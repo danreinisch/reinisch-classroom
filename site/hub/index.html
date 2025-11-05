@@ -1478,17 +1478,28 @@
     
     // Sign-in modal: Student button
     on('#signInStudent', 'click', async () => {
-      // Load student codes
-      const students = await db.listStudents();
-      const select = qs('#studentCodeSelect');
-      select.innerHTML = '<option value="">-- Select your code --</option>' + 
-        students.map(s => `<option value="${s.code}">${s.code}${s.name && s.name !== s.code ? ' - ' + s.name : ''}</option>`).join('');
-      
-      // Show student sign-in modal
-      qs('#signInModal').classList.remove('show');
-      qs('#studentSignInModal').classList.add('show');
-      qs('#studentPassword').value = '';
-      qs('#studentSignInMsg').innerHTML = '';
+      try {
+        // Load student codes
+        const students = await db.listStudents();
+        const select = qs('#studentCodeSelect');
+        select.innerHTML = '<option value="">-- Select your code --</option>' + 
+          students.map(s => `<option value="${s.code}">${s.code}${s.name && s.name !== s.code ? ' - ' + s.name : ''}</option>`).join('');
+        
+        // Show student sign-in modal
+        qs('#signInModal').classList.remove('show');
+        qs('#studentSignInModal').classList.add('show');
+        qs('#studentPassword').value = '';
+        qs('#studentSignInMsg').innerHTML = '';
+      } catch (err) {
+        console.error('Failed to load student codes:', err);
+        const msgEl = qs('#studentSignInMsg');
+        if (msgEl) {
+          msgEl.innerHTML = '<span style="color:#fecaca">Failed to load student list. Please try again.</span>';
+        }
+        // Still show the modal so user can see the error
+        qs('#signInModal').classList.remove('show');
+        qs('#studentSignInModal').classList.add('show');
+      }
     });
     
     // Track if coming from sign-in modal for teacher auth
@@ -1529,18 +1540,23 @@
         return;
       }
       
-      // Verify password
-      const isValid = await db.verifyStudentPassword(code, password);
-      
-      if (isValid) {
-        // Success: persist auth and redirect
-        setAuth({ role: 'student', code });
-        updateUserChip();
-        qs('#studentSignInModal').classList.remove('show');
-        // Redirect to student portal
-        window.location.href = '/student/';
-      } else {
-        msgEl.innerHTML = '<span style="color:#fecaca">Invalid password</span>';
+      try {
+        // Verify password
+        const isValid = await db.verifyStudentPassword(code, password);
+        
+        if (isValid) {
+          // Success: persist auth and redirect
+          setAuth({ role: 'student', code });
+          updateUserChip();
+          qs('#studentSignInModal').classList.remove('show');
+          // Redirect to student portal
+          window.location.href = '/student/';
+        } else {
+          msgEl.innerHTML = '<span style="color:#fecaca">Invalid password</span>';
+        }
+      } catch (err) {
+        console.error('Failed to verify password:', err);
+        msgEl.innerHTML = '<span style="color:#fecaca">Authentication error. Please try again.</span>';
       }
     }
     
