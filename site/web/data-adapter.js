@@ -712,6 +712,41 @@ const remote = supabase && {
   }
 };
 
+/**
+ * Add progress entry by goal code (for CSV ingestion with manifest mapping)
+ * Resolves goal_id from goal_code for remote mode, uses goal_code directly for local mode
+ */
+export async function addProgressByGoalCode({ student_code, goal_code, date, points = '', percent = null, method = '', by_name = 'Teacher', via = 'csv_import', notes = '' }) {
+  if (isRemote && remote) {
+    // Remote mode: need to resolve goal_id from goal_code
+    const { data: stu, error: e1 } = await supabase.from('students').select('id').eq('code', student_code).single();
+    if (e1) throw e1;
+    
+    const { data: goal, error: e2 } = await supabase.from('goals')
+      .select('id')
+      .eq('student_id', stu.id)
+      .eq('code', goal_code)
+      .single();
+    if (e2) throw e2;
+    
+    // Call remote.addProgress directly to avoid recursion
+    return remote.addProgress({ student_code, goal_id: goal.id, date, points, percent, method, by_name, via, notes });
+  } else {
+    // Local mode: store with goal_code directly
+    return local.addProgress({ 
+      student_code, 
+      goal_code, 
+      date, 
+      points, 
+      percent, 
+      method, 
+      by_name, 
+      via, 
+      notes
+    });
+  }
+}
+
 export const db = remote || local;
 export const isRemote = !!remote;
 export const localStore = store; // exposed for CSV import/export bootstrap

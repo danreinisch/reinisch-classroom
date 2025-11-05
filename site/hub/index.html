@@ -1128,8 +1128,102 @@
       </div>
 
       <div class="card ttab" data-tab="upload" style="display:none">
-        <div class="card-header"><div>📦 Upload</div></div>
-        <div class="subtle">WIP: Porting from v8.2.</div>
+        <div class="card-header"><div>📦 Upload & IEP Goal Mapping</div></div>
+        
+        <!-- Import IEP CSV to Codebook -->
+        <div class="card" style="margin-top:12px">
+          <div class="card-header"><div>Import IEP CSV to Codebook</div></div>
+          <div class="subtle" style="margin-bottom:12px">
+            Import your IEP CSV to build a codebook that maps students → skill tags → goal codes. 
+            Expected columns: Student Code, Student Name, Goal Area, Goal Code, Goal Description
+          </div>
+          
+          <label>IEP CSV File
+            <input id="iepCsvFile" type="file" accept=".csv,text/csv" />
+          </label>
+          
+          <div style="display:flex;gap:10px;margin-top:12px">
+            <button class="btn primary small" id="btnImportIEPCsv">Import & Build Codebook</button>
+          </div>
+          
+          <div id="codebookSummary" style="margin-top:12px;padding:10px;background:rgba(255,255,255,.04);border-radius:8px;border:1px solid var(--line);display:none">
+            <div style="font-weight:800;margin-bottom:6px">Codebook Summary</div>
+            <div id="codebookSummaryContent" class="subtle"></div>
+          </div>
+        </div>
+
+        <!-- Map IEP Goals for Assignment -->
+        <div class="card" style="margin-top:12px">
+          <div class="card-header"><div>Map IEP Goals to Assignment</div></div>
+          <div class="subtle" style="margin-bottom:12px">
+            Map questions from an assignment to IEP skill tags and goal codes. This creates a manifest for progress tracking.
+          </div>
+          
+          <label>Select Assignment
+            <select id="mapAssignmentSelect">
+              <option value="">-- Select an assignment --</option>
+            </select>
+          </label>
+          
+          <label style="margin-top:12px">Assignment Type
+            <select id="mapAssignmentType">
+              <option value="html">HTML/TXT</option>
+              <option value="google_form">Google Form (CSV Headers)</option>
+            </select>
+          </label>
+          
+          <!-- HTML/TXT Source -->
+          <div id="mapHtmlSource" style="margin-top:12px">
+            <label>HTML/TXT Content (paste or upload)
+              <textarea id="mapHtmlContent" rows="4" placeholder="Paste HTML or TXT content, or upload file below..."></textarea>
+            </label>
+            <label style="margin-top:8px">Or upload file
+              <input id="mapHtmlFile" type="file" accept=".html,.htm,.txt" />
+            </label>
+          </div>
+          
+          <!-- Google Forms CSV Headers -->
+          <div id="mapFormCsvSource" style="margin-top:12px;display:none">
+            <label>Sample Response CSV (for column headers)
+              <input id="mapFormCsvFile" type="file" accept=".csv,text/csv" />
+            </label>
+            <div class="subtle" style="margin-top:4px">Upload a sample response CSV to detect question columns</div>
+          </div>
+          
+          <div style="display:flex;gap:10px;margin-top:12px">
+            <button class="btn primary small" id="btnDetectQuestions">Detect Questions</button>
+            <button class="btn small" id="btnClearMapping">Clear</button>
+          </div>
+          
+          <!-- Questions Table -->
+          <div id="questionsTableWrap" style="margin-top:12px;display:none">
+            <div style="font-weight:800;margin-bottom:8px">Detected Questions</div>
+            <div class="table-wrap" style="max-height:400px;overflow:auto">
+              <table class="table" id="questionsTable">
+                <thead>
+                  <tr>
+                    <th>Q Ref</th>
+                    <th>Label</th>
+                    <th>Skill Tags</th>
+                    <th>Default Codes</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+            
+            <div style="display:flex;gap:10px;margin-top:12px">
+              <button class="btn primary" id="btnSaveManifest">Save Manifest</button>
+              <button class="btn" id="btnPreviewManifest">Preview JSON</button>
+            </div>
+          </div>
+          
+          <div id="manifestStatus" style="margin-top:12px;padding:10px;background:rgba(255,255,255,.04);border-radius:8px;border:1px solid var(--line);display:none">
+            <div style="font-weight:800;margin-bottom:6px" id="manifestStatusTitle">Status</div>
+            <div class="subtle" id="manifestStatusMessage">Ready</div>
+          </div>
+        </div>
       </div>
 
       <div class="card ttab" data-tab="data" style="display:none">
@@ -1484,6 +1578,100 @@
       <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px">
         <button class="btn small" id="migratorCancel">Cancel</button>
         <button class="btn primary small" id="migratorStart">Start Migration</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Skill Tags Modal -->
+  <div class="modal-backdrop" id="editSkillTagsModal">
+    <div class="modal card" style="max-width:600px">
+      <div class="card-header"><div>Edit Skill Tags</div></div>
+      
+      <div class="subtle" style="margin-top:12px;margin-bottom:12px">
+        Question: <strong id="editSkillTagsQuestion"></strong>
+      </div>
+      
+      <label>Skill Tags (comma-separated)
+        <input id="editSkillTagsInput" type="text" placeholder="reading_comprehension, written_expression" />
+      </label>
+      
+      <div id="editSkillTagsSuggestions" style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap"></div>
+      
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px">
+        <button class="btn small" id="editSkillTagsCancel">Cancel</button>
+        <button class="btn primary small" id="editSkillTagsSave">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Default Codes Modal -->
+  <div class="modal-backdrop" id="editDefaultCodesModal">
+    <div class="modal card" style="max-width:600px">
+      <div class="card-header"><div>Edit Default Goal Codes</div></div>
+      
+      <div class="subtle" style="margin-top:12px;margin-bottom:12px">
+        Question: <strong id="editDefaultCodesQuestion"></strong>
+      </div>
+      
+      <label>Default Goal Codes (comma-separated)
+        <input id="editDefaultCodesInput" type="text" placeholder="S001.11.1, S001.12.2" />
+      </label>
+      
+      <div class="subtle" style="margin-top:8px">
+        These codes are used when no student-specific mapping exists in the codebook
+      </div>
+      
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px">
+        <button class="btn small" id="editDefaultCodesCancel">Cancel</button>
+        <button class="btn primary small" id="editDefaultCodesSave">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Overrides Modal -->
+  <div class="modal-backdrop" id="editOverridesModal">
+    <div class="modal card" style="max-width:700px">
+      <div class="card-header"><div>Edit Student Overrides</div></div>
+      
+      <div class="subtle" style="margin-top:12px;margin-bottom:12px">
+        Question: <strong id="editOverridesQuestion"></strong>
+      </div>
+      
+      <div class="subtle" style="margin-bottom:12px">
+        Add per-student goal code overrides. Format: Student Code, Goal Codes (comma-separated)
+      </div>
+      
+      <label>Student Code
+        <input id="editOverridesStudentCode" type="text" placeholder="S001" />
+      </label>
+      
+      <label style="margin-top:12px">Goal Codes (comma-separated)
+        <input id="editOverridesGoalCodes" type="text" placeholder="S001.11.1, S001.12.2" />
+      </label>
+      
+      <button class="btn small" id="btnAddOverride" style="margin-top:8px">Add Override</button>
+      
+      <div id="overridesList" style="margin-top:12px;padding:10px;background:rgba(255,255,255,.04);border-radius:8px;border:1px solid var(--line);max-height:200px;overflow:auto">
+        <div style="font-weight:800;margin-bottom:6px">Current Overrides</div>
+        <div id="overridesListContent" class="subtle">No overrides</div>
+      </div>
+      
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px">
+        <button class="btn small" id="editOverridesCancel">Cancel</button>
+        <button class="btn primary small" id="editOverridesSave">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Preview Manifest Modal -->
+  <div class="modal-backdrop" id="previewManifestModal">
+    <div class="modal card" style="max-width:900px">
+      <div class="card-header"><div>Manifest Preview</div></div>
+      
+      <pre id="previewManifestContent" style="margin-top:12px;padding:10px;background:rgba(255,255,255,.04);border-radius:8px;border:1px solid var(--line);max-height:60vh;overflow:auto;font-size:12px;white-space:pre-wrap"></pre>
+      
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px">
+        <button class="btn small" id="previewManifestClose">Close</button>
       </div>
     </div>
   </div>
@@ -4625,6 +4813,499 @@
     qs('#subPlanDate')?.addEventListener('change', (e) => {
       loadSubPlanForDate(e.target.value);
     });
+
+    // =======================
+    // Upload Tab - IEP Goal Mapping
+    // =======================
+    
+    import { 
+      buildCodebookFromIEPCsv, 
+      saveCodebook, 
+      loadCodebook,
+      getAllSkillTags,
+      getCodebookSummary,
+      normalizeSkillTag
+    } from '../web/codebook.js';
+    
+    import {
+      validateManifest,
+      detectQuestionsFromHTML,
+      detectQuestionsFromTXT,
+      detectQuestionsFromGoogleFormCSV,
+      saveManifest,
+      loadManifest,
+      createManifest
+    } from '../web/assignment-manifest.js';
+    
+    // Global state for mapping
+    let currentManifest = null;
+    let currentQuestionIndex = null;
+    
+    // Helper: Parse CSV text
+    // Note: Simple implementation for basic CSV files
+    // Does not handle quoted fields with commas - ensure CSV data uses simple format
+    // For production use with complex CSV files (quoted fields, embedded commas):
+    //   1. Pre-process CSV to remove quotes/commas from fields, or
+    //   2. Use a proper CSV parsing library like PapaParse or csv-parse
+    function parseCSV(text) {
+      const lines = text.trim().split('\n');
+      return lines.map(line => {
+        // Simple CSV parsing (splits on comma, no quote handling)
+        return line.split(',').map(cell => cell.trim());
+      });
+    }
+    
+    // Helper: Read file as text
+    function readFileAsText(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = e => resolve(e.target.result);
+        reader.onerror = reject;
+        reader.readAsText(file);
+      });
+    }
+    
+    // Import IEP CSV to Codebook
+    on('#btnImportIEPCsv', 'click', async () => {
+      const fileInput = qs('#iepCsvFile');
+      if (!fileInput.files[0]) {
+        addNotif('Please select an IEP CSV file', { type: 'error' });
+        return;
+      }
+      
+      try {
+        const text = await readFileAsText(fileInput.files[0]);
+        const csvData = parseCSV(text);
+        
+        const { codebook, stats } = buildCodebookFromIEPCsv(csvData);
+        
+        // Save codebook
+        saveCodebook(codebook);
+        
+        // Show summary
+        const summaryDiv = qs('#codebookSummary');
+        const contentDiv = qs('#codebookSummaryContent');
+        
+        let html = `
+          ✓ Processed ${stats.students} students<br>
+          ✓ Identified ${stats.skills} unique skill tags<br>
+          ✓ Created ${stats.entries} goal code mappings
+        `;
+        
+        if (stats.errors.length > 0) {
+          html += `<br><br><strong>Warnings:</strong><br>`;
+          html += stats.errors.slice(0, 5).join('<br>');
+          if (stats.errors.length > 5) {
+            html += `<br>... and ${stats.errors.length - 5} more`;
+          }
+        }
+        
+        contentDiv.innerHTML = html;
+        summaryDiv.style.display = 'block';
+        
+        addNotif('IEP Codebook imported successfully', { type: 'success' });
+      } catch (err) {
+        console.error('Failed to import IEP CSV:', err);
+        addNotif('Failed to import IEP CSV: ' + err.message, { type: 'error' });
+      }
+    });
+    
+    // Populate assignment dropdown
+    async function populateAssignmentDropdown() {
+      const select = qs('#mapAssignmentSelect');
+      if (!select) return;
+      
+      try {
+        const assignments = await db.listAssignments();
+        select.innerHTML = '<option value="">-- Select an assignment --</option>';
+        
+        for (const a of assignments) {
+          const option = document.createElement('option');
+          option.value = a.id;
+          option.textContent = a.title;
+          select.appendChild(option);
+        }
+      } catch (err) {
+        console.error('Failed to load assignments:', err);
+        addNotif('Unable to load assignments. Please check your connection.', { type: 'error' });
+      }
+    }
+    
+    // Toggle source inputs based on assignment type
+    qs('#mapAssignmentType')?.addEventListener('change', (e) => {
+      const type = e.target.value;
+      const htmlSource = qs('#mapHtmlSource');
+      const formCsvSource = qs('#mapFormCsvSource');
+      
+      if (type === 'html') {
+        htmlSource.style.display = 'block';
+        formCsvSource.style.display = 'none';
+      } else {
+        htmlSource.style.display = 'none';
+        formCsvSource.style.display = 'block';
+      }
+    });
+    
+    // Handle HTML file upload
+    qs('#mapHtmlFile')?.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      try {
+        const text = await readFileAsText(file);
+        qs('#mapHtmlContent').value = text;
+      } catch (err) {
+        console.error('Failed to read file:', err);
+        addNotif('Failed to read file: ' + err.message, { type: 'error' });
+      }
+    });
+    
+    // Detect Questions
+    on('#btnDetectQuestions', 'click', async () => {
+      const assignmentId = qs('#mapAssignmentSelect').value;
+      const assignmentType = qs('#mapAssignmentType').value;
+      
+      if (!assignmentId) {
+        addNotif('Please select an assignment', { type: 'error' });
+        return;
+      }
+      
+      try {
+        let questions = [];
+        
+        if (assignmentType === 'html') {
+          const content = qs('#mapHtmlContent').value;
+          if (!content) {
+            addNotif('Please provide HTML/TXT content', { type: 'error' });
+            return;
+          }
+          
+          // Try HTML detection first
+          questions = detectQuestionsFromHTML(content);
+          
+          // If no questions found, try TXT detection
+          if (questions.length === 0) {
+            questions = detectQuestionsFromTXT(content);
+          }
+        } else if (assignmentType === 'google_form') {
+          const fileInput = qs('#mapFormCsvFile');
+          if (!fileInput.files[0]) {
+            addNotif('Please select a sample response CSV', { type: 'error' });
+            return;
+          }
+          
+          const text = await readFileAsText(fileInput.files[0]);
+          const csvData = parseCSV(text);
+          
+          if (csvData.length === 0) {
+            addNotif('CSV file is empty', { type: 'error' });
+            return;
+          }
+          
+          questions = detectQuestionsFromGoogleFormCSV(csvData[0]);
+        }
+        
+        if (questions.length === 0) {
+          addNotif('No questions detected', { type: 'error' });
+          return;
+        }
+        
+        // Create manifest
+        currentManifest = createManifest(assignmentId, assignmentType, questions);
+        
+        // Render questions table
+        renderQuestionsTable();
+        
+        qs('#questionsTableWrap').style.display = 'block';
+        
+        addNotif(`Detected ${questions.length} questions`, { type: 'success' });
+      } catch (err) {
+        console.error('Failed to detect questions:', err);
+        addNotif('Failed to detect questions: ' + err.message, { type: 'error' });
+      }
+    });
+    
+    // Render questions table
+    function renderQuestionsTable() {
+      const tbody = qs('#questionsTable tbody');
+      if (!tbody || !currentManifest) return;
+      
+      tbody.innerHTML = '';
+      
+      for (let i = 0; i < currentManifest.questions.length; i++) {
+        const q = currentManifest.questions[i];
+        const tr = document.createElement('tr');
+        
+        tr.innerHTML = `
+          <td>${q.q_ref}</td>
+          <td class="subtle">${q.label || '—'}</td>
+          <td>
+            <span class="badge">${q.skill_tags.join(', ') || '—'}</span>
+            <button class="btn small" style="margin-left:4px;padding:4px 8px" data-action="edit-tags" data-index="${i}">Edit</button>
+          </td>
+          <td>
+            <span class="subtle">${q.default_goal_codes.join(', ') || '—'}</span>
+            <button class="btn small" style="margin-left:4px;padding:4px 8px" data-action="edit-defaults" data-index="${i}">Edit</button>
+          </td>
+          <td>
+            <button class="btn small" data-action="edit-overrides" data-index="${i}">Overrides</button>
+          </td>
+        `;
+        
+        tbody.appendChild(tr);
+      }
+      
+      // Attach event listeners to action buttons
+      tbody.querySelectorAll('[data-action]').forEach(btn => {
+        btn.addEventListener('click', handleQuestionAction);
+      });
+    }
+    
+    // Handle question actions
+    function handleQuestionAction(e) {
+      const action = e.target.dataset.action;
+      const index = parseInt(e.target.dataset.index);
+      currentQuestionIndex = index;
+      
+      if (action === 'edit-tags') {
+        openEditSkillTagsModal(index);
+      } else if (action === 'edit-defaults') {
+        openEditDefaultCodesModal(index);
+      } else if (action === 'edit-overrides') {
+        openEditOverridesModal(index);
+      }
+    }
+    
+    // Open Edit Skill Tags Modal
+    function openEditSkillTagsModal(index) {
+      const q = currentManifest.questions[index];
+      qs('#editSkillTagsQuestion').textContent = q.q_ref;
+      qs('#editSkillTagsInput').value = q.skill_tags.join(', ');
+      
+      // Show suggestions from codebook
+      const suggestions = getAllSkillTags();
+      const suggestionsDiv = qs('#editSkillTagsSuggestions');
+      suggestionsDiv.innerHTML = '';
+      
+      if (suggestions.length > 0) {
+        const label = document.createElement('div');
+        label.className = 'subtle';
+        label.style.width = '100%';
+        label.textContent = 'Suggestions:';
+        suggestionsDiv.appendChild(label);
+        
+        suggestions.forEach(tag => {
+          const badge = document.createElement('span');
+          badge.className = 'badge';
+          badge.textContent = tag;
+          badge.style.cursor = 'pointer';
+          badge.addEventListener('click', () => {
+            const input = qs('#editSkillTagsInput');
+            const current = input.value.split(',').map(s => s.trim()).filter(Boolean);
+            if (!current.includes(tag)) {
+              current.push(tag);
+              input.value = current.join(', ');
+            }
+          });
+          suggestionsDiv.appendChild(badge);
+        });
+      }
+      
+      qs('#editSkillTagsModal').classList.add('show');
+    }
+    
+    on('#editSkillTagsCancel', 'click', () => {
+      qs('#editSkillTagsModal').classList.remove('show');
+    });
+    
+    on('#editSkillTagsSave', 'click', () => {
+      const input = qs('#editSkillTagsInput').value;
+      const tags = input.split(',').map(s => normalizeSkillTag(s)).filter(Boolean);
+      
+      currentManifest.questions[currentQuestionIndex].skill_tags = tags;
+      renderQuestionsTable();
+      
+      qs('#editSkillTagsModal').classList.remove('show');
+      addNotif('Skill tags updated', { type: 'success' });
+    });
+    
+    // Open Edit Default Codes Modal
+    function openEditDefaultCodesModal(index) {
+      const q = currentManifest.questions[index];
+      qs('#editDefaultCodesQuestion').textContent = q.q_ref;
+      qs('#editDefaultCodesInput').value = q.default_goal_codes.join(', ');
+      
+      qs('#editDefaultCodesModal').classList.add('show');
+    }
+    
+    on('#editDefaultCodesCancel', 'click', () => {
+      qs('#editDefaultCodesModal').classList.remove('show');
+    });
+    
+    on('#editDefaultCodesSave', 'click', () => {
+      const input = qs('#editDefaultCodesInput').value;
+      const codes = input.split(',').map(s => s.trim()).filter(Boolean);
+      
+      currentManifest.questions[currentQuestionIndex].default_goal_codes = codes;
+      renderQuestionsTable();
+      
+      qs('#editDefaultCodesModal').classList.remove('show');
+      addNotif('Default codes updated', { type: 'success' });
+    });
+    
+    // Open Edit Overrides Modal
+    function openEditOverridesModal(index) {
+      const q = currentManifest.questions[index];
+      qs('#editOverridesQuestion').textContent = q.q_ref;
+      
+      // Clear inputs
+      qs('#editOverridesStudentCode').value = '';
+      qs('#editOverridesGoalCodes').value = '';
+      
+      // Render current overrides
+      renderOverridesList(q.per_student_overrides);
+      
+      qs('#editOverridesModal').classList.add('show');
+    }
+    
+    function renderOverridesList(overrides) {
+      const content = qs('#overridesListContent');
+      
+      if (!overrides || Object.keys(overrides).length === 0) {
+        content.innerHTML = 'No overrides';
+        return;
+      }
+      
+      let html = '';
+      for (const [studentCode, codes] of Object.entries(overrides)) {
+        html += `
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+            <span><strong>${studentCode}:</strong> ${codes.join(', ')}</span>
+            <button class="btn small" style="padding:2px 6px" data-student="${studentCode}">Remove</button>
+          </div>
+        `;
+      }
+      
+      content.innerHTML = html;
+      
+      // Attach remove handlers
+      content.querySelectorAll('button').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const studentCode = btn.dataset.student;
+          delete currentManifest.questions[currentQuestionIndex].per_student_overrides[studentCode];
+          renderOverridesList(currentManifest.questions[currentQuestionIndex].per_student_overrides);
+        });
+      });
+    }
+    
+    on('#btnAddOverride', 'click', () => {
+      const studentCode = qs('#editOverridesStudentCode').value.trim();
+      const goalCodes = qs('#editOverridesGoalCodes').value;
+      
+      if (!studentCode || !goalCodes) {
+        addNotif('Please provide both student code and goal codes', { type: 'error' });
+        return;
+      }
+      
+      const codes = goalCodes.split(',').map(s => s.trim()).filter(Boolean);
+      
+      if (!currentManifest.questions[currentQuestionIndex].per_student_overrides) {
+        currentManifest.questions[currentQuestionIndex].per_student_overrides = {};
+      }
+      
+      currentManifest.questions[currentQuestionIndex].per_student_overrides[studentCode] = codes;
+      
+      // Clear inputs
+      qs('#editOverridesStudentCode').value = '';
+      qs('#editOverridesGoalCodes').value = '';
+      
+      // Re-render
+      renderOverridesList(currentManifest.questions[currentQuestionIndex].per_student_overrides);
+      
+      addNotif('Override added', { type: 'success' });
+    });
+    
+    on('#editOverridesCancel', 'click', () => {
+      qs('#editOverridesModal').classList.remove('show');
+    });
+    
+    on('#editOverridesSave', 'click', () => {
+      renderQuestionsTable();
+      qs('#editOverridesModal').classList.remove('show');
+      addNotif('Overrides updated', { type: 'success' });
+    });
+    
+    // Save Manifest
+    on('#btnSaveManifest', 'click', () => {
+      if (!currentManifest) {
+        addNotif('No manifest to save', { type: 'error' });
+        return;
+      }
+      
+      const result = saveManifest(currentManifest);
+      
+      if (result.success) {
+        const statusDiv = qs('#manifestStatus');
+        const titleDiv = qs('#manifestStatusTitle');
+        const messageDiv = qs('#manifestStatusMessage');
+        
+        titleDiv.textContent = 'Success';
+        messageDiv.textContent = `Manifest saved for assignment ${currentManifest.assignment_id}`;
+        statusDiv.style.display = 'block';
+        
+        addNotif('Manifest saved successfully', { type: 'success' });
+      } else {
+        addNotif('Failed to save manifest: ' + result.errors.join(', '), { type: 'error' });
+      }
+    });
+    
+    // Preview Manifest
+    on('#btnPreviewManifest', 'click', () => {
+      if (!currentManifest) {
+        addNotif('No manifest to preview', { type: 'error' });
+        return;
+      }
+      
+      qs('#previewManifestContent').textContent = JSON.stringify(currentManifest, null, 2);
+      qs('#previewManifestModal').classList.add('show');
+    });
+    
+    on('#previewManifestClose', 'click', () => {
+      qs('#previewManifestModal').classList.remove('show');
+    });
+    
+    // Clear Mapping
+    on('#btnClearMapping', 'click', () => {
+      currentManifest = null;
+      currentQuestionIndex = null;
+      qs('#questionsTableWrap').style.display = 'none';
+      qs('#manifestStatus').style.display = 'none';
+      qs('#mapHtmlContent').value = '';
+      qs('#mapHtmlFile').value = '';
+      qs('#mapFormCsvFile').value = '';
+    });
+    
+    // Initialize Upload tab
+    document.addEventListener('click', async (e) => {
+      if (e.target.matches('[data-tab="upload"]') || e.target.closest('[data-tab="upload"]')) {
+        await populateAssignmentDropdown();
+        
+        // Show codebook summary if available
+        const summary = getCodebookSummary();
+        if (summary.students > 0) {
+          const summaryDiv = qs('#codebookSummary');
+          const contentDiv = qs('#codebookSummaryContent');
+          
+          contentDiv.innerHTML = `
+            ✓ ${summary.students} students<br>
+            ✓ ${summary.skills} skill tags<br>
+            ✓ ${summary.entries} goal code mappings
+          `;
+          summaryDiv.style.display = 'block';
+        }
+      }
+    });
+    
   </script>
 
 <style>
