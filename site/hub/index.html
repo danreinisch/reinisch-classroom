@@ -1417,6 +1417,11 @@
 
     function showTeacher(){ qs('#view-teacher').style.display='grid'; }
     function hideTeacher(){ qs('#view-teacher').style.display='none'; }
+    
+    // Helper: Get teacher password (configurable or default)
+    function getTeacherPassword() {
+      return localStorage.getItem('rc_teacher_pass') || TEACHER_PW_LOCAL;
+    }
 
     // Theme toggle: Bold vs Normal glassmorphism
     // Use 'rc_glass_theme' key to match boot script
@@ -1491,8 +1496,6 @@
     
     // Sign-in modal: Teacher button
     on('#signInTeacher', 'click', () => {
-      // Check teacher password (configurable via localStorage, default 'teacher123')
-      const teacherPassword = localStorage.getItem('rc_teacher_pass') || TEACHER_PW_LOCAL;
       qs('#signInModal').classList.remove('show');
       qs('#teachModal').classList.add('show');
       qs('#teachPass').focus();
@@ -1511,7 +1514,7 @@
     });
     
     // Student sign-in: Sign In button
-    on('#studentSignInGo', 'click', async () => {
+    async function handleStudentSignIn() {
       const code = qs('#studentCodeSelect').value;
       const password = qs('#studentPassword').value;
       const msgEl = qs('#studentSignInMsg');
@@ -1539,28 +1542,21 @@
       } else {
         msgEl.innerHTML = '<span style="color:#fecaca">Invalid password</span>';
       }
-    });
+    }
+    
+    on('#studentSignInGo', 'click', handleStudentSignIn);
     
     // Handle Enter key in student password field
     qs('#studentPassword')?.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') {
-        qs('#studentSignInGo').click();
+        handleStudentSignIn();
       }
     });
     
     // Teacher auth
-    on('#btnTeacher', 'click', ()=>{ 
-      qs('#teachModal').classList.add('show'); 
-      qs('#teachPass').focus(); 
-      isFromSignInModal = false; // Not from sign-in modal
-    });
-    on('#teachCancel', 'click', ()=> {
-      qs('#teachModal').classList.remove('show');
-      isFromSignInModal = false; // Reset flag
-    });
-    on('#teachGo', 'click', ()=>{
+    function handleTeacherAuth() {
       const input = qs('#teachPass').value;
-      const teacherPassword = localStorage.getItem('rc_teacher_pass') || TEACHER_PW_LOCAL;
+      const teacherPassword = getTeacherPassword();
       if (input === teacherPassword) {
         qs('#teachModal').classList.remove('show');
         
@@ -1570,19 +1566,32 @@
           setAuth({ role: 'teacher' });
           updateUserChip();
           isFromSignInModal = false; // Reset flag
+        } else {
+          // Direct teacher center access (not from sign-in)
+          qs('#currentUserChip').textContent = 'Teacher';
         }
         
         showTeacher();
-        qs('#currentUserChip').textContent = 'Teacher';
       } else {
         qs('#teachMsg').innerHTML = '<span style="color:#fecaca">Wrong password</span>';
       }
+    }
+    
+    on('#btnTeacher', 'click', ()=>{ 
+      qs('#teachModal').classList.add('show'); 
+      qs('#teachPass').focus(); 
+      isFromSignInModal = false; // Not from sign-in modal
     });
+    on('#teachCancel', 'click', ()=> {
+      qs('#teachModal').classList.remove('show');
+      isFromSignInModal = false; // Reset flag
+    });
+    on('#teachGo', 'click', handleTeacherAuth);
     
     // Handle Enter key in teacher password field
     qs('#teachPass')?.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') {
-        qs('#teachGo').click();
+        handleTeacherAuth();
       }
     });
     
