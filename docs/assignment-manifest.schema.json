@@ -1,0 +1,88 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://reinisch-classroom.com/schemas/assignment-manifest.json",
+  "title": "Assignment Manifest",
+  "description": "Schema for mapping assignment questions to IEP goal codes via skill tags",
+  "type": "object",
+  "required": ["assignment_id", "assignment_type", "questions"],
+  "properties": {
+    "assignment_id": {
+      "type": "string",
+      "description": "Unique identifier for the assignment"
+    },
+    "assignment_type": {
+      "type": "string",
+      "enum": ["html", "google_form", "txt"],
+      "description": "Type of assignment source"
+    },
+    "questions": {
+      "type": "array",
+      "description": "List of questions in the assignment",
+      "items": {
+        "type": "object",
+        "required": ["q_ref"],
+        "properties": {
+          "q_ref": {
+            "type": "string",
+            "description": "Question reference identifier (e.g., Q1, data-qref attribute, or CSV column header)"
+          },
+          "label": {
+            "type": "string",
+            "description": "Human-readable question label or preview text"
+          },
+          "skill_tags": {
+            "type": "array",
+            "description": "Array of skill tags (normalized Goal Area values)",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z0-9_]+$"
+            },
+            "default": []
+          },
+          "points": {
+            "type": "number",
+            "description": "Maximum points for this question",
+            "minimum": 0,
+            "default": 1
+          },
+          "default_goal_codes": {
+            "type": "array",
+            "description": "Default IEP goal codes to use if no student-specific mapping exists",
+            "items": {
+              "type": "string"
+            },
+            "default": []
+          },
+          "per_student_overrides": {
+            "type": "object",
+            "description": "Map of student_code to array of goal codes for this question",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "default": {}
+          }
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional metadata about the manifest",
+      "properties": {
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "created_by": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
