@@ -3551,8 +3551,11 @@
         // Get current config to check opt-out status and if credentials are changing
         const currentConfig = supabaseSettings.readConfig();
         
-        // Detect if credentials are being added/changed (new key provided, not masked)
-        const isAddingCredentials = !!(url && key && key.length > 20);
+        // Detect if credentials are being added/changed
+        // Supabase anon keys are JWT tokens, typically 100+ characters
+        // Check for minimum realistic key length (e.g., 50 chars)
+        const MIN_SUPABASE_KEY_LENGTH = 50;
+        const isAddingCredentials = !!(url && key && key.length >= MIN_SUPABASE_KEY_LENGTH);
         
         // Use helper to save with anon key preservation
         supabaseSettings.writeConfig(

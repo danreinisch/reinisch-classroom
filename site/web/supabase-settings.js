@@ -153,6 +153,15 @@ export function migrateLegacyKeys() {
 }
 
 /**
+ * Check if configuration has valid credentials (non-empty URL and Anon key)
+ * @param {Object} config - Configuration object from readConfig()
+ * @returns {boolean} True if both URL and Anon key are present and non-empty
+ */
+function hasValidCredentials(config) {
+  return !!(config.url?.trim() && config.anon?.trim());
+}
+
+/**
  * Auto-enable Supabase if URL and Anon key are present and user hasn't opted out
  * @returns {Object} { changed: boolean, enabled: boolean, reason: string }
  */
@@ -160,9 +169,7 @@ export function autoEnableIfEligible() {
   const config = readConfig();
   
   // Check if credentials are present (non-empty strings)
-  const hasCredentials = !!(config.url?.trim() && config.anon?.trim());
-  
-  if (!hasCredentials) {
+  if (!hasValidCredentials(config)) {
     return { 
       changed: false, 
       enabled: false, 
