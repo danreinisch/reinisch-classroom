@@ -1271,7 +1271,10 @@
           </div>
           
           <div id="connectivityDetails" style="margin-top:12px;padding:10px;background:rgba(255,255,255,.04);border-radius:8px;border:1px solid var(--line);display:none">
-            <div style="font-weight:800;margin-bottom:6px">Connectivity Details</div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+              <div style="font-weight:800">Connectivity Details</div>
+              <button id="btnRetryConnectivity" class="btn small" style="padding:4px 8px;font-size:12px">Try again</button>
+            </div>
             <div id="connectivityMessage" class="subtle"></div>
             <div id="connectivityTimestamp" class="subtle" style="margin-top:4px;font-size:12px"></div>
           </div>
@@ -3439,6 +3442,20 @@
           console.log('[Settings] Legacy keys migrated:', migrationResult.message);
         }
         
+        // Try auto-enable if eligible
+        const autoEnableResult = supabaseSettings.autoEnableIfEligible();
+        if (autoEnableResult.changed) {
+          console.log('[Settings] Auto-enabled Supabase:', autoEnableResult.message);
+          
+          // Show toast notification
+          addNotif('Supabase enabled — you can turn this off in Settings', { type: 'success' });
+          
+          // Emit event for immediate UI update
+          window.dispatchEvent(new CustomEvent('rc:remote-config-changed', {
+            detail: { config: autoEnableResult.config, autoEnabled: true }
+          }));
+        }
+        
         // Initialize settings UI
         loadSettings();
       } catch (err) {
@@ -3510,10 +3527,31 @@
       const key = qs('#supabaseKey').value.trim();
       const enabled = qs('#useSupabase').checked;
       
+      // Read current config to determine if user is manually changing enabled state
+      const currentConfig = supabaseSettings.readConfig();
+      
+      // Track opt-out: if user is manually disabling after it was enabled (either manually or auto)
+      let optOut = false;
+      if (currentConfig.enabled && !enabled) {
+        optOut = true;
+      }
+      
+      // Clear opt-out: if user is manually enabling after opting out
+      let clearOptOut = false;
+      if (!currentConfig.enabled && enabled && currentConfig.optOut) {
+        clearOptOut = true;
+      }
+      
       try {
         // Use helper to save with anon key preservation
         supabaseSettings.writeConfig(
-          { url, anon: key, enabled },
+          { 
+            url, 
+            anon: key, 
+            enabled,
+            optOut: clearOptOut ? false : (optOut ? true : undefined),
+            autoEnabled: enabled ? undefined : false // Clear autoEnabled if disabling
+          },
           { preserveAnonIfMasked: true }
         );
         
@@ -3691,6 +3729,37 @@
       }
     }
     
+    // Debounce helper for retry button
+    let lastConnectivityTest = 0;
+    const CONNECTIVITY_TEST_DEBOUNCE_MS = 2000; // 2 seconds
+    
+    // Retry connectivity test (called by "Try again" button)
+    async function retryConnectivityTest() {
+      const now = Date.now();
+      if (now - lastConnectivityTest < CONNECTIVITY_TEST_DEBOUNCE_MS) {
+        // Too soon - debounce
+        return;
+      }
+      lastConnectivityTest = now;
+      
+      const retryBtn = qs('#btnRetryConnectivity');
+      const originalText = retryBtn.textContent;
+      retryBtn.disabled = true;
+      retryBtn.textContent = '⏳ Testing...';
+      
+      try {
+        await testSupabaseConnection();
+        
+        // Emit event for other components to update
+        window.dispatchEvent(new CustomEvent('rc:remote-connectivity-checked', {
+          detail: { timestamp: new Date().toISOString() }
+        }));
+      } finally {
+        retryBtn.disabled = false;
+        retryBtn.textContent = originalText;
+      }
+    }
+    
     // Event listeners
     qs('#toggleKeyVisibility').addEventListener('click', () => {
       const input = qs('#supabaseKey');
@@ -3710,6 +3779,10 @@
     
     qs('#btnTestConnection').addEventListener('click', () => {
       testSupabaseConnection();
+    });
+    
+    qs('#btnRetryConnectivity')?.addEventListener('click', () => {
+      retryConnectivityTest();
     });
     
     qs('#btnResetConfig').addEventListener('click', () => {

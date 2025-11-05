@@ -9,7 +9,9 @@ const KEYS = {
   unified: {
     url: UNIFIED_PREFIX + 'supabase_url',
     anon: UNIFIED_PREFIX + 'supabase_anon',
-    enabled: UNIFIED_PREFIX + 'use_supabase'
+    enabled: UNIFIED_PREFIX + 'use_supabase',
+    optOut: UNIFIED_PREFIX + 'supabase_opt_out',
+    autoEnabled: UNIFIED_PREFIX + 'supabase_auto_enabled'
   },
   legacy: {
     url: LEGACY_PREFIX + 'supabase_url',
@@ -29,6 +31,8 @@ export function readConfig() {
   let url = localStorage.getItem(KEYS.unified.url);
   let anon = localStorage.getItem(KEYS.unified.anon);
   let enabled = localStorage.getItem(KEYS.unified.enabled) === 'true';
+  let optOut = localStorage.getItem(KEYS.unified.optOut) === 'true';
+  let autoEnabled = localStorage.getItem(KEYS.unified.autoEnabled) === 'true';
   
   // Fallback to legacy keys if unified keys are missing
   if (!url) {
@@ -46,12 +50,12 @@ export function readConfig() {
               localStorage.getItem(KEYS.legacy.remote) === 'true';
   }
   
-  return { url, anon, enabled };
+  return { url, anon, enabled, optOut, autoEnabled };
 }
 
 /**
  * Write configuration to localStorage
- * @param {Object} config - { url?, anon?, enabled? }
+ * @param {Object} config - { url?, anon?, enabled?, optOut?, autoEnabled? }
  * @param {Object} options - { preserveAnonIfMasked: boolean }
  */
 export function writeConfig(config = {}, options = {}) {
@@ -80,6 +84,24 @@ export function writeConfig(config = {}, options = {}) {
   // Update enabled flag if provided
   if (config.enabled !== undefined) {
     localStorage.setItem(KEYS.unified.enabled, config.enabled.toString());
+  }
+  
+  // Update optOut flag if provided
+  if (config.optOut !== undefined) {
+    if (config.optOut) {
+      localStorage.setItem(KEYS.unified.optOut, 'true');
+    } else {
+      localStorage.removeItem(KEYS.unified.optOut);
+    }
+  }
+  
+  // Update autoEnabled flag if provided
+  if (config.autoEnabled !== undefined) {
+    if (config.autoEnabled) {
+      localStorage.setItem(KEYS.unified.autoEnabled, 'true');
+    } else {
+      localStorage.removeItem(KEYS.unified.autoEnabled);
+    }
   }
   
   return readConfig();
@@ -231,6 +253,8 @@ export function resetConfig() {
   localStorage.removeItem(KEYS.unified.url);
   localStorage.removeItem(KEYS.unified.anon);
   localStorage.removeItem(KEYS.unified.enabled);
+  localStorage.removeItem(KEYS.unified.optOut);
+  localStorage.removeItem(KEYS.unified.autoEnabled);
   
   // Also remove legacy keys for clean slate
   localStorage.removeItem(KEYS.legacy.url);
@@ -255,9 +279,60 @@ export function getDiagnostics() {
     anon: config.anon ? `${config.anon.substring(0, 4)}... (${config.anon.length} chars)` : '(empty)',
     anonLength: config.anon?.length || 0,
     enabled: config.enabled,
+    optOut: config.optOut,
+    autoEnabled: config.autoEnabled,
     hasUnifiedUrl: !!localStorage.getItem(KEYS.unified.url),
     hasUnifiedAnon: !!localStorage.getItem(KEYS.unified.anon),
     hasLegacyUrl: !!localStorage.getItem(KEYS.legacy.url),
     hasLegacyAnon: !!(localStorage.getItem(KEYS.legacy.anon) || localStorage.getItem(KEYS.legacy.anon_alt))
+  };
+}
+
+/**
+ * Auto-enable Supabase if URL and Anon are present and user hasn't opted out
+ * @returns {Object} { changed: boolean, message: string, config: Object }
+ */
+export function autoEnableIfEligible() {
+  const config = readConfig();
+  
+  // Check if already enabled
+  if (config.enabled) {
+    return { 
+      changed: false, 
+      message: 'Already enabled', 
+      config 
+    };
+  }
+  
+  // Check if user has opted out
+  if (config.optOut) {
+    return { 
+      changed: false, 
+      message: 'User opted out', 
+      config 
+    };
+  }
+  
+  // Check if URL and Anon are present
+  if (!config.url || !config.anon) {
+    return { 
+      changed: false, 
+      message: 'URL or Anon key missing', 
+      config 
+    };
+  }
+  
+  // Auto-enable!
+  writeConfig({ 
+    enabled: true, 
+    autoEnabled: true 
+  });
+  
+  const newConfig = readConfig();
+  
+  return { 
+    changed: true, 
+    message: 'Supabase auto-enabled', 
+    config: newConfig 
   };
 }
