@@ -19,6 +19,7 @@ export function normalizeSkillTag(goalArea) {
 /**
  * Build codebook from IEP CSV data
  * Expected CSV format: Student Code, Student Name, Goal Area, Goal Code, Goal Description, ...
+ * Note: Assumes first row (index 0) is a header row and skips it
  * Returns: { student_code → { skill_tag → [goal_codes] } }
  */
 export function buildCodebookFromIEPCsv(csvData) {
@@ -30,7 +31,13 @@ export function buildCodebookFromIEPCsv(csvData) {
     errors: []
   };
 
-  // Skip header row (index 0)
+  // Check if we have data
+  if (csvData.length < 2) {
+    stats.errors.push('CSV file must have at least a header row and one data row');
+    return { codebook, stats: { ...stats, students: 0, skills: 0 } };
+  }
+
+  // Skip header row (index 0) and process data rows
   for (let i = 1; i < csvData.length; i++) {
     const row = csvData[i];
     

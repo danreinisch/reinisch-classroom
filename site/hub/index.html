@@ -4844,11 +4844,13 @@
     // Helper: Parse CSV text
     // Note: Simple implementation for basic CSV files
     // Does not handle quoted fields with commas - ensure CSV data uses simple format
+    // For production use with complex CSV files (quoted fields, embedded commas):
+    //   1. Pre-process CSV to remove quotes/commas from fields, or
+    //   2. Use a proper CSV parsing library like PapaParse or csv-parse
     function parseCSV(text) {
       const lines = text.trim().split('\n');
       return lines.map(line => {
-        // Simple CSV parsing (no quoted field support)
-        // For production use, consider a CSV library if complex formats are needed
+        // Simple CSV parsing (splits on comma, no quote handling)
         return line.split(',').map(cell => cell.trim());
       });
     }

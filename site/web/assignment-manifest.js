@@ -128,14 +128,27 @@ export function detectQuestionsFromTXT(txtContent) {
 export function detectQuestionsFromGoogleFormCSV(csvHeaders) {
   const questions = [];
   
-  // Common Google Forms standard columns (lowercase for comparison)
-  const standardColumns = ['timestamp', 'email', 'email address', 'score', 'username', 'name'];
+  // Common Google Forms standard columns (exact matches, case-insensitive)
+  const standardColumns = [
+    'timestamp', 
+    'email', 
+    'email address', 
+    'score', 
+    'username', 
+    'name',
+    'first name',
+    'last name',
+    'full name',
+    'student id',
+    'form id',
+    'response id'
+  ];
   
   csvHeaders.forEach((header, idx) => {
     const normalized = header.toLowerCase().trim();
     
-    // Skip standard columns
-    if (standardColumns.some(std => normalized === std || normalized.includes(std))) {
+    // Skip standard columns (exact match only to avoid false positives)
+    if (standardColumns.includes(normalized)) {
       return;
     }
 
