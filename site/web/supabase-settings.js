@@ -313,8 +313,8 @@ export function autoEnableIfEligible() {
     };
   }
   
-  // Check if URL and Anon are present
-  if (!config.url || !config.anon) {
+  // Check if URL and Anon are present and non-empty
+  if (!config.url || !config.anon || config.url.trim() === '' || config.anon.trim() === '') {
     return { 
       changed: false, 
       message: 'URL or Anon key missing', 

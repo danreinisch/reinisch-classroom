@@ -3549,7 +3549,7 @@
             url, 
             anon: key, 
             enabled,
-            optOut: clearOptOut ? false : (optOut ? true : undefined),
+            optOut: clearOptOut ? false : (optOut || undefined),
             autoEnabled: enabled ? undefined : false // Clear autoEnabled if disabling
           },
           { preserveAnonIfMasked: true }
@@ -3781,7 +3781,7 @@
       testSupabaseConnection();
     });
     
-    qs('#btnRetryConnectivity')?.addEventListener('click', () => {
+    qs('#btnRetryConnectivity').addEventListener('click', () => {
       retryConnectivityTest();
     });
     
