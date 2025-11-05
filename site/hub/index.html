@@ -1079,7 +1079,13 @@
         <div class="card-header"><div>⚙️ Settings</div></div>
         
         <div class="card" style="margin-top:12px">
-          <div class="card-header"><div>Supabase Configuration</div></div>
+          <div class="card-header">
+            <div>Supabase Configuration</div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <span id="configStatus" class="badge" title="Configuration status">Not configured</span>
+              <span id="connectivityStatus" class="badge" style="display:none" title="Connectivity status">—</span>
+            </div>
+          </div>
           
           <label for="supabaseUrl">Supabase URL
             <input id="supabaseUrl" type="text" placeholder="https://your-project.supabase.co" />
@@ -1090,6 +1096,9 @@
               <input id="supabaseKey" type="password" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." />
               <button id="toggleKeyVisibility" class="btn small" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);padding:4px 8px" type="button">👁️</button>
             </div>
+            <div id="keyStoredNote" class="subtle" style="margin-top:4px;display:none">
+              ✓ Key stored. Paste a new key to update, or leave blank to keep current key.
+            </div>
           </label>
           
           <label style="display:flex;align-items:center;gap:10px;margin-top:12px">
@@ -1098,10 +1107,22 @@
           </label>
           <div class="subtle" style="margin-top:4px;margin-left:24px">When enabled, the app will attempt to use Supabase. If connection fails, it falls back to local storage.</div>
           
-          <div style="display:flex;gap:10px;margin-top:16px;align-items:center">
+          <div style="display:flex;gap:10px;margin-top:16px;align-items:center;flex-wrap:wrap">
             <button id="btnSaveSettings" class="btn primary small">Save Settings</button>
             <button id="btnTestConnection" class="btn small">Test Connection</button>
-            <span id="connectionStatus" class="badge" style="margin-left:8px">Local only</span>
+            <button id="btnResetConfig" class="btn small" style="color:#fecaca">Reset Remote Config</button>
+            <button id="btnShowDiagnostics" class="btn small">Show Diagnostics</button>
+          </div>
+          
+          <div id="connectivityDetails" style="margin-top:12px;padding:10px;background:rgba(255,255,255,.04);border-radius:8px;border:1px solid var(--line);display:none">
+            <div style="font-weight:800;margin-bottom:6px">Connectivity Details</div>
+            <div id="connectivityMessage" class="subtle"></div>
+            <div id="connectivityTimestamp" class="subtle" style="margin-top:4px;font-size:12px"></div>
+          </div>
+          
+          <div id="diagnosticsOutput" style="margin-top:12px;padding:10px;background:rgba(255,255,255,.04);border-radius:8px;border:1px solid var(--line);display:none">
+            <div style="font-weight:800;margin-bottom:6px">Diagnostics</div>
+            <pre id="diagnosticsContent" class="subtle" style="font-size:12px;margin:0;white-space:pre-wrap"></pre>
           </div>
           
           <div class="subtle" style="margin-top:12px;padding:10px;background:rgba(255,255,255,.04);border-radius:8px;border:1px solid var(--line)">
@@ -3150,85 +3171,274 @@
     // showTeacher(); initIEP();
 
     // =======================
-    // Settings: Supabase Configuration
+    // Settings: Supabase Configuration (using supabase-settings.js helper)
     // =======================
     
-    // Load settings from localStorage
+    // Import the helper module
+    let supabaseSettings = null;
+    (async () => {
+      try {
+        supabaseSettings = await import('../web/supabase-settings.js');
+        
+        // Migrate legacy keys on page load
+        const migrationResult = supabaseSettings.migrateLegacyKeys();
+        if (migrationResult.migrated) {
+          console.log('[Settings] Legacy keys migrated:', migrationResult.message);
+        }
+        
+        // Initialize settings UI
+        loadSettings();
+      } catch (err) {
+        console.error('[Settings] Failed to load supabase-settings module:', err);
+        // Fallback to basic loading
+        loadSettingsFallback();
+      }
+    })();
+    
+    // Load settings from localStorage using helper
     function loadSettings() {
-      const url = localStorage.getItem(NS + 'supabase_url') || '';
-      const key = localStorage.getItem(NS + 'supabase_key') || '';
-      const useRemote = localStorage.getItem(NS + 'use_remote') === 'true';
+      if (!supabaseSettings) {
+        loadSettingsFallback();
+        return;
+      }
+      
+      const config = supabaseSettings.readConfig();
+      
+      // Display URL
+      qs('#supabaseUrl').value = config.url || '';
+      
+      // For anon key, show masked value if key exists
+      const keyInput = qs('#supabaseKey');
+      if (config.anon) {
+        keyInput.value = ''; // Leave blank - user can paste new key to update
+        keyInput.placeholder = `Key stored (${config.anon.length} chars) - paste new key to update`;
+        qs('#keyStoredNote').style.display = 'block';
+      } else {
+        keyInput.value = '';
+        keyInput.placeholder = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...';
+        qs('#keyStoredNote').style.display = 'none';
+      }
+      
+      // Checkbox
+      qs('#useSupabase').checked = config.enabled;
+      
+      // Update status chips
+      updateConfigStatus();
+    }
+    
+    // Fallback loader (direct localStorage access)
+    function loadSettingsFallback() {
+      const url = localStorage.getItem('rc_unified_supabase_url') || 
+                  localStorage.getItem('rc_supabase_url') || '';
+      const key = localStorage.getItem('rc_unified_supabase_anon') || 
+                  localStorage.getItem('rc_supabase_key') || '';
+      const enabled = localStorage.getItem('rc_unified_use_supabase') === 'true' ||
+                      localStorage.getItem('rc_use_remote') === 'true';
       
       qs('#supabaseUrl').value = url;
-      qs('#supabaseKey').value = key;
-      qs('#useSupabase').checked = useRemote;
+      if (key) {
+        qs('#supabaseKey').value = '';
+        qs('#supabaseKey').placeholder = `Key stored (${key.length} chars)`;
+        qs('#keyStoredNote').style.display = 'block';
+      }
+      qs('#useSupabase').checked = enabled;
       
-      updateConnectionStatus();
+      updateConfigStatus();
     }
     
-    // Save settings to localStorage
-    function saveSettings() {
+    // Save settings using helper
+    async function saveSettings() {
+      if (!supabaseSettings) {
+        addNotif('Settings module not loaded', { type: 'error' });
+        return;
+      }
+      
       const url = qs('#supabaseUrl').value.trim();
       const key = qs('#supabaseKey').value.trim();
-      const useRemote = qs('#useSupabase').checked;
+      const enabled = qs('#useSupabase').checked;
       
-      localStorage.setItem(NS + 'supabase_url', url);
-      localStorage.setItem(NS + 'supabase_key', key);
-      localStorage.setItem(NS + 'use_remote', useRemote.toString());
-      
-      addNotif('Settings saved. Reload the page to apply changes.', { type: 'success' });
-      updateConnectionStatus();
+      try {
+        // Use helper to save with anon key preservation
+        supabaseSettings.writeConfig(
+          { url, anon: key, enabled },
+          { preserveAnonIfMasked: true }
+        );
+        
+        addNotif('Settings saved. Reload the page to apply changes.', { type: 'success' });
+        
+        // Reload settings to show updated state
+        loadSettings();
+      } catch (err) {
+        addNotif(`Failed to save settings: ${err.message}`, { type: 'error' });
+      }
     }
     
-    // Test connection
+    // Test connection using helper
     async function testSupabaseConnection() {
-      const statusChip = qs('#connectionStatus');
-      statusChip.textContent = 'Testing...';
-      statusChip.style.background = 'rgba(255,255,255,.18)';
+      if (!supabaseSettings) {
+        addNotif('Settings module not loaded', { type: 'error' });
+        return;
+      }
       
-      // Dynamically import and test
+      const connectivityChip = qs('#connectivityStatus');
+      const detailsDiv = qs('#connectivityDetails');
+      const messageDiv = qs('#connectivityMessage');
+      const timestampDiv = qs('#connectivityTimestamp');
+      
+      // Show connectivity chip and set to testing
+      connectivityChip.style.display = 'inline-flex';
+      connectivityChip.textContent = 'Testing...';
+      connectivityChip.style.background = 'rgba(255,255,255,.18)';
+      connectivityChip.style.color = 'var(--ink)';
+      
       try {
-        const { testConnection } = await import('../web/supabase-client.js');
-        const result = await testConnection();
+        // Get current config
+        const config = supabaseSettings.readConfig();
         
-        if (result.ok) {
-          statusChip.textContent = 'Remote: OK';
-          statusChip.style.background = 'linear-gradient(180deg, rgba(34,197,94,.8), rgba(22,163,74,.8))';
-          statusChip.style.color = '#fff';
-          addNotif('Supabase connection successful!', { type: 'success' });
-        } else {
-          statusChip.textContent = `Remote: Error (${result.error})`;
-          statusChip.style.background = 'linear-gradient(180deg, rgba(239,68,68,.8), rgba(220,38,38,.8))';
-          statusChip.style.color = '#fff';
-          addNotif(`Supabase connection failed: ${result.error}`, { type: 'error' });
+        // Test connectivity
+        const result = await supabaseSettings.testConnectivity(config);
+        
+        // Update chips and details based on result
+        detailsDiv.style.display = 'block';
+        timestampDiv.textContent = `Last checked: ${new Date(result.timestamp).toLocaleString()}`;
+        
+        switch (result.status) {
+          case 'ok':
+            connectivityChip.textContent = 'OK';
+            connectivityChip.style.background = 'linear-gradient(180deg, rgba(34,197,94,.8), rgba(22,163,74,.8))';
+            connectivityChip.style.color = '#fff';
+            connectivityChip.title = 'Connection successful';
+            messageDiv.textContent = `✓ ${result.message} (HTTP ${result.httpStatus})`;
+            messageDiv.style.color = 'var(--ink)';
+            addNotif('Supabase connection successful!', { type: 'success' });
+            break;
+            
+          case 'unauthorized':
+            connectivityChip.textContent = 'Unauthorized';
+            connectivityChip.style.background = 'linear-gradient(180deg, rgba(239,68,68,.8), rgba(220,38,38,.8))';
+            connectivityChip.style.color = '#fff';
+            connectivityChip.title = 'Invalid or expired API key';
+            messageDiv.textContent = `✗ ${result.message} (HTTP ${result.httpStatus})`;
+            messageDiv.style.color = '#fecaca';
+            addNotif('Invalid Supabase API key', { type: 'error' });
+            break;
+            
+          case 'network':
+            connectivityChip.textContent = 'Network Blocked';
+            connectivityChip.style.background = 'linear-gradient(180deg, rgba(251,191,36,.8), rgba(245,158,11,.8))';
+            connectivityChip.style.color = '#fff';
+            connectivityChip.title = 'Network error - possible firewall';
+            messageDiv.textContent = `⚠ ${result.message}`;
+            messageDiv.style.color = '#fcd34d';
+            addNotif('Network blocked - check firewall settings', { type: 'warning' });
+            break;
+            
+          case 'not-configured':
+            connectivityChip.textContent = 'Not Configured';
+            connectivityChip.style.background = 'rgba(255,255,255,.18)';
+            connectivityChip.style.color = 'var(--ink)';
+            connectivityChip.title = result.message;
+            messageDiv.textContent = `ℹ ${result.message}`;
+            messageDiv.style.color = 'var(--muted)';
+            if (result.missing) {
+              messageDiv.textContent += `\nMissing: ${result.missing.join(', ')}`;
+            }
+            addNotif('Please configure all settings first', { type: 'warning' });
+            break;
+            
+          default:
+            connectivityChip.textContent = 'Error';
+            connectivityChip.style.background = 'linear-gradient(180deg, rgba(239,68,68,.8), rgba(220,38,38,.8))';
+            connectivityChip.style.color = '#fff';
+            connectivityChip.title = 'Connection error';
+            messageDiv.textContent = `✗ ${result.message}`;
+            messageDiv.style.color = '#fecaca';
+            addNotif('Connection test failed', { type: 'error' });
         }
       } catch (err) {
-        statusChip.textContent = 'Remote: Error (failed to load)';
-        statusChip.style.background = 'linear-gradient(180deg, rgba(239,68,68,.8), rgba(220,38,38,.8))';
-        statusChip.style.color = '#fff';
-        addNotif(`Failed to test connection: ${err.message}`, { type: 'error' });
+        connectivityChip.textContent = 'Error';
+        connectivityChip.style.background = 'linear-gradient(180deg, rgba(239,68,68,.8), rgba(220,38,38,.8))';
+        connectivityChip.style.color = '#fff';
+        messageDiv.textContent = `✗ ${err.message}`;
+        detailsDiv.style.display = 'block';
+        addNotif(`Test failed: ${err.message}`, { type: 'error' });
       }
     }
     
-    // Update connection status display
-    function updateConnectionStatus() {
-      const url = localStorage.getItem(NS + 'supabase_url') || '';
-      const key = localStorage.getItem(NS + 'supabase_key') || '';
-      const useRemote = localStorage.getItem(NS + 'use_remote') === 'true';
-      const statusChip = qs('#connectionStatus');
+    // Update config status chip
+    function updateConfigStatus() {
+      if (!supabaseSettings) {
+        return;
+      }
       
-      if (!useRemote || !url || !key) {
-        statusChip.textContent = 'Local only';
-        statusChip.style.background = 'rgba(255,255,255,.18)';
-        statusChip.style.color = 'var(--ink)';
-      } else {
-        statusChip.textContent = 'Remote (configured)';
+      const config = supabaseSettings.readConfig();
+      const statusChip = qs('#configStatus');
+      
+      if (config.url && config.anon && config.enabled) {
+        statusChip.textContent = 'Configured';
         statusChip.style.background = 'linear-gradient(180deg, rgba(6,182,212,.8), rgba(8,145,178,.8))';
         statusChip.style.color = '#fff';
+        statusChip.title = 'All settings configured and enabled';
+      } else if (config.url && config.anon && !config.enabled) {
+        statusChip.textContent = 'Disabled';
+        statusChip.style.background = 'rgba(255,255,255,.18)';
+        statusChip.style.color = 'var(--muted)';
+        statusChip.title = 'Configured but not enabled';
+      } else {
+        statusChip.textContent = 'Not Configured';
+        statusChip.style.background = 'rgba(255,255,255,.18)';
+        statusChip.style.color = 'var(--muted)';
+        statusChip.title = 'Missing URL or anon key';
       }
     }
     
-    // Toggle key visibility
+    // Reset configuration
+    function resetRemoteConfig() {
+      if (!confirm('This will clear all Supabase configuration and reload the page. Continue?')) {
+        return;
+      }
+      
+      if (!supabaseSettings) {
+        addNotif('Settings module not loaded', { type: 'error' });
+        return;
+      }
+      
+      try {
+        supabaseSettings.resetConfig();
+        addNotif('Configuration reset. Reloading...', { type: 'success' });
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      } catch (err) {
+        addNotif(`Reset failed: ${err.message}`, { type: 'error' });
+      }
+    }
+    
+    // Show diagnostics
+    function showDiagnostics() {
+      if (!supabaseSettings) {
+        addNotif('Settings module not loaded', { type: 'error' });
+        return;
+      }
+      
+      const output = qs('#diagnosticsOutput');
+      const content = qs('#diagnosticsContent');
+      
+      try {
+        const diag = supabaseSettings.getDiagnostics();
+        content.textContent = JSON.stringify(diag, null, 2);
+        output.style.display = 'block';
+        
+        // Log to console as well
+        console.log('[Settings] Diagnostics:', diag);
+        
+        addNotif('Diagnostics printed to console', { type: 'info' });
+      } catch (err) {
+        addNotif(`Diagnostics failed: ${err.message}`, { type: 'error' });
+      }
+    }
+    
+    // Event listeners
     qs('#toggleKeyVisibility').addEventListener('click', () => {
       const input = qs('#supabaseKey');
       const btn = qs('#toggleKeyVisibility');
@@ -3241,28 +3451,25 @@
       }
     });
     
-    // Save settings button
     qs('#btnSaveSettings').addEventListener('click', () => {
       saveSettings();
     });
     
-    // Test connection button
     qs('#btnTestConnection').addEventListener('click', () => {
       testSupabaseConnection();
     });
     
-    // Toggle checkbox listener
-    qs('#useSupabase').addEventListener('change', () => {
-      updateConnectionStatus();
+    qs('#btnResetConfig').addEventListener('click', () => {
+      resetRemoteConfig();
     });
     
-    // Initialize settings UI
-    function initSettings() {
-      loadSettings();
-    }
+    qs('#btnShowDiagnostics').addEventListener('click', () => {
+      showDiagnostics();
+    });
     
-    // Load settings on initial page load
-    loadSettings();
+    qs('#useSupabase').addEventListener('change', () => {
+      updateConfigStatus();
+    });
 
     // =======================
     // Data Migration Tools: Seed, Pull, CSV Import

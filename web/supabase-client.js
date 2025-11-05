@@ -13,11 +13,27 @@ try {
   supabaseLoadError = err.message;
 }
 
-// Read config from localStorage
-const NS = 'rc_unified_';
-const storedUrl = localStorage.getItem(NS + 'supabase_url');
-const storedKey = localStorage.getItem(NS + 'supabase_key');
-const useRemote = localStorage.getItem(NS + 'use_remote') === 'true';
+// Read config from localStorage using unified keys with legacy fallback
+const UNIFIED_PREFIX = 'rc_unified_';
+const LEGACY_PREFIX = 'rc_';
+
+function getStoredValue(unifiedKey, legacyKeys = []) {
+  // Try unified key first
+  let value = localStorage.getItem(UNIFIED_PREFIX + unifiedKey);
+  if (value) return value;
+  
+  // Try legacy keys as fallback
+  for (const legacyKey of legacyKeys) {
+    value = localStorage.getItem(LEGACY_PREFIX + legacyKey);
+    if (value) return value;
+  }
+  
+  return null;
+}
+
+const storedUrl = getStoredValue('supabase_url', ['supabase_url']);
+const storedKey = getStoredValue('supabase_anon', ['supabase_key', 'supabase_anon']);
+const useRemote = getStoredValue('use_supabase', ['use_remote', 'use_supabase']) === 'true';
 
 // Initialize Supabase client only when both URL and key exist AND use_remote is true AND createClient loaded
 const url = window.SUPABASE_URL || storedUrl;
