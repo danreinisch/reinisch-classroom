@@ -3439,6 +3439,20 @@
           console.log('[Settings] Legacy keys migrated:', migrationResult.message);
         }
         
+        // Auto-enable if eligible (URL + Anon present, no opt-out)
+        const autoEnableResult = supabaseSettings.autoEnableIfEligible();
+        if (autoEnableResult.changed) {
+          console.log('[Settings] Auto-enabled Supabase:', autoEnableResult.reason);
+          
+          // Show toast notification
+          addNotif('Supabase enabled — you can turn this off in Settings', { type: 'info' });
+          
+          // Dispatch event for other listeners
+          window.dispatchEvent(new CustomEvent('rc:remote-config-changed', { 
+            detail: { autoEnabled: true } 
+          }));
+        }
+        
         // Initialize settings UI
         loadSettings();
       } catch (err) {
@@ -3499,6 +3513,29 @@
       updateConfigStatus();
     }
     
+    // Helper: Handle auto-enable after credentials change
+    function handleAutoEnableCheck() {
+      if (!supabaseSettings) return false;
+      
+      const autoEnableResult = supabaseSettings.autoEnableIfEligible();
+      if (autoEnableResult.changed) {
+        console.log('[Settings] Auto-enabled:', autoEnableResult.reason);
+        addNotif('Supabase auto-enabled (credentials detected)', { type: 'info' });
+        
+        // Reload settings to reflect auto-enable
+        loadSettings();
+        
+        // Dispatch event for other listeners
+        window.dispatchEvent(new CustomEvent('rc:remote-config-changed', { 
+          detail: { autoEnabled: true } 
+        }));
+        
+        return true;
+      }
+      
+      return false;
+    }
+    
     // Save settings using helper
     async function saveSettings() {
       if (!supabaseSettings) {
@@ -3511,11 +3548,31 @@
       const enabled = qs('#useSupabase').checked;
       
       try {
+        // Get current config to check opt-out status and if credentials are changing
+        const currentConfig = supabaseSettings.readConfig();
+        
+        // Detect if credentials are being added/changed
+        // Supabase anon keys are JWT tokens, typically 100+ characters
+        // Check for minimum realistic key length (e.g., 50 chars)
+        const MIN_SUPABASE_KEY_LENGTH = 50;
+        const isAddingCredentials = !!(url && key && key.length >= MIN_SUPABASE_KEY_LENGTH);
+        
         // Use helper to save with anon key preservation
         supabaseSettings.writeConfig(
           { url, anon: key, enabled },
           { preserveAnonIfMasked: true }
         );
+        
+        // Only auto-enable if credentials were just added AND toggle is unchecked AND no opt-out
+        const shouldAutoEnable = !enabled && 
+                                 !currentConfig.optOut && 
+                                 isAddingCredentials;
+        
+        if (shouldAutoEnable) {
+          if (handleAutoEnableCheck()) {
+            return; // Auto-enable triggered, settings reloaded
+          }
+        }
         
         addNotif('Settings saved. Reload the page to apply changes.', { type: 'success' });
         
@@ -3628,20 +3685,25 @@
       const statusChip = qs('#configStatus');
       
       if (config.url && config.anon && config.enabled) {
-        statusChip.textContent = 'Configured';
-        statusChip.style.background = 'linear-gradient(180deg, rgba(6,182,212,.8), rgba(8,145,178,.8))';
+        statusChip.textContent = 'Enabled';
+        statusChip.style.background = 'linear-gradient(180deg, rgba(34,197,94,.8), rgba(22,163,74,.8))';
         statusChip.style.color = '#fff';
-        statusChip.title = 'All settings configured and enabled';
+        statusChip.title = 'Supabase is enabled';
       } else if (config.url && config.anon && !config.enabled) {
         statusChip.textContent = 'Disabled';
         statusChip.style.background = 'rgba(255,255,255,.18)';
         statusChip.style.color = 'var(--muted)';
-        statusChip.title = 'Configured but not enabled';
+        statusChip.title = 'Supabase is configured but disabled';
+      } else if (config.url || config.anon) {
+        statusChip.textContent = 'Partially Configured';
+        statusChip.style.background = 'rgba(251,191,36,.3)';
+        statusChip.style.color = 'var(--ink)';
+        statusChip.title = 'Missing URL or anon key';
       } else {
         statusChip.textContent = 'Not Configured';
         statusChip.style.background = 'rgba(255,255,255,.18)';
         statusChip.style.color = 'var(--muted)';
-        statusChip.title = 'Missing URL or anon key';
+        statusChip.title = 'No Supabase configuration';
       }
     }
     
@@ -3720,8 +3782,34 @@
       showDiagnostics();
     });
     
-    qs('#useSupabase').addEventListener('change', () => {
+    qs('#useSupabase').addEventListener('change', (e) => {
+      if (!supabaseSettings) {
+        updateConfigStatus();
+        return;
+      }
+      
+      const isEnabled = e.target.checked;
+      const config = supabaseSettings.readConfig();
+      
+      if (isEnabled) {
+        // User manually enabled: clear opt-out flag, preserve autoEnabled for tracking
+        supabaseSettings.writeConfig({ enabled: true, optOut: false });
+        console.log('[Settings] User manually enabled Supabase, cleared opt-out');
+        addNotif('Supabase enabled', { type: 'success' });
+      } else {
+        // User manually disabled: set opt-out flag, clear autoEnabled
+        supabaseSettings.writeConfig({ enabled: false, optOut: true, autoEnabled: false });
+        console.log('[Settings] User disabled Supabase, set opt-out flag');
+        addNotif('Supabase disabled - this preference will be remembered', { type: 'info' });
+      }
+      
+      // Update chips immediately
       updateConfigStatus();
+      
+      // Dispatch event for other listeners
+      window.dispatchEvent(new CustomEvent('rc:remote-config-changed', { 
+        detail: { enabled: isEnabled, userToggled: true } 
+      }));
     });
 
     // =======================
