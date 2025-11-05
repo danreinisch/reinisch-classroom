@@ -1486,6 +1486,9 @@
       qs('#studentSignInMsg').innerHTML = '';
     });
     
+    // Track if coming from sign-in modal for teacher auth
+    let isFromSignInModal = false;
+    
     // Sign-in modal: Teacher button
     on('#signInTeacher', 'click', () => {
       // Check teacher password (configurable via localStorage, default 'teacher123')
@@ -1493,6 +1496,7 @@
       qs('#signInModal').classList.remove('show');
       qs('#teachModal').classList.add('show');
       qs('#teachPass').focus();
+      isFromSignInModal = true; // Set flag
     });
     
     // Sign-in modal: Skip button
@@ -1545,8 +1549,15 @@
     });
     
     // Teacher auth
-    on('#btnTeacher', 'click', ()=>{ qs('#teachModal').classList.add('show'); qs('#teachPass').focus(); });
-    on('#teachCancel', 'click', ()=> qs('#teachModal').classList.remove('show'));
+    on('#btnTeacher', 'click', ()=>{ 
+      qs('#teachModal').classList.add('show'); 
+      qs('#teachPass').focus(); 
+      isFromSignInModal = false; // Not from sign-in modal
+    });
+    on('#teachCancel', 'click', ()=> {
+      qs('#teachModal').classList.remove('show');
+      isFromSignInModal = false; // Reset flag
+    });
     on('#teachGo', 'click', ()=>{
       const input = qs('#teachPass').value;
       const teacherPassword = localStorage.getItem('rc_teacher_pass') || TEACHER_PW_LOCAL;
@@ -1554,11 +1565,11 @@
         qs('#teachModal').classList.remove('show');
         
         // Check if coming from sign-in modal
-        const isFromSignIn = qs('#signInModal').classList.contains('show');
-        if (isFromSignIn) {
+        if (isFromSignInModal) {
           // User signed in as teacher via sign-in modal
           setAuth({ role: 'teacher' });
           updateUserChip();
+          isFromSignInModal = false; // Reset flag
         }
         
         showTeacher();
