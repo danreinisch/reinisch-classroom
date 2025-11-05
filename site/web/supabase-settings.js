@@ -158,14 +158,20 @@ export async function testConnectivity(cfg) {
   const endpoint = `${url}/auth/v1/settings`;
   
   try {
+    // Create AbortController for timeout (better browser compatibility)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    
     const response = await fetch(endpoint, {
       method: 'GET',
       headers: {
         'apikey': cfg.anon,
         'Authorization': `Bearer ${cfg.anon}`
       },
-      signal: AbortSignal.timeout(10000) // 10 second timeout
+      signal: controller.signal
     });
+    
+    clearTimeout(timeoutId);
     
     if (response.ok) {
       return {

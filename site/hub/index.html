@@ -3341,7 +3341,7 @@
             messageDiv.textContent = `ℹ ${result.message}`;
             messageDiv.style.color = 'var(--muted)';
             if (result.missing) {
-              messageDiv.textContent += `\nMissing: ${result.missing.join(', ')}`;
+              messageDiv.innerHTML = `ℹ ${result.message}<br>Missing: ${result.missing.join(', ')}`;
             }
             addNotif('Please configure all settings first', { type: 'warning' });
             break;
