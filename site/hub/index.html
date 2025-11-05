@@ -3564,7 +3564,11 @@
         );
         
         // Only auto-enable if credentials were just added AND toggle is unchecked AND no opt-out
-        if (!enabled && !currentConfig.optOut && isAddingCredentials) {
+        const shouldAutoEnable = !enabled && 
+                                 !currentConfig.optOut && 
+                                 isAddingCredentials;
+        
+        if (shouldAutoEnable) {
           if (handleAutoEnableCheck()) {
             return; // Auto-enable triggered, settings reloaded
           }

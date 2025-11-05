@@ -157,7 +157,7 @@ export function migrateLegacyKeys() {
  * @param {Object} config - Configuration object from readConfig()
  * @returns {boolean} True if both URL and Anon key are present and non-empty
  */
-function hasValidCredentials(config) {
+export function hasValidCredentials(config) {
   return !!(config.url?.trim() && config.anon?.trim());
 }
 
