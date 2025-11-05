@@ -717,7 +717,7 @@ const remote = supabase && {
  * Resolves goal_id from goal_code for remote mode, uses goal_code directly for local mode
  */
 export async function addProgressByGoalCode({ student_code, goal_code, date, points = '', percent = null, method = '', by_name = 'Teacher', via = 'csv_import', notes = '' }) {
-  if (isRemote) {
+  if (isRemote && remote) {
     // Remote mode: need to resolve goal_id from goal_code
     const { data: stu, error: e1 } = await supabase.from('students').select('id').eq('code', student_code).single();
     if (e1) throw e1;
@@ -729,11 +729,11 @@ export async function addProgressByGoalCode({ student_code, goal_code, date, poi
       .single();
     if (e2) throw e2;
     
-    return db.addProgress({ student_code, goal_id: goal.id, date, points, percent, method, by_name, via, notes });
+    // Call remote.addProgress directly to avoid recursion
+    return remote.addProgress({ student_code, goal_id: goal.id, date, points, percent, method, by_name, via, notes });
   } else {
     // Local mode: store with goal_code directly
-    const arr = store.get('progressEntries', []);
-    arr.push({ 
+    return local.addProgress({ 
       student_code, 
       goal_code, 
       date, 
@@ -742,11 +742,8 @@ export async function addProgressByGoalCode({ student_code, goal_code, date, poi
       method, 
       by_name, 
       via, 
-      notes,
-      created_at: new Date().toISOString() 
+      notes
     });
-    store.set('progressEntries', arr);
-    return true;
   }
 }
 

@@ -4842,10 +4842,13 @@
     let currentQuestionIndex = null;
     
     // Helper: Parse CSV text
+    // Note: Simple implementation for basic CSV files
+    // Does not handle quoted fields with commas - ensure CSV data uses simple format
     function parseCSV(text) {
       const lines = text.trim().split('\n');
       return lines.map(line => {
-        // Simple CSV parsing (no quoted field support for now)
+        // Simple CSV parsing (no quoted field support)
+        // For production use, consider a CSV library if complex formats are needed
         return line.split(',').map(cell => cell.trim());
       });
     }
@@ -4922,6 +4925,7 @@
         }
       } catch (err) {
         console.error('Failed to load assignments:', err);
+        addNotif('Unable to load assignments. Please check your connection.', { type: 'error' });
       }
     }
     

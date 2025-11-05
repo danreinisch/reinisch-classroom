@@ -40,9 +40,11 @@ export function buildCodebookFromIEPCsv(csvData) {
       continue;
     }
 
-    const [student_code, student_name, goal_area, goal_code] = row.map(cell => 
-      typeof cell === 'string' ? cell.trim() : String(cell || '').trim()
-    );
+    // Extract first 4 columns explicitly, trim strings
+    const student_code = String(row[0] || '').trim();
+    const student_name = String(row[1] || '').trim();
+    const goal_area = String(row[2] || '').trim();
+    const goal_code = String(row[3] || '').trim();
 
     // Skip rows with empty critical fields
     if (!student_code || !goal_area || !goal_code) {

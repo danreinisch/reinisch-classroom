@@ -43,6 +43,10 @@ export function validateManifest(manifest) {
   };
 }
 
+// Constants for question detection
+const MIN_QUESTION_LENGTH = 10;
+const MAX_QUESTION_LENGTH = 500;
+
 /**
  * Detect questions from HTML content
  * Looks for data-qref attributes first, then auto-numbers block-level elements
@@ -75,7 +79,7 @@ export function detectQuestionsFromHTML(htmlContent) {
   blockElements.forEach((el, idx) => {
     // Skip if it's likely a container with nested questions
     const text = el.textContent.trim();
-    if (text.length > 10 && text.length < 500) { // Reasonable question length
+    if (text.length > MIN_QUESTION_LENGTH && text.length < MAX_QUESTION_LENGTH) {
       const q_ref = `Q${idx + 1}`;
       const label = text.substring(0, 100);
       questions.push({
@@ -119,19 +123,19 @@ export function detectQuestionsFromTXT(txtContent) {
 /**
  * Detect questions from Google Forms CSV headers
  * CSV first row contains column headers; question columns start after standard fields
+ * Note: Standard columns vary based on Google Forms settings
  */
 export function detectQuestionsFromGoogleFormCSV(csvHeaders) {
   const questions = [];
   
-  // Standard Google Forms columns: Timestamp, Email Address, Score (optional)
-  // Question columns come after these
-  const skipColumns = ['timestamp', 'email', 'score', 'username'];
+  // Common Google Forms standard columns (lowercase for comparison)
+  const standardColumns = ['timestamp', 'email', 'email address', 'score', 'username', 'name'];
   
   csvHeaders.forEach((header, idx) => {
     const normalized = header.toLowerCase().trim();
     
     // Skip standard columns
-    if (skipColumns.some(skip => normalized.includes(skip))) {
+    if (standardColumns.some(std => normalized === std || normalized.includes(std))) {
       return;
     }
 
