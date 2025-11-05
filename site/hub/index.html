@@ -1482,8 +1482,16 @@
         // Load student codes
         const students = await db.listStudents();
         const select = qs('#studentCodeSelect');
-        select.innerHTML = '<option value="">-- Select your code --</option>' + 
-          students.map(s => `<option value="${s.code}">${s.code}${s.name && s.name !== s.code ? ' - ' + s.name : ''}</option>`).join('');
+        // Clear existing options
+        select.innerHTML = '<option value="">-- Select your code --</option>';
+        
+        // Add student options with proper escaping
+        students.forEach(s => {
+          const option = document.createElement('option');
+          option.value = s.code;
+          option.textContent = s.code + (s.name && s.name !== s.code ? ' - ' + s.name : '');
+          select.appendChild(option);
+        });
         
         // Show student sign-in modal
         qs('#signInModal').classList.remove('show');
