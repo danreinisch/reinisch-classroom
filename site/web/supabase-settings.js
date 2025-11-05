@@ -189,8 +189,7 @@ export function autoEnableIfEligible() {
   }
   
   // Auto-enable: we have credentials, no opt-out, and not currently enabled
-  localStorage.setItem(KEYS.unified.enabled, 'true');
-  localStorage.setItem(KEYS.unified.autoEnabled, 'true');
+  writeConfig({ enabled: true, autoEnabled: true });
   
   console.log('[supabase-settings] Auto-enabled Supabase (credentials detected, no opt-out)');
   

@@ -3513,6 +3513,29 @@
       updateConfigStatus();
     }
     
+    // Helper: Handle auto-enable after credentials change
+    function handleAutoEnableCheck() {
+      if (!supabaseSettings) return false;
+      
+      const autoEnableResult = supabaseSettings.autoEnableIfEligible();
+      if (autoEnableResult.changed) {
+        console.log('[Settings] Auto-enabled:', autoEnableResult.reason);
+        addNotif('Supabase auto-enabled (credentials detected)', { type: 'info' });
+        
+        // Reload settings to reflect auto-enable
+        loadSettings();
+        
+        // Dispatch event for other listeners
+        window.dispatchEvent(new CustomEvent('rc:remote-config-changed', { 
+          detail: { autoEnabled: true } 
+        }));
+        
+        return true;
+      }
+      
+      return false;
+    }
+    
     // Save settings using helper
     async function saveSettings() {
       if (!supabaseSettings) {
@@ -3534,16 +3557,10 @@
           { preserveAnonIfMasked: true }
         );
         
-        // After saving, check if we should auto-enable
+        // After saving, check if we should auto-enable (only if not manually enabled)
         if (!enabled && !currentConfig.optOut) {
-          const autoEnableResult = supabaseSettings.autoEnableIfEligible();
-          if (autoEnableResult.changed) {
-            console.log('[Settings] Auto-enabled on Save:', autoEnableResult.reason);
-            addNotif('Supabase auto-enabled (credentials detected)', { type: 'info' });
-            
-            // Reload settings to reflect auto-enable
-            loadSettings();
-            return;
+          if (handleAutoEnableCheck()) {
+            return; // Auto-enable triggered, settings reloaded
           }
         }
         
