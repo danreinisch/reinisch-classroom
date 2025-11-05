@@ -9,7 +9,9 @@ const KEYS = {
   unified: {
     url: UNIFIED_PREFIX + 'supabase_url',
     anon: UNIFIED_PREFIX + 'supabase_anon',
-    enabled: UNIFIED_PREFIX + 'use_supabase'
+    enabled: UNIFIED_PREFIX + 'use_supabase',
+    optOut: UNIFIED_PREFIX + 'supabase_opt_out',
+    autoEnabled: UNIFIED_PREFIX + 'supabase_auto_enabled'
   },
   legacy: {
     url: LEGACY_PREFIX + 'supabase_url',
@@ -29,6 +31,8 @@ export function readConfig() {
   let url = localStorage.getItem(KEYS.unified.url);
   let anon = localStorage.getItem(KEYS.unified.anon);
   let enabled = localStorage.getItem(KEYS.unified.enabled) === 'true';
+  let optOut = localStorage.getItem(KEYS.unified.optOut) === 'true';
+  let autoEnabled = localStorage.getItem(KEYS.unified.autoEnabled) === 'true';
   
   // Fallback to legacy keys if unified keys are missing
   if (!url) {
@@ -46,12 +50,12 @@ export function readConfig() {
               localStorage.getItem(KEYS.legacy.remote) === 'true';
   }
   
-  return { url, anon, enabled };
+  return { url, anon, enabled, optOut, autoEnabled };
 }
 
 /**
  * Write configuration to localStorage
- * @param {Object} config - { url?, anon?, enabled? }
+ * @param {Object} config - { url?, anon?, enabled?, optOut?, autoEnabled? }
  * @param {Object} options - { preserveAnonIfMasked: boolean }
  */
 export function writeConfig(config = {}, options = {}) {
@@ -80,6 +84,16 @@ export function writeConfig(config = {}, options = {}) {
   // Update enabled flag if provided
   if (config.enabled !== undefined) {
     localStorage.setItem(KEYS.unified.enabled, config.enabled.toString());
+  }
+  
+  // Update optOut flag if provided
+  if (config.optOut !== undefined) {
+    localStorage.setItem(KEYS.unified.optOut, config.optOut.toString());
+  }
+  
+  // Update autoEnabled flag if provided
+  if (config.autoEnabled !== undefined) {
+    localStorage.setItem(KEYS.unified.autoEnabled, config.autoEnabled.toString());
   }
   
   return readConfig();
@@ -231,6 +245,8 @@ export function resetConfig() {
   localStorage.removeItem(KEYS.unified.url);
   localStorage.removeItem(KEYS.unified.anon);
   localStorage.removeItem(KEYS.unified.enabled);
+  localStorage.removeItem(KEYS.unified.optOut);
+  localStorage.removeItem(KEYS.unified.autoEnabled);
   
   // Also remove legacy keys for clean slate
   localStorage.removeItem(KEYS.legacy.url);
@@ -255,9 +271,54 @@ export function getDiagnostics() {
     anon: config.anon ? `${config.anon.substring(0, 4)}... (${config.anon.length} chars)` : '(empty)',
     anonLength: config.anon?.length || 0,
     enabled: config.enabled,
+    optOut: config.optOut,
+    autoEnabled: config.autoEnabled,
     hasUnifiedUrl: !!localStorage.getItem(KEYS.unified.url),
     hasUnifiedAnon: !!localStorage.getItem(KEYS.unified.anon),
     hasLegacyUrl: !!localStorage.getItem(KEYS.legacy.url),
     hasLegacyAnon: !!(localStorage.getItem(KEYS.legacy.anon) || localStorage.getItem(KEYS.legacy.anon_alt))
   };
+}
+
+/**
+ * Check if auto-enable should be triggered
+ * Returns { shouldEnable: boolean, reason: string }
+ */
+export function checkAutoEnable() {
+  const config = readConfig();
+  
+  // Don't auto-enable if user has explicitly opted out
+  if (config.optOut) {
+    return { shouldEnable: false, reason: 'User has opted out' };
+  }
+  
+  // Don't auto-enable if already enabled
+  if (config.enabled) {
+    return { shouldEnable: false, reason: 'Already enabled' };
+  }
+  
+  // Check if both URL and anon key are present
+  if (!config.url || !config.anon) {
+    return { shouldEnable: false, reason: 'URL or anon key missing' };
+  }
+  
+  // All conditions met - should auto-enable
+  return { shouldEnable: true, reason: 'URL and anon key present, not opted out' };
+}
+
+/**
+ * Execute auto-enable if conditions are met
+ * Returns { enabled: boolean, reason: string, wasAutoEnabled: boolean }
+ */
+export function executeAutoEnable() {
+  const check = checkAutoEnable();
+  
+  if (!check.shouldEnable) {
+    return { enabled: false, reason: check.reason, wasAutoEnabled: false };
+  }
+  
+  // Enable Supabase and mark as auto-enabled
+  writeConfig({ enabled: true, autoEnabled: true });
+  
+  return { enabled: true, reason: 'Auto-enabled successfully', wasAutoEnabled: true };
 }

@@ -3439,6 +3439,14 @@
           console.log('[Settings] Legacy keys migrated:', migrationResult.message);
         }
         
+        // Check and execute auto-enable
+        const autoEnableResult = supabaseSettings.executeAutoEnable();
+        if (autoEnableResult.wasAutoEnabled) {
+          console.log('[Settings] Supabase auto-enabled:', autoEnableResult.reason);
+          // Show a subtle toast notification
+          addNotif('Supabase enabled — you can turn this off in Settings', { type: 'info' });
+        }
+        
         // Initialize settings UI
         loadSettings();
       } catch (err) {
@@ -3517,7 +3525,21 @@
           { preserveAnonIfMasked: true }
         );
         
+        // Check if auto-enable should trigger after save
+        const autoEnableResult = supabaseSettings.executeAutoEnable();
+        if (autoEnableResult.wasAutoEnabled) {
+          console.log('[Settings] Supabase auto-enabled on save:', autoEnableResult.reason);
+          addNotif('Supabase enabled — you can turn this off in Settings', { type: 'info' });
+        }
+        
         addNotif('Settings saved. Reload the page to apply changes.', { type: 'success' });
+        
+        // Reload settings to show updated state
+        loadSettings();
+      } catch (err) {
+        addNotif(`Failed to save settings: ${err.message}`, { type: 'error' });
+      }
+    }
         
         // Reload settings to show updated state
         loadSettings();
@@ -3720,7 +3742,23 @@
       showDiagnostics();
     });
     
-    qs('#useSupabase').addEventListener('change', () => {
+    qs('#useSupabase').addEventListener('change', (e) => {
+      const isChecked = e.target.checked;
+      
+      if (!supabaseSettings) {
+        return;
+      }
+      
+      // If user manually toggles OFF, set opt-out flag
+      if (!isChecked) {
+        supabaseSettings.writeConfig({ optOut: true });
+        console.log('[Settings] User opted out of Supabase auto-enable');
+      } else {
+        // If user manually toggles ON, clear opt-out flag
+        supabaseSettings.writeConfig({ optOut: false });
+        console.log('[Settings] User opted in to Supabase');
+      }
+      
       updateConfigStatus();
     });
 
