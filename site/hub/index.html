@@ -677,7 +677,7 @@
       <div class="brand">Reinisch Classroom — Classroom Hub</div>
       <button class="btn small" id="btnThemeToggle" title="Toggle glass theme">Glass: Bold</button>
       <span id="currentUserChip" class="chip">Signed out</span>
-      <button class="btn small" id="btnStudent">Student Portal</button>
+      <a class="btn small" id="btnStudent" href="/student/">Student Portal</a>
       <button class="btn primary small" id="btnTeacher">Teacher Center 🔒</button>
     </div>
   </div>
@@ -1180,6 +1180,56 @@
     </div>
   </div>
 
+  <!-- Sign-in modal -->
+  <div class="modal-backdrop" id="signInModal">
+    <div class="modal card" style="max-width:480px">
+      <div class="card-header"><div>Welcome to Classroom Hub</div></div>
+      <div class="subtle" style="margin-bottom:16px">Choose your role to continue:</div>
+      
+      <div style="display:grid;gap:12px">
+        <button class="btn" id="signInStudent" style="padding:16px;text-align:left;display:flex;align-items:center;gap:12px">
+          <span style="font-size:32px">🧑</span>
+          <div>
+            <div style="font-weight:900;font-size:16px">Student</div>
+            <div class="subtle" style="font-size:13px">Access your assignments and progress</div>
+          </div>
+        </button>
+        
+        <button class="btn" id="signInTeacher" style="padding:16px;text-align:left;display:flex;align-items:center;gap:12px">
+          <span style="font-size:32px">👨‍🏫</span>
+          <div>
+            <div style="font-weight:900;font-size:16px">Teacher</div>
+            <div class="subtle" style="font-size:13px">Manage classes and track progress</div>
+          </div>
+        </button>
+      </div>
+      
+      <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--line);text-align:center">
+        <button class="btn small" id="signInSkip" style="color:var(--muted)">Continue without sign in</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Student sign-in modal -->
+  <div class="modal-backdrop" id="studentSignInModal">
+    <div class="modal card" style="max-width:420px">
+      <div class="card-header"><div>Student Sign In</div></div>
+      <label>Student Code
+        <select id="studentCodeSelect">
+          <option value="">-- Select your code --</option>
+        </select>
+      </label>
+      <label>Password
+        <input id="studentPassword" type="password" placeholder="Enter your password">
+      </label>
+      <div class="subtle" id="studentSignInMsg" style="min-height:18px;margin-top:6px"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:10px">
+        <button class="btn small" id="studentSignInCancel">Back</button>
+        <button class="btn primary small" id="studentSignInGo">Sign In</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Add Progress modal -->
   <div class="modal-backdrop" id="progModal">
     <div class="modal card">
@@ -1381,19 +1431,163 @@
     applyTheme(currentTheme);
     on('#btnThemeToggle', 'click', ()=> applyTheme(currentTheme === 'glass-bold' ? 'normal' : 'glass-bold'));
 
+    // Sign-in modal logic
+    // Check if user is already signed in
+    function getAuth() {
+      try {
+        return JSON.parse(localStorage.getItem('rc_auth'));
+      } catch {
+        return null;
+      }
+    }
+    
+    function setAuth(authData) {
+      localStorage.setItem('rc_auth', JSON.stringify(authData));
+    }
+    
+    function updateUserChip() {
+      const auth = getAuth();
+      const chip = qs('#currentUserChip');
+      if (auth) {
+        if (auth.role === 'student') {
+          chip.textContent = `Student: ${auth.code}`;
+        } else if (auth.role === 'teacher') {
+          chip.textContent = 'Teacher';
+        } else {
+          chip.textContent = 'Signed out';
+        }
+      } else {
+        chip.textContent = 'Signed out';
+      }
+    }
+    
+    // Show sign-in modal on first visit if not authenticated
+    async function checkAndShowSignIn() {
+      const auth = getAuth();
+      if (!auth) {
+        qs('#signInModal').classList.add('show');
+      } else {
+        updateUserChip();
+      }
+    }
+    
+    // Sign-in modal: Student button
+    on('#signInStudent', 'click', async () => {
+      // Load student codes
+      const students = await db.listStudents();
+      const select = qs('#studentCodeSelect');
+      select.innerHTML = '<option value="">-- Select your code --</option>' + 
+        students.map(s => `<option value="${s.code}">${s.code}${s.name && s.name !== s.code ? ' - ' + s.name : ''}</option>`).join('');
+      
+      // Show student sign-in modal
+      qs('#signInModal').classList.remove('show');
+      qs('#studentSignInModal').classList.add('show');
+      qs('#studentPassword').value = '';
+      qs('#studentSignInMsg').innerHTML = '';
+    });
+    
+    // Sign-in modal: Teacher button
+    on('#signInTeacher', 'click', () => {
+      // Check teacher password (configurable via localStorage, default 'teacher123')
+      const teacherPassword = localStorage.getItem('rc_teacher_pass') || TEACHER_PW_LOCAL;
+      qs('#signInModal').classList.remove('show');
+      qs('#teachModal').classList.add('show');
+      qs('#teachPass').focus();
+    });
+    
+    // Sign-in modal: Skip button
+    on('#signInSkip', 'click', () => {
+      qs('#signInModal').classList.remove('show');
+    });
+    
+    // Student sign-in: Cancel button
+    on('#studentSignInCancel', 'click', () => {
+      qs('#studentSignInModal').classList.remove('show');
+      qs('#signInModal').classList.add('show');
+    });
+    
+    // Student sign-in: Sign In button
+    on('#studentSignInGo', 'click', async () => {
+      const code = qs('#studentCodeSelect').value;
+      const password = qs('#studentPassword').value;
+      const msgEl = qs('#studentSignInMsg');
+      
+      if (!code) {
+        msgEl.innerHTML = '<span style="color:#fecaca">Please select a student code</span>';
+        return;
+      }
+      
+      if (!password) {
+        msgEl.innerHTML = '<span style="color:#fecaca">Please enter a password</span>';
+        return;
+      }
+      
+      // Verify password
+      const isValid = await db.verifyStudentPassword(code, password);
+      
+      if (isValid) {
+        // Success: persist auth and redirect
+        setAuth({ role: 'student', code });
+        updateUserChip();
+        qs('#studentSignInModal').classList.remove('show');
+        // Redirect to student portal
+        window.location.href = '/student/';
+      } else {
+        msgEl.innerHTML = '<span style="color:#fecaca">Invalid password</span>';
+      }
+    });
+    
+    // Handle Enter key in student password field
+    qs('#studentPassword')?.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        qs('#studentSignInGo').click();
+      }
+    });
+    
     // Teacher auth
     on('#btnTeacher', 'click', ()=>{ qs('#teachModal').classList.add('show'); qs('#teachPass').focus(); });
     on('#teachCancel', 'click', ()=> qs('#teachModal').classList.remove('show'));
     on('#teachGo', 'click', ()=>{
       const input = qs('#teachPass').value;
-      if (input === TEACHER_PW_LOCAL) {
+      const teacherPassword = localStorage.getItem('rc_teacher_pass') || TEACHER_PW_LOCAL;
+      if (input === teacherPassword) {
         qs('#teachModal').classList.remove('show');
+        
+        // Check if coming from sign-in modal
+        const isFromSignIn = qs('#signInModal').classList.contains('show');
+        if (isFromSignIn) {
+          // User signed in as teacher via sign-in modal
+          setAuth({ role: 'teacher' });
+          updateUserChip();
+        }
+        
         showTeacher();
         qs('#currentUserChip').textContent = 'Teacher';
       } else {
         qs('#teachMsg').innerHTML = '<span style="color:#fecaca">Wrong password</span>';
       }
     });
+    
+    // Handle Enter key in teacher password field
+    qs('#teachPass')?.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        qs('#teachGo').click();
+      }
+    });
+    
+    // Student Portal button: intercept click if not signed in
+    on('#btnStudent', 'click', (e) => {
+      const auth = getAuth();
+      if (!auth || auth.role !== 'student') {
+        // Not signed in as student, show sign-in modal
+        e.preventDefault();
+        qs('#signInModal').classList.add('show');
+      }
+      // If signed in as student, let the link navigate naturally
+    });
+    
+    // Initialize: Check auth and show sign-in modal if needed
+    checkAndShowSignIn();
 
     // Area → Submenu → Tab mapping
     const AREA_MAP = {
