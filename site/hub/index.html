@@ -3548,8 +3548,11 @@
       const enabled = qs('#useSupabase').checked;
       
       try {
-        // Get current config to check opt-out status
+        // Get current config to check opt-out status and if credentials are changing
         const currentConfig = supabaseSettings.readConfig();
+        
+        // Detect if credentials are being added/changed (new key provided, not masked)
+        const isAddingCredentials = !!(url && key && key.length > 20);
         
         // Use helper to save with anon key preservation
         supabaseSettings.writeConfig(
@@ -3557,8 +3560,8 @@
           { preserveAnonIfMasked: true }
         );
         
-        // After saving, check if we should auto-enable (only if not manually enabled)
-        if (!enabled && !currentConfig.optOut) {
+        // Only auto-enable if credentials were just added AND toggle is unchecked AND no opt-out
+        if (!enabled && !currentConfig.optOut && isAddingCredentials) {
           if (handleAutoEnableCheck()) {
             return; // Auto-enable triggered, settings reloaded
           }
@@ -3782,12 +3785,12 @@
       const config = supabaseSettings.readConfig();
       
       if (isEnabled) {
-        // User manually enabled: clear opt-out flag
-        supabaseSettings.writeConfig({ enabled: true, optOut: false, autoEnabled: false });
+        // User manually enabled: clear opt-out flag, preserve autoEnabled for tracking
+        supabaseSettings.writeConfig({ enabled: true, optOut: false });
         console.log('[Settings] User manually enabled Supabase, cleared opt-out');
         addNotif('Supabase enabled', { type: 'success' });
       } else {
-        // User manually disabled: set opt-out flag
+        // User manually disabled: set opt-out flag, clear autoEnabled
         supabaseSettings.writeConfig({ enabled: false, optOut: true, autoEnabled: false });
         console.log('[Settings] User disabled Supabase, set opt-out flag');
         addNotif('Supabase disabled - this preference will be remembered', { type: 'info' });

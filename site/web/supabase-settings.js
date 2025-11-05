@@ -159,8 +159,8 @@ export function migrateLegacyKeys() {
 export function autoEnableIfEligible() {
   const config = readConfig();
   
-  // Check if credentials are present
-  const hasCredentials = config.url && config.anon;
+  // Check if credentials are present (non-empty strings)
+  const hasCredentials = !!(config.url?.trim() && config.anon?.trim());
   
   if (!hasCredentials) {
     return { 
