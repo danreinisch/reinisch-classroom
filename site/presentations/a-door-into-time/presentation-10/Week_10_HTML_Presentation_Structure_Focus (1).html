@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Week 10 - Structure Focus | A Door Into Time</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            color: #fff;
+            overflow: hidden;
+        }
+        
+        /* Background Image System */
+        .background-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+        
+        .background-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            opacity: 0;
+            transition: opacity 2s ease-in-out;
+        }
+        
+        .background-image.active {
+            opacity: 1;
+        }
+        
+        .background-image:nth-child(1) { background-image: url('image1.jpg'); }
+        .background-image:nth-child(2) { background-image: url('image2.jpg'); }
+        .background-image:nth-child(3) { background-image: url('image3.jpg'); }
+        .background-image:nth-child(4) { background-image: url('image4.jpg'); }
+        .background-image:nth-child(5) { background-image: url('image5.jpg'); }
+        .background-image:nth-child(6) { background-image: url('image6.jpg'); }
+        .background-image:nth-child(7) { background-image: url('image7.jpg'); }
+        .background-image:nth-child(8) { background-image: url('image8.jpg'); }
+        .background-image:nth-child(9) { background-image: url('image9.jpg'); }
+        
+        /* Dark overlay for better text readability */
+        .background-container::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: 1;
+        }
+        
+        .presentation-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            z-index: 2;
+        }
+        
+        .slide {
+            display: none;
+            width: 100%;
+            height: 100%;
+            padding: 40px;
+            position: absolute;
+            top: 0;
+            left: 0;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+        
+        .slide.active {
+            display: flex;
+        }
+        
+        /* Frosted glass effect for better readability */
+        .content-box {
+            background: rgba(26, 26, 46, 0.75);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 1000px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        
+        .slide h1 {
+            font-size: 3.5em;
+            margin-bottom: 20px;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.7);
+            color: #f4a261;
+        }
+        
+        .slide h2 {
+            font-size: 2.5em;
+            margin-bottom: 30px;
+            color: #e9c46a;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
+        }
+        
+        .slide h3 {
+            font-size: 2em;
+            margin-bottom: 20px;
+            color: #2a9d8f;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
+        }
+        
+        .slide p, .slide li {
+            font-size: 1.4em;
+            line-height: 1.6;
+            margin-bottom: 15px;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.7);
+        }
+        
+        .slide ul {
+            text-align: left;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .slide li {
+            margin-bottom: 10px;
+            padding-left: 10px;
+        }
+        
+        .day-header {
+            background: linear-gradient(135deg, #f4a261, #e76f51);
+            padding: 15px 40px;
+            border-radius: 10px;
+            font-size: 1.8em;
+            font-weight: bold;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        
+        .example-box {
+            background: rgba(42, 157, 143, 0.3);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            border: 2px solid #2a9d8f;
+            border-radius: 15px;
+            padding: 30px;
+            margin: 20px auto;
+            max-width: 900px;
+            text-align: left;
+        }
+        
+        .vocab-word {
+            background: linear-gradient(135deg, #e76f51, #f4a261);
+            padding: 20px;
+            border-radius: 15px;
+            font-size: 2.5em;
+            font-weight: bold;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        
+        .controls {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+            z-index: 1000;
+        }
+        
+        .control-btn {
+            background: rgba(244, 162, 97, 0.9);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            color: #1a1a2e;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 15px 30px;
+            font-size: 1.2em;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .control-btn:hover {
+            background: rgba(233, 196, 106, 0.95);
+            transform: scale(1.05);
+        }
+        
+        .control-btn:disabled {
+            background: rgba(102, 102, 102, 0.7);
+            cursor: not-allowed;
+            transform: scale(1);
+        }
+        
+        .slide-counter {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(244, 162, 97, 0.85);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 1.2em;
+            z-index: 1000;
+            color: #1a1a2e;
+            font-weight: bold;
+        }
+        
+        .home-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(42, 157, 143, 0.9);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-size: 1.2em;
+            z-index: 1000;
+            color: white;
+            font-weight: bold;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        
+        .home-btn:hover {
+            background: rgba(33, 134, 122, 0.95);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0,0,0,0.4);
+        }
+        
+        .parts-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            max-width: 900px;
+            margin: 20px auto;
+        }
+        
+        .part-box {
+            background: rgba(244, 162, 97, 0.3);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            border: 2px solid #f4a261;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .part-title {
+            color: #f4a261;
+            font-size: 1.6em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .prefix-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            max-width: 900px;
+            margin: 20px auto;
+        }
+        
+        .prefix-box {
+            background: rgba(42, 157, 143, 0.3);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            border: 2px solid #2a9d8f;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+        }
+        
+        .prefix-title {
+            color: #2a9d8f;
+            font-size: 1.4em;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Background Image Rotation System -->
+    <div class="background-container">
+        <div class="background-image active"></div>
+        <div class="background-image"></div>
+        <div class="background-image"></div>
+        <div class="background-image"></div>
+        <div class="background-image"></div>
+        <div class="background-image"></div>
+        <div class="background-image"></div>
+        <div class="background-image"></div>
+        <div class="background-image"></div>
+    </div>
+
+    <!-- Home Button -->
+    <a href="https://reinischclassroom.com/language-arts/" class="home-btn">
+        <span style="font-size: 1.3em;">←</span> Language Arts Home
+    </a>
+
+    <div class="presentation-container">
+        <div class="slide-counter" id="slideCounter">Slide 1 / 29</div>
+        
+        <!-- Slide 1: Title -->
+        <div class="slide active">
+            <div class="content-box">
+                <h1>Week 10</h1>
+                <h2>Chapters 29-31</h2>
+                <h2 style="color: #2a9d8f;">Structure Focus</h2>
+                <p style="font-size: 1.6em; margin-top: 30px;">Book: A Door Into Time by Shawn Inmon</p>
+            </div>
+        </div>
+
+        <!-- Slide 2: Weekly Overview -->
+        <div class="slide">
+            <div class="content-box">
+                <h2>This Week's Focus: How Stories Are Built</h2>
+                <ul>
+                    <li><strong>Day 1:</strong> Chapter 29 "Basic Training" - Story Organization</li>
+                    <li><strong>Day 2:</strong> Chapter 30 "Janta-ak's Journey" - Vocabulary Focus</li>
+                    <li><strong>Day 3:</strong> Chapter 31 "Godat-ta" - Action Structure</li>
+                    <li><strong>Day 4:</strong> Written Responses About Structure</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- DAY 1 SLIDES -->
+        <!-- Slide 3: Day 1 Title -->
+        <div class="slide">
+            <div class="content-box">
+                <div class="day-header">DAY 1</div>
+                <h2>Chapter 29: "Basic Training"</h2>
+                <h3>Focus: Story Organization</h3>
+            </div>
+        </div>
+
+        <!-- Slide 4: What is Structure? -->
+        <div class="slide">
+            <div class="content-box">
+                <h2>What Is Story Structure?</h2>
+                <p style="font-size: 1.8em; margin: 30px 0;">Structure = How the author organizes or arranges the story</p>
+                <div class="example-box">
+                    <p><strong>Think of it like building blocks:</strong></p>
+                    <p>• You can stack them in order (beginning → middle → end)</p>
+                    <p>• You can show the end first, then explain how you got there</p>
+                    <p>• You can arrange them by importance (most important → least important)</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 5: Chapter 29 Organization -->
+        <div class="slide">
+            <div class="content-box">
+                <h2>How Is Chapter 29 Organized?</h2>
+                <div class="parts-grid">
+                    <div class="part-box">
+                        <div class="part-title">PART 1</div>
+                        <p>Alex trains a small group of leaders</p>
+                    </div>
+                    <div class="part-box">
+                        <div class="part-title">PART 2</div>
+                        <p>Those leaders each train their own groups</p>
+                    </div>
+                    <div class="part-box">
+                        <div class="part-title">PART 3</div>
+                        <p>Skills spread to hundreds of warriors</p>
+                    </div>
+                    <div class="part-box">
+                        <div class="part-title">PART 4</div>
+                        <p>Demonstration shows it all working together</p>
+                    </div>
+                </div>
+                <p style="margin-top: 30px; font-size: 1.5em;"><strong>This is "small to large" structure!</strong></p>
+            </div>
+        </div>
+
+        <!-- Slide 6: Shield Wall Example -->
+        <div class="slide">
+            <div class="content-box">
+                <h2>Example: The Shield Wall</h2>
+                <div class="example-box">
+                    <p><strong>Step 1:</strong> Alex shows Monda-ak how to lock shields together</p>
+                    <p style="margin-top: 15px;"><strong>Step 2:</strong> Monda-ak and others practice the formation</p>
+                    <p style="margin-top: 15px;"><strong>Step 3:</strong> Tinta-ak tries to break through alone - he can't!</p>
+                    <p style="margin-top: 15px;"><strong>Step 4:</strong> Everyone sees: <em>working together is stronger than working alone</em></p>
+                </div>
+                <p style="margin-top: 20px;">The author organizes this to show one clear lesson at a time.</p>
+            </div>
+        </div>
+
+        <!-- Slide 7: Pattern in Chapter 29 -->
+        <div class="slide">
+            <div class="content-box">
+                <h2>The Pattern Alex Uses</h2>
+                <div class="example-box">
+                    <p style="font-size: 1.6em; text-align: center; margin-bottom: 20px;">
+                        <span style="color: #e76f51;">Problem</span> → 
+                        <span style="color: #f4a261;">Demonstration</span> → 
+                        <span style="color: #2a9d8f;">Understanding</span>
+                    </p>
+                    <p><strong>Problem:</strong> Warriors don't know how to fight together</p>
+                    <p><strong>Demonstration:</strong> Alex shows them the shield wall</p>
+                    <p><strong>Understanding:</strong> They learn teamwork beats individual strength</p>
+                </div>
+                <p style="margin-top: 20px;">This pattern repeats throughout the chapter!</p>
+            </div>
+        </div>
+
+        <!-- Slide 8: Why This Structure Works -->
+        <div class="slide">
+            <div class="content-box">
+                <h2>Why Does This Organization Help?</h2>
+                <ul>
+                    <li>We see the army getting better <strong>step by step</strong></li>
+                    <li>Each new skill <strong>builds on</strong> the skills before it</li>
+                    <li>We understand <strong>how</strong> they become an army, not just that they do</li>
+                    <li>The structure shows <strong>progress</strong> clearly</li>
+                </ul>
+                <div class="example-box" style="margin-top: 30px;">
+                    <p><strong>Author's Choice:</strong> Instead of saying "Alex trained an army," the author shows us each step of the training. This makes the story more interesting and believable!</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- DAY 2 SLIDES -->
+        <!-- Slide 9: Day 2 Title -->
+        <div class="slide">
+            <div class="content-box">
+                <div class="day-header">DAY 2</div>
+                <h2>Chapter 30: "Janta-ak's Journey"</h2>
+                <h3>Focus: Vocabulary</h3>
+            </div>
+        </div>
+
+        <!-- Slide 10: Vocabulary - Dangerous -->
+        <div class="slide">
+            <div class="content-box">
+                <div class="vocab-word">dangerous</div>
+                <p style="font-size: 1.6em;"><strong>Type:</strong> Describing word (adjective)</p>
+                <div class="example-box">
+                    <p><strong>Example from text:</strong> "Janta-ak faced dangerous challenges"</p>
+                    <p style="margin-top: 15px;"><strong>What it describes:</strong> The word "dangerous" describes what kind of challenges - challenges that could cause harm</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 11: Vocabulary - Unerringly -->
+        <div class="slide">
+            <div class="content-box">
+                <div class="vocab-word">unerringly</div>
+                <p style="font-size: 1.6em;"><strong>Breaking it down:</strong></p>
+                <div class="prefix-grid">
+                    <div class="prefix-box">
+                        <div class="prefix-title">un-</div>
+                        <p>means "NOT"</p>
+                    </div>
+                    <div class="prefix-box">
+                        <div class="prefix-title">err</div>
+                        <p>means "make mistakes"</p>
+                    </div>
+                    <div class="prefix-box">
+                        <div class="prefix-title">-ing + -ly</div>
+                        <p>tells HOW something happens</p>
+                    </div>
+                </div>
+                <p style="margin-top: 20px; font-size: 1.5em;"><strong>Unerringly = doing something without making mistakes</strong></p>
+            </div>
+        </div>
+
+        <!-- Slide 12: Vocabulary - Cautiously -->
+        <div class="slide">
+            <div class="content-box">
+                <div class="vocab-word">cautiously</div>
+                <p style="font-size: 1.6em;"><strong>Type:</strong> Word that tells HOW (adverb)</p>
+                <div class="example-box">
+                    <p><strong>Example:</strong> "Janta-ak moved cautiously"</p>
+                    <p style="margin-top: 15px;"><strong>What it tells us:</strong> HOW Janta-ak moved - carefully, watching for danger</p>
+                    <p style="margin-top: 15px;"><strong>The -ly ending</strong> usually means a word tells HOW something happens</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 13: Vocabulary - Emaciated -->
+        <div class="slide">
+            <div class="content-box">
+                <div class="vocab-word">emaciated</div>
+                <p style="font-size: 1.6em;"><strong>Meaning:</strong> Extremely skinny from not eating enough</p>
+                <div class="example-box">
+                    <p><strong>In the story:</strong> The children Janta-ak finds are emaciated - they are dangerously thin because they haven't had enough food</p>
+                    <p style="margin-top: 15px;"><strong>This word shows:</strong> How serious the situation is. "Skinny" is normal, but "emaciated" means someone is in danger from not eating.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 14: Vocabulary - Grueling -->
+        <div class="slide">
+            <div class="content-box">
+                <div class="vocab-word">grueling</div>
+                <p style="font-size: 1.6em;"><strong>Meaning:</strong> Very tiring and difficult</p>
+                <div class="example-box">
+                    <p><strong>Example:</strong> "The grueling pace of the march"</p>
+                    <p style="margin-top: 15px;"><strong>Why use this word?</strong> The author could say "tiring" or "hard," but "grueling" is much stronger. It means SO tiring that it exhausts you completely.</p>
+                    <p style="margin-top: 15px;">This helps us understand how tough the journey really is!</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 15: Vocabulary - Rebuild -->
+        <div class="slide">
+            <div class="content-box">
+                <div class="vocab-word">rebuild</div>
+                <p style="font-size: 1.6em;"><strong>Breaking it down:</strong></p>
+                <div class="prefix-grid">
+                    <div class="prefix-box">
+                        <div class="prefix-title">re-</div>
+                        <p>means "AGAIN"</p>
+                    </div>
+                    <div class="prefix-box">
+                        <div class="prefix-title">build</div>
+                        <p>means "to make or construct"</p>
+                    </div>
+                    <div class="prefix-box" style="grid-column: span 1;">
+                        <p style="font-size: 1.3em; margin-top: 10px;"><strong>Rebuild = build again</strong></p>
+                    </div>
+                </div>
+                <div class="example-box" style="margin-top: 20px;">
+                    <p><strong>Other words with "re-":</strong> return, redo, rewrite, replay</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 16: Vocabulary - Warriors -->
+        <div class="slide">
+            <div class="content-box">
+                <div class="vocab-word">warriors</div>
+                <p style="font-size: 1.6em;"><strong>Type:</strong> Naming word (noun)</p>
+                <div class="example-box">
+                    <p><strong>Example:</strong> "The warriors marched forward"</p>
+                    <p style="margin-top: 15px;"><strong>What it names:</strong> Warriors is a naming word - it names the people who fight</p>
+                    <p style="margin-top: 15px;"><strong>The -s ending:</strong> Shows there is more than one warrior</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 17: Vocabulary - Mortality -->
+        <div class="slide">
+            <div class="content-box">
+                <div class="vocab-word">mortality</div>
+                <p style="font-size: 1.6em;"><strong>Meaning:</strong> Death; the fact that all living things die</p>
+                <div class="example-box">
+                    <p><strong>In the text:</strong> "The warriors contemplated their mortality"</p>
+                    <p style="margin-top: 15px;"><strong>What this means:</strong> The warriors thought about the fact that they might die in battle</p>
+                    <p style="margin-top: 15px;"><strong>Why it matters:</strong> This shows how serious and dangerous their situation is. They know death is possible.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- DAY 3 SLIDES -->
+        <!-- Slide 18: Day 3 Title -->
+        <div class="slide">
+            <div class="content-box">
+                <div class="day-header">DAY 3</div>
+                <h2>Chapter 31: "Godat-ta"</h2>
+                <h3>Focus: Action Structure</h3>
+            </div>
+        </div>
+
+        <!-- Slide 19: Action Structure Introduction -->
+        <div class="slide">
+            <div class="content-box">
+                <h2>How Authors Structure Action Scenes</h2>
+                <p style="font-size: 1.5em; margin: 30px 0;">Authors make choices about the SPEED and ORDER of action</p>
+                <div class="parts-grid">
+                    <div class="part-box">
+                        <div class="part-title">SLOW DOWN</div>
+                        <p>Make important moments last longer with lots of details</p>
+                    </div>
+                    <div class="part-box">
+                        <div class="part-title">SPEED UP</div>
+                        <p>Make less important moments go by quickly</p>
+                    </div>
+                    <div class="part-box">
+                        <div class="part-title">BUILD UP</div>
+                        <p>Add tension step by step</p>
+                    </div>
+                    <div class="part-box">
+                        <div class="part-title">RELEASE</div>
+                        <p>Let the tension go after the climax</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 20: Godat-ta Scene Structure -->
+        <div class="slide">
+            <div class="content-box">
+                <h2>Structure of the Godat-ta Scene</h2>
+                <div class="example-box">
+                    <p style="font-size: 1.3em;"><strong>1. SLOW MARCH</strong> → Tension builds as they move through dangerous territory</p>
+                    <p style="font-size: 1.3em; margin-top: 15px;"><strong>2. SPOTTING THE BEAR</strong> → First moment of danger</p>
+                    <p style="font-size: 1.3em; margin-top: 15px;"><strong>3. FIRST CHARGE</strong> → Fast, chaotic action</p>
+                    <p style="font-size: 1.3em; margin-top: 15px;"><strong>4. SECOND CHARGE</strong> → Even more dangerous</p>
+                    <p style="font-size: 1.3em; margin-top: 15px;"><strong>5. SENTA-EH'S ARROW</strong> → SLOW MOTION for the most important moment</p>
+                    <p style="font-size: 1.3em; margin-top: 15px;"><strong>6. ESCAPE</strong> → Quick exit as tension releases</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 21: Slowing Down Important Moments -->
+        <div class="slide">
+            <div class="content-box">
+                <h2>Why Slow Down Senta-eh's Arrow?</h2>
+                <div class="example-box">
+                    <p><strong>What the author does:</strong> Describes the arrow flying through the air in great detail - we see it leave the bow, arc through the air, and hit its target</p>
+                    <p style="margin-top: 20px;"><strong>Why this works:</strong></p>
+                    <ul style="margin-top: 10px;">
+                        <li>Makes this moment feel more important</li>
+                        <li>Builds suspense - will the arrow hit?</li>
+                        <li>Lets us feel the relief when it works</li>
+                        <li>Shows Senta-eh's skill and bravery</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 22: Building Tension -->
+        <div class="slide">
+            <div class="content-box">
+                <h2>How the Author Builds Tension</h2>
+                <ul>
+                    <li><strong>First arrows miss</strong> - Creates worry and fear</li>
+                    <li><strong>Bear keeps charging</strong> - Danger keeps growing</li>
+                    <li><strong>Shield wall holds</strong> - Small victory but danger remains</li>
+                    <li><strong>Senta-eh takes aim</strong> - This is the last chance!</li>
+                    <li><strong>Arrow flies</strong> - Everything depends on this moment</li>
+                    <li><strong>Hit!</strong> - Tension releases, relief floods in</li>
+                </ul>
+                <p style="margin-top: 30px; font-size: 1.5em;">Each step makes the danger feel MORE real!</p>
+            </div>
+        </div>
+
+        <!-- Slide 23: Pattern of the Battle -->
+        <div class="slide">
+            <div class="content-box">
+                <h2>The Pattern: Slow → Fast → Slow</h2>
+                <div class="example-box">
+                    <p style="font-size: 1.4em;"><strong>SLOW:</strong> Marching, watching, waiting (builds tension)</p>
+                    <p style="font-size: 1.4em; margin-top: 15px;"><strong>FAST:</strong> Bear charges! Chaos! Action! (peak excitement)</p>
+                    <p style="font-size: 1.4em; margin-top: 15px;"><strong>SLOW:</strong> Escaping, catching breath (tension releases)</p>
+                </div>
+                <p style="margin-top: 30px;">This pattern keeps readers engaged - not too fast, not too slow, but changing pace to match the action!</p>
+            </div>
+        </div>
+
+        <!-- DAY 4 SLIDES -->
+        <!-- Slide 24: Day 4 Title -->
+        <div class="slide">
+            <div class="content-box">
+                <div class="day-header">DAY 4</div>
+                <h2>Writing Day</h2>
+                <h3>Structure in Your Own Words</h3>
+            </div>
+        </div>
+
+        <!-- Slide 25: Written Response 1 -->
+        <div class="slide">
+            <div class="content-box">
+                <h2>Written Response 1</h2>
+                <div class="example-box">
+                    <p style="font-size: 1.4em;"><strong>Question:</strong> How does the author organize Chapter 29 to show the training getting better and better over time?</p>
+                </div>
+                <div class="example-box" style="margin-top: 30px;">
+                    <p><strong>Success Tips:</strong></p>
+                    <ul>
+                        <li>Think about how Alex starts with just a few people</li>
+                        <li>Notice how the training spreads to more and more warriors</li>
+                        <li>Look at examples like the shield wall demonstration</li>
+                        <li>Explain how each step builds on the one before it</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 26: Written Response 2 -->
+        <div class="slide">
+            <div class="content-box">
+                <h2>Written Response 2</h2>
+                <div class="example-box">
+                    <p style="font-size: 1.4em;"><strong>Question:</strong> How does the author arrange the Godat-ta battle scene in Chapter 31 to create excitement and suspense?</p>
+                </div>
+                <div class="example-box" style="margin-top: 30px;">
+                    <p><strong>Success Tips:</strong></p>
+                    <ul>
+                        <li>Think about the steps: spotting → charge → arrow → escape</li>
+                        <li>Notice how the author slows down important moments</li>
+                        <li>Look at how tension builds with each step</li>
+                        <li>Explain how the structure makes you worried and excited</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 27: Writing Structure Reminder -->
+        <div class="slide">
+            <div class="content-box">
+                <h2>Writing Structure to Use</h2>
+                <div class="parts-grid">
+                    <div class="part-box">
+                        <div class="part-title">1. Topic Sentence</div>
+                        <p>Clearly answer the question</p>
+                    </div>
+                    <div class="part-box">
+                        <div class="part-title">2. Supporting Detail 1</div>
+                        <p>Give proof from the text and explain it</p>
+                    </div>
+                    <div class="part-box">
+                        <div class="part-title">3. Supporting Detail 2</div>
+                        <p>Give more proof from the text and explain it</p>
+                    </div>
+                    <div class="part-box">
+                        <div class="part-title">4. Supporting Detail 3</div>
+                        <p>Give more proof from the text and explain it</p>
+                    </div>
+                </div>
+                <div class="part-box" style="max-width: 600px; margin: 30px auto;">
+                    <div class="part-title">5. Conclusion</div>
+                    <p>Wrap up and connect back to the question</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 28: Key Vocabulary Review -->
+        <div class="slide">
+            <div class="content-box">
+                <h2>Week 10 Vocabulary Review</h2>
+                <div class="prefix-grid">
+                    <div class="prefix-box">
+                        <div class="prefix-title">dangerous</div>
+                        <p>causing harm</p>
+                    </div>
+                    <div class="prefix-box">
+                        <div class="prefix-title">unerringly</div>
+                        <p>without mistakes</p>
+                    </div>
+                    <div class="prefix-box">
+                        <div class="prefix-title">cautiously</div>
+                        <p>carefully</p>
+                    </div>
+                    <div class="prefix-box">
+                        <div class="prefix-title">emaciated</div>
+                        <p>extremely skinny</p>
+                    </div>
+                    <div class="prefix-box">
+                        <div class="prefix-title">grueling</div>
+                        <p>very tiring</p>
+                    </div>
+                    <div class="prefix-box">
+                        <div class="prefix-title">rebuild</div>
+                        <p>build again</p>
+                    </div>
+                    <div class="prefix-box">
+                        <div class="prefix-title">warriors</div>
+                        <p>fighters</p>
+                    </div>
+                    <div class="prefix-box">
+                        <div class="prefix-title">mortality</div>
+                        <p>death</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 29: Closing -->
+        <div class="slide">
+            <div class="content-box">
+                <h1>Great Work This Week!</h1>
+                <h2 style="margin-top: 30px;">You've learned about:</h2>
+                <ul style="max-width: 700px;">
+                    <li>How authors organize stories (small to large structure)</li>
+                    <li>Important vocabulary words from the chapters</li>
+                    <li>How authors structure action scenes to create excitement</li>
+                    <li>How to write about structure in your own words</li>
+                </ul>
+                <p style="font-size: 1.8em; margin-top: 50px; color: #f4a261;">Keep Reading!</p>
+            </div>
+        </div>
+
+        <!-- Navigation Controls -->
+        <div class="controls">
+            <button class="control-btn" id="prevBtn" onclick="changeSlide(-1)">← Previous</button>
+            <button class="control-btn" id="nextBtn" onclick="changeSlide(1)">Next →</button>
+        </div>
+    </div>
+
+    <script>
+        let currentSlide = 0;
+        let currentBackground = 0;
+        const slides = document.querySelectorAll('.slide');
+        const backgrounds = document.querySelectorAll('.background-image');
+        const totalSlides = slides.length;
+        
+        // Initialize
+        updateSlideCounter();
+        updateButtons();
+        
+        // Start background rotation
+        setInterval(rotateBackground, 10000); // Change every 10 seconds
+        
+        function rotateBackground() {
+            backgrounds[currentBackground].classList.remove('active');
+            currentBackground = (currentBackground + 1) % backgrounds.length;
+            backgrounds[currentBackground].classList.add('active');
+        }
+        
+        function showSlide(n) {
+            slides[currentSlide].classList.remove('active');
+            currentSlide = n;
+            if (currentSlide >= totalSlides) currentSlide = totalSlides - 1;
+            if (currentSlide < 0) currentSlide = 0;
+            slides[currentSlide].classList.add('active');
+            updateSlideCounter();
+            updateButtons();
+        }
+        
+        function changeSlide(direction) {
+            showSlide(currentSlide + direction);
+        }
+        
+        function updateSlideCounter() {
+            document.getElementById('slideCounter').textContent = 
+                `Slide ${currentSlide + 1} / ${totalSlides}`;
+        }
+        
+        function updateButtons() {
+            document.getElementById('prevBtn').disabled = currentSlide === 0;
+            document.getElementById('nextBtn').disabled = currentSlide === totalSlides - 1;
+        }
+        
+        // Keyboard navigation
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowLeft') changeSlide(-1);
+            if (e.key === 'ArrowRight') changeSlide(1);
+        });
+    </script>
+</body>
+</html>
