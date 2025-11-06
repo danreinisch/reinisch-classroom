@@ -5425,23 +5425,31 @@
     });
     
     // =======================
-    // Hub Settings: Defensive Auto-Enable & Retry Wire-Up
+    // Hub Settings: Defensive Auto-Enable & Retry Wire-Up Validation
     // =======================
-    // This script wires the Hub Settings UI to the Supabase settings helper.
+    // This script validates that the Hub Settings UI is properly wired to the Supabase settings helper.
     // It's defensive: won't error if elements or helper functions aren't present.
-    // Creates retry UI only when #connectivityDetails exists.
+    // The actual retry button binding happens earlier (see btnRetryConnection event listener).
+    // This is a sanity check that runs after all initialization to confirm everything loaded correctly.
     (function() {
       try {
         // Only proceed if we have the connectivity details element
         const connectivityDetails = document.querySelector('#connectivityDetails');
         if (!connectivityDetails) {
-          console.log('[Hub-Retry] #connectivityDetails not found, skipping wire-up');
+          console.log('[Hub-Retry] #connectivityDetails not found, retry UI will not be available');
+          return;
+        }
+        
+        // Verify retry button was created
+        const retryBtn = document.querySelector('#btnRetryConnection');
+        if (!retryBtn) {
+          console.warn('[Hub-Retry] #btnRetryConnection not found in DOM');
           return;
         }
         
         // Check if supabaseSettings helper is available
         if (typeof supabaseSettings === 'undefined' || !supabaseSettings) {
-          console.log('[Hub-Retry] supabaseSettings not loaded yet, will retry after module loads');
+          console.log('[Hub-Retry] supabaseSettings not loaded yet, functionality may be limited');
           
           // Wait for module to load (the async import happens earlier in the file)
           setTimeout(() => {
@@ -5452,10 +5460,10 @@
           return;
         }
         
-        console.log('[Hub-Retry] Wire-up complete - retry button active');
+        console.log('[Hub-Retry] Validation complete - retry button and helper module are active');
       } catch (err) {
         // Defensive: log error but don't break the page
-        console.warn('[Hub-Retry] Wire-up failed (non-fatal):', err.message);
+        console.warn('[Hub-Retry] Validation failed (non-fatal):', err.message);
       }
     })();
     
