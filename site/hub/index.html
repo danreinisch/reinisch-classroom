@@ -39,6 +39,12 @@
   .iconrail button{width:56px;height:56px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--ink);font-size:24px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
   .iconrail button.active{background:linear-gradient(180deg,rgba(34,197,94,.12),rgba(34,197,94,.06));border-color:rgba(34,197,94,.4);box-shadow:0 4px 16px rgba(34,197,94,.3)}
   .iconrail button:hover{border-color:rgba(255,255,255,.18)}
+  .topnav{display:flex;gap:8px;margin-right:auto;margin-left:12px}
+  .topnav button{padding:8px 16px;border-radius:8px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:var(--ink);font-weight:800;cursor:pointer;transition:.15s}
+  .topnav button:hover{border-color:rgba(255,255,255,.2);background:rgba(255,255,255,.10)}
+  .topnav button.active{background:rgba(34,197,94,.16);border-color:rgba(34,197,94,.45);color:#fff}
+  .role-switch-chip{cursor:pointer;display:none}
+  .role-switch-chip.visible{display:inline-flex}
 </style>
 
 <!-- UI Polish: modal readability + dark dashboard aesthetic -->
@@ -675,8 +681,14 @@
   <div class="header">
     <div class="bar">
       <div class="brand">Reinisch Classroom — Classroom Hub</div>
+      <nav class="topnav">
+        <button data-area-nav="overview">Overview</button>
+        <button data-area-nav="work">Work</button>
+        <button data-area-nav="data">Data</button>
+      </nav>
       <button class="btn small" id="btnThemeToggle" title="Toggle glass theme">Glass: Bold</button>
       <span id="currentUserChip" class="chip">Signed out</span>
+      <span id="roleSwitchChip" class="chip role-switch-chip" title="Switch role">Switch Role</span>
       <a class="btn small" id="btnStudent" href="/student/">Student Portal</a>
       <button class="btn primary small" id="btnTeacher">Teacher Center 🔒</button>
     </div>
@@ -1380,6 +1392,14 @@
             <div class="subtle" style="font-size:13px">Manage classes and track progress</div>
           </div>
         </button>
+        
+        <button class="btn" id="signInSub" style="padding:16px;text-align:left;display:flex;align-items:center;gap:12px">
+          <span style="font-size:32px">📋</span>
+          <div>
+            <div style="font-weight:900;font-size:16px">Substitute</div>
+            <div class="subtle" style="font-size:13px">View today's lesson plans</div>
+          </div>
+        </button>
       </div>
       
       <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--line);text-align:center">
@@ -1404,6 +1424,35 @@
       <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:10px">
         <button class="btn small" id="studentSignInCancel">Back</button>
         <button class="btn primary small" id="studentSignInGo">Sign In</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Role Switch modal -->
+  <div class="modal-backdrop" id="roleSwitchModal">
+    <div class="modal card" style="max-width:420px">
+      <div class="card-header"><div>Switch Role</div></div>
+      <div class="subtle" style="margin-bottom:16px">Choose a role to switch to:</div>
+      
+      <div style="display:grid;gap:12px">
+        <button class="btn" id="roleSwitchStudent" style="padding:12px;text-align:left;display:flex;align-items:center;gap:12px">
+          <span style="font-size:28px">🧑</span>
+          <div style="font-weight:900">Student</div>
+        </button>
+        
+        <button class="btn" id="roleSwitchTeacher" style="padding:12px;text-align:left;display:flex;align-items:center;gap:12px">
+          <span style="font-size:28px">👨‍🏫</span>
+          <div style="font-weight:900">Teacher</div>
+        </button>
+        
+        <button class="btn" id="roleSwitchSub" style="padding:12px;text-align:left;display:flex;align-items:center;gap:12px">
+          <span style="font-size:28px">📋</span>
+          <div style="font-weight:900">Substitute</div>
+        </button>
+      </div>
+      
+      <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--line);text-align:center">
+        <button class="btn small" id="roleSwitchCancel">Cancel</button>
       </div>
     </div>
   </div>
@@ -5706,6 +5755,399 @@
   
   // Expose updater globally for debugging/testing
   window.defensiveUpdateConfigStatus = defensiveUpdateConfigStatus;
+  
+})();
+</script>
+
+<!-- UX Enhancement Script: Top Nav, Persistence, Modal QoL, Role Switch -->
+<script>
+(function() {
+  'use strict';
+  console.debug('[Hub UX] Enhancement script loaded');
+  
+  // ============================================================================
+  // CONFIGURATION & CONSTANTS
+  // ============================================================================
+  const STORAGE_KEYS = {
+    LAST_AREA: 'rc_last_area',
+    LAST_TAB_PREFIX: 'rc_last_tab_'
+  };
+  
+  const MODALS = ['#teachModal', '#signInModal', '#studentSignInModal', '#roleSwitchModal'];
+  
+  // ============================================================================
+  // UTILITY FUNCTIONS
+  // ============================================================================
+  const safeQs = (selector) => {
+    try {
+      return document.querySelector(selector);
+    } catch (e) {
+      return null;
+    }
+  };
+  
+  const safeQsAll = (selector) => {
+    try {
+      return Array.from(document.querySelectorAll(selector));
+    } catch (e) {
+      return [];
+    }
+  };
+  
+  // ============================================================================
+  // DEFENSIVE TEACHER CENTER BUTTON BINDING
+  // ============================================================================
+  function bindTeacherModal() {
+    try {
+      const btnTeacher = safeQs('#btnTeacher');
+      if (!btnTeacher) {
+        console.debug('[Hub UX] Teacher button not found, will retry on DOMContentLoaded');
+        return;
+      }
+      
+      // Check if already bound to prevent duplicate handlers
+      if (btnTeacher.dataset.uxBound === 'true') {
+        return;
+      }
+      
+      btnTeacher.dataset.uxBound = 'true';
+      
+      // Add defensive click handler that works even if other scripts error
+      btnTeacher.addEventListener('click', function uxTeacherHandler() {
+        try {
+          const modal = safeQs('#teachModal');
+          if (modal) {
+            modal.classList.add('show');
+            const passInput = safeQs('#teachPass');
+            if (passInput) {
+              setTimeout(() => passInput.focus(), 50);
+            }
+          }
+        } catch (err) {
+          console.error('[Hub UX] Teacher modal handler error:', err);
+        }
+      }, { capture: false });
+      
+      console.debug('[Hub UX] Teacher button bound defensively');
+    } catch (err) {
+      console.error('[Hub UX] Failed to bind teacher button:', err);
+    }
+  }
+  
+  // ============================================================================
+  // TOP NAVIGATION INITIALIZATION
+  // ============================================================================
+  function initTopNav() {
+    try {
+      const topNavButtons = safeQsAll('[data-area-nav]');
+      if (topNavButtons.length === 0) {
+        console.debug('[Hub UX] Top nav buttons not found');
+        return;
+      }
+      
+      // Restore last area from localStorage
+      const lastArea = localStorage.getItem(STORAGE_KEYS.LAST_AREA);
+      
+      // Click handler for topnav buttons
+      topNavButtons.forEach(btn => {
+        btn.addEventListener('click', function() {
+          const area = this.getAttribute('data-area-nav');
+          if (!area) return;
+          
+          // Update active state in topnav
+          topNavButtons.forEach(b => b.classList.remove('active'));
+          this.classList.add('active');
+          
+          // Forward click to iconrail button
+          const iconRailBtn = safeQs(`.iconrail button[data-area="${area}"]`);
+          if (iconRailBtn) {
+            iconRailBtn.click();
+          }
+          
+          // Save to localStorage
+          localStorage.setItem(STORAGE_KEYS.LAST_AREA, area);
+        });
+        
+        // Set initial active state
+        const area = btn.getAttribute('data-area-nav');
+        if (area === (lastArea || 'overview')) {
+          btn.classList.add('active');
+        }
+      });
+      
+      console.debug('[Hub UX] Top nav initialized');
+    } catch (err) {
+      console.error('[Hub UX] Failed to init top nav:', err);
+    }
+  }
+  
+  // ============================================================================
+  // AREA & TAB PERSISTENCE
+  // ============================================================================
+  function setupPersistence() {
+    try {
+      // Hook into iconrail clicks to track area changes
+      const iconRail = safeQs('.iconrail');
+      if (iconRail) {
+        iconRail.addEventListener('click', function(e) {
+          const btn = e.target.closest('button[data-area]');
+          if (btn) {
+            const area = btn.getAttribute('data-area');
+            localStorage.setItem(STORAGE_KEYS.LAST_AREA, area);
+            
+            // Update topnav active state
+            safeQsAll('[data-area-nav]').forEach(navBtn => {
+              navBtn.classList.toggle('active', navBtn.getAttribute('data-area-nav') === area);
+            });
+          }
+        });
+      }
+      
+      // Hook into submenu clicks to track tab changes
+      const submenu = safeQs('#submenu');
+      if (submenu) {
+        submenu.addEventListener('click', function(e) {
+          if (e.target.tagName === 'A') {
+            const tab = e.target.getAttribute('data-tab');
+            const currentArea = localStorage.getItem(STORAGE_KEYS.LAST_AREA) || 'overview';
+            if (tab && currentArea) {
+              localStorage.setItem(STORAGE_KEYS.LAST_TAB_PREFIX + currentArea, tab);
+            }
+          }
+        });
+      }
+      
+      console.debug('[Hub UX] Persistence hooks installed');
+    } catch (err) {
+      console.error('[Hub UX] Failed to setup persistence:', err);
+    }
+  }
+  
+  function restoreLastState() {
+    try {
+      // Only restore if teacher view is unlocked
+      const viewTeacher = safeQs('#view-teacher');
+      if (!viewTeacher || viewTeacher.style.display === 'none') {
+        console.debug('[Hub UX] Teacher view not unlocked, skipping restore');
+        return;
+      }
+      
+      const lastArea = localStorage.getItem(STORAGE_KEYS.LAST_AREA);
+      if (!lastArea) return;
+      
+      // Restore area
+      const iconRailBtn = safeQs(`.iconrail button[data-area="${lastArea}"]`);
+      const topNavBtn = safeQs(`[data-area-nav="${lastArea}"]`);
+      
+      if (iconRailBtn) {
+        // Update iconrail active state
+        safeQsAll('.iconrail button').forEach(b => b.classList.remove('active'));
+        iconRailBtn.classList.add('active');
+        
+        // Trigger renderSubmenu if available
+        if (typeof window.renderSubmenu === 'function') {
+          window.renderSubmenu(lastArea);
+        }
+      }
+      
+      if (topNavBtn) {
+        safeQsAll('[data-area-nav]').forEach(b => b.classList.remove('active'));
+        topNavBtn.classList.add('active');
+      }
+      
+      // Restore last tab for this area
+      setTimeout(() => {
+        const lastTab = localStorage.getItem(STORAGE_KEYS.LAST_TAB_PREFIX + lastArea);
+        if (lastTab) {
+          const tabLink = safeQs(`#submenu a[data-tab="${lastTab}"]`);
+          if (tabLink) {
+            tabLink.click();
+          }
+        }
+      }, 100);
+      
+      console.debug('[Hub UX] Restored last state:', lastArea);
+    } catch (err) {
+      console.error('[Hub UX] Failed to restore last state:', err);
+    }
+  }
+  
+  // ============================================================================
+  // MODAL ENHANCEMENTS (Escape, Backdrop Click, Focus Trap)
+  // ============================================================================
+  function enhanceModals() {
+    try {
+      // Escape key handler
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+          // Find the topmost visible modal
+          for (let i = MODALS.length - 1; i >= 0; i--) {
+            const modal = safeQs(MODALS[i]);
+            if (modal && modal.classList.contains('show')) {
+              modal.classList.remove('show');
+              e.preventDefault();
+              break;
+            }
+          }
+        }
+      });
+      
+      // Backdrop click handler for each modal
+      MODALS.forEach(modalSelector => {
+        const modal = safeQs(modalSelector);
+        if (!modal) return;
+        
+        modal.addEventListener('click', function(e) {
+          // Only close if clicking the backdrop itself, not the modal content
+          if (e.target === modal) {
+            modal.classList.remove('show');
+          }
+        });
+      });
+      
+      console.debug('[Hub UX] Modal enhancements installed');
+    } catch (err) {
+      console.error('[Hub UX] Failed to enhance modals:', err);
+    }
+  }
+  
+  // ============================================================================
+  // ROLE SWITCH FUNCTIONALITY
+  // ============================================================================
+  function initRoleSwitch() {
+    try {
+      const roleSwitchChip = safeQs('#roleSwitchChip');
+      const roleSwitchModal = safeQs('#roleSwitchModal');
+      
+      if (!roleSwitchChip || !roleSwitchModal) {
+        console.debug('[Hub UX] Role switch elements not found');
+        return;
+      }
+      
+      // Show/hide role switch chip based on auth state
+      function updateRoleSwitchChip() {
+        try {
+          const auth = typeof window.getAuth === 'function' ? window.getAuth() : null;
+          if (auth && auth.role) {
+            roleSwitchChip.classList.add('visible');
+          } else {
+            roleSwitchChip.classList.remove('visible');
+          }
+        } catch (err) {
+          console.debug('[Hub UX] Could not update role switch chip:', err);
+        }
+      }
+      
+      // Check periodically for auth changes
+      setInterval(updateRoleSwitchChip, 1000);
+      updateRoleSwitchChip();
+      
+      // Open role switch modal
+      roleSwitchChip.addEventListener('click', function() {
+        roleSwitchModal.classList.add('show');
+      });
+      
+      // Cancel button
+      const cancelBtn = safeQs('#roleSwitchCancel');
+      if (cancelBtn) {
+        cancelBtn.addEventListener('click', function() {
+          roleSwitchModal.classList.remove('show');
+        });
+      }
+      
+      // Role switch: Student
+      const studentBtn = safeQs('#roleSwitchStudent');
+      if (studentBtn) {
+        studentBtn.addEventListener('click', function() {
+          roleSwitchModal.classList.remove('show');
+          const signInModal = safeQs('#signInModal');
+          if (signInModal) {
+            signInModal.classList.add('show');
+          }
+        });
+      }
+      
+      // Role switch: Teacher
+      const teacherBtn = safeQs('#roleSwitchTeacher');
+      if (teacherBtn) {
+        teacherBtn.addEventListener('click', function() {
+          roleSwitchModal.classList.remove('show');
+          const teachModal = safeQs('#teachModal');
+          if (teachModal) {
+            teachModal.classList.add('show');
+            const passInput = safeQs('#teachPass');
+            if (passInput) {
+              setTimeout(() => passInput.focus(), 50);
+            }
+          }
+        });
+      }
+      
+      // Role switch: Substitute
+      const subBtn = safeQs('#roleSwitchSub');
+      if (subBtn) {
+        subBtn.addEventListener('click', function() {
+          roleSwitchModal.classList.remove('show');
+          window.location.href = '/sub/';
+        });
+      }
+      
+      console.debug('[Hub UX] Role switch initialized');
+    } catch (err) {
+      console.error('[Hub UX] Failed to init role switch:', err);
+    }
+  }
+  
+  // ============================================================================
+  // SUBSTITUTE ROLE HANDLER
+  // ============================================================================
+  function initSubstituteRole() {
+    try {
+      const signInSub = safeQs('#signInSub');
+      if (!signInSub) {
+        console.debug('[Hub UX] Substitute button not found');
+        return;
+      }
+      
+      signInSub.addEventListener('click', function() {
+        window.location.href = '/sub/';
+      });
+      
+      console.debug('[Hub UX] Substitute role handler initialized');
+    } catch (err) {
+      console.error('[Hub UX] Failed to init substitute role:', err);
+    }
+  }
+  
+  // ============================================================================
+  // INITIALIZATION
+  // ============================================================================
+  function init() {
+    try {
+      console.debug('[Hub UX] Starting initialization...');
+      
+      bindTeacherModal();
+      initTopNav();
+      setupPersistence();
+      enhanceModals();
+      initRoleSwitch();
+      initSubstituteRole();
+      
+      // Restore last state after a brief delay to ensure other scripts have loaded
+      setTimeout(restoreLastState, 500);
+      
+      console.debug('[Hub UX] Initialization complete');
+    } catch (err) {
+      console.error('[Hub UX] Initialization failed:', err);
+    }
+  }
+  
+  // Run initialization
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
   
 })();
 </script>
