@@ -34,3 +34,4 @@ build/
 
 # Test screenshots
 screenshots/
+test-reactive-client.html
