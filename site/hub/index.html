@@ -639,11 +639,25 @@
   const currentTheme = localStorage.getItem(THEME_KEY);
   
   // Default to glass-bold on first visit
-  if (!currentTheme) {
-    localStorage.setItem(THEME_KEY, 'glass-bold');
-    document.body.classList.add('glass-bold');
-  } else if (currentTheme === 'glass-bold') {
-    document.body.classList.add('glass-bold');
+  function applyTheme() {
+    if (!document.body) {
+      console.warn('[Theme Boot] Body not ready, waiting for DOMContentLoaded');
+      return;
+    }
+    
+    if (!currentTheme) {
+      localStorage.setItem(THEME_KEY, 'glass-bold');
+      document.body.classList.add('glass-bold');
+    } else if (currentTheme === 'glass-bold') {
+      document.body.classList.add('glass-bold');
+    }
+  }
+  
+  // Apply immediately if body exists, otherwise wait
+  if (document.body) {
+    applyTheme();
+  } else {
+    document.addEventListener('DOMContentLoaded', applyTheme);
   }
 })();
 </script>
@@ -1360,8 +1374,9 @@
   <!-- Teacher password modal -->
   <div class="modal-backdrop" id="teachModal">
     <div class="modal card">
-      <div class="card-header"><div>Classroom Hub — Password</div></div>
-      <label>Password<input id="teachPass" type="password" placeholder="Enter teacher password"></label>
+      <div class="card-header"><div>Classroom Hub — Teacher Login</div></div>
+      <label>Username<input id="teachUser" type="text" placeholder="Enter teacher username" autocomplete="username"></label>
+      <label>Password<input id="teachPass" type="password" placeholder="Enter teacher password" autocomplete="current-password"></label>
       <div class="subtle" id="teachMsg" style="min-height:18px;margin-top:6px"></div>
       <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:10px">
         <button class="btn small" id="teachCancel">Cancel</button>
@@ -1732,15 +1747,32 @@
     import '../web/auth-modal-extend.js';
 
     const TEACHER_PW_LOCAL = 'teacher123';
+    const TEACHER_USER_LOCAL = 'teacher';
     const NS = 'rc_unified_';
-    const qs = s => document.querySelector(s);
+    const qs = s => {
+      const el = document.querySelector(s);
+      if (!el) {
+        console.warn(`[qs] Element not found: ${s}`);
+      }
+      return el;
+    };
     const qsa = s => Array.from(document.querySelectorAll(s));
     const on = (sel, evt, fn) => { const el = document.querySelector(sel); if (el) el.addEventListener(evt, fn); };
 
-    function showTeacher(){ qs('#view-teacher').style.display='grid'; }
-    function hideTeacher(){ qs('#view-teacher').style.display='none'; }
+    function showTeacher(){ 
+      const view = qs('#view-teacher'); 
+      if (view) view.style.display='grid'; 
+    }
+    function hideTeacher(){ 
+      const view = qs('#view-teacher'); 
+      if (view) view.style.display='none'; 
+    }
     
-    // Helper: Get teacher password (configurable or default)
+    // Helper: Get teacher credentials (configurable or defaults)
+    function getTeacherUsername() {
+      return localStorage.getItem('rc_teacher_user') || TEACHER_USER_LOCAL;
+    }
+    
     function getTeacherPassword() {
       return localStorage.getItem('rc_teacher_pass') || TEACHER_PW_LOCAL;
     }
@@ -1775,6 +1807,8 @@
     function updateUserChip() {
       const auth = getAuth();
       const chip = qs('#currentUserChip');
+      if (!chip) return;
+      
       if (auth) {
         if (auth.role === 'student') {
           chip.textContent = `Student: ${auth.code}`;
@@ -1792,7 +1826,8 @@
     async function checkAndShowSignIn() {
       const auth = getAuth();
       if (!auth) {
-        qs('#signInModal').classList.add('show');
+        const modal = qs('#signInModal');
+        if (modal) modal.classList.add('show');
       } else {
         updateUserChip();
       }
@@ -1804,6 +1839,11 @@
         // Load student codes
         const students = await db.listStudents();
         const select = qs('#studentCodeSelect');
+        if (!select) {
+          console.error('[Sign-in] Student code select not found');
+          return;
+        }
+        
         // Clear existing options
         select.innerHTML = '<option value="">-- Select your code --</option>';
         
@@ -1816,10 +1856,15 @@
         });
         
         // Show student sign-in modal
-        qs('#signInModal').classList.remove('show');
-        qs('#studentSignInModal').classList.add('show');
-        qs('#studentPassword').value = '';
-        qs('#studentSignInMsg').innerHTML = '';
+        const signInModal = qs('#signInModal');
+        const studentModal = qs('#studentSignInModal');
+        const passField = qs('#studentPassword');
+        const msgField = qs('#studentSignInMsg');
+        
+        if (signInModal) signInModal.classList.remove('show');
+        if (studentModal) studentModal.classList.add('show');
+        if (passField) passField.value = '';
+        if (msgField) msgField.innerHTML = '';
       } catch (err) {
         console.error('Failed to load student codes:', err);
         const msgEl = qs('#studentSignInMsg');
@@ -1827,8 +1872,10 @@
           msgEl.innerHTML = '<span style="color:#fecaca">Failed to load student list. Please try again.</span>';
         }
         // Still show the modal so user can see the error
-        qs('#signInModal').classList.remove('show');
-        qs('#studentSignInModal').classList.add('show');
+        const signInModal = qs('#signInModal');
+        const studentModal = qs('#studentSignInModal');
+        if (signInModal) signInModal.classList.remove('show');
+        if (studentModal) studentModal.classList.add('show');
       }
     });
     
@@ -1837,28 +1884,44 @@
     
     // Sign-in modal: Teacher button
     on('#signInTeacher', 'click', () => {
-      qs('#signInModal').classList.remove('show');
-      qs('#teachModal').classList.add('show');
-      qs('#teachPass').focus();
+      const signInModal = qs('#signInModal');
+      const teachModal = qs('#teachModal');
+      const passInput = qs('#teachUser');
+      
+      if (signInModal) signInModal.classList.remove('show');
+      if (teachModal) teachModal.classList.add('show');
+      if (passInput) passInput.focus();
       isFromSignInModal = true; // Set flag
     });
     
     // Sign-in modal: Skip button
     on('#signInSkip', 'click', () => {
-      qs('#signInModal').classList.remove('show');
+      const modal = qs('#signInModal');
+      if (modal) modal.classList.remove('show');
     });
     
     // Student sign-in: Cancel button
     on('#studentSignInCancel', 'click', () => {
-      qs('#studentSignInModal').classList.remove('show');
-      qs('#signInModal').classList.add('show');
+      const studentModal = qs('#studentSignInModal');
+      const signInModal = qs('#signInModal');
+      
+      if (studentModal) studentModal.classList.remove('show');
+      if (signInModal) signInModal.classList.add('show');
     });
     
     // Student sign-in: Sign In button
     async function handleStudentSignIn() {
-      const code = qs('#studentCodeSelect').value;
-      const password = qs('#studentPassword').value;
+      const codeSelect = qs('#studentCodeSelect');
+      const passwordField = qs('#studentPassword');
       const msgEl = qs('#studentSignInMsg');
+      
+      if (!codeSelect || !passwordField || !msgEl) {
+        console.error('[Student Sign-in] Required elements not found');
+        return;
+      }
+      
+      const code = codeSelect.value;
+      const password = passwordField.value;
       
       if (!code) {
         msgEl.innerHTML = '<span style="color:#fecaca">Please select a student code</span>';
@@ -1878,7 +1941,8 @@
           // Success: persist auth and redirect
           setAuth({ role: 'student', code });
           updateUserChip();
-          qs('#studentSignInModal').classList.remove('show');
+          const modal = qs('#studentSignInModal');
+          if (modal) modal.classList.remove('show');
           // Redirect to student portal
           window.location.href = '/student/';
         } else {
@@ -1901,40 +1965,69 @@
     
     // Teacher auth
     function handleTeacherAuth() {
-      const input = qs('#teachPass').value;
+      const usernameInput = qs('#teachUser');
+      const passwordInput = qs('#teachPass');
+      const msgEl = qs('#teachMsg');
+      
+      if (!usernameInput || !passwordInput || !msgEl) {
+        console.error('[Teacher Auth] Required elements not found');
+        return;
+      }
+      
+      const inputUser = usernameInput.value.trim();
+      const inputPass = passwordInput.value;
+      const teacherUsername = getTeacherUsername();
       const teacherPassword = getTeacherPassword();
-      if (input === teacherPassword) {
-        qs('#teachModal').classList.remove('show');
+      
+      if (inputUser === teacherUsername && inputPass === teacherPassword) {
+        const modal = qs('#teachModal');
+        if (modal) modal.classList.remove('show');
         
         // Check if coming from sign-in modal
         if (isFromSignInModal) {
           // User signed in as teacher via sign-in modal
-          setAuth({ role: 'teacher' });
+          setAuth({ role: 'teacher', username: inputUser });
           updateUserChip();
           isFromSignInModal = false; // Reset flag
         } else {
           // Direct teacher center access (not from sign-in)
-          qs('#currentUserChip').textContent = 'Teacher';
+          const chip = qs('#currentUserChip');
+          if (chip) chip.textContent = 'Teacher';
         }
         
         showTeacher();
+        
+        // Clear inputs
+        usernameInput.value = '';
+        passwordInput.value = '';
+        msgEl.innerHTML = '';
       } else {
-        qs('#teachMsg').innerHTML = '<span style="color:#fecaca">Wrong password</span>';
+        msgEl.innerHTML = '<span style="color:#fecaca">Invalid username or password</span>';
       }
     }
     
     on('#btnTeacher', 'click', ()=>{ 
-      qs('#teachModal').classList.add('show'); 
-      qs('#teachPass').focus(); 
+      const modal = qs('#teachModal');
+      const userInput = qs('#teachUser');
+      if (modal) modal.classList.add('show'); 
+      if (userInput) userInput.focus();
       isFromSignInModal = false; // Not from sign-in modal
     });
     on('#teachCancel', 'click', ()=> {
-      qs('#teachModal').classList.remove('show');
+      const modal = qs('#teachModal');
+      if (modal) modal.classList.remove('show');
       isFromSignInModal = false; // Reset flag
     });
     on('#teachGo', 'click', handleTeacherAuth);
     
-    // Handle Enter key in teacher password field
+    // Handle Enter key in teacher username/password fields
+    qs('#teachUser')?.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        const passInput = qs('#teachPass');
+        if (passInput) passInput.focus();
+      }
+    });
+    
     qs('#teachPass')?.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') {
         handleTeacherAuth();
@@ -1947,7 +2040,8 @@
       if (!auth || auth.role !== 'student') {
         // Not signed in as student, show sign-in modal
         e.preventDefault();
-        qs('#signInModal').classList.add('show');
+        const modal = qs('#signInModal');
+        if (modal) modal.classList.add('show');
       }
       // If signed in as student, let the link navigate naturally
     });
@@ -2153,8 +2247,14 @@
     }
 
     // Modals helpers
-    function openModal(id){ qs(id).classList.add('show'); }
-    function closeModal(id){ qs(id).classList.remove('show'); }
+    function openModal(id){ 
+      const modal = qs(id);
+      if (modal) modal.classList.add('show');
+    }
+    function closeModal(id){ 
+      const modal = qs(id);
+      if (modal) modal.classList.remove('show');
+    }
 
     // Progress modal
     async function openProgressModal(code=null, goalId=null){
@@ -3647,13 +3747,14 @@
         updateConfigStatus();
         
         // Dispatch event for other listeners
-        const currentConfig = supabaseSettings.readConfig();
+        // Re-read config for event (already declared above at line 3602)
+        const updatedConfig = supabaseSettings.readConfig();
         window.dispatchEvent(new CustomEvent('rc:remote-config-changed', { 
           detail: { 
             enabled, 
             saved: true,
-            url: currentConfig.url,
-            hasKey: !!currentConfig.anon
+            url: updatedConfig.url,
+            hasKey: !!updatedConfig.anon
           } 
         }));
       } catch (err) {
@@ -5323,65 +5424,86 @@
         });
       }
       
-      qs('#editSkillTagsModal').classList.add('show');
+      const modal = qs('#editSkillTagsModal');
+      if (modal) modal.classList.add('show');
     }
     
     on('#editSkillTagsCancel', 'click', () => {
-      qs('#editSkillTagsModal').classList.remove('show');
+      const modal = qs('#editSkillTagsModal');
+      if (modal) modal.classList.remove('show');
     });
     
     on('#editSkillTagsSave', 'click', () => {
-      const input = qs('#editSkillTagsInput').value;
+      const inputEl = qs('#editSkillTagsInput');
+      if (!inputEl) return;
+      
+      const input = inputEl.value;
       const tags = input.split(',').map(s => normalizeSkillTag(s)).filter(Boolean);
       
       currentManifest.questions[currentQuestionIndex].skill_tags = tags;
       renderQuestionsTable();
       
-      qs('#editSkillTagsModal').classList.remove('show');
+      const modal = qs('#editSkillTagsModal');
+      if (modal) modal.classList.remove('show');
       addNotif('Skill tags updated', { type: 'success' });
     });
     
     // Open Edit Default Codes Modal
     function openEditDefaultCodesModal(index) {
       const q = currentManifest.questions[index];
-      qs('#editDefaultCodesQuestion').textContent = q.q_ref;
-      qs('#editDefaultCodesInput').value = q.default_goal_codes.join(', ');
+      const questionEl = qs('#editDefaultCodesQuestion');
+      const inputEl = qs('#editDefaultCodesInput');
       
-      qs('#editDefaultCodesModal').classList.add('show');
+      if (questionEl) questionEl.textContent = q.q_ref;
+      if (inputEl) inputEl.value = q.default_goal_codes.join(', ');
+      
+      const modal = qs('#editDefaultCodesModal');
+      if (modal) modal.classList.add('show');
     }
     
     on('#editDefaultCodesCancel', 'click', () => {
-      qs('#editDefaultCodesModal').classList.remove('show');
+      const modal = qs('#editDefaultCodesModal');
+      if (modal) modal.classList.remove('show');
     });
     
     on('#editDefaultCodesSave', 'click', () => {
-      const input = qs('#editDefaultCodesInput').value;
+      const inputEl = qs('#editDefaultCodesInput');
+      if (!inputEl) return;
+      
+      const input = inputEl.value;
       const codes = input.split(',').map(s => s.trim()).filter(Boolean);
       
       currentManifest.questions[currentQuestionIndex].default_goal_codes = codes;
       renderQuestionsTable();
       
-      qs('#editDefaultCodesModal').classList.remove('show');
+      const modal = qs('#editDefaultCodesModal');
+      if (modal) modal.classList.remove('show');
       addNotif('Default codes updated', { type: 'success' });
     });
     
     // Open Edit Overrides Modal
     function openEditOverridesModal(index) {
       const q = currentManifest.questions[index];
-      qs('#editOverridesQuestion').textContent = q.q_ref;
+      const questionEl = qs('#editOverridesQuestion');
+      const studentCodeEl = qs('#editOverridesStudentCode');
+      const goalCodesEl = qs('#editOverridesGoalCodes');
+      
+      if (questionEl) questionEl.textContent = q.q_ref;
       
       // Clear inputs
-      qs('#editOverridesStudentCode').value = '';
-      qs('#editOverridesGoalCodes').value = '';
+      if (studentCodeEl) studentCodeEl.value = '';
+      if (goalCodesEl) goalCodesEl.value = '';
       
       // Render current overrides
       renderOverridesList(q.per_student_overrides);
       
-      qs('#editOverridesModal').classList.add('show');
+      const modal = qs('#editOverridesModal');
+      if (modal) modal.classList.add('show');
     }
     
     function renderOverridesList(overrides) {
       const content = qs('#overridesListContent');
+      if (!content) return;
       
       if (!overrides || Object.keys(overrides).length === 0) {
         content.innerHTML = 'No overrides';
@@ -5428,8 +5550,10 @@
       currentManifest.questions[currentQuestionIndex].per_student_overrides[studentCode] = codes;
       
       // Clear inputs
-      qs('#editOverridesStudentCode').value = '';
-      qs('#editOverridesGoalCodes').value = '';
+      const studentCodeEl = qs('#editOverridesStudentCode');
+      const goalCodesEl = qs('#editOverridesGoalCodes');
+      if (studentCodeEl) studentCodeEl.value = '';
+      if (goalCodesEl) goalCodesEl.value = '';
       
       // Re-render
       renderOverridesList(currentManifest.questions[currentQuestionIndex].per_student_overrides);
@@ -5438,12 +5562,14 @@
     });
     
     on('#editOverridesCancel', 'click', () => {
-      qs('#editOverridesModal').classList.remove('show');
+      const modal = qs('#editOverridesModal');
+      if (modal) modal.classList.remove('show');
     });
     
     on('#editOverridesSave', 'click', () => {
       renderQuestionsTable();
-      qs('#editOverridesModal').classList.remove('show');
+      const modal = qs('#editOverridesModal');
+      if (modal) modal.classList.remove('show');
       addNotif('Overrides updated', { type: 'success' });
     });
     
