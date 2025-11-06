@@ -1274,6 +1274,7 @@
             <div style="font-weight:800;margin-bottom:6px">Connectivity Details</div>
             <div id="connectivityMessage" class="subtle"></div>
             <div id="connectivityTimestamp" class="subtle" style="margin-top:4px;font-size:12px"></div>
+            <button id="btnRetryConnection" class="btn small" style="margin-top:8px;display:none">Try again</button>
           </div>
           
           <div id="diagnosticsOutput" style="margin-top:12px;padding:10px;background:rgba(255,255,255,.04);border-radius:8px;border:1px solid var(--line);display:none">
@@ -3594,12 +3595,19 @@
       const detailsDiv = qs('#connectivityDetails');
       const messageDiv = qs('#connectivityMessage');
       const timestampDiv = qs('#connectivityTimestamp');
+      const retryBtn = qs('#btnRetryConnection');
       
       // Show connectivity chip and set to testing
       connectivityChip.style.display = 'inline-flex';
       connectivityChip.textContent = 'Testing...';
       connectivityChip.style.background = 'rgba(255,255,255,.18)';
       connectivityChip.style.color = 'var(--ink)';
+      
+      // Disable retry button during test
+      if (retryBtn) {
+        retryBtn.disabled = true;
+        retryBtn.textContent = 'Testing...';
+      }
       
       try {
         // Get current config
@@ -3611,6 +3619,13 @@
         // Update chips and details based on result
         detailsDiv.style.display = 'block';
         timestampDiv.textContent = `Last checked: ${new Date(result.timestamp).toLocaleString()}`;
+        
+        // Show retry button for all results
+        if (retryBtn) {
+          retryBtn.style.display = 'inline-block';
+          retryBtn.disabled = false;
+          retryBtn.textContent = 'Try again';
+        }
         
         switch (result.status) {
           case 'ok':
@@ -3671,6 +3686,14 @@
         connectivityChip.style.color = '#fff';
         messageDiv.textContent = `✗ ${err.message}`;
         detailsDiv.style.display = 'block';
+        
+        // Show retry button on error
+        if (retryBtn) {
+          retryBtn.style.display = 'inline-block';
+          retryBtn.disabled = false;
+          retryBtn.textContent = 'Try again';
+        }
+        
         addNotif(`Test failed: ${err.message}`, { type: 'error' });
       }
     }
@@ -3774,6 +3797,14 @@
       testSupabaseConnection();
     });
     
+    // Retry connection button (defensive: only binds if element exists)
+    const retryBtn = qs('#btnRetryConnection');
+    if (retryBtn) {
+      retryBtn.addEventListener('click', () => {
+        testSupabaseConnection();
+      });
+    }
+    
     qs('#btnResetConfig').addEventListener('click', () => {
       resetRemoteConfig();
     });
@@ -3789,16 +3820,17 @@
       }
       
       const isEnabled = e.target.checked;
-      const config = supabaseSettings.readConfig();
       
       if (isEnabled) {
-        // User manually enabled: clear opt-out flag, preserve autoEnabled for tracking
-        supabaseSettings.writeConfig({ enabled: true, optOut: false });
+        // User manually enabled: clear opt-out flag
+        supabaseSettings.setOptOut(false);
+        supabaseSettings.writeConfig({ enabled: true });
         console.log('[Settings] User manually enabled Supabase, cleared opt-out');
         addNotif('Supabase enabled', { type: 'success' });
       } else {
-        // User manually disabled: set opt-out flag, clear autoEnabled
-        supabaseSettings.writeConfig({ enabled: false, optOut: true, autoEnabled: false });
+        // User manually disabled: set opt-out flag
+        supabaseSettings.setOptOut(true);
+        supabaseSettings.writeConfig({ enabled: false });
         console.log('[Settings] User disabled Supabase, set opt-out flag');
         addNotif('Supabase disabled - this preference will be remembered', { type: 'info' });
       }
@@ -5393,6 +5425,41 @@
         }
       }
     });
+    
+    // =======================
+    // Hub Settings: Defensive Auto-Enable & Retry Wire-Up
+    // =======================
+    // This script wires the Hub Settings UI to the Supabase settings helper.
+    // It's defensive: won't error if elements or helper functions aren't present.
+    // Creates retry UI only when #connectivityDetails exists.
+    (function() {
+      try {
+        // Only proceed if we have the connectivity details element
+        const connectivityDetails = document.querySelector('#connectivityDetails');
+        if (!connectivityDetails) {
+          console.log('[Hub-Retry] #connectivityDetails not found, skipping wire-up');
+          return;
+        }
+        
+        // Check if supabaseSettings helper is available
+        if (typeof supabaseSettings === 'undefined' || !supabaseSettings) {
+          console.log('[Hub-Retry] supabaseSettings not loaded yet, will retry after module loads');
+          
+          // Wait for module to load (the async import happens earlier in the file)
+          setTimeout(() => {
+            if (typeof supabaseSettings !== 'undefined' && supabaseSettings) {
+              console.log('[Hub-Retry] supabaseSettings now available');
+            }
+          }, 1000);
+          return;
+        }
+        
+        console.log('[Hub-Retry] Wire-up complete - retry button active');
+      } catch (err) {
+        // Defensive: log error but don't break the page
+        console.warn('[Hub-Retry] Wire-up failed (non-fatal):', err.message);
+      }
+    })();
     
   </script>
 

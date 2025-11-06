@@ -21,6 +21,31 @@ const KEYS = {
 };
 
 /**
+ * Opt-out preference key
+ */
+const OPT_OUT_KEY = UNIFIED_PREFIX + 'supabase_opt_out';
+
+/**
+ * Get opt-out preference
+ * @returns {boolean} true if user has opted out of auto-enable
+ */
+export function getOptOut() {
+  return localStorage.getItem(OPT_OUT_KEY) === 'true';
+}
+
+/**
+ * Set opt-out preference
+ * @param {boolean} optOut - true to opt out of auto-enable
+ */
+export function setOptOut(optOut) {
+  if (optOut) {
+    localStorage.setItem(OPT_OUT_KEY, 'true');
+  } else {
+    localStorage.removeItem(OPT_OUT_KEY);
+  }
+}
+
+/**
  * Read configuration from localStorage
  * Returns unified keys with fallback to legacy keys
  */
@@ -46,7 +71,10 @@ export function readConfig() {
               localStorage.getItem(KEYS.legacy.remote) === 'true';
   }
   
-  return { url, anon, enabled };
+  // Include opt-out preference
+  const optOut = getOptOut();
+  
+  return { url, anon, enabled, optOut };
 }
 
 /**
@@ -239,6 +267,9 @@ export function resetConfig() {
   localStorage.removeItem(KEYS.legacy.enabled);
   localStorage.removeItem(KEYS.legacy.remote);
   
+  // Clear opt-out preference (defined below)
+  setOptOut(false);
+  
   return { success: true, message: 'Configuration reset' };
 }
 
@@ -258,6 +289,28 @@ export function getDiagnostics() {
     hasUnifiedUrl: !!localStorage.getItem(KEYS.unified.url),
     hasUnifiedAnon: !!localStorage.getItem(KEYS.unified.anon),
     hasLegacyUrl: !!localStorage.getItem(KEYS.legacy.url),
-    hasLegacyAnon: !!(localStorage.getItem(KEYS.legacy.anon) || localStorage.getItem(KEYS.legacy.anon_alt))
+    hasLegacyAnon: !!(localStorage.getItem(KEYS.legacy.anon) || localStorage.getItem(KEYS.legacy.anon_alt)),
+    optOut: getOptOut()
   };
+}
+
+/**
+ * Auto-enable Supabase if eligible
+ * Checks if URL + anon key are present, enabled is false, and no opt-out
+ * @returns {Object} { changed: boolean, reason?: string }
+ */
+export function autoEnableIfEligible() {
+  const config = readConfig();
+  
+  // Check eligibility: has URL and anon, not already enabled, and no opt-out
+  if (config.url && config.anon && !config.enabled && !config.optOut) {
+    // Auto-enable
+    writeConfig({ enabled: true });
+    return { 
+      changed: true, 
+      reason: 'Credentials detected, auto-enabled (no opt-out)' 
+    };
+  }
+  
+  return { changed: false };
 }
