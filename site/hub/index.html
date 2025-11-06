@@ -3598,8 +3598,14 @@
         updateConfigStatus();
         
         // Dispatch event for other listeners
+        const currentConfig = supabaseSettings.readConfig();
         window.dispatchEvent(new CustomEvent('rc:remote-config-changed', { 
-          detail: { enabled, saved: true } 
+          detail: { 
+            enabled, 
+            saved: true,
+            url: currentConfig.url,
+            hasKey: !!currentConfig.anon
+          } 
         }));
       } catch (err) {
         addNotif(`Failed to save settings: ${err.message}`, { type: 'error' });
