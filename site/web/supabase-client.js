@@ -6,14 +6,35 @@ let supabaseLoadError = null;
 let cachedClient = null;
 let lastConfig = null;
 
-// Try to import Supabase, but don't fail if CDN is blocked
-try {
-  const module = await import('https://esm.sh/@supabase/supabase-js@2');
-  createClient = module.createClient;
-} catch (err) {
-  console.warn('Supabase CDN blocked or unavailable; app will use localStorage backend.', err.message);
-  supabaseLoadError = err.message;
+// Multi-CDN import chain with fallback order: esm.sh → jsDelivr → unpkg
+// Vendor fallback can be added under /site/vendor if needed
+const CDN_SOURCES = [
+  'https://esm.sh/@supabase/supabase-js@2',
+  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm',
+  'https://unpkg.com/@supabase/supabase-js@2/dist/module/index.js'
+  // Vendor fallback (if bundled locally):
+  // '/site/vendor/supabase-js/index.js'
+];
+
+// Try to import Supabase from multiple CDNs
+async function loadSupabaseLibrary() {
+  for (const cdnUrl of CDN_SOURCES) {
+    try {
+      const module = await import(cdnUrl);
+      createClient = module.createClient;
+      console.log(`[supabase-client] Loaded from ${cdnUrl}`);
+      return;
+    } catch (err) {
+      console.warn(`[supabase-client] Failed to load from ${cdnUrl}:`, err.message);
+    }
+  }
+  // All CDNs failed
+  supabaseLoadError = 'All CDN sources failed. App will use localStorage backend.';
+  console.warn('[supabase-client]', supabaseLoadError);
 }
+
+// Load library on module initialization
+await loadSupabaseLibrary();
 
 // Read config from localStorage using unified keys with legacy fallback
 const UNIFIED_PREFIX = 'rc_unified_';
