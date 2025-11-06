@@ -1,7 +1,7 @@
 // sub-plans.js
 // Substitute plan helpers with Supabase and local fallback
 
-import { supabase } from './supabase-client.js';
+import { getSupabase } from './supabase-client.js';
 
 const NS = 'rc_sub_plans_';
 
@@ -22,7 +22,8 @@ const localStore = {
 /**
  * Check if Supabase is available
  */
-function isSupabaseAvailable() {
+async function isSupabaseAvailable() {
+  const supabase = await getSupabase();
   return supabase && typeof supabase.from === 'function';
 }
 
@@ -48,7 +49,8 @@ export async function getTodaysSubPlan(date = null) {
   const planDate = date || formatDate(new Date());
   
   // Try remote first if available
-  if (isSupabaseAvailable()) {
+  if (await isSupabaseAvailable()) {
+    const supabase = await getSupabase();
     try {
       const { data, error } = await supabase
         .from('sub_plans')
@@ -126,7 +128,8 @@ export async function upsertSubPlan(plan) {
   }
 
   // Try remote first if available
-  if (isSupabaseAvailable()) {
+  if (await isSupabaseAvailable()) {
+    const supabase = await getSupabase();
     try {
       const { data, error } = await supabase
         .from('sub_plans')
@@ -195,7 +198,8 @@ function upsertLocalSubPlan(plan) {
  */
 export async function listSubPlans(filters = {}) {
   // Try remote first if available
-  if (isSupabaseAvailable()) {
+  if (await isSupabaseAvailable()) {
+    const supabase = await getSupabase();
     try {
       let query = supabase.from('sub_plans').select('*');
       
@@ -262,7 +266,8 @@ function listLocalSubPlans(filters = {}) {
  */
 export async function deleteSubPlan(planDate) {
   // Try remote first if available
-  if (isSupabaseAvailable()) {
+  if (await isSupabaseAvailable()) {
+    const supabase = await getSupabase();
     try {
       const { error } = await supabase
         .from('sub_plans')

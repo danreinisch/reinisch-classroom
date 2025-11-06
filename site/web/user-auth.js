@@ -1,7 +1,7 @@
 // user-auth.js
 // Unified user authentication helpers with Supabase RPC and local fallback
 
-import { supabase } from './supabase-client.js';
+import { getSupabase } from './supabase-client.js';
 
 const NS = 'rc_unified_';
 const AUTH_NS = 'rc_auth_';
@@ -24,7 +24,8 @@ const localStore = {
 /**
  * Check if Supabase is available
  */
-function isSupabaseAvailable() {
+async function isSupabaseAvailable() {
+  const supabase = await getSupabase();
   return supabase && typeof supabase.rpc === 'function';
 }
 
@@ -36,7 +37,8 @@ function isSupabaseAvailable() {
  */
 export async function verifyUserPassword(username, password) {
   // Try remote first if available
-  if (isSupabaseAvailable()) {
+  if (await isSupabaseAvailable()) {
+    const supabase = await getSupabase();
     try {
       const { data, error } = await supabase.rpc('verify_user_password', {
         p_username: username,
@@ -119,7 +121,8 @@ function verifyLocalPassword(username, password) {
  */
 export async function setUserPassword(username, password, role = 'student', studentId = null) {
   // Try remote first if available
-  if (isSupabaseAvailable()) {
+  if (await isSupabaseAvailable()) {
+    const supabase = await getSupabase();
     try {
       const { data, error } = await supabase.rpc('set_user_password', {
         p_username: username,

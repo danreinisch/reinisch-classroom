@@ -3908,7 +3908,7 @@
     
     // Seed → Supabase: push local students and goals to remote
     async function seedToSupabase() {
-      if (!isRemote) {
+      if (!(await isRemote())) {
         showToolsStatus('Error', 'Supabase not enabled. Please configure and enable remote storage first.', '', true);
         addNotif('Seed failed: Supabase not enabled', { type: 'error' });
         return;
@@ -3972,7 +3972,7 @@
     
     // Pull ← Supabase: import students and goals from remote to local
     async function pullFromSupabase() {
-      if (!isRemote) {
+      if (!(await isRemote())) {
         showToolsStatus('Error', 'Supabase not enabled. Please configure and enable remote storage first.', '', true);
         addNotif('Pull failed: Supabase not enabled', { type: 'error' });
         return;
@@ -4115,9 +4115,9 @@
     }
     
     // Reset Demo Classes (Local mode only)
-    function resetDemoClasses() {
+    async function resetDemoClasses() {
       // Check if in remote mode
-      if (isRemote) {
+      if (await isRemote()) {
         addNotif('Demo reset is Local-only; remote data is not modified.', { type: 'warning' });
         return;
       }
@@ -4542,7 +4542,7 @@
       }
       
       // Check if Supabase is available (for execute mode)
-      if (!dryRun && !isRemote) {
+      if (!dryRun && !(await isRemote())) {
         const summaryDiv = qs('#migratorSummary');
         const summaryText = qs('#migratorSummaryText');
         summaryDiv.style.display = 'block';
