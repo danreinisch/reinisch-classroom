@@ -3559,15 +3559,27 @@
         const isAddingCredentials = !!(url && key && key.length >= MIN_SUPABASE_KEY_LENGTH);
         
         // Determine opt-out status based on enabled flag
-        // When enabling: clear opt-out
-        // When disabling: set opt-out (user is explicitly turning it off)
-        const optOut = !enabled;
+        // Only set opt-out when user is explicitly disabling (was enabled, now disabled)
+        // Don't set opt-out when enabling - just clear it
+        const wasEnabled = currentConfig.enabled;
+        let optOut = undefined; // Don't change by default
+        
+        if (enabled && !wasEnabled) {
+          // User is enabling: clear opt-out
+          optOut = false;
+        } else if (!enabled && wasEnabled) {
+          // User is disabling: set opt-out (explicit choice)
+          optOut = true;
+        }
+        // else: no change in enabled state, don't modify opt-out
         
         // Use helper to save with anon key preservation and opt-out handling
-        supabaseSettings.writeConfig(
-          { url, anon: key, enabled, optOut },
-          { preserveAnonIfMasked: true }
-        );
+        const configUpdate = { url, anon: key, enabled };
+        if (optOut !== undefined) {
+          configUpdate.optOut = optOut;
+        }
+        
+        supabaseSettings.writeConfig(configUpdate, { preserveAnonIfMasked: true });
         
         // Only auto-enable if credentials were just added AND toggle is unchecked AND no opt-out
         const shouldAutoEnable = !enabled && 
@@ -3814,12 +3826,17 @@
       
       // Debounce the actual test
       retryDebounceTimeout = setTimeout(async () => {
-        await testSupabaseConnection();
-        
-        // Re-enable button
-        btn.disabled = false;
-        btn.textContent = 'Try again';
-        retryDebounceTimeout = null;
+        try {
+          await testSupabaseConnection();
+        } catch (err) {
+          console.error('[Settings] Retry connection failed:', err);
+          addNotif('Connection test failed: ' + err.message, { type: 'error' });
+        } finally {
+          // Always re-enable button
+          btn.disabled = false;
+          btn.textContent = 'Try again';
+          retryDebounceTimeout = null;
+        }
       }, RETRY_DEBOUNCE_MS);
     });
     

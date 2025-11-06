@@ -174,9 +174,8 @@ export function autoEnableIfEligible() {
     return { changed: false, reason: 'Missing credentials' };
   }
   
-  // All conditions met - auto-enable
-  localStorage.setItem(KEYS.unified.enabled, 'true');
-  localStorage.setItem(KEYS.unified.autoEnabled, 'true');
+  // All conditions met - auto-enable using writeConfig for consistency
+  writeConfig({ enabled: true, autoEnabled: true });
   
   return { 
     changed: true, 
