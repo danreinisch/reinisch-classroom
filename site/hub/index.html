@@ -3581,12 +3581,9 @@
         
         supabaseSettings.writeConfig(configUpdate, { preserveAnonIfMasked: true });
         
-        // Only auto-enable if credentials were just added AND toggle is unchecked AND no opt-out
-        const shouldAutoEnable = !enabled && 
-                                 !currentConfig.optOut && 
-                                 isAddingCredentials;
-        
-        if (shouldAutoEnable) {
+        // Try auto-enable if conditions might be met (credentials present, not manually enabled)
+        // The autoEnableIfEligible helper will check all conditions properly
+        if (!enabled && isAddingCredentials) {
           if (handleAutoEnableCheck()) {
             return; // Auto-enable triggered, settings reloaded
           }
@@ -3830,7 +3827,7 @@
           await testSupabaseConnection();
         } catch (err) {
           console.error('[Settings] Retry connection failed:', err);
-          addNotif('Connection test failed: ' + err.message, { type: 'error' });
+          // testSupabaseConnection already shows error notification, so just log here
         } finally {
           // Always re-enable button
           btn.disabled = false;

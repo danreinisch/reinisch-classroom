@@ -151,7 +151,9 @@ export function migrateLegacyKeys() {
  * - User hasn't manually disabled (opted out)
  * - Not already enabled
  * 
- * @returns {Object} { changed: boolean, reason?: string }
+ * @returns {Object} Result object with changed flag and optional reason
+ * @returns {boolean} result.changed - Whether auto-enable was performed
+ * @returns {string} [result.reason] - Explanation of the result
  */
 export function autoEnableIfEligible() {
   const config = readConfig();
