@@ -5,37 +5,46 @@ export let supabase = null; // live binding - auto-updates on rebuild
 let createClient = null;
 let supabaseLoadError = null;
 let lastConfig = null;
+let libraryLoadPromise = null;
 
 // Multi-CDN fallback: try esm.sh → jsDelivr → unpkg
-async function loadLibrary() {
-  const sources = [
-    'https://esm.sh/@supabase/supabase-js@2',
-    'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm',
-    'https://unpkg.com/@supabase/supabase-js@2/dist/esm/index.js'
-  ];
+// Loads asynchronously to avoid blocking app startup
+function loadLibrary() {
+  if (libraryLoadPromise) return libraryLoadPromise;
   
-  for (const src of sources) {
-    try {
-      const module = await import(src);
-      createClient = module.createClient;
-      supabaseLoadError = null;
-      return;
-    } catch (err) {
-      supabaseLoadError = err?.message || String(err);
+  libraryLoadPromise = (async () => {
+    const sources = [
+      'https://esm.sh/@supabase/supabase-js@2',
+      'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm',
+      'https://unpkg.com/@supabase/supabase-js@2/dist/esm/index.js'
+    ];
+    
+    for (const src of sources) {
+      try {
+        const module = await import(src);
+        createClient = module.createClient;
+        supabaseLoadError = null;
+        return;
+      } catch (err) {
+        supabaseLoadError = err?.message || String(err);
+      }
     }
-  }
+    
+    // Optional vendor fallback (commented out - enable if needed)
+    // try {
+    //   const module = await import('/vendor/supabase-js@2.mjs');
+    //   createClient = module.createClient;
+    //   supabaseLoadError = null;
+    // } catch {}
+    
+    console.warn('All Supabase CDN sources failed; app will use localStorage backend.', supabaseLoadError);
+  })();
   
-  // Optional vendor fallback (commented out - enable if needed)
-  // try {
-  //   const module = await import('/vendor/supabase-js@2.mjs');
-  //   createClient = module.createClient;
-  //   supabaseLoadError = null;
-  // } catch {}
-  
-  console.warn('All Supabase CDN sources failed; app will use localStorage backend.', supabaseLoadError);
+  return libraryLoadPromise;
 }
 
-await loadLibrary();
+// Start loading immediately but don't block
+loadLibrary();
 
 // Read config from localStorage using unified keys with legacy fallback
 const UNIFIED_PREFIX = 'rc_unified_';
@@ -97,9 +106,14 @@ function buildClient(config, reason = 'unknown') {
 
 /**
  * Get the current Supabase client (builds if needed)
- * @returns {Object|null} Supabase client or null if not configured
+ * @returns {Promise<Object|null>} Supabase client or null if not configured
  */
-export function getSupabase() {
+export async function getSupabase() {
+  // Wait for library to load if still loading
+  if (libraryLoadPromise) {
+    await libraryLoadPromise;
+  }
+  
   const config = readCurrentConfig();
   
   // Check if we need to rebuild
