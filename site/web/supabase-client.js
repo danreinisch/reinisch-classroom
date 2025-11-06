@@ -1,8 +1,10 @@
-// Minimal client. If no env keys are provided, this module logs a warning and does nothing.
-// Downstream code should feature-detect and fall back to localStorage when supabase is null.
+// Reactive Supabase client - rebuilds when settings change
+// Listens for rc:remote-config-changed and storage events to re-initialize
 
 let createClient = null;
 let supabaseLoadError = null;
+let cachedClient = null;
+let lastConfig = null;
 
 // Try to import Supabase, but don't fail if CDN is blocked
 try {
@@ -31,44 +33,130 @@ function getStoredValue(unifiedKey, legacyKeys = []) {
   return null;
 }
 
-const storedUrl = getStoredValue('supabase_url', ['supabase_url']);
-const storedKey = getStoredValue('supabase_anon', ['supabase_key', 'supabase_anon']);
-const useRemote = getStoredValue('use_supabase', ['use_remote', 'use_supabase']) === 'true';
+function readCurrentConfig() {
+  const storedUrl = getStoredValue('supabase_url', ['supabase_url']);
+  const storedKey = getStoredValue('supabase_anon', ['supabase_key', 'supabase_anon']);
+  const useRemote = getStoredValue('use_supabase', ['use_remote', 'use_supabase']) === 'true';
+  const optOut = getStoredValue('supabase_opt_out', ['supabase_opt_out']) === 'true';
 
-// Initialize Supabase client only when both URL and key exist AND use_remote is true AND createClient loaded
-const url = window.SUPABASE_URL || storedUrl;
-const key = window.SUPABASE_ANON_KEY || storedKey;
-
-export const supabase = (createClient && url && key && useRemote)
-  ? createClient(url, key, {
-      auth: { persistSession: true, autoRefreshToken: true }
-    })
-  : null;
-
-if (!supabase) {
-  if (supabaseLoadError) {
-    console.warn('Supabase library not available:', supabaseLoadError);
-  } else {
-    console.warn('Supabase env not detected; app will use localStorage backend.');
-  }
+  const url = window.SUPABASE_URL || storedUrl;
+  const key = window.SUPABASE_ANON_KEY || storedKey;
+  
+  return { url, key, useRemote, optOut };
 }
 
-// Helper to test connection
-export async function testConnection() {
-  if (!supabase) {
-    return { ok: false, error: 'not-configured' };
+function configChanged(newConfig) {
+  if (!lastConfig) return true;
+  return lastConfig.url !== newConfig.url ||
+         lastConfig.key !== newConfig.key ||
+         lastConfig.useRemote !== newConfig.useRemote ||
+         lastConfig.optOut !== newConfig.optOut;
+}
+
+function buildClient(config) {
+  // Reset if configuration changed or opt-out is set
+  if (config.optOut || !config.useRemote || !config.url || !config.key || !createClient) {
+    return null;
   }
   
   try {
-    // Attempt a cheap query to test connection
-    // Using a simple select that should work on any Supabase project
-    const { error } = await supabase.from('students').select('id', { count: 'exact', head: true });
-    if (error) {
-      // If students table doesn't exist, that's also useful info
-      return { ok: false, error: error.message };
+    return createClient(config.url, config.key, {
+      auth: { persistSession: true, autoRefreshToken: true }
+    });
+  } catch (err) {
+    console.warn('Failed to create Supabase client:', err.message);
+    return null;
+  }
+}
+
+/**
+ * Get or build the Supabase client based on current localStorage settings
+ * @returns {Promise<Object|null>} Supabase client or null if not configured
+ */
+export async function getSupabase() {
+  const config = readCurrentConfig();
+  
+  // Check if we need to rebuild
+  if (configChanged(config)) {
+    cachedClient = buildClient(config);
+    lastConfig = config;
+    
+    if (!cachedClient) {
+      if (supabaseLoadError) {
+        // Only log on first call
+        if (!lastConfig || lastConfig.useRemote) {
+          console.warn('Supabase library not available:', supabaseLoadError);
+        }
+      } else if (config.optOut) {
+        // Don't spam console when user explicitly opted out
+      } else if (!config.useRemote) {
+        // Don't spam console when feature is disabled
+      } else {
+        console.warn('Supabase env not detected; app will use localStorage backend.');
+      }
     }
-    return { ok: true };
+  }
+  
+  return cachedClient;
+}
+
+/**
+ * Reset the cached client to force rebuild on next getSupabase() call
+ */
+export function resetSupabaseClient() {
+  cachedClient = null;
+  lastConfig = null;
+}
+
+/**
+ * Test connection to Supabase using auth/v1/settings endpoint
+ * @returns {Promise<Object>} { ok: boolean, error?: string }
+ */
+export async function testConnection() {
+  const config = readCurrentConfig();
+  
+  if (!config.url || !config.key) {
+    return { ok: false, error: 'not-configured' };
+  }
+  
+  const url = config.url.replace(/\/$/, '');
+  const endpoint = `${url}/auth/v1/settings`;
+  
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    
+    const response = await fetch(endpoint, {
+      method: 'GET',
+      headers: {
+        'apikey': config.key,
+        'Authorization': `Bearer ${config.key}`
+      },
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (response.ok) {
+      return { ok: true };
+    } else {
+      return { ok: false, error: `HTTP ${response.status}: ${response.statusText}` };
+    }
   } catch (err) {
     return { ok: false, error: err.message || 'connection-failed' };
   }
 }
+
+// Listen for config changes from settings UI
+window.addEventListener('rc:remote-config-changed', (e) => {
+  console.log('[supabase-client] Config changed, resetting client');
+  resetSupabaseClient();
+});
+
+// Listen for storage events from other tabs
+window.addEventListener('storage', (e) => {
+  if (e.key && e.key.startsWith(UNIFIED_PREFIX + 'supabase')) {
+    console.log('[supabase-client] Storage changed in another tab, resetting client');
+    resetSupabaseClient();
+  }
+});
