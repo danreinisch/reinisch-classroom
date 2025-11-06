@@ -639,11 +639,25 @@
   const currentTheme = localStorage.getItem(THEME_KEY);
   
   // Default to glass-bold on first visit
-  if (!currentTheme) {
-    localStorage.setItem(THEME_KEY, 'glass-bold');
-    document.body.classList.add('glass-bold');
-  } else if (currentTheme === 'glass-bold') {
-    document.body.classList.add('glass-bold');
+  function applyTheme() {
+    if (!document.body) {
+      console.warn('[Theme Boot] Body not ready, waiting for DOMContentLoaded');
+      return;
+    }
+    
+    if (!currentTheme) {
+      localStorage.setItem(THEME_KEY, 'glass-bold');
+      document.body.classList.add('glass-bold');
+    } else if (currentTheme === 'glass-bold') {
+      document.body.classList.add('glass-bold');
+    }
+  }
+  
+  // Apply immediately if body exists, otherwise wait
+  if (document.body) {
+    applyTheme();
+  } else {
+    document.addEventListener('DOMContentLoaded', applyTheme);
   }
 })();
 </script>
