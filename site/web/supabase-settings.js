@@ -71,7 +71,7 @@ export function writeConfig(config = {}, options = {}) {
   
   // Update anon key with preservation logic
   if (config.anon !== undefined) {
-    const anonValue = config.anon.trim();
+    const anonValue = (config.anon || '').trim();
     const isMasked = !anonValue || /^[•\*]+$/.test(anonValue) || anonValue === '••••••••';
     
     // Only update if not masked or if preservation is disabled
@@ -83,7 +83,7 @@ export function writeConfig(config = {}, options = {}) {
   
   // Update enabled flag if provided
   if (config.enabled !== undefined) {
-    localStorage.setItem(KEYS.unified.enabled, config.enabled.toString());
+    localStorage.setItem(KEYS.unified.enabled, String(config.enabled));
   }
   
   // Update optOut flag if provided
@@ -111,10 +111,6 @@ export function writeConfig(config = {}, options = {}) {
  * Migrate legacy keys to unified keys if unified keys don't exist
  */
 export function migrateLegacyKeys() {
-  const current = readConfig();
-  let migrated = false;
-  
-  // Check if we need migration (unified keys are empty but legacy exist)
   const hasUnified = localStorage.getItem(KEYS.unified.url) || 
                      localStorage.getItem(KEYS.unified.anon);
   
@@ -122,6 +118,8 @@ export function migrateLegacyKeys() {
     return { migrated: false, message: 'Unified keys already exist' };
   }
   
+  let migrated = false;
+
   // Migrate URL
   const legacyUrl = localStorage.getItem(KEYS.legacy.url);
   if (legacyUrl) {
@@ -153,9 +151,58 @@ export function migrateLegacyKeys() {
 }
 
 /**
+ * Auto-enable Supabase if URL and Anon are present and user hasn't opted out
+ * @returns {Object} { changed: boolean, message: string, config: Object }
+ */
+export function autoEnableIfEligible() {
+  const config = readConfig();
+  
+  // Check if already enabled
+  if (config.enabled) {
+    return { 
+      changed: false, 
+      message: 'Already enabled', 
+      config 
+    };
+  }
+  
+  // Check if user has opted out
+  if (config.optOut) {
+    return { 
+      changed: false, 
+      message: 'User opted out', 
+      config 
+    };
+  }
+  
+  // Check if URL and Anon are present and non-empty
+  if (!config.url?.trim() || !config.anon?.trim()) {
+    return { 
+      changed: false, 
+      message: 'URL or Anon key missing', 
+      config 
+    };
+  }
+  
+  // Auto-enable!
+  writeConfig({ 
+    enabled: true, 
+    autoEnabled: true 
+  });
+  
+  const newConfig = readConfig();
+  
+  return { 
+    changed: true, 
+    message: 'Supabase auto-enabled', 
+    config: newConfig 
+  };
+}
+
+/**
  * Test connectivity to Supabase
  * @param {Object} cfg - { url, anon, enabled }
- * @returns {Promise<Object>} { status: 'ok'|'unauthorized'|'network'|'not-configured', httpStatus?, message?, timestamp }
+ * @returns {Promise<Object>} { status: 'ok'|'unauthorized'|'network'|'not-configured'|'error', httpStatus?, message?, timestamp }
  */
 export async function testConnectivity(cfg) {
   const timestamp = new Date().toISOString();
@@ -226,7 +273,7 @@ export async function testConnectivity(cfg) {
         timestamp,
         error: err.message
       };
-    } else if (err.message.includes('CORS') || err.message.includes('NetworkError')) {
+    } else if (err.message?.includes('CORS') || err.message?.includes('NetworkError')) {
       return {
         status: 'network',
         message: 'Network blocked - possible district firewall or CORS issue',
@@ -285,54 +332,5 @@ export function getDiagnostics() {
     hasUnifiedAnon: !!localStorage.getItem(KEYS.unified.anon),
     hasLegacyUrl: !!localStorage.getItem(KEYS.legacy.url),
     hasLegacyAnon: !!(localStorage.getItem(KEYS.legacy.anon) || localStorage.getItem(KEYS.legacy.anon_alt))
-  };
-}
-
-/**
- * Auto-enable Supabase if URL and Anon are present and user hasn't opted out
- * @returns {Object} { changed: boolean, message: string, config: Object }
- */
-export function autoEnableIfEligible() {
-  const config = readConfig();
-  
-  // Check if already enabled
-  if (config.enabled) {
-    return { 
-      changed: false, 
-      message: 'Already enabled', 
-      config 
-    };
-  }
-  
-  // Check if user has opted out
-  if (config.optOut) {
-    return { 
-      changed: false, 
-      message: 'User opted out', 
-      config 
-    };
-  }
-  
-  // Check if URL and Anon are present and non-empty
-  if (!config.url || !config.anon || config.url.trim() === '' || config.anon.trim() === '') {
-    return { 
-      changed: false, 
-      message: 'URL or Anon key missing', 
-      config 
-    };
-  }
-  
-  // Auto-enable!
-  writeConfig({ 
-    enabled: true, 
-    autoEnabled: true 
-  });
-  
-  const newConfig = readConfig();
-  
-  return { 
-    changed: true, 
-    message: 'Supabase auto-enabled', 
-    config: newConfig 
   };
 }
