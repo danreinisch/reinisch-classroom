@@ -155,8 +155,12 @@ window.addEventListener('rc:remote-config-changed', (e) => {
 
 // Listen for storage events from other tabs
 window.addEventListener('storage', (e) => {
-  // Check for any Supabase-related unified keys
-  if (e.key && (e.key.startsWith(UNIFIED_PREFIX + 'supabase') || e.key === UNIFIED_PREFIX + 'use_supabase')) {
+  // Check for any Supabase-related unified keys (url, anon, use_supabase, opt_out)
+  if (e.key && (
+    e.key.startsWith(UNIFIED_PREFIX + 'supabase') || 
+    e.key === UNIFIED_PREFIX + 'use_supabase' ||
+    e.key === UNIFIED_PREFIX + 'supabase_opt_out'
+  )) {
     console.log('[supabase-client] Storage changed in another tab, resetting client');
     resetSupabaseClient();
   }

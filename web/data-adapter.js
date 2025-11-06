@@ -760,6 +760,8 @@ const remote = {
 const db = {};
 
 // Wrap each method to try remote first, fall back to local
+// Note: We wrap all local methods for consistency, even if remote doesn't implement them.
+// The check `if (supabase && remote[method])` handles methods that only exist in local.
 for (const method of Object.keys(local)) {
   db[method] = async function(...args) {
     const supabase = await getSupabase();
