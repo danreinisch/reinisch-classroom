@@ -5775,6 +5775,11 @@
   
   const MODALS = ['#teachModal', '#signInModal', '#studentSignInModal', '#roleSwitchModal'];
   
+  // Timing constants for UI updates
+  const TAB_RESTORE_DELAY = 100;  // Brief delay to ensure submenu is rendered before restoring tab
+  const STATE_RESTORE_DELAY = 500; // Delay to ensure all async scripts have loaded before restoring state
+  const AUTH_CHECK_INTERVAL = 5000; // Check auth state every 5 seconds (reduced from 1s to minimize overhead)
+  
   // ============================================================================
   // UTILITY FUNCTIONS
   // ============================================================================
@@ -5964,7 +5969,7 @@
             tabLink.click();
           }
         }
-      }, 100);
+      }, TAB_RESTORE_DELAY);
       
       console.debug('[Hub UX] Restored last state:', lastArea);
     } catch (err) {
@@ -6038,8 +6043,8 @@
         }
       }
       
-      // Check periodically for auth changes
-      setInterval(updateRoleSwitchChip, 1000);
+      // Check periodically for auth changes (every 5s to reduce overhead)
+      setInterval(updateRoleSwitchChip, AUTH_CHECK_INTERVAL);
       updateRoleSwitchChip();
       
       // Open role switch modal
@@ -6133,8 +6138,8 @@
       initRoleSwitch();
       initSubstituteRole();
       
-      // Restore last state after a brief delay to ensure other scripts have loaded
-      setTimeout(restoreLastState, 500);
+      // Restore last state after a delay to ensure all async scripts have loaded
+      setTimeout(restoreLastState, STATE_RESTORE_DELAY);
       
       console.debug('[Hub UX] Initialization complete');
     } catch (err) {
