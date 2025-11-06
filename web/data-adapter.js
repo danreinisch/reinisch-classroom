@@ -704,10 +704,12 @@ const remote = {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
     
-    // This is a complex operation that should be done in a transaction
-    // For now, we'll implement a basic version
-    // Note: We don't wrap the entire loop in withRetry since it's a bulk operation
-    // Individual queries inside are simple enough that they'll fail-fast appropriately
+    // This is a bulk import operation that processes multiple rows
+    // We don't wrap the entire loop in withRetry because:
+    // 1. It's not idempotent (could create duplicates on retry)
+    // 2. We track success/failure per row
+    // 3. Partial success is acceptable
+    // Individual row failures are caught and reported in results.errors
     
     const results = {
       processed: 0,
