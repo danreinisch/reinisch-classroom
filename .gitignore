@@ -31,3 +31,6 @@ build/
 # Env
 .env
 .env.*
+
+# Test screenshots
+screenshots/
