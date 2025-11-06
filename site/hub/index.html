@@ -5497,7 +5497,12 @@
 (function() {
   'use strict';
   
-  console.log('[Hub Settings - PR2] Defensive wiring script loaded');
+  // Timing constants for defensive DOM operations
+  // Small delay ensures DOM elements are ready when accessed via event handlers
+  const DOM_READY_DELAY_MS = 50;  // Quick check for immediate DOM access
+  const INITIAL_STATUS_DELAY_MS = 200;  // Longer delay for initial page load status update
+  
+  console.debug('[Hub Settings - PR2] Defensive wiring script loaded');
   
   // Safe querySelector helper with null checking
   const safeQs = (selector) => {
@@ -5540,7 +5545,7 @@
       // Check if the main updateConfigStatus function is available
       if (typeof window.updateConfigStatus === 'function') {
         window.updateConfigStatus();
-        console.log('[Hub Settings - PR2] Config status updated via main function');
+        console.debug('[Hub Settings - PR2] Config status updated via main function');
       } else if (typeof window.supabaseSettings !== 'undefined' && window.supabaseSettings.readConfig) {
         // Fallback: manually update the chip if main function not available yet
         const config = window.supabaseSettings.readConfig();
@@ -5550,25 +5555,25 @@
           safeStyle(configStatus, 'background', 'linear-gradient(180deg, rgba(34,197,94,.8), rgba(22,163,74,.8))');
           safeStyle(configStatus, 'color', '#fff');
           safeProp(configStatus, 'title', 'Supabase is enabled');
-          console.log('[Hub Settings - PR2] Config status updated via fallback (Enabled)');
+          console.debug('[Hub Settings - PR2] Config status updated via fallback (Enabled)');
         } else if (config.url && config.anon && !config.enabled) {
           safeProp(configStatus, 'textContent', 'Disabled');
           safeStyle(configStatus, 'background', 'rgba(255,255,255,.18)');
           safeStyle(configStatus, 'color', 'var(--muted)');
           safeProp(configStatus, 'title', 'Supabase is configured but disabled');
-          console.log('[Hub Settings - PR2] Config status updated via fallback (Disabled)');
+          console.debug('[Hub Settings - PR2] Config status updated via fallback (Disabled)');
         } else if (config.url || config.anon) {
           safeProp(configStatus, 'textContent', 'Partially Configured');
           safeStyle(configStatus, 'background', 'rgba(251,191,36,.3)');
           safeStyle(configStatus, 'color', 'var(--ink)');
           safeProp(configStatus, 'title', 'Missing URL or anon key');
-          console.log('[Hub Settings - PR2] Config status updated via fallback (Partial)');
+          console.debug('[Hub Settings - PR2] Config status updated via fallback (Partial)');
         } else {
           safeProp(configStatus, 'textContent', 'Not Configured');
           safeStyle(configStatus, 'background', 'rgba(255,255,255,.18)');
           safeStyle(configStatus, 'color', 'var(--muted)');
           safeProp(configStatus, 'title', 'No Supabase configuration');
-          console.log('[Hub Settings - PR2] Config status updated via fallback (Not Configured)');
+          console.debug('[Hub Settings - PR2] Config status updated via fallback (Not Configured)');
         }
       }
     } catch (err) {
@@ -5605,7 +5610,7 @@
       }
       
       btnRetry.dataset.pr2Wired = 'true';
-      console.log('[Hub Settings - PR2] Retry button wired up');
+      console.debug('[Hub Settings - PR2] Retry button wired up');
       
       // Add additional handler to ensure timestamp updates
       btnRetry.addEventListener('click', function pr2RetryHandler() {
@@ -5626,7 +5631,7 @@
   // This is the KEY function that ensures auto-enable updates chips immediately
   function setupConfigChangeListener() {
     try {
-      console.log('[Hub Settings - PR2] Setting up config change listener');
+      console.debug('[Hub Settings - PR2] Setting up config change listener');
       
       // Set up event listener EARLY - before the main async module loads
       // This ensures we catch the auto-enable event when it's dispatched
@@ -5634,26 +5639,26 @@
         try {
           const detail = e.detail || {};
           
-          console.log('[Hub Settings - PR2] Config changed event received:', detail);
+          console.debug('[Hub Settings - PR2] Config changed event received:', detail);
           
-          // Update config status chips immediately when config changes
-          // Use a short timeout to ensure DOM elements are ready
+          // Update config status chips after brief delay to ensure DOM is ready
+          // DOM_READY_DELAY_MS ensures elements exist when accessed via event
           setTimeout(() => {
             defensiveUpdateConfigStatus();
-          }, 50);
+          }, DOM_READY_DELAY_MS);
           
           // Update timestamp if this was triggered by save or test
           if (detail.saved || detail.tested) {
             setTimeout(() => {
               updateConnectivityTimestamp();
-            }, 50);
+            }, DOM_READY_DELAY_MS);
           }
         } catch (err) {
           console.debug('[Hub Settings - PR2] Config change handler error:', err.message);
         }
       }, { capture: false });
       
-      console.log('[Hub Settings - PR2] Config change listener attached');
+      console.debug('[Hub Settings - PR2] Config change listener attached');
     } catch (err) {
       console.debug('[Hub Settings - PR2] Could not setup config change listener:', err.message);
     }
@@ -5662,7 +5667,7 @@
   // Initialize wiring
   function initWiring() {
     try {
-      console.log('[Hub Settings - PR2] Initializing wiring...');
+      console.debug('[Hub Settings - PR2] Initializing wiring...');
       
       // Setup config change listener immediately (runs before async module loads)
       setupConfigChangeListener();
@@ -5670,13 +5675,14 @@
       // Setup retry button and initial status when DOM is ready
       const setupUI = () => {
         try {
-          console.log('[Hub Settings - PR2] Setting up UI elements');
+          console.debug('[Hub Settings - PR2] Setting up UI elements');
           setupRetryConnectionWiring();
           
-          // Initial config status update (in case page loaded with existing config)
+          // Initial config status update after page load
+          // INITIAL_STATUS_DELAY_MS ensures all async modules have loaded
           setTimeout(() => {
             defensiveUpdateConfigStatus();
-          }, 200);
+          }, INITIAL_STATUS_DELAY_MS);
         } catch (err) {
           console.debug('[Hub Settings - PR2] UI setup error:', err.message);
         }
@@ -5689,7 +5695,7 @@
         setupUI();
       }
       
-      console.log('[Hub Settings - PR2] Wiring initialization complete');
+      console.debug('[Hub Settings - PR2] Wiring initialization complete');
     } catch (err) {
       console.debug('[Hub Settings - PR2] Wiring initialization failed:', err.message);
     }
