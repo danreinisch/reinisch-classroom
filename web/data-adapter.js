@@ -1,5 +1,6 @@
 // Adapter selection: use Supabase if available, else localStorage.
 import { getSupabase } from './supabase-client.js';
+import { withRetry } from '../site/web/supabase-util.js';
 
 const NS = 'rc_unified_';
 const store = {
@@ -249,47 +250,47 @@ const local = {
 
 const remote = {
   async listStudents() {
-    const supabase = await getSupabase();
+    const supabase = getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
-    const { data, error } = await supabase.from('students').select('id, code, name, class_id').order('code');
+    const { data, error } = await withRetry(() => supabase.from('students').select('id, code, name, class_id').order('code'));
     if (error) throw error; return data;
   },
   async upsertStudent({ code, name, class_id = null }) {
-    const supabase = await getSupabase();
+    const supabase = getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
-    const { data, error } = await supabase.from('students').upsert({ code, name, class_id }, { onConflict: 'code' }).select().single();
+    const { data, error } = await withRetry(() => supabase.from('students').upsert({ code, name, class_id }, { onConflict: 'code' }).select().single());
     if (error) throw error; return data;
   },
   async listGoalsByStudentCode(code) {
-    const supabase = await getSupabase();
+    const supabase = getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
-    const { data: stu, error: e1 } = await supabase.from('students').select('id').eq('code', code).single();
+    const { data: stu, error: e1 } = await withRetry(() => supabase.from('students').select('id').eq('code', code).single());
     if (e1) throw e1;
-    const { data, error } = await supabase.from('goals').select('id, code, desc, target, status').eq('student_id', stu.id).order('code');
+    const { data, error } = await withRetry(() => supabase.from('goals').select('id, code, desc, target, status').eq('student_id', stu.id).order('code'));
     if (error) throw error; return data;
   },
   async upsertGoal({ student_code, code, desc, target = null, status = 'Open' }) {
-    const supabase = await getSupabase();
+    const supabase = getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
     // Lookup student by code
-    const { data: stu, error: e1 } = await supabase.from('students').select('id').eq('code', student_code).single();
+    const { data: stu, error: e1 } = await withRetry(() => supabase.from('students').select('id').eq('code', student_code).single());
     if (e1) throw e1;
     // Upsert goal: unique on (student_id, code)
-    const { data, error } = await supabase.from('goals')
+    const { data, error } = await withRetry(() => supabase.from('goals')
       .upsert({ student_id: stu.id, code, desc, target, status }, { onConflict: 'student_id,code' })
       .select()
-      .single();
+      .single());
     if (error) throw error;
     return { student_code, ...data };
   },
   async listGoalsAll() {
-    const supabase = await getSupabase();
+    const supabase = getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
     // Join students and goals
-    const { data, error } = await supabase
+    const { data, error } = await withRetry(() => supabase
       .from('goals')
       .select('id, code, desc, target, status, student_id, students!inner(code)')
-      .order('code', { foreignTable: 'students', ascending: true });
+      .order('code', { foreignTable: 'students', ascending: true }));
     if (error) throw error;
     // Flatten to include student_code at top level
     return (data || []).map(g => ({
@@ -302,43 +303,43 @@ const remote = {
     }));
   },
   async addProgress({ student_code, goal_id, date, points = '', percent = null, method = '', by_name = 'Teacher', via = 'manual', notes = '' }) {
-    const supabase = await getSupabase();
+    const supabase = getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
-    const { data: stu, error: e1 } = await supabase.from('students').select('id').eq('code', student_code).single();
+    const { data: stu, error: e1 } = await withRetry(() => supabase.from('students').select('id').eq('code', student_code).single());
     if (e1) throw e1;
-    const { error } = await supabase.from('progress_entries').insert({ student_id: stu.id, goal_id, date, points, percent, method, by_name, via, notes });
+    const { error } = await withRetry(() => supabase.from('progress_entries').insert({ student_id: stu.id, goal_id, date, points, percent, method, by_name, via, notes }));
     if (error) throw error; return true;
   },
   async addEvent({ type, student_code, date, due, notes }) {
-    const supabase = await getSupabase();
+    const supabase = getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
-    const { data: stu, error: e1 } = await supabase.from('students').select('id').eq('code', student_code).single();
+    const { data: stu, error: e1 } = await withRetry(() => supabase.from('students').select('id').eq('code', student_code).single());
     if (e1) throw e1;
-    const { error } = await supabase.from('events').insert({ type, student_id: stu.id, date, due, notes });
+    const { error } = await withRetry(() => supabase.from('events').insert({ type, student_id: stu.id, date, due, notes }));
     if (error) throw error; return true;
   },
   async listEvents() {
-    const supabase = await getSupabase();
+    const supabase = getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
-    const { data, error } = await supabase.from('events').select('id, type, student_id, date, due, notes, created_at').order('date', { ascending: true });
+    const { data, error } = await withRetry(() => supabase.from('events').select('id, type, student_id, date, due, notes, created_at').order('date', { ascending: true }));
     if (error) throw error; return data;
   },
   async setStudentPassword(code, plain) {
-    const supabase = await getSupabase();
+    const supabase = getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
-    const { error } = await supabase.rpc('set_student_password', { p_code: code, p_plain: plain });
+    const { error } = await withRetry(() => supabase.rpc('set_student_password', { p_code: code, p_plain: plain }));
     if (error) throw error; return true;
   },
   async verifyStudentPassword(code, plain) {
-    const supabase = await getSupabase();
+    const supabase = getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
-    const { data, error } = await supabase.rpc('verify_student_password', { p_code: code, p_plain: plain });
+    const { data, error } = await withRetry(() => supabase.rpc('verify_student_password', { p_code: code, p_plain: plain }));
     if (error) throw error; return !!data;
   },
   
   // Assignments
   async createAssignment(a) {
-    const supabase = await getSupabase();
+    const supabase = getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
     const payload = {
       title: a.title,
@@ -349,27 +350,27 @@ const remote = {
       meta: a.meta || {},
       created_by: a.created_by || null
     };
-    const { data, error } = await supabase.from('assignments').insert(payload).select().single();
+    const { data, error } = await withRetry(() => supabase.from('assignments').insert(payload).select().single());
     if (error) throw error;
     return data;
   },
   
   async listAssignments() {
-    const supabase = await getSupabase();
+    const supabase = getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
-    const { data, error } = await supabase
+    const { data, error } = await withRetry(() => supabase
       .from('assignments')
       .select('id, title, type, series, page, hero, meta, created_at')
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false }));
     if (error) throw error;
     return data || [];
   },
   
   async listAssignmentInstances() {
-    const supabase = await getSupabase();
+    const supabase = getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
     // Join assignment_instances with students to get student code/name
-    const { data, error } = await supabase
+    const { data, error } = await withRetry(() => supabase
       .from('assignment_instances')
       .select(`
         id,
@@ -380,7 +381,7 @@ const remote = {
         status,
         settings,
         students!inner(code, name)
-      `);
+      `));
     if (error) throw error;
     
     // Flatten to include student_code and student_name at top level
@@ -403,14 +404,14 @@ const remote = {
   },
   
   async upsertAssignmentInstance(x) {
-    const supabase = await getSupabase();
+    const supabase = getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
     // Lookup student by code to get student_id
-    const { data: stu, error: e1 } = await supabase
+    const { data: stu, error: e1 } = await withRetry(() => supabase
       .from('students')
       .select('id')
       .eq('code', x.student_code)
-      .single();
+      .single());
     if (e1) throw e1;
     
     const payload = {
@@ -422,18 +423,18 @@ const remote = {
     };
     
     // Upsert on unique (assignment_id, student_id)
-    const { error } = await supabase
+    const { error } = await withRetry(() => supabase
       .from('assignment_instances')
-      .upsert(payload, { onConflict: 'assignment_id,student_id' });
+      .upsert(payload, { onConflict: 'assignment_id,student_id' }));
     if (error) throw error;
     return true;
   },
   
   async addSubmission(payload) {
-    const supabase = await getSupabase();
+    const supabase = getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
     // Insert submission
-    const { data: submission, error: e1 } = await supabase
+    const { data: submission, error: e1 } = await withRetry(() => supabase
       .from('submissions')
       .insert({
         instance_id: payload.instance_id,
@@ -445,20 +446,20 @@ const remote = {
         notes: payload.notes || null
       })
       .select('id')
-      .single();
+      .single());
     if (e1) throw e1;
     
     // Call process_submission RPC
-    const { error: e2 } = await supabase.rpc('process_submission', { 
+    const { error: e2 } = await withRetry(() => supabase.rpc('process_submission', { 
       p_submission_id: submission.id 
-    });
+    }));
     if (e2) throw e2;
     
     // Update assignment_instances status to 'Submitted'
-    const { error: e3 } = await supabase
+    const { error: e3 } = await withRetry(() => supabase
       .from('assignment_instances')
       .update({ status: 'Submitted' })
-      .eq('id', payload.instance_id);
+      .eq('id', payload.instance_id));
     if (e3) throw e3;
     
     return { submission_id: submission.id };
@@ -466,23 +467,23 @@ const remote = {
   
   // Phase B: Classes and Enrollments
   async listClasses() {
-    const supabase = await getSupabase();
+    const supabase = getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
-    const { data, error } = await supabase
+    const { data, error } = await withRetry(() => supabase
       .from('classes')
       .select('id, name, code')
-      .order('name');
+      .order('name'));
     if (error) throw error;
     return data || [];
   },
   
   async listClassEnrollments() {
-    const supabase = await getSupabase();
+    const supabase = getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
     // Primary: try class_enrollments table with joins
-    const { data: enrollments, error: enrollError } = await supabase
+    const { data: enrollments, error: enrollError } = await withRetry(() => supabase
       .from('class_enrollments')
-      .select('class_id, student_id, students!inner(code, name), classes!inner(id)');
+      .select('class_id, student_id, students!inner(code, name), classes!inner(id)'));
     
     if (enrollError) {
       console.warn('class_enrollments query failed, falling back to students.class_id:', enrollError);
@@ -499,10 +500,10 @@ const remote = {
     }
     
     // Fallback: derive from students.class_id
-    const { data: students, error: studentsError } = await supabase
+    const { data: students, error: studentsError } = await withRetry(() => supabase
       .from('students')
       .select('id, code, name, class_id')
-      .not('class_id', 'is', null);
+      .not('class_id', 'is', null));
     
     if (studentsError) throw studentsError;
     
@@ -516,45 +517,45 @@ const remote = {
   },
   
   async upsertClass(classData) {
-    const supabase = await getSupabase();
+    const supabase = getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
-    const { data, error } = await supabase
+    const { data, error } = await withRetry(() => supabase
       .from('classes')
       .upsert({ name: classData.name, code: classData.code }, { onConflict: 'name' })
       .select()
-      .single();
+      .single());
     if (error) throw error;
     return data;
   },
   
   async upsertClassEnrollment(enrollment) {
-    const supabase = await getSupabase();
+    const supabase = getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
     // Resolve student_id from student_code if needed
     let studentId = enrollment.student_id;
     if (!studentId && enrollment.student_code) {
-      const { data: student, error: studentError } = await supabase
+      const { data: student, error: studentError } = await withRetry(() => supabase
         .from('students')
         .select('id')
         .eq('code', enrollment.student_code)
-        .single();
+        .single());
       if (studentError) throw studentError;
       studentId = student.id;
     }
     
-    const { error } = await supabase
+    const { error } = await withRetry(() => supabase
       .from('class_enrollments')
       .upsert(
         { class_id: enrollment.class_id, student_id: studentId },
         { onConflict: 'class_id,student_id' }
-      );
+      ));
     if (error) throw error;
     return enrollment;
   },
   
   // Phase B: HTML Package Upload with Supabase Storage
   async uploadAssignmentZip(file, manifest, createdBy = null) {
-    const supabase = await getSupabase();
+    const supabase = getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
     // 1. Create assignment row first
     const payload = {
@@ -570,11 +571,11 @@ const remote = {
       created_by: createdBy
     };
     
-    const { data: assignment, error: createErr } = await supabase
+    const { data: assignment, error: createErr } = await withRetry(() => supabase
       .from('assignments')
       .insert(payload)
       .select()
-      .single();
+      .single());
     
     if (createErr) throw createErr;
     
@@ -598,10 +599,10 @@ const remote = {
       const indexUrl = `${supabase.storage.from('assignments').getPublicUrl(`${basePath}/index.html`).data.publicUrl}`;
       
       // 3. Update assignment.page with the public URL
-      const { error: updateErr } = await supabase
+      const { error: updateErr } = await withRetry(() => supabase
         .from('assignments')
         .update({ page: indexUrl })
-        .eq('id', assignment.id);
+        .eq('id', assignment.id));
       
       if (updateErr) throw updateErr;
       
@@ -609,21 +610,21 @@ const remote = {
       return { ...assignment, page: indexUrl };
     } catch (uploadErr) {
       // If upload fails, delete the assignment to maintain consistency
-      await supabase.from('assignments').delete().eq('id', assignment.id);
+      await withRetry(() => supabase.from('assignments').delete().eq('id', assignment.id));
       throw uploadErr;
     }
   },
   
   // Phase B: Google Forms metadata
   async saveFormMeta(assignmentId, meta) {
-    const supabase = await getSupabase();
+    const supabase = getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
     // Fetch current meta and merge with new meta
-    const { data: current, error: fetchErr } = await supabase
+    const { data: current, error: fetchErr } = await withRetry(() => supabase
       .from('assignments')
       .select('meta')
       .eq('id', assignmentId)
-      .single();
+      .single());
     
     if (fetchErr) throw fetchErr;
     
@@ -639,10 +640,10 @@ const remote = {
     }
     
     // Update with properly parameterized query
-    const { error } = await supabase
+    const { error } = await withRetry(() => supabase
       .from('assignments')
       .update(updateData)
-      .eq('id', assignmentId);
+      .eq('id', assignmentId));
     
     if (error) throw error;
     return true;
@@ -650,7 +651,7 @@ const remote = {
   
   // Phase B: Import Google Form responses from CSV
   async importResponsesFromCSV(assignmentId, csvData, answerKey) {
-    const supabase = await getSupabase();
+    const supabase = getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
     // This is a complex operation that should be done in a transaction
     // For now, we'll implement a basic version
@@ -679,11 +680,11 @@ const remote = {
         }
         
         // Get student
-        const { data: students, error: studentErr } = await supabase
+        const { data: students, error: studentErr } = await withRetry(() => supabase
           .from('students')
           .select('id')
           .eq('code', studentCode)
-          .single();
+          .single());
         
         if (studentErr || !students) {
           results.errors.push(`Student ${studentCode} not found`);
@@ -692,18 +693,18 @@ const remote = {
         }
         
         // Get or create instance
-        const { data: instances, error: instErr } = await supabase
+        const { data: instances, error: instErr } = await withRetry(() => supabase
           .from('assignment_instances')
           .select('id')
           .eq('assignment_id', assignmentId)
           .eq('student_id', students.id)
-          .maybeSingle();
+          .maybeSingle());
         
         let instanceId = instances?.id;
         
         if (!instanceId) {
           // Create instance
-          const { data: newInst, error: newInstErr } = await supabase
+          const { data: newInst, error: newInstErr } = await withRetry(() => supabase
             .from('assignment_instances')
             .insert({
               assignment_id: assignmentId,
@@ -711,14 +712,14 @@ const remote = {
               status: 'Assigned'
             })
             .select('id')
-            .single();
+            .single());
           
           if (newInstErr) throw newInstErr;
           instanceId = newInst.id;
         }
         
         // Build submission (simplified - caller should provide formatted data)
-        const { data: submission, error: subErr } = await supabase
+        const { data: submission, error: subErr } = await withRetry(() => supabase
           .from('submissions')
           .insert({
             instance_id: instanceId,
@@ -728,22 +729,22 @@ const remote = {
             detail: row.detail || {}
           })
           .select('id')
-          .single();
+          .single());
         
         if (subErr) throw subErr;
         
         // Call process_submission
-        const { error: processErr } = await supabase.rpc('process_submission', {
+        const { error: processErr } = await withRetry(() => supabase.rpc('process_submission', {
           p_submission_id: submission.id
-        });
+        }));
         
         if (processErr) throw processErr;
         
         // Update instance status
-        await supabase
+        await withRetry(() => supabase
           .from('assignment_instances')
           .update({ status: 'Submitted' })
-          .eq('id', instanceId);
+          .eq('id', instanceId));
         
         results.processed++;
       } catch (err) {
@@ -764,7 +765,7 @@ const db = {};
 // The check `if (supabase && remote[method])` handles methods that only exist in local.
 for (const method of Object.keys(local)) {
   db[method] = async function(...args) {
-    const supabase = await getSupabase();
+    const supabase = getSupabase();
     if (supabase && remote[method]) {
       try {
         return await remote[method](...args);
@@ -783,10 +784,9 @@ for (const method of Object.keys(local)) {
 
 export { db };
 
-// For backward compatibility, provide async function to check remote status
-// Note: Consumers should await this function
-export async function isRemote() {
-  return !!(await getSupabase());
+// For backward compatibility, provide function to check remote status
+export function isRemote() {
+  return !!getSupabase();
 }
 
 export const localStore = store; // exposed for CSV import/export bootstrap

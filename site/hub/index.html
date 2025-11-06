@@ -3597,10 +3597,18 @@
         // Update chips immediately
         updateConfigStatus();
         
-        // Dispatch event for other listeners
-        window.dispatchEvent(new CustomEvent('rc:remote-config-changed', { 
-          detail: { enabled, saved: true } 
-        }));
+        // Dispatch event for other listeners with full config
+        try {
+          const cfgAfter = supabaseSettings.readConfig?.() || {};
+          window.dispatchEvent(new CustomEvent('rc:remote-config-changed', { 
+            detail: { config: cfgAfter, enabled, saved: true, source: 'save' } 
+          }));
+        } catch {
+          // Fallback if readConfig fails
+          window.dispatchEvent(new CustomEvent('rc:remote-config-changed', { 
+            detail: { enabled, saved: true, source: 'save' } 
+          }));
+        }
       } catch (err) {
         addNotif(`Failed to save settings: ${err.message}`, { type: 'error' });
       }
@@ -3861,10 +3869,18 @@
       // Update chips immediately
       updateConfigStatus();
       
-      // Dispatch event for other listeners
-      window.dispatchEvent(new CustomEvent('rc:remote-config-changed', { 
-        detail: { enabled: isEnabled, userToggled: true } 
-      }));
+      // Dispatch event for other listeners with full config
+      try {
+        const cfgAfter = supabaseSettings.readConfig?.() || {};
+        window.dispatchEvent(new CustomEvent('rc:remote-config-changed', { 
+          detail: { config: cfgAfter, enabled: isEnabled, userToggled: true, source: 'toggle' } 
+        }));
+      } catch {
+        // Fallback if readConfig fails
+        window.dispatchEvent(new CustomEvent('rc:remote-config-changed', { 
+          detail: { enabled: isEnabled, userToggled: true, source: 'toggle' } 
+        }));
+      }
     });
     
     // Listen for remote config changes to update header chips

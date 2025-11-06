@@ -1,19 +1,41 @@
 // Reactive Supabase client - rebuilds when settings change
 // Listens for rc:remote-config-changed and storage events to re-initialize
 
+export let supabase = null; // live binding - auto-updates on rebuild
 let createClient = null;
 let supabaseLoadError = null;
-let cachedClient = null;
 let lastConfig = null;
 
-// Try to import Supabase, but don't fail if CDN is blocked
-try {
-  const module = await import('https://esm.sh/@supabase/supabase-js@2');
-  createClient = module.createClient;
-} catch (err) {
-  console.warn('Supabase CDN blocked or unavailable; app will use localStorage backend.', err.message);
-  supabaseLoadError = err.message;
+// Multi-CDN fallback: try esm.sh → jsDelivr → unpkg
+async function loadLibrary() {
+  const sources = [
+    'https://esm.sh/@supabase/supabase-js@2',
+    'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm',
+    'https://unpkg.com/@supabase/supabase-js@2/dist/esm/index.js'
+  ];
+  
+  for (const src of sources) {
+    try {
+      const module = await import(src);
+      createClient = module.createClient;
+      supabaseLoadError = null;
+      return;
+    } catch (err) {
+      supabaseLoadError = err?.message || String(err);
+    }
+  }
+  
+  // Optional vendor fallback (commented out - enable if needed)
+  // try {
+  //   const module = await import('/vendor/supabase-js@2.mjs');
+  //   createClient = module.createClient;
+  //   supabaseLoadError = null;
+  // } catch {}
+  
+  console.warn('All Supabase CDN sources failed; app will use localStorage backend.', supabaseLoadError);
 }
+
+await loadLibrary();
 
 // Read config from localStorage using unified keys with legacy fallback
 const UNIFIED_PREFIX = 'rc_unified_';
@@ -53,35 +75,38 @@ function configChanged(newConfig) {
          lastConfig.optOut !== newConfig.optOut;
 }
 
-function buildClient(config) {
+function buildClient(config, reason = 'unknown') {
   // Reset if configuration changed or opt-out is set
   if (config.optOut || !config.useRemote || !config.url || !config.key || !createClient) {
-    return null;
+    supabase = null;
+    lastConfig = config;
+    return;
   }
   
   try {
-    return createClient(config.url, config.key, {
+    supabase = createClient(config.url, config.key, {
       auth: { persistSession: true, autoRefreshToken: true }
     });
+    lastConfig = config;
   } catch (err) {
     console.warn('Failed to create Supabase client:', err.message);
-    return null;
+    supabase = null;
+    lastConfig = config;
   }
 }
 
 /**
- * Get or build the Supabase client based on current localStorage settings
- * @returns {Promise<Object|null>} Supabase client or null if not configured
+ * Get the current Supabase client (builds if needed)
+ * @returns {Object|null} Supabase client or null if not configured
  */
-export async function getSupabase() {
+export function getSupabase() {
   const config = readCurrentConfig();
   
   // Check if we need to rebuild
   if (configChanged(config)) {
-    cachedClient = buildClient(config);
-    lastConfig = config;
+    buildClient(config, 'config-check');
     
-    if (!cachedClient) {
+    if (!supabase) {
       if (supabaseLoadError) {
         // Only log on first call when user is trying to use remote
         if (config.useRemote) {
@@ -97,25 +122,25 @@ export async function getSupabase() {
     }
   }
   
-  return cachedClient;
+  return supabase;
 }
 
 /**
  * Reset the cached client to force rebuild on next getSupabase() call
  */
 export function resetSupabaseClient() {
-  cachedClient = null;
+  supabase = null;
   lastConfig = null;
 }
 
 /**
  * Test connection to Supabase using auth/v1/settings endpoint
- * @returns {Promise<Object>} { ok: boolean, error?: string }
+ * @returns {Promise<Object>} { ok: boolean, error?: string, detail?: string }
  */
 export async function testConnection() {
   const config = readCurrentConfig();
   
-  if (!config.url || !config.key) {
+  if (!config.url || !config.key || !config.useRemote) {
     return { ok: false, error: 'not-configured' };
   }
   
@@ -139,11 +164,13 @@ export async function testConnection() {
     
     if (response.ok) {
       return { ok: true };
+    } else if (response.status === 401 || response.status === 403) {
+      return { ok: false, error: 'unauthorized' };
     } else {
-      return { ok: false, error: `HTTP ${response.status}: ${response.statusText}` };
+      return { ok: false, error: `http-${response.status}` };
     }
   } catch (err) {
-    return { ok: false, error: err.message || 'connection-failed' };
+    return { ok: false, error: 'network', detail: err.message || String(err) };
   }
 }
 
