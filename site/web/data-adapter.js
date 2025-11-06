@@ -780,5 +780,11 @@ for (const method of Object.keys(local)) {
 }
 
 export { db };
-export const isRemote = async () => !!(await getSupabase());
+
+// For backward compatibility, provide async function to check remote status
+// Note: Consumers should await this function
+export async function isRemote() {
+  return !!(await getSupabase());
+}
+
 export const localStore = store; // exposed for CSV import/export bootstrap

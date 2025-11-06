@@ -83,8 +83,8 @@ export async function getSupabase() {
     
     if (!cachedClient) {
       if (supabaseLoadError) {
-        // Only log on first call
-        if (!lastConfig || lastConfig.useRemote) {
+        // Only log on first call when user is trying to use remote
+        if (config.useRemote) {
           console.warn('Supabase library not available:', supabaseLoadError);
         }
       } else if (config.optOut) {
@@ -155,7 +155,8 @@ window.addEventListener('rc:remote-config-changed', (e) => {
 
 // Listen for storage events from other tabs
 window.addEventListener('storage', (e) => {
-  if (e.key && e.key.startsWith(UNIFIED_PREFIX + 'supabase')) {
+  // Check for any Supabase-related unified keys
+  if (e.key && (e.key.startsWith(UNIFIED_PREFIX + 'supabase') || e.key === UNIFIED_PREFIX + 'use_supabase')) {
     console.log('[supabase-client] Storage changed in another tab, resetting client');
     resetSupabaseClient();
   }
