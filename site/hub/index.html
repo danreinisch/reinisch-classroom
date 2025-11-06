@@ -3443,7 +3443,7 @@
         // Auto-enable if eligible (URL + Anon present, no opt-out)
         const autoEnableResult = supabaseSettings.autoEnableIfEligible();
         if (autoEnableResult.changed) {
-          console.log('[Settings] Auto-enabled Supabase:', autoEnableResult.reason);
+          console.log('[Settings] Auto-enabled Supabase:', autoEnableResult.message);
           
           // Show toast notification
           addNotif('Supabase enabled — you can turn this off in Settings', { type: 'info' });
@@ -3520,7 +3520,7 @@
       
       const autoEnableResult = supabaseSettings.autoEnableIfEligible();
       if (autoEnableResult.changed) {
-        console.log('[Settings] Auto-enabled:', autoEnableResult.reason);
+        console.log('[Settings] Auto-enabled:', autoEnableResult.message);
         addNotif('Supabase auto-enabled (credentials detected)', { type: 'info' });
         
         // Reload settings to reflect auto-enable
