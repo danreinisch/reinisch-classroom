@@ -3537,6 +3537,15 @@
       return false;
     }
     
+    // Initialize Settings tab (called when tab is activated)
+    function initSettings() {
+      // Load current settings into UI
+      loadSettings();
+      
+      // Check if auto-enable should happen (e.g., if credentials were just added elsewhere)
+      handleAutoEnableCheck();
+    }
+    
     // Save settings using helper
     async function saveSettings() {
       if (!supabaseSettings) {
