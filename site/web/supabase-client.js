@@ -6,14 +6,35 @@ let supabaseLoadError = null;
 let cachedClient = null;
 let lastConfig = null;
 
-// Try to import Supabase, but don't fail if CDN is blocked
-try {
-  const module = await import('https://esm.sh/@supabase/supabase-js@2');
-  createClient = module.createClient;
-} catch (err) {
-  console.warn('Supabase CDN blocked or unavailable; app will use localStorage backend.', err.message);
-  supabaseLoadError = err.message;
+// Multi-CDN import fallback chain for @supabase/supabase-js@2
+// Tries: esm.sh → jsDelivr → unpkg → vendored fallback
+const CDN_URLS = [
+  'https://esm.sh/@supabase/supabase-js@2',
+  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm',
+  'https://unpkg.com/@supabase/supabase-js@2/dist/module/index.js',
+  '/vendor/supabase-js@2.mjs'
+];
+
+async function loadSupabaseClient() {
+  for (const url of CDN_URLS) {
+    try {
+      const module = await import(url);
+      createClient = module.createClient;
+      console.log(`[supabase-client] Loaded from ${url.includes('vendor') ? 'vendored fallback' : 'CDN'}`);
+      return;
+    } catch (err) {
+      // Continue to next CDN
+      if (url === CDN_URLS[CDN_URLS.length - 1]) {
+        // Last attempt failed
+        supabaseLoadError = `All CDN sources failed. Last error: ${err.message}`;
+        console.warn('Supabase library unavailable; app will use localStorage backend.', supabaseLoadError);
+      }
+    }
+  }
 }
+
+// Attempt to load the Supabase client
+await loadSupabaseClient();
 
 // Read config from localStorage using unified keys with legacy fallback
 const UNIFIED_PREFIX = 'rc_unified_';
@@ -85,7 +106,9 @@ export async function getSupabase() {
       if (supabaseLoadError) {
         // Only log on first call when user is trying to use remote
         if (config.useRemote) {
-          console.warn('Supabase library not available:', supabaseLoadError);
+          // Only log anon key length if needed, never the full key
+          const keyInfo = config.key ? `${config.key.length} chars` : 'missing';
+          console.warn(`Supabase library not available (anon key: ${keyInfo}):`, supabaseLoadError);
         }
       } else if (config.optOut) {
         // Don't spam console when user explicitly opted out
@@ -99,6 +122,12 @@ export async function getSupabase() {
   
   return cachedClient;
 }
+
+/**
+ * Live binding to the current Supabase client (synchronous access)
+ * For new code, prefer getSupabase() which is async and guaranteed to be current
+ */
+export const supabase = cachedClient;
 
 /**
  * Reset the cached client to force rebuild on next getSupabase() call

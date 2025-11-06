@@ -1,5 +1,6 @@
 // Adapter selection: use Supabase if available, else localStorage.
 import { getSupabase } from './supabase-client.js';
+import { withRetry } from '../site/web/supabase-util.js';
 
 const NS = 'rc_unified_';
 const store = {
@@ -251,417 +252,462 @@ const remote = {
   async listStudents() {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
-    const { data, error } = await supabase.from('students').select('id, code, name, class_id').order('code');
-    if (error) throw error; return data;
+    return await withRetry(async () => {
+      const { data, error } = await supabase.from('students').select('id, code, name, class_id').order('code');
+      if (error) throw error;
+      return data;
+    });
   },
   async upsertStudent({ code, name, class_id = null }) {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
-    const { data, error } = await supabase.from('students').upsert({ code, name, class_id }, { onConflict: 'code' }).select().single();
-    if (error) throw error; return data;
+    return await withRetry(async () => {
+      const { data, error } = await supabase.from('students').upsert({ code, name, class_id }, { onConflict: 'code' }).select().single();
+      if (error) throw error;
+      return data;
+    });
   },
   async listGoalsByStudentCode(code) {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
-    const { data: stu, error: e1 } = await supabase.from('students').select('id').eq('code', code).single();
-    if (e1) throw e1;
-    const { data, error } = await supabase.from('goals').select('id, code, desc, target, status').eq('student_id', stu.id).order('code');
-    if (error) throw error; return data;
+    return await withRetry(async () => {
+      const { data: stu, error: e1 } = await supabase.from('students').select('id').eq('code', code).single();
+      if (e1) throw e1;
+      const { data, error } = await supabase.from('goals').select('id, code, desc, target, status').eq('student_id', stu.id).order('code');
+      if (error) throw error;
+      return data;
+    });
   },
   async upsertGoal({ student_code, code, desc, target = null, status = 'Open' }) {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
-    // Lookup student by code
-    const { data: stu, error: e1 } = await supabase.from('students').select('id').eq('code', student_code).single();
-    if (e1) throw e1;
-    // Upsert goal: unique on (student_id, code)
-    const { data, error } = await supabase.from('goals')
-      .upsert({ student_id: stu.id, code, desc, target, status }, { onConflict: 'student_id,code' })
-      .select()
-      .single();
-    if (error) throw error;
-    return { student_code, ...data };
+    return await withRetry(async () => {
+      // Lookup student by code
+      const { data: stu, error: e1 } = await supabase.from('students').select('id').eq('code', student_code).single();
+      if (e1) throw e1;
+      // Upsert goal: unique on (student_id, code)
+      const { data, error } = await supabase.from('goals')
+        .upsert({ student_id: stu.id, code, desc, target, status }, { onConflict: 'student_id,code' })
+        .select()
+        .single();
+      if (error) throw error;
+      return { student_code, ...data };
+    });
   },
   async listGoalsAll() {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
-    // Join students and goals
-    const { data, error } = await supabase
-      .from('goals')
-      .select('id, code, desc, target, status, student_id, students!inner(code)')
-      .order('code', { foreignTable: 'students', ascending: true });
-    if (error) throw error;
-    // Flatten to include student_code at top level
-    return (data || []).map(g => ({
-      id: g.id,
-      student_code: g.students.code,
-      code: g.code,
-      desc: g.desc,
-      target: g.target,
-      status: g.status
-    }));
+    return await withRetry(async () => {
+      // Join students and goals
+      const { data, error } = await supabase
+        .from('goals')
+        .select('id, code, desc, target, status, student_id, students!inner(code)')
+        .order('code', { foreignTable: 'students', ascending: true });
+      if (error) throw error;
+      // Flatten to include student_code at top level
+      return (data || []).map(g => ({
+        id: g.id,
+        student_code: g.students.code,
+        code: g.code,
+        desc: g.desc,
+        target: g.target,
+        status: g.status
+      }));
+    });
   },
   async addProgress({ student_code, goal_id, date, points = '', percent = null, method = '', by_name = 'Teacher', via = 'manual', notes = '' }) {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
-    const { data: stu, error: e1 } = await supabase.from('students').select('id').eq('code', student_code).single();
-    if (e1) throw e1;
-    const { error } = await supabase.from('progress_entries').insert({ student_id: stu.id, goal_id, date, points, percent, method, by_name, via, notes });
-    if (error) throw error; return true;
+    return await withRetry(async () => {
+      const { data: stu, error: e1 } = await supabase.from('students').select('id').eq('code', student_code).single();
+      if (e1) throw e1;
+      const { error } = await supabase.from('progress_entries').insert({ student_id: stu.id, goal_id, date, points, percent, method, by_name, via, notes });
+      if (error) throw error;
+      return true;
+    });
   },
   async addEvent({ type, student_code, date, due, notes }) {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
-    const { data: stu, error: e1 } = await supabase.from('students').select('id').eq('code', student_code).single();
-    if (e1) throw e1;
-    const { error } = await supabase.from('events').insert({ type, student_id: stu.id, date, due, notes });
-    if (error) throw error; return true;
+    return await withRetry(async () => {
+      const { data: stu, error: e1 } = await supabase.from('students').select('id').eq('code', student_code).single();
+      if (e1) throw e1;
+      const { error } = await supabase.from('events').insert({ type, student_id: stu.id, date, due, notes });
+      if (error) throw error;
+      return true;
+    });
   },
   async listEvents() {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
-    const { data, error } = await supabase.from('events').select('id, type, student_id, date, due, notes, created_at').order('date', { ascending: true });
-    if (error) throw error; return data;
+    return await withRetry(async () => {
+      const { data, error } = await supabase.from('events').select('id, type, student_id, date, due, notes, created_at').order('date', { ascending: true });
+      if (error) throw error;
+      return data;
+    });
   },
   async setStudentPassword(code, plain) {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
-    const { error } = await supabase.rpc('set_student_password', { p_code: code, p_plain: plain });
-    if (error) throw error; return true;
+    return await withRetry(async () => {
+      const { error } = await supabase.rpc('set_student_password', { p_code: code, p_plain: plain });
+      if (error) throw error;
+      return true;
+    });
   },
   async verifyStudentPassword(code, plain) {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
-    const { data, error } = await supabase.rpc('verify_student_password', { p_code: code, p_plain: plain });
-    if (error) throw error; return !!data;
+    return await withRetry(async () => {
+      const { data, error } = await supabase.rpc('verify_student_password', { p_code: code, p_plain: plain });
+      if (error) throw error;
+      return !!data;
+    });
   },
   
   // Assignments
   async createAssignment(a) {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
-    const payload = {
-      title: a.title,
-      type: a.type || 'html',
-      series: a.series || null,
-      page: a.page || null,
-      hero: a.hero || null,
-      meta: a.meta || {},
-      created_by: a.created_by || null
-    };
-    const { data, error } = await supabase.from('assignments').insert(payload).select().single();
-    if (error) throw error;
-    return data;
+    return await withRetry(async () => {
+      const payload = {
+        title: a.title,
+        type: a.type || 'html',
+        series: a.series || null,
+        page: a.page || null,
+        hero: a.hero || null,
+        meta: a.meta || {},
+        created_by: a.created_by || null
+      };
+      const { data, error } = await supabase.from('assignments').insert(payload).select().single();
+      if (error) throw error;
+      return data;
+    });
   },
   
   async listAssignments() {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
-    const { data, error } = await supabase
-      .from('assignments')
-      .select('id, title, type, series, page, hero, meta, created_at')
-      .order('created_at', { ascending: false });
-    if (error) throw error;
-    return data || [];
+    return await withRetry(async () => {
+      const { data, error } = await supabase
+        .from('assignments')
+        .select('id, title, type, series, page, hero, meta, created_at')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    });
   },
   
   async listAssignmentInstances() {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
-    // Join assignment_instances with students to get student code/name
-    const { data, error } = await supabase
-      .from('assignment_instances')
-      .select(`
-        id,
-        assignment_id,
-        student_id,
-        assigned_at,
-        due_at,
-        status,
-        settings,
-        students!inner(code, name)
-      `);
-    if (error) throw error;
-    
-    // Flatten to include student_code and student_name at top level
-    // Client-side sort by student code since we can't order on joined columns
-    const flattened = (data || []).map(inst => ({
-      id: inst.id,
-      assignment_id: inst.assignment_id,
-      student_id: inst.student_id,
-      student_code: inst.students.code,
-      student_name: inst.students.name,
-      assigned_at: inst.assigned_at,
-      due_at: inst.due_at,
-      status: inst.status,
-      settings: inst.settings
-    }));
-    
-    // Sort by student code
-    flattened.sort((a, b) => (a.student_code || '').localeCompare(b.student_code || ''));
-    return flattened;
+    return await withRetry(async () => {
+      // Join assignment_instances with students to get student code/name
+      const { data, error } = await supabase
+        .from('assignment_instances')
+        .select(`
+          id,
+          assignment_id,
+          student_id,
+          assigned_at,
+          due_at,
+          status,
+          settings,
+          students!inner(code, name)
+        `);
+      if (error) throw error;
+      
+      // Flatten to include student_code and student_name at top level
+      // Client-side sort by student code since we can't order on joined columns
+      const flattened = (data || []).map(inst => ({
+        id: inst.id,
+        assignment_id: inst.assignment_id,
+        student_id: inst.student_id,
+        student_code: inst.students.code,
+        student_name: inst.students.name,
+        assigned_at: inst.assigned_at,
+        due_at: inst.due_at,
+        status: inst.status,
+        settings: inst.settings
+      }));
+      
+      // Sort by student code
+      flattened.sort((a, b) => (a.student_code || '').localeCompare(b.student_code || ''));
+      return flattened;
+    });
   },
   
   async upsertAssignmentInstance(x) {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
-    // Lookup student by code to get student_id
-    const { data: stu, error: e1 } = await supabase
-      .from('students')
-      .select('id')
-      .eq('code', x.student_code)
-      .single();
-    if (e1) throw e1;
-    
-    const payload = {
-      assignment_id: x.assignment_id,
-      student_id: stu.id,
-      due_at: x.due_at || null,
-      status: x.status || 'Assigned',
-      settings: x.settings || {}
-    };
-    
-    // Upsert on unique (assignment_id, student_id)
-    const { error } = await supabase
-      .from('assignment_instances')
-      .upsert(payload, { onConflict: 'assignment_id,student_id' });
-    if (error) throw error;
-    return true;
+    return await withRetry(async () => {
+      // Lookup student by code to get student_id
+      const { data: stu, error: e1 } = await supabase
+        .from('students')
+        .select('id')
+        .eq('code', x.student_code)
+        .single();
+      if (e1) throw e1;
+      
+      const payload = {
+        assignment_id: x.assignment_id,
+        student_id: stu.id,
+        due_at: x.due_at || null,
+        status: x.status || 'Assigned',
+        settings: x.settings || {}
+      };
+      
+      // Upsert on unique (assignment_id, student_id)
+      const { error } = await supabase
+        .from('assignment_instances')
+        .upsert(payload, { onConflict: 'assignment_id,student_id' });
+      if (error) throw error;
+      return true;
+    });
   },
   
   async addSubmission(payload) {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
-    // Insert submission
-    const { data: submission, error: e1 } = await supabase
-      .from('submissions')
-      .insert({
-        instance_id: payload.instance_id,
-        answers: payload.answers || {},
-        score_auto: payload.score_auto || null,
-        score_manual: payload.score_manual || null,
-        score_total: payload.score_total || null,
-        detail: payload.detail || {},
-        notes: payload.notes || null
-      })
-      .select('id')
-      .single();
-    if (e1) throw e1;
-    
-    // Call process_submission RPC
-    const { error: e2 } = await supabase.rpc('process_submission', { 
-      p_submission_id: submission.id 
+    return await withRetry(async () => {
+      // Insert submission
+      const { data: submission, error: e1 } = await supabase
+        .from('submissions')
+        .insert({
+          instance_id: payload.instance_id,
+          answers: payload.answers || {},
+          score_auto: payload.score_auto || null,
+          score_manual: payload.score_manual || null,
+          score_total: payload.score_total || null,
+          detail: payload.detail || {},
+          notes: payload.notes || null
+        })
+        .select('id')
+        .single();
+      if (e1) throw e1;
+      
+      // Call process_submission RPC
+      const { error: e2 } = await supabase.rpc('process_submission', { 
+        p_submission_id: submission.id 
+      });
+      if (e2) throw e2;
+      
+      // Update assignment_instances status to 'Submitted'
+      const { error: e3 } = await supabase
+        .from('assignment_instances')
+        .update({ status: 'Submitted' })
+        .eq('id', payload.instance_id);
+      if (e3) throw e3;
+      
+      return { submission_id: submission.id };
     });
-    if (e2) throw e2;
-    
-    // Update assignment_instances status to 'Submitted'
-    const { error: e3 } = await supabase
-      .from('assignment_instances')
-      .update({ status: 'Submitted' })
-      .eq('id', payload.instance_id);
-    if (e3) throw e3;
-    
-    return { submission_id: submission.id };
   },
   
   // Phase B: Classes and Enrollments
   async listClasses() {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
-    const { data, error } = await supabase
-      .from('classes')
-      .select('id, name, code')
-      .order('name');
-    if (error) throw error;
-    return data || [];
+    return await withRetry(async () => {
+      const { data, error } = await supabase
+        .from('classes')
+        .select('id, name, code')
+        .order('name');
+      if (error) throw error;
+      return data || [];
+    });
   },
   
   async listClassEnrollments() {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
-    // Primary: try class_enrollments table with joins
-    const { data: enrollments, error: enrollError } = await supabase
-      .from('class_enrollments')
-      .select('class_id, student_id, students!inner(code, name), classes!inner(id)');
-    
-    if (enrollError) {
-      console.warn('class_enrollments query failed, falling back to students.class_id:', enrollError);
-    }
-    
-    // If we got data from class_enrollments, return it
-    if (enrollments && enrollments.length > 0) {
-      return enrollments.map(e => ({
-        class_id: e.class_id,
-        student_id: e.student_id,
-        student_code: e.students.code,
-        student_name: e.students.name
+    return await withRetry(async () => {
+      // Primary: try class_enrollments table with joins
+      const { data: enrollments, error: enrollError } = await supabase
+        .from('class_enrollments')
+        .select('class_id, student_id, students!inner(code, name), classes!inner(id)');
+      
+      if (enrollError) {
+        console.warn('class_enrollments query failed, falling back to students.class_id:', enrollError);
+      }
+      
+      // If we got data from class_enrollments, return it
+      if (enrollments && enrollments.length > 0) {
+        return enrollments.map(e => ({
+          class_id: e.class_id,
+          student_id: e.student_id,
+          student_code: e.students.code,
+          student_name: e.students.name
+        }));
+      }
+      
+      // Fallback: derive from students.class_id
+      const { data: students, error: studentsError } = await supabase
+        .from('students')
+        .select('id, code, name, class_id')
+        .not('class_id', 'is', null);
+      
+      if (studentsError) throw studentsError;
+      
+      // Return array of { class_id, student_id, student_code, student_name }
+      return (students || []).map(s => ({
+        class_id: s.class_id,
+        student_id: s.id,
+        student_code: s.code,
+        student_name: s.name
       }));
-    }
-    
-    // Fallback: derive from students.class_id
-    const { data: students, error: studentsError } = await supabase
-      .from('students')
-      .select('id, code, name, class_id')
-      .not('class_id', 'is', null);
-    
-    if (studentsError) throw studentsError;
-    
-    // Return array of { class_id, student_id, student_code, student_name }
-    return (students || []).map(s => ({
-      class_id: s.class_id,
-      student_id: s.id,
-      student_code: s.code,
-      student_name: s.name
-    }));
+    });
   },
   
   async upsertClass(classData) {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
-    const { data, error } = await supabase
-      .from('classes')
-      .upsert({ name: classData.name, code: classData.code }, { onConflict: 'name' })
-      .select()
-      .single();
-    if (error) throw error;
-    return data;
+    return await withRetry(async () => {
+      const { data, error } = await supabase
+        .from('classes')
+        .upsert({ name: classData.name, code: classData.code }, { onConflict: 'name' })
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    });
   },
   
   async upsertClassEnrollment(enrollment) {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
-    // Resolve student_id from student_code if needed
-    let studentId = enrollment.student_id;
-    if (!studentId && enrollment.student_code) {
-      const { data: student, error: studentError } = await supabase
-        .from('students')
-        .select('id')
-        .eq('code', enrollment.student_code)
-        .single();
-      if (studentError) throw studentError;
-      studentId = student.id;
-    }
-    
-    const { error } = await supabase
-      .from('class_enrollments')
-      .upsert(
-        { class_id: enrollment.class_id, student_id: studentId },
-        { onConflict: 'class_id,student_id' }
-      );
-    if (error) throw error;
-    return enrollment;
+    return await withRetry(async () => {
+      // Resolve student_id from student_code if needed
+      let studentId = enrollment.student_id;
+      if (!studentId && enrollment.student_code) {
+        const { data: student, error: studentError } = await supabase
+          .from('students')
+          .select('id')
+          .eq('code', enrollment.student_code)
+          .single();
+        if (studentError) throw studentError;
+        studentId = student.id;
+      }
+      
+      const { error } = await supabase
+        .from('class_enrollments')
+        .upsert(
+          { class_id: enrollment.class_id, student_id: studentId },
+          { onConflict: 'class_id,student_id' }
+        );
+      if (error) throw error;
+      return enrollment;
+    });
   },
   
   // Phase B: HTML Package Upload with Supabase Storage
   async uploadAssignmentZip(file, manifest, createdBy = null) {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
-    // 1. Create assignment row first
-    const payload = {
-      title: manifest.title,
-      type: 'html',
-      series: manifest.series || null,
-      page: null, // Will be set after upload
-      hero: null,
-      meta: {
-        version: manifest.version,
-        questions: manifest.questions || []
-      },
-      created_by: createdBy
-    };
-    
-    const { data: assignment, error: createErr } = await supabase
-      .from('assignments')
-      .insert(payload)
-      .select()
-      .single();
-    
-    if (createErr) throw createErr;
-    
-    // 2. Upload all files from the zip to storage
-    // Files should be uploaded to: assignments/{assignmentId}/{filename}
-    const basePath = `assignments/${assignment.id}`;
-    
-    try {
-      // NOTE: In a full implementation, this function should:
-      // 1. Extract all files from the ZIP (already done by caller with JSZip)
-      // 2. Iterate through each file and upload to Supabase Storage
-      // 3. For example:
-      //    for (const [path, file] of Object.entries(zipFiles)) {
-      //      const content = await file.async('blob');
-      //      await supabase.storage.from('assignments').upload(`${basePath}/${path}`, content);
-      //    }
-      // 
-      // For now, we construct the expected public URL without actual upload.
-      // The caller must handle file uploads separately if using Supabase Storage.
+    return await withRetry(async () => {
+      // 1. Create assignment row first
+      const payload = {
+        title: manifest.title,
+        type: 'html',
+        series: manifest.series || null,
+        page: null, // Will be set after upload
+        hero: null,
+        meta: {
+          version: manifest.version,
+          questions: manifest.questions || []
+        },
+        created_by: createdBy
+      };
       
-      const indexUrl = `${supabase.storage.from('assignments').getPublicUrl(`${basePath}/index.html`).data.publicUrl}`;
-      
-      // 3. Update assignment.page with the public URL
-      const { error: updateErr } = await supabase
+      const { data: assignment, error: createErr } = await supabase
         .from('assignments')
-        .update({ page: indexUrl })
-        .eq('id', assignment.id);
+        .insert(payload)
+        .select()
+        .single();
       
-      if (updateErr) throw updateErr;
+      if (createErr) throw createErr;
       
-      // Return the updated assignment
-      return { ...assignment, page: indexUrl };
-    } catch (uploadErr) {
-      // If upload fails, delete the assignment to maintain consistency
-      await supabase.from('assignments').delete().eq('id', assignment.id);
-      throw uploadErr;
-    }
+      // 2. Upload all files from the zip to storage
+      // Files should be uploaded to: assignments/{assignmentId}/{filename}
+      const basePath = `assignments/${assignment.id}`;
+      
+      try {
+        // NOTE: In a full implementation, this function should:
+        // 1. Extract all files from the ZIP (already done by caller with JSZip)
+        // 2. Iterate through each file and upload to Supabase Storage
+        // 3. For example:
+        //    for (const [path, file] of Object.entries(zipFiles)) {
+        //      const content = await file.async('blob');
+        //      await supabase.storage.from('assignments').upload(`${basePath}/${path}`, content);
+        //    }
+        // 
+        // For now, we construct the expected public URL without actual upload.
+        // The caller must handle file uploads separately if using Supabase Storage.
+        
+        const indexUrl = `${supabase.storage.from('assignments').getPublicUrl(`${basePath}/index.html`).data.publicUrl}`;
+        
+        // 3. Update assignment.page with the public URL
+        const { error: updateErr } = await supabase
+          .from('assignments')
+          .update({ page: indexUrl })
+          .eq('id', assignment.id);
+        
+        if (updateErr) throw updateErr;
+        
+        // Return the updated assignment
+        return { ...assignment, page: indexUrl };
+      } catch (uploadErr) {
+        // If upload fails, delete the assignment to maintain consistency
+        await supabase.from('assignments').delete().eq('id', assignment.id);
+        throw uploadErr;
+      }
+    });
   },
   
   // Phase B: Google Forms metadata
   async saveFormMeta(assignmentId, meta) {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
-    // Fetch current meta and merge with new meta
-    const { data: current, error: fetchErr } = await supabase
-      .from('assignments')
-      .select('meta')
-      .eq('id', assignmentId)
-      .single();
-    
-    if (fetchErr) throw fetchErr;
-    
-    // Merge metadata
-    const merged = { ...(current?.meta || {}), ...meta };
-    
-    // Prepare update object
-    const updateData = { meta: merged };
-    
-    // If page is provided, update it at top level
-    if (meta.page) {
-      updateData.page = meta.page;
-    }
-    
-    // Update with properly parameterized query
-    const { error } = await supabase
-      .from('assignments')
-      .update(updateData)
-      .eq('id', assignmentId);
-    
-    if (error) throw error;
-    return true;
+    return await withRetry(async () => {
+      // Fetch current meta and merge with new meta
+      const { data: current, error: fetchErr } = await supabase
+        .from('assignments')
+        .select('meta')
+        .eq('id', assignmentId)
+        .single();
+      
+      if (fetchErr) throw fetchErr;
+      
+      // Merge metadata
+      const merged = { ...(current?.meta || {}), ...meta };
+      
+      // Prepare update object
+      const updateData = { meta: merged };
+      
+      // If page is provided, update it at top level
+      if (meta.page) {
+        updateData.page = meta.page;
+      }
+      
+      // Update with properly parameterized query
+      const { error } = await supabase
+        .from('assignments')
+        .update(updateData)
+        .eq('id', assignmentId);
+      
+      if (error) throw error;
+      return true;
+    });
   },
   
   // Phase B: Import Google Form responses from CSV
   async importResponsesFromCSV(assignmentId, csvData, answerKey) {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
+    
     // This is a complex operation that should be done in a transaction
     // For now, we'll implement a basic version
-    
-    // 1. Parse CSV data (caller should provide parsed rows)
-    // 2. For each row:
-    //    - Match student by code
-    //    - Auto-grade if answer key exists
-    //    - Build per_goal detail from iep_goal_codes
-    //    - Create submission
-    //    - Call process_submission
+    // Note: We don't wrap the entire loop in withRetry since it's a bulk operation
+    // Individual queries inside are simple enough that they'll fail-fast appropriately
     
     const results = {
       processed: 0,
