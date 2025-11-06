@@ -61,9 +61,6 @@ export function readConfig() {
 export function writeConfig(config = {}, options = {}) {
   const { preserveAnonIfMasked = true } = options;
   
-  // Read current config to check for masked values
-  const current = readConfig();
-  
   // Update URL if provided
   if (config.url !== undefined) {
     localStorage.setItem(KEYS.unified.url, config.url);
@@ -71,22 +68,21 @@ export function writeConfig(config = {}, options = {}) {
   
   // Update anon key with preservation logic
   if (config.anon !== undefined) {
-    const anonValue = config.anon.trim();
+    const anonValue = (config.anon || '').trim();
     const isMasked = !anonValue || /^[•\*]+$/.test(anonValue) || anonValue === '••••••••';
     
     // Only update if not masked or if preservation is disabled
     if (!preserveAnonIfMasked || !isMasked) {
       localStorage.setItem(KEYS.unified.anon, anonValue);
     }
-    // Otherwise keep the existing stored key
   }
   
   // Update enabled flag if provided
   if (config.enabled !== undefined) {
-    localStorage.setItem(KEYS.unified.enabled, config.enabled.toString());
+    localStorage.setItem(KEYS.unified.enabled, String(config.enabled));
   }
   
-  // Update opt-out flag if provided
+  // Update optOut flag if provided
   if (config.optOut !== undefined) {
     if (config.optOut) {
       localStorage.setItem(KEYS.unified.optOut, 'true');
@@ -95,7 +91,7 @@ export function writeConfig(config = {}, options = {}) {
     }
   }
   
-  // Update auto-enabled flag if provided
+  // Update autoEnabled flag if provided
   if (config.autoEnabled !== undefined) {
     if (config.autoEnabled) {
       localStorage.setItem(KEYS.unified.autoEnabled, 'true');
@@ -111,10 +107,6 @@ export function writeConfig(config = {}, options = {}) {
  * Migrate legacy keys to unified keys if unified keys don't exist
  */
 export function migrateLegacyKeys() {
-  const current = readConfig();
-  let migrated = false;
-  
-  // Check if we need migration (unified keys are empty but legacy exist)
   const hasUnified = localStorage.getItem(KEYS.unified.url) || 
                      localStorage.getItem(KEYS.unified.anon);
   
@@ -122,6 +114,8 @@ export function migrateLegacyKeys() {
     return { migrated: false, message: 'Unified keys already exist' };
   }
   
+  let migrated = false;
+
   // Migrate URL
   const legacyUrl = localStorage.getItem(KEYS.legacy.url);
   if (legacyUrl) {
@@ -153,64 +147,35 @@ export function migrateLegacyKeys() {
 }
 
 /**
- * Check if configuration has valid credentials (non-empty URL and Anon key)
- * @param {Object} config - Configuration object from readConfig()
- * @returns {boolean} True if both URL and Anon key are present and non-empty
- */
-export function hasValidCredentials(config) {
-  return !!(config.url?.trim() && config.anon?.trim());
-}
-
-/**
- * Auto-enable Supabase if URL and Anon key are present and user hasn't opted out
- * @returns {Object} { changed: boolean, enabled: boolean, reason: string }
+ * Auto-enable Supabase if URL and Anon are present and user hasn't opted out
+ * @returns {Object} { changed: boolean, message: string, config: Object }
  */
 export function autoEnableIfEligible() {
   const config = readConfig();
   
-  // Check if credentials are present (non-empty strings)
-  if (!hasValidCredentials(config)) {
-    return { 
-      changed: false, 
-      enabled: false, 
-      reason: 'No credentials found' 
-    };
-  }
-  
-  // Check if user has opted out
-  if (config.optOut) {
-    return { 
-      changed: false, 
-      enabled: config.enabled, 
-      reason: 'User has opted out' 
-    };
-  }
-  
-  // Check if already enabled
+  // Already enabled
   if (config.enabled) {
-    return { 
-      changed: false, 
-      enabled: true, 
-      reason: 'Already enabled' 
-    };
+    return { changed: false, message: 'Already enabled', config };
+  }
+  // User opted out
+  if (config.optOut) {
+    return { changed: false, message: 'User opted out', config };
+  }
+  // Require non-empty URL and Anon
+  if (!config.url?.trim() || !config.anon?.trim()) {
+    return { changed: false, message: 'URL or Anon key missing', config };
   }
   
-  // Auto-enable: we have credentials, no opt-out, and not currently enabled
+  // Auto-enable
   writeConfig({ enabled: true, autoEnabled: true });
   
-  console.log('[supabase-settings] Auto-enabled Supabase (credentials detected, no opt-out)');
-  
-  return { 
-    changed: true, 
-    enabled: true, 
-    reason: 'Auto-enabled (credentials detected)' 
-  };
+  return { changed: true, message: 'Supabase auto-enabled', config: readConfig() };
 }
 
 /**
  * Test connectivity to Supabase
  * @param {Object} cfg - { url, anon, enabled }
- * @returns {Promise<Object>} { status: 'ok'|'unauthorized'|'network'|'not-configured', httpStatus?, message?, timestamp }
+ * @returns {Promise<Object>} { status: 'ok'|'unauthorized'|'network'|'not-configured'|'error', httpStatus?, message?, timestamp }
  */
 export async function testConnectivity(cfg) {
   const timestamp = new Date().toISOString();
@@ -235,9 +200,9 @@ export async function testConnectivity(cfg) {
   const endpoint = `${url}/auth/v1/settings`;
   
   try {
-    // Create AbortController for timeout (better browser compatibility)
+    // Create AbortController for timeout
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s
     
     const response = await fetch(endpoint, {
       method: 'GET',
@@ -251,57 +216,25 @@ export async function testConnectivity(cfg) {
     clearTimeout(timeoutId);
     
     if (response.ok) {
-      return {
-        status: 'ok',
-        httpStatus: response.status,
-        message: 'Connection successful',
-        timestamp
-      };
+      return { status: 'ok', httpStatus: response.status, message: 'Connection successful', timestamp };
     } else if (response.status === 401 || response.status === 403) {
-      return {
-        status: 'unauthorized',
-        httpStatus: response.status,
-        message: 'Invalid or expired API key',
-        timestamp
-      };
+      return { status: 'unauthorized', httpStatus: response.status, message: 'Invalid or expired API key', timestamp };
     } else {
-      return {
-        status: 'error',
-        httpStatus: response.status,
-        message: `HTTP ${response.status}: ${response.statusText}`,
-        timestamp
-      };
+      return { status: 'error', httpStatus: response.status, message: `HTTP ${response.status}: ${response.statusText}`, timestamp };
     }
   } catch (err) {
-    // Network errors, CORS issues, timeouts
     if (err.name === 'AbortError' || err.name === 'TimeoutError') {
-      return {
-        status: 'network',
-        message: 'Connection timeout - possible network firewall',
-        timestamp,
-        error: err.message
-      };
-    } else if (err.message.includes('CORS') || err.message.includes('NetworkError')) {
-      return {
-        status: 'network',
-        message: 'Network blocked - possible district firewall or CORS issue',
-        timestamp,
-        error: err.message
-      };
-    } else {
-      return {
-        status: 'network',
-        message: `Network error: ${err.message}`,
-        timestamp,
-        error: err.message
-      };
+      return { status: 'network', message: 'Connection timeout - possible network firewall', timestamp, error: err.message };
     }
+    if (err.message?.includes('CORS') || err.message?.includes('NetworkError')) {
+      return { status: 'network', message: 'Network blocked - possible district firewall or CORS issue', timestamp, error: err.message };
+    }
+    return { status: 'network', message: `Network error: ${err.message}`, timestamp, error: err.message };
   }
 }
 
 /**
  * Reset all Supabase configuration
- * Clears only Supabase-related keys from localStorage
  */
 export function resetConfig() {
   // Remove unified keys
