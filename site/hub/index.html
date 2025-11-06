@@ -1274,6 +1274,7 @@
             <div style="font-weight:800;margin-bottom:6px">Connectivity Details</div>
             <div id="connectivityMessage" class="subtle"></div>
             <div id="connectivityTimestamp" class="subtle" style="margin-top:4px;font-size:12px"></div>
+            <button id="btnRetryConnection" class="btn small" style="margin-top:8px">Try again</button>
           </div>
           
           <div id="diagnosticsOutput" style="margin-top:12px;padding:10px;background:rgba(255,255,255,.04);border-radius:8px;border:1px solid var(--line);display:none">
@@ -3780,6 +3781,10 @@
     
     qs('#btnShowDiagnostics').addEventListener('click', () => {
       showDiagnostics();
+    });
+    
+    qs('#btnRetryConnection').addEventListener('click', () => {
+      testSupabaseConnection();
     });
     
     qs('#useSupabase').addEventListener('change', (e) => {
