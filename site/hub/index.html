@@ -1927,7 +1927,8 @@
           // Success: persist auth and redirect
           setAuth({ role: 'student', code });
           updateUserChip();
-          qs('#studentSignInModal').classList.remove('show');
+          const modal = qs('#studentSignInModal');
+          if (modal) modal.classList.remove('show');
           // Redirect to student portal
           window.location.href = '/student/';
         } else {
@@ -2025,7 +2026,8 @@
       if (!auth || auth.role !== 'student') {
         // Not signed in as student, show sign-in modal
         e.preventDefault();
-        qs('#signInModal').classList.add('show');
+        const modal = qs('#signInModal');
+        if (modal) modal.classList.add('show');
       }
       // If signed in as student, let the link navigate naturally
     });
@@ -2231,8 +2233,14 @@
     }
 
     // Modals helpers
-    function openModal(id){ qs(id).classList.add('show'); }
-    function closeModal(id){ qs(id).classList.remove('show'); }
+    function openModal(id){ 
+      const modal = qs(id);
+      if (modal) modal.classList.add('show');
+    }
+    function closeModal(id){ 
+      const modal = qs(id);
+      if (modal) modal.classList.remove('show');
+    }
 
     // Progress modal
     async function openProgressModal(code=null, goalId=null){
@@ -5402,65 +5410,86 @@
         });
       }
       
-      qs('#editSkillTagsModal').classList.add('show');
+      const modal = qs('#editSkillTagsModal');
+      if (modal) modal.classList.add('show');
     }
     
     on('#editSkillTagsCancel', 'click', () => {
-      qs('#editSkillTagsModal').classList.remove('show');
+      const modal = qs('#editSkillTagsModal');
+      if (modal) modal.classList.remove('show');
     });
     
     on('#editSkillTagsSave', 'click', () => {
-      const input = qs('#editSkillTagsInput').value;
+      const inputEl = qs('#editSkillTagsInput');
+      if (!inputEl) return;
+      
+      const input = inputEl.value;
       const tags = input.split(',').map(s => normalizeSkillTag(s)).filter(Boolean);
       
       currentManifest.questions[currentQuestionIndex].skill_tags = tags;
       renderQuestionsTable();
       
-      qs('#editSkillTagsModal').classList.remove('show');
+      const modal = qs('#editSkillTagsModal');
+      if (modal) modal.classList.remove('show');
       addNotif('Skill tags updated', { type: 'success' });
     });
     
     // Open Edit Default Codes Modal
     function openEditDefaultCodesModal(index) {
       const q = currentManifest.questions[index];
-      qs('#editDefaultCodesQuestion').textContent = q.q_ref;
-      qs('#editDefaultCodesInput').value = q.default_goal_codes.join(', ');
+      const questionEl = qs('#editDefaultCodesQuestion');
+      const inputEl = qs('#editDefaultCodesInput');
       
-      qs('#editDefaultCodesModal').classList.add('show');
+      if (questionEl) questionEl.textContent = q.q_ref;
+      if (inputEl) inputEl.value = q.default_goal_codes.join(', ');
+      
+      const modal = qs('#editDefaultCodesModal');
+      if (modal) modal.classList.add('show');
     }
     
     on('#editDefaultCodesCancel', 'click', () => {
-      qs('#editDefaultCodesModal').classList.remove('show');
+      const modal = qs('#editDefaultCodesModal');
+      if (modal) modal.classList.remove('show');
     });
     
     on('#editDefaultCodesSave', 'click', () => {
-      const input = qs('#editDefaultCodesInput').value;
+      const inputEl = qs('#editDefaultCodesInput');
+      if (!inputEl) return;
+      
+      const input = inputEl.value;
       const codes = input.split(',').map(s => s.trim()).filter(Boolean);
       
       currentManifest.questions[currentQuestionIndex].default_goal_codes = codes;
       renderQuestionsTable();
       
-      qs('#editDefaultCodesModal').classList.remove('show');
+      const modal = qs('#editDefaultCodesModal');
+      if (modal) modal.classList.remove('show');
       addNotif('Default codes updated', { type: 'success' });
     });
     
     // Open Edit Overrides Modal
     function openEditOverridesModal(index) {
       const q = currentManifest.questions[index];
-      qs('#editOverridesQuestion').textContent = q.q_ref;
+      const questionEl = qs('#editOverridesQuestion');
+      const studentCodeEl = qs('#editOverridesStudentCode');
+      const goalCodesEl = qs('#editOverridesGoalCodes');
+      
+      if (questionEl) questionEl.textContent = q.q_ref;
       
       // Clear inputs
-      qs('#editOverridesStudentCode').value = '';
-      qs('#editOverridesGoalCodes').value = '';
+      if (studentCodeEl) studentCodeEl.value = '';
+      if (goalCodesEl) goalCodesEl.value = '';
       
       // Render current overrides
       renderOverridesList(q.per_student_overrides);
       
-      qs('#editOverridesModal').classList.add('show');
+      const modal = qs('#editOverridesModal');
+      if (modal) modal.classList.add('show');
     }
     
     function renderOverridesList(overrides) {
       const content = qs('#overridesListContent');
+      if (!content) return;
       
       if (!overrides || Object.keys(overrides).length === 0) {
         content.innerHTML = 'No overrides';
@@ -5507,8 +5536,10 @@
       currentManifest.questions[currentQuestionIndex].per_student_overrides[studentCode] = codes;
       
       // Clear inputs
-      qs('#editOverridesStudentCode').value = '';
-      qs('#editOverridesGoalCodes').value = '';
+      const studentCodeEl = qs('#editOverridesStudentCode');
+      const goalCodesEl = qs('#editOverridesGoalCodes');
+      if (studentCodeEl) studentCodeEl.value = '';
+      if (goalCodesEl) goalCodesEl.value = '';
       
       // Re-render
       renderOverridesList(currentManifest.questions[currentQuestionIndex].per_student_overrides);
@@ -5517,12 +5548,14 @@
     });
     
     on('#editOverridesCancel', 'click', () => {
-      qs('#editOverridesModal').classList.remove('show');
+      const modal = qs('#editOverridesModal');
+      if (modal) modal.classList.remove('show');
     });
     
     on('#editOverridesSave', 'click', () => {
       renderQuestionsTable();
-      qs('#editOverridesModal').classList.remove('show');
+      const modal = qs('#editOverridesModal');
+      if (modal) modal.classList.remove('show');
       addNotif('Overrides updated', { type: 'success' });
     });
     
