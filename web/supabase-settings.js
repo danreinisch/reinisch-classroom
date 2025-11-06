@@ -9,7 +9,9 @@ const KEYS = {
   unified: {
     url: UNIFIED_PREFIX + 'supabase_url',
     anon: UNIFIED_PREFIX + 'supabase_anon',
-    enabled: UNIFIED_PREFIX + 'use_supabase'
+    enabled: UNIFIED_PREFIX + 'use_supabase',
+    optOut: UNIFIED_PREFIX + 'supabase_opt_out',
+    autoEnabled: UNIFIED_PREFIX + 'supabase_auto_enabled'
   },
   legacy: {
     url: LEGACY_PREFIX + 'supabase_url',
@@ -29,6 +31,8 @@ export function readConfig() {
   let url = localStorage.getItem(KEYS.unified.url);
   let anon = localStorage.getItem(KEYS.unified.anon);
   let enabled = localStorage.getItem(KEYS.unified.enabled) === 'true';
+  let optOut = localStorage.getItem(KEYS.unified.optOut) === 'true';
+  let autoEnabled = localStorage.getItem(KEYS.unified.autoEnabled) === 'true';
   
   // Fallback to legacy keys if unified keys are missing
   if (!url) {
@@ -46,12 +50,12 @@ export function readConfig() {
               localStorage.getItem(KEYS.legacy.remote) === 'true';
   }
   
-  return { url, anon, enabled };
+  return { url, anon, enabled, optOut, autoEnabled };
 }
 
 /**
  * Write configuration to localStorage
- * @param {Object} config - { url?, anon?, enabled? }
+ * @param {Object} config - { url?, anon?, enabled?, optOut?, autoEnabled? }
  * @param {Object} options - { preserveAnonIfMasked: boolean }
  */
 export function writeConfig(config = {}, options = {}) {
@@ -80,6 +84,16 @@ export function writeConfig(config = {}, options = {}) {
   // Update enabled flag if provided
   if (config.enabled !== undefined) {
     localStorage.setItem(KEYS.unified.enabled, config.enabled.toString());
+  }
+  
+  // Update opt-out flag if provided
+  if (config.optOut !== undefined) {
+    localStorage.setItem(KEYS.unified.optOut, config.optOut.toString());
+  }
+  
+  // Update auto-enabled flag if provided
+  if (config.autoEnabled !== undefined) {
+    localStorage.setItem(KEYS.unified.autoEnabled, config.autoEnabled.toString());
   }
   
   return readConfig();
@@ -128,6 +142,46 @@ export function migrateLegacyKeys() {
   }
   
   return { migrated, message: migrated ? 'Legacy keys migrated' : 'No legacy keys found' };
+}
+
+/**
+ * Auto-enable Supabase if credentials exist and user hasn't opted out
+ * This is called on page load to enable Supabase automatically when:
+ * - URL and Anon key are present
+ * - User hasn't manually disabled (opted out)
+ * - Not already enabled
+ * 
+ * @returns {Object} { changed: boolean, reason?: string }
+ */
+export function autoEnableIfEligible() {
+  const config = readConfig();
+  
+  // Already enabled - no change needed
+  if (config.enabled) {
+    return { changed: false, reason: 'Already enabled' };
+  }
+  
+  // User has opted out - respect their choice
+  if (config.optOut) {
+    return { changed: false, reason: 'User opted out' };
+  }
+  
+  // Check if credentials are present and valid
+  const hasUrl = config.url && config.url.trim().length > 0;
+  const hasAnon = config.anon && config.anon.trim().length > 0;
+  
+  if (!hasUrl || !hasAnon) {
+    return { changed: false, reason: 'Missing credentials' };
+  }
+  
+  // All conditions met - auto-enable
+  localStorage.setItem(KEYS.unified.enabled, 'true');
+  localStorage.setItem(KEYS.unified.autoEnabled, 'true');
+  
+  return { 
+    changed: true, 
+    reason: 'Auto-enabled: credentials present and no opt-out'
+  };
 }
 
 /**
@@ -231,6 +285,8 @@ export function resetConfig() {
   localStorage.removeItem(KEYS.unified.url);
   localStorage.removeItem(KEYS.unified.anon);
   localStorage.removeItem(KEYS.unified.enabled);
+  localStorage.removeItem(KEYS.unified.optOut);
+  localStorage.removeItem(KEYS.unified.autoEnabled);
   
   // Also remove legacy keys for clean slate
   localStorage.removeItem(KEYS.legacy.url);
@@ -255,6 +311,8 @@ export function getDiagnostics() {
     anon: config.anon ? `${config.anon.substring(0, 4)}... (${config.anon.length} chars)` : '(empty)',
     anonLength: config.anon?.length || 0,
     enabled: config.enabled,
+    optOut: config.optOut,
+    autoEnabled: config.autoEnabled,
     hasUnifiedUrl: !!localStorage.getItem(KEYS.unified.url),
     hasUnifiedAnon: !!localStorage.getItem(KEYS.unified.anon),
     hasLegacyUrl: !!localStorage.getItem(KEYS.legacy.url),

@@ -3558,9 +3558,14 @@
         const MIN_SUPABASE_KEY_LENGTH = 50;
         const isAddingCredentials = !!(url && key && key.length >= MIN_SUPABASE_KEY_LENGTH);
         
-        // Use helper to save with anon key preservation
+        // Determine opt-out status based on enabled flag
+        // When enabling: clear opt-out
+        // When disabling: set opt-out (user is explicitly turning it off)
+        const optOut = !enabled;
+        
+        // Use helper to save with anon key preservation and opt-out handling
         supabaseSettings.writeConfig(
-          { url, anon: key, enabled },
+          { url, anon: key, enabled, optOut },
           { preserveAnonIfMasked: true }
         );
         
@@ -3579,6 +3584,14 @@
         
         // Reload settings to show updated state
         loadSettings();
+        
+        // Update chips immediately
+        updateConfigStatus();
+        
+        // Dispatch event for other listeners
+        window.dispatchEvent(new CustomEvent('rc:remote-config-changed', { 
+          detail: { enabled, saved: true } 
+        }));
       } catch (err) {
         addNotif(`Failed to save settings: ${err.message}`, { type: 'error' });
       }
@@ -3783,8 +3796,31 @@
       showDiagnostics();
     });
     
+    // Debounce helper for "Try again" button
+    let retryDebounceTimeout = null;
+    const RETRY_DEBOUNCE_MS = 1000; // 1 second debounce
+    
     qs('#btnRetryConnection').addEventListener('click', () => {
-      testSupabaseConnection();
+      const btn = qs('#btnRetryConnection');
+      
+      // Clear existing timeout
+      if (retryDebounceTimeout) {
+        clearTimeout(retryDebounceTimeout);
+      }
+      
+      // Show brief busy state
+      btn.disabled = true;
+      btn.textContent = 'Testing...';
+      
+      // Debounce the actual test
+      retryDebounceTimeout = setTimeout(async () => {
+        await testSupabaseConnection();
+        
+        // Re-enable button
+        btn.disabled = false;
+        btn.textContent = 'Try again';
+        retryDebounceTimeout = null;
+      }, RETRY_DEBOUNCE_MS);
     });
     
     qs('#useSupabase').addEventListener('change', (e) => {
@@ -3815,6 +3851,20 @@
       window.dispatchEvent(new CustomEvent('rc:remote-config-changed', { 
         detail: { enabled: isEnabled, userToggled: true } 
       }));
+    });
+    
+    // Listen for remote config changes to update header chips
+    window.addEventListener('rc:remote-config-changed', (e) => {
+      const { enabled, autoEnabled, userToggled, saved } = e.detail || {};
+      
+      console.log('[Settings] Remote config changed:', { enabled, autoEnabled, userToggled, saved });
+      
+      // Update status chips in settings tab if visible
+      updateConfigStatus();
+      
+      // Update header chip to reflect current Supabase status
+      // Note: The currentUserChip is already managed elsewhere, but we can
+      // add a connectivity indicator if needed in the future
     });
 
     // =======================
