@@ -4,6 +4,10 @@ const { requireTeacher } = require('./_lib/auth');
 
 const { SESSION_SECRET } = process.env;
 
+// CORS configuration
+// Note: Allows all origins (*) for development/testing
+// For production, consider restricting to specific domain(s):
+// 'Access-Control-Allow-Origin': 'https://yourdomain.com'
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, OPTIONS',

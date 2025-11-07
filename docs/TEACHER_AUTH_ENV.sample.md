@@ -82,3 +82,24 @@ After deployment, test the authentication:
 - Never log credentials in serverless functions
 - Session tokens expire after 8 hours for security
 - Sessions use HttpOnly cookies to prevent XSS attacks
+- Cookies are marked `Secure` to enforce HTTPS
+
+### Additional Production Security Recommendations
+
+1. **CORS Configuration**: The authentication endpoints currently allow requests from any origin (`*`). For production, consider restricting CORS to your specific domain in the function files.
+
+2. **Rate Limiting**: Consider implementing rate limiting on the login endpoint to prevent brute force attacks. This can be done using:
+   - Netlify Rate Limiting add-on
+   - Cloudflare (if using as CDN)
+   - Application-level rate limiting with Redis/similar
+
+3. **Monitoring**: Set up monitoring/alerting for:
+   - Failed login attempts
+   - Unusual authentication patterns
+   - Session token usage
+
+4. **Password Policy**: Enforce strong password requirements:
+   - Minimum 16 characters
+   - Mix of character types
+   - Regular rotation schedule
+   - Avoid common passwords
