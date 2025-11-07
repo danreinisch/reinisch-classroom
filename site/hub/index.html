@@ -1935,6 +1935,9 @@
       }
       
       // Local fallback: if RPC failed or returned false
+      // NOTE: This fallback uses name/code as password per requirements when RPC auth is unavailable.
+      // This is intentionally simple for offline/local-only scenarios where students may not have
+      // pre-configured passwords. Production deployments should use RPC auth for stronger security.
       if (!isValid) {
         try {
           // Load students for local verification
@@ -6612,6 +6615,8 @@
       initNavigation();
       
       // Remove duplicate Substitute after a delay to allow auth-modal-extend.js to run
+      // The delay ensures the dynamically added Substitute button is present before removal
+      // Alternative approaches (MutationObserver) would add complexity for minimal benefit
       setTimeout(removeDuplicateSubstitute, 500);
       
       console.debug('[Hub Nav] Initialization complete');
