@@ -246,14 +246,16 @@ function setupConnectionMonitoring(client) {
   });
   
   // Optional: Monitor Realtime connection status if available
-  if (client.realtime && typeof client.realtime.subscribe === 'function') {
+  if (client.channel && typeof client.channel === 'function') {
     try {
       const channel = client.channel('system-heartbeat');
       
       channel
         .on('system', { event: '*' }, (payload) => {
-          // Connection is alive
-          reconnectAttempt = 0; // Reset on successful activity
+          // Only reset on explicit connection success indicators
+          if (payload && (payload.type === 'connected' || payload.status === 'ok')) {
+            reconnectAttempt = 0;
+          }
         })
         .subscribe((status) => {
           if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {

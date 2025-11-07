@@ -169,7 +169,7 @@ export function onAuthChange(callback) {
 
 /**
  * Get time remaining until auth expires
- * @returns {number|null} Milliseconds remaining, or null if not auth exists
+ * @returns {number|null} Milliseconds remaining, or null if no auth exists
  */
 export function getTimeRemaining() {
   const auth = readAuth();
