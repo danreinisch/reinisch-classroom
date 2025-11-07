@@ -500,7 +500,13 @@
   }
   
   async function showStudentDashboard() {
-    // Defensive null guards for DOM elements
+    // Defensive null guards for DOM elements and currentUser
+    if (!currentUser) {
+      console.error('[Dashboard] Cannot show dashboard - currentUser is null');
+      showLogin();
+      return;
+    }
+    
     const loginView = qs('#loginView');
     const dashboardView = qs('#studentDashboardView');
     const teacherView = qs('#teacherCenterView');
@@ -943,6 +949,9 @@
     URL.revokeObjectURL(url);
   }
   
+  // Auto-login constants
+  const AUTO_LOGIN_LOADING_MESSAGE = 'Signing you in...';
+  
   // Refresh handlers
   qs('#btnRefreshAssignments').addEventListener('click', loadTeacherAssignments);
   
@@ -994,16 +1003,24 @@
   /**
    * Show loading state in login box
    */
-  function showLoginLoading(message = 'Signing you in...') {
+  function showLoginLoading(message = AUTO_LOGIN_LOADING_MESSAGE) {
     const loginBox = qs('.login-box');
     if (loginBox) {
       const loadingDiv = document.createElement('div');
       loadingDiv.id = 'autoLoginLoading';
       loadingDiv.style.cssText = 'text-align:center; padding:40px 20px;';
-      loadingDiv.innerHTML = `
-        <div style="font-size:20px; font-weight:800; margin-bottom:12px">${message}</div>
-        <div class="subtle">Please wait...</div>
-      `;
+      
+      // Create elements safely to avoid XSS
+      const titleDiv = document.createElement('div');
+      titleDiv.style.cssText = 'font-size:20px; font-weight:800; margin-bottom:12px';
+      titleDiv.textContent = message; // Use textContent to prevent XSS
+      
+      const subtitleDiv = document.createElement('div');
+      subtitleDiv.className = 'subtle';
+      subtitleDiv.textContent = 'Please wait...';
+      
+      loadingDiv.appendChild(titleDiv);
+      loadingDiv.appendChild(subtitleDiv);
       
       // Hide other elements
       const studentForm = qs('#studentLoginForm');
