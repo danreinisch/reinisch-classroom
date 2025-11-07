@@ -500,12 +500,29 @@
   }
   
   async function showStudentDashboard() {
-    qs('#loginView').classList.add('hidden');
-    qs('#studentDashboardView').classList.remove('hidden');
-    qs('#teacherCenterView').classList.add('hidden');
-    qs('#userChip').classList.remove('hidden');
-    qs('#userChip').textContent = currentUser.name || currentUser.code;
-    qs('#btnLogout').classList.remove('hidden');
+    // Defensive null guards for DOM elements and currentUser
+    if (!currentUser) {
+      console.error('[Dashboard] Cannot show dashboard - currentUser is null');
+      showLogin();
+      return;
+    }
+    
+    const loginView = qs('#loginView');
+    const dashboardView = qs('#studentDashboardView');
+    const teacherView = qs('#teacherCenterView');
+    const userChip = qs('#userChip');
+    const logoutBtn = qs('#btnLogout');
+    
+    if (loginView) loginView.classList.add('hidden');
+    if (dashboardView) dashboardView.classList.remove('hidden');
+    if (teacherView) teacherView.classList.add('hidden');
+    
+    if (userChip) {
+      userChip.classList.remove('hidden');
+      userChip.textContent = currentUser.name || currentUser.code;
+    }
+    
+    if (logoutBtn) logoutBtn.classList.remove('hidden');
     
     await loadStudentAssignments();
     await loadStudentGoals();
@@ -932,34 +949,253 @@
     URL.revokeObjectURL(url);
   }
   
+  // Auto-login constants
+  const AUTO_LOGIN_LOADING_MESSAGE = 'Signing you in...';
+  
+  // Simple in-memory cache for student lookups to avoid redundant fetches
+  // Cache is invalidated on page refresh (intentional for now)
+  let studentListCache = null;
+  
   // Refresh handlers
   qs('#btnRefreshAssignments').addEventListener('click', loadTeacherAssignments);
   
-  // Check for existing session
-  (async function init() {
-    const savedRole = sessionStorage.getItem('rc_user_role');
-    const savedCode = sessionStorage.getItem('rc_user_code');
-    
-    if (savedRole === 'teacher') {
-      currentUser = { name: 'Teacher', role: 'teacher' };
-      userRole = 'teacher';
-      showTeacherCenter();
-    } else if (savedRole === 'student' && savedCode) {
-      try {
-        const studentList = await db.listStudents();
-        const student = studentList.find(s => s.code === savedCode);
-        if (student) {
-          currentUser = student;
-          userRole = 'student';
-          showStudentDashboard();
-          return;
+  /**
+   * Auto-login helper: attempts to detect student authentication from multiple sources
+   * @returns {{code: string}|null} Object with student code if found, null otherwise
+   */
+  function getStudentAutoAuth() {
+    try {
+      // Method 1: Check localStorage rc_auth (set by hub)
+      const authStr = localStorage.getItem('rc_auth');
+      if (authStr) {
+        const auth = JSON.parse(authStr);
+        // Validate auth object structure and code format
+        if (auth && 
+            auth.role === 'student' && 
+            auth.code &&
+            typeof auth.code === 'string' &&
+            auth.code.trim().length > 0) {
+          console.log('[Auto-login] Found auth in localStorage rc_auth');
+          return { code: auth.code.trim() };
         }
-      } catch (err) {
-        console.error('Session restore failed:', err);
       }
+    } catch (err) {
+      console.warn('[Auto-login] Failed to parse localStorage rc_auth:', err);
     }
     
-    showLogin();
+    try {
+      // Method 2: Check sessionStorage rc_user_code
+      const sessionCode = sessionStorage.getItem('rc_user_code');
+      if (sessionCode && typeof sessionCode === 'string' && sessionCode.trim().length > 0) {
+        console.log('[Auto-login] Found auth in sessionStorage rc_user_code');
+        return { code: sessionCode.trim() };
+      }
+    } catch (err) {
+      console.warn('[Auto-login] Failed to read sessionStorage:', err);
+    }
+    
+    try {
+      // Method 3: Check URL query parameter ?code=
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlCode = urlParams.get('code');
+      if (urlCode && typeof urlCode === 'string' && urlCode.trim().length > 0) {
+        console.log('[Auto-login] Found auth in URL parameter');
+        return { code: urlCode.trim() };
+      }
+    } catch (err) {
+      console.warn('[Auto-login] Failed to parse URL parameters:', err);
+    }
+    
+    return null;
+  }
+  
+  /**
+   * Show loading state in login box
+   * @param {string} [message=AUTO_LOGIN_LOADING_MESSAGE] - Optional loading message
+   */
+  function showLoginLoading(message = AUTO_LOGIN_LOADING_MESSAGE) {
+    const loginBox = qs('.login-box');
+    if (loginBox) {
+      const loadingDiv = document.createElement('div');
+      loadingDiv.id = 'autoLoginLoading';
+      loadingDiv.style.cssText = 'text-align:center; padding:40px 20px;';
+      
+      // Create elements safely to avoid XSS
+      const titleDiv = document.createElement('div');
+      titleDiv.style.cssText = 'font-size:20px; font-weight:800; margin-bottom:12px';
+      titleDiv.textContent = message; // Use textContent to prevent XSS
+      
+      const subtitleDiv = document.createElement('div');
+      subtitleDiv.className = 'subtle';
+      subtitleDiv.textContent = 'Please wait...';
+      
+      loadingDiv.appendChild(titleDiv);
+      loadingDiv.appendChild(subtitleDiv);
+      
+      // Hide other elements
+      const studentForm = qs('#studentLoginForm');
+      const teacherForm = qs('#teacherLoginForm');
+      const tabs = loginBox.querySelector('.tabs');
+      const subtitle = loginBox.querySelector('.subtle');
+      
+      if (studentForm) studentForm.classList.add('hidden');
+      if (teacherForm) teacherForm.classList.add('hidden');
+      if (tabs) tabs.classList.add('hidden');
+      if (subtitle) subtitle.classList.add('hidden');
+      
+      loginBox.appendChild(loadingDiv);
+    }
+  }
+  
+  /**
+   * Hide loading state and restore login form
+   */
+  function hideLoginLoading() {
+    const loadingDiv = qs('#autoLoginLoading');
+    if (loadingDiv) {
+      loadingDiv.remove();
+    }
+    
+    const loginBox = qs('.login-box');
+    if (loginBox) {
+      const studentForm = qs('#studentLoginForm');
+      const teacherForm = qs('#teacherLoginForm');
+      const tabs = loginBox.querySelector('.tabs');
+      const subtitle = loginBox.querySelector('.subtle');
+      
+      if (studentForm) studentForm.classList.remove('hidden');
+      if (tabs) tabs.classList.remove('hidden');
+      if (subtitle) subtitle.classList.remove('hidden');
+    }
+  }
+  
+  /**
+   * Find a student by code
+   * @param {string} code - Student code to search for
+   * @returns {Promise<Object|null>} Student object if found, null otherwise
+   * 
+   * Performance note: Uses in-memory cache to avoid redundant database fetches
+   * during initialization. For production with large datasets, consider implementing
+   * a database-level getStudentByCode(code) method for direct lookup.
+   */
+  async function findStudentByCode(code) {
+    try {
+      // Use cache if available to avoid redundant fetches during init
+      // On error, cache remains null so we retry next time
+      if (!studentListCache) {
+        try {
+          studentListCache = await db.listStudents();
+        } catch (dbErr) {
+          console.error('[Student Lookup] Database fetch failed:', dbErr);
+          // Don't cache the error - let next call retry
+          return null;
+        }
+      }
+      
+      return studentListCache.find(s => s.code === code) || null;
+    } catch (err) {
+      console.error('[Student Lookup] Failed to find student:', code, err);
+      return null;
+    }
+  }
+  
+  /**
+   * Set student session data
+   * @param {Object} student - Student object
+   * @param {string} code - Student code
+   */
+  function setStudentSession(student, code) {
+    currentUser = student;
+    userRole = 'student';
+    sessionStorage.setItem('rc_user_code', code);
+    sessionStorage.setItem('rc_user_role', 'student');
+  }
+  
+  /**
+   * Attempt auto-login for student based on detected authentication
+   * @param {string} code - Student code from authentication source
+   * @returns {Promise<boolean>} True if successful, false otherwise
+   */
+  async function attemptStudentAutoLogin(code) {
+    try {
+      console.log('[Auto-login] Attempting auto-login for student:', code);
+      
+      const student = await findStudentByCode(code);
+      
+      if (!student) {
+        console.warn('[Auto-login] Student not found:', code);
+        showError('Student not found. Please log in.');
+        return false;
+      }
+      
+      // Set session data
+      setStudentSession(student, code);
+      
+      console.log('[Auto-login] Auto-login successful for:', student.name || code);
+      return true;
+      
+    } catch (err) {
+      console.error('[Auto-login] Auto-login failed:', err);
+      return false;
+    }
+  }
+  
+  // Check for existing session
+  (async function init() {
+    try {
+      // First, check for auto-login from hub or other sources
+      const autoAuth = getStudentAutoAuth();
+      
+      if (autoAuth && autoAuth.code) {
+        // Show loading state
+        showLoginLoading();
+        
+        // Attempt auto-login
+        const success = await attemptStudentAutoLogin(autoAuth.code);
+        
+        if (success) {
+          // Auto-login successful - show dashboard
+          hideLoginLoading();
+          showStudentDashboard();
+          return;
+        } else {
+          // Auto-login failed - fall back to login form
+          hideLoginLoading();
+          showLogin();
+          return;
+        }
+      }
+      
+      // No auto-login detected, check for existing session
+      const savedRole = sessionStorage.getItem('rc_user_role');
+      const savedCode = sessionStorage.getItem('rc_user_code');
+      
+      if (savedRole === 'teacher') {
+        currentUser = { name: 'Teacher', role: 'teacher' };
+        userRole = 'teacher';
+        showTeacherCenter();
+      } else if (savedRole === 'student' && savedCode) {
+        try {
+          const student = await findStudentByCode(savedCode);
+          if (student) {
+            setStudentSession(student, savedCode);
+            showStudentDashboard();
+            return;
+          }
+        } catch (err) {
+          console.error('Session restore failed:', err);
+        }
+      }
+      
+      // Fall back to login form
+      showLogin();
+      
+    } catch (err) {
+      console.error('[Init] Initialization error:', err);
+      // On any error, show login form
+      hideLoginLoading();
+      showLogin();
+    }
   })();
 </script>
 
