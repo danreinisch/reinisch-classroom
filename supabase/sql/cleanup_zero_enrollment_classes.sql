@@ -125,25 +125,31 @@ BEGIN
   /*
   -- UNCOMMENT THE SECTION BELOW TO MARK DUPLICATES AS INACTIVE
   
-  WITH duplicates AS (
-    SELECT 
-      normalized_title,
-      COUNT(*) AS class_count,
-      SUM(CASE WHEN enrollment_count > 0 THEN 1 ELSE 0 END) AS classes_with_enrollments
-    FROM temp_zero_enrollment_duplicates
-    GROUP BY normalized_title
-    HAVING COUNT(*) > 1
-  )
-  UPDATE classes c
-  SET active = false
-  FROM temp_zero_enrollment_duplicates d
-  JOIN duplicates dup ON d.normalized_title = dup.normalized_title
-  WHERE c.id = d.class_id
-    AND d.enrollment_count = 0
-    AND dup.classes_with_enrollments > 0;
-  
-  RAISE NOTICE '';
-  RAISE NOTICE 'Marked % duplicate classes as inactive.', duplicate_count;
+  DECLARE
+    updated_count INT;
+  BEGIN
+    WITH duplicates AS (
+      SELECT 
+        normalized_title,
+        COUNT(*) AS class_count,
+        SUM(CASE WHEN enrollment_count > 0 THEN 1 ELSE 0 END) AS classes_with_enrollments
+      FROM temp_zero_enrollment_duplicates
+      GROUP BY normalized_title
+      HAVING COUNT(*) > 1
+    )
+    UPDATE classes c
+    SET active = false
+    FROM temp_zero_enrollment_duplicates d
+    JOIN duplicates dup ON d.normalized_title = dup.normalized_title
+    WHERE c.id = d.class_id
+      AND d.enrollment_count = 0
+      AND dup.classes_with_enrollments > 0;
+    
+    GET DIAGNOSTICS updated_count = ROW_COUNT;
+    
+    RAISE NOTICE '';
+    RAISE NOTICE 'Marked % duplicate classes as inactive.', updated_count;
+  END;
   */
 
   RAISE NOTICE '';
