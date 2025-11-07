@@ -81,9 +81,19 @@ function buildClient(config) {
   }
   
   try {
-    return createClient(config.url, config.key, {
-      auth: { persistSession: true, autoRefreshToken: true }
+    const client = createClient(config.url, config.key, {
+      auth: { persistSession: true, autoRefreshToken: true },
+      realtime: {
+        params: {
+          eventsPerSecond: 2 // Throttle to reduce server load
+        }
+      }
     });
+    
+    // Setup connection monitoring
+    setupConnectionMonitoring(client);
+    
+    return client;
   } catch (err) {
     console.warn('Failed to create Supabase client:', err.message);
     return null;
@@ -92,15 +102,24 @@ function buildClient(config) {
 
 /**
  * Get or build the Supabase client based on current localStorage settings
+ * Uses singleton pattern to prevent multiple instances
  * @returns {Promise<Object|null>} Supabase client or null if not configured
  */
 export async function getSupabase() {
+  // Use singleton from window to prevent multiple instances across modules
+  if (window.__sbClient && !configChanged(readCurrentConfig())) {
+    return window.__sbClient;
+  }
+  
   const config = readCurrentConfig();
   
   // Check if we need to rebuild
   if (configChanged(config)) {
     cachedClient = buildClient(config);
     lastConfig = config;
+    
+    // Store in window for singleton access
+    window.__sbClient = cachedClient;
     
     if (!cachedClient) {
       if (supabaseLoadError) {
@@ -135,6 +154,7 @@ export const supabase = cachedClient;
 export function resetSupabaseClient() {
   cachedClient = null;
   lastConfig = null;
+  window.__sbClient = null;
 }
 
 /**
@@ -174,6 +194,126 @@ export async function testConnection() {
   } catch (err) {
     return { ok: false, error: err.message || 'connection-failed' };
   }
+}
+
+// ============================================================================
+// CONNECTION MONITORING & AUTO-RECONNECT
+// ============================================================================
+
+let reconnectAttempt = 0;
+const MAX_RECONNECT_ATTEMPTS = 10;
+const BASE_RECONNECT_DELAY = 1000; // 1 second
+const MAX_RECONNECT_DELAY = 30000; // 30 seconds
+
+/**
+ * Calculate exponential backoff delay with jitter
+ * @param {number} attempt - Current attempt number (0-indexed)
+ * @returns {number} Delay in milliseconds
+ */
+function getReconnectDelay(attempt) {
+  const exponentialDelay = Math.min(BASE_RECONNECT_DELAY * Math.pow(2, attempt), MAX_RECONNECT_DELAY);
+  // Add jitter: ±20% random variance
+  const jitter = exponentialDelay * 0.2 * (Math.random() - 0.5);
+  return Math.floor(exponentialDelay + jitter);
+}
+
+/**
+ * Setup connection monitoring for Supabase client
+ * @param {Object} client - Supabase client instance
+ */
+function setupConnectionMonitoring(client) {
+  if (!client) return;
+  
+  console.log('[supabase-client] Setting up connection monitoring');
+  
+  // Network status listeners
+  window.addEventListener('online', () => {
+    console.log('[supabase-client] Network online, attempting reconnect');
+    reconnectAttempt = 0; // Reset counter on network restore
+    attemptReconnect(client);
+  });
+  
+  window.addEventListener('offline', () => {
+    console.log('[supabase-client] Network offline');
+  });
+  
+  // Visibility change listener - reconnect when tab becomes visible
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && navigator.onLine) {
+      console.log('[supabase-client] Tab visible and online, checking connection');
+      attemptReconnect(client);
+    }
+  });
+  
+  // Optional: Monitor Realtime connection status if available
+  if (client.channel && typeof client.channel === 'function') {
+    try {
+      const channel = client.channel('system-heartbeat');
+      
+      channel
+        .on('system', { event: '*' }, (payload) => {
+          // Only reset on explicit connection success indicators
+          if (payload && (payload.type === 'connected' || payload.status === 'ok')) {
+            reconnectAttempt = 0;
+          }
+        })
+        .subscribe((status) => {
+          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            console.warn('[supabase-client] Realtime channel error:', status);
+            attemptReconnect(client);
+          } else if (status === 'SUBSCRIBED') {
+            console.log('[supabase-client] Realtime channel connected');
+            reconnectAttempt = 0;
+          }
+        });
+    } catch (err) {
+      console.warn('[supabase-client] Could not setup realtime monitoring:', err);
+    }
+  }
+}
+
+/**
+ * Attempt to reconnect Supabase client
+ * @param {Object} client - Supabase client instance
+ */
+async function attemptReconnect(client) {
+  if (!client || reconnectAttempt >= MAX_RECONNECT_ATTEMPTS) {
+    if (reconnectAttempt >= MAX_RECONNECT_ATTEMPTS) {
+      console.error('[supabase-client] Max reconnect attempts reached');
+    }
+    return;
+  }
+  
+  const delay = getReconnectDelay(reconnectAttempt);
+  reconnectAttempt++;
+  
+  console.log(`[supabase-client] Reconnect attempt ${reconnectAttempt}/${MAX_RECONNECT_ATTEMPTS} in ${delay}ms`);
+  
+  setTimeout(async () => {
+    try {
+      // Test connection
+      const result = await testConnection();
+      
+      if (result.ok) {
+        console.log('[supabase-client] Reconnection successful');
+        reconnectAttempt = 0;
+        
+        // Dispatch custom event for app to handle
+        window.dispatchEvent(new CustomEvent('supabase:reconnected'));
+      } else {
+        console.warn('[supabase-client] Reconnection failed:', result.error);
+        // Retry
+        if (reconnectAttempt < MAX_RECONNECT_ATTEMPTS) {
+          attemptReconnect(client);
+        }
+      }
+    } catch (err) {
+      console.error('[supabase-client] Reconnect error:', err);
+      if (reconnectAttempt < MAX_RECONNECT_ATTEMPTS) {
+        attemptReconnect(client);
+      }
+    }
+  }, delay);
 }
 
 // Listen for config changes from settings UI
