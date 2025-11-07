@@ -961,7 +961,7 @@
   
   /**
    * Auto-login helper: attempts to detect student authentication from multiple sources
-   * Returns { code: string } if found, null otherwise
+   * @returns {{code: string}|null} Object with student code if found, null otherwise
    */
   function getStudentAutoAuth() {
     try {
@@ -1011,7 +1011,7 @@
   
   /**
    * Show loading state in login box
-   * @param {string} message - Optional loading message (defaults to AUTO_LOGIN_LOADING_MESSAGE)
+   * @param {string} [message=AUTO_LOGIN_LOADING_MESSAGE] - Optional loading message
    */
   function showLoginLoading(message = AUTO_LOGIN_LOADING_MESSAGE) {
     const loginBox = qs('.login-box');
@@ -1081,8 +1081,15 @@
   async function findStudentByCode(code) {
     try {
       // Use cache if available to avoid redundant fetches during init
+      // On error, cache remains null so we retry next time
       if (!studentListCache) {
-        studentListCache = await db.listStudents();
+        try {
+          studentListCache = await db.listStudents();
+        } catch (dbErr) {
+          console.error('[Student Lookup] Database fetch failed:', dbErr);
+          // Don't cache the error - let next call retry
+          return null;
+        }
       }
       
       return studentListCache.find(s => s.code === code) || null;
@@ -1090,6 +1097,18 @@
       console.error('[Student Lookup] Failed to find student:', code, err);
       return null;
     }
+  }
+  
+  /**
+   * Set student session data
+   * @param {Object} student - Student object
+   * @param {string} code - Student code
+   */
+  function setStudentSession(student, code) {
+    currentUser = student;
+    userRole = 'student';
+    sessionStorage.setItem('rc_user_code', code);
+    sessionStorage.setItem('rc_user_role', 'student');
   }
   
   /**
@@ -1109,11 +1128,8 @@
         return false;
       }
       
-      // Set current user and session
-      currentUser = student;
-      userRole = 'student';
-      sessionStorage.setItem('rc_user_code', code);
-      sessionStorage.setItem('rc_user_role', 'student');
+      // Set session data
+      setStudentSession(student, code);
       
       console.log('[Auto-login] Auto-login successful for:', student.name || code);
       return true;
@@ -1162,8 +1178,7 @@
         try {
           const student = await findStudentByCode(savedCode);
           if (student) {
-            currentUser = student;
-            userRole = 'student';
+            setStudentSession(student, savedCode);
             showStudentDashboard();
             return;
           }
