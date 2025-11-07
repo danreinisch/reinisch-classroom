@@ -328,7 +328,7 @@
 
 <script type="module">
   // Import auth-handoff utilities
-  import { readAuth, clearAuth } from '../web/auth-handoff.js';
+  import { readAuth, clearAuth, onAuthChange } from '../web/auth-handoff.js';
   
   // Local storage namespace
   const STORAGE_KEY = 'rc_student_hub_';
@@ -363,6 +363,32 @@
   // Current session
   let currentUser = null;
   let userRole = null; // 'student' or 'teacher'
+  
+  // Listen for auth changes from other tabs via BroadcastChannel
+  if (onAuthChange) {
+    const cleanup = onAuthChange((event) => {
+      console.log('[Student Portal] Auth change received from other tab:', event.type);
+      
+      if (event.type === 'auth-updated' && event.auth) {
+        // Another tab signed in - if it's a student, auto-login here too
+        if (event.auth.role === 'student' && event.auth.code) {
+          console.log('[Student Portal] Auto-login from other tab');
+          attemptStudentAutoLogin(event.auth.code, event.auth.name).then(success => {
+            if (success) {
+              showStudentDashboard();
+            }
+          });
+        }
+      } else if (event.type === 'auth-cleared') {
+        // Another tab logged out - clear session here too
+        console.log('[Student Portal] Logout from other tab');
+        currentUser = null;
+        userRole = null;
+        sessionStorage.clear();
+        showLogin();
+      }
+    });
+  }
   
   // TODO: When Supabase is available, replace with data-adapter calls
   const db = {
@@ -582,7 +608,17 @@
       
     } catch (err) {
       console.error('Failed to load assignments:', err);
-      qs('#assignmentsContent').innerHTML = '<div class="error-msg">Failed to load assignments</div>';
+      // Show friendly message but keep dashboard visible
+      const assignmentsContent = qs('#assignmentsContent');
+      if (assignmentsContent) {
+        assignmentsContent.innerHTML = '<div class="subtle" style="text-align:center; padding:20px">Assignments temporarily unavailable. Retrying in background...</div>';
+      }
+      
+      // Retry in background after a delay
+      setTimeout(() => {
+        console.log('[Dashboard] Retrying assignments load...');
+        loadStudentAssignments();
+      }, 5000);
     }
   }
   
@@ -625,7 +661,17 @@
       
     } catch (err) {
       console.error('Failed to load goals:', err);
-      qs('#goalsContent').innerHTML = '<div class="error-msg">Failed to load goals</div>';
+      // Show friendly message but keep dashboard visible
+      const goalsContent = qs('#goalsContent');
+      if (goalsContent) {
+        goalsContent.innerHTML = '<div class="subtle" style="text-align:center; padding:20px">Goals temporarily unavailable. Retrying in background...</div>';
+      }
+      
+      // Retry in background after a delay
+      setTimeout(() => {
+        console.log('[Dashboard] Retrying goals load...');
+        loadStudentGoals();
+      }, 5000);
     }
   }
   
@@ -1111,25 +1157,48 @@
   
   /**
    * Attempt auto-login for student based on detected authentication
+   * BYPASSES LOGIN IMMEDIATELY - Shows dashboard first, lazy-loads student data
    * @param {string} code - Student code from authentication source
+   * @param {string} [name] - Optional student name from auth handoff
    * @returns {Promise<boolean>} True if successful, false otherwise
    */
-  async function attemptStudentAutoLogin(code) {
+  async function attemptStudentAutoLogin(code, name = null) {
     try {
       console.log('[Auto-login] Attempting auto-login for student:', code);
       
-      const student = await findStudentByCode(code);
+      // BYPASS: Create minimal student object immediately to avoid blocking on DB fetch
+      // This allows dashboard to show while we lazy-load full student data
+      const minimalStudent = {
+        code: code,
+        name: name || code // Use name from auth if available, otherwise use code
+      };
       
-      if (!student) {
-        console.warn('[Auto-login] Student not found:', code);
-        showError('Student not found. Please log in.');
-        return false;
-      }
+      // Set session data immediately
+      setStudentSession(minimalStudent, code);
       
-      // Set session data
-      setStudentSession(student, code);
+      console.log('[Auto-login] Auto-login bypass successful, showing dashboard');
       
-      console.log('[Auto-login] Auto-login successful for:', student.name || code);
+      // Lazy-load full student data in background (non-blocking)
+      // If this fails, the dashboard will still be visible with minimal data
+      findStudentByCode(code).then(fullStudent => {
+        if (fullStudent) {
+          // Update currentUser with full student data if found
+          currentUser = fullStudent;
+          console.log('[Auto-login] Full student data loaded:', fullStudent.name || code);
+          
+          // Update user chip if it exists
+          const userChip = qs('#userChip');
+          if (userChip && fullStudent.name) {
+            userChip.textContent = fullStudent.name;
+          }
+        } else {
+          console.warn('[Auto-login] Could not load full student data, using minimal object');
+        }
+      }).catch(err => {
+        console.error('[Auto-login] Background student load failed:', err);
+        // Dashboard remains visible with minimal data
+      });
+      
       return true;
       
     } catch (err) {
@@ -1148,8 +1217,8 @@
         // Show loading state
         showLoginLoading();
         
-        // Attempt auto-login
-        const success = await attemptStudentAutoLogin(autoAuth.code);
+        // Attempt auto-login with name from auth handoff
+        const success = await attemptStudentAutoLogin(autoAuth.code, autoAuth.name);
         
         if (success) {
           // Auto-login successful - show dashboard
