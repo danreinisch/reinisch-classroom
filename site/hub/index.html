@@ -632,6 +632,12 @@
         crossorigin="anonymous" 
         referrerpolicy="no-referrer"></script>
 
+<!-- PapaParse library for CSV parsing -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js" 
+        integrity="sha512-dfX5uYVXzyU8+KHqj8bjo7UkOdg18PaOtpa48djpNbZHwExddghZ+ZmzWT06R5v6NSk3ZUfsH6FNEDepLx9hPQ==" 
+        crossorigin="anonymous" 
+        referrerpolicy="no-referrer"></script>
+
 <!-- Boot script: default to glass-bold theme on first visit -->
 <script>
 (function() {
@@ -1156,6 +1162,48 @@
 
       <div class="card ttab" data-tab="upload" style="display:none">
         <div class="card-header"><div>📦 Upload & IEP Goal Mapping</div></div>
+        
+        <!-- CSV Import for Students -->
+        <div class="card" style="margin-top:12px">
+          <div class="card-header"><div>Import Students (CSV)</div></div>
+          <div class="subtle" style="margin-bottom:12px">
+            Import students from CSV. Expected columns: code, name, class_id (optional)
+          </div>
+          
+          <label>Students CSV File
+            <input id="studentsCsvFile" type="file" accept=".csv,text/csv" />
+          </label>
+          
+          <div style="display:flex;gap:10px;margin-top:12px">
+            <button class="btn primary small" id="btnImportStudentsCsv">Import Students</button>
+          </div>
+          
+          <div id="studentsImportStatus" style="margin-top:12px;padding:10px;background:rgba(255,255,255,.04);border-radius:8px;border:1px solid var(--line);display:none">
+            <div style="font-weight:800;margin-bottom:6px">Import Status</div>
+            <div id="studentsImportStatusContent" class="subtle"></div>
+          </div>
+        </div>
+        
+        <!-- CSV Import for Goals -->
+        <div class="card" style="margin-top:12px">
+          <div class="card-header"><div>Import Goals (CSV)</div></div>
+          <div class="subtle" style="margin-bottom:12px">
+            Import IEP goals from CSV. Expected columns: student_code, code, desc, target (optional), status (optional)
+          </div>
+          
+          <label>Goals CSV File
+            <input id="goalsCsvFile" type="file" accept=".csv,text/csv" />
+          </label>
+          
+          <div style="display:flex;gap:10px;margin-top:12px">
+            <button class="btn primary small" id="btnImportGoalsCsv">Import Goals</button>
+          </div>
+          
+          <div id="goalsImportStatus" style="margin-top:12px;padding:10px;background:rgba(255,255,255,.04);border-radius:8px;border:1px solid var(--line);display:none">
+            <div style="font-weight:800;margin-bottom:6px">Import Status</div>
+            <div id="goalsImportStatusContent" class="subtle"></div>
+          </div>
+        </div>
         
         <!-- Import IEP CSV to Codebook -->
         <div class="card" style="margin-top:12px">
@@ -2213,6 +2261,12 @@
       if (tab === 'assignments') initAssignments();
       if (tab === 'settings') initSettings();
       if (tab === 'subPlans') initSubPlans();
+      
+      // New tabs initialization (dispatches custom event for module script)
+      if (tab === 'studentPortal' || tab === 'results' || tab === 'gradebook' || 
+          tab === 'hub' || tab === 'classes' || tab === 'upload' || tab === 'data') {
+        window.dispatchEvent(new CustomEvent('hub:tab-init', { detail: { tab } }));
+      }
     }
     
     // Icon rail clicks
@@ -6633,6 +6687,1030 @@
   }
   
 })();
+</script>
+
+<!-- Classroom Hub Tabs Implementation -->
+<script type="module">
+  import { db, localStore } from '../web/data-adapter.js';
+  
+  // Safe query helpers
+  const qs = s => document.querySelector(s);
+  const qsa = s => Array.from(document.querySelectorAll(s));
+  
+  // Helper to add notifications
+  function addNotif(text, meta = {}) {
+    const n = localStore.get('notifications', []);
+    n.unshift({ 
+      id: Date.now() + Math.random().toString(36).slice(2), 
+      text, 
+      time: new Date().toISOString(), 
+      meta 
+    });
+    localStore.set('notifications', n);
+    // Trigger notification UI update if available
+    if (typeof window.renderNotifications === 'function') {
+      window.renderNotifications();
+    }
+  }
+  
+  // ============================================================================
+  // STUDENT PORTAL MANAGER
+  // ============================================================================
+  let studentsCache = [];
+  let goalsCache = [];
+  
+  async function initStudentPortal() {
+    try {
+      // Load students and goals
+      studentsCache = await db.listStudents();
+      goalsCache = await db.listGoalsAll();
+      
+      renderStudentPortalList();
+    } catch (err) {
+      console.error('[Student Portal] Failed to initialize:', err);
+      const container = qs('.ttab[data-tab="studentPortal"]');
+      if (container) {
+        container.innerHTML = `
+          <div class="card-header"><div>🧑 Student Portal Manager</div></div>
+          <div class="subtle" style="padding:20px;text-align:center">
+            Failed to load data. Please check your connection.
+          </div>
+        `;
+      }
+    }
+  }
+  
+  function renderStudentPortalList() {
+    const container = qs('.ttab[data-tab="studentPortal"]');
+    if (!container) return;
+    
+    // Count goals per student
+    const goalCounts = {};
+    goalsCache.forEach(g => {
+      if (g.student_code) {
+        goalCounts[g.student_code] = (goalCounts[g.student_code] || 0) + 1;
+      }
+    });
+    
+    container.innerHTML = `
+      <div class="card-header"><div>🧑 Student Portal Manager</div></div>
+      
+      <div style="display:grid;grid-template-columns:1fr 1.2fr;gap:12px;margin-top:12px">
+        <!-- Left: Student List -->
+        <div class="card">
+          <div class="card-header">
+            <div>Students</div>
+            <input id="studentPortalSearch" class="btn small" style="padding:8px;width:200px" placeholder="Search student…" />
+          </div>
+          <div class="table-wrap scroll" style="max-height:500px">
+            <table class="table" id="studentPortalTable">
+              <thead>
+                <tr>
+                  <th>Student</th>
+                  <th>Goals</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${studentsCache.map(s => `
+                  <tr data-code="${s.code}">
+                    <td>
+                      <div style="font-weight:700">${s.name || s.code}</div>
+                      <div class="subtle" style="font-size:12px">${s.code}</div>
+                    </td>
+                    <td>
+                      <span class="badge">${goalCounts[s.code] || 0} goals</span>
+                    </td>
+                    <td>
+                      <button class="btn small" onclick="window.selectStudentPortal('${s.code}')">View</button>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        
+        <!-- Right: Student Details -->
+        <div class="card">
+          <div class="card-header">
+            <div>Student Details</div>
+            <div><span id="selectedStudentName" class="badge">—</span></div>
+          </div>
+          <div id="studentPortalDetails" style="padding:20px;text-align:center" class="subtle">
+            Select a student to view details and actions
+          </div>
+        </div>
+      </div>
+    `;
+    
+    // Add search functionality
+    const searchInput = qs('#studentPortalSearch');
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase();
+        const rows = qsa('#studentPortalTable tbody tr');
+        rows.forEach(row => {
+          const text = row.textContent.toLowerCase();
+          row.style.display = text.includes(query) ? '' : 'none';
+        });
+      });
+    }
+  }
+  
+  // Global function to select student
+  window.selectStudentPortal = function(code) {
+    const student = studentsCache.find(s => s.code === code);
+    if (!student) return;
+    
+    const studentGoals = goalsCache.filter(g => g.student_code === code);
+    const nameEl = qs('#selectedStudentName');
+    const detailsEl = qs('#studentPortalDetails');
+    
+    if (nameEl) nameEl.textContent = student.name || code;
+    
+    if (detailsEl) {
+      detailsEl.innerHTML = `
+        <div style="text-align:left">
+          <div style="margin-bottom:16px">
+            <div style="font-weight:700;font-size:16px;margin-bottom:8px">${student.name || code}</div>
+            <div class="subtle">Code: ${code}</div>
+            ${student.class_id ? `<div class="subtle">Class: ${student.class_id}</div>` : ''}
+          </div>
+          
+          <div style="margin-bottom:16px">
+            <div style="font-weight:700;margin-bottom:8px">IEP Goals</div>
+            <div class="badge">${studentGoals.length} total goals</div>
+          </div>
+          
+          <div style="margin-bottom:16px">
+            <div style="font-weight:700;margin-bottom:8px">Quick Actions</div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <button class="btn primary" onclick="window.open('/student/?code=${code}', '_blank')">
+                🚀 Open Student Portal
+              </button>
+              <button class="btn" onclick="window.location.href='#addProgress-${code}'">
+                ➕ Add Progress Entry
+              </button>
+              <button class="btn" onclick="window.shareStudentLink('${code}')">
+                🔗 Share Portal Link
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    
+    // Highlight row
+    qsa('#studentPortalTable tbody tr').forEach(row => {
+      row.style.background = row.dataset.code === code ? 
+        'rgba(34,197,94,.08)' : '';
+    });
+  };
+  
+  window.shareStudentLink = function(code) {
+    const link = `${window.location.origin}/student/?code=${code}`;
+    navigator.clipboard.writeText(link).then(() => {
+      addNotif(`Link copied to clipboard: ${link}`, { type: 'success' });
+    }).catch(() => {
+      addNotif(`Link: ${link}`, { type: 'info' });
+    });
+  };
+  
+  // ============================================================================
+  // RESULTS TAB
+  // ============================================================================
+  async function initResults() {
+    try {
+      const submissions = localStore.get('submissions', []);
+      const instances = await db.listAssignmentInstances();
+      const assignments = await db.listAssignments();
+      
+      const container = qs('.ttab[data-tab="results"]');
+      if (!container) return;
+      
+      // Create assignment map
+      const assignmentMap = {};
+      assignments.forEach(a => assignmentMap[a.id] = a);
+      
+      // Create instance map
+      const instanceMap = {};
+      instances.forEach(i => instanceMap[i.id] = i);
+      
+      // Sort submissions by date (most recent first)
+      const sorted = submissions.sort((a, b) => 
+        new Date(b.submitted_at || 0) - new Date(a.submitted_at || 0)
+      );
+      
+      container.innerHTML = `
+        <div class="card-header">
+          <div>🧪 Results</div>
+          <button class="btn small" id="btnRefreshResults">Refresh</button>
+        </div>
+        
+        <div class="table-wrap" style="margin-top:12px">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Student</th>
+                <th>Assignment</th>
+                <th>Score</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${sorted.length === 0 ? 
+                '<tr><td colspan="5" class="subtle" style="text-align:center;padding:40px">No submissions yet</td></tr>' :
+                sorted.slice(0, 50).map(sub => {
+                  const inst = instanceMap[sub.instance_id];
+                  const assignment = inst ? assignmentMap[inst.assignment_id] : null;
+                  const date = sub.submitted_at ? new Date(sub.submitted_at).toLocaleDateString() : '—';
+                  const studentName = inst ? inst.student_name || inst.student_code : '—';
+                  const assignmentTitle = assignment ? assignment.title : '—';
+                  const score = sub.score_total !== null ? sub.score_total : (sub.score_auto || '—');
+                  
+                  return `
+                    <tr>
+                      <td>${date}</td>
+                      <td>${studentName}</td>
+                      <td>${assignmentTitle}</td>
+                      <td><span class="badge">${score}</span></td>
+                      <td><span class="badge">Submitted</span></td>
+                    </tr>
+                  `;
+                }).join('')
+              }
+            </tbody>
+          </table>
+        </div>
+        
+        ${sorted.length > 50 ? 
+          `<div class="subtle" style="margin-top:12px;text-align:center">Showing 50 most recent submissions of ${sorted.length} total</div>` : 
+          ''
+        }
+      `;
+      
+      // Add refresh handler
+      const btnRefresh = qs('#btnRefreshResults');
+      if (btnRefresh) {
+        btnRefresh.addEventListener('click', () => initResults());
+      }
+    } catch (err) {
+      console.error('[Results] Failed to initialize:', err);
+      const container = qs('.ttab[data-tab="results"]');
+      if (container) {
+        container.innerHTML = `
+          <div class="card-header"><div>🧪 Results</div></div>
+          <div class="subtle" style="padding:20px;text-align:center">
+            Failed to load results. Please check your connection.
+          </div>
+        `;
+      }
+    }
+  }
+  
+  // ============================================================================
+  // GRADEBOOK TAB
+  // ============================================================================
+  async function initGradebook() {
+    try {
+      const container = qs('.ttab[data-tab="gradebook"]');
+      if (!container) return;
+      
+      // Load classes for filter
+      const classes = await db.listClasses();
+      const classFilter = qs('#gradebookClassFilter');
+      if (classFilter) {
+        classFilter.innerHTML = '<option value="">All Classes</option>' +
+          classes.map(c => `<option value="${c.id}">${c.name || c.code}</option>`).join('');
+      }
+      
+      renderGradebook();
+      
+      // Add class filter handler
+      const classFilterEl = qs('#gradebookClassFilter');
+      if (classFilterEl) {
+        classFilterEl.addEventListener('change', (e) => {
+          renderGradebook(e.target.value);
+        });
+      }
+    } catch (err) {
+      console.error('[Gradebook] Failed to initialize:', err);
+    }
+  }
+  
+  async function renderGradebook(classFilter = '') {
+    try {
+      const students = await db.listStudents();
+      const instances = await db.listAssignmentInstances();
+      const assignments = await db.listAssignments();
+      const submissions = localStore.get('submissions', []);
+      
+      // Filter students by class if specified
+      const filteredStudents = classFilter ? 
+        students.filter(s => s.class_id === classFilter) : 
+        students;
+      
+      // Create maps
+      const assignmentMap = {};
+      assignments.forEach(a => assignmentMap[a.id] = a);
+      
+      const submissionMap = {};
+      submissions.forEach(sub => submissionMap[sub.instance_id] = sub);
+      
+      // Group instances by student
+      const studentInstances = {};
+      instances.forEach(inst => {
+        const code = inst.student_code;
+        if (!studentInstances[code]) studentInstances[code] = [];
+        studentInstances[code].push(inst);
+      });
+      
+      const contentEl = qs('#gradebookContent');
+      if (!contentEl) return;
+      
+      if (filteredStudents.length === 0) {
+        contentEl.innerHTML = `
+          <div class="subtle" style="text-align:center;padding:40px">
+            No students found${classFilter ? ' in selected class' : ''}.
+          </div>
+        `;
+        return;
+      }
+      
+      contentEl.innerHTML = `
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Student</th>
+                <th>Assigned</th>
+                <th>Submitted</th>
+                <th>Graded</th>
+                <th>Avg Score</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filteredStudents.map(student => {
+                const studentInsts = studentInstances[student.code] || [];
+                const submitted = studentInsts.filter(i => i.status === 'Submitted');
+                const graded = submitted.filter(i => {
+                  const sub = submissionMap[i.id];
+                  return sub && sub.score_total !== null;
+                });
+                
+                // Calculate average score
+                let avgScore = '—';
+                if (graded.length > 0) {
+                  const total = graded.reduce((sum, i) => {
+                    const sub = submissionMap[i.id];
+                    return sum + (sub.score_total || 0);
+                  }, 0);
+                  avgScore = Math.round(total / graded.length);
+                }
+                
+                return `
+                  <tr>
+                    <td>
+                      <div style="font-weight:700">${student.name || student.code}</div>
+                      <div class="subtle" style="font-size:12px">${student.code}</div>
+                    </td>
+                    <td><span class="badge">${studentInsts.length}</span></td>
+                    <td><span class="badge">${submitted.length}</span></td>
+                    <td><span class="badge">${graded.length}</span></td>
+                    <td><span class="badge">${avgScore}</span></td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    } catch (err) {
+      console.error('[Gradebook] Failed to render:', err);
+      const contentEl = qs('#gradebookContent');
+      if (contentEl) {
+        contentEl.innerHTML = `
+          <div class="subtle" style="text-align:center;padding:40px">
+            Failed to load gradebook. Please check your connection.
+          </div>
+        `;
+      }
+    }
+  }
+  
+  // Add refresh handler
+  document.addEventListener('click', (e) => {
+    if (e.target.matches('#btnRefreshGradebook')) {
+      const filter = qs('#gradebookClassFilter');
+      renderGradebook(filter ? filter.value : '');
+    }
+  });
+  
+  // ============================================================================
+  // ASSIGNMENT HUB TAB
+  // ============================================================================
+  async function initHub() {
+    try {
+      const instances = await db.listAssignmentInstances();
+      const assignments = await db.listAssignments();
+      
+      const container = qs('.ttab[data-tab="hub"]');
+      if (!container) return;
+      
+      // Create assignment map
+      const assignmentMap = {};
+      assignments.forEach(a => assignmentMap[a.id] = a);
+      
+      container.innerHTML = `
+        <div class="card-header">
+          <div>🛠 Assignment Hub</div>
+          <div style="display:flex;gap:8px">
+            <input id="hubSearchStudent" class="btn small" style="padding:8px;width:150px" placeholder="Student…" />
+            <select id="hubFilterStatus" class="btn small">
+              <option value="">All Status</option>
+              <option value="Assigned">Assigned</option>
+              <option value="Submitted">Submitted</option>
+              <option value="Graded">Graded</option>
+            </select>
+            <button class="btn small" id="btnRefreshHub">Refresh</button>
+          </div>
+        </div>
+        
+        <div class="table-wrap" style="margin-top:12px">
+          <table class="table" id="hubTable">
+            <thead>
+              <tr>
+                <th>Student</th>
+                <th>Assignment</th>
+                <th>Assigned</th>
+                <th>Due</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${instances.length === 0 ? 
+                '<tr><td colspan="5" class="subtle" style="text-align:center;padding:40px">No assignment instances yet</td></tr>' :
+                instances.map(inst => {
+                  const assignment = assignmentMap[inst.assignment_id];
+                  const assignedDate = inst.assigned_at ? new Date(inst.assigned_at).toLocaleDateString() : '—';
+                  const dueDate = inst.due_at ? new Date(inst.due_at).toLocaleDateString() : '—';
+                  
+                  return `
+                    <tr data-student="${inst.student_code}" data-status="${inst.status}">
+                      <td>
+                        <div style="font-weight:700">${inst.student_name || inst.student_code}</div>
+                        <div class="subtle" style="font-size:12px">${inst.student_code}</div>
+                      </td>
+                      <td>${assignment ? assignment.title : inst.assignment_id}</td>
+                      <td>${assignedDate}</td>
+                      <td>${dueDate}</td>
+                      <td><span class="badge">${inst.status}</span></td>
+                    </tr>
+                  `;
+                }).join('')
+              }
+            </tbody>
+          </table>
+        </div>
+      `;
+      
+      // Add filter handlers
+      const searchInput = qs('#hubSearchStudent');
+      const statusFilter = qs('#hubFilterStatus');
+      const refreshBtn = qs('#btnRefreshHub');
+      
+      function applyFilters() {
+        const searchQuery = searchInput ? searchInput.value.toLowerCase() : '';
+        const statusValue = statusFilter ? statusFilter.value : '';
+        const rows = qsa('#hubTable tbody tr');
+        
+        rows.forEach(row => {
+          if (row.querySelector('.subtle')) {
+            // Skip empty state row
+            return;
+          }
+          
+          const studentMatch = searchQuery === '' || 
+            row.dataset.student.toLowerCase().includes(searchQuery) ||
+            row.textContent.toLowerCase().includes(searchQuery);
+          
+          const statusMatch = statusValue === '' || 
+            row.dataset.status === statusValue;
+          
+          row.style.display = (studentMatch && statusMatch) ? '' : 'none';
+        });
+      }
+      
+      if (searchInput) {
+        searchInput.addEventListener('input', applyFilters);
+      }
+      
+      if (statusFilter) {
+        statusFilter.addEventListener('change', applyFilters);
+      }
+      
+      if (refreshBtn) {
+        refreshBtn.addEventListener('click', () => initHub());
+      }
+    } catch (err) {
+      console.error('[Hub] Failed to initialize:', err);
+      const container = qs('.ttab[data-tab="hub"]');
+      if (container) {
+        container.innerHTML = `
+          <div class="card-header"><div>🛠 Assignment Hub</div></div>
+          <div class="subtle" style="padding:20px;text-align:center">
+            Failed to load assignment hub. Please check your connection.
+          </div>
+        `;
+      }
+    }
+  }
+  
+  // ============================================================================
+  // CLASSES TAB
+  // ============================================================================
+  async function initClasses() {
+    try {
+      const classes = await db.listClasses();
+      const enrollments = await db.listClassEnrollments();
+      
+      const container = qs('.ttab[data-tab="classes"]');
+      if (!container) return;
+      
+      // Group enrollments by class
+      const enrollmentsByClass = {};
+      enrollments.forEach(e => {
+        if (!enrollmentsByClass[e.class_id]) {
+          enrollmentsByClass[e.class_id] = [];
+        }
+        enrollmentsByClass[e.class_id].push(e);
+      });
+      
+      container.innerHTML = `
+        <div class="card-header">
+          <div>👥 Classes</div>
+          <button class="btn primary small" id="btnAddClass">Add Class</button>
+        </div>
+        
+        ${classes.length === 0 ? `
+          <div class="subtle" style="padding:40px;text-align:center">
+            No classes yet. Click "Add Class" to create one.
+          </div>
+        ` : `
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;margin-top:12px">
+            ${classes.map(cls => {
+              const classEnrollments = enrollmentsByClass[cls.id] || [];
+              return `
+                <div class="card">
+                  <div class="card-header">
+                    <div style="font-weight:700">${cls.name || cls.code}</div>
+                    <button class="btn small" onclick="window.editClass('${cls.id}')">Edit</button>
+                  </div>
+                  <div>
+                    <div class="subtle" style="margin-bottom:8px">Class Code: ${cls.code || cls.id}</div>
+                    <div class="badge">${classEnrollments.length} students</div>
+                    <div style="margin-top:12px">
+                      ${classEnrollments.slice(0, 5).map(e => `
+                        <div class="subtle" style="font-size:12px;padding:4px 0">
+                          ${e.student_name || e.student_code}
+                        </div>
+                      `).join('')}
+                      ${classEnrollments.length > 5 ? `
+                        <div class="subtle" style="font-size:12px;padding:4px 0">
+                          ... and ${classEnrollments.length - 5} more
+                        </div>
+                      ` : ''}
+                    </div>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        `}
+      `;
+      
+      // Add class button handler
+      const btnAdd = qs('#btnAddClass');
+      if (btnAdd) {
+        btnAdd.addEventListener('click', () => {
+          const name = prompt('Enter class name:');
+          if (name) {
+            const code = prompt('Enter class code (optional):', name.replace(/\s+/g, '-').toLowerCase());
+            db.upsertClass({ name, code: code || name })
+              .then(() => {
+                addNotif('Class added successfully', { type: 'success' });
+                initClasses();
+              })
+              .catch(err => {
+                console.error('Failed to add class:', err);
+                addNotif('Failed to add class. Local mode active.', { type: 'error' });
+              });
+          }
+        });
+      }
+    } catch (err) {
+      console.error('[Classes] Failed to initialize:', err);
+      const container = qs('.ttab[data-tab="classes"]');
+      if (container) {
+        container.innerHTML = `
+          <div class="card-header"><div>👥 Classes</div></div>
+          <div class="subtle" style="padding:20px;text-align:center">
+            Failed to load classes. Please check your connection.
+          </div>
+        `;
+      }
+    }
+  }
+  
+  window.editClass = function(classId) {
+    addNotif('Edit class functionality coming soon', { type: 'info' });
+  };
+  
+  // ============================================================================
+  // DATA IMPORT/EXPORT TAB
+  // ============================================================================
+  async function initDataImportExport() {
+    try {
+      const container = qs('.ttab[data-tab="data"]');
+      if (!container) return;
+      
+      container.innerHTML = `
+        <div class="card-header"><div>📁 Data Import/Export</div></div>
+        
+        <!-- Export Section -->
+        <div class="card" style="margin-top:12px">
+          <div class="card-header"><div>Export Data (JSON)</div></div>
+          <div class="subtle" style="margin-bottom:12px">
+            Export your data as JSON files for backup or migration.
+          </div>
+          
+          <div style="display:flex;flex-wrap:wrap;gap:8px">
+            <button class="btn" onclick="window.exportData('students')">Export Students</button>
+            <button class="btn" onclick="window.exportData('goals')">Export Goals</button>
+            <button class="btn" onclick="window.exportData('assignments')">Export Assignments</button>
+            <button class="btn" onclick="window.exportData('instances')">Export Instances</button>
+            <button class="btn primary" onclick="window.exportData('all')">Export All</button>
+          </div>
+        </div>
+        
+        <!-- Import Section -->
+        <div class="card" style="margin-top:12px">
+          <div class="card-header"><div>Import Data (JSON)</div></div>
+          <div class="subtle" style="margin-bottom:12px">
+            Import data from JSON files. Choose to append or overwrite existing data.
+          </div>
+          
+          <label>Data Type
+            <select id="importDataType" class="btn small">
+              <option value="students">Students</option>
+              <option value="goals">Goals</option>
+              <option value="assignments">Assignments</option>
+              <option value="instances">Assignment Instances</option>
+            </select>
+          </label>
+          
+          <label style="margin-top:12px">JSON File
+            <input id="importJsonFile" type="file" accept=".json" />
+          </label>
+          
+          <label style="display:flex;align-items:center;gap:10px;margin-top:12px">
+            <input id="importOverwrite" type="checkbox" style="width:auto" />
+            <span style="font-weight:700">Overwrite existing data (otherwise append)</span>
+          </label>
+          
+          <div style="margin-top:12px">
+            <button class="btn primary" id="btnImportJson">Import</button>
+          </div>
+          
+          <div id="importStatus" style="margin-top:12px;padding:10px;background:rgba(255,255,255,.04);border-radius:8px;border:1px solid var(--line);display:none">
+            <div style="font-weight:800;margin-bottom:6px" id="importStatusTitle">Status</div>
+            <div class="subtle" id="importStatusMessage">Ready</div>
+          </div>
+        </div>
+      `;
+      
+      // Add import handler
+      const btnImport = qs('#btnImportJson');
+      if (btnImport) {
+        btnImport.addEventListener('click', async () => {
+          const fileInput = qs('#importJsonFile');
+          const typeSelect = qs('#importDataType');
+          const overwriteCheck = qs('#importOverwrite');
+          const statusDiv = qs('#importStatus');
+          const titleDiv = qs('#importStatusTitle');
+          const msgDiv = qs('#importStatusMessage');
+          
+          if (!fileInput || !fileInput.files[0]) {
+            addNotif('Please select a JSON file', { type: 'error' });
+            return;
+          }
+          
+          try {
+            const text = await fileInput.files[0].text();
+            const data = JSON.parse(text);
+            const type = typeSelect.value;
+            const overwrite = overwriteCheck.checked;
+            
+            // Show status
+            statusDiv.style.display = 'block';
+            titleDiv.textContent = 'Importing...';
+            msgDiv.textContent = 'Processing data...';
+            
+            // Import based on type
+            let count = 0;
+            if (type === 'students') {
+              if (overwrite) localStore.set('students', []);
+              for (const student of data) {
+                await db.upsertStudent(student);
+                count++;
+              }
+            } else if (type === 'goals') {
+              if (overwrite) localStore.set('iepGoals', {});
+              for (const goal of data) {
+                await db.upsertGoal(goal);
+                count++;
+              }
+            } else if (type === 'assignments') {
+              if (overwrite) localStore.set('assignments', []);
+              for (const assignment of data) {
+                // Use local store directly to preserve IDs
+                const arr = localStore.get('assignments', []);
+                arr.push(assignment);
+                localStore.set('assignments', arr);
+                count++;
+              }
+            } else if (type === 'instances') {
+              if (overwrite) localStore.set('assignmentInstances', []);
+              for (const instance of data) {
+                await db.upsertAssignmentInstance(instance);
+                count++;
+              }
+            }
+            
+            titleDiv.textContent = 'Success';
+            msgDiv.textContent = `Imported ${count} ${type}`;
+            addNotif(`Imported ${count} ${type}`, { type: 'success' });
+            
+            // Clear file input
+            fileInput.value = '';
+          } catch (err) {
+            console.error('Import failed:', err);
+            if (statusDiv) statusDiv.style.display = 'block';
+            if (titleDiv) titleDiv.textContent = 'Error';
+            if (msgDiv) msgDiv.textContent = err.message;
+            addNotif('Import failed: ' + err.message, { type: 'error' });
+          }
+        });
+      }
+    } catch (err) {
+      console.error('[Data Import/Export] Failed to initialize:', err);
+    }
+  }
+  
+  // Export data function
+  window.exportData = async function(type) {
+    try {
+      let data, filename;
+      
+      if (type === 'students') {
+        data = await db.listStudents();
+        filename = 'students.json';
+      } else if (type === 'goals') {
+        data = await db.listGoalsAll();
+        filename = 'goals.json';
+      } else if (type === 'assignments') {
+        data = await db.listAssignments();
+        filename = 'assignments.json';
+      } else if (type === 'instances') {
+        data = await db.listAssignmentInstances();
+        filename = 'assignment-instances.json';
+      } else if (type === 'all') {
+        data = {
+          students: await db.listStudents(),
+          goals: await db.listGoalsAll(),
+          assignments: await db.listAssignments(),
+          instances: await db.listAssignmentInstances()
+        };
+        filename = 'classroom-data-all.json';
+      }
+      
+      const json = JSON.stringify(data, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+      
+      addNotif(`Exported ${filename}`, { type: 'success' });
+    } catch (err) {
+      console.error('Export failed:', err);
+      addNotif('Export failed: ' + err.message, { type: 'error' });
+    }
+  };
+  
+  // ============================================================================
+  // CSV UPLOAD HANDLERS FOR UPLOAD TAB
+  // ============================================================================
+  
+  // Helper to parse CSV (basic fallback if PapaParse not available)
+  function parseCSVBasic(text) {
+    const lines = text.trim().split('\n');
+    if (lines.length < 2) return [];
+    
+    const headers = lines[0].split(',').map(h => h.trim());
+    const rows = [];
+    
+    for (let i = 1; i < lines.length; i++) {
+      const values = lines[i].split(',').map(v => v.trim());
+      if (values.length === headers.length) {
+        const row = {};
+        headers.forEach((h, idx) => {
+          row[h] = values[idx];
+        });
+        rows.push(row);
+      }
+    }
+    
+    return rows;
+  }
+  
+  // Parse CSV with PapaParse if available, otherwise fallback
+  function parseCSV(text) {
+    if (typeof Papa !== 'undefined') {
+      const result = Papa.parse(text, { header: true, skipEmptyLines: true });
+      return result.data;
+    } else {
+      return parseCSVBasic(text);
+    }
+  }
+  
+  // Import Students CSV
+  document.addEventListener('click', async (e) => {
+    if (e.target.matches('#btnImportStudentsCsv')) {
+      const fileInput = qs('#studentsCsvFile');
+      const statusDiv = qs('#studentsImportStatus');
+      const contentDiv = qs('#studentsImportStatusContent');
+      
+      if (!fileInput || !fileInput.files[0]) {
+        addNotif('Please select a CSV file', { type: 'error' });
+        return;
+      }
+      
+      try {
+        const text = await fileInput.files[0].text();
+        const rows = parseCSV(text);
+        
+        if (rows.length === 0) {
+          addNotif('CSV file is empty or invalid', { type: 'error' });
+          return;
+        }
+        
+        let imported = 0;
+        let failed = 0;
+        
+        for (const row of rows) {
+          try {
+            // Support both lowercase and title case headers
+            const code = row.code || row.Code;
+            const name = row.name || row.Name;
+            const class_id = row.class_id || row.Class_ID || row['Class ID'] || null;
+            
+            if (!code) {
+              failed++;
+              continue;
+            }
+            
+            await db.upsertStudent({ code, name: name || code, class_id });
+            imported++;
+          } catch (err) {
+            console.error('Failed to import student:', err);
+            failed++;
+          }
+        }
+        
+        if (statusDiv) statusDiv.style.display = 'block';
+        if (contentDiv) {
+          contentDiv.textContent = `Imported ${imported} students${failed > 0 ? `, ${failed} failed` : ''}`;
+        }
+        
+        addNotif(`Imported ${imported} students`, { type: 'success' });
+        
+        // Clear file input
+        fileInput.value = '';
+        
+        // Refresh student portal if active
+        const portalTab = qs('.ttab[data-tab="studentPortal"]');
+        if (portalTab && portalTab.style.display !== 'none') {
+          initStudentPortal();
+        }
+      } catch (err) {
+        console.error('Failed to import students CSV:', err);
+        addNotif('Failed to import CSV: ' + err.message, { type: 'error' });
+      }
+    }
+  });
+  
+  // Import Goals CSV
+  document.addEventListener('click', async (e) => {
+    if (e.target.matches('#btnImportGoalsCsv')) {
+      const fileInput = qs('#goalsCsvFile');
+      const statusDiv = qs('#goalsImportStatus');
+      const contentDiv = qs('#goalsImportStatusContent');
+      
+      if (!fileInput || !fileInput.files[0]) {
+        addNotif('Please select a CSV file', { type: 'error' });
+        return;
+      }
+      
+      try {
+        const text = await fileInput.files[0].text();
+        const rows = parseCSV(text);
+        
+        if (rows.length === 0) {
+          addNotif('CSV file is empty or invalid', { type: 'error' });
+          return;
+        }
+        
+        let imported = 0;
+        let failed = 0;
+        
+        for (const row of rows) {
+          try {
+            // Support both lowercase and title case headers
+            const student_code = row.student_code || row['Student Code'] || row.Student_Code;
+            const code = row.code || row.Code || row['Goal Code'];
+            const desc = row.desc || row.Desc || row.description || row.Description || row['Goal Description'];
+            const target = row.target || row.Target || null;
+            const status = row.status || row.Status || 'Open';
+            
+            if (!student_code || !code) {
+              failed++;
+              continue;
+            }
+            
+            await db.upsertGoal({ student_code, code, desc: desc || code, target, status });
+            imported++;
+          } catch (err) {
+            console.error('Failed to import goal:', err);
+            failed++;
+          }
+        }
+        
+        if (statusDiv) statusDiv.style.display = 'block';
+        if (contentDiv) {
+          contentDiv.textContent = `Imported ${imported} goals${failed > 0 ? `, ${failed} failed` : ''}`;
+        }
+        
+        addNotif(`Imported ${imported} goals`, { type: 'success' });
+        
+        // Clear file input
+        fileInput.value = '';
+        
+        // Refresh student portal if active
+        const portalTab = qs('.ttab[data-tab="studentPortal"]');
+        if (portalTab && portalTab.style.display !== 'none') {
+          initStudentPortal();
+        }
+      } catch (err) {
+        console.error('Failed to import goals CSV:', err);
+        addNotif('Failed to import CSV: ' + err.message, { type: 'error' });
+      }
+    }
+  });
+  
+  // Add init handler for upload tab
+  async function initUpload() {
+    // Upload tab initialization if needed
+    console.log('[Upload] Tab initialized');
+  }
+  
+  // ============================================================================
+  // REGISTER TAB INITIALIZERS
+  // ============================================================================
+  
+  // Listen for tab init events from switchTab function
+  window.addEventListener('hub:tab-init', async (e) => {
+    const { tab } = e.detail;
+    console.log('[Classroom Hub] Initializing tab:', tab);
+    
+    try {
+      if (tab === 'studentPortal') await initStudentPortal();
+      if (tab === 'results') await initResults();
+      if (tab === 'gradebook') await initGradebook();
+      if (tab === 'hub') await initHub();
+      if (tab === 'classes') await initClasses();
+      if (tab === 'upload') await initUpload();
+      if (tab === 'data') await initDataImportExport();
+    } catch (err) {
+      console.error('[Classroom Hub] Tab init error:', err);
+    }
+  });
+  
+  console.log('[Classroom Hub] Tab implementations loaded');
 </script>
 </body>
 </html>
