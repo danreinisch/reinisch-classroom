@@ -1796,6 +1796,9 @@
     import { writeAuth, clearAuth } from '../web/auth-handoff.js';
     import '../web/auth-modal-extend.js';
 
+    // Expose clearAuth globally for role switching
+    window.clearAuth = clearAuth;
+
     const NS = 'rc_unified_';
     const qs = s => {
       const el = document.querySelector(s);
@@ -1842,6 +1845,9 @@
     function setAuth(authData) {
       localStorage.setItem('rc_auth', JSON.stringify(authData));
     }
+    
+    // Expose getAuth globally for role switching checks
+    window.getAuth = getAuth;
     
     function updateUserChip() {
       const auth = getAuth();
@@ -6364,6 +6370,10 @@
       const studentBtn = safeQs('#roleSwitchStudent');
       if (studentBtn) {
         studentBtn.addEventListener('click', function() {
+          // Clear existing auth when switching roles
+          if (typeof window.clearAuth === 'function') {
+            window.clearAuth();
+          }
           roleSwitchModal.classList.remove('show');
           const signInModal = safeQs('#signInModal');
           if (signInModal) {
@@ -6376,6 +6386,10 @@
       const teacherBtn = safeQs('#roleSwitchTeacher');
       if (teacherBtn) {
         teacherBtn.addEventListener('click', function() {
+          // Clear existing auth when switching roles
+          if (typeof window.clearAuth === 'function') {
+            window.clearAuth();
+          }
           roleSwitchModal.classList.remove('show');
           const teachModal = safeQs('#teachModal');
           if (teachModal) {
@@ -6392,6 +6406,10 @@
       const subBtn = safeQs('#roleSwitchSub');
       if (subBtn) {
         subBtn.addEventListener('click', function() {
+          // Clear existing auth when switching roles
+          if (typeof window.clearAuth === 'function') {
+            window.clearAuth();
+          }
           roleSwitchModal.classList.remove('show');
           window.location.href = '/sub/';
         });
