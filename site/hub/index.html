@@ -2030,7 +2030,7 @@
           msgEl.innerHTML = '<span style="color:#fecaca">' + (data.error || 'Invalid username or password') + '</span>';
         }
       } catch (err) {
-        console.error('[Teacher Auth] Authentication error:', err);
+        console.error('[Teacher Auth] Authentication error:', err.message);
         msgEl.innerHTML = '<span style="color:#fecaca">Authentication error. Please try again.</span>';
       } finally {
         // Re-enable button

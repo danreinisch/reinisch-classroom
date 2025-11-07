@@ -3,6 +3,10 @@
 // Sets HttpOnly cookie if credentials match TEACHER_USERNAME and TEACHER_PASSWORD
 const { sign, teacherCookie } = require('./_lib/auth');
 
+// Session configuration
+const SESSION_DURATION_HOURS = 8;
+const SESSION_DURATION_SECONDS = SESSION_DURATION_HOURS * 60 * 60;
+
 const { TEACHER_USERNAME, TEACHER_PASSWORD, SESSION_SECRET } = process.env;
 
 // CORS configuration
@@ -57,8 +61,8 @@ exports.handler = async (event) => {
     }
     
     // Credentials valid - create session token
-    const token = sign({ role: 'teacher', username }, SESSION_SECRET, { expSec: 60 * 60 * 8 });
-    const setCookie = teacherCookie('tc', token, { secure: true, maxAge: 60 * 60 * 8 });
+    const token = sign({ role: 'teacher', username }, SESSION_SECRET, { expSec: SESSION_DURATION_SECONDS });
+    const setCookie = teacherCookie('tc', token, { secure: true, maxAge: SESSION_DURATION_SECONDS });
 
     console.log('[teacher-login] Successful login');
     
