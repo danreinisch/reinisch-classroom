@@ -1,0 +1,84 @@
+# Teacher Authentication Environment Variables
+
+This file documents the environment variables required for server-backed teacher authentication.
+
+## Required Environment Variables
+
+Configure these in your Netlify site settings under **Site settings > Environment variables**:
+
+### `TEACHER_USERNAME`
+The username for teacher login.
+
+**Example:** `teacher`
+
+**Note:** Use a secure, non-obvious username in production.
+
+---
+
+### `TEACHER_PASSWORD`
+The password for teacher login.
+
+**Example:** `your-secure-password-here`
+
+**Security recommendations:**
+- Use a strong password with at least 16 characters
+- Include a mix of uppercase, lowercase, numbers, and symbols
+- Do NOT commit this value to the repository
+- Rotate passwords periodically
+
+---
+
+### `SESSION_SECRET`
+A secret key used to sign session tokens (JWT).
+
+**Example:** `your-random-secret-key-min-32-chars`
+
+**Security requirements:**
+- Must be at least 32 characters long
+- Use a cryptographically random string
+- Keep this value secret and never commit it to the repository
+- Generate using: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`
+
+---
+
+## Setting Environment Variables in Netlify
+
+1. Go to your Netlify site dashboard
+2. Navigate to **Site settings > Environment variables**
+3. Click **Add a variable** or **Add a single variable**
+4. Enter the variable name (e.g., `TEACHER_USERNAME`)
+5. Enter the variable value
+6. Select which scopes need the variable (typically "All", but can restrict to "Production" or "Deploy Previews")
+7. Click **Create variable**
+8. Repeat for all three required variables
+
+## Redeployment
+
+After adding or changing environment variables:
+1. Go to **Deploys** in your Netlify dashboard
+2. Click **Trigger deploy > Clear cache and deploy site**
+3. Wait for the deployment to complete
+
+The new environment variables will be available to your serverless functions after redeployment.
+
+## Testing
+
+After deployment, test the authentication:
+1. Visit your Classroom Hub at `/site/hub/`
+2. Click the **Teacher Center** button
+3. Enter your configured username and password
+4. Verify that login succeeds with correct credentials
+5. Verify that login fails with incorrect credentials
+
+## Security Notes
+
+- The `TEACHER_PASSWORD` and `SESSION_SECRET` should NEVER be committed to the repository
+- This file (`TEACHER_AUTH_ENV.sample.md`) contains only placeholder examples
+- The actual credentials should only exist in:
+  - Netlify environment variables
+  - Secure password managers
+  - Encrypted secrets management systems
+
+- Never log credentials in serverless functions
+- Session tokens expire after 8 hours for security
+- Sessions use HttpOnly cookies to prevent XSS attacks
