@@ -177,7 +177,7 @@
         auto: params.get('auto')
       };
     } catch (err) {
-      console.warn('[auto-login] Failed to parse URL params:', err);
+      // Silent fail - URL parsing errors are non-critical
       return { code: null, auto: null };
     }
   }
@@ -195,7 +195,8 @@
       
       // Validate structure
       if (!auth || !auth.role || !auth.code || !auth.expiresAt) {
-        console.warn('[auto-login] Invalid rc_auth structure');
+        // Invalid structure - clear silently
+        localStorage.removeItem(AUTH_KEY);
         return null;
       }
       
@@ -227,7 +228,7 @@
     // 3. Either URL has ?auto=1 OR sessionStorage has rc_user_code (persisted session)
     
     if (!auth || auth.role !== 'student') {
-      console.info('[auto-login] No valid student auth found');
+      // No valid student auth - silent fail, normal login flow
       return false;
     }
     
@@ -241,7 +242,7 @@
     }
     
     if (!hasAutoParam && !hasSession) {
-      console.info('[auto-login] No auto-login trigger (auto=1 or session)');
+      // No auto-login trigger - silent fail, normal login flow
       return false;
     }
     
@@ -290,9 +291,7 @@
   const bypassed = attemptEarlyBypass();
   
   if (bypassed) {
-    console.info('[auto-login] Early bypass complete, dashboard will hydrate when main app loads');
-  } else {
-    console.info('[auto-login] Early bypass not triggered, showing login form');
+    console.info('[auto-login] Bypass complete - dashboard will hydrate when main app loads');
   }
 })();
 </script>
