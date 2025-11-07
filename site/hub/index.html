@@ -1795,6 +1795,7 @@
     import { listLibraryItems } from '../web/library.js';
     import { writeAuth, clearAuth, readAuth } from '../web/auth-handoff.js';
     import '../web/auth-modal-extend.js';
+    import '../web/diagnostics.js';
 
     // Expose clearAuth globally for role switching
     window.clearAuth = clearAuth;
@@ -6562,14 +6563,14 @@
       });
       
       if (substituteButtons.length > 1) {
-        console.warn('[Hub Nav] Found ' + substituteButtons.length + ' Substitute entries, removing duplicates');
-        // Keep the first, remove the rest
+        // Keep the first, remove the rest (consolidated single log)
+        console.log(`[substitute-auth] Removed ${substituteButtons.length - 1} duplicate button(s)`);
         for (let i = 1; i < substituteButtons.length; i++) {
           substituteButtons[i].remove();
         }
       }
     } catch (err) {
-      console.error('[Hub Nav] Failed to remove duplicate Substitute:', err);
+      console.error('[TeacherCenter] Failed to remove duplicate Substitute:', err);
     }
   }
   
