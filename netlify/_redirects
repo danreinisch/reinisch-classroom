@@ -1,0 +1,13 @@
+# Netlify Redirects Configuration
+# Handles SPA-like routing for student portal and deep links
+
+# Student portal: redirect /student and /student/* to student index
+# This ensures deep links like /student/assignments don't 404
+/student              /site/student/index.html    200
+/student/*            /site/student/index.html    200
+
+# Alternative: If you want true SPA fallback for all unmatched routes, uncomment below
+# /* /index.html 200
+
+# Note: The 200 status preserves the original URL in the browser
+# This allows client-side routing to handle the path

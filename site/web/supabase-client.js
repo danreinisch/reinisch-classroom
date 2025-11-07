@@ -95,7 +95,7 @@ function buildClient(config) {
     
     return client;
   } catch (err) {
-    console.warn('Failed to create Supabase client:', err.message);
+    console.warn('[supabase-client] Failed to create Supabase client:', err.message);
     return null;
   }
 }

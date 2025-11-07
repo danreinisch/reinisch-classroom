@@ -5,7 +5,7 @@ import { verifyUserPassword, saveAuthSession } from './user-auth.js';
 
 // Guard flag to prevent double-binding
 if (window.__authModalExtendBound) {
-  console.log('[auth-modal-extend] Already initialized, skipping');
+  console.log('[substitute-auth] Already initialized, skipping');
 } else {
   window.__authModalExtendBound = true;
   
@@ -18,47 +18,51 @@ if (window.__authModalExtendBound) {
 }
 
 function initSubstituteAuth() {
-  // Find the sign-in modal
-  const signInModal = document.getElementById('signInModal');
-  if (!signInModal) {
-    console.warn('[auth-modal-extend] Sign-in modal not found');
-    return;
-  }
+  try {
+    console.log('[substitute-auth] Initializing substitute authentication');
+    
+    // Find the sign-in modal
+    const signInModal = document.getElementById('signInModal');
+    if (!signInModal) {
+      console.warn('[substitute-auth] Sign-in modal not found');
+      return;
+    }
 
-  // Find the role buttons container
-  const roleButtons = signInModal.querySelector('[style*="display:grid"]');
-  if (!roleButtons) {
-    console.warn('[auth-modal-extend] Role buttons container not found');
-    return;
-  }
+    // Find the role buttons container
+    const roleButtons = signInModal.querySelector('[style*="display:grid"]');
+    if (!roleButtons) {
+      console.warn('[substitute-auth] Role buttons container not found');
+      return;
+    }
 
-  // Check if substitute button already exists to prevent duplicates
-  if (document.getElementById('signInSubstitute')) {
-    console.log('[auth-modal-extend] Substitute button already exists, skipping creation');
-    return;
-  }
+    // Check if substitute button already exists to prevent duplicates
+    if (document.getElementById('signInSubstitute')) {
+      console.log('[substitute-auth] Substitute button already exists, skipping creation');
+      return;
+    }
 
-  // Add Substitute button after Teacher button
-  const substituteButton = document.createElement('button');
-  substituteButton.className = 'btn';
-  substituteButton.id = 'signInSubstitute';
-  substituteButton.style.cssText = 'padding:16px;text-align:left;display:flex;align-items:center;gap:12px';
-  substituteButton.innerHTML = `
-    <span style="font-size:32px">👩‍🏫</span>
-    <div>
-      <div style="font-weight:900;font-size:16px">Substitute</div>
-      <div class="subtle" style="font-size:13px">Access today's lesson plans</div>
-    </div>
-  `;
+    // Add Substitute button after Teacher button
+    const substituteButton = document.createElement('button');
+    substituteButton.className = 'btn';
+    substituteButton.id = 'signInSubstitute';
+    substituteButton.style.cssText = 'padding:16px;text-align:left;display:flex;align-items:center;gap:12px';
+    substituteButton.innerHTML = `
+      <span style="font-size:32px">👩‍🏫</span>
+      <div>
+        <div style="font-weight:900;font-size:16px">Substitute</div>
+        <div class="subtle" style="font-size:13px">Access today's lesson plans</div>
+      </div>
+    `;
   
   roleButtons.appendChild(substituteButton);
 
-  // Check if substitute modal already exists
-  if (document.getElementById('substituteSignInModal')) {
-    console.log('[auth-modal-extend] Substitute modal already exists, skipping creation');
-  } else {
+  // Find or create substitute modal - always define variable to avoid scope issues
+  let substituteModal = document.getElementById('substituteSignInModal');
+  
+  if (!substituteModal) {
+    console.log('[substitute-auth] Creating substitute modal');
     // Create Substitute sign-in modal (similar to student/teacher modals)
-    const substituteModal = document.createElement('div');
+    substituteModal = document.createElement('div');
     substituteModal.className = 'modal-backdrop';
     substituteModal.id = 'substituteSignInModal';
     substituteModal.innerHTML = `
@@ -76,12 +80,14 @@ function initSubstituteAuth() {
     `;
     
     document.body.appendChild(substituteModal);
+  } else {
+    console.log('[substitute-auth] Substitute modal already exists');
   }
 
   // Event handlers
   const openSubstituteModal = () => {
-    signInModal.classList.remove('show');
-    substituteModal.classList.add('show');
+    if (signInModal) signInModal.classList.remove('show');
+    if (substituteModal) substituteModal.classList.add('show');
     document.getElementById('substitutePassword').value = '';
     document.getElementById('substituteSignInMsg').textContent = '';
     // Focus password field after a short delay
@@ -91,8 +97,8 @@ function initSubstituteAuth() {
   };
 
   const closeSubstituteModal = () => {
-    substituteModal.classList.remove('show');
-    signInModal.classList.add('show');
+    if (substituteModal) substituteModal.classList.remove('show');
+    if (signInModal) signInModal.classList.add('show');
   };
 
   const attemptSubstituteSignIn = async () => {
@@ -148,24 +154,47 @@ function initSubstituteAuth() {
     }
   };
 
-  // Bind events
-  substituteButton.addEventListener('click', openSubstituteModal);
-  document.getElementById('substituteSignInCancel').addEventListener('click', closeSubstituteModal);
-  document.getElementById('substituteSignInGo').addEventListener('click', attemptSubstituteSignIn);
+  // Bind events (idempotent - check for __bound flag to prevent duplicates)
+  if (!substituteButton.__bound) {
+    substituteButton.addEventListener('click', openSubstituteModal);
+    substituteButton.__bound = true;
+  }
+  
+  const cancelBtn = document.getElementById('substituteSignInCancel');
+  if (cancelBtn && !cancelBtn.__bound) {
+    cancelBtn.addEventListener('click', closeSubstituteModal);
+    cancelBtn.__bound = true;
+  }
+  
+  const goBtn = document.getElementById('substituteSignInGo');
+  if (goBtn && !goBtn.__bound) {
+    goBtn.addEventListener('click', attemptSubstituteSignIn);
+    goBtn.__bound = true;
+  }
   
   // Enter key to sign in
-  document.getElementById('substitutePassword').addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-      attemptSubstituteSignIn();
-    }
-  });
+  const passwordInput = document.getElementById('substitutePassword');
+  if (passwordInput && !passwordInput.__bound) {
+    passwordInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        attemptSubstituteSignIn();
+      }
+    });
+    passwordInput.__bound = true;
+  }
 
   // Close on backdrop click
-  substituteModal.addEventListener('click', (e) => {
-    if (e.target === substituteModal) {
-      closeSubstituteModal();
-    }
-  });
+  if (substituteModal && !substituteModal.__boundBackdrop) {
+    substituteModal.addEventListener('click', (e) => {
+      if (e.target === substituteModal) {
+        closeSubstituteModal();
+      }
+    });
+    substituteModal.__boundBackdrop = true;
+  }
 
-  console.log('[auth-modal-extend] Substitute authentication initialized');
+  console.log('[substitute-auth] Substitute authentication initialized');
+  } catch (err) {
+    console.error('[substitute-auth] Failed to initialize:', err);
+  }
 }
