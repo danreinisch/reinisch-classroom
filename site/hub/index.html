@@ -1745,7 +1745,9 @@
     // Guard against duplicate script execution
     if (window.__hubAuthBound) {
       console.debug('[Hub] Script already loaded, skipping re-initialization');
-      throw new Error('Script already initialized'); // Prevent execution
+      // Use dynamic import to prevent module execution without throwing
+      await Promise.resolve();
+      return;
     }
     window.__hubAuthBound = true;
     
@@ -2031,8 +2033,7 @@
               const topNavBtn = qs(`[data-area-nav="${lastArea}"]`);
               if (iconRailBtn) iconRailBtn.click();
               if (topNavBtn) {
-                const navButtons = document.querySelectorAll('[data-area-nav]');
-                navButtons.forEach(b => b.classList.remove('active'));
+                qsa('[data-area-nav]').forEach(b => b.classList.remove('active'));
                 topNavBtn.classList.add('active');
               }
             }
