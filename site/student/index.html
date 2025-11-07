@@ -155,6 +155,93 @@
 </head>
 <body>
 
+<!-- Early auto-login bootstrap (24h remember-me) -->
+<script>
+(function() {
+  'use strict';
+  
+  console.log('[Auto-login Bootstrap] Starting early bypass check');
+  
+  try {
+    // Read rc_auth from localStorage
+    const authStr = localStorage.getItem('rc_auth');
+    if (!authStr) {
+      console.log('[Auto-login Bootstrap] No rc_auth found');
+      return;
+    }
+    
+    let auth;
+    try {
+      auth = JSON.parse(authStr);
+    } catch (e) {
+      console.warn('[Auto-login Bootstrap] Invalid rc_auth JSON, clearing');
+      localStorage.removeItem('rc_auth');
+      return;
+    }
+    
+    // Validate structure and role
+    if (!auth || auth.role !== 'student' || !auth.code) {
+      console.log('[Auto-login Bootstrap] Auth is not for student or missing code');
+      return;
+    }
+    
+    // Validate expiry
+    const now = Date.now();
+    if (!auth.expiresAt || typeof auth.expiresAt !== 'number') {
+      console.warn('[Auto-login Bootstrap] Missing or invalid expiresAt, clearing');
+      localStorage.removeItem('rc_auth');
+      return;
+    }
+    
+    if (now > auth.expiresAt) {
+      console.log('[Auto-login Bootstrap] Auth expired, clearing');
+      localStorage.removeItem('rc_auth');
+      sessionStorage.removeItem('rc_user_code');
+      sessionStorage.removeItem('rc_user_role');
+      return;
+    }
+    
+    // Validate URL parameters if ?auto=1 is present
+    const urlParams = new URLSearchParams(window.location.search);
+    const auto = urlParams.get('auto');
+    const urlCode = urlParams.get('code');
+    
+    if (auto === '1') {
+      // URL has auto=1, verify code matches
+      if (urlCode && urlCode !== auth.code) {
+        console.warn('[Auto-login Bootstrap] URL code mismatch, clearing session');
+        localStorage.removeItem('rc_auth');
+        sessionStorage.removeItem('rc_user_code');
+        sessionStorage.removeItem('rc_user_role');
+        return;
+      }
+    }
+    
+    // All validations passed - hydrate session and set bypass flag
+    console.log('[Auto-login Bootstrap] Validation passed, bypassing login for student:', auth.code);
+    
+    sessionStorage.setItem('rc_user_code', auth.code);
+    sessionStorage.setItem('rc_user_role', 'student');
+    
+    // Set global flag to prevent main init from overriding
+    window.__autoLoginOk = true;
+    
+    // Optionally hide login container immediately to avoid flicker
+    // The main init script will show the dashboard
+    const style = document.createElement('style');
+    style.id = 'auto-login-style';
+    style.textContent = '#loginView { display: none !important; }';
+    document.head.appendChild(style);
+    
+    console.log('[Auto-login Bootstrap] Success: Bypassing login form, dashboard will load');
+    
+  } catch (err) {
+    console.error('[Auto-login Bootstrap] Unexpected error:', err);
+    // On any error, let normal login flow handle it
+  }
+})();
+</script>
+
 <div class="header">
   <div class="bar">
     <div class="brand">🎓 Reinisch Classroom</div>
@@ -1213,7 +1300,33 @@
   // Check for existing session
   (async function init() {
     try {
-      // First, check for auto-login from hub or other sources
+      // PRIORITY 1: Check if early bootstrap already handled auto-login
+      if (window.__autoLoginOk === true) {
+        console.log('[Init] Early bootstrap succeeded, proceeding to dashboard');
+        
+        // Remove the temporary style that hid the login view
+        const tempStyle = document.getElementById('auto-login-style');
+        if (tempStyle) tempStyle.remove();
+        
+        // Session storage was already set by bootstrap, just need to restore user object
+        const savedCode = sessionStorage.getItem('rc_user_code');
+        if (savedCode) {
+          // Show dashboard immediately, lazy-load student data
+          const success = await attemptStudentAutoLogin(savedCode, null);
+          if (success) {
+            showStudentDashboard();
+            return;
+          }
+        }
+        
+        // If bootstrap flag was set but session restore failed, clear and show login
+        console.warn('[Init] Bootstrap flag set but session restore failed');
+        window.__autoLoginOk = false;
+        showLogin();
+        return;
+      }
+      
+      // PRIORITY 2: Check for auto-login from hub or other sources
       const autoAuth = getStudentAutoAuth();
       
       if (autoAuth && autoAuth.code) {
@@ -1236,7 +1349,7 @@
         }
       }
       
-      // No auto-login detected, check for existing session
+      // PRIORITY 3: Check for existing session
       const savedRole = sessionStorage.getItem('rc_user_role');
       const savedCode = sessionStorage.getItem('rc_user_code');
       
@@ -1257,14 +1370,18 @@
         }
       }
       
-      // Fall back to login form
-      showLogin();
+      // Fall back to login form (only if __autoLoginOk is not set)
+      if (!window.__autoLoginOk) {
+        showLogin();
+      }
       
     } catch (err) {
       console.error('[Init] Initialization error:', err);
-      // On any error, show login form
+      // On any error, show login form (only if __autoLoginOk is not set)
       hideLoginLoading();
-      showLogin();
+      if (!window.__autoLoginOk) {
+        showLogin();
+      }
     }
   })();
 </script>

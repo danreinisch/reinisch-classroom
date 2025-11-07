@@ -1,2 +1,6 @@
 /life-skills/presentations/presentation-03         /life-skills/presentations/presentation-03/index.html 200
 /life-skills/presentations/presentation-03.html    /life-skills/presentations/presentation-03/ 301
+
+# Student Portal redirects - handle deep links and query parameters
+/student           /site/student/index.html  200
+/student/*         /site/student/index.html  200

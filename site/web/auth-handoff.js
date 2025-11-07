@@ -198,3 +198,29 @@ export function getExpiryMessage() {
     return 'Expires soon';
   }
 }
+
+// ============================================================================
+// LEGACY COMPATIBILITY
+// ============================================================================
+
+/**
+ * Legacy alias for writeAuth to maintain backward compatibility with Hub code
+ * Hub code calls setAuth({ role, code, name }) - map this to writeAuth()
+ * @param {Object} authData - Auth data { role, username, code, student_id, name }
+ */
+if (typeof window !== 'undefined') {
+  window.setAuth = function(authData) {
+    console.log('[auth-handoff] Legacy setAuth called, mapping to writeAuth');
+    
+    // Map legacy fields to new format
+    const mappedAuth = {
+      role: authData.role,
+      code: authData.code || authData.username || authData.student_id,
+      name: authData.name || authData.username
+    };
+    
+    writeAuth(mappedAuth);
+  };
+  
+  console.log('[auth-handoff] Legacy window.setAuth alias registered');
+}

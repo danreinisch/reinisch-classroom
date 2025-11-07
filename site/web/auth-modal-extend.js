@@ -3,11 +3,18 @@
 
 import { verifyUserPassword, saveAuthSession } from './user-auth.js';
 
-// Wait for DOM to be ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initSubstituteAuth);
+// Guard flag to prevent double-binding
+if (window.__authModalExtendBound) {
+  console.log('[auth-modal-extend] Already initialized, skipping');
 } else {
-  initSubstituteAuth();
+  window.__authModalExtendBound = true;
+  
+  // Wait for DOM to be ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initSubstituteAuth);
+  } else {
+    initSubstituteAuth();
+  }
 }
 
 function initSubstituteAuth() {
@@ -22,6 +29,12 @@ function initSubstituteAuth() {
   const roleButtons = signInModal.querySelector('[style*="display:grid"]');
   if (!roleButtons) {
     console.warn('[auth-modal-extend] Role buttons container not found');
+    return;
+  }
+
+  // Check if substitute button already exists to prevent duplicates
+  if (document.getElementById('signInSubstitute')) {
+    console.log('[auth-modal-extend] Substitute button already exists, skipping creation');
     return;
   }
 
@@ -40,25 +53,30 @@ function initSubstituteAuth() {
   
   roleButtons.appendChild(substituteButton);
 
-  // Create Substitute sign-in modal (similar to student/teacher modals)
-  const substituteModal = document.createElement('div');
-  substituteModal.className = 'modal-backdrop';
-  substituteModal.id = 'substituteSignInModal';
-  substituteModal.innerHTML = `
-    <div class="modal card" style="max-width:420px">
-      <div class="card-header"><div>Substitute Sign In</div></div>
-      <label>Password
-        <input id="substitutePassword" type="password" placeholder="Enter substitute password">
-      </label>
-      <div class="subtle" id="substituteSignInMsg" style="min-height:18px;margin-top:6px"></div>
-      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:10px">
-        <button class="btn small" id="substituteSignInCancel">Back</button>
-        <button class="btn primary small" id="substituteSignInGo">Sign In</button>
+  // Check if substitute modal already exists
+  if (document.getElementById('substituteSignInModal')) {
+    console.log('[auth-modal-extend] Substitute modal already exists, skipping creation');
+  } else {
+    // Create Substitute sign-in modal (similar to student/teacher modals)
+    const substituteModal = document.createElement('div');
+    substituteModal.className = 'modal-backdrop';
+    substituteModal.id = 'substituteSignInModal';
+    substituteModal.innerHTML = `
+      <div class="modal card" style="max-width:420px">
+        <div class="card-header"><div>Substitute Sign In</div></div>
+        <label>Password
+          <input id="substitutePassword" type="password" placeholder="Enter substitute password">
+        </label>
+        <div class="subtle" id="substituteSignInMsg" style="min-height:18px;margin-top:6px"></div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:10px">
+          <button class="btn small" id="substituteSignInCancel">Back</button>
+          <button class="btn primary small" id="substituteSignInGo">Sign In</button>
+        </div>
       </div>
-    </div>
-  `;
-  
-  document.body.appendChild(substituteModal);
+    `;
+    
+    document.body.appendChild(substituteModal);
+  }
 
   // Event handlers
   const openSubstituteModal = () => {

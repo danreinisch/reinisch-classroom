@@ -2021,8 +2021,8 @@
         const modal = qs('#studentSignInModal');
         if (modal) modal.classList.remove('show');
         
-        // Redirect to student portal with auto-login parameters
-        window.location.href = `/site/student/?code=${encodeURIComponent(code)}&auto=1`;
+        // Redirect to student portal with auto-login parameters (no /site prefix)
+        window.location.href = `/student/?auto=1&code=${encodeURIComponent(code)}`;
       } else {
         // Show appropriate error message
         if (rpcError) {
