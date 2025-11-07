@@ -1,7 +1,15 @@
 // GET -> verifies teacher session via HttpOnly cookie
 const { requireTeacher } = require('./_lib/auth');
-const { SESSION_SECRET } = process.env;
-const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type' };
+const { SESSION_SECRET, URL } = process.env;
+
+// Use environment-based CORS origin for security
+const ALLOWED_ORIGIN = URL || '*';
+const CORS = { 
+  'Access-Control-Allow-Origin': ALLOWED_ORIGIN, 
+  'Access-Control-Allow-Methods': 'GET, OPTIONS', 
+  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Credentials': 'true'
+};
 
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers: CORS, body: '' };

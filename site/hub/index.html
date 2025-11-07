@@ -1745,9 +1745,9 @@
     // Guard against duplicate script execution
     if (window.__hubAuthBound) {
       console.debug('[Hub] Script already loaded, skipping re-initialization');
-    } else {
-      window.__hubAuthBound = true;
+      throw new Error('Script already initialized'); // Prevent execution
     }
+    window.__hubAuthBound = true;
     
     import { db, isRemote, localStore } from '../web/data-adapter.js';
     import { listLibraryItems } from '../web/library.js';
@@ -2031,7 +2031,8 @@
               const topNavBtn = qs(`[data-area-nav="${lastArea}"]`);
               if (iconRailBtn) iconRailBtn.click();
               if (topNavBtn) {
-                qs('[data-area-nav]')?.forEach(b => b.classList.remove('active'));
+                const navButtons = document.querySelectorAll('[data-area-nav]');
+                navButtons.forEach(b => b.classList.remove('active'));
                 topNavBtn.classList.add('active');
               }
             }
@@ -2100,7 +2101,7 @@
           passwordInput.value = '';
           msgEl.innerHTML = '';
         } else {
-          msgEl.innerHTML = '<span style="color:#fecaca">Invalid username or password (offline mode)</span>';
+          msgEl.innerHTML = '<span style="color:#fecaca">Invalid username or password</span>';
         }
       } finally {
         // Re-enable button

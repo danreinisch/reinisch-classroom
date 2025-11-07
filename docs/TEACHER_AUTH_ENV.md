@@ -9,14 +9,12 @@ These must be set in your Netlify deployment environment:
 ### `TEACHER_USERNAME`
 - **Description**: The username for teacher login
 - **Example**: `dreinisch`
-- **Default (if not set)**: `teacher`
-- **Required**: Yes (for production)
+- **Required**: Yes (no default in production)
 
 ### `TEACHER_PASSWORD`
 - **Description**: The password for teacher login
-- **Example**: `Tool462` or `teacher123`
-- **Default (if not set)**: `teacher123`
-- **Required**: Yes (for production)
+- **Example**: `Tool462` or a strong password
+- **Required**: Yes (no default in production)
 - **Security Note**: Use a strong password in production
 
 ### `SESSION_SECRET`
@@ -24,6 +22,12 @@ These must be set in your Netlify deployment environment:
 - **Example**: A long random string (e.g., `your-very-secure-random-string-here-at-least-32-chars`)
 - **Required**: Yes (critical for security)
 - **Security Note**: Must be a strong, random string at least 32 characters long. Never commit this to version control.
+
+### `URL` (Optional)
+- **Description**: Your Netlify site URL, used for CORS configuration
+- **Example**: `https://your-site.netlify.app`
+- **Default**: `*` (allows all origins, only use for development)
+- **Security Note**: Netlify automatically sets this variable for you. If not set, CORS will default to wildcard which is less secure.
 
 ## How to Set Environment Variables in Netlify
 
