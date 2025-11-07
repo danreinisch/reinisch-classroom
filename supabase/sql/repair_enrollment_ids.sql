@@ -93,7 +93,10 @@ BEGIN
   WHERE class_id IS NULL;
   
   IF null_count > 0 THEN
-    RAISE WARNING 'Still have % enrollment records with NULL class_id (may need manual review)', null_count;
+    RAISE WARNING 'Still have % enrollment records with NULL class_id. Troubleshooting steps:', null_count;
+    RAISE WARNING '  1. Check for invalid class_code values that don''t match any entry in classes.code';
+    RAISE WARNING '  2. Verify classes table has all required class codes';
+    RAISE WARNING '  3. Run: SELECT DISTINCT class_code FROM class_enrollments WHERE class_id IS NULL;';
   ELSE
     RAISE NOTICE 'All enrollment records have class_id populated';
   END IF;

@@ -511,13 +511,12 @@ const remote = {
       return []; // Return empty array if both queries fail
     }
     
-    // Note: This fallback does not provide accurate class_code since we only have class_id.
-    // The consuming code should handle this by checking if class_code looks like an ID.
+    // Fallback returns empty class_code since we only have class_id (not the actual code)
     return (students || [])
       .filter(s => s && s.class_id) // Defensive null checks
       .map(s => ({
         class_id: s.class_id,
-        class_code: '', // Empty string since we don't have the actual code in fallback
+        class_code: '', // Empty: no actual class code available in this fallback
         student_code: s.code || '',
         student_name: s.name || s.code || ''
       }));

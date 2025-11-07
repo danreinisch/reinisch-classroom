@@ -30,7 +30,9 @@ DECLARE
 -- ============================================================================
 -- REPLACE THE SAMPLE DATA BELOW WITH YOUR ACTUAL ROSTER CSV
 -- ============================================================================
--- Expected format: Student Code Name,Class,Class,Class,...
+-- Expected format: Student Code Name,Class1,Class2,Class3,...
+--   - First column: Student code and name (e.g., "S001 John Doe")
+--   - Remaining columns: Class codes (comma-separated)
 -- Example rows shown below - DELETE THESE and paste your actual roster data
 -- ============================================================================
 Student Code Name,Class
