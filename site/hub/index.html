@@ -6737,12 +6737,14 @@
   // ============================================================================
   let studentsCache = [];
   let goalsCache = [];
+  let classesCache = []; // Cache of classes for name lookup in student details
   
   async function initStudentPortal() {
     try {
-      // Load students and goals
+      // Load students, goals, and classes
       studentsCache = await db.listStudents();
       goalsCache = await db.listGoalsAll();
+      classesCache = await db.listClasses();
       
       renderStudentPortalList();
     } catch (err) {
@@ -6843,6 +6845,14 @@
     if (!student) return;
     
     const studentGoals = goalsCache.filter(g => g.student_code === code);
+    
+    // Look up class name from classesCache
+    let className = '';
+    if (student.class_id) {
+      const studentClass = classesCache.find(c => c.id === student.class_id);
+      className = studentClass ? (studentClass.name || studentClass.code) : student.class_id;
+    }
+    
     const nameEl = qs('#selectedStudentName');
     const detailsEl = qs('#studentPortalDetails');
     
@@ -6854,7 +6864,7 @@
           <div style="margin-bottom:16px">
             <div style="font-weight:700;font-size:16px;margin-bottom:8px">${student.name || code}</div>
             <div class="subtle">Code: ${code}</div>
-            ${student.class_id ? `<div class="subtle">Class: ${student.class_id}</div>` : ''}
+            ${className ? `<div class="subtle">Class: ${escapeHtml(className)}</div>` : ''}
           </div>
           
           <div style="margin-bottom:16px">
@@ -7273,19 +7283,60 @@
         }
       });
       
+      // Helper to normalize class titles for duplicate detection
+      // Matches SQL normalization: removes spaces, hyphens, underscores, then lowercase
+      function normalizeTitle(title) {
+        if (!title) return '';
+        return title.replace(/[\s\-_]+/g, '').toLowerCase();
+      }
+      
+      // Filter out zero-enrollment duplicates:
+      // If multiple classes share the same normalized title, keep only those with enrollments
+      // or if none have enrollments, keep the first one
+      const titleMap = {};
+      safeClasses.forEach(cls => {
+        const normalized = normalizeTitle(cls.name || cls.code);
+        if (!titleMap[normalized]) {
+          titleMap[normalized] = [];
+        }
+        titleMap[normalized].push(cls);
+      });
+      
+      const filteredClasses = [];
+      Object.values(titleMap).forEach(group => {
+        if (group.length === 1) {
+          // Only one class with this title - always include
+          filteredClasses.push(group[0]);
+        } else {
+          // Multiple classes with same normalized title
+          // Include only those with enrollments
+          const withEnrollments = group.filter(cls => 
+            enrollmentsByClass[cls.id] && enrollmentsByClass[cls.id].length > 0
+          );
+          
+          if (withEnrollments.length > 0) {
+            // Include all classes that have enrollments
+            filteredClasses.push(...withEnrollments);
+          } else {
+            // None have enrollments - include only the first one
+            filteredClasses.push(group[0]);
+          }
+        }
+      });
+      
       container.innerHTML = `
         <div class="card-header">
           <div>👥 Classes</div>
           <button class="btn primary small" id="btnAddClass">Add Class</button>
         </div>
         
-        ${safeClasses.length === 0 ? `
+        ${filteredClasses.length === 0 ? `
           <div class="subtle" style="padding:40px;text-align:center">
             No classes yet. Click "Add Class" to create one.
           </div>
         ` : `
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;margin-top:12px">
-            ${safeClasses.map(cls => {
+            ${filteredClasses.map(cls => {
               if (!cls) return ''; // Defensive guard
               const classEnrollments = enrollmentsByClass[cls.id] || [];
               const studentCount = classEnrollments.length;
