@@ -213,10 +213,28 @@ if (typeof window !== 'undefined') {
     console.log('[auth-handoff] Legacy setAuth called, mapping to writeAuth');
     
     // Map legacy fields to new format
+    // Priority: code > username > student_id (for backward compatibility)
+    const code = authData.code || authData.username || authData.student_id;
+    const name = authData.name || authData.username;
+    
+    if (!code) {
+      console.warn('[auth-handoff] setAuth called without valid code/username/student_id, ignoring');
+      return;
+    }
+    
+    // Log which field was used for transparency
+    if (authData.code) {
+      console.log('[auth-handoff] Using authData.code:', code);
+    } else if (authData.username) {
+      console.log('[auth-handoff] Using authData.username as code:', code);
+    } else {
+      console.log('[auth-handoff] Using authData.student_id as code:', code);
+    }
+    
     const mappedAuth = {
       role: authData.role,
-      code: authData.code || authData.username || authData.student_id,
-      name: authData.name || authData.username
+      code: code,
+      name: name
     };
     
     writeAuth(mappedAuth);

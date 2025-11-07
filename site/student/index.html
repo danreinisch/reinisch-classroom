@@ -176,6 +176,8 @@
     } catch (e) {
       console.warn('[Auto-login Bootstrap] Invalid rc_auth JSON, clearing');
       localStorage.removeItem('rc_auth');
+      sessionStorage.removeItem('rc_user_code');
+      sessionStorage.removeItem('rc_user_role');
       return;
     }
     
@@ -207,8 +209,16 @@
     const urlCode = urlParams.get('code');
     
     if (auto === '1') {
-      // URL has auto=1, verify code matches
-      if (urlCode && urlCode !== auth.code) {
+      // URL has auto=1, verify code is present and matches
+      if (!urlCode) {
+        console.warn('[Auto-login Bootstrap] URL has auto=1 but no code, clearing session');
+        localStorage.removeItem('rc_auth');
+        sessionStorage.removeItem('rc_user_code');
+        sessionStorage.removeItem('rc_user_role');
+        return;
+      }
+      
+      if (urlCode !== auth.code) {
         console.warn('[Auto-login Bootstrap] URL code mismatch, clearing session');
         localStorage.removeItem('rc_auth');
         sessionStorage.removeItem('rc_user_code');
@@ -226,8 +236,11 @@
     // Set global flag to prevent main init from overriding
     window.__autoLoginOk = true;
     
-    // Optionally hide login container immediately to avoid flicker
-    // The main init script will show the dashboard
+    // Hide login container immediately to avoid flicker
+    // Note: Using !important is acceptable here because:
+    // 1. This is a temporary style that gets removed after dashboard loads
+    // 2. We need to override any existing inline styles
+    // 3. The style is isolated to this specific use case
     const style = document.createElement('style');
     style.id = 'auto-login-style';
     style.textContent = '#loginView { display: none !important; }';
