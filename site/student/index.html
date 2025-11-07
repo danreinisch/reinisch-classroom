@@ -365,7 +365,7 @@
   let userRole = null; // 'student' or 'teacher'
   
   // Listen for auth changes from other tabs via BroadcastChannel
-  if (onAuthChange) {
+  if (typeof onAuthChange === 'function') {
     const cleanup = onAuthChange((event) => {
       console.log('[Student Portal] Auth change received from other tab:', event.type);
       
@@ -384,7 +384,8 @@
         console.log('[Student Portal] Logout from other tab');
         currentUser = null;
         userRole = null;
-        sessionStorage.clear();
+        sessionStorage.removeItem('rc_user_code');
+        sessionStorage.removeItem('rc_user_role');
         showLogin();
       }
     });
@@ -498,7 +499,9 @@
   qs('#btnLogout').addEventListener('click', () => {
     currentUser = null;
     userRole = null;
-    sessionStorage.clear();
+    // Clear only auth-related sessionStorage keys
+    sessionStorage.removeItem('rc_user_code');
+    sessionStorage.removeItem('rc_user_role');
     clearAuth(); // Clear 24-hour auth handoff
     showLogin();
   });
