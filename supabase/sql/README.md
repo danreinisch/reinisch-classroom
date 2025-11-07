@@ -1,6 +1,6 @@
 # SQL Utilities for Classroom Hub
 
-This directory contains SQL scripts for managing class rosters and enrollments in the Reinisch Classroom system.
+This directory contains SQL scripts for managing class rosters, enrollments, and cleanup operations in the Reinisch Classroom system.
 
 ## Scripts
 
@@ -39,6 +39,44 @@ S002 Jane Smith,LSLA,LS
 
 ---
 
+### `cleanup_zero_enrollment_classes.sql`
+
+**Purpose:** Identify and optionally mark inactive classes with 0 enrollments where another class shares the same "normalized" title. This helps clean up duplicate class variants (e.g., LS-LA vs LSLA) after roster imports.
+
+**Usage:**
+1. Open the SQL Editor in your Supabase dashboard
+2. Copy the contents of `cleanup_zero_enrollment_classes.sql`
+3. Execute the script to see a dry-run report
+4. To actually mark duplicates as inactive, uncomment the UPDATE section and re-run
+
+**Features:**
+- Adds an `active` boolean column to classes table (default: true) if it doesn't exist
+- Identifies classes with 0 enrollments where another class shares the same normalized title
+- Reports all duplicate candidates without making changes (dry-run by default)
+- Optionally marks zero-enrollment duplicates as inactive (when UPDATE section is uncommented)
+- Safe to run multiple times (idempotent)
+
+**Expected Output:**
+```
+Zero-Enrollment Duplicate Classes Report
+========================================
+
+Duplicate #1: Life Skills LA (code: LS-LA) - normalized: "lsla" - enrollments: 0 - total with same title: 2 (1 have enrollments)
+Duplicate #2: Language Arts (code: LA) - normalized: "languagearts" - enrollments: 0 - total with same title: 2 (1 have enrollments)
+
+Found 2 zero-enrollment duplicate class(es).
+
+To mark these as inactive, uncomment the UPDATE section below and re-run.
+```
+
+**Notes:**
+- This script does NOT hard-delete any records
+- Classes are only marked as inactive when explicitly enabled (UPDATE section uncommented)
+- The normalization logic matches the frontend duplicate detection in hub/index.html
+- Inactive classes can be re-activated manually if needed
+
+---
+
 ### `repair_enrollment_ids.sql`
 
 **Purpose:** Backfill class_enrollments.class_id from class_code by mapping through the classes table, and install triggers to auto-fill class_id on future inserts.
@@ -67,13 +105,42 @@ S002 Jane Smith,LSLA,LS
 
 ### Initial Setup
 1. Run `ingest_roster_csv_inline_safe.sql` with your roster CSV data
-2. Verify classes and enrollments in the Data → Classes view
-3. If needed, run `repair_enrollment_ids.sql` to backfill any missing class_id values
+2. Run `cleanup_zero_enrollment_classes.sql` to identify and optionally clean up duplicate class variants
+3. Verify classes and enrollments in the Data → Classes view
+4. If needed, run `repair_enrollment_ids.sql` to backfill any missing class_id values
 
 ### Ongoing Maintenance
 - Use the ingest script whenever you need to update rosters
+- Run the cleanup script after each roster import to identify duplicates
 - The repair script only needs to be run once (unless you drop the trigger)
 - Multi-class students (e.g., S008 in both Life Skills and LA3) are fully supported
+
+### Hub Classes View
+The Classroom Hub displays classes by their title (classes.name) instead of internal codes:
+- Primary header shows class name (e.g., "Language Arts 3", "Life Skills")
+- Student counts are aggregated from class_enrollments table
+- Zero-enrollment duplicates are automatically hidden when another class shares the same normalized title
+- Internal codes are shown as small muted text for reference
+
+### Student Hub 24-Hour Remember-Me
+Students who log in from the Classroom Hub are automatically redirected to their Student Portal dashboard:
+- **Authentication Flow:**
+  1. Student logs in from Hub with code and password
+  2. Hub stores rc_auth in localStorage with 24-hour expiry
+  3. Hub redirects to `/student/?auto=1&code=CODE`
+  4. Student Portal detects valid rc_auth and auto-authenticates
+  5. Dashboard is displayed without second password prompt
+
+- **Session Management:**
+  - 24-hour session: Students remain authenticated across page reloads
+  - Manual logout: Click "Logout" button to clear rc_auth and sessionStorage
+  - Auto-expiry: Sessions expire after 24 hours and require re-authentication
+  - Multi-tab sync: Authentication state is synchronized across browser tabs
+
+- **Security Notes:**
+  - Auth tokens are stored in localStorage with expiry timestamps
+  - Expired tokens are automatically cleared on access
+  - Logout clears both rc_auth (24h) and sessionStorage (current session)
 
 ---
 
