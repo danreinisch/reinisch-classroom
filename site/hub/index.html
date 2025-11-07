@@ -6697,6 +6697,14 @@
   const qs = s => document.querySelector(s);
   const qsa = s => Array.from(document.querySelectorAll(s));
   
+  // HTML escape helper to prevent XSS
+  function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+  
   // Helper to add notifications
   function addNotif(text, meta = {}) {
     const n = localStore.get('notifications', []);
@@ -7239,13 +7247,19 @@
       const container = qs('.ttab[data-tab="classes"]');
       if (!container) return;
       
-      // Group enrollments by class
+      // Defensive guards: ensure arrays are valid
+      const safeClasses = Array.isArray(classes) ? classes : [];
+      const safeEnrollments = Array.isArray(enrollments) ? enrollments : [];
+      
+      // Group enrollments by class_id with defensive null checks
       const enrollmentsByClass = {};
-      enrollments.forEach(e => {
-        if (!enrollmentsByClass[e.class_id]) {
-          enrollmentsByClass[e.class_id] = [];
+      safeEnrollments.forEach(e => {
+        if (e && e.class_id) {
+          if (!enrollmentsByClass[e.class_id]) {
+            enrollmentsByClass[e.class_id] = [];
+          }
+          enrollmentsByClass[e.class_id].push(e);
         }
-        enrollmentsByClass[e.class_id].push(e);
       });
       
       container.innerHTML = `
@@ -7254,39 +7268,49 @@
           <button class="btn primary small" id="btnAddClass">Add Class</button>
         </div>
         
-        ${classes.length === 0 ? `
+        ${safeClasses.length === 0 ? `
           <div class="subtle" style="padding:40px;text-align:center">
             No classes yet. Click "Add Class" to create one.
           </div>
         ` : `
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;margin-top:12px">
-            ${classes.map(cls => {
+            ${safeClasses.map(cls => {
+              if (!cls) return ''; // Defensive guard
               const classEnrollments = enrollmentsByClass[cls.id] || [];
+              const studentCount = classEnrollments.length;
+              
+              // Build student list preview: first 5 codes, then "... and N more"
+              const previewStudents = classEnrollments.slice(0, 5);
+              const remainingCount = Math.max(0, studentCount - 5);
+              
               return `
                 <div class="card">
                   <div class="card-header">
-                    <div style="font-weight:700">${cls.name || cls.code}</div>
-                    <button class="btn small" onclick="window.editClass('${cls.id}')">Edit</button>
+                    <div style="font-weight:700">${escapeHtml(cls.name || cls.code || 'Unnamed Class')}</div>
+                    <button class="btn small" onclick="window.editClass('${escapeHtml(cls.id || '')}')">Edit</button>
                   </div>
                   <div>
-                    <div class="subtle" style="margin-bottom:8px">Class Code: ${cls.code || cls.id}</div>
-                    <div class="badge">${classEnrollments.length} students</div>
-                    <div style="margin-top:12px">
-                      ${classEnrollments.slice(0, 5).map(e => `
-                        <div class="subtle" style="font-size:12px;padding:4px 0">
-                          ${e.student_name || e.student_code}
-                        </div>
-                      `).join('')}
-                      ${classEnrollments.length > 5 ? `
-                        <div class="subtle" style="font-size:12px;padding:4px 0">
-                          ... and ${classEnrollments.length - 5} more
-                        </div>
-                      ` : ''}
-                    </div>
+                    <div class="subtle" style="margin-bottom:8px">Code: ${escapeHtml(cls.code || cls.id || '—')}</div>
+                    <div class="badge">${studentCount} student${studentCount !== 1 ? 's' : ''}</div>
+                    ${studentCount > 0 ? `
+                      <div style="margin-top:12px">
+                        <div style="font-weight:700;font-size:12px;margin-bottom:6px">Students:</div>
+                        ${previewStudents.map(e => `
+                          <div class="subtle" style="font-size:12px;padding:4px 0">
+                            ${escapeHtml(e.student_code || '—')}${e.student_name && e.student_name !== e.student_code ? ` (${escapeHtml(e.student_name)})` : ''}
+                          </div>
+                        `).join('')}
+                        ${remainingCount > 0 ? `
+                          <div class="subtle" style="font-size:12px;padding:4px 0;font-style:italic">
+                            … and ${remainingCount} more
+                          </div>
+                        ` : ''}
+                      </div>
+                    ` : ''}
                   </div>
                 </div>
               `;
-            }).join('')}
+            }).filter(Boolean).join('')}
           </div>
         `}
       `;
