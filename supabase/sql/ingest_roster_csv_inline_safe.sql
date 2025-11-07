@@ -27,6 +27,12 @@
 DO $$
 DECLARE
   roster_csv TEXT := $roster$
+-- ============================================================================
+-- REPLACE THE SAMPLE DATA BELOW WITH YOUR ACTUAL ROSTER CSV
+-- ============================================================================
+-- Expected format: Student Code Name,Class,Class,Class,...
+-- Example rows shown below - DELETE THESE and paste your actual roster data
+-- ============================================================================
 Student Code Name,Class
 S001 John Doe,LA1,LA2
 S002 Jane Smith,LSLA,LS
