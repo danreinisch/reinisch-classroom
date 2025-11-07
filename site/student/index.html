@@ -952,6 +952,10 @@
   // Auto-login constants
   const AUTO_LOGIN_LOADING_MESSAGE = 'Signing you in...';
   
+  // Simple in-memory cache for student lookups to avoid redundant fetches
+  // Cache is invalidated on page refresh (intentional for now)
+  let studentListCache = null;
+  
   // Refresh handlers
   qs('#btnRefreshAssignments').addEventListener('click', loadTeacherAssignments);
   
@@ -965,9 +969,14 @@
       const authStr = localStorage.getItem('rc_auth');
       if (authStr) {
         const auth = JSON.parse(authStr);
-        if (auth && auth.role === 'student' && auth.code) {
+        // Validate auth object structure and code format
+        if (auth && 
+            auth.role === 'student' && 
+            auth.code &&
+            typeof auth.code === 'string' &&
+            auth.code.trim().length > 0) {
           console.log('[Auto-login] Found auth in localStorage rc_auth');
-          return { code: auth.code };
+          return { code: auth.code.trim() };
         }
       }
     } catch (err) {
@@ -977,9 +986,9 @@
     try {
       // Method 2: Check sessionStorage rc_user_code
       const sessionCode = sessionStorage.getItem('rc_user_code');
-      if (sessionCode) {
+      if (sessionCode && typeof sessionCode === 'string' && sessionCode.trim().length > 0) {
         console.log('[Auto-login] Found auth in sessionStorage rc_user_code');
-        return { code: sessionCode };
+        return { code: sessionCode.trim() };
       }
     } catch (err) {
       console.warn('[Auto-login] Failed to read sessionStorage:', err);
@@ -989,9 +998,9 @@
       // Method 3: Check URL query parameter ?code=
       const urlParams = new URLSearchParams(window.location.search);
       const urlCode = urlParams.get('code');
-      if (urlCode) {
+      if (urlCode && typeof urlCode === 'string' && urlCode.trim().length > 0) {
         console.log('[Auto-login] Found auth in URL parameter');
-        return { code: urlCode };
+        return { code: urlCode.trim() };
       }
     } catch (err) {
       console.warn('[Auto-login] Failed to parse URL parameters:', err);
@@ -1064,13 +1073,19 @@
    * Find a student by code
    * @param {string} code - Student code to search for
    * @returns {Promise<Object|null>} Student object if found, null otherwise
+   * 
+   * Performance note: Uses in-memory cache to avoid redundant database fetches
+   * during initialization. For production with large datasets, consider implementing
+   * a database-level getStudentByCode(code) method for direct lookup.
    */
   async function findStudentByCode(code) {
     try {
-      // Note: In a future optimization, this could use a direct database lookup
-      // by code (e.g., db.getStudentByCode(code)) instead of fetching all students
-      const studentList = await db.listStudents();
-      return studentList.find(s => s.code === code) || null;
+      // Use cache if available to avoid redundant fetches during init
+      if (!studentListCache) {
+        studentListCache = await db.listStudents();
+      }
+      
+      return studentListCache.find(s => s.code === code) || null;
     } catch (err) {
       console.error('[Student Lookup] Failed to find student:', code, err);
       return null;
