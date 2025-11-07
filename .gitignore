@@ -32,6 +32,11 @@ build/
 .env
 .env.*
 
+# Prevent committing actual teacher auth credentials
+docs/TEACHER_AUTH_ENV.md
+docs/*AUTH*.md
+!docs/*AUTH*.sample.md
+
 # Test screenshots
 screenshots/
 test-reactive-client.html

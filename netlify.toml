@@ -1,5 +1,5 @@
 [build]
-  publish = "site"
+  publish = "."
   command = ""
   functions = "netlify/functions"   # explicitly set functions dir
 

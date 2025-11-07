@@ -1746,8 +1746,6 @@
     import { listLibraryItems } from '../web/library.js';
     import '../web/auth-modal-extend.js';
 
-    const TEACHER_PW_LOCAL = 'teacher123';
-    const TEACHER_USER_LOCAL = 'teacher';
     const NS = 'rc_unified_';
     const qs = s => {
       const el = document.querySelector(s);
@@ -1766,15 +1764,6 @@
     function hideTeacher(){ 
       const view = qs('#view-teacher'); 
       if (view) view.style.display='none'; 
-    }
-    
-    // Helper: Get teacher credentials (configurable or defaults)
-    function getTeacherUsername() {
-      return localStorage.getItem('rc_teacher_user') || TEACHER_USER_LOCAL;
-    }
-    
-    function getTeacherPassword() {
-      return localStorage.getItem('rc_teacher_pass') || TEACHER_PW_LOCAL;
     }
 
     // Theme toggle: Bold vs Normal glassmorphism
@@ -1963,11 +1952,12 @@
       }
     });
     
-    // Teacher auth
-    function handleTeacherAuth() {
+    // Teacher auth - server-backed with username + password
+    async function handleTeacherAuth() {
       const usernameInput = qs('#teachUser');
       const passwordInput = qs('#teachPass');
       const msgEl = qs('#teachMsg');
+      const btnGo = qs('#teachGo');
       
       if (!usernameInput || !passwordInput || !msgEl) {
         console.error('[Teacher Auth] Required elements not found');
@@ -1976,33 +1966,113 @@
       
       const inputUser = usernameInput.value.trim();
       const inputPass = passwordInput.value;
-      const teacherUsername = getTeacherUsername();
-      const teacherPassword = getTeacherPassword();
       
-      if (inputUser === teacherUsername && inputPass === teacherPassword) {
-        const modal = qs('#teachModal');
-        if (modal) modal.classList.remove('show');
+      if (!inputUser || !inputPass) {
+        msgEl.innerHTML = '<span style="color:#fecaca">Please enter both username and password</span>';
+        return;
+      }
+      
+      // Disable button and show loading state
+      if (btnGo) {
+        btnGo.disabled = true;
+        btnGo.textContent = 'Authenticating...';
+      }
+      msgEl.innerHTML = '<span style="color:#c5d1de">Verifying credentials...</span>';
+      
+      try {
+        // POST to server-backed authentication endpoint
+        const response = await fetch('/.netlify/functions/teacher-login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: inputUser, password: inputPass }),
+          credentials: 'include' // Important: include cookies
+        });
         
-        // Check if coming from sign-in modal
-        if (isFromSignInModal) {
-          // User signed in as teacher via sign-in modal
-          setAuth({ role: 'teacher', username: inputUser });
-          updateUserChip();
-          isFromSignInModal = false; // Reset flag
+        const data = await response.json();
+        
+        if (response.ok && data.ok) {
+          // Success - credentials valid, cookie set
+          const modal = qs('#teachModal');
+          if (modal) modal.classList.remove('show');
+          
+          // Check if coming from sign-in modal
+          if (isFromSignInModal) {
+            // User signed in as teacher via sign-in modal
+            setAuth({ role: 'teacher', username: inputUser });
+            updateUserChip();
+            isFromSignInModal = false; // Reset flag
+          } else {
+            // Direct teacher center access (not from sign-in)
+            setAuth({ role: 'teacher', username: inputUser });
+            const chip = qs('#currentUserChip');
+            if (chip) chip.textContent = 'Teacher';
+          }
+          
+          showTeacher();
+          
+          // Restore last area/tab if available
+          setTimeout(() => {
+            const lastArea = localStorage.getItem('rc_last_area');
+            if (lastArea) {
+              const iconRailBtn = qs(`.iconrail button[data-area="${lastArea}"]`);
+              if (iconRailBtn && typeof window.renderSubmenu === 'function') {
+                iconRailBtn.click();
+              }
+            }
+          }, 100);
+          
+          // Clear inputs
+          usernameInput.value = '';
+          passwordInput.value = '';
+          msgEl.innerHTML = '';
         } else {
-          // Direct teacher center access (not from sign-in)
-          const chip = qs('#currentUserChip');
-          if (chip) chip.textContent = 'Teacher';
+          // Failed - invalid credentials
+          msgEl.innerHTML = '<span style="color:#fecaca">' + (data.error || 'Invalid username or password') + '</span>';
         }
+      } catch (err) {
+        console.error('[Teacher Auth] Authentication error:', err.message);
+        msgEl.innerHTML = '<span style="color:#fecaca">Authentication error. Please try again.</span>';
+      } finally {
+        // Re-enable button
+        if (btnGo) {
+          btnGo.disabled = false;
+          btnGo.textContent = 'Unlock';
+        }
+      }
+    }
+    
+    // Check teacher session on page load
+    async function checkTeacherSession() {
+      try {
+        const response = await fetch('/.netlify/functions/teacher-session', {
+          method: 'GET',
+          credentials: 'include' // Important: include cookies
+        });
         
-        showTeacher();
-        
-        // Clear inputs
-        usernameInput.value = '';
-        passwordInput.value = '';
-        msgEl.innerHTML = '';
-      } else {
-        msgEl.innerHTML = '<span style="color:#fecaca">Invalid username or password</span>';
+        if (response.ok) {
+          const data = await response.json();
+          if (data.ok && data.role === 'teacher') {
+            // Valid session exists - restore teacher view
+            setAuth({ role: 'teacher', username: data.username });
+            const chip = qs('#currentUserChip');
+            if (chip) chip.textContent = 'Teacher';
+            showTeacher();
+            
+            // Restore last area/tab
+            setTimeout(() => {
+              const lastArea = localStorage.getItem('rc_last_area');
+              if (lastArea) {
+                const iconRailBtn = qs(`.iconrail button[data-area="${lastArea}"]`);
+                if (iconRailBtn && typeof window.renderSubmenu === 'function') {
+                  iconRailBtn.click();
+                }
+              }
+            }, 100);
+          }
+        }
+      } catch (err) {
+        // Session check failed - user not authenticated
+        console.debug('[Teacher Auth] No valid session found');
       }
     }
     
@@ -2046,8 +2116,12 @@
       // If signed in as student, let the link navigate naturally
     });
     
-    // Initialize: Check auth and show sign-in modal if needed
-    checkAndShowSignIn();
+    // Initialize: Check teacher session, then check auth and show sign-in modal if needed
+    checkTeacherSession().then(() => {
+      checkAndShowSignIn();
+    }).catch(() => {
+      checkAndShowSignIn();
+    });
 
     // Area → Submenu → Tab mapping
     const AREA_MAP = {
