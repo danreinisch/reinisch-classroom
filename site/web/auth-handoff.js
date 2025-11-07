@@ -198,3 +198,47 @@ export function getExpiryMessage() {
     return 'Expires soon';
   }
 }
+
+// ============================================================================
+// LEGACY COMPATIBILITY
+// ============================================================================
+
+/**
+ * Legacy alias for writeAuth to maintain backward compatibility with Hub code
+ * Hub code calls setAuth({ role, code, name }) - map this to writeAuth()
+ * @param {Object} authData - Auth data { role, username, code, student_id, name }
+ */
+if (typeof window !== 'undefined') {
+  window.setAuth = function(authData) {
+    console.log('[auth-handoff] Legacy setAuth called, mapping to writeAuth');
+    
+    // Map legacy fields to new format
+    // Priority: code > username > student_id (for backward compatibility)
+    const code = authData.code || authData.username || authData.student_id;
+    const name = authData.name || authData.username;
+    
+    if (!code) {
+      console.warn('[auth-handoff] setAuth called without valid code/username/student_id, ignoring');
+      return;
+    }
+    
+    // Log which field was used for transparency
+    if (authData.code) {
+      console.log('[auth-handoff] Using authData.code:', code);
+    } else if (authData.username) {
+      console.log('[auth-handoff] Using authData.username as code:', code);
+    } else {
+      console.log('[auth-handoff] Using authData.student_id as code:', code);
+    }
+    
+    const mappedAuth = {
+      role: authData.role,
+      code: code,
+      name: name
+    };
+    
+    writeAuth(mappedAuth);
+  };
+  
+  console.log('[auth-handoff] Legacy window.setAuth alias registered');
+}
