@@ -470,8 +470,8 @@ const remote = {
     if (!supabase) throw new Error('supabase-not-configured');
     const { data, error } = await supabase
       .from('classes')
-      .select('id, name, code')
-      .order('name');
+      .select('id, code, name')
+      .order('code');
     if (error) throw error;
     return data || [];
   },
@@ -482,37 +482,44 @@ const remote = {
     // Primary: try class_enrollments table with joins
     const { data: enrollments, error: enrollError } = await supabase
       .from('class_enrollments')
-      .select('class_id, student_id, students!inner(code, name), classes!inner(id)');
+      .select('class_id, student_id, students!inner(code, name), classes!inner(id, code, name)');
     
     if (enrollError) {
       console.warn('class_enrollments query failed, falling back to students.class_id:', enrollError);
     }
     
-    // If we got data from class_enrollments, return it
+    // If we got data from class_enrollments, return it with defensive handling
     if (enrollments && enrollments.length > 0) {
-      return enrollments.map(e => ({
-        class_id: e.class_id,
-        student_id: e.student_id,
-        student_code: e.students.code,
-        student_name: e.students.name
-      }));
+      return enrollments
+        .filter(e => e && e.students && e.classes) // Defensive null checks
+        .map(e => ({
+          class_id: e.class_id,
+          class_code: e.classes?.code || '',
+          student_code: e.students?.code || '',
+          student_name: e.students?.name || e.students?.code || ''
+        }));
     }
     
-    // Fallback: derive from students.class_id
+    // Fallback: derive from students.class_id (not recommended, but available)
     const { data: students, error: studentsError } = await supabase
       .from('students')
       .select('id, code, name, class_id')
       .not('class_id', 'is', null);
     
-    if (studentsError) throw studentsError;
+    if (studentsError) {
+      console.warn('students fallback query failed:', studentsError);
+      return []; // Return empty array if both queries fail
+    }
     
-    // Return array of { class_id, student_id, student_code, student_name }
-    return (students || []).map(s => ({
-      class_id: s.class_id,
-      student_id: s.id,
-      student_code: s.code,
-      student_name: s.name
-    }));
+    // Return array with defensive handling
+    return (students || [])
+      .filter(s => s && s.class_id) // Defensive null checks
+      .map(s => ({
+        class_id: s.class_id,
+        class_code: s.class_id, // Use class_id as code in fallback
+        student_code: s.code || '',
+        student_name: s.name || s.code || ''
+      }));
   },
   
   async upsertClass(classData) {
