@@ -2088,12 +2088,12 @@
           // Check if coming from sign-in modal
           if (isFromSignInModal) {
             // User signed in as teacher via sign-in modal
-            setAuth({ role: 'teacher', username: inputUser });
+            writeAuth({ role: 'teacher', code: inputUser, name: 'Teacher' });
             updateUserChip();
             isFromSignInModal = false; // Reset flag
           } else {
             // Direct teacher center access (not from sign-in)
-            setAuth({ role: 'teacher', username: inputUser });
+            writeAuth({ role: 'teacher', code: inputUser, name: 'Teacher' });
             const chip = qs('#currentUserChip');
             if (chip) chip.textContent = 'Teacher';
           }
@@ -2143,7 +2143,7 @@
           const data = await response.json();
           if (data.ok && data.role === 'teacher') {
             // Valid session exists - restore teacher view
-            setAuth({ role: 'teacher', username: data.username });
+            writeAuth({ role: 'teacher', code: data.username, name: 'Teacher' });
             const chip = qs('#currentUserChip');
             if (chip) chip.textContent = 'Teacher';
             showTeacher();
