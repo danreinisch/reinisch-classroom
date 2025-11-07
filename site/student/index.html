@@ -1002,6 +1002,7 @@
   
   /**
    * Show loading state in login box
+   * @param {string} message - Optional loading message (defaults to AUTO_LOGIN_LOADING_MESSAGE)
    */
   function showLoginLoading(message = AUTO_LOGIN_LOADING_MESSAGE) {
     const loginBox = qs('.login-box');
@@ -1060,16 +1061,32 @@
   }
   
   /**
+   * Find a student by code
+   * @param {string} code - Student code to search for
+   * @returns {Promise<Object|null>} Student object if found, null otherwise
+   */
+  async function findStudentByCode(code) {
+    try {
+      // Note: In a future optimization, this could use a direct database lookup
+      // by code (e.g., db.getStudentByCode(code)) instead of fetching all students
+      const studentList = await db.listStudents();
+      return studentList.find(s => s.code === code) || null;
+    } catch (err) {
+      console.error('[Student Lookup] Failed to find student:', code, err);
+      return null;
+    }
+  }
+  
+  /**
    * Attempt auto-login for student based on detected authentication
-   * Returns true if successful, false otherwise
+   * @param {string} code - Student code from authentication source
+   * @returns {Promise<boolean>} True if successful, false otherwise
    */
   async function attemptStudentAutoLogin(code) {
     try {
       console.log('[Auto-login] Attempting auto-login for student:', code);
       
-      // Fetch student list
-      const studentList = await db.listStudents();
-      const student = studentList.find(s => s.code === code);
+      const student = await findStudentByCode(code);
       
       if (!student) {
         console.warn('[Auto-login] Student not found:', code);
@@ -1128,8 +1145,7 @@
         showTeacherCenter();
       } else if (savedRole === 'student' && savedCode) {
         try {
-          const studentList = await db.listStudents();
-          const student = studentList.find(s => s.code === savedCode);
+          const student = await findStudentByCode(savedCode);
           if (student) {
             currentUser = student;
             userRole = 'student';
