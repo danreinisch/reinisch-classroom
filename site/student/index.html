@@ -427,8 +427,9 @@
 </div>
 
 <script type="module">
-  // Import auth-handoff utilities
+  // Import auth-handoff utilities and diagnostics
   import { readAuth, clearAuth, onAuthChange } from '../web/auth-handoff.js';
+  import '../web/diagnostics.js'; // Registers window.__diagnoseAuth()
   
   // Local storage namespace
   const STORAGE_KEY = 'rc_student_hub_';

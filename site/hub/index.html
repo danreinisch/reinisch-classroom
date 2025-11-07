@@ -1795,6 +1795,7 @@
     import { listLibraryItems } from '../web/library.js';
     import { writeAuth, clearAuth, readAuth } from '../web/auth-handoff.js';
     import '../web/auth-modal-extend.js';
+    import '../web/diagnostics.js'; // Registers window.__diagnoseAuth()
 
     // Expose clearAuth globally for role switching
     window.clearAuth = clearAuth;
