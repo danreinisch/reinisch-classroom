@@ -7284,9 +7284,10 @@
       });
       
       // Helper to normalize class titles for duplicate detection
+      // Matches SQL normalization: removes spaces, hyphens, underscores, then lowercase
       function normalizeTitle(title) {
         if (!title) return '';
-        return title.toLowerCase().replace(/[\s\-_]+/g, '').trim();
+        return title.replace(/[\s\-_]+/g, '').toLowerCase();
       }
       
       // Filter out zero-enrollment duplicates:
