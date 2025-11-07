@@ -3,7 +3,8 @@ const { requireTeacher } = require('./_lib/auth');
 const { SESSION_SECRET, URL } = process.env;
 
 // Use environment-based CORS origin for security
-const ALLOWED_ORIGIN = URL || '*';
+// In production, Netlify sets URL automatically. Only fallback to * for local dev.
+const ALLOWED_ORIGIN = URL || (process.env.NODE_ENV === 'production' ? '' : '*');
 const CORS = { 
   'Access-Control-Allow-Origin': ALLOWED_ORIGIN, 
   'Access-Control-Allow-Methods': 'GET, OPTIONS', 

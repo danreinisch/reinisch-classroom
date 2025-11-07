@@ -1745,7 +1745,7 @@
     // Guard against duplicate script execution
     if (window.__hubAuthBound) {
       console.debug('[Hub] Script already loaded, skipping re-initialization');
-      // Use dynamic import to prevent module execution without throwing
+      // Early return to prevent re-execution without breaking the page
       await Promise.resolve();
       return;
     }
@@ -1973,6 +1973,58 @@
     });
     
     // Teacher auth - server-backed flow with fallback to local
+    
+    // Helper: Handle successful authentication (reduces duplication)
+    function handleAuthSuccess(inputUser, usernameInput, passwordInput, msgEl) {
+      const modal = qs('#teachModal');
+      if (modal) modal.classList.remove('show');
+      
+      // Check if coming from sign-in modal
+      if (isFromSignInModal) {
+        setAuth({ role: 'teacher', username: inputUser });
+        updateUserChip();
+        isFromSignInModal = false;
+      } else {
+        const chip = qs('#currentUserChip');
+        if (chip) chip.textContent = 'Teacher';
+      }
+      
+      showTeacher();
+      
+      // Restore last area and tab
+      setTimeout(() => {
+        const lastArea = localStorage.getItem('rc_last_area');
+        if (lastArea) {
+          const iconRailBtn = qs(`.iconrail button[data-area="${lastArea}"]`);
+          const topNavBtn = qs(`[data-area-nav="${lastArea}"]`);
+          if (iconRailBtn) iconRailBtn.click();
+          if (topNavBtn) {
+            qsa('[data-area-nav]').forEach(b => b.classList.remove('active'));
+            topNavBtn.classList.add('active');
+          }
+        }
+      }, 100);
+      
+      // Clear inputs
+      usernameInput.value = '';
+      passwordInput.value = '';
+      msgEl.innerHTML = '';
+    }
+    
+    // Helper: Try local authentication fallback
+    function tryLocalAuth(inputUser, inputPass, usernameInput, passwordInput, msgEl) {
+      const teacherUsername = getTeacherUsername();
+      const teacherPassword = getTeacherPassword();
+      
+      if (inputUser === teacherUsername && inputPass === teacherPassword) {
+        handleAuthSuccess(inputUser, usernameInput, passwordInput, msgEl);
+        return true;
+      } else {
+        msgEl.innerHTML = '<span style="color:#fecaca">Invalid username or password</span>';
+        return false;
+      }
+    }
+    
     async function handleTeacherAuth() {
       const usernameInput = qs('#teachUser');
       const passwordInput = qs('#teachPass');
@@ -2010,100 +2062,20 @@
         
         if (response.ok) {
           // Server authentication succeeded
-          const modal = qs('#teachModal');
-          if (modal) modal.classList.remove('show');
-          
-          // Check if coming from sign-in modal
-          if (isFromSignInModal) {
-            setAuth({ role: 'teacher', username: inputUser });
-            updateUserChip();
-            isFromSignInModal = false;
-          } else {
-            const chip = qs('#currentUserChip');
-            if (chip) chip.textContent = 'Teacher';
-          }
-          
-          showTeacher();
-          
-          // Restore last area and tab
-          setTimeout(() => {
-            const lastArea = localStorage.getItem('rc_last_area');
-            if (lastArea) {
-              const iconRailBtn = qs(`.iconrail button[data-area="${lastArea}"]`);
-              const topNavBtn = qs(`[data-area-nav="${lastArea}"]`);
-              if (iconRailBtn) iconRailBtn.click();
-              if (topNavBtn) {
-                qsa('[data-area-nav]').forEach(b => b.classList.remove('active'));
-                topNavBtn.classList.add('active');
-              }
-            }
-          }, 100);
-          
-          // Clear inputs
-          usernameInput.value = '';
-          passwordInput.value = '';
-          msgEl.innerHTML = '';
+          handleAuthSuccess(inputUser, usernameInput, passwordInput, msgEl);
         } else if (response.status === 401) {
           msgEl.innerHTML = '<span style="color:#fecaca">Invalid username or password</span>';
         } else if (response.status === 404) {
           // Function not found - fallback to local auth (dev mode)
           console.warn('[Teacher Auth] Server endpoint not found, falling back to local auth');
-          const teacherUsername = getTeacherUsername();
-          const teacherPassword = getTeacherPassword();
-          
-          if (inputUser === teacherUsername && inputPass === teacherPassword) {
-            const modal = qs('#teachModal');
-            if (modal) modal.classList.remove('show');
-            
-            if (isFromSignInModal) {
-              setAuth({ role: 'teacher', username: inputUser });
-              updateUserChip();
-              isFromSignInModal = false;
-            } else {
-              const chip = qs('#currentUserChip');
-              if (chip) chip.textContent = 'Teacher';
-            }
-            
-            showTeacher();
-            
-            // Clear inputs
-            usernameInput.value = '';
-            passwordInput.value = '';
-            msgEl.innerHTML = '';
-          } else {
-            msgEl.innerHTML = '<span style="color:#fecaca">Invalid username or password</span>';
-          }
+          tryLocalAuth(inputUser, inputPass, usernameInput, passwordInput, msgEl);
         } else {
           msgEl.innerHTML = '<span style="color:#fecaca">Authentication error. Please try again.</span>';
         }
       } catch (error) {
         // Network error or other issue - fallback to local auth
         console.warn('[Teacher Auth] Server error, falling back to local auth:', error);
-        const teacherUsername = getTeacherUsername();
-        const teacherPassword = getTeacherPassword();
-        
-        if (inputUser === teacherUsername && inputPass === teacherPassword) {
-          const modal = qs('#teachModal');
-          if (modal) modal.classList.remove('show');
-          
-          if (isFromSignInModal) {
-            setAuth({ role: 'teacher', username: inputUser });
-            updateUserChip();
-            isFromSignInModal = false;
-          } else {
-            const chip = qs('#currentUserChip');
-            if (chip) chip.textContent = 'Teacher';
-          }
-          
-          showTeacher();
-          
-          // Clear inputs
-          usernameInput.value = '';
-          passwordInput.value = '';
-          msgEl.innerHTML = '';
-        } else {
-          msgEl.innerHTML = '<span style="color:#fecaca">Invalid username or password</span>';
-        }
+        tryLocalAuth(inputUser, inputPass, usernameInput, passwordInput, msgEl);
       } finally {
         // Re-enable button
         if (btnGo) {
