@@ -1742,12 +1742,10 @@
   </div>
 
   <script type="module">
-    // Guard against duplicate script execution
+    // Guard against duplicate script execution - wrap in async IIFE
     if (window.__hubAuthBound) {
       console.debug('[Hub] Script already loaded, skipping re-initialization');
-      // Early return to prevent re-execution without breaking the page
-      await Promise.resolve();
-      return;
+      throw new Error('[Hub] Duplicate initialization prevented');
     }
     window.__hubAuthBound = true;
     
