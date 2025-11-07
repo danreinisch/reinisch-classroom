@@ -6987,6 +6987,14 @@
       }
       
       renderGradebook();
+      
+      // Add class filter handler
+      const classFilterEl = qs('#gradebookClassFilter');
+      if (classFilterEl) {
+        classFilterEl.addEventListener('change', (e) => {
+          renderGradebook(e.target.value);
+        });
+      }
     } catch (err) {
       console.error('[Gradebook] Failed to initialize:', err);
     }
@@ -7099,14 +7107,6 @@
       renderGradebook(filter ? filter.value : '');
     }
   });
-  
-  // Add class filter handler
-  const classFilterEl = qs('#gradebookClassFilter');
-  if (classFilterEl) {
-    classFilterEl.addEventListener('change', (e) => {
-      renderGradebook(e.target.value);
-    });
-  }
   
   // ============================================================================
   // ASSIGNMENT HUB TAB
@@ -7603,7 +7603,8 @@
         fileInput.value = '';
         
         // Refresh student portal if active
-        if (qs('.ttab[data-tab="studentPortal"]').style.display !== 'none') {
+        const portalTab = qs('.ttab[data-tab="studentPortal"]');
+        if (portalTab && portalTab.style.display !== 'none') {
           initStudentPortal();
         }
       } catch (err) {
@@ -7670,7 +7671,8 @@
         fileInput.value = '';
         
         // Refresh student portal if active
-        if (qs('.ttab[data-tab="studentPortal"]').style.display !== 'none') {
+        const portalTab = qs('.ttab[data-tab="studentPortal"]');
+        if (portalTab && portalTab.style.display !== 'none') {
           initStudentPortal();
         }
       } catch (err) {
@@ -7678,8 +7680,7 @@
         addNotif('Failed to import CSV: ' + err.message, { type: 'error' });
       }
     }
-  })
-;
+  });
   
   // Add init handler for upload tab
   async function initUpload() {
