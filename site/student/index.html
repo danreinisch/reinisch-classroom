@@ -152,6 +152,151 @@
   
   .hidden{display:none !important}
 </style>
+
+<!-- Early auto-login script - runs before main app to enable instant bypass -->
+<script>
+(function() {
+  // Early auto-login bypass: executes BEFORE main app bundle to hide login form
+  // and show dashboard immediately if valid rc_auth exists
+  
+  console.info('[auto-login] Early script executing');
+  
+  const AUTH_KEY = 'rc_auth';
+  const SESSION_CODE_KEY = 'rc_user_code';
+  const SESSION_ROLE_KEY = 'rc_user_role';
+  
+  /**
+   * Parse URL parameters
+   * @returns {Object} Object with code and auto parameters
+   */
+  function parseURLParams() {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      return {
+        code: params.get('code'),
+        auto: params.get('auto')
+      };
+    } catch (err) {
+      console.warn('[auto-login] Failed to parse URL params:', err);
+      return { code: null, auto: null };
+    }
+  }
+  
+  /**
+   * Read and validate rc_auth from localStorage
+   * @returns {Object|null} Auth object if valid, null otherwise
+   */
+  function readAuth() {
+    try {
+      const authStr = localStorage.getItem(AUTH_KEY);
+      if (!authStr) return null;
+      
+      const auth = JSON.parse(authStr);
+      
+      // Validate structure
+      if (!auth || !auth.role || !auth.code || !auth.expiresAt) {
+        console.warn('[auto-login] Invalid rc_auth structure');
+        return null;
+      }
+      
+      // Check expiry
+      if (Date.now() > auth.expiresAt) {
+        console.info('[auto-login] rc_auth expired, clearing');
+        localStorage.removeItem(AUTH_KEY);
+        return null;
+      }
+      
+      return auth;
+    } catch (err) {
+      console.error('[auto-login] Failed to read rc_auth:', err);
+      return null;
+    }
+  }
+  
+  /**
+   * Attempt early auto-login bypass
+   * @returns {boolean} True if bypass successful
+   */
+  function attemptEarlyBypass() {
+    const urlParams = parseURLParams();
+    const auth = readAuth();
+    
+    // Check if auto-login conditions are met:
+    // 1. Valid rc_auth exists
+    // 2. Role is 'student'
+    // 3. Either URL has ?auto=1 OR sessionStorage has rc_user_code (persisted session)
+    
+    if (!auth || auth.role !== 'student') {
+      console.info('[auto-login] No valid student auth found');
+      return false;
+    }
+    
+    const hasAutoParam = urlParams.auto === '1';
+    const hasSession = sessionStorage.getItem(SESSION_CODE_KEY) === auth.code;
+    
+    // URL code parameter must match auth code if provided
+    if (urlParams.code && urlParams.code !== auth.code) {
+      console.warn('[auto-login] URL code mismatch, ignoring bypass');
+      return false;
+    }
+    
+    if (!hasAutoParam && !hasSession) {
+      console.info('[auto-login] No auto-login trigger (auto=1 or session)');
+      return false;
+    }
+    
+    // All conditions met - perform bypass
+    console.info('[auto-login] Success! Bypassing login form', { code: auth.code, name: auth.name });
+    
+    // Set sessionStorage for main app to read
+    sessionStorage.setItem(SESSION_CODE_KEY, auth.code);
+    sessionStorage.setItem(SESSION_ROLE_KEY, 'student');
+    
+    // Hydrate minimal student object to window for immediate access
+    window.rcCurrentStudent = {
+      code: auth.code,
+      name: auth.name || auth.code
+    };
+    
+    // Hide login view immediately
+    const loginView = document.getElementById('loginView');
+    if (loginView) {
+      loginView.classList.add('hidden');
+    }
+    
+    // Show dashboard view immediately
+    const dashboardView = document.getElementById('studentDashboardView');
+    if (dashboardView) {
+      dashboardView.classList.remove('hidden');
+    }
+    
+    // Show user chip in header
+    const userChip = document.getElementById('userChip');
+    if (userChip) {
+      userChip.textContent = auth.name || auth.code;
+      userChip.classList.remove('hidden');
+    }
+    
+    // Show logout button
+    const logoutBtn = document.getElementById('btnLogout');
+    if (logoutBtn) {
+      logoutBtn.classList.remove('hidden');
+    }
+    
+    return true;
+  }
+  
+  // Run bypass attempt
+  const bypassed = attemptEarlyBypass();
+  
+  if (bypassed) {
+    console.info('[auto-login] Early bypass complete, dashboard will hydrate when main app loads');
+  } else {
+    console.info('[auto-login] Early bypass not triggered, showing login form');
+  }
+})();
+</script>
+
 </head>
 <body>
 
@@ -1213,6 +1358,24 @@
   // Check for existing session
   (async function init() {
     try {
+      console.info('[Init] Main app initialization starting');
+      
+      // Check if early bypass already ran by looking for window.rcCurrentStudent
+      if (window.rcCurrentStudent) {
+        console.info('[Init] Early bypass detected, hydrating dashboard with:', window.rcCurrentStudent.code);
+        
+        // Set session from early bypass
+        currentUser = window.rcCurrentStudent;
+        userRole = 'student';
+        
+        // Dashboard is already visible from early script, just load data
+        await loadStudentAssignments();
+        await loadStudentGoals();
+        
+        console.info('[Init] Dashboard hydration complete');
+        return;
+      }
+      
       // First, check for auto-login from hub or other sources
       const autoAuth = getStudentAutoAuth();
       

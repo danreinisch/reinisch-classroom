@@ -1,2 +1,7 @@
+# Student portal redirects - handle deep links
+/student              /site/student/index.html  200
+/student/*            /site/student/index.html  200
+
+# Life Skills presentation redirects
 /life-skills/presentations/presentation-03         /life-skills/presentations/presentation-03/index.html 200
 /life-skills/presentations/presentation-03.html    /life-skills/presentations/presentation-03/ 301
