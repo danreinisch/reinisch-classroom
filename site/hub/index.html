@@ -1793,6 +1793,7 @@
   <script type="module">
     import { db, isRemote, localStore } from '../web/data-adapter.js';
     import { listLibraryItems } from '../web/library.js';
+    import { writeAuth, clearAuth } from '../web/auth-handoff.js';
     import '../web/auth-modal-extend.js';
 
     const NS = 'rc_unified_';
@@ -2009,13 +2010,23 @@
       }
       
       if (isValid) {
-        // Success: persist auth and redirect
+        // Success: Get student info for auth handoff
+        const students = await db.listStudents();
+        const student = students.find(s => s.code === code);
+        const studentName = student ? (student.name || code) : code;
+        
+        // Persist auth with 24-hour expiry using auth-handoff
+        writeAuth({ role: 'student', code, name: studentName });
+        
+        // Also set legacy auth for backward compatibility
         setAuth({ role: 'student', code });
         updateUserChip();
+        
         const modal = qs('#studentSignInModal');
         if (modal) modal.classList.remove('show');
-        // Redirect to student portal
-        window.location.href = '/student/';
+        
+        // Redirect to student portal with auto-login parameters
+        window.location.href = `/student/?code=${encodeURIComponent(code)}&auto=1`;
       } else {
         // Show appropriate error message
         if (rpcError) {

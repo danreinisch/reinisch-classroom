@@ -327,6 +327,9 @@
 </div>
 
 <script type="module">
+  // Import auth-handoff utilities
+  import { readAuth, clearAuth } from '../web/auth-handoff.js';
+  
   // Local storage namespace
   const STORAGE_KEY = 'rc_student_hub_';
   
@@ -470,6 +473,7 @@
     currentUser = null;
     userRole = null;
     sessionStorage.clear();
+    clearAuth(); // Clear 24-hour auth handoff
     showLogin();
   });
   
@@ -961,46 +965,40 @@
   
   /**
    * Auto-login helper: attempts to detect student authentication from multiple sources
-   * @returns {{code: string}|null} Object with student code if found, null otherwise
+   * @returns {{code: string, name: string}|null} Object with student code if found, null otherwise
    */
   function getStudentAutoAuth() {
     try {
-      // Method 1: Check localStorage rc_auth (set by hub)
-      const authStr = localStorage.getItem('rc_auth');
-      if (authStr) {
-        const auth = JSON.parse(authStr);
-        // Validate auth object structure and code format
-        if (auth && 
-            auth.role === 'student' && 
-            auth.code &&
-            typeof auth.code === 'string' &&
-            auth.code.trim().length > 0) {
-          console.log('[Auto-login] Found auth in localStorage rc_auth');
-          return { code: auth.code.trim() };
-        }
+      // Method 1: Check auth-handoff (with expiry validation)
+      const auth = readAuth();
+      if (auth && auth.role === 'student' && auth.code) {
+        console.log('[Auto-login] Found valid auth from hub:', auth.code);
+        return { code: auth.code, name: auth.name };
       }
     } catch (err) {
-      console.warn('[Auto-login] Failed to parse localStorage rc_auth:', err);
+      console.warn('[Auto-login] Failed to read auth-handoff:', err);
     }
     
     try {
-      // Method 2: Check sessionStorage rc_user_code
+      // Method 2: Check sessionStorage rc_user_code (fallback for existing sessions)
       const sessionCode = sessionStorage.getItem('rc_user_code');
       if (sessionCode && typeof sessionCode === 'string' && sessionCode.trim().length > 0) {
         console.log('[Auto-login] Found auth in sessionStorage rc_user_code');
-        return { code: sessionCode.trim() };
+        return { code: sessionCode.trim(), name: null };
       }
     } catch (err) {
       console.warn('[Auto-login] Failed to read sessionStorage:', err);
     }
     
     try {
-      // Method 3: Check URL query parameter ?code=
+      // Method 3: Check URL query parameter ?code= (redirect from hub)
       const urlParams = new URLSearchParams(window.location.search);
       const urlCode = urlParams.get('code');
-      if (urlCode && typeof urlCode === 'string' && urlCode.trim().length > 0) {
+      const auto = urlParams.get('auto');
+      
+      if (urlCode && typeof urlCode === 'string' && urlCode.trim().length > 0 && auto === '1') {
         console.log('[Auto-login] Found auth in URL parameter');
-        return { code: urlCode.trim() };
+        return { code: urlCode.trim(), name: null };
       }
     } catch (err) {
       console.warn('[Auto-login] Failed to parse URL parameters:', err);
