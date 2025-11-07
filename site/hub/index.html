@@ -2261,6 +2261,12 @@
       if (tab === 'assignments') initAssignments();
       if (tab === 'settings') initSettings();
       if (tab === 'subPlans') initSubPlans();
+      
+      // New tabs initialization (dispatches custom event for module script)
+      if (tab === 'studentPortal' || tab === 'results' || tab === 'gradebook' || 
+          tab === 'hub' || tab === 'classes' || tab === 'upload' || tab === 'data') {
+        window.dispatchEvent(new CustomEvent('hub:tab-init', { detail: { tab } }));
+      }
     }
     
     // Icon rail clicks
@@ -7672,7 +7678,8 @@
         addNotif('Failed to import CSV: ' + err.message, { type: 'error' });
       }
     }
-  });
+  })
+;
   
   // Add init handler for upload tab
   async function initUpload() {
@@ -7684,23 +7691,23 @@
   // REGISTER TAB INITIALIZERS
   // ============================================================================
   
-  // Hook into switchTab function to initialize tabs
-  const originalSwitchTab = window.switchTab;
-  if (typeof originalSwitchTab === 'function') {
-    window.switchTab = function(tab) {
-      // Call original
-      originalSwitchTab(tab);
-      
-      // Initialize new tabs
-      if (tab === 'studentPortal') initStudentPortal();
-      if (tab === 'results') initResults();
-      if (tab === 'gradebook') initGradebook();
-      if (tab === 'hub') initHub();
-      if (tab === 'classes') initClasses();
-      if (tab === 'upload') initUpload();
-      if (tab === 'data') initDataImportExport();
-    };
-  }
+  // Listen for tab init events from switchTab function
+  window.addEventListener('hub:tab-init', async (e) => {
+    const { tab } = e.detail;
+    console.log('[Classroom Hub] Initializing tab:', tab);
+    
+    try {
+      if (tab === 'studentPortal') await initStudentPortal();
+      if (tab === 'results') await initResults();
+      if (tab === 'gradebook') await initGradebook();
+      if (tab === 'hub') await initHub();
+      if (tab === 'classes') await initClasses();
+      if (tab === 'upload') await initUpload();
+      if (tab === 'data') await initDataImportExport();
+    } catch (err) {
+      console.error('[Classroom Hub] Tab init error:', err);
+    }
+  });
   
   console.log('[Classroom Hub] Tab implementations loaded');
 </script>
