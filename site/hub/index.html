@@ -1793,7 +1793,7 @@
   <script type="module">
     import { db, isRemote, localStore } from '../web/data-adapter.js';
     import { listLibraryItems } from '../web/library.js';
-    import { writeAuth, clearAuth } from '../web/auth-handoff.js';
+    import { writeAuth, clearAuth, readAuth } from '../web/auth-handoff.js';
     import '../web/auth-modal-extend.js';
 
     // Expose clearAuth globally for role switching
@@ -1833,17 +1833,9 @@
     on('#btnThemeToggle', 'click', ()=> applyTheme(currentTheme === 'glass-bold' ? 'normal' : 'glass-bold'));
 
     // Sign-in modal logic
-    // Check if user is already signed in
+    // Use auth-handoff for getting/setting auth
     function getAuth() {
-      try {
-        return JSON.parse(localStorage.getItem('rc_auth'));
-      } catch {
-        return null;
-      }
-    }
-    
-    function setAuth(authData) {
-      localStorage.setItem('rc_auth', JSON.stringify(authData));
+      return readAuth();
     }
     
     // Expose getAuth globally for role switching checks
@@ -1856,7 +1848,7 @@
       
       if (auth) {
         if (auth.role === 'student') {
-          chip.textContent = `Student: ${auth.code}`;
+          chip.textContent = `Student: ${auth.name || auth.code}`;
         } else if (auth.role === 'teacher') {
           chip.textContent = 'Teacher';
         } else {
@@ -2024,15 +2016,13 @@
         // Persist auth with 24-hour expiry using auth-handoff
         writeAuth({ role: 'student', code, name: studentName });
         
-        // Also set legacy auth for backward compatibility
-        setAuth({ role: 'student', code });
         updateUserChip();
         
         const modal = qs('#studentSignInModal');
         if (modal) modal.classList.remove('show');
         
         // Redirect to student portal with auto-login parameters
-        window.location.href = `/student/?code=${encodeURIComponent(code)}&auto=1`;
+        window.location.href = `/site/student/?code=${encodeURIComponent(code)}&auto=1`;
       } else {
         // Show appropriate error message
         if (rpcError) {
