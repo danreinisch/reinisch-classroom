@@ -1081,21 +1081,13 @@ const remote = {
     return await withRetry(async () => {
       console.log('[student-manager] listStudentsWithCounts (remote)', filter);
       
-      // Build query
+      // Build query - select only code and name (no PII fields)
       let query = supabase
         .from('students')
         .select(`
           id, 
           code, 
           name,
-          first_name,
-          last_name,
-          preferred_name,
-          grade,
-          dob,
-          email,
-          guardians,
-          notes,
           created_at,
           class_enrollments!inner(class_id, active),
           goals(id)
@@ -1106,16 +1098,17 @@ const remote = {
       if (filter.student_code) {
         query = query.ilike('code', `%${filter.student_code}%`);
       }
-      if (filter.last_name) {
-        query = query.ilike('last_name', `%${filter.last_name}%`);
-      }
+      // Remove last_name filter as we're code-only now
       
       const { data, error } = await query;
       if (error) throw error;
       
-      // Transform data to include counts
+      // Transform data to include counts (PII fields stripped)
       return (data || []).map(s => ({
-        ...s,
+        id: s.id,
+        code: s.code,
+        name: s.name,
+        created_at: s.created_at,
         goals_count: s.goals?.length || 0,
         classes_count: s.class_enrollments?.filter(e => e.active).length || 0,
         enrollments: s.class_enrollments || []
