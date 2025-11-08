@@ -894,15 +894,30 @@ export class ProgressGridV2 {
       'Trend'
     ];
     
-    // Add quarter average columns
-    selectedQuarters.forEach(q => {
-      header.push(`${q} Avg`);
-    });
+    // Phase 6-8: Add risk indicator columns if enabled
+    if (getFeatureFlag('progressRiskIndicators') && this.visibleColumns.risk) {
+      header.push('Risk');
+    }
+    if (getFeatureFlag('progressRiskIndicators') && this.visibleColumns.lastDataAge) {
+      header.push('Last Data Age (days)');
+    }
+    if (getFeatureFlag('progressRiskIndicators') && this.visibleColumns.deltaVsTarget) {
+      header.push('Delta vs Target');
+    }
     
-    // Add date columns
-    sortedDates.forEach(date => {
-      header.push(date);
-    });
+    // Add quarter average columns
+    if (this.visibleColumns.quarterAvgs) {
+      selectedQuarters.forEach(q => {
+        header.push(`${q} Avg`);
+      });
+    }
+    
+    // Phase 6-8: Add date columns with granularity formatting
+    if (this.visibleColumns.dates) {
+      sortedDates.forEach(date => {
+        header.push(this.formatPeriodHeader(date));
+      });
+    }
     
     rows.push(header);
     
@@ -913,6 +928,11 @@ export class ProgressGridV2 {
       items.forEach(item => {
         const key = `${item.student_code}|${item.goal_code}`;
         const metrics = goalMetricsMap[key];
+        
+        // Phase 6-8: Calculate risk indicators
+        const riskData = getFeatureFlag('progressRiskIndicators') 
+          ? this.calculateRiskIndicators(item)
+          : null;
         
         // Get quarter averages
         const quarterAvgs = {};
@@ -935,17 +955,32 @@ export class ProgressGridV2 {
           metrics?.trend || ''
         ];
         
-        // Add quarter averages
-        selectedQuarters.forEach(q => {
-          const avg = quarterAvgs[q];
-          row.push(avg != null ? Math.round(avg) : '');
-        });
+        // Phase 6-8: Add risk indicator values
+        if (getFeatureFlag('progressRiskIndicators') && this.visibleColumns.risk && riskData) {
+          row.push(riskData.risk);
+        }
+        if (getFeatureFlag('progressRiskIndicators') && this.visibleColumns.lastDataAge && riskData) {
+          row.push(riskData.lastDataAge != null ? riskData.lastDataAge : '');
+        }
+        if (getFeatureFlag('progressRiskIndicators') && this.visibleColumns.deltaVsTarget && riskData) {
+          row.push(riskData.deltaVsTarget != null ? Math.round(riskData.deltaVsTarget) : '');
+        }
         
-        // Add date values
-        sortedDates.forEach(date => {
-          const value = item.measurements[date];
-          row.push(value != null ? Math.round(value) : '');
-        });
+        // Add quarter averages
+        if (this.visibleColumns.quarterAvgs) {
+          selectedQuarters.forEach(q => {
+            const avg = quarterAvgs[q];
+            row.push(avg != null ? Math.round(avg) : '');
+          });
+        }
+        
+        // Add date values (respects granularity)
+        if (this.visibleColumns.dates) {
+          sortedDates.forEach(date => {
+            const value = item.measurements[date];
+            row.push(value != null ? Math.round(value) : '');
+          });
+        }
         
         rows.push(row);
       });
@@ -965,7 +1000,10 @@ export class ProgressGridV2 {
     
     // Download
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-    const filename = `progress_export_${timestamp}.csv`;
+    const granularitySuffix = getFeatureFlag('progressRollups') && this.granularity !== 'daily' 
+      ? `_${this.granularity}` 
+      : '';
+    const filename = `progress_export${granularitySuffix}_${timestamp}.csv`;
     
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
@@ -981,6 +1019,126 @@ export class ProgressGridV2 {
   // ========================================================================
   
   attachEventListeners(containerEl) {
+    // Phase 6-8: Saved Views
+    if (getFeatureFlag('progressSavedViews')) {
+      const viewSelect = containerEl.querySelector('#savedViewSelect');
+      if (viewSelect) {
+        viewSelect.addEventListener('change', async (e) => {
+          const viewId = e.target.value;
+          if (viewId) {
+            await this.restoreView(viewId);
+          }
+        });
+      }
+      
+      const saveViewBtn = containerEl.querySelector('#saveViewBtn');
+      if (saveViewBtn) {
+        saveViewBtn.addEventListener('click', async () => {
+          const name = prompt('Enter a name for this view:');
+          if (name) {
+            try {
+              await this.saveCurrentView(name, false);
+              alert(`View "${name}" saved successfully!`);
+              this.renderOnly(); // Update UI to show new view
+            } catch (err) {
+              alert('Failed to save view. ' + err.message);
+            }
+          }
+        });
+      }
+      
+      const updateViewBtn = containerEl.querySelector('#updateViewBtn');
+      if (updateViewBtn) {
+        updateViewBtn.addEventListener('click', async () => {
+          if (confirm(`Update view "${this.currentViewName}"?`)) {
+            try {
+              await this.updateCurrentView();
+              alert('View updated successfully!');
+            } catch (err) {
+              alert('Failed to update view. ' + err.message);
+            }
+          }
+        });
+      }
+      
+      const deleteViewBtn = containerEl.querySelector('#deleteViewBtn');
+      if (deleteViewBtn) {
+        deleteViewBtn.addEventListener('click', async () => {
+          if (confirm(`Delete view "${this.currentViewName}"?`)) {
+            try {
+              await this.deleteView(this.currentViewId);
+              alert('View deleted successfully!');
+              this.renderOnly(); // Update UI
+            } catch (err) {
+              alert('Failed to delete view. ' + err.message);
+            }
+          }
+        });
+      }
+    }
+    
+    // Phase 6-8: Advanced Filters
+    if (getFeatureFlag('progressAdvancedFilters')) {
+      const valueRangeMin = containerEl.querySelector('#valueRangeMin');
+      const valueRangeMax = containerEl.querySelector('#valueRangeMax');
+      
+      if (valueRangeMin) {
+        valueRangeMin.addEventListener('change', (e) => {
+          this.filters.valueRange.min = e.target.value ? parseFloat(e.target.value) : null;
+          this.debouncedRender();
+        });
+      }
+      
+      if (valueRangeMax) {
+        valueRangeMax.addEventListener('change', (e) => {
+          this.filters.valueRange.max = e.target.value ? parseFloat(e.target.value) : null;
+          this.debouncedRender();
+        });
+      }
+      
+      const sourceCheckboxes = containerEl.querySelectorAll('#sourceCheckboxes input[type="checkbox"]');
+      sourceCheckboxes.forEach(cb => {
+        cb.addEventListener('change', (e) => {
+          const source = e.target.value;
+          if (e.target.checked) {
+            if (!this.filters.sources.includes(source)) {
+              this.filters.sources.push(source);
+            }
+          } else {
+            const idx = this.filters.sources.indexOf(source);
+            if (idx >= 0) {
+              this.filters.sources.splice(idx, 1);
+            }
+          }
+          this.debouncedRender();
+        });
+      });
+      
+      const dataRecencySelect = containerEl.querySelector('#dataRecencySelect');
+      if (dataRecencySelect) {
+        dataRecencySelect.addEventListener('change', (e) => {
+          this.filters.dataRecencyDays = e.target.value ? parseInt(e.target.value) : null;
+          this.debouncedRender();
+        });
+      }
+    }
+    
+    // Phase 6-8: Rollups (Granularity)
+    if (getFeatureFlag('progressRollups')) {
+      containerEl.querySelectorAll('.granularity-toggle').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const granularity = e.target.dataset.granularity;
+          this.setGranularity(granularity);
+        });
+      });
+    }
+    
+    // Phase 6-8: PDF Export
+    const pdfExportBtn = containerEl.querySelector('#gridPdfExportBtn');
+    if (pdfExportBtn) {
+      pdfExportBtn.addEventListener('click', () => this.exportToPDF());
+    }
+    
     // Quarter toggles
     containerEl.querySelectorAll('.quarter-toggle').forEach(btn => {
       btn.addEventListener('click', e => {
@@ -1200,6 +1358,11 @@ export class ProgressGridV2 {
   
   async render(containerEl) {
     this.containerEl = containerEl;
+    
+    // Phase 6-8: Load saved views on first render
+    if (getFeatureFlag('progressSavedViews') && this.savedViews.length === 0) {
+      await this.loadSavedViews();
+    }
     
     // Show loading state
     containerEl.innerHTML = '<div class="grid-loading">Loading progress data...</div>';
