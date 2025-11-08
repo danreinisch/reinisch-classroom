@@ -1,0 +1,102 @@
+{
+  "title": "Science Lab: Chemical Reactions",
+  "version": "1.0",
+  "items": [
+    {
+      "ref": "Q1",
+      "answer_type": "mcq",
+      "points": 1,
+      "correct": "A",
+      "dese_codes": ["MS-PS1-2"],
+      "goal_codes": ["SCI.1"],
+      "notes": "Identify signs of a chemical reaction"
+    },
+    {
+      "ref": "Q2",
+      "answer_type": "mcq",
+      "points": 1,
+      "correct": "C",
+      "dese_codes": ["MS-PS1-2"],
+      "goal_codes": ["SCI.1", "SCI.2"],
+      "notes": "Recognize temperature change as evidence"
+    },
+    {
+      "ref": "Q3",
+      "answer_type": "multi",
+      "points": 2,
+      "correct": ["A", "B", "D"],
+      "dese_codes": ["MS-PS1-5"],
+      "goal_codes": ["SCI.2"],
+      "notes": "Select all products of combustion"
+    },
+    {
+      "ref": "Q4",
+      "answer_type": "boolean",
+      "points": 1,
+      "correct": true,
+      "dese_codes": ["MS-PS1-1"],
+      "goal_codes": ["SCI.1"],
+      "notes": "Matter is conserved in chemical reactions"
+    },
+    {
+      "ref": "Q5",
+      "answer_type": "mcq",
+      "points": 1,
+      "correct": "B",
+      "dese_codes": ["MS-PS1-3"],
+      "goal_codes": ["SCI.3"],
+      "notes": "Classify reaction type: synthesis vs decomposition"
+    },
+    {
+      "ref": "Q6",
+      "answer_type": "constructed",
+      "points": 3,
+      "dese_codes": ["MS-PS1-2", "MS-PS1-5"],
+      "goal_codes": ["SCI.1", "SCI.4"],
+      "scoring": {
+        "keywords": ["energy", "heat", "temperature", "exothermic", "endothermic"],
+        "min_keywords": 2
+      },
+      "notes": "Explain energy changes in chemical reactions"
+    },
+    {
+      "ref": "Q7",
+      "answer_type": "multi",
+      "points": 2,
+      "correct": ["B", "C"],
+      "dese_codes": ["MS-PS1-4"],
+      "goal_codes": ["SCI.3"],
+      "notes": "Select all factors that increase reaction rate"
+    },
+    {
+      "ref": "Q8",
+      "answer_type": "mcq",
+      "points": 1,
+      "correct": "D",
+      "dese_codes": ["MS-PS1-6"],
+      "goal_codes": ["SCI.2"],
+      "notes": "Interpret a chemical equation"
+    },
+    {
+      "ref": "Q9",
+      "answer_type": "boolean",
+      "points": 1,
+      "correct": false,
+      "dese_codes": ["MS-PS1-1"],
+      "goal_codes": ["SCI.1"],
+      "notes": "Atoms can be created in chemical reactions"
+    },
+    {
+      "ref": "Q10",
+      "answer_type": "constructed",
+      "points": 4,
+      "dese_codes": ["MS-PS1-2", "MS-PS1-5", "MS-PS1-6"],
+      "goal_codes": ["SCI.1", "SCI.2", "SCI.4"],
+      "scoring": {
+        "keywords": ["reactants", "products", "equation", "balanced", "conservation", "mass"],
+        "min_keywords": 3
+      },
+      "notes": "Design and balance a chemical equation for a given reaction"
+    }
+  ]
+}
