@@ -2925,6 +2925,56 @@
           });
           
           addNotif(`Created Google Form assignment: "${title}"`, { type: 'success' });
+        } else if (type === 'txt_quiz') {
+          // TXT Quick Quiz Creation (Phase 1)
+          if (!getFeatureFlag('assignmentMappingV1')) {
+            addNotif('TXT Quick Quiz requires Assignment Mapping V1 feature', { type: 'error' });
+            return;
+          }
+          
+          if (!currentMapping || !currentMapping.valid) {
+            addNotif('Please upload and validate a mapping file first', { type: 'error' });
+            return;
+          }
+          
+          // Create assignment
+          assignment = await db.createAssignment({
+            title,
+            type: 'html',  // Store as HTML type but generated from TXT
+            series: series || null,
+            page: null,
+            hero: null,
+            meta: {
+              source: 'txt_quiz',
+              mapping_format: currentMapping.format
+            },
+            created_by: createdBy || null
+          });
+          
+          addNotif(`Created TXT Quick Quiz: "${title}"`, { type: 'success' });
+        }
+        
+        // === Phase 1: Save mapping items if available ===
+        if (getFeatureFlag('assignmentMappingV1') && assignment && currentMapping && currentMapping.valid) {
+          console.log('[assignment-mapping] Saving mapping items for assignment', assignment.id);
+          
+          try {
+            const result = await insertAssignmentItems(
+              window.supabase,
+              assignment.id,
+              currentMapping.items
+            );
+            
+            if (result.success) {
+              console.log(`[assignment-mapping] Saved ${result.item_count} items with ${result.mapping_count} mappings`);
+              addNotif(`Saved ${result.item_count} question mappings`, { type: 'success' });
+            } else {
+              throw new Error(result.error);
+            }
+          } catch (err) {
+            console.error('[assignment-mapping] Failed to save mapping items:', err);
+            addNotif('Warning: Assignment created but mapping save failed: ' + err.message, { type: 'warning' });
+          }
         }
         
         // Clear form
@@ -3427,6 +3477,250 @@
       }
     }
     
+    // === Phase 1: Enhanced submission processing with item-level scoring ===
+    // This function can be called when a real student submission comes in
+    async function processSubmissionWithMapping(instanceId, studentAnswers) {
+      if (!getFeatureFlag('assignmentMappingV1')) {
+        console.warn('[assignment-scoring] Feature flag disabled');
+        return { success: false, error: 'Feature disabled' };
+      }
+      
+      try {
+        console.log('[assignment-scoring] Processing submission for instance:', instanceId);
+        
+        // Get assignment instance to find assignment ID
+        const { data: instance, error: instanceError } = await window.supabase
+          .from('assignment_instances')
+          .select('*, assignment_id, student_id')
+          .eq('id', instanceId)
+          .single();
+        
+        if (instanceError) throw instanceError;
+        
+        // Get assignment items and mappings
+        const items = await getAssignmentItems(window.supabase, instance.assignment_id);
+        
+        if (!items || items.length === 0) {
+          console.warn('[assignment-scoring] No items found for assignment');
+          return { success: false, error: 'No items configured' };
+        }
+        
+        // Score the submission
+        const scoringResult = scoreSubmission(items, studentAnswers);
+        
+        // Compute rollups
+        const goalRollups = computeGoalRollups(items, scoringResult.results);
+        const standardRollups = computeStandardRollups(items, scoringResult.results);
+        
+        // Create submission record
+        const { data: submission, error: submissionError } = await window.supabase
+          .from('submissions')
+          .insert({
+            instance_id: instanceId,
+            answers: studentAnswers,
+            source_type: 'portal'
+          })
+          .select()
+          .single();
+        
+        if (submissionError) throw submissionError;
+        
+        console.log('[assignment-scoring] Created submission:', submission.id);
+        
+        // Add item_id to scored results (need to match by ref)
+        const itemsByRef = {};
+        items.forEach(item => { itemsByRef[item.ref] = item; });
+        
+        const scoredWithIds = scoringResult.results.map(result => ({
+          ...result,
+          item_id: itemsByRef[result.item_ref]?.id
+        })).filter(r => r.item_id);
+        
+        // Save submission answers
+        const saveResult = await saveSubmissionAnswers(
+          window.supabase,
+          submission.id,
+          scoredWithIds,
+          scoringResult.summary,
+          goalRollups,
+          standardRollups
+        );
+        
+        if (!saveResult.success) {
+          throw new Error(saveResult.error);
+        }
+        
+        // Insert goal progress entries
+        const progressResult = await insertGoalProgress(
+          window.supabase,
+          submission.id,
+          instance.student_id,
+          instanceId,
+          goalRollups
+        );
+        
+        if (!progressResult.success) {
+          console.warn('[assignment-rollup] Progress insertion failed:', progressResult.error);
+        }
+        
+        // Lock assignment version if this is the first submission
+        const lockResult = await lockAssignmentVersion(window.supabase, instance.assignment_id);
+        
+        console.log('[assignment-scoring] Submission processing complete');
+        console.log('[assignment-scoring] Summary:', scoringResult.summary);
+        console.log('[assignment-rollup] Goal rollups:', goalRollups.length);
+        console.log('[assignment-rollup] Progress entries:', progressResult.inserted_count);
+        
+        return {
+          success: true,
+          submission_id: submission.id,
+          summary: scoringResult.summary,
+          goal_rollups: goalRollups,
+          standard_rollups: standardRollups,
+          progress_entries: progressResult.inserted_count
+        };
+        
+      } catch (error) {
+        console.error('[assignment-scoring] Failed to process submission:', error);
+        return {
+          success: false,
+          error: error.message
+        };
+      }
+    }
+    
+    // === Phase 1: Display submission detail in audit modal ===
+    async function showSubmissionDetail(submissionId) {
+      if (!getFeatureFlag('assignmentMappingV1')) return;
+      
+      try {
+        console.log('[assignment-mapping] Loading submission detail:', submissionId);
+        
+        // Fetch submission with answers
+        const { data: submission, error: subError } = await window.supabase
+          .from('submissions')
+          .select('*')
+          .eq('id', submissionId)
+          .single();
+        
+        if (subError) throw subError;
+        
+        // Fetch submission answers
+        const { data: answers, error: answersError } = await window.supabase
+          .from('submission_answers')
+          .select('*, assignment_items(*)')
+          .eq('submission_id', submissionId);
+        
+        if (answersError) throw answersError;
+        
+        // Build detail HTML
+        const detailHtml = `
+          <div style="margin-bottom:16px">
+            <div style="font-weight:800;margin-bottom:8px">Overall Score</div>
+            <div style="font-size:24px;color:${submission.score_total >= 70 ? '#22c55e' : '#f87171'}">
+              ${submission.score_total}%
+            </div>
+          </div>
+          
+          <div style="margin-bottom:16px">
+            <div style="font-weight:800;margin-bottom:8px">Per-Question Results</div>
+            <div class="table-wrap" style="max-height:400px;overflow:auto">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Ref</th>
+                    <th>Type</th>
+                    <th>Correct</th>
+                    <th>Earned</th>
+                    <th>Max</th>
+                    <th>Answer</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${answers.map(ans => `
+                    <tr>
+                      <td>${ans.assignment_items.item_ref}</td>
+                      <td><span class="badge">${ans.assignment_items.answer_type}</span></td>
+                      <td>
+                        ${ans.is_correct 
+                          ? '<span style="color:#22c55e">✓</span>' 
+                          : '<span style="color:#f87171">✗</span>'}
+                      </td>
+                      <td>${ans.earned_points}</td>
+                      <td>${ans.max_points}</td>
+                      <td class="subtle">${formatAnswerForDisplay(ans.raw_answer)}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          
+          ${submission.detail?.per_goal ? `
+            <div style="margin-bottom:16px">
+              <div style="font-weight:800;margin-bottom:8px">Goal Rollups</div>
+              <div class="table-wrap">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>Goal Code</th>
+                      <th>Percent</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${Object.entries(submission.detail.per_goal).map(([code, pct]) => `
+                      <tr>
+                        <td><strong>${code}</strong></td>
+                        <td style="color:${pct >= 70 ? '#22c55e' : '#f87171'}">${pct}%</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ` : ''}
+          
+          ${submission.detail?.per_standard ? `
+            <div>
+              <div style="font-weight:800;margin-bottom:8px">DESE Standard Rollups</div>
+              <div class="table-wrap">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>Standard Code</th>
+                      <th>Percent</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${Object.entries(submission.detail.per_standard).map(([code, pct]) => `
+                      <tr>
+                        <td><strong>${code}</strong></td>
+                        <td style="color:${pct >= 70 ? '#22c55e' : '#f87171'}">${pct}%</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ` : ''}
+        `;
+        
+        qs('#submissionDetailContent').innerHTML = detailHtml;
+        qs('#submissionDetailModal').style.display = 'flex';
+        
+      } catch (error) {
+        console.error('[assignment-mapping] Failed to load submission detail:', error);
+        addNotif('Failed to load submission detail: ' + error.message, { type: 'error' });
+      }
+    }
+    
+    // Format answer for display
+    function formatAnswerForDisplay(answer) {
+      if (answer === null || answer === undefined) return '-';
+      if (typeof answer === 'object') return JSON.stringify(answer);
+      return String(answer).substring(0, 50);
+    }
+    
     // Initialize assignments tab
     async function initAssignments() {
       await loadStudents();
@@ -3441,10 +3735,16 @@
       // Initialize form section visibility
       const type = qs('#aType').value;
       qs('#htmlPackageSection').style.display = type === 'html' ? 'block' : 'none';
+      qs('#txtQuizSection').style.display = type === 'txt_quiz' ? 'block' : 'none';
       qs('#googleFormSection').style.display = type === 'google_form' ? 'block' : 'none';
       
       // Initialize HTML source options
       updateHtmlSourceOptions();
+      
+      // Phase 1: Initialize assignment type handler
+      if (getFeatureFlag('assignmentMappingV1')) {
+        updateAssignmentTypeOptions();
+      }
     }
     
     // Event listeners for assignments
