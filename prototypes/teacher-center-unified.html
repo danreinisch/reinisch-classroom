@@ -4330,26 +4330,13 @@
       // Set default password and update on code change
       const codeInput = qs('#studentCode');
       const passwordInput = qs('#studentPassword');
-      if (codeInput && passwordInput) {
-        // Remove old listeners by cloning the element
-        const newCodeInput = codeInput.cloneNode(true);
-        codeInput.parentNode.replaceChild(newCodeInput, codeInput);
-        
-        newCodeInput.addEventListener('input', () => {
-          passwordInput.value = newCodeInput.value + '!';
-          updatePasswordStrength(passwordInput.value);
-        });
-      }
       
-      // Add password strength indicator
-      const passwordInputFinal = qs('#studentPassword');
-      if (passwordInputFinal) {
-        const newPasswordInput = passwordInputFinal.cloneNode(true);
-        passwordInputFinal.parentNode.replaceChild(newPasswordInput, passwordInputFinal);
-        
-        newPasswordInput.addEventListener('input', () => {
-          updatePasswordStrength(newPasswordInput.value);
-        });
+      // Initial password setup
+      if (codeInput && passwordInput) {
+        passwordInput.value = codeInput.value + '!';
+        if (passwordInput.value !== '!') {
+          updatePasswordStrength(passwordInput.value);
+        }
       }
       
       // Set default enrollment date
@@ -4360,6 +4347,23 @@
       
       updateWizardStep(1);
       qs('#addStudentModal').style.display = 'flex';
+      
+      // Add event listeners after modal is shown
+      setTimeout(() => {
+        const codeInputRefreshed = qs('#studentCode');
+        const passwordInputRefreshed = qs('#studentPassword');
+        
+        if (codeInputRefreshed && passwordInputRefreshed) {
+          codeInputRefreshed.addEventListener('input', function handleCodeInput() {
+            passwordInputRefreshed.value = this.value + '!';
+            updatePasswordStrength(passwordInputRefreshed.value);
+          });
+          
+          passwordInputRefreshed.addEventListener('input', function handlePasswordInput() {
+            updatePasswordStrength(this.value);
+          });
+        }
+      }, 0);
     }
     
     // Password strength checker
