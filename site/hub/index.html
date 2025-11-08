@@ -748,6 +748,46 @@
   #editClassModal .modal-actions button {
     flex: 1;
   }
+  
+  /* Edit Class Modal Tabs */
+  .edit-class-tab {
+    background: rgba(255,255,255,.04);
+    border: 1px solid var(--line);
+  }
+  
+  .edit-class-tab.active {
+    background: rgba(34,197,94,.12);
+    border-color: rgba(34,197,94,.4);
+  }
+  
+  .student-checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px;
+    border-radius: 6px;
+    margin-bottom: 4px;
+  }
+  
+  .student-checkbox-item:hover {
+    background: rgba(255,255,255,.04);
+  }
+  
+  .student-checkbox-item input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+  }
+  
+  .student-checkbox-item.inactive {
+    opacity: 0.6;
+  }
+  
+  .student-checkbox-item.inactive label::after {
+    content: " (inactive)";
+    color: var(--muted);
+    font-size: 12px;
+  }
+
 </style>
 </head>
 <body class="glass-bold">
@@ -1845,12 +1885,19 @@
 
   <!-- Edit Class Modal -->
   <div class="modal-backdrop" id="editClassModal">
-    <div class="modal card" style="max-width:500px">
+    <div class="modal card" style="max-width:700px">
       <div class="card-header">
         <div>Edit Class</div>
       </div>
       
-      <div style="margin-top:12px">
+      <!-- Tabs for Class Info and Students -->
+      <div style="display:flex;gap:8px;margin-top:12px;border-bottom:1px solid var(--line);padding-bottom:8px">
+        <button class="btn small edit-class-tab active" data-tab="info">Class Info</button>
+        <button class="btn small edit-class-tab" data-tab="students">Students</button>
+      </div>
+      
+      <!-- Class Info Tab -->
+      <div id="editClassTabInfo" class="edit-class-tab-content" style="margin-top:12px">
         <div class="modal-form-group">
           <label for="editClassName">Display Title</label>
           <input type="text" id="editClassName" placeholder="Class name" />
@@ -1864,6 +1911,29 @@
         <div class="modal-form-group" style="display:flex;align-items:center;gap:10px">
           <input type="checkbox" id="editClassActive" style="width:auto" />
           <label for="editClassActive" style="margin:0;font-weight:700">Active</label>
+        </div>
+      </div>
+      
+      <!-- Students Tab -->
+      <div id="editClassTabStudents" class="edit-class-tab-content" style="margin-top:12px;display:none">
+        <div style="margin-bottom:12px">
+          <input type="text" id="editClassStudentSearch" placeholder="Search students..." style="margin-bottom:8px" />
+          <div style="display:flex;gap:8px;margin-bottom:8px">
+            <button class="btn small" id="editClassSelectAll">Select All</button>
+            <button class="btn small" id="editClassClearAll">Clear All</button>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+            <input type="checkbox" id="editClassSetPrimary" style="width:auto" />
+            <label for="editClassSetPrimary" style="margin:0;font-weight:700">Also set as primary class</label>
+          </div>
+        </div>
+        
+        <div id="editClassStudentList" style="max-height:300px;overflow-y:auto;border:1px solid var(--line);border-radius:8px;padding:8px">
+          <!-- Student checkboxes will be populated here -->
+        </div>
+        
+        <div id="editClassStudentWarning" class="subtle" style="margin-top:8px;padding:8px;background:rgba(255,165,0,.1);border:1px solid rgba(255,165,0,.3);border-radius:8px;display:none">
+          ⚠️ Some students being removed have in-progress work. Their data will be preserved but marked as inactive.
         </div>
       </div>
       
@@ -7487,8 +7557,10 @@
           <div id="classesGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;margin-top:12px">
             ${consolidatedClasses.map(cls => {
               if (!cls) return ''; // Defensive guard
-              const classEnrollments = enrollmentsByClass[cls.id] || [];
-              const studentCount = classEnrollments.length;
+              const allEnrollments = enrollmentsByClass[cls.id] || [];
+              // Filter to only active enrollments for display
+              const activeEnrollments = allEnrollments.filter(e => e.active !== false);
+              const studentCount = activeEnrollments.length;
               
               // Display title with ' SC' suffix (D)
               const displayTitle = addSCSuffix(cls.name || cls.code || 'Unnamed Class');
@@ -7505,7 +7577,7 @@
                     ${studentCount > 0 ? `
                       <div class="class-card-students">
                         <div style="font-weight:700;font-size:12px;margin-bottom:6px">Students:</div>
-                        ${classEnrollments.map(e => `
+                        ${activeEnrollments.map(e => `
                           <div class="subtle" style="font-size:12px;padding:4px 0">
                             ${escapeHtml(e.student_code || '—')}${e.student_name && e.student_name !== e.student_code ? ` (${escapeHtml(e.student_name)})` : ''}
                           </div>
@@ -7582,6 +7654,16 @@
         return;
       }
       
+      // Load all students and enrollments
+      const [allStudents, allEnrollments] = await Promise.all([
+        db.listStudents(),
+        db.listClassEnrollments()
+      ]);
+      
+      // Get current enrollments for this class
+      const currentEnrollments = allEnrollments.filter(e => e.class_id === classId);
+      const enrolledCodes = new Set(currentEnrollments.filter(e => e.active !== false).map(e => e.student_code));
+      
       // Populate modal fields
       const modal = qs('#editClassModal');
       const nameInput = qs('#editClassName');
@@ -7592,21 +7674,95 @@
       if (codeInput) codeInput.value = cls.code || cls.id || '';
       if (activeCheck) activeCheck.checked = cls.active !== false;
       
+      // Populate student list
+      const studentList = qs('#editClassStudentList');
+      if (studentList) {
+        studentList.innerHTML = allStudents.map(student => {
+          const isEnrolled = enrolledCodes.has(student.code);
+          const enrollment = currentEnrollments.find(e => e.student_code === student.code);
+          const isInactive = enrollment && enrollment.active === false;
+          
+          return `
+            <div class="student-checkbox-item ${isInactive ? 'inactive' : ''}" data-student-code="${escapeHtml(student.code)}">
+              <input type="checkbox" 
+                     id="student-${escapeHtml(student.code)}" 
+                     value="${escapeHtml(student.code)}"
+                     ${isEnrolled ? 'checked' : ''} />
+              <label for="student-${escapeHtml(student.code)}" style="cursor:pointer;flex:1;margin:0">
+                ${escapeHtml(student.code)}${student.name && student.name !== student.code ? ` — ${escapeHtml(student.name)}` : ''}
+              </label>
+            </div>
+          `;
+        }).join('');
+      }
+      
+      // Store initial state for comparison
+      window._editingClassId = classId;
+      window._initialEnrollments = enrolledCodes;
+      
+      // Reset to first tab
+      switchEditClassTab('info');
+      
       // Show modal
       if (modal) modal.classList.add('show');
-      
-      // Store current class ID for save handler
-      window._editingClassId = classId;
     } catch (err) {
       console.error('[classes-ui] Failed to open edit modal:', err);
       addNotif('Failed to load class data', { type: 'error' });
     }
   };
   
+  // Tab switching for edit modal
+  function switchEditClassTab(tabName) {
+    // Update tab buttons
+    qsa('.edit-class-tab').forEach(btn => {
+      if (btn.dataset.tab === tabName) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+    
+    // Show/hide tab content
+    const infoTab = qs('#editClassTabInfo');
+    const studentsTab = qs('#editClassTabStudents');
+    
+    if (tabName === 'info') {
+      if (infoTab) infoTab.style.display = 'block';
+      if (studentsTab) studentsTab.style.display = 'none';
+    } else if (tabName === 'students') {
+      if (infoTab) infoTab.style.display = 'none';
+      if (studentsTab) studentsTab.style.display = 'block';
+    }
+  }
+  
+  // Student search filter
+  function filterStudentList() {
+    const searchInput = qs('#editClassStudentSearch');
+    const studentList = qs('#editClassStudentList');
+    
+    if (!searchInput || !studentList) return;
+    
+    const searchTerm = searchInput.value.toLowerCase();
+    const items = studentList.querySelectorAll('.student-checkbox-item');
+    
+    items.forEach(item => {
+      const label = item.querySelector('label');
+      if (!label) return;
+      
+      const text = label.textContent.toLowerCase();
+      if (text.includes(searchTerm)) {
+        item.style.display = 'flex';
+      } else {
+        item.style.display = 'none';
+      }
+    });
+  }
+  
   window.closeEditClassModal = function() {
     const modal = qs('#editClassModal');
     if (modal) modal.classList.remove('show');
     window._editingClassId = null;
+    window._initialEnrollments = null;
   };
   
   window.saveEditClass = async function() {
@@ -7619,9 +7775,11 @@
       
       const nameInput = qs('#editClassName');
       const activeCheck = qs('#editClassActive');
+      const setPrimaryCheck = qs('#editClassSetPrimary');
       
       const newName = nameInput ? nameInput.value.trim() : '';
       const active = activeCheck ? activeCheck.checked : true;
+      const setPrimary = setPrimaryCheck ? setPrimaryCheck.checked : false;
       
       if (!newName) {
         addNotif('Class name is required', { type: 'error' });
@@ -7630,14 +7788,46 @@
       
       console.log('[classes-ui] Saving class:', classId, 'with name:', newName);
       
-      // Update class
+      // Update class info
       await db.upsertClass({
         id: classId,
         name: newName,
         active: active
       });
       
-      addNotif('Class updated successfully', { type: 'success' });
+      // Handle student enrollment changes
+      const studentList = qs('#editClassStudentList');
+      if (studentList) {
+        const checkboxes = studentList.querySelectorAll('input[type="checkbox"]');
+        const currentEnrolled = new Set();
+        
+        checkboxes.forEach(cb => {
+          if (cb.checked) {
+            currentEnrolled.add(cb.value);
+          }
+        });
+        
+        // Calculate diff
+        const initial = window._initialEnrollments || new Set();
+        const addCodes = [...currentEnrolled].filter(code => !initial.has(code));
+        const removeCodes = [...initial].filter(code => !currentEnrolled.has(code));
+        
+        if (addCodes.length > 0 || removeCodes.length > 0) {
+          console.log('[classes-ui] Enrollment changes:', { addCodes, removeCodes });
+          
+          // Update enrollments
+          await db.bulkUpdateClassEnrollments(classId, { addCodes, removeCodes }, { setPrimary });
+          
+          // Ensure assignment instances for new students
+          if (addCodes.length > 0) {
+            await db.ensureAssignmentInstancesForClass(classId, addCodes);
+          }
+          
+          addNotif(`Class updated: +${addCodes.length} students, -${removeCodes.length} students (marked inactive)`, { type: 'success' });
+        } else {
+          addNotif('Class updated successfully', { type: 'success' });
+        }
+      }
       
       // Close modal and refresh
       window.closeEditClassModal();
@@ -7663,6 +7853,43 @@
     // Save button
     if (e.target.matches('#editClassSave')) {
       window.saveEditClass();
+    }
+    
+    // Tab switching
+    if (e.target.matches('.edit-class-tab')) {
+      const tabName = e.target.dataset.tab;
+      if (tabName) switchEditClassTab(tabName);
+    }
+    
+    // Select All button
+    if (e.target.matches('#editClassSelectAll')) {
+      const studentList = qs('#editClassStudentList');
+      if (studentList) {
+        studentList.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+          if (cb.parentElement.style.display !== 'none') {
+            cb.checked = true;
+          }
+        });
+      }
+    }
+    
+    // Clear All button
+    if (e.target.matches('#editClassClearAll')) {
+      const studentList = qs('#editClassStudentList');
+      if (studentList) {
+        studentList.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+          if (cb.parentElement.style.display !== 'none') {
+            cb.checked = false;
+          }
+        });
+      }
+    }
+  });
+  
+  // Student search input handler
+  document.addEventListener('input', (e) => {
+    if (e.target.matches('#editClassStudentSearch')) {
+      filterStudentList();
     }
   });
   
