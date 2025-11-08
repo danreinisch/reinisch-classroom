@@ -160,13 +160,13 @@
 (function() {
   'use strict';
   
-  console.log('[Auto-login Bootstrap] Starting early bypass check');
+  console.log('[auto-login] Starting early bypass check');
   
   try {
     // Read rc_auth from localStorage
     const authStr = localStorage.getItem('rc_auth');
     if (!authStr) {
-      console.log('[Auto-login Bootstrap] No rc_auth found');
+      console.log('[auto-login] No rc_auth found');
       return;
     }
     
@@ -174,7 +174,7 @@
     try {
       auth = JSON.parse(authStr);
     } catch (e) {
-      console.warn('[Auto-login Bootstrap] Invalid rc_auth JSON, clearing');
+      console.warn('[auto-login] Invalid rc_auth JSON, clearing');
       localStorage.removeItem('rc_auth');
       sessionStorage.removeItem('rc_user_code');
       sessionStorage.removeItem('rc_user_role');
@@ -183,20 +183,20 @@
     
     // Validate structure and role
     if (!auth || auth.role !== 'student' || !auth.code) {
-      console.log('[Auto-login Bootstrap] Auth is not for student or missing code');
+      console.log('[auto-login] Auth is not for student or missing code');
       return;
     }
     
     // Validate expiry
     const now = Date.now();
     if (!auth.expiresAt || typeof auth.expiresAt !== 'number') {
-      console.warn('[Auto-login Bootstrap] Missing or invalid expiresAt, clearing');
+      console.warn('[auto-login] Missing or invalid expiresAt, clearing');
       localStorage.removeItem('rc_auth');
       return;
     }
     
     if (now > auth.expiresAt) {
-      console.log('[Auto-login Bootstrap] Auth expired, clearing');
+      console.log('[auto-login] Auth expired, clearing');
       localStorage.removeItem('rc_auth');
       sessionStorage.removeItem('rc_user_code');
       sessionStorage.removeItem('rc_user_role');
@@ -211,7 +211,7 @@
     if (auto === '1') {
       // URL has auto=1, verify code is present and matches
       if (!urlCode) {
-        console.warn('[Auto-login Bootstrap] URL has auto=1 but no code, clearing session');
+        console.warn('[auto-login] URL has auto=1 but no code, clearing session');
         localStorage.removeItem('rc_auth');
         sessionStorage.removeItem('rc_user_code');
         sessionStorage.removeItem('rc_user_role');
@@ -219,7 +219,7 @@
       }
       
       if (urlCode !== auth.code) {
-        console.warn('[Auto-login Bootstrap] URL code mismatch, clearing session');
+        console.warn('[auto-login] URL code mismatch, clearing session');
         localStorage.removeItem('rc_auth');
         sessionStorage.removeItem('rc_user_code');
         sessionStorage.removeItem('rc_user_role');
@@ -228,7 +228,7 @@
     }
     
     // All validations passed - hydrate session and set bypass flag
-    console.log('[Auto-login Bootstrap] Validation passed, bypassing login for student:', auth.code);
+    console.log('[auto-login] Validation passed, bypassing login for student:', auth.code);
     
     sessionStorage.setItem('rc_user_code', auth.code);
     sessionStorage.setItem('rc_user_role', 'student');
@@ -246,10 +246,10 @@
     style.textContent = '#loginView { display: none !important; }';
     document.head.appendChild(style);
     
-    console.log('[Auto-login Bootstrap] Success: Bypassing login form, dashboard will load');
+    console.log('[auto-login] Success: Bypassing login form, dashboard will load');
     
   } catch (err) {
-    console.error('[Auto-login Bootstrap] Unexpected error:', err);
+    console.error('[auto-login] Unexpected error:', err);
     // On any error, let normal login flow handle it
   }
 })();
@@ -468,12 +468,12 @@
   // Listen for auth changes from other tabs via BroadcastChannel
   if (typeof onAuthChange === 'function') {
     const cleanup = onAuthChange((event) => {
-      console.log('[Student Portal] Auth change received from other tab:', event.type);
+      console.log('[student-portal] Auth change received from other tab:', event.type);
       
       if (event.type === 'auth-updated' && event.auth) {
         // Another tab signed in - if it's a student, auto-login here too
         if (event.auth.role === 'student' && event.auth.code) {
-          console.log('[Student Portal] Auto-login from other tab');
+          console.log('[student-portal] Auto-login from other tab');
           attemptStudentAutoLogin(event.auth.code, event.auth.name).then(success => {
             if (success) {
               showStudentDashboard();
@@ -482,7 +482,7 @@
         }
       } else if (event.type === 'auth-cleared') {
         // Another tab logged out - clear session here too
-        console.log('[Student Portal] Logout from other tab');
+        console.log('[student-portal] Logout from other tab');
         currentUser = null;
         userRole = null;
         sessionStorage.removeItem('rc_user_code');
@@ -636,7 +636,7 @@
   async function showStudentDashboard() {
     // Defensive null guards for DOM elements and currentUser
     if (!currentUser) {
-      console.error('[Dashboard] Cannot show dashboard - currentUser is null');
+      console.error('[student-dashboard] Cannot show dashboard - currentUser is null');
       showLogin();
       return;
     }
@@ -720,7 +720,7 @@
       
       // Retry in background after a delay
       setTimeout(() => {
-        console.log('[Dashboard] Retrying assignments load...');
+        console.log('[student-dashboard] Retrying assignments load...');
         loadStudentAssignments();
       }, 5000);
     }
@@ -773,7 +773,7 @@
       
       // Retry in background after a delay
       setTimeout(() => {
-        console.log('[Dashboard] Retrying goals load...');
+        console.log('[student-dashboard] Retrying goals load...');
         loadStudentGoals();
       }, 5000);
     }
@@ -1234,7 +1234,7 @@
         try {
           studentListCache = await db.listStudents();
         } catch (dbErr) {
-          console.error('[Student Lookup] Database fetch failed:', dbErr);
+          console.error('[student-lookup] Database fetch failed:', dbErr);
           // Don't cache the error - let next call retry
           return null;
         }
@@ -1242,7 +1242,7 @@
       
       return studentListCache.find(s => s.code === code) || null;
     } catch (err) {
-      console.error('[Student Lookup] Failed to find student:', code, err);
+      console.error('[student-lookup] Failed to find student:', code, err);
       return null;
     }
   }
@@ -1316,7 +1316,7 @@
     try {
       // PRIORITY 1: Check if early bootstrap already handled auto-login
       if (window.__autoLoginOk === true) {
-        console.log('[Init] Early bootstrap succeeded, proceeding to dashboard');
+        console.log('[student-init] Early bootstrap succeeded, proceeding to dashboard');
         
         // Remove the temporary style that hid the login view
         const tempStyle = document.getElementById('auto-login-style');
@@ -1334,7 +1334,7 @@
         }
         
         // If bootstrap flag was set but session restore failed, clear and show login
-        console.warn('[Init] Bootstrap flag set but session restore failed');
+        console.warn('[student-init] Bootstrap flag set but session restore failed');
         window.__autoLoginOk = false;
         showLogin();
         return;
@@ -1390,7 +1390,7 @@
       }
       
     } catch (err) {
-      console.error('[Init] Initialization error:', err);
+      console.error('[student-init] Initialization error:', err);
       // On any error, show login form (only if __autoLoginOk is not set)
       hideLoginLoading();
       if (!window.__autoLoginOk) {

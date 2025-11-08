@@ -5,7 +5,7 @@ import { verifyUserPassword, saveAuthSession } from './user-auth.js';
 
 // Guard flag to prevent double-binding
 if (window.__authModalExtendBound) {
-  console.log('[auth-modal-extend] Already initialized, skipping');
+  console.log('[substitute-auth] Already initialized, skipping');
 } else {
   window.__authModalExtendBound = true;
   
