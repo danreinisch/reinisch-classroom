@@ -6,9 +6,12 @@ This guide explains how to test the new power features added to the IEP Progress
 
 1. Load the `teacher-center-unified.html` file in a modern browser
 2. Ensure you have sample IEP progress data loaded
-3. For PDF export, include jsPDF library:
+3. For PDF export, include jsPDF library with integrity check:
    ```html
-   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" 
+           integrity="sha512-qZvrmS2ekKPF2mSznTQsxqPgnpkI4DNTlrdUmTzrDgektczlKNRRhy5X5AAOnx5S09ydFYWWNSfcEqDTTHgtNA==" 
+           crossorigin="anonymous" 
+           referrerpolicy="no-referrer"></script>
    ```
 
 ## Enabling Features
@@ -254,8 +257,14 @@ Or enable them individually as needed.
 ## Common Issues & Troubleshooting
 
 ### PDF Export Not Working
-- Ensure jsPDF library is loaded: check browser console for errors
-- Try: `<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>`
+- Ensure jsPDF library is loaded with integrity check: check browser console for errors
+- Try: 
+  ```html
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" 
+          integrity="sha512-qZvrmS2ekKPF2mSznTQsxqPgnpkI4DNTlrdUmTzrDgektczlKNRRhy5X5AAOnx5S09ydFYWWNSfcEqDTTHgtNA==" 
+          crossorigin="anonymous" 
+          referrerpolicy="no-referrer"></script>
+  ```
 
 ### Saved Views Not Persisting
 - Check browser console for Supabase errors
