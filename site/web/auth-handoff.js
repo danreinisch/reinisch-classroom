@@ -13,7 +13,7 @@ try {
     authChannel = new BroadcastChannel(AUTH_CHANNEL_NAME);
   }
 } catch (err) {
-  console.warn('[auth-handoff] BroadcastChannel not available:', err);
+  console.warn('[auth] BroadcastChannel not available:', err);
 }
 
 /**
@@ -23,7 +23,7 @@ try {
  */
 export function writeAuth(authData, ttlMs = DEFAULT_TTL_MS) {
   if (!authData || !authData.role || !authData.code) {
-    console.warn('[auth-handoff] Invalid auth data, skipping write');
+    console.warn('[auth] Invalid auth data, skipping write');
     return;
   }
 
@@ -38,14 +38,14 @@ export function writeAuth(authData, ttlMs = DEFAULT_TTL_MS) {
 
   try {
     localStorage.setItem(AUTH_KEY, JSON.stringify(handoff));
-    console.log('[auth-handoff] Auth written:', { role: handoff.role, code: handoff.code, expiresIn: Math.round(ttlMs / 1000 / 60) + 'min' });
+    console.log('[auth] Auth written:', { role: handoff.role, code: handoff.code, expiresIn: Math.round(ttlMs / 1000 / 60) + 'min' });
     
     // Broadcast to other tabs
     if (authChannel) {
       authChannel.postMessage({ type: 'auth-updated', auth: handoff });
     }
   } catch (err) {
-    console.error('[auth-handoff] Failed to write auth:', err);
+    console.error('[auth] Failed to write auth:', err);
   }
 }
 
@@ -62,21 +62,21 @@ export function readAuth() {
     
     // Validate structure
     if (!auth || !auth.role || !auth.code || !auth.issuedAt || !auth.expiresAt) {
-      console.warn('[auth-handoff] Invalid auth structure, clearing');
+      console.warn('[auth] Invalid auth structure, clearing');
       clearAuth();
       return null;
     }
 
     // Check expiry
     if (isExpired(auth)) {
-      console.log('[auth-handoff] Auth expired, clearing');
+      console.log('[auth] Auth expired, clearing');
       clearAuth();
       return null;
     }
 
     return auth;
   } catch (err) {
-    console.error('[auth-handoff] Failed to read auth:', err);
+    console.error('[auth] Failed to read auth:', err);
     return null;
   }
 }
@@ -87,14 +87,14 @@ export function readAuth() {
 export function clearAuth() {
   try {
     localStorage.removeItem(AUTH_KEY);
-    console.log('[auth-handoff] Auth cleared');
+    console.log('[auth] Auth cleared');
     
     // Broadcast to other tabs
     if (authChannel) {
       authChannel.postMessage({ type: 'auth-cleared' });
     }
   } catch (err) {
-    console.error('[auth-handoff] Failed to clear auth:', err);
+    console.error('[auth] Failed to clear auth:', err);
   }
 }
 
@@ -128,7 +128,7 @@ export function refreshAuth(ttlMs = DEFAULT_TTL_MS) {
 
   try {
     localStorage.setItem(AUTH_KEY, JSON.stringify(auth));
-    console.log('[auth-handoff] Auth refreshed');
+    console.log('[auth] Auth refreshed');
     
     // Broadcast to other tabs
     if (authChannel) {
@@ -137,7 +137,7 @@ export function refreshAuth(ttlMs = DEFAULT_TTL_MS) {
     
     return true;
   } catch (err) {
-    console.error('[auth-handoff] Failed to refresh auth:', err);
+    console.error('[auth] Failed to refresh auth:', err);
     return false;
   }
 }
@@ -149,7 +149,7 @@ export function refreshAuth(ttlMs = DEFAULT_TTL_MS) {
  */
 export function onAuthChange(callback) {
   if (!authChannel) {
-    console.warn('[auth-handoff] BroadcastChannel not available, cannot listen for auth changes');
+    console.warn('[auth] BroadcastChannel not available, cannot listen for auth changes');
     return null;
   }
 
@@ -210,7 +210,7 @@ export function getExpiryMessage() {
  */
 if (typeof window !== 'undefined') {
   window.setAuth = function(authData) {
-    console.log('[auth-handoff] Legacy setAuth called, mapping to writeAuth');
+    console.log('[auth] Legacy setAuth called, mapping to writeAuth');
     
     // Map legacy fields to new format
     // Priority: code > username > student_id (for backward compatibility)
@@ -218,17 +218,17 @@ if (typeof window !== 'undefined') {
     const name = authData.name || authData.username;
     
     if (!code) {
-      console.warn('[auth-handoff] setAuth called without valid code/username/student_id, ignoring');
+      console.warn('[auth] setAuth called without valid code/username/student_id, ignoring');
       return;
     }
     
     // Log which field was used for transparency
     if (authData.code) {
-      console.log('[auth-handoff] Using authData.code:', code);
+      console.log('[auth] Using authData.code:', code);
     } else if (authData.username) {
-      console.log('[auth-handoff] Using authData.username as code:', code);
+      console.log('[auth] Using authData.username as code:', code);
     } else {
-      console.log('[auth-handoff] Using authData.student_id as code:', code);
+      console.log('[auth] Using authData.student_id as code:', code);
     }
     
     const mappedAuth = {
@@ -240,5 +240,5 @@ if (typeof window !== 'undefined') {
     writeAuth(mappedAuth);
   };
   
-  console.log('[auth-handoff] Legacy window.setAuth alias registered');
+  console.log('[auth] Legacy window.setAuth alias registered');
 }
