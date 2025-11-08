@@ -1662,18 +1662,6 @@
       checkVersionLock,
       lockAssignmentVersion
     } from '../web/assignment-mapping-db.js';
-    
-    // Assignment Mapping Phase 1 imports
-    import { parseTxtMapping, parseJsonManifest, validateMapping } from '../web/assignment-mapping-parsers.js';
-    import { scoreSubmission, computeGoalRollups, computeStandardRollups } from '../web/assignment-scoring.js';
-    import { 
-      insertAssignmentItems, 
-      getAssignmentItems, 
-      saveSubmissionAnswers, 
-      insertGoalProgress,
-      checkVersionLock,
-      lockAssignmentVersion
-    } from '../web/assignment-mapping-db.js';
 
     // ========================================================================
     // Feature Flags (Phases 2-5)
