@@ -145,31 +145,14 @@ BEGIN
     RAISE EXCEPTION 'Student code % already exists', v_student_code;
   END IF;
   
-  -- Insert student
+  -- Insert student (code-only identity - do not write to PII columns)
   INSERT INTO students (
     code,
-    name,
-    first_name,
-    last_name,
-    preferred_name,
-    grade,
-    dob,
-    email,
-    guardians,
-    notes
+    name
   )
   VALUES (
     v_student_code,
-    COALESCE(payload->'student'->>'preferred_name', 
-      (payload->'student'->>'first_name' || ' ' || payload->'student'->>'last_name')),
-    payload->'student'->>'first_name',
-    payload->'student'->>'last_name',
-    payload->'student'->>'preferred_name',
-    payload->'student'->>'grade',
-    (payload->'student'->>'dob')::date,
-    payload->'student'->>'email',
-    COALESCE((payload->'student'->'guardians')::jsonb, '[]'::jsonb),
-    payload->'student'->>'notes'
+    v_student_code  -- Use code as name for backward compatibility
   )
   RETURNING id INTO v_student_id;
   
