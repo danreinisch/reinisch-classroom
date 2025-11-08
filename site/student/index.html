@@ -431,6 +431,11 @@
   import { readAuth, clearAuth, onAuthChange } from '../web/auth-handoff.js';
   import '../web/diagnostics.js';
   
+  // Feature flags
+  const feature = {
+    portalTeacherLoginInStudent: false  // Hide teacher login in Student Portal (default: false for rollback safety)
+  };
+  
   // Local storage namespace
   const STORAGE_KEY = 'rc_student_hub_';
   
@@ -464,6 +469,9 @@
   // Current session
   let currentUser = null;
   let userRole = null; // 'student' or 'teacher'
+  
+  // Phase 3: Auth ready flag to prevent double-login and race conditions
+  let authReady = false;  // Set to true once authentication is complete to prevent login view from reappearing
   
   // Listen for auth changes from other tabs via BroadcastChannel
   if (typeof onAuthChange === 'function') {
@@ -532,6 +540,33 @@
     });
   });
   
+  // Phase 1: Hide teacher login UI if feature flag is false (default behavior)
+  if (!feature.portalTeacherLoginInStudent) {
+    console.log('[portal-auth] Teacher login disabled in Student Portal (feature flag: false)');
+    
+    // Hide teacher login tab
+    const teacherTab = document.querySelector('[data-login-mode="teacher"]');
+    if (teacherTab) {
+      teacherTab.style.display = 'none';
+    }
+    
+    // Hide teacher login form
+    const teacherForm = qs('#teacherLoginForm');
+    if (teacherForm) {
+      teacherForm.style.display = 'none';
+    }
+    
+    // Update page title and subtitle for clarity
+    const loginTitle = document.querySelector('#loginView h1');
+    const loginSubtitle = document.querySelector('#loginView .subtle');
+    if (loginTitle) {
+      loginTitle.textContent = 'Student Portal';
+    }
+    if (loginSubtitle) {
+      loginSubtitle.textContent = 'Login to access your dashboard';
+    }
+  }
+  
   // Student login
   qs('#btnStudentLogin').addEventListener('click', async () => {
     const code = qs('#loginCode').value.trim();
@@ -598,8 +633,14 @@
   
   // Logout
   qs('#btnLogout').addEventListener('click', () => {
+    console.log('[portal-auth] Logout initiated');
+    
     currentUser = null;
     userRole = null;
+    
+    // Phase 3: Reset authReady flag to allow login view to show
+    authReady = false;
+    
     // Clear only auth-related sessionStorage keys
     sessionStorage.removeItem('rc_user_code');
     sessionStorage.removeItem('rc_user_role');
@@ -622,6 +663,13 @@
   }
   
   function showLogin() {
+    // Phase 3: Prevent showing login if auth is already ready (prevents race conditions)
+    if (authReady) {
+      console.log('[portal-auth] showLogin blocked - auth already ready');
+      return;
+    }
+    
+    console.log('[portal-auth] Showing login view');
     qs('#loginView').classList.remove('hidden');
     qs('#studentDashboardView').classList.add('hidden');
     qs('#teacherCenterView').classList.add('hidden');
@@ -640,6 +688,11 @@
       showLogin();
       return;
     }
+    
+    console.log('[portal-auth] Showing student dashboard for', currentUser.code || currentUser.name);
+    
+    // Phase 3: Mark auth as ready to prevent login view from reappearing
+    authReady = true;
     
     const loginView = qs('#loginView');
     const dashboardView = qs('#studentDashboardView');
@@ -663,6 +716,11 @@
   }
   
   async function showTeacherCenter() {
+    console.log('[portal-auth] Showing teacher center');
+    
+    // Phase 3: Mark auth as ready
+    authReady = true;
+    
     qs('#loginView').classList.add('hidden');
     qs('#studentDashboardView').classList.add('hidden');
     qs('#teacherCenterView').classList.remove('hidden');
@@ -1142,13 +1200,15 @@
     
     try {
       // Method 3: Check URL query parameter ?code= (redirect from hub)
+      // Phase 2: Support auto=1&code=SXXX&name=... for auto-login handoff
       const urlParams = new URLSearchParams(window.location.search);
       const urlCode = urlParams.get('code');
       const auto = urlParams.get('auto');
+      const urlName = urlParams.get('name');
       
       if (urlCode && typeof urlCode === 'string' && urlCode.trim().length > 0 && auto === '1') {
-        console.log('[Auto-login] Found auth in URL parameter');
-        return { code: urlCode.trim(), name: null };
+        console.log('[portal-auth] Found auto-login in URL:', { code: urlCode, name: urlName || '(none)' });
+        return { code: urlCode.trim(), name: urlName ? urlName.trim() : null };
       }
     } catch (err) {
       console.warn('[Auto-login] Failed to parse URL parameters:', err);
@@ -1199,6 +1259,12 @@
    * Hide loading state and restore login form
    */
   function hideLoginLoading() {
+    // Phase 3: Don't restore login form if auth is already ready
+    if (authReady) {
+      console.log('[portal-auth] hideLoginLoading blocked - auth already ready');
+      return;
+    }
+    
     const loadingDiv = qs('#autoLoginLoading');
     if (loadingDiv) {
       loadingDiv.remove();
