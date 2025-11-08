@@ -339,3 +339,356 @@
     padding: 6px 4px;
   }
 }
+
+/* ============================================================================
+   Phase 4-5: Inline Editing
+   ============================================================================ */
+
+.col-date.editable {
+  cursor: pointer;
+  position: relative;
+}
+
+.col-date.editable:hover {
+  background: rgba(34, 197, 94, 0.12);
+  outline: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.col-date.editable:focus {
+  outline: 2px solid rgba(34, 197, 94, 0.5);
+  outline-offset: -2px;
+}
+
+.col-date.editing {
+  background: rgba(34, 197, 94, 0.2);
+  padding: 2px;
+}
+
+.inline-editor {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  justify-content: center;
+}
+
+.editor-input {
+  width: 60px;
+  padding: 4px 6px;
+  font-size: 13px;
+  border: 1px solid var(--accent, #22c55e);
+  border-radius: 3px;
+  background: var(--bg, #1a1a1a);
+  color: var(--fg, #fff);
+  text-align: center;
+}
+
+.editor-input:focus {
+  outline: none;
+  border-color: var(--accent, #22c55e);
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2);
+}
+
+.editor-save,
+.editor-cancel {
+  padding: 4px 8px;
+  font-size: 14px;
+  border: 1px solid var(--line, #333);
+  border-radius: 3px;
+  background: var(--bg, #1a1a1a);
+  color: var(--fg, #fff);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.editor-save {
+  background: rgba(34, 197, 94, 0.2);
+  border-color: rgba(34, 197, 94, 0.4);
+  color: #22c55e;
+}
+
+.editor-save:hover {
+  background: rgba(34, 197, 94, 0.3);
+}
+
+.editor-cancel {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #ef4444;
+}
+
+.editor-cancel:hover {
+  background: rgba(239, 68, 68, 0.3);
+}
+
+/* Stacked Indicators */
+.stacked-indicator {
+  display: inline-flex;
+  gap: 2px;
+  margin-left: 4px;
+  position: relative;
+}
+
+.source-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  font-size: 9px;
+  font-weight: 700;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.stacked-indicator:hover .history-panel {
+  display: block;
+}
+
+.history-panel {
+  display: none;
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  padding: 8px;
+  background: var(--bg, #1a1a1a);
+  border: 1px solid var(--line, #333);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  z-index: 200;
+  min-width: 200px;
+  max-width: 300px;
+}
+
+.history-item {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 4px;
+  font-size: 11px;
+  border-bottom: 1px solid var(--line, #333);
+}
+
+.history-item:last-child {
+  border-bottom: none;
+}
+
+.history-item .source-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.history-item .value {
+  font-weight: 700;
+  color: var(--accent, #22c55e);
+}
+
+.history-item .time {
+  font-size: 10px;
+  color: var(--muted, #888);
+  margin-left: auto;
+}
+
+/* ============================================================================
+   Phase 4: Bulk Add Modal
+   ============================================================================ */
+
+.bulk-modal-content {
+  padding: 16px;
+}
+
+.bulk-step {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.bulk-step.hidden {
+  display: none;
+}
+
+.bulk-step h4 {
+  margin: 0 0 8px 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.bulk-goal-filters {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.bulk-search,
+.bulk-area-filter,
+.bulk-class-filter {
+  flex: 1;
+  padding: 6px 10px;
+  font-size: 13px;
+  border: 1px solid var(--line, #333);
+  border-radius: 4px;
+  background: var(--bg, #1a1a1a);
+  color: var(--fg, #fff);
+}
+
+.bulk-goal-list {
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid var(--line, #333);
+  border-radius: 4px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.bulk-goal-item {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 8px;
+  border: 1px solid var(--line, #333);
+  border-radius: 4px;
+  margin-bottom: 6px;
+  cursor: pointer;
+  background: var(--bg, #1a1a1a);
+  transition: all 0.15s ease;
+}
+
+.bulk-goal-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--accent, #22c55e);
+}
+
+.bulk-goal-item input[type="checkbox"] {
+  margin-top: 2px;
+  cursor: pointer;
+}
+
+.bulk-goal-info {
+  flex: 1;
+  font-size: 12px;
+}
+
+.bulk-goal-info strong {
+  font-size: 13px;
+}
+
+.bulk-goal-info .subtle {
+  font-size: 11px;
+  color: var(--muted, #888);
+  margin: 4px 0;
+}
+
+.bulk-goal-info .badge {
+  margin-top: 4px;
+}
+
+.bulk-date-options {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.bulk-date-options label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.bulk-date-inputs {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.bulk-date-inputs input[type="date"] {
+  padding: 6px 10px;
+  font-size: 13px;
+  border: 1px solid var(--line, #333);
+  border-radius: 4px;
+  background: var(--bg, #1a1a1a);
+  color: var(--fg, #fff);
+}
+
+.bulk-value-table-wrapper {
+  max-height: 400px;
+  overflow: auto;
+  border: 1px solid var(--line, #333);
+  border-radius: 4px;
+  margin-bottom: 12px;
+}
+
+.bulk-value-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.bulk-value-table th,
+.bulk-value-table td {
+  padding: 8px;
+  border: 1px solid var(--line, #333);
+  text-align: left;
+}
+
+.bulk-value-table th {
+  background: var(--edge, #222);
+  font-weight: 700;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.bulk-value-input {
+  width: 70px;
+  padding: 4px 6px;
+  font-size: 12px;
+  border: 1px solid var(--line, #333);
+  border-radius: 3px;
+  background: var(--bg, #1a1a1a);
+  color: var(--fg, #fff);
+  text-align: center;
+}
+
+.bulk-value-input:focus {
+  outline: none;
+  border-color: var(--accent, #22c55e);
+}
+
+.bulk-shortcuts {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.bulk-review-list {
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid var(--line, #333);
+  border-radius: 4px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.02);
+  margin-top: 12px;
+}
+
+.bulk-review-item {
+  padding: 4px 8px;
+  font-size: 12px;
+  border-bottom: 1px solid var(--line, #333);
+}
+
+.bulk-review-item:last-child {
+  border-bottom: none;
+}
+

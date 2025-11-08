@@ -505,6 +505,90 @@ const local = {
     
     return entry;
   },
+
+  // Phases 4-5: Bulk insert goal progress
+  async bulkInsertGoalProgress(rows = []) {
+    console.log('[progress-bulk] bulkInsertGoalProgress (local mode)', rows.length, 'rows');
+    const arr = store.get('goalProgress', []);
+    const inserted = [];
+    
+    for (const row of rows) {
+      const entry = {
+        id: 'gp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9),
+        goal_code: row.goal_code,
+        student_code: row.student_code,
+        class_code: row.class_code || null,
+        date: row.date,
+        value: parseFloat(row.value),
+        source: row.source || 'manual',
+        collected_by: row.collected_by || null,
+        created_at: new Date().toISOString()
+      };
+      arr.push(entry);
+      inserted.push(entry);
+    }
+    
+    store.set('goalProgress', arr);
+    return { inserted: inserted.length, data: inserted };
+  },
+
+  // Phases 4-5: List assignment-goal mappings
+  async listAssignmentGoalMappings(assignment_id = null) {
+    console.log('[progress-mapping] listAssignmentGoalMappings (local mode)', { assignment_id });
+    const arr = store.get('assignmentGoalMappings', []);
+    if (assignment_id) {
+      return arr.filter(m => m.assignment_id === assignment_id);
+    }
+    return arr;
+  },
+
+  // Phases 4-5: Upsert assignment-goal mapping
+  async upsertAssignmentGoalMapping({ assignment_id, goal_code, student_code, primary_goal = false }) {
+    console.log('[progress-mapping] upsertAssignmentGoalMapping (local mode)', { assignment_id, goal_code, student_code, primary_goal });
+    const arr = store.get('assignmentGoalMappings', []);
+    
+    // Find existing mapping
+    const existing = arr.find(m => 
+      m.assignment_id === assignment_id && 
+      m.goal_code === goal_code &&
+      m.student_code === student_code
+    );
+    
+    if (existing) {
+      existing.primary_goal = primary_goal;
+    } else {
+      arr.push({
+        id: 'agm_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9),
+        assignment_id,
+        goal_code,
+        student_code,
+        primary_goal,
+        created_at: new Date().toISOString()
+      });
+    }
+    
+    store.set('assignmentGoalMappings', arr);
+    return true;
+  },
+
+  // Phases 4-5: Delete assignment-goal mapping
+  async deleteAssignmentGoalMapping({ assignment_id, goal_code, student_code }) {
+    console.log('[progress-mapping] deleteAssignmentGoalMapping (local mode)', { assignment_id, goal_code, student_code });
+    const arr = store.get('assignmentGoalMappings', []);
+    const filtered = arr.filter(m => 
+      !(m.assignment_id === assignment_id && m.goal_code === goal_code && m.student_code === student_code)
+    );
+    store.set('assignmentGoalMappings', filtered);
+    return true;
+  },
+
+  // Phases 4-5: Record progress from submission (local stub)
+  async recordProgressForSubmission(instance_id) {
+    console.log('[progress-assignment] recordProgressForSubmission (local mode)', { instance_id });
+    // In local mode, this is a stub since we don't have RPC
+    // Real implementation happens in remote adapter
+    return { success: true, inserted_count: 0, note: 'Local mode stub - use remote for automation' };
+  },
 };
 
 const remote = {
@@ -1373,6 +1457,154 @@ const remote = {
         })
         .select()
         .single();
+      
+      if (error) throw error;
+      
+      return data;
+    });
+  },
+
+  // Phases 4-5: Bulk insert goal progress
+  async bulkInsertGoalProgress(rows = []) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+    
+    return await withRetry(async () => {
+      console.log('[progress-bulk] bulkInsertGoalProgress (remote)', rows.length, 'rows');
+      
+      // Batch insert all rows
+      const insertRows = [];
+      
+      for (const row of rows) {
+        // Look up goal_id and student_id from codes
+        const { data: goalData, error: goalError } = await supabase
+          .from('goals')
+          .select('id, student_id')
+          .eq('code', row.goal_code)
+          .limit(1)
+          .single();
+        
+        if (goalError) {
+          console.warn('[progress-bulk] Goal not found:', row.goal_code);
+          continue;
+        }
+        
+        const { data: studentData, error: studentError } = await supabase
+          .from('students')
+          .select('id, class_id')
+          .eq('code', row.student_code)
+          .limit(1)
+          .single();
+        
+        if (studentError) {
+          console.warn('[progress-bulk] Student not found:', row.student_code);
+          continue;
+        }
+        
+        insertRows.push({
+          goal_id: goalData.id,
+          student_id: studentData.id,
+          class_id: row.class_id || studentData.class_id,
+          date: row.date,
+          value: parseFloat(row.value),
+          source: row.source || 'manual',
+          collected_by: row.collected_by || null
+        });
+      }
+      
+      if (insertRows.length === 0) {
+        return { inserted: 0, data: [] };
+      }
+      
+      // Insert all rows
+      const { data, error } = await supabase
+        .from('goal_progress')
+        .insert(insertRows)
+        .select();
+      
+      if (error) throw error;
+      
+      return { inserted: data.length, data };
+    });
+  },
+
+  // Phases 4-5: List assignment-goal mappings
+  async listAssignmentGoalMappings(assignment_id = null) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+    
+    return await withRetry(async () => {
+      console.log('[progress-mapping] listAssignmentGoalMappings (remote)', { assignment_id });
+      
+      let query = supabase
+        .from('assignment_goal_map')
+        .select('*, goals(code, desc, student_id, goal_area), assignments(id, title)');
+      
+      if (assignment_id) {
+        query = query.eq('assignment_id', assignment_id);
+      }
+      
+      const { data, error } = await query;
+      if (error) throw error;
+      
+      return data || [];
+    });
+  },
+
+  // Phases 4-5: Upsert assignment-goal mapping
+  async upsertAssignmentGoalMapping({ assignment_id, goal_id, primary_goal = false }) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+    
+    return await withRetry(async () => {
+      console.log('[progress-mapping] upsertAssignmentGoalMapping (remote)', { assignment_id, goal_id, primary_goal });
+      
+      const { data, error } = await supabase
+        .from('assignment_goal_map')
+        .upsert({
+          assignment_id,
+          goal_id,
+          primary_goal
+        }, { onConflict: 'assignment_id,goal_id' })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      return data;
+    });
+  },
+
+  // Phases 4-5: Delete assignment-goal mapping
+  async deleteAssignmentGoalMapping({ assignment_id, goal_id }) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+    
+    return await withRetry(async () => {
+      console.log('[progress-mapping] deleteAssignmentGoalMapping (remote)', { assignment_id, goal_id });
+      
+      const { error } = await supabase
+        .from('assignment_goal_map')
+        .delete()
+        .eq('assignment_id', assignment_id)
+        .eq('goal_id', goal_id);
+      
+      if (error) throw error;
+      
+      return true;
+    });
+  },
+
+  // Phases 4-5: Record progress from submission (call RPC)
+  async recordProgressForSubmission(instance_id) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+    
+    return await withRetry(async () => {
+      console.log('[progress-assignment] recordProgressForSubmission (remote)', { instance_id });
+      
+      const { data, error } = await supabase
+        .rpc('record_progress_for_submission', { p_instance_id: instance_id });
       
       if (error) throw error;
       

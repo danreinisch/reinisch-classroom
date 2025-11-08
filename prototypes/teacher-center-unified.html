@@ -1354,12 +1354,17 @@
     import { db, isRemote, localStore } from '../web/data-adapter.js';
     import { listLibraryItems } from '../web/library.js';
     import { ProgressGridV2 } from '../web/progress-grid-v2.js';
+    import { getFeatureFlag, setFeatureFlag, getAllFeatureFlags, getFeatureDefinitions } from '../web/feature-flags.js';
 
     // ========================================================================
-    // Feature Flags
+    // Feature Flags (Phases 2-5)
     // ========================================================================
     // Set to true to enable the new Progress Grid V2 (Phases 2-3)
     window.FEATURE_PROGRESS_GRID_V2 = false;
+    
+    // Phase 4-5: Feature flags are now managed via feature-flags.js module
+    // Use setFeatureFlag('progressEditing', true) to enable inline editing & bulk add
+    // Use setFeatureFlag('progressAutoFromAssignments', true) to enable assignment automation
 
     const TEACHER_PW_LOCAL = 'teacher123';
     const NS = 'rc_unified_';
@@ -1999,9 +2004,11 @@
       const container = qs('#progressGridV2Container');
       
       if (!progressGridV2Instance) {
+        const teacherEmail = localStorage.getItem('rc_unified_teacher_email') || 'teacher@example.com';
         progressGridV2Instance = new ProgressGridV2(db, {
           trendThreshold: 5,
-          debounceMs: 300
+          debounceMs: 300,
+          teacherEmail: teacherEmail
         });
       }
       
@@ -3872,6 +3879,39 @@
     };
     
     console.log('[goal-progress] Seed helper available: window.__seedGoalProgressDemo()');
+    
+    // ========================================================================
+    // Phase 4-5: Global Diagnostic Function
+    // ========================================================================
+    window.__diagnoseProgressEditing = function() {
+      if (!progressGridV2Instance) {
+        return {
+          error: 'Progress grid not initialized',
+          flags: getAllFeatureFlags()
+        };
+      }
+      
+      return {
+        ...progressGridV2Instance.getDiagnostics(),
+        featureFlags: getAllFeatureFlags(),
+        featureDefinitions: getFeatureDefinitions()
+      };
+    };
+    
+    // Expose feature flag management to console for testing
+    window.__featureFlags = {
+      get: getFeatureFlag,
+      set: setFeatureFlag,
+      getAll: getAllFeatureFlags,
+      getDefinitions: getFeatureDefinitions
+    };
+    
+    console.log('[IEP Progress] Diagnostic functions available:');
+    console.log('  window.__diagnoseProgressEditing() - Get progress editing diagnostics');
+    console.log('  window.__featureFlags.get(name) - Get feature flag value');
+    console.log('  window.__featureFlags.set(name, value) - Set feature flag');
+    console.log('  window.__featureFlags.getAll() - Get all feature flags');
+    console.log('  window.__featureFlags.getDefinitions() - Get feature definitions');
   </script>
 </body>
 </html>

@@ -1,5 +1,5 @@
 // ============================================================================
-// IEP Progress Grid V2 (Phases 2-3)
+// IEP Progress Grid V2 (Phases 2-5)
 // ============================================================================
 // Spreadsheet-like grid with:
 // - Multi-quarter selection
@@ -8,7 +8,13 @@
 // - Enhanced filtering and search
 // - Baseline, Current, Delta, Trend metrics
 // - CSV export
+// - Inline editing (Phase 4)
+// - Bulk add modal (Phase 4)
+// - Assignment-goal mapping (Phase 5)
+// - Realtime refresh (Phase 5)
 // ============================================================================
+
+import { getFeatureFlag } from './feature-flags.js';
 
 export class ProgressGridV2 {
   constructor(dataAdapter, options = {}) {
@@ -17,6 +23,7 @@ export class ProgressGridV2 {
       trendThreshold: options.trendThreshold || 5, // percentage points
       columnBufferSize: options.columnBufferSize || 5, // extra columns to render
       debounceMs: options.debounceMs || 300,
+      teacherEmail: options.teacherEmail || 'teacher@example.com', // For collected_by
       ...options
     };
     
@@ -49,10 +56,22 @@ export class ProgressGridV2 {
     // Debounce timer
     this.debounceTimer = null;
     
+    // Phase 4-5: Editing state
+    this.editingCell = null; // { student_code, goal_code, date }
+    this.bulkModalOpen = false;
+    this.pendingBulkRows = [];
+    
+    // Phase 5: Realtime
+    this.realtimeChannel = null;
+    this.realtimeActive = false;
+    this.realtimeDebounceTimer = null;
+    
     // Bind methods
     this.render = this.render.bind(this);
     this.refresh = this.refresh.bind(this);
     this.exportCSV = this.exportCSV.bind(this);
+    this.handleCellClick = this.handleCellClick.bind(this);
+    this.handleCellEdit = this.handleCellEdit.bind(this);
   }
   
   // ========================================================================
@@ -369,6 +388,7 @@ export class ProgressGridV2 {
         <div class="filter-actions">
           <button class="btn small" id="gridRefreshBtn">🔄 Refresh</button>
           <button class="btn small" id="gridExportBtn">📥 Export CSV</button>
+          ${getFeatureFlag('progressEditing') ? '<button class="btn small primary" id="gridBulkAddBtn">➕ Bulk Add Progress</button>' : ''}
         </div>
       </div>
     `;
@@ -480,7 +500,23 @@ export class ProgressGridV2 {
           // Date columns
           visibleDates.forEach(date => {
             const value = item.measurements[date];
-            html += `<td class="col-date">${value != null ? Math.round(value) + '%' : '—'}</td>`;
+            const isEditable = getFeatureFlag('progressEditing');
+            const cellClass = isEditable ? 'col-date editable' : 'col-date';
+            const cellData = `data-student="${item.student_code}" data-goal="${item.goal_code}" data-date="${date}"`;
+            
+            // Check if there are multiple entries for this date (stacked indicator)
+            const entries = this.rawData.filter(r => 
+              r.student_code === item.student_code && 
+              r.goal_code === item.goal_code && 
+              r.date === date
+            );
+            const hasMultiple = entries.length > 1;
+            const stackedIndicator = hasMultiple ? this.buildStackedIndicator(entries) : '';
+            
+            html += `<td class="${cellClass}" ${cellData} tabindex="${isEditable ? '0' : '-1'}">
+              ${value != null ? Math.round(value) + '%' : '—'}
+              ${stackedIndicator}
+            </td>`;
           });
           
           html += '</tr>';
@@ -726,6 +762,24 @@ export class ProgressGridV2 {
       exportBtn.addEventListener('click', () => this.exportCSV());
     }
     
+    // Bulk add button (Phase 4)
+    const bulkAddBtn = containerEl.querySelector('#gridBulkAddBtn');
+    if (bulkAddBtn) {
+      bulkAddBtn.addEventListener('click', () => this.openBulkAddModal());
+    }
+    
+    // Cell click for inline editing (Phase 4)
+    if (getFeatureFlag('progressEditing')) {
+      containerEl.querySelectorAll('td.editable').forEach(cell => {
+        cell.addEventListener('click', this.handleCellClick);
+        cell.addEventListener('keydown', e => {
+          if (e.key === 'Enter') {
+            this.handleCellClick(e);
+          }
+        });
+      });
+    }
+    
     // Area collapse/expand
     containerEl.querySelectorAll('.area-header').forEach(header => {
       header.addEventListener('click', e => {
@@ -877,6 +931,11 @@ export class ProgressGridV2 {
     
     // Render UI
     this.renderOnly();
+    
+    // Setup realtime (Phase 5)
+    if (!this.realtimeChannel) {
+      this.setupRealtime();
+    }
   }
   
   renderOnly() {
@@ -900,5 +959,578 @@ export class ProgressGridV2 {
     if (this.containerEl) {
       await this.render(this.containerEl);
     }
+  }
+
+  // ========================================================================
+  // Phase 4-5: Inline Editing
+  // ========================================================================
+
+  buildStackedIndicator(entries) {
+    if (entries.length <= 1) return '';
+    
+    // Build mini-history HTML
+    const historyItems = entries.map(e => {
+      const icon = e.source === 'assignment' ? 'A' : e.source === 'manual' ? 'M' : 'I';
+      const time = new Date(e.created_at).toLocaleString();
+      return `<div class="history-item">
+        <span class="source-icon">${icon}</span>
+        <span class="value">${Math.round(e.value)}%</span>
+        <span class="time">${time}</span>
+      </div>`;
+    }).join('');
+    
+    return `<span class="stacked-indicator" title="Multiple entries">
+      ${entries.map(e => {
+        const icon = e.source === 'assignment' ? 'A' : e.source === 'manual' ? 'M' : 'I';
+        return `<span class="source-badge">${icon}</span>`;
+      }).join('')}
+      <div class="history-panel">${historyItems}</div>
+    </span>`;
+  }
+
+  handleCellClick(e) {
+    const cell = e.target.closest('td.editable');
+    if (!cell || !getFeatureFlag('progressEditing')) return;
+    
+    const student = cell.dataset.student;
+    const goal = cell.dataset.goal;
+    const date = cell.dataset.date;
+    
+    console.log('[progress-inline-edit] Cell clicked:', { student, goal, date });
+    
+    // Open inline editor
+    this.openInlineEditor(cell, student, goal, date);
+  }
+
+  openInlineEditor(cell, student_code, goal_code, date) {
+    // Close any existing editor
+    this.closeInlineEditor();
+    
+    // Get current value
+    const currentText = cell.textContent.trim();
+    const currentValue = currentText === '—' ? '' : parseInt(currentText);
+    
+    // Create editor
+    const editor = document.createElement('div');
+    editor.className = 'inline-editor';
+    editor.innerHTML = `
+      <input type="number" min="0" max="100" step="1" value="${currentValue || ''}" class="editor-input" />
+      <button class="editor-save" title="Save">✓</button>
+      <button class="editor-cancel" title="Cancel">✗</button>
+    `;
+    
+    // Replace cell content
+    cell.dataset.originalContent = cell.innerHTML;
+    cell.innerHTML = '';
+    cell.appendChild(editor);
+    cell.classList.add('editing');
+    
+    const input = editor.querySelector('.editor-input');
+    const saveBtn = editor.querySelector('.editor-save');
+    const cancelBtn = editor.querySelector('.editor-cancel');
+    
+    // Focus input
+    input.focus();
+    input.select();
+    
+    // Save handler
+    const save = async () => {
+      const value = parseInt(input.value);
+      if (isNaN(value) || value < 0 || value > 100) {
+        alert('Please enter a value between 0 and 100');
+        input.focus();
+        return;
+      }
+      
+      console.log('[progress-inline-edit] Saving:', { student_code, goal_code, date, value });
+      
+      // Optimistic UI update
+      cell.innerHTML = `${value}%`;
+      cell.classList.remove('editing');
+      
+      try {
+        // Save to backend
+        await this.db.upsertGoalProgress({
+          goal_code,
+          student_code,
+          date,
+          value,
+          source: 'manual',
+          collected_by: this.options.teacherEmail
+        });
+        
+        console.log('[progress-inline-edit] Saved successfully');
+        
+        // Refresh data to update metrics
+        await this.refresh();
+      } catch (err) {
+        console.error('[progress-inline-edit] Save failed:', err);
+        
+        // Rollback
+        cell.innerHTML = cell.dataset.originalContent;
+        alert('Failed to save. Please try again.');
+      }
+    };
+    
+    // Event listeners
+    saveBtn.addEventListener('click', save);
+    cancelBtn.addEventListener('click', () => this.closeInlineEditor(cell));
+    
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        save();
+      } else if (e.key === 'Escape') {
+        this.closeInlineEditor(cell);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        const delta = e.shiftKey ? 5 : 1;
+        input.value = Math.min(100, (parseInt(input.value) || 0) + delta);
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        const delta = e.shiftKey ? 5 : 1;
+        input.value = Math.max(0, (parseInt(input.value) || 0) - delta);
+      }
+    });
+    
+    // Store editing state
+    this.editingCell = { cell, student_code, goal_code, date };
+  }
+
+  closeInlineEditor(cell = null) {
+    const target = cell || this.editingCell?.cell;
+    if (!target) return;
+    
+    if (target.dataset.originalContent) {
+      target.innerHTML = target.dataset.originalContent;
+      delete target.dataset.originalContent;
+    }
+    target.classList.remove('editing');
+    
+    this.editingCell = null;
+  }
+
+  // ========================================================================
+  // Phase 4: Bulk Add Modal
+  // ========================================================================
+
+  openBulkAddModal() {
+    console.log('[progress-bulk] Opening bulk add modal');
+    this.bulkModalOpen = true;
+    
+    // Create modal
+    const modal = document.createElement('div');
+    modal.className = 'modal-backdrop show';
+    modal.id = 'bulkAddModal';
+    modal.innerHTML = `
+      <div class="modal card">
+        <div class="card-header">
+          <h3>Bulk Add Progress</h3>
+          <button class="btn small" id="closeBulkModal">✗ Close</button>
+        </div>
+        <div class="bulk-modal-content">
+          <div class="bulk-step" id="bulkStep1">
+            <h4>Step 1: Select Goals</h4>
+            <div class="bulk-goal-filters">
+              <input type="text" placeholder="Search goals..." class="bulk-search" />
+              <select class="bulk-area-filter">
+                <option value="">All Areas</option>
+              </select>
+              <select class="bulk-class-filter">
+                <option value="">All Classes</option>
+              </select>
+            </div>
+            <div class="bulk-goal-list" id="bulkGoalList">
+              <!-- Populated by JS -->
+            </div>
+            <button class="btn primary" id="bulkNextStep1">Next: Select Dates →</button>
+          </div>
+          
+          <div class="bulk-step hidden" id="bulkStep2">
+            <h4>Step 2: Select Dates</h4>
+            <div class="bulk-date-options">
+              <label>
+                <input type="radio" name="dateMode" value="single" checked />
+                Single Date
+              </label>
+              <label>
+                <input type="radio" name="dateMode" value="range" />
+                Date Range
+              </label>
+            </div>
+            <div class="bulk-date-inputs">
+              <input type="date" id="bulkStartDate" />
+              <span id="bulkRangeTo" class="hidden">to</span>
+              <input type="date" id="bulkEndDate" class="hidden" />
+              <label class="hidden" id="bulkSkipWeekendsLabel">
+                <input type="checkbox" id="bulkSkipWeekends" checked />
+                Skip weekends
+              </label>
+            </div>
+            <button class="btn" id="bulkBackStep2">← Back</button>
+            <button class="btn primary" id="bulkNextStep2">Next: Enter Values →</button>
+          </div>
+          
+          <div class="bulk-step hidden" id="bulkStep3">
+            <h4>Step 3: Enter Values</h4>
+            <div class="bulk-value-table-wrapper">
+              <table class="bulk-value-table" id="bulkValueTable">
+                <!-- Populated by JS -->
+              </table>
+            </div>
+            <div class="bulk-shortcuts">
+              <button class="btn small" id="bulkFillAll">Fill All (Value: <input type="number" min="0" max="100" id="bulkFillValue" value="80" style="width:60px" />)</button>
+            </div>
+            <button class="btn" id="bulkBackStep3">← Back</button>
+            <button class="btn primary" id="bulkNextStep3">Next: Review →</button>
+          </div>
+          
+          <div class="bulk-step hidden" id="bulkStep4">
+            <h4>Step 4: Review & Commit</h4>
+            <div id="bulkReviewSummary">
+              <!-- Populated by JS -->
+            </div>
+            <button class="btn" id="bulkBackStep4">← Back</button>
+            <button class="btn primary" id="bulkCommit">✓ Save All Entries</button>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Attach event listeners
+    this.attachBulkModalListeners(modal);
+    
+    // Populate initial data
+    this.populateBulkGoals(modal);
+  }
+
+  attachBulkModalListeners(modal) {
+    // Close modal
+    const closeBtn = modal.querySelector('#closeBulkModal');
+    closeBtn.addEventListener('click', () => this.closeBulkAddModal());
+    
+    // Date mode toggle
+    modal.querySelectorAll('input[name="dateMode"]').forEach(radio => {
+      radio.addEventListener('change', e => {
+        const isRange = e.target.value === 'range';
+        modal.querySelector('#bulkEndDate').classList.toggle('hidden', !isRange);
+        modal.querySelector('#bulkRangeTo').classList.toggle('hidden', !isRange);
+        modal.querySelector('#bulkSkipWeekendsLabel').classList.toggle('hidden', !isRange);
+      });
+    });
+    
+    // Step navigation
+    modal.querySelector('#bulkNextStep1').addEventListener('click', () => {
+      const selected = this.getSelectedBulkGoals(modal);
+      if (selected.length === 0) {
+        alert('Please select at least one goal');
+        return;
+      }
+      this.showBulkStep(modal, 2);
+    });
+    
+    modal.querySelector('#bulkBackStep2').addEventListener('click', () => this.showBulkStep(modal, 1));
+    
+    modal.querySelector('#bulkNextStep2').addEventListener('click', () => {
+      const dates = this.getBulkDates(modal);
+      if (dates.length === 0) {
+        alert('Please select valid dates');
+        return;
+      }
+      this.populateBulkValueTable(modal);
+      this.showBulkStep(modal, 3);
+    });
+    
+    modal.querySelector('#bulkBackStep3').addEventListener('click', () => this.showBulkStep(modal, 2));
+    
+    modal.querySelector('#bulkNextStep3').addEventListener('click', () => {
+      this.populateBulkReview(modal);
+      this.showBulkStep(modal, 4);
+    });
+    
+    modal.querySelector('#bulkBackStep4').addEventListener('click', () => this.showBulkStep(modal, 3));
+    
+    modal.querySelector('#bulkCommit').addEventListener('click', () => this.commitBulkAdd(modal));
+    
+    // Fill all shortcut
+    modal.querySelector('#bulkFillAll').addEventListener('click', () => {
+      const value = modal.querySelector('#bulkFillValue').value;
+      modal.querySelectorAll('.bulk-value-input').forEach(input => {
+        input.value = value;
+      });
+    });
+  }
+
+  populateBulkGoals(modal) {
+    // Get all unique goals from raw data
+    const goalsMap = new Map();
+    this.rawData.forEach(row => {
+      const key = `${row.student_code}|${row.goal_code}`;
+      if (!goalsMap.has(key)) {
+        goalsMap.set(key, {
+          student_code: row.student_code,
+          student_name: row.student_name,
+          goal_code: row.goal_code,
+          goal_desc: row.goal_desc,
+          goal_area: row.goal_area,
+          class_code: row.class_code
+        });
+      }
+    });
+    
+    const goals = Array.from(goalsMap.values());
+    
+    // Populate filters
+    const areas = new Set(goals.map(g => g.goal_area).filter(Boolean));
+    const classes = new Set(goals.map(g => g.class_code).filter(Boolean));
+    
+    const areaFilter = modal.querySelector('.bulk-area-filter');
+    areaFilter.innerHTML = '<option value="">All Areas</option>' + 
+      Array.from(areas).sort().map(a => `<option value="${a}">${a}</option>`).join('');
+    
+    const classFilter = modal.querySelector('.bulk-class-filter');
+    classFilter.innerHTML = '<option value="">All Classes</option>' + 
+      Array.from(classes).sort().map(c => `<option value="${c}">${c}</option>`).join('');
+    
+    // Populate goal list
+    const goalList = modal.querySelector('#bulkGoalList');
+    goalList.innerHTML = goals.map(g => `
+      <label class="bulk-goal-item">
+        <input type="checkbox" value="${g.student_code}|${g.goal_code}" />
+        <div class="bulk-goal-info">
+          <strong>${g.student_name} (${g.student_code})</strong> - ${g.goal_code}
+          <div class="subtle">${g.goal_desc.substring(0, 100)}${g.goal_desc.length > 100 ? '...' : ''}</div>
+          <div class="badge">${g.goal_area}</div>
+        </div>
+      </label>
+    `).join('');
+    
+    // Search filter
+    const searchInput = modal.querySelector('.bulk-search');
+    searchInput.addEventListener('input', () => this.filterBulkGoals(modal));
+    
+    areaFilter.addEventListener('change', () => this.filterBulkGoals(modal));
+    classFilter.addEventListener('change', () => this.filterBulkGoals(modal));
+  }
+
+  filterBulkGoals(modal) {
+    const search = modal.querySelector('.bulk-search').value.toLowerCase();
+    const area = modal.querySelector('.bulk-area-filter').value;
+    const cls = modal.querySelector('.bulk-class-filter').value;
+    
+    modal.querySelectorAll('.bulk-goal-item').forEach(item => {
+      const text = item.textContent.toLowerCase();
+      const areaMatch = !area || item.querySelector('.badge').textContent === area;
+      const searchMatch = !search || text.includes(search);
+      
+      item.style.display = areaMatch && searchMatch ? 'flex' : 'none';
+    });
+  }
+
+  getSelectedBulkGoals(modal) {
+    const selected = [];
+    modal.querySelectorAll('.bulk-goal-item input:checked').forEach(cb => {
+      const [student_code, goal_code] = cb.value.split('|');
+      const item = this.rawData.find(r => r.student_code === student_code && r.goal_code === goal_code);
+      if (item) {
+        selected.push({
+          student_code,
+          goal_code,
+          student_name: item.student_name,
+          goal_desc: item.goal_desc
+        });
+      }
+    });
+    return selected;
+  }
+
+  getBulkDates(modal) {
+    const mode = modal.querySelector('input[name="dateMode"]:checked').value;
+    const startDate = modal.querySelector('#bulkStartDate').value;
+    
+    if (!startDate) return [];
+    
+    if (mode === 'single') {
+      return [startDate];
+    } else {
+      const endDate = modal.querySelector('#bulkEndDate').value;
+      const skipWeekends = modal.querySelector('#bulkSkipWeekends').checked;
+      
+      if (!endDate) return [startDate];
+      
+      const dates = [];
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        const dayOfWeek = d.getDay();
+        if (skipWeekends && (dayOfWeek === 0 || dayOfWeek === 6)) {
+          continue;
+        }
+        dates.push(d.toISOString().split('T')[0]);
+      }
+      
+      return dates;
+    }
+  }
+
+  populateBulkValueTable(modal) {
+    const goals = this.getSelectedBulkGoals(modal);
+    const dates = this.getBulkDates(modal);
+    
+    const table = modal.querySelector('#bulkValueTable');
+    
+    let html = '<thead><tr><th>Goal</th>';
+    dates.forEach(d => {
+      html += `<th>${d}</th>`;
+    });
+    html += '</tr></thead><tbody>';
+    
+    goals.forEach(g => {
+      html += `<tr><td><strong>${g.student_name}</strong><br/>${g.goal_code}</td>`;
+      dates.forEach(d => {
+        html += `<td><input type="number" min="0" max="100" class="bulk-value-input" data-student="${g.student_code}" data-goal="${g.goal_code}" data-date="${d}" /></td>`;
+      });
+      html += '</tr>';
+    });
+    
+    html += '</tbody>';
+    table.innerHTML = html;
+  }
+
+  populateBulkReview(modal) {
+    const inputs = modal.querySelectorAll('.bulk-value-input');
+    const rows = [];
+    
+    inputs.forEach(input => {
+      const value = parseInt(input.value);
+      if (!isNaN(value) && value >= 0 && value <= 100) {
+        rows.push({
+          student_code: input.dataset.student,
+          goal_code: input.dataset.goal,
+          date: input.dataset.date,
+          value
+        });
+      }
+    });
+    
+    this.pendingBulkRows = rows;
+    
+    const summary = modal.querySelector('#bulkReviewSummary');
+    summary.innerHTML = `
+      <p><strong>${rows.length}</strong> entries will be created.</p>
+      <div class="bulk-review-list">
+        ${rows.map(r => `<div class="bulk-review-item">${r.student_code} - ${r.goal_code} - ${r.date}: ${r.value}%</div>`).slice(0, 20).join('')}
+        ${rows.length > 20 ? `<div class="subtle">... and ${rows.length - 20} more</div>` : ''}
+      </div>
+    `;
+  }
+
+  async commitBulkAdd(modal) {
+    console.log('[progress-bulk] Committing', this.pendingBulkRows.length, 'rows');
+    
+    const commitBtn = modal.querySelector('#bulkCommit');
+    commitBtn.disabled = true;
+    commitBtn.textContent = 'Saving...';
+    
+    try {
+      const result = await this.db.bulkInsertGoalProgress(
+        this.pendingBulkRows.map(r => ({
+          ...r,
+          source: 'manual',
+          collected_by: this.options.teacherEmail
+        }))
+      );
+      
+      console.log('[progress-bulk] Committed successfully:', result);
+      alert(`Successfully saved ${result.inserted} entries!`);
+      
+      this.closeBulkAddModal();
+      await this.refresh();
+    } catch (err) {
+      console.error('[progress-bulk] Commit failed:', err);
+      alert('Failed to save entries. Please try again.');
+      commitBtn.disabled = false;
+      commitBtn.textContent = '✓ Save All Entries';
+    }
+  }
+
+  showBulkStep(modal, step) {
+    modal.querySelectorAll('.bulk-step').forEach((s, i) => {
+      s.classList.toggle('hidden', i + 1 !== step);
+    });
+  }
+
+  closeBulkAddModal() {
+    const modal = document.getElementById('bulkAddModal');
+    if (modal) {
+      modal.remove();
+    }
+    this.bulkModalOpen = false;
+    this.pendingBulkRows = [];
+  }
+
+  // ========================================================================
+  // Phase 5: Realtime Refresh
+  // ========================================================================
+
+  async setupRealtime() {
+    // Only setup if Supabase is available
+    const supabase = await this.db.getSupabase?.();
+    if (!supabase) {
+      console.log('[progress-realtime] Supabase not available, skipping realtime setup');
+      return;
+    }
+    
+    console.log('[progress-realtime] Setting up realtime subscription');
+    
+    this.realtimeChannel = supabase
+      .channel('goal_progress_changes')
+      .on('postgres_changes', 
+        { event: 'INSERT', schema: 'public', table: 'goal_progress' },
+        payload => this.handleRealtimeInsert(payload)
+      )
+      .subscribe((status) => {
+        console.log('[progress-realtime] Subscription status:', status);
+        this.realtimeActive = status === 'SUBSCRIBED';
+      });
+  }
+
+  handleRealtimeInsert(payload) {
+    console.log('[progress-realtime] Insert detected:', payload);
+    
+    // Debounce refresh to avoid excessive updates
+    clearTimeout(this.realtimeDebounceTimer);
+    this.realtimeDebounceTimer = setTimeout(() => {
+      console.log('[progress-realtime] Refreshing grid');
+      this.refresh();
+    }, 250);
+  }
+
+  teardownRealtime() {
+    if (this.realtimeChannel) {
+      console.log('[progress-realtime] Tearing down realtime subscription');
+      this.realtimeChannel.unsubscribe();
+      this.realtimeChannel = null;
+      this.realtimeActive = false;
+    }
+  }
+
+  // ========================================================================
+  // Phase 4-5: Diagnostics
+  // ========================================================================
+
+  getDiagnostics() {
+    return {
+      editingEnabled: getFeatureFlag('progressEditing'),
+      autoFromAssignmentsEnabled: getFeatureFlag('progressAutoFromAssignments'),
+      bulkModalOpen: this.bulkModalOpen,
+      pendingBulkRows: this.pendingBulkRows.length,
+      realtimeActive: this.realtimeActive,
+      editingCell: this.editingCell ? `${this.editingCell.student_code}|${this.editingCell.goal_code}|${this.editingCell.date}` : null,
+      dataRows: this.rawData.length,
+      processedAreas: this.processedData?.sortedAreas?.length || 0
+    };
   }
 }
