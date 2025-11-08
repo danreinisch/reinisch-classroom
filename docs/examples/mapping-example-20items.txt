@@ -1,0 +1,31 @@
+# Math Assessment Week 1
+# 20 questions covering linear equations and functions
+# Created: 2025-11-08
+
+# Section 1: Linear Equations (Q1-Q8)
+Q1|1|A|MA.8.EE.1|MATH.1|Solve for x: 2x + 5 = 13
+Q2|1|B|MA.8.EE.1|MATH.1|Solve for y: 3y - 7 = 11
+Q3|1|C|MA.8.EE.2|MATH.1;MATH.2|Identify slope in y = 2x + 3
+Q4|1|D|MA.8.EE.2|MATH.2|What is the y-intercept of y = -x + 5?
+Q5|2|A;C|MA.8.EE.3|MATH.2|Select all equivalent expressions to 2(x + 3)
+Q6|2|B;D|MA.8.EE.3|MATH.2|Which expressions equal 12 when x = 3?
+Q7|1|true|MA.8.EE.1|MATH.1|True/False: 2x = 10 has solution x = 5
+Q8|1|false|MA.8.EE.2|MATH.2|True/False: The slope of y = 5 is 5
+
+# Section 2: Functions (Q9-Q15)
+Q9|1|A|MA.8.F.1|MATH.3|Which graph represents y = x + 2?
+Q10|1|B|MA.8.F.1|MATH.3|Identify the function that passes through (0,0) and (1,2)
+Q11|1|C|MA.8.F.2|MATH.3;MATH.4|Compare rates of change for two linear functions
+Q12|1|D|MA.8.F.3|MATH.4|Identify proportional relationships
+Q13|2|A;B;D|MA.8.F.2|MATH.3|Select all linear functions
+Q14|1|true|MA.8.F.1|MATH.3|True/False: A function can have multiple y-values for one x-value
+Q15|1|false|MA.8.F.4|MATH.4|True/False: y = 3 is a linear function
+
+# Section 3: Constructed Responses (Q16-Q18)
+Q16|3|-|MA.8.EE.4|MATH.1;MATH.5|Explain how to solve a two-step equation
+Q17|3|-|MA.8.F.2;MA.8.F.5|MATH.3;MATH.5|Describe the relationship between slope and rate of change
+Q18|4|-|MA.8.EE.4;MA.8.F.1|MATH.1;MATH.3;MATH.5|Write and solve a word problem involving linear equations
+
+# Section 4: Mixed Review (Q19-Q20)
+Q19|1|B|MA.8.NS.1|-|Simplify: 2/3 + 1/4
+Q20|1|C|-|MATH.6|Reflection on learning goals
