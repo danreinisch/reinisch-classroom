@@ -124,6 +124,13 @@ const FEATURES = {
     key: FEATURE_PREFIX + 'assignment_mapping_v1',
     default: false,
     description: 'Enable per-question mapping to DESE Standards and IEP Goal Codes with immediate scoring'
+  },
+  
+  // Student Manager
+  studentManager: {
+    key: FEATURE_PREFIX + 'student_manager',
+    default: false,
+    description: 'Enable Student Manager in Teacher Center Data section for manual student creation with enrollments and IEP goals'
   }
 };
 
