@@ -759,6 +759,100 @@ export class ProgressGridV2 {
         this.renderOnly();
       });
     });
+    
+    // Populate filter checkboxes
+    this.populateFilterCheckboxes(containerEl);
+  }
+  
+  // ========================================================================
+  // Filter Checkbox Population
+  // ========================================================================
+  
+  populateFilterCheckboxes(containerEl) {
+    // Extract unique values from raw data
+    const goalAreas = new Set();
+    const classes = new Set();
+    const students = new Map(); // code -> name
+    
+    this.rawData.forEach(row => {
+      if (row.goal_area) goalAreas.add(row.goal_area);
+      if (row.class_code) classes.add(row.class_code);
+      if (row.student_code) {
+        students.set(row.student_code, row.student_name || row.student_code);
+      }
+    });
+    
+    // Goal Areas
+    const goalAreaContainer = containerEl.querySelector('#goalAreaCheckboxes');
+    if (goalAreaContainer) {
+      const sortedAreas = Array.from(goalAreas).sort();
+      goalAreaContainer.innerHTML = sortedAreas.map(area => `
+        <label>
+          <input type="checkbox" value="${area}" class="goal-area-checkbox" />
+          <span>${area}</span>
+        </label>
+      `).join('') || '<span style="font-size:12px;color:var(--muted)">No goal areas found</span>';
+      
+      // Attach listeners
+      goalAreaContainer.querySelectorAll('.goal-area-checkbox').forEach(cb => {
+        cb.addEventListener('change', e => {
+          if (e.target.checked) {
+            this.filters.goalAreas.push(e.target.value);
+          } else {
+            this.filters.goalAreas = this.filters.goalAreas.filter(a => a !== e.target.value);
+          }
+          this.debouncedRender();
+        });
+      });
+    }
+    
+    // Classes
+    const classContainer = containerEl.querySelector('#classCheckboxes');
+    if (classContainer) {
+      const sortedClasses = Array.from(classes).sort();
+      classContainer.innerHTML = sortedClasses.map(cls => `
+        <label>
+          <input type="checkbox" value="${cls}" class="class-checkbox" />
+          <span>${cls}</span>
+        </label>
+      `).join('') || '<span style="font-size:12px;color:var(--muted)">No classes found</span>';
+      
+      // Attach listeners
+      classContainer.querySelectorAll('.class-checkbox').forEach(cb => {
+        cb.addEventListener('change', e => {
+          if (e.target.checked) {
+            this.filters.classCodes.push(e.target.value);
+          } else {
+            this.filters.classCodes = this.filters.classCodes.filter(c => c !== e.target.value);
+          }
+          this.debouncedRender();
+        });
+      });
+    }
+    
+    // Students
+    const studentContainer = containerEl.querySelector('#studentCheckboxes');
+    if (studentContainer) {
+      const sortedStudents = Array.from(students.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+      studentContainer.innerHTML = sortedStudents.map(([code, name]) => `
+        <label>
+          <input type="checkbox" value="${code}" class="student-checkbox" />
+          <span>${name} (${code})</span>
+        </label>
+      `).join('') || '<span style="font-size:12px;color:var(--muted)">No students found</span>';
+      
+      // Attach listeners
+      studentContainer.querySelectorAll('.student-checkbox').forEach(cb => {
+        cb.addEventListener('change', e => {
+          if (e.target.checked) {
+            this.filters.studentCodes.push(e.target.value);
+          } else {
+            this.filters.studentCodes = this.filters.studentCodes.filter(s => s !== e.target.value);
+          }
+          this.debouncedRender();
+        });
+      });
+    }
   }
   
   // ========================================================================
