@@ -161,7 +161,11 @@ const local = {
     // Prefer stored enrollments; otherwise derive from students having class_id
     const storedEnrollments = store.get('classEnrollments', []);
     if (storedEnrollments.length > 0) {
-      return storedEnrollments;
+      // Return all enrollments (including inactive for history)
+      return storedEnrollments.map(e => ({
+        ...e,
+        active: e.active !== false // Default to true if not set
+      }));
     }
     
     // Derive from students with class_id
@@ -171,7 +175,8 @@ const local = {
       .map(s => ({
         class_id: s.class_id,
         student_code: s.code,
-        student_name: s.name || s.code
+        student_name: s.name || s.code,
+        active: true
       }));
   },
   
@@ -193,10 +198,120 @@ const local = {
       e.class_id === enrollment.class_id && e.student_code === enrollment.student_code
     );
     if (!existing) {
-      enrollments.push(enrollment);
+      enrollments.push({ ...enrollment, active: enrollment.active !== false });
       store.set('classEnrollments', enrollments);
+    } else {
+      // Update active status if provided
+      if (enrollment.active !== undefined) {
+        existing.active = enrollment.active;
+        store.set('classEnrollments', enrollments);
+      }
     }
     return enrollment;
+  },
+  
+  async removeClassEnrollment({ class_id, student_id, student_code }) {
+    const enrollments = store.get('classEnrollments', []);
+    const idx = enrollments.findIndex(e => 
+      e.class_id === class_id && 
+      (student_id ? e.student_id === student_id : e.student_code === student_code)
+    );
+    if (idx >= 0) {
+      // Mark as inactive instead of deleting (preserve history)
+      enrollments[idx].active = false;
+      store.set('classEnrollments', enrollments);
+    }
+    return true;
+  },
+  
+  async bulkUpdateClassEnrollments(class_id, { addCodes = [], removeCodes = [] }, opts = {}) {
+    const students = store.get('students', []);
+    const enrollments = store.get('classEnrollments', []);
+    
+    // Add new enrollments
+    for (const code of addCodes) {
+      const student = students.find(s => s.code === code);
+      if (student) {
+        const existing = enrollments.find(e => 
+          e.class_id === class_id && e.student_code === code
+        );
+        if (existing) {
+          // Reactivate if previously inactive
+          existing.active = true;
+        } else {
+          enrollments.push({
+            class_id,
+            student_code: code,
+            student_name: student.name || code,
+            active: true
+          });
+        }
+        
+        // Set as primary class if requested
+        if (opts.setPrimary) {
+          student.class_id = class_id;
+        }
+      }
+    }
+    
+    // Mark removed enrollments as inactive
+    for (const code of removeCodes) {
+      const idx = enrollments.findIndex(e => 
+        e.class_id === class_id && e.student_code === code
+      );
+      if (idx >= 0) {
+        enrollments[idx].active = false;
+      }
+      
+      // Clear primary class if requested and currently this class
+      if (opts.setPrimary) {
+        const student = students.find(s => s.code === code);
+        if (student && student.class_id === class_id) {
+          student.class_id = null;
+        }
+      }
+    }
+    
+    store.set('classEnrollments', enrollments);
+    store.set('students', students);
+    return true;
+  },
+  
+  async ensureAssignmentInstancesForClass(class_id, studentCodes = []) {
+    const assignments = store.get('assignments', []);
+    const instances = store.get('assignmentInstances', []);
+    const students = store.get('students', []);
+    
+    // Find assignments linked to this class (stored in meta.class_id)
+    const classAssignments = assignments.filter(a => 
+      a.meta?.class_id === class_id || a.class_id === class_id
+    );
+    
+    // For each student, ensure they have instances for all class assignments
+    for (const code of studentCodes) {
+      const student = students.find(s => s.code === code);
+      if (!student) continue;
+      
+      for (const assignment of classAssignments) {
+        const existing = instances.find(i => 
+          i.assignment_id === assignment.id && i.student_code === code
+        );
+        if (!existing) {
+          instances.push({
+            id: assignment.id + '-' + code,
+            assignment_id: assignment.id,
+            student_code: code,
+            student_name: student.name || code,
+            assigned_at: new Date().toISOString().split('T')[0],
+            status: 'Assigned',
+            settings: {}
+          });
+        }
+      }
+    }
+    
+    store.set('assignmentInstances', instances);
+    return true;
   },
   
   // Phase B: HTML Package Upload (local stub - stores manifest but not actual files)
@@ -524,7 +639,7 @@ const remote = {
       // Primary: try class_enrollments table with joins
       const { data: enrollments, error: enrollError } = await supabase
         .from('class_enrollments')
-        .select('class_id, student_id, students!inner(code, name), classes!inner(id)');
+        .select('class_id, student_id, active, students!inner(code, name), classes!inner(id)');
       
       if (enrollError) {
         console.warn('class_enrollments query failed, falling back to students.class_id:', enrollError);
@@ -536,7 +651,8 @@ const remote = {
           class_id: e.class_id,
           student_id: e.student_id,
           student_code: e.students.code,
-          student_name: e.students.name
+          student_name: e.students.name,
+          active: e.active !== false // Default to true
         }));
       }
       
@@ -548,12 +664,13 @@ const remote = {
       
       if (studentsError) throw studentsError;
       
-      // Return array of { class_id, student_id, student_code, student_name }
+      // Return array of { class_id, student_id, student_code, student_name, active }
       return (students || []).map(s => ({
         class_id: s.class_id,
         student_id: s.id,
         student_code: s.code,
-        student_name: s.name
+        student_name: s.name,
+        active: true // Fallback always shows as active
       }));
     });
   },
@@ -588,14 +705,157 @@ const remote = {
         studentId = student.id;
       }
       
+      const payload = {
+        class_id: enrollment.class_id,
+        student_id: studentId,
+        active: enrollment.active !== false // Default to true
+      };
+      
       const { error } = await supabase
         .from('class_enrollments')
-        .upsert(
-          { class_id: enrollment.class_id, student_id: studentId },
-          { onConflict: 'class_id,student_id' }
-        );
+        .upsert(payload, { onConflict: 'class_id,student_id' });
       if (error) throw error;
       return enrollment;
+    });
+  },
+  
+  async removeClassEnrollment({ class_id, student_id, student_code }) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+    return await withRetry(async () => {
+      // Resolve student_id from student_code if needed
+      let resolvedStudentId = student_id;
+      if (!resolvedStudentId && student_code) {
+        const { data: student, error: studentError } = await supabase
+          .from('students')
+          .select('id')
+          .eq('code', student_code)
+          .single();
+        if (studentError) throw studentError;
+        resolvedStudentId = student.id;
+      }
+      
+      // Mark as inactive instead of deleting (preserve history)
+      const { error } = await supabase
+        .from('class_enrollments')
+        .update({ active: false })
+        .eq('class_id', class_id)
+        .eq('student_id', resolvedStudentId);
+      
+      if (error) throw error;
+      return true;
+    });
+  },
+  
+  async bulkUpdateClassEnrollments(class_id, { addCodes = [], removeCodes = [] }, opts = {}) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+    return await withRetry(async () => {
+      // Resolve student codes to IDs
+      const allCodes = [...addCodes, ...removeCodes];
+      const { data: students, error: studentsError } = await supabase
+        .from('students')
+        .select('id, code, class_id')
+        .in('code', allCodes);
+      
+      if (studentsError) throw studentsError;
+      
+      const studentMap = new Map(students.map(s => [s.code, s]));
+      
+      // Add new enrollments
+      for (const code of addCodes) {
+        const student = studentMap.get(code);
+        if (!student) continue;
+        
+        // Upsert enrollment (reactivate if exists)
+        const { error: enrollError } = await supabase
+          .from('class_enrollments')
+          .upsert({
+            class_id,
+            student_id: student.id,
+            active: true
+          }, { onConflict: 'class_id,student_id' });
+        
+        if (enrollError) throw enrollError;
+        
+        // Set as primary class if requested
+        if (opts.setPrimary) {
+          const { error: studentError } = await supabase
+            .from('students')
+            .update({ class_id })
+            .eq('id', student.id);
+          
+          if (studentError) throw studentError;
+        }
+      }
+      
+      // Mark removed enrollments as inactive
+      for (const code of removeCodes) {
+        const student = studentMap.get(code);
+        if (!student) continue;
+        
+        const { error: enrollError } = await supabase
+          .from('class_enrollments')
+          .update({ active: false })
+          .eq('class_id', class_id)
+          .eq('student_id', student.id);
+        
+        if (enrollError) throw enrollError;
+        
+        // Clear primary class if requested and currently this class
+        if (opts.setPrimary && student.class_id === class_id) {
+          const { error: studentError } = await supabase
+            .from('students')
+            .update({ class_id: null })
+            .eq('id', student.id);
+          
+          if (studentError) throw studentError;
+        }
+      }
+      
+      return true;
+    });
+  },
+  
+  async ensureAssignmentInstancesForClass(class_id, studentCodes = []) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+    return await withRetry(async () => {
+      // Find assignments linked to this class (stored in meta.class_id)
+      const { data: assignments, error: assignmentsError } = await supabase
+        .from('assignments')
+        .select('id, meta')
+        .or(`meta->>class_id.eq.${class_id}`);
+      
+      if (assignmentsError) throw assignmentsError;
+      
+      // Resolve student codes to IDs
+      const { data: students, error: studentsError } = await supabase
+        .from('students')
+        .select('id, code')
+        .in('code', studentCodes);
+      
+      if (studentsError) throw studentsError;
+      
+      // For each student, ensure they have instances for all class assignments
+      for (const student of students) {
+        for (const assignment of assignments) {
+          // Upsert instance (idempotent)
+          const { error: instanceError } = await supabase
+            .from('assignment_instances')
+            .upsert({
+              assignment_id: assignment.id,
+              student_id: student.id,
+              status: 'Assigned'
+            }, { onConflict: 'assignment_id,student_id' });
+          
+          if (instanceError && !instanceError.message.includes('duplicate')) {
+            console.error('Failed to create instance for', student.code, assignment.id, instanceError);
+          }
+        }
+      }
+      
+      return true;
     });
   },
   
