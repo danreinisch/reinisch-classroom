@@ -585,6 +585,17 @@ export class ProgressGridV2 {
   }
   
   // ========================================================================
+  // Utility Methods
+  // ========================================================================
+  
+  escapeHtml(text) {
+    if (text == null) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+  
+  // ========================================================================
   // CSV Export
   // ========================================================================
   
@@ -1305,21 +1316,21 @@ export class ProgressGridV2 {
     
     const areaFilter = modal.querySelector('.bulk-area-filter');
     areaFilter.innerHTML = '<option value="">All Areas</option>' + 
-      Array.from(areas).sort().map(a => `<option value="${a}">${a}</option>`).join('');
+      Array.from(areas).sort().map(a => `<option value="${this.escapeHtml(a)}">${this.escapeHtml(a)}</option>`).join('');
     
     const classFilter = modal.querySelector('.bulk-class-filter');
     classFilter.innerHTML = '<option value="">All Classes</option>' + 
-      Array.from(classes).sort().map(c => `<option value="${c}">${c}</option>`).join('');
+      Array.from(classes).sort().map(c => `<option value="${this.escapeHtml(c)}">${this.escapeHtml(c)}</option>`).join('');
     
     // Populate goal list
     const goalList = modal.querySelector('#bulkGoalList');
     goalList.innerHTML = goals.map(g => `
       <label class="bulk-goal-item">
-        <input type="checkbox" value="${g.student_code}|${g.goal_code}" />
+        <input type="checkbox" value="${this.escapeHtml(g.student_code)}|${this.escapeHtml(g.goal_code)}" />
         <div class="bulk-goal-info">
-          <strong>${g.student_name} (${g.student_code})</strong> - ${g.goal_code}
-          <div class="subtle">${g.goal_desc.substring(0, 100)}${g.goal_desc.length > 100 ? '...' : ''}</div>
-          <div class="badge">${g.goal_area}</div>
+          <strong>${this.escapeHtml(g.student_name)} (${this.escapeHtml(g.student_code)})</strong> - ${this.escapeHtml(g.goal_code)}
+          <div class="subtle">${this.escapeHtml(g.goal_desc.substring(0, 100))}${g.goal_desc.length > 100 ? '...' : ''}</div>
+          <div class="badge">${this.escapeHtml(g.goal_area)}</div>
         </div>
       </label>
     `).join('');
@@ -1401,14 +1412,14 @@ export class ProgressGridV2 {
     
     let html = '<thead><tr><th>Goal</th>';
     dates.forEach(d => {
-      html += `<th>${d}</th>`;
+      html += `<th>${this.escapeHtml(d)}</th>`;
     });
     html += '</tr></thead><tbody>';
     
     goals.forEach(g => {
-      html += `<tr><td><strong>${g.student_name}</strong><br/>${g.goal_code}</td>`;
+      html += `<tr><td><strong>${this.escapeHtml(g.student_name)}</strong><br/>${this.escapeHtml(g.goal_code)}</td>`;
       dates.forEach(d => {
-        html += `<td><input type="number" min="0" max="100" class="bulk-value-input" data-student="${g.student_code}" data-goal="${g.goal_code}" data-date="${d}" /></td>`;
+        html += `<td><input type="number" min="0" max="100" class="bulk-value-input" data-student="${this.escapeHtml(g.student_code)}" data-goal="${this.escapeHtml(g.goal_code)}" data-date="${this.escapeHtml(d)}" /></td>`;
       });
       html += '</tr>';
     });
@@ -1439,7 +1450,7 @@ export class ProgressGridV2 {
     summary.innerHTML = `
       <p><strong>${rows.length}</strong> entries will be created.</p>
       <div class="bulk-review-list">
-        ${rows.map(r => `<div class="bulk-review-item">${r.student_code} - ${r.goal_code} - ${r.date}: ${r.value}%</div>`).slice(0, 20).join('')}
+        ${rows.map(r => `<div class="bulk-review-item">${this.escapeHtml(r.student_code)} - ${this.escapeHtml(r.goal_code)} - ${this.escapeHtml(r.date)}: ${Math.round(r.value)}%</div>`).slice(0, 20).join('')}
         ${rows.length > 20 ? `<div class="subtle">... and ${rows.length - 20} more</div>` : ''}
       </div>
     `;
@@ -1566,9 +1577,9 @@ export class ProgressGridV2 {
     }
     
     list.innerHTML = assignments.map(a => `
-      <div class="mapping-assignment-item" data-assignment-id="${a.id}">
-        <strong>${a.title || 'Untitled'}</strong>
-        <div class="subtle">${a.series || ''} ${a.type ? `• ${a.type}` : ''}</div>
+      <div class="mapping-assignment-item" data-assignment-id="${this.escapeHtml(String(a.id))}">
+        <strong>${this.escapeHtml(a.title || 'Untitled')}</strong>
+        <div class="subtle">${this.escapeHtml(a.series || '')} ${a.type ? `• ${this.escapeHtml(a.type)}` : ''}</div>
       </div>
     `).join('');
     
@@ -1600,8 +1611,8 @@ export class ProgressGridV2 {
     const goalList = modal.querySelector('#mappingGoalList');
     const addBtn = modal.querySelector('#addGoalMappingBtn');
     
-    infoDiv.innerHTML = `<strong>${assignment.title || 'Untitled Assignment'}</strong><br/>
-      <span class="subtle">${assignment.series || ''} ${assignment.type ? `• ${assignment.type}` : ''}</span>`;
+    infoDiv.innerHTML = `<strong>${this.escapeHtml(assignment.title || 'Untitled Assignment')}</strong><br/>
+      <span class="subtle">${this.escapeHtml(assignment.series || '')} ${assignment.type ? `• ${this.escapeHtml(assignment.type)}` : ''}</span>`;
     
     goalList.classList.remove('hidden');
     addBtn.classList.remove('hidden');
@@ -1616,21 +1627,21 @@ export class ProgressGridV2 {
       goalList.innerHTML = mappings.map(m => `
         <div class="mapping-goal-item">
           <div class="mapping-goal-info">
-            <strong>${m.goals?.code || 'Unknown'}</strong> - ${m.goals?.desc || ''}
-            <div class="subtle">${m.goals?.goal_area || 'Uncategorized'}</div>
+            <strong>${this.escapeHtml(m.goals?.code || 'Unknown')}</strong> - ${this.escapeHtml(m.goals?.desc || '')}
+            <div class="subtle">${this.escapeHtml(m.goals?.goal_area || 'Uncategorized')}</div>
           </div>
           <div class="mapping-goal-actions">
             <label>
               <input type="checkbox" ${m.primary_goal ? 'checked' : ''} 
                 class="mapping-primary-toggle" 
-                data-mapping-id="${m.id}" 
-                data-assignment-id="${assignmentId}"
-                data-goal-id="${m.goal_id}" />
+                data-mapping-id="${this.escapeHtml(String(m.id))}" 
+                data-assignment-id="${this.escapeHtml(String(assignmentId))}"
+                data-goal-id="${this.escapeHtml(String(m.goal_id))}" />
               Primary
             </label>
             <button class="btn small mapping-remove-btn" 
-              data-assignment-id="${assignmentId}" 
-              data-goal-id="${m.goal_id}">Remove</button>
+              data-assignment-id="${this.escapeHtml(String(assignmentId))}" 
+              data-goal-id="${this.escapeHtml(String(m.goal_id))}">Remove</button>
           </div>
         </div>
       `).join('');
@@ -1700,7 +1711,7 @@ export class ProgressGridV2 {
     dialog.innerHTML = `
       <div class="modal card" style="max-width: 600px;">
         <div class="card-header">
-          <h3>Add Goals to "${assignment.title}"</h3>
+          <h3>Add Goals to "${this.escapeHtml(assignment.title)}"</h3>
           <button class="btn small" id="closeAddGoalsDialog">✗ Close</button>
         </div>
         <div style="padding: 16px;">
@@ -1711,13 +1722,13 @@ export class ProgressGridV2 {
               const alreadyMapped = existingGoalIds.has(g.id);
               return `
                 <label class="mapping-add-goal-item ${alreadyMapped ? 'disabled' : ''}">
-                  <input type="checkbox" value="${g.id}" ${alreadyMapped ? 'disabled' : ''} 
-                    data-student-code="${g.student_code}" 
-                    data-goal-code="${g.code}" />
+                  <input type="checkbox" value="${this.escapeHtml(String(g.id))}" ${alreadyMapped ? 'disabled' : ''} 
+                    data-student-code="${this.escapeHtml(g.student_code || '')}" 
+                    data-goal-code="${this.escapeHtml(g.code || '')}" />
                   <div class="mapping-goal-info">
-                    <strong>${g.student_code || 'Unknown'} - ${g.code}</strong>
-                    <div class="subtle">${g.desc || ''}</div>
-                    <div class="badge">${g.goal_area || 'Uncategorized'}</div>
+                    <strong>${this.escapeHtml(g.student_code || 'Unknown')} - ${this.escapeHtml(g.code || '')}</strong>
+                    <div class="subtle">${this.escapeHtml(g.desc || '')}</div>
+                    <div class="badge">${this.escapeHtml(g.goal_area || 'Uncategorized')}</div>
                   </div>
                   ${alreadyMapped ? '<span class="subtle">Already mapped</span>' : ''}
                 </label>
