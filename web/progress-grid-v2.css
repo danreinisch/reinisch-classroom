@@ -2,6 +2,19 @@
    IEP Progress Grid V2 - Styles
    ============================================================================ */
 
+/* Accessibility: Screen reader only content */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
 /* Filter Bar */
 .progress-grid-v2-filters {
   display: grid;

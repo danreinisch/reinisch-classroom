@@ -1020,10 +1020,21 @@ export class ProgressGridV2 {
     // Create editor
     const editor = document.createElement('div');
     editor.className = 'inline-editor';
+    editor.setAttribute('role', 'group');
+    editor.setAttribute('aria-label', `Edit progress for ${student_code} ${goal_code} on ${date}`);
     editor.innerHTML = `
-      <input type="number" min="0" max="100" step="1" value="${currentValue || ''}" class="editor-input" />
-      <button class="editor-save" title="Save">✓</button>
-      <button class="editor-cancel" title="Cancel">✗</button>
+      <input 
+        type="number" 
+        min="0" 
+        max="100" 
+        step="1" 
+        value="${currentValue || ''}" 
+        class="editor-input"
+        aria-label="Progress value (0-100)"
+        aria-describedby="editor-hint" />
+      <button class="editor-save" title="Save" aria-label="Save progress value">✓</button>
+      <button class="editor-cancel" title="Cancel" aria-label="Cancel editing">✗</button>
+      <span id="editor-hint" class="sr-only">Use arrow keys to adjust value by 1, Shift+arrow to adjust by 5, Enter to save, Escape to cancel</span>
     `;
     
     // Replace cell content
