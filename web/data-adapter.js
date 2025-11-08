@@ -589,6 +589,74 @@ const local = {
     // Real implementation happens in remote adapter
     return { success: true, inserted_count: 0, note: 'Local mode stub - use remote for automation' };
   },
+
+  // ============================================================================
+  // Phases 6-8: Saved Views (Local fallback using localStorage)
+  // ============================================================================
+  async listSavedViews(userId) {
+    const key = `savedViews_${userId}`;
+    return store.get(key, []);
+  },
+
+  async getSavedView(userId, viewId) {
+    const views = store.get(`savedViews_${userId}`, []);
+    return views.find(v => v.id === viewId) || null;
+  },
+
+  async createSavedView(userId, { name, config, is_default = false }) {
+    const key = `savedViews_${userId}`;
+    const views = store.get(key, []);
+    
+    // If setting as default, unset other defaults
+    if (is_default) {
+      views.forEach(v => v.is_default = false);
+    }
+    
+    const newView = {
+      id: 'view_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9),
+      user_id: userId,
+      name,
+      config,
+      is_default,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    
+    views.push(newView);
+    store.set(key, views);
+    return newView;
+  },
+
+  async updateSavedView(userId, viewId, { name, config, is_default }) {
+    const key = `savedViews_${userId}`;
+    const views = store.get(key, []);
+    const view = views.find(v => v.id === viewId);
+    
+    if (!view) {
+      throw new Error('View not found');
+    }
+    
+    // If setting as default, unset other defaults
+    if (is_default) {
+      views.forEach(v => v.is_default = false);
+    }
+    
+    if (name !== undefined) view.name = name;
+    if (config !== undefined) view.config = config;
+    if (is_default !== undefined) view.is_default = is_default;
+    view.updated_at = new Date().toISOString();
+    
+    store.set(key, views);
+    return view;
+  },
+
+  async deleteSavedView(userId, viewId) {
+    const key = `savedViews_${userId}`;
+    const views = store.get(key, []);
+    const filtered = views.filter(v => v.id !== viewId);
+    store.set(key, filtered);
+    return true;
+  },
 };
 
 const remote = {
@@ -1609,6 +1677,139 @@ const remote = {
       if (error) throw error;
       
       return data;
+    });
+  },
+
+  // ============================================================================
+  // Phases 6-8: Saved Views (Remote using Supabase)
+  // ============================================================================
+  async listSavedViews(userId) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+    
+    return await withRetry(async () => {
+      console.log('[saved-views] listSavedViews (remote)', { userId });
+      
+      const { data, error } = await supabase
+        .from('progress_saved_views')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      return data || [];
+    });
+  },
+
+  async getSavedView(userId, viewId) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+    
+    return await withRetry(async () => {
+      console.log('[saved-views] getSavedView (remote)', { userId, viewId });
+      
+      const { data, error } = await supabase
+        .from('progress_saved_views')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('id', viewId)
+        .single();
+      
+      if (error) {
+        if (error.code === 'PGRST116') return null; // Not found
+        throw error;
+      }
+      
+      return data;
+    });
+  },
+
+  async createSavedView(userId, { name, config, is_default = false }) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+    
+    return await withRetry(async () => {
+      console.log('[saved-views] createSavedView (remote)', { userId, name, is_default });
+      
+      // If setting as default, unset other defaults first
+      if (is_default) {
+        await supabase
+          .from('progress_saved_views')
+          .update({ is_default: false })
+          .eq('user_id', userId)
+          .eq('is_default', true);
+      }
+      
+      const { data, error } = await supabase
+        .from('progress_saved_views')
+        .insert({
+          user_id: userId,
+          name,
+          config,
+          is_default
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      return data;
+    });
+  },
+
+  async updateSavedView(userId, viewId, { name, config, is_default }) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+    
+    return await withRetry(async () => {
+      console.log('[saved-views] updateSavedView (remote)', { userId, viewId });
+      
+      // If setting as default, unset other defaults first
+      if (is_default) {
+        await supabase
+          .from('progress_saved_views')
+          .update({ is_default: false })
+          .eq('user_id', userId)
+          .eq('is_default', true)
+          .neq('id', viewId);
+      }
+      
+      const updates = {};
+      if (name !== undefined) updates.name = name;
+      if (config !== undefined) updates.config = config;
+      if (is_default !== undefined) updates.is_default = is_default;
+      
+      const { data, error } = await supabase
+        .from('progress_saved_views')
+        .update(updates)
+        .eq('user_id', userId)
+        .eq('id', viewId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      return data;
+    });
+  },
+
+  async deleteSavedView(userId, viewId) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+    
+    return await withRetry(async () => {
+      console.log('[saved-views] deleteSavedView (remote)', { userId, viewId });
+      
+      const { error } = await supabase
+        .from('progress_saved_views')
+        .delete()
+        .eq('user_id', userId)
+        .eq('id', viewId);
+      
+      if (error) throw error;
+      
+      return true;
     });
   }
 };

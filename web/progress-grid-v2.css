@@ -891,4 +891,194 @@
   }
 }
 
+/* ============================================================================
+   Phase 6-8: Saved Views, Advanced Filters, Risk Indicators, Rollups
+   ============================================================================ */
+
+/* Saved Views */
+.filter-select {
+  padding: 6px 10px;
+  font-size: 13px;
+  border: 1px solid var(--line, #333);
+  border-radius: 4px;
+  background: var(--bg, #1a1a1a);
+  color: var(--fg, #fff);
+  cursor: pointer;
+}
+
+.filter-select:focus {
+  outline: none;
+  border-color: var(--accent, #22c55e);
+}
+
+/* Advanced Filters */
+.filter-number-input {
+  padding: 6px 10px;
+  font-size: 13px;
+  border: 1px solid var(--line, #333);
+  border-radius: 4px;
+  background: var(--bg, #1a1a1a);
+  color: var(--fg, #fff);
+  width: 80px;
+}
+
+.filter-number-input:focus {
+  outline: none;
+  border-color: var(--accent, #22c55e);
+}
+
+/* Granularity Toggles (Rollups) */
+.granularity-toggles {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.granularity-toggle {
+  padding: 6px 12px;
+  font-size: 12px;
+  border: 1px solid var(--line, #333);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--fg, #fff);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.granularity-toggle:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--accent, #22c55e);
+}
+
+.granularity-toggle.active {
+  background: var(--accent, #22c55e);
+  color: #000;
+  font-weight: 600;
+  border-color: var(--accent, #22c55e);
+}
+
+/* Risk Indicators */
+.risk-indicator {
+  font-size: 14px;
+  cursor: help;
+  display: inline-block;
+}
+
+.risk-indicator.risk-red {
+  filter: drop-shadow(0 0 2px rgba(239, 68, 68, 0.5));
+}
+
+.risk-indicator.risk-amber {
+  filter: drop-shadow(0 0 2px rgba(251, 191, 36, 0.5));
+}
+
+.risk-indicator.risk-green {
+  filter: drop-shadow(0 0 2px rgba(34, 197, 94, 0.5));
+}
+
+/* Risk columns */
+.col-risk,
+.col-last-data-age,
+.col-delta-target {
+  text-align: center;
+  font-size: 12px;
+}
+
+.col-delta-target.delta-positive {
+  color: var(--success, #22c55e);
+}
+
+.col-delta-target.delta-negative {
+  color: var(--danger, #ef4444);
+}
+
+/* Keyboard Navigation & Accessibility */
+.progress-grid-v2-table th:focus,
+.progress-grid-v2-table td.editable:focus,
+.quarter-toggle:focus,
+.granularity-toggle:focus,
+.filter-select:focus,
+.btn:focus {
+  outline: 2px solid var(--accent, #22c55e);
+  outline-offset: 2px;
+}
+
+.collapse-icon:focus {
+  outline: 2px solid var(--accent, #22c55e);
+  outline-offset: 1px;
+  border-radius: 2px;
+}
+
+/* Focus visible for keyboard navigation */
+*:focus-visible {
+  outline: 2px solid var(--accent, #22c55e);
+  outline-offset: 2px;
+}
+
+/* ARIA live regions */
+[aria-live] {
+  position: relative;
+}
+
+/* Ensure tooltips are accessible */
+[title] {
+  position: relative;
+}
+
+/* Screen reader announcements */
+.grid-loading,
+.grid-error,
+.grid-empty {
+  padding: 24px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--muted, #888);
+}
+
+/* Print styles for PDF export */
+@media print {
+  .progress-grid-v2-filters,
+  .filter-actions,
+  .scroll-hint {
+    display: none !important;
+  }
+  
+  .progress-grid-v2-table {
+    font-size: 8pt;
+    border-collapse: collapse;
+  }
+  
+  .progress-grid-v2-table th,
+  .progress-grid-v2-table td {
+    border: 1px solid #333;
+    padding: 4px;
+  }
+  
+  .area-header {
+    page-break-after: avoid;
+    page-break-inside: avoid;
+  }
+  
+  .data-row {
+    page-break-inside: avoid;
+  }
+}
+
+/* Responsive adjustments for Phase 6-8 */
+@media (max-width: 768px) {
+  .progress-grid-v2-filters {
+    grid-template-columns: 1fr;
+  }
+  
+  .filter-section {
+    width: 100%;
+  }
+  
+  .col-risk,
+  .col-last-data-age,
+  .col-delta-target {
+    font-size: 11px;
+  }
+}
+
 
