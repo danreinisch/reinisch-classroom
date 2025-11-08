@@ -1965,6 +1965,28 @@
     const qsa = s => Array.from(document.querySelectorAll(s));
     const on = (sel, evt, fn) => { const el = document.querySelector(sel); if (el) el.addEventListener(evt, fn); };
 
+    /**
+     * Phase 2: Helper to compute student portal base path
+     * Supports both /site/student/ and /student/ deployments
+     * @param {string} code - Student code
+     * @param {string} [name] - Optional student name
+     * @returns {string} Full student portal URL with auto-login params
+     */
+    function getStudentPortalURL(code, name = null) {
+      // Detect if we're in a /site/ deployment by checking current pathname
+      const currentPath = window.location.pathname;
+      const basePath = currentPath.includes('/site/') ? '/site/student/' : '/student/';
+      
+      // Build URL with auto-login parameters
+      let url = `${basePath}?auto=1&code=${encodeURIComponent(code)}`;
+      if (name) {
+        url += `&name=${encodeURIComponent(name)}`;
+      }
+      
+      console.log('[portal-auth] Student portal URL:', url);
+      return url;
+    }
+
     function showTeacher(){ 
       const view = qs('#view-teacher'); 
       if (view) view.style.display='grid'; 
@@ -2173,11 +2195,40 @@
         
         updateUserChip();
         
+        // Phase 2: Close modal before redirect to prevent visual glitches
         const modal = qs('#studentSignInModal');
-        if (modal) modal.classList.remove('show');
+        if (modal) {
+          modal.classList.remove('show');
+          console.log('[portal-auth] Student sign-in modal closed');
+        }
         
-        // Redirect to student portal with auto-login parameters (no /site prefix)
-        window.location.href = `/student/?auto=1&code=${encodeURIComponent(code)}`;
+        // Phase 2: Use helper to build student portal URL with correct base path
+        try {
+          const studentPortalURL = getStudentPortalURL(code, studentName);
+          
+          // Small delay to ensure modal close animation completes
+          setTimeout(() => {
+            try {
+              window.location.href = studentPortalURL;
+            } catch (redirectErr) {
+              // Phase 6: Show explicit error if redirect fails
+              console.error('[portal-auth] Redirect failed:', redirectErr);
+              if (msgEl) {
+                msgEl.innerHTML = '<span style="color:#fecaca">Navigation failed. Please click <a href="' + 
+                  studentPortalURL + '" style="color:#22c55e">here</a> to continue.</span>';
+              }
+              // Reopen modal to show error
+              if (modal) modal.classList.add('show');
+            }
+          }, 100);
+        } catch (urlErr) {
+          // Phase 6: Handle URL construction failure
+          console.error('[portal-auth] Failed to construct URL:', urlErr);
+          if (msgEl) {
+            msgEl.innerHTML = '<span style="color:#fecaca">Failed to prepare redirect. Please try again.</span>';
+          }
+          if (modal) modal.classList.add('show');
+        }
       } else {
         // Show appropriate error message
         if (rpcError) {
@@ -2349,16 +2400,20 @@
       }
     });
     
-    // Student Portal button: intercept click if not signed in
+    // Phase 2: Student Portal button - use dynamic path detection
     on('#btnStudent', 'click', (e) => {
+      e.preventDefault();  // Always prevent default, we'll handle navigation
+      
       const auth = getAuth();
       if (!auth || auth.role !== 'student') {
         // Not signed in as student, show sign-in modal
-        e.preventDefault();
         const modal = qs('#signInModal');
         if (modal) modal.classList.add('show');
+      } else {
+        // Signed in as student, navigate to portal with correct path
+        const studentPortalURL = getStudentPortalURL(auth.code, auth.name);
+        window.location.href = studentPortalURL;
       }
-      // If signed in as student, let the link navigate naturally
     });
     
     // Initialize: Check teacher session, then check auth and show sign-in modal if needed
@@ -7038,7 +7093,7 @@
           <div style="margin-bottom:16px">
             <div style="font-weight:700;margin-bottom:8px">Quick Actions</div>
             <div style="display:flex;flex-direction:column;gap:8px">
-              <button class="btn primary" onclick="window.open('/student/?code=${code}', '_blank')">
+              <button class="btn primary" onclick="window.open(getStudentPortalURL('${code}'), '_blank')">
                 🚀 Open Student Portal
               </button>
               <button class="btn" onclick="window.location.href='#addProgress-${code}'">
@@ -7061,7 +7116,9 @@
   };
   
   window.shareStudentLink = function(code) {
-    const link = `${window.location.origin}/student/?code=${code}`;
+    // Phase 2: Use dynamic path helper for student portal links
+    const portalURL = getStudentPortalURL(code);
+    const link = `${window.location.origin}${portalURL}`;
     navigator.clipboard.writeText(link).then(() => {
       addNotif(`Link copied to clipboard: ${link}`, { type: 'success' });
     }).catch(() => {
