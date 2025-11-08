@@ -1097,7 +1097,7 @@
           <input 
             type="text" 
             id="studentSearchInput" 
-            placeholder="Search by student code, last name, or class..." 
+            placeholder="Search by student code..." 
             style="width:100%;max-width:400px"
           />
         </div>
@@ -1107,8 +1107,6 @@
             <thead>
               <tr>
                 <th>Code</th>
-                <th>Name</th>
-                <th>Grade</th>
                 <th>Classes</th>
                 <th>Goals</th>
                 <th>Actions</th>
@@ -1116,7 +1114,7 @@
             </thead>
             <tbody id="studentManagerList">
               <tr>
-                <td colspan="6" class="subtle" style="text-align:center;padding:20px">
+                <td colspan="4" class="subtle" style="text-align:center;padding:20px">
                   Loading students...
                 </td>
               </tr>
@@ -1492,47 +1490,30 @@
         <div id="addStudentModalTitle">Add Student - Step 1: Student Info</div>
       </div>
       
-      <!-- Step 1: Student Info -->
+      <!-- Step 1: Student Code & Password -->
       <div id="studentStep1" class="student-wizard-step">
-        <div class="grid-iep">
-          <div>
-            <label>Student Code* <input type="text" id="studentCode" placeholder="S001" required /></label>
-            <label>First Name* <input type="text" id="studentFirstName" required /></label>
-            <label>Last Name* <input type="text" id="studentLastName" required /></label>
-            <label>Preferred Name <input type="text" id="studentPreferredName" /></label>
-            <label>Grade* 
-              <select id="studentGrade" required>
-                <option value="">Select Grade</option>
-                <option value="6">6</option>
-                <option value="7">7</option>
-                <option value="8">8</option>
-                <option value="9">9</option>
-                <option value="10">10</option>
-                <option value="11">11</option>
-                <option value="12">12</option>
-              </select>
-            </label>
+        <div style="max-width:500px">
+          <label>Student Code* 
+            <input type="text" id="studentCode" placeholder="S001" required />
+            <div class="subtle" style="font-size:12px;margin-top:4px">Unique identifier for the student (e.g., S001, S002)</div>
+          </label>
+          
+          <label style="margin-top:16px">Initial Password* 
+            <div style="position:relative">
+              <input type="text" id="studentPassword" required />
+              <button type="button" class="btn small" id="btnCopyPassword" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);padding:4px 8px">📋</button>
+            </div>
+            <div class="subtle" style="font-size:12px;margin-top:4px">Default: {code}! (e.g., S001!). Editable.</div>
+          </label>
+          
+          <!-- Password strength indicator -->
+          <div id="passwordStrengthIndicator" style="margin-top:8px;display:none">
+            <div style="font-size:12px;margin-bottom:4px">Password strength:</div>
+            <div style="display:flex;gap:4px;height:4px;background:rgba(255,255,255,0.1);border-radius:2px">
+              <div id="strengthBar" style="height:100%;border-radius:2px;transition:width 0.3s, background 0.3s"></div>
+            </div>
+            <div id="strengthText" style="font-size:11px;margin-top:4px" class="subtle"></div>
           </div>
-          <div>
-            <label>Date of Birth <input type="date" id="studentDOB" /></label>
-            <label>Email <input type="email" id="studentEmail" /></label>
-            <label>Password 
-              <div style="position:relative">
-                <input type="text" id="studentPassword" />
-                <button type="button" class="btn small" id="btnCopyPassword" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);padding:4px 8px">📋</button>
-              </div>
-              <div class="subtle" style="font-size:12px;margin-top:4px">Default: [code]! (e.g., S001!)</div>
-            </label>
-            <label>Notes <textarea id="studentNotes" rows="3"></textarea></label>
-          </div>
-        </div>
-        
-        <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--line)">
-          <div style="font-weight:800;margin-bottom:8px">Guardians</div>
-          <div id="guardiansContainer">
-            <!-- Guardian entries will be added here -->
-          </div>
-          <button type="button" class="btn small" id="btnAddGuardian" style="margin-top:8px">+ Add Guardian</button>
         </div>
         
         <div id="step1Error" style="color:#fca5a5;margin-top:12px;display:none"></div>
@@ -1593,30 +1574,11 @@
     <div class="modal card" style="max-width:900px">
       <div class="card-header"><div>Edit Student</div></div>
       
-      <div class="grid-iep">
-        <div>
-          <label>Student Code <input type="text" id="editStudentCode" disabled style="opacity:0.6" /></label>
-          <label>First Name <input type="text" id="editStudentFirstName" /></label>
-          <label>Last Name <input type="text" id="editStudentLastName" /></label>
-          <label>Preferred Name <input type="text" id="editStudentPreferredName" /></label>
-          <label>Grade 
-            <select id="editStudentGrade">
-              <option value="">Select Grade</option>
-              <option value="6">6</option>
-              <option value="7">7</option>
-              <option value="8">8</option>
-              <option value="9">9</option>
-              <option value="10">10</option>
-              <option value="11">11</option>
-              <option value="12">12</option>
-            </select>
-          </label>
-        </div>
-        <div>
-          <label>Date of Birth <input type="date" id="editStudentDOB" /></label>
-          <label>Email <input type="email" id="editStudentEmail" /></label>
-          <label>Notes <textarea id="editStudentNotes" rows="3"></textarea></label>
-        </div>
+      <div style="max-width:500px;margin-bottom:16px">
+        <label>Student Code 
+          <input type="text" id="editStudentCode" disabled style="opacity:0.6" />
+          <div class="subtle" style="font-size:12px;margin-top:4px">Code cannot be changed after creation</div>
+        </label>
       </div>
       
       <div style="margin-top:16px">
@@ -4314,16 +4276,14 @@
       if (searchInput && searchInput.value) {
         const search = searchInput.value.toLowerCase();
         students = students.filter(s => 
-          s.code.toLowerCase().includes(search) ||
-          (s.last_name || '').toLowerCase().includes(search) ||
-          (s.first_name || '').toLowerCase().includes(search)
+          s.code.toLowerCase().includes(search)
         );
       }
       
       if (students.length === 0) {
         tbody.innerHTML = `
           <tr>
-            <td colspan="6" class="subtle" style="text-align:center;padding:20px">
+            <td colspan="4" class="subtle" style="text-align:center;padding:20px">
               No students found. Click "Add Student" to create one.
             </td>
           </tr>`;
@@ -4331,12 +4291,9 @@
       }
       
       tbody.innerHTML = students.map(s => {
-        const displayName = s.preferred_name || `${s.first_name || ''} ${s.last_name || ''}`.trim() || s.name || s.code;
         return `
           <tr>
             <td><strong>${s.code}</strong></td>
-            <td>${displayName}</td>
-            <td>${s.grade || '-'}</td>
             <td>${s.classes_count || 0}</td>
             <td>${s.goals_count || 0}</td>
             <td>
@@ -4365,18 +4322,33 @@
     function openAddStudentModal() {
       console.log('[student-create] Opening add student modal');
       studentManagerState.currentStep = 1;
-      studentManagerState.guardians = [];
       studentManagerState.goals = [];
       
       // Reset form
       resetAddStudentForm();
       
-      // Set default password
+      // Set default password and update on code change
       const codeInput = qs('#studentCode');
       const passwordInput = qs('#studentPassword');
       if (codeInput && passwordInput) {
-        codeInput.addEventListener('input', () => {
-          passwordInput.value = codeInput.value + '!';
+        // Remove old listeners by cloning the element
+        const newCodeInput = codeInput.cloneNode(true);
+        codeInput.parentNode.replaceChild(newCodeInput, codeInput);
+        
+        newCodeInput.addEventListener('input', () => {
+          passwordInput.value = newCodeInput.value + '!';
+          updatePasswordStrength(passwordInput.value);
+        });
+      }
+      
+      // Add password strength indicator
+      const passwordInputFinal = qs('#studentPassword');
+      if (passwordInputFinal) {
+        const newPasswordInput = passwordInputFinal.cloneNode(true);
+        passwordInputFinal.parentNode.replaceChild(newPasswordInput, passwordInputFinal);
+        
+        newPasswordInput.addEventListener('input', () => {
+          updatePasswordStrength(newPasswordInput.value);
         });
       }
       
@@ -4390,16 +4362,54 @@
       qs('#addStudentModal').style.display = 'flex';
     }
     
+    // Password strength checker
+    function updatePasswordStrength(password) {
+      const indicator = qs('#passwordStrengthIndicator');
+      const strengthBar = qs('#strengthBar');
+      const strengthText = qs('#strengthText');
+      
+      if (!password || password.length === 0) {
+        indicator.style.display = 'none';
+        return;
+      }
+      
+      indicator.style.display = 'block';
+      
+      let strength = 0;
+      let text = 'Weak';
+      let color = '#ef4444'; // red
+      
+      if (password.length >= 8) strength++;
+      if (password.length >= 12) strength++;
+      if (/[a-z]/.test(password) && /[A-Z]/.test(password)) strength++;
+      if (/[0-9]/.test(password)) strength++;
+      if (/[^a-zA-Z0-9]/.test(password)) strength++;
+      
+      if (strength >= 4) {
+        text = 'Strong';
+        color = '#22c55e'; // green
+      } else if (strength >= 2) {
+        text = 'Moderate';
+        color = '#eab308'; // yellow
+      }
+      
+      strengthBar.style.width = (strength * 20) + '%';
+      strengthBar.style.background = color;
+      strengthText.textContent = text;
+    }
+    
     // Reset Add Student form
     function resetAddStudentForm() {
-      ['studentCode', 'studentFirstName', 'studentLastName', 'studentPreferredName', 
-       'studentGrade', 'studentDOB', 'studentEmail', 'studentPassword', 'studentNotes'].forEach(id => {
+      ['studentCode', 'studentPassword'].forEach(id => {
         const el = qs('#' + id);
         if (el) el.value = '';
       });
-      qs('#guardiansContainer').innerHTML = '';
       qs('#goalsContainer').innerHTML = '';
       qs('#confirmAccurate').checked = false;
+      
+      // Hide password strength indicator
+      const strengthIndicator = qs('#passwordStrengthIndicator');
+      if (strengthIndicator) strengthIndicator.style.display = 'none';
     }
     
     // Update wizard step
@@ -4415,7 +4425,7 @@
       qs('#studentStep' + step).style.display = 'block';
       
       // Update title
-      const titles = ['Student Info', 'Enrollments', 'Initial Goals', 'Review & Create'];
+      const titles = ['Student Code & Password', 'Enrollments', 'Initial Goals (Optional)', 'Review & Create'];
       qs('#addStudentModalTitle').textContent = `Add Student - Step ${step}: ${titles[step - 1]}`;
       
       // Update buttons
@@ -4460,12 +4470,15 @@
     // Validate Step 1
     function validateStep1() {
       const code = qs('#studentCode').value.trim();
-      const firstName = qs('#studentFirstName').value.trim();
-      const lastName = qs('#studentLastName').value.trim();
-      const grade = qs('#studentGrade').value;
+      const password = qs('#studentPassword').value.trim();
       
-      if (!code || !firstName || !lastName || !grade) {
-        showStepError(1, 'Please fill in all required fields (Code, First Name, Last Name, Grade)');
+      if (!code) {
+        showStepError(1, 'Please enter a student code');
+        return false;
+      }
+      
+      if (!password) {
+        showStepError(1, 'Please enter a password');
         return false;
       }
       
@@ -4619,19 +4632,6 @@
       if (!summary) return;
       
       const code = qs('#studentCode').value;
-      const firstName = qs('#studentFirstName').value;
-      const lastName = qs('#studentLastName').value;
-      const preferredName = qs('#studentPreferredName').value;
-      const grade = qs('#studentGrade').value;
-      const dob = qs('#studentDOB').value;
-      const email = qs('#studentEmail').value;
-      const notes = qs('#studentNotes').value;
-      
-      // Collect guardians
-      const guardians = Array.from(qsa('.guardian-name')).map((nameEl, i) => ({
-        name: nameEl.value,
-        contact: qsa('.guardian-contact')[i]?.value || ''
-      })).filter(g => g.name);
       
       // Collect selected classes
       const selectedClasses = Array.from(qsa('.class-checkbox:checked')).map(cb => {
@@ -4652,19 +4652,7 @@
         <div style="margin-bottom:12px">
           <div style="font-weight:800;margin-bottom:6px">Student Information</div>
           <div><strong>Code:</strong> ${code}</div>
-          <div><strong>Name:</strong> ${preferredName || `${firstName} ${lastName}`}</div>
-          <div><strong>Grade:</strong> ${grade}</div>
-          ${dob ? `<div><strong>DOB:</strong> ${dob}</div>` : ''}
-          ${email ? `<div><strong>Email:</strong> ${email}</div>` : ''}
-          ${notes ? `<div><strong>Notes:</strong> ${notes}</div>` : ''}
         </div>
-        
-        ${guardians.length > 0 ? `
-          <div style="margin-bottom:12px">
-            <div style="font-weight:800;margin-bottom:6px">Guardians (${guardians.length})</div>
-            ${guardians.map(g => `<div>• ${g.name} - ${g.contact}</div>`).join('')}
-          </div>
-        ` : ''}
         
         ${selectedClasses.length > 0 ? `
           <div style="margin-bottom:12px">
@@ -4702,21 +4690,10 @@
       try {
         console.log('[student-create] Creating student');
         
-        // Collect student data
+        // Collect student data (code-only)
         const studentData = {
           code: qs('#studentCode').value.trim(),
-          first_name: qs('#studentFirstName').value.trim(),
-          last_name: qs('#studentLastName').value.trim(),
-          preferred_name: qs('#studentPreferredName').value.trim() || null,
-          grade: qs('#studentGrade').value,
-          dob: qs('#studentDOB').value || null,
-          email: qs('#studentEmail').value.trim() || null,
-          notes: qs('#studentNotes').value.trim() || null,
-          password_hash: qs('#studentPassword').value || (qs('#studentCode').value + '!'),
-          guardians: Array.from(qsa('.guardian-name')).map((nameEl, i) => ({
-            name: nameEl.value,
-            contact: qsa('.guardian-contact')[i]?.value || ''
-          })).filter(g => g.name)
+          password_hash: qs('#studentPassword').value || (qs('#studentCode').value + '!')
         };
         
         // Collect enrollments

@@ -92,18 +92,11 @@ const local = {
       throw new Error(`Student code ${student.code} already exists`);
     }
     
-    // Create student
+    // Enforce code-only identity: only accept code and password_hash
+    // Ignore any PII fields even if present in payload
     const newStudent = {
       code: student.code,
-      name: student.preferred_name || `${student.first_name} ${student.last_name}`,
-      first_name: student.first_name,
-      last_name: student.last_name,
-      preferred_name: student.preferred_name || null,
-      grade: student.grade,
-      dob: student.dob || null,
-      email: student.email || null,
-      guardians: student.guardians || [],
-      notes: student.notes || null,
+      name: student.code, // Use code as name for backward compatibility
       password: student.password_hash, // In local mode, store plaintext (hashed in remote)
       created_at: new Date().toISOString()
     };

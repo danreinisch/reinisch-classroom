@@ -131,6 +131,13 @@ const FEATURES = {
     key: FEATURE_PREFIX + 'student_manager',
     default: false,
     description: 'Enable Student Manager in Teacher Center Data section for manual student creation with enrollments and IEP goals'
+  },
+  
+  // Student Manager: Code-Only Identity
+  studentCodeOnly: {
+    key: FEATURE_PREFIX + 'student_code_only',
+    default: true,
+    description: 'Restrict student identity to code-only (no PII fields collected, stored, or displayed in Student Manager)'
   }
 };
 
