@@ -1152,20 +1152,137 @@
 
   <!-- All Progress modal -->
   <div class="modal-backdrop" id="allModal">
-    <div class="modal card">
-      <div class="card-header"><div>All IEP Progress (All Students & Goals)</div></div>
-      <div class="table-wrap" style="max-height:60vh;overflow:auto">
-        <table class="table" id="allTable">
-          <thead><tr><th>Date</th><th>Student</th><th>Goal</th><th>Method</th><th>Percent</th><th>By</th><th>Notes</th></tr></thead>
-          <tbody></tbody>
-        </table>
+    <div class="modal card" style="max-width:95vw;width:1600px">
+      <div class="card-header">
+        <div>🎯 View All Progress - Grouped by Goal Area</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn small" id="allRefresh" title="Refresh data">🔄</button>
+          <button class="btn small" id="allClose">Close</button>
+        </div>
       </div>
-      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:10px">
-        <button class="btn small" id="allClose">Close</button>
-        <button class="btn small" id="allExport">Export CSV</button>
+      
+      <!-- Filters -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin:12px 0;padding:12px;background:rgba(255,255,255,.04);border-radius:8px">
+        <div>
+          <label style="font-size:13px;margin-bottom:4px">Goal Areas</label>
+          <div id="goalAreaFilters" style="max-height:120px;overflow-y:auto;display:flex;flex-direction:column;gap:4px">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+        <div>
+          <label style="font-size:13px;margin-bottom:4px">Classes</label>
+          <div id="classFilters" style="max-height:120px;overflow-y:auto;display:flex;flex-direction:column;gap:4px">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+        <div>
+          <label style="font-size:13px;margin-bottom:4px">Student Search</label>
+          <input type="text" id="studentSearchFilter" placeholder="Search student code or name..." style="padding:6px 8px;font-size:13px">
+        </div>
+        <div>
+          <label style="font-size:13px;margin-bottom:4px">Quarter</label>
+          <select id="quarterFilter" style="padding:6px 8px;font-size:13px">
+            <option value="current">Current Quarter</option>
+            <option value="Q1">Q1 (Jul-Sep)</option>
+            <option value="Q2">Q2 (Oct-Dec)</option>
+            <option value="Q3">Q3 (Jan-Mar)</option>
+            <option value="Q4">Q4 (Apr-Jun)</option>
+            <option value="all">All Time</option>
+          </select>
+        </div>
+      </div>
+      
+      <!-- Loading skeleton -->
+      <div id="pivotLoading" style="display:none;padding:20px;text-align:center">
+        <div style="background:rgba(255,255,255,.08);height:40px;border-radius:6px;margin-bottom:8px;animation:pulse 1.5s ease-in-out infinite"></div>
+        <div style="background:rgba(255,255,255,.08);height:40px;border-radius:6px;margin-bottom:8px;animation:pulse 1.5s ease-in-out infinite;animation-delay:0.2s"></div>
+        <div style="background:rgba(255,255,255,.08);height:40px;border-radius:6px;animation:pulse 1.5s ease-in-out infinite;animation-delay:0.4s"></div>
+      </div>
+      
+      <!-- Pivot grid container -->
+      <div id="pivotGridContainer" style="max-height:60vh;overflow:auto;border:1px solid var(--line);border-radius:8px">
+        <div id="pivotGrid">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+      
+      <!-- Export button -->
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px">
+        <button class="btn small" id="allExport" disabled title="CSV export coming soon" style="opacity:0.5;cursor:not-allowed">Export CSV (Coming Soon)</button>
       </div>
     </div>
   </div>
+
+  <style>
+    @keyframes pulse {
+      0%, 100% { opacity: 0.6; }
+      50% { opacity: 0.3; }
+    }
+    
+    .pivot-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    
+    .pivot-table th,
+    .pivot-table td {
+      padding: 8px 6px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+    }
+    
+    .pivot-table th {
+      background: var(--edge);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      font-weight: 800;
+      font-size: 12px;
+    }
+    
+    .pivot-table .date-col {
+      min-width: 80px;
+      text-align: center;
+    }
+    
+    .pivot-table .avg-col {
+      min-width: 80px;
+      text-align: center;
+      font-weight: 700;
+      background: rgba(34,197,94,.08);
+    }
+    
+    .pivot-table .goal-area-header {
+      background: linear-gradient(180deg, rgba(34,197,94,.15), rgba(34,197,94,.08));
+      font-weight: 900;
+      font-size: 14px;
+      padding: 12px 10px;
+      cursor: pointer;
+      user-select: none;
+    }
+    
+    .pivot-table .goal-area-header:hover {
+      background: linear-gradient(180deg, rgba(34,197,94,.22), rgba(34,197,94,.12));
+    }
+    
+    .pivot-table .goal-desc {
+      max-width: 300px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      cursor: help;
+    }
+    
+    .pivot-table tbody tr:hover {
+      background: rgba(255,255,255,.04);
+    }
+    
+    .pivot-value {
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+    }
+  </style>
 
   <!-- Import from Library modal -->
   <div class="modal-backdrop" id="importLibraryModal">
@@ -1522,39 +1639,320 @@
       addNotif(`Share link created for ${student_code}`, { student_code, token });
     });
 
-    // All progress modal
-    function openAllModal(){
-      const tbody = qs('#allTable tbody');
-      const progress = getProgress().slice().sort((a,b)=> (b.date||'').localeCompare(a.date||''));
-      const mapName = Object.fromEntries(STUDENTS.map(s=> [s.code, s.name||s.code]));
-      function goalLabel(code, gid){ const gs = localStore.get('iepGoals', {})[code]||[]; const g = gs.find(x=> (x.id===gid||x.code===gid)); return g ? (g.code||g.id) : gid; }
-      tbody.innerHTML = progress.map(p=>{
-        const sname = mapName[p.student_code] || p.student_code;
-        return `<tr>
-          <td>${fmtDate(p.date)}</td>
-          <td>${sname} (${p.student_code})</td>
-          <td>${goalLabel(p.student_code, p.goal_id)}</td>
-          <td>${p.method||'—'}</td>
-          <td>${p.percent!=null? (p.percent+'%'):'—'}</td>
-          <td>${p.by_name||'—'}</td>
-          <td>${(p.notes||'').replace(/</g,'&lt;')}</td>
-        </tr>`;
-      }).join('') || '<tr><td colspan="7" class="subtle">No progress entries.</td></tr>';
+    // ============================================================================
+    // Phase 1: Goal Progress Pivot Grid
+    // ============================================================================
+    
+    let pivotFilters = {
+      goalAreas: [],
+      classes: [],
+      studentSearch: '',
+      quarter: 'current'
+    };
+    
+    let pivotDebounceTimer = null;
+    
+    // Determine current quarter based on today's date
+    function getCurrentQuarter() {
+      const today = new Date();
+      const month = today.getMonth() + 1; // 1-12
+      if ([7, 8, 9].includes(month)) return 'Q1';
+      if ([10, 11, 12].includes(month)) return 'Q2';
+      if ([1, 2, 3].includes(month)) return 'Q3';
+      if ([4, 5, 6].includes(month)) return 'Q4';
+      return 'Q1'; // default
+    }
+    
+    // Get date range for quarter filter
+    function getQuarterDateRange(quarter) {
+      const today = new Date();
+      const month = today.getMonth() + 1;
+      const year = today.getFullYear();
+      const schoolYear = month >= 7 ? year : year - 1;
+      
+      if (quarter === 'current') {
+        quarter = getCurrentQuarter();
+      }
+      
+      if (quarter === 'all') {
+        return { startDate: null, endDate: null };
+      }
+      
+      const ranges = {
+        Q1: { start: [schoolYear, 7, 1], end: [schoolYear, 9, 30] },
+        Q2: { start: [schoolYear, 10, 1], end: [schoolYear, 12, 31] },
+        Q3: { start: [schoolYear + 1, 1, 1], end: [schoolYear + 1, 3, 31] },
+        Q4: { start: [schoolYear + 1, 4, 1], end: [schoolYear + 1, 6, 30] }
+      };
+      
+      const range = ranges[quarter];
+      if (!range) return { startDate: null, endDate: null };
+      
+      return {
+        startDate: new Date(range.start[0], range.start[1] - 1, range.start[2]).toISOString().split('T')[0],
+        endDate: new Date(range.end[0], range.end[1] - 1, range.end[2]).toISOString().split('T')[0]
+      };
+    }
+    
+    // Fetch progress data with current filters
+    async function fetchProgressData() {
+      console.log('[goal-progress-pivot] Fetching data with filters:', pivotFilters);
+      
+      const { startDate, endDate } = getQuarterDateRange(pivotFilters.quarter);
+      
+      const params = {
+        startDate,
+        endDate,
+        goalAreas: pivotFilters.goalAreas.length > 0 ? pivotFilters.goalAreas : null,
+        classCodes: pivotFilters.classes.length > 0 ? pivotFilters.classes : null
+      };
+      
+      try {
+        let data = await db.listGoalProgress(params);
+        
+        // Apply student search filter client-side
+        if (pivotFilters.studentSearch) {
+          const search = pivotFilters.studentSearch.toLowerCase();
+          data = data.filter(row => 
+            (row.student_code || '').toLowerCase().includes(search) ||
+            (row.student_name || '').toLowerCase().includes(search)
+          );
+        }
+        
+        console.log('[goal-progress-pivot] Fetched', data.length, 'rows');
+        return data;
+      } catch (err) {
+        console.error('[goal-progress-pivot] Error fetching data:', err);
+        return [];
+      }
+    }
+    
+    // Build pivot grid HTML
+    function buildPivotGrid(data) {
+      console.log('[goal-progress-pivot] Building grid with', data.length, 'rows');
+      
+      if (data.length === 0) {
+        return '<div style="padding:40px;text-align:center;color:var(--muted)">No progress data found for selected filters.</div>';
+      }
+      
+      // Extract unique dates (sorted ascending)
+      const uniqueDates = [...new Set(data.map(r => r.date))].sort();
+      console.log('[goal-progress-pivot] Unique dates:', uniqueDates.length);
+      
+      // Group by goal area, then by student + goal
+      const groupedByArea = {};
+      data.forEach(row => {
+        const area = row.goal_area || 'Uncategorized';
+        if (!groupedByArea[area]) groupedByArea[area] = [];
+        groupedByArea[area].push(row);
+      });
+      
+      // Build table
+      let html = '<table class="pivot-table"><thead><tr>';
+      html += '<th style="min-width:100px">Student</th>';
+      html += '<th style="min-width:100px">Goal Code</th>';
+      html += '<th style="min-width:250px">Goal Description</th>';
+      html += '<th style="min-width:80px">Class</th>';
+      
+      // Date columns
+      uniqueDates.forEach(date => {
+        html += `<th class="date-col">${fmtDate(date)}</th>`;
+      });
+      
+      html += '<th class="avg-col">Quarter Avg</th>';
+      html += '</tr></thead><tbody>';
+      
+      // Sort goal areas alphabetically
+      const sortedAreas = Object.keys(groupedByArea).sort();
+      
+      sortedAreas.forEach(area => {
+        const areaRows = groupedByArea[area];
+        
+        // Group by student + goal within area
+        const studentGoalMap = {};
+        areaRows.forEach(row => {
+          const key = `${row.student_code}|${row.goal_code}`;
+          if (!studentGoalMap[key]) {
+            studentGoalMap[key] = {
+              student_code: row.student_code,
+              student_name: row.student_name,
+              goal_code: row.goal_code,
+              goal_desc: row.goal_desc,
+              class_code: row.class_code,
+              measurements: {}
+            };
+          }
+          studentGoalMap[key].measurements[row.date] = row.value;
+        });
+        
+        // Area header row
+        const colspan = 4 + uniqueDates.length + 1;
+        html += `<tr><td colspan="${colspan}" class="goal-area-header">📁 ${area} (${Object.keys(studentGoalMap).length} goals)</td></tr>`;
+        
+        // Data rows
+        Object.values(studentGoalMap).forEach(item => {
+          // Calculate average
+          const values = Object.values(item.measurements).filter(v => v != null);
+          const avg = values.length > 0 ? Math.round(values.reduce((a, b) => a + b, 0) / values.length) : null;
+          
+          // Truncate goal description with tooltip
+          const truncatedDesc = item.goal_desc.length > 120 
+            ? item.goal_desc.substring(0, 120) + '...' 
+            : item.goal_desc;
+          
+          html += '<tr>';
+          html += `<td>${item.student_name}<br><span style="font-size:11px;color:var(--muted)">${item.student_code}</span></td>`;
+          html += `<td><span class="badge">${item.goal_code}</span></td>`;
+          html += `<td class="goal-desc" title="${item.goal_desc.replace(/"/g, '&quot;')}">${truncatedDesc}</td>`;
+          html += `<td>${item.class_code || '—'}</td>`;
+          
+          // Date columns
+          uniqueDates.forEach(date => {
+            const value = item.measurements[date];
+            html += `<td class="pivot-value">${value != null ? value + '%' : '—'}</td>`;
+          });
+          
+          // Quarter average
+          html += `<td class="avg-col pivot-value">${avg != null ? avg + '%' : '—'}</td>`;
+          html += '</tr>';
+        });
+      });
+      
+      html += '</tbody></table>';
+      return html;
+    }
+    
+    // Render pivot grid
+    async function renderPivotGrid() {
+      const loadingEl = qs('#pivotLoading');
+      const gridEl = qs('#pivotGrid');
+      
+      loadingEl.style.display = 'block';
+      gridEl.innerHTML = '';
+      
+      try {
+        const data = await fetchProgressData();
+        gridEl.innerHTML = buildPivotGrid(data);
+      } catch (err) {
+        console.error('[goal-progress-pivot] Render error:', err);
+        gridEl.innerHTML = '<div style="padding:20px;text-align:center;color:red">Error loading data. Check console.</div>';
+      } finally {
+        loadingEl.style.display = 'none';
+      }
+    }
+    
+    // Debounced render
+    function debouncedRenderPivotGrid() {
+      clearTimeout(pivotDebounceTimer);
+      pivotDebounceTimer = setTimeout(renderPivotGrid, 300);
+    }
+    
+    // Populate filter checkboxes
+    async function populateFilters() {
+      // Get all unique goal areas and classes from goals and students
+      const goalsMap = localStore.get('iepGoals', {});
+      const students = STUDENTS || [];
+      
+      const goalAreas = new Set();
+      const classes = new Set();
+      
+      // Extract goal areas
+      Object.values(goalsMap).forEach(studentGoals => {
+        studentGoals.forEach(goal => {
+          if (goal.goal_area) goalAreas.add(goal.goal_area);
+        });
+      });
+      
+      // Extract classes from students
+      students.forEach(student => {
+        if (student.class_id) {
+          // For now, use class_id as class name (can be improved)
+          classes.add(student.class_id);
+        }
+      });
+      
+      // Populate goal area checkboxes
+      const goalAreaEl = qs('#goalAreaFilters');
+      const sortedAreas = Array.from(goalAreas).sort();
+      goalAreaEl.innerHTML = sortedAreas.map(area => `
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer">
+          <input type="checkbox" value="${area}" class="goal-area-filter" />
+          <span>${area}</span>
+        </label>
+      `).join('') || '<span style="font-size:12px;color:var(--muted)">No goal areas defined</span>';
+      
+      // Populate class checkboxes (placeholder - needs actual class names)
+      const classEl = qs('#classFilters');
+      const sortedClasses = Array.from(classes).sort();
+      classEl.innerHTML = sortedClasses.map(cls => `
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer">
+          <input type="checkbox" value="${cls}" class="class-filter" />
+          <span>${cls}</span>
+        </label>
+      `).join('') || '<span style="font-size:12px;color:var(--muted)">No classes found</span>';
+      
+      // Attach event listeners
+      document.querySelectorAll('.goal-area-filter').forEach(cb => {
+        cb.addEventListener('change', e => {
+          if (e.target.checked) {
+            pivotFilters.goalAreas.push(e.target.value);
+          } else {
+            pivotFilters.goalAreas = pivotFilters.goalAreas.filter(a => a !== e.target.value);
+          }
+          debouncedRenderPivotGrid();
+        });
+      });
+      
+      document.querySelectorAll('.class-filter').forEach(cb => {
+        cb.addEventListener('change', e => {
+          if (e.target.checked) {
+            pivotFilters.classes.push(e.target.value);
+          } else {
+            pivotFilters.classes = pivotFilters.classes.filter(c => c !== e.target.value);
+          }
+          debouncedRenderPivotGrid();
+        });
+      });
+    }
+    
+    // Open modal
+    async function openAllModal(){
+      console.log('[goal-progress-pivot] Opening View All Progress modal');
+      
+      // Reset filters
+      pivotFilters = {
+        goalAreas: [],
+        classes: [],
+        studentSearch: '',
+        quarter: 'current'
+      };
+      
+      qs('#studentSearchFilter').value = '';
+      qs('#quarterFilter').value = 'current';
+      
+      await populateFilters();
+      await renderPivotGrid();
       openModal('#allModal');
     }
+    
+    // Event listeners
     qs('#allClose').addEventListener('click', ()=> closeModal('#allModal'));
     qs('#btnIEPAll').addEventListener('click', openAllModal);
+    qs('#allRefresh').addEventListener('click', renderPivotGrid);
+    
+    qs('#studentSearchFilter').addEventListener('input', e => {
+      pivotFilters.studentSearch = e.target.value;
+      debouncedRenderPivotGrid();
+    });
+    
+    qs('#quarterFilter').addEventListener('change', e => {
+      pivotFilters.quarter = e.target.value;
+      renderPivotGrid();
+    });
+    
+    // Old export functionality disabled for now
     qs('#allExport').addEventListener('click', ()=>{
-      const rows = [['Date','Student','Goal','Method','Percent','By','Notes']];
-      const progress = getProgress().slice().sort((a,b)=> (b.date||'').localeCompare(a.date||''));
-      const mapName = Object.fromEntries(STUDENTS.map(s=> [s.code, s.name||s.code]));
-      const goalLabel = (code, gid)=>{ const gs = localStore.get('iepGoals', {})[code]||[]; const g = gs.find(x=> (x.id===gid||x.code===gid)); return g ? (g.code||g.id) : gid; };
-      for (const p of progress){
-        rows.push([p.date||'', `${mapName[p.student_code]||p.student_code} (${p.student_code})`, goalLabel(p.student_code,p.goal_id), p.method||'', (p.percent!=null? p.percent:''), p.by_name||'', (p.notes||'').replace(/\n/g,' ')]);
-      }
-      const csv = rows.map(r=> r.map(f=> `"${String(f).replace(/"/g,'""')}"`).join(',')).join('\n');
-      const blob = new Blob([csv], { type:'text/csv;charset=utf-8;' });
-      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'iep_progress.csv'; a.click();
+      // Disabled - tooltip shows "Coming soon"
     });
 
     // Summary modal
@@ -3293,6 +3691,117 @@
     qs('#btnImportCSV').addEventListener('click', importCSV);
     qs('#btnSeedDemoClasses').addEventListener('click', seedDemoClasses);
     qs('#btnResetDemoClasses').addEventListener('click', resetDemoClasses);
+    
+    // ============================================================================
+    // Diagnostic Helper for Goal Progress
+    // ============================================================================
+    window.__diagnoseGoalProgress = async function() {
+      console.log('[goal-progress] Running diagnostics...');
+      
+      try {
+        const data = await db.listGoalProgress({ limit: 1000 });
+        const uniqueDates = [...new Set(data.map(r => r.date))].sort();
+        const goalAreas = [...new Set(data.map(r => r.goal_area))].sort();
+        
+        const result = {
+          totalRows: data.length,
+          distinctDates: uniqueDates.length,
+          dateRange: uniqueDates.length > 0 ? [uniqueDates[0], uniqueDates[uniqueDates.length - 1]] : null,
+          goalAreas,
+          sampleRow: data[0] || null,
+          uniqueStudents: [...new Set(data.map(r => r.student_code))].length,
+          uniqueGoals: [...new Set(data.map(r => r.goal_code))].length
+        };
+        
+        console.log('[goal-progress] Diagnostics result:', result);
+        return result;
+      } catch (err) {
+        console.error('[goal-progress] Diagnostics error:', err);
+        return { error: err.message };
+      }
+    };
+    
+    console.log('[goal-progress] Diagnostic helper available: window.__diagnoseGoalProgress()');
+    
+    // ============================================================================
+    // Seed Helper for Goal Progress Testing
+    // ============================================================================
+    window.__seedGoalProgressDemo = async function() {
+      console.log('[goal-progress] Seeding demo data...');
+      
+      try {
+        // First, ensure we have some goals with goal_area set
+        const goalsMap = localStore.get('iepGoals', {});
+        const hasGoals = Object.keys(goalsMap).length > 0;
+        
+        if (!hasGoals) {
+          console.warn('[goal-progress] No goals found. Please add some students and goals first.');
+          return { error: 'No goals found. Add students and goals first.' };
+        }
+        
+        // Add goal_area to existing goals if not set
+        let updated = false;
+        const goalAreas = ['Reading', 'Math', 'Writing', 'Social Skills', 'Communication'];
+        Object.keys(goalsMap).forEach((studentCode, idx) => {
+          goalsMap[studentCode].forEach((goal, gIdx) => {
+            if (!goal.goal_area) {
+              goal.goal_area = goalAreas[gIdx % goalAreas.length];
+              updated = true;
+            }
+          });
+        });
+        
+        if (updated) {
+          localStore.set('iepGoals', goalsMap);
+          console.log('[goal-progress] Updated goals with goal_area');
+        }
+        
+        // Generate sample progress entries
+        const today = new Date();
+        const entries = [];
+        
+        Object.keys(goalsMap).forEach(studentCode => {
+          goalsMap[studentCode].forEach(goal => {
+            // Generate 5-10 progress entries over the past 60 days
+            const numEntries = 5 + Math.floor(Math.random() * 6);
+            
+            for (let i = 0; i < numEntries; i++) {
+              const daysAgo = Math.floor(Math.random() * 60);
+              const date = new Date(today);
+              date.setDate(date.getDate() - daysAgo);
+              
+              const value = 50 + Math.floor(Math.random() * 40); // Random 50-90%
+              
+              entries.push({
+                goal_code: goal.code,
+                student_code: studentCode,
+                date: date.toISOString().split('T')[0],
+                value,
+                source: 'manual',
+                collected_by: 'Demo Seed'
+              });
+            }
+          });
+        });
+        
+        // Insert entries via data adapter
+        for (const entry of entries) {
+          await db.upsertGoalProgress(entry);
+        }
+        
+        console.log('[goal-progress] Seeded', entries.length, 'progress entries');
+        return { 
+          success: true, 
+          entriesCreated: entries.length,
+          studentsWithGoals: Object.keys(goalsMap).length
+        };
+      } catch (err) {
+        console.error('[goal-progress] Seed error:', err);
+        return { error: err.message };
+      }
+    };
+    
+    console.log('[goal-progress] Seed helper available: window.__seedGoalProgressDemo()');
   </script>
 </body>
 </html>
