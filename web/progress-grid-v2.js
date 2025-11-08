@@ -389,6 +389,7 @@ export class ProgressGridV2 {
           <button class="btn small" id="gridRefreshBtn">🔄 Refresh</button>
           <button class="btn small" id="gridExportBtn">📥 Export CSV</button>
           ${getFeatureFlag('progressEditing') ? '<button class="btn small primary" id="gridBulkAddBtn">➕ Bulk Add Progress</button>' : ''}
+          ${getFeatureFlag('progressAutoFromAssignments') ? '<button class="btn small" id="gridMappingBtn">⚙️ Assignment Mapping</button>' : ''}
         </div>
       </div>
     `;
@@ -766,6 +767,12 @@ export class ProgressGridV2 {
     const bulkAddBtn = containerEl.querySelector('#gridBulkAddBtn');
     if (bulkAddBtn) {
       bulkAddBtn.addEventListener('click', () => this.openBulkAddModal());
+    }
+    
+    // Mapping button (Phase 5)
+    const mappingBtn = containerEl.querySelector('#gridMappingBtn');
+    if (mappingBtn) {
+      mappingBtn.addEventListener('click', () => this.openMappingModal());
     }
     
     // Cell click for inline editing (Phase 4)
@@ -1469,6 +1476,315 @@ export class ProgressGridV2 {
     }
     this.bulkModalOpen = false;
     this.pendingBulkRows = [];
+  }
+
+  // ========================================================================
+  // Phase 5: Assignment Goal Mapping UI
+  // ========================================================================
+
+  async openMappingModal() {
+    console.log('[progress-mapping] Opening assignment-goal mapping modal');
+    
+    // Fetch assignments
+    const assignments = await this.db.listAssignments();
+    
+    // Create modal
+    const modal = document.createElement('div');
+    modal.className = 'modal-backdrop show';
+    modal.id = 'mappingModal';
+    modal.innerHTML = `
+      <div class="modal card" style="max-width: 1000px;">
+        <div class="card-header">
+          <h3>⚙️ Assignment → Goal Mapping</h3>
+          <button class="btn small" id="closeMappingModal">✗ Close</button>
+        </div>
+        <div class="mapping-modal-content">
+          <p class="subtle">Map assignments to IEP goals for automated progress tracking when submissions are graded.</p>
+          
+          <div class="mapping-layout">
+            <div class="mapping-assignments">
+              <h4>Assignments</h4>
+              <input type="text" placeholder="Search assignments..." class="mapping-search" id="assignmentSearch" />
+              <div class="mapping-assignment-list" id="assignmentList">
+                <!-- Populated by JS -->
+              </div>
+            </div>
+            
+            <div class="mapping-goals">
+              <h4>Mapped Goals</h4>
+              <div id="mappingSelectedAssignment" class="mapping-selected-info">
+                Select an assignment to view/edit mappings
+              </div>
+              <div id="mappingGoalList" class="mapping-goal-list hidden">
+                <!-- Populated by JS -->
+              </div>
+              <button class="btn primary hidden" id="addGoalMappingBtn">+ Add Goals</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Attach event listeners
+    this.attachMappingModalListeners(modal, assignments);
+    
+    // Populate assignments
+    this.populateMappingAssignments(modal, assignments);
+  }
+
+  attachMappingModalListeners(modal, assignments) {
+    // Close modal
+    const closeBtn = modal.querySelector('#closeMappingModal');
+    closeBtn.addEventListener('click', () => this.closeMappingModal());
+    
+    // Assignment search
+    const searchInput = modal.querySelector('#assignmentSearch');
+    searchInput.addEventListener('input', () => {
+      this.filterMappingAssignments(modal, assignments);
+    });
+  }
+
+  populateMappingAssignments(modal, assignments) {
+    const list = modal.querySelector('#assignmentList');
+    
+    if (!assignments || assignments.length === 0) {
+      list.innerHTML = '<div class="subtle" style="padding: 16px;">No assignments found</div>';
+      return;
+    }
+    
+    list.innerHTML = assignments.map(a => `
+      <div class="mapping-assignment-item" data-assignment-id="${a.id}">
+        <strong>${a.title || 'Untitled'}</strong>
+        <div class="subtle">${a.series || ''} ${a.type ? `• ${a.type}` : ''}</div>
+      </div>
+    `).join('');
+    
+    // Attach click listeners
+    list.querySelectorAll('.mapping-assignment-item').forEach(item => {
+      item.addEventListener('click', () => {
+        // Deselect others
+        list.querySelectorAll('.mapping-assignment-item').forEach(i => i.classList.remove('selected'));
+        item.classList.add('selected');
+        
+        const assignmentId = item.dataset.assignmentId;
+        this.showMappingForAssignment(modal, assignmentId, assignments.find(a => a.id == assignmentId));
+      });
+    });
+  }
+
+  filterMappingAssignments(modal, assignments) {
+    const search = modal.querySelector('#assignmentSearch').value.toLowerCase();
+    modal.querySelectorAll('.mapping-assignment-item').forEach(item => {
+      const text = item.textContent.toLowerCase();
+      item.style.display = text.includes(search) ? 'block' : 'none';
+    });
+  }
+
+  async showMappingForAssignment(modal, assignmentId, assignment) {
+    console.log('[progress-mapping] Showing mappings for assignment:', assignmentId);
+    
+    const infoDiv = modal.querySelector('#mappingSelectedAssignment');
+    const goalList = modal.querySelector('#mappingGoalList');
+    const addBtn = modal.querySelector('#addGoalMappingBtn');
+    
+    infoDiv.innerHTML = `<strong>${assignment.title || 'Untitled Assignment'}</strong><br/>
+      <span class="subtle">${assignment.series || ''} ${assignment.type ? `• ${assignment.type}` : ''}</span>`;
+    
+    goalList.classList.remove('hidden');
+    addBtn.classList.remove('hidden');
+    
+    // Fetch existing mappings
+    const mappings = await this.db.listAssignmentGoalMappings(assignmentId);
+    console.log('[progress-mapping] Fetched mappings:', mappings);
+    
+    if (!mappings || mappings.length === 0) {
+      goalList.innerHTML = '<div class="subtle" style="padding: 16px;">No goals mapped yet. Click "+ Add Goals" to map goals.</div>';
+    } else {
+      goalList.innerHTML = mappings.map(m => `
+        <div class="mapping-goal-item">
+          <div class="mapping-goal-info">
+            <strong>${m.goals?.code || 'Unknown'}</strong> - ${m.goals?.desc || ''}
+            <div class="subtle">${m.goals?.goal_area || 'Uncategorized'}</div>
+          </div>
+          <div class="mapping-goal-actions">
+            <label>
+              <input type="checkbox" ${m.primary_goal ? 'checked' : ''} 
+                class="mapping-primary-toggle" 
+                data-mapping-id="${m.id}" 
+                data-assignment-id="${assignmentId}"
+                data-goal-id="${m.goal_id}" />
+              Primary
+            </label>
+            <button class="btn small mapping-remove-btn" 
+              data-assignment-id="${assignmentId}" 
+              data-goal-id="${m.goal_id}">Remove</button>
+          </div>
+        </div>
+      `).join('');
+      
+      // Attach listeners
+      goalList.querySelectorAll('.mapping-primary-toggle').forEach(cb => {
+        cb.addEventListener('change', async (e) => {
+          const assignmentId = e.target.dataset.assignmentId;
+          const goalId = e.target.dataset.goalId;
+          const primary = e.target.checked;
+          
+          try {
+            await this.db.upsertAssignmentGoalMapping({
+              assignment_id: assignmentId,
+              goal_id: goalId,
+              primary_goal: primary
+            });
+            console.log('[progress-mapping] Updated primary flag');
+          } catch (err) {
+            console.error('[progress-mapping] Failed to update primary flag:', err);
+            e.target.checked = !primary; // Revert
+            alert('Failed to update primary goal flag');
+          }
+        });
+      });
+      
+      goalList.querySelectorAll('.mapping-remove-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const assignmentId = e.target.dataset.assignmentId;
+          const goalId = e.target.dataset.goalId;
+          
+          if (!confirm('Remove this goal mapping?')) return;
+          
+          try {
+            await this.db.deleteAssignmentGoalMapping({
+              assignment_id: assignmentId,
+              goal_id: goalId
+            });
+            console.log('[progress-mapping] Removed mapping');
+            
+            // Refresh mappings
+            this.showMappingForAssignment(modal, assignmentId, assignment);
+          } catch (err) {
+            console.error('[progress-mapping] Failed to remove mapping:', err);
+            alert('Failed to remove mapping');
+          }
+        });
+      });
+    }
+    
+    // Add goals button
+    addBtn.onclick = () => this.openAddGoalsMappingDialog(modal, assignmentId, assignment);
+  }
+
+  async openAddGoalsMappingDialog(modal, assignmentId, assignment) {
+    console.log('[progress-mapping] Opening add goals dialog');
+    
+    // Fetch all goals
+    const allGoals = await this.db.listGoalsAll();
+    const existingMappings = await this.db.listAssignmentGoalMappings(assignmentId);
+    const existingGoalIds = new Set(existingMappings.map(m => m.goal_id));
+    
+    // Create dialog
+    const dialog = document.createElement('div');
+    dialog.className = 'modal-backdrop show';
+    dialog.id = 'addGoalsDialog';
+    dialog.innerHTML = `
+      <div class="modal card" style="max-width: 600px;">
+        <div class="card-header">
+          <h3>Add Goals to "${assignment.title}"</h3>
+          <button class="btn small" id="closeAddGoalsDialog">✗ Close</button>
+        </div>
+        <div style="padding: 16px;">
+          <input type="text" placeholder="Search goals..." class="mapping-search" id="goalSearchDialog" />
+          
+          <div class="mapping-add-goal-list">
+            ${allGoals.map(g => {
+              const alreadyMapped = existingGoalIds.has(g.id);
+              return `
+                <label class="mapping-add-goal-item ${alreadyMapped ? 'disabled' : ''}">
+                  <input type="checkbox" value="${g.id}" ${alreadyMapped ? 'disabled' : ''} 
+                    data-student-code="${g.student_code}" 
+                    data-goal-code="${g.code}" />
+                  <div class="mapping-goal-info">
+                    <strong>${g.student_code || 'Unknown'} - ${g.code}</strong>
+                    <div class="subtle">${g.desc || ''}</div>
+                    <div class="badge">${g.goal_area || 'Uncategorized'}</div>
+                  </div>
+                  ${alreadyMapped ? '<span class="subtle">Already mapped</span>' : ''}
+                </label>
+              `;
+            }).join('')}
+          </div>
+          
+          <div style="margin-top: 16px; display: flex; gap: 8px;">
+            <button class="btn" id="cancelAddGoals">Cancel</button>
+            <button class="btn primary" id="confirmAddGoals">Add Selected Goals</button>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(dialog);
+    
+    // Search
+    dialog.querySelector('#goalSearchDialog').addEventListener('input', (e) => {
+      const search = e.target.value.toLowerCase();
+      dialog.querySelectorAll('.mapping-add-goal-item').forEach(item => {
+        const text = item.textContent.toLowerCase();
+        item.style.display = text.includes(search) ? 'flex' : 'none';
+      });
+    });
+    
+    // Close
+    const closeDialog = () => {
+      dialog.remove();
+    };
+    
+    dialog.querySelector('#closeAddGoalsDialog').addEventListener('click', closeDialog);
+    dialog.querySelector('#cancelAddGoals').addEventListener('click', closeDialog);
+    
+    // Confirm
+    dialog.querySelector('#confirmAddGoals').addEventListener('click', async () => {
+      const selected = Array.from(dialog.querySelectorAll('.mapping-add-goal-item input:checked'))
+        .map(cb => cb.value);
+      
+      if (selected.length === 0) {
+        alert('Please select at least one goal');
+        return;
+      }
+      
+      console.log('[progress-mapping] Adding mappings:', selected);
+      
+      try {
+        for (const goalId of selected) {
+          await this.db.upsertAssignmentGoalMapping({
+            assignment_id: assignmentId,
+            goal_id: goalId,
+            primary_goal: false
+          });
+        }
+        
+        console.log('[progress-mapping] Added', selected.length, 'mappings');
+        closeDialog();
+        
+        // Refresh mappings
+        this.showMappingForAssignment(modal, assignmentId, assignment);
+      } catch (err) {
+        console.error('[progress-mapping] Failed to add mappings:', err);
+        alert('Failed to add mappings. Please try again.');
+      }
+    });
+  }
+
+  closeMappingModal() {
+    const modal = document.getElementById('mappingModal');
+    if (modal) {
+      modal.remove();
+    }
+    
+    // Also close add goals dialog if open
+    const dialog = document.getElementById('addGoalsDialog');
+    if (dialog) {
+      dialog.remove();
+    }
   }
 
   // ========================================================================

@@ -692,3 +692,190 @@
   border-bottom: none;
 }
 
+/* ============================================================================
+   Phase 5: Assignment Goal Mapping UI
+   ============================================================================ */
+
+.mapping-modal-content {
+  padding: 16px;
+}
+
+.mapping-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.mapping-assignments,
+.mapping-goals {
+  border: 1px solid var(--line, #333);
+  border-radius: 4px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.mapping-assignments h4,
+.mapping-goals h4 {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.mapping-search {
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 13px;
+  border: 1px solid var(--line, #333);
+  border-radius: 4px;
+  background: var(--bg, #1a1a1a);
+  color: var(--fg, #fff);
+  margin-bottom: 8px;
+}
+
+.mapping-assignment-list,
+.mapping-goal-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.mapping-assignment-item {
+  padding: 10px;
+  border: 1px solid var(--line, #333);
+  border-radius: 4px;
+  margin-bottom: 6px;
+  cursor: pointer;
+  background: var(--bg, #1a1a1a);
+  transition: all 0.15s ease;
+}
+
+.mapping-assignment-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--accent, #22c55e);
+}
+
+.mapping-assignment-item.selected {
+  background: rgba(34, 197, 94, 0.15);
+  border-color: var(--accent, #22c55e);
+}
+
+.mapping-assignment-item strong {
+  font-size: 13px;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.mapping-assignment-item .subtle {
+  font-size: 11px;
+  color: var(--muted, #888);
+}
+
+.mapping-selected-info {
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--line, #333);
+  border-radius: 4px;
+  margin-bottom: 12px;
+  font-size: 13px;
+}
+
+.mapping-goal-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 10px;
+  border: 1px solid var(--line, #333);
+  border-radius: 4px;
+  margin-bottom: 6px;
+  background: var(--bg, #1a1a1a);
+}
+
+.mapping-goal-info {
+  flex: 1;
+  font-size: 12px;
+}
+
+.mapping-goal-info strong {
+  font-size: 13px;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.mapping-goal-info .subtle {
+  font-size: 11px;
+  color: var(--muted, #888);
+}
+
+.mapping-goal-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.mapping-goal-actions label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.mapping-primary-toggle {
+  cursor: pointer;
+}
+
+.mapping-remove-btn {
+  padding: 4px 8px;
+  font-size: 11px;
+}
+
+.mapping-add-goal-list {
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid var(--line, #333);
+  border-radius: 4px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.02);
+  margin-top: 12px;
+}
+
+.mapping-add-goal-item {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 8px;
+  border: 1px solid var(--line, #333);
+  border-radius: 4px;
+  margin-bottom: 6px;
+  cursor: pointer;
+  background: var(--bg, #1a1a1a);
+  transition: all 0.15s ease;
+}
+
+.mapping-add-goal-item:hover:not(.disabled) {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--accent, #22c55e);
+}
+
+.mapping-add-goal-item.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.mapping-add-goal-item input[type="checkbox"] {
+  margin-top: 2px;
+  cursor: pointer;
+}
+
+.mapping-add-goal-item input[type="checkbox"]:disabled {
+  cursor: not-allowed;
+}
+
+@media (max-width: 900px) {
+  .mapping-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+

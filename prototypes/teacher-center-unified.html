@@ -3005,6 +3005,22 @@
           notes: 'Test submission from simulator'
         });
         
+        // Phase 5: Trigger assignment→goal progress automation
+        if (getFeatureFlag('progressAutoFromAssignments')) {
+          try {
+            console.log('[progress-assignment] Triggering automation for instance:', instanceId);
+            const result = await db.recordProgressForSubmission(instanceId);
+            console.log('[progress-assignment] Automation result:', result);
+            
+            if (result.success && result.inserted_count > 0) {
+              console.log(`[progress-assignment] Created ${result.inserted_count} progress entries`);
+            }
+          } catch (err) {
+            console.warn('[progress-assignment] Automation failed:', err);
+            // Don't fail the whole submission if automation fails
+          }
+        }
+        
         // Show result
         qs('#simResult').style.display = 'block';
         // Escape HTML to prevent XSS
