@@ -5131,7 +5131,7 @@
     }
     
     // Validate step 1 form
-    function validateStep1() {
+    function validateGoalWizardStep1() {
       let isValid = true;
       
       for (let i = 0; i < multiGoalWizardState.goalCount; i++) {
@@ -5267,7 +5267,7 @@
         updateGoalWizardStep(1);
       } else if (step === 1) {
         // Validate all goal forms
-        if (!validateStep1()) {
+        if (!validateGoalWizardStep1()) {
           return;
         }
         renderReviewTable();
