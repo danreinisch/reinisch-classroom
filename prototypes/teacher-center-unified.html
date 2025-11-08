@@ -2491,11 +2491,17 @@
     function showMappingErrors(errors) {
       const msgDiv = qs('#mappingValidationMessages');
       msgDiv.style.display = 'block';
+      
+      // Escape HTML to prevent XSS
+      const escapeHtml = (str) => String(str).replace(/[&<>"']/g, m => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      })[m]);
+      
       msgDiv.innerHTML = `
         <div style="padding:10px;background:rgba(239,68,68,.1);border-radius:8px;border:1px solid rgba(239,68,68,.5);color:#fecaca">
           <div style="font-weight:800;margin-bottom:6px">⚠️ Validation Errors</div>
           <ul style="margin:0;padding-left:20px">
-            ${errors.map(e => `<li>${e.message || e}</li>`).join('')}
+            ${errors.map(e => `<li>${escapeHtml(e.message || e)}</li>`).join('')}
           </ul>
         </div>
       `;
@@ -2505,11 +2511,17 @@
     function showMappingWarnings(warnings) {
       const msgDiv = qs('#mappingValidationMessages');
       msgDiv.style.display = 'block';
+      
+      // Escape HTML to prevent XSS
+      const escapeHtml = (str) => String(str).replace(/[&<>"']/g, m => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      })[m]);
+      
       msgDiv.innerHTML = `
         <div style="padding:10px;background:rgba(251,191,36,.1);border-radius:8px;border:1px solid rgba(251,191,36,.5);color:#fcd34d">
           <div style="font-weight:800;margin-bottom:6px">⚠️ Warnings</div>
           <ul style="margin:0;padding-left:20px">
-            ${warnings.map(w => `<li>${w.ref ? `[${w.ref}] ` : ''}${w.message}</li>`).join('')}
+            ${warnings.map(w => `<li>${w.ref ? `[${escapeHtml(w.ref)}] ` : ''}${escapeHtml(w.message)}</li>`).join('')}
           </ul>
         </div>
       `;
