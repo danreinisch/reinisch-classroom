@@ -54,6 +54,34 @@ const FEATURES = {
     key: FEATURE_PREFIX + 'progress_pdf_export',
     default: false,
     description: 'Enable PDF export of current grid view'
+  },
+  
+  // Portal B: Assignment Status Groupings and Filters
+  portalAssignmentsStatus: {
+    key: FEATURE_PREFIX + 'portal_assignments_status',
+    default: true,
+    description: 'Enable assignment status groupings (upcoming/late/missing/in-progress/submitted/graded) and filters'
+  },
+  
+  // Portal B: Grades Card
+  portalGradesCard: {
+    key: FEATURE_PREFIX + 'portal_grades_card',
+    default: true,
+    description: 'Enable grades panel with overall and per-class averages and trend indicators'
+  },
+  
+  // Portal B: One-time Resubmission
+  portalResubmission: {
+    key: FEATURE_PREFIX + 'portal_resubmission',
+    default: true,
+    description: 'Enable one-time resubmission workflow for all assignments'
+  },
+  
+  // Portal B: Top Status Bar
+  portalTopBar: {
+    key: FEATURE_PREFIX + 'portal_top_bar',
+    default: true,
+    description: 'Enable top status bar with live date/time, student info, and Tool Kit link'
   }
 };
 
