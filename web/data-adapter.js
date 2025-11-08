@@ -725,6 +725,88 @@ const local = {
     store.set(key, filtered);
     return true;
   },
+  
+  // Portal C: Saved Views for Student Portal
+  async listPortalSavedViews(userCode, viewType = 'assignments') {
+    const key = `portalSavedViews_${userCode}_${viewType}`;
+    return store.get(key, []);
+  },
+
+  async getPortalSavedView(userCode, viewId) {
+    const allViews = [];
+    // Gather all views for this user across view types
+    ['assignments'].forEach(viewType => {
+      const views = store.get(`portalSavedViews_${userCode}_${viewType}`, []);
+      allViews.push(...views);
+    });
+    return allViews.find(v => v.id === viewId) || null;
+  },
+
+  async createPortalSavedView(userCode, { name, view_type = 'assignments', config }) {
+    const key = `portalSavedViews_${userCode}_${view_type}`;
+    const views = store.get(key, []);
+    
+    const newView = {
+      id: 'pview_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9),
+      user_code: userCode,
+      name,
+      view_type,
+      config,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    
+    views.push(newView);
+    store.set(key, views);
+    return newView;
+  },
+
+  async updatePortalSavedView(userCode, viewId, { name, config }) {
+    // Find view across all view types
+    let foundView = null;
+    let foundKey = null;
+    
+    ['assignments'].forEach(viewType => {
+      const key = `portalSavedViews_${userCode}_${viewType}`;
+      const views = store.get(key, []);
+      const view = views.find(v => v.id === viewId);
+      if (view) {
+        foundView = view;
+        foundKey = key;
+      }
+    });
+    
+    if (!foundView) {
+      throw new Error('View not found');
+    }
+    
+    const views = store.get(foundKey, []);
+    const view = views.find(v => v.id === viewId);
+    
+    if (name !== undefined) view.name = name;
+    if (config !== undefined) view.config = config;
+    view.updated_at = new Date().toISOString();
+    
+    store.set(foundKey, views);
+    return view;
+  },
+
+  async deletePortalSavedView(userCode, viewId) {
+    // Delete from all view types
+    let deleted = false;
+    
+    ['assignments'].forEach(viewType => {
+      const key = `portalSavedViews_${userCode}_${viewType}`;
+      const views = store.get(key, []);
+      const filtered = views.filter(v => v.id !== viewId);
+      if (filtered.length < views.length) {
+        store.set(key, filtered);
+        deleted = true;
+      }
+    });
+    
+    return deleted;
+  },
 };
 
 const remote = {
@@ -1930,6 +2012,118 @@ const remote = {
         .from('progress_saved_views')
         .delete()
         .eq('user_id', userId)
+        .eq('id', viewId);
+      
+      if (error) throw error;
+      
+      return true;
+    });
+  },
+  
+  // Portal C: Saved Views for Student Portal
+  async listPortalSavedViews(userCode, viewType = 'assignments') {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+    
+    return await withRetry(async () => {
+      console.log('[portal-saved-views] listPortalSavedViews (remote)', { userCode, viewType });
+      
+      const { data, error } = await supabase
+        .from('portal_saved_views')
+        .select('*')
+        .eq('user_code', userCode)
+        .eq('view_type', viewType)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      return data || [];
+    });
+  },
+
+  async getPortalSavedView(userCode, viewId) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+    
+    return await withRetry(async () => {
+      console.log('[portal-saved-views] getPortalSavedView (remote)', { userCode, viewId });
+      
+      const { data, error } = await supabase
+        .from('portal_saved_views')
+        .select('*')
+        .eq('user_code', userCode)
+        .eq('id', viewId)
+        .single();
+      
+      if (error) {
+        if (error.code === 'PGRST116') return null; // Not found
+        throw error;
+      }
+      
+      return data;
+    });
+  },
+
+  async createPortalSavedView(userCode, { name, view_type = 'assignments', config }) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+    
+    return await withRetry(async () => {
+      console.log('[portal-saved-views] createPortalSavedView (remote)', { userCode, name, view_type });
+      
+      const { data, error } = await supabase
+        .from('portal_saved_views')
+        .insert({
+          user_code: userCode,
+          name,
+          view_type,
+          config
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      return data;
+    });
+  },
+
+  async updatePortalSavedView(userCode, viewId, { name, config }) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+    
+    return await withRetry(async () => {
+      console.log('[portal-saved-views] updatePortalSavedView (remote)', { userCode, viewId });
+      
+      const updates = {};
+      if (name !== undefined) updates.name = name;
+      if (config !== undefined) updates.config = config;
+      
+      const { data, error } = await supabase
+        .from('portal_saved_views')
+        .update(updates)
+        .eq('user_code', userCode)
+        .eq('id', viewId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      return data;
+    });
+  },
+
+  async deletePortalSavedView(userCode, viewId) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+    
+    return await withRetry(async () => {
+      console.log('[portal-saved-views] deletePortalSavedView (remote)', { userCode, viewId });
+      
+      const { error } = await supabase
+        .from('portal_saved_views')
+        .delete()
+        .eq('user_code', userCode)
         .eq('id', viewId);
       
       if (error) throw error;

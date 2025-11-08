@@ -82,6 +82,41 @@ const FEATURES = {
     key: FEATURE_PREFIX + 'portal_top_bar',
     default: true,
     description: 'Enable top status bar with live date/time, student info, and Tool Kit link'
+  },
+  
+  // Portal C: Saved Views
+  portalSavedViews: {
+    key: FEATURE_PREFIX + 'portal_saved_views',
+    default: true,
+    description: 'Enable saved filter/sort configurations for Assignments dashboard'
+  },
+  
+  // Portal C: Advanced Filters
+  portalAdvancedFilters: {
+    key: FEATURE_PREFIX + 'portal_advanced_filters',
+    default: true,
+    description: 'Enable advanced filters (score range, recency, source/type, overdue streak)'
+  },
+  
+  // Portal C: Risk Indicators
+  portalRiskIndicators: {
+    key: FEATURE_PREFIX + 'portal_risk_indicators',
+    default: true,
+    description: 'Enable risk badges and insights (missing, late, low score, trends)'
+  },
+  
+  // Portal C: Rollups (Weekly/Monthly)
+  portalRollups: {
+    key: FEATURE_PREFIX + 'portal_rollups',
+    default: true,
+    description: 'Enable weekly and monthly aggregation of grades and metrics'
+  },
+  
+  // Portal C: PDF Export
+  portalPdfExport: {
+    key: FEATURE_PREFIX + 'portal_pdf_export',
+    default: true,
+    description: 'Enable PDF export of assignments and grades views'
   }
 };
 
