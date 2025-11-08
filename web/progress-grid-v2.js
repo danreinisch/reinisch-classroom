@@ -24,6 +24,15 @@ export class ProgressGridV2 {
       columnBufferSize: options.columnBufferSize || 5, // extra columns to render
       debounceMs: options.debounceMs || 300,
       teacherEmail: options.teacherEmail || 'teacher@example.com', // For collected_by
+      userId: options.userId || 'default_user', // Phase 6-8: For saved views
+      // Phase 6-8: Risk indicator thresholds (configurable)
+      riskThresholds: {
+        missingDataDaysRed: 14,
+        missingDataDaysAmber: 7,
+        belowTargetRed: 10, // percentage points
+        belowTargetAmber: 10, // percentage points
+        negativeTrendPoints: 3 // number of consecutive points
+      },
       ...options
     };
     
@@ -34,7 +43,13 @@ export class ProgressGridV2 {
       goalAreas: [],
       quarters: [], // Empty means current quarter
       dateRange: { start: null, end: null },
-      searchText: ''
+      searchText: '',
+      // Phase 6-8: Advanced filters
+      valueRange: { min: null, max: null }, // Current value filter
+      sources: [], // 'manual', 'assignment', 'import'
+      caseManagers: [],
+      teachers: [],
+      dataRecencyDays: null // Filter for recency (e.g., has data in last N days)
     };
     
     this.sorting = {
@@ -48,10 +63,39 @@ export class ProgressGridV2 {
       count: 15 // Initial visible columns
     };
     
+    // Phase 6-8: Granularity for rollups
+    this.granularity = 'daily'; // 'daily', 'weekly', 'monthly'
+    
+    // Phase 6-8: Saved views
+    this.savedViews = [];
+    this.currentViewId = null;
+    this.currentViewName = null;
+    
+    // Phase 6-8: Visible columns (for customization)
+    this.visibleColumns = {
+      student: true,
+      goalCode: true,
+      goalDesc: true,
+      class: true,
+      baseline: true,
+      current: true,
+      delta: true,
+      trend: true,
+      risk: false, // Phase 6-8
+      lastDataAge: false, // Phase 6-8
+      deltaVsTarget: false, // Phase 6-8
+      quarterAvgs: true,
+      dates: true
+    };
+    
     // Data cache
     this.rawData = [];
     this.quarterAverages = [];
     this.processedData = null;
+    
+    // Phase 6-8: Query cache for performance
+    this.queryCache = new Map(); // keyed by filter hash
+    this.maxCacheSize = 10;
     
     // Debounce timer
     this.debounceTimer = null;
@@ -211,6 +255,7 @@ export class ProgressGridV2 {
           goal_desc: row.goal_desc,
           goal_area: area,
           class_code: row.class_code,
+          target: row.target, // Phase 6-8: Track target for delta vs target
           measurements: {}
         };
       }
@@ -255,6 +300,24 @@ export class ProgressGridV2 {
       goalMetricsMap[key].delta = delta;
       goalMetricsMap[key].trend = trend;
     });
+    
+    // Phase 6-8: Apply advanced filters after metrics calculation
+    if (getFeatureFlag('progressAdvancedFilters')) {
+      Object.keys(groupedByArea).forEach(area => {
+        const items = Object.values(groupedByArea[area]);
+        const filteredItems = this.applyAdvancedFiltersToItems(items, goalMetricsMap);
+        
+        if (filteredItems.length === 0) {
+          delete groupedByArea[area];
+        } else {
+          groupedByArea[area] = {};
+          filteredItems.forEach(item => {
+            const key = `${item.student_code}|${item.goal_code}`;
+            groupedByArea[area][key] = item;
+          });
+        }
+      });
+    }
     
     // Sort dates
     const sortedDates = Array.from(uniqueDates).sort();
@@ -309,6 +372,52 @@ export class ProgressGridV2 {
     
     console.log('[ProgressGridV2] Processed', sortedAreas.length, 'goal areas with', sortedDates.length, 'unique dates');
   }
+
+  // Phase 6-8: Helper for advanced filters
+  applyAdvancedFiltersToItems(items, metricsMap) {
+    let filtered = items;
+    
+    // Value range filter (on current value)
+    if (this.filters.valueRange.min != null || this.filters.valueRange.max != null) {
+      filtered = filtered.filter(item => {
+        const key = `${item.student_code}|${item.goal_code}`;
+        const current = metricsMap[key]?.current;
+        if (current == null) return false;
+        
+        if (this.filters.valueRange.min != null && current < this.filters.valueRange.min) return false;
+        if (this.filters.valueRange.max != null && current > this.filters.valueRange.max) return false;
+        
+        return true;
+      });
+    }
+    
+    // Source type filter
+    if (this.filters.sources.length > 0) {
+      filtered = filtered.filter(item => {
+        const entries = this.rawData.filter(r => 
+          r.student_code === item.student_code && r.goal_code === item.goal_code
+        );
+        return entries.some(e => this.filters.sources.includes(e.source));
+      });
+    }
+    
+    // Data recency filter
+    if (this.filters.dataRecencyDays != null) {
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - this.filters.dataRecencyDays);
+      const cutoffStr = cutoffDate.toISOString().split('T')[0];
+      
+      filtered = filtered.filter(item => {
+        const entries = this.rawData.filter(r => 
+          r.student_code === item.student_code && r.goal_code === item.goal_code
+        );
+        return entries.some(e => e.date >= cutoffStr);
+      });
+    }
+    
+    return filtered;
+  }
+
   
   // ========================================================================
   // Rendering
@@ -319,8 +428,86 @@ export class ProgressGridV2 {
       ? this.filters.quarters 
       : [this.getCurrentQuarter()];
     
+    // Phase 6-8: Saved Views dropdown
+    const savedViewsUI = getFeatureFlag('progressSavedViews') ? `
+      <div class="filter-section">
+        <label class="filter-label">Saved Views</label>
+        <div style="display:flex;gap:6px;align-items:center">
+          <select class="filter-select" id="savedViewSelect">
+            <option value="">-- Select View --</option>
+            ${this.savedViews.map(v => `
+              <option value="${v.id}" ${this.currentViewId === v.id ? 'selected' : ''}>
+                ${this.escapeHtml(v.name)} ${v.is_default ? '⭐' : ''}
+              </option>
+            `).join('')}
+          </select>
+          <button class="btn small" id="saveViewBtn" title="Save current view">💾</button>
+          ${this.currentViewId ? '<button class="btn small" id="updateViewBtn" title="Update current view">↻</button>' : ''}
+          ${this.currentViewId ? '<button class="btn small" id="deleteViewBtn" title="Delete current view">🗑️</button>' : ''}
+        </div>
+      </div>
+    ` : '';
+    
+    // Phase 6-8: Advanced Filters
+    const advancedFiltersUI = getFeatureFlag('progressAdvancedFilters') ? `
+      <div class="filter-section">
+        <label class="filter-label">Value Range (Current %)</label>
+        <div style="display:flex;gap:6px;align-items:center">
+          <input type="number" class="filter-number-input" id="valueRangeMin" 
+                 placeholder="Min" min="0" max="100" 
+                 value="${this.filters.valueRange.min || ''}" />
+          <span>to</span>
+          <input type="number" class="filter-number-input" id="valueRangeMax" 
+                 placeholder="Max" min="0" max="100" 
+                 value="${this.filters.valueRange.max || ''}" />
+        </div>
+      </div>
+      
+      <div class="filter-section">
+        <label class="filter-label">Data Sources</label>
+        <div class="filter-checkboxes" id="sourceCheckboxes">
+          ${['manual', 'assignment', 'import'].map(src => `
+            <label>
+              <input type="checkbox" value="${src}" 
+                     ${this.filters.sources.includes(src) ? 'checked' : ''} />
+              ${src.charAt(0).toUpperCase() + src.slice(1)}
+            </label>
+          `).join('')}
+        </div>
+      </div>
+      
+      <div class="filter-section">
+        <label class="filter-label">Data Recency</label>
+        <select class="filter-select" id="dataRecencySelect">
+          <option value="">All time</option>
+          <option value="7" ${this.filters.dataRecencyDays === 7 ? 'selected' : ''}>Last 7 days</option>
+          <option value="14" ${this.filters.dataRecencyDays === 14 ? 'selected' : ''}>Last 14 days</option>
+          <option value="30" ${this.filters.dataRecencyDays === 30 ? 'selected' : ''}>Last 30 days</option>
+        </select>
+      </div>
+    ` : '';
+    
+    // Phase 6-8: Rollups (granularity toggle)
+    const rollupsUI = getFeatureFlag('progressRollups') ? `
+      <div class="filter-section">
+        <label class="filter-label">Granularity</label>
+        <div class="granularity-toggles">
+          ${['daily', 'weekly', 'monthly'].map(g => `
+            <button 
+              class="granularity-toggle ${this.granularity === g ? 'active' : ''}" 
+              data-granularity="${g}"
+            >
+              ${g.charAt(0).toUpperCase() + g.slice(1)}
+            </button>
+          `).join('')}
+        </div>
+      </div>
+    ` : '';
+    
     return `
       <div class="progress-grid-v2-filters">
+        ${savedViewsUI}
+        
         <div class="filter-section">
           <label class="filter-label">Quarters</label>
           <div class="quarter-toggles">
@@ -344,6 +531,9 @@ export class ProgressGridV2 {
             value="${this.filters.searchText}"
           />
         </div>
+        
+        ${advancedFiltersUI}
+        ${rollupsUI}
         
         <div class="filter-section">
           <label class="filter-label">Goal Areas</label>
@@ -388,6 +578,7 @@ export class ProgressGridV2 {
         <div class="filter-actions">
           <button class="btn small" id="gridRefreshBtn">🔄 Refresh</button>
           <button class="btn small" id="gridExportBtn">📥 Export CSV</button>
+          ${getFeatureFlag('progressPdfExport') ? '<button class="btn small" id="gridPdfExportBtn">📄 Export PDF</button>' : ''}
           ${getFeatureFlag('progressEditing') ? '<button class="btn small primary" id="gridBulkAddBtn">➕ Bulk Add Progress</button>' : ''}
           ${getFeatureFlag('progressAutoFromAssignments') ? '<button class="btn small" id="gridMappingBtn">⚙️ Assignment Mapping</button>' : ''}
         </div>
@@ -415,41 +606,69 @@ export class ProgressGridV2 {
       : [this.getCurrentQuarter()];
     
     let html = '<div class="progress-grid-v2-table-wrapper">';
-    html += '<table class="progress-grid-v2-table">';
+    html += '<table class="progress-grid-v2-table" role="grid" aria-label="IEP Progress Data">';
+    
+    // Phase 6-8: Count columns for colspan
+    let baseColCount = 8;
+    if (getFeatureFlag('progressRiskIndicators')) {
+      if (this.visibleColumns.risk) baseColCount++;
+      if (this.visibleColumns.lastDataAge) baseColCount++;
+      if (this.visibleColumns.deltaVsTarget) baseColCount++;
+    }
     
     // Header
-    html += '<thead><tr>';
-    html += '<th class="col-student sortable" data-field="student_code">Student</th>';
-    html += '<th class="col-goal-code">Goal</th>';
-    html += '<th class="col-goal-desc">Description</th>';
-    html += '<th class="col-class">Class</th>';
-    html += '<th class="col-baseline">Baseline</th>';
-    html += '<th class="col-current sortable" data-field="current">Current</th>';
-    html += '<th class="col-delta sortable" data-field="delta">Delta</th>';
-    html += '<th class="col-trend">Trend</th>';
+    html += '<thead><tr role="row">';
+    if (this.visibleColumns.student) html += '<th role="columnheader" class="col-student sortable" data-field="student_code" tabindex="0">Student</th>';
+    if (this.visibleColumns.goalCode) html += '<th role="columnheader" class="col-goal-code">Goal</th>';
+    if (this.visibleColumns.goalDesc) html += '<th role="columnheader" class="col-goal-desc">Description</th>';
+    if (this.visibleColumns.class) html += '<th role="columnheader" class="col-class">Class</th>';
+    if (this.visibleColumns.baseline) html += '<th role="columnheader" class="col-baseline">Baseline</th>';
+    if (this.visibleColumns.current) html += '<th role="columnheader" class="col-current sortable" data-field="current" tabindex="0">Current</th>';
+    if (this.visibleColumns.delta) html += '<th role="columnheader" class="col-delta sortable" data-field="delta" tabindex="0">Delta</th>';
+    if (this.visibleColumns.trend) html += '<th role="columnheader" class="col-trend">Trend</th>';
+    
+    // Phase 6-8: Risk indicators columns
+    if (getFeatureFlag('progressRiskIndicators')) {
+      if (this.visibleColumns.risk) html += '<th role="columnheader" class="col-risk" title="Risk indicator based on recency, target, and trend">Risk</th>';
+      if (this.visibleColumns.lastDataAge) html += '<th role="columnheader" class="col-last-data-age" title="Days since last data entry">Last Data</th>';
+      if (this.visibleColumns.deltaVsTarget) html += '<th role="columnheader" class="col-delta-target" title="Current value vs target">Δ Target</th>';
+    }
     
     // Quarter average columns
-    selectedQuarters.forEach(q => {
-      html += `<th class="col-quarter-avg">${q} Avg</th>`;
-    });
+    if (this.visibleColumns.quarterAvgs) {
+      selectedQuarters.forEach(q => {
+        html += `<th role="columnheader" class="col-quarter-avg">${q} Avg</th>`;
+      });
+    }
     
-    // Date columns
-    visibleDates.forEach(date => {
-      html += `<th class="col-date">${this.formatDate(date)}</th>`;
-    });
+    // Date columns (with granularity formatting)
+    if (this.visibleColumns.dates) {
+      visibleDates.forEach(date => {
+        const header = this.formatPeriodHeader(date);
+        html += `<th role="columnheader" class="col-date">${header}</th>`;
+      });
+    }
     
-    html += '</tr></thead><tbody>';
+    html += '</tr></thead><tbody role="rowgroup">';
     
     // Render each area
     sortedAreas.forEach(area => {
       const items = groupedByArea[area];
       const isCollapsed = this.collapsedAreas.has(area);
       
+      // Count visible columns for colspan
+      let visibleColCount = 0;
+      Object.values(this.visibleColumns).forEach(v => {
+        if (v === true) visibleColCount++;
+      });
+      if (this.visibleColumns.quarterAvgs) visibleColCount += selectedQuarters.length - 1;
+      if (this.visibleColumns.dates) visibleColCount += visibleDates.length - 1;
+      
       // Area header
       html += `
-        <tr class="area-header" data-area="${area}">
-          <td colspan="${8 + selectedQuarters.length + visibleDates.length}">
-            <span class="collapse-icon">${isCollapsed ? '▶' : '▼'}</span>
+        <tr class="area-header" data-area="${area}" role="row">
+          <td colspan="${visibleColCount}" role="gridcell">
+            <span class="collapse-icon" role="button" tabindex="0" aria-label="${isCollapsed ? 'Expand' : 'Collapse'} ${area}">${isCollapsed ? '▶' : '▼'}</span>
             📁 ${area} (${items.length} goals)
           </td>
         </tr>
@@ -461,6 +680,11 @@ export class ProgressGridV2 {
           const key = `${item.student_code}|${item.goal_code}`;
           const metrics = goalMetricsMap[key];
           
+          // Phase 6-8: Calculate risk indicators
+          const riskData = getFeatureFlag('progressRiskIndicators') 
+            ? this.calculateRiskIndicators(item)
+            : null;
+          
           // Get quarter averages for this goal
           const quarterAvgs = {};
           this.quarterAverages.forEach(qa => {
@@ -469,56 +693,99 @@ export class ProgressGridV2 {
             }
           });
           
-          html += '<tr class="data-row">';
+          html += '<tr class="data-row" role="row">';
           
           // Student
-          html += `<td class="col-student">${item.student_name}<br><span class="student-code">${item.student_code}</span></td>`;
+          if (this.visibleColumns.student) {
+            html += `<td role="gridcell" class="col-student" aria-label="Student ${item.student_code}">${item.student_name}<br><span class="student-code">${item.student_code}</span></td>`;
+          }
           
           // Goal code
-          html += `<td class="col-goal-code"><span class="badge">${item.goal_code}</span></td>`;
+          if (this.visibleColumns.goalCode) {
+            html += `<td role="gridcell" class="col-goal-code"><span class="badge">${item.goal_code}</span></td>`;
+          }
           
           // Goal description (truncated with tooltip)
-          const truncDesc = item.goal_desc.length > 120 
-            ? item.goal_desc.substring(0, 120) + '...' 
-            : item.goal_desc;
-          html += `<td class="col-goal-desc" title="${this.escapeHtml(item.goal_desc)}">${truncDesc}</td>`;
+          if (this.visibleColumns.goalDesc) {
+            const truncDesc = item.goal_desc.length > 120 
+              ? item.goal_desc.substring(0, 120) + '...' 
+              : item.goal_desc;
+            html += `<td role="gridcell" class="col-goal-desc" title="${this.escapeHtml(item.goal_desc)}">${truncDesc}</td>`;
+          }
           
           // Class
-          html += `<td class="col-class">${item.class_code || '—'}</td>`;
+          if (this.visibleColumns.class) {
+            html += `<td role="gridcell" class="col-class">${item.class_code || '—'}</td>`;
+          }
           
           // Metrics
-          html += `<td class="col-baseline">${metrics?.baseline != null ? Math.round(metrics.baseline) + '%' : '—'}</td>`;
-          html += `<td class="col-current">${metrics?.current != null ? Math.round(metrics.current) + '%' : '—'}</td>`;
-          html += `<td class="col-delta ${this.getDeltaClass(metrics?.delta)}">${this.formatDelta(metrics?.delta)}</td>`;
-          html += `<td class="col-trend">${this.getTrendIcon(metrics?.trend)}</td>`;
+          if (this.visibleColumns.baseline) {
+            const baselineVal = metrics?.baseline != null ? Math.round(metrics.baseline) + '%' : '—';
+            html += `<td role="gridcell" class="col-baseline" aria-label="Baseline ${baselineVal}">${baselineVal}</td>`;
+          }
+          if (this.visibleColumns.current) {
+            const currentVal = metrics?.current != null ? Math.round(metrics.current) + '%' : '—';
+            html += `<td role="gridcell" class="col-current" aria-label="Current ${currentVal}">${currentVal}</td>`;
+          }
+          if (this.visibleColumns.delta) {
+            html += `<td role="gridcell" class="col-delta ${this.getDeltaClass(metrics?.delta)}" aria-label="Delta ${this.formatDelta(metrics?.delta)}">${this.formatDelta(metrics?.delta)}</td>`;
+          }
+          if (this.visibleColumns.trend) {
+            html += `<td role="gridcell" class="col-trend" aria-label="Trend ${metrics?.trend || 'unknown'}">${this.getTrendIcon(metrics?.trend)}</td>`;
+          }
+          
+          // Phase 6-8: Risk indicators
+          if (getFeatureFlag('progressRiskIndicators')) {
+            if (this.visibleColumns.risk && riskData) {
+              html += `<td role="gridcell" class="col-risk">${this.getRiskIcon(riskData.risk, riskData.reasons)}</td>`;
+            }
+            if (this.visibleColumns.lastDataAge && riskData) {
+              const ageText = riskData.lastDataAge != null ? `${riskData.lastDataAge}d` : '—';
+              html += `<td role="gridcell" class="col-last-data-age" aria-label="Last data ${ageText} ago">${ageText}</td>`;
+            }
+            if (this.visibleColumns.deltaVsTarget && riskData) {
+              const deltaTarget = riskData.deltaVsTarget;
+              const deltaTargetText = deltaTarget != null ? (deltaTarget >= 0 ? `+${Math.round(deltaTarget)}pp` : `${Math.round(deltaTarget)}pp`) : '—';
+              const deltaTargetClass = deltaTarget != null ? (deltaTarget >= 0 ? 'delta-positive' : 'delta-negative') : '';
+              html += `<td role="gridcell" class="col-delta-target ${deltaTargetClass}" aria-label="Delta vs target ${deltaTargetText}">${deltaTargetText}</td>`;
+            }
+          }
           
           // Quarter averages
-          selectedQuarters.forEach(q => {
-            const avg = quarterAvgs[q];
-            html += `<td class="col-quarter-avg">${avg != null ? Math.round(avg) + '%' : '—'}</td>`;
-          });
+          if (this.visibleColumns.quarterAvgs) {
+            selectedQuarters.forEach(q => {
+              const avg = quarterAvgs[q];
+              const avgText = avg != null ? Math.round(avg) + '%' : '—';
+              html += `<td role="gridcell" class="col-quarter-avg" aria-label="${q} average ${avgText}">${avgText}</td>`;
+            });
+          }
           
           // Date columns
-          visibleDates.forEach(date => {
-            const value = item.measurements[date];
-            const isEditable = getFeatureFlag('progressEditing');
-            const cellClass = isEditable ? 'col-date editable' : 'col-date';
-            const cellData = `data-student="${item.student_code}" data-goal="${item.goal_code}" data-date="${date}"`;
-            
-            // Check if there are multiple entries for this date (stacked indicator)
-            const entries = this.rawData.filter(r => 
-              r.student_code === item.student_code && 
-              r.goal_code === item.goal_code && 
-              r.date === date
-            );
-            const hasMultiple = entries.length > 1;
-            const stackedIndicator = hasMultiple ? this.buildStackedIndicator(entries) : '';
-            
-            html += `<td class="${cellClass}" ${cellData} tabindex="${isEditable ? '0' : '-1'}">
-              ${value != null ? Math.round(value) + '%' : '—'}
-              ${stackedIndicator}
-            </td>`;
-          });
+          if (this.visibleColumns.dates) {
+            visibleDates.forEach(date => {
+              const value = item.measurements[date];
+              const isEditable = getFeatureFlag('progressEditing');
+              const cellClass = isEditable ? 'col-date editable' : 'col-date';
+              const cellData = `data-student="${item.student_code}" data-goal="${item.goal_code}" data-date="${date}"`;
+              
+              // Check if there are multiple entries for this date (stacked indicator)
+              const entries = this.rawData.filter(r => 
+                r.student_code === item.student_code && 
+                r.goal_code === item.goal_code && 
+                r.date === date
+              );
+              const hasMultiple = entries.length > 1;
+              const stackedIndicator = hasMultiple ? this.buildStackedIndicator(entries) : '';
+              
+              const valueText = value != null ? Math.round(value) + '%' : '—';
+              const ariaLabel = `Student ${item.student_code}, Goal ${item.goal_code}, ${this.formatPeriodHeader(date)}, ${valueText}`;
+              
+              html += `<td role="gridcell" class="${cellClass}" ${cellData} tabindex="${isEditable ? '0' : '-1'}" aria-label="${ariaLabel}">
+                ${valueText}
+                ${stackedIndicator}
+              </td>`;
+            });
+          }
           
           html += '</tr>';
         });
@@ -529,7 +796,7 @@ export class ProgressGridV2 {
     
     // Add scroll hint if there are more columns
     if (sortedDates.length > visibleDates.length) {
-      html += `<div class="scroll-hint">← Scroll horizontally to see ${sortedDates.length - visibleDates.length} more date columns →</div>`;
+      html += `<div class="scroll-hint" aria-live="polite">← Scroll horizontally to see ${sortedDates.length - visibleDates.length} more date columns →</div>`;
     }
     
     return html;
@@ -1863,12 +2130,539 @@ export class ProgressGridV2 {
     return {
       editingEnabled: getFeatureFlag('progressEditing'),
       autoFromAssignmentsEnabled: getFeatureFlag('progressAutoFromAssignments'),
+      savedViewsEnabled: getFeatureFlag('progressSavedViews'),
+      advancedFiltersEnabled: getFeatureFlag('progressAdvancedFilters'),
+      riskIndicatorsEnabled: getFeatureFlag('progressRiskIndicators'),
+      rollupsEnabled: getFeatureFlag('progressRollups'),
+      pdfExportEnabled: getFeatureFlag('progressPdfExport'),
       bulkModalOpen: this.bulkModalOpen,
       pendingBulkRows: this.pendingBulkRows.length,
       realtimeActive: this.realtimeActive,
       editingCell: this.editingCell ? `${this.editingCell.student_code}|${this.editingCell.goal_code}|${this.editingCell.date}` : null,
       dataRows: this.rawData.length,
-      processedAreas: this.processedData?.sortedAreas?.length || 0
+      processedAreas: this.processedData?.sortedAreas?.length || 0,
+      currentViewId: this.currentViewId,
+      granularity: this.granularity,
+      cacheSize: this.queryCache.size
     };
+  }
+
+  // ========================================================================
+  // Phase 6-8: Saved Views
+  // ========================================================================
+
+  async loadSavedViews() {
+    if (!getFeatureFlag('progressSavedViews')) return;
+    
+    try {
+      this.savedViews = await this.db.listSavedViews(this.options.userId);
+      console.log('[saved-views] Loaded', this.savedViews.length, 'saved views');
+      
+      // Auto-restore last used or default view
+      const defaultView = this.savedViews.find(v => v.is_default);
+      const lastUsedViewId = localStorage.getItem(`rc_progress_last_view_${this.options.userId}`);
+      const viewToRestore = lastUsedViewId 
+        ? this.savedViews.find(v => v.id === lastUsedViewId) || defaultView
+        : defaultView;
+      
+      if (viewToRestore) {
+        await this.restoreView(viewToRestore.id);
+      }
+    } catch (err) {
+      console.error('[saved-views] Failed to load saved views:', err);
+    }
+  }
+
+  async saveCurrentView(name, setAsDefault = false) {
+    if (!getFeatureFlag('progressSavedViews')) return;
+    
+    const config = this.getCurrentViewConfig();
+    
+    try {
+      const view = await this.db.createSavedView(this.options.userId, {
+        name,
+        config,
+        is_default: setAsDefault
+      });
+      
+      this.savedViews.push(view);
+      this.currentViewId = view.id;
+      this.currentViewName = view.name;
+      
+      console.log('[saved-views] Created view:', name);
+      return view;
+    } catch (err) {
+      console.error('[saved-views] Failed to create view:', err);
+      throw err;
+    }
+  }
+
+  async updateCurrentView() {
+    if (!getFeatureFlag('progressSavedViews') || !this.currentViewId) return;
+    
+    const config = this.getCurrentViewConfig();
+    
+    try {
+      const view = await this.db.updateSavedView(this.options.userId, this.currentViewId, {
+        config
+      });
+      
+      // Update in local array
+      const idx = this.savedViews.findIndex(v => v.id === this.currentViewId);
+      if (idx >= 0) {
+        this.savedViews[idx] = view;
+      }
+      
+      console.log('[saved-views] Updated view:', this.currentViewName);
+      return view;
+    } catch (err) {
+      console.error('[saved-views] Failed to update view:', err);
+      throw err;
+    }
+  }
+
+  async deleteView(viewId) {
+    if (!getFeatureFlag('progressSavedViews')) return;
+    
+    try {
+      await this.db.deleteSavedView(this.options.userId, viewId);
+      
+      this.savedViews = this.savedViews.filter(v => v.id !== viewId);
+      
+      if (this.currentViewId === viewId) {
+        this.currentViewId = null;
+        this.currentViewName = null;
+      }
+      
+      console.log('[saved-views] Deleted view:', viewId);
+    } catch (err) {
+      console.error('[saved-views] Failed to delete view:', err);
+      throw err;
+    }
+  }
+
+  async restoreView(viewId) {
+    if (!getFeatureFlag('progressSavedViews')) return;
+    
+    const view = this.savedViews.find(v => v.id === viewId);
+    if (!view) {
+      console.warn('[saved-views] View not found:', viewId);
+      return;
+    }
+    
+    this.applyViewConfig(view.config);
+    this.currentViewId = view.id;
+    this.currentViewName = view.name;
+    
+    // Remember last used view
+    localStorage.setItem(`rc_progress_last_view_${this.options.userId}`, viewId);
+    
+    console.log('[saved-views] Restored view:', view.name);
+    await this.refresh();
+  }
+
+  getCurrentViewConfig() {
+    return {
+      filters: { ...this.filters },
+      sorting: { ...this.sorting },
+      collapsedAreas: Array.from(this.collapsedAreas),
+      visibleColumns: { ...this.visibleColumns },
+      granularity: this.granularity
+    };
+  }
+
+  applyViewConfig(config) {
+    if (config.filters) {
+      this.filters = { ...this.filters, ...config.filters };
+    }
+    if (config.sorting) {
+      this.sorting = { ...config.sorting };
+    }
+    if (config.collapsedAreas) {
+      this.collapsedAreas = new Set(config.collapsedAreas);
+    }
+    if (config.visibleColumns) {
+      this.visibleColumns = { ...this.visibleColumns, ...config.visibleColumns };
+    }
+    if (config.granularity) {
+      this.granularity = config.granularity;
+    }
+  }
+
+  // ========================================================================
+  // Phase 6-8: Advanced Filters
+  // ========================================================================
+
+  applyAdvancedFilters(data) {
+    if (!getFeatureFlag('progressAdvancedFilters')) return data;
+    
+    let filtered = data;
+    
+    // Value range filter (on current value)
+    if (this.filters.valueRange.min != null || this.filters.valueRange.max != null) {
+      filtered = filtered.filter(row => {
+        const current = row.current;
+        if (current == null) return false;
+        
+        if (this.filters.valueRange.min != null && current < this.filters.valueRange.min) return false;
+        if (this.filters.valueRange.max != null && current > this.filters.valueRange.max) return false;
+        
+        return true;
+      });
+    }
+    
+    // Source type filter
+    if (this.filters.sources.length > 0) {
+      filtered = filtered.filter(row => {
+        // Check if any entry for this goal matches the source types
+        const entries = this.rawData.filter(r => 
+          r.student_code === row.student_code && r.goal_code === row.goal_code
+        );
+        return entries.some(e => this.filters.sources.includes(e.source));
+      });
+    }
+    
+    // Data recency filter
+    if (this.filters.dataRecencyDays != null) {
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - this.filters.dataRecencyDays);
+      const cutoffStr = cutoffDate.toISOString().split('T')[0];
+      
+      filtered = filtered.filter(row => {
+        const entries = this.rawData.filter(r => 
+          r.student_code === row.student_code && r.goal_code === row.goal_code
+        );
+        return entries.some(e => e.date >= cutoffStr);
+      });
+    }
+    
+    return filtered;
+  }
+
+  // ========================================================================
+  // Phase 6-8: Risk Indicators
+  // ========================================================================
+
+  calculateRiskIndicators(item) {
+    if (!getFeatureFlag('progressRiskIndicators')) {
+      return { risk: 'none', reasons: [], lastDataAge: null, deltaVsTarget: null };
+    }
+    
+    const risks = [];
+    let riskLevel = 'green'; // green, amber, red
+    
+    // Find all entries for this goal
+    const entries = this.rawData.filter(r => 
+      r.student_code === item.student_code && r.goal_code === item.goal_code
+    );
+    
+    if (entries.length === 0) {
+      return { risk: 'none', reasons: ['No data'], lastDataAge: null, deltaVsTarget: null };
+    }
+    
+    // Calculate last data age
+    const sortedDates = entries.map(e => e.date).sort();
+    const lastDate = sortedDates[sortedDates.length - 1];
+    const today = new Date().toISOString().split('T')[0];
+    const lastDataAge = this.daysBetween(lastDate, today);
+    
+    // Check missing data recency
+    const thresholds = this.options.riskThresholds;
+    if (lastDataAge >= thresholds.missingDataDaysRed) {
+      riskLevel = 'red';
+      risks.push(`No data in ${lastDataAge} days`);
+    } else if (lastDataAge >= thresholds.missingDataDaysAmber) {
+      if (riskLevel === 'green') riskLevel = 'amber';
+      risks.push(`No data in ${lastDataAge} days`);
+    }
+    
+    // Calculate delta vs target (if target exists)
+    let deltaVsTarget = null;
+    if (item.target != null && item.current != null) {
+      deltaVsTarget = item.current - item.target;
+      
+      if (deltaVsTarget < -thresholds.belowTargetRed) {
+        riskLevel = 'red';
+        risks.push(`${Math.abs(Math.round(deltaVsTarget))}pp below target`);
+      } else if (deltaVsTarget < 0 && Math.abs(deltaVsTarget) <= thresholds.belowTargetAmber) {
+        if (riskLevel !== 'red') riskLevel = 'amber';
+        risks.push(`${Math.abs(Math.round(deltaVsTarget))}pp below target`);
+      }
+    }
+    
+    // Check for negative trend
+    const recentValues = sortedDates.slice(-thresholds.negativeTrendPoints).map(date => {
+      const entry = entries.find(e => e.date === date);
+      return entry ? entry.value : null;
+    }).filter(v => v != null);
+    
+    if (recentValues.length >= 2) {
+      const isNegativeTrend = recentValues.every((val, idx) => {
+        if (idx === 0) return true;
+        return val < recentValues[idx - 1];
+      });
+      
+      if (isNegativeTrend) {
+        if (riskLevel === 'green') riskLevel = 'amber';
+        risks.push(`Declining trend over ${recentValues.length} points`);
+      }
+    }
+    
+    return {
+      risk: riskLevel,
+      reasons: risks,
+      lastDataAge,
+      deltaVsTarget
+    };
+  }
+
+  daysBetween(date1Str, date2Str) {
+    const d1 = new Date(date1Str + 'T00:00:00');
+    const d2 = new Date(date2Str + 'T00:00:00');
+    const diffTime = Math.abs(d2 - d1);
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  }
+
+  getRiskIcon(risk, reasons) {
+    const icons = {
+      red: '🔴',
+      amber: '🟡',
+      green: '🟢',
+      none: '⚪'
+    };
+    const icon = icons[risk] || '⚪';
+    const tooltip = reasons.length > 0 ? reasons.join('; ') : 'No issues';
+    return `<span class="risk-indicator risk-${risk}" title="${this.escapeHtml(tooltip)}">${icon}</span>`;
+  }
+
+  // ========================================================================
+  // Phase 6-8: Rollups (Weekly/Monthly Aggregation)
+  // ========================================================================
+
+  setGranularity(granularity) {
+    if (!getFeatureFlag('progressRollups')) return;
+    
+    if (!['daily', 'weekly', 'monthly'].includes(granularity)) {
+      console.warn('[rollups] Invalid granularity:', granularity);
+      return;
+    }
+    
+    this.granularity = granularity;
+    console.log('[rollups] Granularity set to:', granularity);
+    this.refresh();
+  }
+
+  aggregateByGranularity(data) {
+    if (this.granularity === 'daily' || !getFeatureFlag('progressRollups')) {
+      return data; // No aggregation needed
+    }
+    
+    // Group by student/goal and aggregate by time period
+    const aggregated = [];
+    const grouped = {};
+    
+    data.forEach(row => {
+      const key = `${row.student_code}|${row.goal_code}`;
+      if (!grouped[key]) {
+        grouped[key] = {
+          ...row,
+          measurements: {}
+        };
+      }
+      
+      // Aggregate measurements by period
+      Object.entries(row.measurements).forEach(([date, value]) => {
+        const period = this.granularity === 'weekly' 
+          ? this.getWeekKey(date)
+          : this.getMonthKey(date);
+        
+        if (!grouped[key].measurements[period]) {
+          grouped[key].measurements[period] = [];
+        }
+        grouped[key].measurements[period].push(value);
+      });
+    });
+    
+    // Calculate averages for each period
+    Object.values(grouped).forEach(row => {
+      const avgMeasurements = {};
+      Object.entries(row.measurements).forEach(([period, values]) => {
+        avgMeasurements[period] = values.reduce((sum, v) => sum + v, 0) / values.length;
+      });
+      row.measurements = avgMeasurements;
+      aggregated.push(row);
+    });
+    
+    return aggregated;
+  }
+
+  getWeekKey(dateStr) {
+    // ISO week: YYYY-Www (e.g., 2025-W42)
+    const date = new Date(dateStr + 'T00:00:00');
+    const year = date.getFullYear();
+    const week = this.getISOWeek(date);
+    return `${year}-W${String(week).padStart(2, '0')}`;
+  }
+
+  getISOWeek(date) {
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() + 4 - (d.getDay() || 7));
+    const yearStart = new Date(d.getFullYear(), 0, 1);
+    return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+  }
+
+  getMonthKey(dateStr) {
+    // Format: YYYY-MM
+    const date = new Date(dateStr + 'T00:00:00');
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    return `${year}-${month}`;
+  }
+
+  formatPeriodHeader(periodKey) {
+    if (this.granularity === 'weekly') {
+      // Format: W42 (Oct 15)
+      const [year, week] = periodKey.split('-W');
+      const weekEndDate = this.getWeekEndDate(parseInt(year), parseInt(week));
+      return `W${week} (${this.formatDate(weekEndDate)})`;
+    } else if (this.granularity === 'monthly') {
+      // Format: Oct 2025
+      const [year, month] = periodKey.split('-');
+      const date = new Date(year, parseInt(month) - 1, 1);
+      return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    } else {
+      return this.formatDate(periodKey);
+    }
+  }
+
+  getWeekEndDate(year, week) {
+    const jan4 = new Date(year, 0, 4);
+    const daysToAdd = (week - 1) * 7 + (7 - jan4.getDay());
+    const weekEnd = new Date(year, 0, 4 + daysToAdd);
+    return weekEnd.toISOString().split('T')[0];
+  }
+
+  // ========================================================================
+  // Phase 6-8: PDF Export
+  // ========================================================================
+
+  async exportToPDF() {
+    if (!getFeatureFlag('progressPdfExport')) {
+      alert('PDF export is not enabled. Please enable it in settings.');
+      return;
+    }
+    
+    // Use jsPDF library (needs to be loaded separately)
+    if (typeof window.jspdf === 'undefined') {
+      console.error('[pdf-export] jsPDF library not loaded');
+      alert('PDF export library not loaded. Please include jsPDF in your page.');
+      return;
+    }
+    
+    try {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: 'a4'
+      });
+      
+      // Header
+      doc.setFontSize(16);
+      doc.text('IEP Progress Report', 14, 15);
+      
+      doc.setFontSize(10);
+      doc.text(`Date: ${new Date().toLocaleDateString()}`, 14, 22);
+      doc.text(`Teacher: ${this.options.teacherEmail}`, 14, 27);
+      
+      if (this.currentViewName) {
+        doc.text(`View: ${this.currentViewName}`, 14, 32);
+      }
+      
+      if (this.filters.dateRange.start || this.filters.dateRange.end) {
+        const range = `${this.filters.dateRange.start || 'start'} to ${this.filters.dateRange.end || 'today'}`;
+        doc.text(`Date Range: ${range}`, 14, 37);
+      }
+      
+      // Export grid data
+      let yPos = 45;
+      const { groupedByArea, sortedAreas } = this.processedData;
+      
+      doc.setFontSize(8);
+      
+      for (const area of sortedAreas) {
+        const items = groupedByArea[area];
+        
+        // Check if we need a new page
+        if (yPos > 180) {
+          doc.addPage();
+          yPos = 15;
+        }
+        
+        // Goal Area Header
+        doc.setFontSize(12);
+        doc.setFont(undefined, 'bold');
+        doc.text(`📁 ${area}`, 14, yPos);
+        yPos += 7;
+        
+        doc.setFontSize(8);
+        doc.setFont(undefined, 'normal');
+        
+        // Render simplified table for each item
+        items.forEach(item => {
+          if (yPos > 185) {
+            doc.addPage();
+            yPos = 15;
+          }
+          
+          const text = `${item.student_code} - ${item.goal_code}: Current ${item.current != null ? Math.round(item.current) + '%' : '—'}, Baseline ${item.baseline != null ? Math.round(item.baseline) + '%' : '—'}`;
+          doc.text(text, 14, yPos);
+          yPos += 5;
+        });
+        
+        yPos += 3;
+      }
+      
+      // Save PDF
+      const filename = `IEP_Progress_${new Date().toISOString().split('T')[0]}.pdf`;
+      doc.save(filename);
+      
+      console.log('[pdf-export] PDF exported:', filename);
+    } catch (err) {
+      console.error('[pdf-export] Failed to export PDF:', err);
+      alert('Failed to export PDF. See console for details.');
+    }
+  }
+
+  // ========================================================================
+  // Phase 6-8: Performance - Query Caching
+  // ========================================================================
+
+  getFilterHash() {
+    // Create a hash of current filters for caching
+    return JSON.stringify({
+      filters: this.filters,
+      sorting: this.sorting,
+      granularity: this.granularity
+    });
+  }
+
+  getCachedQuery(hash) {
+    return this.queryCache.get(hash);
+  }
+
+  setCachedQuery(hash, data) {
+    // Implement LRU cache
+    if (this.queryCache.size >= this.maxCacheSize) {
+      const firstKey = this.queryCache.keys().next().value;
+      this.queryCache.delete(firstKey);
+    }
+    this.queryCache.set(hash, data);
+  }
+
+  clearQueryCache() {
+    this.queryCache.clear();
+    console.log('[cache] Query cache cleared');
   }
 }

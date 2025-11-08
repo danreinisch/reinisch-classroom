@@ -19,6 +19,41 @@ const FEATURES = {
     key: FEATURE_PREFIX + 'progress_auto_assignments',
     default: false,
     description: 'Enable assignment-to-goal mapping and automated progress tracking'
+  },
+  
+  // Phase 6-8: Saved Views
+  progressSavedViews: {
+    key: FEATURE_PREFIX + 'progress_saved_views',
+    default: false,
+    description: 'Enable saved filter/sort/group configurations as named views'
+  },
+  
+  // Phase 6-8: Advanced Filters
+  progressAdvancedFilters: {
+    key: FEATURE_PREFIX + 'progress_advanced_filters',
+    default: false,
+    description: 'Enable value-range, source, case-manager, and recency filters'
+  },
+  
+  // Phase 6-8: Risk Indicators
+  progressRiskIndicators: {
+    key: FEATURE_PREFIX + 'progress_risk_indicators',
+    default: false,
+    description: 'Enable risk columns, recency tracking, and delta vs target'
+  },
+  
+  // Phase 6-8: Rollups (Weekly/Monthly)
+  progressRollups: {
+    key: FEATURE_PREFIX + 'progress_rollups',
+    default: false,
+    description: 'Enable weekly and monthly aggregation of progress data'
+  },
+  
+  // Phase 6-8: PDF Export
+  progressPdfExport: {
+    key: FEATURE_PREFIX + 'progress_pdf_export',
+    default: false,
+    description: 'Enable PDF export of current grid view'
   }
 };
 
