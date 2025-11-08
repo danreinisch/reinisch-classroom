@@ -4,6 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Reinisch Classroom — Classroom Hub</title>
+<link rel="stylesheet" href="../web/progress-grid-v2.css" />
 <style>
   :root{ --base:#0b0f14; --ink:#e7ecf2; --muted:#9aa6b2; --line:rgba(255,255,255,.08); --brand:#22c55e; }
   *{box-sizing:border-box} html,body{height:100%}
@@ -664,6 +665,7 @@
           <div>
             <button class="btn small" id="btnIEPSummary">Summary</button>
             <button class="btn primary small" id="btnIEPAll">View All Progress</button>
+            <button class="btn primary small" id="btnIEPAllV2" style="display:none">View All Progress (V2)</button>
           </div>
         </div>
 
@@ -1213,6 +1215,23 @@
     </div>
   </div>
 
+  <!-- All Progress V2 modal (Feature Flag) -->
+  <div class="modal-backdrop" id="allModalV2" style="display:none">
+    <div class="modal card" style="max-width:95vw;width:1600px">
+      <div class="card-header">
+        <div>🎯 View All Progress - Enhanced Grid (V2)</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn small" id="allCloseV2">Close</button>
+        </div>
+      </div>
+      
+      <!-- Grid container (populated by ProgressGridV2) -->
+      <div id="progressGridV2Container" style="margin-top:12px">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+  </div>
+
   <style>
     @keyframes pulse {
       0%, 100% { opacity: 0.6; }
@@ -1334,6 +1353,13 @@
   <script type="module">
     import { db, isRemote, localStore } from '../web/data-adapter.js';
     import { listLibraryItems } from '../web/library.js';
+    import { ProgressGridV2 } from '../web/progress-grid-v2.js';
+
+    // ========================================================================
+    // Feature Flags
+    // ========================================================================
+    // Set to true to enable the new Progress Grid V2 (Phases 2-3)
+    window.FEATURE_PROGRESS_GRID_V2 = false;
 
     const TEACHER_PW_LOCAL = 'teacher123';
     const NS = 'rc_unified_';
@@ -1954,6 +1980,50 @@
     qs('#allExport').addEventListener('click', ()=>{
       // Disabled - tooltip shows "Coming soon"
     });
+
+    // ========================================================================
+    // Progress Grid V2 (Feature Flag)
+    // ========================================================================
+    let progressGridV2Instance = null;
+    
+    // Show/hide V2 button based on feature flag
+    if (window.FEATURE_PROGRESS_GRID_V2) {
+      const btnV2 = qs('#btnIEPAllV2');
+      if (btnV2) btnV2.style.display = 'inline-block';
+    }
+    
+    async function openAllModalV2() {
+      console.log('[ProgressGridV2] Opening V2 modal');
+      
+      const modal = qs('#allModalV2');
+      const container = qs('#progressGridV2Container');
+      
+      if (!progressGridV2Instance) {
+        progressGridV2Instance = new ProgressGridV2(db, {
+          trendThreshold: 5,
+          debounceMs: 300
+        });
+      }
+      
+      // Show modal
+      modal.style.display = 'flex';
+      
+      // Render grid
+      await progressGridV2Instance.render(container);
+    }
+    
+    // Event listeners for V2
+    const btnV2 = qs('#btnIEPAllV2');
+    if (btnV2) {
+      btnV2.addEventListener('click', openAllModalV2);
+    }
+    
+    const closeV2 = qs('#allCloseV2');
+    if (closeV2) {
+      closeV2.addEventListener('click', () => {
+        qs('#allModalV2').style.display = 'none';
+      });
+    }
 
     // Summary modal
     function openSummary(){
