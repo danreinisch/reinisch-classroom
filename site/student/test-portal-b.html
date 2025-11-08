@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portal B Test Suite</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .test-section {
+      background: white;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .test-section h2 {
+      margin-top: 0;
+      color: #333;
+    }
+    .test-result {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+    }
+    .test-result.pass {
+      background: #d4edda;
+      border: 1px solid #c3e6cb;
+      color: #155724;
+    }
+    .test-result.fail {
+      background: #f8d7da;
+      border: 1px solid #f5c6cb;
+      color: #721c24;
+    }
+    .code-block {
+      background: #f4f4f4;
+      padding: 10px;
+      border-radius: 4px;
+      font-family: monospace;
+      margin: 10px 0;
+      overflow-x: auto;
+    }
+    button {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧪 Portal B Test Suite</h1>
+  
+  <div class="test-section">
+    <h2>1. Feature Flags Test</h2>
+    <p>Verify all Portal B feature flags are properly defined and can be toggled.</p>
+    <button onclick="testFeatureFlags()">Run Test</button>
+    <div id="featureFlagsResult"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>2. Helper Functions Test</h2>
+    <p>Test assignment status computation and grouping logic.</p>
+    <button onclick="testHelperFunctions()">Run Test</button>
+    <div id="helperFunctionsResult"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>3. Grade Calculations Test</h2>
+    <p>Verify grade average, trend, and sparkline calculations.</p>
+    <button onclick="testGradeCalculations()">Run Test</button>
+    <div id="gradeCalculationsResult"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>4. Status Precedence Test</h2>
+    <p>Verify status precedence: Missing > Late > In Progress > Upcoming</p>
+    <button onclick="testStatusPrecedence()">Run Test</button>
+    <div id="statusPrecedenceResult"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>5. Date/Time Formatting Test</h2>
+    <p>Test date and time formatting for display.</p>
+    <button onclick="testDateFormatting()">Run Test</button>
+    <div id="dateFormattingResult"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>6. Text Truncation Test</h2>
+    <p>Verify text truncation works correctly for goal descriptions.</p>
+    <button onclick="testTextTruncation()">Run Test</button>
+    <div id="textTruncationResult"></div>
+  </div>
+
+  <script type="module">
+    import { getFeatureFlag, setFeatureFlag, getAllFeatureFlags } from '../web/feature-flags.js';
+    import {
+      AssignmentStatus,
+      computeAssignmentStatus,
+      groupAssignmentsByStatus,
+      calculateOverallAverage,
+      calculateTrend,
+      truncateText,
+      formatDateTime,
+      countMissingAssignments
+    } from '../web/portal-b-helpers.js';
+    
+    window.portalBTests = {
+      getFeatureFlag,
+      setFeatureFlag,
+      getAllFeatureFlags,
+      AssignmentStatus,
+      computeAssignmentStatus,
+      groupAssignmentsByStatus,
+      calculateOverallAverage,
+      calculateTrend,
+      truncateText,
+      formatDateTime,
+      countMissingAssignments
+    };
+    
+    console.log('Portal B Test Suite loaded');
+  </script>
+  
+  <script>
+    function showResult(elementId, passed, message) {
+      const el = document.getElementById(elementId);
+      const className = passed ? 'pass' : 'fail';
+      const symbol = passed ? '✅' : '❌';
+      el.innerHTML = `<div class="test-result ${className}">${symbol} ${message}</div>`;
+    }
+    
+    function testFeatureFlags() {
+      try {
+        const flags = window.portalBTests.getAllFeatureFlags();
+        
+        const requiredFlags = [
+          'portalAssignmentsStatus',
+          'portalGradesCard',
+          'portalResubmission',
+          'portalTopBar'
+        ];
+        
+        let allPresent = true;
+        let details = '<div class="code-block">';
+        
+        for (const flag of requiredFlags) {
+          const value = flags[flag];
+          details += `${flag}: ${value !== undefined ? value : 'MISSING'}<br>`;
+          if (value === undefined) allPresent = false;
+        }
+        
+        details += '</div>';
+        
+        showResult('featureFlagsResult', allPresent, 
+          allPresent ? 'All Portal B feature flags present and accessible' : 'Some flags are missing');
+        document.getElementById('featureFlagsResult').innerHTML += details;
+        
+      } catch (err) {
+        showResult('featureFlagsResult', false, `Error: ${err.message}`);
+      }
+    }
+    
+    function testHelperFunctions() {
+      try {
+        const now = new Date('2024-01-15T10:00:00Z');
+        
+        // Test 1: Upcoming assignment
+        const upcomingInstance = {
+          id: '1',
+          due_at: '2024-01-20',
+          status: 'Assigned'
+        };
+        const upcomingStatus = window.portalBTests.computeAssignmentStatus(upcomingInstance, null, now);
+        
+        // Test 2: Late assignment (2 days overdue)
+        const lateInstance = {
+          id: '2',
+          due_at: '2024-01-13',
+          status: 'Assigned'
+        };
+        const lateStatus = window.portalBTests.computeAssignmentStatus(lateInstance, null, now);
+        
+        // Test 3: Missing assignment (5 days overdue)
+        const missingInstance = {
+          id: '3',
+          due_at: '2024-01-10',
+          status: 'Assigned'
+        };
+        const missingStatus = window.portalBTests.computeAssignmentStatus(missingInstance, null, now);
+        
+        // Test 4: Graded assignment
+        const gradedInstance = {
+          id: '4',
+          due_at: '2024-01-10',
+          status: 'Graded'
+        };
+        const gradedSubmission = { score_total: 85 };
+        const gradedStatus = window.portalBTests.computeAssignmentStatus(gradedInstance, gradedSubmission, now);
+        
+        const allCorrect = 
+          upcomingStatus === 'Upcoming' &&
+          lateStatus === 'Late' &&
+          missingStatus === 'Missing' &&
+          gradedStatus === 'Graded';
+        
+        const details = `<div class="code-block">
+          Upcoming: ${upcomingStatus} (expected: Upcoming)<br>
+          Late: ${lateStatus} (expected: Late)<br>
+          Missing: ${missingStatus} (expected: Missing)<br>
+          Graded: ${gradedStatus} (expected: Graded)
+        </div>`;
+        
+        showResult('helperFunctionsResult', allCorrect, 
+          allCorrect ? 'All status computations correct' : 'Some computations incorrect');
+        document.getElementById('helperFunctionsResult').innerHTML += details;
+        
+      } catch (err) {
+        showResult('helperFunctionsResult', false, `Error: ${err.message}`);
+      }
+    }
+    
+    function testGradeCalculations() {
+      try {
+        // Test overall average
+        const submissions = [
+          { score_total: 85 },
+          { score_total: 90 },
+          { score_total: 78 },
+          { score_total: 92 },
+          { score_total: 88 }
+        ];
+        
+        const avg = window.portalBTests.calculateOverallAverage(submissions);
+        const expectedAvg = Math.round((85 + 90 + 78 + 92 + 88) / 5);
+        
+        // Test trend
+        const trendSubmissions = [
+          { score_total: 95, submitted_at: '2024-01-15' },
+          { score_total: 90, submitted_at: '2024-01-14' },
+          { score_total: 92, submitted_at: '2024-01-13' },
+          { score_total: 88, submitted_at: '2024-01-12' },
+          { score_total: 85, submitted_at: '2024-01-11' },
+          { score_total: 80, submitted_at: '2024-01-10' },
+          { score_total: 75, submitted_at: '2024-01-09' },
+          { score_total: 78, submitted_at: '2024-01-08' },
+          { score_total: 72, submitted_at: '2024-01-07' },
+          { score_total: 70, submitted_at: '2024-01-06' }
+        ];
+        
+        const trend = window.portalBTests.calculateTrend(trendSubmissions);
+        
+        const avgCorrect = avg === expectedAvg;
+        const trendCorrect = trend.direction === 'up'; // Last 5 avg should be higher than prev 5
+        
+        const details = `<div class="code-block">
+          Overall Average: ${avg} (expected: ${expectedAvg})<br>
+          Trend Direction: ${trend.direction} (expected: up)<br>
+          Last 5 Avg: ${trend.lastFiveAvg}<br>
+          Prev 5 Avg: ${trend.prevFiveAvg || 'N/A'}
+        </div>`;
+        
+        showResult('gradeCalculationsResult', avgCorrect && trendCorrect,
+          avgCorrect && trendCorrect ? 'Grade calculations correct' : 'Some calculations incorrect');
+        document.getElementById('gradeCalculationsResult').innerHTML += details;
+        
+      } catch (err) {
+        showResult('gradeCalculationsResult', false, `Error: ${err.message}`);
+      }
+    }
+    
+    function testStatusPrecedence() {
+      try {
+        const now = new Date('2024-01-15T10:00:00Z');
+        
+        const instances = [
+          { id: '1', due_at: '2024-01-20', status: 'Assigned' }, // Upcoming
+          { id: '2', due_at: '2024-01-13', status: 'Assigned' }, // Late
+          { id: '3', due_at: '2024-01-10', status: 'Assigned' }, // Missing
+          { id: '4', due_at: '2024-01-16', status: 'In Progress' } // In Progress
+        ];
+        
+        const submissionsMap = {};
+        
+        const groups = window.portalBTests.groupAssignmentsByStatus(instances, submissionsMap, now);
+        
+        const upcomingCount = groups['Upcoming']?.length || 0;
+        const lateCount = groups['Late']?.length || 0;
+        const missingCount = groups['Missing']?.length || 0;
+        const inProgressCount = groups['In Progress']?.length || 0;
+        
+        const correct = upcomingCount === 1 && lateCount === 1 && missingCount === 1 && inProgressCount === 1;
+        
+        const details = `<div class="code-block">
+          Upcoming: ${upcomingCount} (expected: 1)<br>
+          Late: ${lateCount} (expected: 1)<br>
+          Missing: ${missingCount} (expected: 1)<br>
+          In Progress: ${inProgressCount} (expected: 1)
+        </div>`;
+        
+        showResult('statusPrecedenceResult', correct,
+          correct ? 'Status precedence correct' : 'Status grouping incorrect');
+        document.getElementById('statusPrecedenceResult').innerHTML += details;
+        
+      } catch (err) {
+        showResult('statusPrecedenceResult', false, `Error: ${err.message}`);
+      }
+    }
+    
+    function testDateFormatting() {
+      try {
+        const testDate = new Date('2024-01-15T14:30:00');
+        
+        const fullFormat = window.portalBTests.formatDateTime(testDate, 'full');
+        const dateFormat = window.portalBTests.formatDateTime(testDate, 'date');
+        const timeFormat = window.portalBTests.formatDateTime(testDate, 'time');
+        
+        const allDefined = fullFormat && fullFormat !== '—' && 
+                          dateFormat && dateFormat !== '—' &&
+                          timeFormat && timeFormat !== '—';
+        
+        const details = `<div class="code-block">
+          Full: ${fullFormat}<br>
+          Date: ${dateFormat}<br>
+          Time: ${timeFormat}
+        </div>`;
+        
+        showResult('dateFormattingResult', allDefined,
+          allDefined ? 'Date formatting working' : 'Date formatting failed');
+        document.getElementById('dateFormattingResult').innerHTML += details;
+        
+      } catch (err) {
+        showResult('dateFormattingResult', false, `Error: ${err.message}`);
+      }
+    }
+    
+    function testTextTruncation() {
+      try {
+        const shortText = "This is a short goal description.";
+        const longText = "This is a very long goal description that should be truncated because it exceeds the maximum length limit of 140 characters and we need to ensure that it displays properly with ellipsis at the end.";
+        
+        const truncatedShort = window.portalBTests.truncateText(shortText, 140);
+        const truncatedLong = window.portalBTests.truncateText(longText, 140);
+        
+        const shortCorrect = truncatedShort === shortText;
+        const longCorrect = truncatedLong.length === 140 && truncatedLong.endsWith('...');
+        
+        const details = `<div class="code-block">
+          Short text preserved: ${shortCorrect}<br>
+          Long text length: ${truncatedLong.length} (expected: 140)<br>
+          Has ellipsis: ${truncatedLong.endsWith('...')}<br>
+          Truncated: "${truncatedLong}"
+        </div>`;
+        
+        showResult('textTruncationResult', shortCorrect && longCorrect,
+          shortCorrect && longCorrect ? 'Text truncation working correctly' : 'Truncation failed');
+        document.getElementById('textTruncationResult').innerHTML += details;
+        
+      } catch (err) {
+        showResult('textTruncationResult', false, `Error: ${err.message}`);
+      }
+    }
+  </script>
+</body>
+</html>

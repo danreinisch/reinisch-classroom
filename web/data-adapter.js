@@ -137,6 +137,74 @@ const local = {
     return { submission_id: id };
   },
   
+  // Portal B: List submissions (filtered by student if provided)
+  async listSubmissions(filters = {}) {
+    const submissions = store.get('submissions', []);
+    let result = [...submissions];
+    
+    if (filters.student_code) {
+      const instances = store.get('assignmentInstances', []);
+      const studentInstanceIds = new Set(
+        instances.filter(i => i.student_code === filters.student_code).map(i => i.id)
+      );
+      result = result.filter(s => studentInstanceIds.has(s.instance_id));
+    }
+    
+    if (filters.instance_id) {
+      result = result.filter(s => s.instance_id === filters.instance_id);
+    }
+    
+    return result;
+  },
+  
+  // Portal B: Get latest submission for an instance
+  async getLatestSubmission(instance_id) {
+    const submissions = store.get('submissions', []);
+    const instanceSubmissions = submissions
+      .filter(s => s.instance_id === instance_id)
+      .sort((a, b) => new Date(b.submitted_at) - new Date(a.submitted_at));
+    
+    return instanceSubmissions[0] || null;
+  },
+  
+  // Portal B: Create resubmission
+  async createResubmission({ instance_id, original_submission_id, answers = {} }) {
+    const instances = store.get('assignmentInstances', []);
+    const instance = instances.find(i => i.id === instance_id);
+    
+    if (!instance) {
+      throw new Error(`Assignment instance ${instance_id} not found`);
+    }
+    
+    // Check resubmission limit
+    const resubmissionCount = instance.resubmission_count || 0;
+    if (resubmissionCount >= 1) {
+      throw new Error('Resubmission limit reached for this assignment');
+    }
+    
+    // Create new submission
+    const submissions = store.get('submissions', []);
+    const id = 'SUB' + Math.random().toString(36).slice(2, 9).toUpperCase();
+    const newSubmission = {
+      id,
+      instance_id,
+      submission_type: 'resubmission',
+      original_submission_id,
+      answers,
+      submitted_at: new Date().toISOString()
+    };
+    
+    submissions.push(newSubmission);
+    store.set('submissions', submissions);
+    
+    // Increment resubmission count and update status
+    instance.resubmission_count = resubmissionCount + 1;
+    instance.status = 'Submitted';
+    store.set('assignmentInstances', instances);
+    
+    return { submission_id: id };
+  },
+  
   // Phase B: Classes and Enrollments (local stub)
   async listClasses() {
     // Prefer stored classes; otherwise derive unique set from students[].class_id
@@ -911,6 +979,63 @@ const remote = {
       if (e3) throw e3;
       
       return { submission_id: submission.id };
+    });
+  },
+  
+  // Portal B: List submissions (filtered by student if provided)
+  async listSubmissions(filters = {}) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+    return await withRetry(async () => {
+      let query = supabase
+        .from('submissions')
+        .select('*, assignment_instances!inner(student_id, students!inner(code))')
+        .order('submitted_at', { ascending: false });
+      
+      if (filters.student_code) {
+        query = query.eq('assignment_instances.students.code', filters.student_code);
+      }
+      
+      if (filters.instance_id) {
+        query = query.eq('instance_id', filters.instance_id);
+      }
+      
+      const { data, error } = await query;
+      if (error) throw error;
+      
+      return data || [];
+    });
+  },
+  
+  // Portal B: Get latest submission for an instance
+  async getLatestSubmission(instance_id) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+    return await withRetry(async () => {
+      const { data, error } = await supabase
+        .rpc('get_latest_submission', { p_instance_id: instance_id });
+      
+      if (error) throw error;
+      
+      return data && data.length > 0 ? data[0] : null;
+    });
+  },
+  
+  // Portal B: Create resubmission
+  async createResubmission({ instance_id, original_submission_id, answers = {} }) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+    return await withRetry(async () => {
+      const { data, error } = await supabase
+        .rpc('create_resubmission', {
+          p_instance_id: instance_id,
+          p_original_submission_id: original_submission_id,
+          p_answers: answers
+        });
+      
+      if (error) throw error;
+      
+      return { submission_id: data };
     });
   },
   
