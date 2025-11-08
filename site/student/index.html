@@ -151,6 +151,256 @@
   .success-msg{color:#6ee7b7; padding:12px; background:rgba(34,197,94,.1); border-radius:8px; border:1px solid rgba(34,197,94,.3)}
   
   .hidden{display:none !important}
+  
+  /* Portal B: Top Status Bar */
+  .portal-top-bar{
+    background:rgba(15,23,42,.95); border-bottom:1px solid var(--line);
+    padding:12px 16px; display:flex; gap:16px; align-items:center; justify-content:space-between;
+  }
+  .portal-top-bar .clock{
+    font-weight:800; color:var(--brand); font-size:15px;
+  }
+  .portal-top-bar .student-info{
+    font-weight:700; font-size:14px;
+  }
+  .portal-top-bar .actions{
+    display:flex; gap:8px;
+  }
+  
+  /* Portal B: Toast Notifications */
+  .toast-container{
+    position:fixed; top:80px; right:20px; z-index:100; max-width:400px;
+  }
+  .toast{
+    background:var(--panel); border:1px solid var(--line); border-radius:12px;
+    padding:16px; margin-bottom:12px; box-shadow:var(--shadow-2);
+    animation:slideIn 0.3s ease-out;
+  }
+  .toast.warning{
+    border-color:rgba(245,158,11,.5); background:rgba(245,158,11,.1);
+  }
+  .toast.info{
+    border-color:rgba(6,182,212,.5); background:rgba(6,182,212,.1);
+  }
+  .toast .toast-header{
+    display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;
+  }
+  .toast .toast-title{
+    font-weight:900; font-size:15px;
+  }
+  .toast .toast-close{
+    background:none; border:none; color:var(--muted); cursor:pointer;
+    font-size:20px; padding:0; line-height:1;
+  }
+  .toast .toast-body{
+    color:var(--ink-dim); font-size:14px;
+  }
+  .toast .toast-link{
+    color:var(--brand); text-decoration:underline; cursor:pointer; font-weight:700;
+  }
+  @keyframes slideIn{
+    from{transform:translateX(400px); opacity:0}
+    to{transform:translateX(0); opacity:1}
+  }
+  
+  /* Portal B: Collapsible Sections */
+  .section-header{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:14px 18px; cursor:pointer; border:1px solid var(--line);
+    border-radius:12px; margin-bottom:12px; background:rgba(255,255,255,.03);
+    transition:.15s;
+  }
+  .section-header:hover{
+    background:rgba(255,255,255,.06);
+  }
+  .section-header.collapsed{
+    margin-bottom:0;
+  }
+  .section-header .section-title{
+    font-weight:900; font-size:16px; display:flex; align-items:center; gap:10px;
+  }
+  .section-header .section-count{
+    font-weight:700; font-size:14px; color:var(--muted);
+  }
+  .section-header .toggle-icon{
+    font-size:18px; transition:transform .2s;
+  }
+  .section-header.collapsed .toggle-icon{
+    transform:rotate(-90deg);
+  }
+  .section-content{
+    margin-bottom:20px;
+  }
+  .section-content.collapsed{
+    display:none;
+  }
+  
+  /* Portal B: Assignment Cards */
+  .assignment-card{
+    border:1px solid var(--line); border-radius:10px; padding:16px;
+    margin-bottom:12px; background:rgba(255,255,255,.02); transition:.15s;
+  }
+  .assignment-card:hover{
+    background:rgba(255,255,255,.05); border-color:var(--line-strong);
+  }
+  .assignment-card-header{
+    display:flex; justify-content:space-between; align-items:flex-start;
+    margin-bottom:10px;
+  }
+  .assignment-card-title{
+    font-weight:800; font-size:15px; margin-bottom:4px;
+  }
+  .assignment-card-meta{
+    display:flex; gap:12px; font-size:13px; color:var(--muted);
+    flex-wrap:wrap; margin-bottom:8px;
+  }
+  .assignment-card-footer{
+    display:flex; justify-content:space-between; align-items:center;
+    padding-top:12px; border-top:1px solid var(--line);
+  }
+  
+  /* Portal B: Status Pills */
+  .status-pill{
+    display:inline-flex; align-items:center; gap:4px; padding:4px 10px;
+    border-radius:999px; font-size:12px; font-weight:800; border:1px solid;
+  }
+  .status-pill.upcoming{
+    background:rgba(6,182,212,.15); border-color:rgba(6,182,212,.4); color:#22d3ee;
+  }
+  .status-pill.in-progress{
+    background:rgba(139,92,246,.15); border-color:rgba(139,92,246,.4); color:#a78bfa;
+  }
+  .status-pill.late{
+    background:rgba(245,158,11,.15); border-color:rgba(245,158,11,.4); color:#fbbf24;
+  }
+  .status-pill.missing{
+    background:rgba(239,68,68,.15); border-color:rgba(239,68,68,.4); color:#f87171;
+  }
+  .status-pill.submitted{
+    background:rgba(34,197,94,.15); border-color:rgba(34,197,94,.4); color:#4ade80;
+  }
+  .status-pill.graded{
+    background:rgba(34,197,94,.2); border-color:rgba(34,197,94,.5); color:#22c55e;
+  }
+  
+  /* Portal B: Grades Card */
+  .grades-card{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    padding:20px; margin-bottom:20px;
+  }
+  .grade-stat{
+    margin-bottom:16px; padding-bottom:16px; border-bottom:1px solid var(--line);
+  }
+  .grade-stat:last-child{
+    margin-bottom:0; padding-bottom:0; border-bottom:none;
+  }
+  .grade-stat-label{
+    font-size:13px; color:var(--muted); margin-bottom:4px; font-weight:700;
+  }
+  .grade-stat-value{
+    font-size:28px; font-weight:900; color:var(--ink);
+  }
+  .grade-stat-trend{
+    display:inline-flex; align-items:center; gap:4px; margin-left:8px;
+    font-size:18px;
+  }
+  .grade-stat-trend.up{color:#4ade80}
+  .grade-stat-trend.down{color:#f87171}
+  .grade-stat-trend.flat{color:var(--muted)}
+  .sparkline{
+    margin-top:8px; height:30px;
+  }
+  
+  /* Portal B: Filters */
+  .filters{
+    display:flex; gap:12px; margin-bottom:20px; flex-wrap:wrap;
+  }
+  .filter-group{
+    display:flex; flex-direction:column; gap:4px;
+  }
+  .filter-group label{
+    font-size:12px; font-weight:700; color:var(--muted);
+    margin:0;
+  }
+  
+  /* Portal B: Modal */
+  .modal-overlay{
+    position:fixed; top:0; left:0; right:0; bottom:0;
+    background:rgba(0,0,0,.7); z-index:200; display:flex;
+    align-items:center; justify-content:center; padding:20px;
+  }
+  .modal{
+    background:var(--panel); border:1px solid var(--line-strong);
+    border-radius:16px; padding:24px; max-width:500px; width:100%;
+    box-shadow:0 20px 60px rgba(0,0,0,.5);
+  }
+  .modal-header{
+    font-size:20px; font-weight:900; margin-bottom:16px;
+  }
+  .modal-body{
+    color:var(--ink-dim); margin-bottom:20px; line-height:1.6;
+  }
+  .modal-footer{
+    display:flex; gap:12px; justify-content:flex-end;
+  }
+  
+  /* Portal B: Tooltip */
+  .tooltip{
+    position:relative; cursor:help;
+  }
+  .tooltip .tooltip-text{
+    visibility:hidden; position:absolute; z-index:50; bottom:125%;
+    left:50%; transform:translateX(-50%); width:max-content; max-width:300px;
+    background:var(--panel-2); color:var(--ink); padding:8px 12px;
+    border-radius:8px; font-size:13px; border:1px solid var(--line-strong);
+    box-shadow:var(--shadow-1); opacity:0; transition:opacity .2s;
+  }
+  .tooltip:hover .tooltip-text{
+    visibility:visible; opacity:1;
+  }
+  
+  /* Mobile Responsive */
+  @media (max-width:768px){
+    .portal-top-bar{
+      flex-wrap:wrap; padding:10px 12px;
+    }
+    .portal-top-bar .clock{
+      font-size:13px;
+    }
+    .portal-top-bar .student-info{
+      font-size:12px;
+    }
+    .portal-top-bar .actions{
+      width:100%; justify-content:flex-end;
+    }
+    .btn.small{
+      padding:6px 10px; font-size:12px;
+    }
+    .toast-container{
+      top:60px; right:10px; left:10px; max-width:none;
+    }
+    .assignment-card-meta{
+      font-size:12px;
+    }
+    .filters{
+      flex-direction:column;
+    }
+  }
+  
+  @media (max-width:375px){
+    .section-header{
+      padding:12px 14px;
+    }
+    .section-header .section-title{
+      font-size:14px;
+    }
+    .assignment-card{
+      padding:12px;
+    }
+    .assignment-card-title{
+      font-size:14px;
+    }
+  }
 </style>
 </head>
 <body>
@@ -255,6 +505,22 @@
 })();
 </script>
 
+<!-- Portal B: Top Status Bar (hidden until logged in) -->
+<div id="portalTopBar" class="portal-top-bar hidden">
+  <div class="clock" id="portalClock">Loading...</div>
+  <div class="student-info">
+    <span id="portalStudentName"></span>
+  </div>
+  <div class="actions">
+    <a href="https://reinischclassroom.com/language-arts/toolkit/" target="_blank" rel="noopener noreferrer" class="btn small">🛠️ Tool Kit</a>
+    <button id="portalHelpBtn" class="btn small">Help</button>
+    <button id="portalLogoutBtn" class="btn small">Logout</button>
+  </div>
+</div>
+
+<!-- Portal B: Toast Container -->
+<div id="toastContainer" class="toast-container"></div>
+
 <div class="header">
   <div class="bar">
     <div class="brand">🎓 Reinisch Classroom</div>
@@ -301,21 +567,148 @@
     <h1 style="margin-bottom:24px">My Dashboard</h1>
     
     <div class="grid-2">
-      <div class="card">
-        <div class="card-header">
-          <div>📚 My Assignments</div>
-          <span id="assignmentsCount" class="badge info">0</span>
+      <!-- Portal B: Grades Card -->
+      <div id="gradesCardContainer" class="hidden">
+        <div class="grades-card">
+          <div class="card-header" style="margin-bottom:16px">
+            <div>📊 My Grades</div>
+          </div>
+          <div id="gradesCardContent">
+            <div class="grade-stat">
+              <div class="grade-stat-label">Overall Average</div>
+              <div class="grade-stat-value">
+                <span id="overallAverage">—</span>%
+                <span id="overallTrend" class="grade-stat-trend"></span>
+              </div>
+              <svg id="overallSparkline" class="sparkline" style="width:100%"></svg>
+            </div>
+            <div id="classAverages"></div>
+          </div>
         </div>
-        <div id="assignmentsContent"></div>
       </div>
       
-      <div class="card">
-        <div class="card-header">
-          <div>🎯 IEP Goals</div>
-          <span id="goalsCount" class="badge info">0</span>
+      <!-- Portal B: Assignments Dashboard -->
+      <div style="grid-column:1/-1">
+        <div class="card">
+          <div class="card-header">
+            <div>📚 My Assignments</div>
+            <span id="assignmentsCount" class="badge info">0</span>
+          </div>
+          
+          <!-- Assignment Status Tabs -->
+          <div class="tabs" id="assignmentTabs">
+            <div class="tab active" data-status-tab="upcoming">Upcoming</div>
+            <div class="tab" data-status-tab="in-progress">In Progress</div>
+            <div class="tab" data-status-tab="late">Late</div>
+            <div class="tab" data-status-tab="missing">Missing</div>
+            <div class="tab" data-status-tab="submitted">Submitted</div>
+            <div class="tab" data-status-tab="graded">Graded</div>
+            <div class="tab" data-status-tab="all">All</div>
+          </div>
+          
+          <!-- Filters (visible in All tab) -->
+          <div id="assignmentFilters" class="filters hidden">
+            <div class="filter-group">
+              <label for="filterStatus">Status</label>
+              <select id="filterStatus" class="btn small" style="width:auto; padding:6px 10px">
+                <option value="">All Statuses</option>
+                <option value="Upcoming">Upcoming</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Late">Late</option>
+                <option value="Missing">Missing</option>
+                <option value="Submitted">Submitted</option>
+                <option value="Graded">Graded</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <label for="filterDueFrom">Due From</label>
+              <input type="date" id="filterDueFrom" class="btn small" style="width:auto; padding:6px 10px" />
+            </div>
+            <div class="filter-group">
+              <label for="filterDueTo">Due To</label>
+              <input type="date" id="filterDueTo" class="btn small" style="width:auto; padding:6px 10px" />
+            </div>
+            <button id="btnApplyFilters" class="btn small primary" style="align-self:flex-end">Apply</button>
+            <button id="btnClearFilters" class="btn small" style="align-self:flex-end">Clear</button>
+          </div>
+          
+          <!-- Assignment Sections -->
+          <div id="upcomingSection" class="tab-content active">
+            <div id="upcomingContent"></div>
+          </div>
+          
+          <div id="in-progressSection" class="tab-content">
+            <div id="in-progressContent"></div>
+          </div>
+          
+          <div id="lateSection" class="tab-content">
+            <div id="lateContent"></div>
+          </div>
+          
+          <div id="missingSection" class="tab-content">
+            <div id="missingContent"></div>
+          </div>
+          
+          <div id="submittedSection" class="tab-content">
+            <div id="submittedContent"></div>
+          </div>
+          
+          <div id="gradedSection" class="tab-content">
+            <div id="gradedContent"></div>
+          </div>
+          
+          <div id="allSection" class="tab-content">
+            <div id="allContent"></div>
+          </div>
         </div>
-        <div id="goalsContent"></div>
       </div>
+      
+      <!-- IEP Goals (existing, with Portal B enhancements) -->
+      <div style="grid-column:1/-1">
+        <div class="card">
+          <div class="card-header">
+            <div>🎯 IEP Goals</div>
+            <span id="goalsCount" class="badge info">0</span>
+          </div>
+          <div id="goalsContent"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Portal B: Resubmission Confirmation Modal -->
+<div id="resubmitModal" class="modal-overlay hidden">
+  <div class="modal">
+    <div class="modal-header">Confirm Resubmission</div>
+    <div class="modal-body">
+      <p>You are about to resubmit this assignment. You have <strong>one resubmission opportunity</strong> per assignment.</p>
+      <p>After resubmitting, you won't be able to submit again for this assignment.</p>
+      <p>Do you want to proceed?</p>
+    </div>
+    <div class="modal-footer">
+      <button id="btnCancelResubmit" class="btn">Cancel</button>
+      <button id="btnConfirmResubmit" class="btn primary">Confirm Resubmission</button>
+    </div>
+  </div>
+</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Portal B: Resubmission Confirmation Modal -->
+<div id="resubmitModal" class="modal-overlay hidden">
+  <div class="modal">
+    <div class="modal-header">Confirm Resubmission</div>
+    <div class="modal-body">
+      <p>You are about to resubmit this assignment. You have <strong>one resubmission opportunity</strong> per assignment.</p>
+      <p>After resubmitting, you won't be able to submit again for this assignment.</p>
+      <p>Do you want to proceed?</p>
+    </div>
+    <div class="modal-footer">
+      <button id="btnCancelResubmit" class="btn">Cancel</button>
+      <button id="btnConfirmResubmit" class="btn primary">Confirm Resubmission</button>
     </div>
   </div>
 </div>
@@ -427,13 +820,33 @@
 </div>
 
 <script type="module">
-  // Import auth-handoff utilities
+  // Import auth-handoff utilities and Portal B helpers
   import { readAuth, clearAuth, onAuthChange } from '../web/auth-handoff.js';
   import '../web/diagnostics.js';
+  import { getFeatureFlag } from '../web/feature-flags.js';
+  import { db } from '../web/data-adapter.js';
+  import {
+    AssignmentStatus,
+    computeAssignmentStatus,
+    groupAssignmentsByStatus,
+    filterAssignments,
+    calculateOverallAverage,
+    calculateClassAverages,
+    calculateTrend,
+    getSparklineData,
+    truncateText,
+    formatDateTime,
+    countMissingAssignments,
+    countLateAssignments
+  } from '../web/portal-b-helpers.js';
   
   // Feature flags
   const feature = {
-    portalTeacherLoginInStudent: false  // Hide teacher login in Student Portal (default: false for rollback safety)
+    portalTeacherLoginInStudent: false,  // Hide teacher login in Student Portal (default: false for rollback safety)
+    portalAssignmentsStatus: getFeatureFlag('portalAssignmentsStatus'),
+    portalGradesCard: getFeatureFlag('portalGradesCard'),
+    portalResubmission: getFeatureFlag('portalResubmission'),
+    portalTopBar: getFeatureFlag('portalTopBar')
   };
   
   // Local storage namespace
@@ -473,6 +886,13 @@
   // Phase 3: Auth ready flag to prevent double-login and race conditions
   let authReady = false;  // Set to true once authentication is complete to prevent login view from reappearing
   
+  // Portal B: State management
+  let assignmentGroups = {};
+  let submissionsMap = {};
+  let currentFilters = {};
+  let pendingResubmission = null;
+  let clockInterval = null;
+  
   // Listen for auth changes from other tabs via BroadcastChannel
   if (typeof onAuthChange === 'function') {
     const cleanup = onAuthChange((event) => {
@@ -499,29 +919,6 @@
       }
     });
   }
-  
-  // TODO: When Supabase is available, replace with data-adapter calls
-  const db = {
-    async listStudents() { return students; },
-    async listAssignments() { return assignments; },
-    async listAssignmentInstances() { return assignmentInstances; },
-    async listGoalsByStudentCode(code) {
-      return iepGoals.filter(g => g.student_code === code);
-    },
-    async addProgress(entry) {
-      iepEntries.push({ ...entry, created_at: new Date().toISOString() });
-      store.set('iepEntries', iepEntries);
-    },
-    async verifyStudentPassword(code, password) {
-      const student = students.find(s => s.code === code);
-      // Simple default: password is code + '!' if not set
-      return student && (student.password === password || password === code + '!');
-    },
-    async verifyTeacherPassword(password) {
-      // Simple default teacher password
-      return password === 'teacher123';
-    }
-  };
   
   // Login mode tabs
   qsa('[data-login-mode]').forEach(tab => {
@@ -722,8 +1119,58 @@
     
     if (logoutBtn) logoutBtn.classList.remove('hidden');
     
+    // Portal B: Show top status bar if enabled
+    if (feature.portalTopBar) {
+      const topBar = qs('#portalTopBar');
+      if (topBar) {
+        topBar.classList.remove('hidden');
+        qs('#portalStudentName').textContent = currentUser.name || currentUser.code;
+        startClock();
+      }
+    }
+    
+    // Load data
     await loadStudentAssignments();
     await loadStudentGoals();
+    
+    // Portal B: Show grades card if enabled
+    if (feature.portalGradesCard) {
+      await loadGradesCard();
+    }
+    
+    // Portal B: Check for missing/late assignments and show toast
+    if (feature.portalAssignmentsStatus && assignmentGroups) {
+      const missingCount = countMissingAssignments(assignmentGroups);
+      const lateCount = countLateAssignments(assignmentGroups);
+      
+      if (missingCount > 0) {
+        showToast({
+          title: 'Missing Assignments',
+          message: `You have ${missingCount} missing assignment${missingCount > 1 ? 's' : ''}. Please review and submit.`,
+          type: 'warning',
+          link: {
+            text: 'View Missing',
+            action: () => {
+              qs('[data-status-tab="missing"]').click();
+              qs('#missingSection').scrollIntoView({ behavior: 'smooth' });
+            }
+          }
+        });
+      } else if (lateCount > 0) {
+        showToast({
+          title: 'Late Assignments',
+          message: `You have ${lateCount} late assignment${lateCount > 1 ? 's' : ''}. Submit soon to avoid missing status.`,
+          type: 'info',
+          link: {
+            text: 'View Late',
+            action: () => {
+              qs('[data-status-tab="late"]').click();
+              qs('#lateSection').scrollIntoView({ behavior: 'smooth' });
+            }
+          }
+        });
+      }
+    }
   }
   
   async function showTeacherCenter() {
