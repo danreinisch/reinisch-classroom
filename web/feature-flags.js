@@ -117,6 +117,13 @@ const FEATURES = {
     key: FEATURE_PREFIX + 'portal_pdf_export',
     default: true,
     description: 'Enable PDF export of assignments and grades views'
+  },
+  
+  // Assignment Mapping Phase 1
+  assignmentMappingV1: {
+    key: FEATURE_PREFIX + 'assignment_mapping_v1',
+    default: false,
+    description: 'Enable per-question mapping to DESE Standards and IEP Goal Codes with immediate scoring'
   }
 };
 
