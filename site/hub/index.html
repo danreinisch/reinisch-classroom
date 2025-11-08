@@ -2203,12 +2203,32 @@
         }
         
         // Phase 2: Use helper to build student portal URL with correct base path
-        const studentPortalURL = getStudentPortalURL(code, studentName);
-        
-        // Small delay to ensure modal close animation completes
-        setTimeout(() => {
-          window.location.href = studentPortalURL;
-        }, 100);
+        try {
+          const studentPortalURL = getStudentPortalURL(code, studentName);
+          
+          // Small delay to ensure modal close animation completes
+          setTimeout(() => {
+            try {
+              window.location.href = studentPortalURL;
+            } catch (redirectErr) {
+              // Phase 6: Show explicit error if redirect fails
+              console.error('[portal-auth] Redirect failed:', redirectErr);
+              if (msgEl) {
+                msgEl.innerHTML = '<span style="color:#fecaca">Navigation failed. Please click <a href="' + 
+                  studentPortalURL + '" style="color:#22c55e">here</a> to continue.</span>';
+              }
+              // Reopen modal to show error
+              if (modal) modal.classList.add('show');
+            }
+          }, 100);
+        } catch (urlErr) {
+          // Phase 6: Handle URL construction failure
+          console.error('[portal-auth] Failed to construct URL:', urlErr);
+          if (msgEl) {
+            msgEl.innerHTML = '<span style="color:#fecaca">Failed to prepare redirect. Please try again.</span>';
+          }
+          if (modal) modal.classList.add('show');
+        }
       } else {
         // Show appropriate error message
         if (rpcError) {

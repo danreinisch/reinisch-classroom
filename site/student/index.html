@@ -577,9 +577,13 @@
       return;
     }
     
+    console.log('[portal-auth] Student login attempt for code:', code);
+    
     try {
+      // Phase 4: Use db.verifyStudentPassword which uses Supabase RPC when available, else local
       const valid = await db.verifyStudentPassword(code, password);
       if (!valid) {
+        // Phase 4: Show error without resetting focus
         showError('Invalid student code or password');
         return;
       }
@@ -592,6 +596,8 @@
         return;
       }
       
+      console.log('[portal-auth] Student login successful:', student.name || code);
+      
       currentUser = student;
       userRole = 'student';
       sessionStorage.setItem('rc_user_code', code);
@@ -599,8 +605,13 @@
       showStudentDashboard();
       
     } catch (err) {
-      console.error('Login error:', err);
-      showError('Login failed: ' + err.message);
+      console.error('[portal-auth] Login error:', err);
+      // Phase 4: Better error message that doesn't reset focus
+      if (err.message === 'supabase-not-configured') {
+        showError('Login service unavailable. Please try again.');
+      } else {
+        showError('Login failed: ' + err.message);
+      }
     }
   });
   
