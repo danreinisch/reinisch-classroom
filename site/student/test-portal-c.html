@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portal C Test Suite</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    h1 {
+      color: #333;
+      border-bottom: 3px solid #22c55e;
+      padding-bottom: 10px;
+    }
+    .test-section {
+      background: white;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .test-section h2 {
+      margin-top: 0;
+      color: #333;
+    }
+    .test-result {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 14px;
+    }
+    .test-result.pass {
+      background: #d4edda;
+      border: 1px solid #c3e6cb;
+      color: #155724;
+    }
+    .test-result.fail {
+      background: #f8d7da;
+      border: 1px solid #f5c6cb;
+      color: #721c24;
+    }
+    .test-result.info {
+      background: #d1ecf1;
+      border: 1px solid #bee5eb;
+      color: #0c5460;
+    }
+    .code-block {
+      background: #f4f4f4;
+      padding: 10px;
+      border-radius: 4px;
+      font-family: monospace;
+      margin: 10px 0;
+      overflow-x: auto;
+    }
+    button {
+      background: #22c55e;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px;
+      font-weight: bold;
+    }
+    button:hover {
+      background: #16a34a;
+    }
+    .summary {
+      background: #e7f3ff;
+      padding: 15px;
+      border-radius: 4px;
+      margin: 20px 0;
+      border-left: 4px solid #22c55e;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧪 Portal C Test Suite</h1>
+  
+  <div class="summary">
+    <strong>Portal C Features:</strong> Saved Views, Advanced Filters, Risk Indicators, Rollups, PDF Export, Accessibility
+  </div>
+  
+  <div class="test-section">
+    <h2>1. Feature Flags Test</h2>
+    <p>Verify all Portal C feature flags are properly defined and can be toggled.</p>
+    <button onclick="testFeatureFlags()">Run Test</button>
+    <div id="featureFlagsResult"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>2. Risk Badge Computation Test</h2>
+    <p>Test risk badge computation for assignments (MISSING, LATE, LOW, NONE).</p>
+    <button onclick="testRiskBadges()">Run Test</button>
+    <div id="riskBadgesResult"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>3. Advanced Filters Test</h2>
+    <p>Test advanced filtering by score range, recency, type, and overdue streak.</p>
+    <button onclick="testAdvancedFilters()">Run Test</button>
+    <div id="advancedFiltersResult"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>4. Dashboard Summary Test</h2>
+    <p>Test dashboard summary calculation (missing, late, low score, improvements).</p>
+    <button onclick="testDashboardSummary()">Run Test</button>
+    <div id="dashboardSummaryResult"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>5. Trend Calculations Test</h2>
+    <p>Test week-over-week trend and average score trend calculations.</p>
+    <button onclick="testTrendCalculations()">Run Test</button>
+    <div id="trendCalculationsResult"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>6. Rollup Aggregation Test</h2>
+    <p>Test aggregation by daily, weekly, and monthly granularity.</p>
+    <button onclick="testRollupAggregation()">Run Test</button>
+    <div id="rollupAggregationResult"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>7. CSV Export Test</h2>
+    <p>Test CSV export with filters and metadata.</p>
+    <button onclick="testCSVExport()">Run Test</button>
+    <div id="csvExportResult"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>8. Saved Views (Local Storage) Test</h2>
+    <p>Test saved views CRUD operations in local storage.</p>
+    <button onclick="testSavedViews()">Run Test</button>
+    <div id="savedViewsResult"></div>
+  </div>
+
+  <script type="module">
+    import { getFeatureFlag, setFeatureFlag } from '../../../web/feature-flags.js';
+    import {
+      computeRiskBadge,
+      RiskBadge,
+      filterByScoreRange,
+      filterByRecency,
+      filterByType,
+      filterByOverdueStreak,
+      applyAdvancedFilters,
+      calculateDashboardSummary,
+      calculateWeekOverWeekTrend,
+      calculateAverageScoreTrend,
+      aggregateByGranularity,
+      Granularity,
+      exportToCSV,
+      createPDFMetadata,
+      PortalCConstants
+    } from '../../../web/portal-c-helpers.js';
+    import { db } from '../../../web/data-adapter.js';
+
+    // Make functions available globally for onclick handlers
+    window.testFeatureFlags = testFeatureFlags;
+    window.testRiskBadges = testRiskBadges;
+    window.testAdvancedFilters = testAdvancedFilters;
+    window.testDashboardSummary = testDashboardSummary;
+    window.testTrendCalculations = testTrendCalculations;
+    window.testRollupAggregation = testRollupAggregation;
+    window.testCSVExport = testCSVExport;
+    window.testSavedViews = testSavedViews;
+
+    function testFeatureFlags() {
+      const result = document.getElementById('featureFlagsResult');
+      result.innerHTML = '';
+      
+      const flags = [
+        'portalSavedViews',
+        'portalAdvancedFilters',
+        'portalRiskIndicators',
+        'portalRollups',
+        'portalPdfExport'
+      ];
+      
+      let allPassed = true;
+      
+      for (const flag of flags) {
+        const value = getFeatureFlag(flag);
+        const passed = typeof value === 'boolean';
+        
+        if (!passed) allPassed = false;
+        
+        result.innerHTML += `
+          <div class="test-result ${passed ? 'pass' : 'fail'}">
+            ${passed ? '✓' : '✗'} ${flag}: ${value} (${typeof value})
+          </div>
+        `;
+      }
+      
+      result.innerHTML += `
+        <div class="test-result ${allPassed ? 'pass' : 'fail'}">
+          ${allPassed ? '✓ All feature flags defined correctly' : '✗ Some feature flags failed'}
+        </div>
+      `;
+    }
+
+    function testRiskBadges() {
+      const result = document.getElementById('riskBadgesResult');
+      result.innerHTML = '';
+      
+      const now = new Date('2024-01-15T12:00:00Z');
+      
+      const tests = [
+        {
+          name: 'Low score (graded < 60)',
+          instance: { due_at: '2024-01-10' },
+          submission: { score_total: 45 },
+          expected: RiskBadge.LOW
+        },
+        {
+          name: 'Missing (> 3 days overdue, not submitted)',
+          instance: { due_at: '2024-01-10' }, // 5 days ago
+          submission: null,
+          expected: RiskBadge.MISSING
+        },
+        {
+          name: 'Late (1-3 days overdue, not submitted)',
+          instance: { due_at: '2024-01-13' }, // 2 days ago
+          submission: null,
+          expected: RiskBadge.LATE
+        },
+        {
+          name: 'None (submitted with good score)',
+          instance: { due_at: '2024-01-10' },
+          submission: { score_total: 85 },
+          expected: RiskBadge.NONE
+        },
+        {
+          name: 'None (upcoming, not submitted)',
+          instance: { due_at: '2024-01-20' },
+          submission: null,
+          expected: RiskBadge.NONE
+        }
+      ];
+      
+      let allPassed = true;
+      
+      for (const test of tests) {
+        const actual = computeRiskBadge(test.instance, test.submission, now);
+        const passed = actual === test.expected;
+        
+        if (!passed) allPassed = false;
+        
+        result.innerHTML += `
+          <div class="test-result ${passed ? 'pass' : 'fail'}">
+            ${passed ? '✓' : '✗'} ${test.name}: Expected ${test.expected}, Got ${actual}
+          </div>
+        `;
+      }
+      
+      result.innerHTML += `
+        <div class="test-result ${allPassed ? 'pass' : 'fail'}">
+          ${allPassed ? '✓ All risk badge tests passed' : '✗ Some risk badge tests failed'}
+        </div>
+      `;
+    }
+
+    function testAdvancedFilters() {
+      const result = document.getElementById('advancedFiltersResult');
+      result.innerHTML = '';
+      
+      // Sample assignments
+      const assignments = [
+        {
+          instance: { assignment_id: 'A1', title: 'Math Quiz', due_at: '2024-01-10' },
+          latestSubmission: { score_total: 45, submitted_at: '2024-01-10T10:00:00Z' },
+          status: 'Graded'
+        },
+        {
+          instance: { assignment_id: 'A2', title: 'Science Lab', due_at: '2024-01-12' },
+          latestSubmission: { score_total: 85, submitted_at: '2024-01-12T14:00:00Z', graded_at: '2024-01-13T10:00:00Z' },
+          status: 'Graded'
+        },
+        {
+          instance: { assignment_id: 'A3', title: 'English Essay', due_at: '2024-01-08' },
+          latestSubmission: null,
+          status: 'Missing'
+        }
+      ];
+      
+      const assignmentsMap = {
+        'A1': { meta: { type: 'practice' } },
+        'A2': { meta: { type: 'standard' } },
+        'A3': { meta: {} }
+      };
+      
+      const now = new Date('2024-01-15T12:00:00Z');
+      
+      // Test score range filter
+      const scoreLow = filterByScoreRange(assignments, 0, 50);
+      const passed1 = scoreLow.length === 1 && scoreLow[0].instance.title === 'Math Quiz';
+      
+      result.innerHTML += `
+        <div class="test-result ${passed1 ? 'pass' : 'fail'}">
+          ${passed1 ? '✓' : '✗'} Score range filter (0-50): ${scoreLow.length} results
+        </div>
+      `;
+      
+      // Test recency filter
+      const recent = filterByRecency(assignments, 3, 'graded', now);
+      const passed2 = recent.length === 1 && recent[0].instance.title === 'Science Lab';
+      
+      result.innerHTML += `
+        <div class="test-result ${passed2 ? 'pass' : 'fail'}">
+          ${passed2 ? '✓' : '✗'} Recency filter (graded in last 3 days): ${recent.length} results
+        </div>
+      `;
+      
+      // Test type filter
+      const practice = filterByType(assignments, ['practice'], assignmentsMap);
+      const passed3 = practice.length === 1 && practice[0].instance.title === 'Math Quiz';
+      
+      result.innerHTML += `
+        <div class="test-result ${passed3 ? 'pass' : 'fail'}">
+          ${passed3 ? '✓' : '✗'} Type filter (practice): ${practice.length} results
+        </div>
+      `;
+      
+      // Test overdue streak filter
+      const overdue = filterByOverdueStreak(assignments, 5, now);
+      const passed4 = overdue.length === 1 && overdue[0].instance.title === 'English Essay';
+      
+      result.innerHTML += `
+        <div class="test-result ${passed4 ? 'pass' : 'fail'}">
+          ${passed4 ? '✓' : '✗'} Overdue streak filter (>= 5 days): ${overdue.length} results
+        </div>
+      `;
+      
+      const allPassed = passed1 && passed2 && passed3 && passed4;
+      result.innerHTML += `
+        <div class="test-result ${allPassed ? 'pass' : 'fail'}">
+          ${allPassed ? '✓ All advanced filter tests passed' : '✗ Some advanced filter tests failed'}
+        </div>
+      `;
+    }
+
+    function testDashboardSummary() {
+      const result = document.getElementById('dashboardSummaryResult');
+      result.innerHTML = '';
+      
+      const groupedAssignments = {
+        Missing: [{ instance: {}, latestSubmission: null }],
+        Late: [{ instance: {}, latestSubmission: null }, { instance: {}, latestSubmission: null }],
+        Graded: [
+          { instance: {}, latestSubmission: { score_total: 45 } },
+          { instance: {}, latestSubmission: { score_total: 85 } }
+        ]
+      };
+      
+      const allAssignments = [
+        ...groupedAssignments.Missing,
+        ...groupedAssignments.Late,
+        ...groupedAssignments.Graded
+      ];
+      
+      const summary = calculateDashboardSummary(groupedAssignments, allAssignments);
+      
+      const passed1 = summary.missing === 1;
+      const passed2 = summary.late === 2;
+      const passed3 = summary.lowScore === 1; // One score < 60
+      const passed4 = summary.improvements === 3; // late + missing
+      
+      result.innerHTML += `
+        <div class="test-result ${passed1 ? 'pass' : 'fail'}">
+          ${passed1 ? '✓' : '✗'} Missing count: ${summary.missing} (expected 1)
+        </div>
+        <div class="test-result ${passed2 ? 'pass' : 'fail'}">
+          ${passed2 ? '✓' : '✗'} Late count: ${summary.late} (expected 2)
+        </div>
+        <div class="test-result ${passed3 ? 'pass' : 'fail'}">
+          ${passed3 ? '✓' : '✗'} Low score count: ${summary.lowScore} (expected 1)
+        </div>
+        <div class="test-result ${passed4 ? 'pass' : 'fail'}">
+          ${passed4 ? '✓' : '✗'} Improvements: ${summary.improvements} (expected 3)
+        </div>
+      `;
+      
+      const allPassed = passed1 && passed2 && passed3 && passed4;
+      result.innerHTML += `
+        <div class="test-result ${allPassed ? 'pass' : 'fail'}">
+          ${allPassed ? '✓ Dashboard summary test passed' : '✗ Dashboard summary test failed'}
+        </div>
+      `;
+    }
+
+    function testTrendCalculations() {
+      const result = document.getElementById('trendCalculationsResult');
+      result.innerHTML = '';
+      
+      const now = new Date('2024-01-15T12:00:00Z');
+      
+      // Create submissions for last 2 weeks
+      const submissions = [
+        { submitted_at: '2024-01-14T10:00:00Z', score_total: 85 }, // Last week
+        { submitted_at: '2024-01-13T10:00:00Z', score_total: 90 }, // Last week
+        { submitted_at: '2024-01-12T10:00:00Z', score_total: 75 }, // Last week
+        { submitted_at: '2024-01-07T10:00:00Z', score_total: 70 }, // Prev week
+        { submitted_at: '2024-01-06T10:00:00Z', score_total: 65 }, // Prev week
+        { submitted_at: '2024-01-01T10:00:00Z', score_total: 60 }  // Earlier
+      ];
+      
+      const weekTrend = calculateWeekOverWeekTrend(submissions, now);
+      const passed1 = weekTrend.lastWeekCount === 3 && weekTrend.prevWeekCount === 2;
+      const passed2 = weekTrend.direction === 'up';
+      
+      result.innerHTML += `
+        <div class="test-result ${passed1 ? 'pass' : 'fail'}">
+          ${passed1 ? '✓' : '✗'} Week-over-week count: Last=${weekTrend.lastWeekCount}, Prev=${weekTrend.prevWeekCount}
+        </div>
+        <div class="test-result ${passed2 ? 'pass' : 'fail'}">
+          ${passed2 ? '✓' : '✗'} Week trend direction: ${weekTrend.direction} (expected 'up')
+        </div>
+      `;
+      
+      const scoreTrend = calculateAverageScoreTrend(submissions);
+      const passed3 = scoreTrend.direction === 'up'; // Recent scores are higher
+      
+      result.innerHTML += `
+        <div class="test-result ${passed3 ? 'pass' : 'fail'}">
+          ${passed3 ? '✓' : '✗'} Score trend direction: ${scoreTrend.direction} (current: ${scoreTrend.currentAvg.toFixed(1)}%, prev: ${scoreTrend.prevAvg.toFixed(1)}%)
+        </div>
+      `;
+      
+      const allPassed = passed1 && passed2 && passed3;
+      result.innerHTML += `
+        <div class="test-result ${allPassed ? 'pass' : 'fail'}">
+          ${allPassed ? '✓ All trend calculation tests passed' : '✗ Some trend calculation tests failed'}
+        </div>
+      `;
+    }
+
+    function testRollupAggregation() {
+      const result = document.getElementById('rollupAggregationResult');
+      result.innerHTML = '';
+      
+      const submissions = [
+        { submitted_at: '2024-01-14T10:00:00Z', score_total: 85 },
+        { submitted_at: '2024-01-13T10:00:00Z', score_total: 90 },
+        { submitted_at: '2024-01-07T10:00:00Z', score_total: 70 },
+        { submitted_at: '2024-01-01T10:00:00Z', score_total: 60 }
+      ];
+      
+      // Test daily aggregation
+      const dailyBuckets = aggregateByGranularity(submissions, Granularity.DAILY, 8);
+      const passed1 = dailyBuckets.length === 8;
+      
+      result.innerHTML += `
+        <div class="test-result ${passed1 ? 'pass' : 'fail'}">
+          ${passed1 ? '✓' : '✗'} Daily aggregation: ${dailyBuckets.length} buckets (expected 8)
+        </div>
+      `;
+      
+      // Test weekly aggregation
+      const weeklyBuckets = aggregateByGranularity(submissions, Granularity.WEEKLY, 8);
+      const passed2 = weeklyBuckets.length === 8;
+      
+      result.innerHTML += `
+        <div class="test-result ${passed2 ? 'pass' : 'fail'}">
+          ${passed2 ? '✓' : '✗'} Weekly aggregation: ${weeklyBuckets.length} buckets (expected 8)
+        </div>
+      `;
+      
+      // Test monthly aggregation
+      const monthlyBuckets = aggregateByGranularity(submissions, Granularity.MONTHLY, 8);
+      const passed3 = monthlyBuckets.length === 8;
+      
+      result.innerHTML += `
+        <div class="test-result ${passed3 ? 'pass' : 'fail'}">
+          ${passed3 ? '✓' : '✗'} Monthly aggregation: ${monthlyBuckets.length} buckets (expected 8)
+        </div>
+      `;
+      
+      // Verify bucket structure
+      const passed4 = dailyBuckets[0].submissionCount >= 0 && 
+                     typeof dailyBuckets[0].avgScore === 'number';
+      
+      result.innerHTML += `
+        <div class="test-result ${passed4 ? 'pass' : 'fail'}">
+          ${passed4 ? '✓' : '✗'} Bucket structure valid (submissionCount, avgScore present)
+        </div>
+      `;
+      
+      const allPassed = passed1 && passed2 && passed3 && passed4;
+      result.innerHTML += `
+        <div class="test-result ${allPassed ? 'pass' : 'fail'}">
+          ${allPassed ? '✓ All rollup aggregation tests passed' : '✗ Some rollup aggregation tests failed'}
+        </div>
+      `;
+    }
+
+    function testCSVExport() {
+      const result = document.getElementById('csvExportResult');
+      result.innerHTML = '';
+      
+      const assignments = [
+        {
+          instance: { title: 'Math Quiz', class_name: 'Math 101', due_at: '2024-01-10' },
+          latestSubmission: { score_total: 85, submitted_at: '2024-01-10T10:00:00Z' },
+          status: 'Graded'
+        }
+      ];
+      
+      const csv = exportToCSV(assignments);
+      
+      const passed1 = csv.includes('Title');
+      const passed2 = csv.includes('Math Quiz');
+      const passed3 = csv.includes('85');
+      
+      result.innerHTML += `
+        <div class="test-result ${passed1 ? 'pass' : 'fail'}">
+          ${passed1 ? '✓' : '✗'} CSV includes header row
+        </div>
+        <div class="test-result ${passed2 ? 'pass' : 'fail'}">
+          ${passed2 ? '✓' : '✗'} CSV includes assignment title
+        </div>
+        <div class="test-result ${passed3 ? 'pass' : 'fail'}">
+          ${passed3 ? '✓' : '✗'} CSV includes score
+        </div>
+      `;
+      
+      result.innerHTML += `<div class="code-block">${csv.substring(0, 200)}...</div>`;
+      
+      const metadata = createPDFMetadata('John Doe', 'S001', { status: ['Graded'] }, Granularity.DAILY);
+      const passed4 = metadata.title.includes('John Doe') && metadata.title.includes('S001');
+      
+      result.innerHTML += `
+        <div class="test-result ${passed4 ? 'pass' : 'fail'}">
+          ${passed4 ? '✓' : '✗'} PDF metadata created correctly
+        </div>
+      `;
+      
+      const allPassed = passed1 && passed2 && passed3 && passed4;
+      result.innerHTML += `
+        <div class="test-result ${allPassed ? 'pass' : 'fail'}">
+          ${allPassed ? '✓ CSV export test passed' : '✗ CSV export test failed'}
+        </div>
+      `;
+    }
+
+    async function testSavedViews() {
+      const result = document.getElementById('savedViewsResult');
+      result.innerHTML = '';
+      
+      const userCode = 'TEST_STUDENT';
+      
+      try {
+        // Create a view
+        const created = await db.createPortalSavedView(userCode, {
+          name: 'Test View',
+          view_type: 'assignments',
+          config: { status: ['Late', 'Missing'] }
+        });
+        
+        const passed1 = created && created.id && created.name === 'Test View';
+        
+        result.innerHTML += `
+          <div class="test-result ${passed1 ? 'pass' : 'fail'}">
+            ${passed1 ? '✓' : '✗'} Create saved view
+          </div>
+        `;
+        
+        // List views
+        const views = await db.listPortalSavedViews(userCode, 'assignments');
+        const passed2 = views.length > 0;
+        
+        result.innerHTML += `
+          <div class="test-result ${passed2 ? 'pass' : 'fail'}">
+            ${passed2 ? '✓' : '✗'} List saved views: ${views.length} views
+          </div>
+        `;
+        
+        // Get specific view
+        const view = await db.getPortalSavedView(userCode, created.id);
+        const passed3 = view && view.name === 'Test View';
+        
+        result.innerHTML += `
+          <div class="test-result ${passed3 ? 'pass' : 'fail'}">
+            ${passed3 ? '✓' : '✗'} Get saved view by ID
+          </div>
+        `;
+        
+        // Update view
+        const updated = await db.updatePortalSavedView(userCode, created.id, {
+          name: 'Updated View'
+        });
+        const passed4 = updated && updated.name === 'Updated View';
+        
+        result.innerHTML += `
+          <div class="test-result ${passed4 ? 'pass' : 'fail'}">
+            ${passed4 ? '✓' : '✗'} Update saved view
+          </div>
+        `;
+        
+        // Delete view
+        const deleted = await db.deletePortalSavedView(userCode, created.id);
+        const passed5 = deleted === true;
+        
+        result.innerHTML += `
+          <div class="test-result ${passed5 ? 'pass' : 'fail'}">
+            ${passed5 ? '✓' : '✗'} Delete saved view
+          </div>
+        `;
+        
+        const allPassed = passed1 && passed2 && passed3 && passed4 && passed5;
+        result.innerHTML += `
+          <div class="test-result ${allPassed ? 'pass' : 'fail'}">
+            ${allPassed ? '✓ All saved views tests passed' : '✗ Some saved views tests failed'}
+          </div>
+        `;
+      } catch (err) {
+        result.innerHTML += `
+          <div class="test-result fail">
+            ✗ Error: ${err.message}
+          </div>
+        `;
+      }
+    }
+  </script>
+</body>
+</html>
