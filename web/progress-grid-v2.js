@@ -1,5 +1,5 @@
 // ============================================================================
-// IEP Progress Grid V2 (Phases 2-3)
+// IEP Progress Grid V2 (Phases 2-5)
 // ============================================================================
 // Spreadsheet-like grid with:
 // - Multi-quarter selection
@@ -8,7 +8,13 @@
 // - Enhanced filtering and search
 // - Baseline, Current, Delta, Trend metrics
 // - CSV export
+// - Inline editing (Phase 4)
+// - Bulk add modal (Phase 4)
+// - Assignment-goal mapping (Phase 5)
+// - Realtime refresh (Phase 5)
 // ============================================================================
+
+import { getFeatureFlag } from './feature-flags.js';
 
 export class ProgressGridV2 {
   constructor(dataAdapter, options = {}) {
@@ -17,6 +23,7 @@ export class ProgressGridV2 {
       trendThreshold: options.trendThreshold || 5, // percentage points
       columnBufferSize: options.columnBufferSize || 5, // extra columns to render
       debounceMs: options.debounceMs || 300,
+      teacherEmail: options.teacherEmail || 'teacher@example.com', // For collected_by
       ...options
     };
     
@@ -49,10 +56,22 @@ export class ProgressGridV2 {
     // Debounce timer
     this.debounceTimer = null;
     
+    // Phase 4-5: Editing state
+    this.editingCell = null; // { student_code, goal_code, date }
+    this.bulkModalOpen = false;
+    this.pendingBulkRows = [];
+    
+    // Phase 5: Realtime
+    this.realtimeChannel = null;
+    this.realtimeActive = false;
+    this.realtimeDebounceTimer = null;
+    
     // Bind methods
     this.render = this.render.bind(this);
     this.refresh = this.refresh.bind(this);
     this.exportCSV = this.exportCSV.bind(this);
+    this.handleCellClick = this.handleCellClick.bind(this);
+    this.handleCellEdit = this.handleCellEdit.bind(this);
   }
   
   // ========================================================================
@@ -369,6 +388,8 @@ export class ProgressGridV2 {
         <div class="filter-actions">
           <button class="btn small" id="gridRefreshBtn">🔄 Refresh</button>
           <button class="btn small" id="gridExportBtn">📥 Export CSV</button>
+          ${getFeatureFlag('progressEditing') ? '<button class="btn small primary" id="gridBulkAddBtn">➕ Bulk Add Progress</button>' : ''}
+          ${getFeatureFlag('progressAutoFromAssignments') ? '<button class="btn small" id="gridMappingBtn">⚙️ Assignment Mapping</button>' : ''}
         </div>
       </div>
     `;
@@ -480,7 +501,23 @@ export class ProgressGridV2 {
           // Date columns
           visibleDates.forEach(date => {
             const value = item.measurements[date];
-            html += `<td class="col-date">${value != null ? Math.round(value) + '%' : '—'}</td>`;
+            const isEditable = getFeatureFlag('progressEditing');
+            const cellClass = isEditable ? 'col-date editable' : 'col-date';
+            const cellData = `data-student="${item.student_code}" data-goal="${item.goal_code}" data-date="${date}"`;
+            
+            // Check if there are multiple entries for this date (stacked indicator)
+            const entries = this.rawData.filter(r => 
+              r.student_code === item.student_code && 
+              r.goal_code === item.goal_code && 
+              r.date === date
+            );
+            const hasMultiple = entries.length > 1;
+            const stackedIndicator = hasMultiple ? this.buildStackedIndicator(entries) : '';
+            
+            html += `<td class="${cellClass}" ${cellData} tabindex="${isEditable ? '0' : '-1'}">
+              ${value != null ? Math.round(value) + '%' : '—'}
+              ${stackedIndicator}
+            </td>`;
           });
           
           html += '</tr>';
@@ -545,6 +582,17 @@ export class ProgressGridV2 {
       '"': '&quot;',
       "'": '&#39;'
     })[m]);
+  }
+  
+  // ========================================================================
+  // Utility Methods
+  // ========================================================================
+  
+  escapeHtml(text) {
+    if (text == null) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
   }
   
   // ========================================================================
@@ -726,6 +774,30 @@ export class ProgressGridV2 {
       exportBtn.addEventListener('click', () => this.exportCSV());
     }
     
+    // Bulk add button (Phase 4)
+    const bulkAddBtn = containerEl.querySelector('#gridBulkAddBtn');
+    if (bulkAddBtn) {
+      bulkAddBtn.addEventListener('click', () => this.openBulkAddModal());
+    }
+    
+    // Mapping button (Phase 5)
+    const mappingBtn = containerEl.querySelector('#gridMappingBtn');
+    if (mappingBtn) {
+      mappingBtn.addEventListener('click', () => this.openMappingModal());
+    }
+    
+    // Cell click for inline editing (Phase 4)
+    if (getFeatureFlag('progressEditing')) {
+      containerEl.querySelectorAll('td.editable').forEach(cell => {
+        cell.addEventListener('click', this.handleCellClick);
+        cell.addEventListener('keydown', e => {
+          if (e.key === 'Enter') {
+            this.handleCellClick(e);
+          }
+        });
+      });
+    }
+    
     // Area collapse/expand
     containerEl.querySelectorAll('.area-header').forEach(header => {
       header.addEventListener('click', e => {
@@ -877,6 +949,11 @@ export class ProgressGridV2 {
     
     // Render UI
     this.renderOnly();
+    
+    // Setup realtime (Phase 5)
+    if (!this.realtimeChannel) {
+      this.setupRealtime();
+    }
   }
   
   renderOnly() {
@@ -900,5 +977,898 @@ export class ProgressGridV2 {
     if (this.containerEl) {
       await this.render(this.containerEl);
     }
+  }
+
+  // ========================================================================
+  // Phase 4-5: Inline Editing
+  // ========================================================================
+
+  buildStackedIndicator(entries) {
+    if (entries.length <= 1) return '';
+    
+    // Build mini-history HTML
+    const historyItems = entries.map(e => {
+      const icon = e.source === 'assignment' ? 'A' : e.source === 'manual' ? 'M' : 'I';
+      const time = new Date(e.created_at).toLocaleString();
+      return `<div class="history-item">
+        <span class="source-icon">${icon}</span>
+        <span class="value">${Math.round(e.value)}%</span>
+        <span class="time">${time}</span>
+      </div>`;
+    }).join('');
+    
+    return `<span class="stacked-indicator" title="Multiple entries">
+      ${entries.map(e => {
+        const icon = e.source === 'assignment' ? 'A' : e.source === 'manual' ? 'M' : 'I';
+        return `<span class="source-badge">${icon}</span>`;
+      }).join('')}
+      <div class="history-panel">${historyItems}</div>
+    </span>`;
+  }
+
+  handleCellClick(e) {
+    const cell = e.target.closest('td.editable');
+    if (!cell || !getFeatureFlag('progressEditing')) return;
+    
+    const student = cell.dataset.student;
+    const goal = cell.dataset.goal;
+    const date = cell.dataset.date;
+    
+    console.log('[progress-inline-edit] Cell clicked:', { student, goal, date });
+    
+    // Open inline editor
+    this.openInlineEditor(cell, student, goal, date);
+  }
+
+  openInlineEditor(cell, student_code, goal_code, date) {
+    // Close any existing editor
+    this.closeInlineEditor();
+    
+    // Get current value
+    const currentText = cell.textContent.trim();
+    const currentValue = currentText === '—' ? '' : parseInt(currentText);
+    
+    // Create editor
+    const editor = document.createElement('div');
+    editor.className = 'inline-editor';
+    editor.setAttribute('role', 'group');
+    editor.setAttribute('aria-label', `Edit progress for ${student_code} ${goal_code} on ${date}`);
+    editor.innerHTML = `
+      <input 
+        type="number" 
+        min="0" 
+        max="100" 
+        step="1" 
+        value="${currentValue || ''}" 
+        class="editor-input"
+        aria-label="Progress value (0-100)"
+        aria-describedby="editor-hint" />
+      <button class="editor-save" title="Save" aria-label="Save progress value">✓</button>
+      <button class="editor-cancel" title="Cancel" aria-label="Cancel editing">✗</button>
+      <span id="editor-hint" class="sr-only">Use arrow keys to adjust value by 1, Shift+arrow to adjust by 5, Enter to save, Escape to cancel</span>
+    `;
+    
+    // Replace cell content
+    cell.dataset.originalContent = cell.innerHTML;
+    cell.innerHTML = '';
+    cell.appendChild(editor);
+    cell.classList.add('editing');
+    
+    const input = editor.querySelector('.editor-input');
+    const saveBtn = editor.querySelector('.editor-save');
+    const cancelBtn = editor.querySelector('.editor-cancel');
+    
+    // Focus input
+    input.focus();
+    input.select();
+    
+    // Save handler
+    const save = async () => {
+      const value = parseInt(input.value);
+      if (isNaN(value) || value < 0 || value > 100) {
+        alert('Please enter a value between 0 and 100');
+        input.focus();
+        return;
+      }
+      
+      console.log('[progress-inline-edit] Saving:', { student_code, goal_code, date, value });
+      
+      // Optimistic UI update
+      cell.innerHTML = `${value}%`;
+      cell.classList.remove('editing');
+      
+      try {
+        // Save to backend
+        await this.db.upsertGoalProgress({
+          goal_code,
+          student_code,
+          date,
+          value,
+          source: 'manual',
+          collected_by: this.options.teacherEmail
+        });
+        
+        console.log('[progress-inline-edit] Saved successfully');
+        
+        // Refresh data to update metrics
+        await this.refresh();
+      } catch (err) {
+        console.error('[progress-inline-edit] Save failed:', err);
+        
+        // Rollback
+        cell.innerHTML = cell.dataset.originalContent;
+        alert('Failed to save. Please try again.');
+      }
+    };
+    
+    // Event listeners
+    saveBtn.addEventListener('click', save);
+    cancelBtn.addEventListener('click', () => this.closeInlineEditor(cell));
+    
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        save();
+      } else if (e.key === 'Escape') {
+        this.closeInlineEditor(cell);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        const delta = e.shiftKey ? 5 : 1;
+        input.value = Math.min(100, (parseInt(input.value) || 0) + delta);
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        const delta = e.shiftKey ? 5 : 1;
+        input.value = Math.max(0, (parseInt(input.value) || 0) - delta);
+      }
+    });
+    
+    // Store editing state
+    this.editingCell = { cell, student_code, goal_code, date };
+  }
+
+  closeInlineEditor(cell = null) {
+    const target = cell || this.editingCell?.cell;
+    if (!target) return;
+    
+    if (target.dataset.originalContent) {
+      target.innerHTML = target.dataset.originalContent;
+      delete target.dataset.originalContent;
+    }
+    target.classList.remove('editing');
+    
+    this.editingCell = null;
+  }
+
+  // ========================================================================
+  // Phase 4: Bulk Add Modal
+  // ========================================================================
+
+  openBulkAddModal() {
+    console.log('[progress-bulk] Opening bulk add modal');
+    this.bulkModalOpen = true;
+    
+    // Create modal
+    const modal = document.createElement('div');
+    modal.className = 'modal-backdrop show';
+    modal.id = 'bulkAddModal';
+    modal.innerHTML = `
+      <div class="modal card">
+        <div class="card-header">
+          <h3>Bulk Add Progress</h3>
+          <button class="btn small" id="closeBulkModal">✗ Close</button>
+        </div>
+        <div class="bulk-modal-content">
+          <div class="bulk-step" id="bulkStep1">
+            <h4>Step 1: Select Goals</h4>
+            <div class="bulk-goal-filters">
+              <input type="text" placeholder="Search goals..." class="bulk-search" />
+              <select class="bulk-area-filter">
+                <option value="">All Areas</option>
+              </select>
+              <select class="bulk-class-filter">
+                <option value="">All Classes</option>
+              </select>
+            </div>
+            <div class="bulk-goal-list" id="bulkGoalList">
+              <!-- Populated by JS -->
+            </div>
+            <button class="btn primary" id="bulkNextStep1">Next: Select Dates →</button>
+          </div>
+          
+          <div class="bulk-step hidden" id="bulkStep2">
+            <h4>Step 2: Select Dates</h4>
+            <div class="bulk-date-options">
+              <label>
+                <input type="radio" name="dateMode" value="single" checked />
+                Single Date
+              </label>
+              <label>
+                <input type="radio" name="dateMode" value="range" />
+                Date Range
+              </label>
+            </div>
+            <div class="bulk-date-inputs">
+              <input type="date" id="bulkStartDate" />
+              <span id="bulkRangeTo" class="hidden">to</span>
+              <input type="date" id="bulkEndDate" class="hidden" />
+              <label class="hidden" id="bulkSkipWeekendsLabel">
+                <input type="checkbox" id="bulkSkipWeekends" checked />
+                Skip weekends
+              </label>
+            </div>
+            <button class="btn" id="bulkBackStep2">← Back</button>
+            <button class="btn primary" id="bulkNextStep2">Next: Enter Values →</button>
+          </div>
+          
+          <div class="bulk-step hidden" id="bulkStep3">
+            <h4>Step 3: Enter Values</h4>
+            <div class="bulk-value-table-wrapper">
+              <table class="bulk-value-table" id="bulkValueTable">
+                <!-- Populated by JS -->
+              </table>
+            </div>
+            <div class="bulk-shortcuts">
+              <button class="btn small" id="bulkFillAll">Fill All (Value: <input type="number" min="0" max="100" id="bulkFillValue" value="80" style="width:60px" />)</button>
+            </div>
+            <button class="btn" id="bulkBackStep3">← Back</button>
+            <button class="btn primary" id="bulkNextStep3">Next: Review →</button>
+          </div>
+          
+          <div class="bulk-step hidden" id="bulkStep4">
+            <h4>Step 4: Review & Commit</h4>
+            <div id="bulkReviewSummary">
+              <!-- Populated by JS -->
+            </div>
+            <button class="btn" id="bulkBackStep4">← Back</button>
+            <button class="btn primary" id="bulkCommit">✓ Save All Entries</button>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Attach event listeners
+    this.attachBulkModalListeners(modal);
+    
+    // Populate initial data
+    this.populateBulkGoals(modal);
+  }
+
+  attachBulkModalListeners(modal) {
+    // Close modal
+    const closeBtn = modal.querySelector('#closeBulkModal');
+    closeBtn.addEventListener('click', () => this.closeBulkAddModal());
+    
+    // Date mode toggle
+    modal.querySelectorAll('input[name="dateMode"]').forEach(radio => {
+      radio.addEventListener('change', e => {
+        const isRange = e.target.value === 'range';
+        modal.querySelector('#bulkEndDate').classList.toggle('hidden', !isRange);
+        modal.querySelector('#bulkRangeTo').classList.toggle('hidden', !isRange);
+        modal.querySelector('#bulkSkipWeekendsLabel').classList.toggle('hidden', !isRange);
+      });
+    });
+    
+    // Step navigation
+    modal.querySelector('#bulkNextStep1').addEventListener('click', () => {
+      const selected = this.getSelectedBulkGoals(modal);
+      if (selected.length === 0) {
+        alert('Please select at least one goal');
+        return;
+      }
+      this.showBulkStep(modal, 2);
+    });
+    
+    modal.querySelector('#bulkBackStep2').addEventListener('click', () => this.showBulkStep(modal, 1));
+    
+    modal.querySelector('#bulkNextStep2').addEventListener('click', () => {
+      const dates = this.getBulkDates(modal);
+      if (dates.length === 0) {
+        alert('Please select valid dates');
+        return;
+      }
+      this.populateBulkValueTable(modal);
+      this.showBulkStep(modal, 3);
+    });
+    
+    modal.querySelector('#bulkBackStep3').addEventListener('click', () => this.showBulkStep(modal, 2));
+    
+    modal.querySelector('#bulkNextStep3').addEventListener('click', () => {
+      this.populateBulkReview(modal);
+      this.showBulkStep(modal, 4);
+    });
+    
+    modal.querySelector('#bulkBackStep4').addEventListener('click', () => this.showBulkStep(modal, 3));
+    
+    modal.querySelector('#bulkCommit').addEventListener('click', () => this.commitBulkAdd(modal));
+    
+    // Fill all shortcut
+    modal.querySelector('#bulkFillAll').addEventListener('click', () => {
+      const value = modal.querySelector('#bulkFillValue').value;
+      modal.querySelectorAll('.bulk-value-input').forEach(input => {
+        input.value = value;
+      });
+    });
+  }
+
+  populateBulkGoals(modal) {
+    // Get all unique goals from raw data
+    const goalsMap = new Map();
+    this.rawData.forEach(row => {
+      const key = `${row.student_code}|${row.goal_code}`;
+      if (!goalsMap.has(key)) {
+        goalsMap.set(key, {
+          student_code: row.student_code,
+          student_name: row.student_name,
+          goal_code: row.goal_code,
+          goal_desc: row.goal_desc,
+          goal_area: row.goal_area,
+          class_code: row.class_code
+        });
+      }
+    });
+    
+    const goals = Array.from(goalsMap.values());
+    
+    // Populate filters
+    const areas = new Set(goals.map(g => g.goal_area).filter(Boolean));
+    const classes = new Set(goals.map(g => g.class_code).filter(Boolean));
+    
+    const areaFilter = modal.querySelector('.bulk-area-filter');
+    areaFilter.innerHTML = '<option value="">All Areas</option>' + 
+      Array.from(areas).sort().map(a => `<option value="${this.escapeHtml(a)}">${this.escapeHtml(a)}</option>`).join('');
+    
+    const classFilter = modal.querySelector('.bulk-class-filter');
+    classFilter.innerHTML = '<option value="">All Classes</option>' + 
+      Array.from(classes).sort().map(c => `<option value="${this.escapeHtml(c)}">${this.escapeHtml(c)}</option>`).join('');
+    
+    // Populate goal list
+    const goalList = modal.querySelector('#bulkGoalList');
+    goalList.innerHTML = goals.map(g => `
+      <label class="bulk-goal-item">
+        <input type="checkbox" value="${this.escapeHtml(g.student_code)}|${this.escapeHtml(g.goal_code)}" />
+        <div class="bulk-goal-info">
+          <strong>${this.escapeHtml(g.student_name)} (${this.escapeHtml(g.student_code)})</strong> - ${this.escapeHtml(g.goal_code)}
+          <div class="subtle">${this.escapeHtml(g.goal_desc.substring(0, 100))}${g.goal_desc.length > 100 ? '...' : ''}</div>
+          <div class="badge">${this.escapeHtml(g.goal_area)}</div>
+        </div>
+      </label>
+    `).join('');
+    
+    // Search filter
+    const searchInput = modal.querySelector('.bulk-search');
+    searchInput.addEventListener('input', () => this.filterBulkGoals(modal));
+    
+    areaFilter.addEventListener('change', () => this.filterBulkGoals(modal));
+    classFilter.addEventListener('change', () => this.filterBulkGoals(modal));
+  }
+
+  filterBulkGoals(modal) {
+    const search = modal.querySelector('.bulk-search').value.toLowerCase();
+    const area = modal.querySelector('.bulk-area-filter').value;
+    const cls = modal.querySelector('.bulk-class-filter').value;
+    
+    modal.querySelectorAll('.bulk-goal-item').forEach(item => {
+      const text = item.textContent.toLowerCase();
+      const areaMatch = !area || item.querySelector('.badge').textContent === area;
+      const searchMatch = !search || text.includes(search);
+      
+      item.style.display = areaMatch && searchMatch ? 'flex' : 'none';
+    });
+  }
+
+  getSelectedBulkGoals(modal) {
+    const selected = [];
+    modal.querySelectorAll('.bulk-goal-item input:checked').forEach(cb => {
+      const [student_code, goal_code] = cb.value.split('|');
+      const item = this.rawData.find(r => r.student_code === student_code && r.goal_code === goal_code);
+      if (item) {
+        selected.push({
+          student_code,
+          goal_code,
+          student_name: item.student_name,
+          goal_desc: item.goal_desc
+        });
+      }
+    });
+    return selected;
+  }
+
+  getBulkDates(modal) {
+    const mode = modal.querySelector('input[name="dateMode"]:checked').value;
+    const startDate = modal.querySelector('#bulkStartDate').value;
+    
+    if (!startDate) return [];
+    
+    if (mode === 'single') {
+      return [startDate];
+    } else {
+      const endDate = modal.querySelector('#bulkEndDate').value;
+      const skipWeekends = modal.querySelector('#bulkSkipWeekends').checked;
+      
+      if (!endDate) return [startDate];
+      
+      const dates = [];
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        const dayOfWeek = d.getDay();
+        if (skipWeekends && (dayOfWeek === 0 || dayOfWeek === 6)) {
+          continue;
+        }
+        dates.push(d.toISOString().split('T')[0]);
+      }
+      
+      return dates;
+    }
+  }
+
+  populateBulkValueTable(modal) {
+    const goals = this.getSelectedBulkGoals(modal);
+    const dates = this.getBulkDates(modal);
+    
+    const table = modal.querySelector('#bulkValueTable');
+    
+    let html = '<thead><tr><th>Goal</th>';
+    dates.forEach(d => {
+      html += `<th>${this.escapeHtml(d)}</th>`;
+    });
+    html += '</tr></thead><tbody>';
+    
+    goals.forEach(g => {
+      html += `<tr><td><strong>${this.escapeHtml(g.student_name)}</strong><br/>${this.escapeHtml(g.goal_code)}</td>`;
+      dates.forEach(d => {
+        html += `<td><input type="number" min="0" max="100" class="bulk-value-input" data-student="${this.escapeHtml(g.student_code)}" data-goal="${this.escapeHtml(g.goal_code)}" data-date="${this.escapeHtml(d)}" /></td>`;
+      });
+      html += '</tr>';
+    });
+    
+    html += '</tbody>';
+    table.innerHTML = html;
+  }
+
+  populateBulkReview(modal) {
+    const inputs = modal.querySelectorAll('.bulk-value-input');
+    const rows = [];
+    
+    inputs.forEach(input => {
+      const value = parseInt(input.value);
+      if (!isNaN(value) && value >= 0 && value <= 100) {
+        rows.push({
+          student_code: input.dataset.student,
+          goal_code: input.dataset.goal,
+          date: input.dataset.date,
+          value
+        });
+      }
+    });
+    
+    this.pendingBulkRows = rows;
+    
+    const summary = modal.querySelector('#bulkReviewSummary');
+    summary.innerHTML = `
+      <p><strong>${rows.length}</strong> entries will be created.</p>
+      <div class="bulk-review-list">
+        ${rows.map(r => `<div class="bulk-review-item">${this.escapeHtml(r.student_code)} - ${this.escapeHtml(r.goal_code)} - ${this.escapeHtml(r.date)}: ${Math.round(r.value)}%</div>`).slice(0, 20).join('')}
+        ${rows.length > 20 ? `<div class="subtle">... and ${rows.length - 20} more</div>` : ''}
+      </div>
+    `;
+  }
+
+  async commitBulkAdd(modal) {
+    console.log('[progress-bulk] Committing', this.pendingBulkRows.length, 'rows');
+    
+    const commitBtn = modal.querySelector('#bulkCommit');
+    commitBtn.disabled = true;
+    commitBtn.textContent = 'Saving...';
+    
+    try {
+      const result = await this.db.bulkInsertGoalProgress(
+        this.pendingBulkRows.map(r => ({
+          ...r,
+          source: 'manual',
+          collected_by: this.options.teacherEmail
+        }))
+      );
+      
+      console.log('[progress-bulk] Committed successfully:', result);
+      alert(`Successfully saved ${result.inserted} entries!`);
+      
+      this.closeBulkAddModal();
+      await this.refresh();
+    } catch (err) {
+      console.error('[progress-bulk] Commit failed:', err);
+      alert('Failed to save entries. Please try again.');
+      commitBtn.disabled = false;
+      commitBtn.textContent = '✓ Save All Entries';
+    }
+  }
+
+  showBulkStep(modal, step) {
+    modal.querySelectorAll('.bulk-step').forEach((s, i) => {
+      s.classList.toggle('hidden', i + 1 !== step);
+    });
+  }
+
+  closeBulkAddModal() {
+    const modal = document.getElementById('bulkAddModal');
+    if (modal) {
+      modal.remove();
+    }
+    this.bulkModalOpen = false;
+    this.pendingBulkRows = [];
+  }
+
+  // ========================================================================
+  // Phase 5: Assignment Goal Mapping UI
+  // ========================================================================
+
+  async openMappingModal() {
+    console.log('[progress-mapping] Opening assignment-goal mapping modal');
+    
+    // Fetch assignments
+    const assignments = await this.db.listAssignments();
+    
+    // Create modal
+    const modal = document.createElement('div');
+    modal.className = 'modal-backdrop show';
+    modal.id = 'mappingModal';
+    modal.innerHTML = `
+      <div class="modal card" style="max-width: 1000px;">
+        <div class="card-header">
+          <h3>⚙️ Assignment → Goal Mapping</h3>
+          <button class="btn small" id="closeMappingModal">✗ Close</button>
+        </div>
+        <div class="mapping-modal-content">
+          <p class="subtle">Map assignments to IEP goals for automated progress tracking when submissions are graded.</p>
+          
+          <div class="mapping-layout">
+            <div class="mapping-assignments">
+              <h4>Assignments</h4>
+              <input type="text" placeholder="Search assignments..." class="mapping-search" id="assignmentSearch" />
+              <div class="mapping-assignment-list" id="assignmentList">
+                <!-- Populated by JS -->
+              </div>
+            </div>
+            
+            <div class="mapping-goals">
+              <h4>Mapped Goals</h4>
+              <div id="mappingSelectedAssignment" class="mapping-selected-info">
+                Select an assignment to view/edit mappings
+              </div>
+              <div id="mappingGoalList" class="mapping-goal-list hidden">
+                <!-- Populated by JS -->
+              </div>
+              <button class="btn primary hidden" id="addGoalMappingBtn">+ Add Goals</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Attach event listeners
+    this.attachMappingModalListeners(modal, assignments);
+    
+    // Populate assignments
+    this.populateMappingAssignments(modal, assignments);
+  }
+
+  attachMappingModalListeners(modal, assignments) {
+    // Close modal
+    const closeBtn = modal.querySelector('#closeMappingModal');
+    closeBtn.addEventListener('click', () => this.closeMappingModal());
+    
+    // Assignment search
+    const searchInput = modal.querySelector('#assignmentSearch');
+    searchInput.addEventListener('input', () => {
+      this.filterMappingAssignments(modal, assignments);
+    });
+  }
+
+  populateMappingAssignments(modal, assignments) {
+    const list = modal.querySelector('#assignmentList');
+    
+    if (!assignments || assignments.length === 0) {
+      list.innerHTML = '<div class="subtle" style="padding: 16px;">No assignments found</div>';
+      return;
+    }
+    
+    list.innerHTML = assignments.map(a => `
+      <div class="mapping-assignment-item" data-assignment-id="${this.escapeHtml(String(a.id))}">
+        <strong>${this.escapeHtml(a.title || 'Untitled')}</strong>
+        <div class="subtle">${this.escapeHtml(a.series || '')} ${a.type ? `• ${this.escapeHtml(a.type)}` : ''}</div>
+      </div>
+    `).join('');
+    
+    // Attach click listeners
+    list.querySelectorAll('.mapping-assignment-item').forEach(item => {
+      item.addEventListener('click', () => {
+        // Deselect others
+        list.querySelectorAll('.mapping-assignment-item').forEach(i => i.classList.remove('selected'));
+        item.classList.add('selected');
+        
+        const assignmentId = item.dataset.assignmentId;
+        this.showMappingForAssignment(modal, assignmentId, assignments.find(a => a.id == assignmentId));
+      });
+    });
+  }
+
+  filterMappingAssignments(modal, assignments) {
+    const search = modal.querySelector('#assignmentSearch').value.toLowerCase();
+    modal.querySelectorAll('.mapping-assignment-item').forEach(item => {
+      const text = item.textContent.toLowerCase();
+      item.style.display = text.includes(search) ? 'block' : 'none';
+    });
+  }
+
+  async showMappingForAssignment(modal, assignmentId, assignment) {
+    console.log('[progress-mapping] Showing mappings for assignment:', assignmentId);
+    
+    const infoDiv = modal.querySelector('#mappingSelectedAssignment');
+    const goalList = modal.querySelector('#mappingGoalList');
+    const addBtn = modal.querySelector('#addGoalMappingBtn');
+    
+    infoDiv.innerHTML = `<strong>${this.escapeHtml(assignment.title || 'Untitled Assignment')}</strong><br/>
+      <span class="subtle">${this.escapeHtml(assignment.series || '')} ${assignment.type ? `• ${this.escapeHtml(assignment.type)}` : ''}</span>`;
+    
+    goalList.classList.remove('hidden');
+    addBtn.classList.remove('hidden');
+    
+    // Fetch existing mappings
+    const mappings = await this.db.listAssignmentGoalMappings(assignmentId);
+    console.log('[progress-mapping] Fetched mappings:', mappings);
+    
+    if (!mappings || mappings.length === 0) {
+      goalList.innerHTML = '<div class="subtle" style="padding: 16px;">No goals mapped yet. Click "+ Add Goals" to map goals.</div>';
+    } else {
+      goalList.innerHTML = mappings.map(m => `
+        <div class="mapping-goal-item">
+          <div class="mapping-goal-info">
+            <strong>${this.escapeHtml(m.goals?.code || 'Unknown')}</strong> - ${this.escapeHtml(m.goals?.desc || '')}
+            <div class="subtle">${this.escapeHtml(m.goals?.goal_area || 'Uncategorized')}</div>
+          </div>
+          <div class="mapping-goal-actions">
+            <label>
+              <input type="checkbox" ${m.primary_goal ? 'checked' : ''} 
+                class="mapping-primary-toggle" 
+                data-mapping-id="${this.escapeHtml(String(m.id))}" 
+                data-assignment-id="${this.escapeHtml(String(assignmentId))}"
+                data-goal-id="${this.escapeHtml(String(m.goal_id))}" />
+              Primary
+            </label>
+            <button class="btn small mapping-remove-btn" 
+              data-assignment-id="${this.escapeHtml(String(assignmentId))}" 
+              data-goal-id="${this.escapeHtml(String(m.goal_id))}">Remove</button>
+          </div>
+        </div>
+      `).join('');
+      
+      // Attach listeners
+      goalList.querySelectorAll('.mapping-primary-toggle').forEach(cb => {
+        cb.addEventListener('change', async (e) => {
+          const assignmentId = e.target.dataset.assignmentId;
+          const goalId = e.target.dataset.goalId;
+          const primary = e.target.checked;
+          
+          try {
+            await this.db.upsertAssignmentGoalMapping({
+              assignment_id: assignmentId,
+              goal_id: goalId,
+              primary_goal: primary
+            });
+            console.log('[progress-mapping] Updated primary flag');
+          } catch (err) {
+            console.error('[progress-mapping] Failed to update primary flag:', err);
+            e.target.checked = !primary; // Revert
+            alert('Failed to update primary goal flag');
+          }
+        });
+      });
+      
+      goalList.querySelectorAll('.mapping-remove-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const assignmentId = e.target.dataset.assignmentId;
+          const goalId = e.target.dataset.goalId;
+          
+          if (!confirm('Remove this goal mapping?')) return;
+          
+          try {
+            await this.db.deleteAssignmentGoalMapping({
+              assignment_id: assignmentId,
+              goal_id: goalId
+            });
+            console.log('[progress-mapping] Removed mapping');
+            
+            // Refresh mappings
+            this.showMappingForAssignment(modal, assignmentId, assignment);
+          } catch (err) {
+            console.error('[progress-mapping] Failed to remove mapping:', err);
+            alert('Failed to remove mapping');
+          }
+        });
+      });
+    }
+    
+    // Add goals button
+    addBtn.onclick = () => this.openAddGoalsMappingDialog(modal, assignmentId, assignment);
+  }
+
+  async openAddGoalsMappingDialog(modal, assignmentId, assignment) {
+    console.log('[progress-mapping] Opening add goals dialog');
+    
+    // Fetch all goals
+    const allGoals = await this.db.listGoalsAll();
+    const existingMappings = await this.db.listAssignmentGoalMappings(assignmentId);
+    const existingGoalIds = new Set(existingMappings.map(m => m.goal_id));
+    
+    // Create dialog
+    const dialog = document.createElement('div');
+    dialog.className = 'modal-backdrop show';
+    dialog.id = 'addGoalsDialog';
+    dialog.innerHTML = `
+      <div class="modal card" style="max-width: 600px;">
+        <div class="card-header">
+          <h3>Add Goals to "${this.escapeHtml(assignment.title)}"</h3>
+          <button class="btn small" id="closeAddGoalsDialog">✗ Close</button>
+        </div>
+        <div style="padding: 16px;">
+          <input type="text" placeholder="Search goals..." class="mapping-search" id="goalSearchDialog" />
+          
+          <div class="mapping-add-goal-list">
+            ${allGoals.map(g => {
+              const alreadyMapped = existingGoalIds.has(g.id);
+              return `
+                <label class="mapping-add-goal-item ${alreadyMapped ? 'disabled' : ''}">
+                  <input type="checkbox" value="${this.escapeHtml(String(g.id))}" ${alreadyMapped ? 'disabled' : ''} 
+                    data-student-code="${this.escapeHtml(g.student_code || '')}" 
+                    data-goal-code="${this.escapeHtml(g.code || '')}" />
+                  <div class="mapping-goal-info">
+                    <strong>${this.escapeHtml(g.student_code || 'Unknown')} - ${this.escapeHtml(g.code || '')}</strong>
+                    <div class="subtle">${this.escapeHtml(g.desc || '')}</div>
+                    <div class="badge">${this.escapeHtml(g.goal_area || 'Uncategorized')}</div>
+                  </div>
+                  ${alreadyMapped ? '<span class="subtle">Already mapped</span>' : ''}
+                </label>
+              `;
+            }).join('')}
+          </div>
+          
+          <div style="margin-top: 16px; display: flex; gap: 8px;">
+            <button class="btn" id="cancelAddGoals">Cancel</button>
+            <button class="btn primary" id="confirmAddGoals">Add Selected Goals</button>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(dialog);
+    
+    // Search
+    dialog.querySelector('#goalSearchDialog').addEventListener('input', (e) => {
+      const search = e.target.value.toLowerCase();
+      dialog.querySelectorAll('.mapping-add-goal-item').forEach(item => {
+        const text = item.textContent.toLowerCase();
+        item.style.display = text.includes(search) ? 'flex' : 'none';
+      });
+    });
+    
+    // Close
+    const closeDialog = () => {
+      dialog.remove();
+    };
+    
+    dialog.querySelector('#closeAddGoalsDialog').addEventListener('click', closeDialog);
+    dialog.querySelector('#cancelAddGoals').addEventListener('click', closeDialog);
+    
+    // Confirm
+    dialog.querySelector('#confirmAddGoals').addEventListener('click', async () => {
+      const selected = Array.from(dialog.querySelectorAll('.mapping-add-goal-item input:checked'))
+        .map(cb => cb.value);
+      
+      if (selected.length === 0) {
+        alert('Please select at least one goal');
+        return;
+      }
+      
+      console.log('[progress-mapping] Adding mappings:', selected);
+      
+      try {
+        for (const goalId of selected) {
+          await this.db.upsertAssignmentGoalMapping({
+            assignment_id: assignmentId,
+            goal_id: goalId,
+            primary_goal: false
+          });
+        }
+        
+        console.log('[progress-mapping] Added', selected.length, 'mappings');
+        closeDialog();
+        
+        // Refresh mappings
+        this.showMappingForAssignment(modal, assignmentId, assignment);
+      } catch (err) {
+        console.error('[progress-mapping] Failed to add mappings:', err);
+        alert('Failed to add mappings. Please try again.');
+      }
+    });
+  }
+
+  closeMappingModal() {
+    const modal = document.getElementById('mappingModal');
+    if (modal) {
+      modal.remove();
+    }
+    
+    // Also close add goals dialog if open
+    const dialog = document.getElementById('addGoalsDialog');
+    if (dialog) {
+      dialog.remove();
+    }
+  }
+
+  // ========================================================================
+  // Phase 5: Realtime Refresh
+  // ========================================================================
+
+  async setupRealtime() {
+    // Only setup if Supabase is available
+    const supabase = await this.db.getSupabase?.();
+    if (!supabase) {
+      console.log('[progress-realtime] Supabase not available, skipping realtime setup');
+      return;
+    }
+    
+    console.log('[progress-realtime] Setting up realtime subscription');
+    
+    this.realtimeChannel = supabase
+      .channel('goal_progress_changes')
+      .on('postgres_changes', 
+        { event: 'INSERT', schema: 'public', table: 'goal_progress' },
+        payload => this.handleRealtimeInsert(payload)
+      )
+      .subscribe((status) => {
+        console.log('[progress-realtime] Subscription status:', status);
+        this.realtimeActive = status === 'SUBSCRIBED';
+      });
+  }
+
+  handleRealtimeInsert(payload) {
+    console.log('[progress-realtime] Insert detected:', payload);
+    
+    // Debounce refresh to avoid excessive updates
+    clearTimeout(this.realtimeDebounceTimer);
+    this.realtimeDebounceTimer = setTimeout(() => {
+      console.log('[progress-realtime] Refreshing grid');
+      this.refresh();
+    }, 250);
+  }
+
+  teardownRealtime() {
+    if (this.realtimeChannel) {
+      console.log('[progress-realtime] Tearing down realtime subscription');
+      this.realtimeChannel.unsubscribe();
+      this.realtimeChannel = null;
+      this.realtimeActive = false;
+    }
+  }
+
+  // ========================================================================
+  // Phase 4-5: Diagnostics
+  // ========================================================================
+
+  getDiagnostics() {
+    return {
+      editingEnabled: getFeatureFlag('progressEditing'),
+      autoFromAssignmentsEnabled: getFeatureFlag('progressAutoFromAssignments'),
+      bulkModalOpen: this.bulkModalOpen,
+      pendingBulkRows: this.pendingBulkRows.length,
+      realtimeActive: this.realtimeActive,
+      editingCell: this.editingCell ? `${this.editingCell.student_code}|${this.editingCell.goal_code}|${this.editingCell.date}` : null,
+      dataRows: this.rawData.length,
+      processedAreas: this.processedData?.sortedAreas?.length || 0
+    };
   }
 }
