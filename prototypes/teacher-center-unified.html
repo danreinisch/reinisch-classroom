@@ -1591,7 +1591,10 @@
       <div style="margin-top:16px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
           <div style="font-weight:800">Goals</div>
-          <button type="button" class="btn small" id="btnEditAddGoal">+ Add Goal</button>
+          <div style="display:flex;gap:8px">
+            <button type="button" class="btn primary small" id="btnAddIEPGoals">+ Add IEP Goals</button>
+            <button type="button" class="btn small" id="btnEditAddGoal">+ Add Goal</button>
+          </div>
         </div>
         <div id="editGoalsContainer">
           <!-- Goals will be listed here -->
@@ -1603,6 +1606,68 @@
       <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
         <button class="btn small" id="btnEditStudentCancel">Cancel</button>
         <button class="btn primary small" id="btnEditStudentSave">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Multi-Goal Wizard Modal -->
+  <div class="modal-backdrop" id="multiGoalWizard" style="display:none" role="dialog" aria-labelledby="multiGoalWizardTitle" aria-modal="true">
+    <div class="modal card" style="max-width:1000px">
+      <div class="card-header">
+        <div id="multiGoalWizardTitle">Add IEP Goals</div>
+        <button type="button" class="btn small" id="btnCloseMultiGoalWizard" aria-label="Close dialog">✕</button>
+      </div>
+      
+      <!-- Step 0: Goal Quantity -->
+      <div id="goalWizardStep0" class="goal-wizard-step">
+        <div style="max-width:500px">
+          <label for="goalQuantity">How many goals would you like to add?
+            <input type="number" id="goalQuantity" min="1" max="20" value="1" required />
+            <div class="subtle" style="font-size:12px;margin-top:4px">Enter a number between 1 and 20</div>
+          </label>
+        </div>
+        <div id="step0Error" style="color:#fca5a5;margin-top:12px;display:none" role="alert" aria-live="polite"></div>
+      </div>
+      
+      <!-- Step 1: Goal Entry Form -->
+      <div id="goalWizardStep1" class="goal-wizard-step" style="display:none">
+        <div style="margin-bottom:12px;font-weight:800">Enter Goal Details</div>
+        <div id="goalsScrollContainer" class="scroll" style="max-height:60vh;padding:12px;display:flex;flex-direction:column;gap:16px" role="region" aria-label="Goals entry form">
+          <!-- Goal cards will be dynamically added here -->
+        </div>
+        <div id="step1Error" style="color:#fca5a5;margin-top:12px;display:none" role="alert" aria-live="polite"></div>
+      </div>
+      
+      <!-- Step 2: Review & Save -->
+      <div id="goalWizardStep2" class="goal-wizard-step" style="display:none">
+        <div style="font-weight:800;margin-bottom:12px">Review Goals</div>
+        <div class="scroll" style="max-height:60vh">
+          <table class="table" id="goalReviewTable">
+            <thead>
+              <tr>
+                <th>Goal Code</th>
+                <th>Goal Area</th>
+                <th>Baseline %</th>
+                <th>Target %</th>
+                <th>Case Manager</th>
+                <th>Active</th>
+              </tr>
+            </thead>
+            <tbody id="goalReviewTableBody">
+              <!-- Review rows will be added here -->
+            </tbody>
+          </table>
+        </div>
+        <div id="step2Error" style="color:#fca5a5;margin-top:12px;display:none" role="alert" aria-live="polite"></div>
+      </div>
+      
+      <!-- Wizard Navigation -->
+      <div style="display:flex;gap:10px;justify-content:space-between;margin-top:16px;padding-top:16px;border-top:1px solid var(--line)">
+        <button class="btn small" id="btnGoalWizardBack" style="display:none">← Back</button>
+        <div style="flex:1"></div>
+        <button class="btn small" id="btnGoalWizardCancel">Cancel</button>
+        <button class="btn primary small" id="btnGoalWizardNext">Next →</button>
+        <button class="btn primary small" id="btnGoalWizardSave" style="display:none">Save All Goals</button>
       </div>
     </div>
   </div>
@@ -4751,9 +4816,480 @@
     // Edit student (placeholder)
     window.editStudent = async function(code) {
       console.log('[student-edit] Edit student:', code);
-      // TODO: Implement edit modal
-      addNotif('Edit student feature coming soon');
+      
+      try {
+        // Load student data
+        const student = studentManagerState.students.find(s => s.code === code);
+        if (!student) {
+          addNotif(`Student ${code} not found`, { type: 'error' });
+          return;
+        }
+        
+        // Populate edit modal
+        qs('#editStudentCode').value = code;
+        
+        // Load and display goals
+        const goals = await db.listStudentGoals(code);
+        const goalsContainer = qs('#editGoalsContainer');
+        
+        if (goals.length === 0) {
+          goalsContainer.innerHTML = '<div class="subtle" style="text-align:center;padding:20px">No goals yet. Click "Add IEP Goals" to add multiple goals at once.</div>';
+        } else {
+          goalsContainer.innerHTML = goals.map(g => `
+            <div class="goal-item" style="margin-bottom:8px">
+              <div>
+                <strong>${g.code}</strong>
+                ${g.goal_area ? `<span class="badge" style="margin-left:8px">${g.goal_area}</span>` : ''}
+              </div>
+              <div class="subtle" style="font-size:13px;margin-top:4px">${g.desc}</div>
+              ${g.baseline !== undefined && g.target !== undefined ? `
+                <div class="subtle" style="font-size:12px;margin-top:4px">
+                  Baseline: ${g.baseline}% • Target: ${g.target}%
+                </div>
+              ` : ''}
+            </div>
+          `).join('');
+        }
+        
+        // Show modal
+        qs('#editStudentModal').style.display = 'flex';
+        
+      } catch (err) {
+        console.error('[student-edit] Error:', err);
+        addNotif(`Failed to load student data: ${err.message}`, { type: 'error' });
+      }
     };
+    
+    // Close edit modal
+    on('#btnEditStudentCancel', 'click', () => {
+      qs('#editStudentModal').style.display = 'none';
+    });
+    
+    // =======================
+    // Multi-Goal Wizard
+    // =======================
+    
+    let multiGoalWizardState = {
+      currentStep: 0,
+      studentCode: null,
+      goalCount: 1,
+      goals: [],
+      existingGoalCodes: [],
+      availableGoalAreas: [],
+      currentTeacher: 'Teacher Name' // TODO: Get from session
+    };
+    
+    // Check if multi-goal wizard is enabled
+    function isMultiGoalWizardEnabled() {
+      return getFeatureFlag('studentMultiGoalWizard');
+    }
+    
+    // Open multi-goal wizard
+    window.openMultiGoalWizard = async function(studentCode) {
+      if (!isMultiGoalWizardEnabled()) {
+        addNotif('Multi-goal wizard feature is disabled. Enable it from Settings.', { type: 'info' });
+        return;
+      }
+      
+      console.log('[multi-goal-wizard] Opening for student:', studentCode);
+      multiGoalWizardState.studentCode = studentCode;
+      multiGoalWizardState.currentStep = 0;
+      multiGoalWizardState.goals = [];
+      
+      // Load existing goal codes for uniqueness check
+      try {
+        const existingGoals = await db.listStudentGoals(studentCode);
+        multiGoalWizardState.existingGoalCodes = existingGoals.map(g => g.code);
+        
+        // Load available goal areas (student-specific + global)
+        const studentAreas = await db.getDistinctGoalAreas(studentCode);
+        const globalAreas = await db.getDistinctGoalAreas();
+        multiGoalWizardState.availableGoalAreas = Array.from(new Set([...studentAreas, ...globalAreas])).sort();
+        
+        console.log('[multi-goal-wizard] Existing codes:', multiGoalWizardState.existingGoalCodes);
+        console.log('[multi-goal-wizard] Available areas:', multiGoalWizardState.availableGoalAreas);
+      } catch (err) {
+        console.error('[multi-goal-wizard] Error loading data:', err);
+        multiGoalWizardState.existingGoalCodes = [];
+        multiGoalWizardState.availableGoalAreas = [];
+      }
+      
+      updateGoalWizardStep(0);
+      qs('#multiGoalWizard').style.display = 'flex';
+      qs('#goalQuantity').focus();
+    };
+    
+    // Update wizard step
+    function updateGoalWizardStep(step) {
+      multiGoalWizardState.currentStep = step;
+      
+      // Hide all steps
+      qsa('.goal-wizard-step').forEach(s => s.style.display = 'none');
+      
+      // Show current step
+      qs(`#goalWizardStep${step}`).style.display = 'block';
+      
+      // Update title
+      const titles = ['How many goals?', 'Enter Goal Details', 'Review & Save'];
+      qs('#multiGoalWizardTitle').textContent = `Add IEP Goals - Step ${step + 1}: ${titles[step]}`;
+      
+      // Update navigation buttons
+      qs('#btnGoalWizardBack').style.display = step > 0 ? 'inline-block' : 'none';
+      qs('#btnGoalWizardNext').style.display = step < 2 ? 'inline-block' : 'none';
+      qs('#btnGoalWizardSave').style.display = step === 2 ? 'inline-block' : 'none';
+      
+      // Clear errors
+      hideGoalWizardError(step);
+    }
+    
+    // Show error for step
+    function showGoalWizardError(step, message) {
+      const errorEl = qs(`#step${step}Error`);
+      if (errorEl) {
+        errorEl.textContent = message;
+        errorEl.style.display = 'block';
+      }
+    }
+    
+    // Hide error for step
+    function hideGoalWizardError(step) {
+      const errorEl = qs(`#step${step}Error`);
+      if (errorEl) {
+        errorEl.style.display = 'none';
+      }
+    }
+    
+    // Generate goal cards for step 1
+    function generateGoalCards() {
+      const container = qs('#goalsScrollContainer');
+      const count = multiGoalWizardState.goalCount;
+      const studentCode = multiGoalWizardState.studentCode;
+      
+      container.innerHTML = '';
+      
+      for (let i = 0; i < count; i++) {
+        const goalNum = i + 1;
+        const suggestedCode = generateGoalCode(studentCode, goalNum);
+        
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.style.padding = '14px';
+        card.setAttribute('data-goal-index', i);
+        card.innerHTML = `
+          <h3 style="margin:0 0 12px 0;font-size:16px" id="goal-${i}-heading">Goal ${goalNum}</h3>
+          
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div>
+              <label for="goalArea-${i}">Goal Area*
+                <select id="goalArea-${i}" required aria-required="true">
+                  <option value="">Select area...</option>
+                  ${multiGoalWizardState.availableGoalAreas.map(area => 
+                    `<option value="${area}">${area}</option>`
+                  ).join('')}
+                  <option value="__new__">+ Add new Area...</option>
+                </select>
+              </label>
+              <input type="text" id="newGoalArea-${i}" placeholder="Enter new area name" style="display:none;margin-top:8px" />
+            </div>
+            
+            <div>
+              <label for="goalCode-${i}">Goal Code*
+                <input type="text" id="goalCode-${i}" value="${suggestedCode}" required aria-required="true" />
+              </label>
+            </div>
+          </div>
+          
+          <div style="margin-top:12px">
+            <label for="goalText-${i}">Goal Text*
+              <textarea id="goalText-${i}" rows="3" required aria-required="true" placeholder="Enter the goal description..."></textarea>
+            </label>
+          </div>
+          
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">
+            <div>
+              <label for="baseline-${i}">Baseline %*
+                <input type="number" id="baseline-${i}" min="0" max="100" value="0" required aria-required="true" />
+              </label>
+            </div>
+            
+            <div>
+              <label for="target-${i}">Mastery/Target %*
+                <input type="number" id="target-${i}" min="0" max="100" value="80" required aria-required="true" />
+              </label>
+            </div>
+          </div>
+          
+          <div style="display:grid;grid-template-columns:1fr auto;gap:12px;margin-top:12px;align-items:end">
+            <div>
+              <label for="caseManager-${i}">Case Manager
+                <input type="text" id="caseManager-${i}" value="${multiGoalWizardState.currentTeacher}" />
+              </label>
+            </div>
+            
+            <div>
+              <label style="display:flex;align-items:center;gap:8px">
+                <input type="checkbox" id="active-${i}" checked style="width:auto" />
+                <span>Active</span>
+              </label>
+            </div>
+          </div>
+        `;
+        
+        container.appendChild(card);
+        
+        // Add event listener for "Add new Area" option
+        const areaSelect = qs(`#goalArea-${i}`);
+        const newAreaInput = qs(`#newGoalArea-${i}`);
+        areaSelect.addEventListener('change', (e) => {
+          if (e.target.value === '__new__') {
+            newAreaInput.style.display = 'block';
+            newAreaInput.required = true;
+            newAreaInput.focus();
+          } else {
+            newAreaInput.style.display = 'none';
+            newAreaInput.required = false;
+          }
+        });
+        
+        // Add event listener for goal code changes (uniqueness check)
+        const codeInput = qs(`#goalCode-${i}`);
+        codeInput.addEventListener('blur', () => validateGoalCode(i));
+      }
+    }
+    
+    // Generate suggested goal code
+    function generateGoalCode(studentCode, goalNum) {
+      // Try to infer area shorthand if first goal area is selected
+      const baseCode = `${studentCode}-G${String(goalNum).padStart(2, '0')}`;
+      return baseCode;
+    }
+    
+    // Validate goal code uniqueness
+    function validateGoalCode(index) {
+      const codeInput = qs(`#goalCode-${index}`);
+      const code = codeInput.value.trim();
+      
+      if (!code) return true;
+      
+      // Check against existing codes
+      if (multiGoalWizardState.existingGoalCodes.includes(code)) {
+        codeInput.style.borderColor = 'rgba(239,68,68,.5)';
+        codeInput.setCustomValidity('Goal code already exists for this student');
+        return false;
+      }
+      
+      // Check against other goals in this wizard
+      const otherCodes = [];
+      for (let i = 0; i < multiGoalWizardState.goalCount; i++) {
+        if (i !== index) {
+          const otherCode = qs(`#goalCode-${i}`)?.value?.trim();
+          if (otherCode) otherCodes.push(otherCode);
+        }
+      }
+      
+      if (otherCodes.includes(code)) {
+        codeInput.style.borderColor = 'rgba(239,68,68,.5)';
+        codeInput.setCustomValidity('Duplicate goal code in this form');
+        return false;
+      }
+      
+      codeInput.style.borderColor = '';
+      codeInput.setCustomValidity('');
+      return true;
+    }
+    
+    // Collect goal data from form
+    function collectGoalData() {
+      const goals = [];
+      
+      for (let i = 0; i < multiGoalWizardState.goalCount; i++) {
+        const areaSelect = qs(`#goalArea-${i}`);
+        const newAreaInput = qs(`#newGoalArea-${i}`);
+        const goalArea = areaSelect.value === '__new__' 
+          ? newAreaInput.value.trim() 
+          : areaSelect.value;
+        
+        const goalCode = qs(`#goalCode-${i}`).value.trim();
+        const goalText = qs(`#goalText-${i}`).value.trim();
+        const baseline = parseInt(qs(`#baseline-${i}`).value);
+        const target = parseInt(qs(`#target-${i}`).value);
+        const caseManager = qs(`#caseManager-${i}`).value.trim();
+        const active = qs(`#active-${i}`).checked;
+        
+        goals.push({
+          goal_area: goalArea,
+          goal_code: goalCode,
+          goal_text: goalText,
+          baseline,
+          target,
+          case_manager: caseManager,
+          active
+        });
+      }
+      
+      return goals;
+    }
+    
+    // Validate step 1 form
+    function validateStep1() {
+      let isValid = true;
+      
+      for (let i = 0; i < multiGoalWizardState.goalCount; i++) {
+        // Validate goal area
+        const areaSelect = qs(`#goalArea-${i}`);
+        const newAreaInput = qs(`#newGoalArea-${i}`);
+        const goalArea = areaSelect.value === '__new__' 
+          ? newAreaInput.value.trim() 
+          : areaSelect.value;
+        
+        if (!goalArea) {
+          showGoalWizardError(1, `Goal ${i + 1}: Goal Area is required`);
+          isValid = false;
+          break;
+        }
+        
+        // Validate goal code
+        const goalCode = qs(`#goalCode-${i}`).value.trim();
+        if (!goalCode) {
+          showGoalWizardError(1, `Goal ${i + 1}: Goal Code is required`);
+          isValid = false;
+          break;
+        }
+        
+        if (!validateGoalCode(i)) {
+          showGoalWizardError(1, `Goal ${i + 1}: Goal Code must be unique`);
+          isValid = false;
+          break;
+        }
+        
+        // Validate goal text
+        const goalText = qs(`#goalText-${i}`).value.trim();
+        if (!goalText) {
+          showGoalWizardError(1, `Goal ${i + 1}: Goal Text is required`);
+          isValid = false;
+          break;
+        }
+        
+        // Validate percentages
+        const baseline = parseInt(qs(`#baseline-${i}`).value);
+        const target = parseInt(qs(`#target-${i}`).value);
+        
+        if (isNaN(baseline) || baseline < 0 || baseline > 100) {
+          showGoalWizardError(1, `Goal ${i + 1}: Baseline must be between 0 and 100`);
+          isValid = false;
+          break;
+        }
+        
+        if (isNaN(target) || target < 0 || target > 100) {
+          showGoalWizardError(1, `Goal ${i + 1}: Target must be between 0 and 100`);
+          isValid = false;
+          break;
+        }
+      }
+      
+      return isValid;
+    }
+    
+    // Render review table
+    function renderReviewTable() {
+      const tbody = qs('#goalReviewTableBody');
+      const goals = collectGoalData();
+      
+      tbody.innerHTML = goals.map((goal, idx) => `
+        <tr>
+          <td><strong>${goal.goal_code}</strong></td>
+          <td>${goal.goal_area}</td>
+          <td>${goal.baseline}%</td>
+          <td>${goal.target}%</td>
+          <td>${goal.case_manager}</td>
+          <td>${goal.active ? '✓' : '—'}</td>
+        </tr>
+      `).join('');
+    }
+    
+    // Save all goals
+    async function saveMultiGoals() {
+      const goals = collectGoalData();
+      multiGoalWizardState.goals = goals;
+      
+      const btn = qs('#btnGoalWizardSave');
+      btn.disabled = true;
+      btn.textContent = 'Saving...';
+      
+      try {
+        console.log('[multi-goal-wizard] Saving goals:', goals);
+        await db.addStudentGoals(multiGoalWizardState.studentCode, goals);
+        
+        addNotif(`Successfully added ${goals.length} goal(s) for ${multiGoalWizardState.studentCode}`);
+        qs('#multiGoalWizard').style.display = 'none';
+        
+        // Refresh student manager if visible
+        if (qs('#studentManagerList')) {
+          await loadStudentManagerData();
+          renderStudentList();
+        }
+      } catch (err) {
+        console.error('[multi-goal-wizard] Save error:', err);
+        showGoalWizardError(2, `Failed to save goals: ${err.message}`);
+        btn.disabled = false;
+        btn.textContent = 'Save All Goals';
+      }
+    }
+    
+    // Event listeners for multi-goal wizard
+    on('#btnAddIEPGoals', 'click', () => {
+      const studentCode = qs('#editStudentCode')?.value;
+      if (studentCode) {
+        openMultiGoalWizard(studentCode);
+      }
+    });
+    
+    on('#btnCloseMultiGoalWizard', 'click', () => {
+      qs('#multiGoalWizard').style.display = 'none';
+    });
+    
+    on('#btnGoalWizardCancel', 'click', () => {
+      qs('#multiGoalWizard').style.display = 'none';
+    });
+    
+    on('#btnGoalWizardNext', 'click', () => {
+      const step = multiGoalWizardState.currentStep;
+      
+      if (step === 0) {
+        // Validate quantity
+        const quantity = parseInt(qs('#goalQuantity').value);
+        if (isNaN(quantity) || quantity < 1 || quantity > 20) {
+          showGoalWizardError(0, 'Please enter a number between 1 and 20');
+          return;
+        }
+        multiGoalWizardState.goalCount = quantity;
+        generateGoalCards();
+        updateGoalWizardStep(1);
+      } else if (step === 1) {
+        // Validate all goal forms
+        if (!validateStep1()) {
+          return;
+        }
+        renderReviewTable();
+        updateGoalWizardStep(2);
+      }
+    });
+    
+    on('#btnGoalWizardBack', 'click', () => {
+      const step = multiGoalWizardState.currentStep;
+      if (step > 0) {
+        updateGoalWizardStep(step - 1);
+      }
+    });
+    
+    on('#btnGoalWizardSave', 'click', saveMultiGoals);
+    
+    // Close modal on Escape
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && qs('#multiGoalWizard').style.display === 'flex') {
+        qs('#multiGoalWizard').style.display = 'none';
+      }
+    });
     
     // Expose feature flag globally
     window.FEATURE_STUDENT_MANAGER = isStudentManagerEnabled();

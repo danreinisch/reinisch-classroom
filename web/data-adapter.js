@@ -217,6 +217,28 @@ const local = {
     const goalsMap = store.get('iepGoals', {});
     return goalsMap[student_code] || [];
   },
+  
+  async getDistinctGoalAreas(student_code = null) {
+    const goalsMap = store.get('iepGoals', {});
+    const areas = new Set();
+    
+    if (student_code) {
+      // Get areas for specific student
+      const studentGoals = goalsMap[student_code] || [];
+      studentGoals.forEach(g => {
+        if (g.goal_area) areas.add(g.goal_area);
+      });
+    } else {
+      // Get all distinct areas across all students
+      Object.values(goalsMap).forEach(goals => {
+        goals.forEach(g => {
+          if (g.goal_area) areas.add(g.goal_area);
+        });
+      });
+    }
+    
+    return Array.from(areas).sort();
+  },
 
   // Assignments / Instances (local placeholders)
   async createAssignment(a) {
@@ -1171,6 +1193,39 @@ const remote = {
       
       if (error) throw error;
       return data || [];
+    });
+  },
+  
+  async getDistinctGoalAreas(student_code = null) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+    return await withRetry(async () => {
+      let query = supabase
+        .from('goals')
+        .select('goal_area');
+      
+      if (student_code) {
+        // Get areas for specific student
+        const { data: student, error: studentError } = await supabase
+          .from('students')
+          .select('id')
+          .eq('code', student_code)
+          .single();
+        
+        if (studentError) throw studentError;
+        query = query.eq('student_id', student.id);
+      }
+      
+      const { data, error } = await query;
+      if (error) throw error;
+      
+      // Extract distinct goal areas
+      const areas = new Set();
+      (data || []).forEach(row => {
+        if (row.goal_area) areas.add(row.goal_area);
+      });
+      
+      return Array.from(areas).sort();
     });
   },
   
