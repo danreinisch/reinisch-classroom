@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IEP Progress Grid - Phase 6-8 Demo</title>
+  
+  <!-- Phase 6-8: PDF Export requires jsPDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  
+  <link rel="stylesheet" href="../web/progress-grid-v2.css">
+  
+  <style>
+    :root {
+      --base: #0b1220;
+      --panel: #0f172a;
+      --ink: #e6edf3;
+      --muted: #94a3b8;
+      --line: rgba(255,255,255,.08);
+      --accent: #22c55e;
+      --bg: #1a1a1a;
+      --fg: #fff;
+      --success: #22c55e;
+      --danger: #ef4444;
+    }
+    
+    body {
+      margin: 0;
+      padding: 20px;
+      background: var(--base);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    
+    .header {
+      padding: 20px 0;
+      margin-bottom: 20px;
+      border-bottom: 2px solid var(--line);
+    }
+    
+    .header h1 {
+      margin: 0 0 10px 0;
+      font-size: 28px;
+    }
+    
+    .header p {
+      margin: 0;
+      color: var(--muted);
+    }
+    
+    .feature-toggle-section {
+      padding: 16px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    
+    .feature-toggle-section h3 {
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      color: var(--accent);
+    }
+    
+    .feature-toggles {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    
+    .feature-toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    
+    .feature-toggle:hover {
+      background: rgba(255,255,255,0.08);
+    }
+    
+    .feature-toggle input[type="checkbox"] {
+      cursor: pointer;
+    }
+    
+    .feature-toggle label {
+      cursor: pointer;
+      user-select: none;
+    }
+    
+    .btn {
+      padding: 8px 16px;
+      background: var(--accent);
+      color: #000;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    
+    .btn:hover {
+      opacity: 0.9;
+    }
+    
+    #gridContainer {
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>IEP Progress Grid - Phase 6-8 Demo</h1>
+    <p>Testing Saved Views, Advanced Filters, Risk Indicators, Rollups, and PDF Export</p>
+  </div>
+  
+  <div class="feature-toggle-section">
+    <h3>🎛️ Feature Flags (Phase 6-8)</h3>
+    <p style="margin: 0 0 12px 0; color: var(--muted); font-size: 13px;">
+      Toggle features on/off to test individual functionality
+    </p>
+    
+    <div class="feature-toggles">
+      <div class="feature-toggle">
+        <input type="checkbox" id="flag_progressSavedViews">
+        <label for="flag_progressSavedViews">💾 Saved Views</label>
+      </div>
+      
+      <div class="feature-toggle">
+        <input type="checkbox" id="flag_progressAdvancedFilters">
+        <label for="flag_progressAdvancedFilters">🔍 Advanced Filters</label>
+      </div>
+      
+      <div class="feature-toggle">
+        <input type="checkbox" id="flag_progressRiskIndicators">
+        <label for="flag_progressRiskIndicators">⚠️ Risk Indicators</label>
+      </div>
+      
+      <div class="feature-toggle">
+        <input type="checkbox" id="flag_progressRollups">
+        <label for="flag_progressRollups">📊 Rollups (Weekly/Monthly)</label>
+      </div>
+      
+      <div class="feature-toggle">
+        <input type="checkbox" id="flag_progressPdfExport">
+        <label for="flag_progressPdfExport">📄 PDF Export</label>
+      </div>
+    </div>
+    
+    <div style="margin-top: 12px;">
+      <button class="btn" onclick="reloadGrid()">↻ Reload Grid</button>
+      <button class="btn" onclick="enableAllFeatures()">✓ Enable All</button>
+      <button class="btn" onclick="disableAllFeatures()">✗ Disable All</button>
+    </div>
+  </div>
+  
+  <div id="gridContainer"></div>
+  
+  <!-- Import modules -->
+  <script type="module">
+    import { setFeatureFlag, getFeatureFlag } from '../web/feature-flags.js';
+    import { db } from '../web/data-adapter.js';
+    import { ProgressGridV2 } from '../web/progress-grid-v2.js';
+    
+    // Make functions available globally
+    window.setFeatureFlag = setFeatureFlag;
+    window.getFeatureFlag = getFeatureFlag;
+    window.db = db;
+    
+    // Initialize feature flag checkboxes
+    function initFeatureToggles() {
+      const flags = [
+        'progressSavedViews',
+        'progressAdvancedFilters', 
+        'progressRiskIndicators',
+        'progressRollups',
+        'progressPdfExport'
+      ];
+      
+      flags.forEach(flag => {
+        const checkbox = document.getElementById(`flag_${flag}`);
+        if (checkbox) {
+          checkbox.checked = getFeatureFlag(flag);
+          checkbox.addEventListener('change', (e) => {
+            setFeatureFlag(flag, e.target.checked);
+            console.log(`[feature-flags] ${flag} = ${e.target.checked}`);
+          });
+        }
+      });
+    }
+    
+    // Create sample test data
+    async function createTestData() {
+      console.log('[demo] Creating test data...');
+      
+      // Students
+      const students = [
+        { code: 'S001', name: 'Alice Anderson', class_id: 'CLS01' },
+        { code: 'S002', name: 'Bob Baker', class_id: 'CLS01' },
+        { code: 'S003', name: 'Charlie Chen', class_id: 'CLS02' }
+      ];
+      
+      for (const student of students) {
+        await db.upsertStudent(student);
+      }
+      
+      // Goals
+      const goals = [
+        { student_code: 'S001', code: 'S001.R.1', desc: 'Read sight words with 90% accuracy', target: 90, goal_area: 'Reading' },
+        { student_code: 'S001', code: 'S001.M.1', desc: 'Add two-digit numbers', target: 85, goal_area: 'Math' },
+        { student_code: 'S002', code: 'S002.R.1', desc: 'Decode CVC words', target: 80, goal_area: 'Reading' },
+        { student_code: 'S003', code: 'S003.S.1', desc: 'Initiate conversation with peers', target: 75, goal_area: 'Social Skills' }
+      ];
+      
+      for (const goal of goals) {
+        await db.upsertGoal(goal);
+      }
+      
+      // Progress entries (with varying recency and trends)
+      const today = new Date();
+      const entries = [];
+      
+      // S001.R.1: Recent data, positive trend (green)
+      for (let i = 0; i < 5; i++) {
+        const date = new Date(today);
+        date.setDate(date.getDate() - i);
+        entries.push({
+          student_code: 'S001',
+          goal_code: 'S001.R.1',
+          date: date.toISOString().split('T')[0],
+          value: 70 + i * 3,
+          source: 'manual',
+          collected_by: 'Teacher'
+        });
+      }
+      
+      // S001.M.1: Old data (red - missing recency)
+      entries.push({
+        student_code: 'S001',
+        goal_code: 'S001.M.1',
+        date: new Date(today.setDate(today.getDate() - 20)).toISOString().split('T')[0],
+        value: 75,
+        source: 'manual',
+        collected_by: 'Teacher'
+      });
+      
+      // S002.R.1: Below target (amber/red)
+      for (let i = 0; i < 4; i++) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        entries.push({
+          student_code: 'S002',
+          goal_code: 'S002.R.1',
+          date: date.toISOString().split('T')[0],
+          value: 60 + i * 2,
+          source: 'assignment',
+          collected_by: 'System'
+        });
+      }
+      
+      // S003.S.1: Declining trend (amber)
+      for (let i = 0; i < 4; i++) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        entries.push({
+          student_code: 'S003',
+          goal_code: 'S003.S.1',
+          date: date.toISOString().split('T')[0],
+          value: 80 - i * 5, // Declining
+          source: 'manual',
+          collected_by: 'Teacher'
+        });
+      }
+      
+      for (const entry of entries) {
+        await db.addProgress(entry);
+      }
+      
+      console.log('[demo] Test data created');
+    }
+    
+    // Initialize grid
+    let grid = null;
+    
+    async function initGrid() {
+      console.log('[demo] Initializing grid...');
+      
+      // Create test data
+      await createTestData();
+      
+      // Create grid instance
+      grid = new ProgressGridV2(db, {
+        trendThreshold: 5,
+        debounceMs: 150,
+        teacherEmail: 'demo@example.com',
+        userId: 'demo_user',
+        riskThresholds: {
+          missingDataDaysRed: 14,
+          missingDataDaysAmber: 7,
+          belowTargetRed: 10,
+          belowTargetAmber: 10,
+          negativeTrendPoints: 3
+        }
+      });
+      
+      // Render
+      const container = document.getElementById('gridContainer');
+      await grid.render(container);
+      
+      console.log('[demo] Grid initialized');
+    }
+    
+    // Global functions for buttons
+    window.reloadGrid = async function() {
+      const container = document.getElementById('gridContainer');
+      container.innerHTML = '<div style="padding: 20px;">Reloading...</div>';
+      await initGrid();
+    };
+    
+    window.enableAllFeatures = function() {
+      const flags = [
+        'progressSavedViews',
+        'progressAdvancedFilters',
+        'progressRiskIndicators',
+        'progressRollups',
+        'progressPdfExport'
+      ];
+      
+      flags.forEach(flag => {
+        setFeatureFlag(flag, true);
+        const checkbox = document.getElementById(`flag_${flag}`);
+        if (checkbox) checkbox.checked = true;
+      });
+      
+      alert('All Phase 6-8 features enabled! Click "Reload Grid" to see them.');
+    };
+    
+    window.disableAllFeatures = function() {
+      const flags = [
+        'progressSavedViews',
+        'progressAdvancedFilters',
+        'progressRiskIndicators',
+        'progressRollups',
+        'progressPdfExport'
+      ];
+      
+      flags.forEach(flag => {
+        setFeatureFlag(flag, false);
+        const checkbox = document.getElementById(`flag_${flag}`);
+        if (checkbox) checkbox.checked = false;
+      });
+      
+      alert('All Phase 6-8 features disabled! Click "Reload Grid" to see the basic grid.');
+    };
+    
+    // Initialize on load
+    document.addEventListener('DOMContentLoaded', () => {
+      initFeatureToggles();
+      initGrid();
+    });
+  </script>
+</body>
+</html>
