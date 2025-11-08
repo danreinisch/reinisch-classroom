@@ -839,6 +839,15 @@
     countMissingAssignments,
     countLateAssignments
   } from '../web/portal-b-helpers.js';
+  import {
+    loadStudentAssignmentsPortalB,
+    loadGradesCard as loadGradesCardUI,
+    showToast,
+    startClock,
+    setupResubmissionHandlers,
+    setupAssignmentTabs,
+    setupFilters
+  } from '../web/portal-b-ui.js';
   
   // Feature flags
   const feature = {
@@ -1190,56 +1199,37 @@
   }
   
   async function loadStudentAssignments() {
-    try {
-      const instances = await db.listAssignmentInstances();
-      const myInstances = instances.filter(i => i.student_code === currentUser.code);
-      
-      qs('#assignmentsCount').textContent = myInstances.length;
-      
-      if (myInstances.length === 0) {
-        qs('#assignmentsContent').innerHTML = '<div class="subtle" style="text-align:center; padding:20px">No assignments yet</div>';
-        return;
-      }
-      
-      const assignmentList = await db.listAssignments();
-      const assignmentMap = new Map(assignmentList.map(a => [a.id, a]));
-      
-      let html = '<table class="table"><thead><tr><th>Assignment</th><th>Status</th><th>Due</th></tr></thead><tbody>';
-      
-      for (const inst of myInstances.slice(0, 5)) {
-        const assignment = assignmentMap.get(inst.assignment_id);
-        const title = assignment ? assignment.title : 'Unknown';
-        const status = inst.status || 'Assigned';
-        const dueDate = inst.due_at ? new Date(inst.due_at).toLocaleDateString() : '—';
-        
-        let badgeClass = 'info';
-        if (status === 'Submitted' || status === 'Completed') badgeClass = 'success';
-        else if (status === 'Late' || status === 'Overdue') badgeClass = 'warning';
-        
-        html += `<tr>
-          <td>${title}</td>
-          <td><span class="badge ${badgeClass}">${status}</span></td>
-          <td>${dueDate}</td>
-        </tr>`;
-      }
-      
-      html += '</tbody></table>';
-      qs('#assignmentsContent').innerHTML = html;
-      
-    } catch (err) {
-      console.error('Failed to load assignments:', err);
-      // Show friendly message but keep dashboard visible
-      const assignmentsContent = qs('#assignmentsContent');
-      if (assignmentsContent) {
-        assignmentsContent.innerHTML = '<div class="subtle" style="text-align:center; padding:20px">Assignments temporarily unavailable. Retrying in background...</div>';
-      }
-      
-      // Retry in background after a delay
-      setTimeout(() => {
-        console.log('[student-dashboard] Retrying assignments load...');
-        loadStudentAssignments();
-      }, 5000);
-    }
+    // Portal B: Use new assignment loading with grouping
+    const helpers = {
+      AssignmentStatus,
+      groupAssignmentsByStatus,
+      filterAssignments,
+      truncateText,
+      formatDateTime,
+      calculateOverallAverage,
+      calculateClassAverages,
+      calculateTrend,
+      getSparklineData
+    };
+    
+    const result = await loadStudentAssignmentsPortalB(db, currentUser, feature, qs, helpers);
+    
+    // Store for later use
+    window.assignmentGroups = result.groups;
+    window.submissionsMap = result.submissionsMap;
+  }
+  
+  async function loadGradesCard() {
+    // Portal B: Load grades card
+    const helpers = {
+      calculateOverallAverage,
+      calculateClassAverages,
+      calculateTrend,
+      getSparklineData,
+      formatDateTime
+    };
+    
+    await loadGradesCardUI(db, currentUser, qs, helpers);
   }
   
   async function loadStudentGoals() {
@@ -1257,14 +1247,22 @@
       for (const goal of goals.slice(0, 4)) {
         const statusBadge = goal.status === 'Open' ? 'info' : goal.status === 'Met' ? 'success' : 'warning';
         
+        // Portal B: Truncate goal text
+        const goalDesc = truncateText(goal.desc || goal.code, 140);
+        const hasTooltip = (goal.desc || goal.code || '').length > 140;
+        
         // Calculate average progress (mock for now)
         const avgProgress = goal.target || Math.floor(Math.random() * 100);
+        
+        const tooltipHtml = hasTooltip ? 
+          `<span class="tooltip">${goalDesc}<span class="tooltip-text">${goal.desc || goal.code}</span></span>` :
+          goalDesc;
         
         html += `
           <div class="goal-item">
             <div style="font-size:24px">🎯</div>
             <div style="flex:1">
-              <div style="font-weight:800; margin-bottom:4px">${goal.desc || goal.code}</div>
+              <div style="font-weight:800; margin-bottom:4px">${tooltipHtml}</div>
               <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px">
                 <span class="badge ${statusBadge}">${goal.status || 'Open'}</span>
                 <span class="subtle">Avg: ${avgProgress}%</span>
@@ -1921,6 +1919,36 @@
         showLogin();
       }
     }
+  })();
+  
+  // Portal B: Setup event handlers
+  (function initPortalB() {
+    // Setup resubmission handlers
+    setupResubmissionHandlers(db, qs, showToast, loadStudentAssignments);
+    
+    // Setup assignment tabs
+    setupAssignmentTabs(qs, qsa);
+    
+    // Setup top bar logout and help buttons
+    const portalLogoutBtn = qs('#portalLogoutBtn');
+    if (portalLogoutBtn) {
+      portalLogoutBtn.addEventListener('click', () => {
+        qs('#btnLogout')?.click();
+      });
+    }
+    
+    const portalHelpBtn = qs('#portalHelpBtn');
+    if (portalHelpBtn) {
+      portalHelpBtn.addEventListener('click', () => {
+        showToast({
+          title: 'Help & Support',
+          message: 'Need help? Contact your teacher or visit the Tool Kit for resources.',
+          type: 'info'
+        });
+      });
+    }
+    
+    console.log('[Portal B] Event handlers initialized');
   })();
 </script>
 
