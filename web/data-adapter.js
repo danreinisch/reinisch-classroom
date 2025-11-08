@@ -81,6 +81,150 @@ const local = {
     return expected === plain;
   },
 
+  // Student Manager methods
+  async createStudentWithEnrollmentsAndGoals(payload) {
+    console.log('[student-manager] createStudentWithEnrollmentsAndGoals (local)', payload);
+    const { student, enrollments = [], goals = [] } = payload;
+    
+    // Validate student code uniqueness
+    const students = store.get('students', []);
+    if (students.find(s => s.code === student.code)) {
+      throw new Error(`Student code ${student.code} already exists`);
+    }
+    
+    // Create student
+    const newStudent = {
+      code: student.code,
+      name: student.preferred_name || `${student.first_name} ${student.last_name}`,
+      first_name: student.first_name,
+      last_name: student.last_name,
+      preferred_name: student.preferred_name || null,
+      grade: student.grade,
+      dob: student.dob || null,
+      email: student.email || null,
+      guardians: student.guardians || [],
+      notes: student.notes || null,
+      password: student.password_hash, // In local mode, store plaintext (hashed in remote)
+      created_at: new Date().toISOString()
+    };
+    students.push(newStudent);
+    store.set('students', students);
+    
+    // Create enrollments
+    if (enrollments.length > 0) {
+      const storedEnrollments = store.get('classEnrollments', []);
+      for (const enrollment of enrollments) {
+        storedEnrollments.push({
+          class_id: enrollment.class_id,
+          student_code: student.code,
+          student_name: newStudent.name,
+          start_date: enrollment.start_date || new Date().toISOString().split('T')[0],
+          active: true
+        });
+      }
+      store.set('classEnrollments', storedEnrollments);
+    }
+    
+    // Create goals
+    if (goals.length > 0) {
+      const goalsMap = store.get('iepGoals', {});
+      const studentGoals = goalsMap[student.code] || [];
+      for (const goal of goals) {
+        studentGoals.push({
+          code: goal.goal_code,
+          desc: goal.goal_text,
+          goal_area: goal.goal_area,
+          baseline: goal.baseline,
+          target: goal.target,
+          case_manager: goal.case_manager,
+          active: goal.active !== false,
+          status: 'Open'
+        });
+      }
+      goalsMap[student.code] = studentGoals;
+      store.set('iepGoals', goalsMap);
+    }
+    
+    return {
+      student: newStudent,
+      enrollments_count: enrollments.length,
+      goals_count: goals.length
+    };
+  },
+
+  async listStudentsWithCounts(filter = {}) {
+    console.log('[student-manager] listStudentsWithCounts (local)', filter);
+    const students = store.get('students', []);
+    const goalsMap = store.get('iepGoals', {});
+    const enrollments = store.get('classEnrollments', []);
+    
+    let filtered = students;
+    
+    // Apply filters
+    if (filter.student_code) {
+      filtered = filtered.filter(s => 
+        s.code.toLowerCase().includes(filter.student_code.toLowerCase())
+      );
+    }
+    if (filter.last_name) {
+      filtered = filtered.filter(s => 
+        (s.last_name || '').toLowerCase().includes(filter.last_name.toLowerCase())
+      );
+    }
+    if (filter.class_code) {
+      const classEnrolledStudents = enrollments
+        .filter(e => e.class_id === filter.class_code && e.active)
+        .map(e => e.student_code);
+      filtered = filtered.filter(s => classEnrolledStudents.includes(s.code));
+    }
+    
+    // Add counts
+    return filtered.map(s => {
+      const goals = goalsMap[s.code] || [];
+      const studentEnrollments = enrollments.filter(e => 
+        e.student_code === s.code && e.active
+      );
+      return {
+        ...s,
+        goals_count: goals.length,
+        classes_count: studentEnrollments.length,
+        enrollments: studentEnrollments
+      };
+    });
+  },
+
+  async addStudentGoals(student_code, goals) {
+    console.log('[student-manager] addStudentGoals (local)', { student_code, goals });
+    const goalsMap = store.get('iepGoals', {});
+    const studentGoals = goalsMap[student_code] || [];
+    
+    for (const goal of goals) {
+      // Check if goal code already exists
+      if (studentGoals.find(g => g.code === goal.goal_code)) {
+        throw new Error(`Goal code ${goal.goal_code} already exists for student ${student_code}`);
+      }
+      studentGoals.push({
+        code: goal.goal_code,
+        desc: goal.goal_text,
+        goal_area: goal.goal_area,
+        baseline: goal.baseline,
+        target: goal.target,
+        case_manager: goal.case_manager,
+        active: goal.active !== false,
+        status: 'Open'
+      });
+    }
+    
+    goalsMap[student_code] = studentGoals;
+    store.set('iepGoals', goalsMap);
+    return true;
+  },
+
+  async listStudentGoals(student_code) {
+    const goalsMap = store.get('iepGoals', {});
+    return goalsMap[student_code] || [];
+  },
+
   // Assignments / Instances (local placeholders)
   async createAssignment(a) {
     const id = 'A' + Math.random().toString(36).slice(2, 9).toUpperCase();
@@ -923,6 +1067,124 @@ const remote = {
       const { data, error } = await supabase.rpc('verify_student_password', { p_code: code, p_plain: plain });
       if (error) throw error;
       return !!data;
+    });
+  },
+  
+  // Student Manager methods
+  async createStudentWithEnrollmentsAndGoals(payload) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+    return await withRetry(async () => {
+      console.log('[student-manager] createStudentWithEnrollmentsAndGoals (remote)', payload);
+      const { data, error } = await supabase.rpc('create_student_with_enrollments_and_goals', { payload });
+      if (error) throw error;
+      return data;
+    });
+  },
+
+  async listStudentsWithCounts(filter = {}) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+    return await withRetry(async () => {
+      console.log('[student-manager] listStudentsWithCounts (remote)', filter);
+      
+      // Build query
+      let query = supabase
+        .from('students')
+        .select(`
+          id, 
+          code, 
+          name,
+          first_name,
+          last_name,
+          preferred_name,
+          grade,
+          dob,
+          email,
+          guardians,
+          notes,
+          created_at,
+          class_enrollments!inner(class_id, active),
+          goals(id)
+        `)
+        .order('code');
+      
+      // Apply filters
+      if (filter.student_code) {
+        query = query.ilike('code', `%${filter.student_code}%`);
+      }
+      if (filter.last_name) {
+        query = query.ilike('last_name', `%${filter.last_name}%`);
+      }
+      
+      const { data, error } = await query;
+      if (error) throw error;
+      
+      // Transform data to include counts
+      return (data || []).map(s => ({
+        ...s,
+        goals_count: s.goals?.length || 0,
+        classes_count: s.class_enrollments?.filter(e => e.active).length || 0,
+        enrollments: s.class_enrollments || []
+      }));
+    });
+  },
+
+  async addStudentGoals(student_code, goals) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+    return await withRetry(async () => {
+      console.log('[student-manager] addStudentGoals (remote)', { student_code, goals });
+      
+      // Get student ID
+      const { data: student, error: studentError } = await supabase
+        .from('students')
+        .select('id')
+        .eq('code', student_code)
+        .single();
+      
+      if (studentError) throw studentError;
+      
+      // Insert goals
+      const goalRecords = goals.map(goal => ({
+        student_id: student.id,
+        code: goal.goal_code,
+        desc: goal.goal_text,
+        goal_area: goal.goal_area,
+        baseline: goal.baseline,
+        target: goal.target,
+        case_manager: goal.case_manager,
+        active: goal.active !== false
+      }));
+      
+      const { error } = await supabase.from('goals').insert(goalRecords);
+      if (error) throw error;
+      
+      return true;
+    });
+  },
+
+  async listStudentGoals(student_code) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+    return await withRetry(async () => {
+      // Get student ID
+      const { data: student, error: studentError } = await supabase
+        .from('students')
+        .select('id')
+        .eq('code', student_code)
+        .single();
+      
+      if (studentError) throw studentError;
+      
+      const { data, error } = await supabase
+        .from('goals')
+        .select('*')
+        .eq('student_id', student.id)
+        .order('code');
+      
+      if (error) throw error;
+      return data || [];
     });
   },
   

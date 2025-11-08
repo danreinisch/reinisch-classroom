@@ -1087,6 +1087,44 @@
         <div class="subtle">WIP: Porting from v8.2.</div>
       </div>
 
+      <div class="card ttab" data-tab="studentManager" style="display:none">
+        <div class="card-header">
+          <div>👥 Student Manager</div>
+          <button id="btnAddStudent" class="btn primary small">+ Add Student</button>
+        </div>
+        
+        <div style="margin-top:12px">
+          <input 
+            type="text" 
+            id="studentSearchInput" 
+            placeholder="Search by student code, last name, or class..." 
+            style="width:100%;max-width:400px"
+          />
+        </div>
+        
+        <div class="scroll" style="margin-top:12px;max-height:60vh">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Name</th>
+                <th>Grade</th>
+                <th>Classes</th>
+                <th>Goals</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="studentManagerList">
+              <tr>
+                <td colspan="6" class="subtle" style="text-align:center;padding:20px">
+                  Loading students...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <div class="card ttab" data-tab="classes" style="display:none">
         <div class="card-header"><div>👥 Classes</div></div>
         <div class="subtle">WIP: Porting from v8.2.</div>
@@ -1447,6 +1485,166 @@
     </div>
   </div>
 
+  <!-- Student Manager: Add Student Modal (4-step wizard) -->
+  <div class="modal-backdrop" id="addStudentModal" style="display:none">
+    <div class="modal card" style="max-width:900px">
+      <div class="card-header">
+        <div id="addStudentModalTitle">Add Student - Step 1: Student Info</div>
+      </div>
+      
+      <!-- Step 1: Student Info -->
+      <div id="studentStep1" class="student-wizard-step">
+        <div class="grid-iep">
+          <div>
+            <label>Student Code* <input type="text" id="studentCode" placeholder="S001" required /></label>
+            <label>First Name* <input type="text" id="studentFirstName" required /></label>
+            <label>Last Name* <input type="text" id="studentLastName" required /></label>
+            <label>Preferred Name <input type="text" id="studentPreferredName" /></label>
+            <label>Grade* 
+              <select id="studentGrade" required>
+                <option value="">Select Grade</option>
+                <option value="6">6</option>
+                <option value="7">7</option>
+                <option value="8">8</option>
+                <option value="9">9</option>
+                <option value="10">10</option>
+                <option value="11">11</option>
+                <option value="12">12</option>
+              </select>
+            </label>
+          </div>
+          <div>
+            <label>Date of Birth <input type="date" id="studentDOB" /></label>
+            <label>Email <input type="email" id="studentEmail" /></label>
+            <label>Password 
+              <div style="position:relative">
+                <input type="text" id="studentPassword" />
+                <button type="button" class="btn small" id="btnCopyPassword" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);padding:4px 8px">📋</button>
+              </div>
+              <div class="subtle" style="font-size:12px;margin-top:4px">Default: [code]! (e.g., S001!)</div>
+            </label>
+            <label>Notes <textarea id="studentNotes" rows="3"></textarea></label>
+          </div>
+        </div>
+        
+        <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--line)">
+          <div style="font-weight:800;margin-bottom:8px">Guardians</div>
+          <div id="guardiansContainer">
+            <!-- Guardian entries will be added here -->
+          </div>
+          <button type="button" class="btn small" id="btnAddGuardian" style="margin-top:8px">+ Add Guardian</button>
+        </div>
+        
+        <div id="step1Error" style="color:#fca5a5;margin-top:12px;display:none"></div>
+      </div>
+      
+      <!-- Step 2: Enrollments -->
+      <div id="studentStep2" class="student-wizard-step" style="display:none">
+        <label>Select Classes</label>
+        <div id="classEnrollmentsList" class="scroll" style="max-height:40vh;margin-top:8px">
+          <!-- Class checkboxes will be rendered here -->
+        </div>
+        <label style="margin-top:12px">Enrollment Start Date 
+          <input type="date" id="enrollmentStartDate" />
+        </label>
+        <div id="step2Error" style="color:#fca5a5;margin-top:12px;display:none"></div>
+      </div>
+      
+      <!-- Step 3: Initial Goals (Optional) -->
+      <div id="studentStep3" class="student-wizard-step" style="display:none">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div style="font-weight:800">Initial IEP Goals (Optional)</div>
+          <button type="button" class="btn small" id="btnAddGoal">+ Add Goal</button>
+        </div>
+        <div id="goalsContainer">
+          <!-- Goal rows will be added here -->
+        </div>
+        <div id="step3Error" style="color:#fca5a5;margin-top:12px;display:none"></div>
+      </div>
+      
+      <!-- Step 4: Review & Create -->
+      <div id="studentStep4" class="student-wizard-step" style="display:none">
+        <div style="font-weight:800;margin-bottom:12px">Review Student Information</div>
+        <div id="reviewSummary" style="background:rgba(255,255,255,.04);padding:12px;border-radius:8px;border:1px solid var(--line)">
+          <!-- Summary will be rendered here -->
+        </div>
+        
+        <label style="display:flex;align-items:center;gap:10px;margin-top:16px">
+          <input type="checkbox" id="confirmAccurate" style="width:auto" />
+          <span>I confirm the data is accurate</span>
+        </label>
+        
+        <div id="step4Error" style="color:#fca5a5;margin-top:12px;display:none"></div>
+      </div>
+      
+      <!-- Wizard Navigation -->
+      <div style="display:flex;gap:10px;justify-content:space-between;margin-top:16px;padding-top:16px;border-top:1px solid var(--line)">
+        <button class="btn small" id="btnStudentBack" style="display:none">← Back</button>
+        <div style="flex:1"></div>
+        <button class="btn small" id="btnStudentCancel">Cancel</button>
+        <button class="btn primary small" id="btnStudentNext">Next →</button>
+        <button class="btn primary small" id="btnStudentCreate" style="display:none">Create Student</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Student Manager: Edit Student Modal -->
+  <div class="modal-backdrop" id="editStudentModal" style="display:none">
+    <div class="modal card" style="max-width:900px">
+      <div class="card-header"><div>Edit Student</div></div>
+      
+      <div class="grid-iep">
+        <div>
+          <label>Student Code <input type="text" id="editStudentCode" disabled style="opacity:0.6" /></label>
+          <label>First Name <input type="text" id="editStudentFirstName" /></label>
+          <label>Last Name <input type="text" id="editStudentLastName" /></label>
+          <label>Preferred Name <input type="text" id="editStudentPreferredName" /></label>
+          <label>Grade 
+            <select id="editStudentGrade">
+              <option value="">Select Grade</option>
+              <option value="6">6</option>
+              <option value="7">7</option>
+              <option value="8">8</option>
+              <option value="9">9</option>
+              <option value="10">10</option>
+              <option value="11">11</option>
+              <option value="12">12</option>
+            </select>
+          </label>
+        </div>
+        <div>
+          <label>Date of Birth <input type="date" id="editStudentDOB" /></label>
+          <label>Email <input type="email" id="editStudentEmail" /></label>
+          <label>Notes <textarea id="editStudentNotes" rows="3"></textarea></label>
+        </div>
+      </div>
+      
+      <div style="margin-top:16px">
+        <div style="font-weight:800;margin-bottom:8px">Class Enrollments</div>
+        <div id="editClassEnrollmentsList">
+          <!-- Class enrollment checkboxes will be rendered here -->
+        </div>
+      </div>
+      
+      <div style="margin-top:16px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div style="font-weight:800">Goals</div>
+          <button type="button" class="btn small" id="btnEditAddGoal">+ Add Goal</button>
+        </div>
+        <div id="editGoalsContainer">
+          <!-- Goals will be listed here -->
+        </div>
+      </div>
+      
+      <div id="editError" style="color:#fca5a5;margin-top:12px;display:none"></div>
+      
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
+        <button class="btn small" id="btnEditStudentCancel">Cancel</button>
+        <button class="btn primary small" id="btnEditStudentSave">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
   <script type="module">
     import { db, isRemote, localStore } from '../web/data-adapter.js';
     import { listLibraryItems } from '../web/library.js';
@@ -1536,7 +1734,8 @@
         { label: 'Assignment Hub', tab: 'hub', icon: '🛠' }
       ],
       data: [
-        { label: 'Classes', tab: 'classes', icon: '👥' },
+        { label: 'Student Manager', tab: 'studentManager', icon: '👥' },
+        { label: 'Classes', tab: 'classes', icon: '🏫' },
         { label: 'Upload', tab: 'upload', icon: '📦' },
         { label: 'Data Import/Export', tab: 'data', icon: '📁' },
         { label: 'Settings', tab: 'settings', icon: '⚙️' }
@@ -1575,6 +1774,7 @@
       if (tab === 'events') initEvents();
       if (tab === 'assignments') initAssignments();
       if (tab === 'settings') initSettings();
+      if (tab === 'studentManager') initStudentManager();
     }
     
     // Icon rail clicks
@@ -4052,6 +4252,542 @@
     qs('#useSupabase').addEventListener('change', () => {
       updateConnectionStatus();
     });
+    
+    // =======================
+    // Student Manager Feature
+    // =======================
+    
+    // Student Manager state
+    let studentManagerState = {
+      currentStep: 1,
+      students: [],
+      classes: [],
+      guardians: [],
+      goals: [],
+      currentStudent: null
+    };
+    
+    // Check if feature is enabled
+    function isStudentManagerEnabled() {
+      return getFeatureFlag('studentManager');
+    }
+    
+    // Diagnostics function
+    window.__studentManagerDiag = function() {
+      return {
+        totalStudents: studentManagerState.students.length,
+        filteredCount: qs('#studentManagerList')?.querySelectorAll('tr').length || 0,
+        flagEnabled: isStudentManagerEnabled(),
+        pendingCreate: studentManagerState.currentStep > 1,
+        lastError: studentManagerState.lastError || null
+      };
+    };
+    
+    // Initialize Student Manager
+    async function initStudentManager() {
+      if (!isStudentManagerEnabled()) {
+        console.log('[student-manager] Feature disabled');
+        qs('#studentManagerList').innerHTML = `
+          <tr>
+            <td colspan="6" class="subtle" style="text-align:center;padding:20px">
+              Student Manager feature is disabled. Enable it from Settings.
+            </td>
+          </tr>`;
+        return;
+      }
+      
+      console.log('[student-manager] Initializing');
+      await loadStudentManagerData();
+      renderStudentList();
+      setupStudentManagerListeners();
+    }
+    
+    // Load data
+    async function loadStudentManagerData() {
+      try {
+        studentManagerState.students = await db.listStudentsWithCounts();
+        studentManagerState.classes = await db.listClasses();
+        console.log('[student-manager] Loaded', studentManagerState.students.length, 'students');
+      } catch (err) {
+        console.error('[student-manager] Load error:', err);
+        studentManagerState.lastError = err.message;
+      }
+    }
+    
+    // Render student list
+    function renderStudentList(filter = {}) {
+      const tbody = qs('#studentManagerList');
+      if (!tbody) return;
+      
+      let students = studentManagerState.students;
+      
+      // Apply search filter
+      const searchInput = qs('#studentSearchInput');
+      if (searchInput && searchInput.value) {
+        const search = searchInput.value.toLowerCase();
+        students = students.filter(s => 
+          s.code.toLowerCase().includes(search) ||
+          (s.last_name || '').toLowerCase().includes(search) ||
+          (s.first_name || '').toLowerCase().includes(search)
+        );
+      }
+      
+      if (students.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" class="subtle" style="text-align:center;padding:20px">
+              No students found. Click "Add Student" to create one.
+            </td>
+          </tr>`;
+        return;
+      }
+      
+      tbody.innerHTML = students.map(s => {
+        const displayName = s.preferred_name || `${s.first_name || ''} ${s.last_name || ''}`.trim() || s.name || s.code;
+        return `
+          <tr>
+            <td><strong>${s.code}</strong></td>
+            <td>${displayName}</td>
+            <td>${s.grade || '-'}</td>
+            <td>${s.classes_count || 0}</td>
+            <td>${s.goals_count || 0}</td>
+            <td>
+              <button class="btn small" onclick="editStudent('${s.code}')">Edit</button>
+              <button class="btn small" disabled style="opacity:0.5">Archive</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+    
+    // Setup event listeners
+    function setupStudentManagerListeners() {
+      // Search input with debounce
+      let searchTimeout;
+      on('#studentSearchInput', 'input', () => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => renderStudentList(), 250);
+      });
+      
+      // Add Student button
+      on('#btnAddStudent', 'click', openAddStudentModal);
+    }
+    
+    // Open Add Student Modal
+    function openAddStudentModal() {
+      console.log('[student-create] Opening add student modal');
+      studentManagerState.currentStep = 1;
+      studentManagerState.guardians = [];
+      studentManagerState.goals = [];
+      
+      // Reset form
+      resetAddStudentForm();
+      
+      // Set default password
+      const codeInput = qs('#studentCode');
+      const passwordInput = qs('#studentPassword');
+      if (codeInput && passwordInput) {
+        codeInput.addEventListener('input', () => {
+          passwordInput.value = codeInput.value + '!';
+        });
+      }
+      
+      // Set default enrollment date
+      const enrollmentDate = qs('#enrollmentStartDate');
+      if (enrollmentDate) {
+        enrollmentDate.value = new Date().toISOString().split('T')[0];
+      }
+      
+      updateWizardStep(1);
+      qs('#addStudentModal').style.display = 'flex';
+    }
+    
+    // Reset Add Student form
+    function resetAddStudentForm() {
+      ['studentCode', 'studentFirstName', 'studentLastName', 'studentPreferredName', 
+       'studentGrade', 'studentDOB', 'studentEmail', 'studentPassword', 'studentNotes'].forEach(id => {
+        const el = qs('#' + id);
+        if (el) el.value = '';
+      });
+      qs('#guardiansContainer').innerHTML = '';
+      qs('#goalsContainer').innerHTML = '';
+      qs('#confirmAccurate').checked = false;
+    }
+    
+    // Update wizard step
+    function updateWizardStep(step) {
+      studentManagerState.currentStep = step;
+      
+      // Hide all steps
+      for (let i = 1; i <= 4; i++) {
+        qs('#studentStep' + i).style.display = 'none';
+      }
+      
+      // Show current step
+      qs('#studentStep' + step).style.display = 'block';
+      
+      // Update title
+      const titles = ['Student Info', 'Enrollments', 'Initial Goals', 'Review & Create'];
+      qs('#addStudentModalTitle').textContent = `Add Student - Step ${step}: ${titles[step - 1]}`;
+      
+      // Update buttons
+      qs('#btnStudentBack').style.display = step > 1 ? 'inline-block' : 'none';
+      qs('#btnStudentNext').style.display = step < 4 ? 'inline-block' : 'none';
+      qs('#btnStudentCreate').style.display = step === 4 ? 'inline-block' : 'none';
+      
+      // Render step content
+      if (step === 2) renderClassEnrollments();
+      if (step === 4) renderReviewSummary();
+    }
+    
+    // Wizard navigation
+    on('#btnStudentNext', 'click', async () => {
+      const step = studentManagerState.currentStep;
+      
+      // Validate current step
+      if (step === 1 && !validateStep1()) return;
+      
+      // Check uniqueness for step 1
+      if (step === 1) {
+        const code = qs('#studentCode').value;
+        if (studentManagerState.students.find(s => s.code === code)) {
+          showStepError(1, `Student code ${code} already exists`);
+          return;
+        }
+      }
+      
+      updateWizardStep(step + 1);
+    });
+    
+    on('#btnStudentBack', 'click', () => {
+      updateWizardStep(studentManagerState.currentStep - 1);
+    });
+    
+    on('#btnStudentCancel', 'click', () => {
+      qs('#addStudentModal').style.display = 'none';
+    });
+    
+    on('#btnStudentCreate', 'click', createStudent);
+    
+    // Validate Step 1
+    function validateStep1() {
+      const code = qs('#studentCode').value.trim();
+      const firstName = qs('#studentFirstName').value.trim();
+      const lastName = qs('#studentLastName').value.trim();
+      const grade = qs('#studentGrade').value;
+      
+      if (!code || !firstName || !lastName || !grade) {
+        showStepError(1, 'Please fill in all required fields (Code, First Name, Last Name, Grade)');
+        return false;
+      }
+      
+      hideStepError(1);
+      return true;
+    }
+    
+    // Show/hide step errors
+    function showStepError(step, message) {
+      const el = qs('#step' + step + 'Error');
+      if (el) {
+        el.textContent = message;
+        el.style.display = 'block';
+      }
+    }
+    
+    function hideStepError(step) {
+      const el = qs('#step' + step + 'Error');
+      if (el) el.style.display = 'none';
+    }
+    
+    // Render class enrollments
+    function renderClassEnrollments() {
+      const container = qs('#classEnrollmentsList');
+      if (!container) return;
+      
+      if (studentManagerState.classes.length === 0) {
+        container.innerHTML = '<div class="subtle">No classes available</div>';
+        return;
+      }
+      
+      container.innerHTML = studentManagerState.classes.map(c => `
+        <label style="display:flex;align-items:center;gap:10px;padding:8px">
+          <input type="checkbox" class="class-checkbox" value="${c.id}" style="width:auto" />
+          <span>${c.name || c.code} <span class="subtle">(${c.code})</span></span>
+        </label>
+      `).join('');
+    }
+    
+    // Add Guardian
+    on('#btnAddGuardian', 'click', () => {
+      const container = qs('#guardiansContainer');
+      const index = studentManagerState.guardians.length;
+      
+      const guardianHtml = `
+        <div class="goal-item" style="margin-bottom:8px" data-guardian="${index}">
+          <div style="flex:1">
+            <label style="margin:0">Guardian Name
+              <input type="text" class="guardian-name" placeholder="John Doe" style="margin-top:4px" />
+            </label>
+          </div>
+          <div style="flex:1">
+            <label style="margin:0">Contact
+              <input type="text" class="guardian-contact" placeholder="555-1234 or email" style="margin-top:4px" />
+            </label>
+          </div>
+          <button type="button" class="btn small" onclick="removeGuardian(${index})">✕</button>
+        </div>
+      `;
+      
+      container.insertAdjacentHTML('beforeend', guardianHtml);
+      studentManagerState.guardians.push({ name: '', contact: '' });
+    });
+    
+    // Remove Guardian
+    window.removeGuardian = function(index) {
+      const el = qs(`[data-guardian="${index}"]`);
+      if (el) el.remove();
+    };
+    
+    // Add Goal
+    on('#btnAddGoal', 'click', () => {
+      const container = qs('#goalsContainer');
+      const index = studentManagerState.goals.length;
+      const studentCode = qs('#studentCode').value || 'S000';
+      
+      const goalHtml = `
+        <div class="goal-item" style="margin-bottom:12px" data-goal="${index}">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <label style="margin:0">Goal Area
+              <input type="text" class="goal-area" placeholder="Reading" style="margin-top:4px" />
+            </label>
+            <label style="margin:0">Goal Code
+              <input type="text" class="goal-code" placeholder="${studentCode}.RDG.1" style="margin-top:4px" />
+            </label>
+            <label style="margin:0;grid-column:1/-1">Goal Text
+              <textarea class="goal-text" rows="2" style="margin-top:4px"></textarea>
+            </label>
+            <label style="margin:0">Baseline %
+              <input type="number" class="goal-baseline" min="0" max="100" placeholder="0" style="margin-top:4px" />
+            </label>
+            <label style="margin:0">Target %
+              <input type="number" class="goal-target" min="0" max="100" placeholder="80" style="margin-top:4px" />
+            </label>
+            <label style="margin:0">Case Manager
+              <input type="text" class="goal-case-manager" value="Teacher" style="margin-top:4px" />
+            </label>
+            <label style="margin:0;display:flex;align-items:center;gap:8px">
+              <input type="checkbox" class="goal-active" checked style="width:auto" />
+              <span>Active</span>
+            </label>
+          </div>
+          <button type="button" class="btn small" onclick="removeGoal(${index})" style="margin-top:8px">Remove Goal</button>
+        </div>
+      `;
+      
+      container.insertAdjacentHTML('beforeend', goalHtml);
+      
+      // Auto-suggest goal code based on area
+      const areaInput = container.querySelector(`[data-goal="${index}"] .goal-area`);
+      const codeInput = container.querySelector(`[data-goal="${index}"] .goal-code`);
+      
+      areaInput.addEventListener('input', () => {
+        const area = areaInput.value.trim().toUpperCase().slice(0, 3);
+        if (area) {
+          const existingGoalCodes = Array.from(container.querySelectorAll('.goal-code')).map(el => el.value);
+          let increment = 1;
+          let suggestedCode;
+          do {
+            suggestedCode = `${studentCode}.${area}.${increment}`;
+            increment++;
+          } while (existingGoalCodes.includes(suggestedCode));
+          
+          codeInput.value = suggestedCode;
+        }
+      });
+    });
+    
+    // Remove Goal
+    window.removeGoal = function(index) {
+      const el = qs(`[data-goal="${index}"]`);
+      if (el) el.remove();
+    };
+    
+    // Copy password button
+    on('#btnCopyPassword', 'click', () => {
+      const passwordInput = qs('#studentPassword');
+      if (passwordInput) {
+        navigator.clipboard.writeText(passwordInput.value).then(() => {
+          const btn = qs('#btnCopyPassword');
+          const oldText = btn.textContent;
+          btn.textContent = '✓';
+          setTimeout(() => { btn.textContent = oldText; }, 1000);
+        });
+      }
+    });
+    
+    // Render review summary
+    function renderReviewSummary() {
+      const summary = qs('#reviewSummary');
+      if (!summary) return;
+      
+      const code = qs('#studentCode').value;
+      const firstName = qs('#studentFirstName').value;
+      const lastName = qs('#studentLastName').value;
+      const preferredName = qs('#studentPreferredName').value;
+      const grade = qs('#studentGrade').value;
+      const dob = qs('#studentDOB').value;
+      const email = qs('#studentEmail').value;
+      const notes = qs('#studentNotes').value;
+      
+      // Collect guardians
+      const guardians = Array.from(qsa('.guardian-name')).map((nameEl, i) => ({
+        name: nameEl.value,
+        contact: qsa('.guardian-contact')[i]?.value || ''
+      })).filter(g => g.name);
+      
+      // Collect selected classes
+      const selectedClasses = Array.from(qsa('.class-checkbox:checked')).map(cb => {
+        const classObj = studentManagerState.classes.find(c => c.id === cb.value);
+        return classObj ? classObj.name || classObj.code : cb.value;
+      });
+      
+      // Collect goals
+      const goals = Array.from(qsa('[data-goal]')).map(goalEl => ({
+        code: goalEl.querySelector('.goal-code')?.value || '',
+        area: goalEl.querySelector('.goal-area')?.value || '',
+        text: goalEl.querySelector('.goal-text')?.value || '',
+        baseline: goalEl.querySelector('.goal-baseline')?.value || '',
+        target: goalEl.querySelector('.goal-target')?.value || ''
+      })).filter(g => g.code);
+      
+      summary.innerHTML = `
+        <div style="margin-bottom:12px">
+          <div style="font-weight:800;margin-bottom:6px">Student Information</div>
+          <div><strong>Code:</strong> ${code}</div>
+          <div><strong>Name:</strong> ${preferredName || `${firstName} ${lastName}`}</div>
+          <div><strong>Grade:</strong> ${grade}</div>
+          ${dob ? `<div><strong>DOB:</strong> ${dob}</div>` : ''}
+          ${email ? `<div><strong>Email:</strong> ${email}</div>` : ''}
+          ${notes ? `<div><strong>Notes:</strong> ${notes}</div>` : ''}
+        </div>
+        
+        ${guardians.length > 0 ? `
+          <div style="margin-bottom:12px">
+            <div style="font-weight:800;margin-bottom:6px">Guardians (${guardians.length})</div>
+            ${guardians.map(g => `<div>• ${g.name} - ${g.contact}</div>`).join('')}
+          </div>
+        ` : ''}
+        
+        ${selectedClasses.length > 0 ? `
+          <div style="margin-bottom:12px">
+            <div style="font-weight:800;margin-bottom:6px">Classes (${selectedClasses.length})</div>
+            ${selectedClasses.map(c => `<div>• ${c}</div>`).join('')}
+          </div>
+        ` : ''}
+        
+        ${goals.length > 0 ? `
+          <div style="margin-bottom:12px">
+            <div style="font-weight:800;margin-bottom:6px">Goals (${goals.length})</div>
+            ${goals.map(g => `
+              <div style="margin-bottom:6px">
+                <div><strong>${g.code}</strong> - ${g.area}</div>
+                <div class="subtle">${g.text}</div>
+                <div class="subtle">Baseline: ${g.baseline}%, Target: ${g.target}%</div>
+              </div>
+            `).join('')}
+          </div>
+        ` : ''}
+      `;
+    }
+    
+    // Create student
+    async function createStudent() {
+      if (!qs('#confirmAccurate').checked) {
+        showStepError(4, 'Please confirm that the data is accurate');
+        return;
+      }
+      
+      const btn = qs('#btnStudentCreate');
+      btn.disabled = true;
+      btn.textContent = 'Creating...';
+      
+      try {
+        console.log('[student-create] Creating student');
+        
+        // Collect student data
+        const studentData = {
+          code: qs('#studentCode').value.trim(),
+          first_name: qs('#studentFirstName').value.trim(),
+          last_name: qs('#studentLastName').value.trim(),
+          preferred_name: qs('#studentPreferredName').value.trim() || null,
+          grade: qs('#studentGrade').value,
+          dob: qs('#studentDOB').value || null,
+          email: qs('#studentEmail').value.trim() || null,
+          notes: qs('#studentNotes').value.trim() || null,
+          password_hash: qs('#studentPassword').value || (qs('#studentCode').value + '!'),
+          guardians: Array.from(qsa('.guardian-name')).map((nameEl, i) => ({
+            name: nameEl.value,
+            contact: qsa('.guardian-contact')[i]?.value || ''
+          })).filter(g => g.name)
+        };
+        
+        // Collect enrollments
+        const enrollments = Array.from(qsa('.class-checkbox:checked')).map(cb => ({
+          class_id: cb.value,
+          start_date: qs('#enrollmentStartDate').value || new Date().toISOString().split('T')[0]
+        }));
+        
+        // Collect goals
+        const goals = Array.from(qsa('[data-goal]')).map(goalEl => ({
+          goal_code: goalEl.querySelector('.goal-code')?.value || '',
+          goal_area: goalEl.querySelector('.goal-area')?.value || '',
+          goal_text: goalEl.querySelector('.goal-text')?.value || '',
+          baseline: parseInt(goalEl.querySelector('.goal-baseline')?.value) || 0,
+          target: goalEl.querySelector('.goal-target')?.value || '80',
+          case_manager: goalEl.querySelector('.goal-case-manager')?.value || 'Teacher',
+          active: goalEl.querySelector('.goal-active')?.checked !== false
+        })).filter(g => g.goal_code);
+        
+        const payload = {
+          student: studentData,
+          enrollments,
+          goals
+        };
+        
+        console.log('[student-create] Payload:', payload);
+        
+        const result = await db.createStudentWithEnrollmentsAndGoals(payload);
+        
+        console.log('[student-create] Success:', result);
+        
+        // Close modal
+        qs('#addStudentModal').style.display = 'none';
+        
+        // Reload student list
+        await loadStudentManagerData();
+        renderStudentList();
+        
+        addNotif(`Student ${studentData.code} created successfully with ${enrollments.length} classes and ${goals.length} goals`);
+        
+      } catch (err) {
+        console.error('[student-create] Error:', err);
+        showStepError(4, 'Failed to create student: ' + err.message);
+        studentManagerState.lastError = err.message;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Create Student';
+      }
+    }
+    
+    // Edit student (placeholder)
+    window.editStudent = async function(code) {
+      console.log('[student-edit] Edit student:', code);
+      // TODO: Implement edit modal
+      addNotif('Edit student feature coming soon');
+    };
+    
+    // Expose feature flag globally
+    window.FEATURE_STUDENT_MANAGER = isStudentManagerEnabled();
     
     // Initialize settings UI
     function initSettings() {
