@@ -245,6 +245,150 @@ const local = {
     // Local mode doesn't support full CSV import, return stub
     throw new Error('CSV import not supported in local mode. Please enable Supabase.');
   },
+
+  // ============================================================================
+  // Phase 1: Goal Progress (Local fallback)
+  // ============================================================================
+  async listGoalProgress({ studentCodes, goalCodes, classCodes, startDate, endDate, goalAreas, limit } = {}) {
+    console.log('[goal-progress] listGoalProgress (local mode)', { studentCodes, goalCodes, classCodes, startDate, endDate, goalAreas, limit });
+    const progressArr = store.get('goalProgress', []);
+    const students = store.get('students', []);
+    const goalsMap = store.get('iepGoals', {});
+    
+    // Build a flat list of goals with metadata
+    const allGoals = [];
+    for (const [student_code, goals] of Object.entries(goalsMap)) {
+      for (const goal of goals) {
+        allGoals.push({
+          ...goal,
+          student_code,
+          goal_code: goal.code,
+          goal_area: goal.goal_area || 'Uncategorized'
+        });
+      }
+    }
+    
+    // Filter progress entries
+    let filtered = progressArr.filter(p => {
+      // Filter by student codes
+      if (studentCodes && studentCodes.length > 0 && !studentCodes.includes(p.student_code)) return false;
+      
+      // Filter by goal codes
+      if (goalCodes && goalCodes.length > 0 && !goalCodes.includes(p.goal_code)) return false;
+      
+      // Filter by class codes
+      if (classCodes && classCodes.length > 0 && !classCodes.includes(p.class_code)) return false;
+      
+      // Filter by date range
+      if (startDate && p.date < startDate) return false;
+      if (endDate && p.date > endDate) return false;
+      
+      // Filter by goal areas (join with goals to get goal_area)
+      if (goalAreas && goalAreas.length > 0) {
+        const goal = allGoals.find(g => g.goal_code === p.goal_code && g.student_code === p.student_code);
+        if (!goal || !goalAreas.includes(goal.goal_area)) return false;
+      }
+      
+      return true;
+    });
+    
+    // Enrich with metadata
+    filtered = filtered.map(p => {
+      const student = students.find(s => s.code === p.student_code);
+      const goal = allGoals.find(g => g.goal_code === p.goal_code && g.student_code === p.student_code);
+      return {
+        ...p,
+        student_name: student?.name || p.student_code,
+        goal_desc: goal?.desc || '',
+        goal_area: goal?.goal_area || 'Uncategorized',
+        class_code: p.class_code || null
+      };
+    });
+    
+    // Apply limit
+    if (limit) {
+      filtered = filtered.slice(0, limit);
+    }
+    
+    return filtered;
+  },
+
+  async listGoalQuarterAverages({ goalIds, studentIds, year } = {}) {
+    console.log('[goal-progress] listGoalQuarterAverages (local mode)', { goalIds, studentIds, year });
+    const progressArr = store.get('goalProgress', []);
+    
+    // Group by goal_code, student_code, quarter
+    const groups = {};
+    
+    progressArr.forEach(p => {
+      if (!p.date || p.value == null) return;
+      
+      const date = new Date(p.date);
+      const month = date.getMonth() + 1; // 1-12
+      const pYear = date.getFullYear();
+      
+      // Determine school year and quarter
+      const schoolYear = month >= 7 ? pYear : pYear - 1;
+      const quarter = 
+        [7, 8, 9].includes(month) ? 'Q1' :
+        [10, 11, 12].includes(month) ? 'Q2' :
+        [1, 2, 3].includes(month) ? 'Q3' :
+        [4, 5, 6].includes(month) ? 'Q4' : 'Unknown';
+      
+      // Filter by year if specified
+      if (year && schoolYear !== year) return;
+      
+      const key = `${p.student_code}|${p.goal_code}|${quarter}|${schoolYear}`;
+      if (!groups[key]) {
+        groups[key] = {
+          student_code: p.student_code,
+          goal_code: p.goal_code,
+          quarter,
+          school_year: schoolYear,
+          sum: 0,
+          count: 0
+        };
+      }
+      
+      groups[key].sum += parseFloat(p.value);
+      groups[key].count += 1;
+    });
+    
+    // Convert to array with averages
+    const result = Object.values(groups).map(g => ({
+      student_code: g.student_code,
+      goal_code: g.goal_code,
+      quarter: g.quarter,
+      school_year: g.school_year,
+      avg_value: Math.round(g.sum / g.count * 10) / 10,
+      measurement_count: g.count
+    }));
+    
+    return result;
+  },
+
+  async upsertGoalProgress({ goal_code, student_code, date, value, source = 'manual', class_code = null, collected_by = null }) {
+    console.log('[goal-progress] upsertGoalProgress (local mode)', { goal_code, student_code, date, value, source });
+    const arr = store.get('goalProgress', []);
+    
+    // Create new entry (local mode doesn't update, just appends)
+    const entry = {
+      id: 'gp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9),
+      goal_code,
+      student_code,
+      class_code,
+      date,
+      value: parseFloat(value),
+      source,
+      collected_by,
+      created_at: new Date().toISOString()
+    };
+    
+    arr.push(entry);
+    store.set('goalProgress', arr);
+    
+    return entry;
+  },
 };
 
 const remote = {
@@ -760,6 +904,173 @@ const remote = {
     }
     
     return results;
+  },
+
+  // ============================================================================
+  // Phase 1: Goal Progress (Remote via Supabase)
+  // ============================================================================
+  async listGoalProgress({ studentCodes, goalCodes, classCodes, startDate, endDate, goalAreas, limit } = {}) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+    
+    console.log('[goal-progress] listGoalProgress (remote)', { studentCodes, goalCodes, classCodes, startDate, endDate, goalAreas, limit });
+    
+    let query = supabase
+      .from('goal_progress')
+      .select(`
+        id,
+        date,
+        value,
+        source,
+        collected_by,
+        created_at,
+        goal_id,
+        student_id,
+        class_id,
+        goals!inner(id, code, desc, goal_area, student_id),
+        students!inner(id, code, name),
+        classes(id, name)
+      `)
+      .order('date', { ascending: true });
+    
+    // Apply filters
+    if (studentCodes && studentCodes.length > 0) {
+      query = query.in('students.code', studentCodes);
+    }
+    
+    if (goalCodes && goalCodes.length > 0) {
+      query = query.in('goals.code', goalCodes);
+    }
+    
+    if (classCodes && classCodes.length > 0) {
+      query = query.in('classes.name', classCodes);
+    }
+    
+    if (startDate) {
+      query = query.gte('date', startDate);
+    }
+    
+    if (endDate) {
+      query = query.lte('date', endDate);
+    }
+    
+    if (goalAreas && goalAreas.length > 0) {
+      query = query.in('goals.goal_area', goalAreas);
+    }
+    
+    if (limit) {
+      query = query.limit(limit);
+    }
+    
+    const { data, error } = await query;
+    if (error) throw error;
+    
+    // Transform to flattened structure with defensive null checks
+    return (data || []).map(row => ({
+      id: row.id,
+      date: row.date,
+      value: row.value,
+      source: row.source,
+      collected_by: row.collected_by,
+      created_at: row.created_at,
+      goal_id: row.goal_id,
+      goal_code: row.goals?.code || '',
+      goal_desc: row.goals?.desc || '',
+      goal_area: row.goals?.goal_area || 'Uncategorized',
+      student_id: row.student_id,
+      student_code: row.students?.code || '',
+      student_name: row.students?.name || row.students?.code || '',
+      class_id: row.class_id,
+      class_code: row.classes?.name || null
+    }));
+  },
+
+  async listGoalQuarterAverages({ goalIds, studentIds, year } = {}) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+    
+    console.log('[goal-progress] listGoalQuarterAverages (remote)', { goalIds, studentIds, year });
+    
+    let query = supabase
+      .from('goal_progress_quarter_avg')
+      .select('*');
+    
+    if (goalIds && goalIds.length > 0) {
+      query = query.in('goal_id', goalIds);
+    }
+    
+    if (studentIds && studentIds.length > 0) {
+      query = query.in('student_id', studentIds);
+    }
+    
+    if (year) {
+      query = query.eq('school_year', year);
+    }
+    
+    const { data, error } = await query;
+    if (error) throw error;
+    
+    return data || [];
+  },
+
+  async upsertGoalProgress({ goal_code, student_code, date, value, source = 'manual', class_code = null, collected_by = null }) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+    
+    console.log('[goal-progress] upsertGoalProgress (remote)', { goal_code, student_code, date, value, source });
+    
+    // Look up goal_id and student_id from codes
+    const { data: goalData, error: goalError } = await supabase
+      .from('goals')
+      .select('id, student_id')
+      .eq('code', goal_code)
+      .limit(1)
+      .single();
+    
+    if (goalError) throw new Error(`Goal not found with code: ${goal_code}`);
+    
+    const { data: studentData, error: studentError } = await supabase
+      .from('students')
+      .select('id, class_id')
+      .eq('code', student_code)
+      .limit(1)
+      .single();
+    
+    if (studentError) throw new Error(`Student not found with code: ${student_code}`);
+    
+    // Look up class_id if class_code provided
+    let resolvedClassId = studentData.class_id; // default to student's primary class
+    if (class_code) {
+      const { data: classData } = await supabase
+        .from('classes')
+        .select('id')
+        .eq('name', class_code)
+        .limit(1)
+        .single();
+      
+      if (classData) {
+        resolvedClassId = classData.id;
+      }
+    }
+    
+    // Insert progress entry
+    const { data, error } = await supabase
+      .from('goal_progress')
+      .insert({
+        goal_id: goalData.id,
+        student_id: studentData.id,
+        class_id: resolvedClassId,
+        date,
+        value: parseFloat(value),
+        source,
+        collected_by
+      })
+      .select()
+      .single();
+    
+    if (error) throw error;
+    
+    return data;
   }
 };
 
