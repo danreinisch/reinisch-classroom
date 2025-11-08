@@ -989,8 +989,17 @@
       </div>
 
       <div class="card ttab" data-tab="classes" style="display:none">
-        <div class="card-header"><div>👥 Classes</div></div>
-        <div class="subtle">WIP: Porting from v8.2.</div>
+        <div class="card-header">
+          <div>👥 Classes</div>
+          <div style="display:flex;gap:8px">
+            <button class="btn primary small" id="btnStudentManager">Student Manager</button>
+            <button class="btn small" id="btnAddClass">+ Add Class</button>
+          </div>
+        </div>
+        
+        <div id="classesContainer" style="margin-top:12px;display:grid;gap:12px">
+          <!-- Classes will be populated here -->
+        </div>
       </div>
 
       <div class="card ttab" data-tab="upload" style="display:none">
@@ -1214,6 +1223,184 @@
     </div>
   </div>
 
+  <!-- Edit Class Modal -->
+  <div class="modal-backdrop" id="editClassModal">
+    <div class="modal card" style="max-width:900px">
+      <div class="card-header"><div id="editClassTitle">Edit Class</div></div>
+      
+      <!-- Tabs -->
+      <nav class="tabs" style="margin-top:12px">
+        <button class="active" data-class-tab="info">Class Info</button>
+        <button data-class-tab="students">Students</button>
+      </nav>
+      
+      <!-- Class Info Tab -->
+      <div id="classInfoTab" class="class-tab-content">
+        <div style="margin-top:12px">
+          <label>Class Name <span style="color:#f87171">*</span>
+            <input id="editClassName" type="text" placeholder="e.g., Language Arts 1" required />
+          </label>
+          <label style="margin-top:12px">Class Code
+            <input id="editClassCode" type="text" placeholder="e.g., LA1" />
+          </label>
+        </div>
+      </div>
+      
+      <!-- Students Tab -->
+      <div id="classStudentsTab" class="class-tab-content" style="display:none">
+        <div style="margin-top:12px">
+          <div class="subtle" style="margin-bottom:8px">Checked = enrolled in this class. Save applies changes.</div>
+          
+          <label style="margin-bottom:8px">Search students (code or name)
+            <input id="editClassSearch" type="text" placeholder="Search..." />
+          </label>
+          
+          <div style="display:flex;gap:8px;margin-bottom:12px">
+            <button class="btn small" id="btnSelectAllStudents">Select All</button>
+            <button class="btn small" id="btnClearAllStudents">Clear All</button>
+          </div>
+          
+          <!-- Diff Summary Bar -->
+          <div id="enrollmentDiffBar" style="padding:10px;background:rgba(34,197,94,.08);border-radius:8px;border:1px solid rgba(34,197,94,.3);margin-bottom:12px;display:none">
+            <div style="font-weight:800">Changes to apply:</div>
+            <div class="subtle">
+              <span id="diffToAdd">To add: 0</span> | 
+              <span id="diffToRemove">To remove: 0</span>
+            </div>
+          </div>
+          
+          <!-- Options -->
+          <div style="margin-bottom:12px;padding:10px;background:rgba(255,255,255,.04);border-radius:8px">
+            <label style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+              <input type="checkbox" id="editSetPrimary" style="width:auto" />
+              <span>Also set as primary class for added students</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:8px">
+              <input type="checkbox" id="editClearPrimary" checked style="width:auto" />
+              <span>Clear primary for removed students (if this is their primary)</span>
+            </label>
+          </div>
+          
+          <!-- Student List (scrollable) -->
+          <div id="editClassStudentList" class="scroll" style="max-height:40vh;border:1px solid var(--line);border-radius:8px;padding:8px">
+            <!-- Students will be rendered here -->
+          </div>
+          
+          <!-- Quick Add Student -->
+          <div style="margin-top:12px;padding:10px;background:rgba(255,255,255,.04);border-radius:8px;border:1px solid var(--line)">
+            <div style="font-weight:800;margin-bottom:8px">+ Add student to this class</div>
+            <div style="display:grid;grid-template-columns:1fr 2fr auto;gap:8px">
+              <input id="quickAddCode" type="text" placeholder="Student code" />
+              <input id="quickAddName" type="text" placeholder="Display name (optional)" />
+              <button class="btn small" id="btnQuickAddStudent">Add</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px">
+        <button class="btn small" id="editClassCancel">Cancel</button>
+        <button class="btn primary small" id="editClassSave">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Student Manager Modal -->
+  <div class="modal-backdrop" id="studentManagerModal">
+    <div class="modal card" style="max-width:900px;max-height:90vh;overflow:auto">
+      <div class="card-header"><div>Student Manager</div></div>
+      
+      <div style="margin-top:12px">
+        <!-- Basic Info -->
+        <div class="card" style="padding:12px">
+          <div style="font-weight:800;margin-bottom:8px">Student Information</div>
+          
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <label>Student Code <span style="color:#f87171">*</span>
+              <input id="smCode" type="text" placeholder="e.g., S001" required />
+              <div class="subtle" style="margin-top:4px" id="smCodeValidation"></div>
+            </label>
+            
+            <label>Display Name <span style="color:#f87171">*</span>
+              <input id="smDisplayName" type="text" placeholder="e.g., John D." required />
+            </label>
+          </div>
+          
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">
+            <label>First Name (optional)
+              <input id="smFirstName" type="text" placeholder="First name" />
+            </label>
+            
+            <label>Last Name (optional)
+              <input id="smLastName" type="text" placeholder="Last name" />
+            </label>
+          </div>
+          
+          <label style="margin-top:12px">Password (optional)
+            <input id="smPassword" type="password" placeholder="Leave blank for default (code + !)" />
+            <div class="subtle" style="margin-top:4px">Default: [student code]!</div>
+          </label>
+        </div>
+        
+        <!-- Classes -->
+        <div class="card" style="padding:12px;margin-top:12px">
+          <div style="font-weight:800;margin-bottom:8px">Class Enrollment</div>
+          
+          <label>Primary Class (optional)
+            <select id="smPrimaryClass">
+              <option value="">— No primary class —</option>
+            </select>
+          </label>
+          
+          <label style="margin-top:12px">Additional Classes (multi-select)
+            <select id="smAdditionalClasses" multiple size="4">
+            </select>
+            <div class="subtle" style="margin-top:4px">Hold Ctrl/Cmd to select multiple</div>
+          </label>
+        </div>
+        
+        <!-- Initial Goals -->
+        <div class="card" style="padding:12px;margin-top:12px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <div style="font-weight:800">Initial Goals (optional)</div>
+            <button class="btn small" id="btnAddGoalRow">+ Add Goal</button>
+          </div>
+          
+          <div id="smGoalsList">
+            <!-- Goal rows will be added here -->
+          </div>
+        </div>
+        
+        <!-- Metadata (Optional) -->
+        <div class="card" style="padding:12px;margin-top:12px">
+          <div style="font-weight:800;margin-bottom:8px">Metadata (optional)</div>
+          
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+            <label>Grade
+              <input id="smGrade" type="text" placeholder="e.g., 10" />
+            </label>
+            
+            <label>Case Manager
+              <input id="smCaseManager" type="text" placeholder="Name" />
+            </label>
+            
+            <label>Tags
+              <input id="smTags" type="text" placeholder="comma,separated" />
+            </label>
+          </div>
+        </div>
+      </div>
+      
+      <div style="display:flex;gap:10px;justify-content:space-between;margin-top:12px">
+        <button class="btn small" id="smCancel">Cancel</button>
+        <div style="display:flex;gap:8px">
+          <button class="btn small" id="smSaveAndAnother">Save & Add Another</button>
+          <button class="btn primary small" id="smSave">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script type="module">
     import { db, isRemote, localStore } from '../web/data-adapter.js';
     import { listLibraryItems } from '../web/library.js';
@@ -1306,6 +1493,7 @@
       if (tab === 'events') initEvents();
       if (tab === 'assignments') initAssignments();
       if (tab === 'settings') initSettings();
+      if (tab === 'classes') initClasses();
     }
     
     // Icon rail clicks
@@ -3293,6 +3481,562 @@
     qs('#btnImportCSV').addEventListener('click', importCSV);
     qs('#btnSeedDemoClasses').addEventListener('click', seedDemoClasses);
     qs('#btnResetDemoClasses').addEventListener('click', resetDemoClasses);
+    
+    // =======================
+    // Classes Tab & Roster Management
+    // =======================
+    
+    let CLASSES = [];
+    let ENROLLMENTS = [];
+    let CURRENT_EDIT_CLASS = null;
+    let INITIAL_ENROLLMENTS = new Set(); // Track initial state for diff
+    
+    // Initialize Classes tab
+    async function initClasses() {
+      console.log('[class-edit] Initializing Classes tab');
+      await loadClasses();
+      renderClasses();
+    }
+    
+    // Load classes and enrollments
+    async function loadClasses() {
+      try {
+        CLASSES = await db.listClasses() || [];
+        ENROLLMENTS = await db.listClassEnrollments() || [];
+        console.log('[class-edit] Loaded', CLASSES.length, 'classes and', ENROLLMENTS.length, 'enrollments');
+      } catch (err) {
+        console.error('[class-edit] Failed to load classes:', err);
+        CLASSES = [];
+        ENROLLMENTS = [];
+      }
+    }
+    
+    // Render class cards
+    function renderClasses() {
+      const container = qs('#classesContainer');
+      if (!CLASSES.length) {
+        container.innerHTML = '<div class="card subtle">No classes yet. Click "+ Add Class" to create one.</div>';
+        return;
+      }
+      
+      container.innerHTML = CLASSES.map(cls => {
+        const enrollments = ENROLLMENTS.filter(e => e.class_id === cls.id && e.active !== false);
+        const memberCodes = enrollments.map(e => e.student_code);
+        const memberDisplay = memberCodes.length > 0
+          ? memberCodes.slice(0, 10).join(', ') + (memberCodes.length > 10 ? ` + ${memberCodes.length - 10} more` : '')
+          : 'No students enrolled';
+        
+        return `
+          <div class="card" style="padding:12px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+              <div>
+                <div style="font-weight:900;font-size:18px">${cls.name || cls.code}</div>
+                <div class="subtle" style="font-size:14px">Code: ${cls.code || '—'} | ${enrollments.length} student${enrollments.length !== 1 ? 's' : ''}</div>
+              </div>
+              <button class="btn small" onclick="openEditClassModal('${cls.id}')">Edit</button>
+            </div>
+            <div class="scroll" style="max-height:120px;padding:8px;background:rgba(255,255,255,.02);border-radius:8px;border:1px solid var(--line)">
+              <div class="subtle" style="font-size:13px">${memberDisplay}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+    
+    // Open Edit Class Modal
+    window.openEditClassModal = async function(classId) {
+      console.log('[class-edit] Opening edit modal for class', classId);
+      CURRENT_EDIT_CLASS = CLASSES.find(c => c.id === classId);
+      if (!CURRENT_EDIT_CLASS) {
+        console.error('[class-edit] Class not found:', classId);
+        return;
+      }
+      
+      // Populate class info
+      qs('#editClassTitle').textContent = `Edit Class: ${CURRENT_EDIT_CLASS.name}`;
+      qs('#editClassName').value = CURRENT_EDIT_CLASS.name || '';
+      qs('#editClassCode').value = CURRENT_EDIT_CLASS.code || '';
+      
+      // Reset to Class Info tab
+      switchClassTab('info');
+      
+      // Load current enrollments
+      const currentEnrollments = ENROLLMENTS.filter(e => 
+        e.class_id === classId && e.active !== false
+      );
+      INITIAL_ENROLLMENTS = new Set(currentEnrollments.map(e => e.student_code));
+      console.log('[class-edit] Initial enrollments:', Array.from(INITIAL_ENROLLMENTS));
+      
+      // Render student list
+      await renderEditClassStudentList();
+      
+      // Show modal
+      qs('#editClassModal').classList.add('show');
+    };
+    
+    // Switch between Class Info and Students tabs in Edit Modal
+    function switchClassTab(tab) {
+      qsa('[data-class-tab]').forEach(btn => btn.classList.toggle('active', btn.dataset.classTab === tab));
+      qs('#classInfoTab').style.display = tab === 'info' ? 'block' : 'none';
+      qs('#classStudentsTab').style.display = tab === 'students' ? 'block' : 'none';
+    }
+    
+    // Render student list in Edit Class modal
+    async function renderEditClassStudentList() {
+      const searchTerm = (qs('#editClassSearch')?.value || '').toLowerCase();
+      const studentList = qs('#editClassStudentList');
+      
+      if (!STUDENTS.length) {
+        await loadStudents(); // Ensure students are loaded
+      }
+      
+      const filteredStudents = STUDENTS.filter(s => 
+        (s.code || '').toLowerCase().includes(searchTerm) ||
+        (s.name || '').toLowerCase().includes(searchTerm)
+      );
+      
+      if (!filteredStudents.length) {
+        studentList.innerHTML = '<div class="subtle">No students found</div>';
+        return;
+      }
+      
+      studentList.innerHTML = filteredStudents.map(s => {
+        const isEnrolled = INITIAL_ENROLLMENTS.has(s.code);
+        const isPrimary = s.class_id === CURRENT_EDIT_CLASS.id;
+        const label = `${s.name || s.code} (${s.code})${isPrimary ? ' — Primary Class' : ''}`;
+        
+        return `
+          <label style="display:flex;align-items:center;gap:8px;padding:6px;border-bottom:1px solid var(--line);margin-bottom:4px">
+            <input type="checkbox" class="student-checkbox" data-code="${s.code}" ${isEnrolled ? 'checked' : ''} 
+                   style="width:auto" aria-label="Enroll ${s.code} in ${CURRENT_EDIT_CLASS.code || CURRENT_EDIT_CLASS.name}" />
+            <span>${label}</span>
+          </label>
+        `;
+      }).join('');
+      
+      // Update diff immediately
+      updateEnrollmentDiff();
+      
+      // Add change listeners
+      qsa('.student-checkbox').forEach(cb => {
+        cb.addEventListener('change', updateEnrollmentDiff);
+      });
+    }
+    
+    // Update enrollment diff summary
+    function updateEnrollmentDiff() {
+      const currentChecked = new Set(
+        Array.from(qsa('.student-checkbox:checked')).map(cb => cb.dataset.code)
+      );
+      
+      const addCodes = Array.from(currentChecked).filter(code => !INITIAL_ENROLLMENTS.has(code));
+      const removeCodes = Array.from(INITIAL_ENROLLMENTS).filter(code => !currentChecked.has(code));
+      
+      const diffBar = qs('#enrollmentDiffBar');
+      const hasChanges = addCodes.length > 0 || removeCodes.length > 0;
+      
+      diffBar.style.display = hasChanges ? 'block' : 'none';
+      qs('#diffToAdd').textContent = `To add: ${addCodes.length}`;
+      qs('#diffToRemove').textContent = `To remove: ${removeCodes.length}`;
+      
+      console.log('[class-edit] Diff - Add:', addCodes, 'Remove:', removeCodes);
+    }
+    
+    // Select All / Clear All
+    qs('#btnSelectAllStudents').addEventListener('click', () => {
+      qsa('.student-checkbox').forEach(cb => cb.checked = true);
+      updateEnrollmentDiff();
+    });
+    
+    qs('#btnClearAllStudents').addEventListener('click', () => {
+      qsa('.student-checkbox').forEach(cb => cb.checked = false);
+      updateEnrollmentDiff();
+    });
+    
+    // Search filter
+    qs('#editClassSearch').addEventListener('input', () => {
+      renderEditClassStudentList();
+    });
+    
+    // Tab switching in Edit Modal
+    qsa('[data-class-tab]').forEach(btn => {
+      btn.addEventListener('click', () => switchClassTab(btn.dataset.classTab));
+    });
+    
+    // Quick Add Student
+    qs('#btnQuickAddStudent').addEventListener('click', async () => {
+      const code = qs('#quickAddCode').value.trim();
+      const name = qs('#quickAddName').value.trim();
+      
+      if (!code) {
+        alert('Student code is required');
+        return;
+      }
+      
+      try {
+        console.log('[class-edit] Quick adding student:', code);
+        
+        // Create student if doesn't exist
+        await db.upsertStudent({
+          code,
+          name: name || code,
+          class_id: null
+        });
+        
+        // Set default password
+        await db.setStudentPassword(code, code + '!');
+        
+        // Enroll in current class
+        await db.upsertClassEnrollment({
+          class_id: CURRENT_EDIT_CLASS.id,
+          student_code: code,
+          student_name: name || code,
+          active: true
+        });
+        
+        // Reload data
+        await loadStudents();
+        await loadClasses();
+        
+        // Update INITIAL_ENROLLMENTS to include this student
+        INITIAL_ENROLLMENTS.add(code);
+        
+        // Refresh list
+        await renderEditClassStudentList();
+        
+        // Clear inputs
+        qs('#quickAddCode').value = '';
+        qs('#quickAddName').value = '';
+        
+        addNotif(`Added ${code} to ${CURRENT_EDIT_CLASS.name}`);
+      } catch (err) {
+        console.error('[class-edit] Quick add failed:', err);
+        alert('Failed to add student: ' + err.message);
+      }
+    });
+    
+    // Save Edit Class
+    qs('#editClassSave').addEventListener('click', async () => {
+      if (!CURRENT_EDIT_CLASS) return;
+      
+      const btn = qs('#editClassSave');
+      btn.disabled = true;
+      btn.textContent = 'Saving...';
+      
+      try {
+        console.log('[class-edit] Saving class changes...');
+        
+        // 1. Update class info
+        const name = qs('#editClassName').value.trim();
+        const code = qs('#editClassCode').value.trim();
+        
+        if (name) {
+          await db.upsertClass({
+            id: CURRENT_EDIT_CLASS.id,
+            name,
+            code: code || name
+          });
+        }
+        
+        // 2. Compute diff
+        const currentChecked = new Set(
+          Array.from(qsa('.student-checkbox:checked')).map(cb => cb.dataset.code)
+        );
+        const addCodes = Array.from(currentChecked).filter(c => !INITIAL_ENROLLMENTS.has(c));
+        const removeCodes = Array.from(INITIAL_ENROLLMENTS).filter(c => !currentChecked.has(c));
+        
+        console.log('[class-edit] Applying changes - Add:', addCodes, 'Remove:', removeCodes);
+        
+        // 3. Apply bulk update
+        if (addCodes.length > 0 || removeCodes.length > 0) {
+          const setPrimary = qs('#editSetPrimary').checked;
+          const clearPrimary = qs('#editClearPrimary').checked;
+          
+          await db.bulkUpdateClassEnrollments(
+            CURRENT_EDIT_CLASS.id,
+            { addCodes, removeCodes },
+            { setPrimary: setPrimary || clearPrimary } // Use setPrimary flag for both add and remove logic
+          );
+          
+          // 4. Backfill assignment instances for newly added students
+          if (addCodes.length > 0) {
+            console.log('[enrollment-sync] Backfilling assignment instances for', addCodes);
+            await db.ensureAssignmentInstancesForClass(CURRENT_EDIT_CLASS.id, addCodes);
+          }
+        }
+        
+        // Reload and close
+        await loadClasses();
+        renderClasses();
+        qs('#editClassModal').classList.remove('show');
+        
+        addNotif(`Updated ${CURRENT_EDIT_CLASS.name}: +${addCodes.length} -${removeCodes.length} students`);
+        
+      } catch (err) {
+        console.error('[class-edit] Save failed:', err);
+        alert('Failed to save changes: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Save';
+      }
+    });
+    
+    // Cancel Edit Class
+    qs('#editClassCancel').addEventListener('click', () => {
+      qs('#editClassModal').classList.remove('show');
+    });
+    
+    // Add Class button
+    qs('#btnAddClass').addEventListener('click', async () => {
+      const name = prompt('Enter class name:');
+      if (!name) return;
+      
+      const code = prompt('Enter class code (optional):', name.replace(/\s+/g, '').toUpperCase());
+      
+      try {
+        await db.upsertClass({
+          name,
+          code: code || name
+        });
+        
+        await loadClasses();
+        renderClasses();
+        addNotif(`Created class: ${name}`);
+      } catch (err) {
+        console.error('[class-edit] Failed to create class:', err);
+        alert('Failed to create class: ' + err.message);
+      }
+    });
+    
+    // =======================
+    // Student Manager
+    // =======================
+    
+    let SM_GOAL_COUNTER = 0;
+    
+    // Open Student Manager
+    qs('#btnStudentManager').addEventListener('click', async () => {
+      console.log('[student-manager] Opening Student Manager');
+      
+      // Reset form
+      qs('#smCode').value = '';
+      qs('#smDisplayName').value = '';
+      qs('#smFirstName').value = '';
+      qs('#smLastName').value = '';
+      qs('#smPassword').value = '';
+      qs('#smGrade').value = '';
+      qs('#smCaseManager').value = '';
+      qs('#smTags').value = '';
+      qs('#smCodeValidation').textContent = '';
+      
+      // Populate class dropdowns
+      await loadClasses();
+      const primarySelect = qs('#smPrimaryClass');
+      const additionalSelect = qs('#smAdditionalClasses');
+      
+      const classOptions = CLASSES.map(c => 
+        `<option value="${c.id}">${c.name} (${c.code || c.id})</option>`
+      ).join('');
+      
+      primarySelect.innerHTML = '<option value="">— No primary class —</option>' + classOptions;
+      additionalSelect.innerHTML = classOptions;
+      
+      // Clear goals list
+      qs('#smGoalsList').innerHTML = '';
+      SM_GOAL_COUNTER = 0;
+      
+      // Show modal
+      qs('#studentManagerModal').classList.add('show');
+    });
+    
+    // Add goal row
+    qs('#btnAddGoalRow').addEventListener('click', () => {
+      const goalId = ++SM_GOAL_COUNTER;
+      const goalsContainer = qs('#smGoalsList');
+      
+      const goalRow = document.createElement('div');
+      goalRow.className = 'goal-row';
+      goalRow.style.cssText = 'display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;margin-bottom:8px;padding:8px;border:1px solid var(--line);border-radius:8px;background:rgba(255,255,255,.02)';
+      goalRow.dataset.goalId = goalId;
+      
+      goalRow.innerHTML = `
+        <input type="text" placeholder="Goal description" data-field="desc" />
+        <select data-field="measurement">
+          <option value="Percent">Percent</option>
+          <option value="Frequency">Frequency</option>
+          <option value="Custom">Custom</option>
+        </select>
+        <input type="text" placeholder="Target (e.g., 80%)" data-field="target" />
+        <button class="btn small" onclick="this.closest('.goal-row').remove()">×</button>
+      `;
+      
+      goalsContainer.appendChild(goalRow);
+    });
+    
+    // Auto-fill display name from first/last
+    qs('#smFirstName').addEventListener('input', autoFillDisplayName);
+    qs('#smLastName').addEventListener('input', autoFillDisplayName);
+    
+    function autoFillDisplayName() {
+      const first = qs('#smFirstName').value.trim();
+      const last = qs('#smLastName').value.trim();
+      const displayName = qs('#smDisplayName');
+      
+      if (!displayName.value || displayName.dataset.autoFilled === 'true') {
+        const name = [first, last].filter(Boolean).join(' ');
+        displayName.value = name || displayName.value;
+        displayName.dataset.autoFilled = name ? 'true' : 'false';
+      }
+    }
+    
+    // Manual edit of display name stops auto-fill
+    qs('#smDisplayName').addEventListener('input', () => {
+      qs('#smDisplayName').dataset.autoFilled = 'false';
+    });
+    
+    // Validate student code on blur
+    qs('#smCode').addEventListener('blur', async () => {
+      const code = qs('#smCode').value.trim();
+      if (!code) return;
+      
+      try {
+        const existing = STUDENTS.find(s => s.code === code);
+        if (existing) {
+          qs('#smCodeValidation').textContent = '⚠️ This code already exists';
+          qs('#smCodeValidation').style.color = '#f87171';
+        } else {
+          qs('#smCodeValidation').textContent = '✓ Code available';
+          qs('#smCodeValidation').style.color = '#22c55e';
+        }
+      } catch (err) {
+        console.error('[student-manager] Validation error:', err);
+      }
+    });
+    
+    // Save Student
+    async function saveStudent(addAnother = false) {
+      const code = qs('#smCode').value.trim();
+      const displayName = qs('#smDisplayName').value.trim();
+      
+      if (!code || !displayName) {
+        alert('Student code and display name are required');
+        return;
+      }
+      
+      const btn = addAnother ? qs('#smSaveAndAnother') : qs('#smSave');
+      btn.disabled = true;
+      btn.textContent = 'Saving...';
+      
+      try {
+        console.log('[student-manager] Creating student:', code);
+        
+        // Collect goal rows
+        const goalRows = Array.from(qsa('.goal-row'));
+        const goals = goalRows.map(row => {
+          const desc = row.querySelector('[data-field="desc"]').value.trim();
+          const measurement = row.querySelector('[data-field="measurement"]').value;
+          const target = row.querySelector('[data-field="target"]').value.trim();
+          
+          return desc ? {
+            code: `${code}.${Date.now()}.${Math.random().toString(36).slice(2, 5)}`,
+            desc,
+            title: desc,
+            target: target || null,
+            measurement_type: measurement
+          } : null;
+        }).filter(Boolean);
+        
+        // Collect class enrollments
+        const primaryClass = qs('#smPrimaryClass').value;
+        const additionalClasses = Array.from(qs('#smAdditionalClasses').selectedOptions)
+          .map(opt => opt.value)
+          .filter(id => id !== primaryClass); // Avoid duplicates
+        
+        const payload = {
+          code,
+          name: displayName,
+          display_name: displayName,
+          password: qs('#smPassword').value.trim() || null,
+          primary_class_id: primaryClass || null,
+          additional_class_ids: additionalClasses,
+          goals,
+          metadata: {
+            grade: qs('#smGrade').value.trim() || null,
+            case_manager: qs('#smCaseManager').value.trim() || null,
+            tags: qs('#smTags').value.trim() || null
+          }
+        };
+        
+        console.log('[student-manager] Payload:', payload);
+        
+        // Call orchestration method
+        const result = await db.createStudentWithEnrollments(payload);
+        
+        console.log('[student-manager] Result:', result);
+        
+        // Reload students
+        await loadStudents();
+        await loadClasses();
+        
+        addNotif(`Created student ${code} with ${goals.length} goal(s)`);
+        
+        if (addAnother) {
+          // Clear form but keep open
+          qs('#smCode').value = '';
+          qs('#smDisplayName').value = '';
+          qs('#smFirstName').value = '';
+          qs('#smLastName').value = '';
+          qs('#smPassword').value = '';
+          qs('#smCodeValidation').textContent = '';
+          qs('#smGoalsList').innerHTML = '';
+          SM_GOAL_COUNTER = 0;
+          qs('#smCode').focus();
+        } else {
+          // Close modal
+          qs('#studentManagerModal').classList.remove('show');
+        }
+        
+      } catch (err) {
+        console.error('[student-manager] Save failed:', err);
+        alert('Failed to create student: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = addAnother ? 'Save & Add Another' : 'Save';
+      }
+    }
+    
+    qs('#smSave').addEventListener('click', () => saveStudent(false));
+    qs('#smSaveAndAnother').addEventListener('click', () => saveStudent(true));
+    
+    // Cancel Student Manager
+    qs('#smCancel').addEventListener('click', () => {
+      qs('#studentManagerModal').classList.remove('show');
+    });
+    
+    // =======================
+    // Diagnostic Functions
+    // =======================
+    
+    window.__diagnoseRoster = function(class_id) {
+      if (!CURRENT_EDIT_CLASS || CURRENT_EDIT_CLASS.id !== class_id) {
+        console.log('[__diagnoseRoster] No active edit session for class', class_id);
+        return { error: 'No active edit session' };
+      }
+      
+      const currentChecked = new Set(
+        Array.from(qsa('.student-checkbox:checked')).map(cb => cb.dataset.code)
+      );
+      const addCodes = Array.from(currentChecked).filter(c => !INITIAL_ENROLLMENTS.has(c));
+      const removeCodes = Array.from(INITIAL_ENROLLMENTS).filter(c => !currentChecked.has(c));
+      
+      return {
+        class_id,
+        class_name: CURRENT_EDIT_CLASS.name,
+        members: Array.from(INITIAL_ENROLLMENTS),
+        pendingAdds: addCodes,
+        pendingRemoves: removeCodes
+      };
+    };
   </script>
 </body>
 </html>

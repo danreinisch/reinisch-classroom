@@ -361,6 +361,70 @@ const local = {
     // Local mode doesn't support full CSV import, return stub
     throw new Error('CSV import not supported in local mode. Please enable Supabase.');
   },
+  
+  // Student Manager: Create student with full enrollment and goals
+  async createStudentWithEnrollments(studentPayload) {
+    const {
+      code,
+      name,
+      display_name,
+      password,
+      primary_class_id,
+      additional_class_ids = [],
+      goals = [],
+      metadata = {}
+    } = studentPayload;
+    
+    // 1. Create student
+    const student = {
+      code,
+      name: name || display_name || code,
+      class_id: primary_class_id || null
+    };
+    await this.upsertStudent(student);
+    
+    // 2. Set password if provided
+    if (password) {
+      await this.setStudentPassword(code, password);
+    } else {
+      // Default password: code + '!'
+      await this.setStudentPassword(code, code + '!');
+    }
+    
+    // 3. Create enrollments
+    const allClassIds = new Set([
+      ...(primary_class_id ? [primary_class_id] : []),
+      ...additional_class_ids
+    ]);
+    
+    for (const class_id of allClassIds) {
+      await this.upsertClassEnrollment({
+        class_id,
+        student_code: code,
+        student_name: student.name,
+        active: true
+      });
+    }
+    
+    // 4. Create goals
+    for (const goal of goals) {
+      await this.upsertGoal({
+        student_code: code,
+        code: goal.code || `${code}.${Date.now()}`,
+        desc: goal.desc || goal.title || '',
+        target: goal.target || null,
+        status: 'Open'
+      });
+    }
+    
+    // 5. Backfill assignment instances for all enrolled classes
+    const studentCodes = [code];
+    for (const class_id of allClassIds) {
+      await this.ensureAssignmentInstancesForClass(class_id, studentCodes);
+    }
+    
+    return { success: true, student_code: code };
+  },
 };
 
 const remote = {
@@ -1061,6 +1125,113 @@ const remote = {
     }
     
     return results;
+  },
+  
+  // Student Manager: Create student with full enrollment and goals
+  async createStudentWithEnrollments(studentPayload) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+    
+    return await withRetry(async () => {
+      const {
+        code,
+        name,
+        display_name,
+        password,
+        primary_class_id,
+        additional_class_ids = [],
+        goals = [],
+        metadata = {}
+      } = studentPayload;
+      
+      // 1. Create student
+      const { data: student, error: studentError } = await supabase
+        .from('students')
+        .upsert({
+          code,
+          name: name || display_name || code,
+          class_id: primary_class_id || null
+        }, { onConflict: 'code' })
+        .select()
+        .single();
+      
+      if (studentError) throw studentError;
+      
+      // 2. Set password if provided
+      const pwdToSet = password || (code + '!');
+      const { error: pwdError } = await supabase.rpc('set_student_password', {
+        p_code: code,
+        p_plain: pwdToSet
+      });
+      
+      if (pwdError) throw pwdError;
+      
+      // 3. Create enrollments
+      const allClassIds = new Set([
+        ...(primary_class_id ? [primary_class_id] : []),
+        ...additional_class_ids
+      ]);
+      
+      for (const class_id of allClassIds) {
+        const { error: enrollError } = await supabase
+          .from('class_enrollments')
+          .upsert({
+            class_id,
+            student_id: student.id,
+            active: true
+          }, { onConflict: 'class_id,student_id' });
+        
+        if (enrollError) throw enrollError;
+      }
+      
+      // 4. Create goals
+      for (const goal of goals) {
+        const { error: goalError } = await supabase
+          .from('goals')
+          .upsert({
+            student_id: student.id,
+            code: goal.code || `${code}.${Date.now()}`,
+            desc: goal.desc || goal.title || '',
+            target: goal.target || null,
+            status: 'Open'
+          }, { onConflict: 'student_id,code' });
+        
+        if (goalError) throw goalError;
+      }
+      
+      // 5. Backfill assignment instances for all enrolled classes
+      // Find assignments linked to these classes
+      const classIdArray = Array.from(allClassIds);
+      if (classIdArray.length > 0) {
+        const { data: assignments, error: assignmentsError } = await supabase
+          .from('assignments')
+          .select('id, meta');
+        
+        if (assignmentsError) throw assignmentsError;
+        
+        // Filter assignments that belong to any of the enrolled classes
+        const relevantAssignments = (assignments || []).filter(a => 
+          a.meta?.class_id && classIdArray.includes(a.meta.class_id)
+        );
+        
+        // Create instances for this student
+        for (const assignment of relevantAssignments) {
+          const { error: instanceError } = await supabase
+            .from('assignment_instances')
+            .upsert({
+              assignment_id: assignment.id,
+              student_id: student.id,
+              status: 'Assigned'
+            }, { onConflict: 'assignment_id,student_id' });
+          
+          if (instanceError && !instanceError.message.includes('duplicate')) {
+            console.error('[student-manager] Failed to create instance:', instanceError);
+          }
+        }
+      }
+      
+      return { success: true, student_code: code, student_id: student.id };
+    });
   }
 };
 
