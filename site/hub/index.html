@@ -696,6 +696,59 @@
   /* Keep the Teacher Center action crisp */
   #btnTeacher { text-shadow: none !important; }
 </style>
+
+<!-- Classes Page UX Styles -->
+<style id="classes-page-styles">
+  /* Scrollable student list in class cards */
+  .class-card-students {
+    max-height: 200px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    margin-top: 12px;
+    padding-right: 4px;
+  }
+  
+  /* Custom scrollbar for student lists */
+  .class-card-students::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  .class-card-students::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+  }
+  
+  .class-card-students::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.18);
+    border-radius: 4px;
+  }
+  
+  .class-card-students::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.28);
+  }
+  
+  /* Edit Class Modal Styles */
+  #editClassModal .modal-form-group {
+    margin-bottom: 16px;
+  }
+  
+  #editClassModal .modal-form-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 700;
+    color: var(--ink);
+  }
+  
+  #editClassModal .modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+  }
+  
+  #editClassModal .modal-actions button {
+    flex: 1;
+  }
+</style>
 </head>
 <body class="glass-bold">
   <div class="header">
@@ -1786,6 +1839,37 @@
       
       <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px">
         <button class="btn small" id="previewManifestClose">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Class Modal -->
+  <div class="modal-backdrop" id="editClassModal">
+    <div class="modal card" style="max-width:500px">
+      <div class="card-header">
+        <div>Edit Class</div>
+      </div>
+      
+      <div style="margin-top:12px">
+        <div class="modal-form-group">
+          <label for="editClassName">Display Title</label>
+          <input type="text" id="editClassName" placeholder="Class name" />
+        </div>
+        
+        <div class="modal-form-group">
+          <label for="editClassCode">Code (read-only)</label>
+          <input type="text" id="editClassCode" readonly style="background:rgba(255,255,255,.02);cursor:not-allowed" />
+        </div>
+        
+        <div class="modal-form-group" style="display:flex;align-items:center;gap:10px">
+          <input type="checkbox" id="editClassActive" style="width:auto" />
+          <label for="editClassActive" style="margin:0;font-weight:700">Active</label>
+        </div>
+      </div>
+      
+      <div class="modal-actions">
+        <button class="btn" id="editClassCancel">Cancel</button>
+        <button class="btn primary" id="editClassSave">Save Changes</button>
       </div>
     </div>
   </div>
@@ -7271,6 +7355,7 @@
   // ============================================================================
   async function initClasses() {
     try {
+      console.log('[classes-ui] Loading classes and enrollments...');
       const classes = await db.listClasses();
       const enrollments = await db.listClassEnrollments();
       
@@ -7292,16 +7377,37 @@
         }
       });
       
-      // Helper to normalize class titles for duplicate detection
+      // Helper to normalize class titles for duplicate detection (C)
       // Matches SQL normalization: removes spaces, hyphens, underscores, then lowercase
       function normalizeTitle(title) {
         if (!title) return '';
         return title.replace(/[\s\-_]+/g, '').toLowerCase();
       }
       
-      // Filter out zero-enrollment duplicates:
-      // If multiple classes share the same normalized title, keep only those with enrollments
-      // or if none have enrollments, keep the first one
+      // Helper to determine preferred class code (C)
+      // Priority: 1) LA[0-9] pattern, 2) LSLA, 3) LS, 4) shortest code
+      function getPreferredCode(codes) {
+        if (!codes || codes.length === 0) return '';
+        if (codes.length === 1) return codes[0];
+        
+        // Check for LA[0-9] pattern
+        const laPattern = codes.find(c => /^LA\d+$/.test(c));
+        if (laPattern) return laPattern;
+        
+        // Check for LSLA
+        if (codes.includes('LSLA')) return 'LSLA';
+        
+        // Check for LS
+        if (codes.includes('LS')) return 'LS';
+        
+        // Return shortest code
+        return codes.reduce((shortest, code) => 
+          code.length < shortest.length ? code : shortest
+        );
+      }
+      
+      // De-duplicate classes (C) and consolidate enrollments
+      // Group classes by normalized title
       const titleMap = {};
       safeClasses.forEach(cls => {
         const normalized = normalizeTitle(cls.name || cls.code);
@@ -7311,27 +7417,61 @@
         titleMap[normalized].push(cls);
       });
       
-      const filteredClasses = [];
-      Object.values(titleMap).forEach(group => {
+      // Build consolidated class list
+      const consolidatedClasses = [];
+      Object.entries(titleMap).forEach(([normalized, group]) => {
         if (group.length === 1) {
-          // Only one class with this title - always include
-          filteredClasses.push(group[0]);
+          // Single class - use as-is
+          consolidatedClasses.push({
+            ...group[0],
+            _consolidatedFrom: [group[0].id]
+          });
         } else {
-          // Multiple classes with same normalized title
-          // Include only those with enrollments
-          const withEnrollments = group.filter(cls => 
-            enrollmentsByClass[cls.id] && enrollmentsByClass[cls.id].length > 0
-          );
+          // Multiple classes with same normalized title - consolidate
+          console.log(`[classes-ui] Consolidating ${group.length} duplicates for "${group[0].name || group[0].code}"`);
           
-          if (withEnrollments.length > 0) {
-            // Include all classes that have enrollments
-            filteredClasses.push(...withEnrollments);
-          } else {
-            // None have enrollments - include only the first one
-            filteredClasses.push(group[0]);
-          }
+          // Collect all class IDs and codes
+          const allIds = group.map(c => c.id);
+          const allCodes = group.map(c => c.code).filter(Boolean);
+          
+          // Select preferred code
+          const preferredCode = getPreferredCode(allCodes);
+          
+          // Find the class with the preferred code, or use first
+          const preferred = group.find(c => c.code === preferredCode) || group[0];
+          
+          // Merge all enrollments from all duplicate classes
+          const mergedEnrollments = new Map();
+          allIds.forEach(classId => {
+            const enrolls = enrollmentsByClass[classId] || [];
+            enrolls.forEach(e => {
+              // Use student_code as unique key
+              if (!mergedEnrollments.has(e.student_code)) {
+                mergedEnrollments.set(e.student_code, e);
+              }
+            });
+          });
+          
+          // Update enrollmentsByClass for the consolidated class
+          enrollmentsByClass[preferred.id] = Array.from(mergedEnrollments.values());
+          
+          consolidatedClasses.push({
+            ...preferred,
+            code: preferredCode,
+            _consolidatedFrom: allIds,
+            _isDuplicate: true
+          });
         }
       });
+      
+      // Helper to add ' SC' suffix if not present (D)
+      function addSCSuffix(title) {
+        if (!title) return title;
+        if (title.trim().endsWith(' SC') || title.trim().endsWith('SC')) {
+          return title;
+        }
+        return title + ' SC';
+      }
       
       container.innerHTML = `
         <div class="card-header">
@@ -7339,43 +7479,37 @@
           <button class="btn primary small" id="btnAddClass">Add Class</button>
         </div>
         
-        ${filteredClasses.length === 0 ? `
+        ${consolidatedClasses.length === 0 ? `
           <div class="subtle" style="padding:40px;text-align:center">
             No classes yet. Click "Add Class" to create one.
           </div>
         ` : `
-          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;margin-top:12px">
-            ${filteredClasses.map(cls => {
+          <div id="classesGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;margin-top:12px">
+            ${consolidatedClasses.map(cls => {
               if (!cls) return ''; // Defensive guard
               const classEnrollments = enrollmentsByClass[cls.id] || [];
               const studentCount = classEnrollments.length;
               
-              // Build student list preview: first 5 codes, then "... and N more"
-              const previewStudents = classEnrollments.slice(0, 5);
-              const remainingCount = Math.max(0, studentCount - 5);
+              // Display title with ' SC' suffix (D)
+              const displayTitle = addSCSuffix(cls.name || cls.code || 'Unnamed Class');
               
               return `
-                <div class="card">
+                <div class="card class-card" data-class-id="${escapeHtml(cls.id || '')}">
                   <div class="card-header">
-                    <div style="font-weight:700">${escapeHtml(cls.name || cls.code || 'Unnamed Class')}</div>
-                    <button class="btn small" onclick="window.editClass('${escapeHtml(cls.id || '')}')">Edit</button>
+                    <div style="font-weight:700">${escapeHtml(displayTitle)}</div>
+                    <button class="btn small class-edit-btn" data-class-id="${escapeHtml(cls.id || '')}">Edit</button>
                   </div>
                   <div>
                     <div class="subtle" style="margin-bottom:8px">Code: ${escapeHtml(cls.code || cls.id || '—')}</div>
                     <div class="badge">${studentCount} student${studentCount !== 1 ? 's' : ''}</div>
                     ${studentCount > 0 ? `
-                      <div style="margin-top:12px">
+                      <div class="class-card-students">
                         <div style="font-weight:700;font-size:12px;margin-bottom:6px">Students:</div>
-                        ${previewStudents.map(e => `
+                        ${classEnrollments.map(e => `
                           <div class="subtle" style="font-size:12px;padding:4px 0">
                             ${escapeHtml(e.student_code || '—')}${e.student_name && e.student_name !== e.student_code ? ` (${escapeHtml(e.student_name)})` : ''}
                           </div>
                         `).join('')}
-                        ${remainingCount > 0 ? `
-                          <div class="subtle" style="font-size:12px;padding:4px 0;font-style:italic">
-                            … and ${remainingCount} more
-                          </div>
-                        ` : ''}
                       </div>
                     ` : ''}
                   </div>
@@ -7399,14 +7533,29 @@
                 initClasses();
               })
               .catch(err => {
-                console.error('Failed to add class:', err);
+                console.error('[classes-ui] Failed to add class:', err);
                 addNotif('Failed to add class. Local mode active.', { type: 'error' });
               });
           }
         });
       }
+      
+      // Add delegated click handler for Edit buttons (B)
+      const classesGrid = qs('#classesGrid');
+      if (classesGrid) {
+        classesGrid.addEventListener('click', (e) => {
+          if (e.target.matches('.class-edit-btn')) {
+            const classId = e.target.getAttribute('data-class-id');
+            if (classId) {
+              window.openEditClassModal(classId);
+            }
+          }
+        });
+      }
+      
+      console.log('[classes-ui] Rendered', consolidatedClasses.length, 'classes');
     } catch (err) {
-      console.error('[Classes] Failed to initialize:', err);
+      console.error('[classes-ui] Failed to initialize:', err);
       const container = qs('.ttab[data-tab="classes"]');
       if (container) {
         container.innerHTML = `
@@ -7419,9 +7568,103 @@
     }
   }
   
-  window.editClass = function(classId) {
-    addNotif('Edit class functionality coming soon', { type: 'info' });
+  // Edit Class Modal Handlers (B)
+  window.openEditClassModal = async function(classId) {
+    try {
+      console.log('[classes-ui] Opening edit modal for class:', classId);
+      
+      // Load class data
+      const classes = await db.listClasses();
+      const cls = classes.find(c => c.id === classId);
+      
+      if (!cls) {
+        addNotif('Class not found', { type: 'error' });
+        return;
+      }
+      
+      // Populate modal fields
+      const modal = qs('#editClassModal');
+      const nameInput = qs('#editClassName');
+      const codeInput = qs('#editClassCode');
+      const activeCheck = qs('#editClassActive');
+      
+      if (nameInput) nameInput.value = cls.name || cls.code || '';
+      if (codeInput) codeInput.value = cls.code || cls.id || '';
+      if (activeCheck) activeCheck.checked = cls.active !== false;
+      
+      // Show modal
+      if (modal) modal.classList.add('show');
+      
+      // Store current class ID for save handler
+      window._editingClassId = classId;
+    } catch (err) {
+      console.error('[classes-ui] Failed to open edit modal:', err);
+      addNotif('Failed to load class data', { type: 'error' });
+    }
   };
+  
+  window.closeEditClassModal = function() {
+    const modal = qs('#editClassModal');
+    if (modal) modal.classList.remove('show');
+    window._editingClassId = null;
+  };
+  
+  window.saveEditClass = async function() {
+    try {
+      const classId = window._editingClassId;
+      if (!classId) {
+        addNotif('No class selected', { type: 'error' });
+        return;
+      }
+      
+      const nameInput = qs('#editClassName');
+      const activeCheck = qs('#editClassActive');
+      
+      const newName = nameInput ? nameInput.value.trim() : '';
+      const active = activeCheck ? activeCheck.checked : true;
+      
+      if (!newName) {
+        addNotif('Class name is required', { type: 'error' });
+        return;
+      }
+      
+      console.log('[classes-ui] Saving class:', classId, 'with name:', newName);
+      
+      // Update class
+      await db.upsertClass({
+        id: classId,
+        name: newName,
+        active: active
+      });
+      
+      addNotif('Class updated successfully', { type: 'success' });
+      
+      // Close modal and refresh
+      window.closeEditClassModal();
+      await initClasses();
+    } catch (err) {
+      console.error('[classes-ui] Failed to save class:', err);
+      addNotif('Failed to save class: ' + err.message, { type: 'error' });
+    }
+  };
+  
+  // Modal event handlers
+  document.addEventListener('click', (e) => {
+    // Close modal on backdrop click
+    if (e.target.matches('#editClassModal')) {
+      window.closeEditClassModal();
+    }
+    
+    // Cancel button
+    if (e.target.matches('#editClassCancel')) {
+      window.closeEditClassModal();
+    }
+    
+    // Save button
+    if (e.target.matches('#editClassSave')) {
+      window.saveEditClass();
+    }
+  });
   
   // ============================================================================
   // DATA IMPORT/EXPORT TAB
