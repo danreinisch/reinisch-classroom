@@ -784,6 +784,183 @@
 </head>
 <body>
 
+<!-- HOTFIX: Early failsafe timer to guarantee login view visibility -->
+<!-- TODO: Fold this into existing diagnostics work after hotfix is stable -->
+<script>
+(function() {
+  'use strict';
+  
+  // A) Failsafe visibility timer: Force #loginView visible if window.authReady not set within 3s
+  // This runs BEFORE any async work to prevent top-level errors from leaving page blank
+  
+  const urlParams = new URLSearchParams(window.location.search);
+  const DEBUG_MODE = urlParams.get('debug') === '1';
+  const FAILSAFE_DELAY_MS = DEBUG_MODE ? 0 : 3000; // No delay in debug mode
+  
+  if (DEBUG_MODE) {
+    console.log('[HOTFIX][failsafe] Debug mode enabled - failsafe timer bypassed');
+  }
+  
+  setTimeout(() => {
+    // Only fire if window.authReady is not set
+    if (!window.authReady) {
+      const loginView = document.getElementById('loginView');
+      const dashboardView = document.getElementById('studentDashboardView');
+      const teacherView = document.getElementById('teacherCenterView');
+      
+      // Check if any view is visible
+      const isLoginVisible = loginView && !loginView.classList.contains('hidden');
+      const isDashboardVisible = dashboardView && !dashboardView.classList.contains('hidden');
+      const isTeacherVisible = teacherView && !teacherView.classList.contains('hidden');
+      
+      if (!isLoginVisible && !isDashboardVisible && !isTeacherVisible) {
+        console.warn('[HOTFIX][failsafe] TRIGGERED - No view visible after ' + FAILSAFE_DELAY_MS + 'ms, forcing login view');
+        
+        if (DEBUG_MODE) {
+          console.log('[HOTFIX][failsafe] Current state:', {
+            authReady: window.authReady,
+            loginHidden: loginView?.classList.contains('hidden'),
+            dashboardHidden: dashboardView?.classList.contains('hidden'),
+            teacherHidden: teacherView?.classList.contains('hidden')
+          });
+        }
+        
+        // Force show login view defensively
+        if (loginView) {
+          loginView.classList.remove('hidden');
+          console.log('[HOTFIX][failsafe] Login view forced visible');
+        }
+        
+        // Hide other views
+        if (dashboardView) dashboardView.classList.add('hidden');
+        if (teacherView) teacherView.classList.add('hidden');
+      } else if (DEBUG_MODE) {
+        console.log('[HOTFIX][failsafe] Check passed - a view is visible or authReady is set');
+      }
+    } else if (DEBUG_MODE) {
+      console.log('[HOTFIX][failsafe] Check passed - authReady is true');
+    }
+  }, FAILSAFE_DELAY_MS);
+})();
+</script>
+
+<!-- HOTFIX: Global error capture with visible banner -->
+<!-- TODO: Fold this into existing diagnostics work after hotfix is stable -->
+<script>
+(function() {
+  'use strict';
+  
+  const urlParams = new URLSearchParams(window.location.search);
+  const DEBUG_MODE = urlParams.get('debug') === '1';
+  
+  // Track first error to avoid spamming
+  let firstError = null;
+  
+  // B) Global error handlers: Show user-friendly banner on uncaught errors
+  
+  // Handler for synchronous errors
+  window.onerror = function(message, source, lineno, colno, error) {
+    console.error('[HOTFIX][global-error] Uncaught error:', { message, source, lineno, colno, error });
+    
+    if (!firstError) {
+      firstError = { message, source, lineno, error };
+      
+      // Show banner with user-friendly message
+      const errorMsg = DEBUG_MODE && message ? 
+        'Student Portal failed to load fully. Error: ' + message :
+        'Student Portal failed to load fully. Please try again or contact your teacher.';
+      
+      // Use a safe setTimeout to avoid blocking the error handler
+      setTimeout(() => {
+        showFatalBanner(errorMsg, 'error');
+      }, 100);
+    }
+    
+    // Return false to allow default error handling to continue
+    return false;
+  };
+  
+  // Handler for unhandled promise rejections
+  window.addEventListener('unhandledrejection', function(event) {
+    console.error('[HOTFIX][unhandled-rejection]', event.reason);
+    
+    if (!firstError) {
+      firstError = { message: event.reason?.message || String(event.reason), type: 'rejection' };
+      
+      // Show banner with user-friendly message
+      const errorMsg = DEBUG_MODE && event.reason?.message ? 
+        'Student Portal failed to load fully. Error: ' + event.reason.message :
+        'Student Portal failed to load fully. Please try again or contact your teacher.';
+      
+      setTimeout(() => {
+        showFatalBanner(errorMsg, 'error');
+      }, 100);
+    }
+  });
+  
+  // C) Helper: showFatalBanner(message, type='error')
+  // Creates or updates #portalFatalBanner with accessible, dismissible banner
+  // This is a temporary hotfix - reuses existing .portal-banner styles
+  window.showFatalBanner = function(message, type = 'error') {
+    let banner = document.getElementById('portalFatalBanner');
+    
+    if (!banner) {
+      // Create banner element if it doesn't exist
+      banner = document.createElement('div');
+      banner.id = 'portalFatalBanner';
+      banner.className = 'portal-banner';
+      banner.setAttribute('role', 'alert');
+      banner.setAttribute('aria-live', 'assertive');
+      banner.setAttribute('aria-atomic', 'true');
+      
+      banner.innerHTML = `
+        <div class="portal-banner-icon" id="portalFatalBannerIcon"></div>
+        <div class="portal-banner-content">
+          <div class="portal-banner-title" id="portalFatalBannerTitle">Portal Error</div>
+          <div class="portal-banner-message" id="portalFatalBannerMessage"></div>
+        </div>
+        <button id="portalFatalBannerDismiss" class="portal-banner-dismiss" aria-label="Dismiss error notification">×</button>
+      `;
+      
+      document.body.insertBefore(banner, document.body.firstChild);
+      
+      // Setup dismiss handler
+      const dismissBtn = document.getElementById('portalFatalBannerDismiss');
+      if (dismissBtn) {
+        dismissBtn.addEventListener('click', () => {
+          banner.classList.add('hidden');
+        });
+      }
+    }
+    
+    // Update banner content
+    const icon = document.getElementById('portalFatalBannerIcon');
+    const messageEl = document.getElementById('portalFatalBannerMessage');
+    
+    // Set icon based on type
+    const icons = {
+      error: '⚠️',
+      warning: '⚠️',
+      info: 'ℹ️'
+    };
+    
+    if (icon) icon.textContent = icons[type] || icons.error;
+    if (messageEl) messageEl.textContent = message;
+    
+    // Set type class
+    banner.className = 'portal-banner ' + type;
+    
+    if (DEBUG_MODE) {
+      console.log('[HOTFIX][showFatalBanner] Showing', type, 'banner:', message);
+    }
+  };
+  
+  if (DEBUG_MODE) {
+    console.log('[HOTFIX][global-error] Global error handlers installed');
+  }
+})();
+</script>
+
 <!-- Early auto-login bootstrap (24h remember-me) -->
 <script>
 (function() {
@@ -1273,9 +1450,11 @@
     closeAssignmentDetail
   } from '../web/portal-b-ui.js';
   
-  // G) Debug mode support: ?debug=1 enables verbose logging and bypasses failsafe delay
+  // HOTFIX: Debug mode support: ?debug=1 enables verbose logging and bypasses failsafe delay
+  // Make it globally available for early scripts
   const urlParams = new URLSearchParams(window.location.search);
   const DEBUG_MODE = urlParams.get('debug') === '1';
+  window.DEBUG_MODE = DEBUG_MODE; // Make available globally
   
   if (DEBUG_MODE) {
     console.log('[student-portal] DEBUG MODE ENABLED - verbose logging active');
@@ -1607,15 +1786,18 @@
   }
   
   function showLogin() {
-    // Phase 3: Prevent showing login if auth is already ready (prevents race conditions)
-    if (authReady) {
-      console.log('[portal-auth] showLogin blocked - auth already ready');
-      return;
+    // HOTFIX: Removed authReady guard - always allow showing login view
+    // This ensures login is always visible on errors/failures
+    // TODO: Review guard logic after hotfix is stable
+    
+    if (DEBUG_MODE) {
+      console.log('[student-portal] showLogin() called, authReady:', authReady);
     }
     
     console.log('[student-portal] Showing login view');
     
-    // B) showLogin() hardening: Guarantee UI state with defensive null checks
+    // HOTFIX: Defensive hardening - always unhide login, always hide others
+    // Do not bail early due to prior state flags
     const loginView = qs('#loginView');
     const dashboardView = qs('#studentDashboardView');
     const teacherView = qs('#teacherCenterView');
@@ -1625,13 +1807,19 @@
     const loginPassword = qs('#loginPassword');
     const teacherPassword = qs('#teacherPassword');
     const loginError = qs('#loginError');
+    const portalTopBar = qs('#portalTopBar');
     
-    // Always unhide login view
-    if (loginView) loginView.classList.remove('hidden');
+    // Always unhide login view - never bail
+    if (loginView) {
+      loginView.classList.remove('hidden');
+    } else {
+      console.error('[HOTFIX][showLogin] loginView element not found!');
+    }
     
-    // Always hide dashboard and teacher views
+    // Always hide dashboard and teacher views - never bail
     if (dashboardView) dashboardView.classList.add('hidden');
     if (teacherView) teacherView.classList.add('hidden');
+    if (portalTopBar) portalTopBar.classList.add('hidden');
     
     // Hide user chip and logout button
     if (userChip) userChip.classList.add('hidden');
@@ -1659,9 +1847,12 @@
   }
   
   async function showStudentDashboard() {
-    // C) showStudentDashboard() hardening: Guard against missing currentUser
+    // HOTFIX: Guard against missing currentUser - call showLogin() and return
     if (!currentUser) {
-      console.error('[student-portal] Cannot show dashboard - currentUser is null, falling back to login');
+      console.error('[HOTFIX][showStudentDashboard] currentUser is null, falling back to login');
+      if (DEBUG_MODE) {
+        console.log('[HOTFIX][showStudentDashboard] State:', { currentUser, userRole, authReady });
+      }
       showLogin();
       return;
     }
@@ -1669,18 +1860,26 @@
     console.log('[student-portal] Showing student dashboard for', currentUser.code || currentUser.name);
     
     // Phase 3: Mark auth as ready to prevent login view from reappearing
-    authReady = true;
+    window.authReady = true;
     
-    // C) Always unhide dashboard and hide login (independent of feature flags)
+    // HOTFIX: Always reveal dashboard FIRST, then hide login (order matters!)
     const loginView = qs('#loginView');
     const dashboardView = qs('#studentDashboardView');
     const teacherView = qs('#teacherCenterView');
     const userChip = qs('#userChip');
     const logoutBtn = qs('#btnLogout');
     
-    // Core UI visibility - never depend on feature flags for these
+    // 1. Always unhide dashboard and teacher view (order: show first)
+    if (dashboardView) {
+      dashboardView.classList.remove('hidden');
+    } else {
+      console.error('[HOTFIX][showStudentDashboard] dashboardView element not found!');
+      showLogin();
+      return;
+    }
+    
+    // 2. Hide other views AFTER dashboard is visible
     if (loginView) loginView.classList.add('hidden');
-    if (dashboardView) dashboardView.classList.remove('hidden');
     if (teacherView) teacherView.classList.add('hidden');
     
     if (userChip) {
@@ -1705,29 +1904,30 @@
       }
     }
     
-    // C) Wrap data loads in try/catch - failures don't blank the UI
+    // HOTFIX: Wrap data loads in try/catch with showFatalBanner on failure
+    // Dashboard remains visible even if data loads fail
     try {
       await loadStudentAssignments();
     } catch (err) {
-      console.error('[student-portal] Failed to load assignments:', err);
-      // Dashboard remains visible, show friendly error banner
-      showBanner({
-        type: 'error',
-        title: 'Assignments Failed to Load',
-        message: 'Could not load your assignments. You can still use other features. Please refresh the page to try again.'
-      });
+      console.error('[HOTFIX][showStudentDashboard] Failed to load assignments:', err);
+      const errorMsg = DEBUG_MODE && err.message ?
+        'Could not load assignments. Error: ' + err.message :
+        'Could not load your assignments. Please refresh the page or contact your teacher.';
+      if (typeof window.showFatalBanner === 'function') {
+        window.showFatalBanner(errorMsg, 'error');
+      }
     }
     
     try {
       await loadStudentGoals();
     } catch (err) {
-      console.error('[student-portal] Failed to load goals:', err);
-      // Dashboard remains visible, show friendly error banner
-      showBanner({
-        type: 'error',
-        title: 'Goals Failed to Load',
-        message: 'Could not load your IEP goals. You can still use other features. Please refresh the page to try again.'
-      });
+      console.error('[HOTFIX][showStudentDashboard] Failed to load goals:', err);
+      const errorMsg = DEBUG_MODE && err.message ?
+        'Could not load IEP goals. Error: ' + err.message :
+        'Could not load your IEP goals. Please refresh the page or contact your teacher.';
+      if (typeof window.showFatalBanner === 'function') {
+        window.showFatalBanner(errorMsg, 'warning');
+      }
     }
     
     // Portal B: Show grades card if enabled (feature-flag controlled widget)
@@ -1735,13 +1935,13 @@
       try {
         await loadGradesCard();
       } catch (err) {
-        console.error('[student-portal] Failed to load grades card:', err);
-        // Dashboard remains visible, show friendly error banner
-        showBanner({
-          type: 'warning',
-          title: 'Grades Failed to Load',
-          message: 'Could not load your grades. You can still use other features. Please refresh the page to try again.'
-        });
+        console.error('[HOTFIX][showStudentDashboard] Failed to load grades card:', err);
+        const errorMsg = DEBUG_MODE && err.message ?
+          'Could not load grades. Error: ' + err.message :
+          'Could not load your grades. Please refresh the page or contact your teacher.';
+        if (typeof window.showFatalBanner === 'function') {
+          window.showFatalBanner(errorMsg, 'warning');
+        }
       }
     }
     
@@ -2574,15 +2774,20 @@
             if (DEBUG_MODE) console.log('[student-portal] Init completed in', Date.now() - initStartTime, 'ms');
             return;
           } else {
-            console.warn('[student-portal] Student not found in database, clearing session');
+            // HOTFIX: Student not found - clear session and show login
+            console.warn('[HOTFIX][init] Student not found in database, clearing session and showing login');
             sessionStorage.removeItem('rc_user_code');
             sessionStorage.removeItem('rc_user_role');
+            showLogin();
+            return;
           }
         } catch (err) {
-          console.error('[student-portal] Session restore failed:', err);
-          // Clear invalid session
+          // HOTFIX: Session restore failed - clear session and show login
+          console.error('[HOTFIX][init] Session restore failed:', err);
           sessionStorage.removeItem('rc_user_code');
           sessionStorage.removeItem('rc_user_role');
+          showLogin();
+          return;
         }
       }
       
@@ -2596,51 +2801,12 @@
       
     } catch (err) {
       console.error('[student-portal] Initialization error:', err);
-      // D) On any error, show login form (only if __autoLoginOk is not set)
+      // HOTFIX: On any error, show login form
       hideLoginLoading();
       if (!window.__autoLoginOk) {
         showLogin();
       }
     }
-  })();
-  
-  // A) Initialization failsafe: Reveal login view if authReady is not set within N seconds
-  // This prevents blank screens if initialization encounters an exception or hangs
-  (function setupFailsafe() {
-    const FAILSAFE_TIMEOUT_MS = DEBUG_MODE ? 0 : 3000; // Bypass delay in debug mode
-    
-    if (DEBUG_MODE) {
-      console.log('[student-portal] Failsafe bypassed in debug mode');
-    }
-    
-    setTimeout(() => {
-      // Only trigger failsafe if auth is not ready and no view is visible
-      if (!authReady) {
-        const loginView = qs('#loginView');
-        const dashboardView = qs('#studentDashboardView');
-        const teacherView = qs('#teacherCenterView');
-        
-        const isLoginVisible = loginView && !loginView.classList.contains('hidden');
-        const isDashboardVisible = dashboardView && !dashboardView.classList.contains('hidden');
-        const isTeacherVisible = teacherView && !teacherView.classList.contains('hidden');
-        
-        if (!isLoginVisible && !isDashboardVisible && !isTeacherVisible) {
-          console.warn('[student-portal] FAILSAFE TRIGGERED - No view visible after', FAILSAFE_TIMEOUT_MS, 'ms, forcing login view');
-          
-          // Clear any broken state
-          window.__autoLoginOk = false;
-          hideLoginLoading();
-          
-          // Force show login
-          authReady = false; // Reset to allow showLogin to work
-          showLogin();
-        } else if (DEBUG_MODE) {
-          console.log('[student-portal] Failsafe check passed - a view is visible');
-        }
-      } else if (DEBUG_MODE) {
-        console.log('[student-portal] Failsafe check passed - authReady is true');
-      }
-    }, FAILSAFE_TIMEOUT_MS);
   })();
   
   // Portal B: Setup event handlers
