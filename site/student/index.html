@@ -561,6 +561,42 @@
     flex:1; text-align:center;
   }
   
+  /* Portal Banner - Diagnostic UI for adapter failures */
+  .portal-banner{
+    position:fixed; top:0; left:0; right:0; z-index:200;
+    padding:14px 20px; display:flex; align-items:center; gap:12px;
+    border-bottom:1px solid; box-shadow:var(--shadow-1);
+  }
+  .portal-banner.error{
+    background:rgba(239,68,68,.15); border-color:rgba(239,68,68,.4); color:#fca5a5;
+  }
+  .portal-banner.warning{
+    background:rgba(245,158,11,.15); border-color:rgba(245,158,11,.4); color:#fbbf24;
+  }
+  .portal-banner.info{
+    background:rgba(6,182,212,.15); border-color:rgba(6,182,212,.4); color:#22d3ee;
+  }
+  .portal-banner-icon{
+    font-size:20px; flex-shrink:0;
+  }
+  .portal-banner-content{
+    flex:1;
+  }
+  .portal-banner-title{
+    font-weight:900; font-size:15px; margin-bottom:2px;
+  }
+  .portal-banner-message{
+    font-size:13px; opacity:0.9;
+  }
+  .portal-banner-dismiss{
+    background:none; border:none; color:currentColor; cursor:pointer;
+    font-size:20px; padding:4px 8px; line-height:1; opacity:0.7;
+    border-radius:4px; transition:opacity .15s;
+  }
+  .portal-banner-dismiss:hover{
+    opacity:1; background:rgba(255,255,255,.1);
+  }
+  
   /* Mobile Responsive */
   @media (max-width:768px){
     .portal-top-bar{
@@ -723,6 +759,16 @@
   }
 })();
 </script>
+
+<!-- Portal Banner - Diagnostic UI for adapter failures -->
+<div id="portalBanner" class="portal-banner hidden" role="status" aria-live="polite" aria-atomic="true">
+  <div class="portal-banner-icon" id="portalBannerIcon"></div>
+  <div class="portal-banner-content">
+    <div class="portal-banner-title" id="portalBannerTitle"></div>
+    <div class="portal-banner-message" id="portalBannerMessage"></div>
+  </div>
+  <button id="portalBannerDismiss" class="portal-banner-dismiss" aria-label="Dismiss notification">×</button>
+</div>
 
 <!-- Portal B: Top Status Bar (hidden until logged in) -->
 <div id="portalTopBar" class="portal-top-bar hidden">
@@ -1078,13 +1124,56 @@
     console.log('[student-portal] DEBUG MODE ENABLED - verbose logging active');
   }
   
+  // TODO: DIAGNOSTIC - Temporary force-enable flag for top bar testing
+  // Remove this constant once visual checks are complete
+  const DIAGNOSTIC_FORCE_TOP_BAR = true;
+  
+  /**
+   * Resolve portalTopBar feature flag with diagnostic overrides
+   * Precedence: query param > localStorage > hard default(DIAGNOSTIC_FORCE_TOP_BAR) > getFeatureFlag fallback
+   */
+  function resolvePortalTopBar() {
+    // 1. Check query parameter ?forceTopBar=1 or ?forceTopBar=0
+    const forceTopBarParam = urlParams.get('forceTopBar');
+    if (forceTopBarParam === '1') {
+      console.log('[student-portal] Top bar ENABLED via query param');
+      return true;
+    }
+    if (forceTopBarParam === '0') {
+      console.log('[student-portal] Top bar DISABLED via query param');
+      return false;
+    }
+    
+    // 2. Check localStorage rc_forceTopBar
+    const forceTopBarStorage = localStorage.getItem('rc_forceTopBar');
+    if (forceTopBarStorage === '1') {
+      console.log('[student-portal] Top bar ENABLED via localStorage');
+      return true;
+    }
+    if (forceTopBarStorage === '0') {
+      console.log('[student-portal] Top bar DISABLED via localStorage');
+      return false;
+    }
+    
+    // 3. Hard default (diagnostic phase)
+    if (DIAGNOSTIC_FORCE_TOP_BAR) {
+      console.log('[student-portal] Top bar ENABLED via DIAGNOSTIC_FORCE_TOP_BAR');
+      return true;
+    }
+    
+    // 4. Fallback to feature flag
+    const flagValue = getFeatureFlag('portalTopBar');
+    console.log('[student-portal] Top bar using feature flag:', flagValue);
+    return flagValue;
+  }
+  
   // Feature flags
   const feature = {
     portalTeacherLoginInStudent: false,  // Hide teacher login in Student Portal (default: false for rollback safety)
     portalAssignmentsStatus: getFeatureFlag('portalAssignmentsStatus'),
     portalGradesCard: getFeatureFlag('portalGradesCard'),
     portalResubmission: getFeatureFlag('portalResubmission'),
-    portalTopBar: getFeatureFlag('portalTopBar')
+    portalTopBar: resolvePortalTopBar()
   };
   
   // Local storage namespace
@@ -1130,6 +1219,54 @@
   let currentFilters = {};
   let pendingResubmission = null;
   let clockInterval = null;
+  
+  // Banner helper functions
+  /**
+   * Show diagnostic banner for adapter failures
+   * @param {Object} options - Banner configuration
+   * @param {string} options.type - Banner type: 'error', 'warning', or 'info'
+   * @param {string} options.title - Banner title
+   * @param {string} options.message - Banner message
+   */
+  function showBanner({ type = 'error', title, message }) {
+    const banner = qs('#portalBanner');
+    const icon = qs('#portalBannerIcon');
+    const titleEl = qs('#portalBannerTitle');
+    const messageEl = qs('#portalBannerMessage');
+    
+    if (!banner || !icon || !titleEl || !messageEl) {
+      console.error('[portal-banner] Banner elements not found');
+      return;
+    }
+    
+    // Set icon based on type
+    const icons = {
+      error: '⚠️',
+      warning: '⚠️',
+      info: 'ℹ️'
+    };
+    icon.textContent = icons[type] || icons.error;
+    
+    // Set content
+    titleEl.textContent = title;
+    messageEl.textContent = message;
+    
+    // Set type class
+    banner.className = `portal-banner ${type}`;
+    
+    console.log(`[portal-banner] Showing ${type} banner:`, title);
+  }
+  
+  /**
+   * Clear/hide the diagnostic banner
+   */
+  function clearBanner() {
+    const banner = qs('#portalBanner');
+    if (banner) {
+      banner.classList.add('hidden');
+      console.log('[portal-banner] Banner cleared');
+    }
+  }
   
   // Listen for auth changes from other tabs via BroadcastChannel
   if (typeof onAuthChange === 'function') {
@@ -1414,14 +1551,24 @@
       await loadStudentAssignments();
     } catch (err) {
       console.error('[student-portal] Failed to load assignments:', err);
-      // Dashboard remains visible, show friendly error in assignments section
+      // Dashboard remains visible, show friendly error banner
+      showBanner({
+        type: 'error',
+        title: 'Assignments Failed to Load',
+        message: 'Could not load your assignments. You can still use other features. Please refresh the page to try again.'
+      });
     }
     
     try {
       await loadStudentGoals();
     } catch (err) {
       console.error('[student-portal] Failed to load goals:', err);
-      // Dashboard remains visible, show friendly error in goals section
+      // Dashboard remains visible, show friendly error banner
+      showBanner({
+        type: 'error',
+        title: 'Goals Failed to Load',
+        message: 'Could not load your IEP goals. You can still use other features. Please refresh the page to try again.'
+      });
     }
     
     // Portal B: Show grades card if enabled (feature-flag controlled widget)
@@ -1430,7 +1577,12 @@
         await loadGradesCard();
       } catch (err) {
         console.error('[student-portal] Failed to load grades card:', err);
-        // Dashboard remains visible, grades card shows error state
+        // Dashboard remains visible, show friendly error banner
+        showBanner({
+          type: 'warning',
+          title: 'Grades Failed to Load',
+          message: 'Could not load your grades. You can still use other features. Please refresh the page to try again.'
+        });
       }
     }
     
@@ -2289,6 +2441,14 @@
   
   // Portal B: Setup event handlers
   (function initPortalB() {
+    // Setup banner dismiss button
+    const bannerDismiss = qs('#portalBannerDismiss');
+    if (bannerDismiss) {
+      bannerDismiss.addEventListener('click', () => {
+        clearBanner();
+      });
+    }
+    
     // Setup resubmission handlers
     setupResubmissionHandlers(db, qs, showToast, loadStudentAssignments);
     
