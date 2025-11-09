@@ -128,6 +128,14 @@
         </div>
       </div>
 
+      <div class="row">
+        <div>
+          <label>Diagnostic Tools</label>
+          <button class="primary" id="auditBtn">Audit Life Skills</button>
+          <div class="hint">Scan Life Skills directories and verify site-state.json entries</div>
+        </div>
+      </div>
+
       <div class="log" id="log"></div>
     </div>
   </div>
@@ -410,6 +418,93 @@
       console.error(e);
       log('Error:', e && e.message ? e.message : String(e));
       alert('Error: ' + (e && e.message ? e.message : String(e)));
+    }
+  });
+
+  // Audit Life Skills functionality
+  const auditBtn = document.getElementById('auditBtn');
+  auditBtn.addEventListener('click', async () => {
+    try {
+      log('=== Starting Life Skills Audit ===');
+      
+      // Find Life Skills unit
+      const lifeUnit = units.find(u => u.id === 'life');
+      if (!lifeUnit) {
+        log('ERROR: Life Skills unit not found in units.json');
+        alert('Life Skills unit not found');
+        return;
+      }
+
+      log(`Auditing Life Skills (${lifeUnit.slots} slots)...`);
+      
+      // Reload fresh state
+      await loadState();
+      const lifeCat = siteState?.categories?.life || { titles: [], links: [] };
+      const titles = lifeCat.titles || [];
+      const links = lifeCat.links || [];
+      
+      ensureArraySize(titles, lifeUnit.slots);
+      ensureArraySize(links, lifeUnit.slots);
+      
+      let issuesFound = 0;
+      
+      for (let i = 1; i <= lifeUnit.slots; i++) {
+        const slotNum = num(i);
+        const title = (titles[i - 1] || '').trim();
+        const link = (links[i - 1] || '').trim();
+        const expectedPath = `/life-skills/presentations/presentation-${slotNum}/`;
+        
+        // Check if directory exists via HEAD request
+        let dirExists = false;
+        try {
+          const headRes = await fetch(expectedPath, { method: 'HEAD', cache: 'no-store' });
+          dirExists = headRes.ok;
+        } catch {
+          dirExists = false;
+        }
+        
+        // Log slot status
+        if (!title && !link && !dirExists) {
+          // Empty slot - normal
+          log(`Slot ${slotNum}: Empty (no title, no link, no directory) ✓`);
+        } else if (title && link && dirExists) {
+          // Complete slot - ideal
+          log(`Slot ${slotNum}: "${title}" → ${link} ✓`);
+        } else {
+          // Mismatch detected
+          issuesFound++;
+          log(`⚠ Slot ${slotNum}: MISMATCH detected!`);
+          log(`  Title: ${title || '(empty)'}`);
+          log(`  Link: ${link || '(empty)'}`);
+          log(`  Directory exists: ${dirExists ? 'YES' : 'NO'}`);
+          
+          if (title && !link) {
+            log(`  → Issue: Has title but no link`);
+          }
+          if (link && !title) {
+            log(`  → Issue: Has link but no title`);
+          }
+          if (dirExists && !link) {
+            log(`  → Issue: Directory exists but no link in state`);
+          }
+          if (link && !dirExists) {
+            log(`  → Issue: Link in state but directory doesn't exist`);
+          }
+        }
+      }
+      
+      log('');
+      if (issuesFound === 0) {
+        log('=== Audit Complete: No issues found ✓ ===');
+        alert('Audit complete! No issues found. Check log for details.');
+      } else {
+        log(`=== Audit Complete: ${issuesFound} issue(s) found ===`);
+        alert(`Audit found ${issuesFound} issue(s). Check log for details.`);
+      }
+    } catch (e) {
+      console.error(e);
+      log('Audit error:', e?.message || String(e));
+      alert('Audit error: ' + (e?.message || String(e)));
     }
   });
 
