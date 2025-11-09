@@ -96,11 +96,15 @@ async function handleUpload(body){
     const redirectHtml = redirectIndexHtml(finalTitle, entryRel, unit.pagePath, unit.section);
     blobs.set(`${slotDir}/index.html`, Buffer.from(redirectHtml));
     
+    // Update only the current slot
     state.categories[category].titles[slot - 1] = finalTitle;
     state.categories[category].links[slot - 1]  = `/${unit.baseOut}/presentation-${String(slot).padStart(2, '0')}/`;
     state.updated = new Date().toISOString();
 
-    blobs.set('site/assets/data/site-state.json', Buffer.from(JSON.stringify(state, null, 2)));
+    // Mirror state to BOTH paths: site/assets and assets (root)
+    const stateJSON = JSON.stringify(state, null, 2);
+    blobs.set('site/assets/data/site-state.json', Buffer.from(stateJSON));
+    blobs.set('assets/data/site-state.json', Buffer.from(stateJSON));
 
     if (REGENERATE_CATEGORY_INDEX) {
       const catIndexPath = unit.pagePath.replace(/\/$/, '') + '/index.html';
@@ -147,7 +151,10 @@ async function handleDelete(body){
   state.categories[category].links[slot - 1]  = '';
   state.updated = new Date().toISOString();
 
-  blobs.set('site/assets/data/site-state.json', Buffer.from(JSON.stringify(state, null, 2)));
+  // Mirror state to BOTH paths: site/assets and assets (root)
+  const stateJSON = JSON.stringify(state, null, 2);
+  blobs.set('site/assets/data/site-state.json', Buffer.from(stateJSON));
+  blobs.set('assets/data/site-state.json', Buffer.from(stateJSON));
 
   if (REGENERATE_CATEGORY_INDEX) {
     const catIndexPath = unit.pagePath.replace(/\/$/, '') + '/index.html';
@@ -355,6 +362,42 @@ function ensureStateShape(state, units){
     if(!u || !u.id) continue;
     if(!state.categories[u.id]) state.categories[u.id] = { slots: Number(u.slots)||0, titles: [], links: [] };
   }
+}
+
+// Merge states: preserve non-empty titles/links from existing state
+function mergeState(existing, next, units){
+  const merged = { 
+    version: next.version || existing.version || 'v1',
+    updated: next.updated || existing.updated || '',
+    categories: {}
+  };
+  
+  for(const u of units.list){
+    if(!u || !u.id) continue;
+    const id = u.id;
+    const slots = Number(u.slots) || 0;
+    
+    const existCat = existing.categories && existing.categories[id] || { titles: [], links: [] };
+    const nextCat = next.categories && next.categories[id] || { titles: [], links: [] };
+    
+    const mergedTitles = [];
+    const mergedLinks = [];
+    
+    for(let i = 0; i < slots; i++){
+      const existTitle = (existCat.titles && existCat.titles[i] || '').trim();
+      const nextTitle = (nextCat.titles && nextCat.titles[i] || '').trim();
+      const existLink = (existCat.links && existCat.links[i] || '').trim();
+      const nextLink = (nextCat.links && nextCat.links[i] || '').trim();
+      
+      // Prefer next if non-empty, otherwise keep existing
+      mergedTitles.push(nextTitle || existTitle);
+      mergedLinks.push(nextLink || existLink);
+    }
+    
+    merged.categories[id] = { slots, titles: mergedTitles, links: mergedLinks };
+  }
+  
+  return merged;
 }
 function redirectIndexHtml(title, targetRel, unitPagePath, section){
   // Use shared theme + nav injection; also render an inline nav as fallback using glass buttons

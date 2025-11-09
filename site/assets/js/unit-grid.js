@@ -12,7 +12,21 @@
   }
 
   async function loadUnits(){ try{ return await getJSON('/assets/data/units.json'); } catch{ return { units: [] }; } }
-  async function loadState(){ try{ return await getJSON('/assets/data/site-state.json'); } catch{ return { categories:{} }; } }
+  async function loadState(){ 
+    // Try root path first (/assets/data/site-state.json)
+    try{ 
+      const r = await getJSON('/assets/data/site-state.json');
+      return r;
+    } catch(rootErr) {
+      // Fallback to site path if root fails
+      try {
+        const r = await getJSON('/site/assets/data/site-state.json');
+        return r;
+      } catch(siteErr) {
+        return { categories:{} }; 
+      }
+    }
+  }
 
   function inferUnitId(units, pathname){
     const clean = pathname.replace(/index\.html$/,'').replace(/\/+$/,'/') || '/';
