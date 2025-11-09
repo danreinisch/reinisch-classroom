@@ -138,6 +138,13 @@ const FEATURES = {
     key: FEATURE_PREFIX + 'student_code_only',
     default: true,
     description: 'Restrict student identity to code-only (no PII fields collected, stored, or displayed in Student Manager)'
+  },
+  
+  // Student Manager: Multi-Goal Wizard
+  studentMultiGoalWizard: {
+    key: FEATURE_PREFIX + 'student_multi_goal_wizard',
+    default: false,
+    description: 'Enable multi-goal entry wizard for adding multiple IEP goals in one operation'
   }
 };
 
