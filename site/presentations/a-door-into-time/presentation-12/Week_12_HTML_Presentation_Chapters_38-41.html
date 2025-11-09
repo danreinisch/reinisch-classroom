@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Week 12 - Strong Textual Evidence | A Door Into Time</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            color: #fff;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        /* Background image slideshow */
+        .bg-slideshow {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -2;
+        }
+        
+        .bg-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            opacity: 0;
+            transition: opacity 2s ease-in-out;
+        }
+        
+        .bg-image.active {
+            opacity: 1;
+        }
+        
+        /* Frosted glass overlay */
+        .glass-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(3px);
+            z-index: -1;
+        }
+        
+        .presentation-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+        
+        .slide {
+            display: none;
+            width: 100%;
+            height: 100%;
+            padding: 80px 60px 120px 60px;
+            position: absolute;
+            top: 0;
+            left: 0;
+            overflow-y: auto;
+        }
+        
+        .slide.active {
+            display: block;
+        }
+        
+        .slide-content {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+        
+        .slide h1 {
+            font-size: 3.5em;
+            margin-bottom: 20px;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.7);
+            color: #f4a261;
+            text-align: center;
+        }
+        
+        .slide h2 {
+            font-size: 2.5em;
+            margin-bottom: 30px;
+            color: #e9c46a;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
+        }
+        
+        .slide h3 {
+            font-size: 2em;
+            margin-bottom: 20px;
+            margin-top: 25px;
+            color: #2a9d8f;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
+        }
+
+        .slide h4 {
+            font-size: 1.6em;
+            margin-bottom: 15px;
+            margin-top: 20px;
+            color: #f4a261;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
+        }
+        
+        .slide p {
+            font-size: 1.3em;
+            line-height: 1.8;
+            margin-bottom: 15px;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.7);
+        }
+        
+        .slide li {
+            font-size: 1.2em;
+            line-height: 1.8;
+            margin-bottom: 12px;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.7);
+        }
+        
+        .slide ul, .slide ol {
+            margin-left: 25px;
+            margin-bottom: 20px;
+        }
+        
+        .content-box {
+            background: rgba(42, 157, 143, 0.25);
+            border: 2px solid rgba(42, 157, 143, 0.5);
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+            box-shadow: 3px 3px 10px rgba(0,0,0,0.6);
+        }
+
+        .vocab-box {
+            background: rgba(233, 196, 106, 0.2);
+            border: 2px solid rgba(233, 196, 106, 0.5);
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+            box-shadow: 3px 3px 10px rgba(0,0,0,0.6);
+        }
+
+        .vocab-detail {
+            margin: 12px 0;
+            padding-left: 15px;
+            font-size: 1.15em;
+        }
+
+        .vocab-detail strong {
+            color: #e9c46a;
+        }
+
+        .example-sentence {
+            font-style: italic;
+            background: rgba(244, 162, 97, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 12px;
+            border-left: 4px solid #f4a261;
+        }
+
+        .hints-box {
+            background: rgba(244, 162, 97, 0.25);
+            border: 2px solid rgba(244, 162, 97, 0.5);
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+            box-shadow: 3px 3px 10px rgba(0,0,0,0.6);
+        }
+
+        .format-box {
+            background: rgba(139, 69, 19, 0.3);
+            border: 2px solid rgba(139, 69, 19, 0.6);
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+            box-shadow: 3px 3px 10px rgba(0,0,0,0.6);
+        }
+
+        .question-highlight {
+            font-size: 1.4em;
+            background: rgba(233, 196, 106, 0.3);
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 5px solid #e9c46a;
+            margin: 20px 0;
+        }
+        
+        /* Top Language Arts button */
+        .top-home-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(244, 162, 97, 0.9);
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-weight: bold;
+            color: #1a1a2e;
+            font-size: 1.1em;
+            box-shadow: 2px 2px 8px rgba(0,0,0,0.5);
+            z-index: 100;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+
+        .top-home-btn:hover {
+            background: rgba(244, 162, 97, 1);
+            transform: scale(1.05);
+        }
+        
+        .slide-counter {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(42, 157, 143, 0.9);
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 1em;
+            box-shadow: 2px 2px 8px rgba(0,0,0,0.5);
+            z-index: 100;
+        }
+        
+        /* Navigation buttons */
+        .navigation {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 15px;
+            z-index: 100;
+        }
+        
+        .nav-btn {
+            padding: 12px 30px;
+            background: rgba(233, 196, 106, 0.9);
+            border: none;
+            border-radius: 8px;
+            color: #1a1a2e;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1em;
+            transition: all 0.3s;
+            box-shadow: 2px 2px 8px rgba(0,0,0,0.5);
+        }
+        
+        .nav-btn:hover {
+            background: rgba(233, 196, 106, 1);
+            transform: scale(1.05);
+        }
+        
+        .nav-btn:disabled {
+            background: rgba(100, 100, 100, 0.5);
+            cursor: not-allowed;
+            color: #666;
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .slide {
+                padding: 70px 30px 150px 30px;
+            }
+
+            .slide h1 {
+                font-size: 2.2em;
+            }
+
+            .slide h2 {
+                font-size: 1.8em;
+            }
+
+            .slide h3 {
+                font-size: 1.5em;
+            }
+
+            .slide p, .slide li {
+                font-size: 1.1em;
+            }
+
+            .top-home-btn, .slide-counter {
+                font-size: 0.9em;
+                padding: 10px 15px;
+            }
+
+            .nav-btn {
+                font-size: 0.9em;
+                padding: 10px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Background Images -->
+    <div class="bg-slideshow">
+        <div class="bg-image active" style="background-image: url('image1.jpg');"></div>
+        <div class="bg-image" style="background-image: url('image2.jpg');"></div>
+        <div class="bg-image" style="background-image: url('image3.jpg');"></div>
+        <div class="bg-image" style="background-image: url('image4.jpg');"></div>
+        <div class="bg-image" style="background-image: url('image5.jpg');"></div>
+        <div class="bg-image" style="background-image: url('image6.jpg');"></div>
+        <div class="bg-image" style="background-image: url('image7.jpg');"></div>
+        <div class="bg-image" style="background-image: url('image8.jpg');"></div>
+        <div class="bg-image" style="background-image: url('image9.jpg');"></div>
+        <div class="bg-image" style="background-image: url('image10.jpg');"></div>
+        <div class="bg-image" style="background-image: url('image11.jpg');"></div>
+    </div>
+
+    <!-- Glass Overlay -->
+    <div class="glass-overlay"></div>
+
+    <!-- Top Language Arts Button -->
+    <a href="https://reinischclassroom.com/language-arts/" class="top-home-btn">Language Arts</a>
+
+    <!-- Floating Slide Counter -->
+    <div class="slide-counter" id="slideCounter">Slide 1 of 21</div>
+
+    <!-- Presentation Container -->
+    <div class="presentation-container">
+        <!-- SLIDE 1: Title Slide -->
+        <div class="slide active" data-slide="1">
+            <div class="slide-content">
+                <h1>Week 12: Chapters 38-41</h1>
+                <h2 style="text-align: center; margin-top: 30px;">The Battle of Denta-ah</h2>
+                <div class="content-box" style="margin-top: 40px;">
+                    <h3>This Week's Focus: Strong Textual Evidence</h3>
+                    <p>In these climactic battle chapters, we'll examine how authors use specific details and evidence to:</p>
+                    <ul>
+                        <li>Show the brutal reality of warfare</li>
+                        <li>Develop character through action and decision-making</li>
+                        <li>Create tension and suspense through strategic description</li>
+                        <li>Illustrate the emotional and physical costs of conflict</li>
+                    </ul>
+                </div>
+                <div class="content-box">
+                    <h3>Chapters Covered:</h3>
+                    <ul>
+                        <li><strong>Chapter 38:</strong> Trapped</li>
+                        <li><strong>Chapter 39:</strong> The Battle of Denta-ah</li>
+                        <li><strong>Chapter 40:</strong> The Battle of Denta-ah II</li>
+                        <li><strong>Chapter 41:</strong> To Catch a Fugitive</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 2: Chapter 38 Summary -->
+        <div class="slide" data-slide="2">
+            <div class="slide-content">
+                <h2>Day 1: Chapter 38 - Trapped</h2>
+                <div class="content-box">
+                    <p>Alex's army enters Denta-ah through the first gate, finding the passage suspiciously easy. They encounter Janta-ak and freed slaves who helped open the gate, but soon realize this was part of a larger plan.</p>
+                    
+                    <p>The Denta-ah warriors have set an elaborate trap. Once Alex's forces are inside, the gate slams shut behind them, locking them in. Crossbow fighters appear on the walls surrounding them on three sides, raining down deadly bolts on the trapped army.</p>
+                    
+                    <p>Monda-ak is wounded by a crossbow bolt, and many warriors fall before they can form their defensive shield walls. Alex risks his own life to drag Monda-ak to safety under a lean-to. The situation looks desperate as they are pinned down with nowhere to hide.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 3: Chapter 38 Key Points -->
+        <div class="slide" data-slide="3">
+            <div class="slide-content">
+                <h2>Chapter 38: Key Evidence</h2>
+                <div class="content-box">
+                    <h3>Important Details to Remember:</h3>
+                    <ul>
+                        <li><strong>The Trap:</strong> Denta-ah warriors deliberately retreated, luring Alex's army inside where they could be surrounded</li>
+                        <li><strong>Strategic Planning:</strong> Alex ordered shields dipped in water to protect against fire arrows—evidence of his tactical thinking</li>
+                        <li><strong>Personal Cost:</strong> Alex "abandoned all pretense of protecting himself" to save Monda-ak, showing loyalty over tactical safety</li>
+                        <li><strong>The Ladder Sound:</strong> Janta-ak recognizing the "scraping, thumping sound" as ladders shows how sound details build tension</li>
+                        <li><strong>Shield Wall Formation:</strong> The text describes squads looking "like massive porcupines, with bolts quivering" as evidence of the assault's intensity</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 4: Chapter 39 Summary -->
+        <div class="slide" data-slide="4">
+            <div class="slide-content">
+                <h2>Chapter 39: The Battle of Denta-ah</h2>
+                <div class="content-box">
+                    <p>Alex quickly reorganizes his trapped forces into defensive shield formations despite heavy casualties. The crossbow assault continues until the Denta-ah warriors on the walls mysteriously disappear.</p>
+                    
+                    <p>The reason becomes clear when freed slaves outside manage to open the second gate. A full battle is underway, and Alex's forces, now reinforced by armed former slaves, gain a decisive advantage.</p>
+                    
+                    <p>The Denta-ah warriors refuse to surrender, fighting fiercely to the end in brutal hand-to-hand combat. The first battle is won, but the field runs red with the blood of the fallen. Alex equips his forces with weapons from the dead and prepares to assault the inner gate.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 5: Chapter 39 Key Evidence -->
+        <div class="slide" data-slide="5">
+            <div class="slide-content">
+                <h2>Chapter 39: Key Evidence</h2>
+                <div class="content-box">
+                    <h3>Important Details to Remember:</h3>
+                    <ul>
+                        <li><strong>Tactical Adaptation:</strong> Alex's forces transformed from offensive march to defensive shield walls to coordinated counterattack</li>
+                        <li><strong>The Freed Slaves' Impact:</strong> Opening the second gate turned the tide—evidence that oppressed people fight fiercely for freedom</li>
+                        <li><strong>Battlefield Description:</strong> "The field was red with the blood of the fallen" shows the author isn't romanticizing warfare</li>
+                        <li><strong>Enemy Determination:</strong> Denta-ah warriors "fought to the end" rather than surrendering—evidence of what people will do to defend their homes</li>
+                        <li><strong>Leadership Losses:</strong> Multiple lieutenants fell, showing that war doesn't spare leaders</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 6: Day 1 Discussion Questions -->
+        <div class="slide" data-slide="6">
+            <div class="slide-content">
+                <h2>Day 1: Discussion Questions</h2>
+                <div class="content-box">
+                    <h3>Think About These Questions:</h3>
+                    <ol>
+                        <li><strong>Why did the Denta-ah warriors retreat to the inner gate instead of fighting at the first gate?</strong>
+                            <ul>
+                                <li>What evidence shows this was planned?</li>
+                                <li>How did this strategy work in their favor?</li>
+                            </ul>
+                        </li>
+                        
+                        <li style="margin-top: 20px;"><strong>How did Alex's decision to soak the shields in water show smart planning?</strong>
+                            <ul>
+                                <li>What clues did he notice before ordering this?</li>
+                                <li>Did it end up being useful?</li>
+                            </ul>
+                        </li>
+                        
+                        <li style="margin-top: 20px;"><strong>What evidence shows that losing warriors in battle affects Alex emotionally?</strong>
+                            <ul>
+                                <li>Look for his actions and internal thoughts</li>
+                                <li>How does he balance emotions with leadership?</li>
+                            </ul>
+                        </li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 7: Vocabulary Introduction -->
+        <div class="slide" data-slide="7">
+            <div class="slide-content">
+                <h2>Day 2: Vocabulary from Chapters 38-41</h2>
+                <div class="content-box">
+                    <h3>Today's Focus:</h3>
+                    <p>We'll explore eight important vocabulary words from these battle chapters. For each word, we'll examine:</p>
+                    <ul>
+                        <li><strong>Definition:</strong> What the word means</li>
+                        <li><strong>Etymology:</strong> Where the word came from</li>
+                        <li><strong>Morphology:</strong> How the word is built from parts</li>
+                        <li><strong>Usage in Context:</strong> How the author uses it in the novel</li>
+                    </ul>
+                    <p style="margin-top: 25px;"><em>Understanding these words will help you better understand the intensity and strategy of the battle scenes.</em></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 8: Vocabulary 1-2 -->
+        <div class="slide" data-slide="8">
+            <div class="slide-content">
+                <h2>Vocabulary: Words 1-2</h2>
+                
+                <div class="vocab-box">
+                    <h4>1. ONSLAUGHT</h4>
+                    <div class="vocab-detail">
+                        <strong>Definition:</strong> A fierce or destructive attack; an overwhelming amount of something coming at once
+                    </div>
+                    <div class="vocab-detail">
+                        <strong>Etymology:</strong> From Dutch "aanslag" meaning "a striking at," combined into English in the 1620s. The word literally means "a slaughter" or violent assault.
+                    </div>
+                    <div class="vocab-detail">
+                        <strong>Morphology:</strong> "On-" (toward) + "slaught" (slaughter, killing)
+                    </div>
+                    <div class="example-sentence">
+                        <strong>From the novel:</strong> "Alex raised his shield and braced himself for an onslaught that never came."
+                    </div>
+                </div>
+
+                <div class="vocab-box">
+                    <h4>2. ENTRENCHED</h4>
+                    <div class="vocab-detail">
+                        <strong>Definition:</strong> Established so firmly that change is very difficult; dug into a protected position that is hard to attack
+                    </div>
+                    <div class="vocab-detail">
+                        <strong>Etymology:</strong> From French "entrencher" (1590s) meaning "to dig a trench." Originally a military term for soldiers digging protective ditches.
+                    </div>
+                    <div class="vocab-detail">
+                        <strong>Morphology:</strong> "En-" (in, into) + "trench" (a long, narrow ditch) + "-ed" (past tense/adjective form)
+                    </div>
+                    <div class="example-sentence">
+                        <strong>From the novel:</strong> "A long way to fight against an entrenched enemy, but an easy walk with no resistance."
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 9: Vocabulary 3-4 -->
+        <div class="slide" data-slide="9">
+            <div class="slide-content">
+                <h2>Vocabulary: Words 3-4</h2>
+                
+                <div class="vocab-box">
+                    <h4>3. WITHERING</h4>
+                    <div class="vocab-detail">
+                        <strong>Definition:</strong> Devastating or overwhelming; scornful or harsh (like a withering look); causing something to shrivel or weaken
+                    </div>
+                    <div class="vocab-detail">
+                        <strong>Etymology:</strong> From Old English "wiðerian" meaning "to weather, dry up, shrivel." Used as an intensifier in military contexts since the 1800s.
+                    </div>
+                    <div class="vocab-detail">
+                        <strong>Morphology:</strong> "Wither" (to dry up, fade away) + "-ing" (present participle/adjective form)
+                    </div>
+                    <div class="example-sentence">
+                        <strong>From the novel:</strong> "The bowmen looking down on them opened fire with devastating effect, then ducked back behind the wall before Alex could return fire. A few moments later, they popped above the wall again and released another withering volley."
+                    </div>
+                </div>
+
+                <div class="vocab-box">
+                    <h4>4. ATTRITION</h4>
+                    <div class="vocab-detail">
+                        <strong>Definition:</strong> The gradual reduction of something through sustained attack or pressure; wearing down an enemy through continuous losses
+                    </div>
+                    <div class="vocab-detail">
+                        <strong>Etymology:</strong> From Latin "atterere" meaning "to rub away." Entered English in the 1400s, used in military strategy since the 1800s.
+                    </div>
+                    <div class="vocab-detail">
+                        <strong>Morphology:</strong> "At-" (toward) + "trit" (rubbed, worn) + "-ion" (noun form showing action or condition)
+                    </div>
+                    <div class="example-sentence">
+                        <strong>From the novel:</strong> "We can't win like this. If it's a war of attrition, they can wait us out and pick us off."
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 10: Vocabulary 5-6 -->
+        <div class="slide" data-slide="10">
+            <div class="slide-content">
+                <h2>Vocabulary: Words 5-6</h2>
+                
+                <div class="vocab-box">
+                    <h4>5. DIMINISHED</h4>
+                    <div class="vocab-detail">
+                        <strong>Definition:</strong> Made smaller, weaker, or less important; reduced in size, number, or strength
+                    </div>
+                    <div class="vocab-detail">
+                        <strong>Etymology:</strong> From Latin "diminuere" meaning "to make smaller, break into small pieces." Came into English through Old French in the 1400s.
+                    </div>
+                    <div class="vocab-detail">
+                        <strong>Morphology:</strong> "Di-" (away, apart) + "minu" (small, less) + "-ish" (to make) + "-ed" (past tense form)
+                    </div>
+                    <div class="example-sentence">
+                        <strong>From the novel:</strong> "A few dozen Denta-ah fell, but the horde did not notice they had been diminished."
+                    </div>
+                </div>
+
+                <div class="vocab-box">
+                    <h4>6. VISCERA</h4>
+                    <div class="vocab-detail">
+                        <strong>Definition:</strong> The internal organs of the body, especially those in the abdomen (like intestines, stomach, liver)
+                    </div>
+                    <div class="vocab-detail">
+                        <strong>Etymology:</strong> From Latin "viscera," plural of "viscus" meaning "internal organ, inner parts of the body." Used in English since the 1650s.
+                    </div>
+                    <div class="vocab-detail">
+                        <strong>Morphology:</strong> "Visc" (internal organs) + "-era" (plural ending in Latin)
+                    </div>
+                    <div class="example-sentence">
+                        <strong>From the novel:</strong> "Bodies littered the ground, which was slick with the blood and viscera of battle."
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 11: Vocabulary 7-8 -->
+        <div class="slide" data-slide="11">
+            <div class="slide-content">
+                <h2>Vocabulary: Words 7-8</h2>
+                
+                <div class="vocab-box">
+                    <h4>7. CONTINGENCY</h4>
+                    <div class="vocab-detail">
+                        <strong>Definition:</strong> A group of people sent to represent or perform a specific task; a possible future event or circumstance that may happen
+                    </div>
+                    <div class="vocab-detail">
+                        <strong>Etymology:</strong> From Latin "contingere" meaning "to touch, happen to." Entered English in the 1550s meaning "possibility."
+                    </div>
+                    <div class="vocab-detail">
+                        <strong>Morphology:</strong> "Con-" (together, with) + "ting" (to touch) + "-ency" (noun form showing state or quality)
+                    </div>
+                    <div class="example-sentence">
+                        <strong>From the novel:</strong> "While they waited for the barrier to be consumed by fire, Alex sent a small contingency back to the outer gate to burn that as well."
+                    </div>
+                </div>
+
+                <div class="vocab-box">
+                    <h4>8. EXHILARATED</h4>
+                    <div class="vocab-detail">
+                        <strong>Definition:</strong> Filled with excitement, joy, and energy; thrilled and invigorated
+                    </div>
+                    <div class="vocab-detail">
+                        <strong>Etymology:</strong> From Latin "exhilarare" meaning "to gladden, cheer." Came into English in the 1530s, originally meant "to make cheerful."
+                    </div>
+                    <div class="vocab-detail">
+                        <strong>Morphology:</strong> "Ex-" (out, thoroughly) + "hilar" (cheerful, merry) + "-ate" (to make) + "-ed" (past tense/adjective form)
+                    </div>
+                    <div class="example-sentence">
+                        <strong>From the novel:</strong> "'Monda-ak,' Alex cried, exhilarated at the sight of his friend and worried for his safety."
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 12: Vocabulary Review -->
+        <div class="slide" data-slide="12">
+            <div class="slide-content">
+                <h2>Vocabulary Review</h2>
+                <div class="content-box">
+                    <h3>Quick Review:</h3>
+                    <ol>
+                        <li><strong>Onslaught</strong> - A fierce, overwhelming attack</li>
+                        <li><strong>Entrenched</strong> - In a firmly established, protected position</li>
+                        <li><strong>Withering</strong> - Devastating or overwhelming</li>
+                        <li><strong>Attrition</strong> - Gradual wearing down through continuous losses</li>
+                        <li><strong>Diminished</strong> - Made smaller or weaker</li>
+                        <li><strong>Viscera</strong> - Internal organs of the body</li>
+                        <li><strong>Contingency</strong> - A group sent to perform a specific task</li>
+                        <li><strong>Exhilarated</strong> - Filled with excitement and energy</li>
+                    </ol>
+                </div>
+                <div class="content-box">
+                    <h3>Think About:</h3>
+                    <p>How do these military and battle-related words help the author create a realistic, intense atmosphere during the fight scenes? Which words are most effective in making you feel the danger and chaos of battle?</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 13: Chapter 40 Summary Part 1 -->
+        <div class="slide" data-slide="13">
+            <div class="slide-content">
+                <h2>Day 3: Chapter 40 - Part 1</h2>
+                <h3>Alex's Injury</h3>
+                <div class="content-box">
+                    <p>The battle continues with Alex directing his forces to set fires at the base of the inner gate. While giving orders, Alex forgets to protect himself and is struck by a crossbow bolt in the shoulder.</p>
+                    
+                    <p>Sekun-ak, though badly burned from earlier fighting, rushes to help Alex. He pulls the arrow out roughly and bandages the wound, saying they'll "fix him better" after they've driven out the Denta-ah forces. This shows the harsh reality of battlefield medicine—speed and function matter more than comfort.</p>
+                    
+                    <p>Despite his injury, Alex continues commanding the battle, knowing he must see it through to the end.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 14: Chapter 40 Summary Part 2 -->
+        <div class="slide" data-slide="14">
+            <div class="slide-content">
+                <h2>Chapter 40 - Part 2</h2>
+                <h3>Fire and Rifles</h3>
+                <div class="content-box">
+                    <p>Tinta-ak's squad successfully sets multiple fires at the base of the inner gate. When Denta-ah warriors try to pour water from troughs to extinguish the flames, they are shot down by Alex's archers. The fires spread and the gate begins to weaken.</p>
+                    
+                    <p>Suddenly, Doug-ak appears on the wall with a rifle. He fires once, killing Janta-ak instantly with a bullet to the head. This proves that Doug-ak, unlike Alex, kept his modern weapons and used them to maintain power in Kragdon-ah.</p>
+                    
+                    <p>The longbow archers fire at where Doug-ak stood, but he has already ducked back behind the wall. The use of the rifle shows an unfair technological advantage that can kill from a distance without warning.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 15: Chapter 40 Summary Part 3 -->
+        <div class="slide" data-slide="15">
+            <div class="slide-content">
+                <h2>Chapter 40 - Part 3</h2>
+                <h3>The Final Battle</h3>
+                <div class="content-box">
+                    <p>The inner gate, weakened by fire, finally collapses forward in a spray of embers and ashes. Hundreds of Denta-ah warriors pour through and over the burning gate, fighting with savage desperation.</p>
+                    
+                    <p>The battle breaks down into brutal hand-to-hand combat. Alex, unable to use his shield due to his shoulder wound, fights with only his hammer. Monda-ak, despite his own injury, returns to the battle and saves Alex from a spear attack.</p>
+                    
+                    <p>The Denta-ah warriors fight bravely to the end, even when vastly outnumbered. The ground becomes "slick with the blood and viscera of battle." Doug-ak, seeing the battle is lost, turns and flees with his rifle.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 16: Chapter 40 Key Evidence -->
+        <div class="slide" data-slide="16">
+            <div class="slide-content">
+                <h2>Chapter 40: Key Evidence</h2>
+                <div class="content-box">
+                    <h3>Important Details to Remember:</h3>
+                    <ul>
+                        <li><strong>Alex's Wound:</strong> Happened because he "forgot to keep his head on a swivel"—shows even leaders make mistakes when overwhelmed</li>
+                        <li><strong>Sekun-ak's Treatment:</strong> Rough and painful but focused on keeping Alex fighting—evidence of wartime priorities</li>
+                        <li><strong>The Rifle:</strong> Doug-ak's weapon kills Janta-ak from a distance "before anyone can react"—shows technological unfairness</li>
+                        <li><strong>Fire Strategy Success:</strong> Multiple fires burn the gate despite attempts to stop them—evidence of good tactical planning</li>
+                        <li><strong>Monda-ak's Loyalty:</strong> Returns to battle despite injury, "catapulting into the air" to save Alex—powerful evidence of devotion</li>
+                        <li><strong>Brutal Reality:</strong> Ground "slick with blood and viscera"—author doesn't hide war's horror</li>
+                        <li><strong>Fighting to the End:</strong> Denta-ah warriors keep fighting even when only "ten of them against hundreds"—shows what defending home means</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 17: Day 3 Discussion Questions -->
+        <div class="slide" data-slide="17">
+            <div class="slide-content">
+                <h2>Day 3: Discussion Questions</h2>
+                <div class="content-box">
+                    <h3>Think About These Questions:</h3>
+                    <ol>
+                        <li><strong>What does Alex's injury teach us about the dangers of losing focus in dangerous situations?</strong>
+                            <ul>
+                                <li>What was he focused on when he got hurt?</li>
+                                <li>Could this happen to anyone, or was it a mistake?</li>
+                            </ul>
+                        </li>
+                        
+                        <li style="margin-top: 20px;"><strong>How does the text show that fire was an effective weapon against the gate?</strong>
+                            <ul>
+                                <li>What specific details describe the fire's progress?</li>
+                                <li>What evidence shows the Denta-ah couldn't stop it?</li>
+                            </ul>
+                        </li>
+                        
+                        <li style="margin-top: 20px;"><strong>What evidence proves that Doug-ak kept and used modern weapons in Kragdon-ah?</strong>
+                            <ul>
+                                <li>What does the text tell us about the rifle and its effect?</li>
+                                <li>How is this different from Alex's choice?</li>
+                            </ul>
+                        </li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 18: Written Response Question -->
+        <div class="slide" data-slide="18">
+            <div class="slide-content">
+                <h2>Day 4: Written Response</h2>
+                <div class="question-highlight">
+                    <strong>Question (5 Points):</strong> How does the author use specific details and evidence throughout these chapters to show that war has a high cost, both in lives lost and in emotional impact on the survivors? Use evidence from the text to support your answer.
+                </div>
+                <div class="hints-box">
+                    <h4>Hints to Guide Your Thinking:</h4>
+                    <ol>
+                        <li><strong>Hint 1:</strong> Think about the specific warriors who are injured or killed and how the text describes what happens to them (like Janta-ak, Monda-ak, Sekun-ak, and the many unnamed warriors).</li>
+                        <li><strong>Hint 2:</strong> Look for moments where Alex shows emotions about the people he's losing, or where the text describes the physical aftermath of battle.</li>
+                        <li><strong>Hint 3:</strong> Consider what characters say about war, like when the wounded warrior says "It is the way of war. It is why we don't wage war about anything less than this."</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 19: Writing Format Guide -->
+        <div class="slide" data-slide="19">
+            <div class="slide-content">
+                <h2>Written Response Format</h2>
+                <div class="format-box">
+                    <h3>Follow This Structure:</h3>
+                    <ol>
+                        <li><strong>Topic Sentence:</strong> Restate the question as a statement and clearly state your position.
+                            <div style="margin-top: 10px; padding: 15px; background: rgba(255, 255, 255, 0.1); border-radius: 8px;">
+                                <em>Example:</em> "Throughout Chapters 38-41, the author uses specific details and evidence to show that war costs both lives and leaves emotional scars on those who survive."
+                            </div>
+                        </li>
+                        
+                        <li style="margin-top: 20px;"><strong>Supporting Detail 1:</strong> Give your first piece of evidence with text support
+                            <div style="margin-top: 10px; padding: 15px; background: rgba(255, 255, 255, 0.1); border-radius: 8px;">
+                                <em>Example:</em> "The text shows the human cost when..."<br>
+                                <em>Include a quote or specific reference</em>
+                            </div>
+                        </li>
+                        
+                        <li style="margin-top: 20px;"><strong>Supporting Detail 2:</strong> Give your second piece of evidence with text support</li>
+                        
+                        <li style="margin-top: 20px;"><strong>Supporting Detail 3:</strong> Give your third piece of evidence with text support</li>
+                        
+                        <li style="margin-top: 20px;"><strong>Conclusion:</strong> Restate the question and strongly reaffirm your position
+                            <div style="margin-top: 10px; padding: 15px; background: rgba(255, 255, 255, 0.1); border-radius: 8px;">
+                                <em>Example:</em> "The author's use of specific details and evidence clearly shows that war carries a terrible cost in both human lives and emotional suffering for the survivors."
+                            </div>
+                        </li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 20: Writing Tips -->
+        <div class="slide" data-slide="20">
+            <div class="slide-content">
+                <h2>Tips for Success</h2>
+                <div class="content-box">
+                    <h3>Remember to:</h3>
+                    <ul>
+                        <li><strong>Use Specific Examples:</strong> Don't just say "warriors died"—tell WHO died and HOW the text describes it</li>
+                        <li><strong>Include Quotes:</strong> Use actual words from the chapters to back up what you say</li>
+                        <li><strong>Explain Your Evidence:</strong> After giving a quote or example, explain HOW it proves your point</li>
+                        <li><strong>Stay Focused:</strong> Every sentence should relate to the question about war's costs</li>
+                        <li><strong>Write Complete Paragraphs:</strong> Each supporting detail should be several sentences, not just one</li>
+                    </ul>
+                </div>
+                <div class="content-box">
+                    <h3>Good Evidence to Consider:</h3>
+                    <ul>
+                        <li>Janta-ak's sudden death from the rifle shot</li>
+                        <li>Monda-ak and Sekun-ak's injuries and pain</li>
+                        <li>The description of the battlefield covered in blood</li>
+                        <li>Alex risking his life to save Monda-ak</li>
+                        <li>The wounded warrior's statement about why war must be for important reasons</li>
+                        <li>The many unnamed warriors who fell</li>
+                        <li>Alex's thoughts and emotions about losing people</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 21: Closing Slide -->
+        <div class="slide" data-slide="21">
+            <div class="slide-content">
+                <h2>Week 12 Complete!</h2>
+                <div class="content-box">
+                    <h3>What We Learned:</h3>
+                    <ul>
+                        <li>How to identify and use <strong>strong textual evidence</strong> to support our understanding</li>
+                        <li>The importance of <strong>specific details</strong> in making stories realistic and powerful</li>
+                        <li>How authors show <strong>consequences</strong> of characters' choices and actions</li>
+                        <li>The difference between stating an opinion and <strong>proving it with evidence</strong> from the text</li>
+                    </ul>
+                </div>
+                <div class="content-box">
+                    <h3>Key Takeaway:</h3>
+                    <p style="font-size: 1.4em; text-align: center; padding: 20px; background: rgba(233, 196, 106, 0.2); border-radius: 10px; margin: 30px 0;">
+                        Good readers don't just <em>understand</em> what happens—they can <strong>prove</strong> their understanding by pointing to specific evidence in the text.
+                    </p>
+                </div>
+                <div class="content-box">
+                    <h3>Navigation:</h3>
+                    <p style="text-align: center;">Use the links below to return to the Language Arts page or continue to the next week's materials.</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Navigation Buttons -->
+    <div class="navigation">
+        <button class="nav-btn" id="prevBtn" onclick="changeSlide(-1)">← Previous</button>
+        <button class="nav-btn" id="nextBtn" onclick="changeSlide(1)">Next →</button>
+    </div>
+
+    <script>
+        // Background Image Rotation
+        let currentImageIndex = 0;
+        const images = document.querySelectorAll('.bg-image');
+        const imageCount = images.length;
+
+        function rotateBackground() {
+            images[currentImageIndex].classList.remove('active');
+            currentImageIndex = (currentImageIndex + 1) % imageCount;
+            images[currentImageIndex].classList.add('active');
+        }
+
+        setInterval(rotateBackground, 8000);
+
+        // Slide Navigation
+        let currentSlide = 1;
+        const totalSlides = 21;
+        const slides = document.querySelectorAll('.slide');
+
+        function showSlide(n) {
+            if (n > totalSlides) { currentSlide = 1; }
+            if (n < 1) { currentSlide = totalSlides; }
+            else { currentSlide = n; }
+
+            slides.forEach(slide => slide.classList.remove('active'));
+            slides[currentSlide - 1].classList.add('active');
+
+            document.getElementById('slideCounter').textContent = `Slide ${currentSlide} of ${totalSlides}`;
+
+            document.getElementById('prevBtn').disabled = (currentSlide === 1);
+            document.getElementById('nextBtn').disabled = (currentSlide === totalSlides);
+
+            slides[currentSlide - 1].scrollTop = 0;
+        }
+
+        function changeSlide(n) {
+            showSlide(currentSlide + n);
+        }
+
+        // Keyboard navigation
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'ArrowLeft') {
+                changeSlide(-1);
+            } else if (event.key === 'ArrowRight') {
+                changeSlide(1);
+            }
+        });
+
+        showSlide(1);
+    </script>
+</body>
+</html>
