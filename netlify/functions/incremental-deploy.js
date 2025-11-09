@@ -80,17 +80,23 @@ async function handleUpload(body){
 
   // Only in final batch: redirect + state update
   if (final) {
-    if (!title || !String(title).trim()) return json(400, { message: 'Missing title for final batch' });
-
     const entryRel = await pickEntryHtml(owner, repo, branch, blobs, slotDir);
-    const redirectHtml = redirectIndexHtml(title, entryRel, unit.pagePath, unit.section);
-    blobs.set(`${slotDir}/index.html`, Buffer.from(redirectHtml));
-
-    const state = await fetchStateFromLiveOrRepo(owner, repo, branch, units);
+    
+    // Fetch existing state from repo to get the latest committed version
+    const state = await fetchStateFromRepo(owner, repo, branch, units);
     ensureStateShape(state, units);
     ensureArraySize(state.categories[category].titles, slots);
     ensureArraySize(state.categories[category].links,  slots);
-    state.categories[category].titles[slot - 1] = title;
+    
+    // Preserve existing title if no title provided (allow blank to keep existing)
+    const existingTitle = state.categories[category].titles[slot - 1] || '';
+    const finalTitle = (title && String(title).trim()) ? title : existingTitle;
+    if (!finalTitle) return json(400, { message: 'Missing title for final batch (no existing title to preserve)' });
+    
+    const redirectHtml = redirectIndexHtml(finalTitle, entryRel, unit.pagePath, unit.section);
+    blobs.set(`${slotDir}/index.html`, Buffer.from(redirectHtml));
+    
+    state.categories[category].titles[slot - 1] = finalTitle;
     state.categories[category].links[slot - 1]  = `/${unit.baseOut}/presentation-${String(slot).padStart(2, '0')}/`;
     state.updated = new Date().toISOString();
 
@@ -133,7 +139,7 @@ async function handleDelete(body){
   const blobs = new Map();
   for (const p of toDelete) blobs.set(p, DELETE);
 
-  const state = await fetchStateFromLiveOrRepo(owner, repo, branch, units);
+  const state = await fetchStateFromRepo(owner, repo, branch, units);
   ensureStateShape(state, units);
   ensureArraySize(state.categories[category].titles, slots);
   ensureArraySize(state.categories[category].links,  slots);
@@ -316,14 +322,8 @@ function ghHeaders() {
 async function safeText(res){ try{ return await res.text(); } catch{ return ''; } }
 
 // ---------- State + page helpers ----------
-async function fetchStateFromLiveOrRepo(owner, repo, branch, units) {
-  try {
-    const base = process.env.PUBLIC_SITE_URL;
-    if (base) {
-      const res = await fetch(`${base}/assets/data/site-state.json`, { headers: { 'Cache-Control':'no-cache' } });
-      if (res.ok) return await res.json();
-    }
-  } catch {}
+// Fetch state from repo only (for commit operations - ensures latest committed state)
+async function fetchStateFromRepo(owner, repo, branch, units) {
   try {
     const res = await fetch(`${GH_API}/repos/${owner}/${repo}/contents/site/assets/data/site-state.json?ref=${encodeURIComponent(branch)}`, { headers: ghHeaders() });
     if (res.ok) {
@@ -335,6 +335,18 @@ async function fetchStateFromLiveOrRepo(owner, repo, branch, units) {
   const state = { version: 'v1', updated: '', categories: {} };
   ensureStateShape(state, units);
   return state;
+}
+
+// Fetch state from live site or repo (for read operations)
+async function fetchStateFromLiveOrRepo(owner, repo, branch, units) {
+  try {
+    const base = process.env.PUBLIC_SITE_URL;
+    if (base) {
+      const res = await fetch(`${base}/assets/data/site-state.json`, { headers: { 'Cache-Control':'no-cache' } });
+      if (res.ok) return await res.json();
+    }
+  } catch {}
+  return fetchStateFromRepo(owner, repo, branch, units);
 }
 function ensureStateShape(state, units){
   if(!state||typeof state!=='object') state={version:'v1',updated:'',categories:{}};

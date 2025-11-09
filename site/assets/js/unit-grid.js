@@ -27,7 +27,19 @@
     return '';
   }
 
-  function buildGrid(root, unit, state){
+  // Config: Enable defensive slot checking (check if presentation exists even when link missing)
+  const DEFENSIVE_SLOT_CHECK = true;
+
+  async function checkSlotExists(path) {
+    try {
+      const res = await fetch(path, { method: 'HEAD', cache: 'no-store' });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  }
+
+  async function buildGrid(root, unit, state){
     const cat = state && state.categories && state.categories[unit.id] || null;
     const slots = Number((cat && cat.slots) || unit.slots || 0);
     const titles = (cat && Array.isArray(cat.titles) ? cat.titles.slice() : []);
@@ -38,8 +50,18 @@
     const frag = document.createDocumentFragment();
     for (let i=1;i<=slots;i++){
       const t = (titles[i-1] || '').trim();
-      const l = (links[i-1]  || '').trim();
+      let l = (links[i-1]  || '').trim();
       const title = t || `Presentation ${i}`;
+      
+      // Defensive: If we have a title but no link, check if the slot path exists
+      if (DEFENSIVE_SLOT_CHECK && t && !l && unit.baseOut) {
+        const slotPath = `/${unit.baseOut}/presentation-${String(i).padStart(2, '0')}/`;
+        const exists = await checkSlotExists(slotPath);
+        if (exists) {
+          l = slotPath; // Treat as live if path exists
+        }
+      }
+      
       const sub   = l ? 'Open presentation' : 'Placeholder';
 
       let card;
@@ -75,6 +97,6 @@
     if (!unit) return;
 
     const state = await loadState();
-    buildGrid(grid, unit, state);
+    await buildGrid(grid, unit, state);
   });
 })();

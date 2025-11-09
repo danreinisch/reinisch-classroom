@@ -329,14 +329,50 @@
         if (!res.ok) { alert(`Upload failed: ${res.status}\n${(text||'').slice(0,400)}`); return; }
       }
 
+      // Verify upload: fetch updated state and confirm the slot link was written
+      log('Verifying upload…');
+      try {
+        await new Promise(r => setTimeout(r, 2000)); // Wait 2s for Netlify to deploy
+        const verifyRes = await fetch('/assets/data/site-state.json?t=' + Date.now(), { cache: 'no-store' });
+        if (verifyRes.ok) {
+          const verifyState = await verifyRes.json();
+          const slotLink = verifyState?.categories?.[category]?.links?.[slot - 1] || '';
+          const slotTitle = verifyState?.categories?.[category]?.titles?.[slot - 1] || '';
+          
+          if (slotLink && slotTitle) {
+            log(`✓ Verification SUCCESS: Slot ${num(slot)} is live!`);
+            log(`  Title: "${slotTitle}"`);
+            log(`  Link: ${slotLink}`);
+            siteState = verifyState; // Update local cache
+          } else {
+            log(`⚠ Verification WARNING: Slot ${num(slot)} link or title is missing in site-state.json`);
+            log(`  Title: "${slotTitle || '(empty)'}"`);
+            log(`  Link: ${slotLink || '(empty)'}`);
+            log(`  This may resolve after the next Netlify deployment. Try reloading the hub page in 1-2 minutes.`);
+            alert('Upload completed but verification shows slot may not be live yet.\nCheck the log below for details.\nThe slot should appear after the next deployment (~1-2 min).');
+          }
+        } else {
+          log('⚠ Verification WARNING: Could not fetch site-state.json for verification (status ' + verifyRes.status + ')');
+          log('  Upload succeeded but verification failed. The slot should still be live after deployment.');
+        }
+      } catch (verifyErr) {
+        log('⚠ Verification ERROR:', verifyErr?.message || String(verifyErr));
+        log('  Upload succeeded but verification failed. The slot should still be live after deployment.');
+      }
+
       // Update local titles to reflect the change
       if (siteState?.categories?.[category]?.titles) {
         const titles = siteState.categories[category].titles;
         while (titles.length < total) titles.push('');
         titles[slot-1] = title;
       }
+      if (siteState?.categories?.[category]?.links) {
+        const links = siteState.categories[category].links;
+        while (links.length < total) links.push('');
+        links[slot-1] = `/${unit.baseOut}/presentation-${num(slot)}/`;
+      }
       renderSlots();
-      alert('Upload complete');
+      alert('Upload complete - see verification log below');
     }catch(e){
       console.error(e);
       log('Error:', e && e.message ? e.message : String(e));
