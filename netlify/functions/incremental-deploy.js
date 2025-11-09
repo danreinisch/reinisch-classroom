@@ -83,20 +83,8 @@ async function handleUpload(body){
     const entryRel = await pickEntryHtml(owner, repo, branch, blobs, slotDir);
     
     // Fetch existing state from repo to get the latest committed version
-    const existingState = await fetchStateFromRepo(owner, repo, branch, units);
-    ensureStateShape(existingState, units);
-    
-    // Create new state with current slot update
-    const newState = { 
-      version: existingState.version || 'v1', 
-      updated: new Date().toISOString(), 
-      categories: {} 
-    };
-    ensureStateShape(newState, units);
-    
-    // Merge existing state with new state, preserving non-empty values
-    const state = mergeState(existingState, newState, units);
-    
+    const state = await fetchStateFromRepo(owner, repo, branch, units);
+    ensureStateShape(state, units);
     ensureArraySize(state.categories[category].titles, slots);
     ensureArraySize(state.categories[category].links,  slots);
     
