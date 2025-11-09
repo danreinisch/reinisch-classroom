@@ -597,6 +597,130 @@
     opacity:1; background:rgba(255,255,255,.1);
   }
   
+  /* Assignment Detail Modal */
+  .assignment-detail-modal{
+    position:fixed; top:0; left:0; right:0; bottom:0; z-index:300;
+    background:rgba(0,0,0,.85); display:flex; align-items:center;
+    justify-content:center; padding:20px; animation:fadeIn 0.2s;
+  }
+  .assignment-detail-content{
+    background:var(--panel); border:1px solid var(--line-strong);
+    border-radius:16px; max-width:700px; width:100%; max-height:90vh;
+    overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,.6);
+    display:flex; flex-direction:column;
+  }
+  .assignment-detail-header{
+    padding:24px; border-bottom:1px solid var(--line);
+    display:flex; justify-content:space-between; align-items:flex-start;
+    position:sticky; top:0; background:var(--panel); z-index:1;
+  }
+  .assignment-detail-title{
+    flex:1; font-size:22px; font-weight:900; margin-bottom:8px;
+  }
+  .assignment-detail-close{
+    background:none; border:none; color:var(--muted); cursor:pointer;
+    font-size:28px; padding:0; line-height:1; margin-left:12px;
+    transition:color .15s;
+  }
+  .assignment-detail-close:hover{
+    color:var(--ink);
+  }
+  .assignment-detail-meta{
+    display:flex; gap:16px; font-size:14px; color:var(--muted);
+    flex-wrap:wrap; margin-top:8px;
+  }
+  .assignment-detail-body{
+    padding:24px; flex:1;
+  }
+  .assignment-detail-section{
+    margin-bottom:24px;
+  }
+  .assignment-detail-section:last-child{
+    margin-bottom:0;
+  }
+  .assignment-detail-section-title{
+    font-size:15px; font-weight:800; margin-bottom:12px;
+    color:var(--ink); text-transform:uppercase; letter-spacing:0.5px;
+  }
+  .assignment-detail-description{
+    color:var(--ink-dim); line-height:1.6; margin-bottom:16px;
+  }
+  .assignment-detail-field{
+    display:flex; justify-content:space-between; padding:10px 0;
+    border-bottom:1px solid var(--line);
+  }
+  .assignment-detail-field:last-child{
+    border-bottom:none;
+  }
+  .assignment-detail-label{
+    font-weight:700; color:var(--muted); font-size:14px;
+  }
+  .assignment-detail-value{
+    font-weight:700; color:var(--ink); font-size:14px; text-align:right;
+  }
+  .assignment-detail-footer{
+    padding:20px 24px; border-top:1px solid var(--line);
+    display:flex; justify-content:space-between; align-items:center;
+    gap:12px; position:sticky; bottom:0; background:var(--panel);
+  }
+  .assignment-detail-nav{
+    display:flex; gap:8px;
+  }
+  .assignment-detail-nav .btn{
+    min-width:80px;
+  }
+  .assignment-detail-actions{
+    display:flex; gap:8px;
+  }
+  @keyframes fadeIn{
+    from{opacity:0}
+    to{opacity:1}
+  }
+  
+  /* Quarter Filter Dropdown */
+  .quarter-filter{
+    margin-bottom:16px;
+  }
+  .quarter-filter label{
+    font-size:13px; font-weight:700; color:var(--muted);
+    margin-bottom:6px; display:block;
+  }
+  
+  /* Graded Assignments Table */
+  .graded-assignments-table{
+    width:100%; border-collapse:collapse; margin-top:16px;
+  }
+  .graded-assignments-table th,
+  .graded-assignments-table td{
+    padding:10px 12px; text-align:left; border-bottom:1px solid var(--line);
+    font-size:14px;
+  }
+  .graded-assignments-table th{
+    font-weight:800; color:var(--muted); font-size:13px;
+    text-transform:uppercase; letter-spacing:0.3px;
+  }
+  .graded-assignments-table td{
+    color:var(--ink-dim);
+  }
+  .graded-assignments-table tbody tr{
+    cursor:pointer; transition:background .15s;
+  }
+  .graded-assignments-table tbody tr:hover{
+    background:rgba(255,255,255,.05);
+  }
+  .graded-assignments-table .assignment-link{
+    color:var(--brand); font-weight:700; text-decoration:none;
+  }
+  .graded-assignments-table .assignment-link:hover{
+    text-decoration:underline;
+  }
+  
+  /* Quarter Sparkline */
+  .quarter-sparkline{
+    display:inline-block; width:60px; height:20px; margin-left:8px;
+    vertical-align:middle;
+  }
+  
   /* Mobile Responsive */
   @media (max-width:768px){
     .portal-top-bar{
@@ -843,8 +967,12 @@
         <div class="grades-card">
           <div class="card-header" style="margin-bottom:16px">
             <div>📊 My Grades</div>
-            <!-- Portal C: Rollup Toggle -->
-            <div id="rollupToggleContainer" class="hidden"></div>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <!-- Portal C: Rollup Toggle -->
+              <div id="rollupToggleContainer" class="hidden"></div>
+              <button id="btnExportGradesCSV" class="btn small hidden" aria-label="Export grades to CSV">📄 CSV</button>
+              <button id="btnExportGradesPDF" class="btn small hidden" aria-label="Export grades to PDF">📄 PDF</button>
+            </div>
           </div>
           <div id="gradesCardContent">
             <div class="grade-stat">
@@ -977,6 +1105,27 @@
   </div>
 </div>
 
+<!-- Portal B: Assignment Detail Modal -->
+<div id="assignmentDetailModal" class="assignment-detail-modal hidden" role="dialog" aria-modal="true" aria-labelledby="assignmentDetailTitle">
+  <div class="assignment-detail-content">
+    <div class="assignment-detail-header">
+      <div style="flex:1">
+        <div id="assignmentDetailTitle" class="assignment-detail-title"></div>
+        <div id="assignmentDetailMeta" class="assignment-detail-meta"></div>
+      </div>
+      <button id="assignmentDetailClose" class="assignment-detail-close" aria-label="Close assignment details">×</button>
+    </div>
+    <div class="assignment-detail-body" id="assignmentDetailBody"></div>
+    <div class="assignment-detail-footer">
+      <div class="assignment-detail-nav">
+        <button id="assignmentDetailPrev" class="btn small" aria-label="Previous assignment">← Prev</button>
+        <button id="assignmentDetailNext" class="btn small" aria-label="Next assignment">Next →</button>
+      </div>
+      <div class="assignment-detail-actions" id="assignmentDetailActions"></div>
+    </div>
+  </div>
+</div>
+
 <!-- Portal C: Advanced Filters Drawer -->
 <div id="advancedFiltersDrawer" class="filter-drawer"></div>
 
@@ -1104,7 +1253,12 @@
     truncateText,
     formatDateTime,
     countMissingAssignments,
-    countLateAssignments
+    countLateAssignments,
+    getQuarter,
+    groupSubmissionsByQuarter,
+    calculateQuarterAverages,
+    getQuarterSparklineData,
+    filterSubmissionsByQuarter
   } from '../web/portal-b-helpers.js';
   import {
     loadStudentAssignmentsPortalB,
@@ -1113,7 +1267,10 @@
     startClock,
     setupResubmissionHandlers,
     setupAssignmentTabs,
-    setupFilters
+    setupFilters,
+    setupAssignmentDetailHandlers,
+    openAssignmentDetail,
+    closeAssignmentDetail
   } from '../web/portal-b-ui.js';
   
   // G) Debug mode support: ?debug=1 enables verbose logging and bypasses failsafe delay
@@ -1173,7 +1330,9 @@
     portalAssignmentsStatus: getFeatureFlag('portalAssignmentsStatus'),
     portalGradesCard: getFeatureFlag('portalGradesCard'),
     portalResubmission: getFeatureFlag('portalResubmission'),
-    portalTopBar: resolvePortalTopBar()
+    portalTopBar: resolvePortalTopBar(),
+    portalQuarterAverages: getFeatureFlag('portalQuarterAverages'),
+    portalQuarterlyExport: getFeatureFlag('portalQuarterlyExport')
   };
   
   // Local storage namespace
@@ -1648,27 +1807,72 @@
       calculateOverallAverage,
       calculateClassAverages,
       calculateTrend,
-      getSparklineData
+      getSparklineData,
+      getQuarter,
+      groupSubmissionsByQuarter,
+      calculateQuarterAverages,
+      getQuarterSparklineData,
+      filterSubmissionsByQuarter
     };
     
     const result = await loadStudentAssignmentsPortalB(db, currentUser, feature, qs, helpers);
     
-    // Store for later use
+    // Store for later use globally and create context for assignment detail modal
     window.assignmentGroups = result.groups;
     window.submissionsMap = result.submissionsMap;
+    
+    // Fetch assignment data for detail modal
+    const assignmentsList = await db.listAssignments();
+    window.assignmentMap = new Map(assignmentsList.map(a => [a.id, a]));
+    
+    // Create context for assignment detail modal
+    const context = {
+      assignmentGroups: window.assignmentGroups,
+      submissionsMap: window.submissionsMap,
+      assignmentMap: window.assignmentMap,
+      feature,
+      helpers,
+      currentStatusTab: getCurrentStatusTab()
+    };
+    
+    // Setup assignment detail handlers with context
+    setupAssignmentDetailHandlers(context);
+    
+    // Check for deep-link: #assignment/{instance_id}
+    const hash = window.location.hash;
+    if (hash.startsWith('#assignment/')) {
+      const instanceId = hash.substring('#assignment/'.length);
+      if (instanceId) {
+        // Delay to ensure DOM is ready
+        setTimeout(() => {
+          openAssignmentDetail(instanceId, context);
+        }, 100);
+      }
+    }
+  }
+  
+  // Helper to get current active status tab
+  function getCurrentStatusTab() {
+    const activeTab = document.querySelector('[data-status-tab].active');
+    return activeTab ? activeTab.dataset.statusTab : 'all';
   }
   
   async function loadGradesCard() {
-    // Portal B: Load grades card
+    // Portal B: Load grades card with quarterly features
     const helpers = {
       calculateOverallAverage,
       calculateClassAverages,
       calculateTrend,
       getSparklineData,
-      formatDateTime
+      formatDateTime,
+      getQuarter,
+      groupSubmissionsByQuarter,
+      calculateQuarterAverages,
+      getQuarterSparklineData,
+      filterSubmissionsByQuarter
     };
     
-    await loadGradesCardUI(db, currentUser, qs, helpers);
+    await loadGradesCardUI(db, currentUser, qs, helpers, feature);
   }
   
   async function loadStudentGoals() {
@@ -2473,6 +2677,43 @@
         });
       });
     }
+    
+    // Hash change listener for deep-linking to assignment details
+    window.addEventListener('hashchange', () => {
+      const hash = window.location.hash;
+      if (hash.startsWith('#assignment/')) {
+        const instanceId = hash.substring('#assignment/'.length);
+        if (instanceId && window.assignmentGroups && window.assignmentMap) {
+          const helpers = {
+            AssignmentStatus,
+            groupAssignmentsByStatus,
+            filterAssignments,
+            truncateText,
+            formatDateTime,
+            calculateOverallAverage,
+            calculateClassAverages,
+            calculateTrend,
+            getSparklineData,
+            getQuarter,
+            groupSubmissionsByQuarter,
+            calculateQuarterAverages,
+            getQuarterSparklineData,
+            filterSubmissionsByQuarter
+          };
+          
+          const context = {
+            assignmentGroups: window.assignmentGroups,
+            submissionsMap: window.submissionsMap,
+            assignmentMap: window.assignmentMap,
+            feature,
+            helpers,
+            currentStatusTab: getCurrentStatusTab()
+          };
+          
+          openAssignmentDetail(instanceId, context);
+        }
+      }
+    });
     
     console.log('[Portal B] Event handlers initialized');
   })();

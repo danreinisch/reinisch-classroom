@@ -84,6 +84,20 @@ const FEATURES = {
     description: 'Enable top status bar with live date/time, student info, and Tool Kit link'
   },
   
+  // Portal B: Quarterly Averages
+  portalQuarterAverages: {
+    key: FEATURE_PREFIX + 'portal_quarter_averages',
+    default: true,
+    description: 'Enable quarterly grade averages (Q1-Q4) in Grades card'
+  },
+  
+  // Portal B: Quarterly Export
+  portalQuarterlyExport: {
+    key: FEATURE_PREFIX + 'portal_quarterly_export',
+    default: true,
+    description: 'Enable CSV/PDF export with quarterly summary data'
+  },
+  
   // Portal C: Saved Views
   portalSavedViews: {
     key: FEATURE_PREFIX + 'portal_saved_views',

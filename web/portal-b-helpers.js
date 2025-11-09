@@ -308,3 +308,94 @@ export function countMissingAssignments(groups) {
 export function countLateAssignments(groups) {
   return groups[AssignmentStatus.LATE]?.length || 0;
 }
+
+/**
+ * Get quarter number from date (UTC-based)
+ * Q1 = Jan-Mar (1-3), Q2 = Apr-Jun (4-6), Q3 = Jul-Sep (7-9), Q4 = Oct-Dec (10-12)
+ * @param {Date|string} date - Date to get quarter for
+ * @returns {number} Quarter number (1-4)
+ */
+export function getQuarter(date) {
+  if (!date) return null;
+  
+  const d = typeof date === 'string' ? new Date(date) : date;
+  const month = d.getUTCMonth() + 1; // getUTCMonth is 0-indexed
+  
+  if (month >= 1 && month <= 3) return 1;
+  if (month >= 4 && month <= 6) return 2;
+  if (month >= 7 && month <= 9) return 3;
+  return 4; // Oct-Dec
+}
+
+/**
+ * Group submissions by quarter based on submitted_at
+ * @param {Array} submissions - All graded submissions
+ * @returns {Object} Map of quarter -> submissions array
+ */
+export function groupSubmissionsByQuarter(submissions) {
+  const gradedSubmissions = submissions.filter(s => s.score_total != null && s.submitted_at);
+  
+  const quarters = { 1: [], 2: [], 3: [], 4: [] };
+  
+  for (const submission of gradedSubmissions) {
+    const quarter = getQuarter(submission.submitted_at);
+    if (quarter && quarters[quarter]) {
+      quarters[quarter].push(submission);
+    }
+  }
+  
+  return quarters;
+}
+
+/**
+ * Calculate average grade per quarter
+ * @param {Array} submissions - All graded submissions
+ * @returns {Object} Map of quarter -> average percentage (or null if no data)
+ */
+export function calculateQuarterAverages(submissions) {
+  const quarterGroups = groupSubmissionsByQuarter(submissions);
+  const averages = {};
+  
+  for (let q = 1; q <= 4; q++) {
+    const quarterSubmissions = quarterGroups[q];
+    if (quarterSubmissions.length === 0) {
+      averages[`Q${q}`] = null;
+    } else {
+      const sum = quarterSubmissions.reduce((acc, s) => acc + s.score_total, 0);
+      averages[`Q${q}`] = Math.round(sum / quarterSubmissions.length);
+    }
+  }
+  
+  return averages;
+}
+
+/**
+ * Get sparkline data for a specific quarter
+ * @param {Array} submissions - All graded submissions
+ * @param {number} quarter - Quarter number (1-4)
+ * @returns {Array} Array of scores for the quarter (chronological order)
+ */
+export function getQuarterSparklineData(submissions, quarter) {
+  const quarterGroups = groupSubmissionsByQuarter(submissions);
+  const quarterSubmissions = quarterGroups[quarter] || [];
+  
+  // Sort by submitted_at ascending (oldest to newest)
+  return quarterSubmissions
+    .sort((a, b) => new Date(a.submitted_at) - new Date(b.submitted_at))
+    .map(s => s.score_total);
+}
+
+/**
+ * Filter submissions by quarter
+ * @param {Array} submissions - All submissions
+ * @param {number} quarter - Quarter number (1-4) or null for all
+ * @returns {Array} Filtered submissions
+ */
+export function filterSubmissionsByQuarter(submissions, quarter) {
+  if (!quarter) return submissions;
+  
+  return submissions.filter(s => {
+    if (!s.submitted_at) return false;
+    return getQuarter(s.submitted_at) === quarter;
+  });
+}
