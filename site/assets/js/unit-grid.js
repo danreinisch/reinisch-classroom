@@ -27,13 +27,50 @@
     return '';
   }
 
-  function buildGrid(root, unit, state){
+  // Config: Enable defensive slot checking (check if presentation exists even when link missing)
+  const DEFENSIVE_SLOT_CHECK = true;
+
+  async function checkSlotExists(path) {
+    try {
+      const res = await fetch(path, { method: 'HEAD', cache: 'no-store' });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  }
+
+  async function buildGrid(root, unit, state){
     const cat = state && state.categories && state.categories[unit.id] || null;
     const slots = Number((cat && cat.slots) || unit.slots || 0);
     const titles = (cat && Array.isArray(cat.titles) ? cat.titles.slice() : []);
     const links  = (cat && Array.isArray(cat.links ) ? cat.links.slice()  : []);
     ensureArraySize(titles, slots);
     ensureArraySize(links,  slots);
+
+    // Defensive: Pre-check slots that have titles but no links (in parallel)
+    const checkPromises = [];
+    const checksNeeded = [];
+    if (DEFENSIVE_SLOT_CHECK && unit.baseOut) {
+      for (let i=1;i<=slots;i++){
+        const t = (titles[i-1] || '').trim();
+        const l = (links[i-1]  || '').trim();
+        if (t && !l) {
+          const slotPath = `/${unit.baseOut}/presentation-${String(i).padStart(2, '0')}/`;
+          checksNeeded.push({ index: i-1, path: slotPath });
+          checkPromises.push(checkSlotExists(slotPath));
+        }
+      }
+    }
+    
+    // Wait for all checks to complete
+    if (checkPromises.length > 0) {
+      const results = await Promise.all(checkPromises);
+      results.forEach((exists, idx) => {
+        if (exists) {
+          links[checksNeeded[idx].index] = checksNeeded[idx].path;
+        }
+      });
+    }
 
     const frag = document.createDocumentFragment();
     for (let i=1;i<=slots;i++){
@@ -75,6 +112,6 @@
     if (!unit) return;
 
     const state = await loadState();
-    buildGrid(grid, unit, state);
+    await buildGrid(grid, unit, state);
   });
 })();

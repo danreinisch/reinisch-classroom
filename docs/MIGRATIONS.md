@@ -400,3 +400,76 @@ Ensure migrations ran successfully:
 SELECT routine_name FROM information_schema.routines 
 WHERE routine_schema = 'public' AND routine_type = 'FUNCTION';
 ```
+
+## Admin Uploader Troubleshooting
+
+### Life Skills / Presentation Uploads
+
+#### Symptom: Upload succeeds but hub still shows "Placeholder"
+
+**Possible Causes:**
+1. State update didn't commit properly
+2. Netlify deployment hasn't completed yet
+3. Browser cache showing old state
+
+**Solutions:**
+
+1. **Check the verification log** in the Admin Uploader after upload
+   - Look for "✓ Verification SUCCESS" message
+   - If you see "⚠ Verification WARNING", wait 1-2 minutes for Netlify deployment to complete
+   - Reload the hub page with hard refresh (Ctrl+Shift+R or Cmd+Shift+R)
+
+2. **Verify the slot directory exists** in the repository
+   - For Life Skills slot N, check: `site/life-skills/presentations/presentation-NN/index.html`
+   - For other categories, check: `site/{baseOut}/presentation-NN/index.html`
+
+3. **Check site-state.json** in the repository
+   - Navigate to `site/assets/data/site-state.json`
+   - Find the category (e.g., "life" for Life Skills)
+   - Verify `titles[N-1]` has the title
+   - Verify `links[N-1]` has the path (e.g., `/life-skills/presentations/presentation-05/`)
+
+4. **If the upload succeeded but verification failed:**
+   - The slot files are committed, but deployment may be in progress
+   - Wait 1-2 minutes and reload the hub page
+   - If still showing Placeholder after 5 minutes, check the Netlify deployment logs
+
+5. **If multiple uploads are happening concurrently:**
+   - The system has retry logic for concurrent uploads
+   - If one slot overwrites another, simply re-upload the affected slot
+   - The improved state merging (as of 2025-11-09) should prevent this issue
+
+#### Best Practices
+
+- **Upload one slot at a time** if possible to avoid any potential race conditions
+- **Check the verification log** after each upload to confirm success
+- **Allow 1-2 minutes** after upload for Netlify deployment before checking the hub
+- **Use hard refresh** (Ctrl+Shift+R) when checking the hub to avoid browser cache
+- **Keep the title** when re-uploading: the uploader now preserves existing titles if you leave the title field blank
+
+#### Advanced: Manual State Fix
+
+If a slot is uploaded but the state is incorrect, you can manually edit `site/assets/data/site-state.json`:
+
+1. Navigate to the file in GitHub
+2. Click "Edit" (pencil icon)
+3. Find the category section (e.g., `"life"` for Life Skills)
+4. Update the `titles` and `links` arrays:
+   ```json
+   "life": {
+     "slots": 32,
+     "titles": [
+       "Title for slot 1",
+       "Title for slot 2",
+       ...
+     ],
+     "links": [
+       "/life-skills/presentations/presentation-01/",
+       "/life-skills/presentations/presentation-02/",
+       ...
+     ]
+   }
+   ```
+5. Commit the change
+6. Wait for Netlify deployment (~1-2 minutes)
+7. Hard refresh the hub page
