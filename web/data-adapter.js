@@ -270,6 +270,12 @@ const local = {
     return { student_code: code, active };
   },
 
+  async getStudentEnrollments(student_code) {
+    console.log('[student-manager] getStudentEnrollments (local) - not fully implemented', student_code);
+    // Local implementation would return enrollments from localStorage
+    return [];
+  },
+
   // Assignments / Instances (local placeholders)
   async createAssignment(a) {
     const id = 'A' + Math.random().toString(36).slice(2, 9).toUpperCase();
@@ -1280,6 +1286,32 @@ const remote = {
       if (error) throw error;
       
       return data;
+    });
+  },
+
+  async getStudentEnrollments(student_code) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+    return await withRetry(async () => {
+      console.log('[student-manager] getStudentEnrollments (remote)', student_code);
+      
+      // Get student ID
+      const { data: student, error: studentError } = await supabase
+        .from('students')
+        .select('id')
+        .eq('code', student_code)
+        .single();
+      
+      if (studentError) throw studentError;
+      
+      const { data, error } = await supabase
+        .from('class_enrollments')
+        .select('*')
+        .eq('student_id', student.id)
+        .order('created_at');
+      
+      if (error) throw error;
+      return data || [];
     });
   },
 
