@@ -216,6 +216,24 @@ The hub uses a defensive checking strategy:
 
 This ensures uploads appear even if state update was delayed or missed.
 
+### Debug Overlay
+
+To quickly verify state data on any hub page, add `?debugState=1` to the URL:
+
+```
+/life-skills/?debugState=1
+```
+
+This displays a debug overlay in the top-right corner showing:
+- First 10 slots with their titles and links
+- Last updated timestamp
+- Real-time state from site-state.json
+
+Useful for:
+- Verifying uploads without running an audit
+- Checking state after deployment
+- Troubleshooting display issues
+
 ## Best Practices
 
 1. **Always Enter a Title**: Even when re-uploading, include the title to avoid potential issues

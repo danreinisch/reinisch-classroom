@@ -100,6 +100,36 @@
     root.appendChild(frag);
   }
 
+  // Optional debug overlay: add ?debugState=1 to URL to see state info
+  function showDebugOverlay(unit, state) {
+    const cat = state && state.categories && state.categories[unit.id] || null;
+    if (!cat) return;
+    
+    const titles = cat.titles || [];
+    const links = cat.links || [];
+    const maxShow = 10; // Show first 10 slots
+    
+    let html = `<div style="position:fixed;top:10px;right:10px;background:rgba(0,0,0,0.9);color:#fff;padding:15px;border-radius:8px;max-width:400px;font-size:12px;font-family:monospace;z-index:10000;max-height:80vh;overflow:auto;">`;
+    html += `<div style="font-weight:bold;margin-bottom:10px;color:#90c4ff;">Debug: ${unit.title} State</div>`;
+    html += `<div style="margin-bottom:5px;color:#fbbf24;">Showing first ${Math.min(maxShow, titles.length)} of ${titles.length} slots</div>`;
+    
+    for (let i = 0; i < Math.min(maxShow, titles.length); i++) {
+      const title = (titles[i] || '').trim() || '(empty)';
+      const link = (links[i] || '').trim() || '(empty)';
+      const slotNum = String(i + 1).padStart(2, '0');
+      html += `<div style="margin:8px 0;padding:8px;background:rgba(255,255,255,0.05);border-radius:4px;">`;
+      html += `<div style="color:#90c4ff;">Slot ${slotNum}</div>`;
+      html += `<div style="color:#a5b4fc;margin-top:3px;">Title: ${title.length > 50 ? title.slice(0, 50) + '...' : title}</div>`;
+      html += `<div style="color:#86efac;margin-top:3px;">Link: ${link}</div>`;
+      html += `</div>`;
+    }
+    
+    html += `<div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.2);color:#9ca3af;font-size:10px;">Last updated: ${state.updated || 'unknown'}</div>`;
+    html += `</div>`;
+    
+    document.body.insertAdjacentHTML('beforeend', html);
+  }
+
   document.addEventListener('DOMContentLoaded', async () => {
     const grid = qs('#grid');
     if (!grid) return;
@@ -113,5 +143,11 @@
 
     const state = await loadState();
     await buildGrid(grid, unit, state);
+    
+    // Show debug overlay if ?debugState=1 in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('debugState') === '1') {
+      showDebugOverlay(unit, state);
+    }
   });
 })();
