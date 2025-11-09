@@ -1093,13 +1093,21 @@
           <button id="btnAddStudent" class="btn primary small">+ Add Student</button>
         </div>
         
-        <div style="margin-top:12px">
+        <div style="margin-top:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
           <input 
             type="text" 
             id="studentSearchInput" 
             placeholder="Search by student code..." 
-            style="width:100%;max-width:400px"
+            style="flex:1;min-width:200px;max-width:400px"
           />
+          <div style="display:flex;gap:6px;align-items:center">
+            <label style="margin:0;font-size:13px;color:var(--muted)">Status:</label>
+            <select id="studentStatusFilter" style="width:auto;padding:6px 10px">
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+              <option value="all">All</option>
+            </select>
+          </div>
         </div>
         
         <div class="scroll" style="margin-top:12px;max-height:60vh">
@@ -1107,6 +1115,7 @@
             <thead>
               <tr>
                 <th>Code</th>
+                <th>Status</th>
                 <th>Classes</th>
                 <th>Goals</th>
                 <th>Actions</th>
@@ -1114,7 +1123,7 @@
             </thead>
             <tbody id="studentManagerList">
               <tr>
-                <td colspan="4" class="subtle" style="text-align:center;padding:20px">
+                <td colspan="5" class="subtle" style="text-align:center;padding:20px">
                   Loading students...
                 </td>
               </tr>
@@ -1569,43 +1578,254 @@
     </div>
   </div>
 
-  <!-- Student Manager: Edit Student Modal -->
-  <div class="modal-backdrop" id="editStudentModal" style="display:none">
-    <div class="modal card" style="max-width:900px">
-      <div class="card-header"><div>Edit Student</div></div>
+  <!-- Student Manager: Update Student Modal -->
+  <div class="modal-backdrop" id="updateStudentModal" style="display:none">
+    <div class="modal card" style="max-width:1000px">
+      <div class="card-header">
+        <div id="updateStudentModalTitle">Update Student</div>
+      </div>
       
-      <div style="max-width:500px;margin-bottom:16px">
-        <label>Student Code 
-          <input type="text" id="editStudentCode" disabled style="opacity:0.6" />
-          <div class="subtle" style="font-size:12px;margin-top:4px">Code cannot be changed after creation</div>
+      <!-- Student Info Section -->
+      <div style="border-bottom:1px solid var(--line);padding-bottom:16px;margin-bottom:16px">
+        <div style="display:flex;gap:20px;align-items:flex-start">
+          <div style="flex:1">
+            <label>Student Code 
+              <input type="text" id="updateStudentCode" disabled style="opacity:0.6" />
+              <div class="subtle" style="font-size:12px;margin-top:4px">Code cannot be changed after creation</div>
+            </label>
+          </div>
+          <div style="flex:1">
+            <label>Status
+              <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
+                <span id="updateStudentStatus" class="badge"></span>
+                <button type="button" class="btn small" id="btnToggleStudentActive" style="display:none"></button>
+              </div>
+            </label>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Class Enrollments Section -->
+      <div style="border-bottom:1px solid var(--line);padding-bottom:16px;margin-bottom:16px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div style="font-weight:800">Class Enrollments</div>
+          <button type="button" class="btn small" id="btnManageEnrollments">Manage Classes</button>
+        </div>
+        <div id="updateEnrollmentsList" style="display:flex;flex-direction:column;gap:6px">
+          <!-- Enrollment items will be rendered here -->
+        </div>
+      </div>
+      
+      <!-- Goals Section -->
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div style="font-weight:800">IEP Goals</div>
+          <div style="display:flex;gap:8px">
+            <button type="button" class="btn primary small" id="btnUpdateAddIEPGoals">+ Add IEP Goals</button>
+          </div>
+        </div>
+        <div class="scroll" style="max-height:400px">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Area</th>
+                <th>Text</th>
+                <th>Baseline</th>
+                <th>Target</th>
+                <th>Version</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="updateGoalsList">
+              <!-- Goals will be listed here -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+      
+      <div id="updateError" style="color:#fca5a5;margin-top:12px;display:none"></div>
+      
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;padding-top:16px;border-top:1px solid var(--line)">
+        <button class="btn small" id="btnUpdateStudentCancel">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Manage Enrollments Modal -->
+  <div class="modal-backdrop" id="manageEnrollmentsModal" style="display:none">
+    <div class="modal card" style="max-width:600px">
+      <div class="card-header">
+        <div>Manage Class Enrollments</div>
+      </div>
+      
+      <div style="margin-bottom:16px">
+        <div class="subtle" style="font-size:13px;margin-bottom:12px">
+          Select classes to enroll the student in. Unchecking a class will mark the enrollment as inactive.
+        </div>
+        <div id="manageEnrollmentsClassList" style="display:flex;flex-direction:column;gap:8px">
+          <!-- Class checkboxes will be rendered here -->
+        </div>
+      </div>
+      
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
+        <button class="btn small" id="btnManageEnrollmentsCancel">Cancel</button>
+        <button class="btn primary small" id="btnManageEnrollmentsSave">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Replace Goal Modal -->
+  <div class="modal-backdrop" id="replaceGoalModal" style="display:none">
+    <div class="modal card" style="max-width:700px">
+      <div class="card-header">
+        <div id="replaceGoalModalTitle">Replace Goal</div>
+      </div>
+      
+      <div style="background:rgba(255,255,255,.04);padding:12px;border-radius:8px;border:1px solid var(--line);margin-bottom:16px">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:4px">Current Goal (will be archived)</div>
+        <div id="replaceGoalOldInfo" style="font-size:13px"></div>
+      </div>
+      
+      <div style="margin-bottom:16px">
+        <div style="font-weight:700;margin-bottom:12px">New Goal Version</div>
+        
+        <label>Goal Code
+          <input type="text" id="replaceGoalCode" placeholder="e.g., S001.RDG.1v2" />
+          <div class="subtle" style="font-size:12px;margin-top:4px">Leave blank to use same code with incremented version suffix</div>
+        </label>
+        
+        <label style="margin-top:12px">Goal Text*
+          <textarea id="replaceGoalText" rows="3" required></textarea>
+        </label>
+        
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">
+          <label>Baseline %*
+            <input type="number" id="replaceGoalBaseline" min="0" max="100" required />
+          </label>
+          
+          <label>Target %*
+            <input type="number" id="replaceGoalTarget" min="0" max="100" required />
+          </label>
+        </div>
+        
+        <label style="margin-top:12px">Start Date*
+          <input type="date" id="replaceGoalStartDate" required />
+        </label>
+        
+        <label style="margin-top:12px">Case Manager
+          <input type="text" id="replaceGoalCaseManager" />
         </label>
       </div>
       
-      <div style="margin-top:16px">
-        <div style="font-weight:800;margin-bottom:8px">Class Enrollments</div>
-        <div id="editClassEnrollmentsList">
-          <!-- Class enrollment checkboxes will be rendered here -->
-        </div>
-      </div>
-      
-      <div style="margin-top:16px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-          <div style="font-weight:800">Goals</div>
-          <div style="display:flex;gap:8px">
-            <button type="button" class="btn primary small" id="btnAddIEPGoals">+ Add IEP Goals</button>
-            <button type="button" class="btn small" id="btnEditAddGoal">+ Add Goal</button>
-          </div>
-        </div>
-        <div id="editGoalsContainer">
-          <!-- Goals will be listed here -->
-        </div>
-      </div>
-      
-      <div id="editError" style="color:#fca5a5;margin-top:12px;display:none"></div>
+      <div id="replaceGoalError" style="color:#fca5a5;margin-top:12px;display:none"></div>
       
       <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
-        <button class="btn small" id="btnEditStudentCancel">Cancel</button>
-        <button class="btn primary small" id="btnEditStudentSave">Save Changes</button>
+        <button class="btn small" id="btnReplaceGoalCancel">Cancel</button>
+        <button class="btn primary small" id="btnReplaceGoalSave">Replace Goal</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Goal History Modal -->
+  <div class="modal-backdrop" id="goalHistoryModal" style="display:none">
+    <div class="modal card" style="max-width:900px">
+      <div class="card-header">
+        <div id="goalHistoryModalTitle">Goal History</div>
+      </div>
+      
+      <div class="scroll" style="max-height:500px">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Version</th>
+              <th>Status</th>
+              <th>Text</th>
+              <th>Baseline</th>
+              <th>Target</th>
+              <th>Start Date</th>
+              <th>Progress Entries</th>
+            </tr>
+          </thead>
+          <tbody id="goalHistoryList">
+            <!-- History will be listed here -->
+          </tbody>
+        </table>
+      </div>
+      
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
+        <button class="btn small" id="btnGoalHistoryClose">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Operation Chooser Modal (Add/Update/Remove Student) -->
+  <div class="modal-backdrop" id="operationChooserModal" style="display:none">
+    <div class="modal card" style="max-width:500px">
+      <div class="card-header">
+        <div>Student Manager Operations</div>
+      </div>
+      
+      <div style="margin:20px 0">
+        <div style="font-size:14px;color:var(--muted);margin-bottom:16px">
+          Choose an operation to perform:
+        </div>
+        
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <button class="btn" id="btnChooseAddStudent" style="text-align:left;padding:16px;background:rgba(255,255,255,.08);justify-content:flex-start">
+            <div>
+              <div style="font-weight:800;font-size:15px;margin-bottom:4px">➕ Add Student</div>
+              <div style="font-size:12px;color:var(--muted)">Create a new student with enrollments and goals</div>
+            </div>
+          </button>
+          
+          <button class="btn" id="btnChooseUpdateStudent" style="text-align:left;padding:16px;background:rgba(255,255,255,.08);justify-content:flex-start">
+            <div>
+              <div style="font-weight:800;font-size:15px;margin-bottom:4px">✏️ Update Student</div>
+              <div style="font-size:12px;color:var(--muted)">Modify enrollments, goals, or status</div>
+            </div>
+          </button>
+          
+          <button class="btn" id="btnChooseRemoveStudent" style="text-align:left;padding:16px;background:rgba(255,255,255,.08);justify-content:flex-start">
+            <div>
+              <div style="font-weight:800;font-size:15px;margin-bottom:4px">🗑️ Remove Student</div>
+              <div style="font-size:12px;color:var(--muted)">Mark student as inactive (preserves all data)</div>
+            </div>
+          </button>
+        </div>
+      </div>
+      
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
+        <button class="btn small" id="btnOperationChooserCancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Select Student Modal (for Update/Remove operations) -->
+  <div class="modal-backdrop" id="selectStudentModal" style="display:none">
+    <div class="modal card" style="max-width:600px">
+      <div class="card-header">
+        <div id="selectStudentModalTitle">Select Student</div>
+      </div>
+      
+      <div style="margin:16px 0">
+        <input 
+          type="text" 
+          id="selectStudentSearch" 
+          placeholder="Search by student code..." 
+          style="width:100%"
+        />
+      </div>
+      
+      <div class="scroll" style="max-height:400px">
+        <div id="selectStudentList" style="display:flex;flex-direction:column;gap:6px">
+          <!-- Student selection items will be rendered here -->
+        </div>
+      </div>
+      
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
+        <button class="btn small" id="btnSelectStudentCancel">Cancel</button>
       </div>
     </div>
   </div>
@@ -4320,7 +4540,10 @@
     // Load data
     async function loadStudentManagerData() {
       try {
-        studentManagerState.students = await db.listStudentsWithCounts();
+        // Get status filter
+        const statusFilter = qs('#studentStatusFilter')?.value || 'active';
+        
+        studentManagerState.students = await db.listStudentsWithCounts({ status: statusFilter });
         studentManagerState.classes = await db.listClasses();
         console.log('[student-manager] Loaded', studentManagerState.students.length, 'students');
       } catch (err) {
@@ -4348,22 +4571,31 @@
       if (students.length === 0) {
         tbody.innerHTML = `
           <tr>
-            <td colspan="4" class="subtle" style="text-align:center;padding:20px">
-              No students found. Click "Add Student" to create one.
+            <td colspan="5" class="subtle" style="text-align:center;padding:20px">
+              No students found. Click "+ Add Student" to create one.
             </td>
           </tr>`;
         return;
       }
       
       tbody.innerHTML = students.map(s => {
+        const isInactive = s.active === false;
+        const rowStyle = isInactive ? 'opacity:0.5' : '';
+        const statusBadge = isInactive 
+          ? '<span class="badge" style="background:#fca5a5;color:#7f1d1d">Inactive</span>'
+          : '<span class="badge" style="background:#86efac;color:#14532d">Active</span>';
+        const goalsDisplay = s.goals_active_count !== undefined 
+          ? `${s.goals_active_count}/${s.goals_count}`
+          : (s.goals_count || 0);
+        
         return `
-          <tr>
+          <tr style="${rowStyle}">
             <td><strong>${s.code}</strong></td>
+            <td>${statusBadge}</td>
             <td>${s.classes_count || 0}</td>
-            <td>${s.goals_count || 0}</td>
+            <td>${goalsDisplay}</td>
             <td>
-              <button class="btn small" onclick="editStudent('${s.code}')">Edit</button>
-              <button class="btn small" disabled style="opacity:0.5">Archive</button>
+              <button class="btn small" onclick="openUpdateStudentFlow('${s.code}')">Update</button>
             </td>
           </tr>
         `;
@@ -4379,8 +4611,14 @@
         searchTimeout = setTimeout(() => renderStudentList(), 250);
       });
       
-      // Add Student button
-      on('#btnAddStudent', 'click', openAddStudentModal);
+      // Status filter
+      on('#studentStatusFilter', 'change', async () => {
+        await loadStudentManagerData();
+        renderStudentList();
+      });
+      
+      // Add Student button - now opens operation chooser
+      on('#btnAddStudent', 'click', openOperationChooser);
     }
     
     // Open Add Student Modal
@@ -4813,9 +5051,113 @@
       }
     }
     
-    // Edit student (placeholder)
-    window.editStudent = async function(code) {
-      console.log('[student-edit] Edit student:', code);
+    // =======================
+    // Operation Chooser & Update Student Flow
+    // =======================
+    
+    // Operation Chooser Modal
+    function openOperationChooser() {
+      qs('#operationChooserModal').style.display = 'flex';
+    }
+    
+    on('#btnOperationChooserCancel', 'click', () => {
+      qs('#operationChooserModal').style.display = 'none';
+    });
+    
+    on('#btnChooseAddStudent', 'click', () => {
+      qs('#operationChooserModal').style.display = 'none';
+      openAddStudentModal();
+    });
+    
+    on('#btnChooseUpdateStudent', 'click', () => {
+      qs('#operationChooserModal').style.display = 'none';
+      openSelectStudentModal('update');
+    });
+    
+    on('#btnChooseRemoveStudent', 'click', () => {
+      qs('#operationChooserModal').style.display = 'none';
+      openSelectStudentModal('remove');
+    });
+    
+    // Select Student Modal
+    let selectStudentOperation = null;
+    
+    function openSelectStudentModal(operation) {
+      selectStudentOperation = operation;
+      const title = operation === 'update' ? 'Select Student to Update' : 'Select Student to Remove';
+      qs('#selectStudentModalTitle').textContent = title;
+      
+      renderSelectStudentList();
+      qs('#selectStudentModal').style.display = 'flex';
+    }
+    
+    function renderSelectStudentList() {
+      const search = (qs('#selectStudentSearch')?.value || '').toLowerCase();
+      let students = studentManagerState.students.filter(s => 
+        s.code.toLowerCase().includes(search)
+      );
+      
+      // For remove operation, only show active students
+      if (selectStudentOperation === 'remove') {
+        students = students.filter(s => s.active !== false);
+      }
+      
+      const container = qs('#selectStudentList');
+      if (students.length === 0) {
+        container.innerHTML = '<div class="subtle" style="text-align:center;padding:20px">No students found.</div>';
+        return;
+      }
+      
+      container.innerHTML = students.map(s => {
+        const isInactive = s.active === false;
+        const statusBadge = isInactive 
+          ? '<span class="badge" style="background:#fca5a5;color:#7f1d1d;margin-left:8px">Inactive</span>'
+          : '';
+        
+        return `
+          <button 
+            class="btn" 
+            onclick="selectStudentForOperation('${s.code}')"
+            style="text-align:left;padding:12px;background:rgba(255,255,255,.06);justify-content:flex-start"
+          >
+            <strong>${s.code}</strong>${statusBadge}
+            <span class="subtle" style="margin-left:auto;font-size:12px">
+              ${s.classes_count || 0} classes • ${s.goals_count || 0} goals
+            </span>
+          </button>
+        `;
+      }).join('');
+    }
+    
+    on('#selectStudentSearch', 'input', () => {
+      renderSelectStudentList();
+    });
+    
+    on('#btnSelectStudentCancel', 'click', () => {
+      qs('#selectStudentModal').style.display = 'none';
+    });
+    
+    window.selectStudentForOperation = function(code) {
+      qs('#selectStudentModal').style.display = 'none';
+      
+      if (selectStudentOperation === 'update') {
+        openUpdateStudentFlow(code);
+      } else if (selectStudentOperation === 'remove') {
+        confirmRemoveStudent(code);
+      }
+    };
+    
+    // Update Student Flow
+    let updateStudentState = {
+      code: null,
+      student: null,
+      goals: [],
+      enrollments: [],
+      enrollmentChanges: { add: [], remove: [] }
+    };
+    
+    window.openUpdateStudentFlow = async function(code) {
+      console.log('[student-update] Opening update flow for:', code);
       
       try {
         // Load student data
@@ -4825,45 +5167,396 @@
           return;
         }
         
-        // Populate edit modal
-        qs('#editStudentCode').value = code;
+        updateStudentState.code = code;
+        updateStudentState.student = student;
         
-        // Load and display goals
-        const goals = await db.listStudentGoals(code);
-        const goalsContainer = qs('#editGoalsContainer');
+        // Load goals
+        updateStudentState.goals = await db.listStudentGoals(code);
         
-        if (goals.length === 0) {
-          goalsContainer.innerHTML = '<div class="subtle" style="text-align:center;padding:20px">No goals yet. Click "Add IEP Goals" to add multiple goals at once.</div>';
+        // Load enrollments
+        const enrollmentsData = await db.getStudentEnrollments(code);
+        updateStudentState.enrollments = enrollmentsData || [];
+        updateStudentState.enrollmentChanges = { add: [], remove: [] };
+        
+        // Populate modal
+        qs('#updateStudentCode').value = code;
+        qs('#updateStudentModalTitle').textContent = `Update Student ${code}`;
+        
+        // Status display
+        const isActive = student.active !== false;
+        const statusEl = qs('#updateStudentStatus');
+        const toggleBtn = qs('#btnToggleStudentActive');
+        
+        if (isActive) {
+          statusEl.innerHTML = '<span style="color:#86efac">●</span> Active';
+          statusEl.style.background = 'rgba(134,239,172,.1)';
+          statusEl.style.color = '#86efac';
+          toggleBtn.style.display = 'none';
         } else {
-          goalsContainer.innerHTML = goals.map(g => `
-            <div class="goal-item" style="margin-bottom:8px">
-              <div>
-                <strong>${g.code}</strong>
-                ${g.goal_area ? `<span class="badge" style="margin-left:8px">${g.goal_area}</span>` : ''}
-              </div>
-              <div class="subtle" style="font-size:13px;margin-top:4px">${g.desc}</div>
-              ${g.baseline !== undefined && g.target !== undefined ? `
-                <div class="subtle" style="font-size:12px;margin-top:4px">
-                  Baseline: ${g.baseline}% • Target: ${g.target}%
-                </div>
-              ` : ''}
-            </div>
-          `).join('');
+          statusEl.innerHTML = '<span style="color:#fca5a5">●</span> Inactive';
+          statusEl.style.background = 'rgba(252,165,165,.1)';
+          statusEl.style.color = '#fca5a5';
+          toggleBtn.style.display = 'inline-block';
+          toggleBtn.textContent = '🔄 Reactivate';
         }
         
+        // Render enrollments
+        renderUpdateEnrollmentsList();
+        
+        // Render goals
+        renderUpdateGoalsList();
+        
         // Show modal
-        qs('#editStudentModal').style.display = 'flex';
+        qs('#updateStudentModal').style.display = 'flex';
         
       } catch (err) {
-        console.error('[student-edit] Error:', err);
+        console.error('[student-update] Error:', err);
         addNotif(`Failed to load student data: ${err.message}`, { type: 'error' });
       }
     };
     
-    // Close edit modal
-    on('#btnEditStudentCancel', 'click', () => {
-      qs('#editStudentModal').style.display = 'none';
+    function renderUpdateEnrollmentsList() {
+      const container = qs('#updateEnrollmentsList');
+      if (!updateStudentState.enrollments || updateStudentState.enrollments.length === 0) {
+        container.innerHTML = '<div class="subtle" style="font-size:13px">No class enrollments</div>';
+        return;
+      }
+      
+      container.innerHTML = updateStudentState.enrollments
+        .filter(e => e.active)
+        .map(e => {
+          const className = studentManagerState.classes.find(c => c.id === e.class_id)?.name || 'Unknown';
+          const startDate = e.start_date ? new Date(e.start_date).toLocaleDateString() : 'N/A';
+          
+          return `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:rgba(255,255,255,.04);border-radius:6px">
+              <div>
+                <strong style="font-size:14px">${className}</strong>
+                <span class="subtle" style="font-size:12px;margin-left:10px">Started: ${startDate}</span>
+              </div>
+            </div>
+          `;
+        }).join('');
+    }
+    
+    function renderUpdateGoalsList() {
+      const tbody = qs('#updateGoalsList');
+      if (!updateStudentState.goals || updateStudentState.goals.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="8" class="subtle" style="text-align:center;padding:20px">
+              No goals yet. Click "+ Add IEP Goals" to add goals.
+            </td>
+          </tr>`;
+        return;
+      }
+      
+      tbody.innerHTML = updateStudentState.goals.map(g => {
+        const isActive = g.active !== false;
+        const rowStyle = isActive ? '' : 'opacity:0.5';
+        const statusBadge = isActive
+          ? '<span class="badge" style="background:#86efac;color:#14532d">Active</span>'
+          : '<span class="badge" style="background:#fca5a5;color:#7f1d1d">Archived</span>';
+        const version = g.version || 1;
+        const textPreview = (g.desc || '').substring(0, 50) + (g.desc?.length > 50 ? '...' : '');
+        
+        return `
+          <tr style="${rowStyle}">
+            <td><strong>${g.code}</strong></td>
+            <td>${g.goal_area || '-'}</td>
+            <td style="max-width:200px">${textPreview}</td>
+            <td>${g.baseline !== undefined ? g.baseline + '%' : '-'}</td>
+            <td>${g.target || '-'}</td>
+            <td>v${version}</td>
+            <td>${statusBadge}</td>
+            <td>
+              ${isActive ? `
+                <button class="btn small" onclick="openReplaceGoalModal('${g.id}')" style="padding:4px 8px;font-size:12px">Replace</button>
+                <button class="btn small" onclick="confirmArchiveGoal('${g.id}')" style="padding:4px 8px;font-size:12px">Archive</button>
+              ` : ''}
+              <button class="btn small" onclick="openGoalHistoryModal('${g.code}')" style="padding:4px 8px;font-size:12px">History</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+    
+    on('#btnUpdateStudentCancel', 'click', () => {
+      qs('#updateStudentModal').style.display = 'none';
     });
+    
+    on('#btnToggleStudentActive', 'click', async () => {
+      if (!updateStudentState.code) return;
+      
+      try {
+        await db.setStudentActive({ code: updateStudentState.code, active: true });
+        addNotif(`Student ${updateStudentState.code} reactivated`, { type: 'success' });
+        
+        // Reload data
+        await loadStudentManagerData();
+        renderStudentList();
+        
+        // Close modal
+        qs('#updateStudentModal').style.display = 'none';
+      } catch (err) {
+        console.error('[student-update] Reactivation error:', err);
+        addNotif(`Failed to reactivate student: ${err.message}`, { type: 'error' });
+      }
+    });
+    
+    on('#btnManageEnrollments', 'click', openManageEnrollmentsModal);
+    on('#btnUpdateAddIEPGoals', 'click', () => {
+      // Open multi-goal wizard for this student
+      openMultiGoalWizard(updateStudentState.code);
+    });
+    
+    // Manage Enrollments Modal
+    function openManageEnrollmentsModal() {
+      const container = qs('#manageEnrollmentsClassList');
+      const classes = studentManagerState.classes || [];
+      
+      container.innerHTML = classes.map(c => {
+        const isEnrolled = updateStudentState.enrollments.some(e => e.class_id === c.id && e.active);
+        
+        return `
+          <label style="display:flex;align-items:center;gap:10px;padding:8px;background:rgba(255,255,255,.04);border-radius:6px">
+            <input 
+              type="checkbox" 
+              value="${c.id}" 
+              ${isEnrolled ? 'checked' : ''}
+              style="width:auto"
+            />
+            <span>${c.name || c.code || 'Unnamed Class'}</span>
+          </label>
+        `;
+      }).join('');
+      
+      qs('#manageEnrollmentsModal').style.display = 'flex';
+    }
+    
+    on('#btnManageEnrollmentsCancel', 'click', () => {
+      qs('#manageEnrollmentsModal').style.display = 'none';
+    });
+    
+    on('#btnManageEnrollmentsSave', 'click', async () => {
+      try {
+        const checkboxes = qsa('#manageEnrollmentsClassList input[type="checkbox"]');
+        const selectedIds = new Set(
+          Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value)
+        );
+        
+        // Calculate changes
+        const currentEnrollments = updateStudentState.enrollments.filter(e => e.active);
+        const currentIds = new Set(currentEnrollments.map(e => e.class_id));
+        
+        const toAdd = [];
+        const toRemove = [];
+        
+        // Find new enrollments
+        selectedIds.forEach(id => {
+          if (!currentIds.has(id)) {
+            toAdd.push({ class_id: id, start_date: new Date().toISOString().split('T')[0] });
+          }
+        });
+        
+        // Find removed enrollments
+        currentIds.forEach(id => {
+          if (!selectedIds.has(id)) {
+            toRemove.push(id);
+          }
+        });
+        
+        if (toAdd.length === 0 && toRemove.length === 0) {
+          addNotif('No changes to enrollments', { type: 'info' });
+          qs('#manageEnrollmentsModal').style.display = 'none';
+          return;
+        }
+        
+        // Update enrollments via RPC
+        await db.updateStudentEnrollments({
+          code: updateStudentState.code,
+          add: toAdd,
+          remove: toRemove
+        });
+        
+        addNotif(`Updated enrollments: +${toAdd.length} added, -${toRemove.length} removed`, { type: 'success' });
+        
+        // Reload enrollments
+        const enrollmentsData = await db.getStudentEnrollments(updateStudentState.code);
+        updateStudentState.enrollments = enrollmentsData || [];
+        renderUpdateEnrollmentsList();
+        
+        qs('#manageEnrollmentsModal').style.display = 'none';
+      } catch (err) {
+        console.error('[enrollments] Update error:', err);
+        addNotif(`Failed to update enrollments: ${err.message}`, { type: 'error' });
+      }
+    });
+    
+    // Replace Goal Modal
+    let replaceGoalState = { oldGoalId: null, oldGoal: null };
+    
+    window.openReplaceGoalModal = function(goalId) {
+      const goal = updateStudentState.goals.find(g => g.id === goalId);
+      if (!goal) {
+        addNotif('Goal not found', { type: 'error' });
+        return;
+      }
+      
+      replaceGoalState.oldGoalId = goalId;
+      replaceGoalState.oldGoal = goal;
+      
+      // Populate old goal info
+      qs('#replaceGoalOldInfo').innerHTML = `
+        <strong>${goal.code}</strong> (v${goal.version || 1}) - ${goal.goal_area || 'N/A'}<br>
+        ${goal.desc}<br>
+        <span class="subtle" style="font-size:11px">Baseline: ${goal.baseline}% • Target: ${goal.target}%</span>
+      `;
+      
+      // Pre-populate new goal fields with current values
+      qs('#replaceGoalCode').value = ''; // Leave blank for auto-increment
+      qs('#replaceGoalText').value = goal.desc || '';
+      qs('#replaceGoalBaseline').value = goal.baseline || '';
+      qs('#replaceGoalTarget').value = goal.target || '';
+      qs('#replaceGoalStartDate').value = new Date().toISOString().split('T')[0];
+      qs('#replaceGoalCaseManager').value = goal.case_manager || '';
+      
+      qs('#replaceGoalModal').style.display = 'flex';
+    };
+    
+    on('#btnReplaceGoalCancel', 'click', () => {
+      qs('#replaceGoalModal').style.display = 'none';
+    });
+    
+    on('#btnReplaceGoalSave', 'click', async () => {
+      try {
+        const newGoal = {
+          goal_code: qs('#replaceGoalCode').value || replaceGoalState.oldGoal.code,
+          goal_text: qs('#replaceGoalText').value,
+          goal_area: replaceGoalState.oldGoal.goal_area,
+          baseline: parseInt(qs('#replaceGoalBaseline').value),
+          target: qs('#replaceGoalTarget').value,
+          start_date: qs('#replaceGoalStartDate').value,
+          case_manager: qs('#replaceGoalCaseManager').value
+        };
+        
+        if (!newGoal.goal_text) {
+          qs('#replaceGoalError').textContent = 'Goal text is required';
+          qs('#replaceGoalError').style.display = 'block';
+          return;
+        }
+        
+        await db.replaceGoalVersion({
+          old_goal_id: replaceGoalState.oldGoalId,
+          new_goal: newGoal
+        });
+        
+        addNotif(`Goal replaced with new version`, { type: 'success' });
+        
+        // Reload goals
+        updateStudentState.goals = await db.listStudentGoals(updateStudentState.code);
+        renderUpdateGoalsList();
+        
+        qs('#replaceGoalModal').style.display = 'none';
+      } catch (err) {
+        console.error('[replace-goal] Error:', err);
+        qs('#replaceGoalError').textContent = err.message;
+        qs('#replaceGoalError').style.display = 'block';
+      }
+    });
+    
+    // Archive Goal
+    window.confirmArchiveGoal = async function(goalId) {
+      if (!confirm('Archive this goal? It will no longer be active but will remain in history.')) {
+        return;
+      }
+      
+      try {
+        await db.archiveGoal({ goal_id: goalId });
+        addNotif('Goal archived', { type: 'success' });
+        
+        // Reload goals
+        updateStudentState.goals = await db.listStudentGoals(updateStudentState.code);
+        renderUpdateGoalsList();
+      } catch (err) {
+        console.error('[archive-goal] Error:', err);
+        addNotif(`Failed to archive goal: ${err.message}`, { type: 'error' });
+      }
+    };
+    
+    // Goal History Modal
+    window.openGoalHistoryModal = async function(goalCode) {
+      try {
+        // Get all versions of this goal
+        const allGoals = await db.listStudentGoals(updateStudentState.code);
+        const goalVersions = allGoals.filter(g => g.code === goalCode).sort((a, b) => (b.version || 1) - (a.version || 1));
+        
+        if (goalVersions.length === 0) {
+          addNotif('No goal history found', { type: 'info' });
+          return;
+        }
+        
+        qs('#goalHistoryModalTitle').textContent = `Goal History: ${goalCode}`;
+        
+        const tbody = qs('#goalHistoryList');
+        tbody.innerHTML = goalVersions.map(g => {
+          const isActive = g.active !== false;
+          const statusBadge = isActive
+            ? '<span class="badge" style="background:#86efac;color:#14532d">Active</span>'
+            : '<span class="badge" style="background:#fca5a5;color:#7f1d1d">Archived</span>';
+          const startDate = g.start_date ? new Date(g.start_date).toLocaleDateString() : 'N/A';
+          
+          return `
+            <tr>
+              <td>v${g.version || 1}</td>
+              <td>${statusBadge}</td>
+              <td style="max-width:300px">${g.desc || '-'}</td>
+              <td>${g.baseline !== undefined ? g.baseline + '%' : '-'}</td>
+              <td>${g.target || '-'}</td>
+              <td>${startDate}</td>
+              <td>-</td>
+            </tr>
+          `;
+        }).join('');
+        
+        qs('#goalHistoryModal').style.display = 'flex';
+      } catch (err) {
+        console.error('[goal-history] Error:', err);
+        addNotif(`Failed to load goal history: ${err.message}`, { type: 'error' });
+      }
+    };
+    
+    on('#btnGoalHistoryClose', 'click', () => {
+      qs('#goalHistoryModal').style.display = 'none';
+    });
+    
+    // Remove Student
+    function confirmRemoveStudent(code) {
+      if (!confirm(`Mark student ${code} as inactive?\n\nThis will:\n- Block their login\n- Hide them from active student list\n- Preserve all data for analytics/restoration`)) {
+        return;
+      }
+      
+      removeStudent(code);
+    }
+    
+    async function removeStudent(code) {
+      try {
+        await db.setStudentActive({ code, active: false });
+        addNotif(`Student ${code} marked as inactive`, { type: 'success' });
+        
+        // Reload data
+        await loadStudentManagerData();
+        renderStudentList();
+      } catch (err) {
+        console.error('[student-remove] Error:', err);
+        addNotif(`Failed to remove student: ${err.message}`, { type: 'error' });
+      }
+    }
+    
+    // Edit student (legacy - redirects to update flow)
+    window.editStudent = async function(code) {
+      openUpdateStudentFlow(code);
+    };
     
     // =======================
     // Multi-Goal Wizard

@@ -240,6 +240,42 @@ const local = {
     return Array.from(areas).sort();
   },
 
+  // Student Manager: Operation Chooser & Versioning (local placeholders)
+  async updateStudentEnrollments({ code, add = [], remove = [] }) {
+    console.log('[student-manager] updateStudentEnrollments (local) - not fully implemented', { code, add, remove });
+    // Local implementation would update enrollments in localStorage
+    return { student_code: code, added: add.length, removed: remove.length };
+  },
+
+  async replaceGoalVersion({ old_goal_id, new_goal }) {
+    console.log('[student-manager] replaceGoalVersion (local) - not fully implemented', { old_goal_id, new_goal });
+    // Local implementation would update goals in localStorage with versioning
+    return { old_goal_id, new_goal_id: 'local-' + Date.now(), version: 2 };
+  },
+
+  async archiveGoal({ goal_id }) {
+    console.log('[student-manager] archiveGoal (local) - not fully implemented', { goal_id });
+    // Local implementation would mark goal as archived
+    return { goal_id, archived: true };
+  },
+
+  async setStudentActive({ code, active }) {
+    console.log('[student-manager] setStudentActive (local) - not fully implemented', { code, active });
+    const students = store.get('students', []);
+    const student = students.find(s => s.code === code);
+    if (student) {
+      student.active = active;
+      store.set('students', students);
+    }
+    return { student_code: code, active };
+  },
+
+  async getStudentEnrollments(student_code) {
+    console.log('[student-manager] getStudentEnrollments (local) - not fully implemented', student_code);
+    // Local implementation would return enrollments from localStorage
+    return [];
+  },
+
   // Assignments / Instances (local placeholders)
   async createAssignment(a) {
     const id = 'A' + Math.random().toString(36).slice(2, 9).toUpperCase();
@@ -1103,16 +1139,17 @@ const remote = {
     return await withRetry(async () => {
       console.log('[student-manager] listStudentsWithCounts (remote)', filter);
       
-      // Build query - select only code and name (no PII fields)
+      // Build query - select only code and name (no PII fields), include active status
       let query = supabase
         .from('students')
         .select(`
           id, 
           code, 
           name,
+          active,
           created_at,
           class_enrollments!inner(class_id, active),
-          goals(id)
+          goals(id, active)
         `)
         .order('code');
       
@@ -1120,7 +1157,14 @@ const remote = {
       if (filter.student_code) {
         query = query.ilike('code', `%${filter.student_code}%`);
       }
-      // Remove last_name filter as we're code-only now
+      
+      // Filter by active status (default: active only)
+      if (filter.status === 'active') {
+        query = query.eq('active', true);
+      } else if (filter.status === 'inactive') {
+        query = query.eq('active', false);
+      }
+      // if filter.status === 'all', don't filter
       
       const { data, error } = await query;
       if (error) throw error;
@@ -1130,8 +1174,10 @@ const remote = {
         id: s.id,
         code: s.code,
         name: s.name,
+        active: s.active !== false, // default to true for backward compat
         created_at: s.created_at,
         goals_count: s.goals?.length || 0,
+        goals_active_count: s.goals?.filter(g => g.active !== false).length || 0,
         classes_count: s.class_enrollments?.filter(e => e.active).length || 0,
         enrollments: s.class_enrollments || []
       }));
@@ -1226,6 +1272,85 @@ const remote = {
       });
       
       return Array.from(areas).sort();
+    });
+  },
+  
+  // Student Manager: Operation Chooser & Versioning
+  async updateStudentEnrollments(payload) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+    return await withRetry(async () => {
+      console.log('[student-manager] updateStudentEnrollments (remote)', payload);
+      
+      const { data, error } = await supabase.rpc('update_student_enrollments', { payload });
+      if (error) throw error;
+      
+      return data;
+    });
+  },
+
+  async getStudentEnrollments(student_code) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+    return await withRetry(async () => {
+      console.log('[student-manager] getStudentEnrollments (remote)', student_code);
+      
+      // Get student ID
+      const { data: student, error: studentError } = await supabase
+        .from('students')
+        .select('id')
+        .eq('code', student_code)
+        .single();
+      
+      if (studentError) throw studentError;
+      
+      const { data, error } = await supabase
+        .from('class_enrollments')
+        .select('*')
+        .eq('student_id', student.id)
+        .order('created_at');
+      
+      if (error) throw error;
+      return data || [];
+    });
+  },
+
+  async replaceGoalVersion(payload) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+    return await withRetry(async () => {
+      console.log('[student-manager] replaceGoalVersion (remote)', payload);
+      
+      const { data, error } = await supabase.rpc('replace_goal_version', { payload });
+      if (error) throw error;
+      
+      return data;
+    });
+  },
+
+  async archiveGoal(payload) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+    return await withRetry(async () => {
+      console.log('[student-manager] archiveGoal (remote)', payload);
+      
+      const { data, error } = await supabase.rpc('archive_goal', { payload });
+      if (error) throw error;
+      
+      return data;
+    });
+  },
+
+  async setStudentActive(payload) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+    return await withRetry(async () => {
+      console.log('[student-manager] setStudentActive (remote)', payload);
+      
+      const { data, error } = await supabase.rpc('set_student_active', { payload });
+      if (error) throw error;
+      
+      return data;
     });
   },
   
