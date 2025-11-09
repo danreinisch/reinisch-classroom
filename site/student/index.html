@@ -1070,6 +1070,14 @@
     setupFilters
   } from '../web/portal-b-ui.js';
   
+  // G) Debug mode support: ?debug=1 enables verbose logging and bypasses failsafe delay
+  const urlParams = new URLSearchParams(window.location.search);
+  const DEBUG_MODE = urlParams.get('debug') === '1';
+  
+  if (DEBUG_MODE) {
+    console.log('[student-portal] DEBUG MODE ENABLED - verbose logging active');
+  }
+  
   // Feature flags
   const feature = {
     portalTeacherLoginInStudent: false,  // Hide teacher login in Student Portal (default: false for rollback safety)
@@ -1296,8 +1304,10 @@
   
   function showError(msg) {
     const errorDiv = qs('#loginError');
-    errorDiv.textContent = msg;
-    errorDiv.classList.remove('hidden');
+    if (errorDiv) {
+      errorDiv.textContent = msg;
+      errorDiv.classList.remove('hidden');
+    }
   }
   
   function showLogin() {
@@ -1307,65 +1317,121 @@
       return;
     }
     
-    console.log('[portal-auth] Showing login view');
-    qs('#loginView').classList.remove('hidden');
-    qs('#studentDashboardView').classList.add('hidden');
-    qs('#teacherCenterView').classList.add('hidden');
-    qs('#userChip').classList.add('hidden');
-    qs('#btnLogout').classList.add('hidden');
-    qs('#loginCode').value = '';
-    qs('#loginPassword').value = '';
-    qs('#teacherPassword').value = '';
-    qs('#loginError').classList.add('hidden');
+    console.log('[student-portal] Showing login view');
+    
+    // B) showLogin() hardening: Guarantee UI state with defensive null checks
+    const loginView = qs('#loginView');
+    const dashboardView = qs('#studentDashboardView');
+    const teacherView = qs('#teacherCenterView');
+    const userChip = qs('#userChip');
+    const btnLogout = qs('#btnLogout');
+    const loginCode = qs('#loginCode');
+    const loginPassword = qs('#loginPassword');
+    const teacherPassword = qs('#teacherPassword');
+    const loginError = qs('#loginError');
+    
+    // Always unhide login view
+    if (loginView) loginView.classList.remove('hidden');
+    
+    // Always hide dashboard and teacher views
+    if (dashboardView) dashboardView.classList.add('hidden');
+    if (teacherView) teacherView.classList.add('hidden');
+    
+    // Hide user chip and logout button
+    if (userChip) userChip.classList.add('hidden');
+    if (btnLogout) btnLogout.classList.add('hidden');
+    
+    // Clear form fields
+    if (loginCode) loginCode.value = '';
+    if (loginPassword) loginPassword.value = '';
+    if (teacherPassword) teacherPassword.value = '';
+    
+    // Clear error state
+    if (loginError) loginError.classList.add('hidden');
+    
+    // Restore login UI elements (tabs and forms) - ensure they're visible
+    const studentForm = qs('#studentLoginForm');
+    const teacherForm = qs('#teacherLoginForm');
+    const tabs = document.querySelector('#loginView .tabs');
+    const subtitle = document.querySelector('#loginView .subtle');
+    
+    if (studentForm) studentForm.classList.remove('hidden');
+    if (tabs) tabs.classList.remove('hidden');
+    if (subtitle) subtitle.classList.remove('hidden');
+    
+    console.log('[student-portal] Login view restored successfully');
   }
   
   async function showStudentDashboard() {
-    // Defensive null guards for DOM elements and currentUser
+    // C) showStudentDashboard() hardening: Guard against missing currentUser
     if (!currentUser) {
-      console.error('[student-dashboard] Cannot show dashboard - currentUser is null');
+      console.error('[student-portal] Cannot show dashboard - currentUser is null, falling back to login');
       showLogin();
       return;
     }
     
-    console.log('[portal-auth] Showing student dashboard for', currentUser.code || currentUser.name);
+    console.log('[student-portal] Showing student dashboard for', currentUser.code || currentUser.name);
     
     // Phase 3: Mark auth as ready to prevent login view from reappearing
     authReady = true;
     
+    // C) Always unhide dashboard and hide login (independent of feature flags)
     const loginView = qs('#loginView');
     const dashboardView = qs('#studentDashboardView');
     const teacherView = qs('#teacherCenterView');
     const userChip = qs('#userChip');
     const logoutBtn = qs('#btnLogout');
     
+    // Core UI visibility - never depend on feature flags for these
     if (loginView) loginView.classList.add('hidden');
     if (dashboardView) dashboardView.classList.remove('hidden');
     if (teacherView) teacherView.classList.add('hidden');
     
     if (userChip) {
       userChip.classList.remove('hidden');
+      // Handle PII removal: prefer code if name is missing
       userChip.textContent = currentUser.name || currentUser.code;
     }
     
     if (logoutBtn) logoutBtn.classList.remove('hidden');
     
-    // Portal B: Show top status bar if enabled
+    // Portal B: Show top status bar if enabled (feature-flag controlled widget)
     if (feature.portalTopBar) {
       const topBar = qs('#portalTopBar');
+      const studentNameEl = qs('#portalStudentName');
       if (topBar) {
         topBar.classList.remove('hidden');
-        qs('#portalStudentName').textContent = currentUser.name || currentUser.code;
+        if (studentNameEl) {
+          // Handle PII removal: prefer code if name is missing
+          studentNameEl.textContent = currentUser.name || currentUser.code;
+        }
         startClock();
       }
     }
     
-    // Load data
-    await loadStudentAssignments();
-    await loadStudentGoals();
+    // C) Wrap data loads in try/catch - failures don't blank the UI
+    try {
+      await loadStudentAssignments();
+    } catch (err) {
+      console.error('[student-portal] Failed to load assignments:', err);
+      // Dashboard remains visible, show friendly error in assignments section
+    }
     
-    // Portal B: Show grades card if enabled
+    try {
+      await loadStudentGoals();
+    } catch (err) {
+      console.error('[student-portal] Failed to load goals:', err);
+      // Dashboard remains visible, show friendly error in goals section
+    }
+    
+    // Portal B: Show grades card if enabled (feature-flag controlled widget)
     if (feature.portalGradesCard) {
-      await loadGradesCard();
+      try {
+        await loadGradesCard();
+      } catch (err) {
+        console.error('[student-portal] Failed to load grades card:', err);
+        // Dashboard remains visible, grades card shows error state
+      }
     }
     
     // Portal B: Check for missing/late assignments and show toast
@@ -1857,22 +1923,23 @@
       // Method 1: Check auth-handoff (with expiry validation)
       const auth = readAuth();
       if (auth && auth.role === 'student' && auth.code) {
-        console.log('[Auto-login] Found valid auth from hub:', auth.code);
+        console.log('[student-portal] Found valid auth from hub:', auth.code);
+        if (DEBUG_MODE) console.log('[student-portal] Auth details:', { code: auth.code, name: auth.name, expiresAt: auth.expiresAt });
         return { code: auth.code, name: auth.name };
       }
     } catch (err) {
-      console.warn('[Auto-login] Failed to read auth-handoff:', err);
+      console.warn('[student-portal] Failed to read auth-handoff:', err);
     }
     
     try {
       // Method 2: Check sessionStorage rc_user_code (fallback for existing sessions)
       const sessionCode = sessionStorage.getItem('rc_user_code');
       if (sessionCode && typeof sessionCode === 'string' && sessionCode.trim().length > 0) {
-        console.log('[Auto-login] Found auth in sessionStorage rc_user_code');
+        console.log('[student-portal] Found auth in sessionStorage rc_user_code');
         return { code: sessionCode.trim(), name: null };
       }
     } catch (err) {
-      console.warn('[Auto-login] Failed to read sessionStorage:', err);
+      console.warn('[student-portal] Failed to read sessionStorage:', err);
     }
     
     try {
@@ -1884,13 +1951,14 @@
       const urlName = urlParams.get('name');
       
       if (urlCode && typeof urlCode === 'string' && urlCode.trim().length > 0 && auto === '1') {
-        console.log('[portal-auth] Found auto-login in URL:', { code: urlCode, name: urlName || '(none)' });
+        console.log('[student-portal] Found auto-login in URL:', { code: urlCode, name: urlName || '(none)' });
         return { code: urlCode.trim(), name: urlName ? urlName.trim() : null };
       }
     } catch (err) {
-      console.warn('[Auto-login] Failed to parse URL parameters:', err);
+      console.warn('[student-portal] Failed to parse URL parameters:', err);
     }
     
+    if (DEBUG_MODE) console.log('[student-portal] No auto-auth detected');
     return null;
   }
   
@@ -1934,11 +2002,15 @@
   
   /**
    * Hide loading state and restore login form
+   * D) Ensure this cannot exit early due to authReady guard unless dashboard is visible
    */
   function hideLoginLoading() {
-    // Phase 3: Don't restore login form if auth is already ready
-    if (authReady) {
-      console.log('[portal-auth] hideLoginLoading blocked - auth already ready');
+    // D) Only skip restoration if dashboard is actually visible
+    const dashboardView = qs('#studentDashboardView');
+    const isDashboardVisible = dashboardView && !dashboardView.classList.contains('hidden');
+    
+    if (authReady && isDashboardVisible) {
+      console.log('[student-portal] hideLoginLoading blocked - dashboard is visible');
       return;
     }
     
@@ -1962,6 +2034,7 @@
   
   /**
    * Find a student by code
+   * E) Updated to match both s.code and s.student_code for code-only identity (post-PII removal)
    * @param {string} code - Student code to search for
    * @returns {Promise<Object|null>} Student object if found, null otherwise
    * 
@@ -1977,15 +2050,16 @@
         try {
           studentListCache = await db.listStudents();
         } catch (dbErr) {
-          console.error('[student-lookup] Database fetch failed:', dbErr);
+          console.error('[student-portal] Database fetch failed:', dbErr);
           // Don't cache the error - let next call retry
           return null;
         }
       }
       
-      return studentListCache.find(s => s.code === code) || null;
+      // E) Match either s.code or s.student_code for code-only identity (post-PII removal)
+      return studentListCache.find(s => s.code === code || s.student_code === code) || null;
     } catch (err) {
-      console.error('[student-lookup] Failed to find student:', code, err);
+      console.error('[student-portal] Failed to find student:', code, err);
       return null;
     }
   }
@@ -2011,7 +2085,7 @@
    */
   async function attemptStudentAutoLogin(code, name = null) {
     try {
-      console.log('[Auto-login] Attempting auto-login for student:', code);
+      console.log('[student-portal] Attempting auto-login for student:', code);
       
       // BYPASS: Create minimal student object immediately to avoid blocking on DB fetch
       // This allows dashboard to show while we lazy-load full student data
@@ -2023,7 +2097,7 @@
       // Set session data immediately
       setStudentSession(minimalStudent, code);
       
-      console.log('[Auto-login] Auto-login bypass successful, showing dashboard');
+      console.log('[student-portal] Auto-login bypass successful, showing dashboard');
       
       // Lazy-load full student data in background (non-blocking)
       // If this fails, the dashboard will still be visible with minimal data
@@ -2031,35 +2105,45 @@
         if (fullStudent) {
           // Update currentUser with full student data if found
           currentUser = fullStudent;
-          console.log('[Auto-login] Full student data loaded:', fullStudent.name || code);
+          console.log('[student-portal] Full student data loaded:', fullStudent.name || code);
           
           // Update user chip if it exists
           const userChip = qs('#userChip');
           if (userChip && fullStudent.name) {
             userChip.textContent = fullStudent.name;
           }
+          
+          // Update top bar if visible
+          const studentNameEl = qs('#portalStudentName');
+          if (studentNameEl && fullStudent.name) {
+            studentNameEl.textContent = fullStudent.name;
+          }
         } else {
-          console.warn('[Auto-login] Could not load full student data, using minimal object');
+          console.warn('[student-portal] Could not load full student data, using minimal object');
         }
       }).catch(err => {
-        console.error('[Auto-login] Background student load failed:', err);
+        console.error('[student-portal] Background student load failed:', err);
         // Dashboard remains visible with minimal data
       });
       
       return true;
       
     } catch (err) {
-      console.error('[Auto-login] Auto-login failed:', err);
+      console.error('[student-portal] Auto-login failed:', err);
       return false;
     }
   }
   
   // Check for existing session
   (async function init() {
+    const initStartTime = Date.now();
+    
     try {
+      if (DEBUG_MODE) console.log('[student-portal] Initialization started');
+      
       // PRIORITY 1: Check if early bootstrap already handled auto-login
       if (window.__autoLoginOk === true) {
-        console.log('[student-init] Early bootstrap succeeded, proceeding to dashboard');
+        console.log('[student-portal] Early bootstrap succeeded, proceeding to dashboard');
         
         // Remove the temporary style that hid the login view
         const tempStyle = document.getElementById('auto-login-style');
@@ -2068,17 +2152,19 @@
         // Session storage was already set by bootstrap, just need to restore user object
         const savedCode = sessionStorage.getItem('rc_user_code');
         if (savedCode) {
-          // Show dashboard immediately, lazy-load student data
+          // D) Show dashboard immediately, lazy-load student data
           const success = await attemptStudentAutoLogin(savedCode, null);
           if (success) {
             showStudentDashboard();
+            if (DEBUG_MODE) console.log('[student-portal] Init completed in', Date.now() - initStartTime, 'ms');
             return;
           }
         }
         
-        // If bootstrap flag was set but session restore failed, clear and show login
-        console.warn('[student-init] Bootstrap flag set but session restore failed');
+        // D) If bootstrap flag was set but session restore failed, clear and show login
+        console.warn('[student-portal] Bootstrap flag set but session restore failed');
         window.__autoLoginOk = false;
+        hideLoginLoading();
         showLogin();
         return;
       }
@@ -2087,19 +2173,24 @@
       const autoAuth = getStudentAutoAuth();
       
       if (autoAuth && autoAuth.code) {
+        console.log('[student-portal] Auto-login detected for code:', autoAuth.code);
+        
         // Show loading state
         showLoginLoading();
         
-        // Attempt auto-login with name from auth handoff
+        // D) Attempt auto-login with name from auth handoff
         const success = await attemptStudentAutoLogin(autoAuth.code, autoAuth.name);
         
         if (success) {
           // Auto-login successful - show dashboard
           hideLoginLoading();
           showStudentDashboard();
+          if (DEBUG_MODE) console.log('[student-portal] Init completed in', Date.now() - initStartTime, 'ms');
           return;
         } else {
-          // Auto-login failed - fall back to login form
+          // D) Auto-login failed - explicitly call hideLoginLoading() and showLogin()
+          console.warn('[student-portal] Auto-login failed, falling back to login form');
+          window.__autoLoginOk = false;
           hideLoginLoading();
           showLogin();
           return;
@@ -2111,35 +2202,89 @@
       const savedCode = sessionStorage.getItem('rc_user_code');
       
       if (savedRole === 'teacher') {
+        console.log('[student-portal] Restoring teacher session');
         currentUser = { name: 'Teacher', role: 'teacher' };
         userRole = 'teacher';
         showTeacherCenter();
+        if (DEBUG_MODE) console.log('[student-portal] Init completed in', Date.now() - initStartTime, 'ms');
+        return;
       } else if (savedRole === 'student' && savedCode) {
+        console.log('[student-portal] Restoring student session for code:', savedCode);
         try {
           const student = await findStudentByCode(savedCode);
           if (student) {
             setStudentSession(student, savedCode);
             showStudentDashboard();
+            if (DEBUG_MODE) console.log('[student-portal] Init completed in', Date.now() - initStartTime, 'ms');
             return;
+          } else {
+            console.warn('[student-portal] Student not found in database, clearing session');
+            sessionStorage.removeItem('rc_user_code');
+            sessionStorage.removeItem('rc_user_role');
           }
         } catch (err) {
-          console.error('Session restore failed:', err);
+          console.error('[student-portal] Session restore failed:', err);
+          // Clear invalid session
+          sessionStorage.removeItem('rc_user_code');
+          sessionStorage.removeItem('rc_user_role');
         }
       }
       
       // Fall back to login form (only if __autoLoginOk is not set)
       if (!window.__autoLoginOk) {
+        console.log('[student-portal] No session found, showing login');
         showLogin();
       }
       
+      if (DEBUG_MODE) console.log('[student-portal] Init completed in', Date.now() - initStartTime, 'ms');
+      
     } catch (err) {
-      console.error('[student-init] Initialization error:', err);
-      // On any error, show login form (only if __autoLoginOk is not set)
+      console.error('[student-portal] Initialization error:', err);
+      // D) On any error, show login form (only if __autoLoginOk is not set)
       hideLoginLoading();
       if (!window.__autoLoginOk) {
         showLogin();
       }
     }
+  })();
+  
+  // A) Initialization failsafe: Reveal login view if authReady is not set within N seconds
+  // This prevents blank screens if initialization encounters an exception or hangs
+  (function setupFailsafe() {
+    const FAILSAFE_TIMEOUT_MS = DEBUG_MODE ? 0 : 3000; // Bypass delay in debug mode
+    
+    if (DEBUG_MODE) {
+      console.log('[student-portal] Failsafe bypassed in debug mode');
+    }
+    
+    setTimeout(() => {
+      // Only trigger failsafe if auth is not ready and no view is visible
+      if (!authReady) {
+        const loginView = qs('#loginView');
+        const dashboardView = qs('#studentDashboardView');
+        const teacherView = qs('#teacherCenterView');
+        
+        const isLoginVisible = loginView && !loginView.classList.contains('hidden');
+        const isDashboardVisible = dashboardView && !dashboardView.classList.contains('hidden');
+        const isTeacherVisible = teacherView && !teacherView.classList.contains('hidden');
+        
+        if (!isLoginVisible && !isDashboardVisible && !isTeacherVisible) {
+          console.warn('[student-portal] FAILSAFE TRIGGERED - No view visible after', FAILSAFE_TIMEOUT_MS, 'ms, forcing login view');
+          
+          // Clear any broken state
+          window.__autoLoginOk = false;
+          hideLoginLoading();
+          
+          // Force show login
+          authReady = false; // Reset to allow showLogin to work
+          showLogin();
+        } else if (DEBUG_MODE) {
+          console.log('[student-portal] Failsafe check passed - a view is visible');
+        }
+      } else if (DEBUG_MODE) {
+        console.log('[student-portal] Failsafe check passed - authReady is true');
+      }
+    }, FAILSAFE_TIMEOUT_MS);
   })();
   
   // Portal B: Setup event handlers
