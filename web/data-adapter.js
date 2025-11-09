@@ -1190,31 +1190,14 @@ const remote = {
     return await withRetry(async () => {
       console.log('[student-manager] addStudentGoals (remote)', { student_code, goals });
       
-      // Get student ID
-      const { data: student, error: studentError } = await supabase
-        .from('students')
-        .select('id')
-        .eq('code', student_code)
-        .single();
+      // Call the RPC function which handles errors per-goal
+      const { data, error } = await supabase.rpc('add_student_goals', { 
+        p_student_code: student_code, 
+        p_goals: goals 
+      });
       
-      if (studentError) throw studentError;
-      
-      // Insert goals
-      const goalRecords = goals.map(goal => ({
-        student_id: student.id,
-        code: goal.goal_code,
-        desc: goal.goal_text,
-        goal_area: goal.goal_area,
-        baseline: goal.baseline,
-        target: goal.target,
-        case_manager: goal.case_manager,
-        active: goal.active !== false
-      }));
-      
-      const { error } = await supabase.from('goals').insert(goalRecords);
       if (error) throw error;
-      
-      return true;
+      return data;
     });
   },
 
@@ -1276,13 +1259,17 @@ const remote = {
   },
   
   // Student Manager: Operation Chooser & Versioning
-  async updateStudentEnrollments(payload) {
+  async updateStudentEnrollments({ code, add = [], remove = [] }) {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
     return await withRetry(async () => {
-      console.log('[student-manager] updateStudentEnrollments (remote)', payload);
+      console.log('[student-manager] updateStudentEnrollments (remote)', { code, add, remove });
       
-      const { data, error } = await supabase.rpc('update_student_enrollments', { payload });
+      const { data, error } = await supabase.rpc('update_student_enrollments', { 
+        p_code: code,
+        p_add: add,
+        p_remove: remove
+      });
       if (error) throw error;
       
       return data;
@@ -1315,39 +1302,47 @@ const remote = {
     });
   },
 
-  async replaceGoalVersion(payload) {
+  async replaceGoalVersion({ old_goal_id, new_goal }) {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
     return await withRetry(async () => {
-      console.log('[student-manager] replaceGoalVersion (remote)', payload);
+      console.log('[student-manager] replaceGoalVersion (remote)', { old_goal_id, new_goal });
       
-      const { data, error } = await supabase.rpc('replace_goal_version', { payload });
+      const { data, error } = await supabase.rpc('replace_goal_version', { 
+        p_old_goal_id: old_goal_id,
+        p_new_goal: new_goal
+      });
       if (error) throw error;
       
       return data;
     });
   },
 
-  async archiveGoal(payload) {
+  async archiveGoal({ goal_id }) {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
     return await withRetry(async () => {
-      console.log('[student-manager] archiveGoal (remote)', payload);
+      console.log('[student-manager] archiveGoal (remote)', { goal_id });
       
-      const { data, error } = await supabase.rpc('archive_goal', { payload });
+      const { data, error } = await supabase.rpc('archive_goal', { 
+        p_goal_id: goal_id
+      });
       if (error) throw error;
       
       return data;
     });
   },
 
-  async setStudentActive(payload) {
+  async setStudentActive({ code, active }) {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
     return await withRetry(async () => {
-      console.log('[student-manager] setStudentActive (remote)', payload);
+      console.log('[student-manager] setStudentActive (remote)', { code, active });
       
-      const { data, error } = await supabase.rpc('set_student_active', { payload });
+      const { data, error } = await supabase.rpc('set_student_active', { 
+        p_code: code,
+        p_active: active
+      });
       if (error) throw error;
       
       return data;
