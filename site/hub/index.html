@@ -2140,6 +2140,17 @@
       failedModules.push('diagnostics.js');
     }
     
+    // Student Manager UI module (lazy-loaded in initStudentManager)
+    let StudentManagerUI;
+    try {
+      const studentManagerModule = await import(`/web/student-manager-ui.js?v=${cacheBust}`);
+      StudentManagerUI = studentManagerModule.default || studentManagerModule.StudentManagerUI;
+      console.log(LOG_PREFIX, 'Student Manager UI module loaded successfully');
+    } catch (err) {
+      console.error(LOG_PREFIX, 'Failed to load student-manager-ui.js:', err);
+      failedModules.push('student-manager-ui.js');
+    }
+    
     // Show error banner if any modules failed to load
     if (failedModules.length > 0) {
       const banner = document.getElementById('criticalAssetBanner');
@@ -8768,91 +8779,95 @@
   // ============================================================================
   // STUDENT MANAGER TAB
   // ============================================================================
+  
   async function initStudentManager() {
     try {
-      console.log('[Student Manager] Initializing...');
+      console.log('[student-manager] Initializing...');
       
-      // Load students and goals for metrics
-      const students = await db.listStudents();
-      const goals = await db.listGoalsAll();
-      
-      // Calculate metrics
-      const totalStudents = students.length;
-      const activeStudents = students.filter(s => s.active !== false).length;
-      const totalGoals = goals.length;
-      
-      // Update metric displays
-      const totalEl = qs('#smTotalStudents');
-      const activeEl = qs('#smActiveStudents');
-      const goalsEl = qs('#smTotalGoals');
-      
-      if (totalEl) totalEl.textContent = totalStudents;
-      if (activeEl) activeEl.textContent = activeStudents;
-      if (goalsEl) goalsEl.textContent = totalGoals;
-      
-      // Check migration status
-      await checkMigrationStatus();
-    } catch (err) {
-      console.error('[Student Manager] Failed to initialize:', err);
-    }
-  }
-  
-  // Check migration status (RPC functions and schema)
-  async function checkMigrationStatus() {
-    const badgeEl = qs('#smMigrationBadge');
-    const detailsEl = qs('#smMigrationDetails');
-    
-    if (!badgeEl || !detailsEl) return;
-    
-    try {
-      // Check if we're in remote mode
-      const remote = await isRemote();
-      
-      if (!remote) {
-        badgeEl.textContent = 'Local Mode';
-        badgeEl.style.background = 'rgba(251,191,36,.8)';
-        badgeEl.style.color = '#fff';
-        detailsEl.textContent = 'Running in local storage mode. Migration not required.';
+      // Check if UI module loaded
+      if (!StudentManagerUI) {
+        console.error('[student-manager] UI module not available');
+        const container = qs('.ttab[data-tab="studentManager"]');
+        if (container) {
+          container.innerHTML = `
+            <div class="card-header"><div>👤 Student Manager</div></div>
+            <div class="card" style="padding:20px;text-align:center;background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.5);margin-top:16px">
+              <div style="font-size:32px;margin-bottom:12px">⚠️</div>
+              <div style="font-weight:800;margin-bottom:8px;color:#fecaca">Module Loading Error</div>
+              <div class="subtle">Failed to load student-manager-ui.js. Please check console for details.</div>
+            </div>
+          `;
+        }
         return;
       }
       
-      // Try to call a Student Manager RPC function to verify migration
-      // Test with listStudentsWithCounts which uses the migration RPC
-      try {
-        const students = await db.listStudentsWithCounts('all');
+      // Find the student manager container
+      const container = qs('.ttab[data-tab="studentManager"]');
+      if (!container) {
+        console.error('[student-manager] Container not found');
+        return;
+      }
+      
+      // Clear any existing "Coming Soon" content
+      const comingSoon = container.querySelector('.card[style*="coming soon" i], .card[style*="rgba(34,197,94,.06)"]');
+      if (comingSoon) {
+        comingSoon.remove();
+      }
+      
+      // Create wrapper for metrics if it doesn't exist
+      let metricsSection = container.querySelector('#smMetrics');
+      if (!metricsSection) {
+        metricsSection = document.createElement('div');
+        metricsSection.id = 'smMetrics';
+        metricsSection.style.display = 'grid';
+        metricsSection.style.gridTemplateColumns = 'repeat(auto-fit,minmax(180px,1fr))';
+        metricsSection.style.gap = '12px';
+        metricsSection.style.marginBottom = '16px';
         
-        // If we got here, migration is present
-        badgeEl.textContent = 'Migration OK';
-        badgeEl.style.background = 'linear-gradient(180deg, rgba(34,197,94,.8), rgba(22,163,74,.8))';
-        badgeEl.style.color = '#fff';
-        detailsEl.textContent = 'Database schema and RPC functions are ready.';
-      } catch (rpcError) {
-        console.error('[Student Manager] RPC check error:', rpcError);
+        // Insert metrics cards
+        metricsSection.innerHTML = `
+          <div class="card" style="padding:16px">
+            <div class="subtle" style="font-size:12px;margin-bottom:4px">Total Students</div>
+            <div style="font-size:24px;font-weight:900" id="smTotalStudents">—</div>
+          </div>
+          <div class="card" style="padding:16px">
+            <div class="subtle" style="font-size:12px;margin-bottom:4px">Active Students</div>
+            <div style="font-size:24px;font-weight:900;color:var(--brand)" id="smActiveStudents">—</div>
+          </div>
+          <div class="card" style="padding:16px">
+            <div class="subtle" style="font-size:12px;margin-bottom:4px">Total Goals</div>
+            <div style="font-size:24px;font-weight:900" id="smTotalGoals">—</div>
+          </div>
+        `;
         
-        if (rpcError.message && (rpcError.message.includes('function') || rpcError.message.includes('does not exist'))) {
-          // Migration not run
-          badgeEl.textContent = 'Migration Required';
-          badgeEl.style.background = 'linear-gradient(180deg, rgba(239,68,68,.8), rgba(220,38,38,.8))';
-          badgeEl.style.color = '#fff';
-          detailsEl.innerHTML = `
-            The Student Manager migration has not been applied to your Supabase database.<br>
-            Please run: <code style="background:rgba(255,255,255,.1);padding:2px 6px;border-radius:4px">supabase migration up</code><br>
-            See <a href="/docs/STUDENT_MANAGER.md" target="_blank" style="color:var(--brand);text-decoration:underline">documentation</a> for details.
-          `;
+        // Insert at the beginning of container (after header)
+        const header = container.querySelector('.card-header');
+        if (header && header.nextSibling) {
+          container.insertBefore(metricsSection, header.nextSibling);
         } else {
-          // Other error
-          badgeEl.textContent = 'Check Failed';
-          badgeEl.style.background = 'rgba(251,191,36,.8)';
-          badgeEl.style.color = '#fff';
-          detailsEl.textContent = `Error checking migration: ${rpcError.message}`;
+          container.appendChild(metricsSection);
         }
       }
+      
+      // Initialize UI
+      const ui = new StudentManagerUI('.ttab[data-tab="studentManager"]');
+      await ui.init();
+      
+      console.log('[student-manager] Initialization complete');
     } catch (err) {
-      console.error('[Student Manager] Migration status check failed:', err);
-      badgeEl.textContent = 'Error';
-      badgeEl.style.background = 'rgba(239,68,68,.8)';
-      badgeEl.style.color = '#fff';
-      detailsEl.textContent = `Failed to check migration status: ${err.message}`;
+      console.error('[student-manager] Failed to initialize:', err);
+      const container = qs('.ttab[data-tab="studentManager"]');
+      if (container) {
+        const errorCard = document.createElement('div');
+        errorCard.className = 'card';
+        errorCard.style.cssText = 'padding:20px;text-align:center;background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.5);margin-top:16px';
+        errorCard.innerHTML = `
+          <div style="font-size:32px;margin-bottom:12px">⚠️</div>
+          <div style="font-weight:800;margin-bottom:8px;color:#fecaca">Initialization Error</div>
+          <div class="subtle">${escapeHtml(err.message || 'Unknown error occurred')}</div>
+        `;
+        container.appendChild(errorCard);
+      }
     }
   }
   
