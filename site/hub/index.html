@@ -74,7 +74,7 @@
 
   /* Base background - includes soft-grid by default */
   body{
-    background: url('/assets/bg/bg5e_soft_grid.svg') center/cover no-repeat fixed,
+    background: url('../assets/bg/bg5e_soft_grid.svg') center/cover no-repeat fixed,
                 radial-gradient(1200px 800px at 20% -10%, rgba(34,197,94,.08), transparent 50%),
                 radial-gradient(1200px 800px at 120% 20%, rgba(6,182,212,.06), transparent 50%),
                 linear-gradient(180deg, #0b1220, #0c1322 60%, #0b0f14);
@@ -224,7 +224,7 @@
   /* Uses CSS var --bg-image to support optional background image (assets/bg/bg5e_soft_grid.png) */
   /* Falls back to subtle gradient when image not present */
   body.glass-bold {
-    --bg-image: url('/assets/bg/bg5e_soft_grid.png');
+    --bg-image: url('../assets/bg/bg5e_soft_grid.png');
     background:
       /* Soft grid background image with fallback gradient */
       var(--bg-image, linear-gradient(180deg, #0b1220, #0c1322 60%, #0b0f14)) center/cover no-repeat fixed,
@@ -671,7 +671,7 @@
 <style>
   /* Hub: always render soft-grid and keep Bold overlays when active */
   body {
-    --hub-grid-image: url('/assets/bg/bg5e_soft_grid.svg');
+    --hub-grid-image: url('../assets/bg/bg5e_soft_grid.svg');
     background:
       var(--hub-grid-image) center/cover no-repeat fixed,
       radial-gradient(1400px 900px at 50% 120%, rgba(0,0,0,0.46), rgba(0,0,0,0) 60%),
@@ -2050,7 +2050,7 @@
     // Import critical modules with error handling
     let db, isRemote, localStore;
     try {
-      const dataAdapter = await import('/web/data-adapter.js');
+      const dataAdapter = await import('../web/data-adapter.js');
       db = dataAdapter.db;
       isRemote = dataAdapter.isRemote;
       localStore = dataAdapter.localStore;
@@ -2070,7 +2070,7 @@
     
     let listLibraryItems;
     try {
-      const library = await import('/web/library.js');
+      const library = await import('../web/library.js');
       listLibraryItems = library.listLibraryItems;
       console.log(LOG_PREFIX, 'Library module loaded successfully');
     } catch (err) {
@@ -2081,7 +2081,7 @@
     
     let writeAuth, clearAuth, readAuth;
     try {
-      const authHandoff = await import('/web/auth-handoff.js');
+      const authHandoff = await import('../web/auth-handoff.js');
       writeAuth = authHandoff.writeAuth;
       clearAuth = authHandoff.clearAuth;
       readAuth = authHandoff.readAuth;
@@ -2097,7 +2097,7 @@
     // Feature flags with fallback
     let getFeatureFlag, setFeatureFlag;
     try {
-      const featureFlags = await import('/web/feature-flags.js');
+      const featureFlags = await import('../web/feature-flags.js');
       getFeatureFlag = featureFlags.getFeatureFlag;
       setFeatureFlag = featureFlags.setFeatureFlag;
       console.log(LOG_PREFIX, 'Feature flags module loaded successfully');
@@ -2116,7 +2116,7 @@
     
     // Auth modal extend (optional enhancement)
     try {
-      await import('/web/auth-modal-extend.js');
+      await import('../web/auth-modal-extend.js');
       console.log(LOG_PREFIX, 'Auth modal extend loaded successfully');
     } catch (err) {
       console.error(LOG_PREFIX, 'Failed to load auth-modal-extend.js:', err);
@@ -2125,7 +2125,7 @@
     
     // Diagnostics (optional monitoring)
     try {
-      await import('/web/diagnostics.js');
+      await import('../web/diagnostics.js');
       console.log(LOG_PREFIX, 'Diagnostics module loaded successfully');
     } catch (err) {
       console.error(LOG_PREFIX, 'Failed to load diagnostics.js:', err);
@@ -2638,10 +2638,10 @@
       console.log(LOG_PREFIX, 'Running production asset self-check');
       
       const criticalAssets = [
-        '/web/feature-flags.js',
-        '/web/data-adapter.js',
-        '/web/auth-handoff.js',
-        '/web/library.js'
+        '../web/feature-flags.js',
+        '../web/data-adapter.js',
+        '../web/auth-handoff.js',
+        '../web/library.js'
       ];
       
       const missing = [];
@@ -4256,7 +4256,7 @@
     let supabaseSettings = null;
     (async () => {
       try {
-        supabaseSettings = await import('/web/supabase-settings.js');
+        supabaseSettings = await import('../web/supabase-settings.js');
         
         // Migrate legacy keys on page load
         const migrationResult = supabaseSettings.migrateLegacyKeys();
@@ -5703,7 +5703,7 @@
     async function loadSubPlansModule() {
       if (!upsertSubPlan || !getTodaysSubPlan) {
         try {
-          const subPlansModule = await import('/web/sub-plans.js');
+          const subPlansModule = await import('../web/sub-plans.js');
           upsertSubPlan = subPlansModule.upsertSubPlan;
           getTodaysSubPlan = subPlansModule.getTodaysSubPlan;
           console.log(LOG_PREFIX, 'Sub-plans module loaded successfully');
@@ -5868,7 +5868,7 @@
     async function loadCodebookModule() {
       if (!buildCodebookFromIEPCsv) {
         try {
-          const codebookModule = await import('/web/codebook.js');
+          const codebookModule = await import('../web/codebook.js');
           buildCodebookFromIEPCsv = codebookModule.buildCodebookFromIEPCsv;
           saveCodebook = codebookModule.saveCodebook;
           loadCodebook = codebookModule.loadCodebook;
@@ -5894,7 +5894,7 @@
     async function loadManifestModule() {
       if (!validateManifest) {
         try {
-          const manifestModule = await import('/web/assignment-manifest.js');
+          const manifestModule = await import('../web/assignment-manifest.js');
           validateManifest = manifestModule.validateManifest;
           detectQuestionsFromHTML = manifestModule.detectQuestionsFromHTML;
           detectQuestionsFromTXT = manifestModule.detectQuestionsFromTXT;
@@ -6419,7 +6419,7 @@
 
 <style>
   body {
-    --hub-grid-image: url('/assets/bg/bg5e_soft_grid.svg');
+    --hub-grid-image: url('../assets/bg/bg5e_soft_grid.svg');
     background:
       var(--hub-grid-image) center/cover no-repeat fixed,
       radial-gradient(1400px 900px at 50% 120%, rgba(0,0,0,0.46), rgba(0,0,0,0) 60%),
@@ -7314,7 +7314,7 @@
   // Import db and localStore with error handling
   let db, localStore;
   try {
-    const dataAdapter = await import('/web/data-adapter.js');
+    const dataAdapter = await import('../web/data-adapter.js');
     db = dataAdapter.db;
     localStore = dataAdapter.localStore;
     console.log('[Hub Tabs] Data adapter module loaded successfully');
