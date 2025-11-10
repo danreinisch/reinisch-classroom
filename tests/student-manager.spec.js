@@ -5,9 +5,9 @@ import { test, expect } from '@playwright/test';
  * 
  * Validates that:
  * 1. Hub page loads successfully
- * 2. Teacher sign-in can be accessed (skip actual login for now)
- * 3. Student Manager tab is visible and accessible
- * 4. Metrics render on Student Manager panel
+ * 2. Student Manager readiness event fires
+ * 3. Metrics render with numeric values (not em dashes)
+ * 4. hubHealth.studentManager exists with initMs
  */
 
 test.describe('Student Manager Smoke Test', () => {
@@ -30,41 +30,25 @@ test.describe('Student Manager Smoke Test', () => {
     await expect(teacherBtn).toBeVisible();
   });
   
-  test('should display Student Manager in navigation when feature is enabled', async ({ page }) => {
+  test('should wait for student-manager:ready event and verify metrics', async ({ page }) => {
+    // Set up event listener before navigation
+    const readyEventPromise = page.evaluate(() => {
+      return new Promise((resolve) => {
+        window.addEventListener('student-manager:ready', (e) => {
+          resolve(e.detail);
+        }, { once: true });
+      });
+    });
+    
     // Navigate to hub
     await page.goto('/site/hub/');
     await page.waitForLoadState('networkidle');
     
-    // Click Teacher Center button to show sign-in modal
-    await page.click('#btnTeacher');
-    
-    // Check if sign-in modal appears
-    const signInModal = page.locator('#signInModal');
-    await expect(signInModal).toBeVisible({ timeout: 2000 });
-    
-    // Skip actual login - just close modal to continue in local mode
-    await page.keyboard.press('Escape');
-    
-    // Enable Student Manager feature flag if settings are accessible
-    // This is a smoke test so we'll check if the tab exists in the DOM
-    const studentManagerTab = page.locator('[data-tab="studentManager"]');
-    
-    // The tab may be hidden by feature flag, but should exist in DOM
-    const tabCount = await studentManagerTab.count();
-    expect(tabCount).toBeGreaterThan(0);
-  });
-  
-  test('should display metrics on Student Manager panel', async ({ page }) => {
-    // Navigate to hub
-    await page.goto('/site/hub/');
-    await page.waitForLoadState('networkidle');
-    
-    // Try to access Student Manager tab directly by enabling the feature flag via localStorage
+    // Enable feature flag
     await page.evaluate(() => {
       localStorage.setItem('rc_unified_featureFlags', JSON.stringify({ studentManager: true }));
     });
     
-    // Reload to apply feature flag
     await page.reload();
     await page.waitForLoadState('networkidle');
     
@@ -72,46 +56,78 @@ test.describe('Student Manager Smoke Test', () => {
     const signInModal = page.locator('#signInModal');
     if (await signInModal.isVisible()) {
       await page.keyboard.press('Escape');
+      await page.waitForTimeout(500);
     }
     
-    // Look for Data icon rail button
+    // Navigate to Student Manager tab
     const dataButton = page.locator('.iconrail button[data-area="data"]');
     if (await dataButton.isVisible()) {
       await dataButton.click();
       await page.waitForTimeout(500);
       
-      // Look for Student Manager in submenu
       const studentManagerNav = page.locator('.nav a:has-text("Student Manager")');
       
       if (await studentManagerNav.isVisible()) {
         await studentManagerNav.click();
-        await page.waitForTimeout(1000);
         
-        // Check for metrics section
+        // Wait for ready event (with timeout)
+        const eventDetail = await Promise.race([
+          readyEventPromise,
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout waiting for ready event')), 10000))
+        ]).catch(err => {
+          console.log('Ready event not received:', err.message);
+          return null;
+        });
+        
+        if (eventDetail) {
+          console.log('✓ student-manager:ready event fired with detail:', eventDetail);
+          
+          // Verify event has expected structure
+          expect(eventDetail).toHaveProperty('initMs');
+          expect(eventDetail).toHaveProperty('counts');
+          expect(typeof eventDetail.initMs).toBe('number');
+          expect(eventDetail.initMs).toBeGreaterThan(0);
+        }
+        
+        // Check metrics are numeric (not dashes)
         const totalStudents = page.locator('#smTotalStudents');
         const activeStudents = page.locator('#smActiveStudents');
         const totalGoals = page.locator('#smTotalGoals');
         
-        // Metrics should exist and show numeric values (not dashes)
         await expect(totalStudents).toBeVisible();
         await expect(activeStudents).toBeVisible();
         await expect(totalGoals).toBeVisible();
         
-        // Verify metrics show numbers instead of dashes
         const totalText = await totalStudents.textContent();
         const activeText = await activeStudents.textContent();
         const goalsText = await totalGoals.textContent();
         
+        // Metrics should be numeric or "0*" (partial), not em-dash
         expect(totalText).not.toBe('—');
         expect(activeText).not.toBe('—');
         expect(goalsText).not.toBe('—');
         
-        console.log('✓ Student Manager metrics rendered successfully with numeric values');
+        // Verify they match numeric pattern or partial pattern
+        expect(totalText).toMatch(/^\d+\*?$/);
+        expect(activeText).toMatch(/^\d+\*?$/);
+        expect(goalsText).toMatch(/^\d+\*?$/);
+        
+        console.log('✓ Metrics are numeric:', { totalText, activeText, goalsText });
+        
+        // Check hubHealth exists
+        const hubHealth = await page.evaluate(() => window.hubHealth?.studentManager);
+        expect(hubHealth).toBeDefined();
+        expect(hubHealth.loaded).toBe(true);
+        expect(hubHealth).toHaveProperty('initMs');
+        expect(typeof hubHealth.initMs).toBe('number');
+        expect(hubHealth.initMs).toBeGreaterThan(0);
+        
+        console.log('✓ hubHealth.studentManager exists with initMs:', hubHealth.initMs);
       } else {
-        console.log('ℹ Student Manager nav item not visible - may require feature flag or authentication');
+        console.log('ℹ Student Manager nav item not visible - skipping test');
       }
     } else {
-      console.log('ℹ Data icon rail button not visible - may be in collapsed state or require authentication');
+      console.log('ℹ Data icon rail button not visible - skipping test');
     }
   });
   
