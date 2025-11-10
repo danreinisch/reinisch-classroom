@@ -1399,6 +1399,53 @@
         <div class="subtle">WIP: CSV import/export (local bootstrap).</div>
       </div>
 
+      <div class="card ttab" data-tab="studentManager" style="display:none">
+        <div class="card-header"><div>👤 Student Manager</div></div>
+        <div class="subtle" style="margin-bottom:16px">
+          Create and manage students with code-only identity, class enrollments, and IEP goals. 
+          View the <a href="/docs/STUDENT_MANAGER.md" target="_blank" style="color:var(--brand);text-decoration:underline">documentation</a> for full details.
+        </div>
+        
+        <!-- Quick Metrics -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:16px">
+          <div class="card" style="padding:16px">
+            <div class="subtle" style="font-size:12px;margin-bottom:4px">Total Students</div>
+            <div style="font-size:24px;font-weight:900" id="smTotalStudents">—</div>
+          </div>
+          <div class="card" style="padding:16px">
+            <div class="subtle" style="font-size:12px;margin-bottom:4px">Active Students</div>
+            <div style="font-size:24px;font-weight:900;color:var(--brand)" id="smActiveStudents">—</div>
+          </div>
+          <div class="card" style="padding:16px">
+            <div class="subtle" style="font-size:12px;margin-bottom:4px">Total Goals</div>
+            <div style="font-size:24px;font-weight:900" id="smTotalGoals">—</div>
+          </div>
+        </div>
+        
+        <!-- Migration Status Badge -->
+        <div class="card" style="padding:16px;margin-bottom:16px">
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="font-weight:800">Migration Status:</div>
+            <span id="smMigrationBadge" class="badge" style="font-size:14px">Checking...</span>
+          </div>
+          <div id="smMigrationDetails" class="subtle" style="margin-top:8px;font-size:13px">
+            Verifying database schema and RPC functions...
+          </div>
+        </div>
+        
+        <!-- Coming Soon Notice -->
+        <div class="card" style="padding:20px;text-align:center;background:rgba(34,197,94,.06);border-color:rgba(34,197,94,.2)">
+          <div style="font-size:20px;font-weight:900;margin-bottom:8px">🚧 Coming Soon</div>
+          <div class="subtle" style="margin-bottom:12px">
+            Full Student Manager UI with add/update/remove operations, goal versioning, and multi-goal wizard is under development.
+          </div>
+          <div class="subtle">
+            For now, use the <strong>Upload</strong> tab to import students and goals via CSV, 
+            or the <strong>Classes</strong> tab to manage class enrollments.
+          </div>
+        </div>
+      </div>
+
       <div class="card ttab" data-tab="settings" style="display:none">
         <div class="card-header"><div>⚙️ Settings</div></div>
         
@@ -1499,6 +1546,43 @@
             <div style="font-weight:800;margin-bottom:6px" id="toolsStatusTitle">Status</div>
             <div class="subtle" id="toolsStatusMessage">Ready</div>
             <div class="subtle" style="margin-top:6px" id="toolsStatusDetails"></div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:12px">
+          <div class="card-header"><div>🎚️ Feature Flags</div></div>
+          <div class="subtle" style="margin-bottom:12px">
+            Enable or disable experimental features. Changes take effect immediately and are stored in your browser's localStorage.
+          </div>
+          
+          <!-- Student Manager Flag -->
+          <div style="padding:12px;border:1px solid var(--line);border-radius:8px;margin-bottom:12px;background:rgba(255,255,255,.02)">
+            <label style="display:flex;align-items:center;gap:12px;margin:0;cursor:pointer">
+              <input type="checkbox" id="ffStudentManager" style="width:auto;margin:0" />
+              <div style="flex:1">
+                <div style="font-weight:800;margin-bottom:4px">Student Manager</div>
+                <div class="subtle" style="font-size:13px">
+                  Enable Student Manager in Data section for manual student creation with enrollments and IEP goals
+                </div>
+              </div>
+            </label>
+          </div>
+          
+          <!-- Student Multi-Goal Wizard Flag -->
+          <div style="padding:12px;border:1px solid var(--line);border-radius:8px;margin-bottom:12px;background:rgba(255,255,255,.02)">
+            <label style="display:flex;align-items:center;gap:12px;margin:0;cursor:pointer">
+              <input type="checkbox" id="ffStudentMultiGoalWizard" style="width:auto;margin:0" />
+              <div style="flex:1">
+                <div style="font-weight:800;margin-bottom:4px">Student Multi-Goal Wizard</div>
+                <div class="subtle" style="font-size:13px">
+                  Enable multi-goal entry wizard for adding multiple IEP goals in one operation
+                </div>
+              </div>
+            </label>
+          </div>
+          
+          <div class="subtle" style="padding:10px;background:rgba(255,255,255,.04);border-radius:8px;border:1px solid var(--line)">
+            <strong>Note:</strong> Feature flags are stored locally and don't sync across devices. Toggling a flag will reload the navigation to show/hide associated features.
           </div>
         </div>
       </div>
@@ -1948,6 +2032,7 @@
     import { db, isRemote, localStore } from '../web/data-adapter.js';
     import { listLibraryItems } from '../web/library.js';
     import { writeAuth, clearAuth, readAuth } from '../web/auth-handoff.js';
+    import { getFeatureFlag, setFeatureFlag } from '../../web/feature-flags.js';
     import '../web/auth-modal-extend.js';
     import '../web/diagnostics.js';
 
@@ -2441,6 +2526,7 @@
         { label: 'Classes', tab: 'classes', icon: '👥' },
         { label: 'Upload', tab: 'upload', icon: '📦' },
         { label: 'Data Import/Export', tab: 'data', icon: '📁' },
+        { label: 'Student Manager', tab: 'studentManager', icon: '👤', featureFlag: 'studentManager' },
         { label: 'Settings', tab: 'settings', icon: '⚙️' }
       ]
     };
@@ -2450,7 +2536,16 @@
     // Render submenu for area
     function renderSubmenu(area) {
       const submenu = qs('#submenu');
-      const items = AREA_MAP[area] || [];
+      let items = AREA_MAP[area] || [];
+      
+      // Filter items by feature flags
+      items = items.filter(item => {
+        if (item.featureFlag) {
+          return getFeatureFlag(item.featureFlag);
+        }
+        return true;
+      });
+      
       const titleMap = { overview: 'Overview', work: 'Work', data: 'Data' };
       qs('#submenuTitle').textContent = titleMap[area] || area;
       
@@ -2481,7 +2576,7 @@
       
       // New tabs initialization (dispatches custom event for module script)
       if (tab === 'studentPortal' || tab === 'results' || tab === 'gradebook' || 
-          tab === 'hub' || tab === 'classes' || tab === 'upload' || tab === 'data') {
+          tab === 'hub' || tab === 'classes' || tab === 'upload' || tab === 'data' || tab === 'studentManager') {
         window.dispatchEvent(new CustomEvent('hub:tab-init', { detail: { tab } }));
       }
     }
@@ -4416,6 +4511,46 @@
       // Note: The currentUserChip is already managed elsewhere, but we can
       // add a connectivity indicator if needed in the future
     });
+
+    // =======================
+    // Settings Tab Initialization
+    // =======================
+    
+    function initSettings() {
+      // Load feature flag states
+      loadFeatureFlags();
+    }
+    
+    // =======================
+    // Feature Flags UI
+    // =======================
+    
+    function loadFeatureFlags() {
+      // Student Manager flag
+      const smCheckbox = qs('#ffStudentManager');
+      if (smCheckbox) {
+        smCheckbox.checked = getFeatureFlag('studentManager');
+        smCheckbox.addEventListener('change', (e) => {
+          setFeatureFlag('studentManager', e.target.checked);
+          addNotif(`Student Manager ${e.target.checked ? 'enabled' : 'disabled'}. Reloading navigation...`, { type: 'info' });
+          
+          // Reload the current area to show/hide the Student Manager nav item
+          setTimeout(() => {
+            renderSubmenu(currentArea);
+          }, 100);
+        });
+      }
+      
+      // Student Multi-Goal Wizard flag
+      const wizardCheckbox = qs('#ffStudentMultiGoalWizard');
+      if (wizardCheckbox) {
+        wizardCheckbox.checked = getFeatureFlag('studentMultiGoalWizard');
+        wizardCheckbox.addEventListener('change', (e) => {
+          setFeatureFlag('studentMultiGoalWizard', e.target.checked);
+          addNotif(`Student Multi-Goal Wizard ${e.target.checked ? 'enabled' : 'disabled'}`, { type: 'info' });
+        });
+      }
+    }
 
     // =======================
     // Data Migration Tools: Seed, Pull, CSV Import
@@ -8327,10 +8462,102 @@
       if (tab === 'classes') await initClasses();
       if (tab === 'upload') await initUpload();
       if (tab === 'data') await initDataImportExport();
+      if (tab === 'studentManager') await initStudentManager();
     } catch (err) {
       console.error('[Classroom Hub] Tab init error:', err);
     }
   });
+  
+  // ============================================================================
+  // STUDENT MANAGER TAB
+  // ============================================================================
+  async function initStudentManager() {
+    try {
+      console.log('[Student Manager] Initializing...');
+      
+      // Load students and goals for metrics
+      const students = await db.listStudents();
+      const goals = await db.listGoalsAll();
+      
+      // Calculate metrics
+      const totalStudents = students.length;
+      const activeStudents = students.filter(s => s.active !== false).length;
+      const totalGoals = goals.length;
+      
+      // Update metric displays
+      const totalEl = qs('#smTotalStudents');
+      const activeEl = qs('#smActiveStudents');
+      const goalsEl = qs('#smTotalGoals');
+      
+      if (totalEl) totalEl.textContent = totalStudents;
+      if (activeEl) activeEl.textContent = activeStudents;
+      if (goalsEl) goalsEl.textContent = totalGoals;
+      
+      // Check migration status
+      await checkMigrationStatus();
+    } catch (err) {
+      console.error('[Student Manager] Failed to initialize:', err);
+    }
+  }
+  
+  // Check migration status (RPC functions and schema)
+  async function checkMigrationStatus() {
+    const badgeEl = qs('#smMigrationBadge');
+    const detailsEl = qs('#smMigrationDetails');
+    
+    if (!badgeEl || !detailsEl) return;
+    
+    try {
+      // Check if we're in remote mode
+      const remote = await isRemote();
+      
+      if (!remote) {
+        badgeEl.textContent = 'Local Mode';
+        badgeEl.style.background = 'rgba(251,191,36,.8)';
+        badgeEl.style.color = '#fff';
+        detailsEl.textContent = 'Running in local storage mode. Migration not required.';
+        return;
+      }
+      
+      // Try to call a Student Manager RPC function to verify migration
+      // Test with listStudentsWithCounts which uses the migration RPC
+      try {
+        const students = await db.listStudentsWithCounts('all');
+        
+        // If we got here, migration is present
+        badgeEl.textContent = 'Migration OK';
+        badgeEl.style.background = 'linear-gradient(180deg, rgba(34,197,94,.8), rgba(22,163,74,.8))';
+        badgeEl.style.color = '#fff';
+        detailsEl.textContent = 'Database schema and RPC functions are ready.';
+      } catch (rpcError) {
+        console.error('[Student Manager] RPC check error:', rpcError);
+        
+        if (rpcError.message && (rpcError.message.includes('function') || rpcError.message.includes('does not exist'))) {
+          // Migration not run
+          badgeEl.textContent = 'Migration Required';
+          badgeEl.style.background = 'linear-gradient(180deg, rgba(239,68,68,.8), rgba(220,38,38,.8))';
+          badgeEl.style.color = '#fff';
+          detailsEl.innerHTML = `
+            The Student Manager migration has not been applied to your Supabase database.<br>
+            Please run: <code style="background:rgba(255,255,255,.1);padding:2px 6px;border-radius:4px">supabase migration up</code><br>
+            See <a href="/docs/STUDENT_MANAGER.md" target="_blank" style="color:var(--brand);text-decoration:underline">documentation</a> for details.
+          `;
+        } else {
+          // Other error
+          badgeEl.textContent = 'Check Failed';
+          badgeEl.style.background = 'rgba(251,191,36,.8)';
+          badgeEl.style.color = '#fff';
+          detailsEl.textContent = `Error checking migration: ${rpcError.message}`;
+        }
+      }
+    } catch (err) {
+      console.error('[Student Manager] Migration status check failed:', err);
+      badgeEl.textContent = 'Error';
+      badgeEl.style.background = 'rgba(239,68,68,.8)';
+      badgeEl.style.color = '#fff';
+      detailsEl.textContent = `Failed to check migration status: ${err.message}`;
+    }
+  }
   
   console.log('[Classroom Hub] Tab implementations loaded');
 </script>
