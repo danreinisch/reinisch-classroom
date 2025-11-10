@@ -2044,10 +2044,55 @@
     // [Hub Init] Console prefix for all hub-related logs
     const LOG_PREFIX = '[Hub Init]';
     
+    // Track failed modules for error banner
+    const failedModules = [];
+    
     // Import critical modules with error handling
-    import { db, isRemote, localStore } from '/web/data-adapter.js';
-    import { listLibraryItems } from '/web/library.js';
-    import { writeAuth, clearAuth, readAuth } from '/web/auth-handoff.js';
+    let db, isRemote, localStore;
+    try {
+      const dataAdapter = await import('/web/data-adapter.js');
+      db = dataAdapter.db;
+      isRemote = dataAdapter.isRemote;
+      localStore = dataAdapter.localStore;
+      console.log(LOG_PREFIX, 'Data adapter module loaded successfully');
+    } catch (err) {
+      console.error(LOG_PREFIX, 'Failed to load data-adapter.js:', err);
+      failedModules.push('data-adapter.js');
+      // Provide minimal stubs to prevent complete failure
+      db = {};
+      isRemote = async () => false;
+      localStore = {
+        get: () => null,
+        set: () => {},
+        remove: () => {}
+      };
+    }
+    
+    let listLibraryItems;
+    try {
+      const library = await import('/web/library.js');
+      listLibraryItems = library.listLibraryItems;
+      console.log(LOG_PREFIX, 'Library module loaded successfully');
+    } catch (err) {
+      console.error(LOG_PREFIX, 'Failed to load library.js:', err);
+      failedModules.push('library.js');
+      listLibraryItems = async () => [];
+    }
+    
+    let writeAuth, clearAuth, readAuth;
+    try {
+      const authHandoff = await import('/web/auth-handoff.js');
+      writeAuth = authHandoff.writeAuth;
+      clearAuth = authHandoff.clearAuth;
+      readAuth = authHandoff.readAuth;
+      console.log(LOG_PREFIX, 'Auth handoff module loaded successfully');
+    } catch (err) {
+      console.error(LOG_PREFIX, 'Failed to load auth-handoff.js:', err);
+      failedModules.push('auth-handoff.js');
+      writeAuth = () => {};
+      clearAuth = () => {};
+      readAuth = () => null;
+    }
     
     // Feature flags with fallback
     let getFeatureFlag, setFeatureFlag;
@@ -2058,16 +2103,7 @@
       console.log(LOG_PREFIX, 'Feature flags module loaded successfully');
     } catch (err) {
       console.error(LOG_PREFIX, 'Failed to load feature-flags.js:', err);
-      console.warn(LOG_PREFIX, 'Using fallback stubs for feature flags');
-      
-      // Show error banner
-      const banner = document.getElementById('criticalAssetBanner');
-      const message = document.getElementById('criticalAssetMessage');
-      if (banner && message) {
-        message.textContent = 'Failed to load /web/feature-flags.js. Using conservative defaults. Login should still work.';
-        banner.style.display = 'block';
-      }
-      
+      failedModules.push('feature-flags.js');
       // Provide stub implementations that return conservative defaults
       getFeatureFlag = (name) => {
         console.warn(LOG_PREFIX, `getFeatureFlag stub called for: ${name}, returning false`);
@@ -2078,9 +2114,33 @@
       };
     }
     
-    // Continue with other imports
-    import '/web/auth-modal-extend.js';
-    import '/web/diagnostics.js';
+    // Auth modal extend (optional enhancement)
+    try {
+      await import('/web/auth-modal-extend.js');
+      console.log(LOG_PREFIX, 'Auth modal extend loaded successfully');
+    } catch (err) {
+      console.error(LOG_PREFIX, 'Failed to load auth-modal-extend.js:', err);
+      failedModules.push('auth-modal-extend.js');
+    }
+    
+    // Diagnostics (optional monitoring)
+    try {
+      await import('/web/diagnostics.js');
+      console.log(LOG_PREFIX, 'Diagnostics module loaded successfully');
+    } catch (err) {
+      console.error(LOG_PREFIX, 'Failed to load diagnostics.js:', err);
+      failedModules.push('diagnostics.js');
+    }
+    
+    // Show error banner if any modules failed to load
+    if (failedModules.length > 0) {
+      const banner = document.getElementById('criticalAssetBanner');
+      const message = document.getElementById('criticalAssetMessage');
+      if (banner && message) {
+        message.textContent = `Failed to load ${failedModules.length} module(s): ${failedModules.join(', ')}. Some functionality may be limited.`;
+        banner.style.display = 'block';
+      }
+    }
 
     // Expose clearAuth globally for role switching
     window.clearAuth = clearAuth;
@@ -5638,8 +5698,23 @@
     // Sub Plans
     // =======================
     
-    // Import sub-plans helper at the top level
-    import { upsertSubPlan, getTodaysSubPlan } from '/web/sub-plans.js';
+    // Load sub-plans module dynamically when needed
+    let upsertSubPlan, getTodaysSubPlan;
+    async function loadSubPlansModule() {
+      if (!upsertSubPlan || !getTodaysSubPlan) {
+        try {
+          const subPlansModule = await import('/web/sub-plans.js');
+          upsertSubPlan = subPlansModule.upsertSubPlan;
+          getTodaysSubPlan = subPlansModule.getTodaysSubPlan;
+          console.log(LOG_PREFIX, 'Sub-plans module loaded successfully');
+        } catch (err) {
+          console.error(LOG_PREFIX, 'Failed to load sub-plans.js:', err);
+          // Provide stub implementations
+          upsertSubPlan = async () => ({ success: false, error: 'Module not loaded' });
+          getTodaysSubPlan = async () => null;
+        }
+      }
+    }
     
     // Format date as YYYY-MM-DD
     function formatDateYMD(date) {
@@ -5662,6 +5737,7 @@
     
     // Load sub plan for specific date
     async function loadSubPlanForDate(dateStr) {
+      await loadSubPlansModule(); // Ensure module is loaded
       try {
         const plan = await getTodaysSubPlan(dateStr);
         
@@ -5724,6 +5800,7 @@
     
     // Save sub plan
     async function saveSubPlan() {
+      await loadSubPlansModule(); // Ensure module is loaded
       const btn = qs('#btnSaveSubPlan');
       btn.disabled = true;
       btn.textContent = 'Saving...';
@@ -5786,24 +5863,59 @@
     // Upload Tab - IEP Goal Mapping
     // =======================
     
-    import { 
-      buildCodebookFromIEPCsv, 
-      saveCodebook, 
-      loadCodebook,
-      getAllSkillTags,
-      getCodebookSummary,
-      normalizeSkillTag
-    } from '/web/codebook.js';
+    // Load codebook module dynamically when needed
+    let buildCodebookFromIEPCsv, saveCodebook, loadCodebook, getAllSkillTags, getCodebookSummary, normalizeSkillTag;
+    async function loadCodebookModule() {
+      if (!buildCodebookFromIEPCsv) {
+        try {
+          const codebookModule = await import('/web/codebook.js');
+          buildCodebookFromIEPCsv = codebookModule.buildCodebookFromIEPCsv;
+          saveCodebook = codebookModule.saveCodebook;
+          loadCodebook = codebookModule.loadCodebook;
+          getAllSkillTags = codebookModule.getAllSkillTags;
+          getCodebookSummary = codebookModule.getCodebookSummary;
+          normalizeSkillTag = codebookModule.normalizeSkillTag;
+          console.log(LOG_PREFIX, 'Codebook module loaded successfully');
+        } catch (err) {
+          console.error(LOG_PREFIX, 'Failed to load codebook.js:', err);
+          // Provide stub implementations
+          buildCodebookFromIEPCsv = async () => ({ students: [], skillTags: {} });
+          saveCodebook = async () => {};
+          loadCodebook = async () => null;
+          getAllSkillTags = () => [];
+          getCodebookSummary = () => 'Module not loaded';
+          normalizeSkillTag = (tag) => tag;
+        }
+      }
+    }
     
-    import {
-      validateManifest,
-      detectQuestionsFromHTML,
-      detectQuestionsFromTXT,
-      detectQuestionsFromGoogleFormCSV,
-      saveManifest,
-      loadManifest,
-      createManifest
-    } from '/web/assignment-manifest.js';
+    // Load assignment manifest module dynamically when needed
+    let validateManifest, detectQuestionsFromHTML, detectQuestionsFromTXT, detectQuestionsFromGoogleFormCSV, saveManifest, loadManifest, createManifest;
+    async function loadManifestModule() {
+      if (!validateManifest) {
+        try {
+          const manifestModule = await import('/web/assignment-manifest.js');
+          validateManifest = manifestModule.validateManifest;
+          detectQuestionsFromHTML = manifestModule.detectQuestionsFromHTML;
+          detectQuestionsFromTXT = manifestModule.detectQuestionsFromTXT;
+          detectQuestionsFromGoogleFormCSV = manifestModule.detectQuestionsFromGoogleFormCSV;
+          saveManifest = manifestModule.saveManifest;
+          loadManifest = manifestModule.loadManifest;
+          createManifest = manifestModule.createManifest;
+          console.log(LOG_PREFIX, 'Assignment manifest module loaded successfully');
+        } catch (err) {
+          console.error(LOG_PREFIX, 'Failed to load assignment-manifest.js:', err);
+          // Provide stub implementations
+          validateManifest = () => ({ valid: false, error: 'Module not loaded' });
+          detectQuestionsFromHTML = async () => [];
+          detectQuestionsFromTXT = async () => [];
+          detectQuestionsFromGoogleFormCSV = async () => [];
+          saveManifest = async () => {};
+          loadManifest = async () => null;
+          createManifest = () => null;
+        }
+      }
+    }
     
     // Global state for mapping
     let currentManifest = null;
@@ -5835,6 +5947,7 @@
     
     // Import IEP CSV to Codebook
     on('#btnImportIEPCsv', 'click', async () => {
+      await loadCodebookModule(); // Ensure module is loaded
       const fileInput = qs('#iepCsvFile');
       if (!fileInput.files[0]) {
         addNotif('Please select an IEP CSV file', { type: 'error' });
@@ -5930,6 +6043,7 @@
     
     // Detect Questions
     on('#btnDetectQuestions', 'click', async () => {
+      await loadManifestModule(); // Ensure module is loaded
       const assignmentId = qs('#mapAssignmentSelect').value;
       const assignmentType = qs('#mapAssignmentType').value;
       
@@ -6045,7 +6159,8 @@
     }
     
     // Open Edit Skill Tags Modal
-    function openEditSkillTagsModal(index) {
+    async function openEditSkillTagsModal(index) {
+      await loadCodebookModule(); // Ensure module is loaded
       const q = currentManifest.questions[index];
       qs('#editSkillTagsQuestion').textContent = q.q_ref;
       qs('#editSkillTagsInput').value = q.skill_tags.join(', ');
@@ -6088,7 +6203,8 @@
       if (modal) modal.classList.remove('show');
     });
     
-    on('#editSkillTagsSave', 'click', () => {
+    on('#editSkillTagsSave', 'click', async () => {
+      await loadCodebookModule(); // Ensure module is loaded
       const inputEl = qs('#editSkillTagsInput');
       if (!inputEl) return;
       
@@ -7195,7 +7311,25 @@
 
 <!-- Classroom Hub Tabs Implementation -->
 <script type="module">
-  import { db, localStore } from '/web/data-adapter.js';
+  // Import db and localStore with error handling
+  let db, localStore;
+  try {
+    const dataAdapter = await import('/web/data-adapter.js');
+    db = dataAdapter.db;
+    localStore = dataAdapter.localStore;
+    console.log('[Hub Tabs] Data adapter module loaded successfully');
+  } catch (err) {
+    console.error('[Hub Tabs] Failed to load data-adapter.js:', err);
+    // Provide minimal stubs
+    db = {};
+    localStore = {
+      get: () => null,
+      set: () => {},
+      remove: () => {}
+    };
+    // Show warning in console
+    console.warn('[Hub Tabs] Running with stub implementations - functionality will be limited');
+  }
   
   // Safe query helpers
   const qs = s => document.querySelector(s);
