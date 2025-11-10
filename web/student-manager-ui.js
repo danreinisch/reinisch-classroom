@@ -8,7 +8,11 @@
  * - Loading states and error handling
  */
 
+console.log('[student-manager-ui] Module loading started');
+
 import { studentRpc } from './student-manager-rpc.js';
+
+console.log('[student-manager-ui] student-manager-rpc.js imported successfully');
 
 /**
  * StudentManagerUI class

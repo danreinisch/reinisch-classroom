@@ -1,6 +1,9 @@
 // Adapter selection: use Supabase if available, else localStorage.
+console.log('[data-adapter] Module loading started');
 import { getSupabase } from './supabase-client.js';
-import { withRetry } from '../site/web/supabase-util.js';
+console.log('[data-adapter] supabase-client.js imported');
+import { withRetry } from '/site/web/supabase-util.js';
+console.log('[data-adapter] supabase-util.js imported');
 
 const NS = 'rc_unified_';
 const store = {
