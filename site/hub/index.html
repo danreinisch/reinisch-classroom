@@ -808,6 +808,18 @@
     </div>
   </div>
 
+  <!-- Critical Asset Error Banner (shown only if module loading fails) -->
+  <div id="criticalAssetBanner" style="display:none;background:linear-gradient(180deg,rgba(239,68,68,.9),rgba(220,38,38,.9));color:#fff;padding:12px 20px;border-bottom:1px solid rgba(255,255,255,.2);position:relative;z-index:50">
+    <div style="max-width:1700px;margin:0 auto;display:flex;align-items:center;gap:12px">
+      <span style="font-size:20px">⚠️</span>
+      <div style="flex:1">
+        <strong style="display:block;margin-bottom:4px">Module Loading Error</strong>
+        <span id="criticalAssetMessage" style="font-size:13px;opacity:.95">One or more critical scripts failed to load. Login functionality may be limited.</span>
+      </div>
+      <button onclick="this.parentElement.parentElement.style.display='none'" style="background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.3);color:#fff;padding:6px 12px;border-radius:6px;cursor:pointer;font-weight:800">Dismiss</button>
+    </div>
+  </div>
+
   <section id="view-teacher" class="layout" style="display:none">
     <aside class="iconrail card">
       <button class="active" data-area="overview" title="Overview" aria-label="Overview">🏠</button>
@@ -2029,12 +2041,46 @@
   </div>
 
   <script type="module">
-    import { db, isRemote, localStore } from '../web/data-adapter.js';
-    import { listLibraryItems } from '../web/library.js';
-    import { writeAuth, clearAuth, readAuth } from '../web/auth-handoff.js';
-    import { getFeatureFlag, setFeatureFlag } from '../../web/feature-flags.js';
-    import '../web/auth-modal-extend.js';
-    import '../web/diagnostics.js';
+    // [Hub Init] Console prefix for all hub-related logs
+    const LOG_PREFIX = '[Hub Init]';
+    
+    // Import critical modules with error handling
+    import { db, isRemote, localStore } from '/web/data-adapter.js';
+    import { listLibraryItems } from '/web/library.js';
+    import { writeAuth, clearAuth, readAuth } from '/web/auth-handoff.js';
+    
+    // Feature flags with fallback
+    let getFeatureFlag, setFeatureFlag;
+    try {
+      const featureFlags = await import('/web/feature-flags.js');
+      getFeatureFlag = featureFlags.getFeatureFlag;
+      setFeatureFlag = featureFlags.setFeatureFlag;
+      console.log(LOG_PREFIX, 'Feature flags module loaded successfully');
+    } catch (err) {
+      console.error(LOG_PREFIX, 'Failed to load feature-flags.js:', err);
+      console.warn(LOG_PREFIX, 'Using fallback stubs for feature flags');
+      
+      // Show error banner
+      const banner = document.getElementById('criticalAssetBanner');
+      const message = document.getElementById('criticalAssetMessage');
+      if (banner && message) {
+        message.textContent = 'Failed to load /web/feature-flags.js. Using conservative defaults. Login should still work.';
+        banner.style.display = 'block';
+      }
+      
+      // Provide stub implementations that return conservative defaults
+      getFeatureFlag = (name) => {
+        console.warn(LOG_PREFIX, `getFeatureFlag stub called for: ${name}, returning false`);
+        return false; // Conservative default: all features disabled
+      };
+      setFeatureFlag = (name, value) => {
+        console.warn(LOG_PREFIX, `setFeatureFlag stub called for: ${name} = ${value} (no-op)`);
+      };
+    }
+    
+    // Continue with other imports
+    import '/web/auth-modal-extend.js';
+    import '/web/diagnostics.js';
 
     // Expose clearAuth globally for role switching
     window.clearAuth = clearAuth;
@@ -2335,13 +2381,15 @@
     
     // Teacher auth - server-backed with username + password
     async function handleTeacherAuth() {
+      console.log(LOG_PREFIX, 'Teacher authentication initiated');
+      
       const usernameInput = qs('#teachUser');
       const passwordInput = qs('#teachPass');
       const msgEl = qs('#teachMsg');
       const btnGo = qs('#teachGo');
       
       if (!usernameInput || !passwordInput || !msgEl) {
-        console.error('[Teacher Auth] Required elements not found');
+        console.error(LOG_PREFIX, 'Required auth elements not found');
         return;
       }
       
@@ -2350,6 +2398,7 @@
       
       if (!inputUser || !inputPass) {
         msgEl.innerHTML = '<span style="color:#fecaca">Please enter both username and password</span>';
+        console.warn(LOG_PREFIX, 'Empty credentials provided');
         return;
       }
       
@@ -2361,6 +2410,8 @@
       msgEl.innerHTML = '<span style="color:#c5d1de">Verifying credentials...</span>';
       
       try {
+        console.log(LOG_PREFIX, 'Sending authentication request to /.netlify/functions/teacher-login');
+        
         // POST to server-backed authentication endpoint
         const response = await fetch('/.netlify/functions/teacher-login', {
           method: 'POST',
@@ -2369,9 +2420,13 @@
           credentials: 'include' // Important: include cookies
         });
         
+        console.log(LOG_PREFIX, 'Authentication response status:', response.status);
+        
         const data = await response.json();
         
         if (response.ok && data.ok) {
+          console.log(LOG_PREFIX, 'Authentication successful for user:', inputUser);
+          
           // Success - credentials valid, cookie set
           const modal = qs('#teachModal');
           if (modal) modal.classList.remove('show');
@@ -2408,11 +2463,25 @@
           msgEl.innerHTML = '';
         } else {
           // Failed - invalid credentials
-          msgEl.innerHTML = '<span style="color:#fecaca">' + (data.error || 'Invalid username or password') + '</span>';
+          const errorMsg = data.error || 'Invalid username or password';
+          console.warn(LOG_PREFIX, 'Authentication failed:', errorMsg);
+          msgEl.innerHTML = '<span style="color:#fecaca">' + errorMsg + '</span>';
         }
       } catch (err) {
-        console.error('[Teacher Auth] Authentication error:', err.message);
-        msgEl.innerHTML = '<span style="color:#fecaca">Authentication error. Please try again.</span>';
+        console.error(LOG_PREFIX, 'Authentication error:', err.message, err.stack);
+        
+        // Provide specific error messages based on error type
+        let userMessage = 'Authentication error. Please try again.';
+        
+        if (err.name === 'TypeError' && err.message.includes('fetch')) {
+          userMessage = 'Network error. Check your connection and try again.';
+          console.error(LOG_PREFIX, 'Network error - likely CORS or connectivity issue');
+        } else if (err.message.includes('teacher-login')) {
+          userMessage = 'Authentication endpoint not available. Check server configuration.';
+          console.error(LOG_PREFIX, 'Authentication endpoint error - check Netlify function deployment');
+        }
+        
+        msgEl.innerHTML = '<span style="color:#fecaca">' + userMessage + '</span>';
       } finally {
         // Re-enable button
         if (btnGo) {
@@ -2469,7 +2538,20 @@
       if (modal) modal.classList.remove('show');
       isFromSignInModal = false; // Reset flag
     });
-    on('#teachGo', 'click', handleTeacherAuth);
+    
+    // Always attach login handler, even if modules fail
+    try {
+      on('#teachGo', 'click', handleTeacherAuth);
+      console.log(LOG_PREFIX, 'Teacher login handler attached successfully');
+    } catch (err) {
+      console.error(LOG_PREFIX, 'Failed to attach teacher login handler:', err);
+      // Fallback: attach directly to ensure it works
+      const btnGo = document.getElementById('teachGo');
+      if (btnGo) {
+        btnGo.addEventListener('click', handleTeacherAuth);
+        console.warn(LOG_PREFIX, 'Teacher login handler attached via fallback');
+      }
+    }
     
     // Handle Enter key in teacher username/password fields
     qs('#teachUser')?.addEventListener('keypress', (e) => {
@@ -2484,6 +2566,59 @@
         handleTeacherAuth();
       }
     });
+    
+    // Production Environment Self-Check (one-shot on load)
+    async function checkCriticalAssets() {
+      // Only run in production (not localhost)
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        console.log(LOG_PREFIX, 'Skipping asset check on localhost');
+        return;
+      }
+      
+      console.log(LOG_PREFIX, 'Running production asset self-check');
+      
+      const criticalAssets = [
+        '/web/feature-flags.js',
+        '/web/data-adapter.js',
+        '/web/auth-handoff.js',
+        '/web/library.js'
+      ];
+      
+      const missing = [];
+      
+      for (const asset of criticalAssets) {
+        try {
+          const response = await fetch(asset, { method: 'HEAD' });
+          if (!response.ok) {
+            console.error(LOG_PREFIX, `Asset check failed: ${asset} returned ${response.status}`);
+            missing.push({ asset, status: response.status });
+          } else {
+            console.log(LOG_PREFIX, `Asset check OK: ${asset}`);
+          }
+        } catch (err) {
+          console.error(LOG_PREFIX, `Asset check error: ${asset}`, err);
+          missing.push({ asset, error: err.message });
+        }
+      }
+      
+      if (missing.length > 0) {
+        console.error(LOG_PREFIX, 'Missing or failing assets detected:', missing);
+        
+        const banner = document.getElementById('criticalAssetBanner');
+        const message = document.getElementById('criticalAssetMessage');
+        
+        if (banner && message) {
+          const assetList = missing.map(m => m.asset).join(', ');
+          message.innerHTML = `
+            <strong>Missing assets detected:</strong> ${assetList}<br>
+            <span style="font-size:12px;opacity:.9">Fix: Ensure all module references use absolute paths (starting with /web/) instead of relative paths.</span>
+          `;
+          banner.style.display = 'block';
+        }
+      } else {
+        console.log(LOG_PREFIX, 'All critical assets passed self-check');
+      }
+    }
     
     // Phase 2: Student Portal button - use dynamic path detection
     on('#btnStudent', 'click', (e) => {
@@ -2506,6 +2641,11 @@
       checkAndShowSignIn();
     }).catch(() => {
       checkAndShowSignIn();
+    });
+    
+    // Run production asset self-check
+    checkCriticalAssets().catch(err => {
+      console.error(LOG_PREFIX, 'Asset self-check failed:', err);
     });
 
     // Area → Submenu → Tab mapping
@@ -4056,7 +4196,7 @@
     let supabaseSettings = null;
     (async () => {
       try {
-        supabaseSettings = await import('../web/supabase-settings.js');
+        supabaseSettings = await import('/web/supabase-settings.js');
         
         // Migrate legacy keys on page load
         const migrationResult = supabaseSettings.migrateLegacyKeys();
@@ -5499,7 +5639,7 @@
     // =======================
     
     // Import sub-plans helper at the top level
-    import { upsertSubPlan, getTodaysSubPlan } from '../web/sub-plans.js';
+    import { upsertSubPlan, getTodaysSubPlan } from '/web/sub-plans.js';
     
     // Format date as YYYY-MM-DD
     function formatDateYMD(date) {
@@ -7055,7 +7195,7 @@
 
 <!-- Classroom Hub Tabs Implementation -->
 <script type="module">
-  import { db, localStore } from '../web/data-adapter.js';
+  import { db, localStore } from '/web/data-adapter.js';
   
   // Safe query helpers
   const qs = s => document.querySelector(s);

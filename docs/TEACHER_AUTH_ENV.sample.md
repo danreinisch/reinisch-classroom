@@ -103,3 +103,52 @@ After deployment, test the authentication:
    - Mix of character types
    - Regular rotation schedule
    - Avoid common passwords
+
+---
+
+## Troubleshooting
+
+### Issue: 404 Errors for Scripts (feature-flags.js, etc.)
+
+**Symptoms:**
+- Clicking "Unlock" on the teacher login does nothing
+- Browser console shows 404 errors for `/web/feature-flags.js` or other scripts
+- No network request is made when clicking Unlock
+- Login form appears but doesn't respond
+
+**Root Cause:**
+The hub page uses relative paths for some script imports, which can resolve incorrectly depending on the deployment path. When a critical module like `feature-flags.js` fails to load with a 404, the entire module initialization chain is aborted, preventing the login handler from attaching.
+
+**Fix:**
+All shared module script references in `/site/hub/index.html` should use **absolute paths** (starting with `/web/`) instead of relative paths (`../web/` or `../../web/`).
+
+**Correct:**
+```javascript
+import { getFeatureFlag } from '/web/feature-flags.js';
+```
+
+**Incorrect:**
+```javascript
+import { getFeatureFlag } from '../../web/feature-flags.js';
+```
+
+**Verification:**
+1. Open browser DevTools (F12) and go to the Network tab
+2. Hard reload the page (Ctrl+Shift+R or Cmd+Shift+R)
+3. Filter by "JS" or search for "feature-flags"
+4. Verify the request shows **200 OK** for `/web/feature-flags.js`
+5. If you see a 404, check that all imports in the HTML use absolute paths
+
+**Resilient Fallbacks:**
+The hub now includes fallback mechanisms:
+- If `feature-flags.js` fails to load, stub functions are provided
+- A visible error banner appears explaining the issue
+- Login functionality still works with conservative feature defaults
+- All errors are logged to the console with the `[Hub Init]` prefix
+
+**Production Asset Self-Check:**
+On page load (production only), the hub automatically checks critical assets with HEAD requests. If any return 404, a dismissible alert appears showing:
+- Which assets are missing
+- Suggested fix (use absolute paths)
+
+This helps catch deployment issues early.
