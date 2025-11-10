@@ -7,8 +7,12 @@
  * - createStudent(payload) — scaffold for Phase 2
  */
 
+console.log('[student-manager-rpc] Module loading started');
+
 // Import data adapter for db access
 import { db, isRemote as detectRemoteMode } from './data-adapter.js';
+
+console.log('[student-manager-rpc] data-adapter.js imported successfully');
 
 /**
  * Check environment readiness for Student Manager
