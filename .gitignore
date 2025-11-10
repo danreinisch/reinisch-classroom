@@ -40,3 +40,8 @@ docs/*AUTH*.md
 # Test screenshots
 screenshots/
 test-reactive-client.html
+
+# Playwright
+test-results/
+playwright-report/
+playwright/.cache/
