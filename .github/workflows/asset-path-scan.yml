@@ -1,0 +1,81 @@
+name: Asset Path Scan
+
+on:
+  push:
+    branches: [ main, copilot/** ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  scan-asset-paths:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Scan for relative asset paths in Hub HTML
+        run: |
+          echo "🔍 Scanning for disallowed relative asset paths..."
+          
+          # Flag for tracking violations
+          VIOLATIONS_FOUND=0
+          
+          # Check for relative ../assets/bg references
+          echo ""
+          echo "Checking for relative ../assets/bg references..."
+          if grep -n "url('../assets/bg" site/hub/index.html; then
+            echo "❌ FAIL: Found relative ../assets/bg references in site/hub/index.html"
+            echo "   These should use absolute paths: url('/assets/bg/...')"
+            VIOLATIONS_FOUND=1
+          else
+            echo "✅ PASS: No relative ../assets/bg references found"
+          fi
+          
+          # Check for relative src="web/..." references
+          echo ""
+          echo "Checking for relative src=\"web/...\" references..."
+          if grep -n 'src="web/' site/hub/index.html; then
+            echo "❌ FAIL: Found relative src=\"web/...\" references in site/hub/index.html"
+            echo "   These should use absolute paths: src=\"/web/...\""
+            VIOLATIONS_FOUND=1
+          else
+            echo "✅ PASS: No relative src=\"web/...\" references found"
+          fi
+          
+          # Check for relative src="student-manager-ui.js"
+          echo ""
+          echo "Checking for relative src=\"student-manager-ui.js\" reference..."
+          if grep -n 'src="student-manager-ui.js"' site/hub/index.html; then
+            echo "❌ FAIL: Found relative src=\"student-manager-ui.js\" in site/hub/index.html"
+            echo "   This should use absolute path: src=\"/web/student-manager-ui.js\""
+            VIOLATIONS_FOUND=1
+          else
+            echo "✅ PASS: No relative student-manager-ui.js reference found"
+          fi
+          
+          # Check for legacy global-only StudentManagerUI usage (outside module import)
+          echo ""
+          echo "Checking for legacy global-only StudentManagerUI usage..."
+          # Look for "new StudentManagerUI(" that's NOT in a module context
+          # We'll check for the pattern in non-module script tags
+          if grep -n 'new StudentManagerUI(' site/hub/index.html | grep -v 'import.*StudentManagerUI' | grep -v 'const.*StudentManagerUI' | grep -v 'let.*StudentManagerUI' | grep -v 'var.*StudentManagerUI'; then
+            echo "❌ FAIL: Found bare 'new StudentManagerUI(' usage outside module import context"
+            echo "   StudentManagerUI should be imported as ES module or accessed via window.StudentManagerUI"
+            VIOLATIONS_FOUND=1
+          else
+            echo "✅ PASS: No legacy global-only StudentManagerUI usage found"
+          fi
+          
+          # Summary
+          echo ""
+          echo "================================================"
+          if [ $VIOLATIONS_FOUND -eq 1 ]; then
+            echo "❌ Asset path scan FAILED - violations found"
+            echo "================================================"
+            exit 1
+          else
+            echo "✅ Asset path scan PASSED - no violations found"
+            echo "================================================"
+            exit 0
+          fi

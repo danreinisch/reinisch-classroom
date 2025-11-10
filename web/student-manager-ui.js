@@ -91,133 +91,201 @@ export class StudentManagerUI {
   renderDiagnostics(checks) {
     console.log('[student-manager-ui] Rendering diagnostics:', checks);
     
-    const diagnosticsEl = this.container.querySelector('#smDiagnostics');
-    if (!diagnosticsEl) {
-      // Create diagnostics section if it doesn't exist
-      const section = document.createElement('div');
-      section.id = 'smDiagnostics';
-      section.className = 'card';
-      section.style.marginBottom = '16px';
-      
-      // Insert after metrics or at the beginning
-      const metricsSection = this.container.querySelector('#smMetrics');
-      if (metricsSection && metricsSection.nextSibling) {
-        this.container.insertBefore(section, metricsSection.nextSibling);
-      } else {
-        this.container.insertBefore(section, this.container.firstChild);
+    try {
+      const diagnosticsEl = this.container?.querySelector('#smDiagnostics');
+      if (!diagnosticsEl) {
+        // Create diagnostics section if it doesn't exist
+        const section = document.createElement('div');
+        section.id = 'smDiagnostics';
+        section.className = 'card';
+        section.style.marginBottom = '16px';
+        
+        // Insert after metrics or at the beginning
+        const metricsSection = this.container?.querySelector('#smMetrics');
+        if (metricsSection && metricsSection.nextSibling) {
+          this.container.insertBefore(section, metricsSection.nextSibling);
+        } else if (this.container) {
+          this.container.insertBefore(section, this.container.firstChild);
+        }
       }
-    }
-    
-    const diagnosticsContainer = this.container.querySelector('#smDiagnostics');
-    if (!diagnosticsContainer) return;
-    
-    const statusIcon = (status) => {
-      if (status === 'ok') return '✅';
-      if (status === 'fail') return '❌';
-      if (status === 'warn') return '⚠️';
-      if (status === 'n/a') return '➖';
-      return '⏳';
-    };
-    
-    const statusColor = (status) => {
-      if (status === 'ok') return 'rgba(34,197,94,.8)';
-      if (status === 'fail') return 'rgba(239,68,68,.8)';
-      if (status === 'warn') return 'rgba(251,191,36,.8)';
-      return 'rgba(148,163,184,.8)';
-    };
-    
-    diagnosticsContainer.innerHTML = `
-      <div class="card-header">
-        <div>🔍 Environment Diagnostics</div>
-        <span class="badge" style="background:${statusColor(checks.mode === 'remote' ? 'ok' : 'warn')}">${checks.mode === 'remote' ? 'Remote Mode' : 'Local Mode'}</span>
-      </div>
       
-      <div style="display:grid;gap:8px;margin-top:12px">
-        <div style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;background:rgba(255,255,255,.04)">
-          <span style="font-size:20px">${statusIcon(checks.studentsTable.status)}</span>
-          <div style="flex:1">
-            <div style="font-weight:700">Students Table</div>
-            <div class="subtle" style="font-size:12px">${checks.studentsTable.message}</div>
-          </div>
+      const diagnosticsContainer = this.container?.querySelector('#smDiagnostics');
+      if (!diagnosticsContainer) return;
+      
+      const statusIcon = (status) => {
+        if (status === 'ok') return '✅';
+        if (status === 'fail') return '❌';
+        if (status === 'warn') return '⚠️';
+        if (status === 'n/a') return '➖';
+        return '⏳';
+      };
+      
+      const statusColor = (status) => {
+        if (status === 'ok') return 'rgba(34,197,94,.8)';
+        if (status === 'fail') return 'rgba(239,68,68,.8)';
+        if (status === 'warn') return 'rgba(251,191,36,.8)';
+        return 'rgba(148,163,184,.8)';
+      };
+      
+      // Check if any failures exist
+      const hasFailures = checks && (
+        checks.studentsTable?.status === 'fail' ||
+        checks.goalsTable?.status === 'fail' ||
+        checks.enrollmentsTable?.status === 'fail' ||
+        checks.rpcAvailable?.status === 'fail'
+      );
+      
+      diagnosticsContainer.innerHTML = `
+        <div class="card-header">
+          <div>🔍 Environment Diagnostics</div>
+          <span class="badge" style="background:${statusColor(checks?.mode === 'remote' ? 'ok' : 'warn')}">${checks?.mode === 'remote' ? 'Remote Mode' : 'Local Mode'}</span>
         </div>
         
-        <div style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;background:rgba(255,255,255,.04)">
-          <span style="font-size:20px">${statusIcon(checks.goalsTable.status)}</span>
-          <div style="flex:1">
-            <div style="font-weight:700">Goals Table</div>
-            <div class="subtle" style="font-size:12px">${checks.goalsTable.message}</div>
+        ${hasFailures ? `
+          <div style="padding:10px;margin-top:12px;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.5);border-radius:8px">
+            <div style="font-weight:700;margin-bottom:4px;color:rgba(251,191,36,.9)">⚠️ Partial Metrics</div>
+            <div class="subtle" style="font-size:12px">One or more data sources failed to load. Metrics marked with * indicate partial or unavailable data.</div>
           </div>
-        </div>
+        ` : ''}
         
-        <div style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;background:rgba(255,255,255,.04)">
-          <span style="font-size:20px">${statusIcon(checks.enrollmentsTable.status)}</span>
-          <div style="flex:1">
-            <div style="font-weight:700">Enrollments Table</div>
-            <div class="subtle" style="font-size:12px">${checks.enrollmentsTable.message}</div>
+        <div style="display:grid;gap:8px;margin-top:12px">
+          <div style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;background:rgba(255,255,255,.04)">
+            <span style="font-size:20px">${statusIcon(checks?.studentsTable?.status)}</span>
+            <div style="flex:1">
+              <div style="font-weight:700">Students Table</div>
+              <div class="subtle" style="font-size:12px">${checks?.studentsTable?.message || 'Checking...'}</div>
+            </div>
+          </div>
+          
+          <div style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;background:rgba(255,255,255,.04)">
+            <span style="font-size:20px">${statusIcon(checks?.goalsTable?.status)}</span>
+            <div style="flex:1">
+              <div style="font-weight:700">Goals Table</div>
+              <div class="subtle" style="font-size:12px">${checks?.goalsTable?.message || 'Checking...'}</div>
+            </div>
+          </div>
+          
+          <div style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;background:rgba(255,255,255,.04)">
+            <span style="font-size:20px">${statusIcon(checks?.enrollmentsTable?.status)}</span>
+            <div style="flex:1">
+              <div style="font-weight:700">Enrollments Table</div>
+              <div class="subtle" style="font-size:12px">${checks?.enrollmentsTable?.message || 'Checking...'}</div>
+            </div>
+          </div>
+          
+          <div style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;background:rgba(255,255,255,.04)">
+            <span style="font-size:20px">${statusIcon(checks?.rpcAvailable?.status)}</span>
+            <div style="flex:1">
+              <div style="font-weight:700">RPC Availability</div>
+              <div class="subtle" style="font-size:12px">${checks?.rpcAvailable?.message || 'Checking...'}</div>
+            </div>
           </div>
         </div>
-        
-        <div style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;background:rgba(255,255,255,.04)">
-          <span style="font-size:20px">${statusIcon(checks.rpcAvailable.status)}</span>
-          <div style="flex:1">
-            <div style="font-weight:700">RPC Availability</div>
-            <div class="subtle" style="font-size:12px">${checks.rpcAvailable.message}</div>
-          </div>
-        </div>
-      </div>
-    `;
-    
-    // Update metrics
-    this.updateMetrics(checks.counts);
+      `;
+      
+      // Update metrics with defensive guards
+      if (checks?.counts) {
+        this.updateMetrics(checks.counts);
+      }
+    } catch (err) {
+      console.error('[student-manager-ui] Failed to render diagnostics:', err);
+    }
   }
   
   /**
-   * Update metrics displays
+   * Update metrics displays with defensive guards
    */
   updateMetrics(counts) {
-    const totalEl = document.querySelector('#smTotalStudents');
-    const activeEl = document.querySelector('#smActiveStudents');
-    const goalsEl = document.querySelector('#smTotalGoals');
-    
-    if (totalEl) totalEl.textContent = counts.students || 0;
-    if (goalsEl) goalsEl.textContent = counts.goals || 0;
-    
-    // Active count will be updated after loading students
-    if (activeEl && this.students.length > 0) {
-      const activeCount = this.students.filter(s => s.active).length;
-      activeEl.textContent = activeCount;
+    try {
+      const totalEl = document.querySelector('#smTotalStudents');
+      const activeEl = document.querySelector('#smActiveStudents');
+      const goalsEl = document.querySelector('#smTotalGoals');
+      
+      if (totalEl && counts && typeof counts.students !== 'undefined') {
+        totalEl.textContent = counts.students || 0;
+      }
+      if (goalsEl && counts && typeof counts.goals !== 'undefined') {
+        goalsEl.textContent = counts.goals || 0;
+      }
+      
+      // Active count will be updated after loading students
+      if (activeEl && this.students && this.students.length > 0) {
+        const activeCount = this.students.filter(s => s.active).length;
+        activeEl.textContent = activeCount;
+      }
+    } catch (err) {
+      console.error('[student-manager-ui] Failed to update metrics:', err);
     }
   }
   
   /**
-   * Load students data
+   * Load students data with retry logic
    */
   async loadStudents() {
     console.log('[student-manager-ui] Loading students...');
     this.loading = true;
     this.error = null;
     
-    try {
-      this.students = await studentRpc.listStudents('all');
-      this.filteredStudents = this.students;
-      this.applyFilters();
-      
-      // Update metrics after loading students
-      const totalEl = document.querySelector('#smTotalStudents');
-      const activeEl = document.querySelector('#smActiveStudents');
-      
-      if (totalEl) totalEl.textContent = this.students.length;
-      
-      const activeCount = this.students.filter(s => s.active).length;
-      if (activeEl) activeEl.textContent = activeCount;
-      
-      console.log('[student-manager-ui] Loaded', this.students.length, 'students');
-    } catch (err) {
-      console.error('[student-manager-ui] Failed to load students:', err);
-      this.error = err.message;
-      throw err;
-    } finally {
-      this.loading = false;
+    let attempt = 0;
+    const maxAttempts = 2;
+    
+    while (attempt < maxAttempts) {
+      try {
+        attempt++;
+        this.students = await studentRpc.listStudents('all');
+        this.filteredStudents = this.students;
+        this.applyFilters();
+        
+        // Update metrics after loading students with defensive guards
+        const totalEl = document.querySelector('#smTotalStudents');
+        const activeEl = document.querySelector('#smActiveStudents');
+        
+        if (totalEl) totalEl.textContent = this.students.length;
+        
+        const activeCount = this.students.filter(s => s.active).length;
+        if (activeEl) activeEl.textContent = activeCount;
+        
+        console.log('[student-manager-ui] Loaded', this.students.length, 'students');
+        return; // Success, exit retry loop
+      } catch (err) {
+        console.error(`[student-manager-ui] Load attempt ${attempt}/${maxAttempts} failed:`, err);
+        
+        if (attempt < maxAttempts) {
+          // Wait ~2s before retry
+          console.log('[student-manager-ui] Retrying in 2 seconds...');
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        } else {
+          // Final failure - set partial metrics
+          console.error('[student-manager-ui] All retry attempts exhausted');
+          this.error = err.message;
+          
+          // Set "0*" partial metrics with defensive guards
+          const totalEl = document.querySelector('#smTotalStudents');
+          const activeEl = document.querySelector('#smActiveStudents');
+          const goalsEl = document.querySelector('#smTotalGoals');
+          
+          if (totalEl) totalEl.textContent = '0*';
+          if (activeEl) activeEl.textContent = '0*';
+          if (goalsEl) goalsEl.textContent = '0*';
+          
+          // Emit metrics event with partial flag
+          try {
+            window.dispatchEvent(new CustomEvent('student-manager:metrics', {
+              detail: { 
+                partial: true, 
+                error: err.message,
+                values: { total: '0*', active: '0*', goals: '0*' }
+              }
+            }));
+          } catch (eventErr) {
+            console.warn('[student-manager-ui] Failed to dispatch metrics event:', eventErr);
+          }
+          
+          throw err;
+        }
+      } finally {
+        this.loading = false;
+      }
     }
   }
   
@@ -350,29 +418,33 @@ export class StudentManagerUI {
   }
   
   /**
-   * Attach event listeners
+   * Attach event listeners with defensive guards
    */
   attachEventListeners() {
-    // Filter select
-    const filterSelect = document.querySelector('#smFilterSelect');
-    if (filterSelect) {
-      filterSelect.addEventListener('change', (e) => {
-        this.currentFilter = e.target.value;
-        this.applyFilters();
-        this.render();
-        this.attachEventListeners(); // Re-attach after re-render
-      });
-    }
-    
-    // Search input
-    const searchInput = document.querySelector('#smSearchInput');
-    if (searchInput) {
-      searchInput.addEventListener('input', (e) => {
-        this.searchTerm = e.target.value;
-        this.applyFilters();
-        this.render();
-        this.attachEventListeners(); // Re-attach after re-render
-      });
+    try {
+      // Filter select
+      const filterSelect = document.querySelector('#smFilterSelect');
+      if (filterSelect) {
+        filterSelect.addEventListener('change', (e) => {
+          this.currentFilter = e.target.value;
+          this.applyFilters();
+          this.render();
+          this.attachEventListeners(); // Re-attach after re-render
+        });
+      }
+      
+      // Search input
+      const searchInput = document.querySelector('#smSearchInput');
+      if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+          this.searchTerm = e.target.value;
+          this.applyFilters();
+          this.render();
+          this.attachEventListeners(); // Re-attach after re-render
+        });
+      }
+    } catch (err) {
+      console.error('[student-manager-ui] Failed to attach event listeners:', err);
     }
   }
   
