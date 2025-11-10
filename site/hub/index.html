@@ -8784,31 +8784,84 @@
   
   async function initStudentManager() {
     const startTime = Date.now();
+    const container = qs('.ttab[data-tab="studentManager"]');
+    
+    // Helper to render exactly one error card (prevents duplicates)
+    const renderError = (title, message, details = null) => {
+      if (!container) return;
+      
+      // Remove any existing error cards to ensure only one
+      container.querySelectorAll('.card[data-student-manager-error]').forEach(el => el.remove());
+      
+      // Find the "Coming Soon" card and replace with error, or append new error card
+      const comingSoon = container.querySelector('.card[style*="Coming Soon" i], .card[style*="rgba(34,197,94,.06)"]');
+      
+      const errorHTML = `
+        <div style="font-size:32px;margin-bottom:12px">⚠️</div>
+        <div style="font-weight:800;margin-bottom:8px;color:#fecaca">${escapeHtml(title)}</div>
+        <div class="subtle">${escapeHtml(message)}</div>
+        ${details ? `<div class="subtle" style="margin-top:8px;font-size:12px;opacity:0.8">${escapeHtml(details)}</div>` : ''}
+      `;
+      
+      if (comingSoon) {
+        comingSoon.innerHTML = errorHTML;
+        comingSoon.style.background = 'rgba(239,68,68,.1)';
+        comingSoon.style.borderColor = 'rgba(239,68,68,.5)';
+        comingSoon.setAttribute('data-student-manager-error', 'true');
+      } else {
+        const errorCard = document.createElement('div');
+        errorCard.className = 'card';
+        errorCard.setAttribute('data-student-manager-error', 'true');
+        errorCard.style.cssText = 'padding:20px;text-align:center;background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.5);margin-top:16px';
+        errorCard.innerHTML = errorHTML;
+        container.appendChild(errorCard);
+      }
+    };
+    
     try {
       console.log('[student-manager] Initializing...');
       
-      // Check if UI module loaded
-      if (!StudentManagerUI) {
-        console.error('[student-manager] UI module not available');
-        const container = qs('.ttab[data-tab="studentManager"]');
-        if (container) {
-          // Find the "Coming Soon" card and replace with error
-          const comingSoon = container.querySelector('.card[style*="Coming Soon" i], .card[style*="rgba(34,197,94,.06)"]');
-          if (comingSoon) {
-            comingSoon.innerHTML = `
-              <div style="font-size:32px;margin-bottom:12px">⚠️</div>
-              <div style="font-weight:800;margin-bottom:8px;color:#fecaca">Module Loading Error</div>
-              <div class="subtle">Failed to load student-manager-ui.js. Please check console for details.</div>
-            `;
-            comingSoon.style.background = 'rgba(239,68,68,.1)';
-            comingSoon.style.borderColor = 'rgba(239,68,68,.5)';
-          }
-        }
+      // Preflight check 1: Verify student-manager-ui.js loaded
+      if (!globalThis.StudentManagerUI) {
+        console.error('[student-manager] UI module not available - student-manager-ui.js failed to load');
+        renderError(
+          'Module Loading Error',
+          'Failed to load student-manager-ui.js',
+          'Check browser console for import errors in student-manager-ui.js'
+        );
+        return;
+      }
+      
+      // Preflight check 2: Verify nested dependencies can be imported
+      // Try to import student-manager-rpc.js to check for nested failures
+      try {
+        const rpcModule = await import(`/web/student-manager-rpc.js?v=${Date.now()}`);
+        console.log('[student-manager] student-manager-rpc.js loaded successfully');
+      } catch (rpcErr) {
+        console.error('[student-manager] Failed to load student-manager-rpc.js:', rpcErr);
+        renderError(
+          'Nested Dependency Error',
+          'Failed to load student-manager-rpc.js',
+          `Import error: ${rpcErr.message}`
+        );
+        return;
+      }
+      
+      // Preflight check 3: Verify data-adapter.js can be imported
+      try {
+        const adapterModule = await import(`/web/data-adapter.js?v=${Date.now()}`);
+        console.log('[student-manager] data-adapter.js loaded successfully');
+      } catch (adapterErr) {
+        console.error('[student-manager] Failed to load data-adapter.js:', adapterErr);
+        renderError(
+          'Nested Dependency Error',
+          'Failed to load data-adapter.js',
+          `Import error: ${adapterErr.message}`
+        );
         return;
       }
       
       // Find the student manager container
-      const container = qs('.ttab[data-tab="studentManager"]');
       if (!container) {
         console.error('[student-manager] Container not found');
         return;
@@ -8827,13 +8880,13 @@
       }
       
       // Initialize UI (metrics already exist in HTML)
-      const ui = new StudentManagerUI('.ttab[data-tab="studentManager"]');
+      const ui = new globalThis.StudentManagerUI('.ttab[data-tab="studentManager"]');
       await ui.init();
       
       // Calculate init timing
       const initMs = Date.now() - startTime;
       
-      // Track health for diagnostics
+      // Track health for diagnostics (only on success)
       if (!window.hubHealth) {
         window.hubHealth = {};
       }
@@ -8843,7 +8896,7 @@
         initMs: initMs
       };
       
-      // Dispatch readiness event with init metrics
+      // Dispatch readiness event with init metrics (only on success)
       try {
         const counts = {
           total: parseInt(document.querySelector('#smTotalStudents')?.textContent) || 0,
@@ -8861,30 +8914,11 @@
       }
     } catch (err) {
       console.error('[student-manager] Failed to initialize:', err);
-      const container = qs('.ttab[data-tab="studentManager"]');
-      if (container) {
-        // Find the "Coming Soon" card and replace with error, or append new error card
-        const comingSoon = container.querySelector('.card[style*="Coming Soon" i], .card[style*="rgba(34,197,94,.06)"]');
-        if (comingSoon) {
-          comingSoon.innerHTML = `
-            <div style="font-size:32px;margin-bottom:12px">⚠️</div>
-            <div style="font-weight:800;margin-bottom:8px;color:#fecaca">Initialization Error</div>
-            <div class="subtle">${escapeHtml(err.message || 'Unknown error occurred')}</div>
-          `;
-          comingSoon.style.background = 'rgba(239,68,68,.1)';
-          comingSoon.style.borderColor = 'rgba(239,68,68,.5)';
-        } else {
-          const errorCard = document.createElement('div');
-          errorCard.className = 'card';
-          errorCard.style.cssText = 'padding:20px;text-align:center;background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.5);margin-top:16px';
-          errorCard.innerHTML = `
-            <div style="font-size:32px;margin-bottom:12px">⚠️</div>
-            <div style="font-weight:800;margin-bottom:8px;color:#fecaca">Initialization Error</div>
-            <div class="subtle">${escapeHtml(err.message || 'Unknown error occurred')}</div>
-          `;
-          container.appendChild(errorCard);
-        }
-      }
+      renderError(
+        'Initialization Error',
+        err.message || 'Unknown error occurred',
+        err.stack ? `Stack: ${err.stack.split('\n')[0]}` : null
+      );
     }
   }
   
