@@ -28,13 +28,22 @@ The Student Manager provides code-only identity management for students with cla
 
 ## Feature Flags
 
-Control Student Manager features via Settings → Feature Flags:
+Control Student Manager features via **Settings → Feature Flags** in the Classroom Hub:
 
-- `studentManager` - Enable Student Manager tab (default: false)
+- `studentManager` - Enable Student Manager tab in Data section (default: **true**)
 - `studentCodeOnly` - Enforce code-only identity (default: true)  
 - `studentMultiGoalWizard` - Enable multi-goal entry wizard (default: false)
 
-Enable via browser console:
+### Using the Settings UI
+
+1. Navigate to Classroom Hub → Data → Settings
+2. Scroll to the "Feature Flags" section
+3. Toggle the checkboxes to enable/disable features
+4. Changes take effect immediately (navigation will reload)
+
+### Using Browser Console (Alternative)
+
+You can also enable features programmatically:
 ```javascript
 setFeatureFlag('studentManager', true);
 setFeatureFlag('studentMultiGoalWizard', true);

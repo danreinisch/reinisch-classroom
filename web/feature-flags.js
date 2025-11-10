@@ -143,7 +143,7 @@ const FEATURES = {
   // Student Manager
   studentManager: {
     key: FEATURE_PREFIX + 'student_manager',
-    default: false,
+    default: true,
     description: 'Enable Student Manager in Teacher Center Data section for manual student creation with enrollments and IEP goals'
   },
   
