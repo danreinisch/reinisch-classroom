@@ -92,12 +92,21 @@ test.describe('Student Manager Smoke Test', () => {
         const activeStudents = page.locator('#smActiveStudents');
         const totalGoals = page.locator('#smTotalGoals');
         
-        // Metrics should exist (may show "—" if no data)
+        // Metrics should exist and show numeric values (not dashes)
         await expect(totalStudents).toBeVisible();
         await expect(activeStudents).toBeVisible();
         await expect(totalGoals).toBeVisible();
         
-        console.log('✓ Student Manager metrics rendered successfully');
+        // Verify metrics show numbers instead of dashes
+        const totalText = await totalStudents.textContent();
+        const activeText = await activeStudents.textContent();
+        const goalsText = await totalGoals.textContent();
+        
+        expect(totalText).not.toBe('—');
+        expect(activeText).not.toBe('—');
+        expect(goalsText).not.toBe('—');
+        
+        console.log('✓ Student Manager metrics rendered successfully with numeric values');
       } else {
         console.log('ℹ Student Manager nav item not visible - may require feature flag or authentication');
       }
@@ -128,12 +137,30 @@ test.describe('Student Manager Smoke Test', () => {
     });
     
     // Try to navigate to Student Manager
-    await page.evaluate(() => {
+    const initResult = await page.evaluate(() => {
       // Try to trigger Student Manager init via event
       window.dispatchEvent(new CustomEvent('hub:tab-init', { detail: { tab: 'studentManager' } }));
+      
+      return new Promise(resolve => {
+        setTimeout(() => {
+          resolve({
+            studentManagerUIAvailable: typeof window.StudentManagerUI === 'function',
+            healthTracking: window.hubHealth?.studentManager
+          });
+        }, 2000);
+      });
     });
     
-    await page.waitForTimeout(2000);
+    // Verify StudentManagerUI is globally available
+    expect(initResult.studentManagerUIAvailable).toBe(true);
+    
+    // Verify health tracking is set
+    expect(initResult.healthTracking).toBeDefined();
+    expect(initResult.healthTracking.loaded).toBe(true);
+    
+    // Check that there are no ReferenceError about StudentManagerUI
+    const hasStudentManagerUIError = errors.some(err => err.includes('StudentManagerUI is not defined'));
+    expect(hasStudentManagerUIError).toBe(false);
     
     // Check that there are no ReferenceError about isRemote
     const hasIsRemoteError = errors.some(err => err.includes('isRemote is not defined'));

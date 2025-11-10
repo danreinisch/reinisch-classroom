@@ -202,9 +202,13 @@ export class StudentManagerUI {
       this.filteredStudents = this.students;
       this.applyFilters();
       
-      // Update active count in metrics
-      const activeCount = this.students.filter(s => s.active).length;
+      // Update metrics after loading students
+      const totalEl = document.querySelector('#smTotalStudents');
       const activeEl = document.querySelector('#smActiveStudents');
+      
+      if (totalEl) totalEl.textContent = this.students.length;
+      
+      const activeCount = this.students.filter(s => s.active).length;
       if (activeEl) activeEl.textContent = activeCount;
       
       console.log('[student-manager-ui] Loaded', this.students.length, 'students');
@@ -384,3 +388,8 @@ export class StudentManagerUI {
 
 // Export for use in hub
 export default StudentManagerUI;
+
+// Attach to window for legacy fallback
+if (typeof window !== 'undefined') {
+  window.StudentManagerUI = StudentManagerUI;
+}

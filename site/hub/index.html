@@ -2145,6 +2145,8 @@
     try {
       const studentManagerModule = await import(`/web/student-manager-ui.js?v=${cacheBust}`);
       StudentManagerUI = studentManagerModule.default || studentManagerModule.StudentManagerUI;
+      // Also expose globally for legacy fallback (module also attaches to window)
+      window.StudentManagerUI = StudentManagerUI;
       console.log(LOG_PREFIX, 'Student Manager UI module loaded successfully');
     } catch (err) {
       console.error(LOG_PREFIX, 'Failed to load student-manager-ui.js:', err);
@@ -8789,14 +8791,17 @@
         console.error('[student-manager] UI module not available');
         const container = qs('.ttab[data-tab="studentManager"]');
         if (container) {
-          container.innerHTML = `
-            <div class="card-header"><div>👤 Student Manager</div></div>
-            <div class="card" style="padding:20px;text-align:center;background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.5);margin-top:16px">
+          // Find the "Coming Soon" card and replace with error
+          const comingSoon = container.querySelector('.card[style*="Coming Soon" i], .card[style*="rgba(34,197,94,.06)"]');
+          if (comingSoon) {
+            comingSoon.innerHTML = `
               <div style="font-size:32px;margin-bottom:12px">⚠️</div>
               <div style="font-weight:800;margin-bottom:8px;color:#fecaca">Module Loading Error</div>
               <div class="subtle">Failed to load student-manager-ui.js. Please check console for details.</div>
-            </div>
-          `;
+            `;
+            comingSoon.style.background = 'rgba(239,68,68,.1)';
+            comingSoon.style.borderColor = 'rgba(239,68,68,.5)';
+          }
         }
         return;
       }
@@ -8808,65 +8813,54 @@
         return;
       }
       
-      // Clear any existing "Coming Soon" content
-      const comingSoon = container.querySelector('.card[style*="coming soon" i], .card[style*="rgba(34,197,94,.06)"]');
+      // Clear "Coming Soon" notice if it exists
+      const comingSoon = container.querySelector('.card[style*="Coming Soon" i], .card[style*="rgba(34,197,94,.06)"]');
       if (comingSoon) {
         comingSoon.remove();
       }
       
-      // Create wrapper for metrics if it doesn't exist
-      let metricsSection = container.querySelector('#smMetrics');
-      if (!metricsSection) {
-        metricsSection = document.createElement('div');
-        metricsSection.id = 'smMetrics';
-        metricsSection.style.display = 'grid';
-        metricsSection.style.gridTemplateColumns = 'repeat(auto-fit,minmax(180px,1fr))';
-        metricsSection.style.gap = '12px';
-        metricsSection.style.marginBottom = '16px';
-        
-        // Insert metrics cards
-        metricsSection.innerHTML = `
-          <div class="card" style="padding:16px">
-            <div class="subtle" style="font-size:12px;margin-bottom:4px">Total Students</div>
-            <div style="font-size:24px;font-weight:900" id="smTotalStudents">—</div>
-          </div>
-          <div class="card" style="padding:16px">
-            <div class="subtle" style="font-size:12px;margin-bottom:4px">Active Students</div>
-            <div style="font-size:24px;font-weight:900;color:var(--brand)" id="smActiveStudents">—</div>
-          </div>
-          <div class="card" style="padding:16px">
-            <div class="subtle" style="font-size:12px;margin-bottom:4px">Total Goals</div>
-            <div style="font-size:24px;font-weight:900" id="smTotalGoals">—</div>
-          </div>
-        `;
-        
-        // Insert at the beginning of container (after header)
-        const header = container.querySelector('.card-header');
-        if (header && header.nextSibling) {
-          container.insertBefore(metricsSection, header.nextSibling);
-        } else {
-          container.appendChild(metricsSection);
-        }
+      // Clear migration status badge (will be replaced by diagnostics)
+      const migrationCard = container.querySelector('.card:has(#smMigrationBadge)');
+      if (migrationCard) {
+        migrationCard.remove();
       }
       
-      // Initialize UI
+      // Initialize UI (metrics already exist in HTML)
       const ui = new StudentManagerUI('.ttab[data-tab="studentManager"]');
       await ui.init();
+      
+      // Track health for diagnostics
+      if (!window.hubHealth) {
+        window.hubHealth = {};
+      }
+      window.hubHealth.studentManager = { loaded: true, ts: Date.now() };
       
       console.log('[student-manager] Initialization complete');
     } catch (err) {
       console.error('[student-manager] Failed to initialize:', err);
       const container = qs('.ttab[data-tab="studentManager"]');
       if (container) {
-        const errorCard = document.createElement('div');
-        errorCard.className = 'card';
-        errorCard.style.cssText = 'padding:20px;text-align:center;background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.5);margin-top:16px';
-        errorCard.innerHTML = `
-          <div style="font-size:32px;margin-bottom:12px">⚠️</div>
-          <div style="font-weight:800;margin-bottom:8px;color:#fecaca">Initialization Error</div>
-          <div class="subtle">${escapeHtml(err.message || 'Unknown error occurred')}</div>
-        `;
-        container.appendChild(errorCard);
+        // Find the "Coming Soon" card and replace with error, or append new error card
+        const comingSoon = container.querySelector('.card[style*="Coming Soon" i], .card[style*="rgba(34,197,94,.06)"]');
+        if (comingSoon) {
+          comingSoon.innerHTML = `
+            <div style="font-size:32px;margin-bottom:12px">⚠️</div>
+            <div style="font-weight:800;margin-bottom:8px;color:#fecaca">Initialization Error</div>
+            <div class="subtle">${escapeHtml(err.message || 'Unknown error occurred')}</div>
+          `;
+          comingSoon.style.background = 'rgba(239,68,68,.1)';
+          comingSoon.style.borderColor = 'rgba(239,68,68,.5)';
+        } else {
+          const errorCard = document.createElement('div');
+          errorCard.className = 'card';
+          errorCard.style.cssText = 'padding:20px;text-align:center;background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.5);margin-top:16px';
+          errorCard.innerHTML = `
+            <div style="font-size:32px;margin-bottom:12px">⚠️</div>
+            <div style="font-weight:800;margin-bottom:8px;color:#fecaca">Initialization Error</div>
+            <div class="subtle">${escapeHtml(err.message || 'Unknown error occurred')}</div>
+          `;
+          container.appendChild(errorCard);
+        }
       }
     }
   }
