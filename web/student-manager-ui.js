@@ -272,7 +272,7 @@ export class StudentManagerUI {
             <option value="active" ${this.currentFilter === 'active' ? 'selected' : ''}>Active Only</option>
             <option value="inactive" ${this.currentFilter === 'inactive' ? 'selected' : ''}>Inactive Only</option>
           </select>
-          <input id="smSearchInput" class="btn small" style="width:200px;padding:6px 10px" placeholder="Search by code..." value="${this.searchTerm}" />
+          <input id="smSearchInput" class="btn small" style="width:200px;padding:6px 10px" placeholder="Search by code..." value="${this.escapeHtml(this.searchTerm)}" />
         </div>
       </div>
       
