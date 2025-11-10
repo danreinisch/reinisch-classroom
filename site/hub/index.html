@@ -216,7 +216,7 @@
     color:#062513;
   }
 </style>
-<link rel="stylesheet" href="../web/teacher-center-theme.css">
+<link rel="stylesheet" href="/web/teacher-center-theme.css">
 
 <!-- Bold Glass Theme v3: Subtle soft-grid background with gentle emerald mist, improved readability, and enhanced glassmorphism -->
 <style id="glass-bold-theme-v3">
@@ -2044,13 +2044,21 @@
     // [Hub Init] Console prefix for all hub-related logs
     const LOG_PREFIX = '[Hub Init]';
     
+    // Cache-busting helper for module imports
+    // Uses build timestamp from meta tag or current date as fallback
+    function getCacheBustParam() {
+      const meta = document.querySelector('meta[name="build-time"]');
+      return meta ? meta.content : new Date().toISOString().split('T')[0];
+    }
+    const cacheBust = getCacheBustParam();
+    
     // Track failed modules for error banner
     const failedModules = [];
     
     // Import critical modules with error handling
     let db, isRemote, localStore;
     try {
-      const dataAdapter = await import('../web/data-adapter.js');
+      const dataAdapter = await import(`/web/data-adapter.js?v=${cacheBust}`);
       db = dataAdapter.db;
       isRemote = dataAdapter.isRemote;
       localStore = dataAdapter.localStore;
@@ -2070,7 +2078,7 @@
     
     let listLibraryItems;
     try {
-      const library = await import('../web/library.js');
+      const library = await import(`/web/library.js?v=${cacheBust}`);
       listLibraryItems = library.listLibraryItems;
       console.log(LOG_PREFIX, 'Library module loaded successfully');
     } catch (err) {
@@ -2081,7 +2089,7 @@
     
     let writeAuth, clearAuth, readAuth;
     try {
-      const authHandoff = await import('../web/auth-handoff.js');
+      const authHandoff = await import(`/web/auth-handoff.js?v=${cacheBust}`);
       writeAuth = authHandoff.writeAuth;
       clearAuth = authHandoff.clearAuth;
       readAuth = authHandoff.readAuth;
@@ -2097,7 +2105,7 @@
     // Feature flags with fallback
     let getFeatureFlag, setFeatureFlag;
     try {
-      const featureFlags = await import('../web/feature-flags.js');
+      const featureFlags = await import(`/web/feature-flags.js?v=${cacheBust}`);
       getFeatureFlag = featureFlags.getFeatureFlag;
       setFeatureFlag = featureFlags.setFeatureFlag;
       console.log(LOG_PREFIX, 'Feature flags module loaded successfully');
@@ -2116,7 +2124,7 @@
     
     // Auth modal extend (optional enhancement)
     try {
-      await import('../web/auth-modal-extend.js');
+      await import(`/web/auth-modal-extend.js?v=${cacheBust}`);
       console.log(LOG_PREFIX, 'Auth modal extend loaded successfully');
     } catch (err) {
       console.error(LOG_PREFIX, 'Failed to load auth-modal-extend.js:', err);
@@ -2125,7 +2133,7 @@
     
     // Diagnostics (optional monitoring)
     try {
-      await import('../web/diagnostics.js');
+      await import(`/web/diagnostics.js?v=${cacheBust}`);
       console.log(LOG_PREFIX, 'Diagnostics module loaded successfully');
     } catch (err) {
       console.error(LOG_PREFIX, 'Failed to load diagnostics.js:', err);
@@ -2144,6 +2152,10 @@
 
     // Expose clearAuth globally for role switching
     window.clearAuth = clearAuth;
+    
+    // Expose feature flags globally for Settings UI and debugging
+    window.getFeatureFlag = getFeatureFlag;
+    window.setFeatureFlag = setFeatureFlag;
 
     const NS = 'rc_unified_';
     const qs = s => {
@@ -4256,7 +4268,8 @@
     let supabaseSettings = null;
     (async () => {
       try {
-        supabaseSettings = await import('../web/supabase-settings.js');
+        const cacheBust = document.querySelector('meta[name="build-time"]')?.content || new Date().toISOString().split('T')[0];
+        supabaseSettings = await import(`/web/supabase-settings.js?v=${cacheBust}`);
         
         // Migrate legacy keys on page load
         const migrationResult = supabaseSettings.migrateLegacyKeys();
@@ -5703,7 +5716,8 @@
     async function loadSubPlansModule() {
       if (!upsertSubPlan || !getTodaysSubPlan) {
         try {
-          const subPlansModule = await import('../web/sub-plans.js');
+          const cacheBust = document.querySelector('meta[name="build-time"]')?.content || new Date().toISOString().split('T')[0];
+          const subPlansModule = await import(`/web/sub-plans.js?v=${cacheBust}`);
           upsertSubPlan = subPlansModule.upsertSubPlan;
           getTodaysSubPlan = subPlansModule.getTodaysSubPlan;
           console.log(LOG_PREFIX, 'Sub-plans module loaded successfully');
@@ -5868,7 +5882,8 @@
     async function loadCodebookModule() {
       if (!buildCodebookFromIEPCsv) {
         try {
-          const codebookModule = await import('../web/codebook.js');
+          const cacheBust = document.querySelector('meta[name="build-time"]')?.content || new Date().toISOString().split('T')[0];
+          const codebookModule = await import(`/web/codebook.js?v=${cacheBust}`);
           buildCodebookFromIEPCsv = codebookModule.buildCodebookFromIEPCsv;
           saveCodebook = codebookModule.saveCodebook;
           loadCodebook = codebookModule.loadCodebook;
@@ -5894,7 +5909,8 @@
     async function loadManifestModule() {
       if (!validateManifest) {
         try {
-          const manifestModule = await import('../web/assignment-manifest.js');
+          const cacheBust = document.querySelector('meta[name="build-time"]')?.content || new Date().toISOString().split('T')[0];
+          const manifestModule = await import(`/web/assignment-manifest.js?v=${cacheBust}`);
           validateManifest = manifestModule.validateManifest;
           detectQuestionsFromHTML = manifestModule.detectQuestionsFromHTML;
           detectQuestionsFromTXT = manifestModule.detectQuestionsFromTXT;
@@ -7311,10 +7327,17 @@
 
 <!-- Classroom Hub Tabs Implementation -->
 <script type="module">
+  // Cache-busting helper
+  function getCacheBustParam() {
+    const meta = document.querySelector('meta[name="build-time"]');
+    return meta ? meta.content : new Date().toISOString().split('T')[0];
+  }
+  const cacheBust = getCacheBustParam();
+  
   // Import db and localStore with error handling
   let db, localStore;
   try {
-    const dataAdapter = await import('../web/data-adapter.js');
+    const dataAdapter = await import(`/web/data-adapter.js?v=${cacheBust}`);
     db = dataAdapter.db;
     localStore = dataAdapter.localStore;
     console.log('[Hub Tabs] Data adapter module loaded successfully');
