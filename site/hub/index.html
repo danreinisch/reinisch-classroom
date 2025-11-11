@@ -789,6 +789,45 @@
   }
 
 </style>
+
+<!-- Student Manager Scrollbar Styles -->
+<style id="student-manager-scrollbar-styles">
+  /* Ensure Student Manager table-wrap scrollbar is visible and styled consistently */
+  #smStudentList .table-wrap {
+    /* Ensure scrollbar is visible even under theme overlays */
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.18) rgba(255, 255, 255, 0.05);
+  }
+  
+  /* WebKit/Chromium scrollbar styling */
+  #smStudentList .table-wrap::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  
+  #smStudentList .table-wrap::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+  }
+  
+  #smStudentList .table-wrap::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.18);
+    border-radius: 4px;
+  }
+  
+  #smStudentList .table-wrap::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.28);
+  }
+  
+  /* Ensure scrollbar stays visible under glass-bold theme */
+  body.glass-bold #smStudentList .table-wrap::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.22);
+  }
+  
+  body.glass-bold #smStudentList .table-wrap::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.32);
+  }
+</style>
 </head>
 <body class="glass-bold">
   <div class="header">
