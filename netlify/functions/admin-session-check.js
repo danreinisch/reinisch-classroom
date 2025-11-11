@@ -3,7 +3,7 @@
 
 const crypto = require('crypto');
 
-const COOKIE_NAME = 'rc_admin_session_v2'; // match the new cookie name
+const COOKIE_NAME = 'rc_admin_session_v3'; // match the new Supabase-based cookie name
 
 exports.handler = async (event) => {
   try {

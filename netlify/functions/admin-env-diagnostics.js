@@ -1,5 +1,11 @@
 exports.handler = async () => {
-  const keys = ['ADMIN_USER','ADMIN_PASS','ADMIN_SESSION_SECRET'];
+  const keys = [
+    'SUPABASE_URL',
+    'SUPABASE_URL_RUNTIME',
+    'SUPABASE_SERVICE_KEY',
+    'SUPABASE_SERVICE_KEY_RUNTIME',
+    'ADMIN_SESSION_SECRET'
+  ];
   const report = {};
   for (const k of keys) {
     const v = process.env[k] || '';

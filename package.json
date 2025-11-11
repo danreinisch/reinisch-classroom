@@ -9,7 +9,8 @@
     "test:smoke": "playwright test tests/student-manager-smoke.spec.ts",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "check-leaks": "node scripts/check-env-leaks.cjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.40.0",

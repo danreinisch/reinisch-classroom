@@ -2,9 +2,13 @@
 // If missing/invalid, redirects to /admin-login.
 //
 // Required env vars (Netlify → Environment variables):
-// - ADMIN_USER (username for login)
-// - ADMIN_PASS (password for login)
+// - SUPABASE_URL (or SUPABASE_URL_RUNTIME) - Supabase project URL  
+// - SUPABASE_SERVICE_KEY (or SUPABASE_SERVICE_KEY_RUNTIME) - Supabase service role key
 // - ADMIN_SESSION_SECRET (random 32+ char string, used to sign cookies)
+//
+// Optional:
+// - SUPABASE_URL_RUNTIME - Runtime override for SUPABASE_URL (takes precedence)
+// - SUPABASE_SERVICE_KEY_RUNTIME - Runtime override for SUPABASE_SERVICE_KEY (takes precedence)
 //
 // Note: This guard protects:
 //   - /admin and /admin/*
@@ -13,8 +17,15 @@
 //   - /admin-login (login page and its assets)
 //   - /edge-ping (health check)
 
-const COOKIE_NAME = 'rc_admin_session';
+const COOKIE_NAME = 'rc_admin_session_v3';
 const ALGO = { name: 'HMAC', hash: 'SHA-256' };
+
+// Resolve Supabase configuration with runtime override support
+function resolveSupabaseConfig(env) {
+  const url = (env?.SUPABASE_URL_RUNTIME || env?.SUPABASE_URL || '').trim();
+  const key = (env?.SUPABASE_SERVICE_KEY_RUNTIME || env?.SUPABASE_SERVICE_KEY || '').trim();
+  return { url, key };
+}
 
 export default async (request, context) => {
   const url = new URL(request.url);
@@ -33,8 +44,9 @@ export default async (request, context) => {
     return context.next();
   }
 
-  // If ADMIN_USER/PASS not configured, fail closed
-  const configured = !!(context.env?.ADMIN_USER && context.env?.ADMIN_PASS && context.env?.ADMIN_SESSION_SECRET);
+  // If Supabase and session secret not configured, fail closed
+  const { url: supabaseUrl, key: supabaseKey } = resolveSupabaseConfig(context.env);
+  const configured = !!(supabaseUrl && supabaseKey && context.env?.ADMIN_SESSION_SECRET);
   if (!configured) {
     return unauthorized();
   }
