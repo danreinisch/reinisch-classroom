@@ -47,7 +47,8 @@
     <section id="login" class="card">
       <h3>Login</h3>
       <form onsubmit="return doLogin(event)">
-        <label>Password <input type="password" name="password" required /></label>
+        <label>Username <input type="text" name="username" required autocomplete="username" /></label>
+        <label>Password <input type="password" name="password" required autocomplete="current-password" /></label>
         <button type="submit">Login</button>
         <span id="login-status" class="status"></span>
       </form>
@@ -137,13 +138,14 @@
 
     async function doLogin(ev){
       ev.preventDefault();
+      const username = ev.target.username.value;
       const pass = ev.target.password.value;
       const res = await fetch('/.netlify/functions/teacher-login', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: pass })
+        body: JSON.stringify({ username, password: pass })
       });
       const ok = res.ok;
-      document.getElementById('login-status').textContent = ok ? 'Logged in.' : 'Invalid password';
+      document.getElementById('login-status').textContent = ok ? 'Logged in.' : 'Invalid credentials';
       if (ok) { document.getElementById('login').style.display = 'none'; document.getElementById('app').style.display = ''; }
       return false;
     }
