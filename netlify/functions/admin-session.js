@@ -87,6 +87,8 @@ exports.handler = async (event) => {
     }
 
     // Create signed session token
+    // Note: Password verification already completed via Supabase bcrypt check above.
+    // This HMAC is for session token integrity, not password hashing.
     const exp = Math.floor(Date.now() / 1000) + Math.max(1, MAX_AGE_SECONDS);
     const payload = { 
       u: user.username, 
