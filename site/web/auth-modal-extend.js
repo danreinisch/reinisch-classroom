@@ -19,6 +19,12 @@ if (window.__authModalExtendBound) {
 
 function initSubstituteAuth() {
   try {
+    // Check global flag to prevent multiple injections across code paths
+    if (window.__substituteInjected) {
+      console.log('[substitute-auth] Already injected (global flag), skipping');
+      return;
+    }
+    
     // Find the sign-in modal
     const signInModal = document.getElementById('signInModal');
     if (!signInModal) {
@@ -33,9 +39,34 @@ function initSubstituteAuth() {
       return;
     }
 
-    // Check if substitute button already exists to prevent duplicates
-    if (document.getElementById('signInSubstitute')) {
-      console.log('[substitute-auth] Substitute button already exists, skipping creation');
+    // Robust duplicate detection: check by ID AND text content
+    const existingById = document.getElementById('signInSubstitute');
+    const allButtons = Array.from(roleButtons.querySelectorAll('button'));
+    const existingByText = allButtons.find(btn => {
+      const text = btn.textContent || '';
+      return text.toLowerCase().includes('substitute');
+    });
+    
+    if (existingById || existingByText) {
+      console.log('[substitute-auth] Substitute button already exists (by ID or text), skipping creation');
+      
+      // Set flag to prevent future attempts
+      window.__substituteInjected = true;
+      
+      // Clean up duplicates if multiple exist
+      const allSubButtons = allButtons.filter(btn => {
+        const text = btn.textContent || '';
+        return text.toLowerCase().includes('substitute') || btn.id === 'signInSubstitute';
+      });
+      
+      if (allSubButtons.length > 1) {
+        console.warn('[substitute-auth] Found', allSubButtons.length, 'Substitute buttons, removing duplicates');
+        // Keep first, remove others
+        for (let i = 1; i < allSubButtons.length; i++) {
+          allSubButtons[i].remove();
+        }
+      }
+      
       return;
     }
 
@@ -53,6 +84,10 @@ function initSubstituteAuth() {
     `;
     
     roleButtons.appendChild(substituteButton);
+    
+    // Set global flag to prevent future injections
+    window.__substituteInjected = true;
+    console.log('[substitute-auth] Substitute button created and flag set');
 
     // Define substituteModal at function scope so all handlers can access it
     let substituteModal = document.getElementById('substituteSignInModal');

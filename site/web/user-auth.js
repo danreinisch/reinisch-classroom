@@ -6,6 +6,14 @@ import { getSupabase } from './supabase-client.js';
 const NS = 'rc_unified_';
 const AUTH_NS = 'rc_auth_';
 
+// Initialize hubHealth tracking
+if (!window.hubHealth) {
+  window.hubHealth = {};
+}
+if (!window.hubHealth.auth) {
+  window.hubHealth.auth = { attempts: 0 };
+}
+
 /**
  * Local storage helpers for offline fallback
  */
@@ -36,6 +44,12 @@ async function isSupabaseAvailable() {
  * @returns {Promise<Object|null>} User object with username, role, student_id, user_id or null if failed
  */
 export async function verifyUserPassword(username, password) {
+  // Normalize username: trim and lowercase
+  username = username.trim().toLowerCase();
+  
+  // Track attempt
+  window.hubHealth.auth.attempts = (window.hubHealth.auth.attempts || 0) + 1;
+  
   // Try remote first if available
   if (await isSupabaseAvailable()) {
     const supabase = await getSupabase();
@@ -47,13 +61,43 @@ export async function verifyUserPassword(username, password) {
 
       if (error) {
         console.warn('[user-auth] Supabase RPC error, falling back to local:', error.message);
-        return verifyLocalPassword(username, password);
+        const localResult = verifyLocalPassword(username, password);
+        
+        // Set hubHealth
+        if (localResult) {
+          window.hubHealth.auth = {
+            success: true,
+            user: localResult.username,
+            ts: Date.now(),
+            method: 'local-fallback',
+            attempts: window.hubHealth.auth.attempts
+          };
+        } else {
+          window.hubHealth.auth = {
+            success: false,
+            ts: Date.now(),
+            reason: 'Invalid credentials (local fallback)',
+            attempts: window.hubHealth.auth.attempts
+          };
+        }
+        
+        return localResult;
       }
 
       // RPC returns array, take first result or null
       if (data && data.length > 0) {
         const user = data[0];
         console.log('[user-auth] Remote authentication successful for:', username);
+        
+        // Set hubHealth
+        window.hubHealth.auth = {
+          success: true,
+          user: user.username,
+          ts: Date.now(),
+          method: 'remote',
+          attempts: window.hubHealth.auth.attempts
+        };
+        
         return {
           username: user.username,
           role: user.role,
@@ -63,16 +107,65 @@ export async function verifyUserPassword(username, password) {
       } else {
         // No results means authentication failed
         console.log('[user-auth] Remote authentication failed for:', username);
+        
+        // Set hubHealth
+        window.hubHealth.auth = {
+          success: false,
+          ts: Date.now(),
+          reason: 'Invalid credentials (remote)',
+          attempts: window.hubHealth.auth.attempts
+        };
+        
         return null;
       }
     } catch (err) {
       console.warn('[user-auth] Network error, falling back to local:', err.message);
-      return verifyLocalPassword(username, password);
+      const localResult = verifyLocalPassword(username, password);
+      
+      // Set hubHealth
+      if (localResult) {
+        window.hubHealth.auth = {
+          success: true,
+          user: localResult.username,
+          ts: Date.now(),
+          method: 'local-fallback',
+          attempts: window.hubHealth.auth.attempts
+        };
+      } else {
+        window.hubHealth.auth = {
+          success: false,
+          ts: Date.now(),
+          reason: 'Invalid credentials (local fallback)',
+          attempts: window.hubHealth.auth.attempts
+        };
+      }
+      
+      return localResult;
     }
   } else {
     // Supabase not available, use local
     console.log('[user-auth] Supabase not configured, using local authentication');
-    return verifyLocalPassword(username, password);
+    const localResult = verifyLocalPassword(username, password);
+    
+    // Set hubHealth
+    if (localResult) {
+      window.hubHealth.auth = {
+        success: true,
+        user: localResult.username,
+        ts: Date.now(),
+        method: 'local',
+        attempts: window.hubHealth.auth.attempts
+      };
+    } else {
+      window.hubHealth.auth = {
+        success: false,
+        ts: Date.now(),
+        reason: 'Invalid credentials (local)',
+        attempts: window.hubHealth.auth.attempts
+      };
+    }
+    
+    return localResult;
   }
 }
 
@@ -82,8 +175,9 @@ export async function verifyUserPassword(username, password) {
  */
 function verifyLocalPassword(username, password) {
   const users = localStore.get('users', {});
-  const user = users[username];
+  let user = users[username];
   
+  // Bootstrap default users if not found
   if (!user) {
     // Check for default substitute password
     if (username === 'substitute' && password === 'Winfield2025*') {
@@ -94,6 +188,31 @@ function verifyLocalPassword(username, password) {
         user_id: null
       };
     }
+    
+    // Bootstrap 'dreinisch' teacher user for local dev
+    if (username === 'dreinisch' && password === 'ChangeMe123!') {
+      const bootstrappedUser = {
+        username: 'dreinisch',
+        role: 'teacher',
+        student_id: null,
+        password: 'ChangeMe123!',
+        user_id: Date.now()
+      };
+      
+      // Save to local storage for future use
+      users['dreinisch'] = bootstrappedUser;
+      localStore.set('users', users);
+      
+      console.log('[user-auth] Bootstrapped local user: dreinisch (teacher)');
+      
+      return {
+        username: bootstrappedUser.username,
+        role: bootstrappedUser.role,
+        student_id: null,
+        user_id: bootstrappedUser.user_id
+      };
+    }
+    
     return null;
   }
 
