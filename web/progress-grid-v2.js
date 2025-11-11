@@ -340,15 +340,17 @@ export class ProgressGridV2 {
               ? a.student_code.localeCompare(b.student_code)
               : b.student_code.localeCompare(a.student_code);
           
-          case 'current':
+          case 'current': {
             const currA = metricsA?.current || 0;
             const currB = metricsB?.current || 0;
             return this.sorting.direction === 'asc' ? currA - currB : currB - currA;
+          }
           
-          case 'delta':
+          case 'delta': {
             const deltaA = metricsA?.delta || 0;
             const deltaB = metricsB?.delta || 0;
             return this.sorting.direction === 'asc' ? deltaA - deltaB : deltaB - deltaA;
+          }
           
           case 'goal_area':
             return this.sorting.direction === 'asc'
@@ -855,12 +857,6 @@ export class ProgressGridV2 {
   // Utility Methods
   // ========================================================================
   
-  escapeHtml(text) {
-    if (text == null) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
   
   // ========================================================================
   // CSV Export

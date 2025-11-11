@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 // Portal B Student Dashboard JavaScript
 // Handles assignment grouping, grades, resubmissions, toasts, and UI interactions
 

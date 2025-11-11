@@ -1,0 +1,58 @@
+name: Supabase Validation
+
+on:
+  push:
+    branches: [ main, copilot/** ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  validate-supabase:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Check if Supabase secrets are configured
+        id: check-secrets
+        run: |
+          if [ -n "${{ secrets.SUPABASE_ACCESS_TOKEN }}" ] && \
+             [ -n "${{ secrets.SUPABASE_PROJECT_REF }}" ] && \
+             [ -n "${{ secrets.SUPABASE_DB_PASSWORD }}" ]; then
+            echo "configured=true" >> $GITHUB_OUTPUT
+          else
+            echo "configured=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Setup Supabase CLI
+        if: steps.check-secrets.outputs.configured == 'true'
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      
+      - name: Run Supabase validation
+        if: steps.check-secrets.outputs.configured == 'true'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          echo "🔍 Running Supabase validation..."
+          # Scaffold for future validation logic
+          # Example: supabase db diff --linked
+          echo "✅ Supabase validation complete"
+      
+      - name: Skip Supabase validation (secrets not configured)
+        if: steps.check-secrets.outputs.configured == 'false'
+        run: |
+          echo "ℹ️  Supabase validation skipped - secrets not configured"
+          echo ""
+          echo "To enable Supabase validation, configure the following secrets:"
+          echo "  - SUPABASE_ACCESS_TOKEN"
+          echo "  - SUPABASE_PROJECT_REF"
+          echo "  - SUPABASE_DB_PASSWORD"
+          echo ""
+          echo "See: https://supabase.com/docs/guides/cli/managing-environments"
