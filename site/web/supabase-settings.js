@@ -69,7 +69,7 @@ export function writeConfig(config = {}, options = {}) {
   // Update anon key with preservation logic
   if (config.anon !== undefined) {
     const anonValue = (config.anon || '').trim();
-    const isMasked = !anonValue || /^[•\*]+$/.test(anonValue) || anonValue === '••••••••';
+    const isMasked = !anonValue || /^[•*]+$/.test(anonValue) || anonValue === '••••••••';
     
     // Only update if not masked or if preservation is disabled
     if (!preserveAnonIfMasked || !isMasked) {

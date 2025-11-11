@@ -45,3 +45,6 @@ test-reactive-client.html
 test-results/
 playwright-report/
 playwright/.cache/
+
+# ESLint
+.eslintcache

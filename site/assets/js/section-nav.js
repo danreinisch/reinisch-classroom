@@ -57,7 +57,9 @@
         const backUnit = makeEl('a', 'btn', 'Back to unit'); backUnit.href = unitPath;
         right.appendChild(backUnit);
       }
-    } catch {}
+    } catch {
+      // Ignore errors in unit path detection
+    }
 
     nav.appendChild(left);
     nav.appendChild(right);

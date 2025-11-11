@@ -40,11 +40,12 @@ export function scoreItem(item, studentAnswer) {
       detail.type = 'multi';
       break;
       
-    case 'constructed':
+    case 'constructed': {
       const constructedResult = scoreConstructed(item, studentAnswer);
       isCorrect = constructedResult.is_correct;
       detail = { ...detail, ...constructedResult.detail, type: 'constructed' };
       break;
+    }
       
     default:
       console.warn(`[assignment-scoring] Unknown answer_type: ${item.answer_type}`);

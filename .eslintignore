@@ -1,0 +1,29 @@
+# Ignore build outputs and dependencies
+node_modules/
+dist/
+build/
+
+# Ignore vendor files
+web/vendor/
+site/web/vendor/
+
+# Ignore documentation examples
+docs/
+
+# Ignore test outputs
+test-results/
+playwright-report/
+playwright/.cache/
+
+# Ignore generated files
+*.min.js
+
+# Ignore Netlify functions (Node.js environment)
+netlify/
+
+# Ignore build scripts and config files (Node.js environment)
+scripts/
+playwright.config.js
+
+# Ignore misnamed files
+site/admin-logout.js

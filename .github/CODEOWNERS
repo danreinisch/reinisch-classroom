@@ -1,0 +1,17 @@
+# CODEOWNERS
+# 
+# This file defines ownership and review requirements for critical areas.
+# Changes to these files require review from the specified owners.
+# 
+# Learn more: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Hub loader (critical for Student Manager initialization)
+/site/hub/index.html @danreinisch
+
+# Student Manager modules (critical for core functionality)
+/web/student-manager-*.js @danreinisch
+/site/web/student-manager-*.js @danreinisch
+
+# GitHub workflows and scripts (critical for CI/CD)
+/.github/workflows/* @danreinisch
+/.github/scripts/* @danreinisch
