@@ -189,10 +189,14 @@ function verifyLocalPassword(username, password) {
       };
     }
     
-    // Bootstrap 'dreinisch' teacher user for local dev
-    if (username === 'dreinisch' && password === 'ChangeMe123!') {
+    // Bootstrap generic teacher user for local dev ONLY
+    // Only active when running on localhost to avoid shipping in production
+    const isLocalDev = typeof window !== 'undefined' && 
+      (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+    
+    if (isLocalDev && username === 'teacher_local' && password === 'ChangeMe123!') {
       const bootstrappedUser = {
-        username: 'dreinisch',
+        username: 'teacher_local',
         role: 'teacher',
         student_id: null,
         password: 'ChangeMe123!',
@@ -200,10 +204,10 @@ function verifyLocalPassword(username, password) {
       };
       
       // Save to local storage for future use
-      users['dreinisch'] = bootstrappedUser;
+      users['teacher_local'] = bootstrappedUser;
       localStore.set('users', users);
       
-      console.log('[user-auth] Bootstrapped local user: dreinisch (teacher)');
+      console.log('[user-auth] Bootstrapped local dev user: teacher_local (teacher)');
       
       return {
         username: bootstrappedUser.username,
