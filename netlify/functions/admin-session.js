@@ -1,18 +1,22 @@
-// Login endpoint: verifies ADMIN_USER/ADMIN_PASS and sets a signed session cookie.
+// Login endpoint: verifies credentials via Supabase and sets a signed session cookie.
 // Accepts POST as application/x-www-form-urlencoded or JSON { username, password }.
+// Accepts roles: admin, teacher
 //
 // Required env vars (Netlify → Environment variables; Functions + Runtime scopes):
-// - ADMIN_USER (Secret ON)
-// - ADMIN_PASS (Secret ON)
 // - ADMIN_SESSION_SECRET (Secret ON; random 32+ chars)
+// - SUPABASE_URL or SUPABASE_URL_RUNTIME
+// - SUPABASE_SERVICE_KEY or SUPABASE_SERVICE_KEY_RUNTIME
 //
 // Optional:
-// - MAX_AGE_SECONDS (defaults to 5) — how long the session cookie lasts. Keep it very short to force login each visit.
+// - MAX_AGE_SECONDS (defaults to 28800 = 8 hours)
 
 const crypto = require('crypto');
 
-const COOKIE_NAME = 'rc_admin_session_v2'; // new name to invalidate any old sessions
-const MAX_AGE_SECONDS = Number(process.env.MAX_AGE_SECONDS || 5);
+const COOKIE_NAME = 'rc_admin_session_v3'; // Updated to v3 for Supabase flow
+const MAX_AGE_SECONDS = Number(process.env.MAX_AGE_SECONDS || 28800); // 8 hours default
+
+const SUPABASE_URL = process.env.SUPABASE_URL_RUNTIME || process.env.SUPABASE_URL;
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY_RUNTIME || process.env.SUPABASE_SERVICE_KEY;
 
 exports.handler = async (event) => {
   // Allow preflight
@@ -25,12 +29,12 @@ exports.handler = async (event) => {
     return redirect('/admin-login');
   }
 
-  // Trim env values
-  const userEnv = (process.env.ADMIN_USER || '').trim();
-  const passEnv = (process.env.ADMIN_PASS || '').trim();
-  const secret  = (process.env.ADMIN_SESSION_SECRET || '').trim();
-
-  if (!userEnv || !passEnv || !secret) return redirect('/admin-login?e=1');
+  // Check required env vars
+  const secret = (process.env.ADMIN_SESSION_SECRET || '').trim();
+  if (!secret || !SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
+    console.error('[admin-session] Missing required environment variables');
+    return redirect('/admin-login?e=1');
+  }
 
   // Robust body parsing (handles base64, form, and JSON)
   let inUser = '', inPass = '';
@@ -53,47 +57,76 @@ exports.handler = async (event) => {
     return redirect('/admin-login?e=1');
   }
 
-  if (!safeEqual(inUser, userEnv) || !safeEqual(inPass, passEnv)) {
-    // Safe diagnostics (no secrets)
-    console.log('admin-session invalid credentials', {
-      uLen: inUser.length, envULen: userEnv.length,
-      pLen: inPass.length, envPLen: passEnv.length
-    });
+  if (!inUser || !inPass) {
     return redirect('/admin-login?e=1');
   }
 
-  // Create signed session token with very short lifetime
-  const exp = Math.floor(Date.now() / 1000) + Math.max(1, MAX_AGE_SECONDS);
-  const payload = { u: userEnv, exp, n: crypto.randomBytes(8).toString('hex') };
-  const payloadBuf = Buffer.from(JSON.stringify(payload), 'utf8');
-  const signature = crypto.createHmac('sha256', secret).update(payloadBuf).digest();
-  const token = b64url(payloadBuf) + '.' + b64url(signature);
+  // Verify credentials via Supabase RPC
+  try {
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_user_password`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_SERVICE_KEY,
+        'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`
+      },
+      body: JSON.stringify({
+        p_username: inUser.toLowerCase(),
+        p_password: inPass
+      })
+    });
 
-  return {
-    statusCode: 302,
-    headers: {
-      Location: '/admin/',
-      'Set-Cookie': serializeCookie(COOKIE_NAME, token, {
-        httpOnly: true,
-        secure: true,
-        sameSite: 'Lax',
-        path: '/',
-        maxAge: Math.max(1, MAX_AGE_SECONDS) // keep tiny to force login each visit
-      }),
-      'Cache-Control': 'no-store'
+    const result = await response.json();
+
+    if (!response.ok || !result || result.length === 0) {
+      console.log('[admin-session] Invalid credentials for user:', inUser);
+      return redirect('/admin-login?e=1');
     }
-  };
+
+    const user = result[0];
+    
+    // Check if role is admin or teacher
+    if (user.role !== 'admin' && user.role !== 'teacher') {
+      console.log('[admin-session] User', inUser, 'does not have admin or teacher role:', user.role);
+      return redirect('/admin-login?e=1');
+    }
+
+    // Create signed session token
+    const exp = Math.floor(Date.now() / 1000) + Math.max(1, MAX_AGE_SECONDS);
+    const payload = { 
+      u: user.username, 
+      role: user.role,
+      exp, 
+      n: crypto.randomBytes(8).toString('hex') 
+    };
+    const payloadBuf = Buffer.from(JSON.stringify(payload), 'utf8');
+    const signature = crypto.createHmac('sha256', secret).update(payloadBuf).digest();
+    const token = b64url(payloadBuf) + '.' + b64url(signature);
+
+    console.log('[admin-session] Successful login for user:', user.username, 'with role:', user.role);
+
+    return {
+      statusCode: 302,
+      headers: {
+        Location: '/admin/',
+        'Set-Cookie': serializeCookie(COOKIE_NAME, token, {
+          httpOnly: true,
+          secure: true,
+          sameSite: 'Lax',
+          path: '/',
+          maxAge: Math.max(1, MAX_AGE_SECONDS)
+        }),
+        'Cache-Control': 'no-store'
+      }
+    };
+  } catch (err) {
+    console.error('[admin-session] Error verifying credentials:', err.message);
+    return redirect('/admin-login?e=1');
+  }
 };
 
 function redirect(to) {
   return { statusCode: 302, headers: { Location: to, 'Cache-Control': 'no-store' } };
-}
-
-function safeEqual(a, b) {
-  const ab = Buffer.from(a, 'utf8');
-  const bb = Buffer.from(b, 'utf8');
-  if (ab.length !== bb.length) return false;
-  return crypto.timingSafeEqual(ab, bb);
 }
 
 function b64url(buf) {

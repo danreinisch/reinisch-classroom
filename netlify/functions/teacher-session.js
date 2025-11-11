@@ -45,6 +45,16 @@ exports.handler = async (event) => {
     };
   }
   
+  // Check if role is teacher or admin
+  if (result.user.role !== 'teacher' && result.user.role !== 'admin') {
+    console.log('[teacher-session] User has insufficient permissions:', result.user.role);
+    return {
+      statusCode: 403,
+      headers: { ...CORS, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ok: false, error: 'Insufficient permissions' })
+    };
+  }
+  
   // Session is valid
   return {
     statusCode: 200,

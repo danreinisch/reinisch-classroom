@@ -2,8 +2,6 @@
 // If missing/invalid, redirects to /admin-login.
 //
 // Required env vars (Netlify → Environment variables):
-// - ADMIN_USER (username for login)
-// - ADMIN_PASS (password for login)
 // - ADMIN_SESSION_SECRET (random 32+ char string, used to sign cookies)
 //
 // Note: This guard protects:
@@ -12,8 +10,10 @@
 // It allows these without a session:
 //   - /admin-login (login page and its assets)
 //   - /edge-ping (health check)
+//
+// Accepts cookies signed with admin or teacher role (allowlist: admin, teacher)
 
-const COOKIE_NAME = 'rc_admin_session';
+const COOKIE_NAME = 'rc_admin_session_v3'; // Updated to v3 to match new Supabase flow
 const ALGO = { name: 'HMAC', hash: 'SHA-256' };
 
 export default async (request, context) => {
@@ -33,8 +33,8 @@ export default async (request, context) => {
     return context.next();
   }
 
-  // If ADMIN_USER/PASS not configured, fail closed
-  const configured = !!(context.env?.ADMIN_USER && context.env?.ADMIN_PASS && context.env?.ADMIN_SESSION_SECRET);
+  // If ADMIN_SESSION_SECRET not configured, fail closed
+  const configured = !!(context.env?.ADMIN_SESSION_SECRET);
   if (!configured) {
     return unauthorized();
   }
@@ -44,8 +44,14 @@ export default async (request, context) => {
   if (!token) return redirectToLogin();
 
   try {
-    const ok = await verifyToken(token, context.env.ADMIN_SESSION_SECRET);
-    if (!ok) return redirectToLogin();
+    const payload = await verifyToken(token, context.env.ADMIN_SESSION_SECRET);
+    if (!payload) return redirectToLogin();
+    
+    // Check role allowlist: admin or teacher
+    if (payload.role !== 'admin' && payload.role !== 'teacher') {
+      console.log('[admin-auth-guard] User has insufficient role:', payload.role);
+      return unauthorized();
+    }
   } catch {
     return redirectToLogin();
   }
@@ -82,19 +88,19 @@ function getCookie(header, name) {
 }
 
 // Token format: <b64url(payload)>.<b64url(signature)>
-// payload = JSON { u: string, exp: number (epoch seconds), n: string }
+// payload = JSON { u: string, role: string, exp: number (epoch seconds), n: string }
 async function verifyToken(token, secret) {
   const idx = token.indexOf('.');
-  if (idx <= 0) return false;
+  if (idx <= 0) return null;
   const payloadB64 = token.slice(0, idx);
   const sigB64 = token.slice(idx + 1);
 
   const payloadRaw = b64urlDecode(payloadB64);
   const data = JSON.parse(new TextDecoder().decode(payloadRaw));
 
-  if (!data || typeof data.exp !== 'number') return false;
+  if (!data || typeof data.exp !== 'number') return null;
   const now = Math.floor(Date.now() / 1000);
-  if (data.exp <= now) return false; // expired
+  if (data.exp <= now) return null; // expired
 
   const key = await importKey(secret);
   const valid = await crypto.subtle.verify(
@@ -103,7 +109,7 @@ async function verifyToken(token, secret) {
     b64urlToBytes(sigB64),
     payloadRaw
   );
-  return !!valid;
+  return valid ? data : null;
 }
 
 async function importKey(secret) {

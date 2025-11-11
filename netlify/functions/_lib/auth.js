@@ -51,7 +51,7 @@ function getCookie(event, name) {
 function requireTeacher(event, secret) {
   const token = getCookie(event, 'tc');
   const payload = token ? verify(token, secret) : null;
-  if (!payload || payload.role !== 'teacher') {
+  if (!payload || (payload.role !== 'teacher' && payload.role !== 'admin')) {
     return { ok: false, res: { statusCode: 401, body: 'Unauthorized' } };
   }
   return { ok: true, user: payload };
