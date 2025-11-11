@@ -1418,7 +1418,125 @@
   import '../web/diagnostics.js';
   import { getFeatureFlag } from '../web/feature-flags.js';
   import { db } from '../web/data-adapter.js';
-  import {
+  
+  // Initialize hubHealth tracking for student portal
+  if (!window.hubHealth) {
+    window.hubHealth = {};
+  }
+  if (!window.hubHealth.studentPortal) {
+    window.hubHealth.studentPortal = { attempts: 0, loaded: false };
+  }
+  
+  // Track module import attempts and success
+  window.hubHealth.studentPortal.attempts++;
+  
+  let portalModulesLoaded = false;
+  
+  try {
+    const {
+      AssignmentStatus,
+      computeAssignmentStatus,
+      groupAssignmentsByStatus,
+      filterAssignments,
+      calculateOverallAverage,
+      calculateClassAverages,
+      calculateTrend,
+      getSparklineData,
+      truncateText,
+      formatDateTime,
+      countMissingAssignments,
+      countLateAssignments,
+      getQuarter,
+      groupSubmissionsByQuarter,
+      calculateQuarterAverages,
+      getQuarterSparklineData,
+      filterSubmissionsByQuarter
+    } = await import('../web/portal-b-helpers.js');
+    
+    const {
+      loadStudentAssignmentsPortalB,
+      loadGradesCard: loadGradesCardUI,
+      showToast,
+      startClock,
+      setupResubmissionHandlers,
+      setupAssignmentTabs,
+      setupFilters,
+      setupAssignmentDetailHandlers,
+      openAssignmentDetail,
+      closeAssignmentDetail
+    } = await import('../web/portal-b-ui.js');
+    
+    // Mark modules as loaded
+    portalModulesLoaded = true;
+    window.hubHealth.studentPortal.loaded = true;
+    console.log('[student-portal] Portal B modules loaded successfully');
+    
+    // Export to global scope for use in the rest of the script
+    window.portalBHelpers = {
+      AssignmentStatus,
+      computeAssignmentStatus,
+      groupAssignmentsByStatus,
+      filterAssignments,
+      calculateOverallAverage,
+      calculateClassAverages,
+      calculateTrend,
+      getSparklineData,
+      truncateText,
+      formatDateTime,
+      countMissingAssignments,
+      countLateAssignments,
+      getQuarter,
+      groupSubmissionsByQuarter,
+      calculateQuarterAverages,
+      getQuarterSparklineData,
+      filterSubmissionsByQuarter
+    };
+    
+    window.portalBUI = {
+      loadStudentAssignmentsPortalB,
+      loadGradesCardUI,
+      showToast,
+      startClock,
+      setupResubmissionHandlers,
+      setupAssignmentTabs,
+      setupFilters,
+      setupAssignmentDetailHandlers,
+      openAssignmentDetail,
+      closeAssignmentDetail
+    };
+  } catch (err) {
+    console.error('[student-portal] Failed to load portal modules:', err);
+    window.hubHealth.studentPortal.loaded = false;
+    window.hubHealth.studentPortal.error = err.message;
+    
+    // Show error card instead of blank screen
+    const container = document.querySelector('.container');
+    if (container) {
+      container.innerHTML = `
+        <div class="card" style="max-width:600px; margin:80px auto; text-align:center;">
+          <div style="font-size:48px; margin-bottom:16px;">⚠️</div>
+          <h2 style="margin-bottom:12px;">Student Portal Unavailable</h2>
+          <p class="subtle" style="margin-bottom:20px;">
+            We're having trouble loading the student portal. This is usually a temporary issue.
+          </p>
+          <div class="error-msg" style="text-align:left; margin-bottom:20px;">
+            <strong>Technical details:</strong><br>
+            ${err.message}
+          </div>
+          <div style="display:flex; gap:12px; justify-content:center;">
+            <button class="btn primary" onclick="location.reload()">Reload Page</button>
+            <button class="btn" onclick="location.href='/hub/'">Return to Hub</button>
+          </div>
+        </div>
+      `;
+    }
+    
+    // Don't continue with the rest of the script
+    throw err;
+  }
+  
+  // Use imported modules from global scope
+  const {
     AssignmentStatus,
     computeAssignmentStatus,
     groupAssignmentsByStatus,
@@ -1436,10 +1554,11 @@
     calculateQuarterAverages,
     getQuarterSparklineData,
     filterSubmissionsByQuarter
-  } from '../web/portal-b-helpers.js';
-  import {
+  } = window.portalBHelpers;
+  
+  const {
     loadStudentAssignmentsPortalB,
-    loadGradesCard as loadGradesCardUI,
+    loadGradesCardUI,
     showToast,
     startClock,
     setupResubmissionHandlers,
@@ -1448,7 +1567,7 @@
     setupAssignmentDetailHandlers,
     openAssignmentDetail,
     closeAssignmentDetail
-  } from '../web/portal-b-ui.js';
+  } = window.portalBUI;
   
   // HOTFIX: Debug mode support: ?debug=1 enables verbose logging and bypasses failsafe delay
   // Make it globally available for early scripts
