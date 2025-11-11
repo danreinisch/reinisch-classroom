@@ -23,4 +23,14 @@ async function jsonRes(res) {
   }
 }
 
-module.exports = { rest, jsonRes };
+// RPC call helper
+async function rpc(functionName, params = {}) {
+  const res = await rest(`/rest/v1/rpc/${functionName}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  });
+  return jsonRes(res);
+}
+
+module.exports = { rest, jsonRes, rpc };
