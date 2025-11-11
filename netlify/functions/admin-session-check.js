@@ -1,9 +1,12 @@
 // Session check endpoint: verifies signed cookie and returns 200 when logged in.
 // Returns 401 when not authenticated or expired.
+// Supports both v2 (legacy) and v3 (Supabase-based) cookies.
 
 const crypto = require('crypto');
 
-const COOKIE_NAME = 'rc_admin_session_v2'; // match the new cookie name
+const COOKIE_NAME_V3 = 'rc_admin_session_v3';
+const COOKIE_NAME_V2 = 'rc_admin_session_v2';
+const COOKIE_NAME_LEGACY = 'rc_admin_session';
 
 exports.handler = async (event) => {
   try {
@@ -11,7 +14,12 @@ exports.handler = async (event) => {
     if (!secret) return json(503, { ok: false, message: 'Admin not configured' });
 
     const cookieHeader = event.headers.cookie || event.headers.Cookie || '';
-    const token = getCookie(cookieHeader, COOKIE_NAME);
+    
+    // Try v3 first, then v2, then legacy
+    let token = getCookie(cookieHeader, COOKIE_NAME_V3);
+    if (!token) token = getCookie(cookieHeader, COOKIE_NAME_V2);
+    if (!token) token = getCookie(cookieHeader, COOKIE_NAME_LEGACY);
+    
     if (!token) return json(401, { ok: false, message: 'No session' });
 
     const ok = verifyToken(token, secret);

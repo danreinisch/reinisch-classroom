@@ -1,18 +1,19 @@
-// Login endpoint: verifies ADMIN_USER/ADMIN_PASS and sets a signed session cookie.
+// Login endpoint: verifies credentials via Supabase and sets a signed session cookie.
 // Accepts POST as application/x-www-form-urlencoded or JSON { username, password }.
 //
 // Required env vars (Netlify → Environment variables; Functions + Runtime scopes):
-// - ADMIN_USER (Secret ON)
-// - ADMIN_PASS (Secret ON)
 // - ADMIN_SESSION_SECRET (Secret ON; random 32+ chars)
+// - SUPABASE_URL (or SUPABASE_URL_RUNTIME)
+// - SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_SERVICE_KEY_RUNTIME)
 //
 // Optional:
-// - MAX_AGE_SECONDS (defaults to 5) — how long the session cookie lasts. Keep it very short to force login each visit.
+// - MAX_AGE_SECONDS (defaults to 28800 = 8 hours) — how long the session cookie lasts.
 
 const crypto = require('crypto');
+const { rpc, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } = require('./_lib/supa');
 
-const COOKIE_NAME = 'rc_admin_session_v2'; // new name to invalidate any old sessions
-const MAX_AGE_SECONDS = Number(process.env.MAX_AGE_SECONDS || 5);
+const COOKIE_NAME = 'rc_admin_session_v3'; // new version for Supabase-based auth
+const MAX_AGE_SECONDS = Number(process.env.MAX_AGE_SECONDS || 28800); // 8 hours default
 
 exports.handler = async (event) => {
   // Allow preflight
@@ -25,12 +26,12 @@ exports.handler = async (event) => {
     return redirect('/admin-login');
   }
 
-  // Trim env values
-  const userEnv = (process.env.ADMIN_USER || '').trim();
-  const passEnv = (process.env.ADMIN_PASS || '').trim();
-  const secret  = (process.env.ADMIN_SESSION_SECRET || '').trim();
-
-  if (!userEnv || !passEnv || !secret) return redirect('/admin-login?e=1');
+  // Check if Supabase is configured
+  const secret = (process.env.ADMIN_SESSION_SECRET || '').trim();
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !secret) {
+    console.error('[admin-session] Missing Supabase or session configuration');
+    return redirect('/admin-login?e=1');
+  }
 
   // Robust body parsing (handles base64, form, and JSON)
   let inUser = '', inPass = '';
@@ -53,36 +54,70 @@ exports.handler = async (event) => {
     return redirect('/admin-login?e=1');
   }
 
-  if (!safeEqual(inUser, userEnv) || !safeEqual(inPass, passEnv)) {
-    // Safe diagnostics (no secrets)
-    console.log('admin-session invalid credentials', {
-      uLen: inUser.length, envULen: userEnv.length,
-      pLen: inPass.length, envPLen: passEnv.length
-    });
+  if (!inUser || !inPass) {
     return redirect('/admin-login?e=1');
   }
 
-  // Create signed session token with very short lifetime
-  const exp = Math.floor(Date.now() / 1000) + Math.max(1, MAX_AGE_SECONDS);
-  const payload = { u: userEnv, exp, n: crypto.randomBytes(8).toString('hex') };
-  const payloadBuf = Buffer.from(JSON.stringify(payload), 'utf8');
-  const signature = crypto.createHmac('sha256', secret).update(payloadBuf).digest();
-  const token = b64url(payloadBuf) + '.' + b64url(signature);
+  // Verify credentials via Supabase RPC
+  try {
+    const verifyRes = await rpc('verify_user_password', {
+      p_username: inUser,
+      p_password: inPass
+    });
 
-  return {
-    statusCode: 302,
-    headers: {
-      Location: '/admin/',
-      'Set-Cookie': serializeCookie(COOKIE_NAME, token, {
-        httpOnly: true,
-        secure: true,
-        sameSite: 'Lax',
-        path: '/',
-        maxAge: Math.max(1, MAX_AGE_SECONDS) // keep tiny to force login each visit
-      }),
-      'Cache-Control': 'no-store'
+    if (!verifyRes.ok) {
+      console.error('[admin-session] Supabase RPC error:', verifyRes.status);
+      return redirect('/admin-login?e=1');
     }
-  };
+
+    const users = await verifyRes.json();
+    
+    // verify_user_password returns empty array if credentials invalid
+    if (!Array.isArray(users) || users.length === 0) {
+      console.log('[admin-session] Invalid credentials attempt for username:', inUser);
+      return redirect('/admin-login?e=1');
+    }
+
+    const user = users[0];
+    
+    // Only allow teacher or admin roles for admin panel
+    if (user.role !== 'teacher' && user.role !== 'admin') {
+      console.log('[admin-session] User has invalid role for admin access:', user.role);
+      return redirect('/admin-login?e=1');
+    }
+
+    // Create signed session token
+    const exp = Math.floor(Date.now() / 1000) + Math.max(1, MAX_AGE_SECONDS);
+    const payload = { 
+      u: user.username, 
+      role: user.role,
+      exp, 
+      n: crypto.randomBytes(8).toString('hex') 
+    };
+    const payloadBuf = Buffer.from(JSON.stringify(payload), 'utf8');
+    const signature = crypto.createHmac('sha256', secret).update(payloadBuf).digest();
+    const token = b64url(payloadBuf) + '.' + b64url(signature);
+
+    console.log('[admin-session] Successful login for user:', user.username, 'role:', user.role);
+
+    return {
+      statusCode: 302,
+      headers: {
+        Location: '/admin/',
+        'Set-Cookie': serializeCookie(COOKIE_NAME, token, {
+          httpOnly: true,
+          secure: true,
+          sameSite: 'Lax',
+          path: '/',
+          maxAge: Math.max(1, MAX_AGE_SECONDS)
+        }),
+        'Cache-Control': 'no-store'
+      }
+    };
+  } catch (e) {
+    console.error('[admin-session] Error during authentication:', e.message);
+    return redirect('/admin-login?e=1');
+  }
 };
 
 function redirect(to) {

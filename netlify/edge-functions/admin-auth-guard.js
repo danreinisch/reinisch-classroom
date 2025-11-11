@@ -2,8 +2,6 @@
 // If missing/invalid, redirects to /admin-login.
 //
 // Required env vars (Netlify → Environment variables):
-// - ADMIN_USER (username for login)
-// - ADMIN_PASS (password for login)
 // - ADMIN_SESSION_SECRET (random 32+ char string, used to sign cookies)
 //
 // Note: This guard protects:
@@ -12,8 +10,12 @@
 // It allows these without a session:
 //   - /admin-login (login page and its assets)
 //   - /edge-ping (health check)
+//
+// Cookie versions supported: v3 (Supabase-based), v2, v1 (legacy)
 
-const COOKIE_NAME = 'rc_admin_session';
+const COOKIE_NAME_V3 = 'rc_admin_session_v3';
+const COOKIE_NAME_V2 = 'rc_admin_session_v2';
+const COOKIE_NAME_LEGACY = 'rc_admin_session';
 const ALGO = { name: 'HMAC', hash: 'SHA-256' };
 
 export default async (request, context) => {
@@ -33,14 +35,18 @@ export default async (request, context) => {
     return context.next();
   }
 
-  // If ADMIN_USER/PASS not configured, fail closed
-  const configured = !!(context.env?.ADMIN_USER && context.env?.ADMIN_PASS && context.env?.ADMIN_SESSION_SECRET);
+  // If ADMIN_SESSION_SECRET not configured, fail closed
+  const configured = !!(context.env?.ADMIN_SESSION_SECRET);
   if (!configured) {
     return unauthorized();
   }
 
-  // Check signed session cookie
-  const token = getCookie(request.headers.get('cookie') || '', COOKIE_NAME);
+  // Check signed session cookie (try v3, then v2, then legacy)
+  const cookieHeader = request.headers.get('cookie') || '';
+  let token = getCookie(cookieHeader, COOKIE_NAME_V3);
+  if (!token) token = getCookie(cookieHeader, COOKIE_NAME_V2);
+  if (!token) token = getCookie(cookieHeader, COOKIE_NAME_LEGACY);
+  
   if (!token) return redirectToLogin();
 
   try {
