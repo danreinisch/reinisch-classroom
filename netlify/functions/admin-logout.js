@@ -1,5 +1,5 @@
 // Clears the admin session cookie and redirects to /admin-login
-const COOKIE_NAME = 'rc_admin_session_v2'; // match the new cookie name
+const COOKIE_NAME = 'rc_admin_session_v3'; // updated for Supabase-backed auth
 
 exports.handler = async () => {
   return {

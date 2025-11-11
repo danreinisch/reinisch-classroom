@@ -1,18 +1,20 @@
-// Login endpoint: verifies ADMIN_USER/ADMIN_PASS and sets a signed session cookie.
+// Login endpoint: verifies credentials via Supabase RPC verify_user_password and sets a signed session cookie.
 // Accepts POST as application/x-www-form-urlencoded or JSON { username, password }.
 //
 // Required env vars (Netlify → Environment variables; Functions + Runtime scopes):
-// - ADMIN_USER (Secret ON)
-// - ADMIN_PASS (Secret ON)
-// - ADMIN_SESSION_SECRET (Secret ON; random 32+ chars)
+// - ADMIN_SESSION_SECRET (Secret ON; random 32+ chars) — used to sign session cookies
+// - SUPABASE_URL (runtime only)
+// - SUPABASE_SERVICE_ROLE_KEY (runtime only)
 //
 // Optional:
-// - MAX_AGE_SECONDS (defaults to 5) — how long the session cookie lasts. Keep it very short to force login each visit.
+// - MAX_AGE_SECONDS (defaults to 300) — how long the session cookie lasts. Default is 5 minutes.
 
 const crypto = require('crypto');
+const { rest, jsonRes } = require('./_lib/supa');
 
-const COOKIE_NAME = 'rc_admin_session_v2'; // new name to invalidate any old sessions
-const MAX_AGE_SECONDS = Number(process.env.MAX_AGE_SECONDS || 5);
+const COOKIE_NAME = 'rc_admin_session_v3'; // new name for Supabase-backed auth
+const MAX_AGE_SECONDS = Number(process.env.MAX_AGE_SECONDS || 300);
+const ALLOWED_ROLES = new Set(['admin', 'teacher']);
 
 exports.handler = async (event) => {
   // Allow preflight
@@ -25,12 +27,15 @@ exports.handler = async (event) => {
     return redirect('/admin-login');
   }
 
-  // Trim env values
-  const userEnv = (process.env.ADMIN_USER || '').trim();
-  const passEnv = (process.env.ADMIN_PASS || '').trim();
-  const secret  = (process.env.ADMIN_SESSION_SECRET || '').trim();
+  // Check required env vars
+  const secret = (process.env.ADMIN_SESSION_SECRET || '').trim();
+  const supabaseUrl = (process.env.SUPABASE_URL || '').trim();
+  const supabaseKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
 
-  if (!userEnv || !passEnv || !secret) return redirect('/admin-login?e=1');
+  if (!secret || !supabaseUrl || !supabaseKey) {
+    console.error('admin-session: Missing required env vars');
+    return redirect('/admin-login?e=1');
+  }
 
   // Robust body parsing (handles base64, form, and JSON)
   let inUser = '', inPass = '';
@@ -53,18 +58,45 @@ exports.handler = async (event) => {
     return redirect('/admin-login?e=1');
   }
 
-  if (!safeEqual(inUser, userEnv) || !safeEqual(inPass, passEnv)) {
-    // Safe diagnostics (no secrets)
-    console.log('admin-session invalid credentials', {
-      uLen: inUser.length, envULen: userEnv.length,
-      pLen: inPass.length, envPLen: passEnv.length
-    });
+  if (!inUser || !inPass) {
     return redirect('/admin-login?e=1');
   }
 
-  // Create signed session token with very short lifetime
+  // Call Supabase RPC to verify credentials
+  let userInfo;
+  try {
+    const res = await rest('/rest/v1/rpc/verify_user_password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ p_username: inUser, p_password: inPass })
+    });
+    const result = await jsonRes(res);
+    
+    if (!result.ok || !Array.isArray(result.data) || result.data.length === 0) {
+      console.log('admin-session: Authentication failed for user', inUser);
+      return redirect('/admin-login?e=1');
+    }
+    
+    userInfo = result.data[0];
+  } catch (err) {
+    console.error('admin-session: Supabase RPC error', err);
+    return redirect('/admin-login?e=1');
+  }
+
+  // Check if user role is allowed
+  if (!userInfo.role || !ALLOWED_ROLES.has(userInfo.role)) {
+    console.log('admin-session: User role not allowed', { username: inUser, role: userInfo.role });
+    return redirect('/admin-login?e=1');
+  }
+
+  // Create signed session token with role included
   const exp = Math.floor(Date.now() / 1000) + Math.max(1, MAX_AGE_SECONDS);
-  const payload = { u: userEnv, exp, n: crypto.randomBytes(8).toString('hex') };
+  const payload = { 
+    u: userInfo.username, 
+    r: userInfo.role,
+    exp, 
+    n: crypto.randomBytes(8).toString('hex') 
+  };
   const payloadBuf = Buffer.from(JSON.stringify(payload), 'utf8');
   const signature = crypto.createHmac('sha256', secret).update(payloadBuf).digest();
   const token = b64url(payloadBuf) + '.' + b64url(signature);
@@ -78,7 +110,7 @@ exports.handler = async (event) => {
         secure: true,
         sameSite: 'Lax',
         path: '/',
-        maxAge: Math.max(1, MAX_AGE_SECONDS) // keep tiny to force login each visit
+        maxAge: Math.max(1, MAX_AGE_SECONDS)
       }),
       'Cache-Control': 'no-store'
     }
@@ -87,13 +119,6 @@ exports.handler = async (event) => {
 
 function redirect(to) {
   return { statusCode: 302, headers: { Location: to, 'Cache-Control': 'no-store' } };
-}
-
-function safeEqual(a, b) {
-  const ab = Buffer.from(a, 'utf8');
-  const bb = Buffer.from(b, 'utf8');
-  if (ab.length !== bb.length) return false;
-  return crypto.timingSafeEqual(ab, bb);
 }
 
 function b64url(buf) {
