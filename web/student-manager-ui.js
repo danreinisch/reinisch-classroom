@@ -358,7 +358,7 @@ export class StudentManagerUI {
           <div class="subtle">No students found matching your filters.</div>
         </div>
       ` : `
-        <div class="table-wrap" style="max-height:500px;overflow:auto;margin-top:12px">
+        <div class="table-wrap" style="max-height:60vh;overflow:auto;-webkit-overflow-scrolling:touch;margin-top:12px">
           <table class="table">
             <thead>
               <tr>
@@ -400,6 +400,15 @@ export class StudentManagerUI {
         </div>
       `}
     `;
+    
+    // Defensive logging: verify rendered row count matches filteredStudents length
+    // This helps diagnose any rendering truncation issues
+    const renderedRows = listContainer.querySelectorAll('tbody tr');
+    console.log(`[student-manager-ui] Rendered rows: ${renderedRows.length} (expected: ${this.filteredStudents.length})`);
+    
+    if (renderedRows.length !== this.filteredStudents.length) {
+      console.warn(`[student-manager-ui] Row count mismatch! Rendered ${renderedRows.length} but have ${this.filteredStudents.length} filtered students`);
+    }
   }
   
   /**
