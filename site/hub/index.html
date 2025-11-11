@@ -2140,25 +2140,131 @@
       failedModules.push('diagnostics.js');
     }
     
-    // Student Manager UI module (lazy-loaded in initStudentManager)
+    // Student Manager UI module - dual-path loader with fallback (A.2.3)
+    // Attempts /web/ paths first, then falls back to /site/web/ paths
+    // Tracks all attempts for diagnostics
+    const loadStudentManagerAttempts = [];
     let StudentManagerUI;
-    try {
-      const studentManagerModule = await import(`/web/student-manager-ui.js?v=${cacheBust}`);
-      StudentManagerUI = studentManagerModule.default || studentManagerModule.StudentManagerUI;
-      // Also expose globally for legacy fallback (module also attaches to window)
-      window.StudentManagerUI = StudentManagerUI;
-      console.log(LOG_PREFIX, 'Student Manager UI module loaded successfully');
-    } catch (err) {
-      console.error(LOG_PREFIX, 'Failed to load student-manager-ui.js:', err);
-      failedModules.push('student-manager-ui.js');
+    
+    /**
+     * Attempt to load a module from a specific path
+     * Records HTTP status, content-type, and error details
+     */
+    async function attemptModuleLoad(path) {
+      const attempt = { path, ok: false, status: null, contentType: null, error: null };
+      
+      try {
+        console.log(LOG_PREFIX, `Attempting to load: ${path}`);
+        
+        // First, try a HEAD request to check if the file exists and get metadata
+        try {
+          const headResponse = await fetch(path, { method: 'HEAD' });
+          attempt.status = headResponse.status;
+          attempt.contentType = headResponse.headers.get('content-type');
+          
+          console.log(LOG_PREFIX, `${path} - Status: ${attempt.status}, Content-Type: ${attempt.contentType}`);
+          
+          if (!headResponse.ok) {
+            attempt.error = `HTTP ${headResponse.status} ${headResponse.statusText}`;
+            return attempt;
+          }
+          
+          // Check for HTML content (common sign of 404 page or redirect)
+          if (attempt.contentType && attempt.contentType.includes('text/html')) {
+            attempt.error = 'MIME type mismatch: expected JavaScript, got HTML';
+            return attempt;
+          }
+        } catch (headErr) {
+          console.warn(LOG_PREFIX, `HEAD request failed for ${path}:`, headErr);
+          // Continue to import attempt even if HEAD fails
+        }
+        
+        // Attempt the actual import
+        const module = await import(`${path}?v=${cacheBust}`);
+        const LoadedClass = module.default || module.StudentManagerUI;
+        
+        if (!LoadedClass) {
+          attempt.error = 'Module loaded but StudentManagerUI class not found';
+          return attempt;
+        }
+        
+        attempt.ok = true;
+        return { ...attempt, module: LoadedClass };
+      } catch (err) {
+        attempt.error = err.message;
+        console.error(LOG_PREFIX, `Failed to load ${path}:`, err);
+        return attempt;
+      }
     }
     
-    // Show error banner if any modules failed to load
+    // Try primary paths first (/web/)
+    const primaryAttempt = await attemptModuleLoad('/web/student-manager-ui.js');
+    loadStudentManagerAttempts.push(primaryAttempt);
+    
+    if (primaryAttempt.ok) {
+      StudentManagerUI = primaryAttempt.module;
+      window.StudentManagerUI = StudentManagerUI;
+      console.log(LOG_PREFIX, 'Student Manager UI loaded from /web/ path');
+    } else {
+      // Fallback to /site/web/ path
+      console.warn(LOG_PREFIX, 'Primary path failed, trying fallback /site/web/ path...');
+      
+      const fallbackAttempt = await attemptModuleLoad('/site/web/student-manager-ui.js');
+      loadStudentManagerAttempts.push(fallbackAttempt);
+      
+      if (fallbackAttempt.ok) {
+        StudentManagerUI = fallbackAttempt.module;
+        window.StudentManagerUI = StudentManagerUI;
+        console.log(LOG_PREFIX, 'Student Manager UI loaded from /site/web/ fallback path');
+      } else {
+        console.error(LOG_PREFIX, 'All Student Manager module load attempts failed');
+        failedModules.push('student-manager-ui.js');
+      }
+    }
+    
+    // Store attempts in window.hubHealth for diagnostics
+    if (!window.hubHealth) {
+      window.hubHealth = {};
+    }
+    window.hubHealth.studentManager = {
+      loaded: !!StudentManagerUI,
+      attempts: loadStudentManagerAttempts
+    };
+    
+    // Log attempts table for debugging
+    if (loadStudentManagerAttempts.length > 0) {
+      console.log(LOG_PREFIX, 'Student Manager load attempts:');
+      console.table(loadStudentManagerAttempts.map(a => ({
+        path: a.path,
+        ok: a.ok,
+        status: a.status || '—',
+        contentType: a.contentType || '—',
+        error: a.error || '—'
+      })));
+    }
+    
+    // Show error banner if any modules failed to load (with enhanced diagnostics for A.2.3)
     if (failedModules.length > 0) {
       const banner = document.getElementById('criticalAssetBanner');
       const message = document.getElementById('criticalAssetMessage');
       if (banner && message) {
-        message.textContent = `Failed to load ${failedModules.length} module(s): ${failedModules.join(', ')}. Some functionality may be limited.`;
+        // Build detailed error message
+        let errorDetails = `Failed to load ${failedModules.length} module(s): ${failedModules.join(', ')}.`;
+        
+        // Add Student Manager specific diagnostics if it failed
+        if (failedModules.includes('student-manager-ui.js') && loadStudentManagerAttempts.length > 0) {
+          const lastAttempt = loadStudentManagerAttempts[loadStudentManagerAttempts.length - 1];
+          if (lastAttempt.status) {
+            errorDetails += ` Last attempt: ${lastAttempt.path} returned ${lastAttempt.status}`;
+            if (lastAttempt.error) {
+              errorDetails += ` (${lastAttempt.error})`;
+            }
+          } else if (lastAttempt.error) {
+            errorDetails += ` Error: ${lastAttempt.error}`;
+          }
+        }
+        
+        message.textContent = errorDetails;
         banner.style.display = 'block';
       }
     }
@@ -8786,7 +8892,7 @@
     const startTime = Date.now();
     const container = qs('.ttab[data-tab="studentManager"]');
     
-    // Helper to render exactly one error card (prevents duplicates)
+    // Helper to render exactly one error card with detailed diagnostics
     const renderError = (title, message, details = null) => {
       if (!container) return;
       
@@ -8796,11 +8902,32 @@
       // Find the "Coming Soon" card and replace with error, or append new error card
       const comingSoon = container.querySelector('.card[style*="Coming Soon" i], .card[style*="rgba(34,197,94,.06)"]');
       
+      // Build attempts list if available
+      let attemptsHTML = '';
+      if (window.hubHealth?.studentManager?.attempts?.length > 0) {
+        attemptsHTML = `
+          <div style="margin-top:12px;padding:10px;background:rgba(0,0,0,.2);border-radius:8px">
+            <div style="font-weight:700;margin-bottom:8px;font-size:13px">Load Attempts:</div>
+            <div style="font-size:12px">
+              ${window.hubHealth.studentManager.attempts.map(a => `
+                <div style="margin-bottom:6px;padding:6px;background:rgba(0,0,0,.15);border-radius:6px">
+                  <div><strong>Path:</strong> ${escapeHtml(a.path)}</div>
+                  <div><strong>Status:</strong> ${a.status || '—'} ${a.ok ? '✅' : '❌'}</div>
+                  ${a.contentType ? `<div><strong>Content-Type:</strong> ${escapeHtml(a.contentType)}</div>` : ''}
+                  ${a.error ? `<div><strong>Error:</strong> ${escapeHtml(a.error)}</div>` : ''}
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }
+      
       const errorHTML = `
         <div style="font-size:32px;margin-bottom:12px">⚠️</div>
         <div style="font-weight:800;margin-bottom:8px;color:#fecaca">${escapeHtml(title)}</div>
         <div class="subtle">${escapeHtml(message)}</div>
         ${details ? `<div class="subtle" style="margin-top:8px;font-size:12px;opacity:0.8">${escapeHtml(details)}</div>` : ''}
+        ${attemptsHTML}
       `;
       
       if (comingSoon) {
@@ -8827,36 +8954,7 @@
         renderError(
           'Module Loading Error',
           'Failed to load student-manager-ui.js',
-          'Check browser console for import errors in student-manager-ui.js'
-        );
-        return;
-      }
-      
-      // Preflight check 2: Verify nested dependencies can be imported
-      // Try to import student-manager-rpc.js to check for nested failures
-      try {
-        const rpcModule = await import(`/web/student-manager-rpc.js?v=${Date.now()}`);
-        console.log('[student-manager] student-manager-rpc.js loaded successfully');
-      } catch (rpcErr) {
-        console.error('[student-manager] Failed to load student-manager-rpc.js:', rpcErr);
-        renderError(
-          'Nested Dependency Error',
-          'Failed to load student-manager-rpc.js',
-          `Import error: ${rpcErr.message}`
-        );
-        return;
-      }
-      
-      // Preflight check 3: Verify data-adapter.js can be imported
-      try {
-        const adapterModule = await import(`/web/data-adapter.js?v=${Date.now()}`);
-        console.log('[student-manager] data-adapter.js loaded successfully');
-      } catch (adapterErr) {
-        console.error('[student-manager] Failed to load data-adapter.js:', adapterErr);
-        renderError(
-          'Nested Dependency Error',
-          'Failed to load data-adapter.js',
-          `Import error: ${adapterErr.message}`
+          'The Student Manager UI module could not be loaded from any path. Check load attempts below.'
         );
         return;
       }
@@ -8890,7 +8988,9 @@
       if (!window.hubHealth) {
         window.hubHealth = {};
       }
+      // Merge with existing attempts data
       window.hubHealth.studentManager = { 
+        ...window.hubHealth.studentManager,
         loaded: true, 
         ts: Date.now(),
         initMs: initMs
