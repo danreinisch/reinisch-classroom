@@ -80,3 +80,23 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 7
+
+  leak-guard:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Run leak guard check
+        run: node scripts/check-env-leaks.js
+        env:
+          BUILD_DIR: '.'
+          LEAK_CHECK_STRICT: '0'

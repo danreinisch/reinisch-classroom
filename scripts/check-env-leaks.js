@@ -3,10 +3,11 @@
  * check-env-leaks.js
  * 
  * Optional post-build check that scans the build output for leaked environment secrets.
- * This helps prevent regression where secret values (like ADMIN_USER_ALIASES, ADMIN_USER, ADMIN_PASS)
- * accidentally appear in the browser bundle.
+ * This helps prevent regression where secret values (like ADMIN_USER_ALIASES, DMIN_USER_ALIASES, 
+ * ADMIN_USER, ADMIN_PASS) accidentally appear in the browser bundle.
  * 
- * Exit code 0 (non-fatal) so builds aren't blocked, but warnings are logged to help catch issues.
+ * By default, exit code 0 (non-fatal) so builds aren't blocked, but warnings are logged to help catch issues.
+ * Set LEAK_CHECK_STRICT=1 to enable strict mode which will fail the build (exit code 1) on detected leaks.
  */
 
 import { readFileSync, readdirSync, statSync } from 'fs';
@@ -14,8 +15,10 @@ import { join } from 'path';
 
 // Configuration
 const BUILD_DIR = process.env.NETLIFY_PUBLISH_DIR || process.env.BUILD_DIR || '.';
+const STRICT_MODE = process.env.LEAK_CHECK_STRICT === '1';
 const SECRETS_TO_CHECK = [
   { name: 'ADMIN_USER_ALIASES', value: process.env.ADMIN_USER_ALIASES },
+  { name: 'DMIN_USER_ALIASES', value: process.env.DMIN_USER_ALIASES },
   { name: 'ADMIN_USER', value: process.env.ADMIN_USER },
   { name: 'ADMIN_PASS', value: process.env.ADMIN_PASS }
 ];
@@ -28,6 +31,7 @@ const SKIP_DIRS = ['node_modules', '.git', '.github', 'tests', 'supabase'];
 
 console.log('[check-env-leaks] Starting environment leak check...');
 console.log(`[check-env-leaks] Build directory: ${BUILD_DIR}`);
+console.log(`[check-env-leaks] Strict mode: ${STRICT_MODE ? 'ENABLED (build will fail on leaks)' : 'DISABLED (warnings only)'}`);
 
 // Filter out undefined/empty secrets
 const activeSecrets = SECRETS_TO_CHECK.filter(s => s.value && s.value.trim().length > 0);
@@ -99,10 +103,16 @@ if (leaks.length > 0) {
   }
   
   console.warn('[check-env-leaks] These secrets should be removed from browser-delivered code.');
-  console.warn('[check-env-leaks] This is a WARNING only - build will continue.');
+  
+  if (STRICT_MODE) {
+    console.error('[check-env-leaks] ❌ STRICT MODE: Build FAILED due to secret leaks.');
+    process.exit(1);
+  } else {
+    console.warn('[check-env-leaks] This is a WARNING only - build will continue.');
+  }
 } else {
   console.log('[check-env-leaks] ✓ No secret leaks detected. Build is clean!');
 }
 
-// Always exit with 0 (non-fatal)
+// Exit with 0 (non-fatal) unless strict mode detected leaks
 process.exit(0);
