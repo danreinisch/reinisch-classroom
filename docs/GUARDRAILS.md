@@ -1248,4 +1248,254 @@ The following endpoints were reviewed and **do not require throttling**:
 
 See [DEPLOYMENT_VERIFICATION.md](../DEPLOYMENT_VERIFICATION.md#csv-validation-verification) for manual test cases and verification steps.
 
+## Telemetry (Optional)
+
+The application includes opt-in client error telemetry and diagnostics to help identify and troubleshoot client-side issues. Telemetry is **off by default** and must be explicitly enabled.
+
+### What is Collected
+
+When telemetry is enabled, the following information may be collected:
+
+**Error Events:**
+- Error message (truncated to 512 chars)
+- Error name/type
+- Stack trace (limited to first 30 lines, max 4KB)
+- Source file path (truncated to 256 chars)
+- Line and column numbers
+- Page URL (path only, no query params)
+- Timestamp
+- Client request ID (UUID)
+
+**Performance Metrics:**
+- Metric name (e.g., "student-portal-init")
+- Duration in milliseconds
+- Optional detail string (truncated to 512 chars)
+- Page URL (path only)
+- Timestamp
+- Client request ID (UUID)
+
+### Privacy Protections
+
+**What is NOT collected:**
+- Cookies
+- localStorage data
+- Full user-agent strings (truncated)
+- Query parameters or URL fragments
+- Full referrer URLs
+- User input or form data
+- Authentication tokens
+
+**Data Sanitization:**
+- All angle brackets (`<>`) removed from text fields
+- String lengths strictly limited
+- Stack traces truncated to prevent PII leakage
+- IP addresses hashed for throttling (not stored)
+
+**Retention:**
+- Events logged to Netlify function logs (standard retention)
+- No long-term database storage implemented
+- Logs automatically expire per Netlify's retention policy
+
+### How to Enable
+
+Telemetry can be enabled using any of the following methods:
+
+**1. URL Query Parameter (Temporary):**
+```
+https://reinischclassroom.com/student/?diag=1
+```
+Enabled only for the current page load.
+
+**2. localStorage Flag (Persistent):**
+```javascript
+// In browser console
+localStorage.setItem('rcDiagEnabled', '1');
+// Reload page for changes to take effect
+```
+Remains enabled across page loads until removed.
+
+**3. Feature Flag (Admin/Developer):**
+```javascript
+// Set before loading diagnostics.js
+window.RC_DIAG_ENABLED = true;
+```
+Useful for controlled rollout or A/B testing.
+
+### How to Disable
+
+**Remove URL parameter:**
+Navigate to the page without `?diag=1`.
+
+**Clear localStorage flag:**
+```javascript
+localStorage.removeItem('rcDiagEnabled');
+// Reload page
+```
+
+**Clear feature flag:**
+Reload page without setting `window.RC_DIAG_ENABLED`.
+
+### Rate Limiting
+
+To prevent abuse and control costs:
+
+- **Per-client throttling:** Maximum 10 telemetry events per minute per client
+- **Cooldown period:** 60 seconds
+- **Rejection delay:** 150-300ms random delay when throttled (prevents timing attacks)
+- **Automatic backoff:** After 2 consecutive send failures, events are dropped
+- **Offline detection:** Events dropped when browser is offline
+
+Throttling uses a cookie-based token with hashed IP + client ID.
+
+### Sampling (Not Implemented)
+
+Currently, telemetry is all-or-nothing per client. Future enhancements could add:
+- Sampling rate (e.g., 10% of errors)
+- Severity-based filtering (only critical errors)
+- Metric selection (only specific metrics)
+
+### API Endpoint
+
+**Endpoint:** `/.netlify/functions/client-error`
+
+**Request Format:**
+```json
+{
+  "type": "error",
+  "clientId": "550e8400-e29b-41d4-a716-446655440000",
+  "page": "/student/",
+  "ts": 1699900000000,
+  "payload": {
+    "message": "Failed to fetch assignments",
+    "name": "TypeError",
+    "stack": "TypeError: Failed to fetch...\n  at ...",
+    "source": "/web/portal-b-ui.js",
+    "lineno": 42,
+    "colno": 15
+  }
+}
+```
+
+**Response Codes:**
+- `204 No Content` - Event accepted and logged
+- `400 Bad Request` - Invalid payload or validation error
+- `429 Too Many Requests` - Throttle limit exceeded
+
+**Security:**
+- Enforces `Content-Type: application/json`
+- Body size limited to 25KB
+- Dynamic CORS (same as other functions)
+- All security headers applied
+- X-Request-Id for correlation
+
+### Client API
+
+When telemetry is enabled, the following functions are available:
+
+```javascript
+// Capture an error manually
+window.captureError(new Error('Something went wrong'));
+
+// Record a performance metric
+window.recordMetric('feature-load', 1234.56, 'success');
+
+// Measure an async operation
+await window.measureAsync('data-fetch', async () => {
+  return await fetch('/api/data');
+});
+```
+
+Errors and promise rejections are automatically captured when telemetry is enabled.
+
+### Event Batching
+
+- Events queued in memory
+- Automatic flush every 5 seconds OR when 10 events queued
+- Single-event POST (no batch API)
+- Flush on page unload
+- Events dropped if offline or after 2 send failures
+
+### Debugging Telemetry
+
+**Check if telemetry is enabled:**
+```javascript
+// In console
+console.log(window.rcDiag.enabled); // true or false
+```
+
+**Manually trigger test error:**
+```javascript
+setTimeout(() => { throw new Error('test telemetry error'); }, 0);
+```
+
+**Manually record test metric:**
+```javascript
+window.recordMetric('manual-test', 123.45, 'test-detail');
+```
+
+**View telemetry in Network tab:**
+1. Open DevTools > Network
+2. Filter for "client-error"
+3. Trigger error or metric
+4. Inspect request/response
+
+### Server-Side Logs
+
+Telemetry events are logged in Netlify function logs:
+
+```
+[client-error] [550e8400-...] Telemetry event received:
+[client-error] [550e8400-...]   type: error
+[client-error] [550e8400-...]   page: /student/
+[client-error] [550e8400-...]   clientId: abc-123-...
+[client-error] [550e8400-...]   ts: 2024-11-12T23:00:00.000Z
+[client-error] [550e8400-...]   error.message: Failed to fetch assignments
+[client-error] [550e8400-...]   error.name: TypeError
+[client-error] [550e8400-...]   error.source: /web/portal-b-ui.js
+[client-error] [550e8400-...]   error.stack: TypeError: Failed to fetch...
+```
+
+Search logs by request ID for full context.
+
+### Recommendations
+
+**For end users:**
+- Keep telemetry disabled by default
+- Enable only when troubleshooting specific issues
+- Clear diagnostic flags after resolving issues
+
+**For developers/admins:**
+- Use `?diag=1` for temporary debugging sessions
+- Use localStorage flag for persistent local testing
+- Monitor function logs for error patterns
+- Review throttle limits if legitimate traffic is blocked
+
+**For production monitoring:**
+- Consider implementing sampling (future)
+- Set up alerts for high error rates in function logs
+- Periodically review CSP violation reports alongside telemetry
+- Document any discovered patterns or fixes
+
+### Security Considerations
+
+- **Opt-in only:** No data collected without explicit consent
+- **Minimal payload:** Only error metadata, no user data
+- **Strict validation:** Server enforces schema and limits
+- **Throttling:** Prevents abuse and cost spikes
+- **No PII:** Sanitization removes potentially sensitive data
+- **Short-lived:** No long-term storage beyond standard logs
+
+### Future Enhancements
+
+Potential improvements for future releases:
+
+1. **Structured storage:** Store events in database for analysis
+2. **Sampling:** Collect only a percentage of events
+3. **Filtering:** Client-side filtering by error type or severity
+4. **Aggregation:** Server-side grouping and deduplication
+5. **Dashboards:** Visualization of error trends and metrics
+6. **Alerts:** Automated notifications for critical errors
+7. **Source maps:** Deobfuscate minified stack traces
+8. **User feedback:** Capture optional user-submitted context
+
 
