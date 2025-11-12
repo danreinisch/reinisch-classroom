@@ -576,6 +576,240 @@ curl -s "${PREVIEW_URL}/.netlify/functions/auth-health" | jq .
 
 For detailed guardrails documentation, see [docs/GUARDRAILS.md](docs/GUARDRAILS.md).
 
+## Global Security Headers Verification
+
+These tests verify the site-wide security headers added in the global guardrails extension.
+
+### Test GH1: Global Security Headers Present
+
+Verify security headers on a static HTML page:
+
+```bash
+PREVIEW_URL="https://your-preview-url.netlify.app"
+
+curl -i "${PREVIEW_URL}/"
+```
+
+**Expected headers:**
+- `Strict-Transport-Security: max-age=31536000; includeSubDomains`
+- `X-Content-Type-Options: nosniff`
+- `Referrer-Policy: strict-origin-when-cross-origin`
+- `Permissions-Policy: geolocation=(), microphone=(), camera=()`
+- `X-Frame-Options: SAMEORIGIN`
+- `Content-Security-Policy-Report-Only: default-src 'self'; ...`
+
+✅ **Pass Criteria:** All security headers present in response
+
+### Test GH2: CSP Report-Only Header Format
+
+```bash
+curl -i "${PREVIEW_URL}/" | grep -i "content-security-policy-report-only"
+```
+
+**Expected:**
+- Header contains `report-uri /.netlify/functions/csp-report`
+- Header includes `default-src 'self'`
+- Header is `Content-Security-Policy-Report-Only` (not enforcing)
+
+✅ **Pass Criteria:** CSP-RO header present with report-uri
+
+### Test GH3: HTML Cache-Control
+
+```bash
+curl -i "${PREVIEW_URL}/student/index.html"
+```
+
+**Expected:**
+- `Cache-Control: no-store, no-cache, must-revalidate`
+
+✅ **Pass Criteria:** HTML files have no-store cache control
+
+### Test GH4: CSP Report Endpoint - Accept Valid Report
+
+```bash
+curl -i -X POST "${PREVIEW_URL}/.netlify/functions/csp-report" \
+  -H "Content-Type: application/json" \
+  -H "Origin: https://reinischclassroom.com" \
+  -d '{
+    "csp-report": {
+      "document-uri": "https://reinischclassroom.com/test",
+      "violated-directive": "script-src-elem",
+      "blocked-uri": "https://evil.com/script.js",
+      "source-file": "https://reinischclassroom.com/test.html",
+      "line-number": 42
+    }
+  }'
+```
+
+**Expected:**
+- Status: 204 No Content
+- `X-Request-Id` header present
+- `Access-Control-Allow-Origin` header present (for allowed origin)
+- Empty response body
+
+✅ **Pass Criteria:** 204 response with security headers
+
+### Test GH5: CSP Report Endpoint - Reject Oversized Report
+
+```bash
+# Create 26KB payload (exceeds 25KB limit)
+python3 -c "print('{\"csp-report\":{\"document-uri\":\"' + 'a'*26000 + '\"}}')" | \
+curl -i -X POST "${PREVIEW_URL}/.netlify/functions/csp-report" \
+  -H "Content-Type: application/json" \
+  -d @-
+```
+
+**Expected:**
+- Status: 400 Bad Request
+- Error: "Request body too large"
+
+✅ **Pass Criteria:** Rejects oversized reports with 400
+
+### Test GH6: CSP Report Endpoint - CORS Preflight
+
+```bash
+curl -i -X OPTIONS "${PREVIEW_URL}/.netlify/functions/csp-report" \
+  -H "Origin: https://reinischclassroom.com" \
+  -H "Access-Control-Request-Method: POST"
+```
+
+**Expected:**
+- Status: 200
+- `Access-Control-Allow-Origin: https://reinischclassroom.com`
+- `Access-Control-Allow-Methods` includes POST
+- `Vary: Origin`
+
+✅ **Pass Criteria:** Preflight succeeds with CORS headers
+
+### Test GH7: CSP Report Endpoint - Invalid Content-Type
+
+```bash
+curl -i -X POST "${PREVIEW_URL}/.netlify/functions/csp-report" \
+  -H "Content-Type: text/plain" \
+  -d '{"csp-report":{}}'
+```
+
+**Expected:**
+- Status: 400
+- Error: "Content-Type must be application/json or application/csp-report"
+
+✅ **Pass Criteria:** Rejects invalid content-type
+
+### Test GH8: Client Request ID in Diagnostics
+
+1. Open browser to `${PREVIEW_URL}/student/?diag=1`
+2. Open DevTools console
+3. Look for:
+   ```
+   [diagnostics] Client Request ID: <UUID>
+   ```
+4. Verify `window.rcClientRequestId` exists:
+   ```javascript
+   console.log(window.rcClientRequestId);
+   ```
+
+✅ **Pass Criteria:** Client request ID generated and available
+
+### Test GH9: wrapFetch Adds Client ID Header
+
+1. Open browser to `${PREVIEW_URL}/student/?diag=1`
+2. Open DevTools console
+3. Run:
+   ```javascript
+   const resp = await wrapFetch('/.netlify/functions/auth-health');
+   console.log('Request included client ID header');
+   ```
+4. Check Network tab → Request Headers → `X-Client-Request-Id` should be present
+
+✅ **Pass Criteria:** wrapFetch injects X-Client-Request-Id header
+
+### Test GH10: Server Logs Show Client Request ID
+
+```bash
+# Make a request with client ID
+curl -i -X GET "${PREVIEW_URL}/.netlify/functions/auth-health" \
+  -H "X-Client-Request-Id: test-client-123"
+```
+
+Then check Netlify function logs for:
+
+```
+[auth-health] [<server-id>] Request received
+[auth-health] [<server-id>] Client Request ID: test-client-123
+```
+
+✅ **Pass Criteria:** Client ID appears in server logs when provided
+
+### Test GH11: Diagnostic Mode Toggle
+
+**Test with ?diag=1:**
+
+1. Open `${PREVIEW_URL}/student/?diag=1`
+2. DevTools console should show:
+   ```
+   [rcDiag] Diagnostic mode enabled
+   ```
+3. Run `window.rcDiag.log('test message')`
+4. Should output: `[rcDiag] test message`
+
+**Test without ?diag=1:**
+
+1. Open `${PREVIEW_URL}/student/` (no query param)
+2. Run `window.rcDiag.log('test message')`
+3. Should output: *(nothing)*
+
+✅ **Pass Criteria:** Logging only active when ?diag=1 present
+
+### Test GH12: Student Portal Loads Without Errors
+
+1. Open `${PREVIEW_URL}/student/`
+2. Check DevTools console for errors
+3. Verify no new errors related to diagnostics or security headers
+4. Confirm portal UI loads normally
+
+✅ **Pass Criteria:** No console errors, portal loads successfully
+
+### Test GH13: Student Portal Error Toast (Simulated)
+
+This test verifies defensive error handling without triggering the fatal banner.
+
+**Manual simulation:**
+
+1. Open `${PREVIEW_URL}/student/`
+2. Open DevTools
+3. Go to Network tab → Block requests matching pattern `portal-b-helpers.js`
+4. Reload page
+5. Observe error handling
+
+**Expected (if error is recoverable):**
+- Non-blocking toast appears in top-right
+- Toast shows "Module Load Issue" with refresh button
+- Portal container not replaced with error card
+- Toast auto-dismisses after 10 seconds
+
+**Expected (if error is hard failure):**
+- Full error card replaces portal
+- Shows "Student Portal Unavailable" message
+- Includes reload and return buttons
+
+✅ **Pass Criteria:** Recoverable errors show toast; hard failures show error card
+
+### Global Headers Checklist
+
+- [ ] GH1: Global security headers present on all routes
+- [ ] GH2: CSP-RO header format correct with report-uri
+- [ ] GH3: HTML files have no-store cache-control
+- [ ] GH4: CSP report endpoint accepts valid reports (204)
+- [ ] GH5: CSP report endpoint rejects oversized reports (400)
+- [ ] GH6: CSP report endpoint handles CORS preflight
+- [ ] GH7: CSP report endpoint validates content-type
+- [ ] GH8: Client request ID generated on page load
+- [ ] GH9: wrapFetch injects X-Client-Request-Id header
+- [ ] GH10: Server logs show client request ID when provided
+- [ ] GH11: Diagnostic mode toggles with ?diag=1
+- [ ] GH12: Student portal loads without new errors
+- [ ] GH13: Portal error handling shows toast vs. fatal banner appropriately
+
 ## Success Criteria
 
 All tests pass ✅ = **Ready for production merge**
