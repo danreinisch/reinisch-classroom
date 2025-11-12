@@ -2,8 +2,6 @@
 // Uses validation.js utilities to validate CSV structure and content
 
 import {
-  isString,
-  nonEmpty,
   maxLen,
   matchRegex,
   safeTrim,
@@ -79,9 +77,6 @@ export function buildIEPValidator(config = {}) {
       errors.push('CSV must have either "percent" or "value" column');
       return { ok: false, errors };
     }
-
-    // Optional headers
-    const optionalHeaders = ['notes', 'method', 'source'];
 
     // Empty file check
     if (rows.length === 0) {
