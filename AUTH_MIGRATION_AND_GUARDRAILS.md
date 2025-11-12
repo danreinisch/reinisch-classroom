@@ -111,6 +111,122 @@ These are **no longer used** but may remain set in Netlify for backwards compati
 
 **Note**: The leak guard script monitors for these in published files to prevent accidental exposure.
 
+## Netlify Runtime & Config Fix
+
+### Problem
+PR #181 encountered Netlify Deploy Preview failures with two related issues:
+
+1. **Config Parse Error**: Duplicate `[build.environment]` table definitions in `netlify.toml` caused Netlify to reject the configuration with error: `Can't redefine existing key at row 7, col 19...`
+
+2. **502 Bad Gateway Errors**: Teacher login endpoint returned 502 responses due to `ReferenceError: fetch is not defined` when running on Node.js versions older than 18 where native `fetch` is unavailable.
+
+### Root Cause
+- **Configuration**: The `netlify.toml` file lacked explicit Node.js runtime version pinning, allowing Netlify to use older runtimes (Node 14/16) that don't include native `fetch`.
+- **Fetch Dependency**: Code in `netlify/functions/_lib/supa.js` relies on the global `fetch` API without polyfill, causing runtime errors in older Node environments.
+
+### Resolution Steps
+
+#### 1. Fix netlify.toml Configuration
+Updated `netlify.toml` to pin the Lambda runtime to Node 18:
+
+```toml
+[build]
+  publish = "."
+  command = "node scripts/check-env-leaks.js || true"
+  functions = "netlify/functions"
+
+[build.environment]
+  AWS_LAMBDA_JS_RUNTIME = "nodejs18.x"
+
+[functions]
+  node_bundler = "esbuild"
+```
+
+**Key changes:**
+- Added `[build.environment]` section with `AWS_LAMBDA_JS_RUNTIME = "nodejs18.x"`
+- Ensures all functions run on Node 18+ where native `fetch` is available
+- Single, non-duplicate environment section
+
+#### 2. Rely on Native Node 18 Fetch
+No code changes needed - existing code already uses native `fetch`:
+- `netlify/functions/_lib/supa.js` uses global `fetch` directly
+- No polyfill required with Node 18+
+- Added clarifying comment documenting Node 18+ requirement
+
+#### 3. Enhanced Error Logging
+Improved diagnostic logging for RPC failures:
+
+**teacher-login.js:**
+```javascript
+if (!verifyRes.ok) {
+  console.error('[teacher-login] Supabase RPC error - status:', verifyRes.status);
+  return { statusCode: 500, ... };
+}
+```
+
+**admin-session.js:**
+```javascript
+if (!verifyRes.ok) {
+  console.error('[admin-session] Supabase RPC error - status:', verifyRes.status);
+  return redirect('/admin-login?e=1');
+}
+```
+
+Logs now include:
+- RPC HTTP status codes (400, 404, 500, etc.)
+- Distinguishes between configuration errors (500), RPC failures (500), invalid credentials (401), and throttling (429)
+- No sensitive data (passwords, tokens) logged
+
+#### 4. Runtime Version Diagnostics
+Added `runtime_node_version` field to auth health check:
+
+```bash
+curl https://yoursite.com/.netlify/functions/auth-health
+```
+
+Returns:
+```json
+{
+  "ok": true,
+  "timestamp": "2025-11-12T01:42:00.000Z",
+  "runtime_node_version": "v18.19.0",
+  "env": { ... },
+  "status": { ... }
+}
+```
+
+This allows immediate verification of runtime version in deployment previews.
+
+### Verification
+After deploying with the fix:
+
+1. **Config Parse**: Deploy preview builds successfully without TOML errors
+2. **Runtime Version**: `curl /.netlify/functions/auth-health | jq .runtime_node_version` shows `v18.x.x`
+3. **No 502 Errors**: `POST /.netlify/functions/teacher-login` returns 200 (valid creds) or 401 (invalid), never 502
+4. **Logs Clean**: Function logs show no `ReferenceError: fetch is not defined` errors
+5. **Status Codes**: Logs include `[teacher-login] Supabase RPC error - status: 400` on failures
+
+### Troubleshooting
+
+**Symptom**: 502 Bad Gateway on teacher-login  
+**Check**: `curl /.netlify/functions/auth-health | jq .runtime_node_version`  
+**Fix**: Ensure `netlify.toml` has `AWS_LAMBDA_JS_RUNTIME = "nodejs18.x"`
+
+**Symptom**: `ReferenceError: fetch is not defined`  
+**Check**: Netlify function logs  
+**Fix**: Clear build cache, redeploy with Node 18 pinned
+
+**Symptom**: Config parse error on deploy  
+**Check**: `netlify.toml` for duplicate `[build.environment]` sections  
+**Fix**: Consolidate into single `[build.environment]` block
+
+### Related Files
+- `netlify.toml` - Runtime configuration
+- `netlify/functions/_lib/supa.js` - Uses native fetch
+- `netlify/functions/auth-health.js` - Runtime version diagnostics
+- `netlify/functions/teacher-login.js` - Enhanced logging
+- `netlify/functions/admin-session.js` - Enhanced logging
+
 ## Guardrails
 
 ### 1. Throttling

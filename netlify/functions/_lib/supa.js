@@ -1,5 +1,6 @@
 // Minimal REST helpers for Supabase (no supabase-js needed)
 // Supports runtime overrides via SUPABASE_URL_RUNTIME and SUPABASE_SERVICE_KEY_RUNTIME
+// Uses native Node 18+ fetch (no polyfill required)
 const SUPABASE_URL = process.env.SUPABASE_URL_RUNTIME || process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_KEY_RUNTIME || process.env.SUPABASE_SERVICE_ROLE_KEY;
 

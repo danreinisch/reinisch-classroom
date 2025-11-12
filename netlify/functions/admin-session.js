@@ -66,7 +66,7 @@ exports.handler = async (event) => {
     });
 
     if (!verifyRes.ok) {
-      console.error('[admin-session] Supabase RPC error:', verifyRes.status);
+      console.error('[admin-session] Supabase RPC error - status:', verifyRes.status);
       return redirect('/admin-login?e=1');
     }
 
