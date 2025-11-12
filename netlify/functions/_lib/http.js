@@ -12,6 +12,15 @@ const TRUSTED_ORIGINS = [
   'http://127.0.0.1:3000',
 ];
 
+// Default security headers used across all responses
+const DEFAULT_SEC_HEADERS = {
+  'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+  'X-Content-Type-Options': 'nosniff',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+  'Permissions-Policy': 'geolocation=(), microphone=(), camera=()',
+  'X-Frame-Options': 'SAMEORIGIN',
+};
+
 /**
  * Generate a unique request ID
  * @returns {string} UUID v4 format request ID
@@ -27,10 +36,7 @@ function generateRequestId() {
  */
 function getSecurityHeaders(requestId) {
   const headers = {
-    'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
-    'X-Content-Type-Options': 'nosniff',
-    'Referrer-Policy': 'strict-origin-when-cross-origin',
-    'Permissions-Policy': 'geolocation=(), microphone=(), camera=()',
+    ...DEFAULT_SEC_HEADERS,
     'Cache-Control': 'no-store',
   };
   
@@ -39,6 +45,50 @@ function getSecurityHeaders(requestId) {
   }
   
   return headers;
+}
+
+/**
+ * Check if request is asking for HTML content
+ * @param {Object} event - Netlify function event object
+ * @returns {boolean} True if request likely expects HTML
+ */
+function isHtmlRequest(event) {
+  const accept = event.headers.accept || event.headers.Accept || '';
+  return accept.includes('text/html');
+}
+
+/**
+ * Safely merge headers, with later objects taking precedence
+ * @param {...Object} headerObjects - Header objects to merge
+ * @returns {Object} Merged headers object
+ */
+function mergeHeaders(...headerObjects) {
+  return Object.assign({}, ...headerObjects);
+}
+
+/**
+ * Build an HTML response with security headers and CORS
+ * @param {Object} event - Netlify function event object
+ * @param {number} status - HTTP status code
+ * @param {string} body - HTML string
+ * @param {Object} extraHeaders - Additional headers to include
+ * @param {string} requestId - Optional request ID
+ * @returns {Object} Netlify function response object
+ */
+function htmlResponse(event, status, body, extraHeaders = {}, requestId = null) {
+  const securityHeaders = getSecurityHeaders(requestId);
+  const corsHeaders = getCorsHeaders(event);
+  
+  return {
+    statusCode: status,
+    headers: mergeHeaders(
+      securityHeaders,
+      corsHeaders,
+      { 'Content-Type': 'text/html; charset=utf-8' },
+      extraHeaders
+    ),
+    body,
+  };
 }
 
 /**
@@ -104,12 +154,12 @@ function jsonResponse(event, status, body, extraHeaders = {}, requestId = null) 
   
   return {
     statusCode: status,
-    headers: {
-      ...securityHeaders,
-      ...corsHeaders,
-      'Content-Type': 'application/json',
-      ...extraHeaders,
-    },
+    headers: mergeHeaders(
+      securityHeaders,
+      corsHeaders,
+      { 'Content-Type': 'application/json' },
+      extraHeaders
+    ),
     body: JSON.stringify(body),
   };
 }
@@ -127,10 +177,7 @@ function handleCorsPreFlight(event, methods = ['GET', 'POST', 'OPTIONS'], header
   
   return {
     statusCode: 200,
-    headers: {
-      ...securityHeaders,
-      ...corsHeaders,
-    },
+    headers: mergeHeaders(securityHeaders, corsHeaders),
     body: '',
   };
 }
@@ -211,11 +258,15 @@ function validateStringField(value, fieldName, minLength = 1, maxLength = 64) {
 }
 
 module.exports = {
+  DEFAULT_SEC_HEADERS,
   generateRequestId,
   getSecurityHeaders,
   getCorsHeaders,
   isOriginAllowed,
+  isHtmlRequest,
+  mergeHeaders,
   jsonResponse,
+  htmlResponse,
   handleCorsPreFlight,
   validateBodySize,
   safeJsonParse,

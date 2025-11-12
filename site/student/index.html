@@ -1413,9 +1413,11 @@
 </div>
 
 <script type="module">
+  // Import diagnostics early for client request ID and wrapFetch
+  import '../web/diagnostics.js';
+  
   // Import auth-handoff utilities and Portal B helpers
   import { readAuth, clearAuth, onAuthChange } from '../web/auth-handoff.js';
-  import '../web/diagnostics.js';
   import { getFeatureFlag } from '../web/feature-flags.js';
   import { db } from '../web/data-adapter.js';
   
@@ -1509,30 +1511,64 @@
     window.hubHealth.studentPortal.loaded = false;
     window.hubHealth.studentPortal.error = err.message;
     
-    // Show error card instead of blank screen
-    const container = document.querySelector('.container');
-    if (container) {
-      container.innerHTML = `
-        <div class="card" style="max-width:600px; margin:80px auto; text-align:center;">
-          <div style="font-size:48px; margin-bottom:16px;">⚠️</div>
-          <h2 style="margin-bottom:12px;">Student Portal Unavailable</h2>
-          <p class="subtle" style="margin-bottom:20px;">
-            We're having trouble loading the student portal. This is usually a temporary issue.
-          </p>
-          <div class="error-msg" style="text-align:left; margin-bottom:20px;">
-            <strong>Technical details:</strong><br>
-            ${err.message}
+    // Determine if this is a recoverable error (e.g., network issue, single module)
+    // vs. a hard failure (syntax error, missing critical dependencies)
+    const isRecoverable = err.name === 'TypeError' && err.message.includes('fetch');
+    
+    if (isRecoverable) {
+      // Show a non-blocking toast for recoverable errors
+      console.warn('[student-portal] Recoverable error - showing toast notification');
+      
+      // Create a simple toast notification (UI might not be loaded yet)
+      const toastHtml = `
+        <div class="toast warning" style="position:fixed; top:80px; right:20px; z-index:100; max-width:400px;">
+          <div class="toast-header">
+            <div class="toast-title">⚠️ Module Load Issue</div>
+            <button class="toast-close" onclick="this.closest('.toast').remove()">×</button>
           </div>
-          <div style="display:flex; gap:12px; justify-content:center;">
-            <button class="btn primary" onclick="location.reload()">Reload Page</button>
-            <button class="btn" onclick="location.href='/hub/'">Return to Hub</button>
+          <div class="toast-body">
+            Some portal features may be unavailable. Try refreshing if you experience issues.
+          </div>
+          <div style="margin-top:12px;">
+            <button class="btn small primary" onclick="location.reload()">Refresh Now</button>
           </div>
         </div>
       `;
+      document.body.insertAdjacentHTML('beforeend', toastHtml);
+      
+      // Auto-dismiss after 10 seconds
+      setTimeout(() => {
+        const toast = document.querySelector('.toast.warning');
+        if (toast) toast.remove();
+      }, 10000);
+      
+      // Don't throw - continue with degraded functionality
+    } else {
+      // Hard failure - show full error card
+      const container = document.querySelector('.container');
+      if (container) {
+        container.innerHTML = `
+          <div class="card" style="max-width:600px; margin:80px auto; text-align:center;">
+            <div style="font-size:48px; margin-bottom:16px;">⚠️</div>
+            <h2 style="margin-bottom:12px;">Student Portal Unavailable</h2>
+            <p class="subtle" style="margin-bottom:20px;">
+              We're having trouble loading the student portal. This is usually a temporary issue.
+            </p>
+            <div class="error-msg" style="text-align:left; margin-bottom:20px;">
+              <strong>Technical details:</strong><br>
+              ${err.message}
+            </div>
+            <div style="display:flex; gap:12px; justify-content:center;">
+              <button class="btn primary" onclick="location.reload()">Reload Page</button>
+              <button class="btn" onclick="location.href='/hub/'">Return to Hub</button>
+            </div>
+          </div>
+        `;
+      }
+      
+      // Don't continue with the rest of the script
+      throw err;
     }
-    
-    // Don't continue with the rest of the script
-    throw err;
   }
   
   // Use imported modules from global scope

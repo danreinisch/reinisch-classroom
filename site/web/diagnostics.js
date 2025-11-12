@@ -1,5 +1,163 @@
 // diagnostics.js
 // Diagnostic utilities for debugging authentication and session state
+// Extended with client request ID tracking, fetch wrapper, and conditional logging
+
+// ============================================================================
+// Client Request ID & Fetch Wrapper
+// ============================================================================
+
+/**
+ * Generate UUID v4 client request ID
+ * Generated once per page load
+ * @returns {string} UUID v4 format
+ */
+function generateClientRequestId() {
+  // Simple UUID v4 generation using crypto API if available
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  
+  // Fallback for older browsers
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
+// Initialize client request ID once per page load
+if (typeof window !== 'undefined' && !window.rcClientRequestId) {
+  window.rcClientRequestId = generateClientRequestId();
+  console.log('[diagnostics] Client Request ID:', window.rcClientRequestId);
+}
+
+/**
+ * Wrapped fetch with timeout, retry, and client request ID injection
+ * @param {string} url - URL to fetch
+ * @param {Object} opts - Fetch options
+ * @returns {Promise<Response>} Fetch response
+ */
+async function wrapFetch(url, opts = {}) {
+  const maxRetries = 1;
+  const timeoutMs = 10000; // 10 seconds
+  
+  // Inject X-Client-Request-Id header
+  const headers = opts.headers || {};
+  headers['X-Client-Request-Id'] = window.rcClientRequestId;
+  
+  const wrappedOpts = {
+    ...opts,
+    headers,
+  };
+  
+  // Attempt fetch with timeout and retry
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      // Create AbortController for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+      
+      const response = await fetch(url, {
+        ...wrappedOpts,
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+      return response;
+    } catch (err) {
+      // If it's the last attempt, throw the error
+      if (attempt === maxRetries) {
+        console.error('[diagnostics] wrapFetch failed after retries:', err.message);
+        throw err;
+      }
+      
+      // Network error - retry once
+      if (err.name === 'AbortError') {
+        console.warn(`[diagnostics] wrapFetch timeout on attempt ${attempt + 1}, retrying...`);
+      } else if (err.name === 'TypeError' && err.message.includes('fetch')) {
+        console.warn(`[diagnostics] wrapFetch network error on attempt ${attempt + 1}, retrying...`);
+      } else {
+        // Don't retry for other error types
+        throw err;
+      }
+      
+      // Wait 500ms before retry
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+  }
+}
+
+// ============================================================================
+// Conditional Diagnostic Logger
+// ============================================================================
+
+/**
+ * Diagnostic logger that only logs when ?diag=1 is present
+ */
+const rcDiag = {
+  enabled: false,
+  
+  /**
+   * Initialize diagnostic mode based on URL parameter
+   */
+  init() {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      this.enabled = params.get('diag') === '1';
+      
+      if (this.enabled) {
+        console.log('%c[rcDiag] Diagnostic mode enabled', 'color: #22c55e; font-weight: bold');
+      }
+    }
+  },
+  
+  /**
+   * Log message (only if diag mode enabled)
+   */
+  log(...args) {
+    if (this.enabled) {
+      console.log('[rcDiag]', ...args);
+    }
+  },
+  
+  /**
+   * Warn message (only if diag mode enabled)
+   */
+  warn(...args) {
+    if (this.enabled) {
+      console.warn('[rcDiag]', ...args);
+    }
+  },
+  
+  /**
+   * Error message (only if diag mode enabled)
+   */
+  error(...args) {
+    if (this.enabled) {
+      console.error('[rcDiag]', ...args);
+    }
+  },
+  
+  /**
+   * Info message (only if diag mode enabled)
+   */
+  info(...args) {
+    if (this.enabled) {
+      console.info('[rcDiag]', ...args);
+    }
+  },
+};
+
+// Initialize diagnostic mode
+if (typeof window !== 'undefined') {
+  rcDiag.init();
+  window.rcDiag = rcDiag;
+  window.wrapFetch = wrapFetch;
+}
+
+// ============================================================================
+// Existing Diagnostic Functions
+// ============================================================================
 
 /**
  * Diagnose current authentication state
@@ -220,7 +378,18 @@ if (typeof window !== 'undefined') {
   console.log('  window.__clearAllAuth() - Clear all auth state (logs you out)');
   console.log('  window.__expireAuth() - Expire current auth (for testing)');
   console.log('  window.__getDiagnostics() - Get raw diagnostics object');
+  console.log('  window.wrapFetch(url, opts) - Fetch with timeout, retry, and request ID');
+  console.log('  window.rcDiag.log() - Log only when ?diag=1 is present');
+  console.log('  window.rcClientRequestId - Current client request ID');
 }
 
 // Export functions for module use
-export { diagnoseAuth, printDiagnostics, clearAllAuth, expireAuth };
+export { 
+  diagnoseAuth, 
+  printDiagnostics, 
+  clearAllAuth, 
+  expireAuth,
+  wrapFetch,
+  generateClientRequestId,
+  rcDiag,
+};
