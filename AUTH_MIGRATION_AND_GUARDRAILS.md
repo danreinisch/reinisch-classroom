@@ -220,6 +220,40 @@ After deploying with the fix:
 **Check**: `netlify.toml` for duplicate `[build.environment]` sections  
 **Fix**: Consolidate into single `[build.environment]` block
 
+**Symptom**: `Runtime.HandlerNotFound: teacher-login.handler is undefined or not exported`  
+**Check**: Netlify function logs, module system configuration  
+**Fix**: Ensure `netlify/functions/package.json` exists with `{"type": "commonjs"}`
+
+#### Netlify Functions Module System
+
+**Problem:**  
+The repository root defines `"type": "module"` in `package.json`, which tells Node.js to treat `.js` files as ES modules by default. However, Netlify Functions under `netlify/functions/` are authored using CommonJS syntax (`require()`, `exports.handler = ...`).
+
+When Netlify builds and deploys functions, it may treat `.js` files as ESM if the nearest `package.json` declares `"type": "module"`. Under ESM, `exports` is not available, which can result in the handler function not being exported properly, leading to `Runtime.HandlerNotFound` errors.
+
+**Solution:**  
+Add a `netlify/functions/package.json` file with `{"type": "commonjs"}` to explicitly mark all `.js` files in the functions directory (and its subdirectories like `_lib/`) as CommonJS modules. This overrides the root package.json setting for the functions directory only.
+
+**File:** `netlify/functions/package.json`
+```json
+{
+  "type": "commonjs"
+}
+```
+
+This ensures that:
+- Functions can use `require()` and `exports.handler` syntax
+- The handler is properly exported at runtime
+- No code changes are needed to the function files themselves
+
+**Verification:**  
+After deploying with this fix, the cold-start logs for `teacher-login` should show:
+```
+[teacher-login] Module loaded successfully
+```
+
+This confirms the module loads correctly and the handler is available.
+
 ### Related Files
 - `netlify.toml` - Runtime configuration
 - `netlify/functions/_lib/supa.js` - Uses native fetch
