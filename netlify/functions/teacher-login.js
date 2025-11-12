@@ -4,7 +4,7 @@
 // Sets HttpOnly cookie if credentials are valid
 
 // Ensure fetch is available (Node 18+ or polyfill)
-require('./_lib/fetch-polyfill');
+require('./_lib/fetch-polyfill.cjs');
 
 const { sign, teacherCookie } = require('./_lib/auth');
 const { rpc, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } = require('./_lib/supa');

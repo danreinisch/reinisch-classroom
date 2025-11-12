@@ -322,7 +322,7 @@ This has been addressed through multiple defensive layers:
    - Pinned Node.js runtime to 18.x for all contexts (production, deploy previews, branch deploys)
    - Ensures global `fetch` is available natively
    
-2. **Fetch Polyfill** (`netlify/functions/_lib/fetch-polyfill.js`)
+2. **Fetch Polyfill** (`netlify/functions/_lib/fetch-polyfill.cjs`)
    - Defensive fallback using `node-fetch` library
    - Automatically loaded at the top of auth functions
    - Provides `fetch` if the runtime doesn't have it
@@ -401,4 +401,4 @@ If 502 errors persist after deployment:
 - Admin Session: `netlify/functions/admin-session.js`
 - Edge Guard: `netlify/edge-functions/admin-auth-guard.js`
 - Leak Guard: `scripts/check-env-leaks.js`
-- Fetch Polyfill: `netlify/functions/_lib/fetch-polyfill.js`
+- Fetch Polyfill: `netlify/functions/_lib/fetch-polyfill.cjs`

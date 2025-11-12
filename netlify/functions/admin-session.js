@@ -10,7 +10,7 @@
 // - MAX_AGE_SECONDS (defaults to 28800 = 8 hours) — how long the session cookie lasts.
 
 // Ensure fetch is available (Node 18+ or polyfill)
-require('./_lib/fetch-polyfill');
+require('./_lib/fetch-polyfill.cjs');
 
 const crypto = require('crypto');
 const { rpc, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } = require('./_lib/supa');
