@@ -1885,7 +1885,9 @@
     sessionStorage.removeItem('rc_user_code');
     sessionStorage.removeItem('rc_user_role');
     clearAuth(); // Clear 24-hour auth handoff
-    showLogin();
+    
+    // Redirect to site root instead of showing in-page login
+    window.location.href = '/';
   });
   
   // Enter key handlers
@@ -2205,6 +2207,28 @@
         return;
       }
       
+      // Fetch real progress entries for this student
+      const entries = await db.listGoalProgress({ studentCodes: [currentUser.code] });
+      
+      // Build a map of goal -> average progress
+      const byGoal = new Map();
+      for (const e of entries) {
+        const key = e.goal_code || e.goal_id || e.goal;
+        const val = typeof e.percent === 'number' ? e.percent : (typeof e.value === 'number' ? e.value : null);
+        if (key && val != null) {
+          const agg = byGoal.get(key) || { sum: 0, n: 0 };
+          agg.sum += val;
+          agg.n += 1;
+          byGoal.set(key, agg);
+        }
+      }
+      
+      // Helper to compute average for a goal (returns 0 if no entries)
+      const avgFor = (goalCode) => {
+        const a = byGoal.get(goalCode);
+        return a ? Math.round(a.sum / a.n) : 0;
+      };
+      
       let html = '';
       for (const goal of goals.slice(0, 4)) {
         const statusBadge = goal.status === 'Open' ? 'info' : goal.status === 'Met' ? 'success' : 'warning';
@@ -2213,8 +2237,8 @@
         const goalDesc = truncateText(goal.desc || goal.code, 140);
         const hasTooltip = (goal.desc || goal.code || '').length > 140;
         
-        // Calculate average progress (mock for now)
-        const avgProgress = goal.target || Math.floor(Math.random() * 100);
+        // Calculate average progress from real data
+        const avgProgress = avgFor(goal.code);
         
         const tooltipHtml = hasTooltip ? 
           `<span class="tooltip">${goalDesc}<span class="tooltip-text">${goal.desc || goal.code}</span></span>` :
@@ -2948,7 +2972,19 @@
     const portalLogoutBtn = qs('#portalLogoutBtn');
     if (portalLogoutBtn) {
       portalLogoutBtn.addEventListener('click', () => {
-        qs('#btnLogout')?.click();
+        console.log('[portal-auth] Logout initiated from top bar');
+        
+        currentUser = null;
+        userRole = null;
+        authReady = false;
+        
+        // Clear only auth-related sessionStorage keys
+        sessionStorage.removeItem('rc_user_code');
+        sessionStorage.removeItem('rc_user_role');
+        clearAuth(); // Clear 24-hour auth handoff
+        
+        // Redirect to site root instead of showing in-page login
+        window.location.href = '/';
       });
     }
     
