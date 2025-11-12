@@ -694,7 +694,7 @@ export function showToast({ title, message, type = 'info', link = null, duration
 /**
  * Start the live clock
  */
-export function startClock(qs) {
+export function startClock(qs = (sel) => document.querySelector(sel)) {
   const updateClock = () => {
     const clockEl = qs('#portalClock');
     if (!clockEl) return;
