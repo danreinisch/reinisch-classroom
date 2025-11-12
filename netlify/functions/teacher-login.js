@@ -80,7 +80,7 @@ exports.handler = async (event) => {
   // Validate password field
   const passwordValidation = validateStringField(password, 'password', 1, 64);
   if (!passwordValidation.valid) {
-    console.log(`[teacher-login] [${requestId}] Invalid password: ${passwordValidation.error}`);
+    console.log(`[teacher-login] [${requestId}] Invalid password field format`);
     return jsonResponse(event, 400, { error: passwordValidation.error }, {}, requestId);
   }
 
