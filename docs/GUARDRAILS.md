@@ -988,3 +988,264 @@ npm run postbuild
 3. Add Subresource Integrity (SRI) for CDN resources
 4. Monitor CSP reports and address any edge cases
 
+## Data Integrity
+
+The application implements client-side CSV validation to prevent malformed or malicious data from entering the system. This reduces the risk of data poisoning, improves user experience on invalid input, and ensures data quality.
+
+### CSV Validation Architecture
+
+**Location:** `site/web/validation.js` and `site/web/csv-iep-validators.js`
+
+**Philosophy:**
+- Validate early, fail fast
+- Block import until all constraints pass
+- Provide clear, actionable error messages
+- Normalize data formats for consistency
+
+### IEP Progress CSV Validation
+
+**Target:** `site/student/index.html` IEP Progress tab (`#iepFileInput` and handlers)
+
+**Validation Stages:**
+
+1. **File Constraints:**
+   - Type: Must be `text/csv` or have `.csv` extension
+   - Size: Maximum 1 MB (configurable via `maxBytes` parameter)
+   - Rows: Maximum 2,000 rows (configurable via `maxRows` parameter)
+
+2. **Header Validation:**
+   - Required headers (case-insensitive, whitespace-trimmed):
+     - `date` - Progress observation date
+     - `student_code` - Student identifier
+     - `goal_code` - IEP goal identifier
+     - `collected_by` - Name of person who collected data
+     - `percent` OR `value` - Progress measurement (at least one required)
+   - Optional headers:
+     - `notes` - Additional observations
+     - `method` - Data collection method
+     - `source` - Data source
+
+3. **Row-Level Validation:**
+   
+   | Field | Rules | Normalization |
+   |-------|-------|---------------|
+   | `date` | ISO `yyyy-mm-dd` or US `MM/DD/YYYY`; must be valid date | Converts US format to ISO |
+   | `student_code` | 1-32 chars; A-Z, 0-9, `_`, `-` only | Trimmed |
+   | `goal_code` | 1-32 chars; A-Z, 0-9, `_`, `-` only | Trimmed |
+   | `percent` or `value` | Number 0-100 | Parsed as float |
+   | `collected_by` | 1-64 chars | Trimmed |
+   | `notes` (optional) | ≤500 chars | HTML-escaped (`<` → `&lt;`, `>` → `&gt;`) |
+   | `method` (optional) | No length limit | HTML-escaped |
+   | `source` (optional) | No length limit | HTML-escaped |
+
+4. **Aggregate Validation:**
+   - Empty file or header-only: Rejected with error message
+   - Error rate threshold: If >10% of rows invalid (configurable via `maxErrorRate`), import is blocked
+   - Valid rows with warnings: If error rate ≤10%, valid rows imported, invalid rows skipped with summary
+
+### User Experience on Validation Failure
+
+When validation fails, the user sees:
+
+1. **Error Summary Panel:**
+   - Red-bordered panel with clear heading: "❌ CSV Validation Failed"
+   - List of top-level errors (e.g., "File size exceeds 1.0 MB limit")
+   - Summary statistics: total rows, valid rows, invalid rows, error rate
+   - First 20 row errors displayed with row numbers and specific issues
+
+2. **Row Error Format:**
+   ```
+   Row 15: date: Date must be yyyy-mm-dd or MM/DD/YYYY; percent/value: Value must be between 0 and 100
+   ```
+
+3. **Actions:**
+   - Dismiss button to clear errors
+   - Import is blocked until a valid file is provided
+
+4. **Partial Import (Under Error Threshold):**
+   - If error rate ≤10%, valid rows are imported
+   - User sees success alert with: "Import successful! 180 valid rows imported. 20 rows had errors and were skipped."
+
+### Security Benefits
+
+- **Input Sanitization:** HTML special characters escaped in text fields
+- **Type Safety:** Numbers validated as numeric, dates validated as dates
+- **Length Limits:** Prevents oversized inputs (notes ≤500 chars)
+- **Pattern Matching:** Student/goal codes restricted to safe character set
+- **No Execution:** All validation client-side, no code execution
+
+### Validation Utilities (site/web/validation.js)
+
+**Available Functions:**
+
+| Function | Purpose | Example |
+|----------|---------|---------|
+| `isString(value)` | Type check | `isString("hello")` → `true` |
+| `nonEmpty(value)` | Check if trimmed string non-empty | `nonEmpty("  ")` → `false` |
+| `maxLen(value, max)` | Check string length | `maxLen("test", 10)` → `true` |
+| `matchRegex(value, regex)` | Pattern matching | `matchRegex("A1", /^[A-Z0-9]+$/)` → `true` |
+| `safeTrim(value)` | Trim string safely | `safeTrim("  hi  ")` → `"hi"` |
+| `toDateISO(dateStr)` | Parse and normalize date | `toDateISO("12/25/2024")` → `{ok: true, date: "2024-12-25"}` |
+| `toNumberInRange(value, min, max)` | Parse number in range | `toNumberInRange("50", 0, 100)` → `{ok: true, value: 50}` |
+| `sanitizeText(text)` | HTML escape | `sanitizeText("<script>")` → `"&lt;script&gt;"` |
+| `csvHeaderMap(headers, expected)` | Map headers case-insensitively | Returns index map or error |
+
+### CSV Validator API (site/web/csv-iep-validators.js)
+
+**Usage:**
+
+```javascript
+import { buildIEPValidator } from '../web/csv-iep-validators.js';
+
+const { validateFile, validateRows } = buildIEPValidator({
+  maxBytes: 1_000_000, // 1 MB
+  maxRows: 2000,
+  maxErrorRate: 0.10 // 10%
+});
+
+// Step 1: Validate file
+const file = input.files[0];
+const fileCheck = await validateFile(file);
+if (!fileCheck.ok) {
+  showErrors(fileCheck.errors);
+  return;
+}
+
+// Step 2: Parse CSV (using PapaParse or similar)
+const { headers, rows } = await parseCsv(file);
+
+// Step 3: Validate rows
+const rowCheck = validateRows(headers, rows);
+if (!rowCheck.ok) {
+  showErrors(rowCheck.errors, rowCheck.errorSummary);
+  return;
+}
+
+// Step 4: Import normalized rows
+importData(rowCheck.normalizedRows);
+```
+
+**Return Values:**
+
+- `validateFile(file)` → `{ ok: boolean, errors?: string[] }`
+- `validateRows(headers, rows)` → `{ ok: boolean, normalizedRows?: Array, errors?: Array, errorSummary?: Object }`
+
+**Error Summary Structure:**
+
+```javascript
+{
+  totalRows: 200,
+  validRows: 180,
+  invalidRows: 20,
+  errorRate: "10.0",
+  rowErrors: [
+    { row: 15, errors: ["date: Invalid date", "percent/value: Value must be between 0 and 100"] },
+    // ... up to 20 errors
+  ]
+}
+```
+
+### Cookie Security Audit
+
+**Audit Date:** 2025-11-12
+
+**Teacher Login Cookie (`tc`):**
+
+Located in `netlify/functions/_lib/auth.js` (`teacherCookie` function):
+
+```javascript
+function teacherCookie(name, value, { domain, secure = true, maxAge = 60 * 60 * 8 }) {
+  const parts = [
+    `${name}=${value}`,
+    `Path=/`,
+    `HttpOnly`,
+    `SameSite=Lax`,
+    `Max-Age=${maxAge}`,
+  ];
+  if (secure) parts.push('Secure');
+  if (domain) parts.push(`Domain=${domain}`);
+  return parts.join('; ');
+}
+```
+
+**✅ Verified Attributes:**
+- `HttpOnly`: ✅ Enabled (prevents JavaScript access)
+- `Secure`: ✅ Enabled (HTTPS only, except localhost dev)
+- `SameSite=Lax`: ✅ Enabled (CSRF protection)
+- `Path=/`: ✅ Site-wide
+- `Max-Age=28800`: ✅ 8 hours
+
+**Admin Login Cookie (`rc_admin_session_v3`):**
+
+Located in `netlify/functions/admin-session.js` (`serializeCookie` function):
+
+```javascript
+'Set-Cookie': serializeCookie(COOKIE_NAME, token, {
+  httpOnly: true,
+  secure: true,
+  sameSite: 'Lax',
+  path: '/',
+  maxAge: Math.max(1, MAX_AGE_SECONDS)
+})
+```
+
+**✅ Verified Attributes:**
+- `HttpOnly`: ✅ Enabled
+- `Secure`: ✅ Enabled
+- `SameSite=Lax`: ✅ Enabled
+- `Path=/`: ✅ Site-wide
+- `Max-Age=28800`: ✅ 8 hours (default)
+
+**Conclusion:** All authentication cookies correctly configured with security-best-practice attributes.
+
+### Rate Limiting Expansion
+
+**Audit Date:** 2025-11-12
+
+**Endpoints Audited:**
+1. `teacher-login.js` - Handles teacher/admin login via JSON API
+2. `admin-session.js` - Handles admin login via form POST or JSON
+
+**Throttle Implementation:**
+
+Both endpoints now implement identical throttle and fixed delay patterns:
+
+| Feature | teacher-login.js | admin-session.js |
+|---------|------------------|------------------|
+| Throttle Window | 60 seconds | 60 seconds |
+| Invalid Creds Delay | 150-300ms | 150-300ms |
+| Throttle Cookie | `tc_throttle` | `admin_throttle` |
+| Cookie Attributes | HttpOnly, SameSite=Lax | HttpOnly, SameSite=Lax |
+| IP Hashing | ✅ Yes | ✅ Yes |
+
+**How It Works:**
+
+1. **Invalid Credentials:**
+   - Fixed delay added (150-300ms randomized)
+   - Throttle cookie set with hashed IP and timestamp
+   - 401/redirect response returned
+
+2. **Throttle Check:**
+   - On subsequent request, checks for throttle cookie
+   - If cookie present and within window (60s), request blocked
+   - Returns 429 (teacher-login) or redirects to login with error (admin-session)
+
+3. **Brute-Force Protection:**
+   - Delay reduces timing attack effectiveness
+   - Per-IP throttle adds friction to automated attacks
+   - Short window (60s) balances security and UX
+
+**Other Sensitive Endpoints:**
+
+The following endpoints were reviewed and **do not require throttling**:
+- `teacher-session.js` - Session verification (no credentials processed)
+- `admin-session-check.js` - Session check (no credentials processed)
+- `auth-health.js` - Public health check (no sensitive data)
+
+**Conclusion:** All credential-accepting endpoints protected with throttle and fixed delay. No additional endpoints identified that require throttling.
+
+### Testing Data Integrity
+
+See [DEPLOYMENT_VERIFICATION.md](../DEPLOYMENT_VERIFICATION.md#csv-validation-verification) for manual test cases and verification steps.
+
+

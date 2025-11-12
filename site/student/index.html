@@ -150,6 +150,28 @@
   .error-msg{color:#fca5a5; padding:12px; background:rgba(239,68,68,.1); border-radius:8px; border:1px solid rgba(239,68,68,.3)}
   .success-msg{color:#6ee7b7; padding:12px; background:rgba(34,197,94,.1); border-radius:8px; border:1px solid rgba(34,197,94,.3)}
   
+  /* CSV Validation Error Display */
+  .validation-errors{
+    background:rgba(239,68,68,.08); border:1px solid rgba(239,68,68,.3);
+    border-radius:10px; padding:16px; margin:16px 0;
+  }
+  .validation-errors h3{
+    margin:0 0 12px 0; font-size:16px; font-weight:900; color:#fca5a5;
+  }
+  .validation-errors .error-list{
+    max-height:300px; overflow-y:auto; margin-top:12px;
+  }
+  .validation-errors .error-item{
+    padding:8px 12px; margin-bottom:8px; background:rgba(0,0,0,.2);
+    border-radius:6px; border-left:3px solid rgba(239,68,68,.6);
+  }
+  .validation-errors .error-item strong{
+    color:#fca5a5; font-weight:800;
+  }
+  .validation-errors .error-actions{
+    margin-top:12px; display:flex; gap:8px;
+  }
+  
   .hidden{display:none !important}
   
   /* Portal B: Top Status Bar */
@@ -1097,6 +1119,7 @@
           </div>
         </div>
         <input type="file" id="iepFileInput" accept=".csv" class="hidden" />
+        <div id="iepValidationErrors"></div>
         <div id="iepProgressContent">
           <div class="subtle" style="text-align:center; padding:40px">Import IEP progress CSV</div>
         </div>
@@ -1152,6 +1175,9 @@
 <script type="module">
   // Import diagnostics early for client request ID and wrapFetch
   import '../web/diagnostics.js';
+  
+  // Import CSV validation utilities
+  import { buildIEPValidator } from '../web/csv-iep-validators.js';
   
   // Import auth-handoff utilities and Portal B helpers
   import { readAuth, clearAuth, onAuthChange } from '../web/auth-handoff.js';
@@ -2236,30 +2262,120 @@
     loadIEPProgress();
   });
   
-  // IEP CSV import
+  // IEP CSV import with validation
+  const iepValidator = buildIEPValidator({
+    maxBytes: 1_000_000, // 1 MB
+    maxRows: 2000,
+    maxErrorRate: 0.10 // 10%
+  });
+
   qs('#btnImportIEP').addEventListener('click', () => {
     qs('#iepFileInput').click();
   });
   
-  qs('#iepFileInput').addEventListener('change', (e) => {
+  qs('#iepFileInput').addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file) return;
     
+    // Clear previous validation errors
+    qs('#iepValidationErrors').innerHTML = '';
+    
+    // Step 1: Validate file constraints
+    const fileCheck = await iepValidator.validateFile(file);
+    if (!fileCheck.ok) {
+      showIEPValidationErrors(fileCheck.errors);
+      e.target.value = ''; // Reset input
+      return;
+    }
+    
+    // Step 2: Parse CSV
     Papa.parse(file, {
       header: true,
+      skipEmptyLines: true,
       complete: (results) => {
-        parseIEPCSV(results.data);
-        e.target.value = ''; // Reset input
+        handleIEPParsedCSV(results, e);
       },
       error: (err) => {
-        alert('Failed to parse CSV: ' + err.message);
+        showIEPValidationErrors(['Failed to parse CSV: ' + err.message]);
+        e.target.value = ''; // Reset input
       }
     });
   });
   
+  function handleIEPParsedCSV(results, event) {
+    const headers = results.meta.fields || [];
+    const rows = results.data || [];
+    
+    // Step 3: Validate rows
+    const rowCheck = iepValidator.validateRows(headers, rows);
+    
+    if (!rowCheck.ok) {
+      showIEPValidationErrors(rowCheck.errors, rowCheck.errorSummary);
+      event.target.value = ''; // Reset input
+      return;
+    }
+    
+    // Success - import normalized rows
+    iepEntries = rowCheck.normalizedRows.map((row, idx) => ({
+      id: idx,
+      ...row
+    }));
+    store.set('iepEntries', iepEntries);
+    
+    loadIEPProgress();
+    
+    // Show success message with warnings if any
+    if (rowCheck.errorSummary) {
+      const { validRows, invalidRows } = rowCheck.errorSummary;
+      alert(`Import successful!\n\n${validRows} valid rows imported.\n${invalidRows} rows had errors and were skipped.`);
+    } else {
+      alert('IEP progress imported successfully! ' + iepEntries.length + ' entries loaded.');
+    }
+    
+    event.target.value = ''; // Reset input
+  }
+  
+  function showIEPValidationErrors(errors, errorSummary = null) {
+    let html = '<div class="validation-errors">';
+    html += '<h3>❌ CSV Validation Failed</h3>';
+    
+    if (errors && errors.length > 0) {
+      html += '<div>';
+      errors.forEach(err => {
+        html += `<div class="error-msg" style="margin-bottom:8px">${err}</div>`;
+      });
+      html += '</div>';
+    }
+    
+    if (errorSummary) {
+      html += '<div style="margin-top:12px">';
+      html += `<p><strong>Summary:</strong> ${errorSummary.validRows} valid, ${errorSummary.invalidRows} invalid (${errorSummary.errorRate}% error rate)</p>`;
+      
+      if (errorSummary.rowErrors && errorSummary.rowErrors.length > 0) {
+        html += '<div class="error-list">';
+        html += '<p><strong>Row Errors (first 20):</strong></p>';
+        errorSummary.rowErrors.forEach(rowErr => {
+          html += '<div class="error-item">';
+          html += `<strong>Row ${rowErr.row}:</strong> `;
+          html += rowErr.errors.join('; ');
+          html += '</div>';
+        });
+        html += '</div>';
+      }
+      html += '</div>';
+    }
+    
+    html += '<div class="error-actions">';
+    html += '<button class="btn small" onclick="document.getElementById(\'iepValidationErrors\').innerHTML = \'\'">Dismiss</button>';
+    html += '</div>';
+    html += '</div>';
+    
+    qs('#iepValidationErrors').innerHTML = html;
+  }
+  
   function parseIEPCSV(rows) {
-    // Expected format: IEP Goal with Student Code Name
-    // Store parsed IEP entries
+    // Legacy function - now handled by handleIEPParsedCSV
+    // Keeping for backward compatibility if needed
     iepEntries = rows.map((row, idx) => ({
       id: idx,
       ...row

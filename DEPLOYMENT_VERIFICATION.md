@@ -810,6 +810,298 @@ This test verifies defensive error handling without triggering the fatal banner.
 - [ ] GH12: Student portal loads without new errors
 - [ ] GH13: Portal error handling shows toast vs. fatal banner appropriately
 
+## CSV Validation Verification
+
+These tests verify the client-side CSV validation for IEP Progress imports.
+
+### Test CSV1: Invalid File Type
+
+1. Navigate to `${PREVIEW_URL}/student/`
+2. Log in and go to IEP Progress tab
+3. Click "Import CSV"
+4. Select a non-CSV file (e.g., .txt, .xlsx, .json)
+
+**Expected:**
+- Validation error displayed: "File must be a CSV file (text/csv)"
+- Import blocked
+- No data imported
+
+✅ **Pass Criteria:** Error shown, import blocked
+
+### Test CSV2: Oversized File
+
+1. Create a CSV file >1 MB (e.g., 10,000 rows of dummy data)
+2. Try to import it via IEP Progress tab
+
+**Expected:**
+- Validation error: "File size exceeds 1.0 MB limit"
+- Import blocked
+
+✅ **Pass Criteria:** Size limit enforced
+
+### Test CSV3: Empty or Header-Only File
+
+**Test 3a - Empty file:**
+```csv
+(empty file)
+```
+
+**Test 3b - Header only:**
+```csv
+date,student_code,goal_code,percent,collected_by
+```
+
+**Expected:**
+- Error: "CSV file is empty or contains only headers"
+- Import blocked
+
+✅ **Pass Criteria:** Empty files rejected
+
+### Test CSV4: Missing Required Headers
+
+```csv
+date,student_code,percent,collected_by
+2024-01-15,S001,75,Teacher1
+```
+
+**Expected:**
+- Error: "Missing required headers: goal_code"
+- Import blocked
+
+✅ **Pass Criteria:** Missing headers detected
+
+### Test CSV5: Missing percent/value Column
+
+```csv
+date,student_code,goal_code,collected_by
+2024-01-15,S001,G001,Teacher1
+```
+
+**Expected:**
+- Error: "CSV must have either 'percent' or 'value' column"
+- Import blocked
+
+✅ **Pass Criteria:** Percent/value requirement enforced
+
+### Test CSV6: Invalid Date Formats
+
+```csv
+date,student_code,goal_code,percent,collected_by
+invalid-date,S001,G001,75,Teacher1
+2024-13-45,S002,G002,80,Teacher2
+```
+
+**Expected:**
+- Row errors displayed for rows 2 and 3
+- Error details: "date: Date must be yyyy-mm-dd or MM/DD/YYYY" or "date: Invalid date"
+
+✅ **Pass Criteria:** Invalid dates rejected with clear messages
+
+### Test CSV7: Valid Date Normalization
+
+```csv
+date,student_code,goal_code,percent,collected_by
+2024-01-15,S001,G001,75,Teacher1
+01/20/2024,S002,G002,80,Teacher2
+12/31/2024,S003,G003,90,Teacher3
+```
+
+**Expected:**
+- All rows imported successfully
+- US format dates (01/20/2024, 12/31/2024) normalized to ISO (2024-01-20, 2024-12-31)
+- Success message: "IEP progress imported successfully! 3 entries loaded."
+
+✅ **Pass Criteria:** Date normalization works, all formats accepted
+
+### Test CSV8: Invalid student_code/goal_code
+
+```csv
+date,student_code,goal_code,percent,collected_by
+2024-01-15,S@001,G001,75,Teacher1
+2024-01-16,S002,G 002,80,Teacher2
+2024-01-17,VeryLongStudentCodeThatExceeds32Characters,G003,85,Teacher3
+```
+
+**Expected:**
+- Row 2 error: "student_code must contain only A-Z, 0-9, _, -"
+- Row 3 error: "goal_code must contain only A-Z, 0-9, _, -"
+- Row 4 error: "student_code must be 32 characters or less"
+
+✅ **Pass Criteria:** Character set and length limits enforced
+
+### Test CSV9: Invalid percent/value Range
+
+```csv
+date,student_code,goal_code,percent,collected_by
+2024-01-15,S001,G001,150,Teacher1
+2024-01-16,S002,G002,-10,Teacher2
+2024-01-17,S003,G003,abc,Teacher3
+```
+
+**Expected:**
+- Row 2 error: "percent/value: Value must be between 0 and 100"
+- Row 3 error: "percent/value: Value must be between 0 and 100"
+- Row 4 error: "percent/value: Value must be a number"
+
+✅ **Pass Criteria:** Range and type validation works
+
+### Test CSV10: Notes Length Limit
+
+```csv
+date,student_code,goal_code,percent,collected_by,notes
+2024-01-15,S001,G001,75,Teacher1,"This is a very long note that exceeds 500 characters... [generate 501+ chars]"
+```
+
+**Expected:**
+- Row 2 error: "notes must be 500 characters or less"
+
+✅ **Pass Criteria:** Length limit enforced on optional fields
+
+### Test CSV11: HTML in Notes (Sanitization)
+
+```csv
+date,student_code,goal_code,percent,collected_by,notes
+2024-01-15,S001,G001,75,Teacher1,"<script>alert('xss')</script>"
+2024-01-16,S002,G002,80,Teacher2,"Student showed improvement > 50%"
+```
+
+**Expected:**
+- Both rows imported successfully
+- Notes sanitized:
+  - Row 1: `&lt;script&gt;alert('xss')&lt;/script&gt;`
+  - Row 2: `Student showed improvement &gt; 50%`
+
+✅ **Pass Criteria:** HTML escaped, no XSS risk
+
+### Test CSV12: High Error Rate (>10%)
+
+```csv
+date,student_code,goal_code,percent,collected_by
+2024-01-15,S001,G001,75,Teacher1
+invalid,S002,G002,80,Teacher2
+invalid,S003,G003,85,Teacher3
+invalid,S004,G004,90,Teacher4
+invalid,S005,G005,95,Teacher5
+2024-01-20,S006,G006,100,Teacher6
+```
+
+(5 out of 6 rows invalid = 83% error rate)
+
+**Expected:**
+- Import blocked
+- Error: "Too many invalid rows: 83.3% (max 10%)"
+- Error summary shows: 1 valid, 5 invalid
+- First 5 row errors listed
+
+✅ **Pass Criteria:** Error rate threshold enforced
+
+### Test CSV13: Low Error Rate (≤10%) - Partial Import
+
+```csv
+date,student_code,goal_code,percent,collected_by
+2024-01-15,S001,G001,75,Teacher1
+2024-01-16,S002,G002,80,Teacher2
+2024-01-17,S003,G003,85,Teacher3
+2024-01-18,S004,G004,90,Teacher4
+2024-01-19,S005,G005,95,Teacher5
+2024-01-20,S006,G006,100,Teacher6
+2024-01-21,S007,G007,105,Teacher7
+2024-01-22,S008,G008,110,Teacher8
+2024-01-23,S009,G009,75,Teacher9
+2024-01-24,S010,G010,80,Teacher10
+```
+
+(2 out of 10 rows invalid = 20%, but this should fail. Let's make it 1 out of 11 = 9%)
+
+```csv
+date,student_code,goal_code,percent,collected_by
+2024-01-15,S001,G001,75,Teacher1
+2024-01-16,S002,G002,80,Teacher2
+2024-01-17,S003,G003,85,Teacher3
+2024-01-18,S004,G004,90,Teacher4
+2024-01-19,S005,G005,95,Teacher5
+2024-01-20,S006,G006,100,Teacher6
+2024-01-21,S007,G007,75,Teacher7
+2024-01-22,S008,G008,80,Teacher8
+2024-01-23,S009,G009,85,Teacher9
+2024-01-24,S010,G010,90,Teacher10
+invalid,S011,G011,95,Teacher11
+```
+
+(1 out of 11 rows invalid = 9%)
+
+**Expected:**
+- Import succeeds (partial)
+- Alert: "Import successful! 10 valid rows imported. 1 rows had errors and were skipped."
+- 10 rows displayed in table
+
+✅ **Pass Criteria:** Partial import works under error threshold
+
+### Test CSV14: Valid Full Import
+
+```csv
+date,student_code,goal_code,percent,collected_by,notes,method,source
+2024-01-15,S001,G001,75,Teacher1,"Made progress","Direct observation","Classroom"
+01/20/2024,S002,G002,80,Teacher2,"Excellent work","Assessment","Testing"
+2024-01-25,S003,G003,90,Teacher3,,,"Classroom"
+```
+
+**Expected:**
+- All 3 rows imported
+- Success alert: "IEP progress imported successfully! 3 entries loaded."
+- Data displayed in table with normalized dates
+
+✅ **Pass Criteria:** Valid import works perfectly
+
+### Test CSV15: Cookie Security Verification
+
+1. Log in to Teacher Center: `${PREVIEW_URL}/site/teacher/`
+2. Open DevTools → Application tab → Cookies
+3. Select the site domain
+4. Inspect `tc` cookie
+
+**Expected:**
+- `HttpOnly`: ✅ Checked
+- `Secure`: ✅ Checked
+- `SameSite`: `Lax`
+- `Path`: `/`
+
+✅ **Pass Criteria:** All security flags present
+
+### Test CSV16: Admin Login Throttle
+
+1. Navigate to `${PREVIEW_URL}/admin-login`
+2. Enter invalid credentials
+3. Submit form
+4. Immediately try again with invalid credentials
+
+**Expected:**
+- First attempt: Redirects to `/admin-login?e=1` (error)
+- Response includes `Set-Cookie: admin_throttle=...`
+- Second attempt: Blocked, redirects to `/admin-login?e=1`
+- Wait 60 seconds, try again: Allowed
+
+✅ **Pass Criteria:** Throttle active on admin login
+
+### CSV Validation Checklist
+
+- [ ] CSV1: Invalid file type rejected
+- [ ] CSV2: Oversized file rejected
+- [ ] CSV3: Empty/header-only file rejected
+- [ ] CSV4: Missing required headers detected
+- [ ] CSV5: Missing percent/value column detected
+- [ ] CSV6: Invalid dates rejected
+- [ ] CSV7: Date normalization works (MM/DD/YYYY → yyyy-mm-dd)
+- [ ] CSV8: Invalid student_code/goal_code rejected
+- [ ] CSV9: Invalid percent/value range rejected
+- [ ] CSV10: Notes length limit enforced
+- [ ] CSV11: HTML in notes sanitized
+- [ ] CSV12: High error rate (>10%) blocks import
+- [ ] CSV13: Low error rate (≤10%) allows partial import
+- [ ] CSV14: Valid full import succeeds
+- [ ] CSV15: Cookie security flags verified (tc cookie)
+- [ ] CSV16: Admin login throttle enforced
+
 ## Success Criteria
 
 All tests pass ✅ = **Ready for production merge**
