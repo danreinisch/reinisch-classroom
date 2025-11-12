@@ -14,6 +14,8 @@ const { rpc, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } = require('./_lib/supa');
 
 const COOKIE_NAME = 'rc_admin_session_v3'; // new version for Supabase-based auth
 const MAX_AGE_SECONDS = Number(process.env.MAX_AGE_SECONDS || 28800); // 8 hours default
+const THROTTLE_WINDOW_SECONDS = 60; // 1 minute window for throttling
+const INVALID_CREDS_DELAY_MS = 150 + Math.floor(Math.random() * 150); // 150-300ms delay
 
 exports.handler = async (event) => {
   // Allow preflight
@@ -58,6 +60,14 @@ exports.handler = async (event) => {
     return redirect('/admin-login?e=1');
   }
 
+  // Check throttling (per-IP attempt limit via cookie)
+  const clientIp = event.headers['x-forwarded-for'] || event.headers['X-Forwarded-For'] || 'unknown';
+  const throttleResult = checkThrottle(event, clientIp);
+  if (!throttleResult.allowed) {
+    console.log('[admin-session] Throttled login attempt from', clientIp);
+    return redirect('/admin-login?e=1');
+  }
+
   // Verify credentials via Supabase RPC
   try {
     const verifyRes = await rpc('verify_user_password', {
@@ -75,7 +85,19 @@ exports.handler = async (event) => {
     // verify_user_password returns empty array if credentials invalid
     if (!Array.isArray(users) || users.length === 0) {
       console.log('[admin-session] Invalid credentials attempt for username:', inUser);
-      return redirect('/admin-login?e=1');
+      
+      // Add fixed delay to reduce brute-force timing attacks
+      await new Promise(resolve => setTimeout(resolve, INVALID_CREDS_DELAY_MS));
+      
+      // Set throttle cookie and redirect
+      return {
+        statusCode: 302,
+        headers: {
+          Location: '/admin-login?e=1',
+          'Set-Cookie': createThrottleCookie(clientIp),
+          'Cache-Control': 'no-store'
+        }
+      };
     }
 
     const user = users[0];
@@ -146,4 +168,56 @@ function serializeCookie(name, value, opts = {}) {
   if (opts.secure)   parts.push('Secure');
   if (opts.sameSite) parts.push(`SameSite=${opts.sameSite}`);
   return parts.join('; ');
+}
+
+// Simple per-IP throttling using cookies
+function checkThrottle(event, clientIp) {
+  const cookieHeader = event.headers.cookie || event.headers.Cookie || '';
+  const throttleCookie = getCookie(cookieHeader, 'admin_throttle');
+  
+  if (!throttleCookie) {
+    return { allowed: true };
+  }
+
+  // Check if throttle is still active
+  try {
+    const [timestamp, ip] = throttleCookie.split('_');
+    const throttleTime = parseInt(timestamp, 10);
+    const now = Math.floor(Date.now() / 1000);
+    
+    if (ip === hashIp(clientIp) && (now - throttleTime) < THROTTLE_WINDOW_SECONDS) {
+      return { allowed: false };
+    }
+  } catch (e) {
+    // Invalid cookie, allow
+  }
+  
+  return { allowed: true };
+}
+
+function createThrottleCookie(clientIp) {
+  const timestamp = Math.floor(Date.now() / 1000);
+  const value = `${timestamp}_${hashIp(clientIp)}`;
+  return `admin_throttle=${value}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${THROTTLE_WINDOW_SECONDS}`;
+}
+
+function getCookie(header, name) {
+  if (!header) return '';
+  const parts = header.split(/;\s*/);
+  for (const part of parts) {
+    const [k, ...v] = part.split('=');
+    if (k === name) return v.join('=');
+  }
+  return '';
+}
+
+// Simple hash for IP (not cryptographic, just for cookie storage)
+function hashIp(ip) {
+  let hash = 0;
+  for (let i = 0; i < ip.length; i++) {
+    const char = ip.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return Math.abs(hash).toString(36);
 }
