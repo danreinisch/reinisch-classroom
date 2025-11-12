@@ -909,3 +909,82 @@ Once all inline scripts are refactored:
 - [MDN CORS](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS) - CORS documentation
 - [MDN Content-Security-Policy](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy) - CSP reference
 - [CSP Evaluator](https://csp-evaluator.withgoogle.com/) - Google's CSP validation tool
+
+### Step 5: Remove Unsafe Inline Scripts (Completed - Stage 3B)
+
+**Goal:** Eliminate all inline JavaScript to enable strict CSP without 'unsafe-inline'.
+
+**Actions Completed:**
+
+- [x] Extract inline scripts from site/student/index.html to external modules
+  - [x] student-portal-failsafe.js - Failsafe timer for login view visibility
+  - [x] student-portal-error-handler.js - Global error capture with user banner
+  - [x] student-portal-auto-login.js - 24-hour auto-login bootstrap
+- [x] Extract inline scripts from site/hub/index.html to external modules
+  - [x] hub-theme-boot.js - Glass theme initialization
+  - [x] hub-defensive-wiring.js - UI wiring for reactive updates
+  - [x] hub-ux-enhancement.js - Area/tab persistence and navigation
+  - [x] hub-healthcheck.js - Module loading diagnostics
+- [x] Replace inline event handlers with addEventListener
+  - [x] student/index.html: Toast dismiss and error card buttons
+  - [x] hub/index.html: Critical asset banner dismiss button
+- [x] Create CI check to prevent regressions
+  - [x] scripts/check-inline-scripts.cjs - Scans HTML for violations
+  - [x] Added to package.json postbuild hook
+  - [x] Checks for inline `<script>` content and onclick/onload/etc. attributes
+- [x] Tighten CSP in netlify.toml
+  - [x] Removed 'unsafe-inline' from enforced Content-Security-Policy
+  - [x] Kept 'unsafe-inline' in Report-Only mode for monitoring
+  - [x] Updated comments to reflect Stage 3B status
+
+**How to Add New JavaScript:**
+
+1. **Create an external .js file** in `site/web/` directory
+2. **Reference it** with `<script src="/web/your-module.js"></script>` in HTML
+3. **For module scripts**, use `<script type="module" src="/web/your-module.js"></script>`
+4. **Never add inline scripts** - CI will fail if you do
+5. **Replace inline event handlers** with addEventListener:
+
+```javascript
+// ❌ BAD: Inline event handler (violates CSP)
+button.innerHTML = `<button onclick="doSomething()">Click</button>`;
+
+// ✅ GOOD: Use addEventListener
+button.innerHTML = `<button id="myBtn" data-action="do-something">Click</button>`;
+const btn = document.getElementById('myBtn');
+btn.addEventListener('click', function() {
+  doSomething();
+});
+```
+
+**Running the Inline Scripts Checker:**
+
+```bash
+# Check for inline scripts violations
+npm run check:inline-scripts
+
+# Runs automatically in CI via postbuild hook
+npm run postbuild
+```
+
+**Current Policy Status:**
+
+- ✅ Enforced CSP blocks inline scripts
+- ✅ 'unsafe-inline' removed from script-src
+- ⚠️ style-src still allows 'unsafe-inline' (planned for future phase)
+- ✅ Report-Only CSP monitors with 'unsafe-inline' enabled
+- ✅ CI guard prevents inline script regressions
+
+**Known Limitations:**
+
+- Presentation files (`site/presentations/**`) contain inline scripts (excluded from CI)
+- Test files contain inline scripts (acceptable for test infrastructure)
+- Dynamic HTML templates in hub module scripts use onclick (needs refactoring)
+
+**Next Steps (Future Phases):**
+
+1. Refactor dynamic template onclick handlers to use data attributes + addEventListener
+2. Consider removing 'unsafe-inline' from style-src (requires CSS extraction)
+3. Add Subresource Integrity (SRI) for CDN resources
+4. Monitor CSP reports and address any edge cases
+

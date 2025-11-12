@@ -786,280 +786,17 @@
 
 <!-- HOTFIX: Early failsafe timer to guarantee login view visibility -->
 <!-- TODO: Fold this into existing diagnostics work after hotfix is stable -->
-<script>
-(function() {
-  'use strict';
-  
-  // A) Failsafe visibility timer: Force #loginView visible if window.authReady not set within 3s
-  // This runs BEFORE any async work to prevent top-level errors from leaving page blank
-  
-  const urlParams = new URLSearchParams(window.location.search);
-  const DEBUG_MODE = urlParams.get('debug') === '1';
-  const FAILSAFE_DELAY_MS = DEBUG_MODE ? 0 : 3000; // No delay in debug mode
-  
-  if (DEBUG_MODE) {
-    console.log('[HOTFIX][failsafe] Debug mode enabled - failsafe timer bypassed');
-  }
-  
-  setTimeout(() => {
-    // Only fire if window.authReady is not set
-    if (!window.authReady) {
-      const loginView = document.getElementById('loginView');
-      const dashboardView = document.getElementById('studentDashboardView');
-      const teacherView = document.getElementById('teacherCenterView');
-      
-      // Check if any view is visible
-      const isLoginVisible = loginView && !loginView.classList.contains('hidden');
-      const isDashboardVisible = dashboardView && !dashboardView.classList.contains('hidden');
-      const isTeacherVisible = teacherView && !teacherView.classList.contains('hidden');
-      
-      if (!isLoginVisible && !isDashboardVisible && !isTeacherVisible) {
-        console.warn('[HOTFIX][failsafe] TRIGGERED - No view visible after ' + FAILSAFE_DELAY_MS + 'ms, forcing login view');
-        
-        if (DEBUG_MODE) {
-          console.log('[HOTFIX][failsafe] Current state:', {
-            authReady: window.authReady,
-            loginHidden: loginView?.classList.contains('hidden'),
-            dashboardHidden: dashboardView?.classList.contains('hidden'),
-            teacherHidden: teacherView?.classList.contains('hidden')
-          });
-        }
-        
-        // Force show login view defensively
-        if (loginView) {
-          loginView.classList.remove('hidden');
-          console.log('[HOTFIX][failsafe] Login view forced visible');
-        }
-        
-        // Hide other views
-        if (dashboardView) dashboardView.classList.add('hidden');
-        if (teacherView) teacherView.classList.add('hidden');
-      } else if (DEBUG_MODE) {
-        console.log('[HOTFIX][failsafe] Check passed - a view is visible or authReady is set');
-      }
-    } else if (DEBUG_MODE) {
-      console.log('[HOTFIX][failsafe] Check passed - authReady is true');
-    }
-  }, FAILSAFE_DELAY_MS);
-})();
-</script>
+<!-- Guardrails Stage 3B: Externalized to student-portal-failsafe.js -->
+<script src="../web/student-portal-failsafe.js"></script>
 
 <!-- HOTFIX: Global error capture with visible banner -->
 <!-- TODO: Fold this into existing diagnostics work after hotfix is stable -->
-<script>
-(function() {
-  'use strict';
-  
-  const urlParams = new URLSearchParams(window.location.search);
-  const DEBUG_MODE = urlParams.get('debug') === '1';
-  
-  // Track first error to avoid spamming
-  let firstError = null;
-  
-  // B) Global error handlers: Show user-friendly banner on uncaught errors
-  
-  // Handler for synchronous errors
-  window.onerror = function(message, source, lineno, colno, error) {
-    console.error('[HOTFIX][global-error] Uncaught error:', { message, source, lineno, colno, error });
-    
-    if (!firstError) {
-      firstError = { message, source, lineno, error };
-      
-      // Show banner with user-friendly message
-      const errorMsg = DEBUG_MODE && message ? 
-        'Student Portal failed to load fully. Error: ' + message :
-        'Student Portal failed to load fully. Please try again or contact your teacher.';
-      
-      // Use a safe setTimeout to avoid blocking the error handler
-      setTimeout(() => {
-        showFatalBanner(errorMsg, 'error');
-      }, 100);
-    }
-    
-    // Return false to allow default error handling to continue
-    return false;
-  };
-  
-  // Handler for unhandled promise rejections
-  window.addEventListener('unhandledrejection', function(event) {
-    console.error('[HOTFIX][unhandled-rejection]', event.reason);
-    
-    if (!firstError) {
-      firstError = { message: event.reason?.message || String(event.reason), type: 'rejection' };
-      
-      // Show banner with user-friendly message
-      const errorMsg = DEBUG_MODE && event.reason?.message ? 
-        'Student Portal failed to load fully. Error: ' + event.reason.message :
-        'Student Portal failed to load fully. Please try again or contact your teacher.';
-      
-      setTimeout(() => {
-        showFatalBanner(errorMsg, 'error');
-      }, 100);
-    }
-  });
-  
-  // C) Helper: showFatalBanner(message, type='error')
-  // Creates or updates #portalFatalBanner with accessible, dismissible banner
-  // This is a temporary hotfix - reuses existing .portal-banner styles
-  window.showFatalBanner = function(message, type = 'error') {
-    let banner = document.getElementById('portalFatalBanner');
-    
-    if (!banner) {
-      // Create banner element if it doesn't exist
-      banner = document.createElement('div');
-      banner.id = 'portalFatalBanner';
-      banner.className = 'portal-banner';
-      banner.setAttribute('role', 'alert');
-      banner.setAttribute('aria-live', 'assertive');
-      banner.setAttribute('aria-atomic', 'true');
-      
-      banner.innerHTML = `
-        <div class="portal-banner-icon" id="portalFatalBannerIcon"></div>
-        <div class="portal-banner-content">
-          <div class="portal-banner-title" id="portalFatalBannerTitle">Portal Error</div>
-          <div class="portal-banner-message" id="portalFatalBannerMessage"></div>
-        </div>
-        <button id="portalFatalBannerDismiss" class="portal-banner-dismiss" aria-label="Dismiss error notification">×</button>
-      `;
-      
-      document.body.insertBefore(banner, document.body.firstChild);
-      
-      // Setup dismiss handler
-      const dismissBtn = document.getElementById('portalFatalBannerDismiss');
-      if (dismissBtn) {
-        dismissBtn.addEventListener('click', () => {
-          banner.classList.add('hidden');
-        });
-      }
-    }
-    
-    // Update banner content
-    const icon = document.getElementById('portalFatalBannerIcon');
-    const messageEl = document.getElementById('portalFatalBannerMessage');
-    
-    // Set icon based on type
-    const icons = {
-      error: '⚠️',
-      warning: '⚠️',
-      info: 'ℹ️'
-    };
-    
-    if (icon) icon.textContent = icons[type] || icons.error;
-    if (messageEl) messageEl.textContent = message;
-    
-    // Set type class
-    banner.className = 'portal-banner ' + type;
-    
-    if (DEBUG_MODE) {
-      console.log('[HOTFIX][showFatalBanner] Showing', type, 'banner:', message);
-    }
-  };
-  
-  if (DEBUG_MODE) {
-    console.log('[HOTFIX][global-error] Global error handlers installed');
-  }
-})();
-</script>
+<!-- Guardrails Stage 3B: Externalized to student-portal-error-handler.js -->
+<script src="../web/student-portal-error-handler.js"></script>
 
 <!-- Early auto-login bootstrap (24h remember-me) -->
-<script>
-(function() {
-  'use strict';
-  
-  console.log('[auto-login] Starting early bypass check');
-  
-  try {
-    // Read rc_auth from localStorage
-    const authStr = localStorage.getItem('rc_auth');
-    if (!authStr) {
-      console.log('[auto-login] No rc_auth found');
-      return;
-    }
-    
-    let auth;
-    try {
-      auth = JSON.parse(authStr);
-    } catch (e) {
-      console.warn('[auto-login] Invalid rc_auth JSON, clearing');
-      localStorage.removeItem('rc_auth');
-      sessionStorage.removeItem('rc_user_code');
-      sessionStorage.removeItem('rc_user_role');
-      return;
-    }
-    
-    // Validate structure and role
-    if (!auth || auth.role !== 'student' || !auth.code) {
-      console.log('[auto-login] Auth is not for student or missing code');
-      return;
-    }
-    
-    // Validate expiry
-    const now = Date.now();
-    if (!auth.expiresAt || typeof auth.expiresAt !== 'number') {
-      console.warn('[auto-login] Missing or invalid expiresAt, clearing');
-      localStorage.removeItem('rc_auth');
-      return;
-    }
-    
-    if (now > auth.expiresAt) {
-      console.log('[auto-login] Auth expired, clearing');
-      localStorage.removeItem('rc_auth');
-      sessionStorage.removeItem('rc_user_code');
-      sessionStorage.removeItem('rc_user_role');
-      return;
-    }
-    
-    // Validate URL parameters if ?auto=1 is present
-    const urlParams = new URLSearchParams(window.location.search);
-    const auto = urlParams.get('auto');
-    const urlCode = urlParams.get('code');
-    
-    if (auto === '1') {
-      // URL has auto=1, verify code is present and matches
-      if (!urlCode) {
-        console.warn('[auto-login] URL has auto=1 but no code, clearing session');
-        localStorage.removeItem('rc_auth');
-        sessionStorage.removeItem('rc_user_code');
-        sessionStorage.removeItem('rc_user_role');
-        return;
-      }
-      
-      if (urlCode !== auth.code) {
-        console.warn('[auto-login] URL code mismatch, clearing session');
-        localStorage.removeItem('rc_auth');
-        sessionStorage.removeItem('rc_user_code');
-        sessionStorage.removeItem('rc_user_role');
-        return;
-      }
-    }
-    
-    // All validations passed - hydrate session and set bypass flag
-    console.log('[auto-login] Validation passed, bypassing login for student:', auth.code);
-    
-    sessionStorage.setItem('rc_user_code', auth.code);
-    sessionStorage.setItem('rc_user_role', 'student');
-    
-    // Set global flag to prevent main init from overriding
-    window.__autoLoginOk = true;
-    
-    // Hide login container immediately to avoid flicker
-    // Note: Using !important is acceptable here because:
-    // 1. This is a temporary style that gets removed after dashboard loads
-    // 2. We need to override any existing inline styles
-    // 3. The style is isolated to this specific use case
-    const style = document.createElement('style');
-    style.id = 'auto-login-style';
-    style.textContent = '#loginView { display: none !important; }';
-    document.head.appendChild(style);
-    
-    console.log('[auto-login] Success: Bypassing login form, dashboard will load');
-    
-  } catch (err) {
-    console.error('[auto-login] Unexpected error:', err);
-    // On any error, let normal login flow handle it
-  }
-})();
-</script>
+<!-- Guardrails Stage 3B: Externalized to student-portal-auto-login.js -->
+<script src="../web/student-portal-auto-login.js"></script>
 
 <!-- Portal Banner - Diagnostic UI for adapter failures -->
 <div id="portalBanner" class="portal-banner hidden" role="status" aria-live="polite" aria-atomic="true">
@@ -1524,17 +1261,35 @@
         <div class="toast warning" style="position:fixed; top:80px; right:20px; z-index:100; max-width:400px;">
           <div class="toast-header">
             <div class="toast-title">⚠️ Module Load Issue</div>
-            <button class="toast-close" onclick="this.closest('.toast').remove()">×</button>
+            <button class="toast-close" data-action="dismiss-toast">×</button>
           </div>
           <div class="toast-body">
             Some portal features may be unavailable. Try refreshing if you experience issues.
           </div>
           <div style="margin-top:12px;">
-            <button class="btn small primary" onclick="location.reload()">Refresh Now</button>
+            <button class="btn small primary" data-action="refresh-page">Refresh Now</button>
           </div>
         </div>
       `;
       document.body.insertAdjacentHTML('beforeend', toastHtml);
+      
+      // Add event listeners for toast actions
+      const toast = document.querySelector('.toast.warning');
+      if (toast) {
+        const dismissBtn = toast.querySelector('[data-action="dismiss-toast"]');
+        if (dismissBtn) {
+          dismissBtn.addEventListener('click', function() {
+            this.closest('.toast').remove();
+          });
+        }
+        
+        const refreshBtn = toast.querySelector('[data-action="refresh-page"]');
+        if (refreshBtn) {
+          refreshBtn.addEventListener('click', function() {
+            location.reload();
+          });
+        }
+      }
       
       // Auto-dismiss after 10 seconds
       setTimeout(() => {
@@ -1559,11 +1314,26 @@
               ${err.message}
             </div>
             <div style="display:flex; gap:12px; justify-content:center;">
-              <button class="btn primary" onclick="location.reload()">Reload Page</button>
-              <button class="btn" onclick="location.href='/hub/'">Return to Hub</button>
+              <button class="btn primary" data-action="reload-page">Reload Page</button>
+              <button class="btn" data-action="return-hub">Return to Hub</button>
             </div>
           </div>
         `;
+        
+        // Add event listeners for error card actions
+        const reloadBtn = container.querySelector('[data-action="reload-page"]');
+        if (reloadBtn) {
+          reloadBtn.addEventListener('click', function() {
+            location.reload();
+          });
+        }
+        
+        const hubBtn = container.querySelector('[data-action="return-hub"]');
+        if (hubBtn) {
+          hubBtn.addEventListener('click', function() {
+            location.href = '/hub/';
+          });
+        }
       }
       
       // Don't continue with the rest of the script

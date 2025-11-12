@@ -639,34 +639,8 @@
         referrerpolicy="no-referrer"></script>
 
 <!-- Boot script: default to glass-bold theme on first visit -->
-<script>
-(function() {
-  const THEME_KEY = 'rc_glass_theme';
-  const currentTheme = localStorage.getItem(THEME_KEY);
-  
-  // Default to glass-bold on first visit
-  function applyTheme() {
-    if (!document.body) {
-      console.warn('[Theme Boot] Body not ready, waiting for DOMContentLoaded');
-      return;
-    }
-    
-    if (!currentTheme) {
-      localStorage.setItem(THEME_KEY, 'glass-bold');
-      document.body.classList.add('glass-bold');
-    } else if (currentTheme === 'glass-bold') {
-      document.body.classList.add('glass-bold');
-    }
-  }
-  
-  // Apply immediately if body exists, otherwise wait
-  if (document.body) {
-    applyTheme();
-  } else {
-    document.addEventListener('DOMContentLoaded', applyTheme);
-  }
-})();
-</script>
+<!-- Guardrails Stage 3B: Externalized to hub-theme-boot.js -->
+<script src="/web/hub-theme-boot.js"></script>
 
 <style>
   /* Hub: always render soft-grid and keep Bold overlays when active */
@@ -855,7 +829,7 @@
         <strong style="display:block;margin-bottom:4px">Module Loading Error</strong>
         <span id="criticalAssetMessage" style="font-size:13px;opacity:.95">One or more critical scripts failed to load. Login functionality may be limited.</span>
       </div>
-      <button onclick="this.parentElement.parentElement.style.display='none'" style="background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.3);color:#fff;padding:6px 12px;border-radius:6px;cursor:pointer;font-weight:800">Dismiss</button>
+      <button id="dismissCriticalAssetBanner" style="background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.3);color:#fff;padding:6px 12px;border-radius:6px;cursor:pointer;font-weight:800">Dismiss</button>
     </div>
   </div>
 
@@ -6611,880 +6585,237 @@
   body.glass-bold .card { backdrop-filter: blur(12px) saturate(150%) !important; -webkit-backdrop-filter: blur(12px) saturate(150%) !important; }
   #btnTeacher { text-shadow: none !important; }
 </style>
-<script>
-  (function(){ try { const k='rc_glass_theme'; const pref=localStorage.getItem(k); if(!pref){document.body.classList.add('glass-bold'); localStorage.setItem(k,'bold'); } else if(pref==='bold'){ document.body.classList.add('glass-bold'); } else { document.body.classList.remove('glass-bold'); } } catch(e){} })();
-</script>
+<!-- Compact theme fallback - Guardrails Stage 3B: Already covered by hub-theme-boot.js above, removing duplicate -->
+
 
 <!-- PR 2: UI wiring for reactive client - append-only defensive script -->
-<script>
-(function() {
-  'use strict';
-  
-  // Timing constants for defensive DOM operations
-  // Small delay ensures DOM elements are ready when accessed via event handlers
-  const DOM_READY_DELAY_MS = 50;  // Quick check for immediate DOM access
-  const INITIAL_STATUS_DELAY_MS = 200;  // Longer delay for initial page load status update
-  
-  console.debug('[Hub Settings - PR2] Defensive wiring script loaded');
-  
-  // Safe querySelector helper with null checking
-  const safeQs = (selector) => {
-    try {
-      return document.querySelector(selector);
-    } catch (e) {
-      return null;
-    }
-  };
-  
-  // Safe property setter - only sets if element exists
-  const safeProp = (element, prop, value) => {
-    if (element && element[prop] !== undefined) {
-      element[prop] = value;
-      return true;
-    }
-    return false;
-  };
-  
-  // Safe style setter
-  const safeStyle = (element, prop, value) => {
-    if (element && element.style) {
-      element.style[prop] = value;
-      return true;
-    }
-    return false;
-  };
-  
-  // Defensive updater for config status chip
-  // This is the main function that ensures chips update on auto-enable
-  function defensiveUpdateConfigStatus() {
-    try {
-      const configStatus = safeQs('#configStatus');
-      
-      if (!configStatus) {
-        console.debug('[Hub Settings - PR2] Config status element not ready yet');
-        return;
-      }
-      
-      // Check if the main updateConfigStatus function is available
-      if (typeof window.updateConfigStatus === 'function') {
-        window.updateConfigStatus();
-        console.debug('[Hub Settings - PR2] Config status updated via main function');
-      } else if (typeof window.supabaseSettings !== 'undefined' && window.supabaseSettings.readConfig) {
-        // Fallback: manually update the chip if main function not available yet
-        const config = window.supabaseSettings.readConfig();
-        
-        if (config.url && config.anon && config.enabled) {
-          safeProp(configStatus, 'textContent', 'Enabled');
-          safeStyle(configStatus, 'background', 'linear-gradient(180deg, rgba(34,197,94,.8), rgba(22,163,74,.8))');
-          safeStyle(configStatus, 'color', '#fff');
-          safeProp(configStatus, 'title', 'Supabase is enabled');
-          console.debug('[Hub Settings - PR2] Config status updated via fallback (Enabled)');
-        } else if (config.url && config.anon && !config.enabled) {
-          safeProp(configStatus, 'textContent', 'Disabled');
-          safeStyle(configStatus, 'background', 'rgba(255,255,255,.18)');
-          safeStyle(configStatus, 'color', 'var(--muted)');
-          safeProp(configStatus, 'title', 'Supabase is configured but disabled');
-          console.debug('[Hub Settings - PR2] Config status updated via fallback (Disabled)');
-        } else if (config.url || config.anon) {
-          safeProp(configStatus, 'textContent', 'Partially Configured');
-          safeStyle(configStatus, 'background', 'rgba(251,191,36,.3)');
-          safeStyle(configStatus, 'color', 'var(--ink)');
-          safeProp(configStatus, 'title', 'Missing URL or anon key');
-          console.debug('[Hub Settings - PR2] Config status updated via fallback (Partial)');
-        } else {
-          safeProp(configStatus, 'textContent', 'Not Configured');
-          safeStyle(configStatus, 'background', 'rgba(255,255,255,.18)');
-          safeStyle(configStatus, 'color', 'var(--muted)');
-          safeProp(configStatus, 'title', 'No Supabase configuration');
-          console.debug('[Hub Settings - PR2] Config status updated via fallback (Not Configured)');
-        }
-      }
-    } catch (err) {
-      // Silently fail - defensive approach
-      console.debug('[Hub Settings - PR2] Could not update config status:', err.message);
-    }
-  }
-  
-  // Defensive updater for connectivity details timestamp
-  function updateConnectivityTimestamp() {
-    try {
-      const timestampDiv = safeQs('#connectivityTimestamp');
-      if (timestampDiv) {
-        const now = new Date();
-        timestampDiv.textContent = `Last checked: ${now.toLocaleString()}`;
-      }
-    } catch (err) {
-      console.debug('[Hub Settings - PR2] Could not update connectivity timestamp:', err.message);
-    }
-  }
-  
-  // Enhanced "Try again" button - ensures timestamp updates
-  function setupRetryConnectionWiring() {
-    try {
-      const btnRetry = safeQs('#btnRetryConnection');
-      if (!btnRetry) {
-        console.debug('[Hub Settings - PR2] Retry button not found yet');
-        return;
-      }
-      
-      // Check if our handler is already attached
-      if (btnRetry.dataset.pr2Wired === 'true') {
-        return; // Already wired up
-      }
-      
-      btnRetry.dataset.pr2Wired = 'true';
-      console.debug('[Hub Settings - PR2] Retry button wired up');
-      
-      // Add additional handler to ensure timestamp updates
-      btnRetry.addEventListener('click', function pr2RetryHandler() {
-        try {
-          // Update timestamp immediately when clicked
-          updateConnectivityTimestamp();
-        } catch (err) {
-          console.debug('[Hub Settings - PR2] Retry handler error:', err.message);
-        }
-      }, { capture: false });
-      
-    } catch (err) {
-      console.debug('[Hub Settings - PR2] Could not setup retry connection:', err.message);
-    }
-  }
-  
-  // Wire up chips to update immediately on config changes
-  // This is the KEY function that ensures auto-enable updates chips immediately
-  function setupConfigChangeListener() {
-    try {
-      console.debug('[Hub Settings - PR2] Setting up config change listener');
-      
-      // Set up event listener EARLY - before the main async module loads
-      // This ensures we catch the auto-enable event when it's dispatched
-      window.addEventListener('rc:remote-config-changed', function pr2ConfigHandler(e) {
-        try {
-          const detail = e.detail || {};
-          
-          console.debug('[Hub Settings - PR2] Config changed event received:', detail);
-          
-          // Update config status chips after brief delay to ensure DOM is ready
-          // DOM_READY_DELAY_MS ensures elements exist when accessed via event
-          setTimeout(() => {
-            defensiveUpdateConfigStatus();
-          }, DOM_READY_DELAY_MS);
-          
-          // Update timestamp if this was triggered by save or test
-          if (detail.saved || detail.tested) {
-            setTimeout(() => {
-              updateConnectivityTimestamp();
-            }, DOM_READY_DELAY_MS);
-          }
-        } catch (err) {
-          console.debug('[Hub Settings - PR2] Config change handler error:', err.message);
-        }
-      }, { capture: false });
-      
-      console.debug('[Hub Settings - PR2] Config change listener attached');
-    } catch (err) {
-      console.debug('[Hub Settings - PR2] Could not setup config change listener:', err.message);
-    }
-  }
-  
-  // Initialize wiring
-  function initWiring() {
-    try {
-      console.debug('[Hub Settings - PR2] Initializing wiring...');
-      
-      // Setup config change listener immediately (runs before async module loads)
-      setupConfigChangeListener();
-      
-      // Setup retry button and initial status when DOM is ready
-      const setupUI = () => {
-        try {
-          console.debug('[Hub Settings - PR2] Setting up UI elements');
-          setupRetryConnectionWiring();
-          
-          // Initial config status update after page load
-          // INITIAL_STATUS_DELAY_MS ensures all async modules have loaded
-          setTimeout(() => {
-            defensiveUpdateConfigStatus();
-          }, INITIAL_STATUS_DELAY_MS);
-        } catch (err) {
-          console.debug('[Hub Settings - PR2] UI setup error:', err.message);
-        }
-      };
-      
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', setupUI);
-      } else {
-        // DOM already loaded - setup immediately
-        setupUI();
-      }
-      
-      console.debug('[Hub Settings - PR2] Wiring initialization complete');
-    } catch (err) {
-      console.debug('[Hub Settings - PR2] Wiring initialization failed:', err.message);
-    }
-  }
-  
-  // Run initialization immediately
-  initWiring();
-  
-  // Expose updater globally for debugging/testing
-  window.defensiveUpdateConfigStatus = defensiveUpdateConfigStatus;
-  
-})();
-</script>
+<!-- Guardrails Stage 3B: Externalized to hub-defensive-wiring.js -->
+<script src="/web/hub-defensive-wiring.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 <!-- UX Enhancement Script: Top Nav, Persistence, Modal QoL, Role Switch -->
-<script>
-(function() {
-  'use strict';
-  console.debug('[Hub UX] Enhancement script loaded');
-  
-  // ============================================================================
-  // CONFIGURATION & CONSTANTS
-  // ============================================================================
-  const STORAGE_KEYS = {
-    LAST_AREA: 'rc_last_area',
-    LAST_TAB_PREFIX: 'rc_last_tab_'
-  };
-  
-  const MODALS = ['#teachModal', '#signInModal', '#studentSignInModal', '#roleSwitchModal'];
-  
-  // Timing constants for UI updates
-  const TAB_RESTORE_DELAY = 100;  // Brief delay to ensure submenu is rendered before restoring tab
-  const STATE_RESTORE_DELAY = 500; // Delay to ensure all async scripts have loaded before restoring state
-  const AUTH_CHECK_INTERVAL = 5000; // Check auth state every 5 seconds (reduced from 1s to minimize overhead)
-  
-  // ============================================================================
-  // UTILITY FUNCTIONS
-  // ============================================================================
-  const safeQs = (selector) => {
-    try {
-      return document.querySelector(selector);
-    } catch (e) {
-      return null;
-    }
-  };
-  
-  const safeQsAll = (selector) => {
-    try {
-      return Array.from(document.querySelectorAll(selector));
-    } catch (e) {
-      return [];
-    }
-  };
-  
-  // ============================================================================
-  // DEFENSIVE TEACHER CENTER BUTTON BINDING
-  // ============================================================================
-  function bindTeacherModal() {
-    try {
-      const btnTeacher = safeQs('#btnTeacher');
-      if (!btnTeacher) {
-        console.debug('[Hub UX] Teacher button not found, will retry on DOMContentLoaded');
-        return;
-      }
-      
-      // Check if already bound to prevent duplicate handlers
-      if (btnTeacher.dataset.uxBound === 'true') {
-        return;
-      }
-      
-      btnTeacher.dataset.uxBound = 'true';
-      
-      // Add defensive click handler that works even if other scripts error
-      btnTeacher.addEventListener('click', function uxTeacherHandler() {
-        try {
-          const modal = safeQs('#teachModal');
-          if (modal) {
-            modal.classList.add('show');
-            const passInput = safeQs('#teachPass');
-            if (passInput) {
-              setTimeout(() => passInput.focus(), 50);
-            }
-          }
-        } catch (err) {
-          console.error('[Hub UX] Teacher modal handler error:', err);
-        }
-      }, { capture: false });
-      
-      console.debug('[Hub UX] Teacher button bound defensively');
-    } catch (err) {
-      console.error('[Hub UX] Failed to bind teacher button:', err);
-    }
-  }
-  
-  // ============================================================================
-  // TOP NAVIGATION INITIALIZATION
-  // ============================================================================
-  function initTopNav() {
-    try {
-      const topNavButtons = safeQsAll('[data-area-nav]');
-      if (topNavButtons.length === 0) {
-        console.debug('[Hub UX] Top nav buttons not found');
-        return;
-      }
-      
-      // Restore last area from localStorage
-      const lastArea = localStorage.getItem(STORAGE_KEYS.LAST_AREA);
-      
-      // Click handler for topnav buttons
-      topNavButtons.forEach(btn => {
-        btn.addEventListener('click', function() {
-          const area = this.getAttribute('data-area-nav');
-          if (!area) return;
-          
-          // Update active state in topnav
-          topNavButtons.forEach(b => b.classList.remove('active'));
-          this.classList.add('active');
-          
-          // Forward click to iconrail button
-          const iconRailBtn = safeQs(`.iconrail button[data-area="${area}"]`);
-          if (iconRailBtn) {
-            iconRailBtn.click();
-          }
-          
-          // Save to localStorage
-          localStorage.setItem(STORAGE_KEYS.LAST_AREA, area);
-        });
-        
-        // Set initial active state
-        const area = btn.getAttribute('data-area-nav');
-        if (area === (lastArea || 'overview')) {
-          btn.classList.add('active');
-        }
-      });
-      
-      console.debug('[Hub UX] Top nav initialized');
-    } catch (err) {
-      console.error('[Hub UX] Failed to init top nav:', err);
-    }
-  }
-  
-  // ============================================================================
-  // AREA & TAB PERSISTENCE
-  // ============================================================================
-  function setupPersistence() {
-    try {
-      // Hook into iconrail clicks to track area changes
-      const iconRail = safeQs('.iconrail');
-      if (iconRail) {
-        iconRail.addEventListener('click', function(e) {
-          const btn = e.target.closest('button[data-area]');
-          if (btn) {
-            const area = btn.getAttribute('data-area');
-            localStorage.setItem(STORAGE_KEYS.LAST_AREA, area);
-            
-            // Update topnav active state
-            safeQsAll('[data-area-nav]').forEach(navBtn => {
-              navBtn.classList.toggle('active', navBtn.getAttribute('data-area-nav') === area);
-            });
-          }
-        });
-      }
-      
-      // Hook into submenu clicks to track tab changes
-      const submenu = safeQs('#submenu');
-      if (submenu) {
-        submenu.addEventListener('click', function(e) {
-          if (e.target.tagName === 'A') {
-            const tab = e.target.getAttribute('data-tab');
-            const currentArea = localStorage.getItem(STORAGE_KEYS.LAST_AREA) || 'overview';
-            if (tab && currentArea) {
-              localStorage.setItem(STORAGE_KEYS.LAST_TAB_PREFIX + currentArea, tab);
-            }
-          }
-        });
-      }
-      
-      console.debug('[Hub UX] Persistence hooks installed');
-    } catch (err) {
-      console.error('[Hub UX] Failed to setup persistence:', err);
-    }
-  }
-  
-  function restoreLastState() {
-    try {
-      // Only restore if teacher view is unlocked
-      const viewTeacher = safeQs('#view-teacher');
-      if (!viewTeacher || viewTeacher.style.display === 'none') {
-        console.debug('[Hub UX] Teacher view not unlocked, skipping restore');
-        return;
-      }
-      
-      const lastArea = localStorage.getItem(STORAGE_KEYS.LAST_AREA);
-      if (!lastArea) return;
-      
-      // Restore area
-      const iconRailBtn = safeQs(`.iconrail button[data-area="${lastArea}"]`);
-      const topNavBtn = safeQs(`[data-area-nav="${lastArea}"]`);
-      
-      if (iconRailBtn) {
-        // Update iconrail active state
-        safeQsAll('.iconrail button').forEach(b => b.classList.remove('active'));
-        iconRailBtn.classList.add('active');
-        
-        // Trigger renderSubmenu if available
-        if (typeof window.renderSubmenu === 'function') {
-          window.renderSubmenu(lastArea);
-        }
-      }
-      
-      if (topNavBtn) {
-        safeQsAll('[data-area-nav]').forEach(b => b.classList.remove('active'));
-        topNavBtn.classList.add('active');
-      }
-      
-      // Restore last tab for this area
-      setTimeout(() => {
-        const lastTab = localStorage.getItem(STORAGE_KEYS.LAST_TAB_PREFIX + lastArea);
-        if (lastTab) {
-          const tabLink = safeQs(`#submenu a[data-tab="${lastTab}"]`);
-          if (tabLink) {
-            tabLink.click();
-          }
-        }
-      }, TAB_RESTORE_DELAY);
-      
-      console.debug('[Hub UX] Restored last state:', lastArea);
-    } catch (err) {
-      console.error('[Hub UX] Failed to restore last state:', err);
-    }
-  }
-  
-  // ============================================================================
-  // MODAL ENHANCEMENTS (Escape, Backdrop Click, Focus Trap)
-  // ============================================================================
-  function enhanceModals() {
-    try {
-      // Escape key handler
-      document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-          // Find the topmost visible modal
-          for (let i = MODALS.length - 1; i >= 0; i--) {
-            const modal = safeQs(MODALS[i]);
-            if (modal && modal.classList.contains('show')) {
-              modal.classList.remove('show');
-              e.preventDefault();
-              break;
-            }
-          }
-        }
-      });
-      
-      // Backdrop click handler for each modal
-      MODALS.forEach(modalSelector => {
-        const modal = safeQs(modalSelector);
-        if (!modal) return;
-        
-        modal.addEventListener('click', function(e) {
-          // Only close if clicking the backdrop itself, not the modal content
-          if (e.target === modal) {
-            modal.classList.remove('show');
-          }
-        });
-      });
-      
-      console.debug('[Hub UX] Modal enhancements installed');
-    } catch (err) {
-      console.error('[Hub UX] Failed to enhance modals:', err);
-    }
-  }
-  
-  // ============================================================================
-  // ROLE SWITCH FUNCTIONALITY
-  // ============================================================================
-  function initRoleSwitch() {
-    try {
-      const roleSwitchChip = safeQs('#roleSwitchChip');
-      const roleSwitchModal = safeQs('#roleSwitchModal');
-      
-      if (!roleSwitchChip || !roleSwitchModal) {
-        console.debug('[Hub UX] Role switch elements not found');
-        return;
-      }
-      
-      // Show/hide role switch chip based on auth state
-      function updateRoleSwitchChip() {
-        try {
-          const auth = typeof window.getAuth === 'function' ? window.getAuth() : null;
-          if (auth && auth.role) {
-            roleSwitchChip.classList.add('visible');
-          } else {
-            roleSwitchChip.classList.remove('visible');
-          }
-        } catch (err) {
-          console.debug('[Hub UX] Could not update role switch chip:', err);
-        }
-      }
-      
-      // Check periodically for auth changes (every 5s to reduce overhead)
-      setInterval(updateRoleSwitchChip, AUTH_CHECK_INTERVAL);
-      updateRoleSwitchChip();
-      
-      // Open role switch modal
-      roleSwitchChip.addEventListener('click', function() {
-        roleSwitchModal.classList.add('show');
-      });
-      
-      // Cancel button
-      const cancelBtn = safeQs('#roleSwitchCancel');
-      if (cancelBtn) {
-        cancelBtn.addEventListener('click', function() {
-          roleSwitchModal.classList.remove('show');
-        });
-      }
-      
-      // Role switch: Student
-      const studentBtn = safeQs('#roleSwitchStudent');
-      if (studentBtn) {
-        studentBtn.addEventListener('click', function() {
-          // Clear existing auth when switching roles
-          if (typeof window.clearAuth === 'function') {
-            window.clearAuth();
-          }
-          roleSwitchModal.classList.remove('show');
-          const signInModal = safeQs('#signInModal');
-          if (signInModal) {
-            signInModal.classList.add('show');
-          }
-        });
-      }
-      
-      // Role switch: Teacher
-      const teacherBtn = safeQs('#roleSwitchTeacher');
-      if (teacherBtn) {
-        teacherBtn.addEventListener('click', function() {
-          // Clear existing auth when switching roles
-          if (typeof window.clearAuth === 'function') {
-            window.clearAuth();
-          }
-          roleSwitchModal.classList.remove('show');
-          const teachModal = safeQs('#teachModal');
-          if (teachModal) {
-            teachModal.classList.add('show');
-            const passInput = safeQs('#teachPass');
-            if (passInput) {
-              setTimeout(() => passInput.focus(), 50);
-            }
-          }
-        });
-      }
-      
-      // Role switch: Substitute
-      const subBtn = safeQs('#roleSwitchSub');
-      if (subBtn) {
-        subBtn.addEventListener('click', function() {
-          // Clear existing auth when switching roles
-          if (typeof window.clearAuth === 'function') {
-            window.clearAuth();
-          }
-          roleSwitchModal.classList.remove('show');
-          window.location.href = '/sub/';
-        });
-      }
-      
-      console.debug('[Hub UX] Role switch initialized');
-    } catch (err) {
-      console.error('[Hub UX] Failed to init role switch:', err);
-    }
-  }
-  
-  // ============================================================================
-  // SUBSTITUTE ROLE HANDLER
-  // ============================================================================
-  function initSubstituteRole() {
-    try {
-      const signInSub = safeQs('#signInSub');
-      if (!signInSub) {
-        console.debug('[Hub UX] Substitute button not found');
-        return;
-      }
-      
-      signInSub.addEventListener('click', function() {
-        window.location.href = '/sub/';
-      });
-      
-      console.debug('[Hub UX] Substitute role handler initialized');
-    } catch (err) {
-      console.error('[Hub UX] Failed to init substitute role:', err);
-    }
-  }
-  
-  // ============================================================================
-  // INITIALIZATION
-  // ============================================================================
-  function init() {
-    try {
-      console.debug('[Hub UX] Starting initialization...');
-      
-      bindTeacherModal();
-      initTopNav();
-      setupPersistence();
-      enhanceModals();
-      initRoleSwitch();
-      initSubstituteRole();
-      
-      // Restore last state after a delay to ensure all async scripts have loaded
-      setTimeout(restoreLastState, STATE_RESTORE_DELAY);
-      
-      console.debug('[Hub UX] Initialization complete');
-    } catch (err) {
-      console.error('[Hub UX] Initialization failed:', err);
-    }
-  }
-  
-  // Run initialization
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
-  }
-  
-})();
-</script>
+<!-- Guardrails Stage 3B: Externalized to hub-ux-enhancement.js -->
+<script src="/web/hub-ux-enhancement.js"></script>
 
-<!-- Hub Navigation & Clock Enhancement Script -->
-<script>
-(function() {
-  'use strict';
-  
-  // Guard against duplicate initialization
-  if (window.__hubNavBound) {
-    console.debug('[Hub Nav] Already initialized, skipping');
-    return;
-  }
-  window.__hubNavBound = true;
-  
-  console.debug('[Hub Nav] Enhancement script loaded');
-  
-  // Safe querySelector helper
-  const safeQs = (selector) => {
-    try {
-      return document.querySelector(selector);
-    } catch (e) {
-      return null;
-    }
-  };
-  
-  const safeQsAll = (selector) => {
-    try {
-      return Array.from(document.querySelectorAll(selector));
-    } catch (e) {
-      return [];
-    }
-  };
-  
-  // ============================================================================
-  // LIVE DATE/TIME DISPLAY
-  // ============================================================================
-  function initClock() {
-    const clockEl = safeQs('#datetimeDisplay');
-    if (!clockEl) {
-      console.debug('[Hub Nav] Clock element not found');
-      return;
-    }
-    
-    function updateClock() {
-      try {
-        const now = new Date();
-        // Format: "Fri, Nov 8 • 6:52:01 PM"
-        const options = {
-          weekday: 'short',
-          month: 'short',
-          day: 'numeric',
-          hour: 'numeric',
-          minute: '2-digit',
-          second: '2-digit',
-          hour12: true
-        };
-        const formatted = now.toLocaleString(undefined, options);
-        // Add bullet separator between date and time
-        const parts = formatted.split(', ');
-        if (parts.length >= 3) {
-          // Format is typically "Fri, Nov 8, 6:52:01 PM"
-          clockEl.textContent = `${parts[0]}, ${parts[1]} • ${parts.slice(2).join(', ')}`;
-        } else {
-          clockEl.textContent = formatted;
-        }
-      } catch (err) {
-        console.error('[Hub Nav] Clock update error:', err);
-      }
-    }
-    
-    // Update immediately
-    updateClock();
-    
-    // Update every second
-    setInterval(updateClock, 1000);
-    
-    console.debug('[Hub Nav] Clock initialized');
-  }
-  
-  // ============================================================================
-  // REMOVE DUPLICATE SUBSTITUTE ENTRIES
-  // ============================================================================
-  function removeDuplicateSubstitute() {
-    try {
-      // Find the sign-in modal
-      const signInModal = safeQs('#signInModal');
-      if (!signInModal) {
-        console.debug('[Hub Nav] Sign-in modal not found');
-        return;
-      }
-      
-      // Find all buttons in the modal that contain "Substitute" text
-      const allButtons = Array.from(signInModal.querySelectorAll('button'));
-      const substituteButtons = allButtons.filter(btn => {
-        const text = btn.textContent || '';
-        return text.includes('Substitute');
-      });
-      
-      if (substituteButtons.length > 1) {
-        console.warn('[Hub Nav] Found ' + substituteButtons.length + ' Substitute entries, removing duplicates');
-        // Keep the first, remove the rest
-        for (let i = 1; i < substituteButtons.length; i++) {
-          substituteButtons[i].remove();
-        }
-      }
-    } catch (err) {
-      console.error('[Hub Nav] Failed to remove duplicate Substitute:', err);
-    }
-  }
-  
-  // ============================================================================
-  // PREVIOUS/NEXT/EXIT NAVIGATION
-  // ============================================================================
-  function initNavigation() {
-    const prevBtn = safeQs('#navPrev');
-    const nextBtn = safeQs('#navNext');
-    const exitBtn = safeQs('#navExit');
-    
-    if (!prevBtn || !nextBtn || !exitBtn) {
-      console.debug('[Hub Nav] Navigation buttons not found');
-      return;
-    }
-    
-    // Get current submenu tabs
-    function getSubmenuTabs() {
-      return safeQsAll('#submenu a[data-tab]');
-    }
-    
-    // Get currently active tab
-    function getActiveTab() {
-      const tabs = getSubmenuTabs();
-      return tabs.find(tab => tab.classList.contains('active')) || tabs[0];
-    }
-    
-    // Update localStorage for tab persistence
-    function saveCurrentTab(tabName) {
-      try {
-        const currentArea = localStorage.getItem('rc_last_area') || 'overview';
-        if (tabName && currentArea) {
-          localStorage.setItem('rc_last_tab_' + currentArea, tabName);
-        }
-      } catch (err) {
-        console.debug('[Hub Nav] Could not save tab:', err);
-      }
-    }
-    
-    // Previous button handler
-    prevBtn.addEventListener('click', function() {
-      try {
-        const tabs = getSubmenuTabs();
-        if (tabs.length === 0) return;
-        
-        const activeTab = getActiveTab();
-        const currentIndex = tabs.indexOf(activeTab);
-        
-        // Wrap to end if at beginning
-        const prevIndex = currentIndex <= 0 ? tabs.length - 1 : currentIndex - 1;
-        const prevTab = tabs[prevIndex];
-        
-        if (prevTab) {
-          prevTab.click();
-          const tabName = prevTab.getAttribute('data-tab');
-          saveCurrentTab(tabName);
-        }
-      } catch (err) {
-        console.error('[Hub Nav] Previous button error:', err);
-      }
-    });
-    
-    // Next button handler
-    nextBtn.addEventListener('click', function() {
-      try {
-        const tabs = getSubmenuTabs();
-        if (tabs.length === 0) return;
-        
-        const activeTab = getActiveTab();
-        const currentIndex = tabs.indexOf(activeTab);
-        
-        // Wrap to beginning if at end
-        const nextIndex = currentIndex >= tabs.length - 1 ? 0 : currentIndex + 1;
-        const nextTab = tabs[nextIndex];
-        
-        if (nextTab) {
-          nextTab.click();
-          const tabName = nextTab.getAttribute('data-tab');
-          saveCurrentTab(tabName);
-        }
-      } catch (err) {
-        console.error('[Hub Nav] Next button error:', err);
-      }
-    });
-    
-    // Exit button handler
-    exitBtn.addEventListener('click', function() {
-      try {
-        // Try to open role-switch modal first
-        const roleSwitchModal = safeQs('#roleSwitchModal');
-        if (roleSwitchModal) {
-          roleSwitchModal.classList.add('show');
-        } else {
-          // Fallback: open sign-in modal
-          const signInModal = safeQs('#signInModal');
-          if (signInModal) {
-            signInModal.classList.add('show');
-          }
-        }
-      } catch (err) {
-        console.error('[Hub Nav] Exit button error:', err);
-      }
-    });
-    
-    console.debug('[Hub Nav] Navigation buttons initialized');
-  }
-  
-  // ============================================================================
-  // INITIALIZATION
-  // ============================================================================
-  function init() {
-    try {
-      console.debug('[Hub Nav] Initializing...');
-      
-      initClock();
-      initNavigation();
-      
-      // Remove duplicate Substitute after a delay to allow auth-modal-extend.js to run
-      // The delay ensures the dynamically added Substitute button is present before removal
-      // Alternative approaches (MutationObserver) would add complexity for minimal benefit
-      setTimeout(removeDuplicateSubstitute, 500);
-      
-      console.debug('[Hub Nav] Initialization complete');
-    } catch (err) {
-      console.error('[Hub Nav] Initialization failed:', err);
-    }
-  }
-  
-  // Run initialization
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
-  }
-  
-})();
-</script>
+<!-- Guardrails Stage 3B: Externalized to hub-healthcheck.js -->
+<script src="/web/hub-healthcheck.js"></script>
 
 <!-- Classroom Hub Tabs Implementation -->
 <script type="module">
