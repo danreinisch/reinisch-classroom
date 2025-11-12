@@ -28,10 +28,14 @@
     # Prevent clickjacking
     X-Frame-Options = "SAMEORIGIN"
     
-    # CSP in report-only mode (conservative policy, won't block anything)
-    # Report violations to /.netlify/functions/csp-report
-    # This policy allows most current assets while monitoring violations
-    Content-Security-Policy-Report-Only = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://*.supabase.co; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://*.supabase.co https://*.supabase.net; media-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; report-uri /.netlify/functions/csp-report"
+    # CSP enforced (Stage 3A): Removes 'unsafe-eval', keeps 'unsafe-inline' temporarily
+    # 'unsafe-inline' retained due to existing inline scripts in HTML pages
+    # Will be removed in Stage 3B after refactoring to external modules/nonces
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://*.supabase.co; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://*.supabase.co https://*.supabase.io https://*.netlify.app; media-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; report-uri /.netlify/functions/csp-report"
+    
+    # CSP in report-only mode (parallel monitoring for additional violations)
+    # Kept alongside enforced policy to catch edge cases during transition
+    Content-Security-Policy-Report-Only = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://*.supabase.co; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://*.supabase.co https://*.supabase.io https://*.netlify.app; media-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; report-uri /.netlify/functions/csp-report"
 
 # Cache-Control: no-store for HTML files to prevent caching of pages
 [[headers]]
