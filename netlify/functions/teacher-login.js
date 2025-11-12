@@ -95,7 +95,7 @@ exports.handler = async (event) => {
     });
 
     if (!verifyRes.ok) {
-      console.error('[teacher-login] Supabase RPC error:', verifyRes.status);
+      console.error('[teacher-login] Supabase RPC error - status:', verifyRes.status);
       return {
         statusCode: 500,
         headers: CORS,

@@ -25,6 +25,7 @@ exports.handler = async (event) => {
   const health = {
     ok: true,
     timestamp: new Date().toISOString(),
+    runtime_node_version: process.version,
     env: {
       supabase_url: {
         present: !!supabaseUrl,

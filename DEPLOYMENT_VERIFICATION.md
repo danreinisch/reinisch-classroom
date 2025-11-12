@@ -252,6 +252,96 @@ Expected output: (no matches)
 | 7. No dreinisch in site | ✅ Passed | Verified in PR |
 | 8. Deploy Logs Clean | ⏳ Pending | Check after deploy |
 
+## Netlify Runtime & Configuration Verification
+
+### Verifying Node 18 Runtime
+
+After deploying with the updated `netlify.toml`, verify the runtime version:
+
+**Test 9: Runtime Version Check**
+
+```bash
+PREVIEW_URL="https://your-preview-url.netlify.app"
+
+curl -s "${PREVIEW_URL}/.netlify/functions/auth-health" | jq .runtime_node_version
+```
+
+Expected output:
+```
+"v18.19.0"
+```
+(or any v18.x.x version)
+
+✅ **Pass Criteria:** Version string starts with `"v18.`
+
+### Verifying No 502 Errors
+
+**Test 10: Teacher Login Without 502**
+
+```bash
+# Should return 200 (valid) or 401 (invalid), never 502
+curl -i -X POST "${PREVIEW_URL}/.netlify/functions/teacher-login" \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"dreinisch","password":"WrongPass"}'
+```
+
+Expected: `HTTP/2 401` (not 502)
+
+```bash
+# Try with correct password
+curl -i -X POST "${PREVIEW_URL}/.netlify/functions/teacher-login" \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"dreinisch","password":"Tool462"}'
+```
+
+Expected: `HTTP/2 200`
+
+✅ **Pass Criteria:** Never returns 502 Bad Gateway
+
+### Verifying Function Logs
+
+Check Netlify function logs for:
+
+1. **No fetch errors:**
+   - ❌ Bad: `ReferenceError: fetch is not defined`
+   - ✅ Good: No fetch-related errors
+
+2. **Status code logging:**
+   - ✅ Good: `[teacher-login] Supabase RPC error - status: 400`
+   - ✅ Good: `[admin-session] Supabase RPC error - status: 500`
+
+### Configuration Troubleshooting
+
+**Issue: Build fails with "Can't redefine existing key"**
+
+**Cause:** Duplicate `[build.environment]` sections in netlify.toml
+
+**Fix:**
+1. Ensure only ONE `[build.environment]` section exists
+2. Verify no other TOML files (e.g., `netlify/toml`) are being included
+
+**Issue: Still getting 502 on teacher-login**
+
+**Cause:** Node runtime is still <18
+
+**Fix:**
+1. Clear Netlify build cache
+2. Redeploy with `netlify.toml` containing:
+   ```toml
+   [build.environment]
+     AWS_LAMBDA_JS_RUNTIME = "nodejs18.x"
+   ```
+3. Verify with auth-health runtime_node_version check
+
+**Issue: "fetch is not defined" in function logs**
+
+**Cause:** Functions deployed with Node <18
+
+**Fix:**
+1. Verify `netlify.toml` has `AWS_LAMBDA_JS_RUNTIME = "nodejs18.x"`
+2. Trigger new deployment (clear cache if needed)
+3. Wait for full deployment, then test again
+
 ## Rollback Plan
 
 If issues are discovered:
