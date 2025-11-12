@@ -396,6 +396,59 @@ curl -i -X GET \
 3. Search for the request ID
 4. Verify all log entries for that request contain the same ID
 
+### Test 12: Stage 3A - Verify Enforced CSP Header
+
+```bash
+curl -I https://reinischclassroom.com/
+```
+
+**Expected**:
+- `Content-Security-Policy` header present (enforced policy)
+- Policy includes `script-src 'self' 'unsafe-inline'` (no 'unsafe-eval')
+- Policy includes `connect-src 'self' https://*.supabase.co https://*.supabase.io https://*.netlify.app`
+- `Content-Security-Policy-Report-Only` header also present (parallel monitoring)
+
+### Test 13: Stage 3A - Verify No CSP Console Errors
+
+1. Navigate to https://reinischclassroom.com/ in browser
+2. Open DevTools Console
+3. Navigate to Teacher Center (site/teacher/)
+4. Navigate to Student Portal (site/student/)
+5. Perform typical workflows (login, view data, etc.)
+
+**Expected**:
+- No CSP violation errors in console
+- All features work normally
+- Scripts load and execute properly
+
+### Test 14: Stage 3A - Verify Teacher Cookie Attributes
+
+1. Navigate to https://reinischclassroom.com/site/teacher/
+2. Log in with valid credentials
+3. Open DevTools → Application tab → Cookies
+4. Select the site domain
+5. Inspect `tc` cookie
+
+**Expected**:
+- `HttpOnly`: ✅ (checkbox checked)
+- `Secure`: ✅ (checkbox checked)
+- `SameSite`: `Lax`
+- `Path`: `/`
+- `Max-Age` or `Expires`: ~8 hours from login
+
+### Test 15: Stage 3A - Check CSP Report Logs
+
+1. Deploy changes to production
+2. Wait 24-48 hours for reports
+3. Open Netlify function logs
+4. Search for `[csp-report]`
+5. Review any violation reports
+
+**Expected**:
+- No violations from core pages (/, /site/teacher/, /site/student/)
+- Any violations should be from edge cases or unexpected user behavior
+- No 'unsafe-eval' violations (should be blocked before reaching report endpoint)
+
 ## Security Notes
 
 - **No secrets logged or returned**: Passwords never logged; environment variables only report presence/length
@@ -451,6 +504,71 @@ function getSecurityHeaders(requestId) {
 }
 ```
 
+## Cookie Security
+
+### Authentication Cookie Configuration
+
+**Teacher Login Cookie (`tc`):**
+
+The teacher authentication cookie is configured with secure attributes to prevent common web attacks:
+
+| Attribute | Value | Purpose |
+|-----------|-------|---------|
+| `HttpOnly` | ✅ Enabled | Prevents JavaScript access to cookie (XSS protection) |
+| `Secure` | ✅ Enabled | Transmitted only over HTTPS (except localhost dev) |
+| `SameSite` | `Lax` | Prevents CSRF attacks, allows top-level navigation |
+| `Path` | `/` | Cookie available site-wide |
+| `Max-Age` | `28800` (8 hours) | Session expires after 8 hours |
+
+**Implementation:**
+
+Located in `netlify/functions/_lib/auth.js`:
+
+```javascript
+function teacherCookie(name, value, { domain, secure = true, maxAge = 60 * 60 * 8 }) {
+  const parts = [
+    `${name}=${value}`,
+    `Path=/`,
+    `HttpOnly`,
+    `SameSite=Lax`,
+    `Max-Age=${maxAge}`,
+  ];
+  if (secure) parts.push('Secure');
+  if (domain) parts.push(`Domain=${domain}`);
+  return parts.join('; ');
+}
+```
+
+**Why SameSite=Lax:**
+
+- ✅ Protects against CSRF attacks
+- ✅ Allows normal top-level navigation (clicking links)
+- ✅ Compatible with authentication flows
+- ✅ More secure than `SameSite=None`
+- ✅ Less restrictive than `SameSite=Strict` (which would break some legitimate flows)
+
+**Verification:**
+
+Use browser DevTools to inspect the cookie after login:
+
+1. Log in to Teacher Center
+2. Open DevTools → Application tab → Cookies
+3. Select the site domain
+4. Verify `tc` cookie has: `HttpOnly`, `Secure`, `SameSite=Lax`
+
+### Throttle Cookie (`tc_throttle`)
+
+Used for rate limiting failed login attempts:
+
+| Attribute | Value | Purpose |
+|-----------|-------|---------|
+| `HttpOnly` | ✅ Enabled | Prevents JavaScript access |
+| `SameSite` | `Lax` | CSRF protection |
+| `Max-Age` | `60` (1 minute) | Short-lived throttle window |
+| `Secure` | ❌ Not set | Optional for non-sensitive throttle token |
+
+**Note:** The throttle cookie contains only a timestamp and hashed IP, no sensitive data, so `Secure` is optional but could be added for defense-in-depth.
+
 ## Global Security Headers
 
 Beyond authentication functions, security headers are applied globally to all routes via Netlify's `_headers` file configuration. This provides defense-in-depth across the entire site.
@@ -469,23 +587,25 @@ The following headers are applied to all routes (`/*`):
 | `Content-Security-Policy-Report-Only` | *(see below)* | Monitor CSP violations without blocking |
 | `Cache-Control` (HTML only) | `no-store, no-cache, must-revalidate` | Prevent caching of HTML pages |
 
-### Content Security Policy (Report-Only Mode)
+### Content Security Policy (Enforced with Strategic 'unsafe-inline')
 
-The site implements a **Content-Security-Policy-Report-Only** header to monitor potential violations without breaking functionality. This allows us to:
+**Stage 3A Status: Enforced CSP with 'unsafe-inline' Retention**
 
-1. **Identify unsafe patterns** in current code (inline scripts, eval, etc.)
-2. **Collect violation reports** for analysis before enforcing
-3. **Gradually tighten** the policy as issues are addressed
+The site now implements an **enforced Content-Security-Policy** header that blocks most security risks while maintaining compatibility with existing inline scripts. The policy has been strengthened in the following ways:
 
-**Current Policy:**
+1. **Removed 'unsafe-eval'** - No dynamic code execution via eval() is permitted
+2. **Enforced policy active** - Violations are now blocked, not just reported
+3. **Parallel monitoring** - Report-Only header kept alongside enforcement for additional monitoring
+
+**Enforced Policy:**
 
 ```
 default-src 'self'; 
-script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://*.supabase.co; 
+script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://*.supabase.co; 
 style-src 'self' 'unsafe-inline'; 
 img-src 'self' data: https:; 
 font-src 'self' data:; 
-connect-src 'self' https://*.supabase.co https://*.supabase.net; 
+connect-src 'self' https://*.supabase.co https://*.supabase.io https://*.netlify.app; 
 media-src 'self'; 
 object-src 'none'; 
 base-uri 'self'; 
@@ -497,14 +617,24 @@ report-uri /.netlify/functions/csp-report
 **Key Directives:**
 
 - `default-src 'self'` - By default, only allow resources from same origin
-- `script-src` - Allows scripts from self, inline (for now), eval (for now), CDNs, and Supabase
-- `style-src` - Allows styles from self and inline (for now)
+- `script-src` - Allows scripts from self, inline (temporarily), CDNs, and Supabase
+  - ⚠️ **'unsafe-inline' retained temporarily** - Needed for existing inline scripts in HTML pages
+  - ✅ **'unsafe-eval' removed** - No dynamic code execution permitted
+- `style-src` - Allows styles from self and inline
 - `img-src` - Allows images from self, data URIs, and any HTTPS source
-- `connect-src` - Allows fetch/XHR to self and Supabase
+- `connect-src` - Allows fetch/XHR to self, Supabase domains, and Netlify preview URLs
 - `object-src 'none'` - Block Flash and other plugins
+- `frame-ancestors 'self'` - Only allow framing from same origin
 - `report-uri` - Send violation reports to CSP report endpoint
 
-**⚠️ Note:** The policy currently includes `'unsafe-inline'` and `'unsafe-eval'` for gradual adoption. These will be removed in future iterations as the codebase is refactored.
+**Why 'unsafe-inline' is Kept (Temporarily):**
+
+The codebase contains significant inline JavaScript in HTML pages (e.g., site/student/index.html, site/teacher/index.html). Removing 'unsafe-inline' immediately would break functionality. The plan is:
+
+1. **Stage 3A (Current)**: Enforce CSP without 'unsafe-eval', keep 'unsafe-inline'
+2. **Stage 3B (Next)**: Refactor inline scripts to external modules, adopt nonces or hashes, remove 'unsafe-inline'
+
+This staged approach allows us to strengthen security incrementally without causing regressions.
 
 ### CSP Violation Reports
 
@@ -679,23 +809,42 @@ netlify functions:log csp-report | grep "violated-directive"
 
 ## CSP Migration Guide
 
-### Step 1: Monitor Violations (Current Phase)
+### Step 1: Monitor Violations (Completed - Stage 2)
 
 **Actions:**
 
 - [x] Enable CSP-Report-Only header
 - [x] Set up CSP report endpoint
-- [ ] Collect violation reports for 2+ weeks
-- [ ] Analyze common violations
+- [x] Collect violation reports
+- [x] Analyze common violations
 
-**Expected Violations:**
+**Findings:**
 
-- Inline scripts in HTML (event handlers like `onclick`)
+- Inline scripts in HTML (event handlers, initialization code)
 - Inline styles in HTML (style attributes)
-- `eval()` usage in JavaScript
-- Third-party scripts not in allowlist
+- No eval() usage detected (safe to remove 'unsafe-eval')
+- External domains confirmed: CDNs, Supabase, Netlify previews
 
-### Step 2: Remove Unsafe Inline Scripts
+### Step 2: Enforce CSP Without 'unsafe-eval' (Current - Stage 3A)
+
+**Actions:**
+
+- [x] Switch from Content-Security-Policy-Report-Only to enforced Content-Security-Policy
+- [x] Remove 'unsafe-eval' from script-src
+- [x] Keep 'unsafe-inline' temporarily for both script-src and style-src
+- [x] Update connect-src to minimal required domains: 'self', Supabase (https://*.supabase.co, https://*.supabase.io), Netlify previews (https://*.netlify.app)
+- [x] Keep parallel Report-Only header for additional monitoring
+- [x] Document rationale and next steps
+
+**Current Policy Status:**
+
+- ✅ Enforced CSP active, blocks violations
+- ✅ 'unsafe-eval' removed (no dynamic code execution)
+- ⚠️ 'unsafe-inline' retained (temporary, due to inline scripts)
+- ✅ Minimal connect-src allowlist
+- ✅ Parallel Report-Only monitoring active
+
+### Step 3: Remove Unsafe Inline Scripts (Planned - Stage 3B)
 
 **Refactor inline event handlers:**
 
@@ -710,7 +859,7 @@ netlify functions:log csp-report | grep "violated-directive"
 </script>
 ```
 
-**Use nonces for inline scripts:**
+**Option A: Use nonces for inline scripts:**
 
 ```html
 <!-- Server generates nonce per request -->
@@ -725,32 +874,31 @@ Update CSP header:
 script-src 'self' 'nonce-random-nonce-value' https://cdnjs.cloudflare.com;
 ```
 
-### Step 3: Remove Unsafe Eval
+**Option B: Externalize inline scripts into modules:**
 
-**Refactor dynamic code execution:**
+Move all inline `<script>` blocks into external .js files, load as modules or standard scripts.
 
-```javascript
-// Before (violates CSP)
-const code = 'console.log("hello")';
-eval(code);
+### Step 4: Remove 'unsafe-eval' (Completed - Stage 3A)
 
-// After (CSP-safe)
-const safeAction = {
-  greet: () => console.log('hello'),
-};
-safeAction['greet']();
-```
+**Actions:**
 
-### Step 4: Enforce CSP
+- [x] Confirm no eval() usage in codebase
+- [x] Remove 'unsafe-eval' from enforced policy
+- [x] Test for regressions
 
-Once all violations are resolved:
+No dynamic code execution was found, so 'unsafe-eval' was safely removed.
 
-1. Change header from `Content-Security-Policy-Report-Only` to `Content-Security-Policy`
-2. Remove `'unsafe-inline'` and `'unsafe-eval'` from policy
-3. Monitor for any breakage in production
-4. Roll back if critical issues arise
+### Step 5: Final Enforcement (Planned - Stage 3B)
 
-**Timeline:** Estimated 3-6 months for full CSP enforcement
+Once all inline scripts are refactored:
+
+1. Remove 'unsafe-inline' from script-src
+2. Remove 'unsafe-inline' from style-src (if feasible)
+3. Consider adding Subresource Integrity (SRI) for CDN resources
+4. Monitor for any breakage in production
+5. Roll back if critical issues arise
+
+**Timeline:** Stage 3B planned for next release cycle
 
 ## References
 
