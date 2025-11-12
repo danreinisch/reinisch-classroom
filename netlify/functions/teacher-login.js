@@ -8,90 +8,117 @@ console.log('[teacher-login] Module loaded successfully');
 
 const { sign, teacherCookie } = require('./_lib/auth');
 const { rpc, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } = require('./_lib/supa');
+const {
+  generateRequestId,
+  jsonResponse,
+  handleCorsPreFlight,
+  validateBodySize,
+  safeJsonParse,
+  validateStringField,
+  getSecurityHeaders,
+  getCorsHeaders,
+} = require('./_lib/http');
 
 // Session configuration
 const SESSION_DURATION_HOURS = 8;
 const SESSION_DURATION_SECONDS = SESSION_DURATION_HOURS * 60 * 60;
 const THROTTLE_WINDOW_SECONDS = 60; // 1 minute window for throttling
+const INVALID_CREDS_DELAY_MS = 150 + Math.floor(Math.random() * 150); // 150-300ms delay
 
 const { SESSION_SECRET } = process.env;
 
-// CORS configuration
-// Note: Allows all origins (*) for development/testing
-// For production, consider restricting to specific domain(s):
-// 'Access-Control-Allow-Origin': 'https://yourdomain.com'
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
-};
-
 exports.handler = async (event) => {
+  const requestId = generateRequestId();
+  console.log(`[teacher-login] [${requestId}] Request received`);
+
   // Handle CORS preflight
   if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 200, headers: CORS, body: '' };
+    return handleCorsPreFlight(event, ['POST', 'OPTIONS'], ['Content-Type']);
   }
   
   if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, headers: CORS, body: 'Method Not Allowed' };
+    console.log(`[teacher-login] [${requestId}] Method not allowed: ${event.httpMethod}`);
+    return jsonResponse(event, 405, { error: 'Method Not Allowed' }, {}, requestId);
+  }
+
+  // Validate Content-Type
+  const contentType = event.headers['content-type'] || event.headers['Content-Type'] || '';
+  if (!contentType.includes('application/json')) {
+    console.log(`[teacher-login] [${requestId}] Invalid Content-Type: ${contentType}`);
+    return jsonResponse(event, 400, { error: 'Content-Type must be application/json' }, {}, requestId);
+  }
+
+  // Validate body size
+  const bodySizeCheck = validateBodySize(event.body, 10);
+  if (!bodySizeCheck.valid) {
+    console.log(`[teacher-login] [${requestId}] Body too large: ${bodySizeCheck.error}`);
+    return jsonResponse(event, 400, { error: 'Request body too large' }, {}, requestId);
   }
 
   // Check if Supabase is configured
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !SESSION_SECRET) {
-    console.error('[teacher-login] Server not configured: Missing required Supabase or session configuration');
-    return { 
-      statusCode: 500, 
-      headers: CORS, 
-      body: JSON.stringify({ error: 'Server not configured' })
+    console.error(`[teacher-login] [${requestId}] Server not configured: Missing required Supabase or session configuration`);
+    return jsonResponse(event, 500, { error: 'Server not configured' }, {}, requestId);
+  }
+
+  // Parse JSON safely
+  const parseResult = safeJsonParse(event.body);
+  if (!parseResult.ok) {
+    console.log(`[teacher-login] [${requestId}] Invalid JSON: ${parseResult.error}`);
+    return jsonResponse(event, 400, { error: 'Invalid JSON in request body' }, {}, requestId);
+  }
+
+  const { username, password } = parseResult.data;
+  
+  // Validate username field
+  const usernameValidation = validateStringField(username, 'username', 1, 64);
+  if (!usernameValidation.valid) {
+    console.log(`[teacher-login] [${requestId}] Invalid username: ${usernameValidation.error}`);
+    return jsonResponse(event, 400, { error: usernameValidation.error }, {}, requestId);
+  }
+
+  // Validate password field
+  const passwordValidation = validateStringField(password, 'password', 1, 64);
+  if (!passwordValidation.valid) {
+    console.log(`[teacher-login] [${requestId}] Invalid password: ${passwordValidation.error}`);
+    return jsonResponse(event, 400, { error: passwordValidation.error }, {}, requestId);
+  }
+
+  // Dev bootstrap: allow 'teacher_local' on localhost only
+  const host = event.headers.host || event.headers.Host || '';
+  const isLocalhost = host.startsWith('localhost') || host.startsWith('127.0.0.1');
+  
+  if (username === 'teacher_local' && isLocalhost) {
+    // Accept any password for teacher_local on localhost (dev only)
+    const token = sign({ role: 'teacher', username: 'teacher_local' }, SESSION_SECRET, { expSec: SESSION_DURATION_SECONDS });
+    const setCookie = teacherCookie('tc', token, { secure: false, maxAge: SESSION_DURATION_SECONDS });
+    
+    console.log(`[teacher-login] [${requestId}] Dev mode: teacher_local login on localhost`);
+    
+    const securityHeaders = getSecurityHeaders(requestId);
+    const corsHeaders = getCorsHeaders(event, ['POST', 'OPTIONS'], ['Content-Type']);
+    
+    return {
+      statusCode: 200,
+      headers: { 
+        ...securityHeaders,
+        ...corsHeaders,
+        'Set-Cookie': setCookie, 
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ ok: true, username: 'teacher_local' }),
     };
   }
 
+  // Check throttling (per-IP attempt limit via cookie)
+  const clientIp = event.headers['x-forwarded-for'] || event.headers['X-Forwarded-For'] || 'unknown';
+  const throttleResult = checkThrottle(event, clientIp);
+  if (!throttleResult.allowed) {
+    console.log(`[teacher-login] [${requestId}] Throttled login attempt from`, clientIp);
+    return jsonResponse(event, 429, { error: 'Too many attempts. Please try again in a moment.' }, {}, requestId);
+  }
+  
   try {
-    const { username, password } = JSON.parse(event.body || '{}');
-    
-    // Validate credentials (no logging of actual values for security)
-    if (!username || !password) {
-      return { 
-        statusCode: 401, 
-        headers: CORS, 
-        body: JSON.stringify({ error: 'Username and password required' })
-      };
-    }
-
-    // Dev bootstrap: allow 'teacher_local' on localhost only
-    const host = event.headers.host || event.headers.Host || '';
-    const isLocalhost = host.startsWith('localhost') || host.startsWith('127.0.0.1');
-    
-    if (username === 'teacher_local' && isLocalhost) {
-      // Accept any password for teacher_local on localhost (dev only)
-      const token = sign({ role: 'teacher', username: 'teacher_local' }, SESSION_SECRET, { expSec: SESSION_DURATION_SECONDS });
-      const setCookie = teacherCookie('tc', token, { secure: false, maxAge: SESSION_DURATION_SECONDS });
-      
-      console.log('[teacher-login] Dev mode: teacher_local login on localhost');
-      
-      return {
-        statusCode: 200,
-        headers: { 
-          ...CORS, 
-          'Set-Cookie': setCookie, 
-          'Content-Type': 'application/json' 
-        },
-        body: JSON.stringify({ ok: true, username: 'teacher_local' }),
-      };
-    }
-
-    // Check throttling (per-IP attempt limit via cookie)
-    const clientIp = event.headers['x-forwarded-for'] || event.headers['X-Forwarded-For'] || 'unknown';
-    const throttleResult = checkThrottle(event, clientIp);
-    if (!throttleResult.allowed) {
-      console.log('[teacher-login] Throttled login attempt from', clientIp);
-      return {
-        statusCode: 429,
-        headers: CORS,
-        body: JSON.stringify({ error: 'Too many attempts. Please try again in a moment.' })
-      };
-    }
-    
     // Verify credentials via Supabase RPC
     const verifyRes = await rpc('verify_user_password', {
       p_username: username,
@@ -99,24 +126,29 @@ exports.handler = async (event) => {
     });
 
     if (!verifyRes.ok) {
-      console.error('[teacher-login] Supabase RPC error - status:', verifyRes.status);
-      return {
-        statusCode: 500,
-        headers: CORS,
-        body: JSON.stringify({ error: 'Authentication service unavailable' })
-      };
+      console.error(`[teacher-login] [${requestId}] Supabase RPC error - status:`, verifyRes.status);
+      return jsonResponse(event, 500, { error: 'Authentication service unavailable' }, {}, requestId);
     }
 
     const users = await verifyRes.json();
     
     // verify_user_password returns empty array if credentials invalid
     if (!Array.isArray(users) || users.length === 0) {
-      console.log('[teacher-login] Invalid credentials attempt for username:', username);
+      console.log(`[teacher-login] [${requestId}] Invalid credentials attempt for username:`, username);
+      
+      // Add fixed delay to reduce brute-force timing attacks
+      await new Promise(resolve => setTimeout(resolve, INVALID_CREDS_DELAY_MS));
+      
       // Set throttle cookie
+      const securityHeaders = getSecurityHeaders(requestId);
+      const corsHeaders = getCorsHeaders(event, ['POST', 'OPTIONS'], ['Content-Type']);
+      
       return { 
         statusCode: 401, 
         headers: { 
-          ...CORS,
+          ...securityHeaders,
+          ...corsHeaders,
+          'Content-Type': 'application/json',
           'Set-Cookie': createThrottleCookie(clientIp)
         }, 
         body: JSON.stringify({ error: 'Invalid username or password' })
@@ -127,36 +159,32 @@ exports.handler = async (event) => {
     
     // Only allow teacher or admin roles
     if (user.role !== 'teacher' && user.role !== 'admin') {
-      console.log('[teacher-login] User has invalid role for teacher login:', user.role);
-      return {
-        statusCode: 403,
-        headers: CORS,
-        body: JSON.stringify({ error: 'Access denied' })
-      };
+      console.log(`[teacher-login] [${requestId}] User has invalid role for teacher login:`, user.role);
+      return jsonResponse(event, 403, { error: 'Access denied' }, {}, requestId);
     }
     
     // Credentials valid - create session token
     const token = sign({ role: user.role, username: user.username }, SESSION_SECRET, { expSec: SESSION_DURATION_SECONDS });
     const setCookie = teacherCookie('tc', token, { secure: true, maxAge: SESSION_DURATION_SECONDS });
 
-    console.log('[teacher-login] Successful login for user:', user.username, 'role:', user.role);
+    console.log(`[teacher-login] [${requestId}] Successful login for user:`, user.username, 'role:', user.role);
+    
+    const securityHeaders = getSecurityHeaders(requestId);
+    const corsHeaders = getCorsHeaders(event, ['POST', 'OPTIONS'], ['Content-Type']);
     
     return {
       statusCode: 200,
       headers: { 
-        ...CORS, 
+        ...securityHeaders,
+        ...corsHeaders,
         'Set-Cookie': setCookie, 
-        'Content-Type': 'application/json' 
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({ ok: true, username: user.username }),
     };
   } catch (e) {
-    console.error('[teacher-login] Error processing request:', e.message);
-    return { 
-      statusCode: 400, 
-      headers: CORS, 
-      body: JSON.stringify({ error: 'Bad request' })
-    };
+    console.error(`[teacher-login] [${requestId}] Error processing request:`, e.message);
+    return jsonResponse(event, 500, { error: 'Authentication service error' }, {}, requestId);
   }
 };
 

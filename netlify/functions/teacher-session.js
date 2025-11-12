@@ -1,58 +1,47 @@
 // Teacher session verification endpoint
 // GET - verifies HttpOnly cookie and returns session status
 const { requireTeacher } = require('./_lib/auth');
+const {
+  generateRequestId,
+  jsonResponse,
+  handleCorsPreFlight,
+} = require('./_lib/http');
 
 const { SESSION_SECRET } = process.env;
 
-// CORS configuration
-// Note: Allows all origins (*) for development/testing
-// For production, consider restricting to specific domain(s):
-// 'Access-Control-Allow-Origin': 'https://yourdomain.com'
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
-};
-
 exports.handler = async (event) => {
+  const requestId = generateRequestId();
+  console.log(`[teacher-session] [${requestId}] Request received`);
+
   // Handle CORS preflight
   if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 200, headers: CORS, body: '' };
+    return handleCorsPreFlight(event, ['GET', 'OPTIONS'], ['Content-Type']);
   }
   
   if (event.httpMethod !== 'GET') {
-    return { statusCode: 405, headers: CORS, body: 'Method Not Allowed' };
+    console.log(`[teacher-session] [${requestId}] Method not allowed: ${event.httpMethod}`);
+    return jsonResponse(event, 405, { error: 'Method Not Allowed' }, {}, requestId);
   }
 
   // Check if environment variable is configured
   if (!SESSION_SECRET) {
-    console.error('[teacher-session] Server not configured: Missing SESSION_SECRET');
-    return { 
-      statusCode: 500, 
-      headers: CORS, 
-      body: JSON.stringify({ error: 'Server not configured' })
-    };
+    console.error(`[teacher-session] [${requestId}] Server not configured: Missing SESSION_SECRET`);
+    return jsonResponse(event, 500, { error: 'Server not configured' }, {}, requestId);
   }
 
   // Verify session
   const result = requireTeacher(event, SESSION_SECRET);
   
   if (!result.ok) {
-    return {
-      statusCode: 401,
-      headers: { ...CORS, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ok: false, error: 'Unauthorized' })
-    };
+    console.log(`[teacher-session] [${requestId}] Unauthorized access attempt`);
+    return jsonResponse(event, 401, { ok: false, error: 'Unauthorized' }, {}, requestId);
   }
   
   // Session is valid
-  return {
-    statusCode: 200,
-    headers: { ...CORS, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ 
-      ok: true, 
-      role: result.user.role,
-      username: result.user.username 
-    })
-  };
+  console.log(`[teacher-session] [${requestId}] Valid session for user:`, result.user.username);
+  return jsonResponse(event, 200, { 
+    ok: true, 
+    role: result.user.role,
+    username: result.user.username 
+  }, {}, requestId);
 };

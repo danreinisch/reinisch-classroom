@@ -389,6 +389,193 @@ Supabase data remains (harmless, can be ignored).
 
 **Fix:** Check response for which env vars are missing (`present: false`)
 
+## Guardrails Verification
+
+The application implements security guardrails across authentication functions. Verify they are working correctly:
+
+### Test G1: Security Headers Present
+
+```bash
+PREVIEW_URL="https://your-preview-url.netlify.app"
+
+curl -i "${PREVIEW_URL}/.netlify/functions/auth-health"
+```
+
+**Expected headers:**
+- `Strict-Transport-Security: max-age=31536000; includeSubDomains`
+- `X-Content-Type-Options: nosniff`
+- `Referrer-Policy: strict-origin-when-cross-origin`
+- `Permissions-Policy: geolocation=(), microphone=(), camera=()`
+- `Cache-Control: no-store`
+- `X-Request-Id: <UUID>`
+
+✅ **Pass Criteria:** All security headers present in response
+
+### Test G2: Dynamic CORS (Allowed Origin)
+
+```bash
+curl -i -X OPTIONS \
+  -H "Origin: https://reinischclassroom.com" \
+  -H "Access-Control-Request-Method: POST" \
+  "${PREVIEW_URL}/.netlify/functions/teacher-login"
+```
+
+**Expected:**
+- Status: 200
+- `Access-Control-Allow-Origin: https://reinischclassroom.com` (echoes origin, not "*")
+- `Vary: Origin`
+
+✅ **Pass Criteria:** Origin echoed, Vary header present
+
+### Test G3: Dynamic CORS (Blocked Origin)
+
+```bash
+curl -i -X OPTIONS \
+  -H "Origin: https://evil.com" \
+  -H "Access-Control-Request-Method: POST" \
+  "${PREVIEW_URL}/.netlify/functions/teacher-login"
+```
+
+**Expected:**
+- Status: 200
+- **No** `Access-Control-Allow-Origin` header (origin not allowed)
+
+✅ **Pass Criteria:** No CORS header for untrusted origin
+
+### Test G4: Dynamic CORS (Netlify Preview Auto-Allow)
+
+```bash
+# Use the actual preview URL's origin
+curl -i -X OPTIONS \
+  -H "Origin: https://deploy-preview-123--reinischclassroom.netlify.app" \
+  -H "Access-Control-Request-Method: POST" \
+  "${PREVIEW_URL}/.netlify/functions/teacher-login"
+```
+
+**Expected:**
+- Status: 200
+- `Access-Control-Allow-Origin: https://deploy-preview-123--reinischclassroom.netlify.app`
+
+✅ **Pass Criteria:** Netlify preview origins automatically allowed
+
+### Test G5: Input Validation (Invalid JSON)
+
+```bash
+curl -i -X POST \
+  -H "Content-Type: application/json" \
+  -d '{invalid}' \
+  "${PREVIEW_URL}/.netlify/functions/teacher-login"
+```
+
+**Expected:**
+- Status: 400
+- Body: `{"error":"Invalid JSON in request body"}`
+- `X-Request-Id` header present
+
+✅ **Pass Criteria:** Returns 400 with validation error
+
+### Test G6: Input Validation (Missing Content-Type)
+
+```bash
+curl -i -X POST \
+  -d '{"username":"test","password":"test"}' \
+  "${PREVIEW_URL}/.netlify/functions/teacher-login"
+```
+
+**Expected:**
+- Status: 400
+- Body: `{"error":"Content-Type must be application/json"}`
+
+✅ **Pass Criteria:** Returns 400 when Content-Type missing
+
+### Test G7: Input Validation (Field Length)
+
+```bash
+curl -i -X POST \
+  -H "Content-Type: application/json" \
+  -d '{"username":"","password":"test"}' \
+  "${PREVIEW_URL}/.netlify/functions/teacher-login"
+```
+
+**Expected:**
+- Status: 400
+- Body contains: `"username must be at least 1 character(s)"`
+
+✅ **Pass Criteria:** Field validation enforced
+
+### Test G8: Throttle and Delay on Invalid Credentials
+
+```bash
+# First attempt - measure time
+time curl -X POST \
+  -H "Content-Type: application/json" \
+  -d '{"username":"testuser","password":"wrongpass"}' \
+  "${PREVIEW_URL}/.netlify/functions/teacher-login"
+```
+
+**Expected:**
+- Status: 401
+- Response time includes ~150-300ms delay
+- `Set-Cookie: tc_throttle=...` header present
+- Body: `{"error":"Invalid username or password"}`
+
+```bash
+# Second attempt with throttle cookie - should be blocked
+curl -i -X POST \
+  -H "Content-Type: application/json" \
+  -H "Cookie: tc_throttle=<value-from-previous>" \
+  -d '{"username":"testuser","password":"wrongpass"}' \
+  "${PREVIEW_URL}/.netlify/functions/teacher-login"
+```
+
+**Expected:**
+- Status: 429
+- Body: `{"error":"Too many attempts. Please try again in a moment."}`
+
+✅ **Pass Criteria:** Delay present, throttle enforced after invalid attempt
+
+### Test G9: Request ID Correlation
+
+```bash
+# Make a request and capture the X-Request-Id
+RESPONSE=$(curl -i -X GET "${PREVIEW_URL}/.netlify/functions/auth-health" 2>&1)
+REQUEST_ID=$(echo "$RESPONSE" | grep -i "x-request-id:" | cut -d' ' -f2 | tr -d '\r')
+
+echo "Request ID: $REQUEST_ID"
+```
+
+Then check Netlify function logs for entries containing that request ID.
+
+✅ **Pass Criteria:** Request ID appears in both response header and function logs
+
+### Test G10: No Secrets in auth-health Response
+
+```bash
+curl -s "${PREVIEW_URL}/.netlify/functions/auth-health" | jq .
+```
+
+**Expected:**
+- Response contains `env` object with `present` and `length` fields
+- **No actual secret values** anywhere in response
+- Only metadata like boolean flags and string lengths
+
+✅ **Pass Criteria:** No SUPABASE_URL, keys, or secrets in response body
+
+### Guardrails Checklist
+
+- [ ] G1: Security headers present in all auth responses
+- [ ] G2: CORS echoes allowed origins (not "*")
+- [ ] G3: CORS blocks untrusted origins
+- [ ] G4: Netlify preview origins auto-allowed
+- [ ] G5: Invalid JSON rejected with 400
+- [ ] G6: Missing Content-Type rejected with 400
+- [ ] G7: Field validation enforced (length, type)
+- [ ] G8: Invalid credentials trigger delay and throttle
+- [ ] G9: X-Request-Id in responses and logs
+- [ ] G10: No secrets exposed in responses
+
+For detailed guardrails documentation, see [docs/GUARDRAILS.md](docs/GUARDRAILS.md).
+
 ## Success Criteria
 
 All tests pass ✅ = **Ready for production merge**
