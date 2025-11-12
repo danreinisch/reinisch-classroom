@@ -2,6 +2,10 @@
 // POST body: { username, password }
 // Authenticates against Supabase app_users table (roles: teacher, admin)
 // Sets HttpOnly cookie if credentials are valid
+
+// Module initialization log (printed once per cold start)
+console.log('[teacher-login] Module loaded successfully');
+
 const { sign, teacherCookie } = require('./_lib/auth');
 const { rpc, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } = require('./_lib/supa');
 
