@@ -4,6 +4,7 @@
  * Part of Guardrails Stage 3B - externalized from inline script
  */
 
+(function() {
   'use strict';
   console.debug('[Hub UX] Enhancement script loaded');
   
@@ -272,7 +273,7 @@
       }
       
       // Show/hide role switch chip based on auth state
-      function updateRoleSwitchChip() {
+      const updateRoleSwitchChip = () => {
         try {
           const auth = typeof window.getAuth === 'function' ? window.getAuth() : null;
           if (auth && auth.role) {
@@ -283,7 +284,7 @@
         } catch (err) {
           console.debug('[Hub UX] Could not update role switch chip:', err);
         }
-      }
+      };
       
       // Check periodically for auth changes (every 5s to reduce overhead)
       setInterval(updateRoleSwitchChip, AUTH_CHECK_INTERVAL);

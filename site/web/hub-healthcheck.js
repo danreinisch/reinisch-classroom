@@ -4,6 +4,7 @@
  * Part of Guardrails Stage 3B - externalized from inline script
  */
 
+(function() {
   'use strict';
   
   // Guard against duplicate initialization
