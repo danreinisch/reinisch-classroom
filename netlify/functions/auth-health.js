@@ -5,14 +5,25 @@
 // Usage: GET /.netlify/functions/auth-health
 // Returns: { ok: true, env: { ... }, timestamp: ... }
 
+const {
+  generateRequestId,
+  jsonResponse,
+  handleCorsPreFlight,
+} = require('./_lib/http');
+
 exports.handler = async (event) => {
+  const requestId = generateRequestId();
+  console.log(`[auth-health] [${requestId}] Request received`);
+
+  // Handle CORS preflight
+  if (event.httpMethod === 'OPTIONS') {
+    return handleCorsPreFlight(event, ['GET', 'OPTIONS'], ['Content-Type']);
+  }
+
   // Only allow GET
   if (event.httpMethod !== 'GET') {
-    return {
-      statusCode: 405,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: 'Method Not Allowed' })
-    };
+    console.log(`[auth-health] [${requestId}] Method not allowed: ${event.httpMethod}`);
+    return jsonResponse(event, 405, { error: 'Method Not Allowed' }, {}, requestId);
   }
 
   // Check for runtime overrides first, then regular env vars
@@ -56,9 +67,6 @@ exports.handler = async (event) => {
   // Overall health is OK if Supabase is configured
   health.ok = health.status.supabase_configured;
 
-  return {
-    statusCode: 200,
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(health, null, 2)
-  };
+  console.log(`[auth-health] [${requestId}] Health check complete - ok:`, health.ok);
+  return jsonResponse(event, 200, health, {}, requestId);
 };
