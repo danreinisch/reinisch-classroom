@@ -305,6 +305,95 @@ For issues or questions:
 3. Check Supabase logs for RPC call failures
 4. Verify environment variables are set correctly
 
+## Troubleshooting: 502 Bad Gateway Errors
+
+### Symptoms
+- Teacher/Admin login intermittently returns 502 Bad Gateway
+- Netlify function logs show `ReferenceError: fetch is not defined`
+- Authentication works sometimes but fails unpredictably
+
+### Root Cause
+The 502 error occurs when Netlify Functions run on a Node.js runtime version that doesn't provide global `fetch` (pre-Node 18). The Supabase client requires `fetch` to make HTTP requests, and when it's missing, the function crashes with a ReferenceError.
+
+### Solution
+This has been addressed through multiple defensive layers:
+
+1. **Runtime Configuration** (`netlify.toml`)
+   - Pinned Node.js runtime to 18.x for all contexts (production, deploy previews, branch deploys)
+   - Ensures global `fetch` is available natively
+   
+2. **Fetch Polyfill** (`netlify/functions/_lib/fetch-polyfill.js`)
+   - Defensive fallback using `node-fetch` library
+   - Automatically loaded at the top of auth functions
+   - Provides `fetch` if the runtime doesn't have it
+   
+3. **Enhanced Logging**
+   - Auth functions now log detailed error information
+   - Special detection for fetch-related errors
+   - Includes HTTP status codes from Supabase responses
+
+### Verification Steps
+
+1. **Check Runtime Configuration**
+   ```bash
+   # netlify.toml should contain:
+   [build.environment]
+     AWS_LAMBDA_JS_RUNTIME = "nodejs18.x"
+   ```
+
+2. **Verify Auth Health**
+   ```bash
+   curl https://yoursite.com/.netlify/functions/auth-health
+   ```
+   Should return:
+   ```json
+   {
+     "ok": true,
+     "status": {
+       "supabase_configured": true,
+       "teacher_auth_ready": true,
+       "admin_auth_ready": true
+     }
+   }
+   ```
+
+3. **Test Teacher Login**
+   ```bash
+   curl -i -X POST https://yoursite.com/.netlify/functions/teacher-login \
+     -H 'Content-Type: application/json' \
+     -d '{"username":"dreinisch","password":"Tool462"}'
+   ```
+   Expected: `200 OK` (valid credentials) or `401 Unauthorized` (invalid credentials)
+   
+   **Never** `502 Bad Gateway`
+
+4. **Check Function Logs**
+   - Look for `[fetch-polyfill]` messages showing whether polyfill was needed
+   - No `ReferenceError: fetch is not defined` errors
+   - Clear status codes logged for Supabase responses
+
+### Related Endpoints
+
+- **Auth Health**: `/.netlify/functions/auth-health` - Configuration status
+- **Environment Check**: `/.netlify/functions/env-check` - Full environment diagnostics
+
+### Quick Fixes
+
+If 502 errors persist after deployment:
+
+1. **Clear Netlify Build Cache**
+   - Go to Netlify dashboard → Deploys → Clear build cache
+   - Trigger new deploy
+   
+2. **Verify Environment Variables**
+   - All variables should be set in Functions + Runtime scopes
+   - Check for typos in variable names
+   
+3. **Review Deploy Logs**
+   - Check if Node.js 18.x was actually used
+   - Look for dependency installation errors
+   - Verify `node-fetch` was installed
+
 ## References
 
 - Supabase Migration: `supabase/migrations/20251105_app_users_and_sub_plans.sql`
@@ -312,3 +401,4 @@ For issues or questions:
 - Admin Session: `netlify/functions/admin-session.js`
 - Edge Guard: `netlify/edge-functions/admin-auth-guard.js`
 - Leak Guard: `scripts/check-env-leaks.js`
+- Fetch Polyfill: `netlify/functions/_lib/fetch-polyfill.js`

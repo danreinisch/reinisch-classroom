@@ -2,6 +2,10 @@
 // POST body: { username, password }
 // Authenticates against Supabase app_users table (roles: teacher, admin)
 // Sets HttpOnly cookie if credentials are valid
+
+// Ensure fetch is available (Node 18+ or polyfill)
+require('./_lib/fetch-polyfill');
+
 const { sign, teacherCookie } = require('./_lib/auth');
 const { rpc, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } = require('./_lib/supa');
 
@@ -95,7 +99,7 @@ exports.handler = async (event) => {
     });
 
     if (!verifyRes.ok) {
-      console.error('[teacher-login] Supabase RPC error:', verifyRes.status);
+      console.error('[teacher-login] Supabase RPC error - status:', verifyRes.status, 'statusText:', verifyRes.statusText);
       return {
         statusCode: 500,
         headers: CORS,
@@ -147,7 +151,11 @@ exports.handler = async (event) => {
       body: JSON.stringify({ ok: true, username: user.username }),
     };
   } catch (e) {
-    console.error('[teacher-login] Error processing request:', e.message);
+    console.error('[teacher-login] Error processing request:', e.message, e.stack);
+    // If this is a fetch-related error, log it specially
+    if (e.message && e.message.includes('fetch')) {
+      console.error('[teacher-login] FETCH ERROR - global.fetch may not be available');
+    }
     return { 
       statusCode: 400, 
       headers: CORS, 

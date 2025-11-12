@@ -9,6 +9,9 @@
 // Optional:
 // - MAX_AGE_SECONDS (defaults to 28800 = 8 hours) — how long the session cookie lasts.
 
+// Ensure fetch is available (Node 18+ or polyfill)
+require('./_lib/fetch-polyfill');
+
 const crypto = require('crypto');
 const { rpc, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } = require('./_lib/supa');
 
@@ -66,7 +69,7 @@ exports.handler = async (event) => {
     });
 
     if (!verifyRes.ok) {
-      console.error('[admin-session] Supabase RPC error:', verifyRes.status);
+      console.error('[admin-session] Supabase RPC error - status:', verifyRes.status, 'statusText:', verifyRes.statusText);
       return redirect('/admin-login?e=1');
     }
 
@@ -117,7 +120,11 @@ exports.handler = async (event) => {
       }
     };
   } catch (e) {
-    console.error('[admin-session] Error during authentication:', e.message);
+    console.error('[admin-session] Error during authentication:', e.message, e.stack);
+    // If this is a fetch-related error, log it specially
+    if (e.message && e.message.includes('fetch')) {
+      console.error('[admin-session] FETCH ERROR - global.fetch may not be available');
+    }
     return redirect('/admin-login?e=1');
   }
 };
