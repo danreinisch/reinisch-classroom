@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "postbuild": "node scripts/check-env-leaks.js"
+    "check:inline-scripts": "node scripts/check-inline-scripts.cjs",
+    "postbuild": "node scripts/check-env-leaks.js && node scripts/check-inline-scripts.cjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.40.0",

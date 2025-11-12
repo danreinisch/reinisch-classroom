@@ -1261,17 +1261,35 @@
         <div class="toast warning" style="position:fixed; top:80px; right:20px; z-index:100; max-width:400px;">
           <div class="toast-header">
             <div class="toast-title">⚠️ Module Load Issue</div>
-            <button class="toast-close" onclick="this.closest('.toast').remove()">×</button>
+            <button class="toast-close" data-action="dismiss-toast">×</button>
           </div>
           <div class="toast-body">
             Some portal features may be unavailable. Try refreshing if you experience issues.
           </div>
           <div style="margin-top:12px;">
-            <button class="btn small primary" onclick="location.reload()">Refresh Now</button>
+            <button class="btn small primary" data-action="refresh-page">Refresh Now</button>
           </div>
         </div>
       `;
       document.body.insertAdjacentHTML('beforeend', toastHtml);
+      
+      // Add event listeners for toast actions
+      const toast = document.querySelector('.toast.warning');
+      if (toast) {
+        const dismissBtn = toast.querySelector('[data-action="dismiss-toast"]');
+        if (dismissBtn) {
+          dismissBtn.addEventListener('click', function() {
+            this.closest('.toast').remove();
+          });
+        }
+        
+        const refreshBtn = toast.querySelector('[data-action="refresh-page"]');
+        if (refreshBtn) {
+          refreshBtn.addEventListener('click', function() {
+            location.reload();
+          });
+        }
+      }
       
       // Auto-dismiss after 10 seconds
       setTimeout(() => {
@@ -1296,11 +1314,26 @@
               ${err.message}
             </div>
             <div style="display:flex; gap:12px; justify-content:center;">
-              <button class="btn primary" onclick="location.reload()">Reload Page</button>
-              <button class="btn" onclick="location.href='/hub/'">Return to Hub</button>
+              <button class="btn primary" data-action="reload-page">Reload Page</button>
+              <button class="btn" data-action="return-hub">Return to Hub</button>
             </div>
           </div>
         `;
+        
+        // Add event listeners for error card actions
+        const reloadBtn = container.querySelector('[data-action="reload-page"]');
+        if (reloadBtn) {
+          reloadBtn.addEventListener('click', function() {
+            location.reload();
+          });
+        }
+        
+        const hubBtn = container.querySelector('[data-action="return-hub"]');
+        if (hubBtn) {
+          hubBtn.addEventListener('click', function() {
+            location.href = '/hub/';
+          });
+        }
       }
       
       // Don't continue with the rest of the script

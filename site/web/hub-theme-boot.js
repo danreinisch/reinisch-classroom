@@ -29,4 +29,26 @@
   } else {
     document.addEventListener('DOMContentLoaded', applyTheme);
   }
+  
+  // Setup event listeners for static HTML elements
+  // This needs to run after DOM is ready
+  function setupStaticEventListeners() {
+    // Critical asset banner dismiss button
+    const dismissBtn = document.getElementById('dismissCriticalAssetBanner');
+    if (dismissBtn) {
+      dismissBtn.addEventListener('click', function() {
+        const banner = this.closest('#criticalAssetBanner');
+        if (banner) {
+          banner.style.display = 'none';
+        }
+      });
+    }
+  }
+  
+  // Run setup when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupStaticEventListeners);
+  } else {
+    setupStaticEventListeners();
+  }
 })();
