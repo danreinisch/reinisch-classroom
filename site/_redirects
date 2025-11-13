@@ -1,6 +1,18 @@
 /life-skills/presentations/presentation-03         /life-skills/presentations/presentation-03/index.html 200
 /life-skills/presentations/presentation-03.html    /life-skills/presentations/presentation-03/ 301
 
+# Admin redirects - map pretty paths to /site/admin assets
+/admin             /site/admin/index.html    200
+/admin/*           /site/admin/:splat        200
+
+# Admin Login redirects
+/admin-login       /site/admin-login/index.html    200
+/admin-login/*     /site/admin-login/:splat        200
+
+# Hub redirects - map pretty paths to /site/hub assets
+/hub               /site/hub/index.html      200
+/hub/*             /site/hub/:splat          200
+
 # Student Portal redirects - handle deep links and query parameters
 /student           /site/student/index.html  200
 /student/*         /site/student/index.html  200
