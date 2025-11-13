@@ -125,8 +125,8 @@
   filesEl.addEventListener('change', (e)=> addFiles(e.target.files||[]));
   folderEl.addEventListener('change', (e)=> addFiles(e.target.files||[]));
 
-  ;['dragenter','dragover'].forEach(ev => dropEl.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); dropEl.classList.add('drag'); }));
-  ;['dragleave','drop'].forEach(ev => dropEl.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); dropEl.classList.remove('drag'); }));
+  ['dragenter','dragover'].forEach(ev => dropEl.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); dropEl.classList.add('drag'); }));
+  ['dragleave','drop'].forEach(ev => dropEl.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); dropEl.classList.remove('drag'); }));
   dropEl.addEventListener('drop', e => { const dt = e.dataTransfer; if (dt && dt.files) addFiles(dt.files); });
 
   // Robust base64 for large files: FileReader + DataURL, then strip prefix
