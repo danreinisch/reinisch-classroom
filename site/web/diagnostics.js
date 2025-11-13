@@ -88,48 +88,32 @@ async function wrapFetch(url, opts = {}) {
 }
 
 // ============================================================================
-// Conditional Diagnostic Logger & Telemetry
+// Conditional Diagnostic Logger
 // ============================================================================
 
 /**
- * Check if telemetry is enabled via any opt-in mechanism
- * @returns {boolean} True if telemetry should be active
- */
-function isTelemetryEnabled() {
-  if (typeof window === 'undefined') return false;
-  
-  // Check URL flag ?diag=1
-  const params = new URLSearchParams(window.location.search);
-  if (params.get('diag') === '1') return true;
-  
-  // Check localStorage flag
-  try {
-    if (localStorage.getItem('rcDiagEnabled') === '1') return true;
-  } catch (err) {
-    // localStorage not available
-  }
-  
-  // Check window feature flag
-  if (window.RC_DIAG_ENABLED === true) return true;
-  
-  return false;
-}
-
-/**
- * Diagnostic logger that only logs when telemetry is enabled
+ * Diagnostic logger that only logs when ?diag=1 is present
  */
 const rcDiag = {
   enabled: false,
   
   /**
-   * Initialize diagnostic mode based on opt-in mechanisms
+   * Initialize diagnostic mode based on URL parameter, localStorage, or window flag
    */
   init() {
     if (typeof window !== 'undefined') {
-      this.enabled = isTelemetryEnabled();
+      const params = new URLSearchParams(window.location.search);
+      const urlFlag = params.get('diag') === '1';
+      const localStorageFlag = localStorage.getItem('rcDiagEnabled') === '1';
+      const windowFlag = window.RC_DIAG_ENABLED === true;
+      
+      this.enabled = urlFlag || localStorageFlag || windowFlag;
       
       if (this.enabled) {
         console.log('%c[rcDiag] Diagnostic mode enabled', 'color: #22c55e; font-weight: bold');
+        if (urlFlag) console.log('[rcDiag] Enabled via ?diag=1');
+        if (localStorageFlag) console.log('[rcDiag] Enabled via localStorage.rcDiagEnabled');
+        if (windowFlag) console.log('[rcDiag] Enabled via window.RC_DIAG_ENABLED');
       }
     }
   },
@@ -176,241 +160,6 @@ if (typeof window !== 'undefined') {
   rcDiag.init();
   window.rcDiag = rcDiag;
   window.wrapFetch = wrapFetch;
-}
-
-// ============================================================================
-// Client Error Telemetry (Opt-in)
-// ============================================================================
-
-/**
- * Telemetry event queue and batching system
- */
-const telemetryQueue = {
-  events: [],
-  flushTimer: null,
-  maxBatchSize: 10,
-  flushIntervalMs: 5000,
-  failCount: 0,
-  maxFailures: 2,
-  
-  /**
-   * Add event to queue and schedule flush
-   * @param {Object} event - Telemetry event
-   */
-  enqueue(event) {
-    if (!isTelemetryEnabled()) return;
-    
-    this.events.push(event);
-    
-    // Flush immediately if batch is full
-    if (this.events.length >= this.maxBatchSize) {
-      this.flush();
-    } else {
-      // Schedule flush if not already scheduled
-      if (!this.flushTimer) {
-        this.flushTimer = setTimeout(() => this.flush(), this.flushIntervalMs);
-      }
-    }
-  },
-  
-  /**
-   * Send queued events to server
-   */
-  async flush() {
-    // Clear timer
-    if (this.flushTimer) {
-      clearTimeout(this.flushTimer);
-      this.flushTimer = null;
-    }
-    
-    // Nothing to send
-    if (this.events.length === 0) return;
-    
-    // Drop events if offline
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      rcDiag.warn('Telemetry: Offline, dropping', this.events.length, 'events');
-      this.events = [];
-      return;
-    }
-    
-    // Drop events if too many failures
-    if (this.failCount >= this.maxFailures) {
-      rcDiag.warn('Telemetry: Max failures reached, dropping', this.events.length, 'events');
-      this.events = [];
-      return;
-    }
-    
-    // Get events to send
-    const batch = this.events.splice(0, this.maxBatchSize);
-    
-    // Send each event individually (API doesn't support batching)
-    for (const event of batch) {
-      try {
-        const response = await wrapFetch('/.netlify/functions/client-error', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(event),
-        });
-        
-        if (response.status === 204) {
-          // Success
-          this.failCount = 0; // Reset fail counter on success
-          rcDiag.log('Telemetry event sent:', event.type, event.payload.name || event.payload.message);
-        } else if (response.status === 429) {
-          // Throttled - stop sending
-          rcDiag.warn('Telemetry: Throttled by server');
-          this.failCount++;
-          break;
-        } else {
-          // Other error
-          rcDiag.warn('Telemetry: Server error', response.status);
-          this.failCount++;
-        }
-      } catch (err) {
-        rcDiag.error('Telemetry: Send failed', err.message);
-        this.failCount++;
-      }
-    }
-  },
-};
-
-/**
- * Capture and report an error
- * @param {Error|ErrorEvent|PromiseRejectionEvent} errorInput - Error to capture
- */
-function captureError(errorInput) {
-  if (!isTelemetryEnabled()) return;
-  
-  let error;
-  let source;
-  let lineno;
-  let colno;
-  
-  // Normalize different error types
-  if (errorInput instanceof ErrorEvent) {
-    error = errorInput.error || new Error(errorInput.message);
-    source = errorInput.filename;
-    lineno = errorInput.lineno;
-    colno = errorInput.colno;
-  } else if (errorInput && errorInput.reason) {
-    // PromiseRejectionEvent
-    error = errorInput.reason instanceof Error ? errorInput.reason : new Error(String(errorInput.reason));
-  } else if (errorInput instanceof Error) {
-    error = errorInput;
-  } else {
-    error = new Error(String(errorInput));
-  }
-  
-  // Extract page path (no query params or hash)
-  const page = window.location.pathname;
-  
-  // Build telemetry event
-  const event = {
-    type: 'error',
-    clientId: window.rcClientRequestId || null,
-    page,
-    ts: Date.now(),
-    payload: {
-      message: error.message || 'Unknown error',
-      name: error.name || 'Error',
-    },
-  };
-  
-  // Add stack if available
-  if (error.stack) {
-    event.payload.stack = error.stack;
-  }
-  
-  // Add source location if available
-  if (source) {
-    event.payload.source = source;
-  }
-  if (lineno !== undefined && lineno !== null) {
-    event.payload.lineno = lineno;
-  }
-  if (colno !== undefined && colno !== null) {
-    event.payload.colno = colno;
-  }
-  
-  telemetryQueue.enqueue(event);
-}
-
-/**
- * Record a performance metric
- * @param {string} name - Metric name
- * @param {number} durationMs - Duration in milliseconds
- * @param {string} detail - Optional detail string
- */
-function recordMetric(name, durationMs, detail) {
-  if (!isTelemetryEnabled()) return;
-  
-  const page = window.location.pathname;
-  
-  const event = {
-    type: 'metric',
-    clientId: window.rcClientRequestId || null,
-    page,
-    ts: Date.now(),
-    payload: {
-      name,
-      durationMs,
-    },
-  };
-  
-  if (detail) {
-    event.payload.detail = detail;
-  }
-  
-  telemetryQueue.enqueue(event);
-}
-
-/**
- * Measure time for an async operation
- * @param {string} name - Metric name
- * @param {Function} fn - Async function to measure
- * @returns {Promise<any>} Result of the function
- */
-async function measureAsync(name, fn) {
-  const start = performance.now();
-  try {
-    const result = await fn();
-    const duration = performance.now() - start;
-    recordMetric(name, duration);
-    return result;
-  } catch (err) {
-    const duration = performance.now() - start;
-    recordMetric(name, duration, 'failed');
-    throw err;
-  }
-}
-
-// Install global error handlers
-if (typeof window !== 'undefined' && isTelemetryEnabled()) {
-  // Capture uncaught errors
-  window.addEventListener('error', (event) => {
-    captureError(event);
-  });
-  
-  // Capture unhandled promise rejections
-  window.addEventListener('unhandledrejection', (event) => {
-    captureError(event);
-  });
-  
-  // Flush queue before page unload
-  window.addEventListener('beforeunload', () => {
-    telemetryQueue.flush();
-  });
-  
-  rcDiag.log('Telemetry: Error handlers installed');
-}
-
-// Export telemetry functions to window
-if (typeof window !== 'undefined') {
-  window.captureError = captureError;
-  window.recordMetric = recordMetric;
-  window.measureAsync = measureAsync;
 }
 
 // ============================================================================
@@ -637,11 +386,278 @@ if (typeof window !== 'undefined') {
   console.log('  window.__expireAuth() - Expire current auth (for testing)');
   console.log('  window.__getDiagnostics() - Get raw diagnostics object');
   console.log('  window.wrapFetch(url, opts) - Fetch with timeout, retry, and request ID');
-  console.log('  window.rcDiag.log() - Log only when telemetry enabled');
+  console.log('  window.rcDiag.log() - Log only when ?diag=1 is present');
   console.log('  window.rcClientRequestId - Current client request ID');
-  console.log('  window.captureError(error) - Capture error for telemetry');
-  console.log('  window.recordMetric(name, durationMs, detail) - Record performance metric');
-  console.log('  window.measureAsync(name, asyncFn) - Measure async function duration');
+  console.log('  window.rcTelemetry - Client error telemetry (opt-in, enabled with diag mode)');
+}
+
+// ============================================================================
+// Client Error Telemetry (Opt-in Only)
+// ============================================================================
+
+/**
+ * Telemetry system for capturing errors and metrics
+ * Only active when diagnostics are enabled
+ */
+const rcTelemetry = {
+  queue: [],
+  flushIntervalId: null,
+  maxQueueSize: 10,
+  flushIntervalMs: 5000, // 5 seconds
+  failureCount: 0,
+  maxFailures: 2,
+  
+  /**
+   * Initialize telemetry system
+   */
+  init() {
+    if (!rcDiag.enabled) {
+      return; // No-op when diagnostics disabled
+    }
+    
+    rcDiag.log('Telemetry system initializing...');
+    
+    // Set up error handlers
+    this.setupErrorHandlers();
+    
+    // Start flush interval
+    this.flushIntervalId = setInterval(() => {
+      this.flush();
+    }, this.flushIntervalMs);
+    
+    rcDiag.log('Telemetry system initialized');
+  },
+  
+  /**
+   * Set up global error and rejection handlers
+   */
+  setupErrorHandlers() {
+    // Capture unhandled errors
+    window.addEventListener('error', (event) => {
+      this.captureError({
+        message: event.message,
+        name: 'Error',
+        stack: event.error ? event.error.stack : undefined,
+        source: event.filename,
+        lineno: event.lineno,
+        colno: event.colno,
+      });
+    });
+    
+    // Capture unhandled promise rejections
+    window.addEventListener('unhandledrejection', (event) => {
+      const error = event.reason;
+      this.captureError({
+        message: error && error.message ? error.message : String(event.reason),
+        name: error && error.name ? error.name : 'UnhandledRejection',
+        stack: error && error.stack ? error.stack : undefined,
+        source: 'promise',
+      });
+    });
+    
+    rcDiag.log('Error handlers installed');
+  },
+  
+  /**
+   * Capture an error event
+   * @param {Object} errorData - Error data
+   */
+  captureError(errorData) {
+    if (!rcDiag.enabled) return;
+    
+    rcDiag.log('Capturing error:', errorData.message);
+    
+    // Sanitize and normalize error data
+    const sanitized = {
+      message: this.sanitizeString(errorData.message || 'Unknown error', 512),
+      name: this.sanitizeString(errorData.name || 'Error', 128),
+      stack: this.sanitizeStack(errorData.stack),
+      source: this.sanitizeString(errorData.source, 256),
+      lineno: errorData.lineno,
+      colno: errorData.colno,
+    };
+    
+    // Queue the event
+    this.queueEvent({
+      type: 'error',
+      clientId: window.rcClientRequestId,
+      page: this.getPagePath(),
+      ts: Date.now(),
+      payload: sanitized,
+    });
+  },
+  
+  /**
+   * Record a timing metric
+   * @param {string} name - Metric name
+   * @param {number} durationMs - Duration in milliseconds
+   * @param {string} detail - Optional detail string
+   */
+  recordMetric(name, durationMs, detail) {
+    if (!rcDiag.enabled) return;
+    
+    rcDiag.log('Recording metric:', name, durationMs + 'ms');
+    
+    // Queue the event
+    this.queueEvent({
+      type: 'metric',
+      clientId: window.rcClientRequestId,
+      page: this.getPagePath(),
+      ts: Date.now(),
+      payload: {
+        name: this.sanitizeString(name, 128),
+        durationMs,
+        detail: detail ? this.sanitizeString(detail, 512) : undefined,
+      },
+    });
+  },
+  
+  /**
+   * Queue an event for sending
+   * @param {Object} event - Event data
+   */
+  queueEvent(event) {
+    // Check if offline
+    if (!navigator.onLine) {
+      rcDiag.warn('Offline, dropping telemetry event');
+      return;
+    }
+    
+    // Check if too many failures
+    if (this.failureCount >= this.maxFailures) {
+      rcDiag.warn('Too many failures, dropping telemetry event');
+      return;
+    }
+    
+    this.queue.push(event);
+    
+    // Flush immediately if queue is full
+    if (this.queue.length >= this.maxQueueSize) {
+      this.flush();
+    }
+  },
+  
+  /**
+   * Flush queued events to server
+   */
+  async flush() {
+    if (this.queue.length === 0) return;
+    
+    const events = this.queue.splice(0, this.maxQueueSize);
+    rcDiag.log(`Flushing ${events.length} telemetry event(s)...`);
+    
+    // Send each event
+    for (const event of events) {
+      try {
+        const response = await wrapFetch('/.netlify/functions/client-error', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(event),
+        });
+        
+        if (response.ok) {
+          rcDiag.log('Telemetry event sent successfully:', event.type);
+          this.failureCount = 0; // Reset failure count on success
+        } else if (response.status === 429) {
+          rcDiag.warn('Telemetry throttled (429)');
+          this.failureCount++;
+        } else {
+          rcDiag.warn('Telemetry send failed:', response.status);
+          this.failureCount++;
+        }
+      } catch (err) {
+        rcDiag.error('Telemetry send error:', err.message);
+        this.failureCount++;
+      }
+    }
+  },
+  
+  /**
+   * Get current page path (no query string or hash)
+   * @returns {string} Page path
+   */
+  getPagePath() {
+    try {
+      return window.location.pathname;
+    } catch (e) {
+      return '/';
+    }
+  },
+  
+  /**
+   * Sanitize string by removing potentially sensitive info
+   * @param {string} str - Input string
+   * @param {number} maxLength - Max length
+   * @returns {string} Sanitized string
+   */
+  sanitizeString(str, maxLength) {
+    if (!str) return '';
+    let sanitized = String(str);
+    
+    // Truncate if needed
+    if (sanitized.length > maxLength) {
+      sanitized = sanitized.substring(0, maxLength) + '...';
+    }
+    
+    return sanitized;
+  },
+  
+  /**
+   * Sanitize stack trace
+   * @param {string} stack - Stack trace
+   * @returns {string} Sanitized stack (max 30 lines, 4KB)
+   */
+  sanitizeStack(stack) {
+    if (!stack) return undefined;
+    
+    let sanitized = String(stack);
+    const lines = sanitized.split('\n');
+    
+    // Take first 30 lines
+    if (lines.length > 30) {
+      sanitized = lines.slice(0, 30).join('\n');
+    }
+    
+    // Truncate to 4KB
+    if (sanitized.length > 4096) {
+      sanitized = sanitized.substring(0, 4096);
+    }
+    
+    return sanitized;
+  },
+  
+  /**
+   * Measure and record timing for an async operation
+   * @param {string} name - Metric name
+   * @param {Function} fn - Async function to measure
+   * @returns {Promise<any>} Result of fn
+   */
+  async measureAsync(name, fn) {
+    const start = performance.now();
+    try {
+      const result = await fn();
+      const duration = performance.now() - start;
+      this.recordMetric(name, duration);
+      return result;
+    } catch (err) {
+      const duration = performance.now() - start;
+      this.recordMetric(name, duration, 'error');
+      throw err;
+    }
+  },
+};
+
+// Initialize telemetry when diagnostics are enabled
+if (typeof window !== 'undefined') {
+  // Initialize after a short delay to let the page settle
+  setTimeout(() => {
+    rcTelemetry.init();
+  }, 100);
+  
+  // Export to window for programmatic use
+  window.rcTelemetry = rcTelemetry;
 }
 
 // Export functions for module use
@@ -653,7 +669,5 @@ export {
   wrapFetch,
   generateClientRequestId,
   rcDiag,
-  captureError,
-  recordMetric,
-  measureAsync,
+  rcTelemetry,
 };

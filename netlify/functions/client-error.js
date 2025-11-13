@@ -1,6 +1,6 @@
-// Client Error Telemetry Collector
-// Privacy-safe, opt-in error and metric telemetry endpoint
-// Accepts error reports and performance metrics from client diagnostics
+// Client Error Telemetry Endpoint
+// Receives client-side error reports and metrics (opt-in only)
+// Privacy-safe: sanitizes payloads, throttles aggressively, opt-in only
 
 console.log('[client-error] Module loaded successfully');
 
@@ -15,342 +15,22 @@ const {
   getCorsHeaders,
 } = require('./_lib/http');
 
-// Maximum size for telemetry payloads (25KB)
-const MAX_PAYLOAD_SIZE_KB = 25;
-
-// Throttle settings
-const THROTTLE_WINDOW_MS = 60000; // 1 minute
+// Configuration
+const MAX_BODY_SIZE_KB = 25;
+const THROTTLE_WINDOW_SECONDS = 60; // 1 minute
 const MAX_EVENTS_PER_WINDOW = 10;
-const REJECTION_DELAY_MS = 150 + Math.floor(Math.random() * 150); // 150-300ms
+const THROTTLE_DELAY_MS = 150 + Math.floor(Math.random() * 150); // 150-300ms delay on rejection
 
 // Field size limits
-const MAX_STRING_LENGTHS = {
-  message: 512,
-  name: 256,
-  source: 256,
-  page: 256,
-  stack: 4096, // ~4KB for stack traces
-  metricName: 128,
-  detail: 512,
-};
+const MAX_MESSAGE_LENGTH = 512;
+const MAX_STACK_LENGTH = 4096; // ~4KB
+const MAX_PAGE_LENGTH = 256;
+const MAX_NAME_LENGTH = 128;
+const MAX_SOURCE_LENGTH = 256;
+const MAX_DETAIL_LENGTH = 512;
 
-/**
- * Generate throttle key from IP and clientId
- * @param {string} ip - Client IP address
- * @param {string} clientId - Client request ID
- * @returns {string} Hashed throttle key
- */
-function getThrottleKey(ip, clientId) {
-  const combined = `${ip || 'unknown'}:${clientId || 'none'}`;
-  return crypto.createHash('sha256').update(combined).digest('hex').substring(0, 16);
-}
-
-/**
- * Parse throttle cookie
- * @param {string} cookieHeader - Cookie header value
- * @returns {Object|null} Parsed throttle data or null
- */
-function parseThrottleCookie(cookieHeader) {
-  if (!cookieHeader) return null;
-  
-  const match = cookieHeader.match(/ce_throttle=([^;]+)/);
-  if (!match) return null;
-  
-  try {
-    const [timestamp, key, count] = match[1].split('_');
-    return {
-      timestamp: parseInt(timestamp, 10),
-      key,
-      count: parseInt(count, 10),
-    };
-  } catch (err) {
-    return null;
-  }
-}
-
-/**
- * Create throttle cookie
- * @param {string} key - Throttle key
- * @param {number} count - Event count
- * @returns {string} Set-Cookie header value
- */
-function createThrottleCookie(key, count) {
-  const timestamp = Date.now();
-  const value = `${timestamp}_${key}_${count}`;
-  const maxAge = Math.ceil(THROTTLE_WINDOW_MS / 1000);
-  
-  return `ce_throttle=${value}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}`;
-}
-
-/**
- * Check if request should be throttled
- * @param {Object} event - Netlify function event
- * @param {string} clientId - Client request ID
- * @returns {Object} { throttled: boolean, cookie: string|null, count: number }
- */
-function checkThrottle(event, clientId) {
-  const ip = event.headers['x-forwarded-for'] || event.headers['X-Forwarded-For'] || 'unknown';
-  const throttleKey = getThrottleKey(ip, clientId);
-  
-  const cookieHeader = event.headers.cookie || event.headers.Cookie || '';
-  const existing = parseThrottleCookie(cookieHeader);
-  
-  // No existing throttle
-  if (!existing) {
-    return {
-      throttled: false,
-      cookie: createThrottleCookie(throttleKey, 1),
-      count: 1,
-    };
-  }
-  
-  // Check if throttle window expired
-  const now = Date.now();
-  if (now - existing.timestamp > THROTTLE_WINDOW_MS) {
-    // Window expired, reset counter
-    return {
-      throttled: false,
-      cookie: createThrottleCookie(throttleKey, 1),
-      count: 1,
-    };
-  }
-  
-  // Check if key matches (same IP + clientId)
-  if (existing.key !== throttleKey) {
-    // Different client, start new counter
-    return {
-      throttled: false,
-      cookie: createThrottleCookie(throttleKey, 1),
-      count: 1,
-    };
-  }
-  
-  // Same client within window
-  const newCount = existing.count + 1;
-  
-  if (newCount > MAX_EVENTS_PER_WINDOW) {
-    // Throttled!
-    return {
-      throttled: true,
-      cookie: createThrottleCookie(throttleKey, newCount),
-      count: newCount,
-    };
-  }
-  
-  // Under limit
-  return {
-    throttled: false,
-    cookie: createThrottleCookie(throttleKey, newCount),
-    count: newCount,
-  };
-}
-
-/**
- * Truncate string to max length
- * @param {string} str - String to truncate
- * @param {number} maxLen - Maximum length
- * @returns {string} Truncated string
- */
-function truncateString(str, maxLen) {
-  if (typeof str !== 'string') return '';
-  if (str.length <= maxLen) return str;
-  return str.substring(0, maxLen);
-}
-
-/**
- * Sanitize text by removing angle brackets
- * @param {string} str - String to sanitize
- * @returns {string} Sanitized string
- */
-function sanitizeText(str) {
-  if (typeof str !== 'string') return '';
-  return str.replace(/[<>]/g, '');
-}
-
-/**
- * Truncate stack trace to reasonable size
- * @param {string} stack - Stack trace
- * @returns {string} Truncated stack trace
- */
-function truncateStack(stack) {
-  if (typeof stack !== 'string') return '';
-  
-  // Limit to first 30 lines and 4KB
-  const lines = stack.split('\n').slice(0, 30);
-  const joined = lines.join('\n');
-  
-  return truncateString(joined, MAX_STRING_LENGTHS.stack);
-}
-
-/**
- * Validate and normalize error payload
- * @param {Object} payload - Raw payload from request
- * @returns {Object} { valid: boolean, normalized?: Object, errors?: Array }
- */
-function validateErrorPayload(payload) {
-  const errors = [];
-  const normalized = {};
-  
-  // Required: message
-  if (typeof payload.message !== 'string' || !payload.message.trim()) {
-    errors.push('error payload: message is required and must be a non-empty string');
-  } else {
-    normalized.message = sanitizeText(truncateString(payload.message.trim(), MAX_STRING_LENGTHS.message));
-  }
-  
-  // Optional: name
-  if (payload.name !== undefined) {
-    normalized.name = sanitizeText(truncateString(String(payload.name), MAX_STRING_LENGTHS.name));
-  }
-  
-  // Optional: stack
-  if (payload.stack !== undefined) {
-    normalized.stack = truncateStack(payload.stack);
-  }
-  
-  // Optional: source
-  if (payload.source !== undefined) {
-    normalized.source = sanitizeText(truncateString(String(payload.source), MAX_STRING_LENGTHS.source));
-  }
-  
-  // Optional: lineno, colno (should be numbers if present)
-  if (payload.lineno !== undefined) {
-    const lineno = parseInt(payload.lineno, 10);
-    if (!isNaN(lineno) && lineno >= 0) {
-      normalized.lineno = lineno;
-    }
-  }
-  
-  if (payload.colno !== undefined) {
-    const colno = parseInt(payload.colno, 10);
-    if (!isNaN(colno) && colno >= 0) {
-      normalized.colno = colno;
-    }
-  }
-  
-  if (errors.length > 0) {
-    return { valid: false, errors };
-  }
-  
-  return { valid: true, normalized };
-}
-
-/**
- * Validate and normalize metric payload
- * @param {Object} payload - Raw payload from request
- * @returns {Object} { valid: boolean, normalized?: Object, errors?: Array }
- */
-function validateMetricPayload(payload) {
-  const errors = [];
-  const normalized = {};
-  
-  // Required: name
-  if (typeof payload.name !== 'string' || !payload.name.trim()) {
-    errors.push('metric payload: name is required and must be a non-empty string');
-  } else {
-    normalized.name = truncateString(payload.name.trim(), MAX_STRING_LENGTHS.metricName);
-  }
-  
-  // Required: durationMs
-  if (typeof payload.durationMs !== 'number' || payload.durationMs < 0) {
-    errors.push('metric payload: durationMs is required and must be a non-negative number');
-  } else {
-    normalized.durationMs = Math.round(payload.durationMs);
-  }
-  
-  // Optional: detail
-  if (payload.detail !== undefined) {
-    normalized.detail = sanitizeText(truncateString(String(payload.detail), MAX_STRING_LENGTHS.detail));
-  }
-  
-  if (errors.length > 0) {
-    return { valid: false, errors };
-  }
-  
-  return { valid: true, normalized };
-}
-
-/**
- * Validate telemetry event
- * @param {Object} data - Parsed request body
- * @param {Object} event - Netlify function event
- * @returns {Object} { valid: boolean, normalized?: Object, errors?: Array }
- */
-function validateTelemetryEvent(data, event) {
-  const errors = [];
-  const normalized = {};
-  
-  // Validate type
-  if (!data.type || !['error', 'metric'].includes(data.type)) {
-    errors.push('type must be "error" or "metric"');
-    return { valid: false, errors };
-  }
-  normalized.type = data.type;
-  
-  // Validate or derive clientId
-  if (data.clientId && typeof data.clientId === 'string') {
-    // Basic UUID v4 validation
-    if (/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(data.clientId)) {
-      normalized.clientId = data.clientId;
-    } else {
-      errors.push('clientId must be a valid UUID v4');
-    }
-  } else {
-    // Try to derive from X-Client-Request-Id header
-    const headerClientId = event.headers['x-client-request-id'] || event.headers['X-Client-Request-Id'];
-    if (headerClientId && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(headerClientId)) {
-      normalized.clientId = headerClientId;
-    } else {
-      normalized.clientId = null; // Optional
-    }
-  }
-  
-  // Validate page
-  if (typeof data.page !== 'string' || !data.page.trim()) {
-    errors.push('page is required and must be a non-empty string');
-  } else {
-    normalized.page = truncateString(data.page.trim(), MAX_STRING_LENGTHS.page);
-  }
-  
-  // Validate timestamp
-  if (typeof data.ts !== 'number') {
-    errors.push('ts (timestamp) is required and must be a number (epoch ms)');
-  } else {
-    const now = Date.now();
-    const diff = Math.abs(now - data.ts);
-    const dayMs = 24 * 60 * 60 * 1000;
-    
-    if (diff > dayMs) {
-      errors.push('ts (timestamp) must be within +/- 24 hours of server time');
-    } else {
-      normalized.ts = data.ts;
-    }
-  }
-  
-  // Validate payload based on type
-  if (!data.payload || typeof data.payload !== 'object') {
-    errors.push('payload is required and must be an object');
-  } else {
-    let payloadResult;
-    if (normalized.type === 'error') {
-      payloadResult = validateErrorPayload(data.payload);
-    } else {
-      payloadResult = validateMetricPayload(data.payload);
-    }
-    
-    if (!payloadResult.valid) {
-      errors.push(...payloadResult.errors);
-    } else {
-      normalized.payload = payloadResult.normalized;
-    }
-  }
-  
-  if (errors.length > 0) {
-    return { valid: false, errors };
-  }
-  
-  return { valid: true, normalized };
-}
+// Get HMAC secret for cookie signing (optional)
+const { HMAC_SECRET } = process.env;
 
 /**
  * Netlify function handler for client error telemetry
@@ -380,7 +60,7 @@ exports.handler = async (event) => {
   }
 
   // Validate body size (≤25KB)
-  const bodySizeCheck = validateBodySize(event.body, MAX_PAYLOAD_SIZE_KB);
+  const bodySizeCheck = validateBodySize(event.body, MAX_BODY_SIZE_KB);
   if (!bodySizeCheck.valid) {
     console.log(`[client-error] [${requestId}] Body too large: ${bodySizeCheck.error}`);
     return jsonResponse(event, 400, { error: 'Request body too large' }, {}, requestId);
@@ -395,29 +75,31 @@ exports.handler = async (event) => {
 
   const data = parseResult.data;
 
-  // Extract client request ID from header
+  // Extract client request ID if present
   const clientRequestId = event.headers['x-client-request-id'] || event.headers['X-Client-Request-Id'] || null;
   if (clientRequestId) {
     console.log(`[client-error] [${requestId}] Client Request ID: ${clientRequestId}`);
   }
 
-  // Validate telemetry event
-  const validation = validateTelemetryEvent(data, event);
+  // Validate required fields
+  const validation = validateTelemetryData(data, clientRequestId);
   if (!validation.valid) {
-    console.log(`[client-error] [${requestId}] Validation failed: ${validation.errors.join('; ')}`);
-    return jsonResponse(event, 400, { error: 'Validation failed', details: validation.errors }, {}, requestId);
+    console.log(`[client-error] [${requestId}] Validation failed: ${validation.error}`);
+    return jsonResponse(event, 400, { error: validation.error }, {}, requestId);
   }
 
-  const normalized = validation.normalized;
+  const { type, clientId, page, ts, payload } = validation.data;
 
-  // Check throttle
-  const throttle = checkThrottle(event, normalized.clientId);
+  // Check throttling
+  const clientIp = event.headers['x-forwarded-for'] || event.headers['X-Forwarded-For'] || 'unknown';
+  const throttleKey = `${clientIp}_${clientId}`;
+  const throttleResult = checkThrottle(event, throttleKey);
   
-  if (throttle.throttled) {
-    console.log(`[client-error] [${requestId}] Throttled (count: ${throttle.count})`);
+  if (!throttleResult.allowed) {
+    console.log(`[client-error] [${requestId}] Throttled: ${throttleKey}`);
     
-    // Add fixed delay on rejection
-    await new Promise(resolve => setTimeout(resolve, REJECTION_DELAY_MS));
+    // Add delay on rejection
+    await new Promise(resolve => setTimeout(resolve, THROTTLE_DELAY_MS));
     
     const securityHeaders = getSecurityHeaders(requestId);
     const corsHeaders = getCorsHeaders(event, ['POST', 'OPTIONS'], ['Content-Type', 'X-Client-Request-Id']);
@@ -427,31 +109,28 @@ exports.handler = async (event) => {
       headers: {
         ...securityHeaders,
         ...corsHeaders,
-        'Set-Cookie': throttle.cookie,
+        'Set-Cookie': createThrottleCookie(throttleKey, throttleResult.count),
       },
-      body: JSON.stringify({ error: 'Too many telemetry events. Please wait a moment.' }),
+      body: '',
     };
   }
 
+  // Sanitize and truncate payload
+  const sanitized = sanitizePayload(type, payload);
+
   // Log the telemetry event
-  console.log(`[client-error] [${requestId}] Telemetry event received:`);
-  console.log(`[client-error] [${requestId}]   type: ${normalized.type}`);
-  console.log(`[client-error] [${requestId}]   page: ${normalized.page}`);
-  console.log(`[client-error] [${requestId}]   clientId: ${normalized.clientId || 'N/A'}`);
-  console.log(`[client-error] [${requestId}]   ts: ${new Date(normalized.ts).toISOString()}`);
-  
-  if (normalized.type === 'error') {
-    console.log(`[client-error] [${requestId}]   error.message: ${normalized.payload.message}`);
-    console.log(`[client-error] [${requestId}]   error.name: ${normalized.payload.name || 'N/A'}`);
-    console.log(`[client-error] [${requestId}]   error.source: ${normalized.payload.source || 'N/A'}`);
-    if (normalized.payload.stack) {
-      console.log(`[client-error] [${requestId}]   error.stack: ${normalized.payload.stack.substring(0, 200)}...`);
+  if (type === 'error') {
+    console.log(`[client-error] [${requestId}] ERROR - page: ${page}, name: ${sanitized.name || 'N/A'}, message: ${sanitized.message || 'N/A'}`);
+    if (sanitized.stack) {
+      console.log(`[client-error] [${requestId}]   stack: ${sanitized.stack.substring(0, 200)}...`);
     }
-  } else if (normalized.type === 'metric') {
-    console.log(`[client-error] [${requestId}]   metric.name: ${normalized.payload.name}`);
-    console.log(`[client-error] [${requestId}]   metric.durationMs: ${normalized.payload.durationMs}`);
-    if (normalized.payload.detail) {
-      console.log(`[client-error] [${requestId}]   metric.detail: ${normalized.payload.detail}`);
+    if (sanitized.source) {
+      console.log(`[client-error] [${requestId}]   source: ${sanitized.source}`);
+    }
+  } else if (type === 'metric') {
+    console.log(`[client-error] [${requestId}] METRIC - page: ${page}, name: ${sanitized.name || 'N/A'}, durationMs: ${sanitized.durationMs || 'N/A'}`);
+    if (sanitized.detail) {
+      console.log(`[client-error] [${requestId}]   detail: ${sanitized.detail}`);
     }
   }
 
@@ -464,8 +143,287 @@ exports.handler = async (event) => {
     headers: {
       ...securityHeaders,
       ...corsHeaders,
-      'Set-Cookie': throttle.cookie,
+      'Set-Cookie': createThrottleCookie(throttleKey, throttleResult.count + 1),
     },
     body: '',
   };
 };
+
+/**
+ * Validate telemetry data structure
+ * @param {Object} data - Request data
+ * @param {string} clientRequestId - Client request ID from header
+ * @returns {Object} { valid: boolean, data?: Object, error?: string }
+ */
+function validateTelemetryData(data, clientRequestId) {
+  // Validate type
+  if (!data.type || (data.type !== 'error' && data.type !== 'metric')) {
+    return { valid: false, error: 'type must be "error" or "metric"' };
+  }
+
+  // Validate or derive clientId
+  let clientId = data.clientId;
+  if (!clientId) {
+    // Derive from X-Client-Request-Id if missing
+    clientId = clientRequestId || 'unknown';
+  } else {
+    // Validate UUID v4 format (simple check)
+    if (typeof clientId !== 'string' || !clientId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i)) {
+      return { valid: false, error: 'clientId must be a valid UUID v4' };
+    }
+  }
+
+  // Validate page
+  if (!data.page || typeof data.page !== 'string' || data.page.length > MAX_PAGE_LENGTH) {
+    return { valid: false, error: `page must be a string <= ${MAX_PAGE_LENGTH} characters` };
+  }
+
+  // Validate timestamp (within +/- 24h)
+  if (!data.ts || typeof data.ts !== 'number') {
+    return { valid: false, error: 'ts must be a number (epoch ms)' };
+  }
+  const now = Date.now();
+  const diff = Math.abs(now - data.ts);
+  const twentyFourHours = 24 * 60 * 60 * 1000;
+  if (diff > twentyFourHours) {
+    return { valid: false, error: 'ts must be within +/- 24 hours of server time' };
+  }
+
+  // Validate payload
+  if (!data.payload || typeof data.payload !== 'object') {
+    return { valid: false, error: 'payload must be an object' };
+  }
+
+  // Type-specific payload validation
+  if (data.type === 'error') {
+    // Error payload: { message, name, stack?, source?, lineno?, colno? }
+    const p = data.payload;
+    if (p.message !== undefined && typeof p.message !== 'string') {
+      return { valid: false, error: 'payload.message must be a string' };
+    }
+    if (p.name !== undefined && typeof p.name !== 'string') {
+      return { valid: false, error: 'payload.name must be a string' };
+    }
+    if (p.stack !== undefined && typeof p.stack !== 'string') {
+      return { valid: false, error: 'payload.stack must be a string' };
+    }
+    if (p.source !== undefined && typeof p.source !== 'string') {
+      return { valid: false, error: 'payload.source must be a string' };
+    }
+    if (p.lineno !== undefined && typeof p.lineno !== 'number') {
+      return { valid: false, error: 'payload.lineno must be a number' };
+    }
+    if (p.colno !== undefined && typeof p.colno !== 'number') {
+      return { valid: false, error: 'payload.colno must be a number' };
+    }
+  } else if (data.type === 'metric') {
+    // Metric payload: { name, durationMs, detail? }
+    const p = data.payload;
+    if (!p.name || typeof p.name !== 'string') {
+      return { valid: false, error: 'payload.name is required for metric type' };
+    }
+    if (p.durationMs === undefined || typeof p.durationMs !== 'number') {
+      return { valid: false, error: 'payload.durationMs is required for metric type' };
+    }
+    if (p.detail !== undefined && typeof p.detail !== 'string') {
+      return { valid: false, error: 'payload.detail must be a string' };
+    }
+  }
+
+  return {
+    valid: true,
+    data: {
+      type: data.type,
+      clientId,
+      page: data.page,
+      ts: data.ts,
+      payload: data.payload,
+    },
+  };
+}
+
+/**
+ * Sanitize and truncate payload fields
+ * @param {string} type - Event type ('error' or 'metric')
+ * @param {Object} payload - Raw payload
+ * @returns {Object} Sanitized payload
+ */
+function sanitizePayload(type, payload) {
+  if (type === 'error') {
+    return {
+      message: payload.message ? sanitizeString(payload.message, MAX_MESSAGE_LENGTH) : undefined,
+      name: payload.name ? sanitizeString(payload.name, MAX_NAME_LENGTH) : undefined,
+      stack: payload.stack ? truncateStack(payload.stack, MAX_STACK_LENGTH) : undefined,
+      source: payload.source ? sanitizeString(payload.source, MAX_SOURCE_LENGTH) : undefined,
+      lineno: payload.lineno,
+      colno: payload.colno,
+    };
+  } else if (type === 'metric') {
+    return {
+      name: sanitizeString(payload.name, MAX_NAME_LENGTH),
+      durationMs: payload.durationMs,
+      detail: payload.detail ? sanitizeString(payload.detail, MAX_DETAIL_LENGTH) : undefined,
+    };
+  }
+  return {};
+}
+
+/**
+ * Sanitize string by removing angle brackets and truncating
+ * @param {string} str - Input string
+ * @param {number} maxLength - Maximum length
+ * @returns {string} Sanitized string
+ */
+function sanitizeString(str, maxLength) {
+  if (!str) return '';
+  // Remove angle brackets to prevent injection
+  let sanitized = str.replace(/[<>]/g, '');
+  // Truncate to max length
+  if (sanitized.length > maxLength) {
+    sanitized = sanitized.substring(0, maxLength) + '...';
+  }
+  return sanitized;
+}
+
+/**
+ * Truncate stack trace to first ~30 lines and max length
+ * @param {string} stack - Stack trace
+ * @param {number} maxLength - Maximum length
+ * @returns {string} Truncated stack
+ */
+function truncateStack(stack, maxLength) {
+  if (!stack) return '';
+  
+  // Remove angle brackets
+  let sanitized = stack.replace(/[<>]/g, '');
+  
+  // Split into lines and take first 30
+  const lines = sanitized.split('\n');
+  if (lines.length > 30) {
+    sanitized = lines.slice(0, 30).join('\n') + '\n... (truncated)';
+  }
+  
+  // Truncate to max length
+  if (sanitized.length > maxLength) {
+    sanitized = sanitized.substring(0, maxLength) + '... (truncated)';
+  }
+  
+  return sanitized;
+}
+
+/**
+ * Check throttling using cookie-based counter
+ * @param {Object} event - Netlify function event
+ * @param {string} throttleKey - Key for throttling (IP + clientId)
+ * @returns {Object} { allowed: boolean, count: number }
+ */
+function checkThrottle(event, throttleKey) {
+  const cookieHeader = event.headers.cookie || event.headers.Cookie || '';
+  const throttleCookie = getCookie(cookieHeader, 'ce_throttle');
+  
+  if (!throttleCookie) {
+    return { allowed: true, count: 0 };
+  }
+
+  // Parse throttle cookie: timestamp_key_count[_hmac]
+  try {
+    const parts = throttleCookie.split('_');
+    if (parts.length < 3) {
+      return { allowed: true, count: 0 };
+    }
+    
+    const timestamp = parseInt(parts[0], 10);
+    const key = parts[1];
+    const count = parseInt(parts[2], 10);
+    
+    // Verify HMAC if secret is available
+    if (HMAC_SECRET && parts.length >= 4) {
+      const hmac = parts[3];
+      const expected = createHmac(`${timestamp}_${key}_${count}`);
+      if (hmac !== expected) {
+        console.log('[client-error] Invalid HMAC in throttle cookie');
+        return { allowed: true, count: 0 };
+      }
+    }
+    
+    const now = Math.floor(Date.now() / 1000);
+    const hashedKey = hashKey(throttleKey);
+    
+    // Check if within window and same key
+    if (key === hashedKey && (now - timestamp) < THROTTLE_WINDOW_SECONDS) {
+      if (count >= MAX_EVENTS_PER_WINDOW) {
+        return { allowed: false, count };
+      }
+      return { allowed: true, count };
+    }
+  } catch (e) {
+    // Invalid cookie, allow
+    console.log('[client-error] Error parsing throttle cookie:', e.message);
+  }
+  
+  return { allowed: true, count: 0 };
+}
+
+/**
+ * Create throttle cookie with optional HMAC
+ * @param {string} throttleKey - Key for throttling
+ * @param {number} count - Event count
+ * @returns {string} Set-Cookie header value
+ */
+function createThrottleCookie(throttleKey, count) {
+  const timestamp = Math.floor(Date.now() / 1000);
+  const key = hashKey(throttleKey);
+  const value = `${timestamp}_${key}_${count}`;
+  
+  // Add HMAC if secret is available
+  let cookieValue = value;
+  if (HMAC_SECRET) {
+    const hmac = createHmac(value);
+    cookieValue = `${value}_${hmac}`;
+  }
+  
+  return `ce_throttle=${cookieValue}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${THROTTLE_WINDOW_SECONDS}`;
+}
+
+/**
+ * Get cookie value from header
+ * @param {string} header - Cookie header
+ * @param {string} name - Cookie name
+ * @returns {string} Cookie value or empty string
+ */
+function getCookie(header, name) {
+  if (!header) return '';
+  const parts = header.split(/;\s*/);
+  for (const part of parts) {
+    const [k, ...v] = part.split('=');
+    if (k === name) return v.join('=');
+  }
+  return '';
+}
+
+/**
+ * Simple hash for key (not cryptographic, just for cookie storage)
+ * @param {string} key - Key to hash
+ * @returns {string} Hashed key
+ */
+function hashKey(key) {
+  let hash = 0;
+  for (let i = 0; i < key.length; i++) {
+    const char = key.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return Math.abs(hash).toString(36);
+}
+
+/**
+ * Create HMAC for cookie signing
+ * @param {string} value - Value to sign
+ * @returns {string} HMAC signature
+ */
+function createHmac(value) {
+  if (!HMAC_SECRET) return '';
+  const hmac = crypto.createHmac('sha256', HMAC_SECRET);
+  hmac.update(value);
+  return hmac.digest('hex').substring(0, 16);
+}
