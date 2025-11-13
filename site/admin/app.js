@@ -1,0 +1,381 @@
+(function(){
+  // Batch target ~3.5 MB (base64 expands ~33% so we use estimated encoded sizes)
+  const BATCH_TARGET = 3.5 * 1024 * 1024;
+
+  const catEl   = document.getElementById('cat');
+  const slotSel = document.getElementById('slotSel');
+  const slotWarn= document.getElementById('slotWarn');
+  const titleEl = document.getElementById('title');
+  const filesEl = document.getElementById('files');
+  const folderEl= document.getElementById('folder');
+  const dropEl  = document.getElementById('drop');
+  const listEl  = document.getElementById('list');
+  const logEl   = document.getElementById('log');
+  const uploadBtn = document.getElementById('upload');
+  const deleteBtn = document.getElementById('deleteBtn');
+
+  let units = [];
+  let siteState = null;
+  let queue = [];
+
+  function log(){ logEl.textContent += Array.from(arguments).join(' ') + '\n'; logEl.scrollTop = logEl.scrollHeight; }
+  function fmtBytes(n){ if(!n && n!==0) return ''; const u=['B','KB','MB','GB']; let i=0; while(n>1024&&i<u.length-1){n/=1024;i++} return n.toFixed(1)+' '+u[i]; }
+  function ensureArraySize(arr,n){ while(arr.length<n) arr.push(''); }
+  function num(n){ return String(n).padStart(2,'0'); }
+
+  async function loadUnits(){
+    try{
+      const r = await fetch('/assets/data/units.json', { cache:'no-store' });
+      if (r.ok) {
+        const j = await r.json();
+        units = Array.isArray(j.units) ? j.units : [];
+        return;
+      }
+    }catch(e){ log('Failed to load units.json:', e?.message||String(e)); }
+    units = [];
+  }
+  async function loadState(){
+    try{
+      const r = await fetch('/assets/data/site-state.json', { cache:'no-store' });
+      if (r.ok) { siteState = await r.json(); return; }
+    }catch(e){ log('Failed to load site-state.json:', e?.message||String(e)); }
+    siteState = { version:'v1', updated:'', categories:{} };
+  }
+
+  function renderCategories(){
+    catEl.innerHTML = '';
+    for (const u of units){
+      const opt = document.createElement('option');
+      opt.value = u.id;
+      opt.textContent = `${u.title} (${u.slots})`;
+      catEl.appendChild(opt);
+    }
+    if (!units.length){
+      const opt = document.createElement('option');
+      opt.value = ''; opt.textContent = 'No units found (check /assets/data/units.json)';
+      catEl.appendChild(opt);
+    }
+  }
+
+  function firstOpenSlot(titles=[], total=1){
+    for (let i=0;i<total;i++){ if (!String(titles[i]||'').trim()) return i+1; }
+    return 1;
+  }
+
+  function renderSlots(){
+    const id = catEl.value;
+    const unit = units.find(u => u.id === id);
+    const total = Number(unit?.slots || 0);
+
+    const titles = (siteState && siteState.categories && siteState.categories[id] && siteState.categories[id].titles) || [];
+    ensureArraySize(titles, total);
+
+    const prev = Number(slotSel.value) || 0;
+    slotSel.innerHTML = '';
+    for (let i=1;i<=total;i++){
+      const t = (titles[i-1]||'').trim();
+      const opt = document.createElement('option');
+      opt.value = String(i);
+      opt.textContent = t ? `${num(i)} — ${t}` : `${num(i)} — Open`;
+      slotSel.appendChild(opt);
+    }
+    let def = prev>=1 && prev<=total ? prev : firstOpenSlot(titles, total);
+    slotSel.value = String(def);
+    updateSlotWarningAndTitle();
+  }
+
+  function updateSlotWarningAndTitle(){
+    const id = catEl.value;
+    const s = Number(slotSel.value)||1;
+    const titles = (siteState && siteState.categories && siteState.categories[id] && siteState.categories[id].titles) || [];
+    const existing = (titles[s-1]||'').trim();
+    if (existing) {
+      slotWarn.style.display = '';
+      slotWarn.textContent = `Note: Slot ${num(s)} is already used (“${existing}”). Uploading will replace its files and title.`;
+      deleteBtn.disabled = false;
+      if (!(titleEl.value||'').trim()) titleEl.value = existing;
+    } else {
+      slotWarn.style.display = 'none';
+      deleteBtn.disabled = true;
+    }
+  }
+
+  catEl.addEventListener('change', renderSlots);
+  slotSel.addEventListener('change', updateSlotWarningAndTitle);
+
+  function addFiles(fileList){
+    for (const f of fileList) {
+      if (String(f.name||'').startsWith('.')) continue; // skip hidden files like .DS_Store
+      let path = f.webkitRelativePath || f.name;
+      if (path.includes('/')) {
+        const parts = path.split('/');
+        // Drop top directory if a folder was selected
+        path = parts.slice(1).join('/') || parts[parts.length-1];
+      }
+      queue.push({ file:f, path });
+    }
+    renderList();
+  }
+  function renderList(){
+    if (!queue.length) { listEl.textContent = '(no files selected)'; return; }
+    const items = queue.map(q => `• ${q.path} (${fmtBytes(q.file.size)})`).join('\n');
+    listEl.textContent = items;
+  }
+
+  filesEl.addEventListener('change', (e)=> addFiles(e.target.files||[]));
+  folderEl.addEventListener('change', (e)=> addFiles(e.target.files||[]));
+
+  ;['dragenter','dragover'].forEach(ev => dropEl.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); dropEl.classList.add('drag'); }));
+  ;['dragleave','drop'].forEach(ev => dropEl.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); dropEl.classList.remove('drag'); }));
+  dropEl.addEventListener('drop', e => { const dt = e.dataTransfer; if (dt && dt.files) addFiles(dt.files); });
+
+  // Robust base64 for large files: FileReader + DataURL, then strip prefix
+  async function toBase64(f){
+    return new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => {
+        try{
+          const s = String(r.result||''); const i = s.indexOf('base64,'); res(i>=0 ? s.slice(i+7) : s);
+        }catch(e){ rej(e); }
+      };
+      r.onerror = () => rej(r.error||new Error('read error'));
+      r.readAsDataURL(f);
+    });
+  }
+  function estimateB64Size(bytes){ return Math.ceil(bytes * 4 / 3); }
+
+  uploadBtn.addEventListener('click', async () => {
+    try{
+      const category = catEl.value;
+      const unit = units.find(u => u.id === category);
+      if (!unit) { alert('Choose a category'); return; }
+      const slot = Number(slotSel.value);
+      const title = (titleEl.value||'').trim();
+      const total = Number(unit.slots||0);
+      if (!category || !slot || slot<1 || slot>total) { alert('Please choose a valid category and slot'); return; }
+      if (!title) { alert('Please enter a title'); return; }
+      if (!queue.length) { alert('Please add at least one file'); return; }
+
+      log('Preparing files…');
+      const encoded = [];
+      let totalBytes = 0, doneBytes = 0;
+      for (const q of queue) totalBytes += q.file.size;
+      for (const q of queue) {
+        const b64 = await toBase64(q.file);
+        const encSize = estimateB64Size(q.file.size);
+        doneBytes += q.file.size;
+        encoded.push({ path: q.path, base64: b64, encSize });
+        log(`Encoded ${q.path} (${fmtBytes(q.file.size)})  [${fmtBytes(doneBytes)}/${fmtBytes(totalBytes)}]`);
+      }
+
+      // Create batches under target size
+      const batches = [];
+      let cur = [], curSize = 0;
+      for (const e of encoded) {
+        if (curSize + e.encSize > BATCH_TARGET && cur.length) { batches.push(cur); cur=[]; curSize=0; }
+        cur.push({ path:e.path, base64:e.base64 });
+        curSize += e.encSize;
+      }
+      if (cur.length) batches.push(cur);
+
+      log(`Uploading in ${batches.length} batch(es)…`);
+      for (let i=0;i<batches.length;i++){
+        const files = batches[i];
+        const isFinal = (i === batches.length - 1);
+        const res = await fetch('/.netlify/functions/incremental-deploy', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ category, slot, title, files, final: isFinal })
+        });
+        const text = await res.text().catch(()=> '');
+        log(`Batch ${i+1}/${batches.length} -> ${res.status} ${text}`);
+        if (res.status === 401) { alert('Session expired. Please sign in again.'); location.replace('/admin-login'); return; }
+        if (!res.ok) { alert(`Upload failed: ${res.status}\n${(text||'').slice(0,400)}`); return; }
+      }
+
+      // Verify upload: fetch updated state and confirm the slot link was written
+      log('Verifying upload…');
+      try {
+        await new Promise(r => setTimeout(r, 2000)); // Wait 2s for Netlify to deploy
+        const verifyRes = await fetch('/assets/data/site-state.json?t=' + Date.now(), { cache: 'no-store' });
+        if (verifyRes.ok) {
+          const verifyState = await verifyRes.json();
+          const slotLink = verifyState?.categories?.[category]?.links?.[slot - 1] || '';
+          const slotTitle = verifyState?.categories?.[category]?.titles?.[slot - 1] || '';
+          
+          if (slotLink && slotTitle) {
+            log(`✓ Verification SUCCESS: Slot ${num(slot)} is live!`);
+            log(`  Title: "${slotTitle}"`);
+            log(`  Link: ${slotLink}`);
+            siteState = verifyState; // Update local cache
+          } else {
+            log(`⚠ Verification WARNING: Slot ${num(slot)} link or title is missing in site-state.json`);
+            log(`  Title: "${slotTitle || '(empty)'}"`);
+            log(`  Link: ${slotLink || '(empty)'}`);
+            log(`  This may resolve after the next Netlify deployment. Try reloading the hub page in 1-2 minutes.`);
+            alert('Upload completed but verification shows slot may not be live yet.\nCheck the log below for details.\nThe slot should appear after the next deployment (~1-2 min).');
+          }
+        } else {
+          log('⚠ Verification WARNING: Could not fetch site-state.json for verification (status ' + verifyRes.status + ')');
+          log('  Upload succeeded but verification failed. The slot should still be live after deployment.');
+        }
+      } catch (verifyErr) {
+        log('⚠ Verification ERROR:', verifyErr?.message || String(verifyErr));
+        log('  Upload succeeded but verification failed. The slot should still be live after deployment.');
+      }
+
+      // Update local titles to reflect the change
+      if (siteState?.categories?.[category]?.titles) {
+        const titles = siteState.categories[category].titles;
+        while (titles.length < total) titles.push('');
+        titles[slot-1] = title;
+      }
+      if (siteState?.categories?.[category]?.links) {
+        const links = siteState.categories[category].links;
+        while (links.length < total) links.push('');
+        links[slot-1] = `/${unit.baseOut}/presentation-${num(slot)}/`;
+      }
+      renderSlots();
+      alert('Upload complete - see verification log below');
+    }catch(e){
+      console.error(e);
+      log('Error:', e && e.message ? e.message : String(e));
+      alert('Error: ' + (e && e.message ? e.message : String(e)));
+    }
+  });
+
+  deleteBtn.addEventListener('click', async () => {
+    const category = catEl.value;
+    const slot = Number(slotSel.value);
+    if (!category || !slot) return;
+    if (!confirm(`Delete all files and the title for slot ${num(slot)}? This cannot be undone.`)) return;
+
+    try{
+      log('Deleting…');
+      const res = await fetch('/.netlify/functions/incremental-deploy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ action:'delete', category, slot })
+      });
+      const text = await res.text().catch(()=> '');
+      log(`Delete response ${res.status} -> ${text}`);
+      if (res.status === 401) { alert('Session expired. Please sign in again.'); location.replace('/admin-login'); return; }
+      if (!res.ok) { alert(`Delete failed: ${res.status}\n${(text||'').slice(0,400)}`); return; }
+
+      if (siteState?.categories?.[category]) {
+        const titles = siteState.categories[category].titles || [];
+        const links  = siteState.categories[category].links  || [];
+        titles[slot-1] = ''; links[slot-1] = '';
+      }
+      renderSlots();
+      alert('Slot deleted');
+    }catch(e){
+      console.error(e);
+      log('Error:', e && e.message ? e.message : String(e));
+      alert('Error: ' + (e && e.message ? e.message : String(e)));
+    }
+  });
+
+  // Audit Life Skills functionality
+  const auditBtn = document.getElementById('auditBtn');
+  auditBtn.addEventListener('click', async () => {
+    try {
+      log('=== Starting Life Skills Audit ===');
+      
+      // Find Life Skills unit
+      const lifeUnit = units.find(u => u.id === 'life');
+      if (!lifeUnit) {
+        log('ERROR: Life Skills unit not found in units.json');
+        alert('Life Skills unit not found');
+        return;
+      }
+
+      log(`Auditing Life Skills (${lifeUnit.slots} slots)...`);
+      
+      // Reload fresh state
+      await loadState();
+      const lifeCat = siteState?.categories?.life || { titles: [], links: [] };
+      const titles = lifeCat.titles || [];
+      const links = lifeCat.links || [];
+      
+      ensureArraySize(titles, lifeUnit.slots);
+      ensureArraySize(links, lifeUnit.slots);
+      
+      let issuesFound = 0;
+      
+      for (let i = 1; i <= lifeUnit.slots; i++) {
+        const slotNum = num(i);
+        const title = (titles[i - 1] || '').trim();
+        const link = (links[i - 1] || '').trim();
+        const expectedPath = `/life-skills/presentations/presentation-${slotNum}/`;
+        
+        // Check if directory exists via HEAD request
+        let dirExists = false;
+        try {
+          const headRes = await fetch(expectedPath, { method: 'HEAD', cache: 'no-store' });
+          dirExists = headRes.ok;
+        } catch {
+          dirExists = false;
+        }
+        
+        // Log slot status
+        if (!title && !link && !dirExists) {
+          // Empty slot - normal
+          log(`Slot ${slotNum}: Empty (no title, no link, no directory) ✓`);
+        } else if (title && link && dirExists) {
+          // Complete slot - ideal
+          log(`Slot ${slotNum}: "${title}" → ${link} ✓`);
+        } else {
+          // Mismatch detected
+          issuesFound++;
+          log(`⚠ Slot ${slotNum}: MISMATCH detected!`);
+          log(`  Title: ${title || '(empty)'}`);
+          log(`  Link: ${link || '(empty)'}`);
+          log(`  Directory exists: ${dirExists ? 'YES' : 'NO'}`);
+          
+          if (title && !link) {
+            log(`  → Issue: Has title but no link`);
+          }
+          if (link && !title) {
+            log(`  → Issue: Has link but no title`);
+          }
+          if (dirExists && !link) {
+            log(`  → Issue: Directory exists but no link in state`);
+          }
+          if (link && !dirExists) {
+            log(`  → Issue: Link in state but directory doesn't exist`);
+          }
+        }
+      }
+      
+      log('');
+      if (issuesFound === 0) {
+        log('=== Audit Complete: No issues found ✓ ===');
+        alert('Audit complete! No issues found. Check log for details.');
+      } else {
+        log(`=== Audit Complete: ${issuesFound} issue(s) found ===`);
+        alert(`Audit found ${issuesFound} issue(s). Check log for details.`);
+      }
+    } catch (e) {
+      console.error(e);
+      log('Audit error:', e?.message || String(e));
+      alert('Audit error: ' + (e?.message || String(e)));
+    }
+  });
+
+  (async()=>{
+    await loadUnits();
+    await loadState();
+    renderCategories();
+    renderSlots();
+    renderList();
+
+    // Quick function diagnostics
+    try{
+      const r=await fetch('/.netlify/functions/incremental-deploy?action=diagnostics',{cache:'no-store', credentials:'same-origin'});
+      const t=await r.text().catch(()=> ''); log('GET diagnostics ->', r.status, t.slice(0, 300));
+    }catch(e){ log('Diagnostics failed', e?.message||String(e)); }
+  })();
+})();
