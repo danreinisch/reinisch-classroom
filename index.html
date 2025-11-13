@@ -37,24 +37,10 @@
       <div class="cta-row">
         <a class="cta" href="#learn-more">Learn more</a>
         <a class="cta" href="site/math-toolkit/">Math Toolkit</a>
+        <a class="cta" href="/hub/">Classroom Hub</a>
+        <a class="cta" href="/admin/">Admin</a>
       </div>
     </main>
-
-    <!-- Ensure reliable video looping -->
-    <script>
-      (function() {
-        const video = document.getElementById('bg-video');
-        if (video) {
-          video.addEventListener('ended', function() {
-            this.currentTime = 0;
-            this.play();
-          });
-          video.play().catch(function(error) {
-            console.log('Video autoplay failed:', error);
-          });
-        }
-      })();
-    </script>
 
     <!-- Load shared site script so home quick links (including Teacher Tools) are injected -->
     <script defer src="site/assets/js/site.js"></script>
