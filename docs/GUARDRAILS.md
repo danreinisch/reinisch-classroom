@@ -1248,4 +1248,389 @@ The following endpoints were reviewed and **do not require throttling**:
 
 See [DEPLOYMENT_VERIFICATION.md](../DEPLOYMENT_VERIFICATION.md#csv-validation-verification) for manual test cases and verification steps.
 
+## Telemetry (Optional)
+
+The application includes an **opt-in** client error telemetry system to help diagnose client-side issues in production. This system is privacy-safe, rate-limited, and disabled by default.
+
+### Overview
+
+**What It Does:**
+- Captures JavaScript errors and unhandled promise rejections
+- Records timing metrics for key operations (e.g., dynamic imports)
+- Sends sanitized telemetry events to `/.netlify/functions/client-error`
+
+**Privacy & Security:**
+- ✅ **Opt-in only**: Disabled by default for all users
+- ✅ **No PII collected**: Never logs cookies, localStorage, or full user-agent
+- ✅ **Sanitized payloads**: Removes angle brackets, truncates long strings
+- ✅ **Rate limited**: 10 events per minute per client (IP + client ID)
+- ✅ **Server-side only**: Telemetry data exists only in Netlify function logs
+- ✅ **Throttling with delay**: 150-300ms delay on rate limit rejection
+
+### How to Enable Diagnostics
+
+Telemetry is only active when diagnostic mode is enabled via one of these methods:
+
+**Option 1: URL Parameter (Recommended for Ad-Hoc Debugging)**
+```
+https://reinischclassroom.com/student/?diag=1
+```
+
+**Option 2: localStorage Flag (Persistent Across Sessions)**
+```javascript
+localStorage.setItem('rcDiagEnabled', '1');
+// Then reload the page
+```
+
+**Option 3: Feature Flag (Programmatic)**
+```javascript
+window.RC_DIAG_ENABLED = true;
+// Must be set before diagnostics.js loads
+```
+
+**To Disable:**
+- Remove `?diag=1` from URL, or
+- Run `localStorage.removeItem('rcDiagEnabled')` and reload, or
+- Set `window.RC_DIAG_ENABLED = false`
+
+### What Gets Collected
+
+#### Error Events (`type: 'error'`)
+
+When an error occurs (window.error or unhandledrejection):
+
+**Captured Fields:**
+- `message`: Error message (truncated to 512 chars, angle brackets removed)
+- `name`: Error name (e.g., "TypeError", "ReferenceError")
+- `stack`: Stack trace (first 30 lines, max 4KB, sanitized)
+- `source`: Source file URL (truncated to 256 chars)
+- `lineno`: Line number
+- `colno`: Column number
+- `page`: Page path (no query string or hash)
+- `clientId`: Client request ID (UUID v4)
+- `ts`: Timestamp (epoch milliseconds)
+
+**Not Collected:**
+- ❌ Cookies
+- ❌ localStorage/sessionStorage
+- ❌ Full user-agent string
+- ❌ User input or form data
+- ❌ Referrer (truncated if logged)
+
+#### Metric Events (`type: 'metric'`)
+
+When a timing metric is recorded:
+
+**Captured Fields:**
+- `name`: Metric name (e.g., "dynamic-import-student-portal")
+- `durationMs`: Duration in milliseconds
+- `detail`: Optional detail string (truncated to 512 chars)
+- `page`: Page path
+- `clientId`: Client request ID
+- `ts`: Timestamp
+
+**Example Metrics:**
+- Dynamic import load times for Student Portal modules
+- Hub initialization time
+- Module loading diagnostics
+
+### Rate Limiting
+
+**Throttle Policy:**
+- **Limit**: 10 events per minute per client (keyed by IP + client ID)
+- **Window**: 60 seconds (rolling)
+- **Mechanism**: Cookie-based counter with optional HMAC signing
+- **Response on throttle**: 429 Too Many Requests
+- **Rejection delay**: 150-300ms random delay added on throttle
+
+**Throttle Cookie (`ce_throttle`):**
+```
+ce_throttle=<timestamp>_<hashed_key>_<count>[_<hmac>]
+Path=/
+HttpOnly
+SameSite=Lax
+Max-Age=60
+```
+
+**Behavior:**
+- First 10 events within 60s: Accepted (204 No Content)
+- 11th+ event within 60s: Rejected (429 Too Many Requests)
+- After 60s: Counter resets, new window begins
+
+**Additional Protections:**
+- Events dropped if offline (navigator.onLine === false)
+- Events dropped after 2 consecutive send failures
+- Queue limited to 10 events, flushed every 5 seconds
+
+### Telemetry Endpoint: client-error
+
+**Path:** `/.netlify/functions/client-error`
+
+**Request Format:**
+```json
+POST /.netlify/functions/client-error
+Content-Type: application/json
+X-Client-Request-Id: <uuid>
+
+{
+  "type": "error",
+  "clientId": "550e8400-e29b-41d4-a716-446655440000",
+  "page": "/student/",
+  "ts": 1699889234567,
+  "payload": {
+    "message": "Cannot read property 'foo' of undefined",
+    "name": "TypeError",
+    "stack": "TypeError: Cannot read property...\n  at Object...",
+    "source": "https://reinischclassroom.com/web/student-portal.js",
+    "lineno": 42,
+    "colno": 15
+  }
+}
+```
+
+**Response:**
+- `204 No Content`: Event logged successfully
+- `400 Bad Request`: Invalid payload or schema violation
+- `429 Too Many Requests`: Rate limit exceeded (includes throttle cookie)
+
+**Validation:**
+- Body size: ≤ 25 KB
+- Content-Type: Must be `application/json`
+- `type`: Must be `"error"` or `"metric"`
+- `clientId`: UUID v4 format (optional, derived from header if missing)
+- `page`: String, ≤ 256 characters
+- `ts`: Number (epoch ms), within ±24 hours of server time
+- `payload`: Object with type-specific fields (allowlist enforced)
+
+**Payload Sanitization:**
+- Removes angle brackets (`<`, `>`) from text fields
+- Truncates `message` to 512 chars
+- Truncates `stack` to first 30 lines and 4KB
+- Truncates `source` to 256 chars
+- Allowlist: Only expected fields are logged; extra fields dropped
+
+**Logged Output:**
+```
+[client-error] [550e8400-e29b-41d4-a716-446655440000] Request received
+[client-error] [550e8400-e29b-41d4-a716-446655440000] Client Request ID: client-abc-123
+[client-error] [550e8400-e29b-41d4-a716-446655440000] ERROR - page: /student/, name: TypeError, message: Cannot read property 'foo' of undefined
+[client-error] [550e8400-e29b-41d4-a716-446655440000]   stack: TypeError: Cannot read property...
+```
+
+### Using the Telemetry API
+
+**Automatic Error Capture:**
+
+Errors are captured automatically when diagnostics are enabled:
+
+```javascript
+// This error will be captured and sent automatically
+throw new Error('Something went wrong');
+
+// Unhandled promise rejections are also captured
+fetch('/api/data').then(res => res.json()); // If fetch fails
+```
+
+**Manual Metric Recording:**
+
+```javascript
+// Record a timing metric
+window.rcTelemetry.recordMetric('user-action', 250, 'button-click');
+
+// Measure an async operation
+const result = await window.rcTelemetry.measureAsync('fetch-data', async () => {
+  return await fetch('/api/data').then(r => r.json());
+});
+```
+
+**Programmatic Error Capture:**
+
+```javascript
+// Capture a custom error
+window.rcTelemetry.captureError({
+  message: 'Custom error message',
+  name: 'CustomError',
+  stack: new Error().stack,
+  source: 'my-module.js',
+});
+```
+
+### Viewing Telemetry Data
+
+**Via Netlify Function Logs:**
+
+1. Log in to Netlify dashboard
+2. Select your site
+3. Click "Functions" → "client-error"
+4. Click "View logs"
+5. Search for request IDs or error messages
+
+**Via Netlify CLI:**
+
+```bash
+netlify functions:log client-error --live
+```
+
+**Filtering Logs:**
+
+```bash
+# Search for specific error type
+netlify functions:log client-error | grep "TypeError"
+
+# Search for specific page
+netlify functions:log client-error | grep "page: /student/"
+
+# Search by client request ID
+netlify functions:log client-error | grep "client-abc-123"
+```
+
+### Sampling (Not Implemented)
+
+Currently, all events are sent when diagnostics are enabled. Future enhancements may include:
+- Sampling rate (e.g., send 10% of events)
+- Error deduplication (suppress repeated identical errors)
+- Configurable flush interval and batch size
+
+### Best Practices
+
+**For Developers:**
+- Enable `?diag=1` when debugging issues in production
+- Use localStorage flag for persistent diagnostic sessions
+- Check telemetry logs after deploying major changes
+- Monitor throttle 429s to detect excessive error rates
+
+**For Admins:**
+- Keep diagnostics disabled for end users (default)
+- Enable selectively for users reporting issues
+- Review telemetry logs weekly for emerging patterns
+- Document any recurring errors in issue tracker
+
+**For Users:**
+- Diagnostics are off by default; no telemetry sent
+- Only enable if instructed by support team
+- Remove `?diag=1` from URL when done troubleshooting
+
+### Privacy Guarantees
+
+**What We Never Collect:**
+- ❌ Cookies (session tokens, auth cookies)
+- ❌ localStorage or sessionStorage contents
+- ❌ Full user-agent string (only truncated UA if needed)
+- ❌ Referrer URLs (truncated or omitted)
+- ❌ Form input values
+- ❌ Personally identifiable information (PII)
+- ❌ IP addresses (used only for rate limiting, not stored)
+
+**What We Do Collect (When Opted In):**
+- ✅ Error messages (sanitized)
+- ✅ Stack traces (truncated)
+- ✅ Page paths (no query params)
+- ✅ Timing metrics
+- ✅ Client request IDs (for correlation)
+
+**Data Retention:**
+- Telemetry data exists only in Netlify function logs
+- Logs are retained per Netlify's retention policy (typically 30 days)
+- No separate database or long-term storage
+- Can be extended to a datastore in the future if desired
+
+### Troubleshooting
+
+**Issue: Telemetry not working**
+- **Cause**: Diagnostics not enabled
+- **Fix**: Add `?diag=1` to URL or set localStorage flag
+
+**Issue: 429 Too Many Requests**
+- **Cause**: More than 10 events in 60 seconds
+- **Fix**: Wait 60 seconds, or reduce error frequency
+
+**Issue: Events not appearing in logs**
+- **Cause**: Offline, network error, or throttled
+- **Fix**: Check browser console for `[rcDiag]` messages
+
+**Issue: CORS error on telemetry fetch**
+- **Cause**: Origin not in allowlist
+- **Fix**: Ensure request is from same origin or trusted domain
+
+### Manual Testing
+
+#### Test 1: Enable Diagnostics and Trigger Error
+
+```bash
+# 1. Open browser to https://reinischclassroom.com/student/?diag=1
+# 2. Open DevTools Console
+# 3. Run: setTimeout(() => { throw new Error('diagnostic test error'); }, 0)
+# 4. Check Network tab for POST to /.netlify/functions/client-error
+# 5. Verify response is 204 No Content
+```
+
+**Expected:**
+- Request sent to `/.netlify/functions/client-error`
+- Response: 204 No Content
+- Response headers include `X-Request-Id`
+- Console shows `[rcDiag] Capturing error: diagnostic test error`
+- Function logs show sanitized error with page, name, message
+
+#### Test 2: Record Metric
+
+```bash
+# 1. Enable diagnostics (?diag=1)
+# 2. In console, run: window.rcTelemetry.recordMetric('test-metric', 123, 'test detail')
+# 3. Wait up to 5 seconds for batch flush
+# 4. Check Network tab for POST request
+```
+
+**Expected:**
+- Request sent with `type: 'metric'`
+- Payload includes `name: 'test-metric'`, `durationMs: 123`, `detail: 'test detail'`
+- Response: 204 No Content
+
+#### Test 3: Verify Throttling
+
+```bash
+# 1. Enable diagnostics
+# 2. In console, run this loop:
+for (let i = 0; i < 12; i++) {
+  setTimeout(() => {
+    throw new Error('throttle test ' + i);
+  }, i * 100);
+}
+# 3. Check Network tab
+```
+
+**Expected:**
+- First 10 requests: 204 No Content
+- 11th and 12th requests: 429 Too Many Requests
+- Console shows `[rcDiag] Telemetry throttled (429)`
+
+#### Test 4: Verify Diagnostics Disabled = No Telemetry
+
+```bash
+# 1. Navigate to https://reinischclassroom.com/student/ (no ?diag=1)
+# 2. In console, run: throw new Error('should not send')
+# 3. Check Network tab
+```
+
+**Expected:**
+- No request to `/.netlify/functions/client-error`
+- Error appears in console but not sent to server
+
+#### Test 5: Verify Payload Sanitization
+
+```bash
+# 1. Enable diagnostics
+# 2. In console, run: throw new Error('<script>alert("xss")</script>')
+# 3. Check function logs
+```
+
+**Expected:**
+- Logged message has angle brackets removed: `scriptalert("xss")/script`
+- No script execution or XSS
+
+### References
+
+- [DEPLOYMENT_VERIFICATION.md](../DEPLOYMENT_VERIFICATION.md) - Telemetry verification steps
+- [site/web/diagnostics.js](../../site/web/diagnostics.js) - Client telemetry implementation
+- [netlify/functions/client-error.js](../../netlify/functions/client-error.js) - Telemetry endpoint
+
 

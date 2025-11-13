@@ -203,3 +203,266 @@ element.querySelector('[data-action="dismiss"]').addEventListener('click', handl
 - [GUARDRAILS.md](./GUARDRAILS.md) - Complete security guardrails guide
 - [README.md](../README.md) - Project overview and setup
 - [SUPABASE_SETUP.md](./SUPABASE_SETUP.md) - Supabase configuration guide
+
+## Telemetry Verification (Optional)
+
+The application includes opt-in client error telemetry. Verify it works correctly in production.
+
+### 1. Enable Diagnostics
+
+**Method 1: URL Parameter**
+```
+https://your-domain.netlify.app/student/?diag=1
+```
+
+**Method 2: localStorage**
+```javascript
+// In browser console
+localStorage.setItem('rcDiagEnabled', '1');
+// Then reload page
+```
+
+### 2. Verify Telemetry Initialization
+
+**Check Console Output:**
+- [ ] `[rcDiag] Diagnostic mode enabled` appears
+- [ ] `[rcDiag] Telemetry system initializing...` appears
+- [ ] `[rcDiag] Error handlers installed` appears
+- [ ] `[rcDiag] Telemetry system initialized` appears
+- [ ] `window.rcTelemetry` is available in console
+
+### 3. Test Error Capture
+
+**Trigger a Test Error:**
+
+```javascript
+// In browser console
+setTimeout(() => { throw new Error('diagnostic test error'); }, 0);
+```
+
+**Verify:**
+- [ ] Console shows `[rcDiag] Capturing error: diagnostic test error`
+- [ ] Network tab shows POST to `/.netlify/functions/client-error`
+- [ ] Response status is `204 No Content`
+- [ ] Response includes `X-Request-Id` header
+
+**Check Function Logs:**
+
+```bash
+netlify functions:log client-error --live
+```
+
+**Expected Output:**
+```
+[client-error] [<request-id>] Request received
+[client-error] [<request-id>] Client Request ID: <client-id>
+[client-error] [<request-id>] ERROR - page: /student/, name: Error, message: diagnostic test error
+```
+
+### 4. Test Metric Recording
+
+**Record a Test Metric:**
+
+```javascript
+// In browser console
+window.rcTelemetry.recordMetric('test-metric', 123, 'verification test');
+```
+
+**Verify:**
+- [ ] Console shows `[rcDiag] Recording metric: test-metric 123ms`
+- [ ] Within 5 seconds, POST request to `/.netlify/functions/client-error`
+- [ ] Response status is `204 No Content`
+
+**Check Function Logs:**
+
+```bash
+netlify functions:log client-error
+```
+
+**Expected Output:**
+```
+[client-error] [<request-id>] METRIC - page: /student/, name: test-metric, durationMs: 123
+[client-error] [<request-id>]   detail: verification test
+```
+
+### 5. Test Throttling
+
+**Trigger Multiple Errors Rapidly:**
+
+```javascript
+// In browser console
+for (let i = 0; i < 12; i++) {
+  setTimeout(() => {
+    throw new Error('throttle test ' + i);
+  }, i * 100);
+}
+```
+
+**Verify:**
+- [ ] First 10 errors get `204 No Content` responses
+- [ ] 11th and 12th errors get `429 Too Many Requests` responses
+- [ ] Console shows `[rcDiag] Telemetry throttled (429)`
+- [ ] Response includes `Set-Cookie: ce_throttle=...` header
+
+**Wait 60 Seconds and Retry:**
+- [ ] After throttle window expires, new errors get `204` again
+
+### 6. Test Diagnostics Disabled
+
+**Navigate Without diag Flag:**
+```
+https://your-domain.netlify.app/student/
+```
+
+**Trigger Error:**
+```javascript
+// In browser console
+throw new Error('should not send telemetry');
+```
+
+**Verify:**
+- [ ] Error appears in console
+- [ ] No POST request to `/.netlify/functions/client-error` in Network tab
+- [ ] Console does NOT show `[rcDiag]` messages
+- [ ] `window.rcTelemetry` exists but is inactive
+
+### 7. Test Payload Sanitization
+
+**Trigger Error with HTML:**
+
+```javascript
+// In browser console
+throw new Error('<script>alert("xss")</script>');
+```
+
+**Check Function Logs:**
+- [ ] Logged message has angle brackets removed
+- [ ] No script tags in logs: `scriptalert("xss")/script`
+
+**Trigger Error with Long Message:**
+
+```javascript
+throw new Error('A'.repeat(1000));
+```
+
+**Check Function Logs:**
+- [ ] Message truncated to 512 characters
+- [ ] Ends with `...` to indicate truncation
+
+### 8. Test Dynamic Import Metric (If Implemented)
+
+**Navigate to Student Portal:**
+```
+https://your-domain.netlify.app/student/?diag=1
+```
+
+**Wait for Portal to Load:**
+- [ ] Check function logs for dynamic import metrics
+- [ ] Look for metrics like `dynamic-import-student-portal`
+
+**Expected Output:**
+```
+[client-error] [<request-id>] METRIC - page: /student/, name: dynamic-import-student-portal, durationMs: <time>
+```
+
+### 9. Verify CORS Headers
+
+**Test Preflight Request:**
+
+```bash
+curl -i -X OPTIONS \
+  -H "Origin: https://your-domain.netlify.app" \
+  -H "Access-Control-Request-Method: POST" \
+  -H "Access-Control-Request-Headers: Content-Type, X-Client-Request-Id" \
+  https://your-domain.netlify.app/.netlify/functions/client-error
+```
+
+**Expected:**
+- Status: `200 OK`
+- `Access-Control-Allow-Origin: https://your-domain.netlify.app`
+- `Access-Control-Allow-Methods: POST, OPTIONS`
+- `Access-Control-Allow-Headers: Content-Type, X-Client-Request-Id`
+- `Vary: Origin`
+
+### 10. Test Invalid Payloads
+
+**Test Oversized Body:**
+
+```javascript
+// Create ~30KB payload (exceeds 25KB limit)
+const largePayload = {
+  type: 'error',
+  clientId: window.rcClientRequestId,
+  page: '/test',
+  ts: Date.now(),
+  payload: {
+    message: 'A'.repeat(30000),
+  }
+};
+
+fetch('/.netlify/functions/client-error', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(largePayload),
+}).then(r => console.log('Status:', r.status));
+```
+
+**Expected:**
+- Status: `400 Bad Request`
+- Error: "Request body too large"
+
+**Test Invalid Type:**
+
+```javascript
+const invalidPayload = {
+  type: 'invalid-type',
+  clientId: window.rcClientRequestId,
+  page: '/test',
+  ts: Date.now(),
+  payload: { message: 'test' }
+};
+
+fetch('/.netlify/functions/client-error', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(invalidPayload),
+}).then(r => console.log('Status:', r.status));
+```
+
+**Expected:**
+- Status: `400 Bad Request`
+- Error: "type must be \"error\" or \"metric\""
+
+### Telemetry Verification Checklist
+
+- [ ] Diagnostics can be enabled via `?diag=1`
+- [ ] Diagnostics can be enabled via `localStorage.rcDiagEnabled`
+- [ ] Error events are captured and sent
+- [ ] Metric events are recorded and sent
+- [ ] Throttling works after 10 events per minute
+- [ ] Diagnostics disabled = no telemetry sent
+- [ ] Payload sanitization removes angle brackets
+- [ ] Long messages are truncated
+- [ ] Function logs show sanitized telemetry data
+- [ ] CORS headers are correct
+- [ ] Invalid payloads return 400 errors
+- [ ] Oversized payloads are rejected
+
+### Common Issues
+
+**Issue: Telemetry not sending**
+- **Cause**: Diagnostics not enabled
+- **Fix**: Ensure `?diag=1` is in URL or localStorage flag is set
+
+**Issue: 429 Too Many Requests**
+- **Cause**: Exceeded 10 events per minute
+- **Fix**: Wait 60 seconds for throttle window to reset
+
+**Issue: No console output**
+- **Cause**: `window.rcDiag` not available or diagnostics disabled
+- **Fix**: Verify diagnostics.js is loaded and diag mode is enabled
+
+**Issue: CORS error**
+- **Cause**: Request from non-allowed origin
+- **Fix**: Check that origin is in TRUSTED_ORIGINS list in _lib/http.js
+
