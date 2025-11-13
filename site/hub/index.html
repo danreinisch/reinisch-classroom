@@ -2168,6 +2168,7 @@
      */
     async function attemptModuleLoad(path) {
       const attempt = { path, ok: false, status: null, contentType: null, error: null };
+      const moduleLoadStart = performance.now();
       
       try {
         console.log(LOG_PREFIX, `Attempting to load: ${path}`);
@@ -2205,10 +2206,26 @@
         }
         
         attempt.ok = true;
+        
+        // Record import timing metric if telemetry is available
+        const moduleLoadDuration = performance.now() - moduleLoadStart;
+        if (window.rcTelemetry && attempt.ok) {
+          const moduleName = path.split('/').pop().replace(/\.js$/, '');
+          window.rcTelemetry.recordMetric(`dynamic-import-${moduleName}`, moduleLoadDuration, 'hub-module');
+        }
+        
         return { ...attempt, module: LoadedClass };
       } catch (err) {
         attempt.error = err.message;
         console.error(LOG_PREFIX, `Failed to load ${path}:`, err);
+        
+        // Record failed import as metric too
+        const moduleLoadDuration = performance.now() - moduleLoadStart;
+        if (window.rcTelemetry) {
+          const moduleName = path.split('/').pop().replace(/\.js$/, '');
+          window.rcTelemetry.recordMetric(`dynamic-import-${moduleName}`, moduleLoadDuration, 'hub-module-failed');
+        }
+        
         return attempt;
       }
     }

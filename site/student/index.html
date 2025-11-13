@@ -1198,6 +1198,8 @@
   let portalModulesLoaded = false;
   
   try {
+    // Measure portal-b-helpers import time
+    const helpersStart = performance.now();
     const {
       AssignmentStatus,
       computeAssignmentStatus,
@@ -1217,7 +1219,15 @@
       getQuarterSparklineData,
       filterSubmissionsByQuarter
     } = await import('../web/portal-b-helpers.js');
+    const helpersDuration = performance.now() - helpersStart;
     
+    // Record metric if telemetry is available
+    if (window.rcTelemetry) {
+      window.rcTelemetry.recordMetric('dynamic-import-portal-b-helpers', helpersDuration);
+    }
+    
+    // Measure portal-b-ui import time
+    const uiStart = performance.now();
     const {
       loadStudentAssignmentsPortalB,
       loadGradesCard: loadGradesCardUI,
@@ -1230,6 +1240,12 @@
       openAssignmentDetail,
       closeAssignmentDetail
     } = await import('../web/portal-b-ui.js');
+    const uiDuration = performance.now() - uiStart;
+    
+    // Record metric if telemetry is available
+    if (window.rcTelemetry) {
+      window.rcTelemetry.recordMetric('dynamic-import-portal-b-ui', uiDuration);
+    }
     
     // Mark modules as loaded
     portalModulesLoaded = true;
