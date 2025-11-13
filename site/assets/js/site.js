@@ -260,7 +260,9 @@
     const isRootHome = (p === '/' || p === '');
     const isSubSiteHome = (p === '/site/' || p === '/site');
     if (!isRootHome && !isSubSiteHome) return;
+    // Check for existing Admin link by class or by href="/admin/"
     if (document.querySelector('.admin-link')) return;
+    if (document.querySelector('a[href="/admin/"]')) return;
 
     const a = document.createElement('a');
     a.className = 'admin-link';
