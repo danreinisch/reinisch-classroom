@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Week 12 - Strong Textual Evidence | A Door Into Time</title>
+    <script src="/site/assets/js/presentation-nav.js" defer></script>
     <style>
         * {
             margin: 0;
@@ -319,13 +320,13 @@
     <div class="glass-overlay"></div>
 
     <!-- Top Language Arts Button -->
-    <a href="https://reinischclassroom.com/language-arts/" class="top-home-btn">Language Arts</a>
+    <a href="https://reinischclassroom.com/language-arts/" class="top-home-btn nav-home">Language Arts</a>
 
     <!-- Floating Slide Counter -->
     <div class="slide-counter" id="slideCounter">Slide 1 of 21</div>
 
     <!-- Presentation Container -->
-    <div class="presentation-container">
+    <div class="presentation-container" data-slide-index="12" data-slide-total="13">
         <!-- SLIDE 1: Title Slide -->
         <div class="slide active" data-slide="1">
             <div class="slide-content">
@@ -852,59 +853,10 @@
 
     <!-- Navigation Buttons -->
     <div class="navigation">
-        <button class="nav-btn" id="prevBtn" onclick="changeSlide(-1)">← Previous</button>
-        <button class="nav-btn" id="nextBtn" onclick="changeSlide(1)">Next →</button>
+        <button aria-label="Previous slide" class="nav-btn nav-prev" id="prevBtn" >← Previous</button>
+        <button aria-label="Next slide" class="nav-btn nav-next" id="nextBtn" >Next →</button>
     </div>
 
-    <script>
-        // Background Image Rotation
-        let currentImageIndex = 0;
-        const images = document.querySelectorAll('.bg-image');
-        const imageCount = images.length;
-
-        function rotateBackground() {
-            images[currentImageIndex].classList.remove('active');
-            currentImageIndex = (currentImageIndex + 1) % imageCount;
-            images[currentImageIndex].classList.add('active');
-        }
-
-        setInterval(rotateBackground, 8000);
-
-        // Slide Navigation
-        let currentSlide = 1;
-        const totalSlides = 21;
-        const slides = document.querySelectorAll('.slide');
-
-        function showSlide(n) {
-            if (n > totalSlides) { currentSlide = 1; }
-            if (n < 1) { currentSlide = totalSlides; }
-            else { currentSlide = n; }
-
-            slides.forEach(slide => slide.classList.remove('active'));
-            slides[currentSlide - 1].classList.add('active');
-
-            document.getElementById('slideCounter').textContent = `Slide ${currentSlide} of ${totalSlides}`;
-
-            document.getElementById('prevBtn').disabled = (currentSlide === 1);
-            document.getElementById('nextBtn').disabled = (currentSlide === totalSlides);
-
-            slides[currentSlide - 1].scrollTop = 0;
-        }
-
-        function changeSlide(n) {
-            showSlide(currentSlide + n);
-        }
-
-        // Keyboard navigation
-        document.addEventListener('keydown', function(event) {
-            if (event.key === 'ArrowLeft') {
-                changeSlide(-1);
-            } else if (event.key === 'ArrowRight') {
-                changeSlide(1);
-            }
-        });
-
-        showSlide(1);
-    </script>
+    
 </body>
 </html>

@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Week 5 - Structure & Sequence Focus</title>
+    <script src="/site/assets/js/presentation-nav.js" defer></script>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -270,16 +271,7 @@
             margin: 20px 0;
         }
     </style>
-<script>
-(function(){
-  // Determine root: if path contains "/site/", assets live under that; else assets are at root
-  var root = location.pathname.indexOf('/site/') >= 0 ? location.pathname.slice(0, location.pathname.indexOf('/site/') + 6) : '/';
-  function addCSS(href){ var l=document.createElement('link'); l.rel='stylesheet'; l.href=href; document.head.appendChild(l); }
-  function addJS(src){ var s=document.createElement('script'); s.defer=true; s.src=src; document.head.appendChild(s); }
-  addCSS(root + 'assets/css/site.css');
-  addJS(root + 'assets/js/site.js');
-})();
-</script>
+
 </head>
 <body>
     <!-- Background Images Container -->
@@ -687,145 +679,10 @@
     </div>
 
     <div class="navigation">
-        <button class="nav-btn" onclick="previousSlide()">← Previous</button>
-        <button class="nav-btn" onclick="nextSlide()">Next →</button>
+        <button class="nav-btn" >← Previous</button>
+        <button aria-label="Next slide" class="nav-btn nav-next" >Next →</button>
     </div>
 
-    <script>
-        let currentSlide = 0;
-        const slides = document.querySelectorAll('.slide');
-        const totalSlides = slides.length;
-        
-        let currentBg = 0;
-        const backgrounds = document.querySelectorAll('.background-image');
-        let availableBackgrounds = [];
-        let bgRotationInterval;
-
-        // Possible image paths and formats to try
-        const imagePaths = [
-            // Direct in same folder
-            'image1.jpg', 'image2.jpg', 'image3.jpg', 'image4.jpg', 'image5.jpg', 'image6.jpg', 'image7.jpg',
-            'image1.png', 'image2.png', 'image3.png', 'image4.png', 'image5.png', 'image6.png', 'image7.png',
-            // In Background Images folder
-            'Background Images/image1.jpg', 'Background Images/image2.jpg', 'Background Images/image3.jpg', 
-            'Background Images/image4.jpg', 'Background Images/image5.jpg', 'Background Images/image6.jpg', 'Background Images/image7.jpg',
-            'Background Images/image1.png', 'Background Images/image2.png', 'Background Images/image3.png',
-            'Background Images/image4.png', 'Background Images/image5.png', 'Background Images/image6.png', 'Background Images/image7.png',
-            // Alternative naming
-            'bg1.jpg', 'bg2.jpg', 'bg3.jpg', 'bg4.jpg', 'bg5.jpg', 'bg6.jpg', 'bg7.jpg',
-            'bg1.png', 'bg2.png', 'bg3.png', 'bg4.png', 'bg5.png', 'bg6.png', 'bg7.png'
-        ];
-
-        function checkImageExists(url) {
-            return new Promise((resolve) => {
-                const img = new Image();
-                img.onload = () => resolve(url);
-                img.onerror = () => resolve(null);
-                img.src = url;
-            });
-        }
-
-        async function loadBackgroundImages() {
-            const loadPromises = imagePaths.map(path => checkImageExists(path));
-            const results = await Promise.all(loadPromises);
-            
-            availableBackgrounds = results.filter(url => url !== null);
-            
-            // Apply found images to background elements
-            for (let i = 0; i < Math.min(availableBackgrounds.length, backgrounds.length); i++) {
-                backgrounds[i].style.backgroundImage = `url('${availableBackgrounds[i]}')`;
-            }
-            
-            // Update status message
-            updateBackgroundStatus();
-            
-            // Start rotation if we have images
-            if (availableBackgrounds.length > 1) {
-                startBackgroundRotation();
-            } else if (availableBackgrounds.length === 1) {
-                backgrounds[0].classList.add('active');
-            }
-        }
-
-        function updateBackgroundStatus() {
-            // Create or update status message
-            let statusEl = document.getElementById('bg-status');
-            if (!statusEl) {
-                statusEl = document.createElement('div');
-                statusEl.id = 'bg-status';
-                statusEl.style.cssText = `
-                    position: fixed;
-                    bottom: 80px;
-                    right: 20px;
-                    background: rgba(0, 0, 0, 0.7);
-                    color: white;
-                    padding: 8px 12px;
-                    border-radius: 15px;
-                    font-size: 12px;
-                    z-index: 1000;
-                    backdrop-filter: blur(10px);
-                `;
-                document.body.appendChild(statusEl);
-            }
-            
-            if (availableBackgrounds.length > 0) {
-                statusEl.textContent = `BGs: ${availableBackgrounds.length} loaded ✓`;
-                statusEl.style.background = 'rgba(0, 150, 0, 0.7)';
-                // Hide status after 3 seconds
-                setTimeout(() => statusEl.style.display = 'none', 3000);
-            } else {
-                statusEl.textContent = 'BGs: 0 — place images next to HTML';
-                statusEl.style.background = 'rgba(150, 0, 0, 0.7)';
-            }
-        }
-
-        function startBackgroundRotation() {
-            if (availableBackgrounds.length > 0) {
-                backgrounds[0].classList.add('active');
-                
-                if (availableBackgrounds.length > 1) {
-                    bgRotationInterval = setInterval(rotateBackground, 8000);
-                }
-            }
-        }
-
-        function rotateBackground() {
-            if (availableBackgrounds.length <= 1) return;
-            
-            backgrounds[currentBg].classList.remove('active');
-            currentBg = (currentBg + 1) % availableBackgrounds.length;
-            backgrounds[currentBg].classList.add('active');
-        }
-
-        function showSlide(n) {
-            slides[currentSlide].classList.remove('active');
-            currentSlide = (n + totalSlides) % totalSlides;
-            slides[currentSlide].classList.add('active');
-            document.getElementById('slideCounter').textContent = `${currentSlide + 1} / ${totalSlides}`;
-        }
-
-        function nextSlide() {
-            showSlide(currentSlide + 1);
-        }
-
-        function previousSlide() {
-            showSlide(currentSlide - 1);
-        }
-
-        // Keyboard navigation
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'ArrowRight' || e.key === ' ') {
-                nextSlide();
-            } else if (e.key === 'ArrowLeft') {
-                previousSlide();
-            }
-        });
-
-        // Initialize everything when page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            showSlide(0);
-            loadBackgroundImages();
-        });
-    </script>
+    
 </body>
 </html>
