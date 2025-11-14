@@ -1,5 +1,10 @@
-// Login endpoint: verifies credentials via Supabase and sets a signed session cookie.
+// Login endpoint: verifies credentials via Supabase and sets dual-token session cookies.
 // Accepts POST as application/x-www-form-urlencoded or JSON { username, password }.
+//
+// Session Hardening (v4):
+// - Issues two cookies: rc_admin_session_v4 (access, 30min) + rc_admin_refresh_v1 (refresh, 24h)
+// - Access token for API requests, refresh token for silent renewal
+// - Supports legacy cookie upgrade (v1/v2/v3 → v4+refresh on next login)
 //
 // Required env vars (Netlify → Environment variables; Functions + Runtime scopes):
 // - ADMIN_SESSION_SECRET (Secret ON; random 32+ chars)
@@ -7,13 +12,13 @@
 // - SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_SERVICE_KEY_RUNTIME)
 //
 // Optional:
-// - MAX_AGE_SECONDS (defaults to 28800 = 8 hours) — how long the session cookie lasts.
+// - ACCESS_TOKEN_TTL_SECONDS (default 1800 = 30 minutes)
+// - REFRESH_TOKEN_TTL_SECONDS (default 86400 = 24 hours)
 
 const crypto = require('crypto');
 const { rpc, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } = require('./_lib/supa');
+const { createTokenPair, createTokenCookies } = require('./_lib/token-utils');
 
-const COOKIE_NAME = 'rc_admin_session_v3'; // new version for Supabase-based auth
-const MAX_AGE_SECONDS = Number(process.env.MAX_AGE_SECONDS || 28800); // 8 hours default
 const THROTTLE_WINDOW_SECONDS = 60; // 1 minute window for throttling
 const INVALID_CREDS_DELAY_MS = 150 + Math.floor(Math.random() * 150); // 150-300ms delay
 
@@ -108,33 +113,25 @@ exports.handler = async (event) => {
       return redirect('/admin-login?e=1');
     }
 
-    // Create signed session token
-    // Note: Password verification already completed via Supabase bcrypt check above.
-    // This HMAC is for session token integrity, not password hashing.
-    const exp = Math.floor(Date.now() / 1000) + Math.max(1, MAX_AGE_SECONDS);
-    const payload = { 
-      u: user.username, 
-      role: user.role,
-      exp, 
-      n: crypto.randomBytes(8).toString('hex') 
-    };
-    const payloadBuf = Buffer.from(JSON.stringify(payload), 'utf8');
-    const signature = crypto.createHmac('sha256', secret).update(payloadBuf).digest();
-    const token = b64url(payloadBuf) + '.' + b64url(signature);
+    // Create dual-token session (access + refresh)
+    const tokens = createTokenPair(user.username, user.role, secret);
 
     console.log('[admin-session] Successful login for user:', user.username, 'role:', user.role);
+    console.log('[admin-session] Issued v4 access token (TTL:', tokens.accessTTL, 's) + v1 refresh token (TTL:', tokens.refreshTTL, 's)');
+
+    // Set both cookies
+    const cookies = createTokenCookies(
+      tokens.accessToken,
+      tokens.refreshToken,
+      tokens.accessTTL,
+      tokens.refreshTTL
+    );
 
     return {
       statusCode: 302,
       headers: {
         Location: '/admin/',
-        'Set-Cookie': serializeCookie(COOKIE_NAME, token, {
-          httpOnly: true,
-          secure: true,
-          sameSite: 'Lax',
-          path: '/',
-          maxAge: Math.max(1, MAX_AGE_SECONDS)
-        }),
+        'Set-Cookie': cookies,
         'Cache-Control': 'no-store'
       }
     };
@@ -148,26 +145,14 @@ function redirect(to) {
   return { statusCode: 302, headers: { Location: to, 'Cache-Control': 'no-store' } };
 }
 
-function safeEqual(a, b) {
-  const ab = Buffer.from(a, 'utf8');
-  const bb = Buffer.from(b, 'utf8');
-  if (ab.length !== bb.length) return false;
-  return crypto.timingSafeEqual(ab, bb);
-}
-
-function b64url(buf) {
-  return Buffer.from(buf).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
-}
-function serializeCookie(name, value, opts = {}) {
-  const parts = [`${name}=${value}`];
-  if (opts.maxAge)   parts.push(`Max-Age=${opts.maxAge}`);
-  if (opts.domain)   parts.push(`Domain=${opts.domain}`);
-  if (opts.path)     parts.push(`Path=${opts.path}`);
-  if (opts.expires)  parts.push(`Expires=${opts.expires.toUTCString()}`);
-  if (opts.httpOnly) parts.push('HttpOnly');
-  if (opts.secure)   parts.push('Secure');
-  if (opts.sameSite) parts.push(`SameSite=${opts.sameSite}`);
-  return parts.join('; ');
+function getCookie(header, name) {
+  if (!header) return '';
+  const parts = header.split(/;\s*/);
+  for (const part of parts) {
+    const [k, ...v] = part.split('=');
+    if (k === name) return v.join('=');
+  }
+  return '';
 }
 
 // Simple per-IP throttling using cookies
@@ -199,16 +184,6 @@ function createThrottleCookie(clientIp) {
   const timestamp = Math.floor(Date.now() / 1000);
   const value = `${timestamp}_${hashIp(clientIp)}`;
   return `admin_throttle=${value}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${THROTTLE_WINDOW_SECONDS}`;
-}
-
-function getCookie(header, name) {
-  if (!header) return '';
-  const parts = header.split(/;\s*/);
-  for (const part of parts) {
-    const [k, ...v] = part.split('=');
-    if (k === name) return v.join('=');
-  }
-  return '';
 }
 
 // Simple hash for IP (not cryptographic, just for cookie storage)
