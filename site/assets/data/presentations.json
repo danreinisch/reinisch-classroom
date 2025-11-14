@@ -1,0 +1,71 @@
+{
+  "homeLink": "/language-arts/",
+  "presentations": [
+    {
+      "index": 3,
+      "title": "Week 03 - Chapters 8-10 - Setting",
+      "path": "/site/presentations/a-door-into-time/presentation-03/",
+      "section": "a-door-into-time"
+    },
+    {
+      "index": 4,
+      "title": "Week 04 - Chapters 11-13 - Point of View & Narration",
+      "path": "/site/presentations/a-door-into-time/presentation-04/",
+      "section": "a-door-into-time"
+    },
+    {
+      "index": 5,
+      "title": "Week 05 - Chapters 14-16 - Structure",
+      "path": "/site/presentations/a-door-into-time/presentation-05/",
+      "section": "a-door-into-time"
+    },
+    {
+      "index": 6,
+      "title": "Week 06 - Chapters 17-19 - Craft & Setting",
+      "path": "/site/presentations/a-door-into-time/presentation-06/",
+      "section": "a-door-into-time"
+    },
+    {
+      "index": 7,
+      "title": "Week 07 - Chapters 20-22 - Writing Methods & Setting Focus",
+      "path": "/site/presentations/a-door-into-time/presentation-07/",
+      "section": "a-door-into-time"
+    },
+    {
+      "index": 8,
+      "title": "Week 08 - Ch 23-25 - Problem and Solution",
+      "path": "/site/presentations/a-door-into-time/presentation-08/",
+      "section": "a-door-into-time"
+    },
+    {
+      "index": 9,
+      "title": "Week 09 - Enhanced Presentation",
+      "path": "/site/presentations/a-door-into-time/presentation-09/",
+      "section": "a-door-into-time"
+    },
+    {
+      "index": 10,
+      "title": "Week 10 - Structure Focus",
+      "path": "/site/presentations/a-door-into-time/presentation-10/",
+      "section": "a-door-into-time"
+    },
+    {
+      "index": 11,
+      "title": "Week 11 - Chapters 32-37 - Multiple Perspectives",
+      "path": "/site/presentations/a-door-into-time/presentation-11/",
+      "section": "a-door-into-time"
+    },
+    {
+      "index": 12,
+      "title": "Week 12 - Chapters 38-41",
+      "path": "/site/presentations/a-door-into-time/presentation-12/",
+      "section": "a-door-into-time"
+    },
+    {
+      "index": 13,
+      "title": "Week 13 - Chapters 42-45 - Character Motivation",
+      "path": "/site/presentations/a-door-into-time/presentation-13/",
+      "section": "a-door-into-time"
+    }
+  ]
+}
