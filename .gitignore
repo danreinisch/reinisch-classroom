@@ -48,3 +48,8 @@ playwright/.cache/
 
 # ESLint
 .eslintcache
+
+# Test files
+test-presentation-nav.html
+test-presentation-nav.cjs
+test-week11-presentation.cjs
