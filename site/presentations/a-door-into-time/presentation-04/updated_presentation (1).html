@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Week 04 - POV/Narration Focus | A Door Into Time (Auto-Rotating Backgrounds)</title>
+    <script src="/site/assets/js/presentation-nav.js" defer></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -125,19 +126,10 @@
             box-shadow: 0 2px 8px rgba(0,0,0,.3);
         }
     </style>
-<script>
-(function(){
-  // Determine root: if path contains "/site/", assets live under that; else assets are at root
-  var root = location.pathname.indexOf('/site/') >= 0 ? location.pathname.slice(0, location.pathname.indexOf('/site/') + 6) : '/';
-  function addCSS(href){ var l=document.createElement('link'); l.rel='stylesheet'; l.href=href; document.head.appendChild(l); }
-  function addJS(src){ var s=document.createElement('script'); s.defer=true; s.src=src; document.head.appendChild(s); }
-  addCSS(root + 'assets/css/site.css');
-  addJS(root + 'assets/js/site.js');
-})();
-</script>
+
 </head>
 <body>
-    <div class="presentation-container">
+    <div class="presentation-container" data-slide-index="04" data-slide-total="13">
         <div class="bg-layer" id="bgA"></div>
         <div class="bg-layer" id="bgB"></div>
         <div id="bgStatus">Backgrounds: Loading...</div>
@@ -468,150 +460,11 @@
         </div>
 
         <div class="navigation">
-            <button class="nav-btn" id="prevBtn" onclick="changeSlide(-1)">Previous</button>
-            <button class="nav-btn" id="nextBtn" onclick="changeSlide(1)">Next</button>
+            <button aria-label="Previous slide" class="nav-btn nav-prev" id="prevBtn" >Previous</button>
+            <button aria-label="Next slide" class="nav-btn nav-next" id="nextBtn" >Next</button>
         </div>
     </div>
 
-    <script>
-        let currentSlide = 0;
-        const slides = document.querySelectorAll('.slide');
-        const totalSlides = slides.length;
-        document.getElementById('total').textContent = totalSlides;
-
-        function showSlide(n) {
-            slides[currentSlide].classList.remove('active');
-            currentSlide = (n + totalSlides) % totalSlides;
-            slides[currentSlide].classList.add('active');
-            document.getElementById('current').textContent = currentSlide + 1;
-            document.getElementById('prevBtn').disabled = currentSlide === 0;
-            document.getElementById('nextBtn').disabled = currentSlide === totalSlides - 1;
-        }
-        function changeSlide(direction) {
-            if (direction === 1 && currentSlide < totalSlides - 1) {
-                showSlide(currentSlide + 1);
-            } else if (direction === -1 && currentSlide > 0) {
-                showSlide(currentSlide - 1);
-            }
-        }
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'ArrowRight' || e.key === ' ') { changeSlide(1); }
-            else if (e.key === 'ArrowLeft') { changeSlide(-1); }
-        });
-        showSlide(0);
-
-        // === Auto-rotating background images system ===
-        const candidateImages = [
-            // Use these simple names - save your 18 images with these filenames
-            'image1.png', 'image2.png', 'image3.png', 'image4.png', 'image5.png',
-            'image6.png', 'image7.png', 'image8.png', 'image9.png', 'image10.png',
-            'image11.png', 'image12.png', 'image13.png', 'image14.png', 'image15.png',
-            'image16.png', 'image17.png', 'image18.png'
-        ];
-
-        // Preload and keep only those that actually exist
-        function preload(src){
-            return new Promise((resolve)=>{
-                const im = new Image();
-                im.onload = () => resolve({ src, ok:true });
-                im.onerror = () => resolve({ src, ok:false });
-                im.src = src;
-            });
-        }
-
-        const bgA = document.getElementById('bgA');
-        const bgB = document.getElementById('bgB');
-        const container = document.querySelector('.presentation-container');
-        const bgStatus = document.getElementById('bgStatus');
-        let validBGs = [];
-        let bgIndex = 0;
-        let bgTimer = null;
-        const BG_INTERVAL_DEFAULT = 8000; // 8 seconds per image
-        let intervalMs = BG_INTERVAL_DEFAULT;
-        
-        function setBg(el, src) { 
-            el.style.backgroundImage = `url('${src}')`; 
-        }
-        
-        function startBgTimer(){ 
-            if(bgTimer) clearInterval(bgTimer); 
-            bgTimer = setInterval(rotateBg, intervalMs); 
-        }
-        
-        function stopBgTimer(){ 
-            if(bgTimer) clearInterval(bgTimer); 
-            bgTimer = null; 
-        }
-
-        // Initialize background system
-        Promise.all(candidateImages.map(preload)).then(results => {
-            validBGs = Array.from(new Set(results.filter(r=>r.ok).map(r=>r.src)));
-            
-            if(bgStatus) {
-                bgStatus.textContent = `Backgrounds: ${validBGs.length} loaded`;
-            }
-            
-            if(validBGs.length === 0){
-                console.warn('No background images found. Please save your images as image1.png through image18.png in the same folder as this HTML file.');
-                if(bgStatus) bgStatus.textContent = 'Backgrounds: 0 - Save images as image1.png-image18.png';
-                return;
-            }
-            
-            // Initialize first two backgrounds
-            bgIndex = 0;
-            setBg(bgA, validBGs[bgIndex]);
-            if(validBGs.length > 1) {
-                setBg(bgB, validBGs[(bgIndex + 1) % validBGs.length]);
-            }
-            bgA.style.opacity = 1; 
-            bgB.style.opacity = 0;
-            
-            // Start rotation
-            if(validBGs.length > 1) {
-                startBgTimer();
-            }
-        });
-
-        function rotateBg(){
-            if(validBGs.length <= 1) return;
-            
-            const next = (bgIndex + 1) % validBGs.length;
-            const showA = getComputedStyle(bgA).opacity !== '0';
-            const top = showA ? bgB : bgA;     // the one to fade in
-            const bottom = showA ? bgA : bgB;  // the one to fade out
-            
-            setBg(top, validBGs[next]);
-            top.style.opacity = 1; 
-            bottom.style.opacity = 0;
-            bgIndex = next;
-        }
-
-        // Pause rotation when hovering (useful for reading slides)
-        container.addEventListener('mouseenter', stopBgTimer);
-        container.addEventListener('mouseleave', () => {
-            if(validBGs.length > 1 && !paused) startBgTimer();
-        });
-
-        // Keyboard controls: P = pause/resume, [ and ] to adjust speed
-        let paused = false;
-        document.addEventListener('keydown', (e)=>{
-            if(e.key.toLowerCase() === 'p'){
-                paused = !paused; 
-                if(paused) {
-                    stopBgTimer();
-                    if(bgStatus) bgStatus.textContent = `Backgrounds: ${validBGs.length} (PAUSED)`;
-                } else {
-                    if(validBGs.length > 1) startBgTimer();
-                    if(bgStatus) bgStatus.textContent = `Backgrounds: ${validBGs.length} loaded`;
-                }
-            } else if(e.key === '['){ // slower
-                intervalMs = Math.min(20000, intervalMs + 2000); 
-                if(!paused && validBGs.length > 1) startBgTimer();
-            } else if(e.key === ']'){ // faster
-                intervalMs = Math.max(2000, intervalMs - 2000); 
-                if(!paused && validBGs.length > 1) startBgTimer();
-            }
-        });
-    </script>
+    
 </body>
 </html>
