@@ -23,7 +23,7 @@
   let units = [];
   let siteState = null;
   let queue = [];
-  let sessionTouchTimer = null;
+  let sessionTouchTimer = null; // eslint-disable-line no-unused-vars -- Used by setInterval, cleared on unload
   let sessionInfo = { expiresIn: 0, expiresAt: 0 };
 
   function log(){ logEl.textContent += Array.from(arguments).join(' ') + '\n'; logEl.scrollTop = logEl.scrollHeight; }
