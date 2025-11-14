@@ -20,7 +20,8 @@ const DRY_RUN = process.argv.includes('--dry-run');
 
 // Configuration
 const PRESENTATIONS_DIR = path.join(__dirname, '..', 'site', 'presentations');
-const SCRIPT_TAG = '<script src="/site/assets/js/presentation-nav.js" defer></script>';
+const OLD_SCRIPT_TAG = '<script src="/site/assets/js/presentation-nav.js" defer></script>';
+const NEW_SCRIPT_TAG = '<script src="/assets/js/presentation-nav.js" defer></script>';
 
 /**
  * Find all presentation HTML files
@@ -55,16 +56,29 @@ function updatePresentationFile(filePath) {
   let content = fs.readFileSync(filePath, 'utf8');
   let modified = false;
   
-  // 1. Add external script reference if not present
+  // 1. Add external script reference if not present OR update old path
   if (!content.includes('presentation-nav.js')) {
     const titleMatch = content.match(/(<title>.*?<\/title>)/);
     if (titleMatch) {
-      content = content.replace(titleMatch[0], titleMatch[0] + '\n    ' + SCRIPT_TAG);
+      content = content.replace(titleMatch[0], titleMatch[0] + '\n    ' + NEW_SCRIPT_TAG);
       console.log('  ✓ Added external script reference');
       modified = true;
     } else {
       console.log('  ⚠ Could not find <title> tag to insert script');
     }
+  } else if (content.includes(OLD_SCRIPT_TAG)) {
+    // Update old path to new path
+    content = content.replace(OLD_SCRIPT_TAG, NEW_SCRIPT_TAG);
+    console.log('  ✓ Updated script path from /site/assets to /assets');
+    modified = true;
+  } else if (content.includes('/site/assets/js/presentation-nav.js')) {
+    // Handle variations in whitespace/attributes
+    content = content.replace(
+      /<script\s+src=["']\/site\/assets\/js\/presentation-nav\.js["'][^>]*>/gi,
+      NEW_SCRIPT_TAG
+    );
+    console.log('  ✓ Updated script path from /site/assets to /assets');
+    modified = true;
   }
   
   // 2. Remove inline script blocks (but preserve external scripts)
@@ -119,7 +133,29 @@ function updatePresentationFile(filePath) {
     }
   }
   
-  // 5. Add data attributes to presentation container if missing
+  // 5. Standardize background containers
+  // Replace .bg-slideshow, .background-slideshow with id="bgSlideshow"
+  const bgContainerPatterns = [
+    { pattern: /<div class="bg-slideshow"([^>]*)>/gi, name: '.bg-slideshow' },
+    { pattern: /<div class="background-slideshow"([^>]*)>/gi, name: '.background-slideshow' }
+  ];
+  
+  for (const { pattern, name } of bgContainerPatterns) {
+    const matches = content.match(pattern);
+    if (matches) {
+      for (const match of matches) {
+        if (!match.includes('id="bgSlideshow"')) {
+          // Add id="bgSlideshow" if not present
+          const newTag = match.replace(/<div class="([^"]*)"/, '<div class="$1" id="bgSlideshow"');
+          content = content.replace(match, newTag);
+          console.log(`  ✓ Added id="bgSlideshow" to ${name} container`);
+          modified = true;
+        }
+      }
+    }
+  }
+  
+  // 6. Add data attributes to presentation container if missing
   if (!content.includes('data-slide-index')) {
     // Try to extract presentation number from path
     const presMatch = filePath.match(/presentation-(\d+)/);
