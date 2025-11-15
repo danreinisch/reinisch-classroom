@@ -15,6 +15,8 @@ const EXIT_CODE_ERROR = 1;
 const REQUIRED_ASSETS = [
   'assets/js/presentation-nav.js',
   'site/assets/js/presentation-nav.js',
+  'assets/js/adit-week11-bg-preload.js',
+  'site/assets/js/adit-week11-bg-preload.js',
 ];
 
 let hasWarnings = false;
@@ -42,8 +44,8 @@ if (hasWarnings) {
   console.warn('   Expected paths:');
   REQUIRED_ASSETS.forEach((p) => console.warn(`     - ${p}`));
   console.warn('');
-  console.warn('   The Netlify redirect should handle /site/assets/js/presentation-nav.js');
-  console.warn('   by serving /assets/js/presentation-nav.js if it exists.');
+  console.warn('   The Netlify redirects should handle /site/assets/js paths');
+  console.warn('   by serving /assets/js files if they exist.');
   console.warn('');
 } else {
   console.log('✅ All required asset paths are present!');
