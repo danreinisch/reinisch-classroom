@@ -57,3 +57,10 @@
   to = "/assets/js/presentation-nav.js"
   status = 200
 
+# Redirect for Week 11 background preloader script
+# Ensures /site/assets/js/adit-week11-bg-preload.js resolves to canonical location
+[[redirects]]
+  from = "/site/assets/js/adit-week11-bg-preload.js"
+  to = "/assets/js/adit-week11-bg-preload.js"
+  status = 200
+
