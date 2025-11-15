@@ -1,6 +1,12 @@
 (function(){
   // Batch target ~3.5 MB (base64 expands ~33% so we use estimated encoded sizes)
   const BATCH_TARGET = 3.5 * 1024 * 1024;
+  
+  // Session management constants
+  const SESSION_TOUCH_INTERVAL_MS = 5 * 60 * 1000; // Touch session every 5 minutes
+  const SESSION_SAFETY_BUFFER_SECONDS = 180; // 3 minute safety buffer
+  const QUEUE_STORAGE_KEY = 'adminUploadQueueDraft';
+  const FORM_STATE_KEY = 'adminFormStateDraft';
 
   const catEl   = document.getElementById('cat');
   const slotSel = document.getElementById('slotSel');
@@ -17,11 +23,181 @@
   let units = [];
   let siteState = null;
   let queue = [];
+  let sessionTouchTimer = null; // eslint-disable-line no-unused-vars -- Used by setInterval, cleared on unload
+  let sessionInfo = { expiresIn: 0, expiresAt: 0 };
 
   function log(){ logEl.textContent += Array.from(arguments).join(' ') + '\n'; logEl.scrollTop = logEl.scrollHeight; }
   function fmtBytes(n){ if(!n && n!==0) return ''; const u=['B','KB','MB','GB']; let i=0; while(n>1024&&i<u.length-1){n/=1024;i++} return n.toFixed(1)+' '+u[i]; }
   function ensureArraySize(arr,n){ while(arr.length<n) arr.push(''); }
   function num(n){ return String(n).padStart(2,'0'); }
+
+  // Session management functions
+  async function touchSession() {
+    try {
+      const r = await fetch('/.netlify/functions/admin-session-touch', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      if (r.ok) {
+        const data = await r.json();
+        sessionInfo = {
+          expiresIn: data.expiresIn || 0,
+          expiresAt: data.expiresAt || 0,
+          refreshed: data.refreshed || false
+        };
+        
+        if (data.refreshed) {
+          log('✓ Session auto-refreshed, new TTL:', Math.floor(data.expiresIn / 60), 'min');
+        }
+        
+        updateSessionDisplay();
+        return true;
+      } else {
+        console.error('Session touch failed:', r.status);
+        return false;
+      }
+    } catch (e) {
+      console.error('Session touch error:', e);
+      return false;
+    }
+  }
+
+  async function refreshSession() {
+    try {
+      const r = await fetch('/.netlify/functions/admin-session-refresh', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      if (r.ok) {
+        const data = await r.json();
+        sessionInfo = {
+          expiresIn: data.expiresIn || 0,
+          expiresAt: data.expiresAt || 0,
+          refreshed: true
+        };
+        log('✓ Session refreshed, new TTL:', Math.floor(data.expiresIn / 60), 'min');
+        updateSessionDisplay();
+        return true;
+      } else {
+        console.error('Session refresh failed:', r.status);
+        return false;
+      }
+    } catch (e) {
+      console.error('Session refresh error:', e);
+      return false;
+    }
+  }
+
+  function updateSessionDisplay() {
+    // Create or update session status element
+    let statusEl = document.getElementById('sessionStatus');
+    if (!statusEl) {
+      statusEl = document.createElement('div');
+      statusEl.id = 'sessionStatus';
+      statusEl.style.cssText = 'position:fixed;top:10px;right:10px;background:rgba(0,0,0,0.7);color:#fff;padding:8px 12px;border-radius:6px;font-size:12px;z-index:1000;';
+      document.body.appendChild(statusEl);
+    }
+    
+    const minutes = Math.floor(sessionInfo.expiresIn / 60);
+    const status = sessionInfo.refreshed ? '🔄 Auto-refreshed' : '✓ Active';
+    statusEl.textContent = `Session: ${status} · ${minutes} min remaining`;
+    
+    // Warning if low
+    if (minutes < 5) {
+      statusEl.style.background = 'rgba(200,100,0,0.8)';
+    } else {
+      statusEl.style.background = 'rgba(0,0,0,0.7)';
+    }
+  }
+
+  function persistQueue() {
+    try {
+      const queueData = queue.map(q => ({
+        name: q.file.name,
+        size: q.file.size,
+        type: q.file.type,
+        path: q.path
+      }));
+      localStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(queueData));
+    } catch (e) {
+      console.error('Failed to persist queue:', e);
+    }
+  }
+
+  function persistFormState() {
+    try {
+      const formState = {
+        category: catEl.value,
+        slot: slotSel.value,
+        title: titleEl.value
+      };
+      localStorage.setItem(FORM_STATE_KEY, JSON.stringify(formState));
+    } catch (e) {
+      console.error('Failed to persist form state:', e);
+    }
+  }
+
+  function clearPersistedData() {
+    try {
+      localStorage.removeItem(QUEUE_STORAGE_KEY);
+      localStorage.removeItem(FORM_STATE_KEY);
+    } catch (e) {
+      console.error('Failed to clear persisted data:', e);
+    }
+  }
+
+  function restoreFormState() {
+    try {
+      const stored = localStorage.getItem(FORM_STATE_KEY);
+      if (!stored) return false;
+      
+      const formState = JSON.parse(stored);
+      if (formState.category) catEl.value = formState.category;
+      renderSlots(); // Update slots based on category
+      if (formState.slot) slotSel.value = formState.slot;
+      if (formState.title) titleEl.value = formState.title;
+      updateSlotWarningAndTitle();
+      
+      log('ℹ Restored previous form state from draft');
+      return true;
+    } catch (e) {
+      console.error('Failed to restore form state:', e);
+      return false;
+    }
+  }
+
+  function promptQueueRestore() {
+    try {
+      const stored = localStorage.getItem(QUEUE_STORAGE_KEY);
+      if (!stored) return;
+      
+      const queueData = JSON.parse(stored);
+      if (!queueData || queueData.length === 0) return;
+      
+      const totalSize = queueData.reduce((sum, item) => sum + (item.size || 0), 0);
+      const msg = `Found ${queueData.length} file(s) (${fmtBytes(totalSize)}) from previous session.\n\nRestore this queue?`;
+      
+      if (confirm(msg)) {
+        log('ℹ Previous upload queue found. File selection cannot be restored (browser limitation).');
+        log('ℹ Please re-select the same files to continue your upload.');
+        log('');
+        log('Previously queued files:');
+        queueData.forEach((item, idx) => {
+          log(`  ${idx + 1}. ${item.path} (${fmtBytes(item.size)})`);
+        });
+        log('');
+        restoreFormState();
+      } else {
+        clearPersistedData();
+      }
+    } catch (e) {
+      console.error('Failed to restore queue:', e);
+    }
+  }
 
   async function loadUnits(){
     try{
@@ -100,8 +276,17 @@
     }
   }
 
-  catEl.addEventListener('change', renderSlots);
-  slotSel.addEventListener('change', updateSlotWarningAndTitle);
+  catEl.addEventListener('change', () => {
+    renderSlots();
+    persistFormState();
+  });
+  slotSel.addEventListener('change', () => {
+    updateSlotWarningAndTitle();
+    persistFormState();
+  });
+  titleEl.addEventListener('input', () => {
+    persistFormState();
+  });
 
   function addFiles(fileList){
     for (const f of fileList) {
@@ -115,6 +300,8 @@
       queue.push({ file:f, path });
     }
     renderList();
+    persistQueue();
+    persistFormState();
   }
   function renderList(){
     if (!queue.length) { listEl.textContent = '(no files selected)'; return; }
@@ -144,6 +331,77 @@
   }
   function estimateB64Size(bytes){ return Math.ceil(bytes * 4 / 3); }
 
+  async function uploadBatchWithRetry(payload, batchNum, totalBatches, retryCount = 0) {
+    const maxRetries = 1; // One retry on session expiry
+    
+    try {
+      const res = await fetch('/.netlify/functions/incremental-deploy', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify(payload)
+      });
+
+      let data = null;
+      let text = '';
+      
+      try {
+        const contentType = res.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          data = await res.json();
+          text = JSON.stringify(data);
+        } else {
+          text = await res.text();
+        }
+      } catch {
+        text = await res.text().catch(() => '');
+      }
+
+      log(`Batch ${batchNum}/${totalBatches} -> ${res.status} ${text.slice(0, 200)}`);
+
+      if (res.status === 401) {
+        // Check if it's a structured error with SESSION_EXPIRED code
+        if (data && data.code === 'SESSION_EXPIRED' && data.retryable && retryCount < maxRetries) {
+          log('Session expired, attempting to refresh and retry...');
+          
+          const refreshed = await refreshSession();
+          if (refreshed) {
+            log('Session refreshed successfully, retrying batch...');
+            return await uploadBatchWithRetry(payload, batchNum, totalBatches, retryCount + 1);
+          } else {
+            log('Session refresh failed');
+            alert('Session expired and refresh failed. Please sign in again.');
+            persistQueue();
+            persistFormState();
+            location.replace('/admin-login');
+            return { success: false };
+          }
+        } else {
+          // Non-retryable 401 or retry limit reached
+          alert('Session expired. Please sign in again.');
+          persistQueue();
+          persistFormState();
+          location.replace('/admin-login');
+          return { success: false };
+        }
+      }
+
+      if (!res.ok) {
+        alert(`Upload failed: ${res.status}\n${text.slice(0, 400)}`);
+        return { success: false };
+      }
+
+      return { success: true, data };
+    } catch (e) {
+      log('Upload error:', e?.message || String(e));
+      alert('Upload error: ' + (e?.message || String(e)));
+      return { success: false };
+    }
+  }
+
   uploadBtn.addEventListener('click', async () => {
     try{
       const category = catEl.value;
@@ -156,10 +414,36 @@
       if (!title) { alert('Please enter a title'); return; }
       if (!queue.length) { alert('Please add at least one file'); return; }
 
+      // Pre-flight session check
+      log('Checking session before upload...');
+      const sessionOk = await touchSession();
+      if (!sessionOk) {
+        alert('Session check failed. Please refresh the page and try again.');
+        return;
+      }
+
+      // Calculate estimated encoding time
+      let totalBytes = 0;
+      for (const q of queue) totalBytes += q.file.size;
+      const estimatedEncodingSeconds = Math.ceil(totalBytes / (1024 * 1024 * 2)); // ~2MB/sec estimate
+      
+      log(`Estimated encoding time: ${estimatedEncodingSeconds}s`);
+      log(`Session TTL: ${sessionInfo.expiresIn}s`);
+
+      // Proactive refresh if TTL is too low
+      if (sessionInfo.expiresIn < (estimatedEncodingSeconds + SESSION_SAFETY_BUFFER_SECONDS)) {
+        log('Session TTL too low for estimated work, refreshing...');
+        const refreshed = await refreshSession();
+        if (!refreshed) {
+          alert('Failed to refresh session. Please log in again.');
+          location.replace('/admin-login');
+          return;
+        }
+      }
+
       log('Preparing files…');
       const encoded = [];
-      let totalBytes = 0, doneBytes = 0;
-      for (const q of queue) totalBytes += q.file.size;
+      let doneBytes = 0;
       for (const q of queue) {
         const b64 = await toBase64(q.file);
         const encSize = estimateB64Size(q.file.size);
@@ -179,19 +463,25 @@
       if (cur.length) batches.push(cur);
 
       log(`Uploading in ${batches.length} batch(es)…`);
+      
       for (let i=0;i<batches.length;i++){
         const files = batches[i];
         const isFinal = (i === batches.length - 1);
-        const res = await fetch('/.netlify/functions/incremental-deploy', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'same-origin',
-          body: JSON.stringify({ category, slot, title, files, final: isFinal })
-        });
-        const text = await res.text().catch(()=> '');
-        log(`Batch ${i+1}/${batches.length} -> ${res.status} ${text}`);
-        if (res.status === 401) { alert('Session expired. Please sign in again.'); location.replace('/admin-login'); return; }
-        if (!res.ok) { alert(`Upload failed: ${res.status}\n${(text||'').slice(0,400)}`); return; }
+        
+        const uploadResult = await uploadBatchWithRetry({
+          category, slot, title, files, final: isFinal
+        }, i + 1, batches.length);
+        
+        if (!uploadResult.success) {
+          // Upload failed after retries
+          return;
+        }
+        
+        // Update session info from response
+        if (uploadResult.data && uploadResult.data.sessionRemainingSeconds) {
+          sessionInfo.expiresIn = uploadResult.data.sessionRemainingSeconds;
+          updateSessionDisplay();
+        }
       }
 
       // Verify upload: fetch updated state and confirm the slot link was written
@@ -209,6 +499,9 @@
             log(`  Title: "${slotTitle}"`);
             log(`  Link: ${slotLink}`);
             siteState = verifyState; // Update local cache
+            
+            // Clear persisted data on successful completion
+            clearPersistedData();
           } else {
             log(`⚠ Verification WARNING: Slot ${num(slot)} link or title is missing in site-state.json`);
             log(`  Title: "${slotTitle || '(empty)'}"`);
@@ -255,13 +548,35 @@
       log('Deleting…');
       const res = await fetch('/.netlify/functions/incremental-deploy', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
         credentials: 'same-origin',
         body: JSON.stringify({ action:'delete', category, slot })
       });
-      const text = await res.text().catch(()=> '');
+      
+      let text = '';
+      try {
+        const contentType = res.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const data = await res.json();
+          text = JSON.stringify(data);
+        } else {
+          text = await res.text();
+        }
+      } catch {
+        text = await res.text().catch(() => '');
+      }
+      
       log(`Delete response ${res.status} -> ${text}`);
-      if (res.status === 401) { alert('Session expired. Please sign in again.'); location.replace('/admin-login'); return; }
+      
+      if (res.status === 401) { 
+        alert('Session expired. Please sign in again.'); 
+        persistFormState();
+        location.replace('/admin-login'); 
+        return; 
+      }
       if (!res.ok) { alert(`Delete failed: ${res.status}\n${(text||'').slice(0,400)}`); return; }
 
       if (siteState?.categories?.[category]) {
@@ -371,6 +686,18 @@
     renderCategories();
     renderSlots();
     renderList();
+
+    // Initialize session management
+    log('Initializing session management...');
+    await touchSession();
+    
+    // Set up periodic session touch
+    sessionTouchTimer = setInterval(async () => {
+      await touchSession();
+    }, SESSION_TOUCH_INTERVAL_MS);
+
+    // Check for and offer to restore previous queue
+    promptQueueRestore();
 
     // Quick function diagnostics
     try{

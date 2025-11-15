@@ -6,11 +6,12 @@
 // To opt-in to auto-generation (minimal fallback), set REGENERATE_CATEGORY_INDEX=1.
 
 const crypto = require('crypto');
+const { verifySession, createErrorResponse } = require('./_lib/token-utils');
 
 const GH_API = 'https://api.github.com';
-const SESSION_COOKIE_NAMES = ['rc_admin_session_v2', 'rc_admin_session'];
 const DELETE = Symbol('DELETE');
 const REGENERATE_CATEGORY_INDEX = String(process.env.REGENERATE_CATEGORY_INDEX || '').trim() === '1';
+const ENABLE_SESSION_LOG = String(process.env.ADMIN_SESSION_LOG || '').trim() === '1';
 
 exports.handler = async (event) => {
   try {
@@ -32,15 +33,16 @@ exports.handler = async (event) => {
 
     if (event.httpMethod !== 'POST') return json(405, { message: 'Method not allowed' });
 
-    await requireAdmin(event);
+    const sessionCheck = await requireAdmin(event);
+    if (!sessionCheck.ok) return sessionCheck.response;
 
     let body = {};
     try { body = JSON.parse(event.body || '{}'); }
     catch { return json(400, { message: 'Invalid JSON body' }); }
 
     const { action } = body;
-    if (action === 'delete') return await handleDelete(body);
-    return await handleUpload(body);
+    if (action === 'delete') return await handleDelete(body, sessionCheck.remainingTTL);
+    return await handleUpload(body, sessionCheck.remainingTTL);
   } catch (e) {
     console.error('Top-level error:', e && e.stack ? e.stack : e);
     const msg = e && e.message ? String(e.message) : '';
@@ -51,7 +53,7 @@ exports.handler = async (event) => {
 };
 
 // ---------- Upload ----------
-async function handleUpload(body){
+async function handleUpload(body, remainingTTL){
   const { category, slot, title, files, final } = body;
 
   const units = await loadUnits();
@@ -118,11 +120,17 @@ async function handleUpload(body){
     : `Upload ${category} #${slot} (batch)`;
 
   const commitSha = await commitTreeWithRetry(owner, repo, branch, blobs, message);
-  return json(200, { ok: true, commit: commitSha, final: !!final, files: files.length });
+  return json(200, { 
+    ok: true, 
+    commit: commitSha, 
+    final: !!final, 
+    files: files.length,
+    sessionRemainingSeconds: remainingTTL 
+  });
 }
 
 // ---------- Delete ----------
-async function handleDelete(body){
+async function handleDelete(body, remainingTTL){
   const { category, slot } = body || {};
   const units = await loadUnits();
   const unit = units.byId[category];
@@ -163,50 +171,62 @@ async function handleDelete(body){
   }
 
   const commitSha = await commitTreeWithRetry(owner, repo, branch, blobs, `Delete ${category} #${slot}`);
-  return json(200, { ok: true, deleted: true, commit: commitSha });
+  return json(200, { 
+    ok: true, 
+    deleted: true, 
+    commit: commitSha,
+    sessionRemainingSeconds: remainingTTL 
+  });
 }
 
 // ---------- Auth helper ----------
 async function requireAdmin(event){
   const secret = (process.env.ADMIN_SESSION_SECRET || '').trim();
-  if (secret && verifySessionCookie(event.headers || {}, secret)) return;
-
-  const requiredKey = process.env.ADMIN_KEY;
-  if (requiredKey) {
-    const hdrs = event.headers || {};
-    const sentKey = hdrs['x-admin-key'] || hdrs['X-Admin-Key'] || hdrs['x-Admin-Key'];
-    if (sentKey && sentKey === requiredKey) return;
+  
+  if (!secret) {
+    return {
+      ok: false,
+      response: createErrorResponse('SERVER_ERROR', 'Server configuration error', false, 503)
+    };
   }
 
-  const err = new Error('Unauthorized');
-  err.status = 401;
-  throw err;
-}
-function verifySessionCookie(headers, secret){
-  try {
-    const cookieHeader = headers.cookie || headers.Cookie || '';
-    if (!cookieHeader) return false;
-    let token = '';
-    for (const n of SESSION_COOKIE_NAMES) { token = getCookie(cookieHeader, n); if (token) break; }
-    if (!token) return false;
+  const sessionInfo = verifySession(event.headers, secret);
+  
+  if (!sessionInfo.valid) {
+    if (ENABLE_SESSION_LOG) {
+      console.log('[incremental-deploy] Session verification failed');
+    }
+    return {
+      ok: false,
+      response: createErrorResponse('SESSION_EXPIRED', 'Session expired or invalid', true, 401)
+    };
+  }
 
-    const dot = token.indexOf('.');
-    if (dot <= 0) return false;
-    const payloadB64 = token.slice(0, dot);
-    const sigB64 = token.slice(dot + 1);
+  if (sessionInfo.needsUpgrade && ENABLE_SESSION_LOG) {
+    console.log('[incremental-deploy] Legacy session detected (version:', sessionInfo.legacyVersion, ')');
+  }
 
-    const payloadBuf = b64urlDecode(payloadB64);
-    let data; try { data = JSON.parse(payloadBuf.toString('utf8')); } catch { return false; }
-    if (!data || typeof data.exp !== 'number') return false;
+  // Check for ADMIN_KEY fallback (legacy support)
+  const requiredKey = process.env.ADMIN_KEY;
+  if (!sessionInfo.valid && requiredKey) {
+    const hdrs = event.headers || {};
+    const sentKey = hdrs['x-admin-key'] || hdrs['X-Admin-Key'] || hdrs['x-Admin-Key'];
+    if (sentKey && sentKey === requiredKey) {
+      return { ok: true, remainingTTL: 3600 }; // Fallback TTL
+    }
+  }
 
-    const now = Math.floor(Date.now() / 1000);
-    if (data.exp <= now) return false;
+  if (!sessionInfo.valid) {
+    return {
+      ok: false,
+      response: createErrorResponse('SESSION_EXPIRED', 'Session expired or invalid', true, 401)
+    };
+  }
 
-    const expected = crypto.createHmac('sha256', secret).update(payloadBuf).digest();
-    const actual = b64urlDecode(sigB64);
-    if (expected.length !== actual.length) return false;
-    return crypto.timingSafeEqual(expected, actual);
-  } catch { return false; }
+  return { 
+    ok: true, 
+    remainingTTL: sessionInfo.remainingTTL || 0 
+  };
 }
 
 // ---------- Units loader ----------
@@ -491,18 +511,6 @@ async function getHeadTree(owner, repo, branch) {
 }
 
 // ---------- Utils ----------
-function getCookie(header, name) {
-  for (const part of header.split(/;\s*/)) {
-    const [k, ...v] = part.split('=');
-    if (k === name) return v.join('=');
-  }
-  return '';
-}
-function b64urlDecode(str) {
-  str = str.replace(/-/g, '+').replace(/_/g, '/');
-  const pad = str.length % 4; if (pad) str += '='.repeat(4 - pad);
-  return Buffer.from(str, 'base64');
-}
 function ensureArraySize(arr,n){ while(arr.length<n) arr.push(''); }
 function escapeHtml(s=''){return s.replace(/[&<>"]/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 function shortErr(e){ const msg = e && e.message ? e.message : String(e); return (msg || 'Server error').slice(0, 600); }
