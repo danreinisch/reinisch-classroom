@@ -227,11 +227,23 @@ create_git_bundle() {
     
     log_info "Creating Git bundle with full history..."
     
-    # Create bundle with all branches and tags
-    git bundle create "$bundle_file" --all
+    # Check for shallow repository
+    if [[ -f .git/shallow ]]; then
+        log_warning "Repository is shallow. Converting to full repository for complete backup..."
+        git fetch --unshallow 2>/dev/null || log_warning "Could not unshallow repository. Bundle will contain limited history."
+    fi
     
-    local bundle_size=$(du -h "$bundle_file" | cut -f1)
-    log_success "Git bundle created: $bundle_file (${bundle_size})"
+    # Create bundle with all branches and tags
+    if git bundle create "$bundle_file" --all 2>/dev/null; then
+        local bundle_size=$(du -h "$bundle_file" | cut -f1)
+        log_success "Git bundle created: $bundle_file (${bundle_size})"
+    else
+        log_warning "Failed to create complete bundle. Creating bundle with available history..."
+        # Fallback: create bundle with current branch only
+        git bundle create "$bundle_file" HEAD 2>/dev/null || log_error "Failed to create Git bundle"
+        local bundle_size=$(du -h "$bundle_file" | cut -f1)
+        log_success "Git bundle created (partial): $bundle_file (${bundle_size})"
+    fi
 }
 
 if [[ "$INCLUDE_GIT_BUNDLE" -eq 1 ]]; then
