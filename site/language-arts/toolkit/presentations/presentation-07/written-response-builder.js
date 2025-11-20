@@ -196,11 +196,19 @@ function clearAll() {
   updateWordCount('conclusion','conclusionWordCount');
 }
 
+// Helper function to safely escape HTML
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
 // Preview response in modal
 function previewResponse() {
   const response = generateResponse();
   if (response.trim() === '') { alert('Please write something before previewing!'); return; }
-  const formattedResponse = response.replace(/\n\n/g, '</p><p>');
+  const escapedResponse = escapeHtml(response);
+  const formattedResponse = escapedResponse.replace(/\n\n/g, '</p><p>');
   document.getElementById('previewText').innerHTML = `<p>${formattedResponse}</p>`;
   document.getElementById('previewModal').style.display = 'block';
 }
