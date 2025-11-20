@@ -48,3 +48,10 @@ playwright/.cache/
 
 # ESLint
 .eslintcache
+
+# Backups
+*.tar.gz
+*.zip
+*backup*.tar.gz
+*backup*.zip
+reinisch-classroom-backup-*/
