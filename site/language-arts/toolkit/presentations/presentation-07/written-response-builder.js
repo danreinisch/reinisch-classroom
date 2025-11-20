@@ -218,6 +218,14 @@ function closePreview() {
   document.getElementById('previewModal').style.display = 'none';
 }
 
+// Announce status to screen readers
+function announceStatus(message) {
+  const statusElement = document.getElementById('status-announcements');
+  if (statusElement) {
+    statusElement.textContent = message;
+  }
+}
+
 // Copy response to clipboard
 function copyResponse() {
   const response = generateResponse();
@@ -236,6 +244,7 @@ function copyResponse() {
         const btn = document.querySelector('.btn-success');
         const originalText = btn.textContent;
         btn.textContent = '✓ Copied!';
+        announceStatus('Response copied to clipboard');
         setTimeout(() => {
           btn.textContent = originalText;
         }, 2000);
@@ -266,6 +275,7 @@ function fallbackCopy(text) {
     const btn = document.querySelector('.btn-success');
     const originalText = btn.textContent;
     btn.textContent = '✓ Copied!';
+    announceStatus('Response copied to clipboard');
     setTimeout(() => {
       btn.textContent = originalText;
     }, 2000);
