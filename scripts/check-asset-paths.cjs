@@ -82,12 +82,15 @@ TOOLKIT_BUILDERS.forEach((builderPath) => {
   }
   
   // Check for inline script blocks with content (not external scripts)
+  // Note: This regex is used for detection/validation only, not HTML sanitization
+  // CodeQL alert js/bad-tag-filter is not applicable in this context
   const scriptMatches = content.match(/<script(?![^>]*src=)[^>]*>[\s\S]*?<\/script>/gi);
   if (scriptMatches) {
     const scriptsWithContent = scriptMatches.filter(match => {
       // Ignore module scripts
       if (match.match(/<script\s+type=["']module["']/i)) return false;
       // Check if there's actual content between tags
+      // This regex is for validation/detection, not HTML filtering
       const contentMatch = match.match(/<script[^>]*>([\s\S]*?)<\/script>/i);
       return contentMatch && contentMatch[1].trim().length > 0;
     });
@@ -101,6 +104,7 @@ TOOLKIT_BUILDERS.forEach((builderPath) => {
   }
   
   if (!onclickMatches && !scriptMatches?.some(m => {
+    // This regex is for validation/detection, not HTML filtering  
     const contentMatch = m.match(/<script[^>]*>([\s\S]*?)<\/script>/i);
     return contentMatch && contentMatch[1].trim().length > 0 && !m.match(/<script\s+type=["']module["']/i);
   })) {
