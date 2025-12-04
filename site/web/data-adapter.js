@@ -470,13 +470,13 @@ const remote = {
   async setStudentPassword(code, plain) {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
-    const { error } = await supabase.rpc('set_student_password', { p_code: code, p_plain: plain });
+    const { error } = await supabase.rpc('set_student_password', { p_code: code, p_password: plain });
     if (error) throw error; return true;
   },
   async verifyStudentPassword(code, plain) {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
-    const { data, error } = await supabase.rpc('verify_student_password', { p_code: code, p_plain: plain });
+    const { data, error } = await supabase.rpc('verify_student_password', { p_code: code, p_password: plain });
     if (error) throw error; return !!data;
   },
   
@@ -594,7 +594,7 @@ const remote = {
     
     // Call process_submission RPC
     const { error: e2 } = await supabase.rpc('process_submission', { 
-      p_submission_id: submission.id 
+      submission_id: submission.id 
     });
     if (e2) throw e2;
     
@@ -885,7 +885,7 @@ const remote = {
         
         // Call process_submission
         const { error: processErr } = await supabase.rpc('process_submission', {
-          p_submission_id: submission.id
+          submission_id: submission.id
         });
         
         if (processErr) throw processErr;

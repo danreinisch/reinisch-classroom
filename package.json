@@ -12,6 +12,7 @@
     "format:check": "prettier --check .",
     "check:inline-scripts": "node scripts/check-inline-scripts.cjs",
     "check:nav-script": "node scripts/check-asset-paths.cjs",
+    "check:schema-sync": "node scripts/schema-sync-check.mjs",
     "postbuild": "node scripts/check-env-leaks.js && node scripts/check-inline-scripts.cjs && node scripts/check-asset-paths.cjs"
   },
   "devDependencies": {

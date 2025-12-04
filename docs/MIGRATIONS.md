@@ -352,6 +352,51 @@ RAISE NOTICE 'All tests completed successfully!';
 
 ## Additional Migration Files
 
+### 20251204_schema_reconciliation.sql ⭐ NEW
+
+**Date:** 2025-12-04  
+**Purpose:** Schema reconciliation migration to bring production in sync with repository code
+
+This is a **consolidated migration** that includes all pending tables and functions that exist
+in the repository but have not yet been applied to production. Running this migration will
+align the production database with the code.
+
+#### What This Migration Adds
+
+1. **Goal Progress System (Phase 1)**
+   - `goal_progress` table: Normalized progress measurements for IEP goals
+   - `goal_progress_quarter_avg` view: Quarterly averages computed automatically
+   - `goal_area` column added to `goals` table
+
+2. **Assignment-Goal Mapping (Phases 4-5)**
+   - `assignment_goal_map` table: Maps assignments to IEP goals
+   - `record_progress_for_submission()` function: Auto-creates progress entries from submissions
+
+3. **Saved Views for IEP Progress Grid (Phases 6-8)**
+   - `progress_saved_views` table: Stores filter/sort/group configurations per user
+
+4. **Saved Views for Student Portal (Portal C)**
+   - `portal_saved_views` table: Stores filter/sort configurations per student
+
+5. **Resubmission Support (Portal B)**
+   - `resubmission_count` column on `assignment_instances`
+   - `create_resubmission()` function: Atomic resubmission with limit enforcement
+   - `get_latest_submission()` function: Gets most recent submission for an instance
+
+#### Running the Migration
+
+```sql
+-- Apply via Supabase SQL Editor or psql
+\i supabase/migrations/20251204_schema_reconciliation.sql
+
+-- After applying, re-export the schema
+supabase db dump -f supabase:schema_full_dump.sql
+```
+
+#### Idempotency
+
+This migration is fully **idempotent** - it can be safely run multiple times without errors.
+
 ### 20251105_app_users_and_sub_plans.sql
 - Creates app users and subscription plans tables
 
@@ -369,6 +414,19 @@ RAISE NOTICE 'All tests completed successfully!';
 
 ### 20251108_portal_c_saved_views.sql
 - Portal C saved views
+
+## Schema Sync Verification
+
+A schema sync check script is available to verify the schema is in sync:
+
+```bash
+node scripts/schema-sync-check.mjs
+```
+
+This script compares `supabase:schema_full_dump.sql` against code references and reports:
+- Tables referenced in code but missing from schema
+- RPC parameter mismatches
+- Missing functions
 
 ## Migration Best Practices
 
