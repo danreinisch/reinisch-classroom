@@ -1109,7 +1109,7 @@ const remote = {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
     return await withRetry(async () => {
-      const { error } = await supabase.rpc('set_student_password', { p_code: code, p_plain: plain });
+      const { error } = await supabase.rpc('set_student_password', { p_code: code, p_password: plain });
       if (error) throw error;
       return true;
     });
@@ -1118,7 +1118,7 @@ const remote = {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
     return await withRetry(async () => {
-      const { data, error } = await supabase.rpc('verify_student_password', { p_code: code, p_plain: plain });
+      const { data, error } = await supabase.rpc('verify_student_password', { p_code: code, p_password: plain });
       if (error) throw error;
       return !!data;
     });
@@ -1312,8 +1312,8 @@ const remote = {
       console.log('[student-manager] replaceGoalVersion (remote)', { old_goal_id, new_goal });
       
       const { data, error } = await supabase.rpc('replace_goal_version', { 
-        p_old_goal_id: old_goal_id,
-        p_new_goal: new_goal
+        old_goal_id: old_goal_id,
+        new_goal: new_goal
       });
       if (error) throw error;
       
@@ -1328,7 +1328,7 @@ const remote = {
       console.log('[student-manager] archiveGoal (remote)', { goal_id });
       
       const { data, error } = await supabase.rpc('archive_goal', { 
-        p_goal_id: goal_id
+        goal_id: goal_id
       });
       if (error) throw error;
       
@@ -1475,7 +1475,7 @@ const remote = {
       
       // Call process_submission RPC
       const { error: e2 } = await supabase.rpc('process_submission', { 
-        p_submission_id: submission.id 
+        submission_id: submission.id 
       });
       if (e2) throw e2;
       
@@ -1971,7 +1971,7 @@ const remote = {
         
         // Call process_submission
         const { error: processErr } = await supabase.rpc('process_submission', {
-          p_submission_id: submission.id
+          submission_id: submission.id
         });
         
         if (processErr) throw processErr;
