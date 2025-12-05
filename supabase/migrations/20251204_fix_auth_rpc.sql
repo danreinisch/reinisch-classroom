@@ -1,8 +1,16 @@
 -- Fix verify_user_password signature to return user details instead of boolean
 -- The app code expects to receive the user's role and ID, not just true/false.
+--
+-- This migration drops verify_student_password first because it depends on
+-- verify_user_password. Both functions are then recreated with correct types.
 
+-- Step 1: Drop dependent function first (verify_student_password depends on verify_user_password)
+DROP FUNCTION IF EXISTS public.verify_student_password(text, text);
+
+-- Step 2: Drop verify_user_password
 DROP FUNCTION IF EXISTS public.verify_user_password(text, text);
 
+-- Step 3: Recreate verify_user_password with UUID return types (matching app_users schema)
 CREATE OR REPLACE FUNCTION public.verify_user_password(
   p_username text,
   p_password text
@@ -46,4 +54,19 @@ BEGIN
 END;
 $$;
 
+-- Step 4: Recreate verify_student_password (wrapper for backward compatibility)
+CREATE OR REPLACE FUNCTION public.verify_student_password(
+  p_code text,
+  p_password text
+)
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public, extensions
+AS $$
+  SELECT EXISTS (SELECT 1 FROM public.verify_user_password(p_code, p_password));
+$$;
+
+-- Step 5: Grant permissions for both functions
 GRANT EXECUTE ON FUNCTION public.verify_user_password(text, text) TO anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.verify_student_password(text, text) TO anon, authenticated, service_role;
