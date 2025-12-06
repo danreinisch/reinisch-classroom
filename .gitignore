@@ -48,3 +48,14 @@ playwright/.cache/
 
 # ESLint
 .eslintcache
+
+# Archives
+*.zip
+Archive*.zip
+remaining-source.zip
+
+# Generated inventories/DB dumps (keep migrations/config tracked)
+file-inventory.json
+supabase/schema_full_dump.sql
+supabase-export.sql
+supabase/supabase-export.sql
