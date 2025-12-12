@@ -37,7 +37,12 @@ exports.handler = async (event) => {
   const secret = (process.env.ADMIN_SESSION_SECRET || '').trim();
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !secret) {
     console.error('[admin-session] Missing Supabase or session configuration');
-    return redirect('/admin-login?e=1');
+    const missing = [];
+    if (!SUPABASE_URL) missing.push('SUPABASE_URL/SUPABASE_URL_RUNTIME');
+    if (!SUPABASE_SERVICE_ROLE_KEY) missing.push('SUPABASE_SERVICE_ROLE_KEY/SUPABASE_SERVICE_KEY_RUNTIME');
+    if (!secret) missing.push('ADMIN_SESSION_SECRET');
+    console.error('[admin-session] Missing env vars:', missing.join(', '));
+    return redirect('/admin-login?e=cfg');
   }
 
   // Robust body parsing (handles base64, form, and JSON)
@@ -57,12 +62,14 @@ exports.handler = async (event) => {
       inUser = (obj.username || '').trim();
       inPass = (obj.password || '').trim();
     }
-  } catch {
-    return redirect('/admin-login?e=1');
+  } catch (parseErr) {
+    console.error('[admin-session] Body parsing failed:', parseErr.message);
+    return redirect('/admin-login?e=parse');
   }
 
   if (!inUser || !inPass) {
-    return redirect('/admin-login?e=1');
+    console.error('[admin-session] Missing username or password in request body');
+    return redirect('/admin-login?e=parse');
   }
 
   // Check throttling (per-IP attempt limit via cookie)
@@ -70,19 +77,30 @@ exports.handler = async (event) => {
   const throttleResult = checkThrottle(event, clientIp);
   if (!throttleResult.allowed) {
     console.log('[admin-session] Throttled login attempt from', clientIp);
-    return redirect('/admin-login?e=1');
+    return redirect('/admin-login?e=throttle');
   }
 
   // Verify credentials via Supabase RPC
   try {
-    const verifyRes = await rpc('verify_user_password', {
+    const rpcFunctionName = 'verify_user_password';
+    const verifyRes = await rpc(rpcFunctionName, {
       p_username: inUser,
       p_password: inPass
     });
 
     if (!verifyRes.ok) {
-      console.error('[admin-session] Supabase RPC error - status:', verifyRes.status);
-      return redirect('/admin-login?e=1');
+      console.error('[admin-session] Supabase RPC error - function:', rpcFunctionName, 'status:', verifyRes.status);
+      
+      // Log sanitized response body for debugging
+      try {
+        const responseText = await verifyRes.text();
+        const truncatedResponse = responseText.substring(0, 500);
+        console.error('[admin-session] RPC response body (truncated):', truncatedResponse);
+      } catch (bodyErr) {
+        console.error('[admin-session] Could not read RPC response body:', bodyErr.message);
+      }
+      
+      return redirect(`/admin-login?e=rpc${verifyRes.status}`);
     }
 
     const users = await verifyRes.json();
@@ -98,7 +116,7 @@ exports.handler = async (event) => {
       return {
         statusCode: 302,
         headers: {
-          Location: '/admin-login?e=1',
+          Location: '/admin-login?e=creds',
           'Set-Cookie': createThrottleCookie(clientIp),
           'Cache-Control': 'no-store'
         }
@@ -110,7 +128,7 @@ exports.handler = async (event) => {
     // Only allow teacher or admin roles for admin panel
     if (user.role !== 'teacher' && user.role !== 'admin') {
       console.log('[admin-session] User has invalid role for admin access:', user.role);
-      return redirect('/admin-login?e=1');
+      return redirect('/admin-login?e=role');
     }
 
     // Create dual-token session (access + refresh)
@@ -137,6 +155,7 @@ exports.handler = async (event) => {
     };
   } catch (e) {
     console.error('[admin-session] Error during authentication:', e.message);
+    console.error('[admin-session] Error stack:', e.stack);
     return redirect('/admin-login?e=1');
   }
 };

@@ -13,11 +13,27 @@
     input{width:100%;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff}
     .actions{margin-top:16px;display:flex;gap:.6rem;align-items:center}
     .muted{font-size:12px;color:var(--muted)}
+    .error-message{
+      margin:12px 0;
+      padding:12px;
+      background:rgba(255,100,100,0.15);
+      border:1px solid rgba(255,100,100,0.3);
+      border-radius:8px;
+      color:#ffaaaa;
+      font-size:14px;
+    }
+    .error-message .support-text{
+      margin-top:6px;
+      font-size:12px;
+      color:var(--muted);
+    }
   </style>
 </head>
 <body>
   <main class="wrap">
     <h1>Admin Login</h1>
+    <!-- Error message container (populated by JavaScript if error code present) -->
+    <div id="errorContainer"></div>
     <form method="post" action="/.netlify/functions/admin-session">
       <label>Username</label>
       <input name="username" autocomplete="username" required/>
@@ -30,5 +46,29 @@
     </form>
     <p class="muted" style="margin-top:8px">Use your admin credentials to access the uploader.</p>
   </main>
+  
+  <script>
+    // Display error message if error code is present in URL
+    (function() {
+      const params = new URLSearchParams(window.location.search);
+      const errorCode = params.get('e');
+      
+      if (errorCode) {
+        const errorContainer = document.getElementById('errorContainer');
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'error-message';
+        errorDiv.setAttribute('data-error-code', errorCode);
+        
+        // User-friendly generic message
+        errorDiv.innerHTML = `
+          <div>Login failed. Please try again.</div>
+          <div class="support-text">If the problem persists, contact support.</div>
+          <!-- Error code for debugging: ${errorCode} -->
+        `;
+        
+        errorContainer.appendChild(errorDiv);
+      }
+    })();
+  </script>
 </body>
 </html>
