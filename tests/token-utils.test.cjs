@@ -1,5 +1,5 @@
 // Unit tests for token utilities
-// Run with: node netlify/functions/_lib/token-utils.test.js
+// Run with: node tests/token-utils.test.cjs
 
 const crypto = require('crypto');
 const assert = require('assert');
@@ -22,7 +22,7 @@ const {
   COOKIE_V1_REFRESH,
   ACCESS_TOKEN_TTL_SECONDS,
   REFRESH_TOKEN_TTL_SECONDS
-} = require('./token-utils');
+} = require('../netlify/functions/_lib/token-utils');
 
 const TEST_SECRET = 'test-secret-key-for-unit-testing-minimum-32-chars';
 

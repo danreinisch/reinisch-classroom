@@ -160,7 +160,7 @@ All 401 errors now return JSON with:
 
 ### 8. Testing
 
-**Unit Tests** (`netlify/functions/_lib/token-utils.test.js`):
+**Unit Tests** (`tests/token-utils.test.cjs`):
 - 23 tests covering all token utilities
 - Token encoding/verification
 - Expiration validation
@@ -194,7 +194,7 @@ All 401 errors now return JSON with:
 - `netlify/functions/_lib/token-utils.js` (shared utilities)
 - `netlify/functions/admin-session-refresh.js` (refresh endpoint)
 - `netlify/functions/admin-session-touch.js` (touch endpoint)
-- `netlify/functions/_lib/token-utils.test.js` (unit tests)
+- `tests/token-utils.test.cjs` (unit tests)
 - `tests/session-hardening.spec.ts` (integration tests)
 - `ADMIN_SESSION_HARDENING.md` (documentation)
 - `SESSION_HARDENING_SUMMARY.md` (this file)
