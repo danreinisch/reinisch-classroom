@@ -1,71 +1,83 @@
 // Session check endpoint: verifies signed cookie and returns 200 when logged in.
 // Returns 401 when not authenticated or expired.
-// Supports both v2 (legacy) and v3 (Supabase-based) cookies.
+// Supports v4 access tokens, v1 refresh tokens, and legacy v1/v2/v3 cookies.
+//
+// Enhanced error handling:
+// - Returns structured error responses with specific codes
+// - Gracefully handles missing or malformed headers
+// - Provides detailed error messages for debugging
 
-const crypto = require('crypto');
-
-const COOKIE_NAME_V3 = 'rc_admin_session_v3';
-const COOKIE_NAME_V2 = 'rc_admin_session_v2';
-const COOKIE_NAME_LEGACY = 'rc_admin_session';
+const { verifySession, createErrorResponse } = require('./_lib/token-utils');
 
 exports.handler = async (event) => {
   try {
+    // Gracefully handle missing headers first
+    if (!event.headers) {
+      console.error('[admin-session-check] Missing headers object');
+      return createErrorResponse(
+        'INVALID_REQUEST',
+        'Invalid request format',
+        false,
+        400
+      );
+    }
+
     const secret = (process.env.ADMIN_SESSION_SECRET || '').trim();
-    if (!secret) return json(503, { ok: false, message: 'Admin not configured' });
-
-    const cookieHeader = event.headers.cookie || event.headers.Cookie || '';
     
-    // Try v3 first, then v2, then legacy
-    let token = getCookie(cookieHeader, COOKIE_NAME_V3);
-    if (!token) token = getCookie(cookieHeader, COOKIE_NAME_V2);
-    if (!token) token = getCookie(cookieHeader, COOKIE_NAME_LEGACY);
+    // Check for missing configuration
+    if (!secret) {
+      console.error('[admin-session-check] Missing ADMIN_SESSION_SECRET');
+      return createErrorResponse(
+        'SERVER_NOT_CONFIGURED',
+        'Admin authentication not configured',
+        false,
+        503
+      );
+    }
+
+    // Verify session using shared utility (supports v4, v1 refresh, and legacy tokens)
+    const result = verifySession(event.headers, secret);
+
+    if (!result.valid) {
+      return createErrorResponse(
+        'NO_VALID_SESSION',
+        'No valid session found',
+        false,
+        401
+      );
+    }
+
+    // Session is valid
+    const response = { ok: true };
     
-    if (!token) return json(401, { ok: false, message: 'No session' });
+    // Include upgrade hint if using legacy token
+    if (result.needsUpgrade) {
+      response.needsUpgrade = true;
+      response.legacyVersion = result.legacyVersion;
+      console.log('[admin-session-check] Legacy token detected:', result.legacyVersion);
+    }
 
-    const ok = verifyToken(token, secret);
-    if (!ok) return json(401, { ok: false, message: 'Invalid or expired session' });
+    // Include refresh hint if access token expired but refresh is valid
+    if (result.needsRefresh) {
+      response.needsRefresh = true;
+      console.log('[admin-session-check] Access token expired, refresh available');
+    }
 
-    return json(200, { ok: true });
+    return {
+      statusCode: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-store'
+      },
+      body: JSON.stringify(response)
+    };
   } catch (e) {
-    return json(500, { ok: false, message: 'Server error' });
+    console.error('[admin-session-check] Unexpected error:', e.message);
+    return createErrorResponse(
+      'SERVER_ERROR',
+      'Internal server error',
+      true,
+      500
+    );
   }
 };
-
-function getCookie(header, name) {
-  if (!header) return '';
-  for (const part of header.split(/;\s*/)) {
-    const [k, ...v] = part.split('=');
-    if (k === name) return v.join('=');
-  }
-  return '';
-}
-
-function verifyToken(token, secret) {
-  const dot = token.indexOf('.');
-  if (dot <= 0) return false;
-  const payloadB64 = token.slice(0, dot);
-  const sigB64 = token.slice(dot + 1);
-
-  const payloadBuf = b64urlDecode(payloadB64);
-  let data;
-  try { data = JSON.parse(payloadBuf.toString('utf8')); } catch { return false; }
-
-  if (!data || typeof data.exp !== 'number') return false;
-  const now = Math.floor(Date.now() / 1000);
-  if (data.exp <= now) return false;
-
-  const expected = crypto.createHmac('sha256', secret).update(payloadBuf).digest();
-  const actual = b64urlDecode(sigB64);
-  return crypto.timingSafeEqual(expected, actual);
-}
-
-function b64urlDecode(str) {
-  str = str.replace(/-/g, '+').replace(/_/g, '/');
-  const pad = str.length % 4;
-  if (pad) str += '='.repeat(4 - pad);
-  return Buffer.from(str, 'base64');
-}
-
-function json(status, data) {
-  return { statusCode: status, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) };
-}

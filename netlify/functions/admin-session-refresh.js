@@ -41,6 +41,17 @@ exports.handler = async (event) => {
     );
   }
 
+  // Gracefully handle missing headers
+  if (!event.headers) {
+    console.error('[admin-session-refresh] Missing headers object');
+    return createErrorResponse(
+      'INVALID_REQUEST',
+      'Invalid request format',
+      false,
+      400
+    );
+  }
+
   const cookies = parseCookies(event.headers);
 
   // Must have a refresh token
@@ -57,6 +68,7 @@ exports.handler = async (event) => {
   const result = refreshAccessToken(cookies.refresh, secret);
   
   if (!result) {
+    console.log('[admin-session-refresh] Failed to refresh - token invalid or expired');
     return createErrorResponse(
       'INVALID_REFRESH_TOKEN',
       'Refresh token is invalid or expired',

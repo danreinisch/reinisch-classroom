@@ -35,8 +35,25 @@ exports.handler = async (event) => {
 
   // Check if Supabase is configured
   const secret = (process.env.ADMIN_SESSION_SECRET || '').trim();
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !secret) {
-    console.error('[admin-session] Missing Supabase or session configuration');
+  if (!secret) {
+    console.error('[admin-session] ERROR: Missing ADMIN_SESSION_SECRET environment variable');
+    console.error('[admin-session] Please configure ADMIN_SESSION_SECRET in Netlify environment variables');
+    return redirect('/admin-login?e=config');
+  }
+  if (!SUPABASE_URL) {
+    console.error('[admin-session] ERROR: Missing SUPABASE_URL environment variable');
+    console.error('[admin-session] Please configure SUPABASE_URL or SUPABASE_URL_RUNTIME');
+    return redirect('/admin-login?e=config');
+  }
+  if (!SUPABASE_SERVICE_ROLE_KEY) {
+    console.error('[admin-session] ERROR: Missing SUPABASE_SERVICE_ROLE_KEY environment variable');
+    console.error('[admin-session] Please configure SUPABASE_SERVICE_ROLE_KEY or SUPABASE_SERVICE_KEY_RUNTIME');
+    return redirect('/admin-login?e=config');
+  }
+
+  // Gracefully handle missing headers
+  if (!event.headers) {
+    console.error('[admin-session] ERROR: Missing headers object in request');
     return redirect('/admin-login?e=1');
   }
 
@@ -46,7 +63,9 @@ exports.handler = async (event) => {
     const ctype = (event.headers['content-type'] || event.headers['Content-Type'] || '').toLowerCase();
     let raw = event.body || '';
     if (event.isBase64Encoded) {
-      try { raw = Buffer.from(raw, 'base64').toString('utf8'); } catch {}
+      try { raw = Buffer.from(raw, 'base64').toString('utf8'); } catch (e) {
+        console.error('[admin-session] Failed to decode base64 body:', e.message);
+      }
     }
     if (ctype.includes('application/x-www-form-urlencoded')) {
       const obj = Object.fromEntries(new URLSearchParams(raw || ''));
@@ -57,11 +76,13 @@ exports.handler = async (event) => {
       inUser = (obj.username || '').trim();
       inPass = (obj.password || '').trim();
     }
-  } catch {
+  } catch (e) {
+    console.error('[admin-session] Failed to parse request body:', e.message);
     return redirect('/admin-login?e=1');
   }
 
   if (!inUser || !inPass) {
+    console.log('[admin-session] Missing username or password in request');
     return redirect('/admin-login?e=1');
   }
 
@@ -70,7 +91,7 @@ exports.handler = async (event) => {
   const throttleResult = checkThrottle(event, clientIp);
   if (!throttleResult.allowed) {
     console.log('[admin-session] Throttled login attempt from', clientIp);
-    return redirect('/admin-login?e=1');
+    return redirect('/admin-login?e=throttled');
   }
 
   // Verify credentials via Supabase RPC
@@ -82,7 +103,8 @@ exports.handler = async (event) => {
 
     if (!verifyRes.ok) {
       console.error('[admin-session] Supabase RPC error - status:', verifyRes.status);
-      return redirect('/admin-login?e=1');
+      console.error('[admin-session] This may indicate a database connectivity issue or misconfigured RPC function');
+      return redirect('/admin-login?e=server');
     }
 
     const users = await verifyRes.json();
@@ -98,7 +120,7 @@ exports.handler = async (event) => {
       return {
         statusCode: 302,
         headers: {
-          Location: '/admin-login?e=1',
+          Location: '/admin-login?e=invalid',
           'Set-Cookie': createThrottleCookie(clientIp),
           'Cache-Control': 'no-store'
         }
@@ -110,7 +132,8 @@ exports.handler = async (event) => {
     // Only allow teacher or admin roles for admin panel
     if (user.role !== 'teacher' && user.role !== 'admin') {
       console.log('[admin-session] User has invalid role for admin access:', user.role);
-      return redirect('/admin-login?e=1');
+      console.log('[admin-session] User must have teacher or admin role to access admin panel');
+      return redirect('/admin-login?e=unauthorized');
     }
 
     // Create dual-token session (access + refresh)
@@ -136,8 +159,9 @@ exports.handler = async (event) => {
       }
     };
   } catch (e) {
-    console.error('[admin-session] Error during authentication:', e.message);
-    return redirect('/admin-login?e=1');
+    console.error('[admin-session] Unexpected error during authentication:', e.message);
+    console.error('[admin-session] Stack trace:', e.stack);
+    return redirect('/admin-login?e=server');
   }
 };
 
