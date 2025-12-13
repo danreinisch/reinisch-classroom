@@ -316,7 +316,7 @@ BEGIN
     RAISE EXCEPTION 'Account inactive. Please contact teacher.';
   END IF;
 
-  RETURN hash = crypt(p_plain, hash);
+  RETURN hash = extensions.crypt(p_plain, hash);
 END $$;
 
 -- Comments

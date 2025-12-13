@@ -3,8 +3,9 @@
 -- Description: Introduce app_users table for unified authentication with bcrypt hashing,
 --              sub_plans table for daily substitute instructions, and related RPCs.
 
--- Enable pgcrypto extension for bcrypt hashing
-create extension if not exists pgcrypto;
+-- Enable pgcrypto extension for bcrypt hashing in extensions schema
+create schema if not exists extensions;
+create extension if not exists pgcrypto with schema extensions;
 
 -- ============================================================================
 -- A) App Users Table
@@ -72,7 +73,7 @@ begin
   end if;
   
   -- Generate bcrypt hash with cost factor 8 (adjustable)
-  v_password_hash := crypt(p_password, gen_salt('bf', 8));
+  v_password_hash := extensions.crypt(p_password, extensions.gen_salt('bf', 8));
   
   -- Upsert user
   insert into public.app_users (username, role, student_id, password_hash)
@@ -127,7 +128,7 @@ begin
   end if;
   
   -- Verify password using bcrypt
-  if v_user.password_hash = crypt(p_password, v_user.password_hash) then
+  if v_user.password_hash = extensions.crypt(p_password, v_user.password_hash) then
     -- Password correct - return user info
     return query
     select 
@@ -160,7 +161,7 @@ declare
 begin
   for v_student in select * from public.students loop
     -- Generate default password: student code + "!"
-    v_password_hash := crypt(v_student.code || '!', gen_salt('bf', 8));
+    v_password_hash := extensions.crypt(v_student.code || '!', extensions.gen_salt('bf', 8));
     
     -- Insert if not exists
     insert into public.app_users (username, role, student_id, password_hash)
