@@ -16,4 +16,6 @@ create extension if not exists pgcrypto with schema extensions;
 grant usage on schema extensions to anon, authenticated, service_role;
 
 -- Migration complete
--- All SQL functions using crypt() and gen_salt() should now qualify them with extensions. prefix
+-- Note: This migration only ensures the schema and extension are in place.
+-- Function updates to use qualified extensions.crypt() and extensions.gen_salt() 
+-- are handled in the respective migration files where those functions are defined.
