@@ -1,5 +1,6 @@
 -- Enable extensions
-create extension if not exists "pgcrypto";
+create schema if not exists extensions;
+create extension if not exists "pgcrypto" with schema extensions;
 
 -- Storage bucket for uploads (metadata tracked in uploads table)
 select storage.create_bucket('uploads', public => false);
@@ -151,7 +152,7 @@ begin
   end if;
 
   insert into student_passwords (student_id, password_hash)
-  values (sid, crypt(p_plain, gen_salt('bf')))
+  values (sid, extensions.crypt(p_plain, extensions.gen_salt('bf')))
   on conflict (student_id) do update
     set password_hash = excluded.password_hash,
         updated_at = now();
@@ -173,5 +174,5 @@ begin
     return false;
   end if;
 
-  return hash = crypt(p_plain, hash);
+  return hash = extensions.crypt(p_plain, hash);
 end $$;

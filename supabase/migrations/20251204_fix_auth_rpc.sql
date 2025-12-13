@@ -31,7 +31,7 @@ BEGIN
   END IF;
   
   -- Verify password using bcrypt
-  IF v_user.password_hash = crypt(p_password, v_user.password_hash) THEN
+  IF v_user.password_hash = extensions.crypt(p_password, v_user.password_hash) THEN
     -- Password correct - return user info
     RETURN QUERY
     SELECT 

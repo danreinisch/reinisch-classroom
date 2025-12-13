@@ -616,7 +616,7 @@ CREATE OR REPLACE FUNCTION "public"."set_user_password"("p_user_id" "uuid", "p_p
     AS $$
 BEGIN
   UPDATE app_users
-  SET password_hash = crypt(p_password, gen_salt('bf'))
+  SET password_hash = extensions.crypt(p_password, extensions.gen_salt('bf'))
   WHERE id = p_user_id;
 END;
 $$;
@@ -655,9 +655,9 @@ begin
   end if;
 
   insert into public.app_users (username, password_hash, role, student_id)
-    values (lower(p_username), crypt(p_password, gen_salt('bf')), p_role, p_student_id)
+    values (lower(p_username), extensions.crypt(p_password, extensions.gen_salt('bf')), p_role, p_student_id)
   on conflict (username) do update
-    set password_hash = crypt(p_password, gen_salt('bf')),
+    set password_hash = extensions.crypt(p_password, extensions.gen_salt('bf')),
         role = excluded.role,
         student_id = excluded.student_id,
         updated_at = now()
@@ -829,7 +829,7 @@ BEGIN
   END IF;
   
   -- Verify password using bcrypt
-  IF v_user.password_hash = crypt(p_password, v_user.password_hash) THEN
+  IF v_user.password_hash = extensions.crypt(p_password, v_user.password_hash) THEN
     -- Password correct - return user info
     RETURN QUERY
     SELECT 
