@@ -198,6 +198,37 @@ element.querySelector('[data-action="dismiss"]').addEventListener('click', handl
 3. Ensure scripts are deployed (check netlify deploy logs)
 4. Clear browser cache and hard refresh
 
+### Issue: Netlify Functions return 502 with multiple Set-Cookie headers
+
+**Symptoms:** Function returns 502 error with message "error decoding lambda response: invalid type "[]interface {}" for "headers" key "Set-Cookie""
+
+**Solution:** Netlify Functions require multiple `Set-Cookie` values to be returned using `multiValueHeaders`:
+
+```javascript
+// ❌ Incorrect - will cause 502 error
+return {
+  statusCode: 302,
+  headers: {
+    Location: '/path',
+    'Set-Cookie': ['cookie1=value1; ...', 'cookie2=value2; ...']
+  }
+};
+
+// ✅ Correct - use multiValueHeaders for arrays
+return {
+  statusCode: 302,
+  headers: {
+    Location: '/path',
+    'Cache-Control': 'no-store'
+  },
+  multiValueHeaders: {
+    'Set-Cookie': ['cookie1=value1; ...', 'cookie2=value2; ...']
+  }
+};
+```
+
+**Note:** Single cookie values can remain in `headers['Set-Cookie']` as a string. Only arrays need `multiValueHeaders`.
+
 ## Related Documentation
 
 - [GUARDRAILS.md](./GUARDRAILS.md) - Complete security guardrails guide
