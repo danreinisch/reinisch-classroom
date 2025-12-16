@@ -1,77 +1,81 @@
-// netlify/functions/admin-session-check.js
-// Checks for an active admin session cookie and responds accordingly.
-//
-// NOTE: Login now sets rc_admin_session_v4. This endpoint must accept v4 first,
-// then fall back to v3, v2, and legacy cookie names.
+// Session check endpoint: verifies signed cookie and returns 200 when logged in.
+// Returns 401 when not authenticated or expired.
+// Supports v4 (current), v3 (legacy), v2 (legacy), and legacy cookie names.
 
-const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 
-const JWT_SECRET = process.env.ADMIN_JWT_SECRET;
-
-// Cookie name preference order (newest -> oldest)
-const COOKIE_NAMES = [
-  'rc_admin_session_v4',
-  'rc_admin_session_v3',
-  'rc_admin_session_v2',
-  // legacy
-  'rc_admin_session',
-];
-
-function parseCookies(cookieHeader) {
-  const cookies = {};
-  if (!cookieHeader) return cookies;
-
-  cookieHeader.split(';').forEach((part) => {
-    const [rawName, ...rest] = part.trim().split('=');
-    if (!rawName) return;
-    const name = rawName;
-    const value = rest.join('=');
-    cookies[name] = decodeURIComponent(value || '');
-  });
-
-  return cookies;
-}
-
-function getSessionTokenFromRequest(event) {
-  const header = event.headers?.cookie || event.headers?.Cookie;
-  const cookies = parseCookies(header);
-
-  for (const name of COOKIE_NAMES) {
-    if (cookies[name]) return { name, token: cookies[name] };
-  }
-
-  return { name: null, token: null };
-}
+const COOKIE_NAME_V4 = 'rc_admin_session_v4';
+const COOKIE_NAME_V3 = 'rc_admin_session_v3';
+const COOKIE_NAME_V2 = 'rc_admin_session_v2';
+const COOKIE_NAME_LEGACY = 'rc_admin_session';
 
 exports.handler = async (event) => {
   try {
-    const { token } = getSessionTokenFromRequest(event);
+    const secret = (process.env.ADMIN_SESSION_SECRET || '').trim();
+    if (!secret) return json(503, { ok: false, message: 'Admin not configured' });
 
-    if (!token) {
-      return {
-        statusCode: 401,
-        body: JSON.stringify({ ok: false, error: 'No admin session cookie found' }),
-      };
-    }
+    const cookieHeader = event.headers.cookie || event.headers.Cookie || '';
 
-    if (!JWT_SECRET) {
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ ok: false, error: 'Missing ADMIN_JWT_SECRET' }),
-      };
-    }
+    // Try v4 first, then v3, then v2, then legacy
+    let token = getCookie(cookieHeader, COOKIE_NAME_V4);
+    if (!token) token = getCookie(cookieHeader, COOKIE_NAME_V3);
+    if (!token) token = getCookie(cookieHeader, COOKIE_NAME_V2);
+    if (!token) token = getCookie(cookieHeader, COOKIE_NAME_LEGACY);
 
-    // Verify the JWT session cookie
-    jwt.verify(token, JWT_SECRET);
+    if (!token) return json(401, { ok: false, message: 'No session' });
 
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ ok: true }),
-    };
-  } catch (err) {
-    return {
-      statusCode: 401,
-      body: JSON.stringify({ ok: false, error: 'Invalid admin session' }),
-    };
+    const ok = verifyToken(token, secret);
+    if (!ok) return json(401, { ok: false, message: 'Invalid or expired session' });
+
+    return json(200, { ok: true });
+  } catch (e) {
+    return json(500, { ok: false, message: 'Server error' });
   }
 };
+
+function getCookie(header, name) {
+  if (!header) return '';
+  for (const part of header.split(/;\s*/)) {
+    const [k, ...v] = part.split('=');
+    if (k === name) return v.join('=');
+  }
+  return '';
+}
+
+function verifyToken(token, secret) {
+  const dot = token.indexOf('.');
+  if (dot <= 0) return false;
+  const payloadB64 = token.slice(0, dot);
+  const sigB64 = token.slice(dot + 1);
+
+  const payloadBuf = b64urlDecode(payloadB64);
+  let data;
+  try {
+    data = JSON.parse(payloadBuf.toString('utf8'));
+  } catch {
+    return false;
+  }
+
+  if (!data || typeof data.exp !== 'number') return false;
+  const now = Math.floor(Date.now() / 1000);
+  if (data.exp <= now) return false;
+
+  const expected = crypto.createHmac('sha256', secret).update(payloadBuf).digest();
+  const actual = b64urlDecode(sigB64);
+  return crypto.timingSafeEqual(expected, actual);
+}
+
+function b64urlDecode(str) {
+  str = str.replace(/-/g, '+').replace(/_/g, '/');
+  const pad = str.length % 4;
+  if (pad) str += '='.repeat(4 - pad);
+  return Buffer.from(str, 'base64');
+}
+
+function json(status, data) {
+  return {
+    statusCode: status,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  };
+}
