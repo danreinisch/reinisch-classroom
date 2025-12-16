@@ -1,9 +1,10 @@
 // Session check endpoint: verifies signed cookie and returns 200 when logged in.
 // Returns 401 when not authenticated or expired.
-// Supports both v2 (legacy) and v3 (Supabase-based) cookies.
+// Supports v4 (current), v3 (legacy), v2 (legacy), and legacy cookie names.
 
 const crypto = require('crypto');
 
+const COOKIE_NAME_V4 = 'rc_admin_session_v4';
 const COOKIE_NAME_V3 = 'rc_admin_session_v3';
 const COOKIE_NAME_V2 = 'rc_admin_session_v2';
 const COOKIE_NAME_LEGACY = 'rc_admin_session';
@@ -14,12 +15,13 @@ exports.handler = async (event) => {
     if (!secret) return json(503, { ok: false, message: 'Admin not configured' });
 
     const cookieHeader = event.headers.cookie || event.headers.Cookie || '';
-    
-    // Try v3 first, then v2, then legacy
-    let token = getCookie(cookieHeader, COOKIE_NAME_V3);
+
+    // Try v4 first, then v3, then v2, then legacy
+    let token = getCookie(cookieHeader, COOKIE_NAME_V4);
+    if (!token) token = getCookie(cookieHeader, COOKIE_NAME_V3);
     if (!token) token = getCookie(cookieHeader, COOKIE_NAME_V2);
     if (!token) token = getCookie(cookieHeader, COOKIE_NAME_LEGACY);
-    
+
     if (!token) return json(401, { ok: false, message: 'No session' });
 
     const ok = verifyToken(token, secret);
@@ -48,7 +50,11 @@ function verifyToken(token, secret) {
 
   const payloadBuf = b64urlDecode(payloadB64);
   let data;
-  try { data = JSON.parse(payloadBuf.toString('utf8')); } catch { return false; }
+  try {
+    data = JSON.parse(payloadBuf.toString('utf8'));
+  } catch {
+    return false;
+  }
 
   if (!data || typeof data.exp !== 'number') return false;
   const now = Math.floor(Date.now() / 1000);
@@ -67,5 +73,9 @@ function b64urlDecode(str) {
 }
 
 function json(status, data) {
-  return { statusCode: status, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) };
+  return {
+    statusCode: status,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  };
 }
