@@ -40,6 +40,23 @@ curl -I https://your-domain.netlify.app/ | grep -i content-security-policy
 4. Open Teacher Center: https://your-domain.netlify.app/hub/
 5. Repeat console check for CSP violations
 
+6. Open Admin Login: https://your-domain.netlify.app/admin-login/
+7. Repeat console check for CSP violations
+   - Note: Admin login error handler externalized to `/web/admin-login.js`
+   - Test with error parameter: `?e=test` to verify error display still works
+
+**CSP Stage 3B Requirements:**
+
+With enforced CSP (Stage 3B), pages must NOT include inline scripts or inline event handlers:
+- All inline `<script>` blocks must be moved to external `.js` files in `site/web/`
+- All inline event handlers (e.g., `onclick="..."`) must use `addEventListener` instead
+- External scripts are loaded using `<script src="/web/filename.js" defer></script>`
+
+**Pages with externalized scripts:**
+- Student Portal: Uses `/web/student-portal-*.js` scripts
+- Admin Login: Uses `/web/admin-login.js` for error message display
+- Other pages: Check `site/web/` directory for complete list
+
 **Test Authentication Flow:**
 
 1. Navigate to Student Portal
