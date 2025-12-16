@@ -18,6 +18,11 @@
         return; // Defensive: exit if container doesn't exist
       }
       
+      // Log error code for debugging (visible in DevTools console)
+      if (console && console.warn) {
+        console.warn('[admin-login] Login failed with error code:', errorCode);
+      }
+      
       const errorDiv = document.createElement('div');
       errorDiv.className = 'error-message';
       errorDiv.setAttribute('data-error-code', errorCode);
