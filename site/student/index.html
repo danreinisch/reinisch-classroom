@@ -2382,7 +2382,7 @@
     }
     
     html += '<div class="error-actions">';
-    html += '<button class="btn small" onclick="document.getElementById(\'iepValidationErrors\').innerHTML = \'\'">Dismiss</button>';
+    html += '<button class="btn small" data-action="dismiss-iep-errors">Dismiss</button>';
     html += '</div>';
     html += '</div>';
     
@@ -2936,6 +2936,19 @@
         });
       });
     }
+    
+    // Event delegation for dynamically created buttons
+    document.addEventListener('click', (e) => {
+      const target = e.target;
+      
+      // Handle IEP validation errors dismiss button
+      if (target && target.dataset && target.dataset.action === 'dismiss-iep-errors') {
+        const errorsContainer = qs('#iepValidationErrors');
+        if (errorsContainer) {
+          errorsContainer.innerHTML = '';
+        }
+      }
+    });
     
     // Hash change listener for deep-linking to assignment details
     window.addEventListener('hashchange', () => {
