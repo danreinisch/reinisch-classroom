@@ -40,6 +40,11 @@ curl -I https://your-domain.netlify.app/ | grep -i content-security-policy
 4. Open Teacher Center: https://your-domain.netlify.app/hub/
 5. Repeat console check for CSP violations
 
+6. Open Admin Login: https://your-domain.netlify.app/admin-login/
+7. Verify no CSP violations (inline script externalized to `/web/admin-login.js`)
+
+**Note:** Stage 3B CSP requires no inline scripts. Admin login error display logic has been externalized to `site/web/admin-login.js` to comply with the enforced CSP policy.
+
 **Test Authentication Flow:**
 
 1. Navigate to Student Portal

@@ -6,6 +6,7 @@
   <title>Admin Login — Reinisch Classroom</title>
   <link rel="stylesheet" href="/assets/css/theme.css"/>
   <script src="/assets/js/section-nav.js" defer></script>
+  <script src="/web/admin-login.js" defer></script>
   <style>
     .wrap{max-width:520px;margin:80px auto;padding:24px;background:var(--panel);border:1px solid var(--panel-brd);border-radius:14px}
     h1{margin:0 0 12px 0}
@@ -46,29 +47,5 @@
     </form>
     <p class="muted" style="margin-top:8px">Use your admin credentials to access the uploader.</p>
   </main>
-  
-  <script>
-    // Display error message if error code is present in URL
-    (function() {
-      const params = new URLSearchParams(window.location.search);
-      const errorCode = params.get('e');
-      
-      if (errorCode) {
-        const errorContainer = document.getElementById('errorContainer');
-        const errorDiv = document.createElement('div');
-        errorDiv.className = 'error-message';
-        errorDiv.setAttribute('data-error-code', errorCode);
-        
-        // User-friendly generic message
-        errorDiv.innerHTML = `
-          <div>Login failed. Please try again.</div>
-          <div class="support-text">If the problem persists, contact support.</div>
-          <!-- Error code for debugging: ${errorCode} -->
-        `;
-        
-        errorContainer.appendChild(errorDiv);
-      }
-    })();
-  </script>
 </body>
 </html>
