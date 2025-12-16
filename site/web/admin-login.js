@@ -23,11 +23,15 @@
       errorDiv.setAttribute('data-error-code', errorCode);
       
       // User-friendly generic message
-      errorDiv.innerHTML = `
-        <div>Login failed. Please try again.</div>
-        <div class="support-text">If the problem persists, contact support.</div>
-        <!-- Error code for debugging: ${errorCode} -->
-      `;
+      const messageDiv = document.createElement('div');
+      messageDiv.textContent = 'Login failed. Please try again.';
+      
+      const supportDiv = document.createElement('div');
+      supportDiv.className = 'support-text';
+      supportDiv.textContent = 'If the problem persists, contact support.';
+      
+      errorDiv.appendChild(messageDiv);
+      errorDiv.appendChild(supportDiv);
       
       errorContainer.appendChild(errorDiv);
     }
