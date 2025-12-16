@@ -32,6 +32,13 @@ This document describes the unified authentication system for Teacher and Admin 
 2. **RPC Functions**
    - `verify_user_password(username, password)`: Authenticates and returns user info
    - `set_user_password(username, password, role, student_id)`: Creates/updates users
+   
+   **Important Note on pgcrypto Functions:**
+   On Supabase, the `pgcrypto` extension (providing `crypt()` and `gen_salt()`) is installed in the `extensions` schema, not `public`. All password-related RPC functions must either:
+   - Use schema-qualified calls: `extensions.crypt(password, extensions.gen_salt('bf'))`
+   - Set `search_path = pg_catalog, public, extensions` at the function level using `SET search_path`
+   
+   Without proper schema qualification or search_path configuration, you'll encounter runtime errors like "function crypt(text, text) does not exist". See migration `20251216171338_fix_set_user_password_crypt.sql` for the corrected function definitions.
 
 3. **Authentication Endpoints**
    - `/.netlify/functions/teacher-login`: POST with {username, password}
