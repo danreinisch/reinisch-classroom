@@ -2939,14 +2939,13 @@
     
     // Event delegation for dynamically created buttons
     document.addEventListener('click', (e) => {
-      const target = e.target;
-      
       // Handle IEP validation errors dismiss button
-      if (target && target.dataset && target.dataset.action === 'dismiss-iep-errors') {
+      if (e.target && e.target.dataset && e.target.dataset.action === 'dismiss-iep-errors') {
         const errorsContainer = qs('#iepValidationErrors');
         if (errorsContainer) {
           errorsContainer.innerHTML = '';
         }
+        e.stopPropagation();
       }
     });
     
