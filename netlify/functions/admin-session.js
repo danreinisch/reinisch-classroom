@@ -149,8 +149,10 @@ exports.handler = async (event) => {
       statusCode: 302,
       headers: {
         Location: '/admin/',
-        'Set-Cookie': cookies,
         'Cache-Control': 'no-store'
+      },
+      multiValueHeaders: {
+        'Set-Cookie': cookies
       }
     };
   } catch (e) {
