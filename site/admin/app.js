@@ -488,7 +488,7 @@
       log('Verifying upload with retry…');
       
       const MAX_RETRIES = 6;
-      const RETRY_DELAYS = [3000, 5000, 8000, 10000, 15000, 20000]; // Total ~61 seconds
+      const RETRY_DELAYS = [3000, 5000, 8000, 10000, 15000, 20000]; // Total 61 seconds
       let verifySuccess = false;
       let lastError = null;
       let verifyState = null;
@@ -497,7 +497,8 @@
         try {
           // Wait before attempting (except first attempt)
           if (attempt > 0) {
-            const delay = RETRY_DELAYS[attempt - 1];
+            const delayIndex = Math.min(attempt - 1, RETRY_DELAYS.length - 1);
+            const delay = RETRY_DELAYS[delayIndex];
             log(`  Waiting ${delay / 1000}s before attempt ${attempt + 1}/${MAX_RETRIES}…`);
             await new Promise(r => setTimeout(r, delay));
           } else {
