@@ -7,12 +7,12 @@ const {
   handleCorsPreFlight,
 } = require('./_lib/http');
 
-// Support both SUPABASE_SERVICE_ROLE_KEY and SUPABASE_SERVICE_KEY
-const SUPABASE_URL = process.env.SUPABASE_URL_RUNTIME || process.env.SUPABASE_URL;
-const SUPABASE_SERVICE_ROLE_KEY = 
-  process.env.SUPABASE_SERVICE_KEY_RUNTIME || 
-  process.env.SUPABASE_SERVICE_ROLE_KEY || 
-  process.env.SUPABASE_SERVICE_KEY;
+const {
+  getSupabaseConfig,
+} = require('./_lib/supa');
+
+// Get Supabase configuration
+const { url: SUPABASE_URL, key: SUPABASE_SERVICE_ROLE_KEY } = getSupabaseConfig();
 
 exports.handler = async (event) => {
   const requestId = generateRequestId();
