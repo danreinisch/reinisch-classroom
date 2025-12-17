@@ -144,8 +144,6 @@ exports.handler = async (event) => {
     const rpcResult = await response.json();
     const isValid = parseBooleanRpcResponse(rpcResult);
     
-    console.log(`[student-login] [${requestId}] RPC result type:`, typeof rpcResult, 'parsed:', isValid);
-    
     if (isValid === true) {
       console.log(`[student-login] [${requestId}] Login successful for code:`, code);
       

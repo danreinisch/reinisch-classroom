@@ -58,7 +58,6 @@ async function jsonRes(res) {
  * PostgREST can return booleans in various formats:
  * - Direct boolean: true or false
  * - Array with single boolean: [true] or [false]
- * - Object (legacy): depends on function signature
  * @param {*} data - Response data from RPC call
  * @returns {boolean} - Parsed boolean value
  */
