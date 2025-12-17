@@ -2404,48 +2404,73 @@
     
     // Sign-in modal: Student button
     on('#signInStudent', 'click', async () => {
+      const select = qs('#studentCodeSelect');
+      const signInModal = qs('#signInModal');
+      const studentModal = qs('#studentSignInModal');
+      const passField = qs('#studentPassword');
+      const msgField = qs('#studentSignInMsg');
+      
+      if (!select) {
+        console.error('[Sign-in] Student code select not found');
+        return;
+      }
+      
+      // Clear existing options
+      select.innerHTML = '<option value="">-- Select your code --</option>';
+      
+      let students = [];
+      let loadSuccess = false;
+      
+      // Try to load from student-roster endpoint first
       try {
-        // Load student codes
-        const students = await db.listStudents();
-        const select = qs('#studentCodeSelect');
-        if (!select) {
-          console.error('[Sign-in] Student code select not found');
-          return;
+        console.log('[Sign-in] Attempting to load student roster from function');
+        const response = await fetch('/.netlify/functions/student-roster');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.ok && Array.isArray(data.students)) {
+            students = data.students;
+            loadSuccess = true;
+            console.log(`[Sign-in] Loaded ${students.length} students from function (source: ${data.source})`);
+          }
+        } else {
+          console.warn(`[Sign-in] Function returned ${response.status}, falling back to local`);
         }
-        
-        // Clear existing options
-        select.innerHTML = '<option value="">-- Select your code --</option>';
-        
-        // Add student options with proper escaping
+      } catch (err) {
+        console.warn('[Sign-in] Failed to load from function, falling back to local:', err);
+      }
+      
+      // Fall back to local db.listStudents if function failed
+      if (!loadSuccess) {
+        try {
+          console.log('[Sign-in] Loading student roster from local db');
+          students = await db.listStudents();
+          loadSuccess = true;
+          console.log(`[Sign-in] Loaded ${students.length} students from local db`);
+        } catch (err) {
+          console.error('[Sign-in] Failed to load from local db:', err);
+        }
+      }
+      
+      // Populate dropdown or show error
+      if (loadSuccess && students.length > 0) {
         students.forEach(s => {
           const option = document.createElement('option');
           option.value = s.code;
           option.textContent = s.code + (s.name && s.name !== s.code ? ' - ' + s.name : '');
           select.appendChild(option);
         });
-        
-        // Show student sign-in modal
-        const signInModal = qs('#signInModal');
-        const studentModal = qs('#studentSignInModal');
-        const passField = qs('#studentPassword');
-        const msgField = qs('#studentSignInMsg');
-        
-        if (signInModal) signInModal.classList.remove('show');
-        if (studentModal) studentModal.classList.add('show');
-        if (passField) passField.value = '';
         if (msgField) msgField.innerHTML = '';
-      } catch (err) {
-        console.error('Failed to load student codes:', err);
-        const msgEl = qs('#studentSignInMsg');
-        if (msgEl) {
-          msgEl.innerHTML = '<span style="color:#fecaca">Failed to load student list. Please try again.</span>';
+      } else {
+        // Show error message
+        if (msgField) {
+          msgField.innerHTML = '<span style="color:#fecaca">No roster available. Ask teacher to enable Supabase or import roster.</span>';
         }
-        // Still show the modal so user can see the error
-        const signInModal = qs('#signInModal');
-        const studentModal = qs('#studentSignInModal');
-        if (signInModal) signInModal.classList.remove('show');
-        if (studentModal) studentModal.classList.add('show');
       }
+      
+      // Show student sign-in modal
+      if (signInModal) signInModal.classList.remove('show');
+      if (studentModal) studentModal.classList.add('show');
+      if (passField) passField.value = '';
     });
     
     // Track if coming from sign-in modal for teacher auth
