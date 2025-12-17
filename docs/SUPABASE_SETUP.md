@@ -162,6 +162,60 @@ All Supabase operations are wrapped with exponential backoff retry logic:
 - ✅ Use Supabase Auth for user authentication
 - ❌ Never log full anon keys (only length if needed)
 
+### Student Authentication (Server-Side)
+
+The application uses server-side student authentication via Netlify Functions to avoid exposing Supabase service role keys client-side:
+
+**Endpoint:** `/.netlify/functions/student-login`
+
+**Method:** `POST`
+
+**Request Body:**
+```json
+{
+  "code": "S001",
+  "password": "student_password"
+}
+```
+
+**Response (Success - 200):**
+```json
+{
+  "ok": true,
+  "code": "S001",
+  "name": "S001"
+}
+```
+
+**Response (Failure - 401):**
+```json
+{
+  "ok": false,
+  "error": "Invalid credentials"
+}
+```
+
+**Required Environment Variables:**
+- `SUPABASE_URL` or `SUPABASE_URL_RUNTIME` - Your Supabase project URL
+- `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_SERVICE_KEY_RUNTIME`, or `SUPABASE_SERVICE_KEY` - Service role key (NOT anon key)
+
+**Setup in Netlify:**
+1. Go to Site Settings > Environment Variables
+2. Add the required variables listed above
+3. Deploy the site to activate the function
+
+**Security Features:**
+- Password verification happens server-side using the `verify_student_password` RPC
+- Uses pgcrypto/crypt for secure password hashing
+- No service role keys exposed to client-side code
+- `Cache-Control: no-store` prevents credential caching
+- CORS headers properly configured
+
+**Local Development:**
+- The client-side code includes a local fallback when running on localhost
+- This fallback is disabled in production for security
+- For local testing, ensure Supabase is configured or use local mode
+
 ### Row-Level Security
 - Always enable RLS on tables with sensitive data
 - Test policies thoroughly before production deployment
