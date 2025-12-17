@@ -1,0 +1,1131 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mastercard Interview Prep – Stephanie (Interactive)</title>
+  <style>:root{
+  --bg0:#070a10;
+  --bg1:#0b1220;
+  --card: rgba(12, 18, 30, .62);
+  --card2: rgba(12, 18, 30, .42);
+  --stroke: rgba(160, 190, 255, .14);
+  --stroke2: rgba(120, 160, 255, .22);
+  --text: rgba(245, 250, 255, .92);
+  --muted: rgba(245, 250, 255, .72);
+  --muted2: rgba(245, 250, 255, .55);
+  --blue: rgba(110, 170, 255, .95);
+  --blue2: rgba(70, 130, 255, .9);
+  --good: rgba(120, 255, 200, .92);
+  --warn: rgba(255, 210, 120, .92);
+  --bad: rgba(255, 120, 140, .92);
+  --shadow: 0 18px 44px rgba(0,0,0,.45);
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+  color: var(--text);
+  background:
+    radial-gradient(1100px 700px at 18% 22%, rgba(70,130,255,.20), transparent 58%),
+    radial-gradient(900px 640px at 76% 35%, rgba(90,170,255,.12), transparent 55%),
+    radial-gradient(700px 520px at 55% 90%, rgba(50,110,255,.10), transparent 60%),
+    linear-gradient(180deg, var(--bg0), var(--bg1));
+}
+
+a{color:inherit}
+.container{
+  max-width: 1200px;
+  margin: 22px auto 40px;
+  padding: 0 18px;
+}
+
+.topbar{
+  padding: 18px 18px 14px;
+  border:1px solid var(--stroke);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(20,28,45,.62), rgba(10,14,22,.55));
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(14px) saturate(120%);
+}
+
+.h1{
+  font-size: 22px;
+  font-weight: 850;
+  letter-spacing: .2px;
+  margin: 0 0 6px;
+}
+.sub{
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+
+.actions{
+  display:flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items:center;
+}
+
+.btn{
+  border:1px solid var(--stroke2);
+  background: rgba(16,22,35,.55);
+  color: var(--text);
+  padding: 9px 12px;
+  border-radius: 12px;
+  font-weight: 750;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: transform .08s ease, border-color .18s ease, background .18s ease;
+  backdrop-filter: blur(10px);
+}
+.btn:hover{ transform: translateY(-1px); border-color: rgba(120,170,255,.38); background: rgba(18,26,42,.62); }
+.btn:active{ transform: translateY(0px); }
+
+.chip{
+  margin-left:auto;
+  border:1px solid var(--stroke2);
+  padding: 8px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--muted);
+  background: rgba(16,22,35,.40);
+  backdrop-filter: blur(10px);
+}
+
+.grid{
+  margin-top: 14px;
+  display:grid;
+  grid-template-columns: 1.9fr 1.1fr;
+  gap: 14px;
+}
+
+.card{
+  border:1px solid var(--stroke);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(16,22,35,.58), rgba(10,14,22,.50));
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(14px) saturate(120%);
+  overflow:hidden;
+}
+
+.card .inner{ padding: 16px; }
+
+.card h2{
+  margin:0 0 6px;
+  font-size: 15.5px;
+  font-weight: 850;
+}
+.card p{ margin:0 0 12px; color: var(--muted); font-size: 12.5px; line-height: 1.45; }
+
+.sec{ margin-top: 14px; }
+.sec:first-child{ margin-top: 8px; }
+.sec h3{
+  margin: 0 0 10px;
+  font-size: 13.5px;
+  letter-spacing: .2px;
+  color: rgba(215,230,255,.92);
+  font-weight: 850;
+  opacity: .95;
+}
+
+.qblock{
+  border:1px solid rgba(120,160,255,.14);
+  border-radius: 16px;
+  background: rgba(10,14,22,.35);
+  padding: 12px;
+  margin-bottom: 12px;
+  box-shadow: 0 12px 26px rgba(0,0,0,.25);
+}
+
+.qtop{
+  display:flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.qtitle{
+  font-weight: 800;
+  font-size: 13px;
+  color: rgba(245,250,255,.92);
+  line-height: 1.3;
+}
+.tag{
+  font-size: 11px;
+  font-weight: 850;
+  padding: 6px 10px;
+  border-radius: 999px;
+  color: rgba(235,245,255,.88);
+  border:1px solid rgba(120,170,255,.22);
+  background: rgba(20,30,50,.35);
+  white-space: nowrap;
+}
+
+.qa-grid{
+  display:grid;
+  grid-template-columns: 1fr 360px;
+  gap: 12px;
+  align-items: stretch;
+}
+
+textarea.answer{
+  width:100%;
+  min-height: 240px;
+  height: 100%;
+  resize: vertical;
+  border-radius: 14px;
+  border: 1px solid rgba(120,170,255,.24);
+  background: rgba(10,14,22,.55);
+  color: rgba(245,250,255,.92);
+  padding: 12px 12px;
+  font-size: 13px;
+  line-height: 1.35;
+  outline: none;
+  box-shadow: inset 0 0 0 1px rgba(90,140,255,.08);
+}
+textarea.answer:focus{
+  border-color: rgba(120,190,255,.52);
+  box-shadow: 0 0 0 3px rgba(80,140,255,.20);
+}
+
+.coach{
+  height: 100%;
+  border-radius: 14px;
+  border:1px solid rgba(120,170,255,.18);
+  background: rgba(10,14,22,.40);
+  padding: 10px 10px 12px;
+  backdrop-filter: blur(10px) saturate(120%);
+}
+.coach-title{
+  display:flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-weight: 900;
+  font-size: 12.5px;
+  margin-bottom: 8px;
+}
+.coach-sub{ color: var(--muted2); font-weight: 900; }
+
+.ideas{
+  margin:0 0 10px 18px;
+  padding:0;
+  color: rgba(235,245,255,.80);
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+.ideas li{ margin-bottom: 6px; }
+
+.minirow{
+  display:flex;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+.mini{
+  border:1px solid rgba(120,170,255,.26);
+  background: rgba(16,22,35,.55);
+  color: rgba(245,250,255,.92);
+  padding: 7px 10px;
+  border-radius: 12px;
+  font-weight: 850;
+  font-size: 12px;
+  cursor:pointer;
+}
+.mini.primary{
+  border-color: rgba(110,170,255,.40);
+  background: rgba(30,55,95,.45);
+}
+.mini.ghost{
+  border-color: rgba(120,170,255,.18);
+  background: rgba(16,22,35,.35);
+  color: rgba(245,250,255,.80);
+}
+
+.feedback{
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(120,170,255,.18);
+  background: rgba(10,14,22,.55);
+  color: rgba(235,245,255,.88);
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+.feedback .scoreRow{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.dots{
+  display:flex;
+  gap: 6px;
+}
+.dot{
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(120,170,255,.26);
+  background: rgba(255,255,255,.08);
+}
+.dot.on.good{ background: rgba(120,255,200,.55); border-color: rgba(120,255,200,.65); }
+.dot.on.warn{ background: rgba(255,210,120,.52); border-color: rgba(255,210,120,.62); }
+.dot.on.bad{ background: rgba(255,120,140,.55); border-color: rgba(255,120,140,.65); }
+.feedback ul{ margin: 6px 0 0 18px; padding:0; }
+
+.hr{
+  height:1px;
+  background: rgba(120,170,255,.12);
+  margin: 12px 0;
+}
+
+.kv{
+  display:flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.pill{
+  display:inline-flex;
+  gap: 8px;
+  align-items:center;
+  border:1px solid rgba(120,170,255,.20);
+  background: rgba(16,22,35,.40);
+  padding: 7px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  color: rgba(235,245,255,.84);
+}
+.pill .dot2{
+  width: 9px; height: 9px; border-radius: 999px;
+  background: rgba(110,170,255,.75);
+  box-shadow: 0 0 12px rgba(90,150,255,.35);
+}
+
+.preview{
+  width:100%;
+  min-height: 140px;
+  border-radius: 14px;
+  border:1px solid rgba(120,170,255,.18);
+  background: rgba(10,14,22,.55);
+  color: rgba(235,245,255,.85);
+  padding: 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+  overflow:auto;
+}
+
+.note{
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--muted2);
+}
+
+.toast{
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 10px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(120,170,255,.18);
+  background: rgba(10,14,22,.72);
+  color: rgba(245,250,255,.90);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 12px 30px rgba(0,0,0,.35);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .18s ease;
+  font-size: 12.5px;
+  font-weight: 800;
+}
+.toast.show{ opacity: 1; }
+
+.fatal{
+  display:none;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,120,140,.35);
+  background: rgba(40,10,18,.35);
+  color: rgba(255,220,230,.92);
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+
+@media (max-width: 980px){
+  .grid{ grid-template-columns: 1fr; }
+  .qa-grid{ grid-template-columns: 1fr; }
+  .chip{ margin-left: 0; width: fit-content; }
+  textarea.answer{ min-height: 180px; }
+}</style>
+</head>
+<body>
+  <div class="container">
+    <div class="topbar">
+      <div class="h1">Mastercard Interview Prep – Stephanie (Interactive)</div>
+      <p class="sub">Type answers in bullets. Each question has “Ideas to include” plus instant feedback. If scripts are blocked on your host, the questions still show (you can still type), but buttons won’t work.</p>
+      <div class="actions">
+        <button class="btn" id="btnAnalyze" type="button">Analyze All</button>
+        <button class="btn" id="btnExportMd" type="button">Export → Markdown</button>
+        <button class="btn" id="btnExportJson" type="button">Export → JSON</button>
+        <button class="btn" id="btnCopy" type="button">Copy Preview</button>
+        <button class="btn" id="btnPrint" type="button">Print</button>
+        <button class="btn" id="btnClear" type="button">Clear All</button>
+        <div class="chip" id="saveState">Autosave: …</div>
+      </div>
+      <div class="fatal" id="fatal"></div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <div class="inner">
+          <h2>Practice Questions (Type Her Answers)</h2>
+          <p>Aim for 3–6 bullets, not scripts. Best answers quietly hit: <strong>Judgment</strong> (tradeoffs), <strong>Collaboration</strong>, <strong>Ownership</strong>.</p>
+          <div id="questions">
+            
+    <section class="sec">
+      <h3>1. Opening &amp; Narrative</h3>
+      <div class="qblock" data-id="q1" data-kind="narrative">
+        <div class="qtop">
+          <div class="qtitle">Walk me through your background and how you arrived at this point in your career.</div>
+          <div class="tag">Guaranteed</div>
+        </div>
+        <div class="qa-grid">
+          <textarea class="answer" id="ans_q1" placeholder="Type bullets here… (3–6 bullets is plenty)"></textarea>
+          <div class="coach">
+            <div class="coach-title">
+              <span>Ideas to include</span>
+              <span class="coach-sub">+ feedback</span>
+            </div>
+            <ul class="ideas">
+              <li>Past → Present → Future (30 seconds each).</li>
+<li>Highlight the pivot to backend + why you enjoy it.</li>
+<li>One credible “signature strength” (debugging, ownership, communication).</li>
+<li>End with why this role now (scale, reliability, high standards).</li>
+            </ul>
+            <div class="minirow">
+              <button class="mini primary" type="button" data-action="feedback" data-target="q1">Get feedback</button>
+              <button class="mini ghost" type="button" data-action="clearFeedback" data-target="q1">Clear feedback</button>
+            </div>
+            <div class="feedback" id="fb_q1" hidden></div>
+          </div>
+        </div>
+      </div><div class="qblock" data-id="q2" data-kind="why">
+        <div class="qtop">
+          <div class="qtitle">What interested you in this role and in Mastercard specifically?</div>
+          <div class="tag">Likely</div>
+        </div>
+        <div class="qa-grid">
+          <textarea class="answer" id="ans_q2" placeholder="Type bullets here… (3–6 bullets is plenty)"></textarea>
+          <div class="coach">
+            <div class="coach-title">
+              <span>Ideas to include</span>
+              <span class="coach-sub">+ feedback</span>
+            </div>
+            <ul class="ideas">
+              <li>Say what you DO know: scale, security, payments, engineering standards.</li>
+<li>Bridge missing req: “Since the posting isn’t public, I’m basing this on the team themes…”</li>
+<li>Connect your experience: reliability, production support, ambiguity.</li>
+<li>Ask a smart clarifier: “What does success look like in 90 days?”</li>
+            </ul>
+            <div class="minirow">
+              <button class="mini primary" type="button" data-action="feedback" data-target="q2">Get feedback</button>
+              <button class="mini ghost" type="button" data-action="clearFeedback" data-target="q2">Clear feedback</button>
+            </div>
+            <div class="feedback" id="fb_q2" hidden></div>
+          </div>
+        </div>
+      </div><div class="qblock" data-id="q3" data-kind="strengths">
+        <div class="qtop">
+          <div class="qtitle">How would you describe your strengths as a senior engineer?</div>
+          <div class="tag">Likely</div>
+        </div>
+        <div class="qa-grid">
+          <textarea class="answer" id="ans_q3" placeholder="Type bullets here… (3–6 bullets is plenty)"></textarea>
+          <div class="coach">
+            <div class="coach-title">
+              <span>Ideas to include</span>
+              <span class="coach-sub">+ feedback</span>
+            </div>
+            <ul class="ideas">
+              <li>Diagnosis + calm under pressure (production credibility).</li>
+<li>Systems thinking: failure modes, tradeoffs, long-term maintainability.</li>
+<li>Mentoring: code reviews, pairing, raising standards.</li>
+<li>Communication: translate tech to business outcomes.</li>
+            </ul>
+            <div class="minirow">
+              <button class="mini primary" type="button" data-action="feedback" data-target="q3">Get feedback</button>
+              <button class="mini ghost" type="button" data-action="clearFeedback" data-target="q3">Clear feedback</button>
+            </div>
+            <div class="feedback" id="fb_q3" hidden></div>
+          </div>
+        </div>
+      </div>
+    </section>
+    
+
+    <section class="sec">
+      <h3>2. Technical Depth &amp; System Design</h3>
+      <div class="qblock" data-id="q4" data-kind="system">
+        <div class="qtop">
+          <div class="qtitle">Tell me about a system you designed or significantly modernized (legacy → modular .NET, APIs, CI/CD).</div>
+          <div class="tag">Very likely</div>
+        </div>
+        <div class="qa-grid">
+          <textarea class="answer" id="ans_q4" placeholder="Type bullets here… (3–6 bullets is plenty)"></textarea>
+          <div class="coach">
+            <div class="coach-title">
+              <span>Ideas to include</span>
+              <span class="coach-sub">+ feedback</span>
+            </div>
+            <ul class="ideas">
+              <li>Context: what was broken about the legacy system?</li>
+<li>Action: what did YOU change (architecture, modules, APIs, pipelines)?</li>
+<li>Quality: tests, CI/CD, code standards, monitoring.</li>
+<li>Result: faster releases, fewer incidents, easier onboarding (numbers if you have them).</li>
+            </ul>
+            <div class="minirow">
+              <button class="mini primary" type="button" data-action="feedback" data-target="q4">Get feedback</button>
+              <button class="mini ghost" type="button" data-action="clearFeedback" data-target="q4">Clear feedback</button>
+            </div>
+            <div class="feedback" id="fb_q4" hidden></div>
+          </div>
+        </div>
+      </div><div class="qblock" data-id="q5" data-kind="system">
+        <div class="qtop">
+          <div class="qtitle">How did you approach reliability, security, and scalability in that system?</div>
+          <div class="tag">Very likely</div>
+        </div>
+        <div class="qa-grid">
+          <textarea class="answer" id="ans_q5" placeholder="Type bullets here… (3–6 bullets is plenty)"></textarea>
+          <div class="coach">
+            <div class="coach-title">
+              <span>Ideas to include</span>
+              <span class="coach-sub">+ feedback</span>
+            </div>
+            <ul class="ideas">
+              <li>Reliability: SLOs, monitoring/alerting, retries/backoff, graceful degradation.</li>
+<li>Security: least privilege, secrets mgmt, encryption, audit logging.</li>
+<li>Scalability: caching, load patterns, performance testing, capacity planning.</li>
+<li>Deploy safety: feature flags, canary/rollbacks.</li>
+            </ul>
+            <div class="minirow">
+              <button class="mini primary" type="button" data-action="feedback" data-target="q5">Get feedback</button>
+              <button class="mini ghost" type="button" data-action="clearFeedback" data-target="q5">Clear feedback</button>
+            </div>
+            <div class="feedback" id="fb_q5" hidden></div>
+          </div>
+        </div>
+      </div><div class="qblock" data-id="q6" data-kind="tradeoffs">
+        <div class="qtop">
+          <div class="qtitle">What tradeoffs did you have to make, and why?</div>
+          <div class="tag">Very likely</div>
+        </div>
+        <div class="qa-grid">
+          <textarea class="answer" id="ans_q6" placeholder="Type bullets here… (3–6 bullets is plenty)"></textarea>
+          <div class="coach">
+            <div class="coach-title">
+              <span>Ideas to include</span>
+              <span class="coach-sub">+ feedback</span>
+            </div>
+            <ul class="ideas">
+              <li>Time vs scope: what did you cut or phase?</li>
+<li>Cost vs performance: what did you optimize and what did you accept?</li>
+<li>Consistency vs availability (if relevant).</li>
+<li>Explain the WHY + how you reduced risk (flags, incremental rollout).</li>
+            </ul>
+            <div class="minirow">
+              <button class="mini primary" type="button" data-action="feedback" data-target="q6">Get feedback</button>
+              <button class="mini ghost" type="button" data-action="clearFeedback" data-target="q6">Clear feedback</button>
+            </div>
+            <div class="feedback" id="fb_q6" hidden></div>
+          </div>
+        </div>
+      </div><div class="qblock" data-id="q7" data-kind="system">
+        <div class="qtop">
+          <div class="qtitle">If you were redesigning that system today, what would you change?</div>
+          <div class="tag">Likely</div>
+        </div>
+        <div class="qa-grid">
+          <textarea class="answer" id="ans_q7" placeholder="Type bullets here… (3–6 bullets is plenty)"></textarea>
+          <div class="coach">
+            <div class="coach-title">
+              <span>Ideas to include</span>
+              <span class="coach-sub">+ feedback</span>
+            </div>
+            <ul class="ideas">
+              <li>Call out one improvement: observability, boundaries, testing, performance, security posture.</li>
+<li>Show maturity: what you learned since then.</li>
+<li>Keep it positive: don’t trash past decisions — explain constraints then.</li>
+            </ul>
+            <div class="minirow">
+              <button class="mini primary" type="button" data-action="feedback" data-target="q7">Get feedback</button>
+              <button class="mini ghost" type="button" data-action="clearFeedback" data-target="q7">Clear feedback</button>
+            </div>
+            <div class="feedback" id="fb_q7" hidden></div>
+          </div>
+        </div>
+      </div>
+    </section>
+    
+
+    <section class="sec">
+      <h3>3. Ownership &amp; Decision-Making</h3>
+      <div class="qblock" data-id="q8" data-kind="ownership">
+        <div class="qtop">
+          <div class="qtitle">Tell me about a time you took ownership of a problem that wasn’t clearly yours.</div>
+          <div class="tag">Very likely</div>
+        </div>
+        <div class="qa-grid">
+          <textarea class="answer" id="ans_q8" placeholder="Type bullets here… (3–6 bullets is plenty)"></textarea>
+          <div class="coach">
+            <div class="coach-title">
+              <span>Ideas to include</span>
+              <span class="coach-sub">+ feedback</span>
+            </div>
+            <ul class="ideas">
+              <li>How you noticed it (signal).</li>
+<li>What you did beyond your lane (coordination, docs, fix).</li>
+<li>Who you pulled in and how you communicated.</li>
+<li>Result: reduced risk, unblocked team, prevented outage.</li>
+            </ul>
+            <div class="minirow">
+              <button class="mini primary" type="button" data-action="feedback" data-target="q8">Get feedback</button>
+              <button class="mini ghost" type="button" data-action="clearFeedback" data-target="q8">Clear feedback</button>
+            </div>
+            <div class="feedback" id="fb_q8" hidden></div>
+          </div>
+        </div>
+      </div><div class="qblock" data-id="q9" data-kind="decision">
+        <div class="qtop">
+          <div class="qtitle">Describe a difficult technical decision you made with incomplete information.</div>
+          <div class="tag">Likely</div>
+        </div>
+        <div class="qa-grid">
+          <textarea class="answer" id="ans_q9" placeholder="Type bullets here… (3–6 bullets is plenty)"></textarea>
+          <div class="coach">
+            <div class="coach-title">
+              <span>Ideas to include</span>
+              <span class="coach-sub">+ feedback</span>
+            </div>
+            <ul class="ideas">
+              <li>List options you considered.</li>
+<li>What data you gathered fast (logs, metrics, stakeholder needs).</li>
+<li>How you chose: risk, reversibility, time-to-mitigate.</li>
+<li>Outcome + what you’d do differently next time.</li>
+            </ul>
+            <div class="minirow">
+              <button class="mini primary" type="button" data-action="feedback" data-target="q9">Get feedback</button>
+              <button class="mini ghost" type="button" data-action="clearFeedback" data-target="q9">Clear feedback</button>
+            </div>
+            <div class="feedback" id="fb_q9" hidden></div>
+          </div>
+        </div>
+      </div><div class="qblock" data-id="q10" data-kind="shipping">
+        <div class="qtop">
+          <div class="qtitle">How do you decide when something is “good enough” to ship?</div>
+          <div class="tag">Likely</div>
+        </div>
+        <div class="qa-grid">
+          <textarea class="answer" id="ans_q10" placeholder="Type bullets here… (3–6 bullets is plenty)"></textarea>
+          <div class="coach">
+            <div class="coach-title">
+              <span>Ideas to include</span>
+              <span class="coach-sub">+ feedback</span>
+            </div>
+            <ul class="ideas">
+              <li>Define quality gates: tests, security checks, perf baseline.</li>
+<li>Risk-based decisions: what breaks if it fails?</li>
+<li>Release safety: rollback plan, monitoring, feature flags.</li>
+<li>Stakeholder alignment: agree on acceptance criteria.</li>
+            </ul>
+            <div class="minirow">
+              <button class="mini primary" type="button" data-action="feedback" data-target="q10">Get feedback</button>
+              <button class="mini ghost" type="button" data-action="clearFeedback" data-target="q10">Clear feedback</button>
+            </div>
+            <div class="feedback" id="fb_q10" hidden></div>
+          </div>
+        </div>
+      </div>
+    </section>
+    
+
+    <section class="sec">
+      <h3>4. Production Issues, Failure &amp; Learning</h3>
+      <div class="qblock" data-id="q11" data-kind="incident">
+        <div class="qtop">
+          <div class="qtitle">Tell me about a production issue or outage you were involved in.</div>
+          <div class="tag">Very likely</div>
+        </div>
+        <div class="qa-grid">
+          <textarea class="answer" id="ans_q11" placeholder="Type bullets here… (3–6 bullets is plenty)"></textarea>
+          <div class="coach">
+            <div class="coach-title">
+              <span>Ideas to include</span>
+              <span class="coach-sub">+ feedback</span>
+            </div>
+            <ul class="ideas">
+              <li>Impact: who was affected and how bad?</li>
+<li>Timeline: what happened first, what changed recently?</li>
+<li>Mitigation: what stabilized the system.</li>
+<li>Root cause: config, deploy, dependency, data, infra.</li>
+            </ul>
+            <div class="minirow">
+              <button class="mini primary" type="button" data-action="feedback" data-target="q11">Get feedback</button>
+              <button class="mini ghost" type="button" data-action="clearFeedback" data-target="q11">Clear feedback</button>
+            </div>
+            <div class="feedback" id="fb_q11" hidden></div>
+          </div>
+        </div>
+      </div><div class="qblock" data-id="q12" data-kind="incident">
+        <div class="qtop">
+          <div class="qtitle">How did you diagnose the issue and communicate during the incident?</div>
+          <div class="tag">Very likely</div>
+        </div>
+        <div class="qa-grid">
+          <textarea class="answer" id="ans_q12" placeholder="Type bullets here… (3–6 bullets is plenty)"></textarea>
+          <div class="coach">
+            <div class="coach-title">
+              <span>Ideas to include</span>
+              <span class="coach-sub">+ feedback</span>
+            </div>
+            <ul class="ideas">
+              <li>Triage → isolate → mitigate → confirm recovery.</li>
+<li>War room / command center roles (IC, comms, ops).</li>
+<li>Regular status updates (what we know / doing / next update).</li>
+<li>Document a timeline while you work.</li>
+            </ul>
+            <div class="minirow">
+              <button class="mini primary" type="button" data-action="feedback" data-target="q12">Get feedback</button>
+              <button class="mini ghost" type="button" data-action="clearFeedback" data-target="q12">Clear feedback</button>
+            </div>
+            <div class="feedback" id="fb_q12" hidden></div>
+          </div>
+        </div>
+      </div><div class="qblock" data-id="q13" data-kind="incident">
+        <div class="qtop">
+          <div class="qtitle">What changed afterward to prevent it from happening again?</div>
+          <div class="tag">Very likely</div>
+        </div>
+        <div class="qa-grid">
+          <textarea class="answer" id="ans_q13" placeholder="Type bullets here… (3–6 bullets is plenty)"></textarea>
+          <div class="coach">
+            <div class="coach-title">
+              <span>Ideas to include</span>
+              <span class="coach-sub">+ feedback</span>
+            </div>
+            <ul class="ideas">
+              <li>Blameless postmortem with clear action items.</li>
+<li>Add monitoring/alerts for the specific failure mode.</li>
+<li>Add tests/guardrails in CI/CD or runtime validation.</li>
+<li>Update runbooks and improve on-call handoffs.</li>
+            </ul>
+            <div class="minirow">
+              <button class="mini primary" type="button" data-action="feedback" data-target="q13">Get feedback</button>
+              <button class="mini ghost" type="button" data-action="clearFeedback" data-target="q13">Clear feedback</button>
+            </div>
+            <div class="feedback" id="fb_q13" hidden></div>
+          </div>
+        </div>
+      </div>
+    </section>
+    
+
+    <section class="sec">
+      <h3>5. Collaboration &amp; Conflict</h3>
+      <div class="qblock" data-id="q14" data-kind="conflict">
+        <div class="qtop">
+          <div class="qtitle">Tell me about a disagreement with another engineer or stakeholder.</div>
+          <div class="tag">Guaranteed</div>
+        </div>
+        <div class="qa-grid">
+          <textarea class="answer" id="ans_q14" placeholder="Type bullets here… (3–6 bullets is plenty)"></textarea>
+          <div class="coach">
+            <div class="coach-title">
+              <span>Ideas to include</span>
+              <span class="coach-sub">+ feedback</span>
+            </div>
+            <ul class="ideas">
+              <li>Start with alignment: shared goal.</li>
+<li>Bring evidence: data, risk, customer impact.</li>
+<li>Offer options, not ultimatums.</li>
+<li>Outcome + what you learned about collaborating.</li>
+            </ul>
+            <div class="minirow">
+              <button class="mini primary" type="button" data-action="feedback" data-target="q14">Get feedback</button>
+              <button class="mini ghost" type="button" data-action="clearFeedback" data-target="q14">Clear feedback</button>
+            </div>
+            <div class="feedback" id="fb_q14" hidden></div>
+          </div>
+        </div>
+      </div><div class="qblock" data-id="q15" data-kind="feedback">
+        <div class="qtop">
+          <div class="qtitle">How do you handle feedback you don’t initially agree with?</div>
+          <div class="tag">Likely</div>
+        </div>
+        <div class="qa-grid">
+          <textarea class="answer" id="ans_q15" placeholder="Type bullets here… (3–6 bullets is plenty)"></textarea>
+          <div class="coach">
+            <div class="coach-title">
+              <span>Ideas to include</span>
+              <span class="coach-sub">+ feedback</span>
+            </div>
+            <ul class="ideas">
+              <li>Ask clarifying questions first (understand intent).</li>
+<li>Separate ego from the idea; test small if possible.</li>
+<li>If you still disagree, explain tradeoffs calmly.</li>
+<li>Close the loop: adopt or document why not.</li>
+            </ul>
+            <div class="minirow">
+              <button class="mini primary" type="button" data-action="feedback" data-target="q15">Get feedback</button>
+              <button class="mini ghost" type="button" data-action="clearFeedback" data-target="q15">Clear feedback</button>
+            </div>
+            <div class="feedback" id="fb_q15" hidden></div>
+          </div>
+        </div>
+      </div><div class="qblock" data-id="q16" data-kind="collab">
+        <div class="qtop">
+          <div class="qtitle">How do you work with non-technical partners like product, QA, or leadership?</div>
+          <div class="tag">Guaranteed</div>
+        </div>
+        <div class="qa-grid">
+          <textarea class="answer" id="ans_q16" placeholder="Type bullets here… (3–6 bullets is plenty)"></textarea>
+          <div class="coach">
+            <div class="coach-title">
+              <span>Ideas to include</span>
+              <span class="coach-sub">+ feedback</span>
+            </div>
+            <ul class="ideas">
+              <li>Translate tech to outcomes: impact, risk, options, recommendation.</li>
+<li>Confirm requirements and acceptance criteria early.</li>
+<li>Demo early and often; shorten feedback loops.</li>
+<li>Document decisions so everyone stays aligned.</li>
+            </ul>
+            <div class="minirow">
+              <button class="mini primary" type="button" data-action="feedback" data-target="q16">Get feedback</button>
+              <button class="mini ghost" type="button" data-action="clearFeedback" data-target="q16">Clear feedback</button>
+            </div>
+            <div class="feedback" id="fb_q16" hidden></div>
+          </div>
+        </div>
+      </div>
+    </section>
+    
+
+    <section class="sec">
+      <h3>6. Leadership &amp; Mentorship</h3>
+      <div class="qblock" data-id="q17" data-kind="mentor">
+        <div class="qtop">
+          <div class="qtitle">How have you mentored junior engineers or raised team standards?</div>
+          <div class="tag">Likely</div>
+        </div>
+        <div class="qa-grid">
+          <textarea class="answer" id="ans_q17" placeholder="Type bullets here… (3–6 bullets is plenty)"></textarea>
+          <div class="coach">
+            <div class="coach-title">
+              <span>Ideas to include</span>
+              <span class="coach-sub">+ feedback</span>
+            </div>
+            <ul class="ideas">
+              <li>Pairing, code reviews, and ‘why’ explanations.</li>
+<li>Documentation/runbooks to reduce repeated questions.</li>
+<li>Raising standards: tests, logging, code style, PR hygiene.</li>
+<li>Give an example of someone you helped level up.</li>
+            </ul>
+            <div class="minirow">
+              <button class="mini primary" type="button" data-action="feedback" data-target="q17">Get feedback</button>
+              <button class="mini ghost" type="button" data-action="clearFeedback" data-target="q17">Clear feedback</button>
+            </div>
+            <div class="feedback" id="fb_q17" hidden></div>
+          </div>
+        </div>
+      </div><div class="qblock" data-id="q18" data-kind="leadership">
+        <div class="qtop">
+          <div class="qtitle">How do you balance hands-on development with leadership responsibilities?</div>
+          <div class="tag">Likely</div>
+        </div>
+        <div class="qa-grid">
+          <textarea class="answer" id="ans_q18" placeholder="Type bullets here… (3–6 bullets is plenty)"></textarea>
+          <div class="coach">
+            <div class="coach-title">
+              <span>Ideas to include</span>
+              <span class="coach-sub">+ feedback</span>
+            </div>
+            <ul class="ideas">
+              <li>Time blocks for deep work + office hours.</li>
+<li>Prioritize: biggest risks first; limit WIP.</li>
+<li>Delegate early; create leverage via docs/automation.</li>
+<li>Stay close to production signals (metrics/incidents).</li>
+            </ul>
+            <div class="minirow">
+              <button class="mini primary" type="button" data-action="feedback" data-target="q18">Get feedback</button>
+              <button class="mini ghost" type="button" data-action="clearFeedback" data-target="q18">Clear feedback</button>
+            </div>
+            <div class="feedback" id="fb_q18" hidden></div>
+          </div>
+        </div>
+      </div>
+    </section>
+    
+
+    <section class="sec">
+      <h3>7. Working Style &amp; Culture Fit</h3>
+      <div class="qblock" data-id="q19" data-kind="culture">
+        <div class="qtop">
+          <div class="qtitle">What does a productive engineering team look like to you?</div>
+          <div class="tag">Likely</div>
+        </div>
+        <div class="qa-grid">
+          <textarea class="answer" id="ans_q19" placeholder="Type bullets here… (3–6 bullets is plenty)"></textarea>
+          <div class="coach">
+            <div class="coach-title">
+              <span>Ideas to include</span>
+              <span class="coach-sub">+ feedback</span>
+            </div>
+            <ul class="ideas">
+              <li>Clear goals and ownership.</li>
+<li>Psychological safety + respectful debate.</li>
+<li>Fast feedback loops (CI, monitoring, reviews).</li>
+<li>Shared standards: testing, docs, observability.</li>
+            </ul>
+            <div class="minirow">
+              <button class="mini primary" type="button" data-action="feedback" data-target="q19">Get feedback</button>
+              <button class="mini ghost" type="button" data-action="clearFeedback" data-target="q19">Clear feedback</button>
+            </div>
+            <div class="feedback" id="fb_q19" hidden></div>
+          </div>
+        </div>
+      </div><div class="qblock" data-id="q20" data-kind="tradeoffs">
+        <div class="qtop">
+          <div class="qtitle">How do you balance speed, quality, and security in delivery?</div>
+          <div class="tag">Very likely</div>
+        </div>
+        <div class="qa-grid">
+          <textarea class="answer" id="ans_q20" placeholder="Type bullets here… (3–6 bullets is plenty)"></textarea>
+          <div class="coach">
+            <div class="coach-title">
+              <span>Ideas to include</span>
+              <span class="coach-sub">+ feedback</span>
+            </div>
+            <ul class="ideas">
+              <li>Security and correctness have a minimum bar.</li>
+<li>Slice scope; ship incrementally with flags.</li>
+<li>Risk-based testing (focus on high-impact paths).</li>
+<li>Communicate tradeoffs early; avoid surprise debt.</li>
+            </ul>
+            <div class="minirow">
+              <button class="mini primary" type="button" data-action="feedback" data-target="q20">Get feedback</button>
+              <button class="mini ghost" type="button" data-action="clearFeedback" data-target="q20">Clear feedback</button>
+            </div>
+            <div class="feedback" id="fb_q20" hidden></div>
+          </div>
+        </div>
+      </div><div class="qblock" data-id="q21" data-kind="ambiguity">
+        <div class="qtop">
+          <div class="qtitle">How do you handle ambiguity or shifting priorities?</div>
+          <div class="tag">Likely</div>
+        </div>
+        <div class="qa-grid">
+          <textarea class="answer" id="ans_q21" placeholder="Type bullets here… (3–6 bullets is plenty)"></textarea>
+          <div class="coach">
+            <div class="coach-title">
+              <span>Ideas to include</span>
+              <span class="coach-sub">+ feedback</span>
+            </div>
+            <ul class="ideas">
+              <li>Clarify the goal and constraints.</li>
+<li>Re-plan in slices; show impacts transparently.</li>
+<li>Align stakeholders on tradeoffs and next steps.</li>
+<li>Keep execution moving while details firm up.</li>
+            </ul>
+            <div class="minirow">
+              <button class="mini primary" type="button" data-action="feedback" data-target="q21">Get feedback</button>
+              <button class="mini ghost" type="button" data-action="clearFeedback" data-target="q21">Clear feedback</button>
+            </div>
+            <div class="feedback" id="fb_q21" hidden></div>
+          </div>
+        </div>
+      </div>
+    </section>
+    
+
+    <section class="sec">
+      <h3>8. Growth &amp; Self-Awareness</h3>
+      <div class="qblock" data-id="q22" data-kind="growth">
+        <div class="qtop">
+          <div class="qtitle">What’s an area you’re still working to improve as an engineer?</div>
+          <div class="tag">Likely</div>
+        </div>
+        <div class="qa-grid">
+          <textarea class="answer" id="ans_q22" placeholder="Type bullets here… (3–6 bullets is plenty)"></textarea>
+          <div class="coach">
+            <div class="coach-title">
+              <span>Ideas to include</span>
+              <span class="coach-sub">+ feedback</span>
+            </div>
+            <ul class="ideas">
+              <li>Pick a real-but-safe improvement (delegation, scope control, speaking up early).</li>
+<li>Show actions you take (process, mentorship, practice).</li>
+<li>Tie to results: how it improved outcomes/team.</li>
+            </ul>
+            <div class="minirow">
+              <button class="mini primary" type="button" data-action="feedback" data-target="q22">Get feedback</button>
+              <button class="mini ghost" type="button" data-action="clearFeedback" data-target="q22">Clear feedback</button>
+            </div>
+            <div class="feedback" id="fb_q22" hidden></div>
+          </div>
+        </div>
+      </div><div class="qblock" data-id="q23" data-kind="growth">
+        <div class="qtop">
+          <div class="qtitle">How do you keep your skills current across evolving technologies?</div>
+          <div class="tag">Likely</div>
+        </div>
+        <div class="qa-grid">
+          <textarea class="answer" id="ans_q23" placeholder="Type bullets here… (3–6 bullets is plenty)"></textarea>
+          <div class="coach">
+            <div class="coach-title">
+              <span>Ideas to include</span>
+              <span class="coach-sub">+ feedback</span>
+            </div>
+            <ul class="ideas">
+              <li>Be deliberate: pick one skill at a time, then apply it.</li>
+<li>Learn by reading real code + doing PR reviews.</li>
+<li>Use courses/books when needed; focus on fundamentals.</li>
+<li>Stay close to production: incidents teach fast.</li>
+            </ul>
+            <div class="minirow">
+              <button class="mini primary" type="button" data-action="feedback" data-target="q23">Get feedback</button>
+              <button class="mini ghost" type="button" data-action="clearFeedback" data-target="q23">Clear feedback</button>
+            </div>
+            <div class="feedback" id="fb_q23" hidden></div>
+          </div>
+        </div>
+      </div>
+    </section>
+    
+
+    <section class="sec">
+      <h3>9. Closing Questions (Choose 1–2)</h3>
+      <div class="qblock" data-id="q24" data-kind="closing">
+        <div class="qtop">
+          <div class="qtitle">What does success look like for this role in the first six months?</div>
+          <div class="tag">Ask them</div>
+        </div>
+        <div class="qa-grid">
+          <textarea class="answer" id="ans_q24" placeholder="Type bullets here… (3–6 bullets is plenty)"></textarea>
+          <div class="coach">
+            <div class="coach-title">
+              <span>Ideas to include</span>
+              <span class="coach-sub">+ feedback</span>
+            </div>
+            <ul class="ideas">
+              <li>Listen for: deliverables, partnerships, operational ownership.</li>
+<li>Follow-up: “What would make you say ‘this was a great hire’?”</li>
+<li>Ask how success is measured (metrics, SLAs/SLOs, project outcomes).</li>
+            </ul>
+            <div class="minirow">
+              <button class="mini primary" type="button" data-action="feedback" data-target="q24">Get feedback</button>
+              <button class="mini ghost" type="button" data-action="clearFeedback" data-target="q24">Clear feedback</button>
+            </div>
+            <div class="feedback" id="fb_q24" hidden></div>
+          </div>
+        </div>
+      </div><div class="qblock" data-id="q25" data-kind="closing">
+        <div class="qtop">
+          <div class="qtitle">What challenges is the team most focused on right now?</div>
+          <div class="tag">Ask them</div>
+        </div>
+        <div class="qa-grid">
+          <textarea class="answer" id="ans_q25" placeholder="Type bullets here… (3–6 bullets is plenty)"></textarea>
+          <div class="coach">
+            <div class="coach-title">
+              <span>Ideas to include</span>
+              <span class="coach-sub">+ feedback</span>
+            </div>
+            <ul class="ideas">
+              <li>Listen for: reliability, data quality, speed of delivery, tech debt.</li>
+<li>Follow-up: “What’s the #1 thing blocking progress?”</li>
+<li>Ask what’s changing in the stack/process this year.</li>
+            </ul>
+            <div class="minirow">
+              <button class="mini primary" type="button" data-action="feedback" data-target="q25">Get feedback</button>
+              <button class="mini ghost" type="button" data-action="clearFeedback" data-target="q25">Clear feedback</button>
+            </div>
+            <div class="feedback" id="fb_q25" hidden></div>
+          </div>
+        </div>
+      </div><div class="qblock" data-id="q26" data-kind="closing">
+        <div class="qtop">
+          <div class="qtitle">How do strong engineers distinguish themselves on this team?</div>
+          <div class="tag">Ask them</div>
+        </div>
+        <div class="qa-grid">
+          <textarea class="answer" id="ans_q26" placeholder="Type bullets here… (3–6 bullets is plenty)"></textarea>
+          <div class="coach">
+            <div class="coach-title">
+              <span>Ideas to include</span>
+              <span class="coach-sub">+ feedback</span>
+            </div>
+            <ul class="ideas">
+              <li>Listen for: ownership, collaboration, operational excellence.</li>
+<li>Follow-up: “What behaviors do you want more of?”</li>
+<li>Ask how feedback/growth works (reviews, mentorship, leveling).</li>
+            </ul>
+            <div class="minirow">
+              <button class="mini primary" type="button" data-action="feedback" data-target="q26">Get feedback</button>
+              <button class="mini ghost" type="button" data-action="clearFeedback" data-target="q26">Clear feedback</button>
+            </div>
+            <div class="feedback" id="fb_q26" hidden></div>
+          </div>
+        </div>
+      </div>
+    </section>
+    
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="inner">
+          <h2>Compass + Guardrails</h2>
+          <p><strong>Anchor sentence:</strong> “I build reliable, scalable systems in ambiguous environments and communicate clearly while doing it.”</p>
+
+          <div class="kv">
+            <span class="pill"><span class="dot2"></span>Judgment: scale • failure • tradeoffs</span>
+            <span class="pill"><span class="dot2"></span>Collaboration: calm • cross-team</span>
+            <span class="pill"><span class="dot2"></span>Ownership: beyond my code</span>
+          </div>
+
+          <div class="hr"></div>
+
+          <p><strong>Behavioral cheat code:</strong> Context → Decision → Outcome → Learning (Learning = senior signal.)</p>
+
+          <p><strong>Language to avoid:</strong> “I have no idea”, “not sure”, “maybe”, “I guess”. Replace with: “Based on what I know…” + one smart assumption + one question back.</p>
+
+          <div class="hr"></div>
+
+          <h2 style="font-size:14px;margin-top:0;">Export Preview</h2>
+          <div class="preview" id="exportPreview">(Click Export above to generate.)</div>
+
+          <div class="note">Notes save in this browser only (LocalStorage). Generated: 2025-12-17T13:01:37.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast">Saved</div>
+  <script src="./mastercard_interview_prep_stephanie_v5_app.js" defer></script>
+<noscript>
+    <div style="max-width:1200px;margin:18px auto;color:#fff;opacity:.85;padding:0 18px;">
+      JavaScript is disabled — you can still type answers, but feedback/export/autosave won’t work.
+    </div>
+  </noscript>
+</body>
+</html>
