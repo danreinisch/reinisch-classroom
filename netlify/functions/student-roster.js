@@ -98,7 +98,7 @@ exports.handler = async (event) => {
     
     // Filter for active students if active field exists
     let students = data;
-    if (data.length > 0 && data[0].hasOwnProperty('active')) {
+    if (data.length > 0 && 'active' in data[0]) {
       students = data.filter(s => s.active === true);
       console.log(`[student-roster] [${requestId}] Filtered to ${students.length} active students from ${data.length} total`);
     } else {
