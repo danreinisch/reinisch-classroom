@@ -2,6 +2,49 @@
 
 This document provides step-by-step instructions for deploying and verifying the unified Supabase authentication system.
 
+## Content Security Policy (CSP) Compliance for Hub Pages
+
+**Important:** All unit hub pages MUST use external JavaScript files to comply with the site's enforced CSP policy which disallows inline scripts (`script-src 'self'` without `'unsafe-inline'`).
+
+### Hub Page Requirements
+- **External scripts only**: Use `<script src="..." defer></script>` tags
+- **No inline scripts**: Remove all `<script>` blocks with code inside
+- **Dynamic content**: Use `/site/assets/js/unit-grid.js` to populate presentation cards from `site-state.json`
+- **Grid container**: Include `<section class="grid" id="grid" aria-live="polite"></section>` for dynamic rendering
+
+### Example Fix
+If a hub page shows "Placeholder" cards and console CSP violations:
+
+**Before (Non-Compliant):**
+```html
+<section class="grid">
+  <a class="card" href="#"><strong>Presentation 1</strong><small>Placeholder</small></a>
+  <!-- More static cards... -->
+</section>
+```
+
+**After (CSP-Compliant):**
+```html
+<link rel="stylesheet" href="/assets/css/theme.css"/>
+<script src="/assets/js/section-nav.js" defer></script>
+<script src="/site/assets/js/unit-grid.js" defer></script>
+...
+<section class="grid" id="grid" aria-live="polite"></section>
+```
+
+The `unit-grid.js` script will:
+1. Fetch unit metadata from `/assets/data/units.json`
+2. Fetch current state from `/assets/data/site-state.json` (or `/site/assets/data/site-state.json`)
+3. Dynamically populate the grid with actual presentation links and titles
+4. Handle placeholder display for slots without content
+
+### Recent Fixes
+- **Warrior of Kragdon-ah** hub: Updated to use external unit-grid.js (removed inline placeholders)
+- **Lost in Kragdon-ah** hub: Updated to use external unit-grid.js
+- **Return from Kragdon-ah** hub: Updated to use external unit-grid.js
+
+For more CSP compliance details, see `docs/CSP_COMPLIANCE_SUMMARY.md`.
+
 ## Pre-Deployment Checklist
 
 ### ✅ Code Review Complete

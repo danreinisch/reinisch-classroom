@@ -64,3 +64,21 @@
   to = "/assets/js/adit-week11-bg-preload.js"
   status = 200
 
+# Redirect for unit-grid.js to canonical location in site/assets
+[[redirects]]
+  from = "/assets/js/unit-grid.js"
+  to = "/site/assets/js/unit-grid.js"
+  status = 200
+
+# Redirect for section-nav.js to canonical location in site/assets
+[[redirects]]
+  from = "/assets/js/section-nav.js"
+  to = "/site/assets/js/section-nav.js"
+  status = 200
+
+# Redirect for theme.css to canonical location in site/assets
+[[redirects]]
+  from = "/assets/css/theme.css"
+  to = "/site/assets/css/theme.css"
+  status = 200
+
