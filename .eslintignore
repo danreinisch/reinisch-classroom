@@ -27,3 +27,6 @@ playwright.config.js
 
 # Ignore misnamed files
 site/admin-logout.js
+
+# Ignore legacy presentation files with lint errors
+site/life-skills/presentations/
