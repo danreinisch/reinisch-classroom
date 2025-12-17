@@ -107,7 +107,7 @@ exports.handler = async (event) => {
       
       // Check for specific error messages (don't log full error text as it may contain sensitive info)
       if (errorText.includes('Account inactive')) {
-        console.log(`[student-login] [${requestId}] Account inactive for code:`, code);
+        console.log(`[student-login] [${requestId}] Account inactive`);
         return jsonResponse(
           event,
           403,
@@ -130,7 +130,7 @@ exports.handler = async (event) => {
       }
       
       // Generic RPC failure - treat as invalid credentials (don't reveal DB details)
-      console.log(`[student-login] [${requestId}] RPC returned error for code:`, code);
+      console.log(`[student-login] [${requestId}] RPC returned error`);
       return jsonResponse(
         event,
         401,
@@ -145,7 +145,7 @@ exports.handler = async (event) => {
     const isValid = parseBooleanRpcResponse(rpcResult);
     
     if (isValid === true) {
-      console.log(`[student-login] [${requestId}] Login successful for code:`, code);
+      console.log(`[student-login] [${requestId}] Login successful`);
       
       // Return code as name (post-PII removal, students only have code)
       return jsonResponse(
@@ -156,7 +156,7 @@ exports.handler = async (event) => {
         requestId
       );
     } else {
-      console.log(`[student-login] [${requestId}] Invalid credentials for code:`, code);
+      console.log(`[student-login] [${requestId}] Invalid credentials`);
       return jsonResponse(
         event,
         401,
