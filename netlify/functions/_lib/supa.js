@@ -1,8 +1,23 @@
 // Minimal REST helpers for Supabase (no supabase-js needed)
 // Supports runtime overrides via SUPABASE_URL_RUNTIME and SUPABASE_SERVICE_KEY_RUNTIME
 // Uses native Node 18+ fetch (no polyfill required)
-const SUPABASE_URL = process.env.SUPABASE_URL_RUNTIME || process.env.SUPABASE_URL;
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_KEY_RUNTIME || process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+/**
+ * Get Supabase configuration from environment variables
+ * Supports both SUPABASE_SERVICE_ROLE_KEY and SUPABASE_SERVICE_KEY
+ * and runtime variants
+ * @returns {Object} { url, key } - Supabase URL and service role key
+ */
+function getSupabaseConfig() {
+  const url = process.env.SUPABASE_URL_RUNTIME || process.env.SUPABASE_URL;
+  const key = 
+    process.env.SUPABASE_SERVICE_KEY_RUNTIME || 
+    process.env.SUPABASE_SERVICE_ROLE_KEY || 
+    process.env.SUPABASE_SERVICE_KEY;
+  return { url, key };
+}
+
+const { url: SUPABASE_URL, key: SUPABASE_SERVICE_ROLE_KEY } = getSupabaseConfig();
 
 if (!SUPABASE_URL) console.warn('Missing SUPABASE_URL');
 if (!SUPABASE_SERVICE_ROLE_KEY) console.warn('Missing SUPABASE_SERVICE_ROLE_KEY');
@@ -38,4 +53,36 @@ async function jsonRes(res) {
   }
 }
 
-module.exports = { rest, jsonRes, rpc, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY };
+/**
+ * Parse RPC boolean response from PostgREST
+ * PostgREST can return booleans in various formats:
+ * - Direct boolean: true or false
+ * - Array with single boolean: [true] or [false]
+ * - Object (legacy): depends on function signature
+ * @param {*} data - Response data from RPC call
+ * @returns {boolean} - Parsed boolean value
+ */
+function parseBooleanRpcResponse(data) {
+  // Direct boolean
+  if (typeof data === 'boolean') {
+    return data;
+  }
+  
+  // Array format (PostgREST sometimes returns [true] or [false])
+  if (Array.isArray(data) && data.length > 0) {
+    return Boolean(data[0]);
+  }
+  
+  // Fallback: coerce to boolean
+  return Boolean(data);
+}
+
+module.exports = { 
+  rest, 
+  jsonRes, 
+  rpc, 
+  parseBooleanRpcResponse,
+  getSupabaseConfig,
+  SUPABASE_URL, 
+  SUPABASE_SERVICE_ROLE_KEY 
+};

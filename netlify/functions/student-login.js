@@ -8,13 +8,13 @@ const {
   handleCorsPreFlight,
 } = require('./_lib/http');
 
-// Support both SUPABASE_SERVICE_ROLE_KEY and SUPABASE_SERVICE_KEY
-// and runtime variants
-const SUPABASE_URL = process.env.SUPABASE_URL_RUNTIME || process.env.SUPABASE_URL;
-const SUPABASE_SERVICE_ROLE_KEY = 
-  process.env.SUPABASE_SERVICE_KEY_RUNTIME || 
-  process.env.SUPABASE_SERVICE_ROLE_KEY || 
-  process.env.SUPABASE_SERVICE_KEY;
+const {
+  getSupabaseConfig,
+  parseBooleanRpcResponse,
+} = require('./_lib/supa');
+
+// Get Supabase configuration
+const { url: SUPABASE_URL, key: SUPABASE_SERVICE_ROLE_KEY } = getSupabaseConfig();
 
 exports.handler = async (event) => {
   const requestId = generateRequestId();
@@ -83,7 +83,7 @@ exports.handler = async (event) => {
   }
 
   try {
-    // Call verify_student_password RPC
+    // Call verify_student_password RPC with correct parameter names
     const rpcUrl = `${SUPABASE_URL}/rest/v1/rpc/verify_student_password`;
     
     console.log(`[student-login] [${requestId}] Verifying credentials for code:`, code);
@@ -97,16 +97,17 @@ exports.handler = async (event) => {
       },
       body: JSON.stringify({
         p_code: code.trim(),
-        p_plain: password
+        p_password: password  // Use p_password, not p_plain
       })
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`[student-login] [${requestId}] RPC error:`, response.status, errorText);
+      console.error(`[student-login] [${requestId}] RPC error - status:`, response.status);
       
-      // Check for specific error messages
+      // Check for specific error messages (don't log full error text as it may contain sensitive info)
       if (errorText.includes('Account inactive')) {
+        console.log(`[student-login] [${requestId}] Account inactive for code:`, code);
         return jsonResponse(
           event,
           403,
@@ -116,7 +117,20 @@ exports.handler = async (event) => {
         );
       }
       
-      // Generic RPC failure - don't reveal details
+      // Check if it's a server/config error vs auth error
+      if (response.status >= 500) {
+        console.error(`[student-login] [${requestId}] Server error from Supabase:`, response.status);
+        return jsonResponse(
+          event,
+          503,
+          { ok: false, error: 'Authentication service unavailable' },
+          { 'Cache-Control': 'no-store' },
+          requestId
+        );
+      }
+      
+      // Generic RPC failure - treat as invalid credentials (don't reveal DB details)
+      console.log(`[student-login] [${requestId}] RPC returned error for code:`, code);
       return jsonResponse(
         event,
         401,
@@ -126,7 +140,11 @@ exports.handler = async (event) => {
       );
     }
 
-    const isValid = await response.json();
+    // Parse RPC response - handle various PostgREST formats
+    const rpcResult = await response.json();
+    const isValid = parseBooleanRpcResponse(rpcResult);
+    
+    console.log(`[student-login] [${requestId}] RPC result type:`, typeof rpcResult, 'parsed:', isValid);
     
     if (isValid === true) {
       console.log(`[student-login] [${requestId}] Login successful for code:`, code);
@@ -151,7 +169,7 @@ exports.handler = async (event) => {
     }
     
   } catch (err) {
-    console.error(`[student-login] [${requestId}] Error:`, err);
+    console.error(`[student-login] [${requestId}] Error:`, err.message);
     return jsonResponse(
       event,
       500,
