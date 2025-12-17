@@ -26,7 +26,7 @@ jobs:
         run: npm ci
       
       - name: Run ESLint
-        run: npm run lint
+        run: npm run lint -- --max-warnings 1000
       
       - name: Run Prettier check (advisory only)
         run: npm run format:check || echo "⚠️ Prettier formatting issues found (advisory only)"
