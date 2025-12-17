@@ -1,0 +1,876 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mastercard Interview Prep – Stephanie</title>
+  <style>
+    :root { --w: 980px; --radius: 16px; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; background: #0b0f14; color: #e8eef6; }
+    header { position: sticky; top: 0; background: rgba(11,15,20,.92); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,.08); z-index: 10; }
+    .wrap { max-width: var(--w); margin: 0 auto; padding: 14px 16px; }
+    h1 { font-size: 18px; margin: 0; letter-spacing: .2px; }
+    .sub { opacity: .75; font-size: 13px; margin-top: 4px; line-height: 1.35; }
+    .bar { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; align-items: center; }
+    button, .chip {
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.06);
+      color: #e8eef6;
+      padding: 9px 11px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 13px;
+    }
+    button:hover { background: rgba(255,255,255,.10); }
+    button:active { transform: translateY(1px); }
+    .chip { cursor: default; opacity: .85; font-weight: 600; }
+    .danger { border-color: rgba(255,120,120,.35); }
+    .primary { border-color: rgba(90,160,255,.78); }
+    .primary:hover { background: rgba(90,160,255,.12); border-color: rgba(90,160,255,.92); }
+    main { max-width: var(--w); margin: 0 auto; padding: 16px; display: grid; gap: 12px; }
+    .grid { display: grid; grid-template-columns: 1.2fr .8fr; gap: 12px; }
+    @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+    .card {
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.04);
+      border-radius: var(--radius);
+      padding: 14px;
+      box-shadow: 0 8px 30px rgba(0,0,0,.25);
+      overflow: hidden;
+    }
+    .card h2 { margin: 0 0 8px; font-size: 15px; }
+    .card h3 { margin: 14px 0 6px; font-size: 13px; opacity: .95; }
+    .muted { opacity: .75; font-size: 13px; line-height: 1.45; }
+    .kicker { font-size: 12px; opacity: .75; margin-top: 2px; }
+    .sec { border-top: 1px solid rgba(255,255,255,.08); padding-top: 12px; margin-top: 12px; }
+    .sec:first-child { border-top: none; padding-top: 0; margin-top: 0; }
+
+    .qblock { border-top: 1px solid rgba(255,255,255,.08); padding-top: 12px; margin-top: 12px; }
+    .qblock:first-child { border-top: none; padding-top: 0; margin-top: 0; }
+    .q-title { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+    .q-title strong { font-size: 14px; }
+    .tag { font-size: 11px; opacity: .8; border: 1px solid rgba(255,255,255,.14); padding: 3px 8px; border-radius: 999px; white-space: nowrap; }
+
+    .qa-grid { display: grid; grid-template-columns: 1.15fr .85fr; gap: 10px; margin-top: 10px; align-items: stretch; }
+    @media (max-width: 900px) { .qa-grid { grid-template-columns: 1fr; } }
+
+    textarea {
+      width: 100%;
+      min-height: 220px;
+      height: 100%;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.35);
+      color: #e8eef6;
+      padding: 10px 10px;
+      font-size: 13px;
+      line-height: 1.45;
+      resize: vertical;
+      outline: none;
+      box-sizing: border-box;
+    }
+    textarea:focus { border-color: rgba(120,180,255,.55); box-shadow: 0 0 0 3px rgba(120,180,255,.12); }
+
+    .coach {
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.22);
+      border-radius: 14px;
+      padding: 10px;
+    }
+    .coach .coach-title { font-weight: 800; font-size: 12px; opacity: .95; margin-bottom: 8px; display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+    .coach ul { margin: 0; padding-left: 18px; }
+    .coach li { margin: 6px 0; font-size: 12px; opacity: .86; line-height: 1.35; }
+    .coach .minirow { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    .mini {
+      padding: 7px 9px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 800;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.06);
+      cursor: pointer;
+    }
+    .mini:hover { background: rgba(255,255,255,.10); }
+    .mini.primary { border-color: rgba(90,160,255,.78); }
+    .primary:hover { background: rgba(90,160,255,.12); border-color: rgba(90,160,255,.92); }
+    .mini.ghost { opacity: .8; }
+
+    .feedback {
+      margin-top: 10px;
+      border-top: 1px solid rgba(255,255,255,.08);
+      padding-top: 10px;
+      font-size: 12px;
+      line-height: 1.4;
+      opacity: .9;
+    }
+    .feedback .score { display: inline-flex; gap: 6px; align-items: center; font-weight: 900; margin-bottom: 8px; }
+    .dots { display: inline-flex; gap: 4px; transform: translateY(1px); }
+    .dot { width: 7px; height: 7px; border-radius: 999px; border: 1px solid rgba(255,255,255,.22); background: rgba(255,255,255,.05); }
+    .dot.on { background: rgba(120,180,255,.65); border-color: rgba(120,180,255,.80); }
+    .feedback ul { margin: 6px 0 0; padding-left: 18px; }
+    .feedback li { margin: 6px 0; }
+
+    .row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    .small { font-size: 12px; opacity: .75; }
+    .toast {
+      position: fixed; right: 16px; bottom: 16px;
+      background: rgba(20,26,34,.92);
+      border: 1px solid rgba(255,255,255,.12);
+      padding: 10px 12px;
+      border-radius: 14px;
+      box-shadow: 0 10px 35px rgba(0,0,0,.35);
+      opacity: 0; transform: translateY(10px);
+      transition: opacity .18s ease, transform .18s ease;
+      font-size: 13px;
+      pointer-events: none;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    details { border-top: 1px solid rgba(255,255,255,.08); padding-top: 10px; margin-top: 10px; }
+    summary { cursor: pointer; font-weight: 800; font-size: 13px; }
+    pre {
+      background: rgba(0,0,0,.35);
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: 14px;
+      padding: 10px;
+      overflow: auto;
+      font-size: 12px;
+      line-height: 1.45;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      margin: 10px 0 0;
+    }
+    .pillrow { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+    .pill { font-size: 12px; opacity: .85; border: 1px dashed rgba(255,255,255,.18); padding: 6px 10px; border-radius: 999px; }
+    .warn { border: 1px solid rgba(255,175,100,.35); background: rgba(255,175,100,.08); padding: 10px 12px; border-radius: 14px; font-size: 12px; opacity: .9; line-height: 1.4; }
+    footer { max-width: var(--w); margin: 0 auto; padding: 0 16px 22px; opacity: .65; font-size: 12px; }
+    a { color: inherit; }
+  
+    /* ===== v3 UI upgrades: bigger answer boxes + frosted-glass dark theme ===== */
+    :root{
+      --glass-bg: rgba(90,160,255,.11);
+      --glass-bg-2: rgba(16,26,44,.58);
+      --glass-border: rgba(120,180,255,.22);
+      --glass-border-soft: rgba(120,180,255,.14);
+      --glass-blur: 18px;
+      --glass-sat: 145%;
+    }
+
+    body{
+      background:
+        radial-gradient(1000px 600px at 18% 12%, rgba(70,120,255,.14), transparent 55%),
+        radial-gradient(900px 520px at 82% 20%, rgba(40,110,255,.16), transparent 60%),
+        radial-gradient(850px 520px at 55% 92%, rgba(0,180,255,.10), transparent 60%),
+        #0b0f14;
+    }
+
+    header{
+      background: rgba(11,15,20,.62) !important;
+      backdrop-filter: blur(var(--glass-blur)) saturate(130%) !important;
+      -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(130%) !important;
+    }
+
+    /* Cards + panels */
+    .card{
+      position: relative;
+      background: var(--glass-bg-2) !important;
+      border: 1px solid var(--glass-border-soft) !important;
+      box-shadow: 0 10px 40px rgba(0,0,0,.35) !important;
+      backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat)) !important;
+      -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat)) !important;
+    }
+    .card::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:
+        linear-gradient(135deg, rgba(90,160,255,.22), rgba(255,255,255,.03) 55%, rgba(0,0,0,0) 100%),
+        radial-gradient(700px 320px at 20% 10%, rgba(90,160,255,.14), transparent 55%);
+      opacity:.55;
+      pointer-events:none;
+    }
+    .card > *{ position: relative; }
+
+    /* Buttons/chips */
+    button, .chip{
+      background: rgba(255,255,255,.06) !important;
+      border: 1px solid rgba(255,255,255,.16) !important;
+      box-shadow: 0 10px 25px rgba(0,0,0,.25);
+      backdrop-filter: blur(14px) saturate(150%);
+      -webkit-backdrop-filter: blur(14px) saturate(150%);
+    }
+    button:hover, .chip:hover{
+      background: rgba(255,255,255,.09) !important;
+      transform: translateY(-1px);
+    }
+
+    
+    /* Stretch textarea to match the ideas/feedback column height */
+    .qa-grid{ align-items: stretch !important; }
+/* Bigger response boxes */
+    textarea{
+      min-height: clamp(260px, 32vh, 520px) !important;
+      height: 100% !important;
+      background: rgba(18,30,52,.48) !important;
+      border: 1px solid rgba(255,255,255,.16) !important;
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.06),
+        0 14px 35px rgba(0,0,0,.30) !important;
+      line-height: 1.4;
+    }
+    textarea:focus{
+      border-color: rgba(90,160,255,.70) !important;
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.06),
+        0 0 0 3px rgba(90,160,255,.22),
+        0 18px 40px rgba(0,0,0,.32) !important;
+    }
+
+    /* Small pills */
+    .pill{
+      background: rgba(255,255,255,.04);
+      border: 1px dashed rgba(255,255,255,.18);
+      backdrop-filter: blur(10px) saturate(130%);
+      -webkit-backdrop-filter: blur(10px) saturate(130%);
+    }
+
+    /* Toast + export preview */
+    .toast{
+      backdrop-filter: blur(16px) saturate(140%);
+      -webkit-backdrop-filter: blur(16px) saturate(140%);
+    }
+
+    /* Mobile: keep it roomy but not ridiculous */
+    @media (max-width: 860px){
+      textarea{ min-height: clamp(240px, 30vh, 420px) !important; height: auto !important; }
+    }
+
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>Mastercard Interview Prep – Stephanie (Interactive)</h1>
+    <div class="sub">Type answers in bullets. Each question has side “Ideas to include” plus instant feedback. Autosaves locally in your browser.</div>
+    <div class="bar">
+      <button class="primary" id="btnAnalyzeAll">Analyze All</button>
+      <button id="btnExportMd">Export → Markdown</button>
+      <button id="btnExportJson">Export → JSON</button>
+      <button id="btnCopy">Copy Export</button>
+      <button id="btnPrint">Print</button>
+      <button class="danger" id="btnClear">Clear All</button>
+      <span class="chip" id="saveState">Autosave: …</span>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div id="fatal" class="warn" style="display:none;"></div>
+
+  <div class="grid">
+    <section class="card" id="left">
+      <h2>Practice Questions (Type Her Answers)</h2>
+      <div class="muted">Aim for 3–6 bullets, not scripts. Best answers quietly hit: Judgment (tradeoffs), Collaboration, Ownership.</div>
+      <div id="questions"></div>
+    </section>
+
+    <aside class="card" id="right">
+      <h2>Compass + Guardrails</h2>
+
+      <h3>Anchor Sentence</h3>
+      <div class="muted"><strong>“I build reliable, scalable systems in ambiguous environments and communicate clearly while doing it.”</strong></div>
+      <div class="kicker">Every answer should quietly prove this.</div>
+
+      <h3>Three Themes</h3>
+      <div class="pillrow">
+        <div class="pill">🧠 Judgment: scale • failure • tradeoffs</div>
+        <div class="pill">🤝 Collaboration: calm • cross-team</div>
+        <div class="pill">🧭 Ownership: beyond my code</div>
+      </div>
+
+      <h3>Behavioral Cheat Code</h3>
+      <div class="muted"><strong>Context → Decision → Outcome → Learning</strong> (Learning = senior signal.)</div>
+
+      <h3>Language to Avoid</h3>
+      <div class="muted">Delete phrases like: <strong>“I have no idea”</strong>, “not sure”, “maybe”, “I guess”. Replace with: “Based on what I know…” + one smart assumption + one question back.</div>
+
+      <details open>
+        <summary>Export Preview</summary>
+        <pre id="exportPreview">(Click Export above to generate.)</pre>
+      </details>
+
+      <details>
+        <summary>What “Analyze” looks for</summary>
+        <div class="muted" style="margin-top:8px;">
+          • Enough detail (not one vague sentence)<br>
+          • Outcome/impact (even qualitative if no numbers)<br>
+          • Senior signals: tradeoffs + learning + risk awareness<br>
+          • For outages: triage → mitigate → communicate → prevent
+        </div>
+      </details>
+
+      <div class="row">
+        <div class="small">Tip: If she can say it out loud in ~60–90 seconds, it’s the right size.</div>
+      </div>
+    </aside>
+  </div>
+
+  <div class="toast" id="toast">Saved.</div>
+</main>
+
+<footer>
+  <div class="wrap">
+    Notes save in <strong>this browser only</strong> (LocalStorage). If you open this file elsewhere, it won’t have the saved answers.
+  </div>
+</footer>
+
+<script>
+(function(){
+  const STORAGE_KEY = "mc_interview_prep_v2";
+  const $questions = document.getElementById("questions");
+  const $preview = document.getElementById("exportPreview");
+  const $toast = document.getElementById("toast");
+  const $saveState = document.getElementById("saveState");
+  const $fatal = document.getElementById("fatal");
+
+  let lastExport = "";
+  let memoryState = {};
+  let storageOK = false;
+
+  function storageTest(){
+    try {
+      const k = "__mc_test__";
+      localStorage.setItem(k, "1");
+      localStorage.removeItem(k);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  function setSaveChip(){
+    $saveState.textContent = storageOK ? "Autosave: ON (Local)" : "Autosave: ON (Memory only)";
+  }
+
+  function toast(msg) {
+    $toast.textContent = msg;
+    $toast.classList.add("show");
+    setTimeout(() => $toast.classList.remove("show"), 900);
+  }
+
+  function showFatal(msg){
+    $fatal.style.display = "block";
+    $fatal.innerHTML = "<strong>Module error:</strong> " + msg + "<br><br><strong>Fix:</strong> Open DevTools → Console and copy the error. This page will still export your typed text if it rendered.";
+  }
+
+  function loadState() {
+    if (!storageOK) return memoryState;
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      const parsed = raw ? JSON.parse(raw) : {};
+      memoryState = parsed || {};
+      return memoryState;
+    } catch {
+      return memoryState;
+    }
+  }
+
+  function saveState(next) {
+    memoryState = next || {};
+    if (storageOK) {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(memoryState)); } catch {}
+    }
+    toast("Saved.");
+  }
+
+  const sections = [
+    { title: "1. Opening & Narrative", items: [
+      { id: "q1", tag: "Guaranteed", kind: "narrative", text: "Walk me through your background and how you arrived at this point in your career.",
+        ideas: [
+          "Past → Present → Future (30 seconds each).",
+          "Highlight the pivot to backend + why you enjoy it.",
+          "One credible “signature strength” (debugging, ownership, communication).",
+          "End with why this role now (scale, reliability, high standards)."
+        ]},
+      { id: "q2", tag: "Likely", kind: "why", text: "What interested you in this role and in Mastercard specifically?",
+        ideas: [
+          "Say what you DO know: scale, security, payments, engineering standards.",
+          "Bridge missing req: “Since the posting isn’t public, I’m basing this on the team themes…”",
+          "Connect your experience: reliability, production support, ambiguity.",
+          "Ask a smart clarifier: “What does success look like in 90 days?”"
+        ]},
+      { id: "q3", tag: "Likely", kind: "strengths", text: "How would you describe your strengths as a senior engineer?",
+        ideas: [
+          "Diagnosis + calm under pressure (production credibility).",
+          "Systems thinking: failure modes, tradeoffs, long-term maintainability.",
+          "Mentoring: code reviews, pairing, raising standards.",
+          "Communication: translate tech to business outcomes."
+        ]}
+    ]},
+    { title: "2. Technical Depth & System Design", items: [
+      { id: "q4", tag: "Very likely", kind: "system", text: "Tell me about a system you designed or significantly modernized (legacy → modular .NET, APIs, CI/CD).",
+        ideas: [
+          "Context: what was broken about the legacy system?",
+          "Action: what did YOU change (architecture, modules, APIs, pipelines)?",
+          "Quality: tests, CI/CD, code standards, monitoring.",
+          "Result: faster releases, fewer incidents, easier onboarding (numbers if you have them)."
+        ]},
+      { id: "q5", tag: "Very likely", kind: "system", text: "How did you approach reliability, security, and scalability in that system?",
+        ideas: [
+          "Reliability: SLOs, monitoring/alerting, retries/backoff, graceful degradation.",
+          "Security: least privilege, secrets mgmt, encryption, audit logging.",
+          "Scalability: caching, load patterns, performance testing, capacity planning.",
+          "Deploy safety: feature flags, canary/rollbacks."
+        ]},
+      { id: "q6", tag: "Very likely", kind: "tradeoffs", text: "What tradeoffs did you have to make, and why?",
+        ideas: [
+          "Time vs scope: what did you cut or phase?",
+          "Cost vs performance: what did you optimize and what did you accept?",
+          "Consistency vs availability (if relevant).",
+          "Explain the WHY + how you reduced risk (flags, incremental rollout)."
+        ]},
+      { id: "q7", tag: "Likely", kind: "system", text: "If you were redesigning that system today, what would you change?",
+        ideas: [
+          "Call out one improvement: observability, boundaries, testing, performance, security posture.",
+          "Show maturity: what you learned since then.",
+          "Keep it positive: don’t trash past decisions — explain constraints then."
+        ]}
+    ]},
+    { title: "3. Ownership & Decision-Making", items: [
+      { id: "q8", tag: "Very likely", kind: "ownership", text: "Tell me about a time you took ownership of a problem that wasn’t clearly yours.",
+        ideas: [
+          "How you noticed it (signal).",
+          "What you did beyond your lane (coordination, docs, fix).",
+          "Who you pulled in and how you communicated.",
+          "Result: reduced risk, unblocked team, prevented outage."
+        ]},
+      { id: "q9", tag: "Likely", kind: "decision", text: "Describe a difficult technical decision you made with incomplete information.",
+        ideas: [
+          "List options you considered.",
+          "What data you gathered fast (logs, metrics, stakeholder needs).",
+          "How you chose: risk, reversibility, time-to-mitigate.",
+          "Outcome + what you’d do differently next time."
+        ]},
+      { id: "q10", tag: "Likely", kind: "shipping", text: "How do you decide when something is “good enough” to ship?",
+        ideas: [
+          "Define quality gates: tests, security checks, perf baseline.",
+          "Risk-based decisions: what breaks if it fails?",
+          "Release safety: rollback plan, monitoring, feature flags.",
+          "Stakeholder alignment: agree on acceptance criteria."
+        ]}
+    ]},
+    { title: "4. Production Issues, Failure & Learning", items: [
+      { id: "q11", tag: "Very likely", kind: "incident", text: "Tell me about a production issue or outage you were involved in.",
+        ideas: [
+          "Impact: who was affected and how bad?",
+          "Timeline: what happened first, what changed recently?",
+          "Mitigation: what stabilized the system.",
+          "Root cause: config, deploy, dependency, data, infra."
+        ]},
+      { id: "q12", tag: "Very likely", kind: "incident", text: "How did you diagnose the issue and communicate during the incident?",
+        ideas: [
+          "Triage → isolate → mitigate → confirm recovery.",
+          "War room / command center roles (IC, comms, ops).",
+          "Regular status updates (what we know / doing / next update).",
+          "Document a timeline while you work."
+        ]},
+      { id: "q13", tag: "Very likely", kind: "incident", text: "What changed afterward to prevent it from happening again?",
+        ideas: [
+          "Blameless postmortem with clear action items.",
+          "Add monitoring/alerts for the specific failure mode.",
+          "Add tests/guardrails in CI/CD or runtime validation.",
+          "Update runbooks and improve on-call handoffs."
+        ]}
+    ]},
+    { title: "5. Collaboration & Conflict", items: [
+      { id: "q14", tag: "Guaranteed", kind: "conflict", text: "Tell me about a disagreement with another engineer or stakeholder.",
+        ideas: [
+          "Start with alignment: shared goal.",
+          "Bring evidence: data, risk, customer impact.",
+          "Offer options, not ultimatums.",
+          "Outcome + what you learned about collaborating."
+        ]},
+      { id: "q15", tag: "Likely", kind: "feedback", text: "How do you handle feedback you don’t initially agree with?",
+        ideas: [
+          "Ask clarifying questions first (understand intent).",
+          "Separate ego from the idea; test small if possible.",
+          "If you still disagree, explain tradeoffs calmly.",
+          "Close the loop: adopt or document why not."
+        ]},
+      { id: "q16", tag: "Guaranteed", kind: "collab", text: "How do you work with non-technical partners like product, QA, or leadership?",
+        ideas: [
+          "Translate tech to outcomes: impact, risk, options, recommendation.",
+          "Confirm requirements and acceptance criteria early.",
+          "Demo early and often; shorten feedback loops.",
+          "Document decisions so everyone stays aligned."
+        ]}
+    ]},
+    { title: "6. Leadership & Mentorship", items: [
+      { id: "q17", tag: "Likely", kind: "mentor", text: "How have you mentored junior engineers or raised team standards?",
+        ideas: [
+          "Pairing, code reviews, and ‘why’ explanations.",
+          "Documentation/runbooks to reduce repeated questions.",
+          "Raising standards: tests, logging, code style, PR hygiene.",
+          "Give an example of someone you helped level up."
+        ]},
+      { id: "q18", tag: "Likely", kind: "leadership", text: "How do you balance hands-on development with leadership responsibilities?",
+        ideas: [
+          "Time blocks for deep work + office hours.",
+          "Prioritize: biggest risks first; limit WIP.",
+          "Delegate early; create leverage via docs/automation.",
+          "Stay close to production signals (metrics/incidents)."
+        ]}
+    ]},
+    { title: "7. Working Style & Culture Fit", items: [
+      { id: "q19", tag: "Likely", kind: "culture", text: "What does a productive engineering team look like to you?",
+        ideas: [
+          "Clear goals and ownership.",
+          "Psychological safety + respectful debate.",
+          "Fast feedback loops (CI, monitoring, reviews).",
+          "Shared standards: testing, docs, observability."
+        ]},
+      { id: "q20", tag: "Very likely", kind: "tradeoffs", text: "How do you balance speed, quality, and security in delivery?",
+        ideas: [
+          "Security and correctness have a minimum bar.",
+          "Slice scope; ship incrementally with flags.",
+          "Risk-based testing (focus on high-impact paths).",
+          "Communicate tradeoffs early; avoid surprise debt."
+        ]},
+      { id: "q21", tag: "Likely", kind: "ambiguity", text: "How do you handle ambiguity or shifting priorities?",
+        ideas: [
+          "Clarify the goal and constraints.",
+          "Re-plan in slices; show impacts transparently.",
+          "Align stakeholders on tradeoffs and next steps.",
+          "Keep execution moving while details firm up."
+        ]}
+    ]},
+    { title: "8. Growth & Self-Awareness", items: [
+      { id: "q22", tag: "Likely", kind: "growth", text: "What’s an area you’re still working to improve as an engineer?",
+        ideas: [
+          "Pick a real-but-safe improvement (delegation, scope control, speaking up early).",
+          "Show actions you take (process, mentorship, practice).",
+          "Tie to results: how it improved outcomes/team."
+        ]},
+      { id: "q23", tag: "Likely", kind: "growth", text: "How do you keep your skills current across evolving technologies?",
+        ideas: [
+          "Be deliberate: pick one skill at a time, then apply it.",
+          "Learn by reading real code + doing PR reviews.",
+          "Use courses/books when needed; focus on fundamentals.",
+          "Stay close to production: incidents teach fast."
+        ]}
+    ]},
+    { title: "9. Closing Questions (Choose 1–2)", items: [
+      { id: "q24", tag: "Ask them", kind: "closing", text: "What does success look like for this role in the first six months?",
+        ideas: [
+          "Listen for: deliverables, partnerships, operational ownership.",
+          "Follow-up: “What would make you say ‘this was a great hire’?”",
+          "Ask how success is measured (metrics, SLAs/SLOs, project outcomes)."
+        ]},
+      { id: "q25", tag: "Ask them", kind: "closing", text: "What challenges is the team most focused on right now?",
+        ideas: [
+          "Listen for: reliability, data quality, speed of delivery, tech debt.",
+          "Follow-up: “What’s the #1 thing blocking progress?”",
+          "Ask what’s changing in the stack/process this year."
+        ]},
+      { id: "q26", tag: "Ask them", kind: "closing", text: "How do strong engineers distinguish themselves on this team?",
+        ideas: [
+          "Listen for: ownership, collaboration, operational excellence.",
+          "Follow-up: “What behaviors do you want more of?”",
+          "Ask how feedback/growth works (reviews, mentorship, leveling)."
+        ]}
+    ]}
+  ];
+
+  function analyzeText(kind, raw){
+    const text = (raw || "").trim();
+    const out = [];
+    const hedge = /(i\s*(have\s*)?no\s*idea|i\s*don't\s*know|not\s*sure|maybe|kinda|sort\s*of|i\s*guess|probably)/i;
+
+    if (!text) {
+      out.push("Add 3–6 bullets. Use: Context → Decision/Action → Outcome → Learning.");
+      return { score: 0, notes: out };
+    }
+
+    // base checks
+    if (text.length < 60) out.push("A bit short. Add one more detail (what you did) + one outcome.");
+    if (hedge.test(text)) out.push("Remove hedging (“not sure / no idea”). Replace with: one assumption + one question back.");
+    const hasImpact = /(reduc|improv|increase|decrease|faster|slower|prevent|saved|impact|outcome|latenc|uptime|slo|sla|%|\b\d+\b)/i.test(text);
+    if (!hasImpact && kind !== "closing") out.push("Add an outcome/impact (numbers if you have them; otherwise a clear before/after).");
+    const hasLearning = /(learn|next\s*time|in\s*hindsight|would\s*do\s*different|what\s*i\s*changed)/i.test(text);
+    if (!hasLearning && ["incident","decision","tradeoffs","system","growth","conflict"].includes(kind)) out.push("Add a ‘learning’ line — that’s senior signal.");
+
+    // kind-specific hints
+    if (kind === "incident") {
+      const hasTriage = /(triage|mitigat|rollback|restart|stabiliz|contain)/i.test(text);
+      const hasComms = /(update|status|stakeholder|war\s*room|incident\s*commander|timeline)/i.test(text);
+      const hasPrevent = /(postmortem|runbook|alert|monitor|test|guardrail|prevent)/i.test(text);
+      if (!hasTriage) out.push("Include mitigation: what stabilized the system (rollback/flag-off/restart).");
+      if (!hasComms) out.push("Include comms: how you kept people informed (cadence + clarity).");
+      if (!hasPrevent) out.push("Include prevention: what changed after (alerts/tests/runbook).");
+    }
+
+    if (kind === "system") {
+      const sec = /(least\s*privilege|encrypt|audit|secret|threat|auth|owasp|token|session)/i.test(text);
+      const rel = /(monitor|alert|slo|sla|retry|timeout|circuit|graceful|rollback|canary|feature\s*flag)/i.test(text);
+      const scale = /(cache|perf|load|throughput|capacity|autoscal|latenc|queue|backpressure)/i.test(text);
+      if (!sec) out.push("Add 1–2 security specifics (least privilege, secrets, encryption, audit logging).");
+      if (!rel) out.push("Add 1–2 reliability specifics (SLOs, monitoring/alerts, rollback/flags).");
+      if (!scale) out.push("Add 1–2 scalability specifics (caching, load patterns, perf tests, capacity).");
+    }
+
+    if (kind === "tradeoffs" || kind === "decision") {
+      const options = /(option|consider|tradeoff|choose|decision|evaluate)/i.test(text);
+      const why = /(because|so\s*that|due\s*to|constraint|risk|impact)/i.test(text);
+      if (!options) out.push("Name the options you considered (2–3), even briefly.");
+      if (!why) out.push("State the reason for the choice (risk, time, customer impact, reversibility).");
+    }
+
+    if (kind === "conflict" || kind === "feedback") {
+      const empathy = /(listen|understand|align|perspective|clarify)/i.test(text);
+      const evidence = /(data|metric|risk|impact|evidence)/i.test(text);
+      if (!empathy) out.push("Include how you sought understanding first (clarify intent / align on goal).");
+      if (!evidence) out.push("Include evidence: data, risk, or customer impact (not opinions).");
+    }
+
+    if (kind === "closing") {
+      out.push("Delivery tip: ask it, then shut up. Let them talk. Follow with one crisp ‘why’ question.");
+    }
+
+    // score: 0-5
+    let score = 1;
+    if (text.length >= 60) score++;
+    if (hasImpact || kind === "closing") score++;
+    if (!hedge.test(text)) score++;
+    if (hasLearning || ["narrative","why","closing"].includes(kind)) score++;
+
+    score = Math.max(0, Math.min(5, score));
+    return { score, notes: out.length ? out : ["Looks solid. Tighten phrasing, keep it outcome-focused, and practice aloud once."] };
+  }
+
+  function dots(score){
+    const d = document.createElement("span");
+    d.className = "dots";
+    for (let i=1;i<=5;i++){
+      const s = document.createElement("span");
+      s.className = "dot" + (i <= score ? " on" : "");
+      d.appendChild(s);
+    }
+    return d;
+  }
+
+  function render() {
+    if (!$questions) throw new Error("Missing #questions container");
+    const state = loadState();
+    $questions.innerHTML = "";
+
+    sections.forEach(sec => {
+      const secWrap = document.createElement("div");
+      secWrap.className = "sec";
+
+      const h = document.createElement("h3");
+      h.textContent = sec.title;
+      secWrap.appendChild(h);
+
+      sec.items.forEach(item => {
+        const block = document.createElement("div");
+        block.className = "qblock";
+
+        const top = document.createElement("div");
+        top.className = "q-title";
+
+        const title = document.createElement("strong");
+        title.textContent = item.text;
+
+        const tag = document.createElement("span");
+        tag.className = "tag";
+        tag.textContent = item.tag;
+
+        top.appendChild(title);
+        top.appendChild(tag);
+
+        const grid = document.createElement("div");
+        grid.className = "qa-grid";
+
+        const ta = document.createElement("textarea");
+        ta.placeholder = "Type bullets here… (3–6 bullets is plenty)";
+        ta.value = state[item.id] || "";
+        ta.addEventListener("input", () => {
+          const next = { ...loadState() };
+          next[item.id] = ta.value;
+          saveState(next);
+        });
+
+        const coach = document.createElement("div");
+        coach.className = "coach";
+
+        const coachTitle = document.createElement("div");
+        coachTitle.className = "coach-title";
+        coachTitle.innerHTML = "<span>Ideas to include</span><span style='opacity:.75;font-weight:800;'>+ feedback</span>";
+
+        const list = document.createElement("ul");
+        (item.ideas || []).forEach(s => {
+          const li = document.createElement("li");
+          li.textContent = s;
+          list.appendChild(li);
+        });
+
+        const minirow = document.createElement("div");
+        minirow.className = "minirow";
+
+        const btnFb = document.createElement("button");
+        btnFb.className = "mini primary";
+        btnFb.type = "button";
+        btnFb.textContent = "Get feedback";
+
+        const btnClr = document.createElement("button");
+        btnClr.className = "mini ghost";
+        btnClr.type = "button";
+        btnClr.textContent = "Clear feedback";
+
+        minirow.appendChild(btnFb);
+        minirow.appendChild(btnClr);
+
+        const fb = document.createElement("div");
+        fb.className = "feedback";
+        fb.style.display = "none";
+
+        btnFb.addEventListener("click", () => {
+          const { score, notes } = analyzeText(item.kind, ta.value);
+          fb.innerHTML = "";
+          const scoreRow = document.createElement("div");
+          scoreRow.className = "score";
+          scoreRow.textContent = "Quick score:";
+          scoreRow.appendChild(dots(score));
+          fb.appendChild(scoreRow);
+
+          const ul = document.createElement("ul");
+          notes.forEach(n => {
+            const li = document.createElement("li");
+            li.textContent = n;
+            ul.appendChild(li);
+          });
+          fb.appendChild(ul);
+          fb.style.display = "block";
+        });
+
+        btnClr.addEventListener("click", () => {
+          fb.style.display = "none";
+          fb.innerHTML = "";
+        });
+
+        coach.appendChild(coachTitle);
+        coach.appendChild(list);
+        coach.appendChild(minirow);
+        coach.appendChild(fb);
+
+        grid.appendChild(ta);
+        grid.appendChild(coach);
+
+        block.appendChild(top);
+        block.appendChild(grid);
+        secWrap.appendChild(block);
+      });
+
+      $questions.appendChild(secWrap);
+    });
+  }
+
+  function buildExport() {
+    const state = loadState();
+    return {
+      meta: {
+        title: "Mastercard Interview Prep – Stephanie",
+        version: "v2",
+        generatedAt: new Date().toISOString()
+      },
+      answers: state
+    };
+  }
+
+  function exportMarkdown() {
+    const state = loadState();
+    let md = `# Mastercard Interview Prep – Stephanie\n\n`;
+    md += `Generated: ${new Date().toLocaleString()}\n\n---\n\n`;
+    md += `## Anchor Sentence\n“I build reliable, scalable systems in ambiguous environments and communicate clearly while doing it.”\n\n---\n\n`;
+
+    sections.forEach(sec => {
+      md += `## ${sec.title}\n\n`;
+      sec.items.forEach(item => {
+        md += `**${item.text}** _(${item.tag})_\n\n`;
+        const ans = (state[item.id] || "").trim();
+        md += ans ? `${ans}\n\n` : `_(no notes yet)_\n\n`;
+        md += `---\n\n`;
+      });
+    });
+
+    lastExport = md;
+    $preview.textContent = md;
+    toast("Exported Markdown.");
+  }
+
+  function exportJson() {
+    const payload = buildExport();
+    lastExport = JSON.stringify(payload, null, 2);
+    $preview.textContent = lastExport;
+    toast("Exported JSON.");
+  }
+
+  async function copyExport() {
+    if (!lastExport) { toast("Nothing to copy yet. Export first."); return; }
+    try { await navigator.clipboard.writeText(lastExport); toast("Copied to clipboard."); }
+    catch { toast("Copy failed (browser blocked). Use manual copy from preview."); }
+  }
+
+  function printPage() { window.print(); }
+
+  function clearAll() {
+    if (!confirm("Clear ALL saved answers? This cannot be undone.")) return;
+    if (storageOK) {
+      try { localStorage.removeItem(STORAGE_KEY); } catch {}
+    }
+    memoryState = {};
+    lastExport = "";
+    $preview.textContent = "(Click Export above to generate.)";
+    toast("Cleared.");
+    render();
+  }
+
+  function analyzeAll(){
+    const state = loadState();
+    let problems = 0;
+    sections.forEach(sec => {
+      sec.items.forEach(item => {
+        const v = (state[item.id] || "").trim();
+        const res = analyzeText(item.kind, v);
+        if (res.score <= 2) problems++;
+      });
+    });
+    toast(problems ? `Analyze All: ${problems} answers need beefing up.` : "Analyze All: looking strong.");
+  }
+
+  function wireButtons(){
+    document.getElementById("btnAnalyzeAll").addEventListener("click", analyzeAll);
+    document.getElementById("btnExportMd").addEventListener("click", exportMarkdown);
+    document.getElementById("btnExportJson").addEventListener("click", exportJson);
+    document.getElementById("btnCopy").addEventListener("click", copyExport);
+    document.getElementById("btnPrint").addEventListener("click", printPage);
+    document.getElementById("btnClear").addEventListener("click", clearAll);
+  }
+
+  function start(){
+    storageOK = storageTest();
+    setSaveChip();
+    wireButtons();
+    render();
+  }
+
+  // Robust init (prevents the “blank page” issue if JS runs too early)
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", () => { try { start(); } catch(e){ console.error(e); showFatal(e.message || String(e)); } });
+  } else {
+    try { start(); } catch(e){ console.error(e); showFatal(e.message || String(e)); }
+  }
+})();
+</script>
+</body>
+</html>
