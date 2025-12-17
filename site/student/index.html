@@ -1657,12 +1657,50 @@
     console.log('[portal-auth] Student login attempt for code:', code);
     
     try {
-      // Phase 4: Use db.verifyStudentPassword which uses Supabase RPC when available, else local
-      const valid = await db.verifyStudentPassword(code, password);
-      if (!valid) {
-        // Phase 4: Show error without resetting focus
-        showError('Invalid student code or password');
-        return;
+      // Phase 4: Use server-side student-login endpoint for verification
+      // This ensures credentials are verified server-side without exposing Supabase keys
+      console.log('[portal-auth] Attempting server-side verification');
+      
+      const response = await fetch('/.netlify/functions/student-login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ code, password })
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok || result.ok !== true) {
+        // Server-side verification failed
+        const errorMsg = result.error || 'Invalid student code or password';
+        console.warn('[portal-auth] Server-side verification failed:', errorMsg);
+        
+        // Check if we should use local fallback (development mode only)
+        const isLocalDev = window.location.hostname === 'localhost' || 
+                          window.location.hostname === '127.0.0.1';
+        
+        if (isLocalDev && response.status === 503) {
+          // Service unavailable - try local fallback in dev mode
+          console.warn('[portal-auth] Service unavailable, trying local fallback (dev mode)');
+          try {
+            const valid = await db.verifyStudentPassword(code, password);
+            if (!valid) {
+              showError('Invalid student code or password');
+              return;
+            }
+          } catch (localErr) {
+            console.error('[portal-auth] Local fallback failed:', localErr);
+            showError('Authentication failed: ' + localErr.message);
+            return;
+          }
+        } else {
+          // Production mode or other error - show error
+          showError(errorMsg);
+          return;
+        }
+      } else {
+        console.log('[portal-auth] Server-side verification successful');
       }
       
       const studentList = await db.listStudents();
@@ -1683,12 +1721,43 @@
       
     } catch (err) {
       console.error('[portal-auth] Login error:', err);
-      // Phase 4: Better error message that doesn't reset focus
-      if (err.message === 'supabase-not-configured') {
-        showError('Login service unavailable. Please try again.');
-      } else {
-        showError('Login failed: ' + err.message);
+      
+      // Check if we're in local dev mode for fallback
+      const isLocalDev = window.location.hostname === 'localhost' || 
+                        window.location.hostname === '127.0.0.1';
+      
+      if (isLocalDev) {
+        console.warn('[portal-auth] Network error, trying local fallback (dev mode)');
+        try {
+          const valid = await db.verifyStudentPassword(code, password);
+          if (!valid) {
+            showError('Invalid student code or password');
+            return;
+          }
+          
+          const studentList = await db.listStudents();
+          const student = studentList.find(s => s.code === code);
+          
+          if (!student) {
+            showError('Student not found');
+            return;
+          }
+          
+          currentUser = student;
+          userRole = 'student';
+          sessionStorage.setItem('rc_user_code', code);
+          sessionStorage.setItem('rc_user_role', 'student');
+          showStudentDashboard();
+          return;
+        } catch (localErr) {
+          console.error('[portal-auth] Local fallback failed:', localErr);
+          showError('Login failed: ' + localErr.message);
+          return;
+        }
       }
+      
+      // Production mode - show generic error
+      showError('Login service unavailable. Please try again.');
     }
   });
   

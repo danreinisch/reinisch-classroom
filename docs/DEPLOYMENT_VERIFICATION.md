@@ -58,12 +58,45 @@ curl -I https://your-domain.netlify.app/ | grep -i content-security-policy
 **Student Portal:**
 
 - [ ] Login form displays correctly
-- [ ] Student login succeeds with valid code
+- [ ] Student login succeeds with valid code (server-side verification)
 - [ ] Dashboard loads with assignments
 - [ ] Assignment cards render properly
 - [ ] Assignment detail modal opens
 - [ ] Logout redirects to /
 - [ ] Auto-login (24h remember-me) works after refresh
+
+**Student Authentication (Server-Side):**
+
+Verify the student-login function works correctly:
+
+```bash
+# Test successful login
+curl -X POST https://your-domain.netlify.app/.netlify/functions/student-login \
+  -H "Content-Type: application/json" \
+  -d '{"code":"S001","password":"correct_password"}'
+
+# Expected response (200):
+# {"ok":true,"code":"S001","name":"S001"}
+
+# Test failed login
+curl -X POST https://your-domain.netlify.app/.netlify/functions/student-login \
+  -H "Content-Type: application/json" \
+  -d '{"code":"S001","password":"wrong_password"}'
+
+# Expected response (401):
+# {"ok":false,"error":"Invalid credentials"}
+```
+
+- [ ] POST to `/.netlify/functions/student-login` returns 200 for valid credentials
+- [ ] POST returns 401 for invalid credentials
+- [ ] Response includes `Cache-Control: no-store` header
+- [ ] Hub student sign-in uses server-side verification
+- [ ] Student portal login uses server-side verification
+- [ ] Local fallback only works on localhost (disabled in production)
+
+**Environment Variables Required:**
+- [ ] `SUPABASE_URL` or `SUPABASE_URL_RUNTIME` configured in Netlify
+- [ ] `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_SERVICE_KEY_RUNTIME`, or `SUPABASE_SERVICE_KEY` configured in Netlify
 
 **Teacher Center:**
 

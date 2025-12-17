@@ -2528,49 +2528,72 @@
       }
       
       let isValid = false;
-      let rpcError = false;
+      let studentName = code; // Default to code if name fetch fails
+      let authError = null;
       
+      // Phase 4: Use server-side student-login endpoint for verification
+      // This ensures credentials are verified server-side without exposing Supabase keys
       try {
-        // Try RPC verification first
-        isValid = await db.verifyStudentPassword(code, password);
+        console.log('[Student Sign-in] Attempting server-side verification for code:', code);
+        msgEl.innerHTML = '<span style="color:var(--muted)">Verifying credentials...</span>';
+        
+        const response = await fetch('/.netlify/functions/student-login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ code, password })
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok && result.ok === true) {
+          isValid = true;
+          studentName = result.name || code;
+          console.log('[Student Sign-in] Server-side verification successful');
+        } else {
+          authError = result.error || 'Invalid credentials';
+          console.warn('[Student Sign-in] Server-side verification failed:', authError);
+        }
       } catch (err) {
-        console.warn('[Student Sign-in] RPC verification failed, using local fallback:', err);
-        rpcError = true;
-      }
-      
-      // Local fallback: if RPC failed or returned false
-      // NOTE: This fallback uses name/code as password per requirements when RPC auth is unavailable.
-      // This is intentionally simple for offline/local-only scenarios where students may not have
-      // pre-configured passwords. Production deployments should use RPC auth for stronger security.
-      if (!isValid) {
-        try {
-          // Load students for local verification
-          const students = await db.listStudents();
-          const student = students.find(s => s.code === code);
-          
-          if (student) {
-            // Check if password matches student.name OR code (case-insensitive, trimmed)
-            const pwTrimmed = password.trim().toLowerCase();
-            const nameTrimmed = (student.name || '').trim().toLowerCase();
-            const codeTrimmed = (student.code || '').trim().toLowerCase();
+        console.error('[Student Sign-in] Server-side verification error:', err);
+        authError = 'Authentication service unavailable';
+        
+        // RESTRICTED LOCAL FALLBACK: Only in development mode (not in production)
+        // Check if we're in a local/dev environment by looking for localhost
+        const isLocalDev = window.location.hostname === 'localhost' || 
+                          window.location.hostname === '127.0.0.1';
+        
+        if (isLocalDev) {
+          console.warn('[Student Sign-in] Using local fallback (dev mode only)');
+          try {
+            // Load students for local verification
+            const students = await db.listStudents();
+            const student = students.find(s => s.code === code);
             
-            if (pwTrimmed === nameTrimmed || pwTrimmed === codeTrimmed) {
-              isValid = true;
-              console.log('[Student Sign-in] Local fallback succeeded');
+            if (student) {
+              // Check if password matches student.name OR code (case-insensitive, trimmed)
+              const pwTrimmed = password.trim().toLowerCase();
+              const nameTrimmed = (student.name || '').trim().toLowerCase();
+              const codeTrimmed = (student.code || '').trim().toLowerCase();
+              
+              if (pwTrimmed === nameTrimmed || pwTrimmed === codeTrimmed) {
+                isValid = true;
+                studentName = student.name || code;
+                authError = null;
+                console.log('[Student Sign-in] Local fallback succeeded');
+              }
             }
+          } catch (fallbackErr) {
+            console.error('[Student Sign-in] Local fallback failed:', fallbackErr);
           }
-        } catch (fallbackErr) {
-          console.error('[Student Sign-in] Local fallback failed:', fallbackErr);
+        } else {
+          console.warn('[Student Sign-in] Local fallback disabled in production mode');
         }
       }
       
       if (isValid) {
-        // Success: Get student info for auth handoff
-        const students = await db.listStudents();
-        const student = students.find(s => s.code === code);
-        const studentName = student ? (student.name || code) : code;
-        
-        // Persist auth with 24-hour expiry using auth-handoff
+        // Success: Persist auth with 24-hour expiry using auth-handoff
         writeAuth({ role: 'student', code, name: studentName });
         
         updateUserChip();
@@ -2611,11 +2634,8 @@
         }
       } else {
         // Show appropriate error message
-        if (rpcError) {
-          msgEl.innerHTML = '<span style="color:#fecaca">Authentication error. Please try again.</span>';
-        } else {
-          msgEl.innerHTML = '<span style="color:#fecaca">Invalid student code or password.</span>';
-        }
+        const errorMsg = authError || 'Invalid student code or password';
+        msgEl.innerHTML = '<span style="color:#fecaca">' + errorMsg + '</span>';
       }
     }
     
