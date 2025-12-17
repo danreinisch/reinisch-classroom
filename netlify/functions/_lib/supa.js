@@ -69,7 +69,10 @@ function parseBooleanRpcResponse(data) {
   }
   
   // Array format (PostgREST sometimes returns [true] or [false])
-  if (Array.isArray(data) && data.length > 0) {
+  if (Array.isArray(data)) {
+    if (data.length === 0) {
+      return false;
+    }
     return Boolean(data[0]);
   }
   
