@@ -1,1 +1,38 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Lost in Kragdon-ah – Reinisch Classroom</title><style>*{box-sizing:border-box;margin:0;padding:0}:root{--glass:rgba(255,255,255,.14);--glass-brd:rgba(255,255,255,.28);--text:#e8edf5}body{min-height:100vh;font-family:Segoe UI,Roboto,Arial,sans-serif;color:var(--text);background:#0b1220;display:flex;flex-direction:column;align-items:center;text-align:center;padding:2rem}.grid{width:100%;max-width:1100px;display:grid;gap:1rem;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}.card{background:var(--glass);border:1px solid var(--glass-brd);border-radius:1rem;padding:1rem 1.25rem;color:var(--text);text-decoration:none;min-height:86px;display:flex;flex-direction:column;justify-content:center;align-items:center;box-shadow:0 10px 30px rgba(0,0,0,.15)}</style></head><body><header><h1>Lost in Kragdon-ah</h1><p style="opacity:.9;margin:14px 0 22px">Unit hub</p></header><section class="grid"><a class="card" href="#"><strong>Presentation 1</strong><small>Placeholder</small></a><a class="card" href="#"><strong>Presentation 2</strong><small>Placeholder</small></a><a class="card" href="#"><strong>Presentation 3</strong><small>Placeholder</small></a><a class="card" href="#"><strong>Presentation 4</strong><small>Placeholder</small></a><a class="card" href="#"><strong>Presentation 5</strong><small>Placeholder</small></a><a class="card" href="#"><strong>Presentation 6</strong><small>Placeholder</small></a><a class="card" href="#"><strong>Presentation 7</strong><small>Placeholder</small></a><a class="card" href="#"><strong>Presentation 8</strong><small>Placeholder</small></a><a class="card" href="#"><strong>Presentation 9</strong><small>Placeholder</small></a><a class="card" href="#"><strong>Presentation 10</strong><small>Placeholder</small></a><a class="card" href="#"><strong>Presentation 11</strong><small>Placeholder</small></a><a class="card" href="#"><strong>Presentation 12</strong><small>Placeholder</small></a><a class="card" href="#"><strong>Presentation 13</strong><small>Placeholder</small></a><a class="card" href="#"><strong>Presentation 14</strong><small>Placeholder</small></a><a class="card" href="#"><strong>Presentation 15</strong><small>Placeholder</small></a><a class="card" href="#"><strong>Presentation 16</strong><small>Placeholder</small></a></section></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Lost in Kragdon-ah – Reinisch Classroom</title>
+  <meta name="description" content="Language Arts unit — Lost in Kragdon-ah"/>
+  <link rel="stylesheet" href="/assets/css/theme.css"/>
+  <script src="/assets/js/section-nav.js" defer></script>
+  <style>
+    .wrap{ max-width:1100px; margin:2.2rem auto; padding:0 1rem }
+    header{ text-align:center; margin-bottom:1.2rem }
+    h1{ margin:.2rem 0 .3rem 0; font-size:2rem }
+    .sub{ color:var(--muted); margin:0 0 1.2rem 0 }
+    .grid{ display:grid; gap:16px; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); align-items:stretch }
+    .card{ display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; text-decoration:none; color:inherit; background:var(--panel); border:1px solid var(--panel-brd); border-radius:14px; padding:18px; min-height:98px; transition:transform .12s ease, border-color .12s ease, background .12s ease }
+    .card:hover{ transform:translateY(-1px); border-color:rgba(255,255,255,.28); background:rgba(255,255,255,.08) }
+    .card.disabled{ cursor:default }
+    .card.disabled:hover{ transform:none; border-color:var(--panel-brd); background:var(--panel) }
+    .t{ font-weight:800; line-height:1.3 }
+    .s{ margin-top:.2rem; color:var(--muted); font-size:.92rem }
+  </style>
+  <script src="/site/assets/js/unit-grid.js" defer></script>
+</head>
+<body>
+  <main class="wrap">
+    <header>
+      <h1>Lost in Kragdon-ah</h1>
+      <p class="sub">Unit hub</p>
+      <nav style="display:flex;justify-content:center;gap:10px;margin-bottom:1.2rem">
+        <a class="btn" href="/">Home</a>
+        <a class="btn" href="/language-arts/">Back to Language Arts</a>
+      </nav>
+    </header>
+    <section class="grid" id="grid" aria-live="polite"></section>
+  </main>
+</body>
+</html>

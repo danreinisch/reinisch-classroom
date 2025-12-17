@@ -484,13 +484,57 @@
         }
       }
 
-      // Verify upload: fetch updated state and confirm the slot link was written
-      log('Verifying upload…');
-      try {
-        await new Promise(r => setTimeout(r, 2000)); // Wait 2s for Netlify to deploy
-        const verifyRes = await fetch('/assets/data/site-state.json?t=' + Date.now(), { cache: 'no-store' });
-        if (verifyRes.ok) {
-          const verifyState = await verifyRes.json();
+      // Verify upload: fetch updated state with retry and dual-path fallback
+      log('Verifying upload with retry…');
+      
+      const MAX_RETRIES = 6;
+      const RETRY_DELAYS = [3000, 5000, 8000, 10000, 15000, 20000]; // Total ~61 seconds
+      let verifySuccess = false;
+      let lastError = null;
+      let verifyState = null;
+      
+      for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+        try {
+          // Wait before attempting (except first attempt)
+          if (attempt > 0) {
+            const delay = RETRY_DELAYS[attempt - 1];
+            log(`  Waiting ${delay / 1000}s before attempt ${attempt + 1}/${MAX_RETRIES}…`);
+            await new Promise(r => setTimeout(r, delay));
+          } else {
+            // Initial delay for Netlify to start deploying
+            await new Promise(r => setTimeout(r, 3000));
+          }
+          
+          log(`Verification attempt ${attempt + 1}/${MAX_RETRIES}…`);
+          
+          // Try root path first, then site path
+          const paths = [
+            '/assets/data/site-state.json',
+            '/site/assets/data/site-state.json'
+          ];
+          
+          let fetchSuccess = false;
+          for (const path of paths) {
+            try {
+              const verifyRes = await fetch(path + '?t=' + Date.now(), { cache: 'no-store' });
+              if (verifyRes.ok) {
+                verifyState = await verifyRes.json();
+                log(`  ✓ Fetched from ${path}`);
+                fetchSuccess = true;
+                break;
+              }
+            } catch (pathErr) {
+              // Continue to next path
+            }
+          }
+          
+          if (!fetchSuccess) {
+            lastError = 'Could not fetch site-state.json from any path';
+            log(`  ⚠ ${lastError}`);
+            continue;
+          }
+          
+          // Check if slot data is present
           const slotLink = verifyState?.categories?.[category]?.links?.[slot - 1] || '';
           const slotTitle = verifyState?.categories?.[category]?.titles?.[slot - 1] || '';
           
@@ -499,23 +543,33 @@
             log(`  Title: "${slotTitle}"`);
             log(`  Link: ${slotLink}`);
             siteState = verifyState; // Update local cache
+            verifySuccess = true;
             
             // Clear persisted data on successful completion
             clearPersistedData();
+            break;
           } else {
-            log(`⚠ Verification WARNING: Slot ${num(slot)} link or title is missing in site-state.json`);
-            log(`  Title: "${slotTitle || '(empty)'}"`);
-            log(`  Link: ${slotLink || '(empty)'}`);
-            log(`  This may resolve after the next Netlify deployment. Try reloading the hub page in 1-2 minutes.`);
-            alert('Upload completed but verification shows slot may not be live yet.\nCheck the log below for details.\nThe slot should appear after the next deployment (~1-2 min).');
+            lastError = 'Slot link or title missing in site-state.json';
+            log(`  ⚠ ${lastError} (may still be deploying)`);
+            log(`    Title: "${slotTitle || '(empty)'}"`);
+            log(`    Link: ${slotLink || '(empty)'}`);
           }
-        } else {
-          log('⚠ Verification WARNING: Could not fetch site-state.json for verification (status ' + verifyRes.status + ')');
-          log('  Upload succeeded but verification failed. The slot should still be live after deployment.');
+        } catch (verifyErr) {
+          lastError = verifyErr?.message || String(verifyErr);
+          log(`  ⚠ Attempt ${attempt + 1} error: ${lastError}`);
         }
-      } catch (verifyErr) {
-        log('⚠ Verification ERROR:', verifyErr?.message || String(verifyErr));
-        log('  Upload succeeded but verification failed. The slot should still be live after deployment.');
+      }
+      
+      // Final result
+      if (verifySuccess) {
+        alert('✓ Upload and verification complete!\nYour content is live. See log for details.');
+      } else {
+        log('');
+        log('⚠ Verification did not confirm deployment after retries.');
+        log(`  Last error: ${lastError || 'unknown'}`);
+        log('  Your upload succeeded, but the deployment may still be in progress.');
+        log('  Check the hub page in 1-2 minutes, or check Netlify deploy status.');
+        alert('Upload completed successfully.\n\nVerification could not confirm deployment yet - this is normal if Netlify is still processing.\n\nCheck the hub page in 1-2 minutes to confirm your content is live.');
       }
 
       // Update local titles to reflect the change
