@@ -48,6 +48,9 @@ jobs:
       
       - name: Run asset-path scan
         run: node .github/scripts/asset-path-scan.mjs
+      
+      - name: Check for /site/ prefix violations
+        run: node scripts/check-site-prefix.mjs
 
   smoke:
     runs-on: ubuntu-latest
