@@ -1,0 +1,3164 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Mastercard Interview Prep – Stephanie (Answer Builder • Mobile + Voice)</title>
+  <style>
+:root{
+  --bg0:#070a10;
+  --bg1:#0b1220;
+  --card: rgba(12, 18, 30, .56);
+  --card2: rgba(10, 16, 28, .48);
+  --stroke: rgba(160, 190, 255, .14);
+  --stroke2: rgba(120, 160, 255, .24);
+  --text: rgba(245, 248, 255, .92);
+  --muted: rgba(210, 225, 255, .70);
+  --muted2: rgba(210, 225, 255, .55);
+  --blue1: rgba(40, 120, 255, .55);
+  --blue2: rgba(70, 140, 255, .95);
+  --good: rgba(120, 255, 200, .92);
+  --warn: rgba(255, 215, 120, .92);
+  --bad: rgba(255, 130, 150, .92);
+  --shadow: 0 24px 60px rgba(0,0,0,.42);
+  --shadow2: 0 12px 30px rgba(0,0,0,.34);
+  --blur: 18px;
+  --radius: 18px;
+  --radius2: 14px;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --sans: ui-sans-serif, -apple-system, system-ui, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family: var(--sans);
+  color: var(--text);
+  background:
+    radial-gradient(1200px 800px at 20% 10%, rgba(40,120,255,.20), transparent 55%),
+    radial-gradient(900px 700px at 80% 40%, rgba(80,160,255,.12), transparent 60%),
+    radial-gradient(800px 500px at 30% 90%, rgba(40,120,255,.10), transparent 60%),
+    linear-gradient(180deg, var(--bg0), var(--bg1));
+}
+a{color:inherit}
+.wrap{max-width: 1180px; margin: 0 auto; padding: 22px 18px 40px}
+header{
+  background: linear-gradient(180deg, rgba(10,16,28,.72), rgba(10,16,28,.45));
+  border: 1px solid var(--stroke);
+  border-radius: 22px;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(var(--blur));
+  -webkit-backdrop-filter: blur(var(--blur));
+  padding: 18px 18px 14px;
+  position: sticky;
+  top: 12px;
+  z-index: 10;
+}
+.title{font-size: 20px; font-weight: 760; letter-spacing: .2px}
+.sub{margin: 6px 0 0; color: var(--muted); font-size: 14px; line-height: 1.35}
+.topbar{display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap; margin-top: 12px}
+.btnrow{display:flex; gap:10px; flex-wrap:wrap}
+.btn{
+  appearance:none; border:1px solid var(--stroke2);
+  background: rgba(12,18,30,.55);
+  color: var(--text);
+  padding: 9px 12px;
+  border-radius: 999px;
+  font-size: 14px;
+  cursor:pointer;
+  box-shadow: 0 10px 20px rgba(0,0,0,.22);
+  backdrop-filter: blur(14px);
+}
+.btn:hover{border-color: rgba(120,160,255,.45); transform: translateY(-1px)}
+.btn.primary{border-color: rgba(70,140,255,.55); background: rgba(40,120,255,.18)}
+.chip{font-size:12px; padding: 6px 10px; border-radius: 999px; border:1px solid var(--stroke); color: var(--muted); background: rgba(8,12,20,.4)}
+
+main{display:grid; grid-template-columns: 1.6fr 1fr; gap: 14px; margin-top: 14px}
+.panel{
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius);
+  background: linear-gradient(180deg, rgba(10,16,28,.64), rgba(10,16,28,.38));
+  box-shadow: var(--shadow2);
+  backdrop-filter: blur(var(--blur));
+  -webkit-backdrop-filter: blur(var(--blur));
+}
+.left{padding: 14px}
+.right{padding: 14px}
+.sec{margin: 0 0 14px}
+.sec h3{margin: 10px 6px 12px; font-size: 14px; color: rgba(230,240,255,.88); letter-spacing: .3px}
+.qblock{padding: 12px; border-radius: var(--radius); border:1px solid rgba(120,160,255,.14); background: rgba(8,12,20,.20); margin: 10px 0}
+.qtop{display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom: 10px}
+.qtitle{font-weight: 720; font-size: 14px; line-height: 1.35}
+.tag{font-size: 11px; padding: 4px 8px; border-radius: 999px; border: 1px solid rgba(120,160,255,.22); color: rgba(220,235,255,.78); background: rgba(40,120,255,.08); white-space:nowrap}
+.qa-grid{display:grid; grid-template-columns: 1.25fr 1fr; gap: 10px; align-items: stretch}
+
+.builder{
+  border: 1px solid rgba(120,160,255,.16);
+  border-radius: var(--radius2);
+  background: rgba(10,14,22,.45);
+  padding: 10px;
+  display:flex;
+  flex-direction: column;
+  min-height: 520px;
+}
+.builder-title{display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-bottom: 8px}
+.builder-title span:first-child{font-weight: 760; font-size: 12px}
+.builder-sub{color: var(--muted2); font-size: 11px}
+.builder-grid{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 120px 1fr 150px 120px;
+  grid-template-areas:
+    "ctx ctx"
+    "act act"
+    "imp trd"
+    "lrn lrn";
+  gap: 10px;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.field{display:flex; flex-direction:column; min-height:0}
+.label{font-size: 11px; color: rgba(220,235,255,.78); margin-bottom: 6px}
+.ta{
+  width:100%;
+  height:100%;
+  resize: vertical;
+  border-radius: 14px;
+  border: 1px solid rgba(120,160,255,.22);
+  background: rgba(7,10,16,.58);
+  color: rgba(245,248,255,.92);
+  padding: 10px 10px;
+  font-size: 14px;
+  line-height: 1.35;
+  outline: none;
+}
+.ta:focus{border-color: rgba(70,140,255,.65); box-shadow: 0 0 0 3px rgba(40,120,255,.18)}
+.ta-small{min-height: 150px}
+.ta-mid{min-height: 180px}
+.ta-big{min-height: 340px; resize: vertical}
+.field-ctx{grid-area: ctx}
+.field-act{grid-area: act}
+.field-imp{grid-area: imp}
+.field-trd{grid-area: trd}
+.field-lrn{grid-area: lrn}
+
+.builder-actions{display:flex; gap:8px; flex-wrap:wrap; padding-top: 10px}
+.mini{
+  appearance:none;
+  border:1px solid rgba(120,160,255,.22);
+  background: rgba(10,14,22,.40);
+  color: rgba(245,248,255,.88);
+  border-radius: 999px;
+  padding: 8px 10px;
+  font-size: 12px;
+  cursor:pointer;
+}
+.mini:hover{border-color: rgba(120,160,255,.45)}
+.mini.primary{border-color: rgba(70,140,255,.70); background: rgba(40,120,255,.18)}
+.mini.ghost{background: transparent}
+
+.preview{margin-top: 10px; border:1px solid rgba(120,160,255,.18); border-radius: 14px; background: rgba(7,10,16,.55); padding: 10px}
+.preview-title{display:flex; align-items:baseline; justify-content:space-between; gap:8px; font-size:12px; font-weight: 720; margin-bottom: 6px}
+.preview-body{white-space: pre-wrap; font-size: 14px; line-height: 1.4; color: rgba(245,248,255,.92)}
+
+.coach{
+  border: 1px solid rgba(120,160,255,.16);
+  border-radius: var(--radius2);
+  background: rgba(10,14,22,.40);
+  padding: 10px;
+  min-height: 520px;
+  display:flex;
+  flex-direction: column;
+}
+.coach-title{display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-bottom: 8px}
+.coach-title span:first-child{font-weight: 760; font-size: 12px}
+.coach-sub{color: var(--muted2); font-size: 11px}
+.ideas{margin:0; padding-left: 18px; color: rgba(230,240,255,.82); font-size: 12px; line-height: 1.35}
+.ideas li{margin: 6px 0}
+
+.resumeBox{margin-top: 10px; border:1px solid rgba(120,160,255,.14); border-radius: 14px; padding: 8px 10px; background: rgba(7,10,16,.35)}
+.resumeBox summary{cursor:pointer; font-size:12px; color: rgba(230,240,255,.86); font-weight: 720}
+.resumeInner{margin-top: 8px}
+.resumeCols{display:grid; grid-template-columns: 1fr; gap: 10px}
+@media(min-width: 940px){ .resumeCols{grid-template-columns: 1fr} } /* keep compact */
+.rhead{font-size: 11px; font-weight: 760; color: rgba(220,235,255,.86); margin: 4px 0}
+.rlist{margin:0; padding-left: 18px; color: rgba(220,235,255,.75); font-size: 11px; line-height: 1.35}
+.rlist li{margin: 6px 0}
+.tiny{font-size:11px}
+
+.feedback{margin-top: 10px; border:1px solid rgba(120,160,255,.18); border-radius: 14px; background: rgba(7,10,16,.60); padding: 10px; font-size: 12px; line-height: 1.35}
+.fbRow{display:flex; gap:8px; flex-wrap:wrap; margin: 6px 0}
+.pill{font-size: 11px; padding: 4px 8px; border-radius: 999px; border:1px solid rgba(120,160,255,.20); background: rgba(40,120,255,.08); color: rgba(230,240,255,.82)}
+.pill.good{border-color: rgba(120,255,200,.35); color: rgba(170,255,220,.95)}
+.pill.warn{border-color: rgba(255,215,120,.35); color: rgba(255,230,160,.95)}
+.pill.bad{border-color: rgba(255,130,150,.35); color: rgba(255,165,185,.95)}
+.fbTitle{font-weight: 780; font-size: 12px; margin: 2px 0 8px}
+.fbSec{margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(120,160,255,.12)}
+.fbSec h4{margin: 0 0 6px; font-size: 12px}
+.fbSec ul{margin: 0; padding-left: 18px; color: rgba(230,240,255,.80)}
+.fbSec li{margin: 5px 0}
+
+.muted{color: var(--muted)}
+.small{font-size: 12px}
+hr.sep{border:none; height:1px; background: rgba(120,160,255,.12); margin: 10px 0}
+
+.fatal{
+  display:none;
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 14px;
+  border:1px solid rgba(255,130,150,.25);
+  background: rgba(40,0,10,.25);
+  color: rgba(255,220,230,.92);
+  font-size: 12px;
+  line-height: 1.35;
+}
+.toast{
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  padding: 10px 12px;
+  border-radius: 999px;
+  border:1px solid rgba(120,160,255,.22);
+  background: rgba(10,14,22,.72);
+  box-shadow: 0 18px 40px rgba(0,0,0,.45);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  color: rgba(240,248,255,.92);
+  font-size: 12px;
+  opacity: 0;
+  pointer-events:none;
+  transition: opacity .22s ease, transform .22s ease;
+}
+.toast.show{opacity: 1; transform: translateX(-50%) translateY(-2px)}
+
+@media(max-width: 980px){
+  header{
+    position: sticky;
+    top: 0;
+    border-radius: 0;
+    margin: -16px -16px 12px;
+    padding: 14px 14px 12px;
+    backdrop-filter: blur(var(--blur));
+    -webkit-backdrop-filter: blur(var(--blur));
+  }
+  .title{font-size: 18px}
+  .sub{font-size: 13px}
+  .sub2{margin: 8px 0 0; font-size: 12px; color: rgba(205,225,255,.75)}
+  .topbar{gap: 8px}
+  .btnrow{gap: 8px}
+  .btn{padding: 10px 12px; font-size: 14px}
+  #jumpSel{font-size: 14px}
+  main{grid-template-columns: 1fr; gap: 12px}
+  .qa-grid{grid-template-columns: 1fr; gap: 12px}
+  .builder-grid{
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "ctx"
+      "act"
+      "imp"
+      "trd"
+      "lrn";
+  }
+  .ta{font-size: 16px} /* prevent iOS zoom */
+  .ta-small{min-height: clamp(180px, 22vh, 260px)}
+  .ta-mid{min-height: clamp(200px, 24vh, 300px)}
+  .ta-big{min-height: clamp(240px, 30vh, 420px)}
+  .micBtn{padding: 9px 12px; font-size: 13px}
+  .qblock{padding: 12px}
+  .qtop{gap: 10px}
+  .qToggle{width: 38px; height: 38px}
+}
+
+  
+
+.fieldTop{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom: 6px}
+.fieldTop .label{margin:0}
+.micBtn{
+  display:inline-flex; align-items:center; gap:8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(120,160,255,.22);
+  background: rgba(10,18,36,.42);
+  color: rgba(230,244,255,.92);
+  cursor:pointer;
+  user-select:none;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 12px 22px rgba(0,0,0,.22);
+  font-size: 12px;
+}
+.micBtn:disabled{opacity:.45; cursor:not-allowed}
+.micBtn:hover{border-color: rgba(120,160,255,.45)}
+.micBtn.active{
+  border-color: rgba(90,170,255,.85);
+  box-shadow: 0 0 0 3px rgba(40,120,255,.18), 0 14px 24px rgba(0,0,0,.25);
+}
+.micIcon{display:inline-flex}
+.micStatus{
+  font-size: 12px;
+  color: rgba(180,210,255,.86);
+  margin: 2px 0 6px;
+  min-height: 14px;
+}
+.jump{display:flex; align-items:center; gap:8px}
+.jumpLbl{font-size:12px; color: var(--muted); font-weight: 650}
+#jumpSel{
+  appearance:none;
+  border:1px solid rgba(120,160,255,.22);
+  background: rgba(7,10,16,.45);
+  color: rgba(240,248,255,.92);
+  padding: 8px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+}
+#jumpSel:focus{outline:none; box-shadow: 0 0 0 3px rgba(40,120,255,.18)}
+.qtop{cursor:pointer}
+.qToggle{
+  margin-left: auto;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border:1px solid rgba(120,160,255,.18);
+  background: rgba(10,16,28,.35);
+  color: rgba(235,245,255,.9);
+  cursor:pointer;
+}
+.qToggle:hover{border-color: rgba(120,160,255,.40)}
+.qblock.collapsed .qa-grid,
+.qblock.collapsed .qactions,
+.qblock.collapsed .preview{display:none}
+.qblock.collapsed .qToggle svg{transform: rotate(-90deg)}
+.qToggle svg{transition: transform .15s ease}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="title">Mastercard Interview Prep – Stephanie (Interactive • Mobile + Voice)</div>
+      <p class="sub">Structured practice with focused feedback tied to the anchor: <span class="muted">“I build reliable, scalable systems in ambiguous environments and communicate clearly while doing it.”</span></p>
+      <p class="sub2">Tip: On iPhone/iPad, use the keyboard mic dictation. On Chrome/Edge/Android, use the <b>Dictate</b> buttons in each box.</p>
+
+      <div class="topbar">
+        <div class="btnrow">
+          <button class="btn primary" id="btnAnalyzeAll" type="button">Analyze all</button>
+          <button class="btn" id="btnExportMd" type="button">Export → Markdown</button>
+          <button class="btn" id="btnExportJson" type="button">Export → JSON</button>
+          <button class="btn" id="btnCopyExport" type="button">Copy export</button>
+          <button class="btn" id="btnPrint" type="button">Print</button>
+          <button class="btn" id="btnClearAll" type="button">Clear all</button>
+        </div>
+        <div class="chip" id="saveState">Autosave: ON (Local)</div>
+        <div class="jump">
+          <label class="jumpLbl" for="jumpSel">Jump</label>
+          <select id="jumpSel" aria-label="Jump to question"></select>
+        </div>
+      </div>
+      <div class="fatal" id="fatal"></div>
+    </header>
+
+    <main>
+      <div class="panel left">
+        <div id="questions">
+          
+    <section class="sec">
+      <h3>1. Opening &amp; Narrative</h3>
+      
+      <div class="qblock" data-id="q1" data-kind="narrative">
+        <div class="qtop">
+          <div class="qtitle">Walk me through your background and how you arrived at this point in your career.</div>
+          <div class="tag">Guaranteed</div>
+        </div>
+
+        <div class="qa-grid">
+          <div class="builder">
+            <div class="builder-title">
+              <span>Answer Builder</span>
+              <span class="builder-sub">Context → Actions → Impact → Tradeoffs → Learning</span>
+            </div>
+
+            <div class="builder-grid" aria-label="Answer builder fields">
+              <div class="field field-ctx">
+                <div class="label">Context (10–15s)</div>
+                <textarea class="ta ta-small" id="ctx_q1" placeholder="Where were you? What was the system + stakes? Keep it tight."></textarea>
+              </div>
+
+              <div class="field field-act">
+                <div class="label">Actions (your moves)</div>
+                <textarea class="ta ta-big" id="act_q1" placeholder="2–5 bullets: what YOU did, how you decided, and how you communicated."></textarea>
+              </div>
+
+              <div class="field field-imp">
+                <div class="label">Impact (numbers if possible)</div>
+                <textarea class="ta ta-mid" id="imp_q1" placeholder="What improved? latency, reliability, defects, manual work, deployment time, stakeholder trust…"></textarea>
+              </div>
+
+              <div class="field field-trd">
+                <div class="label">Tradeoffs (show judgment)</div>
+                <textarea class="ta ta-mid" id="trd_q1" placeholder="What options existed? Why this choice? What risk did you accept/avoid?"></textarea>
+              </div>
+
+              <div class="field field-lrn">
+                <div class="label">Learning (senior signal)</div>
+                <textarea class="ta ta-small" id="lrn_q1" placeholder="What would you do again? What would you change next time?"></textarea>
+              </div>
+            </div>
+
+            <div class="builder-actions">
+              <button class="mini ghost" type="button" data-action="preview" data-target="q1">Preview</button>
+              <button class="mini primary" type="button" data-action="feedback" data-target="q1">Focused feedback</button>
+              <button class="mini" type="button" data-action="clearOne" data-target="q1">Clear</button>
+            </div>
+
+            <div class="preview" id="pv_q1" hidden>
+              <div class="preview-title">
+                <span>Spoken answer preview</span>
+                <span class="muted">(aim for 60–90 seconds)</span>
+              </div>
+              <div class="preview-body" id="pv_body_q1"></div>
+              <div class="minirow">
+                <button class="mini" type="button" data-action="copyPreview" data-target="q1">Copy preview</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="coach">
+            <div class="coach-title">
+              <span>Ideas to include</span>
+              <span class="coach-sub">anchor + themes</span>
+            </div>
+            <ul class="ideas"><li>Past → Present → Future (30 seconds each).</li>
+<li>Highlight the pivot to backend + why you enjoy it.</li>
+<li>One credible “signature strength” (debugging, ownership, communication).</li>
+<li>End with why this role now (scale, reliability, high standards).</li></ul>
+
+            <details class="resumeBox">
+              <summary>Resume evidence you can steal</summary>
+              <div class="resumeInner" data-qresume="q1">
+                <div class="resumeCols">
+                  <div class="rcol">
+                    <div class="rhead">Technical Judgment</div>
+                    <ul class="rlist">
+                      <li>Modernized legacy .NET platforms into modular, scalable architectures; improved maintainability and reduced deployment time.</li><li>Built/integrated RESTful APIs &amp; web services; improved interoperability between internal + third‑party systems with security compliance.</li><li>Embedded Secure SDLC practices (OWASP/JWT/OAuth) to reduce risk and improve quality.</li><li>Streamlined CI/CD with Jenkins (and GitHub Actions); improved delivery reliability and timelines.</li><li>Designed KPI dashboards (SSRS/T‑SQL) for executive reporting; optimized data queries/transformations.</li>
+                    </ul>
+                  </div>
+                  <div class="rcol">
+                    <div class="rhead">Collaboration</div>
+                    <ul class="rlist">
+                      <li>Partnered across DevOps, QA, and support to deliver releases and improve pipeline flow.</li><li>Facilitated stakeholder workshops / design thinking for MVP scope and feature definition.</li><li>Delivered executive roadmap updates and KPI reports to keep leaders aligned.</li><li>Translated business requirements into scalable technical solutions with BAs and non‑technical stakeholders.</li>
+                    </ul>
+                  </div>
+                  <div class="rcol">
+                    <div class="rhead">Ownership</div>
+                    <ul class="rlist">
+                      <li>Directed API integration projects end‑to‑end; reduced manual processes via automation.</li><li>Coordinated cross‑department release planning to ensure smooth launches.</li><li>Authored detailed technical documentation; strengthened knowledge sharing and onboarding.</li><li>Mentored junior engineers (clean code, architecture, agile practices).</li><li>Led debugging / root-cause analysis of legacy codebases; improved maintainability and reduced support needs.</li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="muted tiny">Tip: copy one line and make it specific to the story you’re telling.</div>
+              </div>
+            </details>
+
+            <div class="minirow">
+              <button class="mini ghost" type="button" data-action="clearFeedback" data-target="q1">Clear feedback</button>
+            </div>
+            <div class="feedback" id="fb_q1" hidden></div>
+          </div>
+        </div>
+      </div>
+    
+
+      <div class="qblock" data-id="q2" data-kind="why">
+        <div class="qtop">
+          <div class="qtitle">What interested you in this role and in Mastercard specifically?</div>
+          <div class="tag">Likely</div>
+        </div>
+
+        <div class="qa-grid">
+          <div class="builder">
+            <div class="builder-title">
+              <span>Answer Builder</span>
+              <span class="builder-sub">Context → Actions → Impact → Tradeoffs → Learning</span>
+            </div>
+
+            <div class="builder-grid" aria-label="Answer builder fields">
+              <div class="field field-ctx">
+                <div class="label">Context (10–15s)</div>
+                <textarea class="ta ta-small" id="ctx_q2" placeholder="Where were you? What was the system + stakes? Keep it tight."></textarea>
+              </div>
+
+              <div class="field field-act">
+                <div class="label">Actions (your moves)</div>
+                <textarea class="ta ta-big" id="act_q2" placeholder="2–5 bullets: what YOU did, how you decided, and how you communicated."></textarea>
+              </div>
+
+              <div class="field field-imp">
+                <div class="label">Impact (numbers if possible)</div>
+                <textarea class="ta ta-mid" id="imp_q2" placeholder="What improved? latency, reliability, defects, manual work, deployment time, stakeholder trust…"></textarea>
+              </div>
+
+              <div class="field field-trd">
+                <div class="label">Tradeoffs (show judgment)</div>
+                <textarea class="ta ta-mid" id="trd_q2" placeholder="What options existed? Why this choice? What risk did you accept/avoid?"></textarea>
+              </div>
+
+              <div class="field field-lrn">
+                <div class="label">Learning (senior signal)</div>
+                <textarea class="ta ta-small" id="lrn_q2" placeholder="What would you do again? What would you change next time?"></textarea>
+              </div>
+            </div>
+
+            <div class="builder-actions">
+              <button class="mini ghost" type="button" data-action="preview" data-target="q2">Preview</button>
+              <button class="mini primary" type="button" data-action="feedback" data-target="q2">Focused feedback</button>
+              <button class="mini" type="button" data-action="clearOne" data-target="q2">Clear</button>
+            </div>
+
+            <div class="preview" id="pv_q2" hidden>
+              <div class="preview-title">
+                <span>Spoken answer preview</span>
+                <span class="muted">(aim for 60–90 seconds)</span>
+              </div>
+              <div class="preview-body" id="pv_body_q2"></div>
+              <div class="minirow">
+                <button class="mini" type="button" data-action="copyPreview" data-target="q2">Copy preview</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="coach">
+            <div class="coach-title">
+              <span>Ideas to include</span>
+              <span class="coach-sub">anchor + themes</span>
+            </div>
+            <ul class="ideas"><li>Say what you DO know: scale, security, payments, engineering standards.</li>
+<li>Bridge missing req: “Since the posting isn’t public, I’m basing this on the team themes…”</li>
+<li>Connect your experience: reliability, production support, ambiguity.</li>
+<li>Ask a smart clarifier: “What does success look like in 90 days?”</li></ul>
+
+            <details class="resumeBox">
+              <summary>Resume evidence you can steal</summary>
+              <div class="resumeInner" data-qresume="q2">
+                <div class="resumeCols">
+                  <div class="rcol">
+                    <div class="rhead">Technical Judgment</div>
+                    <ul class="rlist">
+                      <li>Modernized legacy .NET platforms into modular, scalable architectures; improved maintainability and reduced deployment time.</li><li>Built/integrated RESTful APIs &amp; web services; improved interoperability between internal + third‑party systems with security compliance.</li><li>Embedded Secure SDLC practices (OWASP/JWT/OAuth) to reduce risk and improve quality.</li><li>Streamlined CI/CD with Jenkins (and GitHub Actions); improved delivery reliability and timelines.</li><li>Designed KPI dashboards (SSRS/T‑SQL) for executive reporting; optimized data queries/transformations.</li>
+                    </ul>
+                  </div>
+                  <div class="rcol">
+                    <div class="rhead">Collaboration</div>
+                    <ul class="rlist">
+                      <li>Partnered across DevOps, QA, and support to deliver releases and improve pipeline flow.</li><li>Facilitated stakeholder workshops / design thinking for MVP scope and feature definition.</li><li>Delivered executive roadmap updates and KPI reports to keep leaders aligned.</li><li>Translated business requirements into scalable technical solutions with BAs and non‑technical stakeholders.</li>
+                    </ul>
+                  </div>
+                  <div class="rcol">
+                    <div class="rhead">Ownership</div>
+                    <ul class="rlist">
+                      <li>Directed API integration projects end‑to‑end; reduced manual processes via automation.</li><li>Coordinated cross‑department release planning to ensure smooth launches.</li><li>Authored detailed technical documentation; strengthened knowledge sharing and onboarding.</li><li>Mentored junior engineers (clean code, architecture, agile practices).</li><li>Led debugging / root-cause analysis of legacy codebases; improved maintainability and reduced support needs.</li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="muted tiny">Tip: copy one line and make it specific to the story you’re telling.</div>
+              </div>
+            </details>
+
+            <div class="minirow">
+              <button class="mini ghost" type="button" data-action="clearFeedback" data-target="q2">Clear feedback</button>
+            </div>
+            <div class="feedback" id="fb_q2" hidden></div>
+          </div>
+        </div>
+      </div>
+    
+
+      <div class="qblock" data-id="q3" data-kind="strengths">
+        <div class="qtop">
+          <div class="qtitle">How would you describe your strengths as a senior engineer?</div>
+          <div class="tag">Likely</div>
+        </div>
+
+        <div class="qa-grid">
+          <div class="builder">
+            <div class="builder-title">
+              <span>Answer Builder</span>
+              <span class="builder-sub">Context → Actions → Impact → Tradeoffs → Learning</span>
+            </div>
+
+            <div class="builder-grid" aria-label="Answer builder fields">
+              <div class="field field-ctx">
+                <div class="label">Context (10–15s)</div>
+                <textarea class="ta ta-small" id="ctx_q3" placeholder="Where were you? What was the system + stakes? Keep it tight."></textarea>
+              </div>
+
+              <div class="field field-act">
+                <div class="label">Actions (your moves)</div>
+                <textarea class="ta ta-big" id="act_q3" placeholder="2–5 bullets: what YOU did, how you decided, and how you communicated."></textarea>
+              </div>
+
+              <div class="field field-imp">
+                <div class="label">Impact (numbers if possible)</div>
+                <textarea class="ta ta-mid" id="imp_q3" placeholder="What improved? latency, reliability, defects, manual work, deployment time, stakeholder trust…"></textarea>
+              </div>
+
+              <div class="field field-trd">
+                <div class="label">Tradeoffs (show judgment)</div>
+                <textarea class="ta ta-mid" id="trd_q3" placeholder="What options existed? Why this choice? What risk did you accept/avoid?"></textarea>
+              </div>
+
+              <div class="field field-lrn">
+                <div class="label">Learning (senior signal)</div>
+                <textarea class="ta ta-small" id="lrn_q3" placeholder="What would you do again? What would you change next time?"></textarea>
+              </div>
+            </div>
+
+            <div class="builder-actions">
+              <button class="mini ghost" type="button" data-action="preview" data-target="q3">Preview</button>
+              <button class="mini primary" type="button" data-action="feedback" data-target="q3">Focused feedback</button>
+              <button class="mini" type="button" data-action="clearOne" data-target="q3">Clear</button>
+            </div>
+
+            <div class="preview" id="pv_q3" hidden>
+              <div class="preview-title">
+                <span>Spoken answer preview</span>
+                <span class="muted">(aim for 60–90 seconds)</span>
+              </div>
+              <div class="preview-body" id="pv_body_q3"></div>
+              <div class="minirow">
+                <button class="mini" type="button" data-action="copyPreview" data-target="q3">Copy preview</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="coach">
+            <div class="coach-title">
+              <span>Ideas to include</span>
+              <span class="coach-sub">anchor + themes</span>
+            </div>
+            <ul class="ideas"><li>Diagnosis + calm under pressure (production credibility).</li>
+<li>Systems thinking: failure modes, tradeoffs, long-term maintainability.</li>
+<li>Mentoring: code reviews, pairing, raising standards.</li>
+<li>Communication: translate tech to business outcomes.</li></ul>
+
+            <details class="resumeBox">
+              <summary>Resume evidence you can steal</summary>
+              <div class="resumeInner" data-qresume="q3">
+                <div class="resumeCols">
+                  <div class="rcol">
+                    <div class="rhead">Technical Judgment</div>
+                    <ul class="rlist">
+                      <li>Modernized legacy .NET platforms into modular, scalable architectures; improved maintainability and reduced deployment time.</li><li>Built/integrated RESTful APIs &amp; web services; improved interoperability between internal + third‑party systems with security compliance.</li><li>Embedded Secure SDLC practices (OWASP/JWT/OAuth) to reduce risk and improve quality.</li><li>Streamlined CI/CD with Jenkins (and GitHub Actions); improved delivery reliability and timelines.</li><li>Designed KPI dashboards (SSRS/T‑SQL) for executive reporting; optimized data queries/transformations.</li>
+                    </ul>
+                  </div>
+                  <div class="rcol">
+                    <div class="rhead">Collaboration</div>
+                    <ul class="rlist">
+                      <li>Partnered across DevOps, QA, and support to deliver releases and improve pipeline flow.</li><li>Facilitated stakeholder workshops / design thinking for MVP scope and feature definition.</li><li>Delivered executive roadmap updates and KPI reports to keep leaders aligned.</li><li>Translated business requirements into scalable technical solutions with BAs and non‑technical stakeholders.</li>
+                    </ul>
+                  </div>
+                  <div class="rcol">
+                    <div class="rhead">Ownership</div>
+                    <ul class="rlist">
+                      <li>Directed API integration projects end‑to‑end; reduced manual processes via automation.</li><li>Coordinated cross‑department release planning to ensure smooth launches.</li><li>Authored detailed technical documentation; strengthened knowledge sharing and onboarding.</li><li>Mentored junior engineers (clean code, architecture, agile practices).</li><li>Led debugging / root-cause analysis of legacy codebases; improved maintainability and reduced support needs.</li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="muted tiny">Tip: copy one line and make it specific to the story you’re telling.</div>
+              </div>
+            </details>
+
+            <div class="minirow">
+              <button class="mini ghost" type="button" data-action="clearFeedback" data-target="q3">Clear feedback</button>
+            </div>
+            <div class="feedback" id="fb_q3" hidden></div>
+          </div>
+        </div>
+      </div>
+    
+    </section>
+    
+
+    <section class="sec">
+      <h3>2. Technical Depth &amp; System Design</h3>
+      
+      <div class="qblock" data-id="q4" data-kind="system">
+        <div class="qtop">
+          <div class="qtitle">Tell me about a system you designed or significantly modernized (legacy → modular .NET, APIs, CI/CD).</div>
+          <div class="tag">Very likely</div>
+        </div>
+
+        <div class="qa-grid">
+          <div class="builder">
+            <div class="builder-title">
+              <span>Answer Builder</span>
+              <span class="builder-sub">Context → Actions → Impact → Tradeoffs → Learning</span>
+            </div>
+
+            <div class="builder-grid" aria-label="Answer builder fields">
+              <div class="field field-ctx">
+                <div class="label">Context (10–15s)</div>
+                <textarea class="ta ta-small" id="ctx_q4" placeholder="Where were you? What was the system + stakes? Keep it tight."></textarea>
+              </div>
+
+              <div class="field field-act">
+                <div class="label">Actions (your moves)</div>
+                <textarea class="ta ta-big" id="act_q4" placeholder="2–5 bullets: what YOU did, how you decided, and how you communicated."></textarea>
+              </div>
+
+              <div class="field field-imp">
+                <div class="label">Impact (numbers if possible)</div>
+                <textarea class="ta ta-mid" id="imp_q4" placeholder="What improved? latency, reliability, defects, manual work, deployment time, stakeholder trust…"></textarea>
+              </div>
+
+              <div class="field field-trd">
+                <div class="label">Tradeoffs (show judgment)</div>
+                <textarea class="ta ta-mid" id="trd_q4" placeholder="What options existed? Why this choice? What risk did you accept/avoid?"></textarea>
+              </div>
+
+              <div class="field field-lrn">
+                <div class="label">Learning (senior signal)</div>
+                <textarea class="ta ta-small" id="lrn_q4" placeholder="What would you do again? What would you change next time?"></textarea>
+              </div>
+            </div>
+
+            <div class="builder-actions">
+              <button class="mini ghost" type="button" data-action="preview" data-target="q4">Preview</button>
+              <button class="mini primary" type="button" data-action="feedback" data-target="q4">Focused feedback</button>
+              <button class="mini" type="button" data-action="clearOne" data-target="q4">Clear</button>
+            </div>
+
+            <div class="preview" id="pv_q4" hidden>
+              <div class="preview-title">
+                <span>Spoken answer preview</span>
+                <span class="muted">(aim for 60–90 seconds)</span>
+              </div>
+              <div class="preview-body" id="pv_body_q4"></div>
+              <div class="minirow">
+                <button class="mini" type="button" data-action="copyPreview" data-target="q4">Copy preview</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="coach">
+            <div class="coach-title">
+              <span>Ideas to include</span>
+              <span class="coach-sub">anchor + themes</span>
+            </div>
+            <ul class="ideas"><li>Context: what was broken about the legacy system?</li>
+<li>Action: what did YOU change (architecture, modules, APIs, pipelines)?</li>
+<li>Quality: tests, CI/CD, code standards, monitoring.</li>
+<li>Result: faster releases, fewer incidents, easier onboarding (numbers if you have them).</li></ul>
+
+            <details class="resumeBox">
+              <summary>Resume evidence you can steal</summary>
+              <div class="resumeInner" data-qresume="q4">
+                <div class="resumeCols">
+                  <div class="rcol">
+                    <div class="rhead">Technical Judgment</div>
+                    <ul class="rlist">
+                      <li>Modernized legacy .NET platforms into modular, scalable architectures; improved maintainability and reduced deployment time.</li><li>Built/integrated RESTful APIs &amp; web services; improved interoperability between internal + third‑party systems with security compliance.</li><li>Embedded Secure SDLC practices (OWASP/JWT/OAuth) to reduce risk and improve quality.</li><li>Streamlined CI/CD with Jenkins (and GitHub Actions); improved delivery reliability and timelines.</li><li>Designed KPI dashboards (SSRS/T‑SQL) for executive reporting; optimized data queries/transformations.</li>
+                    </ul>
+                  </div>
+                  <div class="rcol">
+                    <div class="rhead">Collaboration</div>
+                    <ul class="rlist">
+                      <li>Partnered across DevOps, QA, and support to deliver releases and improve pipeline flow.</li><li>Facilitated stakeholder workshops / design thinking for MVP scope and feature definition.</li><li>Delivered executive roadmap updates and KPI reports to keep leaders aligned.</li><li>Translated business requirements into scalable technical solutions with BAs and non‑technical stakeholders.</li>
+                    </ul>
+                  </div>
+                  <div class="rcol">
+                    <div class="rhead">Ownership</div>
+                    <ul class="rlist">
+                      <li>Directed API integration projects end‑to‑end; reduced manual processes via automation.</li><li>Coordinated cross‑department release planning to ensure smooth launches.</li><li>Authored detailed technical documentation; strengthened knowledge sharing and onboarding.</li><li>Mentored junior engineers (clean code, architecture, agile practices).</li><li>Led debugging / root-cause analysis of legacy codebases; improved maintainability and reduced support needs.</li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="muted tiny">Tip: copy one line and make it specific to the story you’re telling.</div>
+              </div>
+            </details>
+
+            <div class="minirow">
+              <button class="mini ghost" type="button" data-action="clearFeedback" data-target="q4">Clear feedback</button>
+            </div>
+            <div class="feedback" id="fb_q4" hidden></div>
+          </div>
+        </div>
+      </div>
+    
+
+      <div class="qblock" data-id="q5" data-kind="system">
+        <div class="qtop">
+          <div class="qtitle">How did you approach reliability, security, and scalability in that system?</div>
+          <div class="tag">Very likely</div>
+        </div>
+
+        <div class="qa-grid">
+          <div class="builder">
+            <div class="builder-title">
+              <span>Answer Builder</span>
+              <span class="builder-sub">Context → Actions → Impact → Tradeoffs → Learning</span>
+            </div>
+
+            <div class="builder-grid" aria-label="Answer builder fields">
+              <div class="field field-ctx">
+                <div class="label">Context (10–15s)</div>
+                <textarea class="ta ta-small" id="ctx_q5" placeholder="Where were you? What was the system + stakes? Keep it tight."></textarea>
+              </div>
+
+              <div class="field field-act">
+                <div class="label">Actions (your moves)</div>
+                <textarea class="ta ta-big" id="act_q5" placeholder="2–5 bullets: what YOU did, how you decided, and how you communicated."></textarea>
+              </div>
+
+              <div class="field field-imp">
+                <div class="label">Impact (numbers if possible)</div>
+                <textarea class="ta ta-mid" id="imp_q5" placeholder="What improved? latency, reliability, defects, manual work, deployment time, stakeholder trust…"></textarea>
+              </div>
+
+              <div class="field field-trd">
+                <div class="label">Tradeoffs (show judgment)</div>
+                <textarea class="ta ta-mid" id="trd_q5" placeholder="What options existed? Why this choice? What risk did you accept/avoid?"></textarea>
+              </div>
+
+              <div class="field field-lrn">
+                <div class="label">Learning (senior signal)</div>
+                <textarea class="ta ta-small" id="lrn_q5" placeholder="What would you do again? What would you change next time?"></textarea>
+              </div>
+            </div>
+
+            <div class="builder-actions">
+              <button class="mini ghost" type="button" data-action="preview" data-target="q5">Preview</button>
+              <button class="mini primary" type="button" data-action="feedback" data-target="q5">Focused feedback</button>
+              <button class="mini" type="button" data-action="clearOne" data-target="q5">Clear</button>
+            </div>
+
+            <div class="preview" id="pv_q5" hidden>
+              <div class="preview-title">
+                <span>Spoken answer preview</span>
+                <span class="muted">(aim for 60–90 seconds)</span>
+              </div>
+              <div class="preview-body" id="pv_body_q5"></div>
+              <div class="minirow">
+                <button class="mini" type="button" data-action="copyPreview" data-target="q5">Copy preview</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="coach">
+            <div class="coach-title">
+              <span>Ideas to include</span>
+              <span class="coach-sub">anchor + themes</span>
+            </div>
+            <ul class="ideas"><li>Reliability: SLOs, monitoring/alerting, retries/backoff, graceful degradation.</li>
+<li>Security: least privilege, secrets mgmt, encryption, audit logging.</li>
+<li>Scalability: caching, load patterns, performance testing, capacity planning.</li>
+<li>Deploy safety: feature flags, canary/rollbacks.</li></ul>
+
+            <details class="resumeBox">
+              <summary>Resume evidence you can steal</summary>
+              <div class="resumeInner" data-qresume="q5">
+                <div class="resumeCols">
+                  <div class="rcol">
+                    <div class="rhead">Technical Judgment</div>
+                    <ul class="rlist">
+                      <li>Modernized legacy .NET platforms into modular, scalable architectures; improved maintainability and reduced deployment time.</li><li>Built/integrated RESTful APIs &amp; web services; improved interoperability between internal + third‑party systems with security compliance.</li><li>Embedded Secure SDLC practices (OWASP/JWT/OAuth) to reduce risk and improve quality.</li><li>Streamlined CI/CD with Jenkins (and GitHub Actions); improved delivery reliability and timelines.</li><li>Designed KPI dashboards (SSRS/T‑SQL) for executive reporting; optimized data queries/transformations.</li>
+                    </ul>
+                  </div>
+                  <div class="rcol">
+                    <div class="rhead">Collaboration</div>
+                    <ul class="rlist">
+                      <li>Partnered across DevOps, QA, and support to deliver releases and improve pipeline flow.</li><li>Facilitated stakeholder workshops / design thinking for MVP scope and feature definition.</li><li>Delivered executive roadmap updates and KPI reports to keep leaders aligned.</li><li>Translated business requirements into scalable technical solutions with BAs and non‑technical stakeholders.</li>
+                    </ul>
+                  </div>
+                  <div class="rcol">
+                    <div class="rhead">Ownership</div>
+                    <ul class="rlist">
+                      <li>Directed API integration projects end‑to‑end; reduced manual processes via automation.</li><li>Coordinated cross‑department release planning to ensure smooth launches.</li><li>Authored detailed technical documentation; strengthened knowledge sharing and onboarding.</li><li>Mentored junior engineers (clean code, architecture, agile practices).</li><li>Led debugging / root-cause analysis of legacy codebases; improved maintainability and reduced support needs.</li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="muted tiny">Tip: copy one line and make it specific to the story you’re telling.</div>
+              </div>
+            </details>
+
+            <div class="minirow">
+              <button class="mini ghost" type="button" data-action="clearFeedback" data-target="q5">Clear feedback</button>
+            </div>
+            <div class="feedback" id="fb_q5" hidden></div>
+          </div>
+        </div>
+      </div>
+    
+
+      <div class="qblock" data-id="q6" data-kind="tradeoffs">
+        <div class="qtop">
+          <div class="qtitle">What tradeoffs did you have to make, and why?</div>
+          <div class="tag">Very likely</div>
+        </div>
+
+        <div class="qa-grid">
+          <div class="builder">
+            <div class="builder-title">
+              <span>Answer Builder</span>
+              <span class="builder-sub">Context → Actions → Impact → Tradeoffs → Learning</span>
+            </div>
+
+            <div class="builder-grid" aria-label="Answer builder fields">
+              <div class="field field-ctx">
+                <div class="label">Context (10–15s)</div>
+                <textarea class="ta ta-small" id="ctx_q6" placeholder="Where were you? What was the system + stakes? Keep it tight."></textarea>
+              </div>
+
+              <div class="field field-act">
+                <div class="label">Actions (your moves)</div>
+                <textarea class="ta ta-big" id="act_q6" placeholder="2–5 bullets: what YOU did, how you decided, and how you communicated."></textarea>
+              </div>
+
+              <div class="field field-imp">
+                <div class="label">Impact (numbers if possible)</div>
+                <textarea class="ta ta-mid" id="imp_q6" placeholder="What improved? latency, reliability, defects, manual work, deployment time, stakeholder trust…"></textarea>
+              </div>
+
+              <div class="field field-trd">
+                <div class="label">Tradeoffs (show judgment)</div>
+                <textarea class="ta ta-mid" id="trd_q6" placeholder="What options existed? Why this choice? What risk did you accept/avoid?"></textarea>
+              </div>
+
+              <div class="field field-lrn">
+                <div class="label">Learning (senior signal)</div>
+                <textarea class="ta ta-small" id="lrn_q6" placeholder="What would you do again? What would you change next time?"></textarea>
+              </div>
+            </div>
+
+            <div class="builder-actions">
+              <button class="mini ghost" type="button" data-action="preview" data-target="q6">Preview</button>
+              <button class="mini primary" type="button" data-action="feedback" data-target="q6">Focused feedback</button>
+              <button class="mini" type="button" data-action="clearOne" data-target="q6">Clear</button>
+            </div>
+
+            <div class="preview" id="pv_q6" hidden>
+              <div class="preview-title">
+                <span>Spoken answer preview</span>
+                <span class="muted">(aim for 60–90 seconds)</span>
+              </div>
+              <div class="preview-body" id="pv_body_q6"></div>
+              <div class="minirow">
+                <button class="mini" type="button" data-action="copyPreview" data-target="q6">Copy preview</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="coach">
+            <div class="coach-title">
+              <span>Ideas to include</span>
+              <span class="coach-sub">anchor + themes</span>
+            </div>
+            <ul class="ideas"><li>Time vs scope: what did you cut or phase?</li>
+<li>Cost vs performance: what did you optimize and what did you accept?</li>
+<li>Consistency vs availability (if relevant).</li>
+<li>Explain the WHY + how you reduced risk (flags, incremental rollout).</li></ul>
+
+            <details class="resumeBox">
+              <summary>Resume evidence you can steal</summary>
+              <div class="resumeInner" data-qresume="q6">
+                <div class="resumeCols">
+                  <div class="rcol">
+                    <div class="rhead">Technical Judgment</div>
+                    <ul class="rlist">
+                      <li>Modernized legacy .NET platforms into modular, scalable architectures; improved maintainability and reduced deployment time.</li><li>Built/integrated RESTful APIs &amp; web services; improved interoperability between internal + third‑party systems with security compliance.</li><li>Embedded Secure SDLC practices (OWASP/JWT/OAuth) to reduce risk and improve quality.</li><li>Streamlined CI/CD with Jenkins (and GitHub Actions); improved delivery reliability and timelines.</li><li>Designed KPI dashboards (SSRS/T‑SQL) for executive reporting; optimized data queries/transformations.</li>
+                    </ul>
+                  </div>
+                  <div class="rcol">
+                    <div class="rhead">Collaboration</div>
+                    <ul class="rlist">
+                      <li>Partnered across DevOps, QA, and support to deliver releases and improve pipeline flow.</li><li>Facilitated stakeholder workshops / design thinking for MVP scope and feature definition.</li><li>Delivered executive roadmap updates and KPI reports to keep leaders aligned.</li><li>Translated business requirements into scalable technical solutions with BAs and non‑technical stakeholders.</li>
+                    </ul>
+                  </div>
+                  <div class="rcol">
+                    <div class="rhead">Ownership</div>
+                    <ul class="rlist">
+                      <li>Directed API integration projects end‑to‑end; reduced manual processes via automation.</li><li>Coordinated cross‑department release planning to ensure smooth launches.</li><li>Authored detailed technical documentation; strengthened knowledge sharing and onboarding.</li><li>Mentored junior engineers (clean code, architecture, agile practices).</li><li>Led debugging / root-cause analysis of legacy codebases; improved maintainability and reduced support needs.</li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="muted tiny">Tip: copy one line and make it specific to the story you’re telling.</div>
+              </div>
+            </details>
+
+            <div class="minirow">
+              <button class="mini ghost" type="button" data-action="clearFeedback" data-target="q6">Clear feedback</button>
+            </div>
+            <div class="feedback" id="fb_q6" hidden></div>
+          </div>
+        </div>
+      </div>
+    
+
+      <div class="qblock" data-id="q7" data-kind="system">
+        <div class="qtop">
+          <div class="qtitle">If you were redesigning that system today, what would you change?</div>
+          <div class="tag">Likely</div>
+        </div>
+
+        <div class="qa-grid">
+          <div class="builder">
+            <div class="builder-title">
+              <span>Answer Builder</span>
+              <span class="builder-sub">Context → Actions → Impact → Tradeoffs → Learning</span>
+            </div>
+
+            <div class="builder-grid" aria-label="Answer builder fields">
+              <div class="field field-ctx">
+                <div class="label">Context (10–15s)</div>
+                <textarea class="ta ta-small" id="ctx_q7" placeholder="Where were you? What was the system + stakes? Keep it tight."></textarea>
+              </div>
+
+              <div class="field field-act">
+                <div class="label">Actions (your moves)</div>
+                <textarea class="ta ta-big" id="act_q7" placeholder="2–5 bullets: what YOU did, how you decided, and how you communicated."></textarea>
+              </div>
+
+              <div class="field field-imp">
+                <div class="label">Impact (numbers if possible)</div>
+                <textarea class="ta ta-mid" id="imp_q7" placeholder="What improved? latency, reliability, defects, manual work, deployment time, stakeholder trust…"></textarea>
+              </div>
+
+              <div class="field field-trd">
+                <div class="label">Tradeoffs (show judgment)</div>
+                <textarea class="ta ta-mid" id="trd_q7" placeholder="What options existed? Why this choice? What risk did you accept/avoid?"></textarea>
+              </div>
+
+              <div class="field field-lrn">
+                <div class="label">Learning (senior signal)</div>
+                <textarea class="ta ta-small" id="lrn_q7" placeholder="What would you do again? What would you change next time?"></textarea>
+              </div>
+            </div>
+
+            <div class="builder-actions">
+              <button class="mini ghost" type="button" data-action="preview" data-target="q7">Preview</button>
+              <button class="mini primary" type="button" data-action="feedback" data-target="q7">Focused feedback</button>
+              <button class="mini" type="button" data-action="clearOne" data-target="q7">Clear</button>
+            </div>
+
+            <div class="preview" id="pv_q7" hidden>
+              <div class="preview-title">
+                <span>Spoken answer preview</span>
+                <span class="muted">(aim for 60–90 seconds)</span>
+              </div>
+              <div class="preview-body" id="pv_body_q7"></div>
+              <div class="minirow">
+                <button class="mini" type="button" data-action="copyPreview" data-target="q7">Copy preview</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="coach">
+            <div class="coach-title">
+              <span>Ideas to include</span>
+              <span class="coach-sub">anchor + themes</span>
+            </div>
+            <ul class="ideas"><li>Call out one improvement: observability, boundaries, testing, performance, security posture.</li>
+<li>Show maturity: what you learned since then.</li>
+<li>Keep it positive: don’t trash past decisions — explain constraints then.</li></ul>
+
+            <details class="resumeBox">
+              <summary>Resume evidence you can steal</summary>
+              <div class="resumeInner" data-qresume="q7">
+                <div class="resumeCols">
+                  <div class="rcol">
+                    <div class="rhead">Technical Judgment</div>
+                    <ul class="rlist">
+                      <li>Modernized legacy .NET platforms into modular, scalable architectures; improved maintainability and reduced deployment time.</li><li>Built/integrated RESTful APIs &amp; web services; improved interoperability between internal + third‑party systems with security compliance.</li><li>Embedded Secure SDLC practices (OWASP/JWT/OAuth) to reduce risk and improve quality.</li><li>Streamlined CI/CD with Jenkins (and GitHub Actions); improved delivery reliability and timelines.</li><li>Designed KPI dashboards (SSRS/T‑SQL) for executive reporting; optimized data queries/transformations.</li>
+                    </ul>
+                  </div>
+                  <div class="rcol">
+                    <div class="rhead">Collaboration</div>
+                    <ul class="rlist">
+                      <li>Partnered across DevOps, QA, and support to deliver releases and improve pipeline flow.</li><li>Facilitated stakeholder workshops / design thinking for MVP scope and feature definition.</li><li>Delivered executive roadmap updates and KPI reports to keep leaders aligned.</li><li>Translated business requirements into scalable technical solutions with BAs and non‑technical stakeholders.</li>
+                    </ul>
+                  </div>
+                  <div class="rcol">
+                    <div class="rhead">Ownership</div>
+                    <ul class="rlist">
+                      <li>Directed API integration projects end‑to‑end; reduced manual processes via automation.</li><li>Coordinated cross‑department release planning to ensure smooth launches.</li><li>Authored detailed technical documentation; strengthened knowledge sharing and onboarding.</li><li>Mentored junior engineers (clean code, architecture, agile practices).</li><li>Led debugging / root-cause analysis of legacy codebases; improved maintainability and reduced support needs.</li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="muted tiny">Tip: copy one line and make it specific to the story you’re telling.</div>
+              </div>
+            </details>
+
+            <div class="minirow">
+              <button class="mini ghost" type="button" data-action="clearFeedback" data-target="q7">Clear feedback</button>
+            </div>
+            <div class="feedback" id="fb_q7" hidden></div>
+          </div>
+        </div>
+      </div>
+    
+    </section>
+    
+
+    <section class="sec">
+      <h3>3. Ownership &amp; Decision-Making</h3>
+      
+      <div class="qblock" data-id="q8" data-kind="ownership">
+        <div class="qtop">
+          <div class="qtitle">Tell me about a time you took ownership of a problem that wasn’t clearly yours.</div>
+          <div class="tag">Very likely</div>
+        </div>
+
+        <div class="qa-grid">
+          <div class="builder">
+            <div class="builder-title">
+              <span>Answer Builder</span>
+              <span class="builder-sub">Context → Actions → Impact → Tradeoffs → Learning</span>
+            </div>
+
+            <div class="builder-grid" aria-label="Answer builder fields">
+              <div class="field field-ctx">
+                <div class="label">Context (10–15s)</div>
+                <textarea class="ta ta-small" id="ctx_q8" placeholder="Where were you? What was the system + stakes? Keep it tight."></textarea>
+              </div>
+
+              <div class="field field-act">
+                <div class="label">Actions (your moves)</div>
+                <textarea class="ta ta-big" id="act_q8" placeholder="2–5 bullets: what YOU did, how you decided, and how you communicated."></textarea>
+              </div>
+
+              <div class="field field-imp">
+                <div class="label">Impact (numbers if possible)</div>
+                <textarea class="ta ta-mid" id="imp_q8" placeholder="What improved? latency, reliability, defects, manual work, deployment time, stakeholder trust…"></textarea>
+              </div>
+
+              <div class="field field-trd">
+                <div class="label">Tradeoffs (show judgment)</div>
+                <textarea class="ta ta-mid" id="trd_q8" placeholder="What options existed? Why this choice? What risk did you accept/avoid?"></textarea>
+              </div>
+
+              <div class="field field-lrn">
+                <div class="label">Learning (senior signal)</div>
+                <textarea class="ta ta-small" id="lrn_q8" placeholder="What would you do again? What would you change next time?"></textarea>
+              </div>
+            </div>
+
+            <div class="builder-actions">
+              <button class="mini ghost" type="button" data-action="preview" data-target="q8">Preview</button>
+              <button class="mini primary" type="button" data-action="feedback" data-target="q8">Focused feedback</button>
+              <button class="mini" type="button" data-action="clearOne" data-target="q8">Clear</button>
+            </div>
+
+            <div class="preview" id="pv_q8" hidden>
+              <div class="preview-title">
+                <span>Spoken answer preview</span>
+                <span class="muted">(aim for 60–90 seconds)</span>
+              </div>
+              <div class="preview-body" id="pv_body_q8"></div>
+              <div class="minirow">
+                <button class="mini" type="button" data-action="copyPreview" data-target="q8">Copy preview</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="coach">
+            <div class="coach-title">
+              <span>Ideas to include</span>
+              <span class="coach-sub">anchor + themes</span>
+            </div>
+            <ul class="ideas"><li>How you noticed it (signal).</li>
+<li>What you did beyond your lane (coordination, docs, fix).</li>
+<li>Who you pulled in and how you communicated.</li>
+<li>Result: reduced risk, unblocked team, prevented outage.</li></ul>
+
+            <details class="resumeBox">
+              <summary>Resume evidence you can steal</summary>
+              <div class="resumeInner" data-qresume="q8">
+                <div class="resumeCols">
+                  <div class="rcol">
+                    <div class="rhead">Technical Judgment</div>
+                    <ul class="rlist">
+                      <li>Modernized legacy .NET platforms into modular, scalable architectures; improved maintainability and reduced deployment time.</li><li>Built/integrated RESTful APIs &amp; web services; improved interoperability between internal + third‑party systems with security compliance.</li><li>Embedded Secure SDLC practices (OWASP/JWT/OAuth) to reduce risk and improve quality.</li><li>Streamlined CI/CD with Jenkins (and GitHub Actions); improved delivery reliability and timelines.</li><li>Designed KPI dashboards (SSRS/T‑SQL) for executive reporting; optimized data queries/transformations.</li>
+                    </ul>
+                  </div>
+                  <div class="rcol">
+                    <div class="rhead">Collaboration</div>
+                    <ul class="rlist">
+                      <li>Partnered across DevOps, QA, and support to deliver releases and improve pipeline flow.</li><li>Facilitated stakeholder workshops / design thinking for MVP scope and feature definition.</li><li>Delivered executive roadmap updates and KPI reports to keep leaders aligned.</li><li>Translated business requirements into scalable technical solutions with BAs and non‑technical stakeholders.</li>
+                    </ul>
+                  </div>
+                  <div class="rcol">
+                    <div class="rhead">Ownership</div>
+                    <ul class="rlist">
+                      <li>Directed API integration projects end‑to‑end; reduced manual processes via automation.</li><li>Coordinated cross‑department release planning to ensure smooth launches.</li><li>Authored detailed technical documentation; strengthened knowledge sharing and onboarding.</li><li>Mentored junior engineers (clean code, architecture, agile practices).</li><li>Led debugging / root-cause analysis of legacy codebases; improved maintainability and reduced support needs.</li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="muted tiny">Tip: copy one line and make it specific to the story you’re telling.</div>
+              </div>
+            </details>
+
+            <div class="minirow">
+              <button class="mini ghost" type="button" data-action="clearFeedback" data-target="q8">Clear feedback</button>
+            </div>
+            <div class="feedback" id="fb_q8" hidden></div>
+          </div>
+        </div>
+      </div>
+    
+
+      <div class="qblock" data-id="q9" data-kind="decision">
+        <div class="qtop">
+          <div class="qtitle">Describe a difficult technical decision you made with incomplete information.</div>
+          <div class="tag">Likely</div>
+        </div>
+
+        <div class="qa-grid">
+          <div class="builder">
+            <div class="builder-title">
+              <span>Answer Builder</span>
+              <span class="builder-sub">Context → Actions → Impact → Tradeoffs → Learning</span>
+            </div>
+
+            <div class="builder-grid" aria-label="Answer builder fields">
+              <div class="field field-ctx">
+                <div class="label">Context (10–15s)</div>
+                <textarea class="ta ta-small" id="ctx_q9" placeholder="Where were you? What was the system + stakes? Keep it tight."></textarea>
+              </div>
+
+              <div class="field field-act">
+                <div class="label">Actions (your moves)</div>
+                <textarea class="ta ta-big" id="act_q9" placeholder="2–5 bullets: what YOU did, how you decided, and how you communicated."></textarea>
+              </div>
+
+              <div class="field field-imp">
+                <div class="label">Impact (numbers if possible)</div>
+                <textarea class="ta ta-mid" id="imp_q9" placeholder="What improved? latency, reliability, defects, manual work, deployment time, stakeholder trust…"></textarea>
+              </div>
+
+              <div class="field field-trd">
+                <div class="label">Tradeoffs (show judgment)</div>
+                <textarea class="ta ta-mid" id="trd_q9" placeholder="What options existed? Why this choice? What risk did you accept/avoid?"></textarea>
+              </div>
+
+              <div class="field field-lrn">
+                <div class="label">Learning (senior signal)</div>
+                <textarea class="ta ta-small" id="lrn_q9" placeholder="What would you do again? What would you change next time?"></textarea>
+              </div>
+            </div>
+
+            <div class="builder-actions">
+              <button class="mini ghost" type="button" data-action="preview" data-target="q9">Preview</button>
+              <button class="mini primary" type="button" data-action="feedback" data-target="q9">Focused feedback</button>
+              <button class="mini" type="button" data-action="clearOne" data-target="q9">Clear</button>
+            </div>
+
+            <div class="preview" id="pv_q9" hidden>
+              <div class="preview-title">
+                <span>Spoken answer preview</span>
+                <span class="muted">(aim for 60–90 seconds)</span>
+              </div>
+              <div class="preview-body" id="pv_body_q9"></div>
+              <div class="minirow">
+                <button class="mini" type="button" data-action="copyPreview" data-target="q9">Copy preview</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="coach">
+            <div class="coach-title">
+              <span>Ideas to include</span>
+              <span class="coach-sub">anchor + themes</span>
+            </div>
+            <ul class="ideas"><li>List options you considered.</li>
+<li>What data you gathered fast (logs, metrics, stakeholder needs).</li>
+<li>How you chose: risk, reversibility, time-to-mitigate.</li>
+<li>Outcome + what you’d do differently next time.</li></ul>
+
+            <details class="resumeBox">
+              <summary>Resume evidence you can steal</summary>
+              <div class="resumeInner" data-qresume="q9">
+                <div class="resumeCols">
+                  <div class="rcol">
+                    <div class="rhead">Technical Judgment</div>
+                    <ul class="rlist">
+                      <li>Modernized legacy .NET platforms into modular, scalable architectures; improved maintainability and reduced deployment time.</li><li>Built/integrated RESTful APIs &amp; web services; improved interoperability between internal + third‑party systems with security compliance.</li><li>Embedded Secure SDLC practices (OWASP/JWT/OAuth) to reduce risk and improve quality.</li><li>Streamlined CI/CD with Jenkins (and GitHub Actions); improved delivery reliability and timelines.</li><li>Designed KPI dashboards (SSRS/T‑SQL) for executive reporting; optimized data queries/transformations.</li>
+                    </ul>
+                  </div>
+                  <div class="rcol">
+                    <div class="rhead">Collaboration</div>
+                    <ul class="rlist">
+                      <li>Partnered across DevOps, QA, and support to deliver releases and improve pipeline flow.</li><li>Facilitated stakeholder workshops / design thinking for MVP scope and feature definition.</li><li>Delivered executive roadmap updates and KPI reports to keep leaders aligned.</li><li>Translated business requirements into scalable technical solutions with BAs and non‑technical stakeholders.</li>
+                    </ul>
+                  </div>
+                  <div class="rcol">
+                    <div class="rhead">Ownership</div>
+                    <ul class="rlist">
+                      <li>Directed API integration projects end‑to‑end; reduced manual processes via automation.</li><li>Coordinated cross‑department release planning to ensure smooth launches.</li><li>Authored detailed technical documentation; strengthened knowledge sharing and onboarding.</li><li>Mentored junior engineers (clean code, architecture, agile practices).</li><li>Led debugging / root-cause analysis of legacy codebases; improved maintainability and reduced support needs.</li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="muted tiny">Tip: copy one line and make it specific to the story you’re telling.</div>
+              </div>
+            </details>
+
+            <div class="minirow">
+              <button class="mini ghost" type="button" data-action="clearFeedback" data-target="q9">Clear feedback</button>
+            </div>
+            <div class="feedback" id="fb_q9" hidden></div>
+          </div>
+        </div>
+      </div>
+    
+
+      <div class="qblock" data-id="q10" data-kind="shipping">
+        <div class="qtop">
+          <div class="qtitle">How do you decide when something is “good enough” to ship?</div>
+          <div class="tag">Likely</div>
+        </div>
+
+        <div class="qa-grid">
+          <div class="builder">
+            <div class="builder-title">
+              <span>Answer Builder</span>
+              <span class="builder-sub">Context → Actions → Impact → Tradeoffs → Learning</span>
+            </div>
+
+            <div class="builder-grid" aria-label="Answer builder fields">
+              <div class="field field-ctx">
+                <div class="label">Context (10–15s)</div>
+                <textarea class="ta ta-small" id="ctx_q10" placeholder="Where were you? What was the system + stakes? Keep it tight."></textarea>
+              </div>
+
+              <div class="field field-act">
+                <div class="label">Actions (your moves)</div>
+                <textarea class="ta ta-big" id="act_q10" placeholder="2–5 bullets: what YOU did, how you decided, and how you communicated."></textarea>
+              </div>
+
+              <div class="field field-imp">
+                <div class="label">Impact (numbers if possible)</div>
+                <textarea class="ta ta-mid" id="imp_q10" placeholder="What improved? latency, reliability, defects, manual work, deployment time, stakeholder trust…"></textarea>
+              </div>
+
+              <div class="field field-trd">
+                <div class="label">Tradeoffs (show judgment)</div>
+                <textarea class="ta ta-mid" id="trd_q10" placeholder="What options existed? Why this choice? What risk did you accept/avoid?"></textarea>
+              </div>
+
+              <div class="field field-lrn">
+                <div class="label">Learning (senior signal)</div>
+                <textarea class="ta ta-small" id="lrn_q10" placeholder="What would you do again? What would you change next time?"></textarea>
+              </div>
+            </div>
+
+            <div class="builder-actions">
+              <button class="mini ghost" type="button" data-action="preview" data-target="q10">Preview</button>
+              <button class="mini primary" type="button" data-action="feedback" data-target="q10">Focused feedback</button>
+              <button class="mini" type="button" data-action="clearOne" data-target="q10">Clear</button>
+            </div>
+
+            <div class="preview" id="pv_q10" hidden>
+              <div class="preview-title">
+                <span>Spoken answer preview</span>
+                <span class="muted">(aim for 60–90 seconds)</span>
+              </div>
+              <div class="preview-body" id="pv_body_q10"></div>
+              <div class="minirow">
+                <button class="mini" type="button" data-action="copyPreview" data-target="q10">Copy preview</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="coach">
+            <div class="coach-title">
+              <span>Ideas to include</span>
+              <span class="coach-sub">anchor + themes</span>
+            </div>
+            <ul class="ideas"><li>Define quality gates: tests, security checks, perf baseline.</li>
+<li>Risk-based decisions: what breaks if it fails?</li>
+<li>Release safety: rollback plan, monitoring, feature flags.</li>
+<li>Stakeholder alignment: agree on acceptance criteria.</li></ul>
+
+            <details class="resumeBox">
+              <summary>Resume evidence you can steal</summary>
+              <div class="resumeInner" data-qresume="q10">
+                <div class="resumeCols">
+                  <div class="rcol">
+                    <div class="rhead">Technical Judgment</div>
+                    <ul class="rlist">
+                      <li>Modernized legacy .NET platforms into modular, scalable architectures; improved maintainability and reduced deployment time.</li><li>Built/integrated RESTful APIs &amp; web services; improved interoperability between internal + third‑party systems with security compliance.</li><li>Embedded Secure SDLC practices (OWASP/JWT/OAuth) to reduce risk and improve quality.</li><li>Streamlined CI/CD with Jenkins (and GitHub Actions); improved delivery reliability and timelines.</li><li>Designed KPI dashboards (SSRS/T‑SQL) for executive reporting; optimized data queries/transformations.</li>
+                    </ul>
+                  </div>
+                  <div class="rcol">
+                    <div class="rhead">Collaboration</div>
+                    <ul class="rlist">
+                      <li>Partnered across DevOps, QA, and support to deliver releases and improve pipeline flow.</li><li>Facilitated stakeholder workshops / design thinking for MVP scope and feature definition.</li><li>Delivered executive roadmap updates and KPI reports to keep leaders aligned.</li><li>Translated business requirements into scalable technical solutions with BAs and non‑technical stakeholders.</li>
+                    </ul>
+                  </div>
+                  <div class="rcol">
+                    <div class="rhead">Ownership</div>
+                    <ul class="rlist">
+                      <li>Directed API integration projects end‑to‑end; reduced manual processes via automation.</li><li>Coordinated cross‑department release planning to ensure smooth launches.</li><li>Authored detailed technical documentation; strengthened knowledge sharing and onboarding.</li><li>Mentored junior engineers (clean code, architecture, agile practices).</li><li>Led debugging / root-cause analysis of legacy codebases; improved maintainability and reduced support needs.</li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="muted tiny">Tip: copy one line and make it specific to the story you’re telling.</div>
+              </div>
+            </details>
+
+            <div class="minirow">
+              <button class="mini ghost" type="button" data-action="clearFeedback" data-target="q10">Clear feedback</button>
+            </div>
+            <div class="feedback" id="fb_q10" hidden></div>
+          </div>
+        </div>
+      </div>
+    
+    </section>
+    
+
+    <section class="sec">
+      <h3>4. Production Issues, Failure &amp; Learning</h3>
+      
+      <div class="qblock" data-id="q11" data-kind="incident">
+        <div class="qtop">
+          <div class="qtitle">Tell me about a production issue or outage you were involved in.</div>
+          <div class="tag">Very likely</div>
+        </div>
+
+        <div class="qa-grid">
+          <div class="builder">
+            <div class="builder-title">
+              <span>Answer Builder</span>
+              <span class="builder-sub">Context → Actions → Impact → Tradeoffs → Learning</span>
+            </div>
+
+            <div class="builder-grid" aria-label="Answer builder fields">
+              <div class="field field-ctx">
+                <div class="label">Context (10–15s)</div>
+                <textarea class="ta ta-small" id="ctx_q11" placeholder="Where were you? What was the system + stakes? Keep it tight."></textarea>
+              </div>
+
+              <div class="field field-act">
+                <div class="label">Actions (your moves)</div>
+                <textarea class="ta ta-big" id="act_q11" placeholder="2–5 bullets: what YOU did, how you decided, and how you communicated."></textarea>
+              </div>
+
+              <div class="field field-imp">
+                <div class="label">Impact (numbers if possible)</div>
+                <textarea class="ta ta-mid" id="imp_q11" placeholder="What improved? latency, reliability, defects, manual work, deployment time, stakeholder trust…"></textarea>
+              </div>
+
+              <div class="field field-trd">
+                <div class="label">Tradeoffs (show judgment)</div>
+                <textarea class="ta ta-mid" id="trd_q11" placeholder="What options existed? Why this choice? What risk did you accept/avoid?"></textarea>
+              </div>
+
+              <div class="field field-lrn">
+                <div class="label">Learning (senior signal)</div>
+                <textarea class="ta ta-small" id="lrn_q11" placeholder="What would you do again? What would you change next time?"></textarea>
+              </div>
+            </div>
+
+            <div class="builder-actions">
+              <button class="mini ghost" type="button" data-action="preview" data-target="q11">Preview</button>
+              <button class="mini primary" type="button" data-action="feedback" data-target="q11">Focused feedback</button>
+              <button class="mini" type="button" data-action="clearOne" data-target="q11">Clear</button>
+            </div>
+
+            <div class="preview" id="pv_q11" hidden>
+              <div class="preview-title">
+                <span>Spoken answer preview</span>
+                <span class="muted">(aim for 60–90 seconds)</span>
+              </div>
+              <div class="preview-body" id="pv_body_q11"></div>
+              <div class="minirow">
+                <button class="mini" type="button" data-action="copyPreview" data-target="q11">Copy preview</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="coach">
+            <div class="coach-title">
+              <span>Ideas to include</span>
+              <span class="coach-sub">anchor + themes</span>
+            </div>
+            <ul class="ideas"><li>Impact: who was affected and how bad?</li>
+<li>Timeline: what happened first, what changed recently?</li>
+<li>Mitigation: what stabilized the system.</li>
+<li>Root cause: config, deploy, dependency, data, infra.</li></ul>
+
+            <details class="resumeBox">
+              <summary>Resume evidence you can steal</summary>
+              <div class="resumeInner" data-qresume="q11">
+                <div class="resumeCols">
+                  <div class="rcol">
+                    <div class="rhead">Technical Judgment</div>
+                    <ul class="rlist">
+                      <li>Modernized legacy .NET platforms into modular, scalable architectures; improved maintainability and reduced deployment time.</li><li>Built/integrated RESTful APIs &amp; web services; improved interoperability between internal + third‑party systems with security compliance.</li><li>Embedded Secure SDLC practices (OWASP/JWT/OAuth) to reduce risk and improve quality.</li><li>Streamlined CI/CD with Jenkins (and GitHub Actions); improved delivery reliability and timelines.</li><li>Designed KPI dashboards (SSRS/T‑SQL) for executive reporting; optimized data queries/transformations.</li>
+                    </ul>
+                  </div>
+                  <div class="rcol">
+                    <div class="rhead">Collaboration</div>
+                    <ul class="rlist">
+                      <li>Partnered across DevOps, QA, and support to deliver releases and improve pipeline flow.</li><li>Facilitated stakeholder workshops / design thinking for MVP scope and feature definition.</li><li>Delivered executive roadmap updates and KPI reports to keep leaders aligned.</li><li>Translated business requirements into scalable technical solutions with BAs and non‑technical stakeholders.</li>
+                    </ul>
+                  </div>
+                  <div class="rcol">
+                    <div class="rhead">Ownership</div>
+                    <ul class="rlist">
+                      <li>Directed API integration projects end‑to‑end; reduced manual processes via automation.</li><li>Coordinated cross‑department release planning to ensure smooth launches.</li><li>Authored detailed technical documentation; strengthened knowledge sharing and onboarding.</li><li>Mentored junior engineers (clean code, architecture, agile practices).</li><li>Led debugging / root-cause analysis of legacy codebases; improved maintainability and reduced support needs.</li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="muted tiny">Tip: copy one line and make it specific to the story you’re telling.</div>
+              </div>
+            </details>
+
+            <div class="minirow">
+              <button class="mini ghost" type="button" data-action="clearFeedback" data-target="q11">Clear feedback</button>
+            </div>
+            <div class="feedback" id="fb_q11" hidden></div>
+          </div>
+        </div>
+      </div>
+    
+
+      <div class="qblock" data-id="q12" data-kind="incident">
+        <div class="qtop">
+          <div class="qtitle">How did you diagnose the issue and communicate during the incident?</div>
+          <div class="tag">Very likely</div>
+        </div>
+
+        <div class="qa-grid">
+          <div class="builder">
+            <div class="builder-title">
+              <span>Answer Builder</span>
+              <span class="builder-sub">Context → Actions → Impact → Tradeoffs → Learning</span>
+            </div>
+
+            <div class="builder-grid" aria-label="Answer builder fields">
+              <div class="field field-ctx">
+                <div class="label">Context (10–15s)</div>
+                <textarea class="ta ta-small" id="ctx_q12" placeholder="Where were you? What was the system + stakes? Keep it tight."></textarea>
+              </div>
+
+              <div class="field field-act">
+                <div class="label">Actions (your moves)</div>
+                <textarea class="ta ta-big" id="act_q12" placeholder="2–5 bullets: what YOU did, how you decided, and how you communicated."></textarea>
+              </div>
+
+              <div class="field field-imp">
+                <div class="label">Impact (numbers if possible)</div>
+                <textarea class="ta ta-mid" id="imp_q12" placeholder="What improved? latency, reliability, defects, manual work, deployment time, stakeholder trust…"></textarea>
+              </div>
+
+              <div class="field field-trd">
+                <div class="label">Tradeoffs (show judgment)</div>
+                <textarea class="ta ta-mid" id="trd_q12" placeholder="What options existed? Why this choice? What risk did you accept/avoid?"></textarea>
+              </div>
+
+              <div class="field field-lrn">
+                <div class="label">Learning (senior signal)</div>
+                <textarea class="ta ta-small" id="lrn_q12" placeholder="What would you do again? What would you change next time?"></textarea>
+              </div>
+            </div>
+
+            <div class="builder-actions">
+              <button class="mini ghost" type="button" data-action="preview" data-target="q12">Preview</button>
+              <button class="mini primary" type="button" data-action="feedback" data-target="q12">Focused feedback</button>
+              <button class="mini" type="button" data-action="clearOne" data-target="q12">Clear</button>
+            </div>
+
+            <div class="preview" id="pv_q12" hidden>
+              <div class="preview-title">
+                <span>Spoken answer preview</span>
+                <span class="muted">(aim for 60–90 seconds)</span>
+              </div>
+              <div class="preview-body" id="pv_body_q12"></div>
+              <div class="minirow">
+                <button class="mini" type="button" data-action="copyPreview" data-target="q12">Copy preview</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="coach">
+            <div class="coach-title">
+              <span>Ideas to include</span>
+              <span class="coach-sub">anchor + themes</span>
+            </div>
+            <ul class="ideas"><li>Triage → isolate → mitigate → confirm recovery.</li>
+<li>War room / command center roles (IC, comms, ops).</li>
+<li>Regular status updates (what we know / doing / next update).</li>
+<li>Document a timeline while you work.</li></ul>
+
+            <details class="resumeBox">
+              <summary>Resume evidence you can steal</summary>
+              <div class="resumeInner" data-qresume="q12">
+                <div class="resumeCols">
+                  <div class="rcol">
+                    <div class="rhead">Technical Judgment</div>
+                    <ul class="rlist">
+                      <li>Modernized legacy .NET platforms into modular, scalable architectures; improved maintainability and reduced deployment time.</li><li>Built/integrated RESTful APIs &amp; web services; improved interoperability between internal + third‑party systems with security compliance.</li><li>Embedded Secure SDLC practices (OWASP/JWT/OAuth) to reduce risk and improve quality.</li><li>Streamlined CI/CD with Jenkins (and GitHub Actions); improved delivery reliability and timelines.</li><li>Designed KPI dashboards (SSRS/T‑SQL) for executive reporting; optimized data queries/transformations.</li>
+                    </ul>
+                  </div>
+                  <div class="rcol">
+                    <div class="rhead">Collaboration</div>
+                    <ul class="rlist">
+                      <li>Partnered across DevOps, QA, and support to deliver releases and improve pipeline flow.</li><li>Facilitated stakeholder workshops / design thinking for MVP scope and feature definition.</li><li>Delivered executive roadmap updates and KPI reports to keep leaders aligned.</li><li>Translated business requirements into scalable technical solutions with BAs and non‑technical stakeholders.</li>
+                    </ul>
+                  </div>
+                  <div class="rcol">
+                    <div class="rhead">Ownership</div>
+                    <ul class="rlist">
+                      <li>Directed API integration projects end‑to‑end; reduced manual processes via automation.</li><li>Coordinated cross‑department release planning to ensure smooth launches.</li><li>Authored detailed technical documentation; strengthened knowledge sharing and onboarding.</li><li>Mentored junior engineers (clean code, architecture, agile practices).</li><li>Led debugging / root-cause analysis of legacy codebases; improved maintainability and reduced support needs.</li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="muted tiny">Tip: copy one line and make it specific to the story you’re telling.</div>
+              </div>
+            </details>
+
+            <div class="minirow">
+              <button class="mini ghost" type="button" data-action="clearFeedback" data-target="q12">Clear feedback</button>
+            </div>
+            <div class="feedback" id="fb_q12" hidden></div>
+          </div>
+        </div>
+      </div>
+    
+
+      <div class="qblock" data-id="q13" data-kind="incident">
+        <div class="qtop">
+          <div class="qtitle">What changed afterward to prevent it from happening again?</div>
+          <div class="tag">Very likely</div>
+        </div>
+
+        <div class="qa-grid">
+          <div class="builder">
+            <div class="builder-title">
+              <span>Answer Builder</span>
+              <span class="builder-sub">Context → Actions → Impact → Tradeoffs → Learning</span>
+            </div>
+
+            <div class="builder-grid" aria-label="Answer builder fields">
+              <div class="field field-ctx">
+                <div class="label">Context (10–15s)</div>
+                <textarea class="ta ta-small" id="ctx_q13" placeholder="Where were you? What was the system + stakes? Keep it tight."></textarea>
+              </div>
+
+              <div class="field field-act">
+                <div class="label">Actions (your moves)</div>
+                <textarea class="ta ta-big" id="act_q13" placeholder="2–5 bullets: what YOU did, how you decided, and how you communicated."></textarea>
+              </div>
+
+              <div class="field field-imp">
+                <div class="label">Impact (numbers if possible)</div>
+                <textarea class="ta ta-mid" id="imp_q13" placeholder="What improved? latency, reliability, defects, manual work, deployment time, stakeholder trust…"></textarea>
+              </div>
+
+              <div class="field field-trd">
+                <div class="label">Tradeoffs (show judgment)</div>
+                <textarea class="ta ta-mid" id="trd_q13" placeholder="What options existed? Why this choice? What risk did you accept/avoid?"></textarea>
+              </div>
+
+              <div class="field field-lrn">
+                <div class="label">Learning (senior signal)</div>
+                <textarea class="ta ta-small" id="lrn_q13" placeholder="What would you do again? What would you change next time?"></textarea>
+              </div>
+            </div>
+
+            <div class="builder-actions">
+              <button class="mini ghost" type="button" data-action="preview" data-target="q13">Preview</button>
+              <button class="mini primary" type="button" data-action="feedback" data-target="q13">Focused feedback</button>
+              <button class="mini" type="button" data-action="clearOne" data-target="q13">Clear</button>
+            </div>
+
+            <div class="preview" id="pv_q13" hidden>
+              <div class="preview-title">
+                <span>Spoken answer preview</span>
+                <span class="muted">(aim for 60–90 seconds)</span>
+              </div>
+              <div class="preview-body" id="pv_body_q13"></div>
+              <div class="minirow">
+                <button class="mini" type="button" data-action="copyPreview" data-target="q13">Copy preview</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="coach">
+            <div class="coach-title">
+              <span>Ideas to include</span>
+              <span class="coach-sub">anchor + themes</span>
+            </div>
+            <ul class="ideas"><li>Blameless postmortem with clear action items.</li>
+<li>Add monitoring/alerts for the specific failure mode.</li>
+<li>Add tests/guardrails in CI/CD or runtime validation.</li>
+<li>Update runbooks and improve on-call handoffs.</li></ul>
+
+            <details class="resumeBox">
+              <summary>Resume evidence you can steal</summary>
+              <div class="resumeInner" data-qresume="q13">
+                <div class="resumeCols">
+                  <div class="rcol">
+                    <div class="rhead">Technical Judgment</div>
+                    <ul class="rlist">
+                      <li>Modernized legacy .NET platforms into modular, scalable architectures; improved maintainability and reduced deployment time.</li><li>Built/integrated RESTful APIs &amp; web services; improved interoperability between internal + third‑party systems with security compliance.</li><li>Embedded Secure SDLC practices (OWASP/JWT/OAuth) to reduce risk and improve quality.</li><li>Streamlined CI/CD with Jenkins (and GitHub Actions); improved delivery reliability and timelines.</li><li>Designed KPI dashboards (SSRS/T‑SQL) for executive reporting; optimized data queries/transformations.</li>
+                    </ul>
+                  </div>
+                  <div class="rcol">
+                    <div class="rhead">Collaboration</div>
+                    <ul class="rlist">
+                      <li>Partnered across DevOps, QA, and support to deliver releases and improve pipeline flow.</li><li>Facilitated stakeholder workshops / design thinking for MVP scope and feature definition.</li><li>Delivered executive roadmap updates and KPI reports to keep leaders aligned.</li><li>Translated business requirements into scalable technical solutions with BAs and non‑technical stakeholders.</li>
+                    </ul>
+                  </div>
+                  <div class="rcol">
+                    <div class="rhead">Ownership</div>
+                    <ul class="rlist">
+                      <li>Directed API integration projects end‑to‑end; reduced manual processes via automation.</li><li>Coordinated cross‑department release planning to ensure smooth launches.</li><li>Authored detailed technical documentation; strengthened knowledge sharing and onboarding.</li><li>Mentored junior engineers (clean code, architecture, agile practices).</li><li>Led debugging / root-cause analysis of legacy codebases; improved maintainability and reduced support needs.</li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="muted tiny">Tip: copy one line and make it specific to the story you’re telling.</div>
+              </div>
+            </details>
+
+            <div class="minirow">
+              <button class="mini ghost" type="button" data-action="clearFeedback" data-target="q13">Clear feedback</button>
+            </div>
+            <div class="feedback" id="fb_q13" hidden></div>
+          </div>
+        </div>
+      </div>
+    
+    </section>
+    
+
+    <section class="sec">
+      <h3>5. Collaboration &amp; Conflict</h3>
+      
+      <div class="qblock" data-id="q14" data-kind="conflict">
+        <div class="qtop">
+          <div class="qtitle">Tell me about a disagreement with another engineer or stakeholder.</div>
+          <div class="tag">Guaranteed</div>
+        </div>
+
+        <div class="qa-grid">
+          <div class="builder">
+            <div class="builder-title">
+              <span>Answer Builder</span>
+              <span class="builder-sub">Context → Actions → Impact → Tradeoffs → Learning</span>
+            </div>
+
+            <div class="builder-grid" aria-label="Answer builder fields">
+              <div class="field field-ctx">
+                <div class="label">Context (10–15s)</div>
+                <textarea class="ta ta-small" id="ctx_q14" placeholder="Where were you? What was the system + stakes? Keep it tight."></textarea>
+              </div>
+
+              <div class="field field-act">
+                <div class="label">Actions (your moves)</div>
+                <textarea class="ta ta-big" id="act_q14" placeholder="2–5 bullets: what YOU did, how you decided, and how you communicated."></textarea>
+              </div>
+
+              <div class="field field-imp">
+                <div class="label">Impact (numbers if possible)</div>
+                <textarea class="ta ta-mid" id="imp_q14" placeholder="What improved? latency, reliability, defects, manual work, deployment time, stakeholder trust…"></textarea>
+              </div>
+
+              <div class="field field-trd">
+                <div class="label">Tradeoffs (show judgment)</div>
+                <textarea class="ta ta-mid" id="trd_q14" placeholder="What options existed? Why this choice? What risk did you accept/avoid?"></textarea>
+              </div>
+
+              <div class="field field-lrn">
+                <div class="label">Learning (senior signal)</div>
+                <textarea class="ta ta-small" id="lrn_q14" placeholder="What would you do again? What would you change next time?"></textarea>
+              </div>
+            </div>
+
+            <div class="builder-actions">
+              <button class="mini ghost" type="button" data-action="preview" data-target="q14">Preview</button>
+              <button class="mini primary" type="button" data-action="feedback" data-target="q14">Focused feedback</button>
+              <button class="mini" type="button" data-action="clearOne" data-target="q14">Clear</button>
+            </div>
+
+            <div class="preview" id="pv_q14" hidden>
+              <div class="preview-title">
+                <span>Spoken answer preview</span>
+                <span class="muted">(aim for 60–90 seconds)</span>
+              </div>
+              <div class="preview-body" id="pv_body_q14"></div>
+              <div class="minirow">
+                <button class="mini" type="button" data-action="copyPreview" data-target="q14">Copy preview</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="coach">
+            <div class="coach-title">
+              <span>Ideas to include</span>
+              <span class="coach-sub">anchor + themes</span>
+            </div>
+            <ul class="ideas"><li>Start with alignment: shared goal.</li>
+<li>Bring evidence: data, risk, customer impact.</li>
+<li>Offer options, not ultimatums.</li>
+<li>Outcome + what you learned about collaborating.</li></ul>
+
+            <details class="resumeBox">
+              <summary>Resume evidence you can steal</summary>
+              <div class="resumeInner" data-qresume="q14">
+                <div class="resumeCols">
+                  <div class="rcol">
+                    <div class="rhead">Technical Judgment</div>
+                    <ul class="rlist">
+                      <li>Modernized legacy .NET platforms into modular, scalable architectures; improved maintainability and reduced deployment time.</li><li>Built/integrated RESTful APIs &amp; web services; improved interoperability between internal + third‑party systems with security compliance.</li><li>Embedded Secure SDLC practices (OWASP/JWT/OAuth) to reduce risk and improve quality.</li><li>Streamlined CI/CD with Jenkins (and GitHub Actions); improved delivery reliability and timelines.</li><li>Designed KPI dashboards (SSRS/T‑SQL) for executive reporting; optimized data queries/transformations.</li>
+                    </ul>
+                  </div>
+                  <div class="rcol">
+                    <div class="rhead">Collaboration</div>
+                    <ul class="rlist">
+                      <li>Partnered across DevOps, QA, and support to deliver releases and improve pipeline flow.</li><li>Facilitated stakeholder workshops / design thinking for MVP scope and feature definition.</li><li>Delivered executive roadmap updates and KPI reports to keep leaders aligned.</li><li>Translated business requirements into scalable technical solutions with BAs and non‑technical stakeholders.</li>
+                    </ul>
+                  </div>
+                  <div class="rcol">
+                    <div class="rhead">Ownership</div>
+                    <ul class="rlist">
+                      <li>Directed API integration projects end‑to‑end; reduced manual processes via automation.</li><li>Coordinated cross‑department release planning to ensure smooth launches.</li><li>Authored detailed technical documentation; strengthened knowledge sharing and onboarding.</li><li>Mentored junior engineers (clean code, architecture, agile practices).</li><li>Led debugging / root-cause analysis of legacy codebases; improved maintainability and reduced support needs.</li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="muted tiny">Tip: copy one line and make it specific to the story you’re telling.</div>
+              </div>
+            </details>
+
+            <div class="minirow">
+              <button class="mini ghost" type="button" data-action="clearFeedback" data-target="q14">Clear feedback</button>
+            </div>
+            <div class="feedback" id="fb_q14" hidden></div>
+          </div>
+        </div>
+      </div>
+    
+
+      <div class="qblock" data-id="q15" data-kind="feedback">
+        <div class="qtop">
+          <div class="qtitle">How do you handle feedback you don’t initially agree with?</div>
+          <div class="tag">Likely</div>
+        </div>
+
+        <div class="qa-grid">
+          <div class="builder">
+            <div class="builder-title">
+              <span>Answer Builder</span>
+              <span class="builder-sub">Context → Actions → Impact → Tradeoffs → Learning</span>
+            </div>
+
+            <div class="builder-grid" aria-label="Answer builder fields">
+              <div class="field field-ctx">
+                <div class="label">Context (10–15s)</div>
+                <textarea class="ta ta-small" id="ctx_q15" placeholder="Where were you? What was the system + stakes? Keep it tight."></textarea>
+              </div>
+
+              <div class="field field-act">
+                <div class="label">Actions (your moves)</div>
+                <textarea class="ta ta-big" id="act_q15" placeholder="2–5 bullets: what YOU did, how you decided, and how you communicated."></textarea>
+              </div>
+
+              <div class="field field-imp">
+                <div class="label">Impact (numbers if possible)</div>
+                <textarea class="ta ta-mid" id="imp_q15" placeholder="What improved? latency, reliability, defects, manual work, deployment time, stakeholder trust…"></textarea>
+              </div>
+
+              <div class="field field-trd">
+                <div class="label">Tradeoffs (show judgment)</div>
+                <textarea class="ta ta-mid" id="trd_q15" placeholder="What options existed? Why this choice? What risk did you accept/avoid?"></textarea>
+              </div>
+
+              <div class="field field-lrn">
+                <div class="label">Learning (senior signal)</div>
+                <textarea class="ta ta-small" id="lrn_q15" placeholder="What would you do again? What would you change next time?"></textarea>
+              </div>
+            </div>
+
+            <div class="builder-actions">
+              <button class="mini ghost" type="button" data-action="preview" data-target="q15">Preview</button>
+              <button class="mini primary" type="button" data-action="feedback" data-target="q15">Focused feedback</button>
+              <button class="mini" type="button" data-action="clearOne" data-target="q15">Clear</button>
+            </div>
+
+            <div class="preview" id="pv_q15" hidden>
+              <div class="preview-title">
+                <span>Spoken answer preview</span>
+                <span class="muted">(aim for 60–90 seconds)</span>
+              </div>
+              <div class="preview-body" id="pv_body_q15"></div>
+              <div class="minirow">
+                <button class="mini" type="button" data-action="copyPreview" data-target="q15">Copy preview</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="coach">
+            <div class="coach-title">
+              <span>Ideas to include</span>
+              <span class="coach-sub">anchor + themes</span>
+            </div>
+            <ul class="ideas"><li>Ask clarifying questions first (understand intent).</li>
+<li>Separate ego from the idea; test small if possible.</li>
+<li>If you still disagree, explain tradeoffs calmly.</li>
+<li>Close the loop: adopt or document why not.</li></ul>
+
+            <details class="resumeBox">
+              <summary>Resume evidence you can steal</summary>
+              <div class="resumeInner" data-qresume="q15">
+                <div class="resumeCols">
+                  <div class="rcol">
+                    <div class="rhead">Technical Judgment</div>
+                    <ul class="rlist">
+                      <li>Modernized legacy .NET platforms into modular, scalable architectures; improved maintainability and reduced deployment time.</li><li>Built/integrated RESTful APIs &amp; web services; improved interoperability between internal + third‑party systems with security compliance.</li><li>Embedded Secure SDLC practices (OWASP/JWT/OAuth) to reduce risk and improve quality.</li><li>Streamlined CI/CD with Jenkins (and GitHub Actions); improved delivery reliability and timelines.</li><li>Designed KPI dashboards (SSRS/T‑SQL) for executive reporting; optimized data queries/transformations.</li>
+                    </ul>
+                  </div>
+                  <div class="rcol">
+                    <div class="rhead">Collaboration</div>
+                    <ul class="rlist">
+                      <li>Partnered across DevOps, QA, and support to deliver releases and improve pipeline flow.</li><li>Facilitated stakeholder workshops / design thinking for MVP scope and feature definition.</li><li>Delivered executive roadmap updates and KPI reports to keep leaders aligned.</li><li>Translated business requirements into scalable technical solutions with BAs and non‑technical stakeholders.</li>
+                    </ul>
+                  </div>
+                  <div class="rcol">
+                    <div class="rhead">Ownership</div>
+                    <ul class="rlist">
+                      <li>Directed API integration projects end‑to‑end; reduced manual processes via automation.</li><li>Coordinated cross‑department release planning to ensure smooth launches.</li><li>Authored detailed technical documentation; strengthened knowledge sharing and onboarding.</li><li>Mentored junior engineers (clean code, architecture, agile practices).</li><li>Led debugging / root-cause analysis of legacy codebases; improved maintainability and reduced support needs.</li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="muted tiny">Tip: copy one line and make it specific to the story you’re telling.</div>
+              </div>
+            </details>
+
+            <div class="minirow">
+              <button class="mini ghost" type="button" data-action="clearFeedback" data-target="q15">Clear feedback</button>
+            </div>
+            <div class="feedback" id="fb_q15" hidden></div>
+          </div>
+        </div>
+      </div>
+    
+
+      <div class="qblock" data-id="q16" data-kind="collab">
+        <div class="qtop">
+          <div class="qtitle">How do you work with non-technical partners like product, QA, or leadership?</div>
+          <div class="tag">Guaranteed</div>
+        </div>
+
+        <div class="qa-grid">
+          <div class="builder">
+            <div class="builder-title">
+              <span>Answer Builder</span>
+              <span class="builder-sub">Context → Actions → Impact → Tradeoffs → Learning</span>
+            </div>
+
+            <div class="builder-grid" aria-label="Answer builder fields">
+              <div class="field field-ctx">
+                <div class="label">Context (10–15s)</div>
+                <textarea class="ta ta-small" id="ctx_q16" placeholder="Where were you? What was the system + stakes? Keep it tight."></textarea>
+              </div>
+
+              <div class="field field-act">
+                <div class="label">Actions (your moves)</div>
+                <textarea class="ta ta-big" id="act_q16" placeholder="2–5 bullets: what YOU did, how you decided, and how you communicated."></textarea>
+              </div>
+
+              <div class="field field-imp">
+                <div class="label">Impact (numbers if possible)</div>
+                <textarea class="ta ta-mid" id="imp_q16" placeholder="What improved? latency, reliability, defects, manual work, deployment time, stakeholder trust…"></textarea>
+              </div>
+
+              <div class="field field-trd">
+                <div class="label">Tradeoffs (show judgment)</div>
+                <textarea class="ta ta-mid" id="trd_q16" placeholder="What options existed? Why this choice? What risk did you accept/avoid?"></textarea>
+              </div>
+
+              <div class="field field-lrn">
+                <div class="label">Learning (senior signal)</div>
+                <textarea class="ta ta-small" id="lrn_q16" placeholder="What would you do again? What would you change next time?"></textarea>
+              </div>
+            </div>
+
+            <div class="builder-actions">
+              <button class="mini ghost" type="button" data-action="preview" data-target="q16">Preview</button>
+              <button class="mini primary" type="button" data-action="feedback" data-target="q16">Focused feedback</button>
+              <button class="mini" type="button" data-action="clearOne" data-target="q16">Clear</button>
+            </div>
+
+            <div class="preview" id="pv_q16" hidden>
+              <div class="preview-title">
+                <span>Spoken answer preview</span>
+                <span class="muted">(aim for 60–90 seconds)</span>
+              </div>
+              <div class="preview-body" id="pv_body_q16"></div>
+              <div class="minirow">
+                <button class="mini" type="button" data-action="copyPreview" data-target="q16">Copy preview</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="coach">
+            <div class="coach-title">
+              <span>Ideas to include</span>
+              <span class="coach-sub">anchor + themes</span>
+            </div>
+            <ul class="ideas"><li>Translate tech to outcomes: impact, risk, options, recommendation.</li>
+<li>Confirm requirements and acceptance criteria early.</li>
+<li>Demo early and often; shorten feedback loops.</li>
+<li>Document decisions so everyone stays aligned.</li></ul>
+
+            <details class="resumeBox">
+              <summary>Resume evidence you can steal</summary>
+              <div class="resumeInner" data-qresume="q16">
+                <div class="resumeCols">
+                  <div class="rcol">
+                    <div class="rhead">Technical Judgment</div>
+                    <ul class="rlist">
+                      <li>Modernized legacy .NET platforms into modular, scalable architectures; improved maintainability and reduced deployment time.</li><li>Built/integrated RESTful APIs &amp; web services; improved interoperability between internal + third‑party systems with security compliance.</li><li>Embedded Secure SDLC practices (OWASP/JWT/OAuth) to reduce risk and improve quality.</li><li>Streamlined CI/CD with Jenkins (and GitHub Actions); improved delivery reliability and timelines.</li><li>Designed KPI dashboards (SSRS/T‑SQL) for executive reporting; optimized data queries/transformations.</li>
+                    </ul>
+                  </div>
+                  <div class="rcol">
+                    <div class="rhead">Collaboration</div>
+                    <ul class="rlist">
+                      <li>Partnered across DevOps, QA, and support to deliver releases and improve pipeline flow.</li><li>Facilitated stakeholder workshops / design thinking for MVP scope and feature definition.</li><li>Delivered executive roadmap updates and KPI reports to keep leaders aligned.</li><li>Translated business requirements into scalable technical solutions with BAs and non‑technical stakeholders.</li>
+                    </ul>
+                  </div>
+                  <div class="rcol">
+                    <div class="rhead">Ownership</div>
+                    <ul class="rlist">
+                      <li>Directed API integration projects end‑to‑end; reduced manual processes via automation.</li><li>Coordinated cross‑department release planning to ensure smooth launches.</li><li>Authored detailed technical documentation; strengthened knowledge sharing and onboarding.</li><li>Mentored junior engineers (clean code, architecture, agile practices).</li><li>Led debugging / root-cause analysis of legacy codebases; improved maintainability and reduced support needs.</li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="muted tiny">Tip: copy one line and make it specific to the story you’re telling.</div>
+              </div>
+            </details>
+
+            <div class="minirow">
+              <button class="mini ghost" type="button" data-action="clearFeedback" data-target="q16">Clear feedback</button>
+            </div>
+            <div class="feedback" id="fb_q16" hidden></div>
+          </div>
+        </div>
+      </div>
+    
+    </section>
+    
+
+    <section class="sec">
+      <h3>6. Leadership &amp; Mentorship</h3>
+      
+      <div class="qblock" data-id="q17" data-kind="mentor">
+        <div class="qtop">
+          <div class="qtitle">How have you mentored junior engineers or raised team standards?</div>
+          <div class="tag">Likely</div>
+        </div>
+
+        <div class="qa-grid">
+          <div class="builder">
+            <div class="builder-title">
+              <span>Answer Builder</span>
+              <span class="builder-sub">Context → Actions → Impact → Tradeoffs → Learning</span>
+            </div>
+
+            <div class="builder-grid" aria-label="Answer builder fields">
+              <div class="field field-ctx">
+                <div class="label">Context (10–15s)</div>
+                <textarea class="ta ta-small" id="ctx_q17" placeholder="Where were you? What was the system + stakes? Keep it tight."></textarea>
+              </div>
+
+              <div class="field field-act">
+                <div class="label">Actions (your moves)</div>
+                <textarea class="ta ta-big" id="act_q17" placeholder="2–5 bullets: what YOU did, how you decided, and how you communicated."></textarea>
+              </div>
+
+              <div class="field field-imp">
+                <div class="label">Impact (numbers if possible)</div>
+                <textarea class="ta ta-mid" id="imp_q17" placeholder="What improved? latency, reliability, defects, manual work, deployment time, stakeholder trust…"></textarea>
+              </div>
+
+              <div class="field field-trd">
+                <div class="label">Tradeoffs (show judgment)</div>
+                <textarea class="ta ta-mid" id="trd_q17" placeholder="What options existed? Why this choice? What risk did you accept/avoid?"></textarea>
+              </div>
+
+              <div class="field field-lrn">
+                <div class="label">Learning (senior signal)</div>
+                <textarea class="ta ta-small" id="lrn_q17" placeholder="What would you do again? What would you change next time?"></textarea>
+              </div>
+            </div>
+
+            <div class="builder-actions">
+              <button class="mini ghost" type="button" data-action="preview" data-target="q17">Preview</button>
+              <button class="mini primary" type="button" data-action="feedback" data-target="q17">Focused feedback</button>
+              <button class="mini" type="button" data-action="clearOne" data-target="q17">Clear</button>
+            </div>
+
+            <div class="preview" id="pv_q17" hidden>
+              <div class="preview-title">
+                <span>Spoken answer preview</span>
+                <span class="muted">(aim for 60–90 seconds)</span>
+              </div>
+              <div class="preview-body" id="pv_body_q17"></div>
+              <div class="minirow">
+                <button class="mini" type="button" data-action="copyPreview" data-target="q17">Copy preview</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="coach">
+            <div class="coach-title">
+              <span>Ideas to include</span>
+              <span class="coach-sub">anchor + themes</span>
+            </div>
+            <ul class="ideas"><li>Pairing, code reviews, and ‘why’ explanations.</li>
+<li>Documentation/runbooks to reduce repeated questions.</li>
+<li>Raising standards: tests, logging, code style, PR hygiene.</li>
+<li>Give an example of someone you helped level up.</li></ul>
+
+            <details class="resumeBox">
+              <summary>Resume evidence you can steal</summary>
+              <div class="resumeInner" data-qresume="q17">
+                <div class="resumeCols">
+                  <div class="rcol">
+                    <div class="rhead">Technical Judgment</div>
+                    <ul class="rlist">
+                      <li>Modernized legacy .NET platforms into modular, scalable architectures; improved maintainability and reduced deployment time.</li><li>Built/integrated RESTful APIs &amp; web services; improved interoperability between internal + third‑party systems with security compliance.</li><li>Embedded Secure SDLC practices (OWASP/JWT/OAuth) to reduce risk and improve quality.</li><li>Streamlined CI/CD with Jenkins (and GitHub Actions); improved delivery reliability and timelines.</li><li>Designed KPI dashboards (SSRS/T‑SQL) for executive reporting; optimized data queries/transformations.</li>
+                    </ul>
+                  </div>
+                  <div class="rcol">
+                    <div class="rhead">Collaboration</div>
+                    <ul class="rlist">
+                      <li>Partnered across DevOps, QA, and support to deliver releases and improve pipeline flow.</li><li>Facilitated stakeholder workshops / design thinking for MVP scope and feature definition.</li><li>Delivered executive roadmap updates and KPI reports to keep leaders aligned.</li><li>Translated business requirements into scalable technical solutions with BAs and non‑technical stakeholders.</li>
+                    </ul>
+                  </div>
+                  <div class="rcol">
+                    <div class="rhead">Ownership</div>
+                    <ul class="rlist">
+                      <li>Directed API integration projects end‑to‑end; reduced manual processes via automation.</li><li>Coordinated cross‑department release planning to ensure smooth launches.</li><li>Authored detailed technical documentation; strengthened knowledge sharing and onboarding.</li><li>Mentored junior engineers (clean code, architecture, agile practices).</li><li>Led debugging / root-cause analysis of legacy codebases; improved maintainability and reduced support needs.</li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="muted tiny">Tip: copy one line and make it specific to the story you’re telling.</div>
+              </div>
+            </details>
+
+            <div class="minirow">
+              <button class="mini ghost" type="button" data-action="clearFeedback" data-target="q17">Clear feedback</button>
+            </div>
+            <div class="feedback" id="fb_q17" hidden></div>
+          </div>
+        </div>
+      </div>
+    
+
+      <div class="qblock" data-id="q18" data-kind="leadership">
+        <div class="qtop">
+          <div class="qtitle">How do you balance hands-on development with leadership responsibilities?</div>
+          <div class="tag">Likely</div>
+        </div>
+
+        <div class="qa-grid">
+          <div class="builder">
+            <div class="builder-title">
+              <span>Answer Builder</span>
+              <span class="builder-sub">Context → Actions → Impact → Tradeoffs → Learning</span>
+            </div>
+
+            <div class="builder-grid" aria-label="Answer builder fields">
+              <div class="field field-ctx">
+                <div class="label">Context (10–15s)</div>
+                <textarea class="ta ta-small" id="ctx_q18" placeholder="Where were you? What was the system + stakes? Keep it tight."></textarea>
+              </div>
+
+              <div class="field field-act">
+                <div class="label">Actions (your moves)</div>
+                <textarea class="ta ta-big" id="act_q18" placeholder="2–5 bullets: what YOU did, how you decided, and how you communicated."></textarea>
+              </div>
+
+              <div class="field field-imp">
+                <div class="label">Impact (numbers if possible)</div>
+                <textarea class="ta ta-mid" id="imp_q18" placeholder="What improved? latency, reliability, defects, manual work, deployment time, stakeholder trust…"></textarea>
+              </div>
+
+              <div class="field field-trd">
+                <div class="label">Tradeoffs (show judgment)</div>
+                <textarea class="ta ta-mid" id="trd_q18" placeholder="What options existed? Why this choice? What risk did you accept/avoid?"></textarea>
+              </div>
+
+              <div class="field field-lrn">
+                <div class="label">Learning (senior signal)</div>
+                <textarea class="ta ta-small" id="lrn_q18" placeholder="What would you do again? What would you change next time?"></textarea>
+              </div>
+            </div>
+
+            <div class="builder-actions">
+              <button class="mini ghost" type="button" data-action="preview" data-target="q18">Preview</button>
+              <button class="mini primary" type="button" data-action="feedback" data-target="q18">Focused feedback</button>
+              <button class="mini" type="button" data-action="clearOne" data-target="q18">Clear</button>
+            </div>
+
+            <div class="preview" id="pv_q18" hidden>
+              <div class="preview-title">
+                <span>Spoken answer preview</span>
+                <span class="muted">(aim for 60–90 seconds)</span>
+              </div>
+              <div class="preview-body" id="pv_body_q18"></div>
+              <div class="minirow">
+                <button class="mini" type="button" data-action="copyPreview" data-target="q18">Copy preview</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="coach">
+            <div class="coach-title">
+              <span>Ideas to include</span>
+              <span class="coach-sub">anchor + themes</span>
+            </div>
+            <ul class="ideas"><li>Time blocks for deep work + office hours.</li>
+<li>Prioritize: biggest risks first; limit WIP.</li>
+<li>Delegate early; create leverage via docs/automation.</li>
+<li>Stay close to production signals (metrics/incidents).</li></ul>
+
+            <details class="resumeBox">
+              <summary>Resume evidence you can steal</summary>
+              <div class="resumeInner" data-qresume="q18">
+                <div class="resumeCols">
+                  <div class="rcol">
+                    <div class="rhead">Technical Judgment</div>
+                    <ul class="rlist">
+                      <li>Modernized legacy .NET platforms into modular, scalable architectures; improved maintainability and reduced deployment time.</li><li>Built/integrated RESTful APIs &amp; web services; improved interoperability between internal + third‑party systems with security compliance.</li><li>Embedded Secure SDLC practices (OWASP/JWT/OAuth) to reduce risk and improve quality.</li><li>Streamlined CI/CD with Jenkins (and GitHub Actions); improved delivery reliability and timelines.</li><li>Designed KPI dashboards (SSRS/T‑SQL) for executive reporting; optimized data queries/transformations.</li>
+                    </ul>
+                  </div>
+                  <div class="rcol">
+                    <div class="rhead">Collaboration</div>
+                    <ul class="rlist">
+                      <li>Partnered across DevOps, QA, and support to deliver releases and improve pipeline flow.</li><li>Facilitated stakeholder workshops / design thinking for MVP scope and feature definition.</li><li>Delivered executive roadmap updates and KPI reports to keep leaders aligned.</li><li>Translated business requirements into scalable technical solutions with BAs and non‑technical stakeholders.</li>
+                    </ul>
+                  </div>
+                  <div class="rcol">
+                    <div class="rhead">Ownership</div>
+                    <ul class="rlist">
+                      <li>Directed API integration projects end‑to‑end; reduced manual processes via automation.</li><li>Coordinated cross‑department release planning to ensure smooth launches.</li><li>Authored detailed technical documentation; strengthened knowledge sharing and onboarding.</li><li>Mentored junior engineers (clean code, architecture, agile practices).</li><li>Led debugging / root-cause analysis of legacy codebases; improved maintainability and reduced support needs.</li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="muted tiny">Tip: copy one line and make it specific to the story you’re telling.</div>
+              </div>
+            </details>
+
+            <div class="minirow">
+              <button class="mini ghost" type="button" data-action="clearFeedback" data-target="q18">Clear feedback</button>
+            </div>
+            <div class="feedback" id="fb_q18" hidden></div>
+          </div>
+        </div>
+      </div>
+    
+    </section>
+    
+
+    <section class="sec">
+      <h3>7. Working Style &amp; Culture Fit</h3>
+      
+      <div class="qblock" data-id="q19" data-kind="culture">
+        <div class="qtop">
+          <div class="qtitle">What does a productive engineering team look like to you?</div>
+          <div class="tag">Likely</div>
+        </div>
+
+        <div class="qa-grid">
+          <div class="builder">
+            <div class="builder-title">
+              <span>Answer Builder</span>
+              <span class="builder-sub">Context → Actions → Impact → Tradeoffs → Learning</span>
+            </div>
+
+            <div class="builder-grid" aria-label="Answer builder fields">
+              <div class="field field-ctx">
+                <div class="label">Context (10–15s)</div>
+                <textarea class="ta ta-small" id="ctx_q19" placeholder="Where were you? What was the system + stakes? Keep it tight."></textarea>
+              </div>
+
+              <div class="field field-act">
+                <div class="label">Actions (your moves)</div>
+                <textarea class="ta ta-big" id="act_q19" placeholder="2–5 bullets: what YOU did, how you decided, and how you communicated."></textarea>
+              </div>
+
+              <div class="field field-imp">
+                <div class="label">Impact (numbers if possible)</div>
+                <textarea class="ta ta-mid" id="imp_q19" placeholder="What improved? latency, reliability, defects, manual work, deployment time, stakeholder trust…"></textarea>
+              </div>
+
+              <div class="field field-trd">
+                <div class="label">Tradeoffs (show judgment)</div>
+                <textarea class="ta ta-mid" id="trd_q19" placeholder="What options existed? Why this choice? What risk did you accept/avoid?"></textarea>
+              </div>
+
+              <div class="field field-lrn">
+                <div class="label">Learning (senior signal)</div>
+                <textarea class="ta ta-small" id="lrn_q19" placeholder="What would you do again? What would you change next time?"></textarea>
+              </div>
+            </div>
+
+            <div class="builder-actions">
+              <button class="mini ghost" type="button" data-action="preview" data-target="q19">Preview</button>
+              <button class="mini primary" type="button" data-action="feedback" data-target="q19">Focused feedback</button>
+              <button class="mini" type="button" data-action="clearOne" data-target="q19">Clear</button>
+            </div>
+
+            <div class="preview" id="pv_q19" hidden>
+              <div class="preview-title">
+                <span>Spoken answer preview</span>
+                <span class="muted">(aim for 60–90 seconds)</span>
+              </div>
+              <div class="preview-body" id="pv_body_q19"></div>
+              <div class="minirow">
+                <button class="mini" type="button" data-action="copyPreview" data-target="q19">Copy preview</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="coach">
+            <div class="coach-title">
+              <span>Ideas to include</span>
+              <span class="coach-sub">anchor + themes</span>
+            </div>
+            <ul class="ideas"><li>Clear goals and ownership.</li>
+<li>Psychological safety + respectful debate.</li>
+<li>Fast feedback loops (CI, monitoring, reviews).</li>
+<li>Shared standards: testing, docs, observability.</li></ul>
+
+            <details class="resumeBox">
+              <summary>Resume evidence you can steal</summary>
+              <div class="resumeInner" data-qresume="q19">
+                <div class="resumeCols">
+                  <div class="rcol">
+                    <div class="rhead">Technical Judgment</div>
+                    <ul class="rlist">
+                      <li>Modernized legacy .NET platforms into modular, scalable architectures; improved maintainability and reduced deployment time.</li><li>Built/integrated RESTful APIs &amp; web services; improved interoperability between internal + third‑party systems with security compliance.</li><li>Embedded Secure SDLC practices (OWASP/JWT/OAuth) to reduce risk and improve quality.</li><li>Streamlined CI/CD with Jenkins (and GitHub Actions); improved delivery reliability and timelines.</li><li>Designed KPI dashboards (SSRS/T‑SQL) for executive reporting; optimized data queries/transformations.</li>
+                    </ul>
+                  </div>
+                  <div class="rcol">
+                    <div class="rhead">Collaboration</div>
+                    <ul class="rlist">
+                      <li>Partnered across DevOps, QA, and support to deliver releases and improve pipeline flow.</li><li>Facilitated stakeholder workshops / design thinking for MVP scope and feature definition.</li><li>Delivered executive roadmap updates and KPI reports to keep leaders aligned.</li><li>Translated business requirements into scalable technical solutions with BAs and non‑technical stakeholders.</li>
+                    </ul>
+                  </div>
+                  <div class="rcol">
+                    <div class="rhead">Ownership</div>
+                    <ul class="rlist">
+                      <li>Directed API integration projects end‑to‑end; reduced manual processes via automation.</li><li>Coordinated cross‑department release planning to ensure smooth launches.</li><li>Authored detailed technical documentation; strengthened knowledge sharing and onboarding.</li><li>Mentored junior engineers (clean code, architecture, agile practices).</li><li>Led debugging / root-cause analysis of legacy codebases; improved maintainability and reduced support needs.</li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="muted tiny">Tip: copy one line and make it specific to the story you’re telling.</div>
+              </div>
+            </details>
+
+            <div class="minirow">
+              <button class="mini ghost" type="button" data-action="clearFeedback" data-target="q19">Clear feedback</button>
+            </div>
+            <div class="feedback" id="fb_q19" hidden></div>
+          </div>
+        </div>
+      </div>
+    
+
+      <div class="qblock" data-id="q20" data-kind="tradeoffs">
+        <div class="qtop">
+          <div class="qtitle">How do you balance speed, quality, and security in delivery?</div>
+          <div class="tag">Very likely</div>
+        </div>
+
+        <div class="qa-grid">
+          <div class="builder">
+            <div class="builder-title">
+              <span>Answer Builder</span>
+              <span class="builder-sub">Context → Actions → Impact → Tradeoffs → Learning</span>
+            </div>
+
+            <div class="builder-grid" aria-label="Answer builder fields">
+              <div class="field field-ctx">
+                <div class="label">Context (10–15s)</div>
+                <textarea class="ta ta-small" id="ctx_q20" placeholder="Where were you? What was the system + stakes? Keep it tight."></textarea>
+              </div>
+
+              <div class="field field-act">
+                <div class="label">Actions (your moves)</div>
+                <textarea class="ta ta-big" id="act_q20" placeholder="2–5 bullets: what YOU did, how you decided, and how you communicated."></textarea>
+              </div>
+
+              <div class="field field-imp">
+                <div class="label">Impact (numbers if possible)</div>
+                <textarea class="ta ta-mid" id="imp_q20" placeholder="What improved? latency, reliability, defects, manual work, deployment time, stakeholder trust…"></textarea>
+              </div>
+
+              <div class="field field-trd">
+                <div class="label">Tradeoffs (show judgment)</div>
+                <textarea class="ta ta-mid" id="trd_q20" placeholder="What options existed? Why this choice? What risk did you accept/avoid?"></textarea>
+              </div>
+
+              <div class="field field-lrn">
+                <div class="label">Learning (senior signal)</div>
+                <textarea class="ta ta-small" id="lrn_q20" placeholder="What would you do again? What would you change next time?"></textarea>
+              </div>
+            </div>
+
+            <div class="builder-actions">
+              <button class="mini ghost" type="button" data-action="preview" data-target="q20">Preview</button>
+              <button class="mini primary" type="button" data-action="feedback" data-target="q20">Focused feedback</button>
+              <button class="mini" type="button" data-action="clearOne" data-target="q20">Clear</button>
+            </div>
+
+            <div class="preview" id="pv_q20" hidden>
+              <div class="preview-title">
+                <span>Spoken answer preview</span>
+                <span class="muted">(aim for 60–90 seconds)</span>
+              </div>
+              <div class="preview-body" id="pv_body_q20"></div>
+              <div class="minirow">
+                <button class="mini" type="button" data-action="copyPreview" data-target="q20">Copy preview</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="coach">
+            <div class="coach-title">
+              <span>Ideas to include</span>
+              <span class="coach-sub">anchor + themes</span>
+            </div>
+            <ul class="ideas"><li>Security and correctness have a minimum bar.</li>
+<li>Slice scope; ship incrementally with flags.</li>
+<li>Risk-based testing (focus on high-impact paths).</li>
+<li>Communicate tradeoffs early; avoid surprise debt.</li></ul>
+
+            <details class="resumeBox">
+              <summary>Resume evidence you can steal</summary>
+              <div class="resumeInner" data-qresume="q20">
+                <div class="resumeCols">
+                  <div class="rcol">
+                    <div class="rhead">Technical Judgment</div>
+                    <ul class="rlist">
+                      <li>Modernized legacy .NET platforms into modular, scalable architectures; improved maintainability and reduced deployment time.</li><li>Built/integrated RESTful APIs &amp; web services; improved interoperability between internal + third‑party systems with security compliance.</li><li>Embedded Secure SDLC practices (OWASP/JWT/OAuth) to reduce risk and improve quality.</li><li>Streamlined CI/CD with Jenkins (and GitHub Actions); improved delivery reliability and timelines.</li><li>Designed KPI dashboards (SSRS/T‑SQL) for executive reporting; optimized data queries/transformations.</li>
+                    </ul>
+                  </div>
+                  <div class="rcol">
+                    <div class="rhead">Collaboration</div>
+                    <ul class="rlist">
+                      <li>Partnered across DevOps, QA, and support to deliver releases and improve pipeline flow.</li><li>Facilitated stakeholder workshops / design thinking for MVP scope and feature definition.</li><li>Delivered executive roadmap updates and KPI reports to keep leaders aligned.</li><li>Translated business requirements into scalable technical solutions with BAs and non‑technical stakeholders.</li>
+                    </ul>
+                  </div>
+                  <div class="rcol">
+                    <div class="rhead">Ownership</div>
+                    <ul class="rlist">
+                      <li>Directed API integration projects end‑to‑end; reduced manual processes via automation.</li><li>Coordinated cross‑department release planning to ensure smooth launches.</li><li>Authored detailed technical documentation; strengthened knowledge sharing and onboarding.</li><li>Mentored junior engineers (clean code, architecture, agile practices).</li><li>Led debugging / root-cause analysis of legacy codebases; improved maintainability and reduced support needs.</li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="muted tiny">Tip: copy one line and make it specific to the story you’re telling.</div>
+              </div>
+            </details>
+
+            <div class="minirow">
+              <button class="mini ghost" type="button" data-action="clearFeedback" data-target="q20">Clear feedback</button>
+            </div>
+            <div class="feedback" id="fb_q20" hidden></div>
+          </div>
+        </div>
+      </div>
+    
+
+      <div class="qblock" data-id="q21" data-kind="ambiguity">
+        <div class="qtop">
+          <div class="qtitle">How do you handle ambiguity or shifting priorities?</div>
+          <div class="tag">Likely</div>
+        </div>
+
+        <div class="qa-grid">
+          <div class="builder">
+            <div class="builder-title">
+              <span>Answer Builder</span>
+              <span class="builder-sub">Context → Actions → Impact → Tradeoffs → Learning</span>
+            </div>
+
+            <div class="builder-grid" aria-label="Answer builder fields">
+              <div class="field field-ctx">
+                <div class="label">Context (10–15s)</div>
+                <textarea class="ta ta-small" id="ctx_q21" placeholder="Where were you? What was the system + stakes? Keep it tight."></textarea>
+              </div>
+
+              <div class="field field-act">
+                <div class="label">Actions (your moves)</div>
+                <textarea class="ta ta-big" id="act_q21" placeholder="2–5 bullets: what YOU did, how you decided, and how you communicated."></textarea>
+              </div>
+
+              <div class="field field-imp">
+                <div class="label">Impact (numbers if possible)</div>
+                <textarea class="ta ta-mid" id="imp_q21" placeholder="What improved? latency, reliability, defects, manual work, deployment time, stakeholder trust…"></textarea>
+              </div>
+
+              <div class="field field-trd">
+                <div class="label">Tradeoffs (show judgment)</div>
+                <textarea class="ta ta-mid" id="trd_q21" placeholder="What options existed? Why this choice? What risk did you accept/avoid?"></textarea>
+              </div>
+
+              <div class="field field-lrn">
+                <div class="label">Learning (senior signal)</div>
+                <textarea class="ta ta-small" id="lrn_q21" placeholder="What would you do again? What would you change next time?"></textarea>
+              </div>
+            </div>
+
+            <div class="builder-actions">
+              <button class="mini ghost" type="button" data-action="preview" data-target="q21">Preview</button>
+              <button class="mini primary" type="button" data-action="feedback" data-target="q21">Focused feedback</button>
+              <button class="mini" type="button" data-action="clearOne" data-target="q21">Clear</button>
+            </div>
+
+            <div class="preview" id="pv_q21" hidden>
+              <div class="preview-title">
+                <span>Spoken answer preview</span>
+                <span class="muted">(aim for 60–90 seconds)</span>
+              </div>
+              <div class="preview-body" id="pv_body_q21"></div>
+              <div class="minirow">
+                <button class="mini" type="button" data-action="copyPreview" data-target="q21">Copy preview</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="coach">
+            <div class="coach-title">
+              <span>Ideas to include</span>
+              <span class="coach-sub">anchor + themes</span>
+            </div>
+            <ul class="ideas"><li>Clarify the goal and constraints.</li>
+<li>Re-plan in slices; show impacts transparently.</li>
+<li>Align stakeholders on tradeoffs and next steps.</li>
+<li>Keep execution moving while details firm up.</li></ul>
+
+            <details class="resumeBox">
+              <summary>Resume evidence you can steal</summary>
+              <div class="resumeInner" data-qresume="q21">
+                <div class="resumeCols">
+                  <div class="rcol">
+                    <div class="rhead">Technical Judgment</div>
+                    <ul class="rlist">
+                      <li>Modernized legacy .NET platforms into modular, scalable architectures; improved maintainability and reduced deployment time.</li><li>Built/integrated RESTful APIs &amp; web services; improved interoperability between internal + third‑party systems with security compliance.</li><li>Embedded Secure SDLC practices (OWASP/JWT/OAuth) to reduce risk and improve quality.</li><li>Streamlined CI/CD with Jenkins (and GitHub Actions); improved delivery reliability and timelines.</li><li>Designed KPI dashboards (SSRS/T‑SQL) for executive reporting; optimized data queries/transformations.</li>
+                    </ul>
+                  </div>
+                  <div class="rcol">
+                    <div class="rhead">Collaboration</div>
+                    <ul class="rlist">
+                      <li>Partnered across DevOps, QA, and support to deliver releases and improve pipeline flow.</li><li>Facilitated stakeholder workshops / design thinking for MVP scope and feature definition.</li><li>Delivered executive roadmap updates and KPI reports to keep leaders aligned.</li><li>Translated business requirements into scalable technical solutions with BAs and non‑technical stakeholders.</li>
+                    </ul>
+                  </div>
+                  <div class="rcol">
+                    <div class="rhead">Ownership</div>
+                    <ul class="rlist">
+                      <li>Directed API integration projects end‑to‑end; reduced manual processes via automation.</li><li>Coordinated cross‑department release planning to ensure smooth launches.</li><li>Authored detailed technical documentation; strengthened knowledge sharing and onboarding.</li><li>Mentored junior engineers (clean code, architecture, agile practices).</li><li>Led debugging / root-cause analysis of legacy codebases; improved maintainability and reduced support needs.</li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="muted tiny">Tip: copy one line and make it specific to the story you’re telling.</div>
+              </div>
+            </details>
+
+            <div class="minirow">
+              <button class="mini ghost" type="button" data-action="clearFeedback" data-target="q21">Clear feedback</button>
+            </div>
+            <div class="feedback" id="fb_q21" hidden></div>
+          </div>
+        </div>
+      </div>
+    
+    </section>
+    
+
+    <section class="sec">
+      <h3>8. Growth &amp; Self-Awareness</h3>
+      
+      <div class="qblock" data-id="q22" data-kind="growth">
+        <div class="qtop">
+          <div class="qtitle">What’s an area you’re still working to improve as an engineer?</div>
+          <div class="tag">Likely</div>
+        </div>
+
+        <div class="qa-grid">
+          <div class="builder">
+            <div class="builder-title">
+              <span>Answer Builder</span>
+              <span class="builder-sub">Context → Actions → Impact → Tradeoffs → Learning</span>
+            </div>
+
+            <div class="builder-grid" aria-label="Answer builder fields">
+              <div class="field field-ctx">
+                <div class="label">Context (10–15s)</div>
+                <textarea class="ta ta-small" id="ctx_q22" placeholder="Where were you? What was the system + stakes? Keep it tight."></textarea>
+              </div>
+
+              <div class="field field-act">
+                <div class="label">Actions (your moves)</div>
+                <textarea class="ta ta-big" id="act_q22" placeholder="2–5 bullets: what YOU did, how you decided, and how you communicated."></textarea>
+              </div>
+
+              <div class="field field-imp">
+                <div class="label">Impact (numbers if possible)</div>
+                <textarea class="ta ta-mid" id="imp_q22" placeholder="What improved? latency, reliability, defects, manual work, deployment time, stakeholder trust…"></textarea>
+              </div>
+
+              <div class="field field-trd">
+                <div class="label">Tradeoffs (show judgment)</div>
+                <textarea class="ta ta-mid" id="trd_q22" placeholder="What options existed? Why this choice? What risk did you accept/avoid?"></textarea>
+              </div>
+
+              <div class="field field-lrn">
+                <div class="label">Learning (senior signal)</div>
+                <textarea class="ta ta-small" id="lrn_q22" placeholder="What would you do again? What would you change next time?"></textarea>
+              </div>
+            </div>
+
+            <div class="builder-actions">
+              <button class="mini ghost" type="button" data-action="preview" data-target="q22">Preview</button>
+              <button class="mini primary" type="button" data-action="feedback" data-target="q22">Focused feedback</button>
+              <button class="mini" type="button" data-action="clearOne" data-target="q22">Clear</button>
+            </div>
+
+            <div class="preview" id="pv_q22" hidden>
+              <div class="preview-title">
+                <span>Spoken answer preview</span>
+                <span class="muted">(aim for 60–90 seconds)</span>
+              </div>
+              <div class="preview-body" id="pv_body_q22"></div>
+              <div class="minirow">
+                <button class="mini" type="button" data-action="copyPreview" data-target="q22">Copy preview</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="coach">
+            <div class="coach-title">
+              <span>Ideas to include</span>
+              <span class="coach-sub">anchor + themes</span>
+            </div>
+            <ul class="ideas"><li>Pick a real-but-safe improvement (delegation, scope control, speaking up early).</li>
+<li>Show actions you take (process, mentorship, practice).</li>
+<li>Tie to results: how it improved outcomes/team.</li></ul>
+
+            <details class="resumeBox">
+              <summary>Resume evidence you can steal</summary>
+              <div class="resumeInner" data-qresume="q22">
+                <div class="resumeCols">
+                  <div class="rcol">
+                    <div class="rhead">Technical Judgment</div>
+                    <ul class="rlist">
+                      <li>Modernized legacy .NET platforms into modular, scalable architectures; improved maintainability and reduced deployment time.</li><li>Built/integrated RESTful APIs &amp; web services; improved interoperability between internal + third‑party systems with security compliance.</li><li>Embedded Secure SDLC practices (OWASP/JWT/OAuth) to reduce risk and improve quality.</li><li>Streamlined CI/CD with Jenkins (and GitHub Actions); improved delivery reliability and timelines.</li><li>Designed KPI dashboards (SSRS/T‑SQL) for executive reporting; optimized data queries/transformations.</li>
+                    </ul>
+                  </div>
+                  <div class="rcol">
+                    <div class="rhead">Collaboration</div>
+                    <ul class="rlist">
+                      <li>Partnered across DevOps, QA, and support to deliver releases and improve pipeline flow.</li><li>Facilitated stakeholder workshops / design thinking for MVP scope and feature definition.</li><li>Delivered executive roadmap updates and KPI reports to keep leaders aligned.</li><li>Translated business requirements into scalable technical solutions with BAs and non‑technical stakeholders.</li>
+                    </ul>
+                  </div>
+                  <div class="rcol">
+                    <div class="rhead">Ownership</div>
+                    <ul class="rlist">
+                      <li>Directed API integration projects end‑to‑end; reduced manual processes via automation.</li><li>Coordinated cross‑department release planning to ensure smooth launches.</li><li>Authored detailed technical documentation; strengthened knowledge sharing and onboarding.</li><li>Mentored junior engineers (clean code, architecture, agile practices).</li><li>Led debugging / root-cause analysis of legacy codebases; improved maintainability and reduced support needs.</li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="muted tiny">Tip: copy one line and make it specific to the story you’re telling.</div>
+              </div>
+            </details>
+
+            <div class="minirow">
+              <button class="mini ghost" type="button" data-action="clearFeedback" data-target="q22">Clear feedback</button>
+            </div>
+            <div class="feedback" id="fb_q22" hidden></div>
+          </div>
+        </div>
+      </div>
+    
+
+      <div class="qblock" data-id="q23" data-kind="growth">
+        <div class="qtop">
+          <div class="qtitle">How do you keep your skills current across evolving technologies?</div>
+          <div class="tag">Likely</div>
+        </div>
+
+        <div class="qa-grid">
+          <div class="builder">
+            <div class="builder-title">
+              <span>Answer Builder</span>
+              <span class="builder-sub">Context → Actions → Impact → Tradeoffs → Learning</span>
+            </div>
+
+            <div class="builder-grid" aria-label="Answer builder fields">
+              <div class="field field-ctx">
+                <div class="label">Context (10–15s)</div>
+                <textarea class="ta ta-small" id="ctx_q23" placeholder="Where were you? What was the system + stakes? Keep it tight."></textarea>
+              </div>
+
+              <div class="field field-act">
+                <div class="label">Actions (your moves)</div>
+                <textarea class="ta ta-big" id="act_q23" placeholder="2–5 bullets: what YOU did, how you decided, and how you communicated."></textarea>
+              </div>
+
+              <div class="field field-imp">
+                <div class="label">Impact (numbers if possible)</div>
+                <textarea class="ta ta-mid" id="imp_q23" placeholder="What improved? latency, reliability, defects, manual work, deployment time, stakeholder trust…"></textarea>
+              </div>
+
+              <div class="field field-trd">
+                <div class="label">Tradeoffs (show judgment)</div>
+                <textarea class="ta ta-mid" id="trd_q23" placeholder="What options existed? Why this choice? What risk did you accept/avoid?"></textarea>
+              </div>
+
+              <div class="field field-lrn">
+                <div class="label">Learning (senior signal)</div>
+                <textarea class="ta ta-small" id="lrn_q23" placeholder="What would you do again? What would you change next time?"></textarea>
+              </div>
+            </div>
+
+            <div class="builder-actions">
+              <button class="mini ghost" type="button" data-action="preview" data-target="q23">Preview</button>
+              <button class="mini primary" type="button" data-action="feedback" data-target="q23">Focused feedback</button>
+              <button class="mini" type="button" data-action="clearOne" data-target="q23">Clear</button>
+            </div>
+
+            <div class="preview" id="pv_q23" hidden>
+              <div class="preview-title">
+                <span>Spoken answer preview</span>
+                <span class="muted">(aim for 60–90 seconds)</span>
+              </div>
+              <div class="preview-body" id="pv_body_q23"></div>
+              <div class="minirow">
+                <button class="mini" type="button" data-action="copyPreview" data-target="q23">Copy preview</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="coach">
+            <div class="coach-title">
+              <span>Ideas to include</span>
+              <span class="coach-sub">anchor + themes</span>
+            </div>
+            <ul class="ideas"><li>Be deliberate: pick one skill at a time, then apply it.</li>
+<li>Learn by reading real code + doing PR reviews.</li>
+<li>Use courses/books when needed; focus on fundamentals.</li>
+<li>Stay close to production: incidents teach fast.</li></ul>
+
+            <details class="resumeBox">
+              <summary>Resume evidence you can steal</summary>
+              <div class="resumeInner" data-qresume="q23">
+                <div class="resumeCols">
+                  <div class="rcol">
+                    <div class="rhead">Technical Judgment</div>
+                    <ul class="rlist">
+                      <li>Modernized legacy .NET platforms into modular, scalable architectures; improved maintainability and reduced deployment time.</li><li>Built/integrated RESTful APIs &amp; web services; improved interoperability between internal + third‑party systems with security compliance.</li><li>Embedded Secure SDLC practices (OWASP/JWT/OAuth) to reduce risk and improve quality.</li><li>Streamlined CI/CD with Jenkins (and GitHub Actions); improved delivery reliability and timelines.</li><li>Designed KPI dashboards (SSRS/T‑SQL) for executive reporting; optimized data queries/transformations.</li>
+                    </ul>
+                  </div>
+                  <div class="rcol">
+                    <div class="rhead">Collaboration</div>
+                    <ul class="rlist">
+                      <li>Partnered across DevOps, QA, and support to deliver releases and improve pipeline flow.</li><li>Facilitated stakeholder workshops / design thinking for MVP scope and feature definition.</li><li>Delivered executive roadmap updates and KPI reports to keep leaders aligned.</li><li>Translated business requirements into scalable technical solutions with BAs and non‑technical stakeholders.</li>
+                    </ul>
+                  </div>
+                  <div class="rcol">
+                    <div class="rhead">Ownership</div>
+                    <ul class="rlist">
+                      <li>Directed API integration projects end‑to‑end; reduced manual processes via automation.</li><li>Coordinated cross‑department release planning to ensure smooth launches.</li><li>Authored detailed technical documentation; strengthened knowledge sharing and onboarding.</li><li>Mentored junior engineers (clean code, architecture, agile practices).</li><li>Led debugging / root-cause analysis of legacy codebases; improved maintainability and reduced support needs.</li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="muted tiny">Tip: copy one line and make it specific to the story you’re telling.</div>
+              </div>
+            </details>
+
+            <div class="minirow">
+              <button class="mini ghost" type="button" data-action="clearFeedback" data-target="q23">Clear feedback</button>
+            </div>
+            <div class="feedback" id="fb_q23" hidden></div>
+          </div>
+        </div>
+      </div>
+    
+    </section>
+    
+
+    <section class="sec">
+      <h3>9. Closing Questions (Choose 1–2)</h3>
+      
+      <div class="qblock" data-id="q24" data-kind="closing">
+        <div class="qtop">
+          <div class="qtitle">What does success look like for this role in the first six months?</div>
+          <div class="tag">Ask them</div>
+        </div>
+
+        <div class="qa-grid">
+          <div class="builder">
+            <div class="builder-title">
+              <span>Answer Builder</span>
+              <span class="builder-sub">Context → Actions → Impact → Tradeoffs → Learning</span>
+            </div>
+
+            <div class="builder-grid" aria-label="Answer builder fields">
+              <div class="field field-ctx">
+                <div class="label">Context (10–15s)</div>
+                <textarea class="ta ta-small" id="ctx_q24" placeholder="Where were you? What was the system + stakes? Keep it tight."></textarea>
+              </div>
+
+              <div class="field field-act">
+                <div class="label">Actions (your moves)</div>
+                <textarea class="ta ta-big" id="act_q24" placeholder="2–5 bullets: what YOU did, how you decided, and how you communicated."></textarea>
+              </div>
+
+              <div class="field field-imp">
+                <div class="label">Impact (numbers if possible)</div>
+                <textarea class="ta ta-mid" id="imp_q24" placeholder="What improved? latency, reliability, defects, manual work, deployment time, stakeholder trust…"></textarea>
+              </div>
+
+              <div class="field field-trd">
+                <div class="label">Tradeoffs (show judgment)</div>
+                <textarea class="ta ta-mid" id="trd_q24" placeholder="What options existed? Why this choice? What risk did you accept/avoid?"></textarea>
+              </div>
+
+              <div class="field field-lrn">
+                <div class="label">Learning (senior signal)</div>
+                <textarea class="ta ta-small" id="lrn_q24" placeholder="What would you do again? What would you change next time?"></textarea>
+              </div>
+            </div>
+
+            <div class="builder-actions">
+              <button class="mini ghost" type="button" data-action="preview" data-target="q24">Preview</button>
+              <button class="mini primary" type="button" data-action="feedback" data-target="q24">Focused feedback</button>
+              <button class="mini" type="button" data-action="clearOne" data-target="q24">Clear</button>
+            </div>
+
+            <div class="preview" id="pv_q24" hidden>
+              <div class="preview-title">
+                <span>Spoken answer preview</span>
+                <span class="muted">(aim for 60–90 seconds)</span>
+              </div>
+              <div class="preview-body" id="pv_body_q24"></div>
+              <div class="minirow">
+                <button class="mini" type="button" data-action="copyPreview" data-target="q24">Copy preview</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="coach">
+            <div class="coach-title">
+              <span>Ideas to include</span>
+              <span class="coach-sub">anchor + themes</span>
+            </div>
+            <ul class="ideas"><li>Listen for: deliverables, partnerships, operational ownership.</li>
+<li>Follow-up: “What would make you say ‘this was a great hire’?”</li>
+<li>Ask how success is measured (metrics, SLAs/SLOs, project outcomes).</li></ul>
+
+            <details class="resumeBox">
+              <summary>Resume evidence you can steal</summary>
+              <div class="resumeInner" data-qresume="q24">
+                <div class="resumeCols">
+                  <div class="rcol">
+                    <div class="rhead">Technical Judgment</div>
+                    <ul class="rlist">
+                      <li>Modernized legacy .NET platforms into modular, scalable architectures; improved maintainability and reduced deployment time.</li><li>Built/integrated RESTful APIs &amp; web services; improved interoperability between internal + third‑party systems with security compliance.</li><li>Embedded Secure SDLC practices (OWASP/JWT/OAuth) to reduce risk and improve quality.</li><li>Streamlined CI/CD with Jenkins (and GitHub Actions); improved delivery reliability and timelines.</li><li>Designed KPI dashboards (SSRS/T‑SQL) for executive reporting; optimized data queries/transformations.</li>
+                    </ul>
+                  </div>
+                  <div class="rcol">
+                    <div class="rhead">Collaboration</div>
+                    <ul class="rlist">
+                      <li>Partnered across DevOps, QA, and support to deliver releases and improve pipeline flow.</li><li>Facilitated stakeholder workshops / design thinking for MVP scope and feature definition.</li><li>Delivered executive roadmap updates and KPI reports to keep leaders aligned.</li><li>Translated business requirements into scalable technical solutions with BAs and non‑technical stakeholders.</li>
+                    </ul>
+                  </div>
+                  <div class="rcol">
+                    <div class="rhead">Ownership</div>
+                    <ul class="rlist">
+                      <li>Directed API integration projects end‑to‑end; reduced manual processes via automation.</li><li>Coordinated cross‑department release planning to ensure smooth launches.</li><li>Authored detailed technical documentation; strengthened knowledge sharing and onboarding.</li><li>Mentored junior engineers (clean code, architecture, agile practices).</li><li>Led debugging / root-cause analysis of legacy codebases; improved maintainability and reduced support needs.</li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="muted tiny">Tip: copy one line and make it specific to the story you’re telling.</div>
+              </div>
+            </details>
+
+            <div class="minirow">
+              <button class="mini ghost" type="button" data-action="clearFeedback" data-target="q24">Clear feedback</button>
+            </div>
+            <div class="feedback" id="fb_q24" hidden></div>
+          </div>
+        </div>
+      </div>
+    
+
+      <div class="qblock" data-id="q25" data-kind="closing">
+        <div class="qtop">
+          <div class="qtitle">What challenges is the team most focused on right now?</div>
+          <div class="tag">Ask them</div>
+        </div>
+
+        <div class="qa-grid">
+          <div class="builder">
+            <div class="builder-title">
+              <span>Answer Builder</span>
+              <span class="builder-sub">Context → Actions → Impact → Tradeoffs → Learning</span>
+            </div>
+
+            <div class="builder-grid" aria-label="Answer builder fields">
+              <div class="field field-ctx">
+                <div class="label">Context (10–15s)</div>
+                <textarea class="ta ta-small" id="ctx_q25" placeholder="Where were you? What was the system + stakes? Keep it tight."></textarea>
+              </div>
+
+              <div class="field field-act">
+                <div class="label">Actions (your moves)</div>
+                <textarea class="ta ta-big" id="act_q25" placeholder="2–5 bullets: what YOU did, how you decided, and how you communicated."></textarea>
+              </div>
+
+              <div class="field field-imp">
+                <div class="label">Impact (numbers if possible)</div>
+                <textarea class="ta ta-mid" id="imp_q25" placeholder="What improved? latency, reliability, defects, manual work, deployment time, stakeholder trust…"></textarea>
+              </div>
+
+              <div class="field field-trd">
+                <div class="label">Tradeoffs (show judgment)</div>
+                <textarea class="ta ta-mid" id="trd_q25" placeholder="What options existed? Why this choice? What risk did you accept/avoid?"></textarea>
+              </div>
+
+              <div class="field field-lrn">
+                <div class="label">Learning (senior signal)</div>
+                <textarea class="ta ta-small" id="lrn_q25" placeholder="What would you do again? What would you change next time?"></textarea>
+              </div>
+            </div>
+
+            <div class="builder-actions">
+              <button class="mini ghost" type="button" data-action="preview" data-target="q25">Preview</button>
+              <button class="mini primary" type="button" data-action="feedback" data-target="q25">Focused feedback</button>
+              <button class="mini" type="button" data-action="clearOne" data-target="q25">Clear</button>
+            </div>
+
+            <div class="preview" id="pv_q25" hidden>
+              <div class="preview-title">
+                <span>Spoken answer preview</span>
+                <span class="muted">(aim for 60–90 seconds)</span>
+              </div>
+              <div class="preview-body" id="pv_body_q25"></div>
+              <div class="minirow">
+                <button class="mini" type="button" data-action="copyPreview" data-target="q25">Copy preview</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="coach">
+            <div class="coach-title">
+              <span>Ideas to include</span>
+              <span class="coach-sub">anchor + themes</span>
+            </div>
+            <ul class="ideas"><li>Listen for: reliability, data quality, speed of delivery, tech debt.</li>
+<li>Follow-up: “What’s the #1 thing blocking progress?”</li>
+<li>Ask what’s changing in the stack/process this year.</li></ul>
+
+            <details class="resumeBox">
+              <summary>Resume evidence you can steal</summary>
+              <div class="resumeInner" data-qresume="q25">
+                <div class="resumeCols">
+                  <div class="rcol">
+                    <div class="rhead">Technical Judgment</div>
+                    <ul class="rlist">
+                      <li>Modernized legacy .NET platforms into modular, scalable architectures; improved maintainability and reduced deployment time.</li><li>Built/integrated RESTful APIs &amp; web services; improved interoperability between internal + third‑party systems with security compliance.</li><li>Embedded Secure SDLC practices (OWASP/JWT/OAuth) to reduce risk and improve quality.</li><li>Streamlined CI/CD with Jenkins (and GitHub Actions); improved delivery reliability and timelines.</li><li>Designed KPI dashboards (SSRS/T‑SQL) for executive reporting; optimized data queries/transformations.</li>
+                    </ul>
+                  </div>
+                  <div class="rcol">
+                    <div class="rhead">Collaboration</div>
+                    <ul class="rlist">
+                      <li>Partnered across DevOps, QA, and support to deliver releases and improve pipeline flow.</li><li>Facilitated stakeholder workshops / design thinking for MVP scope and feature definition.</li><li>Delivered executive roadmap updates and KPI reports to keep leaders aligned.</li><li>Translated business requirements into scalable technical solutions with BAs and non‑technical stakeholders.</li>
+                    </ul>
+                  </div>
+                  <div class="rcol">
+                    <div class="rhead">Ownership</div>
+                    <ul class="rlist">
+                      <li>Directed API integration projects end‑to‑end; reduced manual processes via automation.</li><li>Coordinated cross‑department release planning to ensure smooth launches.</li><li>Authored detailed technical documentation; strengthened knowledge sharing and onboarding.</li><li>Mentored junior engineers (clean code, architecture, agile practices).</li><li>Led debugging / root-cause analysis of legacy codebases; improved maintainability and reduced support needs.</li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="muted tiny">Tip: copy one line and make it specific to the story you’re telling.</div>
+              </div>
+            </details>
+
+            <div class="minirow">
+              <button class="mini ghost" type="button" data-action="clearFeedback" data-target="q25">Clear feedback</button>
+            </div>
+            <div class="feedback" id="fb_q25" hidden></div>
+          </div>
+        </div>
+      </div>
+    
+
+      <div class="qblock" data-id="q26" data-kind="closing">
+        <div class="qtop">
+          <div class="qtitle">How do strong engineers distinguish themselves on this team?</div>
+          <div class="tag">Ask them</div>
+        </div>
+
+        <div class="qa-grid">
+          <div class="builder">
+            <div class="builder-title">
+              <span>Answer Builder</span>
+              <span class="builder-sub">Context → Actions → Impact → Tradeoffs → Learning</span>
+            </div>
+
+            <div class="builder-grid" aria-label="Answer builder fields">
+              <div class="field field-ctx">
+                <div class="label">Context (10–15s)</div>
+                <textarea class="ta ta-small" id="ctx_q26" placeholder="Where were you? What was the system + stakes? Keep it tight."></textarea>
+              </div>
+
+              <div class="field field-act">
+                <div class="label">Actions (your moves)</div>
+                <textarea class="ta ta-big" id="act_q26" placeholder="2–5 bullets: what YOU did, how you decided, and how you communicated."></textarea>
+              </div>
+
+              <div class="field field-imp">
+                <div class="label">Impact (numbers if possible)</div>
+                <textarea class="ta ta-mid" id="imp_q26" placeholder="What improved? latency, reliability, defects, manual work, deployment time, stakeholder trust…"></textarea>
+              </div>
+
+              <div class="field field-trd">
+                <div class="label">Tradeoffs (show judgment)</div>
+                <textarea class="ta ta-mid" id="trd_q26" placeholder="What options existed? Why this choice? What risk did you accept/avoid?"></textarea>
+              </div>
+
+              <div class="field field-lrn">
+                <div class="label">Learning (senior signal)</div>
+                <textarea class="ta ta-small" id="lrn_q26" placeholder="What would you do again? What would you change next time?"></textarea>
+              </div>
+            </div>
+
+            <div class="builder-actions">
+              <button class="mini ghost" type="button" data-action="preview" data-target="q26">Preview</button>
+              <button class="mini primary" type="button" data-action="feedback" data-target="q26">Focused feedback</button>
+              <button class="mini" type="button" data-action="clearOne" data-target="q26">Clear</button>
+            </div>
+
+            <div class="preview" id="pv_q26" hidden>
+              <div class="preview-title">
+                <span>Spoken answer preview</span>
+                <span class="muted">(aim for 60–90 seconds)</span>
+              </div>
+              <div class="preview-body" id="pv_body_q26"></div>
+              <div class="minirow">
+                <button class="mini" type="button" data-action="copyPreview" data-target="q26">Copy preview</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="coach">
+            <div class="coach-title">
+              <span>Ideas to include</span>
+              <span class="coach-sub">anchor + themes</span>
+            </div>
+            <ul class="ideas"><li>Listen for: ownership, collaboration, operational excellence.</li>
+<li>Follow-up: “What behaviors do you want more of?”</li>
+<li>Ask how feedback/growth works (reviews, mentorship, leveling).</li></ul>
+
+            <details class="resumeBox">
+              <summary>Resume evidence you can steal</summary>
+              <div class="resumeInner" data-qresume="q26">
+                <div class="resumeCols">
+                  <div class="rcol">
+                    <div class="rhead">Technical Judgment</div>
+                    <ul class="rlist">
+                      <li>Modernized legacy .NET platforms into modular, scalable architectures; improved maintainability and reduced deployment time.</li><li>Built/integrated RESTful APIs &amp; web services; improved interoperability between internal + third‑party systems with security compliance.</li><li>Embedded Secure SDLC practices (OWASP/JWT/OAuth) to reduce risk and improve quality.</li><li>Streamlined CI/CD with Jenkins (and GitHub Actions); improved delivery reliability and timelines.</li><li>Designed KPI dashboards (SSRS/T‑SQL) for executive reporting; optimized data queries/transformations.</li>
+                    </ul>
+                  </div>
+                  <div class="rcol">
+                    <div class="rhead">Collaboration</div>
+                    <ul class="rlist">
+                      <li>Partnered across DevOps, QA, and support to deliver releases and improve pipeline flow.</li><li>Facilitated stakeholder workshops / design thinking for MVP scope and feature definition.</li><li>Delivered executive roadmap updates and KPI reports to keep leaders aligned.</li><li>Translated business requirements into scalable technical solutions with BAs and non‑technical stakeholders.</li>
+                    </ul>
+                  </div>
+                  <div class="rcol">
+                    <div class="rhead">Ownership</div>
+                    <ul class="rlist">
+                      <li>Directed API integration projects end‑to‑end; reduced manual processes via automation.</li><li>Coordinated cross‑department release planning to ensure smooth launches.</li><li>Authored detailed technical documentation; strengthened knowledge sharing and onboarding.</li><li>Mentored junior engineers (clean code, architecture, agile practices).</li><li>Led debugging / root-cause analysis of legacy codebases; improved maintainability and reduced support needs.</li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="muted tiny">Tip: copy one line and make it specific to the story you’re telling.</div>
+              </div>
+            </details>
+
+            <div class="minirow">
+              <button class="mini ghost" type="button" data-action="clearFeedback" data-target="q26">Clear feedback</button>
+            </div>
+            <div class="feedback" id="fb_q26" hidden></div>
+          </div>
+        </div>
+      </div>
+    
+    </section>
+    
+        </div>
+        <div class="muted small" style="padding: 6px 6px 2px;">Notes save in <strong>this browser only</strong> (LocalStorage). Open it elsewhere and it won’t have the saved answers.</div>
+      </div>
+
+      <div class="panel right">
+        <div style="font-weight:780; font-size: 13px; margin-bottom: 8px;">Compass + Guardrails</div>
+        <div class="muted small"><strong>Anchor Sentence</strong><br/>“I build reliable, scalable systems in ambiguous environments and communicate clearly while doing it.”<br/>Every answer should quietly prove this.</div>
+        <hr class="sep"/>
+
+        <div class="small" style="font-weight:760; margin-bottom:6px;">Technical Judgment</div>
+        <div class="fbRow">
+          <span class="pill">Designs for scale/failure/change</span>
+          <span class="pill">Explains why choices were made</span>
+          <span class="pill">Acknowledges tradeoffs unprompted</span>
+        </div>
+
+        <div class="small" style="font-weight:760; margin: 10px 0 6px;">Collaboration</div>
+        <div class="fbRow">
+          <span class="pill">Works across teams without ego</span>
+          <span class="pill">Handles disagreement calmly</span>
+          <span class="pill">Shares ownership, not territory</span>
+        </div>
+
+        <div class="small" style="font-weight:760; margin: 10px 0 6px;">Ownership</div>
+        <div class="fbRow">
+          <span class="pill">Beyond “my code”</span>
+          <span class="pill">Spots problems pre-ticket</span>
+          <span class="pill">Improves systems, not just features</span>
+        </div>
+
+        <hr class="sep"/>
+        <details open>
+          <summary style="cursor:pointer; font-weight:760; font-size: 12px; color: rgba(230,240,255,.88);">Export preview</summary>
+          <div class="preview" style="margin-top: 8px;">
+            <div class="muted small">(Click Export above to generate.)</div>
+            <div id="exportPreview" class="preview-body" style="margin-top: 8px;"></div>
+          </div>
+        </details>
+
+        <details>
+          <summary style="cursor:pointer; font-weight:760; font-size: 12px; color: rgba(230,240,255,.88); margin-top: 12px;">What “Focused feedback” checks</summary>
+          <div class="muted small" style="margin-top: 8px; line-height: 1.45;">
+            It looks for the anchor signals (reliability/scale/ambiguity/communication) plus the three themes. It also flags hedging (“maybe”, “not sure”) and asks for at least one measurable outcome.
+          </div>
+        </details>
+      </div>
+    </main>
+
+    <div class="toast" id="toast">Saved</div>
+  </div>
+
+  <script src="mastercard_interview_prep_stephanie_builder_v7_mobile.js" defer></script>
+</body>
+</html>
