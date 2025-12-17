@@ -1,372 +1,2573 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Mastercard Interview Prep – Stephanie</title>
-  <style>
-    :root { --w: 980px; }
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; background: #0b0f14; color: #e8eef6; }
-    header { position: sticky; top: 0; background: rgba(11,15,20,.9); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,.08); z-index: 10; }
-    .wrap { max-width: var(--w); margin: 0 auto; padding: 14px 16px; }
-    h1 { font-size: 18px; margin: 0; letter-spacing: .2px; }
-    .sub { opacity: .75; font-size: 13px; margin-top: 4px; }
-    .bar { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
-    button, .chip {
-      border: 1px solid rgba(255,255,255,.14);
-      background: rgba(255,255,255,.06);
-      color: #e8eef6;
-      padding: 9px 11px;
-      border-radius: 12px;
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 13px;
-    }
-    button:hover { background: rgba(255,255,255,.10); }
-    button:active { transform: translateY(1px); }
-    .chip { cursor: default; opacity: .85; }
-    main { max-width: var(--w); margin: 0 auto; padding: 16px; display: grid; gap: 12px; }
-    .grid { display: grid; grid-template-columns: 1.2fr .8fr; gap: 12px; }
-    @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
-    .card {
-      border: 1px solid rgba(255,255,255,.10);
-      background: rgba(255,255,255,.04);
-      border-radius: 16px;
-      padding: 14px;
-      box-shadow: 0 8px 30px rgba(0,0,0,.25);
-    }
-    .card h2 { margin: 0 0 8px; font-size: 15px; }
-    .card h3 { margin: 14px 0 6px; font-size: 13px; opacity: .95; }
-    .muted { opacity: .75; font-size: 13px; line-height: 1.45; }
-    .kicker { font-size: 12px; opacity: .75; margin-top: 2px; }
-    .q { border-top: 1px solid rgba(255,255,255,.08); padding-top: 12px; margin-top: 12px; }
-    .q:first-child { border-top: none; padding-top: 0; margin-top: 0; }
-    .q-title { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
-    .q-title strong { font-size: 14px; }
-    .tag { font-size: 11px; opacity: .8; border: 1px solid rgba(255,255,255,.14); padding: 3px 8px; border-radius: 999px; white-space: nowrap; }
-    textarea {
-      width: 100%;
-      min-height: 110px;
-      border-radius: 14px;
-      border: 1px solid rgba(255,255,255,.14);
-      background: rgba(0,0,0,.35);
-      color: #e8eef6;
-      padding: 10px 10px;
-      font-size: 13px;
-      line-height: 1.45;
-      resize: vertical;
-      outline: none;
-    }
-    textarea:focus { border-color: rgba(120,180,255,.55); box-shadow: 0 0 0 3px rgba(120,180,255,.12); }
-    .row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
-    .small { font-size: 12px; opacity: .75; }
-    .toast {
-      position: fixed; right: 16px; bottom: 16px;
-      background: rgba(20,26,34,.92);
-      border: 1px solid rgba(255,255,255,.12);
-      padding: 10px 12px;
-      border-radius: 14px;
-      box-shadow: 0 10px 35px rgba(0,0,0,.35);
-      opacity: 0; transform: translateY(10px);
-      transition: opacity .18s ease, transform .18s ease;
-      font-size: 13px;
-      pointer-events: none;
-    }
-    .toast.show { opacity: 1; transform: translateY(0); }
-    details { border-top: 1px solid rgba(255,255,255,.08); padding-top: 10px; margin-top: 10px; }
-    summary { cursor: pointer; font-weight: 700; font-size: 13px; }
-    pre {
-      background: rgba(0,0,0,.35);
-      border: 1px solid rgba(255,255,255,.10);
-      border-radius: 14px;
-      padding: 10px;
-      overflow: auto;
-      font-size: 12px;
-      line-height: 1.45;
-      white-space: pre-wrap;
-      word-wrap: break-word;
-      margin: 10px 0 0;
-    }
-    .pillrow { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
-    .pill { font-size: 12px; opacity: .85; border: 1px dashed rgba(255,255,255,.18); padding: 6px 10px; border-radius: 999px; }
-    footer { max-width: var(--w); margin: 0 auto; padding: 0 16px 22px; opacity: .65; font-size: 12px; }
-    a { color: inherit; }
-  </style>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Mastercard Interview Prep – Stephanie (Builder)</title>
+  <link rel="stylesheet" href="./styles.css"/>
 </head>
 <body>
-<header>
-  <div class="wrap">
-    <h1>Mastercard Interview Prep – Stephanie (Interactive)</h1>
-    <div class="sub">Type answers, autosave locally in your browser, export for fine-tuning.</div>
-    <div class="bar">
-      <button id="btnExportMd">Export → Markdown</button>
-      <button id="btnExportJson">Export → JSON</button>
-      <button id="btnCopy">Copy Export</button>
-      <button id="btnPrint">Print</button>
-      <button id="btnClear">Clear All</button>
-      <span class="chip" id="saveState">Autosave: ON (Local)</span>
-    </div>
-  </div>
-</header>
+  <div class="bg"></div>
 
-<main>
-  <div class="grid">
-    <section class="card" id="left">
-      <h2>Practice Questions (Type Her Answers)</h2>
-      <div class="muted">Aim for bullet notes, not scripts. If an answer hits two themes (Judgment / Collaboration / Ownership), it’s strong.</div>
-
-      <div id="questions"></div>
-    </section>
-
-    <aside class="card" id="right">
-      <h2>Compass + Guardrails</h2>
-
-      <h3>Anchor Sentence</h3>
-      <div class="muted"><strong>“I build reliable, scalable systems in ambiguous environments and communicate clearly while doing it.”</strong></div>
-      <div class="kicker">Every answer should quietly prove this.</div>
-
-      <h3>Three Themes</h3>
-      <div class="pillrow">
-        <div class="pill">🧠 Judgment: scale • failure • tradeoffs</div>
-        <div class="pill">🤝 Collaboration: calm • cross-team</div>
-        <div class="pill">🧭 Ownership: beyond my code</div>
+  <header class="top">
+    <div class="topInner">
+      <div class="titleBlock">
+        <h1>Mastercard Interview Prep – Stephanie <span class="muted">(Interactive)</span></h1>
+        <p class="sub">
+          Practice answers. Get focused feedback tied to the anchor + three themes. Autosaves locally in your browser.
+        </p>
       </div>
 
-      <h3>Behavioral Cheat Code</h3>
-      <div class="muted"><strong>Context → Decision → Outcome → Learning</strong> (Learning = senior signal.)</div>
+      <div class="toolbar" role="toolbar" aria-label="Actions">
+        <button class="btn" id="btnAnalyzeAll" type="button">Analyze all</button>
+        <button class="btn btn-secondary" id="btnExportMd" type="button">Export → Markdown</button>
+        <button class="btn btn-secondary" id="btnExportJson" type="button">Export → JSON</button>
+        <button class="btn btn-secondary" id="btnCopy" type="button">Copy export</button>
+        <button class="btn btn-secondary" id="btnPrint" type="button">Print</button>
+        <button class="btn btn-danger" id="btnClearAll" type="button">Clear all</button>
 
-      <h3>Reset Between Interviews</h3>
-      <div class="muted"><strong>“Same story. Same person. Same calm confidence.”</strong></div>
+        <span class="pill" id="autosavePill">Autosave: ON (Local)</span>
+        <span class="pill pill-muted" id="jsStatus">JS: not loaded</span>
+      </div>
 
-      <details open>
-        <summary>Outside Work / Side Project Rule (Use If Asked)</summary>
-        <div class="muted" style="margin-top:8px;">
-          <strong>Prime directive:</strong> Don’t “confess” or proactively correct anything. Answer only if asked, be boring, then move on.<br><br>
-          <strong>Canonical answer shape:</strong><br>
-          “I don’t have outside employment in the sense of client work or anything that overlaps with Mastercard.
-          I’ve contributed limited technical work to an education-focused project my husband runs, entirely outside work hours,
-          with no overlap in domain, data, or IP. I’m careful about boundaries, and my full-time role is always my priority.”
+      <div class="toolsRow">
+        <div class="tool">
+          <label class="toolLabel" for="search">Search</label>
+          <input id="search" class="input" type="search" placeholder="Find a question (e.g., tradeoffs, incident, disagreement)…" autocomplete="off"/>
         </div>
-      </details>
-
-      <details>
-        <summary>Export Preview</summary>
-        <pre id="exportPreview">(Click Export above to generate.)</pre>
-      </details>
-
-      <div class="row">
-        <div class="small">Tip: 3–6 bullets per answer. Add one “tradeoff” + one “learning” when you can. Senior-mode.</div>
+        <div class="tool">
+          <label class="toolLabel" for="jump">Jump</label>
+          <select id="jump" class="select">
+            <option value="">Jump to…</option>
+          </select>
+        </div>
+        <div class="tool toolRight">
+          <label class="toolLabel" for="focusMode">Focus mode</label>
+          <button class="btn btn-secondary" id="focusMode" type="button" aria-pressed="false">Off</button>
+        </div>
       </div>
-    </aside>
-  </div>
+    </div>
+  </header>
 
-  <div class="toast" id="toast">Saved.</div>
-</main>
+  <main class="main">
+    <div class="layout">
+      <section class="panel panelLeft" aria-label="Practice questions">
+        <div class="panelHead">
+          <h2>Practice Questions</h2>
+          <p class="muted">Aim for bullet notes, not scripts. Strong answers quietly hit: <strong>Judgment</strong>, <strong>Collaboration</strong>, <strong>Ownership</strong>.</p>
+        </div>
 
-<footer>
-  <div class="wrap">
-    Notes save in <strong>this browser only</strong> (LocalStorage). If you open this file on a different device/browser, it won’t have the saved answers.
-  </div>
-</footer>
+        
+    <section class="section">
+      <div class="sectionHead">
+        <h2>1. Opening &amp; Narrative</h2>
+        <div class="sectionTools">
+          <button class="btn btn-mini js-openSection" type="button">Open all</button>
+          <button class="btn btn-mini js-closeSection" type="button">Close all</button>
+        </div>
+      </div>
+      <div class="sectionBody">
+        
+    <article class="qcard" id="q1" data-qid="q1">
+      <header class="qhead">
+        <div class="qtitle">
+          <div class="qnum">Q1</div>
+          <div class="qtext">Walk me through your background and how you arrived at this point in your career.</div>
+        </div>
+        <div class="qmeta">
+          <span class="badge">Guaranteed</span>
+          <button class="btn btn-mini js-toggle" type="button" aria-expanded="false" aria-controls="q1-body">Open</button>
+        </div>
+      </header>
 
-<script>
-  const STORAGE_KEY = "mc_interview_prep_v1";
-  const $questions = document.getElementById("questions");
-  const $preview = document.getElementById("exportPreview");
-  const $toast = document.getElementById("toast");
-  let lastExport = "";
+      <div class="qbody" id="q1-body" hidden>
+        <div class="qgrid">
+          <div class="qleft">
+            <div class="fieldHead">
+              <div>
+                <div class="label">Answer (bullet notes)</div>
+                <div class="hint">Aim 3–6 bullets. Say it out loud in 60–90s.</div>
+              </div>
+              <div class="fieldTools">
+                <button class="btn btn-mini js-dictate" type="button" title="Voice to text (Chrome/Edge best)">🎤 Dictate</button>
+                <button class="btn btn-mini js-clearField" type="button" data-target="q1-answer">Clear</button>
+              </div>
+            </div>
+            <textarea id="q1-answer" class="ta ta-main" rows="8" placeholder="Type bullets here… (Example: • Context… • What I did… • Result… • Tradeoff… • Learning…)"></textarea>
 
-  const sections = [
-    { title: "1. Opening & Narrative", items: [
-      { id: "q1", tag: "Guaranteed", text: "Walk me through your background and how you arrived at this point in your career." },
-      { id: "q2", tag: "Likely", text: "What interested you in this role and in Mastercard specifically?" },
-      { id: "q3", tag: "Likely", text: "How would you describe your strengths as a senior engineer?" }
-    ]},
-    { title: "2. Technical Depth & System Design", items: [
-      { id: "q4", tag: "Very likely", text: "Tell me about a system you designed or significantly modernized (legacy → modular .NET, APIs, CI/CD)." },
-      { id: "q5", tag: "Very likely", text: "How did you approach reliability, security, and scalability in that system?" },
-      { id: "q6", tag: "Very likely", text: "What tradeoffs did you have to make, and why?" },
-      { id: "q7", tag: "Likely", text: "If you were redesigning that system today, what would you change?" }
-    ]},
-    { title: "3. Ownership & Decision-Making", items: [
-      { id: "q8", tag: "Very likely", text: "Tell me about a time you took ownership of a problem that wasn’t clearly yours." },
-      { id: "q9", tag: "Likely", text: "Describe a difficult technical decision you made with incomplete information." },
-      { id: "q10", tag: "Likely", text: "How do you decide when something is “good enough” to ship?" }
-    ]},
-    { title: "4. Production Issues, Failure & Learning", items: [
-      { id: "q11", tag: "Very likely", text: "Tell me about a production issue or outage you were involved in." },
-      { id: "q12", tag: "Very likely", text: "How did you diagnose the issue and communicate during the incident?" },
-      { id: "q13", tag: "Very likely", text: "What changed afterward to prevent it from happening again?" }
-    ]},
-    { title: "5. Collaboration & Conflict", items: [
-      { id: "q14", tag: "Guaranteed", text: "Tell me about a disagreement with another engineer or stakeholder." },
-      { id: "q15", tag: "Likely", text: "How do you handle feedback you don’t initially agree with?" },
-      { id: "q16", tag: "Guaranteed", text: "How do you work with non-technical partners like product, QA, or leadership?" }
-    ]},
-    { title: "6. Leadership & Mentorship", items: [
-      { id: "q17", tag: "Likely", text: "How have you mentored junior engineers or raised team standards?" },
-      { id: "q18", tag: "Likely", text: "How do you balance hands-on development with leadership responsibilities?" }
-    ]},
-    { title: "7. Working Style & Culture Fit", items: [
-      { id: "q19", tag: "Likely", text: "What does a productive engineering team look like to you?" },
-      { id: "q20", tag: "Very likely", text: "How do you balance speed, quality, and security in delivery?" },
-      { id: "q21", tag: "Likely", text: "How do you handle ambiguity or shifting priorities?" }
-    ]},
-    { title: "8. Growth & Self-Awareness", items: [
-      { id: "q22", tag: "Likely", text: "What’s an area you’re still working to improve as an engineer?" },
-      { id: "q23", tag: "Likely", text: "How do you keep your skills current across evolving technologies?" }
-    ]},
-    { title: "9. Closing Questions (Choose 1–2)", items: [
-      { id: "q24", tag: "Ask them", text: "What does success look like for this role in the first six months?" },
-      { id: "q25", tag: "Ask them", text: "What challenges is the team most focused on right now?" },
-      { id: "q26", tag: "Ask them", text: "How do strong engineers distinguish themselves on this team?" }
-    ]},
-    { title: "Side Projects / Outside Work (Only if asked)", items: [
-      { id: "q27", tag: "If asked", text: "Do you do any outside work? (Use the canonical “boring boundaries” answer.)" }
-    ]}
-  ];
+            <details class="builder">
+              <summary>Builder (optional): Context → Actions → Impact → Tradeoffs → Learning</summary>
+              <div class="builderGrid">
+                <div class="bfield">
+                  <div class="bhead"><span>Context</span><span class="bsub">What was happening? Constraints?</span></div>
+                  <textarea id="q1-ctx" class="ta" rows="2" placeholder="1–2 sentences. System + stakes + constraints."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Actions</span><span class="bsub">What did YOU do?</span></div>
+                  <textarea id="q1-act" class="ta" rows="2" placeholder="2–3 bullets. Decisions + why."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Impact</span><span class="bsub">What changed?</span></div>
+                  <textarea id="q1-imp" class="ta" rows="2" placeholder="Numbers if possible (time saved, defects, uptime, speed)."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Tradeoffs</span><span class="bsub">What did you choose and why?</span></div>
+                  <textarea id="q1-trd" class="ta" rows="2" placeholder="Name the tradeoff and mitigation."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Learning</span><span class="bsub">What would you do differently?</span></div>
+                  <textarea id="q1-lrn" class="ta" rows="2" placeholder="One improvement. Senior signal."></textarea>
+                </div>
+              </div>
+              <div class="builderActions">
+                <button class="btn btn-secondary js-build" type="button" data-qid="q1">Build answer from builder</button>
+              </div>
+            </details>
 
-  function loadState() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? JSON.parse(raw) : {};
-    } catch {
-      return {};
-    }
-  }
+          </div>
 
-  function saveState(state) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    toast("Saved.");
-  }
+          <aside class="qright">
+            <div class="sideCard">
+              <div class="sideTitle">Ideas to include</div>
+              <ul class="bullets">
+                <li>Past → Present → Future (30s each).</li><li>Name 1 signature strength (diagnosis, reliability, mentorship).</li><li>End with: why this role now (scale, reliability, standards).</li><li>Anchor: reliable + scalable + ambiguity + clear comms.</li>
+              </ul>
+            </div>
 
-  function toast(msg) {
-    $toast.textContent = msg;
-    $toast.classList.add("show");
-    setTimeout(() => $toast.classList.remove("show"), 900);
-  }
+            <div class="sideCard feedbackCard">
+              <div class="sideTitleRow">
+                <div class="sideTitle">Focused feedback</div>
+                <div class="chips" aria-label="Theme scores">
+                  <span class="chip chip-muted" data-chip="q1-anchor">Anchor: —</span>
+                  <span class="chip chip-muted" data-chip="q1-tj">TJ: —</span>
+                  <span class="chip chip-muted" data-chip="q1-col">Collab: —</span>
+                  <span class="chip chip-muted" data-chip="q1-own">Own: —</span>
+                </div>
+              </div>
+              <div class="feedbackBtns">
+                <button class="btn js-feedback" type="button" data-qid="q1">Get feedback</button>
+                <button class="btn btn-secondary js-clearFeedback" type="button" data-qid="q1">Clear</button>
+              </div>
+              <div class="feedbackOut" id="q1-fb" aria-live="polite">
+                <div class="muted">Click <strong>Get feedback</strong> after you write. (No feedback spam while typing.)</div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </article>
+    
+    <article class="qcard" id="q2" data-qid="q2">
+      <header class="qhead">
+        <div class="qtitle">
+          <div class="qnum">Q2</div>
+          <div class="qtext">What interested you in this role and in Mastercard specifically?</div>
+        </div>
+        <div class="qmeta">
+          <span class="badge">Likely</span>
+          <button class="btn btn-mini js-toggle" type="button" aria-expanded="false" aria-controls="q2-body">Open</button>
+        </div>
+      </header>
 
-  function render() {
-    const state = loadState();
-    $questions.innerHTML = "";
+      <div class="qbody" id="q2-body" hidden>
+        <div class="qgrid">
+          <div class="qleft">
+            <div class="fieldHead">
+              <div>
+                <div class="label">Answer (bullet notes)</div>
+                <div class="hint">Aim 3–6 bullets. Say it out loud in 60–90s.</div>
+              </div>
+              <div class="fieldTools">
+                <button class="btn btn-mini js-dictate" type="button" title="Voice to text (Chrome/Edge best)">🎤 Dictate</button>
+                <button class="btn btn-mini js-clearField" type="button" data-target="q2-answer">Clear</button>
+              </div>
+            </div>
+            <textarea id="q2-answer" class="ta ta-main" rows="8" placeholder="Type bullets here… (Example: • Context… • What I did… • Result… • Tradeoff… • Learning…)"></textarea>
 
-    sections.forEach(sec => {
-      const wrap = document.createElement("div");
-      wrap.className = "q";
+            <details class="builder">
+              <summary>Builder (optional): Context → Actions → Impact → Tradeoffs → Learning</summary>
+              <div class="builderGrid">
+                <div class="bfield">
+                  <div class="bhead"><span>Context</span><span class="bsub">What was happening? Constraints?</span></div>
+                  <textarea id="q2-ctx" class="ta" rows="2" placeholder="1–2 sentences. System + stakes + constraints."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Actions</span><span class="bsub">What did YOU do?</span></div>
+                  <textarea id="q2-act" class="ta" rows="2" placeholder="2–3 bullets. Decisions + why."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Impact</span><span class="bsub">What changed?</span></div>
+                  <textarea id="q2-imp" class="ta" rows="2" placeholder="Numbers if possible (time saved, defects, uptime, speed)."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Tradeoffs</span><span class="bsub">What did you choose and why?</span></div>
+                  <textarea id="q2-trd" class="ta" rows="2" placeholder="Name the tradeoff and mitigation."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Learning</span><span class="bsub">What would you do differently?</span></div>
+                  <textarea id="q2-lrn" class="ta" rows="2" placeholder="One improvement. Senior signal."></textarea>
+                </div>
+              </div>
+              <div class="builderActions">
+                <button class="btn btn-secondary js-build" type="button" data-qid="q2">Build answer from builder</button>
+              </div>
+            </details>
 
-      const h = document.createElement("h3");
-      h.textContent = sec.title;
-      wrap.appendChild(h);
+          </div>
 
-      sec.items.forEach(item => {
-        const block = document.createElement("div");
-        block.className = "q";
+          <aside class="qright">
+            <div class="sideCard">
+              <div class="sideTitle">Ideas to include</div>
+              <ul class="bullets">
+                <li>Say what you DO know: scale, security, payments, engineering rigor.</li><li>Bridge missing req: 'Since the posting isn't public…'</li><li>Connect to your work: reliability, incidents, modernization, security.</li><li>Ask 1 smart clarifier (90-day success, role split).</li>
+              </ul>
+            </div>
 
-        const top = document.createElement("div");
-        top.className = "q-title";
+            <div class="sideCard feedbackCard">
+              <div class="sideTitleRow">
+                <div class="sideTitle">Focused feedback</div>
+                <div class="chips" aria-label="Theme scores">
+                  <span class="chip chip-muted" data-chip="q2-anchor">Anchor: —</span>
+                  <span class="chip chip-muted" data-chip="q2-tj">TJ: —</span>
+                  <span class="chip chip-muted" data-chip="q2-col">Collab: —</span>
+                  <span class="chip chip-muted" data-chip="q2-own">Own: —</span>
+                </div>
+              </div>
+              <div class="feedbackBtns">
+                <button class="btn js-feedback" type="button" data-qid="q2">Get feedback</button>
+                <button class="btn btn-secondary js-clearFeedback" type="button" data-qid="q2">Clear</button>
+              </div>
+              <div class="feedbackOut" id="q2-fb" aria-live="polite">
+                <div class="muted">Click <strong>Get feedback</strong> after you write. (No feedback spam while typing.)</div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </article>
+    
+    <article class="qcard" id="q3" data-qid="q3">
+      <header class="qhead">
+        <div class="qtitle">
+          <div class="qnum">Q3</div>
+          <div class="qtext">How would you describe your strengths as a senior engineer?</div>
+        </div>
+        <div class="qmeta">
+          <span class="badge">Likely</span>
+          <button class="btn btn-mini js-toggle" type="button" aria-expanded="false" aria-controls="q3-body">Open</button>
+        </div>
+      </header>
 
-        const title = document.createElement("strong");
-        title.textContent = item.text;
+      <div class="qbody" id="q3-body" hidden>
+        <div class="qgrid">
+          <div class="qleft">
+            <div class="fieldHead">
+              <div>
+                <div class="label">Answer (bullet notes)</div>
+                <div class="hint">Aim 3–6 bullets. Say it out loud in 60–90s.</div>
+              </div>
+              <div class="fieldTools">
+                <button class="btn btn-mini js-dictate" type="button" title="Voice to text (Chrome/Edge best)">🎤 Dictate</button>
+                <button class="btn btn-mini js-clearField" type="button" data-target="q3-answer">Clear</button>
+              </div>
+            </div>
+            <textarea id="q3-answer" class="ta ta-main" rows="8" placeholder="Type bullets here… (Example: • Context… • What I did… • Result… • Tradeoff… • Learning…)"></textarea>
 
-        const tag = document.createElement("span");
-        tag.className = "tag";
-        tag.textContent = item.tag;
+            <details class="builder">
+              <summary>Builder (optional): Context → Actions → Impact → Tradeoffs → Learning</summary>
+              <div class="builderGrid">
+                <div class="bfield">
+                  <div class="bhead"><span>Context</span><span class="bsub">What was happening? Constraints?</span></div>
+                  <textarea id="q3-ctx" class="ta" rows="2" placeholder="1–2 sentences. System + stakes + constraints."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Actions</span><span class="bsub">What did YOU do?</span></div>
+                  <textarea id="q3-act" class="ta" rows="2" placeholder="2–3 bullets. Decisions + why."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Impact</span><span class="bsub">What changed?</span></div>
+                  <textarea id="q3-imp" class="ta" rows="2" placeholder="Numbers if possible (time saved, defects, uptime, speed)."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Tradeoffs</span><span class="bsub">What did you choose and why?</span></div>
+                  <textarea id="q3-trd" class="ta" rows="2" placeholder="Name the tradeoff and mitigation."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Learning</span><span class="bsub">What would you do differently?</span></div>
+                  <textarea id="q3-lrn" class="ta" rows="2" placeholder="One improvement. Senior signal."></textarea>
+                </div>
+              </div>
+              <div class="builderActions">
+                <button class="btn btn-secondary js-build" type="button" data-qid="q3">Build answer from builder</button>
+              </div>
+            </details>
 
-        top.appendChild(title);
-        top.appendChild(tag);
+          </div>
 
-        const ta = document.createElement("textarea");
-        ta.placeholder = "Type bullets here… (3–6 bullets is plenty)";
-        ta.value = state[item.id] || "";
-        ta.addEventListener("input", () => {
-          const next = loadState();
-          next[item.id] = ta.value;
-          saveState(next);
-        });
+          <aside class="qright">
+            <div class="sideCard">
+              <div class="sideTitle">Ideas to include</div>
+              <ul class="bullets">
+                <li>Pick 3 strengths: judgment, collaboration, ownership.</li><li>Add proof: a quick example of each (1 sentence).</li><li>Call out risk-spotting + mentoring as senior signals.</li><li>Anchor: communicate clearly under pressure.</li>
+              </ul>
+            </div>
 
-        block.appendChild(top);
-        block.appendChild(ta);
-        wrap.appendChild(block);
-      });
+            <div class="sideCard feedbackCard">
+              <div class="sideTitleRow">
+                <div class="sideTitle">Focused feedback</div>
+                <div class="chips" aria-label="Theme scores">
+                  <span class="chip chip-muted" data-chip="q3-anchor">Anchor: —</span>
+                  <span class="chip chip-muted" data-chip="q3-tj">TJ: —</span>
+                  <span class="chip chip-muted" data-chip="q3-col">Collab: —</span>
+                  <span class="chip chip-muted" data-chip="q3-own">Own: —</span>
+                </div>
+              </div>
+              <div class="feedbackBtns">
+                <button class="btn js-feedback" type="button" data-qid="q3">Get feedback</button>
+                <button class="btn btn-secondary js-clearFeedback" type="button" data-qid="q3">Clear</button>
+              </div>
+              <div class="feedbackOut" id="q3-fb" aria-live="polite">
+                <div class="muted">Click <strong>Get feedback</strong> after you write. (No feedback spam while typing.)</div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </article>
+    
+      </div>
+    </section>
+    
+    <section class="section">
+      <div class="sectionHead">
+        <h2>2. Technical Depth &amp; System Design</h2>
+        <div class="sectionTools">
+          <button class="btn btn-mini js-openSection" type="button">Open all</button>
+          <button class="btn btn-mini js-closeSection" type="button">Close all</button>
+        </div>
+      </div>
+      <div class="sectionBody">
+        
+    <article class="qcard" id="q4" data-qid="q4">
+      <header class="qhead">
+        <div class="qtitle">
+          <div class="qnum">Q4</div>
+          <div class="qtext">Tell me about a system you designed or significantly modernized (legacy → modular .NET, APIs, CI/CD).</div>
+        </div>
+        <div class="qmeta">
+          <span class="badge">Very likely</span>
+          <button class="btn btn-mini js-toggle" type="button" aria-expanded="false" aria-controls="q4-body">Open</button>
+        </div>
+      </header>
 
-      $questions.appendChild(wrap);
-    });
-  }
+      <div class="qbody" id="q4-body" hidden>
+        <div class="qgrid">
+          <div class="qleft">
+            <div class="fieldHead">
+              <div>
+                <div class="label">Answer (bullet notes)</div>
+                <div class="hint">Aim 3–6 bullets. Say it out loud in 60–90s.</div>
+              </div>
+              <div class="fieldTools">
+                <button class="btn btn-mini js-dictate" type="button" title="Voice to text (Chrome/Edge best)">🎤 Dictate</button>
+                <button class="btn btn-mini js-clearField" type="button" data-target="q4-answer">Clear</button>
+              </div>
+            </div>
+            <textarea id="q4-answer" class="ta ta-main" rows="8" placeholder="Type bullets here… (Example: • Context… • What I did… • Result… • Tradeoff… • Learning…)"></textarea>
 
-  function buildExport() {
-    const state = loadState();
-    return {
-      meta: {
-        title: "Mastercard Interview Prep – Stephanie",
-        version: "v1",
-        generatedAt: new Date().toISOString()
-      },
-      answers: state
-    };
-  }
+            <details class="builder">
+              <summary>Builder (optional): Context → Actions → Impact → Tradeoffs → Learning</summary>
+              <div class="builderGrid">
+                <div class="bfield">
+                  <div class="bhead"><span>Context</span><span class="bsub">What was happening? Constraints?</span></div>
+                  <textarea id="q4-ctx" class="ta" rows="2" placeholder="1–2 sentences. System + stakes + constraints."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Actions</span><span class="bsub">What did YOU do?</span></div>
+                  <textarea id="q4-act" class="ta" rows="2" placeholder="2–3 bullets. Decisions + why."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Impact</span><span class="bsub">What changed?</span></div>
+                  <textarea id="q4-imp" class="ta" rows="2" placeholder="Numbers if possible (time saved, defects, uptime, speed)."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Tradeoffs</span><span class="bsub">What did you choose and why?</span></div>
+                  <textarea id="q4-trd" class="ta" rows="2" placeholder="Name the tradeoff and mitigation."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Learning</span><span class="bsub">What would you do differently?</span></div>
+                  <textarea id="q4-lrn" class="ta" rows="2" placeholder="One improvement. Senior signal."></textarea>
+                </div>
+              </div>
+              <div class="builderActions">
+                <button class="btn btn-secondary js-build" type="button" data-qid="q4">Build answer from builder</button>
+              </div>
+            </details>
 
-  function exportMarkdown() {
-    const state = loadState();
-    let md = `# Mastercard Interview Prep – Stephanie\n\n`;
-    md += `Generated: ${new Date().toLocaleString()}\n\n---\n\n`;
-    md += `## Anchor Sentence\n“I build reliable, scalable systems in ambiguous environments and communicate clearly while doing it.”\n\n---\n\n`;
+          </div>
 
-    sections.forEach(sec => {
-      md += `## ${sec.title}\n\n`;
-      sec.items.forEach(item => {
-        md += `**${item.text}** _(${item.tag})_\n\n`;
-        const ans = (state[item.id] || "").trim();
-        md += ans ? `${ans}\n\n` : `_(no notes yet)_\n\n`;
-        md += `---\n\n`;
-      });
-    });
+          <aside class="qright">
+            <div class="sideCard">
+              <div class="sideTitle">Ideas to include</div>
+              <ul class="bullets">
+                <li>State the system + problem + constraints (legacy, risk, timeline).</li><li>Explain your design choices and why (modularity, APIs, CI/CD).</li><li>Include measurable impact (deploy time, defects, uptime, cycle time).</li><li>Name one failure mode you designed for.</li>
+              </ul>
+            </div>
 
-    md += `\n## Outside Work Canonical Answer (If asked)\n`;
-    md += `I don’t have outside employment in the sense of client work or anything that overlaps with Mastercard. I’ve contributed limited technical work to an education-focused project my husband runs, entirely outside work hours, with no overlap in domain, data, or IP. I’m careful about boundaries, and my full-time role is always my priority.\n`;
+            <div class="sideCard feedbackCard">
+              <div class="sideTitleRow">
+                <div class="sideTitle">Focused feedback</div>
+                <div class="chips" aria-label="Theme scores">
+                  <span class="chip chip-muted" data-chip="q4-anchor">Anchor: —</span>
+                  <span class="chip chip-muted" data-chip="q4-tj">TJ: —</span>
+                  <span class="chip chip-muted" data-chip="q4-col">Collab: —</span>
+                  <span class="chip chip-muted" data-chip="q4-own">Own: —</span>
+                </div>
+              </div>
+              <div class="feedbackBtns">
+                <button class="btn js-feedback" type="button" data-qid="q4">Get feedback</button>
+                <button class="btn btn-secondary js-clearFeedback" type="button" data-qid="q4">Clear</button>
+              </div>
+              <div class="feedbackOut" id="q4-fb" aria-live="polite">
+                <div class="muted">Click <strong>Get feedback</strong> after you write. (No feedback spam while typing.)</div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </article>
+    
+    <article class="qcard" id="q5" data-qid="q5">
+      <header class="qhead">
+        <div class="qtitle">
+          <div class="qnum">Q5</div>
+          <div class="qtext">How did you approach reliability, security, and scalability in that system?</div>
+        </div>
+        <div class="qmeta">
+          <span class="badge">Very likely</span>
+          <button class="btn btn-mini js-toggle" type="button" aria-expanded="false" aria-controls="q5-body">Open</button>
+        </div>
+      </header>
 
-    lastExport = md;
-    $preview.textContent = md;
-    toast("Exported Markdown.");
-  }
+      <div class="qbody" id="q5-body" hidden>
+        <div class="qgrid">
+          <div class="qleft">
+            <div class="fieldHead">
+              <div>
+                <div class="label">Answer (bullet notes)</div>
+                <div class="hint">Aim 3–6 bullets. Say it out loud in 60–90s.</div>
+              </div>
+              <div class="fieldTools">
+                <button class="btn btn-mini js-dictate" type="button" title="Voice to text (Chrome/Edge best)">🎤 Dictate</button>
+                <button class="btn btn-mini js-clearField" type="button" data-target="q5-answer">Clear</button>
+              </div>
+            </div>
+            <textarea id="q5-answer" class="ta ta-main" rows="8" placeholder="Type bullets here… (Example: • Context… • What I did… • Result… • Tradeoff… • Learning…)"></textarea>
 
-  function exportJson() {
-    const payload = buildExport();
-    lastExport = JSON.stringify(payload, null, 2);
-    $preview.textContent = lastExport;
-    toast("Exported JSON.");
-  }
+            <details class="builder">
+              <summary>Builder (optional): Context → Actions → Impact → Tradeoffs → Learning</summary>
+              <div class="builderGrid">
+                <div class="bfield">
+                  <div class="bhead"><span>Context</span><span class="bsub">What was happening? Constraints?</span></div>
+                  <textarea id="q5-ctx" class="ta" rows="2" placeholder="1–2 sentences. System + stakes + constraints."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Actions</span><span class="bsub">What did YOU do?</span></div>
+                  <textarea id="q5-act" class="ta" rows="2" placeholder="2–3 bullets. Decisions + why."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Impact</span><span class="bsub">What changed?</span></div>
+                  <textarea id="q5-imp" class="ta" rows="2" placeholder="Numbers if possible (time saved, defects, uptime, speed)."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Tradeoffs</span><span class="bsub">What did you choose and why?</span></div>
+                  <textarea id="q5-trd" class="ta" rows="2" placeholder="Name the tradeoff and mitigation."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Learning</span><span class="bsub">What would you do differently?</span></div>
+                  <textarea id="q5-lrn" class="ta" rows="2" placeholder="One improvement. Senior signal."></textarea>
+                </div>
+              </div>
+              <div class="builderActions">
+                <button class="btn btn-secondary js-build" type="button" data-qid="q5">Build answer from builder</button>
+              </div>
+            </details>
 
-  async function copyExport() {
-    if (!lastExport) {
-      toast("Nothing to copy yet. Export first.");
-      return;
-    }
-    try {
-      await navigator.clipboard.writeText(lastExport);
-      toast("Copied to clipboard.");
-    } catch {
-      toast("Copy failed (browser blocked). Use manual copy from preview.");
-    }
-  }
+          </div>
 
-  function printPage() { window.print(); }
+          <aside class="qright">
+            <div class="sideCard">
+              <div class="sideTitle">Ideas to include</div>
+              <ul class="bullets">
+                <li>Security: least privilege, secrets, OWASP, authZ/authN, audits.</li><li>Reliability: monitoring, alerts, SLO-ish thinking, rollback plan.</li><li>Scalability: load patterns, caching, data access, backpressure.</li><li>Say 1 tradeoff you accepted and why.</li>
+              </ul>
+            </div>
 
-  function clearAll() {
-    if (!confirm("Clear ALL saved answers? This cannot be undone.")) return;
-    localStorage.removeItem(STORAGE_KEY);
-    lastExport = "";
-    $preview.textContent = "(Click Export above to generate.)";
-    toast("Cleared.");
-    render();
-  }
+            <div class="sideCard feedbackCard">
+              <div class="sideTitleRow">
+                <div class="sideTitle">Focused feedback</div>
+                <div class="chips" aria-label="Theme scores">
+                  <span class="chip chip-muted" data-chip="q5-anchor">Anchor: —</span>
+                  <span class="chip chip-muted" data-chip="q5-tj">TJ: —</span>
+                  <span class="chip chip-muted" data-chip="q5-col">Collab: —</span>
+                  <span class="chip chip-muted" data-chip="q5-own">Own: —</span>
+                </div>
+              </div>
+              <div class="feedbackBtns">
+                <button class="btn js-feedback" type="button" data-qid="q5">Get feedback</button>
+                <button class="btn btn-secondary js-clearFeedback" type="button" data-qid="q5">Clear</button>
+              </div>
+              <div class="feedbackOut" id="q5-fb" aria-live="polite">
+                <div class="muted">Click <strong>Get feedback</strong> after you write. (No feedback spam while typing.)</div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </article>
+    
+    <article class="qcard" id="q6" data-qid="q6">
+      <header class="qhead">
+        <div class="qtitle">
+          <div class="qnum">Q6</div>
+          <div class="qtext">What tradeoffs did you have to make, and why?</div>
+        </div>
+        <div class="qmeta">
+          <span class="badge">Very likely</span>
+          <button class="btn btn-mini js-toggle" type="button" aria-expanded="false" aria-controls="q6-body">Open</button>
+        </div>
+      </header>
 
-  document.getElementById("btnExportMd").addEventListener("click", exportMarkdown);
-  document.getElementById("btnExportJson").addEventListener("click", exportJson);
-  document.getElementById("btnCopy").addEventListener("click", copyExport);
-  document.getElementById("btnPrint").addEventListener("click", printPage);
-  document.getElementById("btnClear").addEventListener("click", clearAll);
+      <div class="qbody" id="q6-body" hidden>
+        <div class="qgrid">
+          <div class="qleft">
+            <div class="fieldHead">
+              <div>
+                <div class="label">Answer (bullet notes)</div>
+                <div class="hint">Aim 3–6 bullets. Say it out loud in 60–90s.</div>
+              </div>
+              <div class="fieldTools">
+                <button class="btn btn-mini js-dictate" type="button" title="Voice to text (Chrome/Edge best)">🎤 Dictate</button>
+                <button class="btn btn-mini js-clearField" type="button" data-target="q6-answer">Clear</button>
+              </div>
+            </div>
+            <textarea id="q6-answer" class="ta ta-main" rows="8" placeholder="Type bullets here… (Example: • Context… • What I did… • Result… • Tradeoff… • Learning…)"></textarea>
 
-  render();
-</script>
+            <details class="builder">
+              <summary>Builder (optional): Context → Actions → Impact → Tradeoffs → Learning</summary>
+              <div class="builderGrid">
+                <div class="bfield">
+                  <div class="bhead"><span>Context</span><span class="bsub">What was happening? Constraints?</span></div>
+                  <textarea id="q6-ctx" class="ta" rows="2" placeholder="1–2 sentences. System + stakes + constraints."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Actions</span><span class="bsub">What did YOU do?</span></div>
+                  <textarea id="q6-act" class="ta" rows="2" placeholder="2–3 bullets. Decisions + why."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Impact</span><span class="bsub">What changed?</span></div>
+                  <textarea id="q6-imp" class="ta" rows="2" placeholder="Numbers if possible (time saved, defects, uptime, speed)."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Tradeoffs</span><span class="bsub">What did you choose and why?</span></div>
+                  <textarea id="q6-trd" class="ta" rows="2" placeholder="Name the tradeoff and mitigation."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Learning</span><span class="bsub">What would you do differently?</span></div>
+                  <textarea id="q6-lrn" class="ta" rows="2" placeholder="One improvement. Senior signal."></textarea>
+                </div>
+              </div>
+              <div class="builderActions">
+                <button class="btn btn-secondary js-build" type="button" data-qid="q6">Build answer from builder</button>
+              </div>
+            </details>
+
+          </div>
+
+          <aside class="qright">
+            <div class="sideCard">
+              <div class="sideTitle">Ideas to include</div>
+              <ul class="bullets">
+                <li>Name the tradeoff (speed vs safety / cost vs latency / scope vs quality).</li><li>Explain why your choice was correct given constraints.</li><li>Show mitigation (feature flags, phased rollout, testing).</li><li>Say what you'd do differently with more time.</li>
+              </ul>
+            </div>
+
+            <div class="sideCard feedbackCard">
+              <div class="sideTitleRow">
+                <div class="sideTitle">Focused feedback</div>
+                <div class="chips" aria-label="Theme scores">
+                  <span class="chip chip-muted" data-chip="q6-anchor">Anchor: —</span>
+                  <span class="chip chip-muted" data-chip="q6-tj">TJ: —</span>
+                  <span class="chip chip-muted" data-chip="q6-col">Collab: —</span>
+                  <span class="chip chip-muted" data-chip="q6-own">Own: —</span>
+                </div>
+              </div>
+              <div class="feedbackBtns">
+                <button class="btn js-feedback" type="button" data-qid="q6">Get feedback</button>
+                <button class="btn btn-secondary js-clearFeedback" type="button" data-qid="q6">Clear</button>
+              </div>
+              <div class="feedbackOut" id="q6-fb" aria-live="polite">
+                <div class="muted">Click <strong>Get feedback</strong> after you write. (No feedback spam while typing.)</div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </article>
+    
+    <article class="qcard" id="q7" data-qid="q7">
+      <header class="qhead">
+        <div class="qtitle">
+          <div class="qnum">Q7</div>
+          <div class="qtext">If you were redesigning that system today, what would you change?</div>
+        </div>
+        <div class="qmeta">
+          <span class="badge">Likely</span>
+          <button class="btn btn-mini js-toggle" type="button" aria-expanded="false" aria-controls="q7-body">Open</button>
+        </div>
+      </header>
+
+      <div class="qbody" id="q7-body" hidden>
+        <div class="qgrid">
+          <div class="qleft">
+            <div class="fieldHead">
+              <div>
+                <div class="label">Answer (bullet notes)</div>
+                <div class="hint">Aim 3–6 bullets. Say it out loud in 60–90s.</div>
+              </div>
+              <div class="fieldTools">
+                <button class="btn btn-mini js-dictate" type="button" title="Voice to text (Chrome/Edge best)">🎤 Dictate</button>
+                <button class="btn btn-mini js-clearField" type="button" data-target="q7-answer">Clear</button>
+              </div>
+            </div>
+            <textarea id="q7-answer" class="ta ta-main" rows="8" placeholder="Type bullets here… (Example: • Context… • What I did… • Result… • Tradeoff… • Learning…)"></textarea>
+
+            <details class="builder">
+              <summary>Builder (optional): Context → Actions → Impact → Tradeoffs → Learning</summary>
+              <div class="builderGrid">
+                <div class="bfield">
+                  <div class="bhead"><span>Context</span><span class="bsub">What was happening? Constraints?</span></div>
+                  <textarea id="q7-ctx" class="ta" rows="2" placeholder="1–2 sentences. System + stakes + constraints."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Actions</span><span class="bsub">What did YOU do?</span></div>
+                  <textarea id="q7-act" class="ta" rows="2" placeholder="2–3 bullets. Decisions + why."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Impact</span><span class="bsub">What changed?</span></div>
+                  <textarea id="q7-imp" class="ta" rows="2" placeholder="Numbers if possible (time saved, defects, uptime, speed)."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Tradeoffs</span><span class="bsub">What did you choose and why?</span></div>
+                  <textarea id="q7-trd" class="ta" rows="2" placeholder="Name the tradeoff and mitigation."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Learning</span><span class="bsub">What would you do differently?</span></div>
+                  <textarea id="q7-lrn" class="ta" rows="2" placeholder="One improvement. Senior signal."></textarea>
+                </div>
+              </div>
+              <div class="builderActions">
+                <button class="btn btn-secondary js-build" type="button" data-qid="q7">Build answer from builder</button>
+              </div>
+            </details>
+
+          </div>
+
+          <aside class="qright">
+            <div class="sideCard">
+              <div class="sideTitle">Ideas to include</div>
+              <ul class="bullets">
+                <li>Start with 'Knowing what I know now…'</li><li>Upgrade: observability, tests, architecture, data contracts.</li><li>Reduce coupling; improve failure isolation; automation.</li><li>End with a practical next step you'd take first.</li>
+              </ul>
+            </div>
+
+            <div class="sideCard feedbackCard">
+              <div class="sideTitleRow">
+                <div class="sideTitle">Focused feedback</div>
+                <div class="chips" aria-label="Theme scores">
+                  <span class="chip chip-muted" data-chip="q7-anchor">Anchor: —</span>
+                  <span class="chip chip-muted" data-chip="q7-tj">TJ: —</span>
+                  <span class="chip chip-muted" data-chip="q7-col">Collab: —</span>
+                  <span class="chip chip-muted" data-chip="q7-own">Own: —</span>
+                </div>
+              </div>
+              <div class="feedbackBtns">
+                <button class="btn js-feedback" type="button" data-qid="q7">Get feedback</button>
+                <button class="btn btn-secondary js-clearFeedback" type="button" data-qid="q7">Clear</button>
+              </div>
+              <div class="feedbackOut" id="q7-fb" aria-live="polite">
+                <div class="muted">Click <strong>Get feedback</strong> after you write. (No feedback spam while typing.)</div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </article>
+    
+      </div>
+    </section>
+    
+    <section class="section">
+      <div class="sectionHead">
+        <h2>3. Ownership &amp; Decision-Making</h2>
+        <div class="sectionTools">
+          <button class="btn btn-mini js-openSection" type="button">Open all</button>
+          <button class="btn btn-mini js-closeSection" type="button">Close all</button>
+        </div>
+      </div>
+      <div class="sectionBody">
+        
+    <article class="qcard" id="q8" data-qid="q8">
+      <header class="qhead">
+        <div class="qtitle">
+          <div class="qnum">Q8</div>
+          <div class="qtext">Tell me about a time you took ownership of a problem that wasn’t clearly yours.</div>
+        </div>
+        <div class="qmeta">
+          <span class="badge">Very likely</span>
+          <button class="btn btn-mini js-toggle" type="button" aria-expanded="false" aria-controls="q8-body">Open</button>
+        </div>
+      </header>
+
+      <div class="qbody" id="q8-body" hidden>
+        <div class="qgrid">
+          <div class="qleft">
+            <div class="fieldHead">
+              <div>
+                <div class="label">Answer (bullet notes)</div>
+                <div class="hint">Aim 3–6 bullets. Say it out loud in 60–90s.</div>
+              </div>
+              <div class="fieldTools">
+                <button class="btn btn-mini js-dictate" type="button" title="Voice to text (Chrome/Edge best)">🎤 Dictate</button>
+                <button class="btn btn-mini js-clearField" type="button" data-target="q8-answer">Clear</button>
+              </div>
+            </div>
+            <textarea id="q8-answer" class="ta ta-main" rows="8" placeholder="Type bullets here… (Example: • Context… • What I did… • Result… • Tradeoff… • Learning…)"></textarea>
+
+            <details class="builder">
+              <summary>Builder (optional): Context → Actions → Impact → Tradeoffs → Learning</summary>
+              <div class="builderGrid">
+                <div class="bfield">
+                  <div class="bhead"><span>Context</span><span class="bsub">What was happening? Constraints?</span></div>
+                  <textarea id="q8-ctx" class="ta" rows="2" placeholder="1–2 sentences. System + stakes + constraints."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Actions</span><span class="bsub">What did YOU do?</span></div>
+                  <textarea id="q8-act" class="ta" rows="2" placeholder="2–3 bullets. Decisions + why."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Impact</span><span class="bsub">What changed?</span></div>
+                  <textarea id="q8-imp" class="ta" rows="2" placeholder="Numbers if possible (time saved, defects, uptime, speed)."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Tradeoffs</span><span class="bsub">What did you choose and why?</span></div>
+                  <textarea id="q8-trd" class="ta" rows="2" placeholder="Name the tradeoff and mitigation."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Learning</span><span class="bsub">What would you do differently?</span></div>
+                  <textarea id="q8-lrn" class="ta" rows="2" placeholder="One improvement. Senior signal."></textarea>
+                </div>
+              </div>
+              <div class="builderActions">
+                <button class="btn btn-secondary js-build" type="button" data-qid="q8">Build answer from builder</button>
+              </div>
+            </details>
+
+          </div>
+
+          <aside class="qright">
+            <div class="sideCard">
+              <div class="sideTitle">Ideas to include</div>
+              <ul class="bullets">
+                <li>Testing pyramid: unit → integration → e2e (where it mattered most).</li><li>Include non-functional: performance, security, reliability checks.</li><li>CI gates + code review + automated checks.</li><li>Talk about preventing regressions.</li>
+              </ul>
+            </div>
+
+            <div class="sideCard feedbackCard">
+              <div class="sideTitleRow">
+                <div class="sideTitle">Focused feedback</div>
+                <div class="chips" aria-label="Theme scores">
+                  <span class="chip chip-muted" data-chip="q8-anchor">Anchor: —</span>
+                  <span class="chip chip-muted" data-chip="q8-tj">TJ: —</span>
+                  <span class="chip chip-muted" data-chip="q8-col">Collab: —</span>
+                  <span class="chip chip-muted" data-chip="q8-own">Own: —</span>
+                </div>
+              </div>
+              <div class="feedbackBtns">
+                <button class="btn js-feedback" type="button" data-qid="q8">Get feedback</button>
+                <button class="btn btn-secondary js-clearFeedback" type="button" data-qid="q8">Clear</button>
+              </div>
+              <div class="feedbackOut" id="q8-fb" aria-live="polite">
+                <div class="muted">Click <strong>Get feedback</strong> after you write. (No feedback spam while typing.)</div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </article>
+    
+    <article class="qcard" id="q9" data-qid="q9">
+      <header class="qhead">
+        <div class="qtitle">
+          <div class="qnum">Q9</div>
+          <div class="qtext">Describe a difficult technical decision you made with incomplete information.</div>
+        </div>
+        <div class="qmeta">
+          <span class="badge">Likely</span>
+          <button class="btn btn-mini js-toggle" type="button" aria-expanded="false" aria-controls="q9-body">Open</button>
+        </div>
+      </header>
+
+      <div class="qbody" id="q9-body" hidden>
+        <div class="qgrid">
+          <div class="qleft">
+            <div class="fieldHead">
+              <div>
+                <div class="label">Answer (bullet notes)</div>
+                <div class="hint">Aim 3–6 bullets. Say it out loud in 60–90s.</div>
+              </div>
+              <div class="fieldTools">
+                <button class="btn btn-mini js-dictate" type="button" title="Voice to text (Chrome/Edge best)">🎤 Dictate</button>
+                <button class="btn btn-mini js-clearField" type="button" data-target="q9-answer">Clear</button>
+              </div>
+            </div>
+            <textarea id="q9-answer" class="ta ta-main" rows="8" placeholder="Type bullets here… (Example: • Context… • What I did… • Result… • Tradeoff… • Learning…)"></textarea>
+
+            <details class="builder">
+              <summary>Builder (optional): Context → Actions → Impact → Tradeoffs → Learning</summary>
+              <div class="builderGrid">
+                <div class="bfield">
+                  <div class="bhead"><span>Context</span><span class="bsub">What was happening? Constraints?</span></div>
+                  <textarea id="q9-ctx" class="ta" rows="2" placeholder="1–2 sentences. System + stakes + constraints."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Actions</span><span class="bsub">What did YOU do?</span></div>
+                  <textarea id="q9-act" class="ta" rows="2" placeholder="2–3 bullets. Decisions + why."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Impact</span><span class="bsub">What changed?</span></div>
+                  <textarea id="q9-imp" class="ta" rows="2" placeholder="Numbers if possible (time saved, defects, uptime, speed)."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Tradeoffs</span><span class="bsub">What did you choose and why?</span></div>
+                  <textarea id="q9-trd" class="ta" rows="2" placeholder="Name the tradeoff and mitigation."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Learning</span><span class="bsub">What would you do differently?</span></div>
+                  <textarea id="q9-lrn" class="ta" rows="2" placeholder="One improvement. Senior signal."></textarea>
+                </div>
+              </div>
+              <div class="builderActions">
+                <button class="btn btn-secondary js-build" type="button" data-qid="q9">Build answer from builder</button>
+              </div>
+            </details>
+
+          </div>
+
+          <aside class="qright">
+            <div class="sideCard">
+              <div class="sideTitle">Ideas to include</div>
+              <ul class="bullets">
+                <li>How you review: readability, correctness, security, tests, edge cases.</li><li>Ask questions, don’t dunk on people.</li><li>Flag risks + suggest alternatives with reasoning.</li><li>Share ownership: pair or follow-up fix.</li>
+              </ul>
+            </div>
+
+            <div class="sideCard feedbackCard">
+              <div class="sideTitleRow">
+                <div class="sideTitle">Focused feedback</div>
+                <div class="chips" aria-label="Theme scores">
+                  <span class="chip chip-muted" data-chip="q9-anchor">Anchor: —</span>
+                  <span class="chip chip-muted" data-chip="q9-tj">TJ: —</span>
+                  <span class="chip chip-muted" data-chip="q9-col">Collab: —</span>
+                  <span class="chip chip-muted" data-chip="q9-own">Own: —</span>
+                </div>
+              </div>
+              <div class="feedbackBtns">
+                <button class="btn js-feedback" type="button" data-qid="q9">Get feedback</button>
+                <button class="btn btn-secondary js-clearFeedback" type="button" data-qid="q9">Clear</button>
+              </div>
+              <div class="feedbackOut" id="q9-fb" aria-live="polite">
+                <div class="muted">Click <strong>Get feedback</strong> after you write. (No feedback spam while typing.)</div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </article>
+    
+    <article class="qcard" id="q10" data-qid="q10">
+      <header class="qhead">
+        <div class="qtitle">
+          <div class="qnum">Q10</div>
+          <div class="qtext">How do you decide when something is “good enough” to ship?</div>
+        </div>
+        <div class="qmeta">
+          <span class="badge">Likely</span>
+          <button class="btn btn-mini js-toggle" type="button" aria-expanded="false" aria-controls="q10-body">Open</button>
+        </div>
+      </header>
+
+      <div class="qbody" id="q10-body" hidden>
+        <div class="qgrid">
+          <div class="qleft">
+            <div class="fieldHead">
+              <div>
+                <div class="label">Answer (bullet notes)</div>
+                <div class="hint">Aim 3–6 bullets. Say it out loud in 60–90s.</div>
+              </div>
+              <div class="fieldTools">
+                <button class="btn btn-mini js-dictate" type="button" title="Voice to text (Chrome/Edge best)">🎤 Dictate</button>
+                <button class="btn btn-mini js-clearField" type="button" data-target="q10-answer">Clear</button>
+              </div>
+            </div>
+            <textarea id="q10-answer" class="ta ta-main" rows="8" placeholder="Type bullets here… (Example: • Context… • What I did… • Result… • Tradeoff… • Learning…)"></textarea>
+
+            <details class="builder">
+              <summary>Builder (optional): Context → Actions → Impact → Tradeoffs → Learning</summary>
+              <div class="builderGrid">
+                <div class="bfield">
+                  <div class="bhead"><span>Context</span><span class="bsub">What was happening? Constraints?</span></div>
+                  <textarea id="q10-ctx" class="ta" rows="2" placeholder="1–2 sentences. System + stakes + constraints."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Actions</span><span class="bsub">What did YOU do?</span></div>
+                  <textarea id="q10-act" class="ta" rows="2" placeholder="2–3 bullets. Decisions + why."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Impact</span><span class="bsub">What changed?</span></div>
+                  <textarea id="q10-imp" class="ta" rows="2" placeholder="Numbers if possible (time saved, defects, uptime, speed)."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Tradeoffs</span><span class="bsub">What did you choose and why?</span></div>
+                  <textarea id="q10-trd" class="ta" rows="2" placeholder="Name the tradeoff and mitigation."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Learning</span><span class="bsub">What would you do differently?</span></div>
+                  <textarea id="q10-lrn" class="ta" rows="2" placeholder="One improvement. Senior signal."></textarea>
+                </div>
+              </div>
+              <div class="builderActions">
+                <button class="btn btn-secondary js-build" type="button" data-qid="q10">Build answer from builder</button>
+              </div>
+            </details>
+
+          </div>
+
+          <aside class="qright">
+            <div class="sideCard">
+              <div class="sideTitle">Ideas to include</div>
+              <ul class="bullets">
+                <li>Go/no-go: tests passing, monitoring ready, rollback plan exists.</li><li>Prefer canary/feature flags over big-bang releases.</li><li>Define success metrics for the release.</li><li>Communicate risk clearly to stakeholders.</li>
+              </ul>
+            </div>
+
+            <div class="sideCard feedbackCard">
+              <div class="sideTitleRow">
+                <div class="sideTitle">Focused feedback</div>
+                <div class="chips" aria-label="Theme scores">
+                  <span class="chip chip-muted" data-chip="q10-anchor">Anchor: —</span>
+                  <span class="chip chip-muted" data-chip="q10-tj">TJ: —</span>
+                  <span class="chip chip-muted" data-chip="q10-col">Collab: —</span>
+                  <span class="chip chip-muted" data-chip="q10-own">Own: —</span>
+                </div>
+              </div>
+              <div class="feedbackBtns">
+                <button class="btn js-feedback" type="button" data-qid="q10">Get feedback</button>
+                <button class="btn btn-secondary js-clearFeedback" type="button" data-qid="q10">Clear</button>
+              </div>
+              <div class="feedbackOut" id="q10-fb" aria-live="polite">
+                <div class="muted">Click <strong>Get feedback</strong> after you write. (No feedback spam while typing.)</div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </article>
+    
+      </div>
+    </section>
+    
+    <section class="section">
+      <div class="sectionHead">
+        <h2>4. Production Issues, Failure &amp; Learning</h2>
+        <div class="sectionTools">
+          <button class="btn btn-mini js-openSection" type="button">Open all</button>
+          <button class="btn btn-mini js-closeSection" type="button">Close all</button>
+        </div>
+      </div>
+      <div class="sectionBody">
+        
+    <article class="qcard" id="q11" data-qid="q11">
+      <header class="qhead">
+        <div class="qtitle">
+          <div class="qnum">Q11</div>
+          <div class="qtext">Tell me about a production issue or outage you were involved in.</div>
+        </div>
+        <div class="qmeta">
+          <span class="badge">Very likely</span>
+          <button class="btn btn-mini js-toggle" type="button" aria-expanded="false" aria-controls="q11-body">Open</button>
+        </div>
+      </header>
+
+      <div class="qbody" id="q11-body" hidden>
+        <div class="qgrid">
+          <div class="qleft">
+            <div class="fieldHead">
+              <div>
+                <div class="label">Answer (bullet notes)</div>
+                <div class="hint">Aim 3–6 bullets. Say it out loud in 60–90s.</div>
+              </div>
+              <div class="fieldTools">
+                <button class="btn btn-mini js-dictate" type="button" title="Voice to text (Chrome/Edge best)">🎤 Dictate</button>
+                <button class="btn btn-mini js-clearField" type="button" data-target="q11-answer">Clear</button>
+              </div>
+            </div>
+            <textarea id="q11-answer" class="ta ta-main" rows="8" placeholder="Type bullets here… (Example: • Context… • What I did… • Result… • Tradeoff… • Learning…)"></textarea>
+
+            <details class="builder">
+              <summary>Builder (optional): Context → Actions → Impact → Tradeoffs → Learning</summary>
+              <div class="builderGrid">
+                <div class="bfield">
+                  <div class="bhead"><span>Context</span><span class="bsub">What was happening? Constraints?</span></div>
+                  <textarea id="q11-ctx" class="ta" rows="2" placeholder="1–2 sentences. System + stakes + constraints."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Actions</span><span class="bsub">What did YOU do?</span></div>
+                  <textarea id="q11-act" class="ta" rows="2" placeholder="2–3 bullets. Decisions + why."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Impact</span><span class="bsub">What changed?</span></div>
+                  <textarea id="q11-imp" class="ta" rows="2" placeholder="Numbers if possible (time saved, defects, uptime, speed)."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Tradeoffs</span><span class="bsub">What did you choose and why?</span></div>
+                  <textarea id="q11-trd" class="ta" rows="2" placeholder="Name the tradeoff and mitigation."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Learning</span><span class="bsub">What would you do differently?</span></div>
+                  <textarea id="q11-lrn" class="ta" rows="2" placeholder="One improvement. Senior signal."></textarea>
+                </div>
+              </div>
+              <div class="builderActions">
+                <button class="btn btn-secondary js-build" type="button" data-qid="q11">Build answer from builder</button>
+              </div>
+            </details>
+
+          </div>
+
+          <aside class="qright">
+            <div class="sideCard">
+              <div class="sideTitle">Ideas to include</div>
+              <ul class="bullets">
+                <li>Triage: impact + scope + whether it's getting worse.</li><li>Correlate to deploy/config changes; check logs/metrics.</li><li>Mitigate fast (rollback/disable feature/restart) then RCA.</li><li>Close with prevention: monitor + test + runbook.</li>
+              </ul>
+            </div>
+
+            <div class="sideCard feedbackCard">
+              <div class="sideTitleRow">
+                <div class="sideTitle">Focused feedback</div>
+                <div class="chips" aria-label="Theme scores">
+                  <span class="chip chip-muted" data-chip="q11-anchor">Anchor: —</span>
+                  <span class="chip chip-muted" data-chip="q11-tj">TJ: —</span>
+                  <span class="chip chip-muted" data-chip="q11-col">Collab: —</span>
+                  <span class="chip chip-muted" data-chip="q11-own">Own: —</span>
+                </div>
+              </div>
+              <div class="feedbackBtns">
+                <button class="btn js-feedback" type="button" data-qid="q11">Get feedback</button>
+                <button class="btn btn-secondary js-clearFeedback" type="button" data-qid="q11">Clear</button>
+              </div>
+              <div class="feedbackOut" id="q11-fb" aria-live="polite">
+                <div class="muted">Click <strong>Get feedback</strong> after you write. (No feedback spam while typing.)</div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </article>
+    
+    <article class="qcard" id="q12" data-qid="q12">
+      <header class="qhead">
+        <div class="qtitle">
+          <div class="qnum">Q12</div>
+          <div class="qtext">How did you diagnose the issue and communicate during the incident?</div>
+        </div>
+        <div class="qmeta">
+          <span class="badge">Very likely</span>
+          <button class="btn btn-mini js-toggle" type="button" aria-expanded="false" aria-controls="q12-body">Open</button>
+        </div>
+      </header>
+
+      <div class="qbody" id="q12-body" hidden>
+        <div class="qgrid">
+          <div class="qleft">
+            <div class="fieldHead">
+              <div>
+                <div class="label">Answer (bullet notes)</div>
+                <div class="hint">Aim 3–6 bullets. Say it out loud in 60–90s.</div>
+              </div>
+              <div class="fieldTools">
+                <button class="btn btn-mini js-dictate" type="button" title="Voice to text (Chrome/Edge best)">🎤 Dictate</button>
+                <button class="btn btn-mini js-clearField" type="button" data-target="q12-answer">Clear</button>
+              </div>
+            </div>
+            <textarea id="q12-answer" class="ta ta-main" rows="8" placeholder="Type bullets here… (Example: • Context… • What I did… • Result… • Tradeoff… • Learning…)"></textarea>
+
+            <details class="builder">
+              <summary>Builder (optional): Context → Actions → Impact → Tradeoffs → Learning</summary>
+              <div class="builderGrid">
+                <div class="bfield">
+                  <div class="bhead"><span>Context</span><span class="bsub">What was happening? Constraints?</span></div>
+                  <textarea id="q12-ctx" class="ta" rows="2" placeholder="1–2 sentences. System + stakes + constraints."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Actions</span><span class="bsub">What did YOU do?</span></div>
+                  <textarea id="q12-act" class="ta" rows="2" placeholder="2–3 bullets. Decisions + why."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Impact</span><span class="bsub">What changed?</span></div>
+                  <textarea id="q12-imp" class="ta" rows="2" placeholder="Numbers if possible (time saved, defects, uptime, speed)."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Tradeoffs</span><span class="bsub">What did you choose and why?</span></div>
+                  <textarea id="q12-trd" class="ta" rows="2" placeholder="Name the tradeoff and mitigation."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Learning</span><span class="bsub">What would you do differently?</span></div>
+                  <textarea id="q12-lrn" class="ta" rows="2" placeholder="One improvement. Senior signal."></textarea>
+                </div>
+              </div>
+              <div class="builderActions">
+                <button class="btn btn-secondary js-build" type="button" data-qid="q12">Build answer from builder</button>
+              </div>
+            </details>
+
+          </div>
+
+          <aside class="qright">
+            <div class="sideCard">
+              <div class="sideTitle">Ideas to include</div>
+              <ul class="bullets">
+                <li>Incident roles: IC, comms, ops; one shared timeline.</li><li>Regular updates; no side quests; document decisions.</li><li>Stabilize first, then postmortem + action items.</li><li>Ownership signal: you drive follow-ups.</li>
+              </ul>
+            </div>
+
+            <div class="sideCard feedbackCard">
+              <div class="sideTitleRow">
+                <div class="sideTitle">Focused feedback</div>
+                <div class="chips" aria-label="Theme scores">
+                  <span class="chip chip-muted" data-chip="q12-anchor">Anchor: —</span>
+                  <span class="chip chip-muted" data-chip="q12-tj">TJ: —</span>
+                  <span class="chip chip-muted" data-chip="q12-col">Collab: —</span>
+                  <span class="chip chip-muted" data-chip="q12-own">Own: —</span>
+                </div>
+              </div>
+              <div class="feedbackBtns">
+                <button class="btn js-feedback" type="button" data-qid="q12">Get feedback</button>
+                <button class="btn btn-secondary js-clearFeedback" type="button" data-qid="q12">Clear</button>
+              </div>
+              <div class="feedbackOut" id="q12-fb" aria-live="polite">
+                <div class="muted">Click <strong>Get feedback</strong> after you write. (No feedback spam while typing.)</div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </article>
+    
+    <article class="qcard" id="q13" data-qid="q13">
+      <header class="qhead">
+        <div class="qtitle">
+          <div class="qnum">Q13</div>
+          <div class="qtext">What changed afterward to prevent it from happening again?</div>
+        </div>
+        <div class="qmeta">
+          <span class="badge">Very likely</span>
+          <button class="btn btn-mini js-toggle" type="button" aria-expanded="false" aria-controls="q13-body">Open</button>
+        </div>
+      </header>
+
+      <div class="qbody" id="q13-body" hidden>
+        <div class="qgrid">
+          <div class="qleft">
+            <div class="fieldHead">
+              <div>
+                <div class="label">Answer (bullet notes)</div>
+                <div class="hint">Aim 3–6 bullets. Say it out loud in 60–90s.</div>
+              </div>
+              <div class="fieldTools">
+                <button class="btn btn-mini js-dictate" type="button" title="Voice to text (Chrome/Edge best)">🎤 Dictate</button>
+                <button class="btn btn-mini js-clearField" type="button" data-target="q13-answer">Clear</button>
+              </div>
+            </div>
+            <textarea id="q13-answer" class="ta ta-main" rows="8" placeholder="Type bullets here… (Example: • Context… • What I did… • Result… • Tradeoff… • Learning…)"></textarea>
+
+            <details class="builder">
+              <summary>Builder (optional): Context → Actions → Impact → Tradeoffs → Learning</summary>
+              <div class="builderGrid">
+                <div class="bfield">
+                  <div class="bhead"><span>Context</span><span class="bsub">What was happening? Constraints?</span></div>
+                  <textarea id="q13-ctx" class="ta" rows="2" placeholder="1–2 sentences. System + stakes + constraints."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Actions</span><span class="bsub">What did YOU do?</span></div>
+                  <textarea id="q13-act" class="ta" rows="2" placeholder="2–3 bullets. Decisions + why."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Impact</span><span class="bsub">What changed?</span></div>
+                  <textarea id="q13-imp" class="ta" rows="2" placeholder="Numbers if possible (time saved, defects, uptime, speed)."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Tradeoffs</span><span class="bsub">What did you choose and why?</span></div>
+                  <textarea id="q13-trd" class="ta" rows="2" placeholder="Name the tradeoff and mitigation."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Learning</span><span class="bsub">What would you do differently?</span></div>
+                  <textarea id="q13-lrn" class="ta" rows="2" placeholder="One improvement. Senior signal."></textarea>
+                </div>
+              </div>
+              <div class="builderActions">
+                <button class="btn btn-secondary js-build" type="button" data-qid="q13">Build answer from builder</button>
+              </div>
+            </details>
+
+          </div>
+
+          <aside class="qright">
+            <div class="sideCard">
+              <div class="sideTitle">Ideas to include</div>
+              <ul class="bullets">
+                <li>Start calm: align on shared goal and constraints.</li><li>Bring data (risk, cost, failure modes) vs opinions.</li><li>Offer a compromise (flagged rollout, phased approach).</li><li>End with relationship intact + better decision.</li>
+              </ul>
+            </div>
+
+            <div class="sideCard feedbackCard">
+              <div class="sideTitleRow">
+                <div class="sideTitle">Focused feedback</div>
+                <div class="chips" aria-label="Theme scores">
+                  <span class="chip chip-muted" data-chip="q13-anchor">Anchor: —</span>
+                  <span class="chip chip-muted" data-chip="q13-tj">TJ: —</span>
+                  <span class="chip chip-muted" data-chip="q13-col">Collab: —</span>
+                  <span class="chip chip-muted" data-chip="q13-own">Own: —</span>
+                </div>
+              </div>
+              <div class="feedbackBtns">
+                <button class="btn js-feedback" type="button" data-qid="q13">Get feedback</button>
+                <button class="btn btn-secondary js-clearFeedback" type="button" data-qid="q13">Clear</button>
+              </div>
+              <div class="feedbackOut" id="q13-fb" aria-live="polite">
+                <div class="muted">Click <strong>Get feedback</strong> after you write. (No feedback spam while typing.)</div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </article>
+    
+      </div>
+    </section>
+    
+    <section class="section">
+      <div class="sectionHead">
+        <h2>5. Collaboration &amp; Conflict</h2>
+        <div class="sectionTools">
+          <button class="btn btn-mini js-openSection" type="button">Open all</button>
+          <button class="btn btn-mini js-closeSection" type="button">Close all</button>
+        </div>
+      </div>
+      <div class="sectionBody">
+        
+    <article class="qcard" id="q14" data-qid="q14">
+      <header class="qhead">
+        <div class="qtitle">
+          <div class="qnum">Q14</div>
+          <div class="qtext">Tell me about a disagreement with another engineer or stakeholder.</div>
+        </div>
+        <div class="qmeta">
+          <span class="badge">Guaranteed</span>
+          <button class="btn btn-mini js-toggle" type="button" aria-expanded="false" aria-controls="q14-body">Open</button>
+        </div>
+      </header>
+
+      <div class="qbody" id="q14-body" hidden>
+        <div class="qgrid">
+          <div class="qleft">
+            <div class="fieldHead">
+              <div>
+                <div class="label">Answer (bullet notes)</div>
+                <div class="hint">Aim 3–6 bullets. Say it out loud in 60–90s.</div>
+              </div>
+              <div class="fieldTools">
+                <button class="btn btn-mini js-dictate" type="button" title="Voice to text (Chrome/Edge best)">🎤 Dictate</button>
+                <button class="btn btn-mini js-clearField" type="button" data-target="q14-answer">Clear</button>
+              </div>
+            </div>
+            <textarea id="q14-answer" class="ta ta-main" rows="8" placeholder="Type bullets here… (Example: • Context… • What I did… • Result… • Tradeoff… • Learning…)"></textarea>
+
+            <details class="builder">
+              <summary>Builder (optional): Context → Actions → Impact → Tradeoffs → Learning</summary>
+              <div class="builderGrid">
+                <div class="bfield">
+                  <div class="bhead"><span>Context</span><span class="bsub">What was happening? Constraints?</span></div>
+                  <textarea id="q14-ctx" class="ta" rows="2" placeholder="1–2 sentences. System + stakes + constraints."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Actions</span><span class="bsub">What did YOU do?</span></div>
+                  <textarea id="q14-act" class="ta" rows="2" placeholder="2–3 bullets. Decisions + why."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Impact</span><span class="bsub">What changed?</span></div>
+                  <textarea id="q14-imp" class="ta" rows="2" placeholder="Numbers if possible (time saved, defects, uptime, speed)."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Tradeoffs</span><span class="bsub">What did you choose and why?</span></div>
+                  <textarea id="q14-trd" class="ta" rows="2" placeholder="Name the tradeoff and mitigation."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Learning</span><span class="bsub">What would you do differently?</span></div>
+                  <textarea id="q14-lrn" class="ta" rows="2" placeholder="One improvement. Senior signal."></textarea>
+                </div>
+              </div>
+              <div class="builderActions">
+                <button class="btn btn-secondary js-build" type="button" data-qid="q14">Build answer from builder</button>
+              </div>
+            </details>
+
+          </div>
+
+          <aside class="qright">
+            <div class="sideCard">
+              <div class="sideTitle">Ideas to include</div>
+              <ul class="bullets">
+                <li>Translate to impact: user/customer, risk, time, money.</li><li>Use options: A/B/C with recommendation.</li><li>Confirm understanding; keep updates predictable.</li><li>Anchor: communicate clearly while doing it.</li>
+              </ul>
+            </div>
+
+            <div class="sideCard feedbackCard">
+              <div class="sideTitleRow">
+                <div class="sideTitle">Focused feedback</div>
+                <div class="chips" aria-label="Theme scores">
+                  <span class="chip chip-muted" data-chip="q14-anchor">Anchor: —</span>
+                  <span class="chip chip-muted" data-chip="q14-tj">TJ: —</span>
+                  <span class="chip chip-muted" data-chip="q14-col">Collab: —</span>
+                  <span class="chip chip-muted" data-chip="q14-own">Own: —</span>
+                </div>
+              </div>
+              <div class="feedbackBtns">
+                <button class="btn js-feedback" type="button" data-qid="q14">Get feedback</button>
+                <button class="btn btn-secondary js-clearFeedback" type="button" data-qid="q14">Clear</button>
+              </div>
+              <div class="feedbackOut" id="q14-fb" aria-live="polite">
+                <div class="muted">Click <strong>Get feedback</strong> after you write. (No feedback spam while typing.)</div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </article>
+    
+    <article class="qcard" id="q15" data-qid="q15">
+      <header class="qhead">
+        <div class="qtitle">
+          <div class="qnum">Q15</div>
+          <div class="qtext">How do you handle feedback you don’t initially agree with?</div>
+        </div>
+        <div class="qmeta">
+          <span class="badge">Likely</span>
+          <button class="btn btn-mini js-toggle" type="button" aria-expanded="false" aria-controls="q15-body">Open</button>
+        </div>
+      </header>
+
+      <div class="qbody" id="q15-body" hidden>
+        <div class="qgrid">
+          <div class="qleft">
+            <div class="fieldHead">
+              <div>
+                <div class="label">Answer (bullet notes)</div>
+                <div class="hint">Aim 3–6 bullets. Say it out loud in 60–90s.</div>
+              </div>
+              <div class="fieldTools">
+                <button class="btn btn-mini js-dictate" type="button" title="Voice to text (Chrome/Edge best)">🎤 Dictate</button>
+                <button class="btn btn-mini js-clearField" type="button" data-target="q15-answer">Clear</button>
+              </div>
+            </div>
+            <textarea id="q15-answer" class="ta ta-main" rows="8" placeholder="Type bullets here… (Example: • Context… • What I did… • Result… • Tradeoff… • Learning…)"></textarea>
+
+            <details class="builder">
+              <summary>Builder (optional): Context → Actions → Impact → Tradeoffs → Learning</summary>
+              <div class="builderGrid">
+                <div class="bfield">
+                  <div class="bhead"><span>Context</span><span class="bsub">What was happening? Constraints?</span></div>
+                  <textarea id="q15-ctx" class="ta" rows="2" placeholder="1–2 sentences. System + stakes + constraints."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Actions</span><span class="bsub">What did YOU do?</span></div>
+                  <textarea id="q15-act" class="ta" rows="2" placeholder="2–3 bullets. Decisions + why."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Impact</span><span class="bsub">What changed?</span></div>
+                  <textarea id="q15-imp" class="ta" rows="2" placeholder="Numbers if possible (time saved, defects, uptime, speed)."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Tradeoffs</span><span class="bsub">What did you choose and why?</span></div>
+                  <textarea id="q15-trd" class="ta" rows="2" placeholder="Name the tradeoff and mitigation."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Learning</span><span class="bsub">What would you do differently?</span></div>
+                  <textarea id="q15-lrn" class="ta" rows="2" placeholder="One improvement. Senior signal."></textarea>
+                </div>
+              </div>
+              <div class="builderActions">
+                <button class="btn btn-secondary js-build" type="button" data-qid="q15">Build answer from builder</button>
+              </div>
+            </details>
+
+          </div>
+
+          <aside class="qright">
+            <div class="sideCard">
+              <div class="sideTitle">Ideas to include</div>
+              <ul class="bullets">
+                <li>Mentor via pairing, code reviews, docs, and standards.</li><li>Teach reasoning, not just answers.</li><li>Raise the team’s quality bar; reduce bus factor.</li><li>Ownership: create reusable runbooks.</li>
+              </ul>
+            </div>
+
+            <div class="sideCard feedbackCard">
+              <div class="sideTitleRow">
+                <div class="sideTitle">Focused feedback</div>
+                <div class="chips" aria-label="Theme scores">
+                  <span class="chip chip-muted" data-chip="q15-anchor">Anchor: —</span>
+                  <span class="chip chip-muted" data-chip="q15-tj">TJ: —</span>
+                  <span class="chip chip-muted" data-chip="q15-col">Collab: —</span>
+                  <span class="chip chip-muted" data-chip="q15-own">Own: —</span>
+                </div>
+              </div>
+              <div class="feedbackBtns">
+                <button class="btn js-feedback" type="button" data-qid="q15">Get feedback</button>
+                <button class="btn btn-secondary js-clearFeedback" type="button" data-qid="q15">Clear</button>
+              </div>
+              <div class="feedbackOut" id="q15-fb" aria-live="polite">
+                <div class="muted">Click <strong>Get feedback</strong> after you write. (No feedback spam while typing.)</div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </article>
+    
+    <article class="qcard" id="q16" data-qid="q16">
+      <header class="qhead">
+        <div class="qtitle">
+          <div class="qnum">Q16</div>
+          <div class="qtext">How do you work with non-technical partners like product, QA, or leadership?</div>
+        </div>
+        <div class="qmeta">
+          <span class="badge">Guaranteed</span>
+          <button class="btn btn-mini js-toggle" type="button" aria-expanded="false" aria-controls="q16-body">Open</button>
+        </div>
+      </header>
+
+      <div class="qbody" id="q16-body" hidden>
+        <div class="qgrid">
+          <div class="qleft">
+            <div class="fieldHead">
+              <div>
+                <div class="label">Answer (bullet notes)</div>
+                <div class="hint">Aim 3–6 bullets. Say it out loud in 60–90s.</div>
+              </div>
+              <div class="fieldTools">
+                <button class="btn btn-mini js-dictate" type="button" title="Voice to text (Chrome/Edge best)">🎤 Dictate</button>
+                <button class="btn btn-mini js-clearField" type="button" data-target="q16-answer">Clear</button>
+              </div>
+            </div>
+            <textarea id="q16-answer" class="ta ta-main" rows="8" placeholder="Type bullets here… (Example: • Context… • What I did… • Result… • Tradeoff… • Learning…)"></textarea>
+
+            <details class="builder">
+              <summary>Builder (optional): Context → Actions → Impact → Tradeoffs → Learning</summary>
+              <div class="builderGrid">
+                <div class="bfield">
+                  <div class="bhead"><span>Context</span><span class="bsub">What was happening? Constraints?</span></div>
+                  <textarea id="q16-ctx" class="ta" rows="2" placeholder="1–2 sentences. System + stakes + constraints."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Actions</span><span class="bsub">What did YOU do?</span></div>
+                  <textarea id="q16-act" class="ta" rows="2" placeholder="2–3 bullets. Decisions + why."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Impact</span><span class="bsub">What changed?</span></div>
+                  <textarea id="q16-imp" class="ta" rows="2" placeholder="Numbers if possible (time saved, defects, uptime, speed)."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Tradeoffs</span><span class="bsub">What did you choose and why?</span></div>
+                  <textarea id="q16-trd" class="ta" rows="2" placeholder="Name the tradeoff and mitigation."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Learning</span><span class="bsub">What would you do differently?</span></div>
+                  <textarea id="q16-lrn" class="ta" rows="2" placeholder="One improvement. Senior signal."></textarea>
+                </div>
+              </div>
+              <div class="builderActions">
+                <button class="btn btn-secondary js-build" type="button" data-qid="q16">Build answer from builder</button>
+              </div>
+            </details>
+
+          </div>
+
+          <aside class="qright">
+            <div class="sideCard">
+              <div class="sideTitle">Ideas to include</div>
+              <ul class="bullets">
+                <li>Time blocking + WIP limits; avoid constant context switching.</li><li>Delegate with clarity; keep stakeholders updated.</li><li>Use docs to reduce repeated interruptions.</li><li>Protect deep work without being a ghost.</li>
+              </ul>
+            </div>
+
+            <div class="sideCard feedbackCard">
+              <div class="sideTitleRow">
+                <div class="sideTitle">Focused feedback</div>
+                <div class="chips" aria-label="Theme scores">
+                  <span class="chip chip-muted" data-chip="q16-anchor">Anchor: —</span>
+                  <span class="chip chip-muted" data-chip="q16-tj">TJ: —</span>
+                  <span class="chip chip-muted" data-chip="q16-col">Collab: —</span>
+                  <span class="chip chip-muted" data-chip="q16-own">Own: —</span>
+                </div>
+              </div>
+              <div class="feedbackBtns">
+                <button class="btn js-feedback" type="button" data-qid="q16">Get feedback</button>
+                <button class="btn btn-secondary js-clearFeedback" type="button" data-qid="q16">Clear</button>
+              </div>
+              <div class="feedbackOut" id="q16-fb" aria-live="polite">
+                <div class="muted">Click <strong>Get feedback</strong> after you write. (No feedback spam while typing.)</div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </article>
+    
+      </div>
+    </section>
+    
+    <section class="section">
+      <div class="sectionHead">
+        <h2>6. Leadership &amp; Mentorship</h2>
+        <div class="sectionTools">
+          <button class="btn btn-mini js-openSection" type="button">Open all</button>
+          <button class="btn btn-mini js-closeSection" type="button">Close all</button>
+        </div>
+      </div>
+      <div class="sectionBody">
+        
+    <article class="qcard" id="q17" data-qid="q17">
+      <header class="qhead">
+        <div class="qtitle">
+          <div class="qnum">Q17</div>
+          <div class="qtext">How have you mentored junior engineers or raised team standards?</div>
+        </div>
+        <div class="qmeta">
+          <span class="badge">Likely</span>
+          <button class="btn btn-mini js-toggle" type="button" aria-expanded="false" aria-controls="q17-body">Open</button>
+        </div>
+      </header>
+
+      <div class="qbody" id="q17-body" hidden>
+        <div class="qgrid">
+          <div class="qleft">
+            <div class="fieldHead">
+              <div>
+                <div class="label">Answer (bullet notes)</div>
+                <div class="hint">Aim 3–6 bullets. Say it out loud in 60–90s.</div>
+              </div>
+              <div class="fieldTools">
+                <button class="btn btn-mini js-dictate" type="button" title="Voice to text (Chrome/Edge best)">🎤 Dictate</button>
+                <button class="btn btn-mini js-clearField" type="button" data-target="q17-answer">Clear</button>
+              </div>
+            </div>
+            <textarea id="q17-answer" class="ta ta-main" rows="8" placeholder="Type bullets here… (Example: • Context… • What I did… • Result… • Tradeoff… • Learning…)"></textarea>
+
+            <details class="builder">
+              <summary>Builder (optional): Context → Actions → Impact → Tradeoffs → Learning</summary>
+              <div class="builderGrid">
+                <div class="bfield">
+                  <div class="bhead"><span>Context</span><span class="bsub">What was happening? Constraints?</span></div>
+                  <textarea id="q17-ctx" class="ta" rows="2" placeholder="1–2 sentences. System + stakes + constraints."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Actions</span><span class="bsub">What did YOU do?</span></div>
+                  <textarea id="q17-act" class="ta" rows="2" placeholder="2–3 bullets. Decisions + why."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Impact</span><span class="bsub">What changed?</span></div>
+                  <textarea id="q17-imp" class="ta" rows="2" placeholder="Numbers if possible (time saved, defects, uptime, speed)."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Tradeoffs</span><span class="bsub">What did you choose and why?</span></div>
+                  <textarea id="q17-trd" class="ta" rows="2" placeholder="Name the tradeoff and mitigation."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Learning</span><span class="bsub">What would you do differently?</span></div>
+                  <textarea id="q17-lrn" class="ta" rows="2" placeholder="One improvement. Senior signal."></textarea>
+                </div>
+              </div>
+              <div class="builderActions">
+                <button class="btn btn-secondary js-build" type="button" data-qid="q17">Build answer from builder</button>
+              </div>
+            </details>
+
+          </div>
+
+          <aside class="qright">
+            <div class="sideCard">
+              <div class="sideTitle">Ideas to include</div>
+              <ul class="bullets">
+                <li>Clear goals + ownership + psychological safety.</li><li>Fast feedback loops; small batches; fewer handoffs.</li><li>Healthy debate; calm disagreement; shared wins.</li><li>Systems mindset: improve process over time.</li>
+              </ul>
+            </div>
+
+            <div class="sideCard feedbackCard">
+              <div class="sideTitleRow">
+                <div class="sideTitle">Focused feedback</div>
+                <div class="chips" aria-label="Theme scores">
+                  <span class="chip chip-muted" data-chip="q17-anchor">Anchor: —</span>
+                  <span class="chip chip-muted" data-chip="q17-tj">TJ: —</span>
+                  <span class="chip chip-muted" data-chip="q17-col">Collab: —</span>
+                  <span class="chip chip-muted" data-chip="q17-own">Own: —</span>
+                </div>
+              </div>
+              <div class="feedbackBtns">
+                <button class="btn js-feedback" type="button" data-qid="q17">Get feedback</button>
+                <button class="btn btn-secondary js-clearFeedback" type="button" data-qid="q17">Clear</button>
+              </div>
+              <div class="feedbackOut" id="q17-fb" aria-live="polite">
+                <div class="muted">Click <strong>Get feedback</strong> after you write. (No feedback spam while typing.)</div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </article>
+    
+    <article class="qcard" id="q18" data-qid="q18">
+      <header class="qhead">
+        <div class="qtitle">
+          <div class="qnum">Q18</div>
+          <div class="qtext">How do you balance hands-on development with leadership responsibilities?</div>
+        </div>
+        <div class="qmeta">
+          <span class="badge">Likely</span>
+          <button class="btn btn-mini js-toggle" type="button" aria-expanded="false" aria-controls="q18-body">Open</button>
+        </div>
+      </header>
+
+      <div class="qbody" id="q18-body" hidden>
+        <div class="qgrid">
+          <div class="qleft">
+            <div class="fieldHead">
+              <div>
+                <div class="label">Answer (bullet notes)</div>
+                <div class="hint">Aim 3–6 bullets. Say it out loud in 60–90s.</div>
+              </div>
+              <div class="fieldTools">
+                <button class="btn btn-mini js-dictate" type="button" title="Voice to text (Chrome/Edge best)">🎤 Dictate</button>
+                <button class="btn btn-mini js-clearField" type="button" data-target="q18-answer">Clear</button>
+              </div>
+            </div>
+            <textarea id="q18-answer" class="ta ta-main" rows="8" placeholder="Type bullets here… (Example: • Context… • What I did… • Result… • Tradeoff… • Learning…)"></textarea>
+
+            <details class="builder">
+              <summary>Builder (optional): Context → Actions → Impact → Tradeoffs → Learning</summary>
+              <div class="builderGrid">
+                <div class="bfield">
+                  <div class="bhead"><span>Context</span><span class="bsub">What was happening? Constraints?</span></div>
+                  <textarea id="q18-ctx" class="ta" rows="2" placeholder="1–2 sentences. System + stakes + constraints."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Actions</span><span class="bsub">What did YOU do?</span></div>
+                  <textarea id="q18-act" class="ta" rows="2" placeholder="2–3 bullets. Decisions + why."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Impact</span><span class="bsub">What changed?</span></div>
+                  <textarea id="q18-imp" class="ta" rows="2" placeholder="Numbers if possible (time saved, defects, uptime, speed)."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Tradeoffs</span><span class="bsub">What did you choose and why?</span></div>
+                  <textarea id="q18-trd" class="ta" rows="2" placeholder="Name the tradeoff and mitigation."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Learning</span><span class="bsub">What would you do differently?</span></div>
+                  <textarea id="q18-lrn" class="ta" rows="2" placeholder="One improvement. Senior signal."></textarea>
+                </div>
+              </div>
+              <div class="builderActions">
+                <button class="btn btn-secondary js-build" type="button" data-qid="q18">Build answer from builder</button>
+              </div>
+            </details>
+
+          </div>
+
+          <aside class="qright">
+            <div class="sideCard">
+              <div class="sideTitle">Ideas to include</div>
+              <ul class="bullets">
+                <li>De-risk early; ship a smaller safe slice first.</li><li>Security/correctness non-negotiable; scope is flexible.</li><li>Make tradeoffs explicit; communicate early.</li><li>Use flags/canaries to control blast radius.</li>
+              </ul>
+            </div>
+
+            <div class="sideCard feedbackCard">
+              <div class="sideTitleRow">
+                <div class="sideTitle">Focused feedback</div>
+                <div class="chips" aria-label="Theme scores">
+                  <span class="chip chip-muted" data-chip="q18-anchor">Anchor: —</span>
+                  <span class="chip chip-muted" data-chip="q18-tj">TJ: —</span>
+                  <span class="chip chip-muted" data-chip="q18-col">Collab: —</span>
+                  <span class="chip chip-muted" data-chip="q18-own">Own: —</span>
+                </div>
+              </div>
+              <div class="feedbackBtns">
+                <button class="btn js-feedback" type="button" data-qid="q18">Get feedback</button>
+                <button class="btn btn-secondary js-clearFeedback" type="button" data-qid="q18">Clear</button>
+              </div>
+              <div class="feedbackOut" id="q18-fb" aria-live="polite">
+                <div class="muted">Click <strong>Get feedback</strong> after you write. (No feedback spam while typing.)</div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </article>
+    
+      </div>
+    </section>
+    
+    <section class="section">
+      <div class="sectionHead">
+        <h2>7. Working Style &amp; Culture Fit</h2>
+        <div class="sectionTools">
+          <button class="btn btn-mini js-openSection" type="button">Open all</button>
+          <button class="btn btn-mini js-closeSection" type="button">Close all</button>
+        </div>
+      </div>
+      <div class="sectionBody">
+        
+    <article class="qcard" id="q19" data-qid="q19">
+      <header class="qhead">
+        <div class="qtitle">
+          <div class="qnum">Q19</div>
+          <div class="qtext">What does a productive engineering team look like to you?</div>
+        </div>
+        <div class="qmeta">
+          <span class="badge">Likely</span>
+          <button class="btn btn-mini js-toggle" type="button" aria-expanded="false" aria-controls="q19-body">Open</button>
+        </div>
+      </header>
+
+      <div class="qbody" id="q19-body" hidden>
+        <div class="qgrid">
+          <div class="qleft">
+            <div class="fieldHead">
+              <div>
+                <div class="label">Answer (bullet notes)</div>
+                <div class="hint">Aim 3–6 bullets. Say it out loud in 60–90s.</div>
+              </div>
+              <div class="fieldTools">
+                <button class="btn btn-mini js-dictate" type="button" title="Voice to text (Chrome/Edge best)">🎤 Dictate</button>
+                <button class="btn btn-mini js-clearField" type="button" data-target="q19-answer">Clear</button>
+              </div>
+            </div>
+            <textarea id="q19-answer" class="ta ta-main" rows="8" placeholder="Type bullets here… (Example: • Context… • What I did… • Result… • Tradeoff… • Learning…)"></textarea>
+
+            <details class="builder">
+              <summary>Builder (optional): Context → Actions → Impact → Tradeoffs → Learning</summary>
+              <div class="builderGrid">
+                <div class="bfield">
+                  <div class="bhead"><span>Context</span><span class="bsub">What was happening? Constraints?</span></div>
+                  <textarea id="q19-ctx" class="ta" rows="2" placeholder="1–2 sentences. System + stakes + constraints."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Actions</span><span class="bsub">What did YOU do?</span></div>
+                  <textarea id="q19-act" class="ta" rows="2" placeholder="2–3 bullets. Decisions + why."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Impact</span><span class="bsub">What changed?</span></div>
+                  <textarea id="q19-imp" class="ta" rows="2" placeholder="Numbers if possible (time saved, defects, uptime, speed)."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Tradeoffs</span><span class="bsub">What did you choose and why?</span></div>
+                  <textarea id="q19-trd" class="ta" rows="2" placeholder="Name the tradeoff and mitigation."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Learning</span><span class="bsub">What would you do differently?</span></div>
+                  <textarea id="q19-lrn" class="ta" rows="2" placeholder="One improvement. Senior signal."></textarea>
+                </div>
+              </div>
+              <div class="builderActions">
+                <button class="btn btn-secondary js-build" type="button" data-qid="q19">Build answer from builder</button>
+              </div>
+            </details>
+
+          </div>
+
+          <aside class="qright">
+            <div class="sideCard">
+              <div class="sideTitle">Ideas to include</div>
+              <ul class="bullets">
+                <li>Reconfirm objective; show impact on scope/timeline.</li><li>Offer options: swap priorities, phase, or adjust deadline.</li><li>Keep a single source of truth for decisions.</li><li>Stay calm; no silent chaos absorption.</li>
+              </ul>
+            </div>
+
+            <div class="sideCard feedbackCard">
+              <div class="sideTitleRow">
+                <div class="sideTitle">Focused feedback</div>
+                <div class="chips" aria-label="Theme scores">
+                  <span class="chip chip-muted" data-chip="q19-anchor">Anchor: —</span>
+                  <span class="chip chip-muted" data-chip="q19-tj">TJ: —</span>
+                  <span class="chip chip-muted" data-chip="q19-col">Collab: —</span>
+                  <span class="chip chip-muted" data-chip="q19-own">Own: —</span>
+                </div>
+              </div>
+              <div class="feedbackBtns">
+                <button class="btn js-feedback" type="button" data-qid="q19">Get feedback</button>
+                <button class="btn btn-secondary js-clearFeedback" type="button" data-qid="q19">Clear</button>
+              </div>
+              <div class="feedbackOut" id="q19-fb" aria-live="polite">
+                <div class="muted">Click <strong>Get feedback</strong> after you write. (No feedback spam while typing.)</div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </article>
+    
+    <article class="qcard" id="q20" data-qid="q20">
+      <header class="qhead">
+        <div class="qtitle">
+          <div class="qnum">Q20</div>
+          <div class="qtext">How do you balance speed, quality, and security in delivery?</div>
+        </div>
+        <div class="qmeta">
+          <span class="badge">Very likely</span>
+          <button class="btn btn-mini js-toggle" type="button" aria-expanded="false" aria-controls="q20-body">Open</button>
+        </div>
+      </header>
+
+      <div class="qbody" id="q20-body" hidden>
+        <div class="qgrid">
+          <div class="qleft">
+            <div class="fieldHead">
+              <div>
+                <div class="label">Answer (bullet notes)</div>
+                <div class="hint">Aim 3–6 bullets. Say it out loud in 60–90s.</div>
+              </div>
+              <div class="fieldTools">
+                <button class="btn btn-mini js-dictate" type="button" title="Voice to text (Chrome/Edge best)">🎤 Dictate</button>
+                <button class="btn btn-mini js-clearField" type="button" data-target="q20-answer">Clear</button>
+              </div>
+            </div>
+            <textarea id="q20-answer" class="ta ta-main" rows="8" placeholder="Type bullets here… (Example: • Context… • What I did… • Result… • Tradeoff… • Learning…)"></textarea>
+
+            <details class="builder">
+              <summary>Builder (optional): Context → Actions → Impact → Tradeoffs → Learning</summary>
+              <div class="builderGrid">
+                <div class="bfield">
+                  <div class="bhead"><span>Context</span><span class="bsub">What was happening? Constraints?</span></div>
+                  <textarea id="q20-ctx" class="ta" rows="2" placeholder="1–2 sentences. System + stakes + constraints."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Actions</span><span class="bsub">What did YOU do?</span></div>
+                  <textarea id="q20-act" class="ta" rows="2" placeholder="2–3 bullets. Decisions + why."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Impact</span><span class="bsub">What changed?</span></div>
+                  <textarea id="q20-imp" class="ta" rows="2" placeholder="Numbers if possible (time saved, defects, uptime, speed)."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Tradeoffs</span><span class="bsub">What did you choose and why?</span></div>
+                  <textarea id="q20-trd" class="ta" rows="2" placeholder="Name the tradeoff and mitigation."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Learning</span><span class="bsub">What would you do differently?</span></div>
+                  <textarea id="q20-lrn" class="ta" rows="2" placeholder="One improvement. Senior signal."></textarea>
+                </div>
+              </div>
+              <div class="builderActions">
+                <button class="btn btn-secondary js-build" type="button" data-qid="q20">Build answer from builder</button>
+              </div>
+            </details>
+
+          </div>
+
+          <aside class="qright">
+            <div class="sideCard">
+              <div class="sideTitle">Ideas to include</div>
+              <ul class="bullets">
+                <li>Pick one skill to deepen; apply immediately in work.</li><li>Learn from production: incidents, metrics, postmortems.</li><li>Share learnings (docs, tech talk) — collaboration signal.</li><li>Show curiosity without chasing shiny objects.</li>
+              </ul>
+            </div>
+
+            <div class="sideCard feedbackCard">
+              <div class="sideTitleRow">
+                <div class="sideTitle">Focused feedback</div>
+                <div class="chips" aria-label="Theme scores">
+                  <span class="chip chip-muted" data-chip="q20-anchor">Anchor: —</span>
+                  <span class="chip chip-muted" data-chip="q20-tj">TJ: —</span>
+                  <span class="chip chip-muted" data-chip="q20-col">Collab: —</span>
+                  <span class="chip chip-muted" data-chip="q20-own">Own: —</span>
+                </div>
+              </div>
+              <div class="feedbackBtns">
+                <button class="btn js-feedback" type="button" data-qid="q20">Get feedback</button>
+                <button class="btn btn-secondary js-clearFeedback" type="button" data-qid="q20">Clear</button>
+              </div>
+              <div class="feedbackOut" id="q20-fb" aria-live="polite">
+                <div class="muted">Click <strong>Get feedback</strong> after you write. (No feedback spam while typing.)</div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </article>
+    
+    <article class="qcard" id="q21" data-qid="q21">
+      <header class="qhead">
+        <div class="qtitle">
+          <div class="qnum">Q21</div>
+          <div class="qtext">How do you handle ambiguity or shifting priorities?</div>
+        </div>
+        <div class="qmeta">
+          <span class="badge">Likely</span>
+          <button class="btn btn-mini js-toggle" type="button" aria-expanded="false" aria-controls="q21-body">Open</button>
+        </div>
+      </header>
+
+      <div class="qbody" id="q21-body" hidden>
+        <div class="qgrid">
+          <div class="qleft">
+            <div class="fieldHead">
+              <div>
+                <div class="label">Answer (bullet notes)</div>
+                <div class="hint">Aim 3–6 bullets. Say it out loud in 60–90s.</div>
+              </div>
+              <div class="fieldTools">
+                <button class="btn btn-mini js-dictate" type="button" title="Voice to text (Chrome/Edge best)">🎤 Dictate</button>
+                <button class="btn btn-mini js-clearField" type="button" data-target="q21-answer">Clear</button>
+              </div>
+            </div>
+            <textarea id="q21-answer" class="ta ta-main" rows="8" placeholder="Type bullets here… (Example: • Context… • What I did… • Result… • Tradeoff… • Learning…)"></textarea>
+
+            <details class="builder">
+              <summary>Builder (optional): Context → Actions → Impact → Tradeoffs → Learning</summary>
+              <div class="builderGrid">
+                <div class="bfield">
+                  <div class="bhead"><span>Context</span><span class="bsub">What was happening? Constraints?</span></div>
+                  <textarea id="q21-ctx" class="ta" rows="2" placeholder="1–2 sentences. System + stakes + constraints."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Actions</span><span class="bsub">What did YOU do?</span></div>
+                  <textarea id="q21-act" class="ta" rows="2" placeholder="2–3 bullets. Decisions + why."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Impact</span><span class="bsub">What changed?</span></div>
+                  <textarea id="q21-imp" class="ta" rows="2" placeholder="Numbers if possible (time saved, defects, uptime, speed)."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Tradeoffs</span><span class="bsub">What did you choose and why?</span></div>
+                  <textarea id="q21-trd" class="ta" rows="2" placeholder="Name the tradeoff and mitigation."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Learning</span><span class="bsub">What would you do differently?</span></div>
+                  <textarea id="q21-lrn" class="ta" rows="2" placeholder="One improvement. Senior signal."></textarea>
+                </div>
+              </div>
+              <div class="builderActions">
+                <button class="btn btn-secondary js-build" type="button" data-qid="q21">Build answer from builder</button>
+              </div>
+            </details>
+
+          </div>
+
+          <aside class="qright">
+            <div class="sideCard">
+              <div class="sideTitle">Ideas to include</div>
+              <ul class="bullets">
+                <li>Ask: what does success look like in the first 90 days?</li><li>Clarify team expectations: ownership, on-call, velocity vs quality.</li><li>Note any key systems or pain points to focus on.</li>
+              </ul>
+            </div>
+
+            <div class="sideCard feedbackCard">
+              <div class="sideTitleRow">
+                <div class="sideTitle">Focused feedback</div>
+                <div class="chips" aria-label="Theme scores">
+                  <span class="chip chip-muted" data-chip="q21-anchor">Anchor: —</span>
+                  <span class="chip chip-muted" data-chip="q21-tj">TJ: —</span>
+                  <span class="chip chip-muted" data-chip="q21-col">Collab: —</span>
+                  <span class="chip chip-muted" data-chip="q21-own">Own: —</span>
+                </div>
+              </div>
+              <div class="feedbackBtns">
+                <button class="btn js-feedback" type="button" data-qid="q21">Get feedback</button>
+                <button class="btn btn-secondary js-clearFeedback" type="button" data-qid="q21">Clear</button>
+              </div>
+              <div class="feedbackOut" id="q21-fb" aria-live="polite">
+                <div class="muted">Click <strong>Get feedback</strong> after you write. (No feedback spam while typing.)</div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </article>
+    
+      </div>
+    </section>
+    
+    <section class="section">
+      <div class="sectionHead">
+        <h2>8. Growth &amp; Self-Awareness</h2>
+        <div class="sectionTools">
+          <button class="btn btn-mini js-openSection" type="button">Open all</button>
+          <button class="btn btn-mini js-closeSection" type="button">Close all</button>
+        </div>
+      </div>
+      <div class="sectionBody">
+        
+    <article class="qcard" id="q22" data-qid="q22">
+      <header class="qhead">
+        <div class="qtitle">
+          <div class="qnum">Q22</div>
+          <div class="qtext">What’s an area you’re still working to improve as an engineer?</div>
+        </div>
+        <div class="qmeta">
+          <span class="badge">Likely</span>
+          <button class="btn btn-mini js-toggle" type="button" aria-expanded="false" aria-controls="q22-body">Open</button>
+        </div>
+      </header>
+
+      <div class="qbody" id="q22-body" hidden>
+        <div class="qgrid">
+          <div class="qleft">
+            <div class="fieldHead">
+              <div>
+                <div class="label">Answer (bullet notes)</div>
+                <div class="hint">Aim 3–6 bullets. Say it out loud in 60–90s.</div>
+              </div>
+              <div class="fieldTools">
+                <button class="btn btn-mini js-dictate" type="button" title="Voice to text (Chrome/Edge best)">🎤 Dictate</button>
+                <button class="btn btn-mini js-clearField" type="button" data-target="q22-answer">Clear</button>
+              </div>
+            </div>
+            <textarea id="q22-answer" class="ta ta-main" rows="8" placeholder="Type bullets here… (Example: • Context… • What I did… • Result… • Tradeoff… • Learning…)"></textarea>
+
+            <details class="builder">
+              <summary>Builder (optional): Context → Actions → Impact → Tradeoffs → Learning</summary>
+              <div class="builderGrid">
+                <div class="bfield">
+                  <div class="bhead"><span>Context</span><span class="bsub">What was happening? Constraints?</span></div>
+                  <textarea id="q22-ctx" class="ta" rows="2" placeholder="1–2 sentences. System + stakes + constraints."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Actions</span><span class="bsub">What did YOU do?</span></div>
+                  <textarea id="q22-act" class="ta" rows="2" placeholder="2–3 bullets. Decisions + why."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Impact</span><span class="bsub">What changed?</span></div>
+                  <textarea id="q22-imp" class="ta" rows="2" placeholder="Numbers if possible (time saved, defects, uptime, speed)."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Tradeoffs</span><span class="bsub">What did you choose and why?</span></div>
+                  <textarea id="q22-trd" class="ta" rows="2" placeholder="Name the tradeoff and mitigation."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Learning</span><span class="bsub">What would you do differently?</span></div>
+                  <textarea id="q22-lrn" class="ta" rows="2" placeholder="One improvement. Senior signal."></textarea>
+                </div>
+              </div>
+              <div class="builderActions">
+                <button class="btn btn-secondary js-build" type="button" data-qid="q22">Build answer from builder</button>
+              </div>
+            </details>
+
+          </div>
+
+          <aside class="qright">
+            <div class="sideCard">
+              <div class="sideTitle">Ideas to include</div>
+              <ul class="bullets">
+                <li>Ask: how much is BI/dashboarding vs data engineering?</li><li>Ask: what tools are in the stack today and what’s changing?</li>
+              </ul>
+            </div>
+
+            <div class="sideCard feedbackCard">
+              <div class="sideTitleRow">
+                <div class="sideTitle">Focused feedback</div>
+                <div class="chips" aria-label="Theme scores">
+                  <span class="chip chip-muted" data-chip="q22-anchor">Anchor: —</span>
+                  <span class="chip chip-muted" data-chip="q22-tj">TJ: —</span>
+                  <span class="chip chip-muted" data-chip="q22-col">Collab: —</span>
+                  <span class="chip chip-muted" data-chip="q22-own">Own: —</span>
+                </div>
+              </div>
+              <div class="feedbackBtns">
+                <button class="btn js-feedback" type="button" data-qid="q22">Get feedback</button>
+                <button class="btn btn-secondary js-clearFeedback" type="button" data-qid="q22">Clear</button>
+              </div>
+              <div class="feedbackOut" id="q22-fb" aria-live="polite">
+                <div class="muted">Click <strong>Get feedback</strong> after you write. (No feedback spam while typing.)</div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </article>
+    
+    <article class="qcard" id="q23" data-qid="q23">
+      <header class="qhead">
+        <div class="qtitle">
+          <div class="qnum">Q23</div>
+          <div class="qtext">How do you keep your skills current across evolving technologies?</div>
+        </div>
+        <div class="qmeta">
+          <span class="badge">Likely</span>
+          <button class="btn btn-mini js-toggle" type="button" aria-expanded="false" aria-controls="q23-body">Open</button>
+        </div>
+      </header>
+
+      <div class="qbody" id="q23-body" hidden>
+        <div class="qgrid">
+          <div class="qleft">
+            <div class="fieldHead">
+              <div>
+                <div class="label">Answer (bullet notes)</div>
+                <div class="hint">Aim 3–6 bullets. Say it out loud in 60–90s.</div>
+              </div>
+              <div class="fieldTools">
+                <button class="btn btn-mini js-dictate" type="button" title="Voice to text (Chrome/Edge best)">🎤 Dictate</button>
+                <button class="btn btn-mini js-clearField" type="button" data-target="q23-answer">Clear</button>
+              </div>
+            </div>
+            <textarea id="q23-answer" class="ta ta-main" rows="8" placeholder="Type bullets here… (Example: • Context… • What I did… • Result… • Tradeoff… • Learning…)"></textarea>
+
+            <details class="builder">
+              <summary>Builder (optional): Context → Actions → Impact → Tradeoffs → Learning</summary>
+              <div class="builderGrid">
+                <div class="bfield">
+                  <div class="bhead"><span>Context</span><span class="bsub">What was happening? Constraints?</span></div>
+                  <textarea id="q23-ctx" class="ta" rows="2" placeholder="1–2 sentences. System + stakes + constraints."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Actions</span><span class="bsub">What did YOU do?</span></div>
+                  <textarea id="q23-act" class="ta" rows="2" placeholder="2–3 bullets. Decisions + why."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Impact</span><span class="bsub">What changed?</span></div>
+                  <textarea id="q23-imp" class="ta" rows="2" placeholder="Numbers if possible (time saved, defects, uptime, speed)."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Tradeoffs</span><span class="bsub">What did you choose and why?</span></div>
+                  <textarea id="q23-trd" class="ta" rows="2" placeholder="Name the tradeoff and mitigation."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Learning</span><span class="bsub">What would you do differently?</span></div>
+                  <textarea id="q23-lrn" class="ta" rows="2" placeholder="One improvement. Senior signal."></textarea>
+                </div>
+              </div>
+              <div class="builderActions">
+                <button class="btn btn-secondary js-build" type="button" data-qid="q23">Build answer from builder</button>
+              </div>
+            </details>
+
+          </div>
+
+          <aside class="qright">
+            <div class="sideCard">
+              <div class="sideTitle">Ideas to include</div>
+              <ul class="bullets">
+                <li>Ask: how does on-call work and what are common incidents?</li><li>Ask: how does the team do postmortems and follow-ups?</li>
+              </ul>
+            </div>
+
+            <div class="sideCard feedbackCard">
+              <div class="sideTitleRow">
+                <div class="sideTitle">Focused feedback</div>
+                <div class="chips" aria-label="Theme scores">
+                  <span class="chip chip-muted" data-chip="q23-anchor">Anchor: —</span>
+                  <span class="chip chip-muted" data-chip="q23-tj">TJ: —</span>
+                  <span class="chip chip-muted" data-chip="q23-col">Collab: —</span>
+                  <span class="chip chip-muted" data-chip="q23-own">Own: —</span>
+                </div>
+              </div>
+              <div class="feedbackBtns">
+                <button class="btn js-feedback" type="button" data-qid="q23">Get feedback</button>
+                <button class="btn btn-secondary js-clearFeedback" type="button" data-qid="q23">Clear</button>
+              </div>
+              <div class="feedbackOut" id="q23-fb" aria-live="polite">
+                <div class="muted">Click <strong>Get feedback</strong> after you write. (No feedback spam while typing.)</div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </article>
+    
+      </div>
+    </section>
+    
+    <section class="section">
+      <div class="sectionHead">
+        <h2>9. Closing Questions (Choose 1–2)</h2>
+        <div class="sectionTools">
+          <button class="btn btn-mini js-openSection" type="button">Open all</button>
+          <button class="btn btn-mini js-closeSection" type="button">Close all</button>
+        </div>
+      </div>
+      <div class="sectionBody">
+        
+    <article class="qcard" id="q24" data-qid="q24">
+      <header class="qhead">
+        <div class="qtitle">
+          <div class="qnum">Q24</div>
+          <div class="qtext">What does success look like for this role in the first six months?</div>
+        </div>
+        <div class="qmeta">
+          <span class="badge">Ask them</span>
+          <button class="btn btn-mini js-toggle" type="button" aria-expanded="false" aria-controls="q24-body">Open</button>
+        </div>
+      </header>
+
+      <div class="qbody" id="q24-body" hidden>
+        <div class="qgrid">
+          <div class="qleft">
+            <div class="fieldHead">
+              <div>
+                <div class="label">Answer (bullet notes)</div>
+                <div class="hint">Aim 3–6 bullets. Say it out loud in 60–90s.</div>
+              </div>
+              <div class="fieldTools">
+                <button class="btn btn-mini js-dictate" type="button" title="Voice to text (Chrome/Edge best)">🎤 Dictate</button>
+                <button class="btn btn-mini js-clearField" type="button" data-target="q24-answer">Clear</button>
+              </div>
+            </div>
+            <textarea id="q24-answer" class="ta ta-main" rows="6" placeholder="Type bullets here… (Example: • Context… • What I did… • Result… • Tradeoff… • Learning…)"></textarea>
+
+            <details class="builder">
+              <summary>Builder (optional): Context → Actions → Impact → Tradeoffs → Learning</summary>
+              <div class="builderGrid">
+                <div class="bfield">
+                  <div class="bhead"><span>Context</span><span class="bsub">What was happening? Constraints?</span></div>
+                  <textarea id="q24-ctx" class="ta" rows="2" placeholder="1–2 sentences. System + stakes + constraints."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Actions</span><span class="bsub">What did YOU do?</span></div>
+                  <textarea id="q24-act" class="ta" rows="2" placeholder="2–3 bullets. Decisions + why."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Impact</span><span class="bsub">What changed?</span></div>
+                  <textarea id="q24-imp" class="ta" rows="2" placeholder="Numbers if possible (time saved, defects, uptime, speed)."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Tradeoffs</span><span class="bsub">What did you choose and why?</span></div>
+                  <textarea id="q24-trd" class="ta" rows="2" placeholder="Name the tradeoff and mitigation."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Learning</span><span class="bsub">What would you do differently?</span></div>
+                  <textarea id="q24-lrn" class="ta" rows="2" placeholder="One improvement. Senior signal."></textarea>
+                </div>
+              </div>
+              <div class="builderActions">
+                <button class="btn btn-secondary js-build" type="button" data-qid="q24">Build answer from builder</button>
+              </div>
+            </details>
+
+          </div>
+
+          <aside class="qright">
+            <div class="sideCard">
+              <div class="sideTitle">Ideas to include</div>
+              <ul class="bullets">
+                <li>Ask: what metrics does the team own (latency, uptime, fraud KPIs)?</li><li>Ask: what’s the biggest reliability bottleneck right now?</li>
+              </ul>
+            </div>
+
+            <div class="sideCard feedbackCard">
+              <div class="sideTitleRow">
+                <div class="sideTitle">Focused feedback</div>
+                <div class="chips" aria-label="Theme scores">
+                  <span class="chip chip-muted" data-chip="q24-anchor">Anchor: —</span>
+                  <span class="chip chip-muted" data-chip="q24-tj">TJ: —</span>
+                  <span class="chip chip-muted" data-chip="q24-col">Collab: —</span>
+                  <span class="chip chip-muted" data-chip="q24-own">Own: —</span>
+                </div>
+              </div>
+              <div class="feedbackBtns">
+                <button class="btn js-feedback" type="button" data-qid="q24">Get feedback</button>
+                <button class="btn btn-secondary js-clearFeedback" type="button" data-qid="q24">Clear</button>
+              </div>
+              <div class="feedbackOut" id="q24-fb" aria-live="polite">
+                <div class="muted">Click <strong>Get feedback</strong> after you write. (No feedback spam while typing.)</div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </article>
+    
+    <article class="qcard" id="q25" data-qid="q25">
+      <header class="qhead">
+        <div class="qtitle">
+          <div class="qnum">Q25</div>
+          <div class="qtext">What challenges is the team most focused on right now?</div>
+        </div>
+        <div class="qmeta">
+          <span class="badge">Ask them</span>
+          <button class="btn btn-mini js-toggle" type="button" aria-expanded="false" aria-controls="q25-body">Open</button>
+        </div>
+      </header>
+
+      <div class="qbody" id="q25-body" hidden>
+        <div class="qgrid">
+          <div class="qleft">
+            <div class="fieldHead">
+              <div>
+                <div class="label">Answer (bullet notes)</div>
+                <div class="hint">Aim 3–6 bullets. Say it out loud in 60–90s.</div>
+              </div>
+              <div class="fieldTools">
+                <button class="btn btn-mini js-dictate" type="button" title="Voice to text (Chrome/Edge best)">🎤 Dictate</button>
+                <button class="btn btn-mini js-clearField" type="button" data-target="q25-answer">Clear</button>
+              </div>
+            </div>
+            <textarea id="q25-answer" class="ta ta-main" rows="6" placeholder="Type bullets here… (Example: • Context… • What I did… • Result… • Tradeoff… • Learning…)"></textarea>
+
+            <details class="builder">
+              <summary>Builder (optional): Context → Actions → Impact → Tradeoffs → Learning</summary>
+              <div class="builderGrid">
+                <div class="bfield">
+                  <div class="bhead"><span>Context</span><span class="bsub">What was happening? Constraints?</span></div>
+                  <textarea id="q25-ctx" class="ta" rows="2" placeholder="1–2 sentences. System + stakes + constraints."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Actions</span><span class="bsub">What did YOU do?</span></div>
+                  <textarea id="q25-act" class="ta" rows="2" placeholder="2–3 bullets. Decisions + why."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Impact</span><span class="bsub">What changed?</span></div>
+                  <textarea id="q25-imp" class="ta" rows="2" placeholder="Numbers if possible (time saved, defects, uptime, speed)."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Tradeoffs</span><span class="bsub">What did you choose and why?</span></div>
+                  <textarea id="q25-trd" class="ta" rows="2" placeholder="Name the tradeoff and mitigation."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Learning</span><span class="bsub">What would you do differently?</span></div>
+                  <textarea id="q25-lrn" class="ta" rows="2" placeholder="One improvement. Senior signal."></textarea>
+                </div>
+              </div>
+              <div class="builderActions">
+                <button class="btn btn-secondary js-build" type="button" data-qid="q25">Build answer from builder</button>
+              </div>
+            </details>
+
+          </div>
+
+          <aside class="qright">
+            <div class="sideCard">
+              <div class="sideTitle">Ideas to include</div>
+              <ul class="bullets">
+                <li>Ask: what challenges are most urgent this quarter?</li><li>Ask: what’s been hardest to solve so far?</li>
+              </ul>
+            </div>
+
+            <div class="sideCard feedbackCard">
+              <div class="sideTitleRow">
+                <div class="sideTitle">Focused feedback</div>
+                <div class="chips" aria-label="Theme scores">
+                  <span class="chip chip-muted" data-chip="q25-anchor">Anchor: —</span>
+                  <span class="chip chip-muted" data-chip="q25-tj">TJ: —</span>
+                  <span class="chip chip-muted" data-chip="q25-col">Collab: —</span>
+                  <span class="chip chip-muted" data-chip="q25-own">Own: —</span>
+                </div>
+              </div>
+              <div class="feedbackBtns">
+                <button class="btn js-feedback" type="button" data-qid="q25">Get feedback</button>
+                <button class="btn btn-secondary js-clearFeedback" type="button" data-qid="q25">Clear</button>
+              </div>
+              <div class="feedbackOut" id="q25-fb" aria-live="polite">
+                <div class="muted">Click <strong>Get feedback</strong> after you write. (No feedback spam while typing.)</div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </article>
+    
+    <article class="qcard" id="q26" data-qid="q26">
+      <header class="qhead">
+        <div class="qtitle">
+          <div class="qnum">Q26</div>
+          <div class="qtext">How do strong engineers distinguish themselves on this team?</div>
+        </div>
+        <div class="qmeta">
+          <span class="badge">Ask them</span>
+          <button class="btn btn-mini js-toggle" type="button" aria-expanded="false" aria-controls="q26-body">Open</button>
+        </div>
+      </header>
+
+      <div class="qbody" id="q26-body" hidden>
+        <div class="qgrid">
+          <div class="qleft">
+            <div class="fieldHead">
+              <div>
+                <div class="label">Answer (bullet notes)</div>
+                <div class="hint">Aim 3–6 bullets. Say it out loud in 60–90s.</div>
+              </div>
+              <div class="fieldTools">
+                <button class="btn btn-mini js-dictate" type="button" title="Voice to text (Chrome/Edge best)">🎤 Dictate</button>
+                <button class="btn btn-mini js-clearField" type="button" data-target="q26-answer">Clear</button>
+              </div>
+            </div>
+            <textarea id="q26-answer" class="ta ta-main" rows="6" placeholder="Type bullets here… (Example: • Context… • What I did… • Result… • Tradeoff… • Learning…)"></textarea>
+
+            <details class="builder">
+              <summary>Builder (optional): Context → Actions → Impact → Tradeoffs → Learning</summary>
+              <div class="builderGrid">
+                <div class="bfield">
+                  <div class="bhead"><span>Context</span><span class="bsub">What was happening? Constraints?</span></div>
+                  <textarea id="q26-ctx" class="ta" rows="2" placeholder="1–2 sentences. System + stakes + constraints."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Actions</span><span class="bsub">What did YOU do?</span></div>
+                  <textarea id="q26-act" class="ta" rows="2" placeholder="2–3 bullets. Decisions + why."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Impact</span><span class="bsub">What changed?</span></div>
+                  <textarea id="q26-imp" class="ta" rows="2" placeholder="Numbers if possible (time saved, defects, uptime, speed)."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Tradeoffs</span><span class="bsub">What did you choose and why?</span></div>
+                  <textarea id="q26-trd" class="ta" rows="2" placeholder="Name the tradeoff and mitigation."></textarea>
+                </div>
+                <div class="bfield">
+                  <div class="bhead"><span>Learning</span><span class="bsub">What would you do differently?</span></div>
+                  <textarea id="q26-lrn" class="ta" rows="2" placeholder="One improvement. Senior signal."></textarea>
+                </div>
+              </div>
+              <div class="builderActions">
+                <button class="btn btn-secondary js-build" type="button" data-qid="q26">Build answer from builder</button>
+              </div>
+            </details>
+
+          </div>
+
+          <aside class="qright">
+            <div class="sideCard">
+              <div class="sideTitle">Ideas to include</div>
+              <ul class="bullets">
+                <li>Ask: what do strong engineers do differently here?</li><li>Ask: how are seniors evaluated (impact, reliability, mentorship)?</li>
+              </ul>
+            </div>
+
+            <div class="sideCard feedbackCard">
+              <div class="sideTitleRow">
+                <div class="sideTitle">Focused feedback</div>
+                <div class="chips" aria-label="Theme scores">
+                  <span class="chip chip-muted" data-chip="q26-anchor">Anchor: —</span>
+                  <span class="chip chip-muted" data-chip="q26-tj">TJ: —</span>
+                  <span class="chip chip-muted" data-chip="q26-col">Collab: —</span>
+                  <span class="chip chip-muted" data-chip="q26-own">Own: —</span>
+                </div>
+              </div>
+              <div class="feedbackBtns">
+                <button class="btn js-feedback" type="button" data-qid="q26">Get feedback</button>
+                <button class="btn btn-secondary js-clearFeedback" type="button" data-qid="q26">Clear</button>
+              </div>
+              <div class="feedbackOut" id="q26-fb" aria-live="polite">
+                <div class="muted">Click <strong>Get feedback</strong> after you write. (No feedback spam while typing.)</div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </article>
+    
+      </div>
+    </section>
+    
+    <section class="section">
+      <div class="sectionHead">
+        <h2>Side Projects / Outside Work (Only if asked)</h2>
+        <div class="sectionTools">
+          <button class="btn btn-mini js-openSection" type="button">Open all</button>
+          <button class="btn btn-mini js-closeSection" type="button">Close all</button>
+        </div>
+      </div>
+      <div class="sectionBody">
+        
+      </div>
+    </section>
+    
+      </section>
+
+      <aside class="panel panelRight" aria-label="Compass and guardrails">
+        <div class="panelHead">
+          <h2>Compass + Guardrails</h2>
+        </div>
+
+        <div class="card glass">
+          <div class="cardTitle">Anchor sentence</div>
+          <div class="quote">“I build reliable, scalable systems in ambiguous environments and communicate clearly while doing it.”</div>
+          <div class="muted">Every answer should quietly prove this.</div>
+        </div>
+
+        <div class="card glass">
+          <div class="cardTitle">Three themes (what feedback will score)</div>
+          <div class="theme">
+            <div class="themeHead"><span class="dot"></span><strong>Technical Judgment</strong></div>
+            <ul class="bullets">
+              <li>Designs for scale, failure, and change</li>
+              <li>Explains why choices were made</li>
+              <li>Acknowledges tradeoffs without prompting</li>
+            </ul>
+          </div>
+          <div class="theme">
+            <div class="themeHead"><span class="dot dot2"></span><strong>Collaboration</strong></div>
+            <ul class="bullets">
+              <li>Works across teams without ego</li>
+              <li>Handles disagreement calmly</li>
+              <li>Shares ownership instead of territory</li>
+            </ul>
+          </div>
+          <div class="theme">
+            <div class="themeHead"><span class="dot dot3"></span><strong>Ownership</strong></div>
+            <ul class="bullets">
+              <li>Takes responsibility beyond “my code”</li>
+              <li>Spots problems before tickets exist</li>
+              <li>Improves systems, not just features</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="card glass">
+          <div class="cardTitle">Behavioral cheat code</div>
+          <div class="muted"><strong>Context → Decision → Outcome → Learning</strong> (Learning = senior signal.)</div>
+          <div class="spacer"></div>
+          <div class="cardTitle">Language to avoid</div>
+          <div class="muted">Delete: “I have no idea”, “not sure”, “maybe”, “I guess”. Replace with: “Based on what I know…” + one smart assumption + one question back.</div>
+        </div>
+
+        <div class="card glass">
+          <div class="cardTitle">Export preview</div>
+          <div id="exportPreview" class="preview muted">(Click Export above to generate.)</div>
+        </div>
+
+        <div class="card glass">
+          <div class="cardTitle">Voice-to-text notes</div>
+          <div class="muted">
+            Dictation works best in <strong>Chrome / Edge</strong>. On iPhone/iPad, use the keyboard mic if the Dictate button is disabled.
+          </div>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+
+  <script src="./app.js" defer></script>
 </body>
 </html>
