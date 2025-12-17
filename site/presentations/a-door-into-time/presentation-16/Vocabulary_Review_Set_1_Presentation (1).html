@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monday Vocabulary Review - A Door Into Time</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            position: relative;
+        }
+
+        /* Background slideshow */
+        .background-slideshow {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+
+        .background-slideshow img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0;
+            transition: opacity 2s ease-in-out;
+        }
+
+        .background-slideshow img.active {
+            opacity: 1;
+        }
+
+        /* Glassmorphic container */
+        .container {
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 50px;
+            max-width: 1000px;
+            width: 90%;
+            max-height: 85vh;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            animation: fadeIn 0.5s ease-in;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .slide-content {
+            overflow-y: auto;
+            overflow-x: hidden;
+            flex: 1;
+            padding-right: 10px;
+        }
+        
+        .slide-content::-webkit-scrollbar {
+            width: 10px;
+        }
+        
+        .slide-content::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+        
+        .slide-content::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 10px;
+        }
+        
+        .slide-content::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.7);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .slide {
+            display: none;
+        }
+
+        .slide.active {
+            display: block;
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        h1 {
+            color: white;
+            text-align: center;
+            font-size: 3em;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        h2 {
+            color: white;
+            text-align: center;
+            font-size: 2.5em;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        h3 {
+            color: white;
+            font-size: 1.8em;
+            margin-bottom: 15px;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
+        }
+
+        p, li {
+            color: white;
+            font-size: 1.4em;
+            line-height: 1.8;
+            margin-bottom: 15px;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+        }
+
+        .vocab-word {
+            font-size: 3em;
+            color: #FFD700;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 20px;
+            text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.7);
+        }
+
+        .definition {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .example {
+            background: rgba(100, 200, 255, 0.2);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .word-parts {
+            background: rgba(255, 200, 100, 0.2);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .navigation {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 30px;
+        }
+
+        button {
+            background: rgba(255, 255, 255, 0.3);
+            color: white;
+            border: 2px solid white;
+            padding: 15px 40px;
+            font-size: 1.2em;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+        }
+
+        button:hover {
+            background: rgba(255, 255, 255, 0.5);
+            transform: scale(1.05);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .slide-counter {
+            text-align: center;
+            color: white;
+            font-size: 1.2em;
+            margin-top: 20px;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+        }
+
+        .key-points {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .key-points li {
+            padding-left: 40px;
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .key-points li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #90EE90;
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+
+        .response-structure {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 25px;
+            border-radius: 15px;
+            margin: 20px 0;
+            border: 2px solid rgba(255, 255, 255, 0.4);
+        }
+
+        .response-structure h3 {
+            color: #FFD700;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Background Slideshow -->
+    <div class="background-slideshow">
+        <img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1920" class="active" alt="Mountain">
+        <img src="https://images.unsplash.com/photo-1519681393784-d120267933ba?w=1920" alt="Night Sky">
+        <img src="https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=1920" alt="Forest">
+        <img src="https://images.unsplash.com/photo-1418065460487-3e41a6c84dc5?w=1920" alt="Lake">
+        <img src="https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=1920" alt="Path">
+    </div>
+
+    <div class="container">
+        <div class="glass-card">
+            <div class="slide-content">
+            <!-- Slide 1: Title -->
+            <div class="slide active">
+                <h1>📚 Monday Vocabulary Review</h1>
+                <h2>A Door Into Time</h2>
+                <p style="text-align: center; font-size: 1.6em; margin-top: 40px;">
+                    Get ready for tomorrow's assignment!
+                </p>
+                <p style="text-align: center; font-size: 1.3em; margin-top: 20px;">
+                    We'll review all vocabulary words and practice our written response structure.
+                </p>
+            </div>
+
+            <!-- Slide 2: Ferocity -->
+            <div class="slide">
+                <div class="vocab-word">FEROCITY</div>
+                <div class="definition">
+                    <h3>What does it mean?</h3>
+                    <p>Extreme fierceness or savage violence</p>
+                </div>
+                <div class="word-parts">
+                    <h3>Word Type:</h3>
+                    <p><strong>Naming word</strong> (noun)</p>
+                    <p><strong>-ity</strong> = state of being</p>
+                </div>
+                <div class="example">
+                    <h3>In the Story:</h3>
+                    <p>The battle scenes show the <strong>ferocity</strong> of the fighting - not just regular violence, but extreme and savage attacks.</p>
+                </div>
+            </div>
+
+            <!-- Slide 3: Alacrity -->
+            <div class="slide">
+                <div class="vocab-word">ALACRITY</div>
+                <div class="definition">
+                    <h3>What does it mean?</h3>
+                    <p>Eager willingness; cheerful readiness</p>
+                </div>
+                <div class="word-parts">
+                    <h3>Word Type:</h3>
+                    <p><strong>Naming word</strong> (noun)</p>
+                    <p><strong>-ity</strong> = state of being</p>
+                </div>
+                <div class="example">
+                    <h3>In the Story:</h3>
+                    <p>Characters show <strong>alacrity</strong> when they jump into action quickly and willingly, ready to do what needs to be done.</p>
+                </div>
+            </div>
+
+            <!-- Slide 4: Monotonous -->
+            <div class="slide">
+                <div class="vocab-word">MONOTONOUS</div>
+                <div class="definition">
+                    <h3>What does it mean?</h3>
+                    <p>Dull, repetitive, and boring</p>
+                </div>
+                <div class="word-parts">
+                    <h3>Word Parts:</h3>
+                    <p><strong>mono-</strong> = one</p>
+                    <p><strong>-ous</strong> = full of</p>
+                    <p><strong>Describing word</strong> (adjective)</p>
+                </div>
+                <div class="example">
+                    <h3>In the Story:</h3>
+                    <p>The <strong>monotonous</strong> routine of camp life - doing the same thing over and over - makes the battle scenes feel even more intense by comparison.</p>
+                </div>
+            </div>
+
+            <!-- Slide 5: Vulnerable -->
+            <div class="slide">
+                <div class="vocab-word">VULNERABLE</div>
+                <div class="definition">
+                    <h3>What does it mean?</h3>
+                    <p>Exposed to harm or open to attack</p>
+                </div>
+                <div class="word-parts">
+                    <h3>Word Type:</h3>
+                    <p><strong>Describing word</strong> (adjective)</p>
+                </div>
+                <div class="example">
+                    <h3>In the Story:</h3>
+                    <p>Soldiers are <strong>vulnerable</strong> when they're not protected - exposed and open to being attacked or hurt.</p>
+                </div>
+            </div>
+
+            <!-- Slide 6: Laconically -->
+            <div class="slide">
+                <div class="vocab-word">LACONICALLY</div>
+                <div class="definition">
+                    <h3>What does it mean?</h3>
+                    <p>Using very few words; being brief</p>
+                </div>
+                <div class="word-parts">
+                    <h3>Word Type:</h3>
+                    <p><strong>Word that tells how</strong> (adverb)</p>
+                </div>
+                <div class="example">
+                    <h3>In the Story:</h3>
+                    <p>When characters speak <strong>laconically</strong>, they're not chatty - they say what needs to be said in just a few words.</p>
+                </div>
+            </div>
+
+            <!-- Slide 7: Pitiful -->
+            <div class="slide">
+                <div class="vocab-word">PITIFUL</div>
+                <div class="definition">
+                    <h3>What does it mean?</h3>
+                    <p>Deserving pity; pathetically weak</p>
+                </div>
+                <div class="word-parts">
+                    <h3>Word Parts:</h3>
+                    <p><strong>-ful</strong> = full of</p>
+                    <p><strong>Describing word</strong> (adjective)</p>
+                </div>
+                <div class="example">
+                    <h3>In the Story:</h3>
+                    <p>Something <strong>pitiful</strong> makes you feel sorry for it - it's weak and deserves sympathy or compassion.</p>
+                </div>
+            </div>
+
+            <!-- Slide 8: Fomenting -->
+            <div class="slide">
+                <div class="vocab-word">FOMENTING</div>
+                <div class="definition">
+                    <h3>What does it mean?</h3>
+                    <p>Stirring up trouble or rebellion</p>
+                </div>
+                <div class="word-parts">
+                    <h3>Word Type:</h3>
+                    <p><strong>Action word</strong> (verb)</p>
+                </div>
+                <div class="example">
+                    <h3>In the Story:</h3>
+                    <p><strong>Fomenting</strong> rebellion means getting people worked up and ready to fight back - the opposite of calming things down.</p>
+                </div>
+            </div>
+
+            <!-- Slide 9: Barrage -->
+            <div class="slide">
+                <div class="vocab-word">BARRAGE</div>
+                <div class="definition">
+                    <h3>What does it mean?</h3>
+                    <p>A concentrated artillery bombardment; an overwhelming amount</p>
+                </div>
+                <div class="word-parts">
+                    <h3>Word Type:</h3>
+                    <p><strong>Naming word</strong> (noun)</p>
+                </div>
+                <div class="example">
+                    <h3>In the Story:</h3>
+                    <p>A <strong>barrage</strong> isn't just one attack - it's an overwhelming amount of attacks coming all at once.</p>
+                </div>
+            </div>
+
+            <!-- Slide 10: Onslaught -->
+            <div class="slide">
+                <div class="vocab-word">ONSLAUGHT</div>
+                <div class="definition">
+                    <h3>What does it mean?</h3>
+                    <p>A fierce, overwhelming attack</p>
+                </div>
+                <div class="word-parts">
+                    <h3>Word Type:</h3>
+                    <p><strong>Naming word</strong> (noun)</p>
+                </div>
+                <div class="example">
+                    <h3>In the Story:</h3>
+                    <p>An <strong>onslaught</strong> is much more than a regular battle - it's fierce, overwhelming, and intense.</p>
+                </div>
+            </div>
+
+            <!-- Slide 11: Entrenched -->
+            <div class="slide">
+                <div class="vocab-word">ENTRENCHED</div>
+                <div class="definition">
+                    <h3>What does it mean?</h3>
+                    <p>In a firmly established, protected position</p>
+                </div>
+                <div class="word-parts">
+                    <h3>Word Parts:</h3>
+                    <p><strong>en-</strong> = in, into</p>
+                    <p><strong>Describing word</strong> (adjective)</p>
+                </div>
+                <div class="example">
+                    <h3>In the Story:</h3>
+                    <p><strong>Entrenched</strong> soldiers aren't just standing around - they're dug into protected positions that are hard to attack.</p>
+                </div>
+            </div>
+
+            <!-- Slide 12: Written Response Structure -->
+            <div class="slide">
+                <h2>📝 Written Response Structure</h2>
+                <div class="response-structure">
+                    <h3>1. Topic Sentence (1 point)</h3>
+                    <p>Clearly answer the question right away</p>
+                </div>
+                <div class="response-structure">
+                    <h3>2. Three Supporting Details (3 points)</h3>
+                    <p>Each detail needs:</p>
+                    <ul class="key-points">
+                        <li>A specific detail from the story</li>
+                        <li>Your explanation of WHY it matters</li>
+                    </ul>
+                </div>
+                <div class="response-structure">
+                    <h3>3. Conclusion Sentence (1 point)</h3>
+                    <p>Wrap up and restate your main point in different words</p>
+                </div>
+            </div>
+
+            <!-- Slide 13: Good Topic Sentence Example -->
+            <div class="slide">
+                <h2>✅ Good Topic Sentence Example</h2>
+                <div class="example">
+                    <p style="font-size: 1.5em; font-weight: bold;">
+                        "Alex was motivated to fight because he wanted to honor his oath to Banda-ak."
+                    </p>
+                </div>
+                <div class="definition">
+                    <h3>Why is this good?</h3>
+                    <ul class="key-points">
+                        <li>It directly answers the question</li>
+                        <li>It's clear and specific</li>
+                        <li>It sets up what you'll explain next</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Slide 14: Supporting Details -->
+            <div class="slide">
+                <h2>📚 Strong Supporting Details</h2>
+                <div class="definition">
+                    <h3>What you need in EACH detail:</h3>
+                </div>
+                <div class="response-structure">
+                    <p><strong>1. A specific vocabulary word or story detail</strong></p>
+                    <p style="margin-left: 30px;">Example: "The word 'ferocity'..."</p>
+                </div>
+                <div class="response-structure">
+                    <p><strong>2. An explanation of how it helps understanding</strong></p>
+                    <p style="margin-left: 30px;">Example: "...helps me picture just how fierce and violent the fighting was, not just that people were fighting."</p>
+                </div>
+            </div>
+
+            <!-- Slide 15: Tomorrow's Written Response -->
+            <div class="slide">
+                <h2>📝 Tomorrow's Written Response</h2>
+                <div class="example">
+                    <h3>The Question:</h3>
+                    <p>"Looking at all the vocabulary words we learned from 'A Door Into Time,' explain how understanding these words helps you better understand the battle scenes in the story."</p>
+                </div>
+                <div class="definition">
+                    <h3>What to include:</h3>
+                    <ul class="key-points">
+                        <li>Clear topic sentence that answers the question</li>
+                        <li>Three vocabulary words with explanations</li>
+                        <li>How each word helps you understand battles better</li>
+                        <li>Conclusion that wraps it all up</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Slide 16: Final Review -->
+            <div class="slide">
+                <h2>🎯 Quick Review</h2>
+                <div class="definition">
+                    <h3>Vocabulary Words:</h3>
+                    <ul class="key-points">
+                        <li><strong>Ferocity</strong> - Extreme fierceness</li>
+                        <li><strong>Alacrity</strong> - Eager willingness</li>
+                        <li><strong>Monotonous</strong> - Dull and repetitive</li>
+                        <li><strong>Vulnerable</strong> - Exposed to harm</li>
+                        <li><strong>Laconically</strong> - Using few words</li>
+                        <li><strong>Pitiful</strong> - Deserving pity</li>
+                        <li><strong>Fomenting</strong> - Stirring up trouble</li>
+                        <li><strong>Barrage</strong> - Overwhelming amount</li>
+                        <li><strong>Onslaught</strong> - Fierce attack</li>
+                        <li><strong>Entrenched</strong> - Firmly established position</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Slide 17: You're Ready! -->
+            <div class="slide">
+                <h1>🌟 You're Ready!</h1>
+                <p style="text-align: center; font-size: 1.8em; margin-top: 40px;">
+                    You've reviewed all the vocabulary words and the written response structure.
+                </p>
+                <p style="text-align: center; font-size: 1.5em; margin-top: 30px;">
+                    Tomorrow, take your time and show what you know!
+                </p>
+                <p style="text-align: center; font-size: 1.3em; margin-top: 30px;">
+                    Remember: Clear topic sentence + Three strong details + Good conclusion = Success! ✨
+                </p>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <div class="navigation">
+                <button id="prevBtn" onclick="changeSlide(-1)">← Previous</button>
+                <button id="nextBtn" onclick="changeSlide(1)">Next →</button>
+            </div>
+            <div class="slide-counter">
+                <span id="currentSlide">1</span> / <span id="totalSlides">17</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+
+        document.getElementById('totalSlides').textContent = totalSlides;
+
+        function showSlide(n) {
+            slides.forEach(slide => slide.classList.remove('active'));
+            
+            if (n >= totalSlides) currentSlide = totalSlides - 1;
+            if (n < 0) currentSlide = 0;
+            
+            slides[currentSlide].classList.add('active');
+            
+            // Scroll to top of slide content
+            document.querySelector('.slide-content').scrollTop = 0;
+            
+            document.getElementById('currentSlide').textContent = currentSlide + 1;
+            document.getElementById('prevBtn').disabled = currentSlide === 0;
+            document.getElementById('nextBtn').disabled = currentSlide === totalSlides - 1;
+        }
+
+        function changeSlide(direction) {
+            currentSlide += direction;
+            showSlide(currentSlide);
+        }
+
+        // Keyboard navigation
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'ArrowLeft') changeSlide(-1);
+            if (event.key === 'ArrowRight') changeSlide(1);
+        });
+
+        // Background slideshow
+        let bgIndex = 0;
+        const bgImages = document.querySelectorAll('.background-slideshow img');
+        
+        function rotateBackground() {
+            bgImages[bgIndex].classList.remove('active');
+            bgIndex = (bgIndex + 1) % bgImages.length;
+            bgImages[bgIndex].classList.add('active');
+        }
+        
+        setInterval(rotateBackground, 8000);
+
+        // Initialize
+        showSlide(0);
+    </script>
+</body>
+</html>
