@@ -183,10 +183,7 @@ test.describe('Student Login Authentication', () => {
     await expect(loginButton).toBeVisible();
     await loginButton.click();
     
-    // Wait for error message to appear
-    await page.waitForTimeout(1000);
-    
-    // Verify error message is shown
+    // Wait for error message to appear and verify it's visible
     const msgField = page.locator('#studentSignInMsg');
     await expect(msgField).toBeVisible();
     const msgText = await msgField.textContent();
@@ -259,11 +256,8 @@ test.describe('Student Login Authentication', () => {
     await loginButton.click();
     
     // Wait for dashboard to appear
-    await page.waitForTimeout(2000);
-    
-    // Verify dashboard is visible
     const dashboardView = page.locator('#studentDashboardView');
-    await expect(dashboardView).toBeVisible();
+    await expect(dashboardView).toBeVisible({ timeout: 5000 });
     
     // Verify login view is hidden
     await expect(loginView).toBeHidden();
@@ -305,12 +299,9 @@ test.describe('Student Login Authentication', () => {
     await expect(loginButton).toBeVisible();
     await loginButton.click();
     
-    // Wait for error message to appear
-    await page.waitForTimeout(1000);
-    
-    // Verify error message is shown
+    // Wait for error message to appear and verify it's visible
     const errorDiv = page.locator('#loginError');
-    await expect(errorDiv).toBeVisible();
+    await expect(errorDiv).toBeVisible({ timeout: 3000 });
     const errorText = await errorDiv.textContent();
     expect(errorText).toContain('Invalid student code or password');
     

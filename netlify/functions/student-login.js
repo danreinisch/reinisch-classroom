@@ -131,36 +131,11 @@ exports.handler = async (event) => {
     if (isValid === true) {
       console.log(`[student-login] [${requestId}] Login successful for code:`, code);
       
-      // Fetch student name (optional - for better UX)
-      // Only return code as name if student name is not available
-      let name = code;
-      try {
-        const studentUrl = `${SUPABASE_URL}/rest/v1/students?select=code&code=eq.${encodeURIComponent(code.trim())}&limit=1`;
-        const studentResponse = await fetch(studentUrl, {
-          method: 'GET',
-          headers: {
-            'apikey': SUPABASE_SERVICE_ROLE_KEY,
-            'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        if (studentResponse.ok) {
-          const students = await studentResponse.json();
-          if (students.length > 0) {
-            // Use code as name (post-PII removal, students only have code)
-            name = students[0].code;
-          }
-        }
-      } catch (err) {
-        console.warn(`[student-login] [${requestId}] Could not fetch student name:`, err);
-        // Continue without name - not critical
-      }
-      
+      // Return code as name (post-PII removal, students only have code)
       return jsonResponse(
         event,
         200,
-        { ok: true, code: code.trim(), name },
+        { ok: true, code: code.trim(), name: code.trim() },
         { 'Cache-Control': 'no-store' },
         requestId
       );
