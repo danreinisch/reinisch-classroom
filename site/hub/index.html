@@ -3922,8 +3922,8 @@
               }, 100);
             }
           } else if (response.status === 401) {
-            // 401 is expected when no active teacher session exists - log at info level
-            console.info("[Teacher Auth] No active teacher session (401)");
+            // 401 is expected when no active teacher session exists - treat as normal unauthenticated state
+            // No logging needed for this expected condition
           } else {
             // Unexpected status code
             console.warn("[Teacher Auth] Unexpected response status:", response.status);
