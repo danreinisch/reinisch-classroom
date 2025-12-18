@@ -681,6 +681,8 @@ const remote = {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
     
+    // Query submissions with nested joins: submissions -> assignment_instances -> students
+    // This allows filtering by student_code even though it's not directly in submissions table
     let query = supabase
       .from('submissions')
       .select('*, assignment_instances!inner(student_id, students!inner(code))')
