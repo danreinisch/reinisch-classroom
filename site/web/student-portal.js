@@ -1612,7 +1612,7 @@ import './diagnostics.js';
   
   /**
    * Attempt auto-login for student based on detected authentication
-   * BYPASSES LOGIN IMMEDIATELY - Shows dashboard first, lazy-loads student data
+   * Prefers roster data, with robust fallback chain
    * @param {string} code - Student code from authentication source
    * @param {string} [name] - Optional student name from auth handoff
    * @returns {Promise<boolean>} True if successful, false otherwise
@@ -1621,44 +1621,50 @@ import './diagnostics.js';
     try {
       console.log('[student-portal] Attempting auto-login for student:', code);
       
-      // BYPASS: Create minimal student object immediately to avoid blocking on DB fetch
-      // This allows dashboard to show while we lazy-load full student data
-      const minimalStudent = {
-        code: code,
-        name: name || code // Use name from auth if available, otherwise use code
-      };
+      // Helper to normalize name strings (handle empty/whitespace)
+      const normalizeName = (str) => (str && str.trim()) || null;
       
-      // Set session data immediately
-      setStudentSession(minimalStudent, code);
+      // Priority 1: Try to load student from roster/db first (prefer source of truth)
+      const student = await findStudentByCode(code);
       
-      console.log('[student-portal] Auto-login bypass successful, showing dashboard');
+      // Build student object with fallback chain
+      const normalizedName = normalizeName(name);
+      const rosterName = normalizeName(student?.name);
       
-      // Lazy-load full student data in background (non-blocking)
-      // If this fails, the dashboard will still be visible with minimal data
-      findStudentByCode(code).then(fullStudent => {
-        if (fullStudent) {
-          // Update currentUser with full student data if found
-          currentUser = fullStudent;
-          console.log('[student-portal] Full student data loaded:', fullStudent.name || code);
-          
-          // Update user chip if it exists
-          const userChip = qs('#userChip');
-          if (userChip && fullStudent.name) {
-            userChip.textContent = fullStudent.name;
-          }
-          
-          // Update top bar if visible
-          const studentNameEl = qs('#portalStudentName');
-          if (studentNameEl && fullStudent.name) {
-            studentNameEl.textContent = fullStudent.name;
-          }
+      let hydratedStudent;
+      if (student && rosterName) {
+        // Success: Found student in roster with valid name
+        hydratedStudent = student;
+        console.log('[student-portal] Student hydrated from roster:', student.name);
+      } else if (student) {
+        // Partial: Found student in roster but no valid name - use auth name if available
+        hydratedStudent = {
+          ...student,
+          code,  // Preserve the original code parameter
+          name: normalizedName || code
+        };
+        if (normalizedName) {
+          console.log('[student-portal] Student found in roster, name from auth:', normalizedName);
         } else {
-          console.warn('[student-portal] Could not load full student data, using minimal object');
+          console.log('[student-portal] Student found in roster, using code as name');
         }
-      }).catch(err => {
-        console.error('[student-portal] Background student load failed:', err);
-        // Dashboard remains visible with minimal data
-      });
+      } else {
+        // Fallback: Student not in roster - create minimal object with consistent structure
+        hydratedStudent = {
+          code: code,
+          name: normalizedName || code
+        };
+        if (normalizedName) {
+          console.log('[student-portal] Student not in roster, using auth/URL name:', normalizedName);
+        } else {
+          console.log('[student-portal] Student not in roster, using code-only fallback');
+        }
+      }
+      
+      // Set session data with hydrated student
+      setStudentSession(hydratedStudent, code);
+      
+      console.log('[student-portal] Auto-login successful for:', hydratedStudent.name || code);
       
       return true;
       
