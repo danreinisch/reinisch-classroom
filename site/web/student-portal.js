@@ -1445,6 +1445,9 @@ import './diagnostics.js';
   // Cache is invalidated on page refresh (intentional for now)
   let studentListCache = null;
   
+  // Flag to prevent concurrent roster fetches (PR B2)
+  let rosterFetchInProgress = false;
+  
   // Refresh handlers
   qs('#btnRefreshAssignments').addEventListener('click', loadTeacherAssignments);
   
@@ -1595,7 +1598,8 @@ import './diagnostics.js';
       const found = studentListCache.find(s => s.code === code || s.student_code === code);
       
       // PR B2: If not found locally, try fetching roster from function and cache it
-      if (!found) {
+      if (!found && !rosterFetchInProgress) {
+        rosterFetchInProgress = true;
         console.log('[student-portal] Student not found in local roster; fetching roster from function');
         
         try {
@@ -1609,7 +1613,8 @@ import './diagnostics.js';
               data = await response.json();
             } catch (jsonErr) {
               console.error('[student-portal] Failed to parse roster JSON:', jsonErr);
-              return found || null;
+              rosterFetchInProgress = false;
+              return null;
             }
             
             if (data.ok && Array.isArray(data.students) && data.students.length > 0) {
@@ -1630,9 +1635,9 @@ import './diagnostics.js';
                 }
               }
               
-              // Invalidate cache and reload from db to get newly cached students
-              studentListCache = null;
+              // Atomically reload cache from db to get newly cached students
               studentListCache = await db.listStudents();
+              rosterFetchInProgress = false;
               
               // Try to find student again in refreshed cache
               return studentListCache.find(s => s.code === code || s.student_code === code) || null;
@@ -1644,6 +1649,8 @@ import './diagnostics.js';
           }
         } catch (fetchErr) {
           console.error('[student-portal] Roster fetch failed:', fetchErr);
+        } finally {
+          rosterFetchInProgress = false;
         }
       }
       
