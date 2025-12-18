@@ -1613,7 +1613,6 @@ import './diagnostics.js';
               data = await response.json();
             } catch (jsonErr) {
               console.error('[student-portal] Failed to parse roster JSON:', jsonErr);
-              rosterFetchInProgress = false;
               return null;
             }
             
@@ -1637,7 +1636,6 @@ import './diagnostics.js';
               
               // Atomically reload cache from db to get newly cached students
               studentListCache = await db.listStudents();
-              rosterFetchInProgress = false;
               
               // Try to find student again in refreshed cache
               return studentListCache.find(s => s.code === code || s.student_code === code) || null;
