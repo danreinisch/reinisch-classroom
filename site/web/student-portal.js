@@ -1622,39 +1622,37 @@ import './diagnostics.js';
       console.log('[student-portal] Attempting auto-login for student:', code);
       
       // Priority 1: Try to load student from roster/db first (prefer source of truth)
-      let student = null;
-      try {
-        student = await findStudentByCode(code);
-      } catch (err) {
-        console.error('[student-portal] Failed to fetch roster data:', err);
-        // Continue with fallback - don't fail the login
-      }
+      const student = await findStudentByCode(code);
       
       // Build student object with fallback chain
+      // Normalize name: ensure it's a non-empty string or null
+      const normalizedName = (name && name.trim()) || null;
+      const rosterName = (student && student.name && student.name.trim()) || null;
+      
       let hydratedStudent;
-      if (student && student.name) {
-        // Success: Found student in roster with name
+      if (student && rosterName) {
+        // Success: Found student in roster with valid name
         hydratedStudent = student;
         console.log('[student-portal] Student hydrated from roster:', student.name);
-      } else if (student && !student.name) {
-        // Partial: Found student in roster but no name - use auth name if available
+      } else if (student) {
+        // Partial: Found student in roster but no valid name - use auth name if available
         hydratedStudent = {
           ...student,
-          name: name || code
+          name: normalizedName || code
         };
-        if (name) {
-          console.log('[student-portal] Student found in roster, name from auth:', name);
+        if (normalizedName) {
+          console.log('[student-portal] Student found in roster, name from auth:', normalizedName);
         } else {
           console.log('[student-portal] Student found in roster, using code as name');
         }
       } else {
-        // Fallback: Student not in roster - use auth/URL name or code-only
+        // Fallback: Student not in roster - create minimal object with consistent structure
         hydratedStudent = {
           code: code,
-          name: name || code
+          name: normalizedName || code
         };
-        if (name) {
-          console.log('[student-portal] Student not in roster, using auth/URL name:', name);
+        if (normalizedName) {
+          console.log('[student-portal] Student not in roster, using auth/URL name:', normalizedName);
         } else {
           console.log('[student-portal] Student not in roster, using code-only fallback');
         }
