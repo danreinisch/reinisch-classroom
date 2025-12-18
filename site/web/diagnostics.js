@@ -547,6 +547,7 @@ const rcTelemetry = {
     rcDiag.log(`Flushing ${events.length} telemetry event(s)...`);
     
     // Send each event
+    // IMPORTANT: Use same-origin relative URL for preview deploy compatibility
     for (const event of events) {
       try {
         const response = await wrapFetch('/.netlify/functions/client-error', {

@@ -140,6 +140,7 @@
       ev.preventDefault();
       const username = ev.target.username.value;
       const pass = ev.target.password.value;
+      // IMPORTANT: Same-origin relative URL required for preview deploy compatibility
       const res = await fetch('/.netlify/functions/teacher-login', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password: pass })

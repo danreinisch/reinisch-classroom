@@ -2054,6 +2054,29 @@
   </div>
 
   <script type="module">
+    // ============================================================================
+    // NETLIFY PREVIEW DEPLOY COMPATIBILITY
+    // ============================================================================
+    // IMPORTANT: All Netlify Function calls in this Hub MUST use same-origin 
+    // relative URLs (e.g., /.netlify/functions/teacher-session) instead of 
+    // absolute URLs with hardcoded domains.
+    //
+    // WHY: Session cookies set by Netlify Functions are scoped to the request host.
+    // On preview deploys (e.g., deploy-preview-123--site.netlify.app), cookies 
+    // will only be sent to the preview host, NOT to production (reinischclassroom.com).
+    // Using absolute production URLs on preview deploys would result in 401 
+    // Unauthorized errors because session cookies don't cross domain boundaries.
+    //
+    // PATTERN: Always use relative URLs for Netlify Functions:
+    //   ✅ CORRECT:   fetch('/.netlify/functions/teacher-session', ...)
+    //   ❌ INCORRECT: fetch('https://reinischclassroom.com/.netlify/functions/teacher-session', ...)
+    //
+    // This ensures the Hub works identically on:
+    //   - Production: https://reinischclassroom.com/hub/
+    //   - Preview:    https://deploy-preview-*--site.netlify.app/hub/
+    //   - Localhost:  http://localhost:8888/hub/
+    // ============================================================================
+    
     // [Hub Init] Console prefix for all hub-related logs
     const LOG_PREFIX = '[Hub Init]';
     
@@ -2424,6 +2447,7 @@
       // Try to load from student-roster endpoint first
       try {
         console.log('[Sign-in] Attempting to load student roster from function');
+        // IMPORTANT: Same-origin relative URL required for preview deploys compatibility
         const response = await fetch('/.netlify/functions/student-roster');
         if (response.ok) {
           const data = await response.json();
@@ -2537,6 +2561,7 @@
         console.log('[Student Sign-in] Attempting server-side verification for code:', code);
         msgEl.innerHTML = '<span style="color:var(--muted)">Verifying credentials...</span>';
         
+        // IMPORTANT: Same-origin relative URL required for preview deploys compatibility
         const response = await fetch('/.netlify/functions/student-login', {
           method: 'POST',
           headers: {
@@ -2682,11 +2707,12 @@
         console.log(LOG_PREFIX, 'Sending authentication request to /.netlify/functions/teacher-login');
         
         // POST to server-backed authentication endpoint
+        // IMPORTANT: Same-origin relative URL required for preview deploys - see teacher-session comment above
         const response = await fetch('/.netlify/functions/teacher-login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username: inputUser, password: inputPass }),
-          credentials: 'include' // Important: include cookies
+          credentials: 'include' // Important: include cookies for same-origin requests
         });
         
         console.log(LOG_PREFIX, 'Authentication response status:', response.status);
@@ -2763,9 +2789,13 @@
     // Check teacher session on page load
     async function checkTeacherSession() {
       try {
+        // IMPORTANT: Use same-origin relative URL (/.netlify/functions/...) to ensure
+        // session cookies work correctly on Netlify preview deploys (*.netlify.app).
+        // Cookies are scoped to the host, so preview deploys must call their own
+        // function endpoints, not hardcoded production URLs.
         const response = await fetch('/.netlify/functions/teacher-session', {
           method: 'GET',
-          credentials: 'include' // Important: include cookies
+          credentials: 'include' // Important: include cookies for same-origin requests
         });
         
         if (response.ok) {
@@ -3626,6 +3656,7 @@
             addNotif('Fetching HTML from URL...', { type: 'info' });
             
             // Fetch HTML via edge function (to bypass CORS)
+            // IMPORTANT: Same-origin relative URL required for preview deploys compatibility
             let htmlContent;
             try {
               const response = await fetch('/.netlify/functions/fetch-html-url', {
