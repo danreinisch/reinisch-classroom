@@ -1604,7 +1604,13 @@ import './diagnostics.js';
           const response = await fetch('/.netlify/functions/student-roster');
           
           if (response.ok) {
-            const data = await response.json();
+            let data;
+            try {
+              data = await response.json();
+            } catch (jsonErr) {
+              console.error('[student-portal] Failed to parse roster JSON:', jsonErr);
+              return found || null;
+            }
             
             if (data.ok && Array.isArray(data.students) && data.students.length > 0) {
               console.log(`[student-portal] Successfully fetched ${data.students.length} students from roster function`);
