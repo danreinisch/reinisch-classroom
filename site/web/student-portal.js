@@ -1600,10 +1600,8 @@ import './diagnostics.js';
         
         try {
           // Fetch roster from same-origin endpoint (preview deploy compatible)
-          const response = await fetch('/.netlify/functions/student-roster', {
-            method: 'GET',
-            credentials: 'include'
-          });
+          // IMPORTANT: Same-origin relative URL required for preview deploys compatibility
+          const response = await fetch('/.netlify/functions/student-roster');
           
           if (response.ok) {
             const data = await response.json();
