@@ -1569,6 +1569,7 @@ import './diagnostics.js';
   /**
    * Find a student by code
    * E) Updated to match both s.code and s.student_code for code-only identity (post-PII removal)
+   * PR B2: Adds fallback to fetch roster from /.netlify/functions/student-roster when not found locally
    * @param {string} code - Student code to search for
    * @returns {Promise<Object|null>} Student object if found, null otherwise
    * 
@@ -1591,7 +1592,58 @@ import './diagnostics.js';
       }
       
       // E) Match either s.code or s.student_code for code-only identity (post-PII removal)
-      return studentListCache.find(s => s.code === code || s.student_code === code) || null;
+      const found = studentListCache.find(s => s.code === code || s.student_code === code);
+      
+      // PR B2: If not found locally, try fetching roster from function and cache it
+      if (!found) {
+        console.log('[student-portal] Student not found in local roster; fetching roster from function');
+        
+        try {
+          // Fetch roster from same-origin endpoint (preview deploy compatible)
+          const response = await fetch('/.netlify/functions/student-roster', {
+            method: 'GET',
+            credentials: 'include'
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            
+            if (data.ok && Array.isArray(data.students) && data.students.length > 0) {
+              console.log(`[student-portal] Successfully fetched ${data.students.length} students from roster function`);
+              
+              // Cache each student using db.upsertStudent to update localStorage
+              for (const student of data.students) {
+                if (student.code) {
+                  try {
+                    await db.upsertStudent({ 
+                      code: student.code, 
+                      name: student.name || student.code,
+                      class_id: student.class_id || null
+                    });
+                  } catch (upsertErr) {
+                    console.warn('[student-portal] Failed to cache student:', student.code, upsertErr);
+                  }
+                }
+              }
+              
+              // Invalidate cache and reload from db to get newly cached students
+              studentListCache = null;
+              studentListCache = await db.listStudents();
+              
+              // Try to find student again in refreshed cache
+              return studentListCache.find(s => s.code === code || s.student_code === code) || null;
+            } else {
+              console.warn('[student-portal] Roster function returned no students');
+            }
+          } else {
+            console.error('[student-portal] Failed to fetch roster:', response.status);
+          }
+        } catch (fetchErr) {
+          console.error('[student-portal] Roster fetch failed:', fetchErr);
+        }
+      }
+      
+      return found || null;
     } catch (err) {
       console.error('[student-portal] Failed to find student:', code, err);
       return null;
