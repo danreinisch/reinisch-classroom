@@ -1621,13 +1621,15 @@ import './diagnostics.js';
     try {
       console.log('[student-portal] Attempting auto-login for student:', code);
       
+      // Helper to normalize name strings (handle empty/whitespace)
+      const normalizeName = (str) => (str && str.trim()) || null;
+      
       // Priority 1: Try to load student from roster/db first (prefer source of truth)
       const student = await findStudentByCode(code);
       
       // Build student object with fallback chain
-      // Normalize name: ensure it's a non-empty string or null
-      const normalizedName = (name && name.trim()) || null;
-      const rosterName = (student && student.name && student.name.trim()) || null;
+      const normalizedName = normalizeName(name);
+      const rosterName = normalizeName(student?.name);
       
       let hydratedStudent;
       if (student && rosterName) {
@@ -1638,6 +1640,7 @@ import './diagnostics.js';
         // Partial: Found student in roster but no valid name - use auth name if available
         hydratedStudent = {
           ...student,
+          code,  // Preserve the original code parameter
           name: normalizedName || code
         };
         if (normalizedName) {
