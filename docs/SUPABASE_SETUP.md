@@ -92,14 +92,14 @@ The Supabase client rebuilds automatically when:
 
 This eliminates the need for page reloads after configuration changes.
 
-### Multi-CDN Fallback
-The client attempts to load @supabase/supabase-js@2 from multiple sources:
-1. esm.sh (primary)
-2. jsDelivr
-3. unpkg
-4. Vendored fallback at `/vendor/supabase-js@2.mjs`
+### Vendored Supabase Library
+The client loads @supabase/supabase-js@2 exclusively from the vendored file at `/vendor/supabase-js@2.mjs`.
+This approach ensures:
+- **CSP Compliance**: No external CDN requests that could trigger Content Security Policy violations
+- **Deterministic Loading**: Predictable behavior across all deployment environments
+- **Offline Capability**: Works in environments without external network access
 
-If all sources fail, the app falls back to localStorage-only mode.
+If the vendored library fails to load, the app falls back to localStorage-only mode.
 
 ### Retry Logic
 All Supabase operations are wrapped with exponential backoff retry logic:
