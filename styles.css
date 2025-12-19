@@ -1,12 +1,13 @@
 /* Make the video cover the entire viewport and sit behind content */
-html, body {
+html,
+body {
   height: 100%;
   margin: 0;
 }
 
 body {
   /* Fallback background for when video fails to load */
-  background: #000 url('assets/HomePageBackground-poster.jpg') center center / cover no-repeat;
+  background: #000 url("assets/HomePageBackground-poster.jpg") center center / cover no-repeat;
 }
 
 /* When video is working, override body background */
