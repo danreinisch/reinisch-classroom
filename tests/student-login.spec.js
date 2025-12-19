@@ -263,6 +263,80 @@ test.describe('Student Login Authentication', () => {
     await expect(loginView).toBeHidden();
   });
 
+  test('should successfully login with lowercase student code', async ({ page }) => {
+    // Mock student-login endpoint - accepts both lowercase and uppercase codes
+    // Simulating server-side normalization behavior
+    await page.route('**/.netlify/functions/student-login', async (route) => {
+      const request = route.request();
+      const postData = request.postDataJSON();
+      
+      // Normalize the code to uppercase on the server (simulating the actual function behavior)
+      const normalizedCode = postData.code ? postData.code.trim().toUpperCase() : '';
+      
+      if (normalizedCode === 'S002' && postData.password === 'S002') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            ok: true,
+            code: 'S002',  // Server returns normalized uppercase code
+            name: 'S002'
+          })
+        });
+      } else {
+        await route.fulfill({
+          status: 401,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            ok: false,
+            error: 'Invalid credentials'
+          })
+        });
+      }
+    });
+    
+    // Mock data-adapter endpoints for student data
+    await page.route('**/.netlify/functions/students*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([
+          { code: 'S002', name: 'S002', active: true }
+        ])
+      });
+    });
+    
+    // Navigate to student portal
+    await page.goto('/site/student/');
+    await page.waitForLoadState('networkidle');
+    
+    // Wait for login form to be visible
+    const loginView = page.locator('#loginView');
+    await expect(loginView).toBeVisible();
+    
+    // Enter student code in LOWERCASE
+    const codeField = page.locator('#loginCode');
+    await expect(codeField).toBeVisible();
+    await codeField.fill('s002');  // lowercase input
+    
+    // Enter password (uppercase as standardized)
+    const passwordField = page.locator('#loginPassword');
+    await expect(passwordField).toBeVisible();
+    await passwordField.fill('S002');
+    
+    // Click login button
+    const loginButton = page.locator('#btnStudentLogin');
+    await expect(loginButton).toBeVisible();
+    await loginButton.click();
+    
+    // Wait for dashboard to appear - this verifies lowercase code worked
+    const dashboardView = page.locator('#studentDashboardView');
+    await expect(dashboardView).toBeVisible({ timeout: 5000 });
+    
+    // Verify login view is hidden
+    await expect(loginView).toBeHidden();
+  });
+
   test('should show error message on Student Portal with invalid credentials', async ({ page }) => {
     // Mock student-login endpoint - failed login
     await page.route('**/.netlify/functions/student-login', async (route) => {
