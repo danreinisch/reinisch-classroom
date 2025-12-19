@@ -133,7 +133,7 @@
       : '/';
     var webmSrc = root + 'assets/HomePageBackground.webm';
     var mp4Src = root + 'assets/HomePageBackground.mp4';
-    var posterSrc = '/assets/HomePageBackground-poster.jpg';
+    var posterSrc = root + 'assets/HomePageBackground-poster.jpg';
 
     var v = document.createElement('video');
     v.className = 'bg-video';
