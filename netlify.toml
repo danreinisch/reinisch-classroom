@@ -1,5 +1,5 @@
 [build]
-  publish = "."
+  publish = "site"
   command = "node scripts/check-env-leaks.js || true"
   functions = "netlify/functions"
 
