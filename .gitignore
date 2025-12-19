@@ -36,6 +36,7 @@ build/
 docs/TEACHER_AUTH_ENV.md
 docs/*AUTH*.md
 !docs/*AUTH*.sample.md
+!docs/STUDENT_AUTH_REPAIR.md
 
 # Test screenshots
 screenshots/
