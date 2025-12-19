@@ -43,6 +43,31 @@
   [headers.values]
     Cache-Control = "no-store, no-cache, must-revalidate"
 
+# Cache-Control for video assets: long cache with immutable
+[[headers]]
+  for = "/assets/*.mp4"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+    Content-Type = "video/mp4"
+
+[[headers]]
+  for = "/assets/*.webm"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+    Content-Type = "video/webm"
+
+[[headers]]
+  for = "/site/assets/*.mp4"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+    Content-Type = "video/mp4"
+
+[[headers]]
+  for = "/site/assets/*.webm"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+    Content-Type = "video/webm"
+
 # Route-specific CSP for /hub/* - temporary 'unsafe-inline' for Teacher Center inline scripts
 # This allows the Hub login to work while planning inline-to-external refactor
 [[headers]]
