@@ -6,30 +6,19 @@ let supabaseLoadError = null;
 let cachedClient = null;
 let lastConfig = null;
 
-// Multi-CDN import fallback chain for @supabase/supabase-js@2
-// Tries: esm.sh → jsDelivr → unpkg → vendored fallback
-const CDN_URLS = [
-  'https://esm.sh/@supabase/supabase-js@2',
-  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm',
-  'https://unpkg.com/@supabase/supabase-js@2/dist/module/index.js',
-  '/vendor/supabase-js@2.mjs'
-];
+// Load @supabase/supabase-js@2 from vendored file (CSP-compliant, no external CDNs)
+// The vendored file at /vendor/supabase-js@2.mjs provides deterministic loading
+// and avoids CSP violations from external CDN attempts.
+const VENDORED_URL = '/vendor/supabase-js@2.mjs';
 
 async function loadSupabaseClient() {
-  for (const url of CDN_URLS) {
-    try {
-      const module = await import(url);
-      createClient = module.createClient;
-      console.log(`[supabase-client] Loaded from ${url.includes('vendor') ? 'vendored fallback' : 'CDN'}`);
-      return;
-    } catch (err) {
-      // Continue to next CDN
-      if (url === CDN_URLS[CDN_URLS.length - 1]) {
-        // Last attempt failed
-        supabaseLoadError = `All CDN sources failed. Last error: ${err.message}`;
-        console.warn('Supabase library unavailable; app will use localStorage backend.', supabaseLoadError);
-      }
-    }
+  try {
+    const module = await import(VENDORED_URL);
+    createClient = module.createClient;
+    console.log('[supabase-client] Loaded from vendored fallback');
+  } catch (err) {
+    supabaseLoadError = `Failed to load vendored Supabase library: ${err.message}`;
+    console.warn('Supabase library unavailable; app will use localStorage backend.', supabaseLoadError);
   }
 }
 
