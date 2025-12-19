@@ -128,15 +128,30 @@
     var root = location.pathname.indexOf('/site/') >= 0
       ? location.pathname.slice(0, location.pathname.indexOf('/site/') + 6)
       : '/';
-    var src = root + 'assets/HomePageBackground.mp4';
+    var webmSrc = root + 'assets/HomePageBackground.webm';
+    var mp4Src = root + 'assets/HomePageBackground.mp4';
+    var posterSrc = '/assets/HomePageBackground-poster.jpg';
 
     var v = document.createElement('video');
     v.className = 'bg-video';
-    v.autoplay = true; v.muted = true; v.loop = true; v.playsInline = true; v.setAttribute('preload','metadata');
+    v.autoplay = true; v.muted = true; v.loop = true; v.playsInline = true; 
+    v.setAttribute('preload','metadata');
+    v.setAttribute('poster', posterSrc);
 
-    var s = document.createElement('source');
-    s.src = src; s.type = 'video/mp4';
-    v.appendChild(s);
+    // WebM first (better compression), then MP4 fallback
+    var s1 = document.createElement('source');
+    s1.src = webmSrc; s1.type = 'video/webm';
+    v.appendChild(s1);
+
+    var s2 = document.createElement('source');
+    s2.src = mp4Src; s2.type = 'video/mp4';
+    v.appendChild(s2);
+
+    // Error handling: hide video and show fallback
+    v.addEventListener('error', function() {
+      v.style.display = 'none';
+      document.body.classList.add('video-fallback');
+    });
 
     var bg = document.querySelector('.bg');
     if (bg && bg.parentNode) {
