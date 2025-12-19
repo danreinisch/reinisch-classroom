@@ -174,13 +174,13 @@ LIMIT 10;
 
 #### Verification Query 3: Test Specific Student
 ```sql
--- Should succeed (returns row)
-SELECT * FROM verify_student_password('S001', 'S001');
+-- Should return true (valid password)
+SELECT verify_student_password('S001', 'S001');
 
--- Should fail (returns empty)
-SELECT * FROM verify_student_password('S001', 'S001!');
+-- Should return false (invalid password)
+SELECT verify_student_password('S001', 'S001!');
 ```
-**Expected result:** First query returns user info, second returns empty
+**Expected result:** First query returns `true`, second returns `false`
 
 #### Verification Query 4: Check for Remaining Collisions
 ```sql

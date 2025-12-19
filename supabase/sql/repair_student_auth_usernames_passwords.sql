@@ -175,11 +175,11 @@ END $$;
 -- Expected: ok_code = true, ok_old = false for all rows
 
 -- 3. Test specific student authentication
--- SELECT * FROM verify_student_password('S001', 'S001');
--- Expected: Returns row with username='S001', role='student'
+-- SELECT verify_student_password('S001', 'S001');
+-- Expected: true (valid password)
 
--- SELECT * FROM verify_student_password('S001', 'S001!');
--- Expected: Returns no rows (empty result)
+-- SELECT verify_student_password('S001', 'S001!');
+-- Expected: false (invalid password)
 
 -- 4. Verify no case-colliding student usernames remain
 -- SELECT lower(username) as username_lower, count(*) as count,
