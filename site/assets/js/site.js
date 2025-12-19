@@ -15,7 +15,10 @@
       /* Background video and overlay (duplicated here as a safety net if CSS fails to load) */
       .bg-video{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;z-index:-2}
       .bg-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:-1}
-      @media (prefers-reduced-motion: reduce){ .bg-video{display:none} }
+      .bg{display:none}
+      body.video-fallback .bg{display:block}
+      body.video-fallback .bg-video{display:none}
+      @media (prefers-reduced-motion: reduce){ .bg-video{display:none}; .bg{display:block} }
 
       /* Home quick links (Math Toolkit, Classroom Hub) - Glass style */
       .home-quick-links { display:flex; flex-wrap:wrap; gap:.6rem; justify-content:center; margin: 1rem 0; }
