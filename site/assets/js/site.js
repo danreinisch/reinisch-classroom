@@ -295,11 +295,11 @@
     const video = document.getElementById('bg-video');
     if (!video) return;
     
-    // Use capture phase to catch errors from source elements
+    // Error handling: hide video and show fallback
     video.addEventListener('error', function() {
       video.style.display = 'none';
       document.body.classList.add('video-fallback');
-    }, true);
+    });
   }
 
   function init() {
