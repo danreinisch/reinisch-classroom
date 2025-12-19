@@ -82,11 +82,14 @@ exports.handler = async (event) => {
     );
   }
 
+  // Normalize student code to uppercase
+  const codeNorm = code.trim().toUpperCase();
+
   try {
     // Call verify_student_password RPC with correct parameter names
     const rpcUrl = `${SUPABASE_URL}/rest/v1/rpc/verify_student_password`;
     
-    console.log(`[student-login] [${requestId}] Verifying credentials for code:`, code);
+    console.log(`[student-login] [${requestId}] Verifying credentials for code:`, codeNorm);
     
     const response = await fetch(rpcUrl, {
       method: 'POST',
@@ -96,7 +99,7 @@ exports.handler = async (event) => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        p_code: code.trim(),
+        p_code: codeNorm,
         p_password: password  // Use p_password, not p_plain
       })
     });
@@ -151,7 +154,7 @@ exports.handler = async (event) => {
       return jsonResponse(
         event,
         200,
-        { ok: true, code: code.trim(), name: code.trim() },
+        { ok: true, code: codeNorm, name: codeNorm },
         { 'Cache-Control': 'no-store' },
         requestId
       );
