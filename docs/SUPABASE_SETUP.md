@@ -93,11 +93,14 @@ The Supabase client rebuilds automatically when:
 This eliminates the need for page reloads after configuration changes.
 
 ### Vendored Supabase Library
-The client loads @supabase/supabase-js@2 exclusively from the vendored file at `/vendor/supabase-js@2.mjs`.
+The client loads @supabase/supabase-js (pinned to v2.89.0) exclusively from the vendored file at `/vendor/supabase-js@2.mjs`.
 This approach ensures:
 - **CSP Compliance**: No external CDN requests that could trigger Content Security Policy violations
-- **Deterministic Loading**: Predictable behavior across all deployment environments
+- **Deterministic Loading**: Predictable behavior across all deployment environments with a pinned, known-good version
 - **Offline Capability**: Works in environments without external network access
+- **No Stub Warnings**: The vendored file contains the real, fully-functional Supabase library
+
+The vendored file is a self-contained ESM bundle that includes all necessary dependencies.
 
 If the vendored library fails to load, the app falls back to localStorage-only mode.
 
@@ -107,6 +110,33 @@ All Supabase operations are wrapped with exponential backoff retry logic:
 - Exponential backoff with jitter to avoid thundering herd
 - Skips retry for configuration and authorization errors
 - Handles transient network failures gracefully
+
+## Verification
+
+To verify the vendored Supabase library is working correctly:
+
+### Browser Console Verification
+
+1. Open your browser's developer console (F12)
+2. Run the following command to test the library import:
+   ```javascript
+   import('/vendor/supabase-js@2.mjs').then(m => console.log('createClient available:', !!m.createClient))
+   ```
+3. You should see: `createClient available: true`
+
+### Expected Behavior
+
+- ✅ No stub warning messages in the console
+- ✅ `createClient` function is available from the vendored file
+- ✅ Supabase client creation works when configured with valid credentials
+- ✅ No CSP violations or external CDN requests
+
+### What to Check If Issues Occur
+
+- Verify the file exists at `/vendor/supabase-js@2.mjs` (should be ~418KB)
+- Check browser console for any import errors
+- Ensure no Content Security Policy violations are reported
+- Confirm the file is being served correctly by your web server
 
 ## Troubleshooting
 
