@@ -12,7 +12,7 @@
     </style>
   </head>
   <body>
-    <!-- Background video -->
+    <!-- Background video with fallbacks -->
     <video
       id="bg-video"
       class="bg-video"
@@ -21,9 +21,11 @@
       loop
       playsinline
       preload="metadata"
+      poster="assets/HomePageBackground-poster.jpg"
       aria-hidden="true"
       tabindex="-1"
     >
+      <source src="assets/HomePageBackground.webm" type="video/webm" />
       <source src="assets/HomePageBackground.mp4" type="video/mp4" />
       Your browser does not support the HTML5 Video element.
     </video>
@@ -45,5 +47,20 @@
 
     <!-- Load shared site script so home quick links (including Teacher Tools) are injected -->
     <script defer src="site/assets/js/site.js"></script>
+
+    <!-- Background video error handling -->
+    <script>
+      (function() {
+        var video = document.getElementById('bg-video');
+        if (video) {
+          video.addEventListener('error', function() {
+            // If video fails to load, hide it and show static background
+            video.style.display = 'none';
+            // Add fallback class to body for static background styling
+            document.body.classList.add('video-fallback');
+          }, true);
+        }
+      })();
+    </script>
   </body>
 </html>

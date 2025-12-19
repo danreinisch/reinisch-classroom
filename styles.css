@@ -4,6 +4,16 @@ html, body {
   margin: 0;
 }
 
+body {
+  /* Fallback background for when video fails to load */
+  background: #000 url('assets/HomePageBackground-poster.jpg') center center / cover no-repeat;
+}
+
+/* When video is working, override body background */
+body:not(.video-fallback) {
+  background: #000;
+}
+
 .bg-video {
   position: fixed;
   top: 50%;
