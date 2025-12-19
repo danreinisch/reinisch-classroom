@@ -161,9 +161,9 @@ WHERE role = 'student'
 
 #### Verification Query 2: Test Authentication for All Students
 ```sql
-SELECT username, 
-       (SELECT count(*) FROM verify_student_password(username, username)) > 0 as ok_code,
-       (SELECT count(*) FROM verify_student_password(username, username || '!')) > 0 as ok_old
+SELECT username,
+       verify_student_password(username, username) as ok_code,
+       verify_student_password(username, username || '!') as ok_old
 FROM app_users
 WHERE role = 'student'
   AND username ~ '^S[0-9]{3}$'

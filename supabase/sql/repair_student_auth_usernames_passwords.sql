@@ -165,8 +165,8 @@ END $$;
 -- 2. Verify student can authenticate with code (no "!" suffix)
 -- Sample codes: S001, S002, S003, S004
 -- SELECT username, 
---        (SELECT count(*) FROM verify_student_password(username, username)) > 0 as ok_code,
---        (SELECT count(*) FROM verify_student_password(username, username || '!')) > 0 as ok_old
+--        verify_student_password(username, username) as ok_code,
+--        verify_student_password(username, username || '!') as ok_old
 -- FROM app_users
 -- WHERE role = 'student'
 --   AND username ~ '^S[0-9]{3}$'
