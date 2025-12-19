@@ -15,7 +15,10 @@
       /* Background video and overlay (duplicated here as a safety net if CSS fails to load) */
       .bg-video{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;z-index:-2}
       .bg-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:-1}
-      @media (prefers-reduced-motion: reduce){ .bg-video{display:none} }
+      .bg{display:none}
+      body.video-fallback .bg{display:block}
+      body.video-fallback .bg-video{display:none}
+      @media (prefers-reduced-motion: reduce){ .bg-video{display:none}; .bg{display:block} }
 
       /* Home quick links (Math Toolkit, Classroom Hub) - Glass style */
       .home-quick-links { display:flex; flex-wrap:wrap; gap:.6rem; justify-content:center; margin: 1rem 0; }
@@ -128,15 +131,30 @@
     var root = location.pathname.indexOf('/site/') >= 0
       ? location.pathname.slice(0, location.pathname.indexOf('/site/') + 6)
       : '/';
-    var src = root + 'assets/HomePageBackground.mp4';
+    var webmSrc = root + 'assets/HomePageBackground.webm';
+    var mp4Src = root + 'assets/HomePageBackground.mp4';
+    var posterSrc = root + 'assets/HomePageBackground-poster.jpg';
 
     var v = document.createElement('video');
     v.className = 'bg-video';
-    v.autoplay = true; v.muted = true; v.loop = true; v.playsInline = true; v.setAttribute('preload','metadata');
+    v.autoplay = true; v.muted = true; v.loop = true; v.playsInline = true; 
+    v.setAttribute('preload','metadata');
+    v.setAttribute('poster', posterSrc);
 
-    var s = document.createElement('source');
-    s.src = src; s.type = 'video/mp4';
-    v.appendChild(s);
+    // WebM first (better compression), then MP4 fallback
+    var s1 = document.createElement('source');
+    s1.src = webmSrc; s1.type = 'video/webm';
+    v.appendChild(s1);
+
+    var s2 = document.createElement('source');
+    s2.src = mp4Src; s2.type = 'video/mp4';
+    v.appendChild(s2);
+
+    // Error handling: hide video and show fallback
+    v.addEventListener('error', function() {
+      v.style.display = 'none';
+      document.body.classList.add('video-fallback');
+    });
 
     var bg = document.querySelector('.bg');
     if (bg && bg.parentNode) {

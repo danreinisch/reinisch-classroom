@@ -53,6 +53,15 @@ h1, h2, h3, h4 {
   display: none;
 }
 
+/* Show static background when video fails to load */
+body.video-fallback .bg {
+  display: block;
+}
+
+body.video-fallback .bg-video {
+  display: none;
+}
+
 /* Respect users who prefer reduced motion: show static image, hide video */
 @media (prefers-reduced-motion: reduce) {
   .bg-video { display: none; }
