@@ -93,18 +93,6 @@
       <source src="/assets/HomePageBackground.webm" type="video/webm" />
       <source src="/assets/HomePageBackground.mp4" type="video/mp4" />
     </video>
-    <script>
-      // Handle video loading errors - hide video and show fallback
-      (function() {
-        var video = document.getElementById('bg-video');
-        if (video) {
-          video.addEventListener('error', function() {
-            video.style.display = 'none';
-            document.body.classList.add('video-fallback');
-          });
-        }
-      })();
-    </script>
     <div class="bg"></div>
     <div class="centered">
       <header>
