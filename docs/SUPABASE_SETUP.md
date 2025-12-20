@@ -122,12 +122,16 @@ Follow these steps when upgrading to a new version:
    - Review the release notes for breaking changes or security fixes
 
 2. **Download the ESM bundle**
-   - Use the unpkg CDN to obtain the ESM bundle:
+   - Use jsDelivr CDN with the `+esm` suffix to obtain the ESM bundle (recommended):
      ```
-     https://unpkg.com/@supabase/supabase-js@2.x.y/dist/module/index.js
+     https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.x.y/+esm
      ```
    - Replace `2.x.y` with your target version (e.g., `2.89.0`)
    - Download the file contents via browser or curl:
+     ```bash
+     curl -o supabase-js@2.mjs "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.x.y/+esm"
+     ```
+   - Alternative: If jsDelivr is unavailable, you can use unpkg as a fallback:
      ```bash
      curl -o supabase-js@2.mjs "https://unpkg.com/@supabase/supabase-js@2.x.y/dist/module/index.js"
      ```
