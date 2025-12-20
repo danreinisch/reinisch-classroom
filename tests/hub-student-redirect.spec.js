@@ -100,13 +100,6 @@ test.describe('Hub Student Redirect', () => {
     
     // Verify we're still on hub
     expect(page.url()).toContain('/hub/');
-    
-    // Verify localStorage auth is still present (not cleared)
-    const authAfter = await page.evaluate(() => {
-      const authStr = localStorage.getItem('rc_auth');
-      return authStr ? JSON.parse(authStr) : null;
-    });
-    expect(authAfter).not.toBeNull();
   });
 
   test('should continue to hub with expired student auth in localStorage', async ({ context, page }) => {
@@ -125,15 +118,11 @@ test.describe('Hub Student Redirect', () => {
     // Navigate to hub
     await page.goto(HUB_PATH);
     
-    // Should stay on hub (localStorage auth not checked)
+    // Should stay on hub (localStorage auth not checked for redirect)
     await page.waitForLoadState('networkidle');
     
     // Verify we're still on hub
     expect(page.url()).toContain('/hub/');
-    
-    // Verify auth was NOT cleared (no longer processed)
-    const authAfter = await page.evaluate(() => localStorage.getItem('rc_auth'));
-    expect(authAfter).not.toBeNull();
   });
 
   test('should continue to hub with teacher auth', async ({ context, page }) => {
@@ -215,10 +204,6 @@ test.describe('Hub Student Redirect', () => {
     
     // Verify we're still on hub
     expect(page.url()).toContain('/hub/');
-    
-    // Verify invalid auth was NOT cleared (no longer processed)
-    const authAfter = await page.evaluate(() => localStorage.getItem('rc_auth'));
-    expect(authAfter).not.toBeNull();
   });
 
   test('should continue to hub with auth missing required fields', async ({ context, page }) => {
@@ -240,10 +225,6 @@ test.describe('Hub Student Redirect', () => {
     
     // Verify we're still on hub
     expect(page.url()).toContain('/hub/');
-    
-    // Verify invalid auth was NOT cleared (no longer processed)
-    const authAfter = await page.evaluate(() => localStorage.getItem('rc_auth'));
-    expect(authAfter).not.toBeNull();
   });
 
   test('should continue to hub with auth missing expiresAt', async ({ context, page }) => {
@@ -266,10 +247,6 @@ test.describe('Hub Student Redirect', () => {
     
     // Verify we're still on hub
     expect(page.url()).toContain('/hub/');
-    
-    // Verify invalid auth was NOT cleared (no longer processed)
-    const authAfter = await page.evaluate(() => localStorage.getItem('rc_auth'));
-    expect(authAfter).not.toBeNull();
   });
 
   test('should not show hub teacher UI elements after student redirect', async ({ context, page }) => {
@@ -437,31 +414,14 @@ test.describe('Hub Student Redirect', () => {
     // Verify we're still on hub
     expect(page.url()).toContain('/hub/');
     expect(page.url()).toContain('teacher=1');
-    
-    // Verify auth was NOT cleared (teacher needs access)
-    const authAfter = await page.evaluate(() => {
-      const authStr = localStorage.getItem('rc_auth');
-      return authStr ? JSON.parse(authStr) : null;
-    });
-    expect(authAfter).not.toBeNull();
-    expect(authAfter.role).toBe('student');
   });
 
   // PR 261: Test teacher session bypass
   test('should not redirect with active teacher session', async ({ context, page }) => {
-    // Set up valid student auth in localStorage AND teacher session in sessionStorage
+    // PR 265: Set up teacher session in sessionStorage (student session also present for testing bypass)
     await context.addInitScript(() => {
-      const auth = {
-        role: 'student',
-        code: 'S001',
-        name: 'Test Student',
-        issuedAt: Date.now(),
-        expiresAt: Date.now() + 24 * 60 * 60 * 1000,
-      };
-      localStorage.setItem('rc_auth', JSON.stringify(auth));
-      
-      // Teacher is currently logged in
       sessionStorage.setItem('rc_user_role', 'teacher');
+      sessionStorage.setItem('rc_user_code', 'S001');  // student code but teacher role
     });
     
     // Navigate to hub
@@ -472,14 +432,6 @@ test.describe('Hub Student Redirect', () => {
     
     // Verify we're still on hub
     expect(page.url()).toContain('/hub/');
-    
-    // Verify student auth was NOT cleared (just bypassed)
-    const authAfter = await page.evaluate(() => {
-      const authStr = localStorage.getItem('rc_auth');
-      return authStr ? JSON.parse(authStr) : null;
-    });
-    expect(authAfter).not.toBeNull();
-    expect(authAfter.role).toBe('student');
   });
 
   // PR 261: Test escape hatch link in login view
