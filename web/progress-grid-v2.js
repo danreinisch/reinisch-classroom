@@ -15,6 +15,7 @@
 // ============================================================================
 
 import { getFeatureFlag } from './feature-flags.js';
+import { isRealtimeDisabled } from '../site/web/runtime-config.js';
 
 export class ProgressGridV2 {
   constructor(dataAdapter, options = {}) {
@@ -2240,6 +2241,12 @@ export class ProgressGridV2 {
   // ========================================================================
 
   async setupRealtime() {
+    // Skip realtime setup if disabled via runtime config
+    if (isRealtimeDisabled()) {
+      console.log('[progress-realtime] Realtime disabled - skipping setup');
+      return;
+    }
+    
     // Only setup if Supabase is available
     const supabase = await this.db.getSupabase?.();
     if (!supabase) {
