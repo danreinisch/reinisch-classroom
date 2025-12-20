@@ -52,16 +52,11 @@
     // Set flag to prevent failsafe from showing login view during redirect
     window.__redirectingToHub = true;
     
-    // Show simple text-only redirect message
-    // Use a simple inline style to ensure it shows immediately
-    document.addEventListener('DOMContentLoaded', () => {
-      // Hide any existing content
-      document.body.style.visibility = 'hidden';
-      
-      // Create and show redirect message
-      const redirectDiv = document.createElement('div');
-      redirectDiv.id = 'redirectMessage';
-      redirectDiv.style.cssText = `
+    // Inject redirect message immediately (before DOM loads)
+    const style = document.createElement('style');
+    style.textContent = `
+      body { margin: 0; padding: 0; }
+      #redirectMessage {
         position: fixed;
         top: 50%;
         left: 50%;
@@ -71,14 +66,32 @@
         font-weight: 600;
         color: #e6edf3;
         text-align: center;
+        background: linear-gradient(180deg, #0b1220, #0c1322);
+        width: 100vw;
+        height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         z-index: 9999;
-      `;
-      redirectDiv.textContent = 'Redirecting to Hub…';
-      document.body.appendChild(redirectDiv);
-      document.body.style.visibility = 'visible';
-    });
+      }
+    `;
+    document.head.appendChild(style);
     
-    // Use replace() to prevent back button from returning to this page
+    // Create redirect message element
+    const redirectDiv = document.createElement('div');
+    redirectDiv.id = 'redirectMessage';
+    redirectDiv.textContent = 'Redirecting to Hub…';
+    
+    // Add it as soon as DOM is available
+    if (document.body) {
+      document.body.appendChild(redirectDiv);
+    } else {
+      document.addEventListener('DOMContentLoaded', () => {
+        document.body.appendChild(redirectDiv);
+      });
+    }
+    
+    // Perform redirect immediately
     window.location.replace('/hub/');
     
   } catch (err) {
