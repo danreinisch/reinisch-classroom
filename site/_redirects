@@ -14,5 +14,10 @@
 /hub/*             /site/hub/:splat          200
 
 # Student Portal redirects - handle deep links and query parameters
+# The client-side script in /site/student/index.html handles redirect logic:
+# - If no auto-login params and no valid remembered auth: redirects to /hub/
+# - If valid auto-login params (?auto=1&code=...): stays and loads portal
+# - If valid remembered auth in localStorage: stays and loads portal
 /student           /site/student/index.html  200
+/student/          /site/student/index.html  200
 /student/*         /site/student/index.html  200
