@@ -15,7 +15,7 @@
 // ============================================================================
 
 import { getFeatureFlag } from './feature-flags.js';
-import { isRealtimeDisabled } from '../site/web/runtime-config.js';
+import { isRealtimeDisabled } from './runtime-config.js';
 
 export class ProgressGridV2 {
   constructor(dataAdapter, options = {}) {

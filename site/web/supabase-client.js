@@ -192,6 +192,7 @@ export async function testConnection() {
 // ============================================================================
 
 let reconnectAttempt = 0;
+let realtimeDisabledLogged = false; // Track if we've logged the realtime disabled message
 const MAX_RECONNECT_ATTEMPTS = 10;
 const BASE_RECONNECT_DELAY = 1000; // 1 second
 const MAX_RECONNECT_DELAY = 30000; // 30 seconds
@@ -261,8 +262,9 @@ function setupConnectionMonitoring(client) {
     } catch (err) {
       console.warn('[supabase-client] Could not setup realtime monitoring:', err);
     }
-  } else if (isRealtimeDisabled()) {
+  } else if (isRealtimeDisabled() && !realtimeDisabledLogged) {
     console.log('[supabase-client] Realtime disabled - skipping channel subscription');
+    realtimeDisabledLogged = true;
   }
 }
 
