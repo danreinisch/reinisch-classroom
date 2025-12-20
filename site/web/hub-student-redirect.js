@@ -4,6 +4,7 @@
  * Redirects remembered students from /hub/ to /student/ portal
  * 
  * Part of PR E: Students should never see teacher hub UI
+ * Part of PR 261: Add teacher override + robust routing guardrails
  * 
  * Requirements:
  * - Check localStorage.rc_auth for valid student auth
@@ -11,6 +12,10 @@
  * - If valid student auth: redirect to /student/ using location.replace()
  * - If invalid/expired: clear rc_auth and continue to hub
  * - If no auth or teacher/substitute: continue to hub normally
+ * 
+ * Bypass conditions (PR 261):
+ * - If ?teacher=1 query parameter is present, skip redirect entirely
+ * - If sessionStorage.rc_user_role === 'teacher', skip redirect (teacher session active)
  */
 
 (function() {
@@ -20,6 +25,30 @@
   const AUTH_KEY = 'rc_auth';
   
   console.log('[hub-student-redirect] Checking for remembered student auth');
+  
+  // PR 261 A: Check for teacher override query parameter
+  try {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('teacher') === '1') {
+      console.log('[hub-student-redirect] Teacher override detected (?teacher=1), skipping redirect');
+      return;
+    }
+  } catch (err) {
+    console.warn('[hub-student-redirect] Failed to parse URL parameters:', err);
+    // Continue with normal logic on error
+  }
+  
+  // PR 261 B: Check for active teacher session
+  try {
+    const userRole = sessionStorage.getItem('rc_user_role');
+    if (userRole === 'teacher') {
+      console.log('[hub-student-redirect] Active teacher session detected, skipping redirect');
+      return;
+    }
+  } catch (err) {
+    console.warn('[hub-student-redirect] Failed to check sessionStorage:', err);
+    // Continue with normal logic on error
+  }
   
   try {
     // Check localStorage for auth token

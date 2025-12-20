@@ -1468,6 +1468,8 @@
           >🛠️ Tool Kit</a
         >
         <button id="portalHelpBtn" class="btn small">Help</button>
+        <!-- PR 261 C: Teacher/Admin escape hatch in top bar -->
+        <a href="/hub/?teacher=1" class="btn small" title="Access Classroom Hub as Teacher/Admin">🏫 Hub</a>
         <button id="portalLogoutBtn" class="btn small">Logout</button>
       </div>
     </div>
@@ -1535,6 +1537,14 @@
         </div>
 
         <div id="loginError" class="error-msg hidden" style="margin-top: 16px"></div>
+        
+        <!-- PR 261 C: Teacher/Admin escape hatch link -->
+        <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); text-align: center">
+          <p style="color: var(--muted); font-size: 13px; margin-bottom: 8px">Teacher or Admin?</p>
+          <a href="/hub/?teacher=1" style="color: var(--brand); text-decoration: none; font-weight: 700; font-size: 14px">
+            Go to Classroom Hub →
+          </a>
+        </div>
       </div>
     </div>
 
