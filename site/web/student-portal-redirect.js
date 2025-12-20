@@ -64,6 +64,9 @@
     const code = urlParams.get('code');
     
     // Check if this is a valid auto-login deep link
+    // Note: This validation logic is intentionally duplicated in the edge function
+    // (student-entry-redirect.js) for defense in depth - edge function handles
+    // server-side, this handles client-side fallback
     const hasValidAutoLogin = auto === '1' && code && code.trim().length > 0;
     
     if (hasValidAutoLogin) {
@@ -83,6 +86,7 @@
     }
     
     // Check if auto=1 is present but code is missing or empty (invalid deep link)
+    // This is the inverse of hasValidAutoLogin check - validates same constraint
     if (auto === '1' && (!code || code.trim().length === 0)) {
       console.log('[student-portal-redirect] Invalid auto-login detected (missing or empty code), redirecting to hub');
       showRedirectMessage();

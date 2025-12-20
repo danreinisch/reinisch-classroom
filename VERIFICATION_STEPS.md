@@ -24,6 +24,8 @@ This document outlines the manual verification steps for the PR that eliminates 
 
 ## Manual Verification (Production/Staging Environment)
 
+**Note**: Replace `yourdomain.com` with your actual domain (e.g., `reinischclassroom.com`) and `STUDENT_CODE` with a valid student code from your system (e.g., `S010`) when testing.
+
 ### Test Case 1: Valid Deep Link (No Flash)
 **URL**: `https://yourdomain.com/student/?auto=1&code=STUDENT_CODE&name=StudentName`
 (Replace with actual domain and student code)
