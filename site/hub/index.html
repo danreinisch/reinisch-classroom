@@ -925,6 +925,10 @@
       referrerpolicy="no-referrer"
     ></script>
 
+    <!-- Hub Student Redirect: Redirect remembered students to /student/ portal -->
+    <!-- Must run before hub initialization to prevent hub UI from rendering -->
+    <script src="/web/hub-student-redirect.js"></script>
+
     <!-- Boot script: default to glass-bold theme on first visit -->
     <!-- Guardrails Stage 3B: Externalized to hub-theme-boot.js -->
     <script src="/web/hub-theme-boot.js"></script>
