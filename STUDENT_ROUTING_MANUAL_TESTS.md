@@ -1,7 +1,7 @@
 # Student Portal Routing - Manual Test Steps
 
 ## Prerequisites
-- Access to production site: https://reinischclassroom.com
+- Access to the deployed site (production or preview deployment)
 - Incognito/private browsing window (for fresh tests without cached auth)
 - Browser dev tools (for inspection)
 
@@ -14,7 +14,7 @@
 **Steps:**
 1. Open a new **incognito/private** browsing window
 2. Clear any existing site data (not usually needed in incognito)
-3. Navigate to: `https://reinischclassroom.com/student/`
+3. Navigate to: `/student/` on your deployed site
 4. Observe the page load behavior
 
 **Expected Results:**
@@ -43,12 +43,12 @@ console.log(window.location.pathname); // Should be '/hub/'
 
 **Steps:**
 1. Open a new **incognito/private** browsing window
-2. Navigate to: `https://reinischclassroom.com/student/?auto=1&code=S033&name=S033`
-   (Replace S033 with a valid student code if available)
+2. Navigate to: `/student/?auto=1&code=TESTCODE&name=TestStudent` on your deployed site
+   (Replace TESTCODE with a valid student code from your system)
 3. Observe the page load behavior
 
 **Expected Results:**
-- ✅ URL should **stay** at `/student/?auto=1&code=S033&name=S033`
+- ✅ URL should **stay** at `/student/?auto=1&code=TESTCODE&name=TestStudent`
 - ✅ Student dashboard should load directly
 - ✅ No redirect to `/hub/`
 - ✅ Student name should appear in the top bar
@@ -63,7 +63,7 @@ console.log(window.location.pathname); // Should be '/hub/'
 **Dev Tools Check:**
 ```javascript
 // In browser console, verify:
-console.log(window.location.search); // Should include '?auto=1&code=S033...'
+console.log(window.location.search); // Should include '?auto=1&code=TESTCODE...'
 console.log(document.querySelector('#loginView').classList.contains('hidden')); // Should be true
 console.log(document.querySelector('#studentDashboardView').classList.contains('hidden')); // Should be false
 ```
@@ -76,12 +76,12 @@ console.log(document.querySelector('#studentDashboardView').classList.contains('
 
 **Steps:**
 1. In a **normal** (not incognito) browser window:
-   a. Navigate to: `https://reinischclassroom.com/hub/`
+   a. Navigate to: `/hub/` on your deployed site
    b. Select a student from the dropdown
    c. Verify the portal loads
 2. Close the browser completely (not just the tab)
 3. Reopen the browser
-4. Navigate to: `https://reinischclassroom.com/student/`
+4. Navigate to: `/student/` on your deployed site
 5. Observe the page load behavior
 
 **Expected Results:**
@@ -100,7 +100,7 @@ console.log(document.querySelector('#studentDashboardView').classList.contains('
 const auth = JSON.parse(localStorage.getItem('rc_auth'));
 console.log(auth);
 // Should show:
-// { role: 'student', code: 'S033', expiresAt: <future timestamp> }
+// { role: 'student', code: '<student-code>', expiresAt: <future timestamp> }
 ```
 
 ---
@@ -164,7 +164,7 @@ console.log(loginView.classList.contains('hidden')); // Should be true
 **Objective:** Verify that `student-portal-redirect.js` is loaded on the page
 
 **Steps:**
-1. Navigate to: `https://reinischclassroom.com/student/?auto=1&code=TEST&name=TEST`
+1. Navigate to: `/student/?auto=1&code=TESTCODE&name=TestStudent` on your deployed site
 2. Open browser dev tools → Sources tab
 3. Look in the file tree for: `web/student-portal-redirect.js`
 
@@ -194,12 +194,14 @@ console.log(redirectScript.src); // Should show the full URL
 
 **Test each of these URLs in incognito mode:**
 
-| URL | Expected Behavior |
+| URL Path | Expected Behavior |
 |-----|-------------------|
-| `https://reinischclassroom.com/student` | Redirect to `/hub/` |
-| `https://reinischclassroom.com/student/` | Redirect to `/hub/` |
-| `https://reinischclassroom.com/student/?auto=1&code=TEST` | Load portal |
-| `https://reinischclassroom.com/student?auto=1&code=TEST` | Load portal |
+| `/student` | Redirect to `/hub/` |
+| `/student/` | Redirect to `/hub/` |
+| `/student/?auto=1&code=TESTCODE` | Load portal |
+| `/student?auto=1&code=TESTCODE` | Load portal |
+
+Note: Test these paths on your deployed site (prepend your domain).
 
 **Expected Results:**
 - ✅ All paths redirect correctly OR load portal as appropriate

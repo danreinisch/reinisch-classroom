@@ -2,7 +2,7 @@
 
 ## Problem Statement
 
-Production users visiting `https://reinischclassroom.com/student/` were seeing the legacy "Student Portal" code+password login UI (the "gremlin") instead of being redirected to the Hub. Investigation revealed that `student-portal-redirect.js` was not being loaded, indicating that `/student/` was being served by a different artifact than `site/student/index.html`.
+Production users visiting the `/student/` route were seeing the legacy "Student Portal" code+password login UI (the "gremlin") instead of being redirected to the Hub. Investigation revealed that `student-portal-redirect.js` was not being loaded, indicating that `/student/` was being served by a different artifact than `site/student/index.html`.
 
 ## Solution
 
@@ -62,7 +62,7 @@ The redirect logic is implemented in `/site/web/student-portal-redirect.js`, whi
 **Result:** User sees Hub login dropdown instead of gremlin
 
 ### Scenario 2: Auto-login deep link
-**User action:** Navigate to `https://reinischclassroom.com/student/?auto=1&code=S033&name=S033`
+**User action:** Navigate to `/student/?auto=1&code=EXAMPLE&name=TestStudent` (example URL with placeholder credentials)
 
 **Expected behavior:**
 1. Netlify serves `/site/student/index.html` (200 rewrite)
@@ -102,7 +102,7 @@ If we added:
 
 Then **both** of these would redirect:
 - `/student/` → `/hub/` ✅ (wanted)
-- `/student/?auto=1&code=S033` → `/hub/?auto=1&code=S033` ❌ (unwanted)
+- `/student/?auto=1&code=EXAMPLE` → `/hub/?auto=1&code=EXAMPLE` ❌ (unwanted)
 
 The auto-login deep link would break because it would redirect to the Hub with query params that the Hub doesn't understand.
 
