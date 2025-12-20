@@ -75,7 +75,7 @@ test.describe('Student Portal Goal Progress Error Handling', () => {
       });
     });
     
-    // Mock student-goal-progress to return unavailable
+    // Mock student-goal-progress to return unavailable (new behavior)
     await page.route('**/.netlify/functions/student-goal-progress**', async (route) => {
       await route.fulfill({
         status: 200,
@@ -83,7 +83,22 @@ test.describe('Student Portal Goal Progress Error Handling', () => {
         body: JSON.stringify({
           ok: true,
           progress: [],
-          unavailable: true
+          unavailable: true,
+          reason: 'supabase_not_configured'
+        })
+      });
+    });
+    
+    // Mock auth-health to indicate Supabase not configured
+    await page.route('**/.netlify/functions/auth-health', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          ok: false,
+          status: {
+            supabase_configured: false
+          }
         })
       });
     });
@@ -128,6 +143,16 @@ test.describe('Student Portal Goal Progress Error Handling', () => {
     const goalsContent = await page.locator('#goalsContent').textContent();
     expect(goalsContent).toContain('Test Goal 1');
     expect(goalsContent).toContain('Avg: —'); // Progress unavailable indicator
+    
+    // Verify banner is displayed
+    await page.waitForSelector('#portalBanner:not(.hidden)', { timeout: 2000 });
+    const bannerVisible = await page.locator('#portalBanner').isVisible();
+    expect(bannerVisible).toBeTruthy();
+    
+    // Verify banner shows appropriate message
+    const bannerMessage = await page.locator('#portalBannerMessage').textContent();
+    expect(bannerMessage).toContain('Progress');
+    expect(bannerMessage.toLowerCase()).toContain('unavailable');
   });
 
   test('should cap retries at 3 attempts when goal progress fails', async ({ page }) => {
@@ -364,6 +389,20 @@ test.describe('Student Portal Goal Progress Error Handling', () => {
       });
     });
     
+    // Mock auth-health
+    await page.route('**/.netlify/functions/auth-health', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          ok: true,
+          status: {
+            supabase_configured: true
+          }
+        })
+      });
+    });
+    
     // Mock other endpoints
     await page.route('**/.netlify/functions/student-assignments', async (route) => {
       await route.fulfill({
@@ -406,5 +445,204 @@ test.describe('Student Portal Goal Progress Error Handling', () => {
     // Should NOT contain progress-bar-container when unavailable
     const hasProgressBar = goalsContent.includes('progress-bar-container');
     expect(hasProgressBar).toBeFalsy();
+  });
+
+  test('should show diagnostic message in debug mode when Supabase not configured', async ({ page }) => {
+    // Mock student-roster
+    await page.route('**/.netlify/functions/student-roster', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          ok: true,
+          students: [{ code: 'TEST001', name: 'Test Student', class_id: 1 }]
+        })
+      });
+    });
+    
+    // Mock student-login
+    await page.route('**/.netlify/functions/student-login', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ ok: true })
+      });
+    });
+    
+    // Mock student-goals
+    await page.route('**/.netlify/functions/student-goals', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          ok: true,
+          goals: [{ code: 'G001', desc: 'Test Goal', status: 'Open' }]
+        })
+      });
+    });
+    
+    // Mock student-goal-progress to return unavailable with supabase_not_configured reason
+    await page.route('**/.netlify/functions/student-goal-progress**', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          ok: true,
+          progress: [],
+          unavailable: true,
+          reason: 'supabase_not_configured'
+        })
+      });
+    });
+    
+    // Mock auth-health to indicate Supabase not configured
+    await page.route('**/.netlify/functions/auth-health', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          ok: false,
+          status: {
+            supabase_configured: false
+          }
+        })
+      });
+    });
+    
+    // Mock other endpoints
+    await page.route('**/.netlify/functions/student-assignments', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ ok: true, instances: [] })
+      });
+    });
+    
+    await page.route('**/.netlify/functions/student-submissions', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ ok: true, submissions: [] })
+      });
+    });
+    
+    // Navigate with debug mode enabled
+    await page.goto('/student/?debug=1');
+    await page.fill('#loginCode', 'TEST001');
+    await page.fill('#loginPassword', 'testpass');
+    await page.click('#btnStudentLogin');
+    
+    // Wait for dashboard
+    await page.waitForSelector('#studentDashboardView:not(.hidden)', { timeout: 5000 });
+    
+    // Wait for banner to appear
+    await page.waitForSelector('#portalBanner:not(.hidden)', { timeout: 3000 });
+    
+    // Verify banner shows diagnostic message
+    const bannerMessage = await page.locator('#portalBannerMessage').textContent();
+    expect(bannerMessage).toContain('Supabase');
+    expect(bannerMessage).toContain('environment variables');
+    expect(bannerMessage).toContain('auth-health');
+  });
+
+  test('should handle backwards compatibility with 503 response', async ({ page }) => {
+    // Mock student-roster
+    await page.route('**/.netlify/functions/student-roster', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          ok: true,
+          students: [{ code: 'TEST001', name: 'Test Student', class_id: 1 }]
+        })
+      });
+    });
+    
+    // Mock student-login
+    await page.route('**/.netlify/functions/student-login', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ ok: true })
+      });
+    });
+    
+    // Mock student-goals
+    await page.route('**/.netlify/functions/student-goals', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          ok: true,
+          goals: [{ code: 'G001', desc: 'Test Goal', status: 'Open' }]
+        })
+      });
+    });
+    
+    // Mock student-goal-progress to return 503 (old behavior)
+    await page.route('**/.netlify/functions/student-goal-progress**', async (route) => {
+      await route.fulfill({
+        status: 503,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          ok: false,
+          error: 'Service unavailable'
+        })
+      });
+    });
+    
+    // Mock auth-health
+    await page.route('**/.netlify/functions/auth-health', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          ok: true,
+          status: {
+            supabase_configured: true
+          }
+        })
+      });
+    });
+    
+    // Mock other endpoints
+    await page.route('**/.netlify/functions/student-assignments', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ ok: true, instances: [] })
+      });
+    });
+    
+    await page.route('**/.netlify/functions/student-submissions', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ ok: true, submissions: [] })
+      });
+    });
+    
+    // Navigate and login
+    await page.goto('/student/');
+    await page.fill('#loginCode', 'TEST001');
+    await page.fill('#loginPassword', 'testpass');
+    await page.click('#btnStudentLogin');
+    
+    // Wait for dashboard
+    await page.waitForSelector('#studentDashboardView:not(.hidden)', { timeout: 5000 });
+    
+    // Verify dashboard is still visible despite 503 error
+    const dashboardVisible = await page.locator('#studentDashboardView').isVisible();
+    expect(dashboardVisible).toBeTruthy();
+    
+    // Verify goals are shown (even without progress)
+    const goalsContent = await page.locator('#goalsContent').textContent();
+    expect(goalsContent).toContain('Test Goal');
+    expect(goalsContent).toContain('Avg: —');
+    
+    // Verify banner is displayed
+    await page.waitForSelector('#portalBanner:not(.hidden)', { timeout: 2000 });
+    const bannerVisible = await page.locator('#portalBanner').isVisible();
+    expect(bannerVisible).toBeTruthy();
   });
 });
