@@ -31,10 +31,11 @@ exports.handler = async (event) => {
   // Check if Supabase is configured
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
     console.log(`[student-goal-progress] [${requestId}] Supabase not configured`);
+    // Return 200 with unavailable flag to prevent client error handling
     return jsonResponse(
       event, 
-      503, 
-      { ok: false, error: 'Service unavailable' },
+      200, 
+      { ok: true, progress: [], unavailable: true, reason: 'supabase_not_configured' },
       { 'Cache-Control': 'no-store' },
       requestId
     );

@@ -35,8 +35,19 @@ async function apiFetch(url, options = {}) {
       data = { error: await response.text() };
     }
 
-    // Check for error response
+    // Check for error response (but not 503 which might be service unavailable)
     if (!response.ok) {
+      // Special handling for 503 Service Unavailable
+      if (response.status === 503) {
+        // Return a normalized unavailable response instead of throwing
+        return {
+          ok: true,
+          unavailable: true,
+          reason: 'service_unavailable',
+          originalError: data.error || 'Service unavailable'
+        };
+      }
+      
       const errorMsg = data.error || `HTTP ${response.status}`;
       console.error('[student-api] API error:', errorMsg);
       throw new Error(errorMsg);
@@ -117,7 +128,7 @@ export async function getStudentSubmissions(code) {
 /**
  * Get student goal progress
  * @param {string} code - Student code
- * @returns {Promise<Array>} Array of goal progress entries
+ * @returns {Promise<Object>} Object with progress array and availability info
  */
 export async function getStudentGoalProgress(code) {
   const url = `/.netlify/functions/student-goal-progress?code=${encodeURIComponent(code)}`;
@@ -129,13 +140,20 @@ export async function getStudentGoalProgress(code) {
   
   // Check if service is unavailable (schema not present, etc.)
   if (response.unavailable) {
-    const error = new Error('Service temporarily unavailable');
-    error.code = 'SERVICE_UNAVAILABLE';
-    error.reason = response.reason || 'unknown';
-    throw error;
+    // Return a normalized response indicating unavailability
+    return {
+      ok: true,
+      progress: [],
+      unavailable: true,
+      reason: response.reason || 'unknown'
+    };
   }
   
-  return response.progress || [];
+  return {
+    ok: true,
+    progress: response.progress || [],
+    unavailable: false
+  };
 }
 
 /**
@@ -163,7 +181,18 @@ export function createStudentApiAdapter(studentCode) {
       if (studentCodes && studentCodes.length > 0 && studentCodes[0] !== studentCode) {
         return [];
       }
-      return await getStudentGoalProgress(studentCode);
+      const result = await getStudentGoalProgress(studentCode);
+      
+      // Pass through unavailable status
+      if (result.unavailable) {
+        return {
+          progress: [],
+          unavailable: true,
+          reason: result.reason
+        };
+      }
+      
+      return result.progress || [];
     },
     
     // Assignments

@@ -1052,6 +1052,7 @@ const GOALS_RETRY_DELAYS = [2000, 5000, 10000]; // Exponential backoff: 2s, 5s, 
 async function loadStudentGoals() {
   let goals = [];
   let progressAvailable = true;
+  let progressUnavailableReason = null;
   
   try {
     // Separate goals and progress fetching
@@ -1098,18 +1099,36 @@ async function loadStudentGoals() {
     // Try to fetch progress data (non-fatal if it fails)
     let entries = [];
     try {
-      entries = await activeDb.listGoalProgress({ studentCodes: [currentUser.code] });
+      const progressResult = await activeDb.listGoalProgress({ studentCodes: [currentUser.code] });
+      
+      // Check if result indicates unavailability
+      if (progressResult && typeof progressResult === 'object' && progressResult.unavailable) {
+        progressAvailable = false;
+        progressUnavailableReason = progressResult.reason || 'unknown';
+        
+        if (DEBUG_MODE) {
+          console.warn("[student-dashboard] Progress service unavailable (reason: " + 
+                      progressUnavailableReason + ")");
+        } else {
+          console.log("[student-dashboard] Progress data unavailable, continuing without progress metrics");
+        }
+        
+        // Show banner about progress unavailability
+        await showProgressUnavailableBanner(progressUnavailableReason);
+      } else {
+        // Normal response - extract progress array
+        entries = Array.isArray(progressResult) ? progressResult : (progressResult.progress || []);
+      }
     } catch (progressErr) {
-      console.error("[student-api] Failed to fetch goal progress:", progressErr);
+      if (DEBUG_MODE) {
+        console.warn("[student-dashboard] Progress fetch failed:", progressErr);
+      } else {
+        console.log("[student-dashboard] Could not load progress data");
+      }
       progressAvailable = false;
       
-      // Check if this is an "unavailable" response (schema not present) vs a real error
-      if (progressErr.code === 'SERVICE_UNAVAILABLE') {
-        console.log("[student-dashboard] Progress service unavailable (reason: " + 
-                    (progressErr.reason || 'unknown') + "), continuing without progress data");
-      } else {
-        console.warn("[student-dashboard] Progress fetch failed with error:", progressErr.message);
-      }
+      // Show banner about progress unavailability
+      await showProgressUnavailableBanner('error');
     }
 
     // Build a map of goal -> average progress
@@ -1202,6 +1221,52 @@ async function loadStudentGoals() {
       }
     }
   }
+}
+
+/**
+ * Show banner when progress is unavailable, with auth-health diagnostics
+ * @param {string} reason - Reason for unavailability
+ */
+async function showProgressUnavailableBanner(reason) {
+  // Check if we're in diagnostic mode
+  const urlParams = new URLSearchParams(window.location.search);
+  const diagMode = urlParams.get('debug') === '1' || urlParams.get('diag') === '1';
+  
+  let message = 'Progress data is temporarily unavailable. You can still view your goals.';
+  let title = 'Progress Data Unavailable';
+  let bannerType = 'info';
+  
+  // If diagnostic mode is enabled or reason is supabase_not_configured, check auth-health
+  if (diagMode || reason === 'supabase_not_configured') {
+    try {
+      const healthResponse = await fetch('/.netlify/functions/auth-health');
+      if (healthResponse.ok) {
+        const health = await healthResponse.json();
+        
+        if (!health.status?.supabase_configured) {
+          // Supabase is not configured
+          if (diagMode) {
+            // Show detailed diagnostic message for teachers/admins
+            message = 'Supabase is not configured in Netlify. Check environment variables (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY) and visit /.netlify/functions/auth-health for details.';
+            bannerType = 'warning';
+          } else {
+            // Show friendly message for students
+            message = 'Progress tracking is being set up. Please check back later or contact your teacher.';
+          }
+        }
+      }
+    } catch (healthErr) {
+      if (DEBUG_MODE) {
+        console.warn('[student-portal] Could not check auth-health:', healthErr);
+      }
+    }
+  }
+  
+  showBanner({
+    type: bannerType,
+    title: title,
+    message: message
+  });
 }
 
 async function loadTeacherAssignments() {
