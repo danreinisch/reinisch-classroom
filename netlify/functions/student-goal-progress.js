@@ -108,18 +108,124 @@ exports.handler = async (event) => {
     });
 
     if (!progressResponse.ok) {
-      throw new Error(`Progress query failed: ${progressResponse.status}`);
+      // Parse error response for debugging
+      let errorBody = '';
+      let errorData = null;
+      
+      try {
+        errorBody = await progressResponse.text();
+        // Try to parse as JSON for structured error info
+        try {
+          errorData = JSON.parse(errorBody);
+        } catch {
+          // Not JSON, keep as text
+        }
+      } catch (err) {
+        console.error(`[student-goal-progress] [${requestId}] Failed to read error body:`, err);
+      }
+      
+      console.error(`[student-goal-progress] [${requestId}] Progress query failed:`, {
+        status: progressResponse.status,
+        body: errorBody,
+        data: errorData
+      });
+      
+      // Check for known schema errors using status codes and error patterns
+      // PostgREST returns 400 for relation errors, 406 for content negotiation issues
+      const isSchemaError = 
+        progressResponse.status === 404 || // Not found
+        progressResponse.status === 400 && errorBody && (
+          errorBody.includes('relation') && errorBody.includes('does not exist') ||
+          errorBody.includes('column') && errorBody.includes('does not exist')
+        ) ||
+        progressResponse.status === 406; // Not acceptable (relationship/join issue)
+      
+      if (isSchemaError) {
+        // Schema not present - return success with unavailable flag
+        console.log(`[student-goal-progress] [${requestId}] Schema not available (status: ${progressResponse.status}), returning empty result`);
+        return jsonResponse(
+          event,
+          200,
+          { ok: true, progress: [], unavailable: true, reason: 'schema_unavailable' },
+          { 'Cache-Control': 'no-store' },
+          requestId
+        );
+      }
+      
+      // Try fallback query without join for relationship errors
+      console.log(`[student-goal-progress] [${requestId}] Attempting fallback query without join`);
+      const fallbackUrl = `${SUPABASE_URL}/rest/v1/goal_progress?select=*&student_id=eq.${studentId}&order=date.desc`;
+      
+      const fallbackResponse = await fetch(fallbackUrl, {
+        method: 'GET',
+        headers: {
+          'apikey': SUPABASE_SERVICE_ROLE_KEY,
+          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!fallbackResponse.ok) {
+        // Both queries failed - return unavailable
+        console.error(`[student-goal-progress] [${requestId}] Fallback query also failed (status: ${fallbackResponse.status})`);
+        return jsonResponse(
+          event,
+          200,
+          { ok: true, progress: [], unavailable: true, reason: 'query_failed' },
+          { 'Cache-Control': 'no-store' },
+          requestId
+        );
+      }
+      
+      const fallbackProgress = await fallbackResponse.json();
+      
+      // Constants for fallback values
+      const FALLBACK_GOAL_DESC = 'Goal details unavailable';
+      const FALLBACK_GOAL_AREA = 'Uncategorized';
+      
+      // Map fallback data without goal details
+      const fallbackFlattened = (fallbackProgress || []).map(entry => ({
+        id: entry.id,
+        goal_id: entry.goal_id,
+        goal_code: `G${entry.goal_id}`,
+        goal_desc: FALLBACK_GOAL_DESC,
+        goal_area: FALLBACK_GOAL_AREA,
+        student_id: entry.student_id,
+        student_code: codeNorm,
+        class_id: entry.class_id,
+        date: entry.date,
+        value: entry.value,
+        percent: entry.value,
+        source: entry.source,
+        collected_by: entry.collected_by,
+        created_at: entry.created_at
+      }));
+      
+      console.log(`[student-goal-progress] [${requestId}] Fallback successful, fetched ${fallbackFlattened.length} entries`);
+      
+      return jsonResponse(
+        event,
+        200,
+        { ok: true, progress: fallbackFlattened, fallback: true },
+        { 'Cache-Control': 'no-store' },
+        requestId
+      );
     }
 
     const progress = await progressResponse.json();
     
+    // Constants for fallback values
+    const FALLBACK_GOAL_DESC = 'Goal details unavailable';
+    const FALLBACK_GOAL_AREA = 'Uncategorized';
+    
     // Flatten the response to include goal data at top level for easier consumption
+    // Safely handle missing goals relation
     const flattened = (progress || []).map(entry => ({
       id: entry.id,
       goal_id: entry.goal_id,
-      goal_code: entry.goals.code,
-      goal_desc: entry.goals.desc,
-      goal_area: entry.goals.goal_area || 'Uncategorized',
+      goal_code: entry.goals?.code || `G${entry.goal_id}`,
+      goal_desc: entry.goals?.desc || FALLBACK_GOAL_DESC,
+      goal_area: entry.goals?.goal_area || FALLBACK_GOAL_AREA,
       student_id: entry.student_id,
       student_code: codeNorm,
       class_id: entry.class_id,
@@ -141,11 +247,12 @@ exports.handler = async (event) => {
       requestId
     );
   } catch (err) {
-    console.error(`[student-goal-progress] [${requestId}] Error:`, err);
+    console.error(`[student-goal-progress] [${requestId}] Unexpected error:`, err);
+    // Return 200 with unavailable flag to prevent client retry loops
     return jsonResponse(
       event,
-      500,
-      { ok: false, error: 'Failed to fetch goal progress' },
+      200,
+      { ok: true, progress: [], unavailable: true, error: 'Service temporarily unavailable' },
       { 'Cache-Control': 'no-store' },
       requestId
     );
