@@ -9,6 +9,7 @@ import { buildIEPValidator } from "./csv-iep-validators.js";
 import { readAuth, clearAuth, onAuthChange } from "./auth-handoff.js";
 import { getFeatureFlag } from "./feature-flags.js";
 import { db } from "./data-adapter.js";
+import { createStudentApiAdapter } from "./student-api.js";
 
 // Initialize hubHealth tracking for student portal
 if (!window.hubHealth) {
@@ -344,6 +345,11 @@ let userRole = null; // 'student' or 'teacher'
 // Phase 3: Auth ready flag to prevent double-login and race conditions
 let authReady = false; // Set to true once authentication is complete to prevent login view from reappearing
 
+// Active database adapter - switches based on user role
+// For students: uses student-api (Netlify functions only, no direct Supabase)
+// For teachers: uses standard db adapter (with Supabase access)
+let activeDb = db;
+
 // Portal B: State management
 let assignmentGroups = {};
 let submissionsMap = {};
@@ -543,6 +549,11 @@ qs("#btnStudentLogin").addEventListener("click", async () => {
 
     currentUser = student;
     userRole = "student";
+    
+    // Switch to student API adapter (Netlify functions only, no direct Supabase)
+    console.log("[student-portal] Switching to student API adapter for code:", currentUser.code);
+    activeDb = createStudentApiAdapter(currentUser.code);
+    
     sessionStorage.setItem("rc_user_code", code);
     sessionStorage.setItem("rc_user_role", "student");
     showStudentDashboard();
@@ -572,6 +583,11 @@ qs("#btnStudentLogin").addEventListener("click", async () => {
 
         currentUser = student;
         userRole = "student";
+        
+        // Switch to student API adapter (Netlify functions only, no direct Supabase)
+        console.log("[student-portal] Switching to student API adapter for code:", currentUser.code);
+        activeDb = createStudentApiAdapter(currentUser.code);
+        
         sessionStorage.setItem("rc_user_code", code);
         sessionStorage.setItem("rc_user_role", "student");
         showStudentDashboard();
@@ -887,14 +903,14 @@ async function loadStudentAssignments() {
     filterSubmissionsByQuarter,
   };
 
-  const result = await loadStudentAssignmentsPortalB(db, currentUser, feature, qs, helpers);
+  const result = await loadStudentAssignmentsPortalB(activeDb, currentUser, feature, qs, helpers);
 
   // Store for later use globally and create context for assignment detail modal
   window.assignmentGroups = result.groups;
   window.submissionsMap = result.submissionsMap;
 
   // Fetch assignment data for detail modal
-  const assignmentsList = await db.listAssignments();
+  const assignmentsList = await activeDb.listAssignments();
   window.assignmentMap = new Map(assignmentsList.map((a) => [a.id, a]));
 
   // Create context for assignment detail modal
@@ -944,12 +960,12 @@ async function loadGradesCard() {
     filterSubmissionsByQuarter,
   };
 
-  await loadGradesCardUI(db, currentUser, qs, helpers, feature);
+  await loadGradesCardUI(activeDb, currentUser, qs, helpers, feature);
 }
 
 async function loadStudentGoals() {
   try {
-    const goals = await db.listGoalsByStudentCode(currentUser.code);
+    const goals = await activeDb.listGoalsByStudentCode(currentUser.code);
 
     qs("#goalsCount").textContent = goals.length;
 
@@ -960,7 +976,7 @@ async function loadStudentGoals() {
     }
 
     // Fetch real progress entries for this student
-    const entries = await db.listGoalProgress({ studentCodes: [currentUser.code] });
+    const entries = await activeDb.listGoalProgress({ studentCodes: [currentUser.code] });
 
     // Build a map of goal -> average progress
     const byGoal = new Map();
@@ -1707,6 +1723,11 @@ async function findStudentByCode(code) {
 function setStudentSession(student, code) {
   currentUser = student;
   userRole = "student";
+  
+  // Switch to student API adapter (Netlify functions only, no direct Supabase)
+  console.log("[student-portal] Switching to student API adapter for code:", code);
+  activeDb = createStudentApiAdapter(code);
+  
   sessionStorage.setItem("rc_user_code", code);
   sessionStorage.setItem("rc_user_role", "student");
 }
