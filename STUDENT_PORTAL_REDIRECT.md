@@ -4,6 +4,8 @@
 
 The Student Portal at `/student/` no longer shows a direct login screen with username/password fields. Instead, students must access the portal through the Classroom Hub at `/hub/`.
 
+**Server-Side Enforcement (PR #252):** A Netlify Edge Function now enforces this redirect at the edge, preventing the legacy student portal UI from ever being served to clients accessing `/student/` without valid auto-login parameters.
+
 ## Access Methods
 
 ### For Students (via Hub)
@@ -24,7 +26,25 @@ These links bypass the hub and directly load the student dashboard.
 
 ## Implementation Details
 
-### Redirect Logic
+### Server-Side Edge Function (Primary Enforcement)
+
+**Location:** `netlify/edge-functions/student-entry-redirect.js`
+
+The edge function runs at Netlify's edge (before any HTML is served) and:
+
+1. Intercepts requests to `/student` and `/student/`
+2. Checks for valid auto-login parameters (`auto=1` AND `code` present and non-empty)
+3. **Allows** the request to proceed if valid auto-login params are detected
+4. **Redirects** to `/hub/` with HTTP 302 if no valid params (before any UI is rendered)
+
+**Configuration:** Registered in `netlify.toml`:
+```toml
+[[edge_functions]]
+  path = "/student/*"
+  function = "student-entry-redirect"
+```
+
+### Client-Side Redirect Logic (Fallback)
 
 The redirect is implemented in `/site/web/student-portal-redirect.js`, which:
 
@@ -50,6 +70,21 @@ Critical scripts load in this order in `/site/student/index.html`:
 4. `student-portal-auto-login.js` - 24-hour remember-me bootstrap
 
 ## Testing
+
+### Verification Command
+
+Test the edge function redirect behavior:
+
+```bash
+# Should return HTTP/2 302 with Location: /hub/
+curl -sSIL https://reinischclassroom.com/student/
+
+# Should return HTTP/2 302 with Location: /hub/
+curl -sSIL https://reinischclassroom.com/student
+
+# Should return HTTP/2 200 (allowed through)
+curl -sSIL 'https://reinischclassroom.com/student/?auto=1&code=S010'
+```
 
 ### Manual Test Cases
 
@@ -77,14 +112,28 @@ No configuration is needed. The redirect behavior is automatic based on URL para
 
 ## Rollback
 
-If this feature needs to be disabled:
+If the edge function needs to be disabled:
 
-1. Remove the `<script src="../web/student-portal-redirect.js"></script>` line from `/site/student/index.html`
-2. Revert changes to `/site/web/student-portal-failsafe.js`
+1. Remove or comment out the edge function declaration in `netlify.toml`:
+   ```toml
+   # [[edge_functions]]
+   #   path = "/student/*"
+   #   function = "student-entry-redirect"
+   ```
+2. Redeploy to Netlify
+
+The client-side redirect in `student-portal-redirect.js` will continue to function as a fallback.
+
+Alternatively, to fully revert to the original behavior:
+1. Remove the edge function declaration from `netlify.toml`
+2. Remove the `<script src="../web/student-portal-redirect.js"></script>` line from `/site/student/index.html`
+3. Revert changes to `/site/web/student-portal-failsafe.js`
 
 ## Related Files
 
-- `/site/web/student-portal-redirect.js` - New redirect logic
+- `/netlify/edge-functions/student-entry-redirect.js` - **NEW**: Server-side edge redirect (primary enforcement)
+- `/netlify.toml` - **UPDATED**: Edge function registration
+- `/site/web/student-portal-redirect.js` - Client-side redirect logic (fallback)
 - `/site/web/student-portal-failsafe.js` - Updated failsafe (respects redirect flag)
 - `/site/student/index.html` - Updated script loading order
 - `/site/hub/index.html` - Hub entry point (unchanged)
