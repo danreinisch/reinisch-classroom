@@ -107,3 +107,9 @@
   to = "/site/assets/css/theme.css"
   status = 200
 
+# Edge Functions Configuration
+# Student entry redirect - server-side redirect to hub (preserves deep links)
+[[edge_functions]]
+  path = "/student/*"
+  function = "student-entry-redirect"
+
