@@ -1,17 +1,18 @@
 /**
  * Hub Student Redirect
  * 
- * Redirects remembered students from /hub/ to /student/ portal
+ * PR 265: Session-only student authentication
+ * - No longer redirects based on localStorage.rc_auth (24-hour persistence removed)
+ * - Only redirects if there's an active student session in sessionStorage
+ * - Default behavior: /hub/ does not auto-redirect students who logged in earlier
  * 
  * Part of PR E: Students should never see teacher hub UI
  * Part of PR 261: Add teacher override + robust routing guardrails
  * 
  * Requirements:
- * - Check localStorage.rc_auth for valid student auth
- * - Validate JSON structure, role === 'student', and expiry
- * - If valid student auth: redirect to /student/ using location.replace()
- * - If invalid/expired: clear rc_auth and continue to hub
- * - If no auth or teacher/substitute: continue to hub normally
+ * - Check sessionStorage for active student session (optional redirect)
+ * - If no active session: continue to hub normally
+ * - If teacher/substitute session: continue to hub normally
  * 
  * Bypass conditions (PR 261):
  * - If ?teacher=1 query parameter is present, skip redirect entirely
@@ -22,10 +23,9 @@
   'use strict';
   
   const STUDENT_PORTAL_PATH = '/student/';
-  const AUTH_KEY = 'rc_auth';
   const REDIRECT_LATCH_KEY = '__hubStudentRedirected';
   
-  console.log('[hub-student-redirect] Checking for remembered student auth');
+  console.log('[hub-student-redirect] Checking for active student session');
   
   // PR 261 A: Check for teacher override query parameter
   try {
@@ -62,81 +62,33 @@
     // Continue with normal logic on error
   }
   
+  // PR 265: Session-only authentication - check sessionStorage instead of localStorage
   try {
-    // Check localStorage for auth token
-    const authStr = localStorage.getItem(AUTH_KEY);
+    // Check for active student session in sessionStorage
+    const userRole = sessionStorage.getItem('rc_user_role');
+    const userCode = sessionStorage.getItem('rc_user_code');
     
-    // No auth token - continue to hub normally
-    if (!authStr) {
-      console.log('[hub-student-redirect] No auth token found, continuing to hub');
+    // No active student session - continue to hub normally
+    if (userRole !== 'student' || !userCode) {
+      console.log('[hub-student-redirect] No active student session, continuing to hub');
       return;
     }
     
-    // Parse auth token
-    let auth;
+    // Active student session found - redirect to student portal
+    console.log('[hub-student-redirect] Active student session found, redirecting to student portal');
+    
+    // PR 262: Set redirect latch to prevent bfcache redirect spam
     try {
-      auth = JSON.parse(authStr);
-    } catch (parseErr) {
-      console.warn('[hub-student-redirect] Invalid JSON in auth token, clearing and continuing to hub:', parseErr);
-      localStorage.removeItem(AUTH_KEY);
-      return;
+      sessionStorage.setItem(REDIRECT_LATCH_KEY, '1');
+    } catch (err) {
+      console.warn('[hub-student-redirect] Failed to set redirect latch:', err);
     }
     
-    // Validate auth structure
-    if (!auth || typeof auth !== 'object') {
-      console.warn('[hub-student-redirect] Invalid auth structure, clearing and continuing to hub');
-      localStorage.removeItem(AUTH_KEY);
-      return;
-    }
+    // Set global flag to indicate redirect in progress
+    window.__redirectingToStudentPortal = true;
     
-    // Check if auth has required fields
-    if (!auth.role || !auth.code) {
-      console.warn('[hub-student-redirect] Auth missing required fields (role, code), clearing and continuing to hub');
-      localStorage.removeItem(AUTH_KEY);
-      return;
-    }
-    
-    // Check if auth is expired
-    if (!auth.expiresAt) {
-      console.warn('[hub-student-redirect] Auth missing expiresAt field, clearing and continuing to hub');
-      localStorage.removeItem(AUTH_KEY);
-      return;
-    }
-    
-    if (typeof auth.expiresAt !== 'number') {
-      console.warn('[hub-student-redirect] Auth expiresAt is not a number (type: ' + typeof auth.expiresAt + '), clearing and continuing to hub');
-      localStorage.removeItem(AUTH_KEY);
-      return;
-    }
-    
-    const now = Date.now();
-    if (now > auth.expiresAt) {
-      console.log('[hub-student-redirect] Auth token expired, clearing and continuing to hub');
-      localStorage.removeItem(AUTH_KEY);
-      return;
-    }
-    
-    // Check if role is student
-    if (auth.role === 'student') {
-      console.log('[hub-student-redirect] Valid student auth found, redirecting to student portal');
-      
-      // PR 262: Set redirect latch to prevent bfcache redirect spam
-      try {
-        sessionStorage.setItem(REDIRECT_LATCH_KEY, '1');
-      } catch (err) {
-        console.warn('[hub-student-redirect] Failed to set redirect latch:', err);
-      }
-      
-      // Set global flag to indicate redirect in progress
-      window.__redirectingToStudentPortal = true;
-      
-      // Redirect to student portal (use replace to avoid back-button loop)
-      window.location.replace(STUDENT_PORTAL_PATH);
-      return;
-    }
-    
-    // Role is teacher, substitute, or other - continue to hub normally
-    console.log('[hub-student-redirect] Non-student role (' + auth.role + '), continuing to hub');
+    // Redirect to student portal (use replace to avoid back-button loop)
+    window.location.replace(STUDENT_PORTAL_PATH);
     
   } catch (err) {
     console.error('[hub-student-redirect] Unexpected error during redirect check:', err);
