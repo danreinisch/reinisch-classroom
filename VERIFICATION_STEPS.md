@@ -25,7 +25,8 @@ This document outlines the manual verification steps for the PR that eliminates 
 ## Manual Verification (Production/Staging Environment)
 
 ### Test Case 1: Valid Deep Link (No Flash)
-**URL**: `https://reinischclassroom.com/student/?auto=1&code=S010&name=TestStudent`
+**URL**: `https://yourdomain.com/student/?auto=1&code=STUDENT_CODE&name=StudentName`
+(Replace with actual domain and student code)
 
 **Expected Behavior**:
 1. Login form should NEVER be visible
@@ -41,7 +42,7 @@ This document outlines the manual verification steps for the PR that eliminates 
 4. Check console logs for: `[student-portal-redirect] Valid auto-login detected, hiding login view`
 
 ### Test Case 2: Invalid Deep Link - Missing Code
-**URL**: `https://reinischclassroom.com/student/?auto=1`
+**URL**: `https://yourdomain.com/student/?auto=1`
 
 **Expected Behavior**:
 1. Immediate redirect to `/hub/`
@@ -55,19 +56,19 @@ This document outlines the manual verification steps for the PR that eliminates 
 4. Check console logs for: `[student-portal-redirect] Invalid auto-login detected (missing or empty code), redirecting to hub`
 
 ### Test Case 3: Invalid Deep Link - Empty Code
-**URL**: `https://reinischclassroom.com/student/?auto=1&code=`
+**URL**: `https://yourdomain.com/student/?auto=1&code=`
 
 **Expected Behavior**:
 - Same as Test Case 2
 
 ### Test Case 4: Invalid Deep Link - Whitespace Code
-**URL**: `https://reinischclassroom.com/student/?auto=1&code=%20%20%20`
+**URL**: `https://yourdomain.com/student/?auto=1&code=%20%20%20`
 
 **Expected Behavior**:
 - Same as Test Case 2
 
 ### Test Case 5: Direct Access (No Parameters)
-**URL**: `https://reinischclassroom.com/student/`
+**URL**: `https://yourdomain.com/student/`
 
 **Expected Behavior**:
 1. Redirect to `/hub/` (either via edge function 302 or client-side redirect)
@@ -76,7 +77,7 @@ This document outlines the manual verification steps for the PR that eliminates 
 ## Code Flow Diagram
 
 ```
-User navigates to /student/?auto=1&code=S010
+User navigates to /student/?auto=1&code=STUDENT_CODE
     ↓
 Edge Function checks parameters
     ↓
@@ -130,7 +131,7 @@ console.log('Should redirect:', auto === '1' && (!code || code.trim().length ===
 // Expected: true
 
 // Test valid deep link detection  
-const urlParams2 = new URLSearchParams('?auto=1&code=S010');
+const urlParams2 = new URLSearchParams('?auto=1&code=STUDENT_CODE');
 const auto2 = urlParams2.get('auto');
 const code2 = urlParams2.get('code');
 console.log('Should allow:', auto2 === '1' && code2 && code2.trim().length > 0);
