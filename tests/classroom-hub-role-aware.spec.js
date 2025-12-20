@@ -20,10 +20,10 @@ import { test, expect } from '@playwright/test';
  */
 
 const ROOT_HOME_PATH = '/';
-const SITE_HOME_PATH = '/site/';
-const HUB_PATH = '/site/hub/';
+const SITE_HOME_PATH = '/'; // Both resolve to site root in test environment
+const HUB_PATH = '/hub/'; // Server serves ./site directory, so /hub/ maps to ./site/hub/
 const HUB_LINK_HREF = '/hub/'; // The actual href attribute in HTML
-const STUDENT_PORTAL_PATH = '/site/student/';
+const STUDENT_PORTAL_PATH = '/student/'; // Server serves ./site directory, so /student/ maps to ./site/student/
 const STUDENT_PORTAL_LINK_HREF = '/student/'; // The actual href attribute in HTML
 
 test.describe('Role-Aware Classroom Hub Button', () => {
