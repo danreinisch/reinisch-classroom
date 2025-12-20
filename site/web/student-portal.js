@@ -1671,27 +1671,17 @@ async function findStudentByCode(code) {
               `[student-portal] Successfully fetched ${data.students.length} students from roster function`
             );
 
-            // Cache each student using db.upsertStudent to update localStorage
-            for (const student of data.students) {
-              if (student.code) {
-                try {
-                  await db.upsertStudent({
-                    code: student.code,
-                    name: student.name || student.code,
-                    class_id: student.class_id || null,
-                  });
-                } catch (upsertErr) {
-                  console.warn(
-                    "[student-portal] Failed to cache student:",
-                    student.code,
-                    upsertErr
-                  );
-                }
-              }
-            }
+            // PR C: Populate studentListCache directly from roster response (in-memory only)
+            // This avoids calling db.upsertStudent() which could trigger browser → Supabase writes
+            // Support both `code` and `student_code` fields for backward compatibility with different roster formats
+            studentListCache = data.students.map(student => ({
+              code: student.code,
+              name: student.name || student.code,
+              class_id: student.class_id || null,
+              student_code: student.student_code || student.code, // Ensure both field names are available
+            }));
 
-            // Atomically reload cache from db to get newly cached students
-            studentListCache = await db.listStudents();
+            console.log(`[student-portal] Cached ${studentListCache.length} students in memory`);
 
             // Try to find student again in refreshed cache
             return studentListCache.find((s) => s.code === code || s.student_code === code) || null;
