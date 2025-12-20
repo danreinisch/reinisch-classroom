@@ -11,6 +11,87 @@ import { getFeatureFlag } from "./feature-flags.js";
 import { db } from "./data-adapter.js";
 import { createStudentApiAdapter } from "./student-api.js";
 
+// ============================================================================
+// PR 263: bfcache restore hardening
+// ============================================================================
+// If the page is restored from browser back-forward cache (bfcache),
+// force a full reload to avoid half-restored JS state and phantom UI
+window.addEventListener("pageshow", (event) => {
+  if (event.persisted) {
+    console.log("[student-portal] bfcache restore detected, forcing reload");
+    window.location.reload();
+  }
+});
+
+// ============================================================================
+// PR 263: Boot watchdog (visibility-based)
+// ============================================================================
+// If the dashboard is not visible after a timeout, treat as unhealthy resume
+// and redirect to hub with cleared auth
+(function initBootWatchdog() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const DEBUG_MODE = urlParams.get("debug") === "1";
+  
+  // Watchdog timeout: 5 seconds default, can be overridden with ?watchdog_ms=N
+  const WATCHDOG_MS = parseInt(urlParams.get("watchdog_ms"), 10) || 5000;
+  
+  // In debug mode, disable watchdog by default (unless explicitly set)
+  if (DEBUG_MODE && !urlParams.has("watchdog_ms")) {
+    console.log("[student-portal] Boot watchdog disabled in debug mode");
+    return;
+  }
+  
+  console.log(`[student-portal] Boot watchdog starting (timeout: ${WATCHDOG_MS}ms)`);
+  
+  setTimeout(() => {
+    // Skip if already redirecting to hub
+    if (window.__redirectingToHub === true) {
+      console.log("[student-portal] Boot watchdog: redirect already in progress");
+      return;
+    }
+    
+    // Skip if we're already on /hub/
+    if (window.location.pathname.includes("/hub/")) {
+      console.log("[student-portal] Boot watchdog: already on /hub/");
+      return;
+    }
+    
+    // Skip if dashboard is visible and healthy
+    const dashboardView = document.getElementById("studentDashboardView");
+    const isDashboardVisible = 
+      dashboardView && 
+      !dashboardView.classList.contains("hidden") &&
+      dashboardView.offsetParent !== null; // Check if actually rendered (not display:none)
+    
+    if (isDashboardVisible) {
+      console.log("[student-portal] Boot watchdog: dashboard is visible, all good");
+      return;
+    }
+    
+    // Dashboard is not visible - unhealthy resume detected
+    console.warn(
+      "[student-portal] Boot watchdog: dashboard not visible after " + WATCHDOG_MS + "ms, " +
+      "clearing auth and redirecting to hub"
+    );
+    
+    // Clear auth and session
+    try {
+      localStorage.removeItem("rc_auth");
+      sessionStorage.removeItem("rc_user_role");
+      sessionStorage.removeItem("rc_user_code");
+      console.log("[student-portal] Boot watchdog: auth cleared");
+    } catch (err) {
+      console.error("[student-portal] Boot watchdog: failed to clear auth:", err);
+    }
+    
+    // Set redirect flag to prevent loops
+    window.__redirectingToHub = true;
+    
+    // Redirect to hub with reason parameter
+    window.location.replace("/hub/?reason=portal_resume_failed");
+  }, WATCHDOG_MS);
+})();
+
 // Initialize hubHealth tracking for student portal
 if (!window.hubHealth) {
   window.hubHealth = {};
