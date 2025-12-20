@@ -1,6 +1,33 @@
 (function() {
   // Centralize the Classroom Hub URL here for easy changes later
   const HUB_URL = '/hub/';
+  const STUDENT_PORTAL_URL = '/student/';
+  
+  /**
+   * Check if there is a valid remembered student auth in localStorage
+   * Returns true if user is a remembered student with valid, unexpired auth
+   */
+  function hasValidStudentAuth() {
+    try {
+      const authStr = localStorage.getItem('rc_auth');
+      if (!authStr) return false;
+      
+      const auth = JSON.parse(authStr);
+      if (!auth || typeof auth !== 'object') return false;
+      
+      // Check required fields
+      if (auth.role !== 'student') return false;
+      if (!auth.code) return false;
+      if (typeof auth.expiresAt !== 'number') return false;
+      
+      // Check expiry
+      if (Date.now() >= auth.expiresAt) return false;
+      
+      return true;
+    } catch (err) {
+      return false;
+    }
+  }
 
   function injectMinimalStyles() {
     if (document.getElementById('copilot-inline-site-css')) return;
@@ -290,6 +317,39 @@
     document.body.appendChild(a);
   }
 
+  /**
+   * Make "Classroom Hub" links role-aware
+   * If user is a remembered student, route to /student/ instead of /hub/
+   * Otherwise, route to /hub/ as normal
+   */
+  function makeClassroomHubLinksRoleAware() {
+    // Find all "Classroom Hub" links by data-role attribute or href
+    const hubLinks = document.querySelectorAll(
+      'a[data-role="classroom-hub"], a[href="/hub/"]'
+    );
+    
+    hubLinks.forEach(link => {
+      // Skip links that already have a click handler attached
+      if (link.dataset.roleAwareHandlerAttached) return;
+      link.dataset.roleAwareHandlerAttached = 'true';
+      
+      // Determine target URL based on auth
+      const targetUrl = hasValidStudentAuth() ? STUDENT_PORTAL_URL : HUB_URL;
+      
+      // Update href for accessibility (long-press, right-click, etc.)
+      link.setAttribute('href', targetUrl);
+      
+      // Add click handler for navigation
+      link.addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        // Re-check auth at click time in case it changed
+        const destination = hasValidStudentAuth() ? STUDENT_PORTAL_URL : HUB_URL;
+        window.location.assign(destination);
+      });
+    });
+  }
+
   // Handle error events for static #bg-video element (if present)
   function attachVideoErrorHandler() {
     const video = document.getElementById('bg-video');
@@ -318,6 +378,9 @@
     addHomeQuickLinks();
 
     addAdminLink();
+    
+    // Make "Classroom Hub" links role-aware (route students to /student/)
+    makeClassroomHubLinksRoleAware();
   }
 
   if (document.readyState === 'loading') {

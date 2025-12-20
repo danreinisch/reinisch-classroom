@@ -23,8 +23,20 @@
   
   const STUDENT_PORTAL_PATH = '/student/';
   const AUTH_KEY = 'rc_auth';
+  const REDIRECT_LATCH_KEY = '__hubStudentRedirected';
   
   console.log('[hub-student-redirect] Checking for remembered student auth');
+  
+  // PR 262: Check bfcache redirect latch
+  try {
+    if (sessionStorage.getItem(REDIRECT_LATCH_KEY) === '1') {
+      console.log('[hub-student-redirect] Redirect latch detected, skipping redirect (already redirected this session)');
+      return;
+    }
+  } catch (err) {
+    console.warn('[hub-student-redirect] Failed to check redirect latch:', err);
+    // Continue with normal logic on error
+  }
   
   // PR 261 A: Check for teacher override query parameter
   try {
@@ -107,6 +119,13 @@
     // Check if role is student
     if (auth.role === 'student') {
       console.log('[hub-student-redirect] Valid student auth found, redirecting to student portal');
+      
+      // PR 262: Set redirect latch to prevent bfcache redirect spam
+      try {
+        sessionStorage.setItem(REDIRECT_LATCH_KEY, '1');
+      } catch (err) {
+        console.warn('[hub-student-redirect] Failed to set redirect latch:', err);
+      }
       
       // Set global flag to indicate redirect in progress
       window.__redirectingToStudentPortal = true;
