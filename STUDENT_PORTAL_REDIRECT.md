@@ -6,6 +6,10 @@ The Student Portal at `/student/` no longer shows a direct login screen with use
 
 **Server-Side Enforcement (PR #252):** A Netlify Edge Function now enforces this redirect at the edge, preventing the legacy student portal UI from ever being served to clients accessing `/student/` without valid auto-login parameters.
 
+**UI Cleanup (PR A):** The student portal now uses only the Portal B top bar for logout UI. The legacy header with duplicate logout button has been removed for students (kept for teacher center).
+
+**Login Flash Elimination (PR A):** Valid deep-link URLs (`?auto=1&code=...`) now load directly to the dashboard without any login form flash. Invalid deep links (`?auto=1` without code) immediately redirect to the hub.
+
 ## Access Methods
 
 ### For Students (via Hub)
@@ -48,17 +52,40 @@ The edge function runs at Netlify's edge (before any HTML is served) and:
 
 The redirect is implemented in `/site/web/student-portal-redirect.js`, which:
 
-1. Checks for valid auto-login parameters (`auto=1` and `code`)
-2. Checks for valid remembered authentication in localStorage
-3. Redirects to `/hub/` if neither condition is met
-4. Hides `#loginView` immediately when redirecting to prevent UI flash (CSP-compliant)
+1. **Valid deep links** (`auto=1` AND non-empty `code`):
+   - Hides `#loginView` immediately to prevent any login form flash
+   - Sets `window.__deepLinkAutoLogin = true` flag
+   - Allows portal to continue loading and boot normally
 
-### Failsafe Adjustments
+2. **Invalid deep links** (`auto=1` but missing/blank `code`):
+   - Sets `window.__redirectingToHub = true` flag
+   - Hides `#loginView` immediately
+   - Shows "Redirecting to Hub..." message
+   - Redirects to `/hub/` before any UI renders
+
+3. **Remembered authentication** (valid `rc_auth` in localStorage):
+   - Checks for valid student auth that hasn't expired
+   - Allows portal to continue loading if valid
+
+4. **No valid authentication**:
+   - Shows redirect message and redirects to `/hub/`
+
+### UI Cleanup (PR A)
+
+The student portal UI has been simplified:
+
+- **Student dashboard**: Only the Portal B top bar (`#portalTopBar`) with `#portalLogoutBtn` is shown
+- **Legacy header**: Hidden for student view (still shown for teacher center)
+- **No duplicate logout buttons**: Students see only one logout button in the Portal B top bar
+
+### Failsafe Adjustments (PR A)
 
 The failsafe script (`student-portal-failsafe.js`) has been updated to:
 
-- Not show the login view when a redirect to hub is in progress
-- Prevent the "phantom login screen" from flashing during redirects
+- **Deep-link mode detection**: Identifies valid deep links (`auto=1` and non-empty `code`)
+- **Failsafe redirect**: If deep-link mode and `window.authReady` is still false after timeout, redirects to `/hub/` instead of showing login view
+- **Preserve existing behavior**: Skips when `__redirectingToHub` is true (already redirecting)
+- **No login flash**: Prevents the "phantom login screen" from flashing during deep-link loads or redirects
 
 ### Script Loading Order
 
@@ -90,21 +117,38 @@ curl -sSIL 'https://reinischclassroom.com/student/?auto=1&code=S010'
 
 1. **Direct navigation without auth**
    - Navigate to: `https://reinischclassroom.com/student/`
-   - Expected: Immediate redirect to `/hub/`
+   - Expected: Immediate redirect to `/hub/`, no login form visible
 
-2. **Auto-login deep link**
-   - Navigate to: `https://reinischclassroom.com/student/?auto=1&code=S001&name=TestStudent`
-   - Expected: Student dashboard loads directly, no redirect, no login form flash
+2. **Valid auto-login deep link (PR A acceptance criteria)**
+   - Navigate to: `https://reinischclassroom.com/student/?auto=1&code=S010&name=S010`
+   - Expected: Student dashboard loads directly
+   - Expected: **No login form flash at any point** ✅
+   - Expected: Only one logout button visible (Portal B top bar) ✅
 
-3. **Remembered authentication**
+3. **Invalid deep link - missing code (PR A acceptance criteria)**
+   - Navigate to: `https://reinischclassroom.com/student/?auto=1`
+   - Expected: Immediate redirect to `/hub/` ✅
+   - Expected: No login form visible at any point
+
+4. **Invalid deep link - empty code (PR A acceptance criteria)**
+   - Navigate to: `https://reinischclassroom.com/student/?auto=1&code=`
+   - Expected: Immediate redirect to `/hub/` ✅
+   - Expected: No login form visible at any point
+
+5. **Remembered authentication**
    - Log in via hub as a student
    - Close browser
    - Reopen and navigate to: `https://reinischclassroom.com/student/`
    - Expected: If within 24-hour window, dashboard loads; otherwise redirect to hub
 
-4. **No login form flash**
-   - Use any valid auto-login method
-   - Expected: No visible login form at any point during the flow
+6. **Single logout button for students (PR A acceptance criteria)**
+   - Log in as student (any method)
+   - Expected: Only Portal B top bar logout button visible ✅
+   - Expected: No legacy header logout button visible for students
+
+7. **Teacher center still has logout button**
+   - Log in as teacher
+   - Expected: Legacy header with logout button is visible (teacher center not affected by PR A changes)
 
 ## Configuration
 
