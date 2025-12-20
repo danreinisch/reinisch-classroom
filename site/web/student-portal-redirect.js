@@ -7,6 +7,9 @@
 (function() {
   'use strict';
   
+  // Constants
+  const HUB_PATH = '/hub/';
+  
   console.log('[student-portal-redirect] Checking access method');
   
   try {
@@ -92,11 +95,11 @@
     }
     
     // Perform redirect immediately
-    window.location.replace('/hub/');
+    window.location.replace(HUB_PATH);
     
   } catch (err) {
     console.error('[student-portal-redirect] Unexpected error:', err);
     // On error, fail safely by redirecting to hub
-    window.location.replace('/hub/');
+    window.location.replace(HUB_PATH);
   }
 })();

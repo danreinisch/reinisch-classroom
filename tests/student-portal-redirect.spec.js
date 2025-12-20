@@ -10,13 +10,28 @@ import { test, expect } from '@playwright/test';
  * 4. No login form flash occurs during valid auto-login
  */
 
+// Test constants
+const STUDENT_PORTAL_PATH = '/site/student/';
+const HUB_PATH = '/site/hub/';
+
+// Helper to build student portal URL with parameters
+function buildStudentPortalURL(params = {}) {
+  const url = new URL(STUDENT_PORTAL_PATH, 'http://localhost');
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== null && value !== undefined) {
+      url.searchParams.set(key, value);
+    }
+  });
+  return url.pathname + url.search;
+}
+
 test.describe('Student Portal Redirect', () => {
   test('should redirect to hub when accessing /student/ without auth', async ({ page }) => {
     // Navigate to student portal directly without auth
-    await page.goto('/site/student/');
+    await page.goto(STUDENT_PORTAL_PATH);
     
     // Should automatically redirect to hub
-    await page.waitForURL('**/hub/**', { timeout: 3000 });
+    await page.waitForURL(`**${HUB_PATH}`, { timeout: 3000 });
     
     // Verify we're on the hub page
     expect(page.url()).toContain('/hub/');
@@ -53,7 +68,7 @@ test.describe('Student Portal Redirect', () => {
     });
     
     // Navigate to student portal with valid auto-login parameters
-    await page.goto('/site/student/?auto=1&code=S001&name=TestStudent');
+    await page.goto(buildStudentPortalURL({ auto: '1', code: 'S001', name: 'TestStudent' }));
     
     // Should NOT redirect to hub
     await page.waitForLoadState('networkidle');
@@ -69,10 +84,10 @@ test.describe('Student Portal Redirect', () => {
 
   test('should redirect when auto=1 but code is missing', async ({ page }) => {
     // Navigate with auto=1 but no code parameter
-    await page.goto('/site/student/?auto=1');
+    await page.goto(buildStudentPortalURL({ auto: '1' }));
     
     // Should redirect to hub
-    await page.waitForURL('**/hub/**', { timeout: 3000 });
+    await page.waitForURL(`**${HUB_PATH}`, { timeout: 3000 });
     
     // Verify we're on the hub page
     expect(page.url()).toContain('/hub/');
@@ -80,10 +95,10 @@ test.describe('Student Portal Redirect', () => {
 
   test('should redirect when code is present but auto is missing', async ({ page }) => {
     // Navigate with code but no auto=1 parameter
-    await page.goto('/site/student/?code=S001');
+    await page.goto(buildStudentPortalURL({ code: 'S001' }));
     
     // Should redirect to hub
-    await page.waitForURL('**/hub/**', { timeout: 3000 });
+    await page.waitForURL(`**${HUB_PATH}`, { timeout: 3000 });
     
     // Verify we're on the hub page
     expect(page.url()).toContain('/hub/');
@@ -130,7 +145,7 @@ test.describe('Student Portal Redirect', () => {
     });
     
     // Navigate to student portal without auto-login parameters
-    await page.goto('/site/student/');
+    await page.goto(STUDENT_PORTAL_PATH);
     
     // Should NOT redirect to hub (remembered auth is valid)
     await page.waitForLoadState('networkidle');
@@ -156,10 +171,10 @@ test.describe('Student Portal Redirect', () => {
     });
     
     // Navigate to student portal
-    await page.goto('/site/student/');
+    await page.goto(STUDENT_PORTAL_PATH);
     
     // Should redirect to hub (auth expired)
-    await page.waitForURL('**/hub/**', { timeout: 3000 });
+    await page.waitForURL(`**${HUB_PATH}`, { timeout: 3000 });
     
     // Verify we're on the hub page
     expect(page.url()).toContain('/hub/');
@@ -208,7 +223,7 @@ test.describe('Student Portal Redirect', () => {
     });
     
     // Navigate with valid auto-login
-    await page.goto('/site/student/?auto=1&code=S001&name=TestStudent');
+    await page.goto(buildStudentPortalURL({ auto: '1', code: 'S001', name: 'TestStudent' }));
     await page.waitForLoadState('networkidle');
     
     // Check one more time after load
@@ -242,10 +257,10 @@ test.describe('Student Portal Redirect', () => {
     });
     
     // Navigate to student portal without auth
-    await page.goto('/site/student/');
+    await page.goto(STUDENT_PORTAL_PATH);
     
     // Wait for redirect
-    await page.waitForURL('**/hub/**', { timeout: 3000 });
+    await page.waitForURL(`**${HUB_PATH}`, { timeout: 3000 });
     
     // Check if flag was set (we set a marker in the init script)
     redirectFlagSet = await page.evaluate(() => window.__redirectFlagWasSet === true);
