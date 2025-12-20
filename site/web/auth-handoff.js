@@ -99,6 +99,72 @@ export function clearAuth() {
 }
 
 /**
+ * Clear all authentication and session state
+ * Comprehensive cleanup for full sign-out
+ * @param {Object} [options] - Options
+ * @param {boolean} [options.preserveDiagnostics=false] - Keep diagnostic/health data
+ */
+export function clearAllAuthState(options = {}) {
+  const { preserveDiagnostics = false } = options;
+  
+  try {
+    console.log('[auth] Clearing all auth/session state');
+    
+    // Clear primary auth
+    clearAuth();
+    
+    // Clear sessionStorage keys
+    const sessionKeys = [
+      'rc_user_role',
+      'rc_user_code',
+      '__hubStudentRedirected'
+    ];
+    
+    sessionKeys.forEach(key => {
+      try {
+        sessionStorage.removeItem(key);
+      } catch (err) {
+        console.warn(`[auth] Failed to clear sessionStorage.${key}:`, err);
+      }
+    });
+    
+    // Clear legacy localStorage keys
+    const legacyKeys = [
+      'rc_auth_expires'
+    ];
+    
+    legacyKeys.forEach(key => {
+      try {
+        localStorage.removeItem(key);
+      } catch (err) {
+        console.warn(`[auth] Failed to clear localStorage.${key}:`, err);
+      }
+    });
+    
+    // Optionally preserve diagnostics
+    if (!preserveDiagnostics) {
+      // Clear any hub health tracking if not preserving
+      try {
+        if (window.hubHealth) {
+          window.hubHealth.auth = { cleared: true, ts: Date.now() };
+        }
+      } catch (err) {
+        // Ignore
+      }
+    }
+    
+    console.log('[auth] All auth/session state cleared');
+    
+    // Broadcast comprehensive clear to other tabs
+    if (authChannel) {
+      authChannel.postMessage({ type: 'auth-all-cleared' });
+    }
+  } catch (err) {
+    console.error('[auth] Failed to clear all auth state:', err);
+  }
+}
+
+/**
  * Check if auth object is expired
  * @param {Object} auth - Auth object with expiresAt timestamp
  * @returns {boolean} True if expired
@@ -240,5 +306,8 @@ if (typeof window !== 'undefined') {
     writeAuth(mappedAuth);
   };
   
-  console.log('[auth] Legacy window.setAuth alias registered');
+  // Expose clearAllAuthState globally for sign-out
+  window.clearAllAuthState = clearAllAuthState;
+  
+  console.log('[auth] Legacy window.setAuth alias and clearAllAuthState registered');
 }
