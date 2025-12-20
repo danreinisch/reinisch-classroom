@@ -3566,7 +3566,8 @@
       // Show sign-in modal on first visit if not authenticated
       async function checkAndShowSignIn() {
         const auth = getAuth();
-        if (!auth) {
+        // Don't show sign-in modal if there's a pending teacher session
+        if (!auth && !pendingTeacherSession) {
           const modal = qs("#signInModal");
           if (modal) modal.classList.add("show");
         } else {
@@ -4189,11 +4190,16 @@
       // Initialize: Check auth and show sign-in modal if needed
       // Check for prior teacher session on page load (PR 267)
       // Shows resume banner instead of auto-entering teacher center
-      checkTeacherSession().catch((err) => {
-        console.debug(LOG_PREFIX, "Teacher session check failed:", err);
-      });
-      
-      checkAndShowSignIn();
+      checkTeacherSession()
+        .then(() => {
+          // After checking teacher session, show sign-in modal if needed
+          checkAndShowSignIn();
+        })
+        .catch((err) => {
+          console.debug(LOG_PREFIX, "Teacher session check failed:", err);
+          // Still show sign-in modal on error
+          checkAndShowSignIn();
+        });
 
       // Run production asset self-check
       checkCriticalAssets().catch((err) => {
