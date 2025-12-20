@@ -4,77 +4,44 @@ import { test, expect } from '@playwright/test';
  * Hub Student Redirect Test
  * 
  * PR 265: Session-only student authentication
- * - Students are only redirected if they have an active sessionStorage session
- * - localStorage.rc_auth no longer triggers redirect (session-only behavior)
+ * - Students are NO LONGER auto-redirected from /hub/ to /student/
+ * - localStorage.rc_auth no longer triggers redirect
+ * - sessionStorage no longer triggers redirect
+ * - /hub/ is accessible to all users (students, teachers, etc.)
  * 
  * Validates PR 261 requirements:
- * Teachers can bypass redirect with ?teacher=1 or active teacher session
  * Student portal has escape hatch links to /hub/?teacher=1
  * 
  * Test Coverage:
- * 1. Active student session (sessionStorage) redirects from /hub/ to /student/
- * 2. Old localStorage auth (without sessionStorage) does NOT redirect (PR 265)
- * 3. Valid student session + ?teacher=1 allows hub access (PR 261)
- * 4. Valid student session + teacher session allows hub access (PR 261)
- * 5. Teacher/substitute auth allows hub access
- * 6. No auth allows hub access
- * 7. Hub teacher UI not visible after student redirect
- * 8. Escape hatch link visible in student portal login view (PR 261)
- * 9. Escape hatch link visible in student portal top bar (PR 261)
- * 10. Valid student session + /student/ shows dashboard (PR 261)
+ * 1. No auto-redirect from /hub/ (even with student session)
+ * 2. Old localStorage auth does NOT redirect (PR 265)
+ * 3. Teacher/substitute auth allows hub access
+ * 4. No auth allows hub access
+ * 5. Escape hatch link visible in student portal login view (PR 261)
+ * 6. Escape hatch link visible in student portal top bar (PR 261)
  */
 
 const HUB_PATH = '/hub/';
 const STUDENT_PORTAL_PATH = '/student/';
 
 test.describe('Hub Student Redirect', () => {
-  test('should redirect to /student/ with active student session in sessionStorage', async ({ context, page }) => {
-    // PR 265: Set up active student session in sessionStorage (not localStorage)
+  test('should NOT auto-redirect from /hub/ even with student session (PR 265)', async ({ context, page }) => {
+    // PR 265: Set up active student session in sessionStorage
+    // Even with a session, /hub/ should be accessible
     await context.addInitScript(() => {
       sessionStorage.setItem('rc_user_role', 'student');
       sessionStorage.setItem('rc_user_code', 'S001');
     });
     
-    // Mock student portal endpoints to prevent errors
-    await page.route('**/.netlify/functions/students*', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([
-          { code: 'S001', name: 'Test Student', active: true }
-        ])
-      });
-    });
-    
-    await page.route('**/.netlify/functions/assignment-instances*', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([])
-      });
-    });
-    
-    await page.route('**/.netlify/functions/goals*', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([])
-      });
-    });
-    
     // Navigate to hub
     await page.goto(HUB_PATH);
     
-    // Should redirect to student portal
-    await page.waitForURL(`**${STUDENT_PORTAL_PATH}`, { timeout: 5000 });
+    // Should stay on hub (no auto-redirect)
+    await page.waitForLoadState('networkidle');
     
-    // Verify we're on student portal
-    expect(page.url()).toContain('/student/');
-    expect(page.url()).not.toContain('/hub/');
-    
-    // Verify redirect flag was set
-    const flagWasSet = await page.evaluate(() => window.__redirectingToStudentPortal === true);
-    expect(flagWasSet).toBe(true);
+    // Verify we're still on hub
+    expect(page.url()).toContain('/hub/');
+    expect(page.url()).not.toContain('/student/');
   });
 
   test('should NOT redirect with old localStorage auth only (PR 265)', async ({ context, page }) => {
@@ -249,111 +216,13 @@ test.describe('Hub Student Redirect', () => {
     expect(page.url()).toContain('/hub/');
   });
 
-  test('should not show hub teacher UI elements after student redirect', async ({ context, page }) => {
-    // PR 265: Set up active student session in sessionStorage
-    await context.addInitScript(() => {
-      sessionStorage.setItem('rc_user_role', 'student');
-      sessionStorage.setItem('rc_user_code', 'S001');
-    });
-    
-    // Mock student portal endpoints
-    await page.route('**/.netlify/functions/students*', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([
-          { code: 'S001', name: 'Test Student', active: true }
-        ])
-      });
-    });
-    
-    await page.route('**/.netlify/functions/assignment-instances*', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([])
-      });
-    });
-    
-    await page.route('**/.netlify/functions/goals*', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([])
-      });
-    });
-    
-    // Navigate to hub
-    await page.goto(HUB_PATH);
-    
-    // Wait for redirect to student portal
-    await page.waitForURL(`**${STUDENT_PORTAL_PATH}`, { timeout: 5000 });
-    
-    // Verify we're on student portal
-    expect(page.url()).toContain('/student/');
-    
-    // Verify hub-specific UI elements are NOT present
-    // These are teacher-only elements that should never appear in student portal
-    const teacherCenterBtn = page.locator('#btnTeacher');
-    await expect(teacherCenterBtn).not.toBeVisible();
-    
-    // Verify student dashboard is visible instead
-    await page.waitForLoadState('networkidle');
-    const studentDashboard = page.locator('#studentDashboardView');
-    // Note: Dashboard may be hidden initially during login, so we just check URL
-    // The important part is we're NOT on hub
-  });
+  // PR 265: This test is no longer relevant - /hub/ no longer auto-redirects
+  // Students can access /hub/ directly
 
-  test('should handle redirect without polluting browser history', async ({ context, page }) => {
-    // PR 265: Set up active student session in sessionStorage
-    await context.addInitScript(() => {
-      sessionStorage.setItem('rc_user_role', 'student');
-      sessionStorage.setItem('rc_user_code', 'S001');
-    });
-    
-    // Mock student portal endpoints
-    await page.route('**/.netlify/functions/students*', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([])
-      });
-    });
-    
-    await page.route('**/.netlify/functions/assignment-instances*', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([])
-      });
-    });
-    
-    await page.route('**/.netlify/functions/goals*', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([])
-      });
-    });
-    
-    // First navigate to a different page
-    await page.goto('/');
-    await page.waitForLoadState('networkidle');
-    
-    // Then navigate to hub (should redirect to student portal)
-    await page.goto(HUB_PATH);
-    await page.waitForURL(`**${STUDENT_PORTAL_PATH}`, { timeout: 5000 });
-    
-    // Try to go back - should go back to home page, not hub
-    await page.goBack();
-    await page.waitForLoadState('networkidle');
-    
-    // Should be back at home, NOT at hub
-    expect(page.url()).not.toContain('/hub/');
-    expect(page.url()).toContain('/');
-  });
+  // PR 265: This test is no longer relevant - /hub/ no longer auto-redirects
+  // Students can access /hub/ directly
 
-  test('should only redirect from /hub/ not from /student/', async ({ context, page }) => {
+  test('should only access /student/ directly (no redirect from /hub/)', async ({ context, page }) => {
     // PR 265: Set up active student session in sessionStorage
     await context.addInitScript(() => {
       sessionStorage.setItem('rc_user_role', 'student');
