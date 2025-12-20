@@ -806,6 +806,24 @@
 </head>
 <body>
 
+<!-- HOTFIX: Early redirect for direct student portal access without auto-login -->
+<!-- Redirects to hub unless valid auto-login parameters are present -->
+<script src="../web/student-portal-redirect.js"></script>
+
+<!-- Hide login view if redirecting to hub -->
+<script>
+(function() {
+  'use strict';
+  // If redirect flag is set, hide the login view immediately
+  if (window.__redirectingToHub === true) {
+    const style = document.createElement('style');
+    style.id = 'redirect-hide-login';
+    style.textContent = '#loginView { display: none !important; }';
+    document.head.appendChild(style);
+  }
+})();
+</script>
+
 <!-- HOTFIX: Early failsafe timer to guarantee login view visibility -->
 <!-- TODO: Fold this into existing diagnostics work after hotfix is stable -->
 <!-- Guardrails Stage 3B: Externalized to student-portal-failsafe.js -->
