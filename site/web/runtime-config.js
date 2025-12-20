@@ -1,5 +1,7 @@
 // Runtime configuration for Reinisch Classroom
 // Controls feature behavior that can be toggled without code changes
+// NOTE: This file is intentionally duplicated in both web/ and site/web/ directories
+// to maintain consistency with other shared modules like feature-flags.js
 
 /**
  * Configuration flags

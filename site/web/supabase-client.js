@@ -263,7 +263,7 @@ function setupConnectionMonitoring(client) {
       console.warn('[supabase-client] Could not setup realtime monitoring:', err);
     }
   } else if (isRealtimeDisabled() && !realtimeDisabledLogged) {
-    console.log('[supabase-client] Realtime disabled - skipping channel subscription');
+    console.info('[supabase-client] Realtime disabled - skipping channel subscription');
     realtimeDisabledLogged = true;
   }
 }

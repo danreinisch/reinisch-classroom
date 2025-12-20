@@ -2243,7 +2243,7 @@ export class ProgressGridV2 {
   async setupRealtime() {
     // Skip realtime setup if disabled via runtime config
     if (isRealtimeDisabled()) {
-      console.log('[progress-realtime] Realtime disabled - skipping setup');
+      console.info('[progress-realtime] Realtime disabled - skipping setup');
       return;
     }
     
