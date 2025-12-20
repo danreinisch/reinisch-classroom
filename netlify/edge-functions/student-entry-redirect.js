@@ -15,12 +15,15 @@ export default async (request, context) => {
   const url = new URL(request.url);
   const path = url.pathname;
 
-  // Only process /student and /student/ paths
+  // Only process the base student portal paths (/student and /student/)
+  // Other paths like /student/test-portal-b.html should pass through
   if (path !== '/student' && path !== '/student/') {
     return context.next();
   }
 
   // Check for valid auto-login deep link parameters
+  // Note: This validation is intentionally duplicated from client-side code
+  // (student-portal-redirect.js) to provide defense in depth
   const auto = url.searchParams.get('auto');
   const code = url.searchParams.get('code');
 
