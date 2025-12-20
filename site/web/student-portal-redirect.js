@@ -55,10 +55,11 @@
     // Set flag to prevent failsafe from showing login view during redirect
     window.__redirectingToHub = true;
     
-    // Inject redirect message immediately (before DOM loads)
+    // Inject redirect message and hide login view immediately (before DOM loads)
     const style = document.createElement('style');
     style.textContent = `
       body { margin: 0; padding: 0; }
+      #loginView { display: none !important; }
       #redirectMessage {
         position: fixed;
         top: 50%;
