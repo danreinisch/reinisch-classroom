@@ -19,12 +19,43 @@ import { test, expect } from '@playwright/test';
  * 7. Role-aware routing works on both root and /site/ home pages
  */
 
-const ROOT_HOME_PATH = '/';
-const SITE_HOME_PATH = '/'; // Both resolve to site root in test environment
+const HOME_PATH = '/'; // Both root and /site/ home pages resolve to this in test environment
 const HUB_PATH = '/hub/'; // Server serves ./site directory, so /hub/ maps to ./site/hub/
 const HUB_LINK_HREF = '/hub/'; // The actual href attribute in HTML
 const STUDENT_PORTAL_PATH = '/student/'; // Server serves ./site directory, so /student/ maps to ./site/student/
 const STUDENT_PORTAL_LINK_HREF = '/student/'; // The actual href attribute in HTML
+
+/**
+ * Helper function to mock student portal endpoints
+ * Prevents test failures due to missing backend services
+ */
+async function mockStudentPortalEndpoints(page) {
+  await page.route('**/.netlify/functions/students*', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([
+        { code: 'S001', name: 'Test Student', active: true }
+      ])
+    });
+  });
+  
+  await page.route('**/.netlify/functions/assignment-instances*', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([])
+    });
+  });
+  
+  await page.route('**/.netlify/functions/goals*', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([])
+    });
+  });
+}
 
 test.describe('Role-Aware Classroom Hub Button', () => {
   test('should route to /student/ when student clicks Classroom Hub on root home page', async ({ context, page }) => {
@@ -41,34 +72,10 @@ test.describe('Role-Aware Classroom Hub Button', () => {
     });
     
     // Mock student portal endpoints to prevent errors
-    await page.route('**/.netlify/functions/students*', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([
-          { code: 'S001', name: 'Test Student', active: true }
-        ])
-      });
-    });
-    
-    await page.route('**/.netlify/functions/assignment-instances*', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([])
-      });
-    });
-    
-    await page.route('**/.netlify/functions/goals*', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([])
-      });
-    });
+    await mockStudentPortalEndpoints(page);
     
     // Navigate to root home page
-    await page.goto(ROOT_HOME_PATH);
+    await page.goto(HOME_PATH);
     await page.waitForLoadState('networkidle');
     
     // Find and click "Classroom Hub" link
@@ -104,32 +111,10 @@ test.describe('Role-Aware Classroom Hub Button', () => {
     });
     
     // Mock endpoints
-    await page.route('**/.netlify/functions/students*', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([])
-      });
-    });
-    
-    await page.route('**/.netlify/functions/assignment-instances*', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([])
-      });
-    });
-    
-    await page.route('**/.netlify/functions/goals*', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([])
-      });
-    });
+    await mockStudentPortalEndpoints(page);
     
     // Navigate to /site/ home page
-    await page.goto(SITE_HOME_PATH);
+    await page.goto(HOME_PATH);
     await page.waitForLoadState('networkidle');
     
     // Find and click "Classroom Hub" link
@@ -150,7 +135,7 @@ test.describe('Role-Aware Classroom Hub Button', () => {
 
   test('should route to /hub/ when user with no auth clicks Classroom Hub', async ({ page }) => {
     // Navigate to home page without any auth
-    await page.goto(ROOT_HOME_PATH);
+    await page.goto(HOME_PATH);
     await page.waitForLoadState('networkidle');
     
     // Find "Classroom Hub" link
@@ -183,7 +168,7 @@ test.describe('Role-Aware Classroom Hub Button', () => {
     });
     
     // Navigate to home page
-    await page.goto(ROOT_HOME_PATH);
+    await page.goto(HOME_PATH);
     await page.waitForLoadState('networkidle');
     
     // Find "Classroom Hub" link
@@ -216,7 +201,7 @@ test.describe('Role-Aware Classroom Hub Button', () => {
     });
     
     // Navigate to home page
-    await page.goto(ROOT_HOME_PATH);
+    await page.goto(HOME_PATH);
     await page.waitForLoadState('networkidle');
     
     // Find "Classroom Hub" link
@@ -251,29 +236,7 @@ test.describe('Hub Redirect Latch (bfcache mitigation)', () => {
     });
     
     // Mock student portal endpoints
-    await page.route('**/.netlify/functions/students*', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([])
-      });
-    });
-    
-    await page.route('**/.netlify/functions/assignment-instances*', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([])
-      });
-    });
-    
-    await page.route('**/.netlify/functions/goals*', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([])
-      });
-    });
+    await mockStudentPortalEndpoints(page);
     
     // First navigation to hub - should redirect
     await page.goto(HUB_PATH);
