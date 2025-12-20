@@ -3,11 +3,14 @@ import { test, expect } from '@playwright/test';
 /**
  * Student Portal Redirect Test
  * 
+ * PR 265: Session-only student authentication
+ * 
  * Validates that:
- * 1. Direct access to /student/ without auth redirects to /hub/
+ * 1. Direct access to /student/ without auth shows LOGIN UI (not redirected)
  * 2. Auto-login deep links with valid parameters work
- * 3. Remembered authentication allows direct access
+ * 3. Active sessionStorage session allows direct access
  * 4. No login form flash occurs during valid auto-login
+ * 5. Invalid deep links (auto=1 without code) redirect to hub
  */
 
 // Test constants
@@ -26,15 +29,20 @@ function buildStudentPortalURL(params = {}) {
 }
 
 test.describe('Student Portal Redirect', () => {
-  test('should redirect to hub when accessing /student/ without auth', async ({ page }) => {
-    // Navigate to student portal directly without auth
+  test('should NOT redirect when accessing /student/ without auth (PR 265)', async ({ page }) => {
+    // PR 265: Direct access to /student/ should show login UI, not redirect
     await page.goto(STUDENT_PORTAL_PATH);
     
-    // Should automatically redirect to hub
-    await page.waitForURL(`**${HUB_PATH}`, { timeout: 3000 });
+    // Should NOT redirect to hub - should stay on student portal
+    await page.waitForLoadState('networkidle');
     
-    // Verify we're on the hub page
-    expect(page.url()).toContain('/hub/');
+    // Verify we're still on the student portal page
+    expect(page.url()).toContain('/student/');
+    expect(page.url()).not.toContain('/hub/');
+    
+    // Login view should be visible
+    const loginView = page.locator('#loginView');
+    await expect(loginView).toBeVisible({ timeout: 5000 });
   });
 
   test('should allow auto-login with valid deep link parameters', async ({ page }) => {
@@ -115,26 +123,27 @@ test.describe('Student Portal Redirect', () => {
     expect(page.url()).toContain('/hub/');
   });
 
-  test('should redirect when code is present but auto is missing', async ({ page }) => {
-    // Navigate with code but no auto=1 parameter
+  test('should NOT redirect when code without auto=1 (PR 265)', async ({ page }) => {
+    // PR 265: Without auto=1, should show login UI
     await page.goto(buildStudentPortalURL({ code: 'S001' }));
     
-    // Should redirect to hub
-    await page.waitForURL(`**${HUB_PATH}`, { timeout: 3000 });
+    // Should NOT redirect - show login UI
+    await page.waitForLoadState('networkidle');
     
-    // Verify we're on the hub page
-    expect(page.url()).toContain('/hub/');
+    // Verify we're still on student portal
+    expect(page.url()).toContain('/student/');
+    expect(page.url()).not.toContain('/hub/');
+    
+    // Login view should be visible
+    const loginView = page.locator('#loginView');
+    await expect(loginView).toBeVisible({ timeout: 5000 });
   });
 
-  test('should allow access with valid remembered authentication', async ({ context, page }) => {
-    // Set up remembered auth in localStorage before navigation
+  test('should allow access with active sessionStorage session (PR 265)', async ({ context, page }) => {
+    // PR 265: Set up active session in sessionStorage
     await context.addInitScript(() => {
-      const auth = {
-        role: 'student',
-        code: 'S001',
-        expiresAt: Date.now() + 24 * 60 * 60 * 1000, // 24 hours from now
-      };
-      localStorage.setItem('rc_auth', JSON.stringify(auth));
+      sessionStorage.setItem('rc_user_role', 'student');
+      sessionStorage.setItem('rc_user_code', 'S001');
     });
     
     // Mock student data endpoints
@@ -145,6 +154,19 @@ test.describe('Student Portal Redirect', () => {
         body: JSON.stringify([
           { code: 'S001', name: 'Test Student', active: true }
         ])
+      });
+    });
+    
+    await page.route('**/.netlify/functions/student-roster*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          ok: true,
+          students: [
+            { code: 'S001', name: 'Test Student', active: true }
+          ]
+        })
       });
     });
     
@@ -169,7 +191,7 @@ test.describe('Student Portal Redirect', () => {
     // Navigate to student portal without auto-login parameters
     await page.goto(STUDENT_PORTAL_PATH);
     
-    // Should NOT redirect to hub (remembered auth is valid)
+    // Should NOT redirect to hub (session is active)
     await page.waitForLoadState('networkidle');
     
     // Should stay on student portal
@@ -181,8 +203,8 @@ test.describe('Student Portal Redirect', () => {
     await expect(dashboardView).toBeVisible({ timeout: 10000 });
   });
 
-  test('should redirect with expired remembered authentication', async ({ context, page }) => {
-    // Set up EXPIRED auth in localStorage
+  test('should show login UI with expired localStorage auth (PR 265)', async ({ context, page }) => {
+    // PR 265: Expired auth in localStorage should not affect behavior
     await context.addInitScript(() => {
       const auth = {
         role: 'student',
@@ -195,11 +217,16 @@ test.describe('Student Portal Redirect', () => {
     // Navigate to student portal
     await page.goto(STUDENT_PORTAL_PATH);
     
-    // Should redirect to hub (auth expired)
-    await page.waitForURL(`**${HUB_PATH}`, { timeout: 3000 });
+    // Should NOT redirect to hub - show login UI
+    await page.waitForLoadState('networkidle');
     
-    // Verify we're on the hub page
-    expect(page.url()).toContain('/hub/');
+    // Verify we're still on student portal
+    expect(page.url()).toContain('/student/');
+    expect(page.url()).not.toContain('/hub/');
+    
+    // Login view should be visible
+    const loginView = page.locator('#loginView');
+    await expect(loginView).toBeVisible({ timeout: 5000 });
   });
 
   test('should not show login form during valid auto-login', async ({ page }) => {

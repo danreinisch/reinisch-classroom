@@ -1,7 +1,10 @@
 /**
  * Student Portal Entry Redirect
- * Redirects direct /student/ access to the hub unless valid auto-login parameters are present
- * Part of PR: Remove/disable direct Student Portal code+password login UI
+ * PR 265: Allow /student/ to be a stable entrypoint with login UI
+ * 
+ * Redirects to hub only for invalid deep link attempts.
+ * Allows direct access to /student/ for login UI (no localStorage check).
+ * Part of PR: Session-only student authentication
  */
 
 (function() {
@@ -94,37 +97,25 @@
       return;
     }
     
-    // Check if user has valid remembered auth
+    // PR 265: Check sessionStorage for active session (same-tab continuity)
     try {
-      const authStr = localStorage.getItem('rc_auth');
-      if (authStr) {
-        const auth = JSON.parse(authStr);
-        const now = Date.now();
-        
-        // Check if auth is valid, not expired, and for a student
-        if (auth && 
-            auth.role === 'student' && 
-            auth.code && 
-            auth.expiresAt && 
-            typeof auth.expiresAt === 'number' && 
-            now < auth.expiresAt) {
-          console.log('[student-portal-redirect] Valid remembered auth found, proceeding to portal');
-          return;
-        }
+      const userRole = sessionStorage.getItem('rc_user_role');
+      const userCode = sessionStorage.getItem('rc_user_code');
+      
+      if (userRole === 'student' && userCode) {
+        console.log('[student-portal-redirect] Active session found, proceeding to portal');
+        return;
       }
     } catch (e) {
-      console.warn('[student-portal-redirect] Failed to check remembered auth:', e);
+      console.warn('[student-portal-redirect] Failed to check sessionStorage:', e);
     }
     
-    // No valid auth method - show redirect message and redirect to hub
-    console.log('[student-portal-redirect] No valid auto-login or remembered auth, redirecting to hub');
-    
-    showRedirectMessage();
-    window.location.replace(HUB_PATH);
+    // PR 265: No valid auth method - allow direct access to show login UI
+    // This is the key change: we no longer redirect to hub when there's no auth
+    console.log('[student-portal-redirect] No active session or deep link, showing login UI');
     
   } catch (err) {
     console.error('[student-portal-redirect] Unexpected error:', err);
-    // On error, fail safely by redirecting to hub
-    window.location.replace(HUB_PATH);
+    // On error, fail safely by showing login UI (no redirect)
   }
 })();
