@@ -22,7 +22,9 @@ import { test, expect } from '@playwright/test';
 const ROOT_HOME_PATH = '/';
 const SITE_HOME_PATH = '/site/';
 const HUB_PATH = '/site/hub/';
+const HUB_LINK_HREF = '/hub/'; // The actual href attribute in HTML
 const STUDENT_PORTAL_PATH = '/site/student/';
+const STUDENT_PORTAL_LINK_HREF = '/student/'; // The actual href attribute in HTML
 
 test.describe('Role-Aware Classroom Hub Button', () => {
   test('should route to /student/ when student clicks Classroom Hub on root home page', async ({ context, page }) => {
@@ -75,7 +77,7 @@ test.describe('Role-Aware Classroom Hub Button', () => {
     
     // Verify href was updated to /student/ for accessibility
     const href = await classroomHubLink.getAttribute('href');
-    expect(href).toBe(STUDENT_PORTAL_PATH);
+    expect(href).toBe(STUDENT_PORTAL_LINK_HREF);
     
     // Click the link
     await classroomHubLink.click();
@@ -136,7 +138,7 @@ test.describe('Role-Aware Classroom Hub Button', () => {
     
     // Verify href was updated to /student/
     const href = await classroomHubLink.getAttribute('href');
-    expect(href).toBe(STUDENT_PORTAL_PATH);
+    expect(href).toBe(STUDENT_PORTAL_LINK_HREF);
     
     // Click the link
     await classroomHubLink.click();
@@ -157,7 +159,7 @@ test.describe('Role-Aware Classroom Hub Button', () => {
     
     // Verify href is /hub/
     const href = await classroomHubLink.getAttribute('href');
-    expect(href).toBe(HUB_PATH);
+    expect(href).toBe(HUB_LINK_HREF);
     
     // Click the link
     await classroomHubLink.click();
@@ -190,7 +192,7 @@ test.describe('Role-Aware Classroom Hub Button', () => {
     
     // Verify href is /hub/
     const href = await classroomHubLink.getAttribute('href');
-    expect(href).toBe(HUB_PATH);
+    expect(href).toBe(HUB_LINK_HREF);
     
     // Click the link
     await classroomHubLink.click();
@@ -223,7 +225,7 @@ test.describe('Role-Aware Classroom Hub Button', () => {
     
     // Verify href is /hub/ (expired auth is treated as no auth)
     const href = await classroomHubLink.getAttribute('href');
-    expect(href).toBe(HUB_PATH);
+    expect(href).toBe(HUB_LINK_HREF);
     
     // Click the link
     await classroomHubLink.click();

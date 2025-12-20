@@ -27,17 +27,6 @@
   
   console.log('[hub-student-redirect] Checking for remembered student auth');
   
-  // PR 262: Check bfcache redirect latch
-  try {
-    if (sessionStorage.getItem(REDIRECT_LATCH_KEY) === '1') {
-      console.log('[hub-student-redirect] Redirect latch detected, skipping redirect (already redirected this session)');
-      return;
-    }
-  } catch (err) {
-    console.warn('[hub-student-redirect] Failed to check redirect latch:', err);
-    // Continue with normal logic on error
-  }
-  
   // PR 261 A: Check for teacher override query parameter
   try {
     const urlParams = new URLSearchParams(window.location.search);
@@ -59,6 +48,17 @@
     }
   } catch (err) {
     console.warn('[hub-student-redirect] Failed to check sessionStorage:', err);
+    // Continue with normal logic on error
+  }
+  
+  // PR 262: Check bfcache redirect latch (only applies to student redirects)
+  try {
+    if (sessionStorage.getItem(REDIRECT_LATCH_KEY) === '1') {
+      console.log('[hub-student-redirect] Redirect latch detected, skipping redirect (already redirected this session)');
+      return;
+    }
+  } catch (err) {
+    console.warn('[hub-student-redirect] Failed to check redirect latch:', err);
     // Continue with normal logic on error
   }
   

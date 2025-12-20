@@ -329,24 +329,16 @@
     );
     
     hubLinks.forEach(link => {
-      // Skip links that already have a click handler attached
-      if (link.dataset.roleAwareHandlerAttached) return;
-      link.dataset.roleAwareHandlerAttached = 'true';
+      // Skip links that already have been processed
+      if (link.dataset.roleAwareProcessed) return;
+      link.dataset.roleAwareProcessed = 'true';
       
       // Determine target URL based on auth
       const targetUrl = hasValidStudentAuth() ? STUDENT_PORTAL_URL : HUB_URL;
       
-      // Update href for accessibility (long-press, right-click, etc.)
+      // Update href attribute to reflect the correct destination
+      // This allows the link to work naturally without JavaScript intervention
       link.setAttribute('href', targetUrl);
-      
-      // Add click handler for navigation
-      link.addEventListener('click', function(e) {
-        e.preventDefault();
-        
-        // Re-check auth at click time in case it changed
-        const destination = hasValidStudentAuth() ? STUDENT_PORTAL_URL : HUB_URL;
-        window.location.assign(destination);
-      });
     });
   }
 
