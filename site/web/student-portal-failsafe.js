@@ -27,7 +27,43 @@
       return;
     }
     
-    // Skip failsafe if deep-link auto-login is in progress
+    // Parse URL parameters to detect deep-link mode
+    const urlParams = new URLSearchParams(window.location.search);
+    const auto = urlParams.get('auto');
+    const code = urlParams.get('code');
+    const isDeepLinkMode = auto === '1' && code && code.trim().length > 0;
+    
+    // Handle deep-link mode: redirect to hub if auth hasn't become ready
+    if (isDeepLinkMode && !window.authReady) {
+      console.warn('[HOTFIX][failsafe] Deep-link mode detected but auth not ready after ' + FAILSAFE_DELAY_MS + 'ms, redirecting to hub');
+      
+      if (DEBUG_MODE) {
+        console.log('[HOTFIX][failsafe] Deep-link failsafe redirect triggered:', {
+          auto,
+          code: code ? '(present)' : '(missing)',
+          authReady: window.authReady
+        });
+      }
+      
+      // Set redirect flag and redirect to hub
+      window.__redirectingToHub = true;
+      
+      // Hide login view
+      const loginView = document.getElementById('loginView');
+      if (loginView) loginView.style.display = 'none';
+      
+      // Show redirect message
+      const redirectDiv = document.createElement('div');
+      redirectDiv.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-size:18px;font-weight:600;color:#e6edf3;text-align:center;';
+      redirectDiv.textContent = 'Redirecting to Hub…';
+      document.body.appendChild(redirectDiv);
+      
+      // Redirect to hub
+      window.location.replace('/hub/');
+      return;
+    }
+    
+    // Skip normal failsafe if deep-link auto-login is in progress (but auth is becoming ready)
     if (window.__deepLinkAutoLogin === true) {
       if (DEBUG_MODE) {
         console.log('[HOTFIX][failsafe] Skipping - deep-link auto-login in progress');
