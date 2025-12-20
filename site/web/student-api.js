@@ -127,6 +127,11 @@ export async function getStudentGoalProgress(code) {
     throw new Error(response.error || 'Failed to fetch goal progress');
   }
   
+  // Check if service is unavailable (schema not present, etc.)
+  if (response.unavailable) {
+    throw new Error('Service temporarily unavailable');
+  }
+  
   return response.progress || [];
 }
 

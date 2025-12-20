@@ -963,20 +963,71 @@ async function loadGradesCard() {
   await loadGradesCardUI(activeDb, currentUser, qs, helpers, feature);
 }
 
-async function loadStudentGoals() {
-  try {
-    const goals = await activeDb.listGoalsByStudentCode(currentUser.code);
+// Track retry attempts for goals loading
+let goalsRetryCount = 0;
+const MAX_GOALS_RETRIES = 3;
+const GOALS_RETRY_DELAYS = [2000, 5000, 10000]; // Exponential backoff: 2s, 5s, 10s
 
-    qs("#goalsCount").textContent = goals.length;
+async function loadStudentGoals() {
+  let goals = [];
+  let progressAvailable = true;
+  
+  try {
+    // Separate goals and progress fetching
+    try {
+      goals = await activeDb.listGoalsByStudentCode(currentUser.code);
+      qs("#goalsCount").textContent = goals.length;
+    } catch (goalsErr) {
+      console.error("[student-api] Failed to fetch goals list:", goalsErr);
+      qs("#goalsCount").textContent = "—";
+      
+      // If we can't get goals at all, schedule retry
+      if (goalsRetryCount < MAX_GOALS_RETRIES) {
+        const delay = GOALS_RETRY_DELAYS[goalsRetryCount] || 10000;
+        goalsRetryCount++;
+        
+        const goalsContent = qs("#goalsContent");
+        if (goalsContent) {
+          goalsContent.innerHTML =
+            `<div class="subtle" style="text-align:center; padding:20px">Loading goals... (attempt ${goalsRetryCount}/${MAX_GOALS_RETRIES})</div>`;
+        }
+        
+        setTimeout(() => {
+          console.log(`[student-dashboard] Retrying goals load (attempt ${goalsRetryCount}/${MAX_GOALS_RETRIES})...`);
+          loadStudentGoals();
+        }, delay);
+      } else {
+        // Max retries reached
+        const goalsContent = qs("#goalsContent");
+        if (goalsContent) {
+          goalsContent.innerHTML =
+            '<div class="subtle" style="text-align:center; padding:20px">Goals are currently unavailable. Please refresh the page or contact your teacher.</div>';
+        }
+      }
+      return;
+    }
 
     if (goals.length === 0) {
       qs("#goalsContent").innerHTML =
         '<div class="subtle" style="text-align:center; padding:20px">No goals available</div>';
+      goalsRetryCount = 0; // Reset counter on success
       return;
     }
 
-    // Fetch real progress entries for this student
-    const entries = await activeDb.listGoalProgress({ studentCodes: [currentUser.code] });
+    // Try to fetch progress data (non-fatal if it fails)
+    let entries = [];
+    try {
+      entries = await activeDb.listGoalProgress({ studentCodes: [currentUser.code] });
+    } catch (progressErr) {
+      console.error("[student-api] Failed to fetch goal progress:", progressErr);
+      progressAvailable = false;
+      
+      // Check if this is an "unavailable" response vs a real error
+      const errorMsg = progressErr.message || "";
+      if (errorMsg.includes("unavailable") || errorMsg.includes("Service temporarily unavailable")) {
+        console.log("[student-dashboard] Progress service unavailable, continuing without progress data");
+      }
+    }
 
     // Build a map of goal -> average progress
     const byGoal = new Map();
@@ -992,8 +1043,9 @@ async function loadStudentGoals() {
       }
     }
 
-    // Helper to compute average for a goal (returns 0 if no entries)
+    // Helper to compute average for a goal (returns "—" if no progress data available)
     const avgFor = (goalCode) => {
+      if (!progressAvailable) return "—";
       const a = byGoal.get(goalCode);
       return a ? Math.round(a.sum / a.n) : 0;
     };
@@ -1009,6 +1061,7 @@ async function loadStudentGoals() {
 
       // Calculate average progress from real data
       const avgProgress = avgFor(goal.code);
+      const showProgressBar = progressAvailable && typeof avgProgress === "number";
 
       const tooltipHtml = hasTooltip
         ? `<span class="tooltip">${goalDesc}<span class="tooltip-text">${goal.desc || goal.code}</span></span>`
@@ -1021,31 +1074,50 @@ async function loadStudentGoals() {
               <div style="font-weight:800; margin-bottom:4px">${tooltipHtml}</div>
               <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px">
                 <span class="badge ${statusBadge}">${goal.status || "Open"}</span>
-                <span class="subtle">Avg: ${avgProgress}%</span>
+                <span class="subtle">Avg: ${avgProgress}${typeof avgProgress === "number" ? "%" : ""}</span>
               </div>
+              ${showProgressBar ? `
               <div class="progress-bar-container">
                 <div class="progress-bar" style="width:${avgProgress}%"></div>
               </div>
+              ` : '<div class="subtle" style="font-size:12px">Progress data unavailable</div>'}
             </div>
           </div>
         `;
     }
 
     qs("#goalsContent").innerHTML = html;
+    
+    // Reset retry counter on success
+    goalsRetryCount = 0;
+    
   } catch (err) {
-    console.error("Failed to load goals:", err);
-    // Show friendly message but keep dashboard visible
-    const goalsContent = qs("#goalsContent");
-    if (goalsContent) {
-      goalsContent.innerHTML =
-        '<div class="subtle" style="text-align:center; padding:20px">Goals temporarily unavailable. Retrying in background...</div>';
+    console.error("[student-dashboard] Unexpected error loading goals:", err);
+    
+    // Schedule retry with exponential backoff (capped at MAX_GOALS_RETRIES)
+    if (goalsRetryCount < MAX_GOALS_RETRIES) {
+      const delay = GOALS_RETRY_DELAYS[goalsRetryCount] || 10000;
+      goalsRetryCount++;
+      
+      const goalsContent = qs("#goalsContent");
+      if (goalsContent) {
+        goalsContent.innerHTML =
+          `<div class="subtle" style="text-align:center; padding:20px">Goals temporarily unavailable. Retrying in ${delay/1000}s... (attempt ${goalsRetryCount}/${MAX_GOALS_RETRIES})</div>`;
+      }
+      
+      setTimeout(() => {
+        console.log(`[student-dashboard] Retrying goals load (attempt ${goalsRetryCount}/${MAX_GOALS_RETRIES})...`);
+        loadStudentGoals();
+      }, delay);
+    } else {
+      // Max retries reached - show stable error message
+      console.error("[student-dashboard] Max retries reached for goals loading");
+      const goalsContent = qs("#goalsContent");
+      if (goalsContent) {
+        goalsContent.innerHTML =
+          '<div class="subtle" style="text-align:center; padding:20px">Goals are currently unavailable. Please refresh the page or contact your teacher.</div>';
+      }
     }
-
-    // Retry in background after a delay
-    setTimeout(() => {
-      console.log("[student-dashboard] Retrying goals load...");
-      loadStudentGoals();
-    }, 5000);
   }
 }
 

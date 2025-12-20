@@ -108,18 +108,98 @@ exports.handler = async (event) => {
     });
 
     if (!progressResponse.ok) {
-      throw new Error(`Progress query failed: ${progressResponse.status}`);
+      // Parse error response for debugging
+      const errorBody = await progressResponse.text();
+      console.error(`[student-goal-progress] [${requestId}] Progress query failed:`, {
+        status: progressResponse.status,
+        body: errorBody
+      });
+      
+      // Check for known schema errors (table/relationship not found)
+      const isSchemaError = errorBody && (
+        errorBody.includes('relation') && errorBody.includes('does not exist') ||
+        errorBody.includes('column') && errorBody.includes('does not exist') ||
+        errorBody.includes('foreign key')
+      );
+      
+      if (isSchemaError || progressResponse.status === 404) {
+        // Schema not present - return success with unavailable flag
+        console.log(`[student-goal-progress] [${requestId}] Schema not available, returning empty result`);
+        return jsonResponse(
+          event,
+          200,
+          { ok: true, progress: [], unavailable: true },
+          { 'Cache-Control': 'no-store' },
+          requestId
+        );
+      }
+      
+      // Try fallback query without join
+      console.log(`[student-goal-progress] [${requestId}] Attempting fallback query without join`);
+      const fallbackUrl = `${SUPABASE_URL}/rest/v1/goal_progress?select=*&student_id=eq.${studentId}&order=date.desc`;
+      
+      const fallbackResponse = await fetch(fallbackUrl, {
+        method: 'GET',
+        headers: {
+          'apikey': SUPABASE_SERVICE_ROLE_KEY,
+          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!fallbackResponse.ok) {
+        // Both queries failed - return unavailable
+        console.error(`[student-goal-progress] [${requestId}] Fallback query also failed`);
+        return jsonResponse(
+          event,
+          200,
+          { ok: true, progress: [], unavailable: true },
+          { 'Cache-Control': 'no-store' },
+          requestId
+        );
+      }
+      
+      const fallbackProgress = await fallbackResponse.json();
+      
+      // Map fallback data without goal details
+      const fallbackFlattened = (fallbackProgress || []).map(entry => ({
+        id: entry.id,
+        goal_id: entry.goal_id,
+        goal_code: `G${entry.goal_id}`, // Fallback code
+        goal_desc: 'Goal details unavailable',
+        goal_area: 'Uncategorized',
+        student_id: entry.student_id,
+        student_code: codeNorm,
+        class_id: entry.class_id,
+        date: entry.date,
+        value: entry.value,
+        percent: entry.value,
+        source: entry.source,
+        collected_by: entry.collected_by,
+        created_at: entry.created_at
+      }));
+      
+      console.log(`[student-goal-progress] [${requestId}] Fallback successful, fetched ${fallbackFlattened.length} entries`);
+      
+      return jsonResponse(
+        event,
+        200,
+        { ok: true, progress: fallbackFlattened, fallback: true },
+        { 'Cache-Control': 'no-store' },
+        requestId
+      );
     }
 
     const progress = await progressResponse.json();
     
     // Flatten the response to include goal data at top level for easier consumption
+    // Safely handle missing goals relation
     const flattened = (progress || []).map(entry => ({
       id: entry.id,
       goal_id: entry.goal_id,
-      goal_code: entry.goals.code,
-      goal_desc: entry.goals.desc,
-      goal_area: entry.goals.goal_area || 'Uncategorized',
+      goal_code: entry.goals?.code || `G${entry.goal_id}`,
+      goal_desc: entry.goals?.desc || 'Goal details unavailable',
+      goal_area: entry.goals?.goal_area || 'Uncategorized',
       student_id: entry.student_id,
       student_code: codeNorm,
       class_id: entry.class_id,
@@ -141,11 +221,12 @@ exports.handler = async (event) => {
       requestId
     );
   } catch (err) {
-    console.error(`[student-goal-progress] [${requestId}] Error:`, err);
+    console.error(`[student-goal-progress] [${requestId}] Unexpected error:`, err);
+    // Return 200 with unavailable flag to prevent client retry loops
     return jsonResponse(
       event,
-      500,
-      { ok: false, error: 'Failed to fetch goal progress' },
+      200,
+      { ok: true, progress: [], unavailable: true, error: 'Service temporarily unavailable' },
       { 'Cache-Control': 'no-store' },
       requestId
     );
