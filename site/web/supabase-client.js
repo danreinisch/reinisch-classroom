@@ -1,6 +1,8 @@
 // Reactive Supabase client - rebuilds when settings change
 // Listens for rc:remote-config-changed and storage events to re-initialize
 
+import { isRealtimeDisabled } from './runtime-config.js';
+
 let createClient = null;
 let supabaseLoadError = null;
 let cachedClient = null;
@@ -190,6 +192,7 @@ export async function testConnection() {
 // ============================================================================
 
 let reconnectAttempt = 0;
+let realtimeDisabledLogged = false; // Track if we've logged the realtime disabled message
 const MAX_RECONNECT_ATTEMPTS = 10;
 const BASE_RECONNECT_DELAY = 1000; // 1 second
 const MAX_RECONNECT_DELAY = 30000; // 30 seconds
@@ -234,8 +237,9 @@ function setupConnectionMonitoring(client) {
     }
   });
   
-  // Optional: Monitor Realtime connection status if available
-  if (client.channel && typeof client.channel === 'function') {
+  // Optional: Monitor Realtime connection status if available and not disabled
+  // Skip realtime channel creation when DISABLE_REALTIME is true to avoid websocket/CSP errors
+  if (!isRealtimeDisabled() && client.channel && typeof client.channel === 'function') {
     try {
       const channel = client.channel('system-heartbeat');
       
@@ -258,6 +262,9 @@ function setupConnectionMonitoring(client) {
     } catch (err) {
       console.warn('[supabase-client] Could not setup realtime monitoring:', err);
     }
+  } else if (isRealtimeDisabled() && !realtimeDisabledLogged) {
+    console.info('[supabase-client] Realtime disabled - skipping channel subscription');
+    realtimeDisabledLogged = true;
   }
 }
 
