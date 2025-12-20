@@ -104,6 +104,94 @@ The vendored file is a self-contained ESM bundle that includes all necessary dep
 
 If the vendored library fails to load, the app falls back to localStorage-only mode.
 
+### Upgrading the Vendored Supabase JS Library
+
+The Supabase JS library is **intentionally pinned** to ensure:
+- **Deterministic builds**: All environments use the exact same library version
+- **Stability**: Upgrades are deliberate, tested, and reviewable
+- **CSP compliance**: No surprise changes from external CDN updates
+
+**Current pinned version**: v2.89.0 (as of 2025-12-19)
+
+#### Upgrade Procedure
+
+Follow these steps when upgrading to a new version:
+
+1. **Choose a target version**
+   - Select a stable v2.x.y release from https://www.npmjs.com/package/@supabase/supabase-js
+   - Review the release notes for breaking changes or security fixes
+
+2. **Download the ESM bundle**
+   - Use the unpkg CDN to obtain the ESM bundle:
+     ```
+     https://unpkg.com/@supabase/supabase-js@2.x.y/dist/module/index.js
+     ```
+   - Replace `2.x.y` with your target version (e.g., `2.89.0`)
+   - Download the file contents via browser or curl:
+     ```bash
+     curl -o supabase-js@2.mjs "https://unpkg.com/@supabase/supabase-js@2.x.y/dist/module/index.js"
+     ```
+
+3. **Replace the vendored file**
+   - Replace `site/vendor/supabase-js@2.mjs` with the downloaded contents
+   - Ensure the file remains named `supabase-js@2.mjs`
+
+4. **Update the header comment**
+   - Edit the header comment in `site/vendor/supabase-js@2.mjs` to reflect:
+     - New version number (e.g., `v2.x.y`)
+     - Current date in YYYY-MM-DD format
+   - Example header:
+     ```javascript
+     // Vendored @supabase/supabase-js v2.x.y
+     // Package: @supabase/supabase-js
+     // Version: 2.x.y (pinned)
+     // Source: NPM package bundled with esbuild
+     // Date: YYYY-MM-DD
+     // License: MIT
+     ```
+
+5. **Update this documentation**
+   - Update the version number in the "Vendored Supabase Library" section above
+   - Update the "Current pinned version" note in this section
+
+6. **Verify in browser console**
+   - Serve the site locally or deploy to preview environment
+   - Open browser developer console (F12)
+   - Test the library import:
+     ```javascript
+     import('/vendor/supabase-js@2.mjs').then(m => console.log(typeof m.createClient))
+     ```
+   - Expected output: `"function"`
+   - Check the file loads correctly:
+     ```javascript
+     fetch('/vendor/supabase-js@2.mjs').then(r => r.text()).then(t => console.log(t.length))
+     ```
+   - Expected output: large number (typically >400,000 characters)
+
+7. **Run smoke checks**
+   - Load the Classroom Hub and verify no console errors
+   - Load the Student portal and verify no console errors
+   - Test Supabase connection via Settings > Test Connection
+   - Verify data operations work (e.g., view students, goals, or assignments)
+
+#### Rollback Procedure
+
+If issues arise after upgrading:
+
+1. **Revert the commit**
+   ```bash
+   git revert <commit-hash>
+   ```
+   Or manually restore the previous version of `site/vendor/supabase-js@2.mjs`
+
+2. **Redeploy**
+   - Push the revert commit to trigger a new deployment
+   - For Netlify, the deploy will happen automatically on push
+
+3. **Verify rollback**
+   - Confirm the original version is restored
+   - Test that the application functions correctly
+
 ### Retry Logic
 All Supabase operations are wrapped with exponential backoff retry logic:
 - Default: 2 retries with 250ms base delay
