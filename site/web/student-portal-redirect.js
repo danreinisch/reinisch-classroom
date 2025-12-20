@@ -46,11 +46,37 @@
       console.warn('[student-portal-redirect] Failed to check remembered auth:', e);
     }
     
-    // No valid auth method - redirect to hub
+    // No valid auth method - show redirect message and redirect to hub
     console.log('[student-portal-redirect] No valid auto-login or remembered auth, redirecting to hub');
     
     // Set flag to prevent failsafe from showing login view during redirect
     window.__redirectingToHub = true;
+    
+    // Show simple text-only redirect message
+    // Use a simple inline style to ensure it shows immediately
+    document.addEventListener('DOMContentLoaded', () => {
+      // Hide any existing content
+      document.body.style.visibility = 'hidden';
+      
+      // Create and show redirect message
+      const redirectDiv = document.createElement('div');
+      redirectDiv.id = 'redirectMessage';
+      redirectDiv.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-family: ui-sans-serif, -apple-system, Segoe UI, Roboto, Inter, Helvetica, Arial;
+        font-size: 18px;
+        font-weight: 600;
+        color: #e6edf3;
+        text-align: center;
+        z-index: 9999;
+      `;
+      redirectDiv.textContent = 'Redirecting to Hub…';
+      document.body.appendChild(redirectDiv);
+      document.body.style.visibility = 'visible';
+    });
     
     // Use replace() to prevent back button from returning to this page
     window.location.replace('/hub/');

@@ -193,7 +193,11 @@ test.describe('Student Login Authentication', () => {
     expect(page.url()).toContain('/hub/');
   });
 
-  test('should successfully login from Student Portal directly', async ({ page }) => {
+  test.skip('should successfully login from Student Portal directly - DISABLED: Direct login now redirects to hub', async ({ page }) => {
+    // NOTE: This test is disabled because direct access to /student/ without auth now redirects to /hub/
+    // The login flow now requires going through the hub dropdown selector
+    // See student-portal-redirect.spec.js for the new redirect behavior tests
+    
     // Mock student-login endpoint - successful login
     await page.route('**/.netlify/functions/student-login', async (route) => {
       const request = route.request();
