@@ -56,16 +56,21 @@
     }
     
     // Check if auth is expired
-    if (auth.expiresAt && typeof auth.expiresAt === 'number') {
-      const now = Date.now();
-      if (now > auth.expiresAt) {
-        console.log('[hub-student-redirect] Auth token expired, clearing and continuing to hub');
-        localStorage.removeItem(AUTH_KEY);
-        return;
-      }
-    } else {
-      // No expiry or invalid expiry - treat as expired for safety
-      console.warn('[hub-student-redirect] Auth missing or invalid expiresAt, clearing and continuing to hub');
+    if (!auth.expiresAt) {
+      console.warn('[hub-student-redirect] Auth missing expiresAt field, clearing and continuing to hub');
+      localStorage.removeItem(AUTH_KEY);
+      return;
+    }
+    
+    if (typeof auth.expiresAt !== 'number') {
+      console.warn('[hub-student-redirect] Auth expiresAt is not a number (type: ' + typeof auth.expiresAt + '), clearing and continuing to hub');
+      localStorage.removeItem(AUTH_KEY);
+      return;
+    }
+    
+    const now = Date.now();
+    if (now > auth.expiresAt) {
+      console.log('[hub-student-redirect] Auth token expired, clearing and continuing to hub');
       localStorage.removeItem(AUTH_KEY);
       return;
     }

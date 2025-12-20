@@ -313,7 +313,23 @@ test.describe('Hub Student Redirect', () => {
     });
     
     // Mock student portal endpoints
-    await page.route('**/.netlify/functions/**', async (route) => {
+    await page.route('**/.netlify/functions/students*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([])
+      });
+    });
+    
+    await page.route('**/.netlify/functions/assignment-instances*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([])
+      });
+    });
+    
+    await page.route('**/.netlify/functions/goals*', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -352,7 +368,23 @@ test.describe('Hub Student Redirect', () => {
     });
     
     // Mock student portal endpoints
-    await page.route('**/.netlify/functions/**', async (route) => {
+    await page.route('**/.netlify/functions/students*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([])
+      });
+    });
+    
+    await page.route('**/.netlify/functions/assignment-instances*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([])
+      });
+    });
+    
+    await page.route('**/.netlify/functions/goals*', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
