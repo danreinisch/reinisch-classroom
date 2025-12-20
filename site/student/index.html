@@ -1,1183 +1,1960 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Reinisch Classroom - Student Hub & Teacher Center</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-<style>
-  :root{
-    --base:#0b1220; --panel:#0f172a; --panel-2:#111827; --edge:#0b1220;
-    --ink:#e6edf3; --ink-dim:#cbd5e1; --muted:#94a3b8;
-    --line:rgba(255,255,255,.08); --line-strong:rgba(255,255,255,.14);
-    --brand:#22c55e; --brand-2:#06b6d4;
-    --shadow-1:0 6px 28px rgba(0,0,0,.35); --shadow-2:0 14px 48px rgba(0,0,0,.45);
-    --inset-top:inset 0 1px 0 rgba(255,255,255,.03);
-  }
-  *{box-sizing:border-box} html,body{height:100%}
-  body{
-    margin:0;
-    background: url('/assets/bg/bg5e_soft_grid.svg') center/cover no-repeat fixed,
-                radial-gradient(1200px 800px at 20% -10%, rgba(34,197,94,.08), transparent 50%),
-                radial-gradient(1200px 800px at 120% 20%, rgba(6,182,212,.06), transparent 50%),
-                linear-gradient(180deg, #0b1220, #0c1322 60%, #0b0f14);
-    color:var(--ink);
-    font-family:ui-sans-serif,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial;
-  }
-  
-  .header{
-    position:sticky; top:0; z-index:40; padding:16px 0;
-    background:linear-gradient(180deg, rgba(34,197,94,.92), rgba(22,163,74,.92));
-    border-bottom:1px solid rgba(255,255,255,.18);
-  }
-  .bar{max-width:1400px; margin:0 auto; padding:0 16px; display:flex; gap:12px; align-items:center;}
-  .brand{font-weight:900; letter-spacing:.2px; margin-right:auto; color:#031f11; font-size:18px;}
-  .chip{
-    display:inline-flex; align-items:center; gap:8px; padding:6px 12px; border-radius:999px;
-    background:rgba(255,255,255,.25); color:#062513; font-weight:800;
-  }
-  .btn{
-    border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.06);
-    color:var(--ink); padding:10px 16px; border-radius:10px;
-    font-weight:800; cursor:pointer; transition:.15s; border:none;
-  }
-  .btn:hover{background:rgba(255,255,255,.12)}
-  .btn.primary{
-    background:linear-gradient(180deg,rgba(34,197,94,1),rgba(22,163,74,1));
-    color:#032313;
-    box-shadow:0 4px 16px rgba(34,197,94,.35);
-  }
-  .btn.primary:hover{filter:brightness(1.05)}
-  .btn.small{padding:6px 10px; font-size:14px}
-  
-  .container{max-width:1400px; margin:0 auto; padding:24px 16px;}
-  
-  .card{
-    background:var(--panel); border:1px solid var(--line); border-radius:14px;
-    box-shadow:var(--shadow-1), var(--inset-top); padding:20px; margin-bottom:20px;
-  }
-  .card-header{
-    font-size:20px; font-weight:900; margin-bottom:16px; color:var(--ink);
-    display:flex; justify-content:space-between; align-items:center;
-  }
-  
-  .login-box{max-width:420px; margin:80px auto; text-align:center;}
-  .login-box h1{margin-bottom:8px; font-size:32px}
-  .login-box .subtle{color:var(--muted); font-size:15px; margin-bottom:24px}
-  
-  label{display:block; margin:12px 0 6px 0; font-weight:700; text-align:left}
-  input,select,textarea{
-    width:100%; background:#1f2937; border:1px solid rgba(255,255,255,.14);
-    border-radius:10px; color:var(--ink); padding:10px 12px; font-size:15px;
-  }
-  input:focus,select:focus,textarea:focus{
-    outline:2px solid rgba(34,197,94,.35); border-color:rgba(34,197,94,.45);
-    box-shadow:0 0 0 3px rgba(34,197,94,.18);
-  }
-  
-  .table{width:100%; border-collapse:collapse}
-  .table th,.table td{padding:12px; border-bottom:1px solid var(--line); text-align:left}
-  .table th{background:var(--edge); color:var(--ink); font-weight:800}
-  .table td{color:var(--ink-dim)}
-  .table tbody tr:hover{background:rgba(255,255,255,.03)}
-  
-  .badge{
-    display:inline-flex; align-items:center; gap:6px; padding:4px 10px;
-    border-radius:999px; border:1px solid var(--line);
-    background:rgba(255,255,255,.10); font-size:13px; font-weight:700;
-  }
-  .badge.success{background:rgba(34,197,94,.2); border-color:rgba(34,197,94,.4); color:#4ade80}
-  .badge.warning{background:rgba(245,158,11,.2); border-color:rgba(245,158,11,.4); color:#fbbf24}
-  .badge.info{background:rgba(6,182,212,.2); border-color:rgba(6,182,212,.4); color:#22d3ee}
-  
-  .subtle{color:var(--muted); font-size:14px}
-  
-  .grid-2{display:grid; grid-template-columns:1fr 1fr; gap:20px}
-  @media (max-width:768px){.grid-2{grid-template-columns:1fr}}
-  
-  .goal-item{
-    display:flex; gap:10px; align-items:flex-start; padding:14px;
-    border:1px solid var(--line); border-radius:12px; background:rgba(255,255,255,.04);
-    margin-bottom:12px;
-  }
-  
-  .progress-bar-container{
-    background:rgba(255,255,255,.08); border-radius:8px; height:8px; overflow:hidden;
-  }
-  .progress-bar{
-    background:linear-gradient(90deg, var(--brand), var(--brand-2));
-    height:100%; transition:width .3s;
-  }
-  
-  .tabs{
-    display:flex; gap:8px; border-bottom:1px solid var(--line); margin-bottom:20px;
-  }
-  .tab{
-    padding:10px 16px; border-radius:8px 8px 0 0; cursor:pointer;
-    border:1px solid transparent; border-bottom:none; font-weight:700;
-    background:rgba(255,255,255,.03);
-  }
-  .tab.active{
-    background:var(--panel); border-color:var(--line); border-bottom:1px solid var(--panel);
-    margin-bottom:-1px; color:var(--brand);
-  }
-  .tab:hover{background:rgba(255,255,255,.06)}
-  
-  .tab-content{display:none}
-  .tab-content.active{display:block}
-  
-  .spreadsheet-container{
-    overflow-x:auto; border:1px solid var(--line); border-radius:8px;
-    background:var(--panel-2); max-height:600px; overflow-y:auto;
-  }
-  .spreadsheet{
-    width:100%; border-collapse:separate; border-spacing:0;
-  }
-  .spreadsheet th,.spreadsheet td{
-    padding:10px 14px; border-right:1px solid var(--line); border-bottom:1px solid var(--line);
-    white-space:nowrap; text-align:left; font-size:14px;
-  }
-  .spreadsheet th{
-    background:var(--edge); color:var(--ink); font-weight:800;
-    position:sticky; top:0; z-index:2;
-  }
-  .spreadsheet th:first-child,.spreadsheet td:first-child{
-    position:sticky; left:0; background:var(--panel-2); z-index:1;
-  }
-  .spreadsheet th:first-child{z-index:3}
-  .spreadsheet tbody tr:hover{background:rgba(255,255,255,.05)}
-  
-  .error-msg{color:#fca5a5; padding:12px; background:rgba(239,68,68,.1); border-radius:8px; border:1px solid rgba(239,68,68,.3)}
-  .success-msg{color:#6ee7b7; padding:12px; background:rgba(34,197,94,.1); border-radius:8px; border:1px solid rgba(34,197,94,.3)}
-  
-  /* CSV Validation Error Display */
-  .validation-errors{
-    background:rgba(239,68,68,.08); border:1px solid rgba(239,68,68,.3);
-    border-radius:10px; padding:16px; margin:16px 0;
-  }
-  .validation-errors h3{
-    margin:0 0 12px 0; font-size:16px; font-weight:900; color:#fca5a5;
-  }
-  .validation-errors .error-list{
-    max-height:300px; overflow-y:auto; margin-top:12px;
-  }
-  .validation-errors .error-item{
-    padding:8px 12px; margin-bottom:8px; background:rgba(0,0,0,.2);
-    border-radius:6px; border-left:3px solid rgba(239,68,68,.6);
-  }
-  .validation-errors .error-item strong{
-    color:#fca5a5; font-weight:800;
-  }
-  .validation-errors .error-actions{
-    margin-top:12px; display:flex; gap:8px;
-  }
-  
-  .hidden{display:none !important}
-  
-  /* Portal B: Top Status Bar */
-  .portal-top-bar{
-    background:rgba(15,23,42,.95); border-bottom:1px solid var(--line);
-    padding:12px 16px; display:flex; gap:16px; align-items:center; justify-content:space-between;
-  }
-  .portal-top-bar .clock{
-    font-weight:800; color:var(--brand); font-size:15px;
-  }
-  .portal-top-bar .student-info{
-    font-weight:700; font-size:14px;
-  }
-  .portal-top-bar .actions{
-    display:flex; gap:8px;
-  }
-  
-  /* Portal B: Toast Notifications */
-  .toast-container{
-    position:fixed; top:80px; right:20px; z-index:100; max-width:400px;
-  }
-  .toast{
-    background:var(--panel); border:1px solid var(--line); border-radius:12px;
-    padding:16px; margin-bottom:12px; box-shadow:var(--shadow-2);
-    animation:slideIn 0.3s ease-out;
-  }
-  .toast.warning{
-    border-color:rgba(245,158,11,.5); background:rgba(245,158,11,.1);
-  }
-  .toast.info{
-    border-color:rgba(6,182,212,.5); background:rgba(6,182,212,.1);
-  }
-  .toast .toast-header{
-    display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;
-  }
-  .toast .toast-title{
-    font-weight:900; font-size:15px;
-  }
-  .toast .toast-close{
-    background:none; border:none; color:var(--muted); cursor:pointer;
-    font-size:20px; padding:0; line-height:1;
-  }
-  .toast .toast-body{
-    color:var(--ink-dim); font-size:14px;
-  }
-  .toast .toast-link{
-    color:var(--brand); text-decoration:underline; cursor:pointer; font-weight:700;
-  }
-  @keyframes slideIn{
-    from{transform:translateX(400px); opacity:0}
-    to{transform:translateX(0); opacity:1}
-  }
-  
-  /* Portal B: Collapsible Sections */
-  .section-header{
-    display:flex; justify-content:space-between; align-items:center;
-    padding:14px 18px; cursor:pointer; border:1px solid var(--line);
-    border-radius:12px; margin-bottom:12px; background:rgba(255,255,255,.03);
-    transition:.15s;
-  }
-  .section-header:hover{
-    background:rgba(255,255,255,.06);
-  }
-  .section-header.collapsed{
-    margin-bottom:0;
-  }
-  .section-header .section-title{
-    font-weight:900; font-size:16px; display:flex; align-items:center; gap:10px;
-  }
-  .section-header .section-count{
-    font-weight:700; font-size:14px; color:var(--muted);
-  }
-  .section-header .toggle-icon{
-    font-size:18px; transition:transform .2s;
-  }
-  .section-header.collapsed .toggle-icon{
-    transform:rotate(-90deg);
-  }
-  .section-content{
-    margin-bottom:20px;
-  }
-  .section-content.collapsed{
-    display:none;
-  }
-  
-  /* Portal B: Assignment Cards */
-  .assignment-card{
-    border:1px solid var(--line); border-radius:10px; padding:16px;
-    margin-bottom:12px; background:rgba(255,255,255,.02); transition:.15s;
-  }
-  .assignment-card:hover{
-    background:rgba(255,255,255,.05); border-color:var(--line-strong);
-  }
-  .assignment-card-header{
-    display:flex; justify-content:space-between; align-items:flex-start;
-    margin-bottom:10px;
-  }
-  .assignment-card-title{
-    font-weight:800; font-size:15px; margin-bottom:4px;
-  }
-  .assignment-card-meta{
-    display:flex; gap:12px; font-size:13px; color:var(--muted);
-    flex-wrap:wrap; margin-bottom:8px;
-  }
-  .assignment-card-footer{
-    display:flex; justify-content:space-between; align-items:center;
-    padding-top:12px; border-top:1px solid var(--line);
-  }
-  
-  /* Portal B: Status Pills */
-  .status-pill{
-    display:inline-flex; align-items:center; gap:4px; padding:4px 10px;
-    border-radius:999px; font-size:12px; font-weight:800; border:1px solid;
-  }
-  .status-pill.upcoming{
-    background:rgba(6,182,212,.15); border-color:rgba(6,182,212,.4); color:#22d3ee;
-  }
-  .status-pill.in-progress{
-    background:rgba(139,92,246,.15); border-color:rgba(139,92,246,.4); color:#a78bfa;
-  }
-  .status-pill.late{
-    background:rgba(245,158,11,.15); border-color:rgba(245,158,11,.4); color:#fbbf24;
-  }
-  .status-pill.missing{
-    background:rgba(239,68,68,.15); border-color:rgba(239,68,68,.4); color:#f87171;
-  }
-  .status-pill.submitted{
-    background:rgba(34,197,94,.15); border-color:rgba(34,197,94,.4); color:#4ade80;
-  }
-  .status-pill.graded{
-    background:rgba(34,197,94,.2); border-color:rgba(34,197,94,.5); color:#22c55e;
-  }
-  
-  /* Portal B: Grades Card */
-  .grades-card{
-    background:var(--panel); border:1px solid var(--line); border-radius:14px;
-    padding:20px; margin-bottom:20px;
-  }
-  .grade-stat{
-    margin-bottom:16px; padding-bottom:16px; border-bottom:1px solid var(--line);
-  }
-  .grade-stat:last-child{
-    margin-bottom:0; padding-bottom:0; border-bottom:none;
-  }
-  .grade-stat-label{
-    font-size:13px; color:var(--muted); margin-bottom:4px; font-weight:700;
-  }
-  .grade-stat-value{
-    font-size:28px; font-weight:900; color:var(--ink);
-  }
-  .grade-stat-trend{
-    display:inline-flex; align-items:center; gap:4px; margin-left:8px;
-    font-size:18px;
-  }
-  .grade-stat-trend.up{color:#4ade80}
-  .grade-stat-trend.down{color:#f87171}
-  .grade-stat-trend.flat{color:var(--muted)}
-  .sparkline{
-    margin-top:8px; height:30px;
-  }
-  
-  /* Portal B: Filters */
-  .filters{
-    display:flex; gap:12px; margin-bottom:20px; flex-wrap:wrap;
-  }
-  .filter-group{
-    display:flex; flex-direction:column; gap:4px;
-  }
-  .filter-group label{
-    font-size:12px; font-weight:700; color:var(--muted);
-    margin:0;
-  }
-  
-  /* Portal B: Modal */
-  .modal-overlay{
-    position:fixed; top:0; left:0; right:0; bottom:0;
-    background:rgba(0,0,0,.7); z-index:200; display:flex;
-    align-items:center; justify-content:center; padding:20px;
-  }
-  .modal{
-    background:var(--panel); border:1px solid var(--line-strong);
-    border-radius:16px; padding:24px; max-width:500px; width:100%;
-    box-shadow:0 20px 60px rgba(0,0,0,.5);
-  }
-  .modal-header{
-    font-size:20px; font-weight:900; margin-bottom:16px;
-  }
-  .modal-body{
-    color:var(--ink-dim); margin-bottom:20px; line-height:1.6;
-  }
-  .modal-footer{
-    display:flex; gap:12px; justify-content:flex-end;
-  }
-  
-  /* Portal B: Tooltip */
-  .tooltip{
-    position:relative; cursor:help;
-  }
-  .tooltip .tooltip-text{
-    visibility:hidden; position:absolute; z-index:50; bottom:125%;
-    left:50%; transform:translateX(-50%); width:max-content; max-width:300px;
-    background:var(--panel-2); color:var(--ink); padding:8px 12px;
-    border-radius:8px; font-size:13px; border:1px solid var(--line-strong);
-    box-shadow:var(--shadow-1); opacity:0; transition:opacity .2s;
-  }
-  .tooltip:hover .tooltip-text{
-    visibility:visible; opacity:1;
-  }
-  
-  /* Portal C: Saved Views */
-  .saved-views-dropdown{
-    margin-bottom:20px; padding:16px; background:rgba(255,255,255,.03);
-    border:1px solid var(--line); border-radius:12px;
-  }
-  .saved-views-header{
-    display:flex; gap:12px; align-items:center; margin-bottom:12px;
-  }
-  .saved-views-header label{
-    font-weight:800; font-size:14px; margin:0;
-  }
-  .saved-view-select{
-    flex:1; max-width:300px;
-  }
-  .saved-views-actions{
-    display:flex; gap:8px; flex-wrap:wrap;
-  }
-  
-  /* Portal C: Advanced Filters Drawer */
-  .filter-drawer{
-    position:fixed; top:0; right:-400px; width:400px; height:100vh;
-    background:var(--panel); border-left:1px solid var(--line-strong);
-    box-shadow:var(--shadow-2); z-index:150; transition:right .3s ease;
-    display:flex; flex-direction:column;
-  }
-  .filter-drawer.open{
-    right:0;
-  }
-  .filter-drawer-header{
-    padding:20px; border-bottom:1px solid var(--line);
-    display:flex; justify-content:space-between; align-items:center;
-  }
-  .filter-drawer-header h3{
-    margin:0; font-size:20px; font-weight:900;
-  }
-  .filter-drawer-header .btn-close{
-    background:none; border:none; color:var(--muted); cursor:pointer;
-    font-size:24px; padding:0; line-height:1;
-  }
-  .filter-drawer-body{
-    flex:1; overflow-y:auto; padding:20px;
-  }
-  .filter-section{
-    margin-bottom:24px; padding-bottom:24px; border-bottom:1px solid var(--line);
-  }
-  .filter-section:last-child{
-    border-bottom:none;
-  }
-  .filter-section h4{
-    margin:0 0 12px 0; font-size:16px; font-weight:800; color:var(--ink);
-  }
-  .filter-row{
-    display:flex; gap:12px; align-items:center;
-  }
-  .filter-row label{
-    display:flex; align-items:center; gap:6px; margin:0; font-size:14px;
-  }
-  .filter-row input[type="number"]{
-    width:80px;
-  }
-  .filter-checkboxes{
-    display:flex; flex-direction:column; gap:8px;
-  }
-  .filter-checkboxes label{
-    display:flex; align-items:center; gap:8px; margin:0;
-    padding:8px; border-radius:6px; cursor:pointer;
-  }
-  .filter-checkboxes label:hover{
-    background:rgba(255,255,255,.05);
-  }
-  .filter-drawer-footer{
-    padding:20px; border-top:1px solid var(--line);
-    display:flex; gap:12px; justify-content:space-between;
-  }
-  
-  /* Portal C: Risk Badges */
-  .risk-badge{
-    display:inline-flex; align-items:center; padding:4px 8px;
-    border-radius:4px; font-size:11px; font-weight:900; letter-spacing:.5px;
-  }
-  .risk-badge.missing{
-    background:rgba(239,68,68,.2); color:#fca5a5; border:1px solid rgba(239,68,68,.4);
-  }
-  .risk-badge.late{
-    background:rgba(245,158,11,.2); color:#fbbf24; border:1px solid rgba(245,158,11,.4);
-  }
-  .risk-badge.low{
-    background:rgba(239,68,68,.2); color:#fca5a5; border:1px solid rgba(239,68,68,.4);
-  }
-  
-  /* Portal C: Dashboard Summary Card */
-  .dashboard-summary-card{
-    background:rgba(255,255,255,.03); border:1px solid var(--line);
-    border-radius:12px; padding:20px; margin-bottom:20px;
-  }
-  .dashboard-summary-card h3{
-    margin:0 0 16px 0; font-size:18px; font-weight:900;
-  }
-  .summary-grid{
-    display:grid; grid-template-columns:repeat(4, 1fr); gap:16px;
-  }
-  .summary-item{
-    text-align:center; padding:16px; border-radius:10px;
-    background:rgba(255,255,255,.04); border:1px solid var(--line);
-  }
-  .summary-item.missing{
-    border-color:rgba(239,68,68,.4); background:rgba(239,68,68,.1);
-  }
-  .summary-item.late{
-    border-color:rgba(245,158,11,.4); background:rgba(245,158,11,.1);
-  }
-  .summary-item.low-score{
-    border-color:rgba(239,68,68,.4); background:rgba(239,68,68,.1);
-  }
-  .summary-item.improvements{
-    border-color:rgba(34,197,94,.4); background:rgba(34,197,94,.1);
-  }
-  .summary-value{
-    font-size:32px; font-weight:900; margin-bottom:8px;
-  }
-  .summary-item.missing .summary-value{color:#fca5a5}
-  .summary-item.late .summary-value{color:#fbbf24}
-  .summary-item.low-score .summary-value{color:#fca5a5}
-  .summary-item.improvements .summary-value{color:#4ade80}
-  .summary-label{
-    font-size:13px; font-weight:700; color:var(--muted); text-transform:uppercase;
-  }
-  
-  /* Portal C: Trend Insights */
-  .trend-insights{
-    padding:16px; background:rgba(255,255,255,.03); border:1px solid var(--line);
-    border-radius:10px; margin-bottom:20px;
-  }
-  .trend-insights h4{
-    margin:0 0 12px 0; font-size:16px; font-weight:800;
-  }
-  .trend-item{
-    display:flex; justify-content:space-between; align-items:center;
-    padding:10px 0; border-bottom:1px solid var(--line);
-  }
-  .trend-item:last-child{
-    border-bottom:none;
-  }
-  .trend-label{
-    font-weight:700; font-size:14px;
-  }
-  .trend-value{
-    display:flex; align-items:center; gap:6px; font-weight:900; font-size:16px;
-  }
-  .trend-value.up{color:#4ade80}
-  .trend-value.down{color:#fca5a5}
-  .trend-value.flat{color:var(--muted)}
-  .trend-delta{
-    font-size:13px; font-weight:700; color:var(--muted);
-  }
-  
-  /* Portal C: Rollup Toggle */
-  .rollup-toggle{
-    display:flex; gap:12px; align-items:center; margin-bottom:16px;
-  }
-  .rollup-toggle label{
-    font-weight:800; font-size:14px; margin:0;
-  }
-  .btn-group{
-    display:flex; gap:4px;
-  }
-  .btn-group .btn{
-    border-radius:6px;
-  }
-  .btn-group .btn.active{
-    background:linear-gradient(180deg, var(--brand), rgba(22,163,74,1));
-    color:#032313;
-  }
-  
-  /* Portal C: Sparkline */
-  .sparkline-container{
-    margin:16px 0;
-  }
-  .sparkline{
-    display:flex; gap:4px; align-items:flex-end; height:100px;
-    padding:10px; background:rgba(255,255,255,.02); border-radius:8px;
-  }
-  .sparkline-bar{
-    flex:1; background:linear-gradient(180deg, var(--brand), var(--brand-2));
-    border-radius:4px 4px 0 0; min-height:2px; position:relative;
-    display:flex; align-items:flex-start; justify-content:center; padding-top:4px;
-    transition:opacity .2s;
-  }
-  .sparkline-bar:hover{
-    opacity:.8;
-  }
-  .sparkline-value{
-    font-size:10px; font-weight:900; color:#032313;
-  }
-  .sparkline-labels{
-    display:flex; gap:4px; margin-top:8px; font-size:11px;
-    color:var(--muted); font-weight:700;
-  }
-  .sparkline-label{
-    flex:1; text-align:center;
-  }
-  
-  /* Portal Banner - Diagnostic UI for adapter failures */
-  .portal-banner{
-    position:fixed; top:0; left:0; right:0; z-index:200;
-    padding:14px 20px; display:flex; align-items:center; gap:12px;
-    border-bottom:1px solid; box-shadow:var(--shadow-1);
-  }
-  .portal-banner.error{
-    background:rgba(239,68,68,.15); border-color:rgba(239,68,68,.4); color:#fca5a5;
-  }
-  .portal-banner.warning{
-    background:rgba(245,158,11,.15); border-color:rgba(245,158,11,.4); color:#fbbf24;
-  }
-  .portal-banner.info{
-    background:rgba(6,182,212,.15); border-color:rgba(6,182,212,.4); color:#22d3ee;
-  }
-  .portal-banner-icon{
-    font-size:20px; flex-shrink:0;
-  }
-  .portal-banner-content{
-    flex:1;
-  }
-  .portal-banner-title{
-    font-weight:900; font-size:15px; margin-bottom:2px;
-  }
-  .portal-banner-message{
-    font-size:13px; opacity:0.9;
-  }
-  .portal-banner-dismiss{
-    background:none; border:none; color:currentColor; cursor:pointer;
-    font-size:20px; padding:4px 8px; line-height:1; opacity:0.7;
-    border-radius:4px; transition:opacity .15s;
-  }
-  .portal-banner-dismiss:hover{
-    opacity:1; background:rgba(255,255,255,.1);
-  }
-  
-  /* Assignment Detail Modal */
-  .assignment-detail-modal{
-    position:fixed; top:0; left:0; right:0; bottom:0; z-index:300;
-    background:rgba(0,0,0,.85); display:flex; align-items:center;
-    justify-content:center; padding:20px; animation:fadeIn 0.2s;
-  }
-  .assignment-detail-content{
-    background:var(--panel); border:1px solid var(--line-strong);
-    border-radius:16px; max-width:700px; width:100%; max-height:90vh;
-    overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,.6);
-    display:flex; flex-direction:column;
-  }
-  .assignment-detail-header{
-    padding:24px; border-bottom:1px solid var(--line);
-    display:flex; justify-content:space-between; align-items:flex-start;
-    position:sticky; top:0; background:var(--panel); z-index:1;
-  }
-  .assignment-detail-title{
-    flex:1; font-size:22px; font-weight:900; margin-bottom:8px;
-  }
-  .assignment-detail-close{
-    background:none; border:none; color:var(--muted); cursor:pointer;
-    font-size:28px; padding:0; line-height:1; margin-left:12px;
-    transition:color .15s;
-  }
-  .assignment-detail-close:hover{
-    color:var(--ink);
-  }
-  .assignment-detail-meta{
-    display:flex; gap:16px; font-size:14px; color:var(--muted);
-    flex-wrap:wrap; margin-top:8px;
-  }
-  .assignment-detail-body{
-    padding:24px; flex:1;
-  }
-  .assignment-detail-section{
-    margin-bottom:24px;
-  }
-  .assignment-detail-section:last-child{
-    margin-bottom:0;
-  }
-  .assignment-detail-section-title{
-    font-size:15px; font-weight:800; margin-bottom:12px;
-    color:var(--ink); text-transform:uppercase; letter-spacing:0.5px;
-  }
-  .assignment-detail-description{
-    color:var(--ink-dim); line-height:1.6; margin-bottom:16px;
-  }
-  .assignment-detail-field{
-    display:flex; justify-content:space-between; padding:10px 0;
-    border-bottom:1px solid var(--line);
-  }
-  .assignment-detail-field:last-child{
-    border-bottom:none;
-  }
-  .assignment-detail-label{
-    font-weight:700; color:var(--muted); font-size:14px;
-  }
-  .assignment-detail-value{
-    font-weight:700; color:var(--ink); font-size:14px; text-align:right;
-  }
-  .assignment-detail-footer{
-    padding:20px 24px; border-top:1px solid var(--line);
-    display:flex; justify-content:space-between; align-items:center;
-    gap:12px; position:sticky; bottom:0; background:var(--panel);
-  }
-  .assignment-detail-nav{
-    display:flex; gap:8px;
-  }
-  .assignment-detail-nav .btn{
-    min-width:80px;
-  }
-  .assignment-detail-actions{
-    display:flex; gap:8px;
-  }
-  @keyframes fadeIn{
-    from{opacity:0}
-    to{opacity:1}
-  }
-  
-  /* Quarter Filter Dropdown */
-  .quarter-filter{
-    margin-bottom:16px;
-  }
-  .quarter-filter label{
-    font-size:13px; font-weight:700; color:var(--muted);
-    margin-bottom:6px; display:block;
-  }
-  
-  /* Graded Assignments Table */
-  .graded-assignments-table{
-    width:100%; border-collapse:collapse; margin-top:16px;
-  }
-  .graded-assignments-table th,
-  .graded-assignments-table td{
-    padding:10px 12px; text-align:left; border-bottom:1px solid var(--line);
-    font-size:14px;
-  }
-  .graded-assignments-table th{
-    font-weight:800; color:var(--muted); font-size:13px;
-    text-transform:uppercase; letter-spacing:0.3px;
-  }
-  .graded-assignments-table td{
-    color:var(--ink-dim);
-  }
-  .graded-assignments-table tbody tr{
-    cursor:pointer; transition:background .15s;
-  }
-  .graded-assignments-table tbody tr:hover{
-    background:rgba(255,255,255,.05);
-  }
-  .graded-assignments-table .assignment-link{
-    color:var(--brand); font-weight:700; text-decoration:none;
-  }
-  .graded-assignments-table .assignment-link:hover{
-    text-decoration:underline;
-  }
-  
-  /* Quarter Sparkline */
-  .quarter-sparkline{
-    display:inline-block; width:60px; height:20px; margin-left:8px;
-    vertical-align:middle;
-  }
-  
-  /* Mobile Responsive */
-  @media (max-width:768px){
-    .portal-top-bar{
-      flex-wrap:wrap; padding:10px 12px;
-    }
-    .portal-top-bar .clock{
-      font-size:13px;
-    }
-    .portal-top-bar .student-info{
-      font-size:12px;
-    }
-    .portal-top-bar .actions{
-      width:100%; justify-content:flex-end;
-    }
-    .btn.small{
-      padding:6px 10px; font-size:12px;
-    }
-    .toast-container{
-      top:60px; right:10px; left:10px; max-width:none;
-    }
-    .assignment-card-meta{
-      font-size:12px;
-    }
-    .filters{
-      flex-direction:column;
-    }
-    
-    /* Portal C Mobile Adjustments */
-    .filter-drawer{
-      width:100%; right:-100%;
-    }
-    .summary-grid{
-      grid-template-columns:repeat(2, 1fr);
-    }
-    .saved-view-select{
-      max-width:none;
-    }
-    .saved-views-header{
-      flex-direction:column; align-items:flex-start;
-    }
-  }
-  
-  @media (max-width:375px){
-    .section-header{
-      padding:12px 14px;
-    }
-    .section-header .section-title{
-      font-size:14px;
-    }
-    .assignment-card{
-      padding:12px;
-    }
-    .assignment-card-title{
-      font-size:14px;
-    }
-    .summary-grid{
-      grid-template-columns:1fr;
-    }
-  }
-</style>
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Reinisch Classroom - Student Hub & Teacher Center</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+      :root {
+        --base: #0b1220;
+        --panel: #0f172a;
+        --panel-2: #111827;
+        --edge: #0b1220;
+        --ink: #e6edf3;
+        --ink-dim: #cbd5e1;
+        --muted: #94a3b8;
+        --line: rgba(255, 255, 255, 0.08);
+        --line-strong: rgba(255, 255, 255, 0.14);
+        --brand: #22c55e;
+        --brand-2: #06b6d4;
+        --shadow-1: 0 6px 28px rgba(0, 0, 0, 0.35);
+        --shadow-2: 0 14px 48px rgba(0, 0, 0, 0.45);
+        --inset-top: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        margin: 0;
+        background:
+          url("/assets/bg/bg5e_soft_grid.svg") center/cover no-repeat fixed,
+          radial-gradient(1200px 800px at 20% -10%, rgba(34, 197, 94, 0.08), transparent 50%),
+          radial-gradient(1200px 800px at 120% 20%, rgba(6, 182, 212, 0.06), transparent 50%),
+          linear-gradient(180deg, #0b1220, #0c1322 60%, #0b0f14);
+        color: var(--ink);
+        font-family:
+          ui-sans-serif,
+          -apple-system,
+          Segoe UI,
+          Roboto,
+          Inter,
+          Helvetica,
+          Arial;
+      }
 
-<!-- HOTFIX: Early redirect for direct student portal access without auto-login -->
-<!-- Redirects to hub unless valid auto-login parameters are present -->
-<script src="../web/student-portal-redirect.js"></script>
+      .header {
+        position: sticky;
+        top: 0;
+        z-index: 40;
+        padding: 16px 0;
+        background: linear-gradient(180deg, rgba(34, 197, 94, 0.92), rgba(22, 163, 74, 0.92));
+        border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+      }
+      .bar {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 0 16px;
+        display: flex;
+        gap: 12px;
+        align-items: center;
+      }
+      .brand {
+        font-weight: 900;
+        letter-spacing: 0.2px;
+        margin-right: auto;
+        color: #031f11;
+        font-size: 18px;
+      }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 12px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.25);
+        color: #062513;
+        font-weight: 800;
+      }
+      .btn {
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.06);
+        color: var(--ink);
+        padding: 10px 16px;
+        border-radius: 10px;
+        font-weight: 800;
+        cursor: pointer;
+        transition: 0.15s;
+        border: none;
+      }
+      .btn:hover {
+        background: rgba(255, 255, 255, 0.12);
+      }
+      .btn.primary {
+        background: linear-gradient(180deg, rgba(34, 197, 94, 1), rgba(22, 163, 74, 1));
+        color: #032313;
+        box-shadow: 0 4px 16px rgba(34, 197, 94, 0.35);
+      }
+      .btn.primary:hover {
+        filter: brightness(1.05);
+      }
+      .btn.small {
+        padding: 6px 10px;
+        font-size: 14px;
+      }
 
-<!-- HOTFIX: Early failsafe timer to guarantee login view visibility -->
-<!-- TODO: Fold this into existing diagnostics work after hotfix is stable -->
-<!-- Guardrails Stage 3B: Externalized to student-portal-failsafe.js -->
-<script src="../web/student-portal-failsafe.js"></script>
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 24px 16px;
+      }
 
-<!-- HOTFIX: Global error capture with visible banner -->
-<!-- TODO: Fold this into existing diagnostics work after hotfix is stable -->
-<!-- Guardrails Stage 3B: Externalized to student-portal-error-handler.js -->
-<script src="../web/student-portal-error-handler.js"></script>
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        box-shadow: var(--shadow-1), var(--inset-top);
+        padding: 20px;
+        margin-bottom: 20px;
+      }
+      .card-header {
+        font-size: 20px;
+        font-weight: 900;
+        margin-bottom: 16px;
+        color: var(--ink);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
 
-<!-- Early auto-login bootstrap (24h remember-me) -->
-<!-- Guardrails Stage 3B: Externalized to student-portal-auto-login.js -->
-<script src="../web/student-portal-auto-login.js"></script>
+      .login-box {
+        max-width: 420px;
+        margin: 80px auto;
+        text-align: center;
+      }
+      .login-box h1 {
+        margin-bottom: 8px;
+        font-size: 32px;
+      }
+      .login-box .subtle {
+        color: var(--muted);
+        font-size: 15px;
+        margin-bottom: 24px;
+      }
 
-<!-- Portal Banner - Diagnostic UI for adapter failures -->
-<div id="portalBanner" class="portal-banner hidden" role="status" aria-live="polite" aria-atomic="true">
-  <div class="portal-banner-icon" id="portalBannerIcon"></div>
-  <div class="portal-banner-content">
-    <div class="portal-banner-title" id="portalBannerTitle"></div>
-    <div class="portal-banner-message" id="portalBannerMessage"></div>
-  </div>
-  <button id="portalBannerDismiss" class="portal-banner-dismiss" aria-label="Dismiss notification">×</button>
-</div>
+      label {
+        display: block;
+        margin: 12px 0 6px 0;
+        font-weight: 700;
+        text-align: left;
+      }
+      input,
+      select,
+      textarea {
+        width: 100%;
+        background: #1f2937;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 10px;
+        color: var(--ink);
+        padding: 10px 12px;
+        font-size: 15px;
+      }
+      input:focus,
+      select:focus,
+      textarea:focus {
+        outline: 2px solid rgba(34, 197, 94, 0.35);
+        border-color: rgba(34, 197, 94, 0.45);
+        box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.18);
+      }
 
-<!-- Portal B: Top Status Bar (hidden until logged in) -->
-<div id="portalTopBar" class="portal-top-bar hidden">
-  <div class="clock" id="portalClock">Loading...</div>
-  <div class="student-info">
-    <span id="portalStudentName"></span>
-  </div>
-  <div class="actions">
-    <a href="https://reinischclassroom.com/language-arts/toolkit/" target="_blank" rel="noopener noreferrer" class="btn small">🛠️ Tool Kit</a>
-    <button id="portalHelpBtn" class="btn small">Help</button>
-    <button id="portalLogoutBtn" class="btn small">Logout</button>
-  </div>
-</div>
+      .table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      .table th,
+      .table td {
+        padding: 12px;
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+      }
+      .table th {
+        background: var(--edge);
+        color: var(--ink);
+        font-weight: 800;
+      }
+      .table td {
+        color: var(--ink-dim);
+      }
+      .table tbody tr:hover {
+        background: rgba(255, 255, 255, 0.03);
+      }
 
-<!-- Portal B: Toast Container -->
-<div id="toastContainer" class="toast-container"></div>
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.1);
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .badge.success {
+        background: rgba(34, 197, 94, 0.2);
+        border-color: rgba(34, 197, 94, 0.4);
+        color: #4ade80;
+      }
+      .badge.warning {
+        background: rgba(245, 158, 11, 0.2);
+        border-color: rgba(245, 158, 11, 0.4);
+        color: #fbbf24;
+      }
+      .badge.info {
+        background: rgba(6, 182, 212, 0.2);
+        border-color: rgba(6, 182, 212, 0.4);
+        color: #22d3ee;
+      }
 
-<!-- Legacy header - shown only for teacher center (hidden for student dashboard) -->
-<div class="header" id="legacyHeader" style="display: none;">
-  <div class="bar">
-    <div class="brand">🎓 Reinisch Classroom</div>
-    <span id="userChip" class="chip hidden"></span>
-    <button id="btnLogout" class="btn hidden">Logout</button>
-  </div>
-</div>
+      .subtle {
+        color: var(--muted);
+        font-size: 14px;
+      }
 
-<!-- Login View -->
-<div id="loginView">
-  <div class="login-box card">
-    <h1>Student Hub & Teacher Center</h1>
-    <p class="subtle">Login to access your dashboard or teacher tools</p>
-    
-    <div class="tabs" style="border-bottom:none; margin-bottom:16px; justify-content:center">
-      <div class="tab active" data-login-mode="student">Student Login</div>
-      <div class="tab" data-login-mode="teacher">Teacher Login</div>
+      .grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+      }
+      @media (max-width: 768px) {
+        .grid-2 {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .goal-item {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+        padding: 14px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.04);
+        margin-bottom: 12px;
+      }
+
+      .progress-bar-container {
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 8px;
+        height: 8px;
+        overflow: hidden;
+      }
+      .progress-bar {
+        background: linear-gradient(90deg, var(--brand), var(--brand-2));
+        height: 100%;
+        transition: width 0.3s;
+      }
+
+      .tabs {
+        display: flex;
+        gap: 8px;
+        border-bottom: 1px solid var(--line);
+        margin-bottom: 20px;
+      }
+      .tab {
+        padding: 10px 16px;
+        border-radius: 8px 8px 0 0;
+        cursor: pointer;
+        border: 1px solid transparent;
+        border-bottom: none;
+        font-weight: 700;
+        background: rgba(255, 255, 255, 0.03);
+      }
+      .tab.active {
+        background: var(--panel);
+        border-color: var(--line);
+        border-bottom: 1px solid var(--panel);
+        margin-bottom: -1px;
+        color: var(--brand);
+      }
+      .tab:hover {
+        background: rgba(255, 255, 255, 0.06);
+      }
+
+      .tab-content {
+        display: none;
+      }
+      .tab-content.active {
+        display: block;
+      }
+
+      .spreadsheet-container {
+        overflow-x: auto;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel-2);
+        max-height: 600px;
+        overflow-y: auto;
+      }
+      .spreadsheet {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+      }
+      .spreadsheet th,
+      .spreadsheet td {
+        padding: 10px 14px;
+        border-right: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+        white-space: nowrap;
+        text-align: left;
+        font-size: 14px;
+      }
+      .spreadsheet th {
+        background: var(--edge);
+        color: var(--ink);
+        font-weight: 800;
+        position: sticky;
+        top: 0;
+        z-index: 2;
+      }
+      .spreadsheet th:first-child,
+      .spreadsheet td:first-child {
+        position: sticky;
+        left: 0;
+        background: var(--panel-2);
+        z-index: 1;
+      }
+      .spreadsheet th:first-child {
+        z-index: 3;
+      }
+      .spreadsheet tbody tr:hover {
+        background: rgba(255, 255, 255, 0.05);
+      }
+
+      .error-msg {
+        color: #fca5a5;
+        padding: 12px;
+        background: rgba(239, 68, 68, 0.1);
+        border-radius: 8px;
+        border: 1px solid rgba(239, 68, 68, 0.3);
+      }
+      .success-msg {
+        color: #6ee7b7;
+        padding: 12px;
+        background: rgba(34, 197, 94, 0.1);
+        border-radius: 8px;
+        border: 1px solid rgba(34, 197, 94, 0.3);
+      }
+
+      /* CSV Validation Error Display */
+      .validation-errors {
+        background: rgba(239, 68, 68, 0.08);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        border-radius: 10px;
+        padding: 16px;
+        margin: 16px 0;
+      }
+      .validation-errors h3 {
+        margin: 0 0 12px 0;
+        font-size: 16px;
+        font-weight: 900;
+        color: #fca5a5;
+      }
+      .validation-errors .error-list {
+        max-height: 300px;
+        overflow-y: auto;
+        margin-top: 12px;
+      }
+      .validation-errors .error-item {
+        padding: 8px 12px;
+        margin-bottom: 8px;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 6px;
+        border-left: 3px solid rgba(239, 68, 68, 0.6);
+      }
+      .validation-errors .error-item strong {
+        color: #fca5a5;
+        font-weight: 800;
+      }
+      .validation-errors .error-actions {
+        margin-top: 12px;
+        display: flex;
+        gap: 8px;
+      }
+
+      .hidden {
+        display: none !important;
+      }
+
+      /* Portal B: Top Status Bar */
+      .portal-top-bar {
+        background: rgba(15, 23, 42, 0.95);
+        border-bottom: 1px solid var(--line);
+        padding: 12px 16px;
+        display: flex;
+        gap: 16px;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .portal-top-bar .clock {
+        font-weight: 800;
+        color: var(--brand);
+        font-size: 15px;
+      }
+      .portal-top-bar .student-info {
+        font-weight: 700;
+        font-size: 14px;
+      }
+      .portal-top-bar .actions {
+        display: flex;
+        gap: 8px;
+      }
+
+      /* Portal B: Toast Notifications */
+      .toast-container {
+        position: fixed;
+        top: 80px;
+        right: 20px;
+        z-index: 100;
+        max-width: 400px;
+      }
+      .toast {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 12px;
+        box-shadow: var(--shadow-2);
+        animation: slideIn 0.3s ease-out;
+      }
+      .toast.warning {
+        border-color: rgba(245, 158, 11, 0.5);
+        background: rgba(245, 158, 11, 0.1);
+      }
+      .toast.info {
+        border-color: rgba(6, 182, 212, 0.5);
+        background: rgba(6, 182, 212, 0.1);
+      }
+      .toast .toast-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+      .toast .toast-title {
+        font-weight: 900;
+        font-size: 15px;
+      }
+      .toast .toast-close {
+        background: none;
+        border: none;
+        color: var(--muted);
+        cursor: pointer;
+        font-size: 20px;
+        padding: 0;
+        line-height: 1;
+      }
+      .toast .toast-body {
+        color: var(--ink-dim);
+        font-size: 14px;
+      }
+      .toast .toast-link {
+        color: var(--brand);
+        text-decoration: underline;
+        cursor: pointer;
+        font-weight: 700;
+      }
+      @keyframes slideIn {
+        from {
+          transform: translateX(400px);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+
+      /* Portal B: Collapsible Sections */
+      .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 14px 18px;
+        cursor: pointer;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        margin-bottom: 12px;
+        background: rgba(255, 255, 255, 0.03);
+        transition: 0.15s;
+      }
+      .section-header:hover {
+        background: rgba(255, 255, 255, 0.06);
+      }
+      .section-header.collapsed {
+        margin-bottom: 0;
+      }
+      .section-header .section-title {
+        font-weight: 900;
+        font-size: 16px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .section-header .section-count {
+        font-weight: 700;
+        font-size: 14px;
+        color: var(--muted);
+      }
+      .section-header .toggle-icon {
+        font-size: 18px;
+        transition: transform 0.2s;
+      }
+      .section-header.collapsed .toggle-icon {
+        transform: rotate(-90deg);
+      }
+      .section-content {
+        margin-bottom: 20px;
+      }
+      .section-content.collapsed {
+        display: none;
+      }
+
+      /* Portal B: Assignment Cards */
+      .assignment-card {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 16px;
+        margin-bottom: 12px;
+        background: rgba(255, 255, 255, 0.02);
+        transition: 0.15s;
+      }
+      .assignment-card:hover {
+        background: rgba(255, 255, 255, 0.05);
+        border-color: var(--line-strong);
+      }
+      .assignment-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 10px;
+      }
+      .assignment-card-title {
+        font-weight: 800;
+        font-size: 15px;
+        margin-bottom: 4px;
+      }
+      .assignment-card-meta {
+        display: flex;
+        gap: 12px;
+        font-size: 13px;
+        color: var(--muted);
+        flex-wrap: wrap;
+        margin-bottom: 8px;
+      }
+      .assignment-card-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: 12px;
+        border-top: 1px solid var(--line);
+      }
+
+      /* Portal B: Status Pills */
+      .status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 800;
+        border: 1px solid;
+      }
+      .status-pill.upcoming {
+        background: rgba(6, 182, 212, 0.15);
+        border-color: rgba(6, 182, 212, 0.4);
+        color: #22d3ee;
+      }
+      .status-pill.in-progress {
+        background: rgba(139, 92, 246, 0.15);
+        border-color: rgba(139, 92, 246, 0.4);
+        color: #a78bfa;
+      }
+      .status-pill.late {
+        background: rgba(245, 158, 11, 0.15);
+        border-color: rgba(245, 158, 11, 0.4);
+        color: #fbbf24;
+      }
+      .status-pill.missing {
+        background: rgba(239, 68, 68, 0.15);
+        border-color: rgba(239, 68, 68, 0.4);
+        color: #f87171;
+      }
+      .status-pill.submitted {
+        background: rgba(34, 197, 94, 0.15);
+        border-color: rgba(34, 197, 94, 0.4);
+        color: #4ade80;
+      }
+      .status-pill.graded {
+        background: rgba(34, 197, 94, 0.2);
+        border-color: rgba(34, 197, 94, 0.5);
+        color: #22c55e;
+      }
+
+      /* Portal B: Grades Card */
+      .grades-card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 20px;
+        margin-bottom: 20px;
+      }
+      .grade-stat {
+        margin-bottom: 16px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid var(--line);
+      }
+      .grade-stat:last-child {
+        margin-bottom: 0;
+        padding-bottom: 0;
+        border-bottom: none;
+      }
+      .grade-stat-label {
+        font-size: 13px;
+        color: var(--muted);
+        margin-bottom: 4px;
+        font-weight: 700;
+      }
+      .grade-stat-value {
+        font-size: 28px;
+        font-weight: 900;
+        color: var(--ink);
+      }
+      .grade-stat-trend {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        margin-left: 8px;
+        font-size: 18px;
+      }
+      .grade-stat-trend.up {
+        color: #4ade80;
+      }
+      .grade-stat-trend.down {
+        color: #f87171;
+      }
+      .grade-stat-trend.flat {
+        color: var(--muted);
+      }
+      .sparkline {
+        margin-top: 8px;
+        height: 30px;
+      }
+
+      /* Portal B: Filters */
+      .filters {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+      }
+      .filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .filter-group label {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--muted);
+        margin: 0;
+      }
+
+      /* Portal B: Modal */
+      .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 200;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+      .modal {
+        background: var(--panel);
+        border: 1px solid var(--line-strong);
+        border-radius: 16px;
+        padding: 24px;
+        max-width: 500px;
+        width: 100%;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+      }
+      .modal-header {
+        font-size: 20px;
+        font-weight: 900;
+        margin-bottom: 16px;
+      }
+      .modal-body {
+        color: var(--ink-dim);
+        margin-bottom: 20px;
+        line-height: 1.6;
+      }
+      .modal-footer {
+        display: flex;
+        gap: 12px;
+        justify-content: flex-end;
+      }
+
+      /* Portal B: Tooltip */
+      .tooltip {
+        position: relative;
+        cursor: help;
+      }
+      .tooltip .tooltip-text {
+        visibility: hidden;
+        position: absolute;
+        z-index: 50;
+        bottom: 125%;
+        left: 50%;
+        transform: translateX(-50%);
+        width: max-content;
+        max-width: 300px;
+        background: var(--panel-2);
+        color: var(--ink);
+        padding: 8px 12px;
+        border-radius: 8px;
+        font-size: 13px;
+        border: 1px solid var(--line-strong);
+        box-shadow: var(--shadow-1);
+        opacity: 0;
+        transition: opacity 0.2s;
+      }
+      .tooltip:hover .tooltip-text {
+        visibility: visible;
+        opacity: 1;
+      }
+
+      /* Portal C: Saved Views */
+      .saved-views-dropdown {
+        margin-bottom: 20px;
+        padding: 16px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+      }
+      .saved-views-header {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+      .saved-views-header label {
+        font-weight: 800;
+        font-size: 14px;
+        margin: 0;
+      }
+      .saved-view-select {
+        flex: 1;
+        max-width: 300px;
+      }
+      .saved-views-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      /* Portal C: Advanced Filters Drawer */
+      .filter-drawer {
+        position: fixed;
+        top: 0;
+        right: -400px;
+        width: 400px;
+        height: 100vh;
+        background: var(--panel);
+        border-left: 1px solid var(--line-strong);
+        box-shadow: var(--shadow-2);
+        z-index: 150;
+        transition: right 0.3s ease;
+        display: flex;
+        flex-direction: column;
+      }
+      .filter-drawer.open {
+        right: 0;
+      }
+      .filter-drawer-header {
+        padding: 20px;
+        border-bottom: 1px solid var(--line);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .filter-drawer-header h3 {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 900;
+      }
+      .filter-drawer-header .btn-close {
+        background: none;
+        border: none;
+        color: var(--muted);
+        cursor: pointer;
+        font-size: 24px;
+        padding: 0;
+        line-height: 1;
+      }
+      .filter-drawer-body {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px;
+      }
+      .filter-section {
+        margin-bottom: 24px;
+        padding-bottom: 24px;
+        border-bottom: 1px solid var(--line);
+      }
+      .filter-section:last-child {
+        border-bottom: none;
+      }
+      .filter-section h4 {
+        margin: 0 0 12px 0;
+        font-size: 16px;
+        font-weight: 800;
+        color: var(--ink);
+      }
+      .filter-row {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+      }
+      .filter-row label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin: 0;
+        font-size: 14px;
+      }
+      .filter-row input[type="number"] {
+        width: 80px;
+      }
+      .filter-checkboxes {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .filter-checkboxes label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0;
+        padding: 8px;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      .filter-checkboxes label:hover {
+        background: rgba(255, 255, 255, 0.05);
+      }
+      .filter-drawer-footer {
+        padding: 20px;
+        border-top: 1px solid var(--line);
+        display: flex;
+        gap: 12px;
+        justify-content: space-between;
+      }
+
+      /* Portal C: Risk Badges */
+      .risk-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 900;
+        letter-spacing: 0.5px;
+      }
+      .risk-badge.missing {
+        background: rgba(239, 68, 68, 0.2);
+        color: #fca5a5;
+        border: 1px solid rgba(239, 68, 68, 0.4);
+      }
+      .risk-badge.late {
+        background: rgba(245, 158, 11, 0.2);
+        color: #fbbf24;
+        border: 1px solid rgba(245, 158, 11, 0.4);
+      }
+      .risk-badge.low {
+        background: rgba(239, 68, 68, 0.2);
+        color: #fca5a5;
+        border: 1px solid rgba(239, 68, 68, 0.4);
+      }
+
+      /* Portal C: Dashboard Summary Card */
+      .dashboard-summary-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+      }
+      .dashboard-summary-card h3 {
+        margin: 0 0 16px 0;
+        font-size: 18px;
+        font-weight: 900;
+      }
+      .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+      }
+      .summary-item {
+        text-align: center;
+        padding: 16px;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid var(--line);
+      }
+      .summary-item.missing {
+        border-color: rgba(239, 68, 68, 0.4);
+        background: rgba(239, 68, 68, 0.1);
+      }
+      .summary-item.late {
+        border-color: rgba(245, 158, 11, 0.4);
+        background: rgba(245, 158, 11, 0.1);
+      }
+      .summary-item.low-score {
+        border-color: rgba(239, 68, 68, 0.4);
+        background: rgba(239, 68, 68, 0.1);
+      }
+      .summary-item.improvements {
+        border-color: rgba(34, 197, 94, 0.4);
+        background: rgba(34, 197, 94, 0.1);
+      }
+      .summary-value {
+        font-size: 32px;
+        font-weight: 900;
+        margin-bottom: 8px;
+      }
+      .summary-item.missing .summary-value {
+        color: #fca5a5;
+      }
+      .summary-item.late .summary-value {
+        color: #fbbf24;
+      }
+      .summary-item.low-score .summary-value {
+        color: #fca5a5;
+      }
+      .summary-item.improvements .summary-value {
+        color: #4ade80;
+      }
+      .summary-label {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--muted);
+        text-transform: uppercase;
+      }
+
+      /* Portal C: Trend Insights */
+      .trend-insights {
+        padding: 16px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        margin-bottom: 20px;
+      }
+      .trend-insights h4 {
+        margin: 0 0 12px 0;
+        font-size: 16px;
+        font-weight: 800;
+      }
+      .trend-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 0;
+        border-bottom: 1px solid var(--line);
+      }
+      .trend-item:last-child {
+        border-bottom: none;
+      }
+      .trend-label {
+        font-weight: 700;
+        font-size: 14px;
+      }
+      .trend-value {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-weight: 900;
+        font-size: 16px;
+      }
+      .trend-value.up {
+        color: #4ade80;
+      }
+      .trend-value.down {
+        color: #fca5a5;
+      }
+      .trend-value.flat {
+        color: var(--muted);
+      }
+      .trend-delta {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--muted);
+      }
+
+      /* Portal C: Rollup Toggle */
+      .rollup-toggle {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 16px;
+      }
+      .rollup-toggle label {
+        font-weight: 800;
+        font-size: 14px;
+        margin: 0;
+      }
+      .btn-group {
+        display: flex;
+        gap: 4px;
+      }
+      .btn-group .btn {
+        border-radius: 6px;
+      }
+      .btn-group .btn.active {
+        background: linear-gradient(180deg, var(--brand), rgba(22, 163, 74, 1));
+        color: #032313;
+      }
+
+      /* Portal C: Sparkline */
+      .sparkline-container {
+        margin: 16px 0;
+      }
+      .sparkline {
+        display: flex;
+        gap: 4px;
+        align-items: flex-end;
+        height: 100px;
+        padding: 10px;
+        background: rgba(255, 255, 255, 0.02);
+        border-radius: 8px;
+      }
+      .sparkline-bar {
+        flex: 1;
+        background: linear-gradient(180deg, var(--brand), var(--brand-2));
+        border-radius: 4px 4px 0 0;
+        min-height: 2px;
+        position: relative;
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        padding-top: 4px;
+        transition: opacity 0.2s;
+      }
+      .sparkline-bar:hover {
+        opacity: 0.8;
+      }
+      .sparkline-value {
+        font-size: 10px;
+        font-weight: 900;
+        color: #032313;
+      }
+      .sparkline-labels {
+        display: flex;
+        gap: 4px;
+        margin-top: 8px;
+        font-size: 11px;
+        color: var(--muted);
+        font-weight: 700;
+      }
+      .sparkline-label {
+        flex: 1;
+        text-align: center;
+      }
+
+      /* Portal Banner - Diagnostic UI for adapter failures */
+      .portal-banner {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 200;
+        padding: 14px 20px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        border-bottom: 1px solid;
+        box-shadow: var(--shadow-1);
+      }
+      .portal-banner.error {
+        background: rgba(239, 68, 68, 0.15);
+        border-color: rgba(239, 68, 68, 0.4);
+        color: #fca5a5;
+      }
+      .portal-banner.warning {
+        background: rgba(245, 158, 11, 0.15);
+        border-color: rgba(245, 158, 11, 0.4);
+        color: #fbbf24;
+      }
+      .portal-banner.info {
+        background: rgba(6, 182, 212, 0.15);
+        border-color: rgba(6, 182, 212, 0.4);
+        color: #22d3ee;
+      }
+      .portal-banner-icon {
+        font-size: 20px;
+        flex-shrink: 0;
+      }
+      .portal-banner-content {
+        flex: 1;
+      }
+      .portal-banner-title {
+        font-weight: 900;
+        font-size: 15px;
+        margin-bottom: 2px;
+      }
+      .portal-banner-message {
+        font-size: 13px;
+        opacity: 0.9;
+      }
+      .portal-banner-dismiss {
+        background: none;
+        border: none;
+        color: currentColor;
+        cursor: pointer;
+        font-size: 20px;
+        padding: 4px 8px;
+        line-height: 1;
+        opacity: 0.7;
+        border-radius: 4px;
+        transition: opacity 0.15s;
+      }
+      .portal-banner-dismiss:hover {
+        opacity: 1;
+        background: rgba(255, 255, 255, 0.1);
+      }
+
+      /* Assignment Detail Modal */
+      .assignment-detail-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 300;
+        background: rgba(0, 0, 0, 0.85);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        animation: fadeIn 0.2s;
+      }
+      .assignment-detail-content {
+        background: var(--panel);
+        border: 1px solid var(--line-strong);
+        border-radius: 16px;
+        max-width: 700px;
+        width: 100%;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+        display: flex;
+        flex-direction: column;
+      }
+      .assignment-detail-header {
+        padding: 24px;
+        border-bottom: 1px solid var(--line);
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        position: sticky;
+        top: 0;
+        background: var(--panel);
+        z-index: 1;
+      }
+      .assignment-detail-title {
+        flex: 1;
+        font-size: 22px;
+        font-weight: 900;
+        margin-bottom: 8px;
+      }
+      .assignment-detail-close {
+        background: none;
+        border: none;
+        color: var(--muted);
+        cursor: pointer;
+        font-size: 28px;
+        padding: 0;
+        line-height: 1;
+        margin-left: 12px;
+        transition: color 0.15s;
+      }
+      .assignment-detail-close:hover {
+        color: var(--ink);
+      }
+      .assignment-detail-meta {
+        display: flex;
+        gap: 16px;
+        font-size: 14px;
+        color: var(--muted);
+        flex-wrap: wrap;
+        margin-top: 8px;
+      }
+      .assignment-detail-body {
+        padding: 24px;
+        flex: 1;
+      }
+      .assignment-detail-section {
+        margin-bottom: 24px;
+      }
+      .assignment-detail-section:last-child {
+        margin-bottom: 0;
+      }
+      .assignment-detail-section-title {
+        font-size: 15px;
+        font-weight: 800;
+        margin-bottom: 12px;
+        color: var(--ink);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .assignment-detail-description {
+        color: var(--ink-dim);
+        line-height: 1.6;
+        margin-bottom: 16px;
+      }
+      .assignment-detail-field {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px 0;
+        border-bottom: 1px solid var(--line);
+      }
+      .assignment-detail-field:last-child {
+        border-bottom: none;
+      }
+      .assignment-detail-label {
+        font-weight: 700;
+        color: var(--muted);
+        font-size: 14px;
+      }
+      .assignment-detail-value {
+        font-weight: 700;
+        color: var(--ink);
+        font-size: 14px;
+        text-align: right;
+      }
+      .assignment-detail-footer {
+        padding: 20px 24px;
+        border-top: 1px solid var(--line);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        position: sticky;
+        bottom: 0;
+        background: var(--panel);
+      }
+      .assignment-detail-nav {
+        display: flex;
+        gap: 8px;
+      }
+      .assignment-detail-nav .btn {
+        min-width: 80px;
+      }
+      .assignment-detail-actions {
+        display: flex;
+        gap: 8px;
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+
+      /* Quarter Filter Dropdown */
+      .quarter-filter {
+        margin-bottom: 16px;
+      }
+      .quarter-filter label {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--muted);
+        margin-bottom: 6px;
+        display: block;
+      }
+
+      /* Graded Assignments Table */
+      .graded-assignments-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 16px;
+      }
+      .graded-assignments-table th,
+      .graded-assignments-table td {
+        padding: 10px 12px;
+        text-align: left;
+        border-bottom: 1px solid var(--line);
+        font-size: 14px;
+      }
+      .graded-assignments-table th {
+        font-weight: 800;
+        color: var(--muted);
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+      }
+      .graded-assignments-table td {
+        color: var(--ink-dim);
+      }
+      .graded-assignments-table tbody tr {
+        cursor: pointer;
+        transition: background 0.15s;
+      }
+      .graded-assignments-table tbody tr:hover {
+        background: rgba(255, 255, 255, 0.05);
+      }
+      .graded-assignments-table .assignment-link {
+        color: var(--brand);
+        font-weight: 700;
+        text-decoration: none;
+      }
+      .graded-assignments-table .assignment-link:hover {
+        text-decoration: underline;
+      }
+
+      /* Quarter Sparkline */
+      .quarter-sparkline {
+        display: inline-block;
+        width: 60px;
+        height: 20px;
+        margin-left: 8px;
+        vertical-align: middle;
+      }
+
+      /* Mobile Responsive */
+      @media (max-width: 768px) {
+        .portal-top-bar {
+          flex-wrap: wrap;
+          padding: 10px 12px;
+        }
+        .portal-top-bar .clock {
+          font-size: 13px;
+        }
+        .portal-top-bar .student-info {
+          font-size: 12px;
+        }
+        .portal-top-bar .actions {
+          width: 100%;
+          justify-content: flex-end;
+        }
+        .btn.small {
+          padding: 6px 10px;
+          font-size: 12px;
+        }
+        .toast-container {
+          top: 60px;
+          right: 10px;
+          left: 10px;
+          max-width: none;
+        }
+        .assignment-card-meta {
+          font-size: 12px;
+        }
+        .filters {
+          flex-direction: column;
+        }
+
+        /* Portal C Mobile Adjustments */
+        .filter-drawer {
+          width: 100%;
+          right: -100%;
+        }
+        .summary-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .saved-view-select {
+          max-width: none;
+        }
+        .saved-views-header {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+      }
+
+      @media (max-width: 375px) {
+        .section-header {
+          padding: 12px 14px;
+        }
+        .section-header .section-title {
+          font-size: 14px;
+        }
+        .assignment-card {
+          padding: 12px;
+        }
+        .assignment-card-title {
+          font-size: 14px;
+        }
+        .summary-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- HOTFIX: Early redirect for direct student portal access without auto-login -->
+    <!-- Redirects to hub unless valid auto-login parameters are present -->
+    <script src="../web/student-portal-redirect.js"></script>
+
+    <!-- HOTFIX: Early failsafe timer to guarantee login view visibility -->
+    <!-- TODO: Fold this into existing diagnostics work after hotfix is stable -->
+    <!-- Guardrails Stage 3B: Externalized to student-portal-failsafe.js -->
+    <script src="../web/student-portal-failsafe.js"></script>
+
+    <!-- HOTFIX: Global error capture with visible banner -->
+    <!-- TODO: Fold this into existing diagnostics work after hotfix is stable -->
+    <!-- Guardrails Stage 3B: Externalized to student-portal-error-handler.js -->
+    <script src="../web/student-portal-error-handler.js"></script>
+
+    <!-- Early auto-login bootstrap (24h remember-me) -->
+    <!-- Guardrails Stage 3B: Externalized to student-portal-auto-login.js -->
+    <script src="../web/student-portal-auto-login.js"></script>
+
+    <!-- Portal Banner - Diagnostic UI for adapter failures -->
+    <div
+      id="portalBanner"
+      class="portal-banner hidden"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+    >
+      <div class="portal-banner-icon" id="portalBannerIcon"></div>
+      <div class="portal-banner-content">
+        <div class="portal-banner-title" id="portalBannerTitle"></div>
+        <div class="portal-banner-message" id="portalBannerMessage"></div>
+      </div>
+      <button
+        id="portalBannerDismiss"
+        class="portal-banner-dismiss"
+        aria-label="Dismiss notification"
+      >
+        ×
+      </button>
     </div>
-    
-    <div id="studentLoginForm">
-      <label>Student Code
-        <input id="loginCode" type="text" placeholder="Enter your code" autocomplete="username" />
-      </label>
-      <label>Password
-        <input id="loginPassword" type="password" placeholder="Enter password" autocomplete="current-password" />
-      </label>
-      <button id="btnStudentLogin" class="btn primary" style="width:100%; margin-top:16px">Login as Student</button>
-    </div>
-    
-    <div id="teacherLoginForm" class="hidden">
-      <label>Teacher Password
-        <input id="teacherPassword" type="password" placeholder="Enter teacher password" autocomplete="current-password" />
-      </label>
-      <button id="btnTeacherLogin" class="btn primary" style="width:100%; margin-top:16px">Login as Teacher</button>
-    </div>
-    
-    <div id="loginError" class="error-msg hidden" style="margin-top:16px"></div>
-  </div>
-</div>
 
-<!-- Student Dashboard View -->
-<div id="studentDashboardView" class="hidden" role="main" aria-label="Student Dashboard">
-  <div class="container">
-    <h1 style="margin-bottom:24px">My Dashboard</h1>
-    
-    <!-- Portal C: Dashboard Summary Card -->
-    <div id="dashboardSummaryContainer" class="hidden"></div>
-    
-    <!-- Portal C: Trend Insights -->
-    <div id="trendInsightsContainer" class="hidden"></div>
-    
-    <div class="grid-2">
-      <!-- Portal B: Grades Card -->
-      <div id="gradesCardContainer" class="hidden" role="region" aria-label="Grades Summary">
-        <div class="grades-card">
-          <div class="card-header" style="margin-bottom:16px">
-            <div>📊 My Grades</div>
-            <div style="display:flex; gap:8px; align-items:center;">
-              <!-- Portal C: Rollup Toggle -->
-              <div id="rollupToggleContainer" class="hidden"></div>
-              <button id="btnExportGradesCSV" class="btn small hidden" aria-label="Export grades to CSV">📄 CSV</button>
-              <button id="btnExportGradesPDF" class="btn small hidden" aria-label="Export grades to PDF">📄 PDF</button>
-            </div>
-          </div>
-          <div id="gradesCardContent">
-            <div class="grade-stat">
-              <div class="grade-stat-label">Overall Average</div>
-              <div class="grade-stat-value">
-                <span id="overallAverage">—</span>%
-                <span id="overallTrend" class="grade-stat-trend"></span>
+    <!-- Portal B: Top Status Bar (hidden until logged in) -->
+    <div id="portalTopBar" class="portal-top-bar hidden">
+      <div class="clock" id="portalClock">Loading...</div>
+      <div class="student-info">
+        <span id="portalStudentName"></span>
+      </div>
+      <div class="actions">
+        <a
+          href="https://reinischclassroom.com/language-arts/toolkit/"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="btn small"
+          >🛠️ Tool Kit</a
+        >
+        <button id="portalHelpBtn" class="btn small">Help</button>
+        <button id="portalLogoutBtn" class="btn small">Logout</button>
+      </div>
+    </div>
+
+    <!-- Portal B: Toast Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- Legacy header - shown only for teacher center (hidden for student dashboard) -->
+    <div class="header" id="legacyHeader" style="display: none">
+      <div class="bar">
+        <div class="brand">🎓 Reinisch Classroom</div>
+        <span id="userChip" class="chip hidden"></span>
+        <button id="btnLogout" class="btn hidden">Logout</button>
+      </div>
+    </div>
+
+    <!-- Login View -->
+    <div id="loginView">
+      <div class="login-box card">
+        <h1>Student Hub & Teacher Center</h1>
+        <p class="subtle">Login to access your dashboard or teacher tools</p>
+
+        <div class="tabs" style="border-bottom: none; margin-bottom: 16px; justify-content: center">
+          <div class="tab active" data-login-mode="student">Student Login</div>
+          <div class="tab" data-login-mode="teacher">Teacher Login</div>
+        </div>
+
+        <div id="studentLoginForm">
+          <label
+            >Student Code
+            <input
+              id="loginCode"
+              type="text"
+              placeholder="Enter your code"
+              autocomplete="username"
+            />
+          </label>
+          <label
+            >Password
+            <input
+              id="loginPassword"
+              type="password"
+              placeholder="Enter password"
+              autocomplete="current-password"
+            />
+          </label>
+          <button id="btnStudentLogin" class="btn primary" style="width: 100%; margin-top: 16px">
+            Login as Student
+          </button>
+        </div>
+
+        <div id="teacherLoginForm" class="hidden">
+          <label
+            >Teacher Password
+            <input
+              id="teacherPassword"
+              type="password"
+              placeholder="Enter teacher password"
+              autocomplete="current-password"
+            />
+          </label>
+          <button id="btnTeacherLogin" class="btn primary" style="width: 100%; margin-top: 16px">
+            Login as Teacher
+          </button>
+        </div>
+
+        <div id="loginError" class="error-msg hidden" style="margin-top: 16px"></div>
+      </div>
+    </div>
+
+    <!-- Student Dashboard View -->
+    <div id="studentDashboardView" class="hidden" role="main" aria-label="Student Dashboard">
+      <div class="container">
+        <h1 style="margin-bottom: 24px">My Dashboard</h1>
+
+        <!-- Portal C: Dashboard Summary Card -->
+        <div id="dashboardSummaryContainer" class="hidden"></div>
+
+        <!-- Portal C: Trend Insights -->
+        <div id="trendInsightsContainer" class="hidden"></div>
+
+        <div class="grid-2">
+          <!-- Portal B: Grades Card -->
+          <div id="gradesCardContainer" class="hidden" role="region" aria-label="Grades Summary">
+            <div class="grades-card">
+              <div class="card-header" style="margin-bottom: 16px">
+                <div>📊 My Grades</div>
+                <div style="display: flex; gap: 8px; align-items: center">
+                  <!-- Portal C: Rollup Toggle -->
+                  <div id="rollupToggleContainer" class="hidden"></div>
+                  <button
+                    id="btnExportGradesCSV"
+                    class="btn small hidden"
+                    aria-label="Export grades to CSV"
+                  >
+                    📄 CSV
+                  </button>
+                  <button
+                    id="btnExportGradesPDF"
+                    class="btn small hidden"
+                    aria-label="Export grades to PDF"
+                  >
+                    📄 PDF
+                  </button>
+                </div>
               </div>
-              <svg id="overallSparkline" class="sparkline" style="width:100%"></svg>
-            </div>
-            <div id="classAverages"></div>
-            <!-- Portal C: Sparkline Visualization -->
-            <div id="sparklineContainer" class="hidden"></div>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Portal B: Assignments Dashboard -->
-      <div style="grid-column:1/-1" role="region" aria-label="Assignments">
-        <div class="card">
-          <div class="card-header">
-            <div>📚 My Assignments</div>
-            <div style="display:flex; gap:8px; align-items:center">
-              <span id="assignmentsCount" class="badge info">0</span>
-              <!-- Portal C: Export Buttons -->
-              <button id="btnExportCSV" class="btn small hidden" aria-label="Export to CSV">📄 CSV</button>
-              <button id="btnExportPDF" class="btn small hidden" aria-label="Export to PDF">📄 PDF</button>
-              <button id="btnAdvancedFilters" class="btn small hidden" aria-label="Open advanced filters">🔍 Filters</button>
+              <div id="gradesCardContent">
+                <div class="grade-stat">
+                  <div class="grade-stat-label">Overall Average</div>
+                  <div class="grade-stat-value">
+                    <span id="overallAverage">—</span>%
+                    <span id="overallTrend" class="grade-stat-trend"></span>
+                  </div>
+                  <svg id="overallSparkline" class="sparkline" style="width: 100%"></svg>
+                </div>
+                <div id="classAverages"></div>
+                <!-- Portal C: Sparkline Visualization -->
+                <div id="sparklineContainer" class="hidden"></div>
+              </div>
             </div>
           </div>
-          
-          <!-- Portal C: Saved Views -->
-          <div id="savedViewsContainer" class="hidden"></div>
-          
-          <!-- Assignment Status Tabs -->
-          <div class="tabs" id="assignmentTabs" role="tablist" aria-label="Assignment status tabs">
-            <div class="tab active" data-status-tab="upcoming" role="tab" aria-selected="true" tabindex="0">Upcoming</div>
-            <div class="tab" data-status-tab="in-progress" role="tab" aria-selected="false" tabindex="-1">In Progress</div>
-            <div class="tab" data-status-tab="late" role="tab" aria-selected="false" tabindex="-1">Late</div>
-            <div class="tab" data-status-tab="missing" role="tab" aria-selected="false" tabindex="-1">Missing</div>
-            <div class="tab" data-status-tab="submitted" role="tab" aria-selected="false" tabindex="-1">Submitted</div>
-            <div class="tab" data-status-tab="graded" role="tab" aria-selected="false" tabindex="-1">Graded</div>
-            <div class="tab" data-status-tab="all" role="tab" aria-selected="false" tabindex="-1">All</div>
-          </div>
-          
-          <!-- Filters (visible in All tab) -->
-          <div id="assignmentFilters" class="filters hidden">
-            <div class="filter-group">
-              <label for="filterStatus">Status</label>
-              <select id="filterStatus" class="btn small" style="width:auto; padding:6px 10px">
-                <option value="">All Statuses</option>
-                <option value="Upcoming">Upcoming</option>
-                <option value="In Progress">In Progress</option>
-                <option value="Late">Late</option>
-                <option value="Missing">Missing</option>
-                <option value="Submitted">Submitted</option>
-                <option value="Graded">Graded</option>
-              </select>
+
+          <!-- Portal B: Assignments Dashboard -->
+          <div style="grid-column: 1/-1" role="region" aria-label="Assignments">
+            <div class="card">
+              <div class="card-header">
+                <div>📚 My Assignments</div>
+                <div style="display: flex; gap: 8px; align-items: center">
+                  <span id="assignmentsCount" class="badge info">0</span>
+                  <!-- Portal C: Export Buttons -->
+                  <button id="btnExportCSV" class="btn small hidden" aria-label="Export to CSV">
+                    📄 CSV
+                  </button>
+                  <button id="btnExportPDF" class="btn small hidden" aria-label="Export to PDF">
+                    📄 PDF
+                  </button>
+                  <button
+                    id="btnAdvancedFilters"
+                    class="btn small hidden"
+                    aria-label="Open advanced filters"
+                  >
+                    🔍 Filters
+                  </button>
+                </div>
+              </div>
+
+              <!-- Portal C: Saved Views -->
+              <div id="savedViewsContainer" class="hidden"></div>
+
+              <!-- Assignment Status Tabs -->
+              <div
+                class="tabs"
+                id="assignmentTabs"
+                role="tablist"
+                aria-label="Assignment status tabs"
+              >
+                <div
+                  class="tab active"
+                  data-status-tab="upcoming"
+                  role="tab"
+                  aria-selected="true"
+                  tabindex="0"
+                >
+                  Upcoming
+                </div>
+                <div
+                  class="tab"
+                  data-status-tab="in-progress"
+                  role="tab"
+                  aria-selected="false"
+                  tabindex="-1"
+                >
+                  In Progress
+                </div>
+                <div
+                  class="tab"
+                  data-status-tab="late"
+                  role="tab"
+                  aria-selected="false"
+                  tabindex="-1"
+                >
+                  Late
+                </div>
+                <div
+                  class="tab"
+                  data-status-tab="missing"
+                  role="tab"
+                  aria-selected="false"
+                  tabindex="-1"
+                >
+                  Missing
+                </div>
+                <div
+                  class="tab"
+                  data-status-tab="submitted"
+                  role="tab"
+                  aria-selected="false"
+                  tabindex="-1"
+                >
+                  Submitted
+                </div>
+                <div
+                  class="tab"
+                  data-status-tab="graded"
+                  role="tab"
+                  aria-selected="false"
+                  tabindex="-1"
+                >
+                  Graded
+                </div>
+                <div
+                  class="tab"
+                  data-status-tab="all"
+                  role="tab"
+                  aria-selected="false"
+                  tabindex="-1"
+                >
+                  All
+                </div>
+              </div>
+
+              <!-- Filters (visible in All tab) -->
+              <div id="assignmentFilters" class="filters hidden">
+                <div class="filter-group">
+                  <label for="filterStatus">Status</label>
+                  <select
+                    id="filterStatus"
+                    class="btn small"
+                    style="width: auto; padding: 6px 10px"
+                  >
+                    <option value="">All Statuses</option>
+                    <option value="Upcoming">Upcoming</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Late">Late</option>
+                    <option value="Missing">Missing</option>
+                    <option value="Submitted">Submitted</option>
+                    <option value="Graded">Graded</option>
+                  </select>
+                </div>
+                <div class="filter-group">
+                  <label for="filterDueFrom">Due From</label>
+                  <input
+                    type="date"
+                    id="filterDueFrom"
+                    class="btn small"
+                    style="width: auto; padding: 6px 10px"
+                  />
+                </div>
+                <div class="filter-group">
+                  <label for="filterDueTo">Due To</label>
+                  <input
+                    type="date"
+                    id="filterDueTo"
+                    class="btn small"
+                    style="width: auto; padding: 6px 10px"
+                  />
+                </div>
+                <button id="btnApplyFilters" class="btn small primary" style="align-self: flex-end">
+                  Apply
+                </button>
+                <button id="btnClearFilters" class="btn small" style="align-self: flex-end">
+                  Clear
+                </button>
+              </div>
+
+              <!-- Assignment Sections -->
+              <div id="upcomingSection" class="tab-content active">
+                <div id="upcomingContent"></div>
+              </div>
+
+              <div id="in-progressSection" class="tab-content">
+                <div id="in-progressContent"></div>
+              </div>
+
+              <div id="lateSection" class="tab-content">
+                <div id="lateContent"></div>
+              </div>
+
+              <div id="missingSection" class="tab-content">
+                <div id="missingContent"></div>
+              </div>
+
+              <div id="submittedSection" class="tab-content">
+                <div id="submittedContent"></div>
+              </div>
+
+              <div id="gradedSection" class="tab-content">
+                <div id="gradedContent"></div>
+              </div>
+
+              <div id="allSection" class="tab-content">
+                <div id="allContent"></div>
+              </div>
             </div>
-            <div class="filter-group">
-              <label for="filterDueFrom">Due From</label>
-              <input type="date" id="filterDueFrom" class="btn small" style="width:auto; padding:6px 10px" />
+          </div>
+
+          <!-- IEP Goals (existing, with Portal B enhancements) -->
+          <div style="grid-column: 1/-1">
+            <div class="card">
+              <div class="card-header">
+                <div>🎯 IEP Goals</div>
+                <span id="goalsCount" class="badge info">0</span>
+              </div>
+              <div id="goalsContent"></div>
             </div>
-            <div class="filter-group">
-              <label for="filterDueTo">Due To</label>
-              <input type="date" id="filterDueTo" class="btn small" style="width:auto; padding:6px 10px" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Portal B: Resubmission Confirmation Modal -->
+    <div id="resubmitModal" class="modal-overlay hidden">
+      <div class="modal">
+        <div class="modal-header">Confirm Resubmission</div>
+        <div class="modal-body">
+          <p>
+            You are about to resubmit this assignment. You have
+            <strong>one resubmission opportunity</strong> per assignment.
+          </p>
+          <p>After resubmitting, you won't be able to submit again for this assignment.</p>
+          <p>Do you want to proceed?</p>
+        </div>
+        <div class="modal-footer">
+          <button id="btnCancelResubmit" class="btn">Cancel</button>
+          <button id="btnConfirmResubmit" class="btn primary">Confirm Resubmission</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Portal B: Assignment Detail Modal -->
+    <div
+      id="assignmentDetailModal"
+      class="assignment-detail-modal hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="assignmentDetailTitle"
+    >
+      <div class="assignment-detail-content">
+        <div class="assignment-detail-header">
+          <div style="flex: 1">
+            <div id="assignmentDetailTitle" class="assignment-detail-title"></div>
+            <div id="assignmentDetailMeta" class="assignment-detail-meta"></div>
+          </div>
+          <button
+            id="assignmentDetailClose"
+            class="assignment-detail-close"
+            aria-label="Close assignment details"
+          >
+            ×
+          </button>
+        </div>
+        <div class="assignment-detail-body" id="assignmentDetailBody"></div>
+        <div class="assignment-detail-footer">
+          <div class="assignment-detail-nav">
+            <button id="assignmentDetailPrev" class="btn small" aria-label="Previous assignment">
+              ← Prev
+            </button>
+            <button id="assignmentDetailNext" class="btn small" aria-label="Next assignment">
+              Next →
+            </button>
+          </div>
+          <div class="assignment-detail-actions" id="assignmentDetailActions"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Portal C: Advanced Filters Drawer -->
+    <div id="advancedFiltersDrawer" class="filter-drawer"></div>
+
+    <!-- Teacher Center View -->
+    <div id="teacherCenterView" class="hidden">
+      <div class="container">
+        <h1 style="margin-bottom: 24px">Teacher Center</h1>
+
+        <div class="tabs">
+          <div class="tab active" data-teacher-tab="assignments">📝 Assignments</div>
+          <div class="tab" data-teacher-tab="gradebook">📊 Gradebook</div>
+          <div class="tab" data-teacher-tab="iep-progress">🎯 IEP Progress</div>
+          <div class="tab" data-teacher-tab="upload">📤 Upload</div>
+          <div class="tab" data-teacher-tab="review">✅ Review</div>
+          <div class="tab" data-teacher-tab="export">💾 Export</div>
+        </div>
+
+        <!-- Assignments Tab -->
+        <div id="tab-assignments" class="tab-content active">
+          <div class="card">
+            <div class="card-header">
+              <div>Assignment Manager</div>
+              <button id="btnRefreshAssignments" class="btn small">Refresh</button>
             </div>
-            <button id="btnApplyFilters" class="btn small primary" style="align-self:flex-end">Apply</button>
-            <button id="btnClearFilters" class="btn small" style="align-self:flex-end">Clear</button>
-          </div>
-          
-          <!-- Assignment Sections -->
-          <div id="upcomingSection" class="tab-content active">
-            <div id="upcomingContent"></div>
-          </div>
-          
-          <div id="in-progressSection" class="tab-content">
-            <div id="in-progressContent"></div>
-          </div>
-          
-          <div id="lateSection" class="tab-content">
-            <div id="lateContent"></div>
-          </div>
-          
-          <div id="missingSection" class="tab-content">
-            <div id="missingContent"></div>
-          </div>
-          
-          <div id="submittedSection" class="tab-content">
-            <div id="submittedContent"></div>
-          </div>
-          
-          <div id="gradedSection" class="tab-content">
-            <div id="gradedContent"></div>
-          </div>
-          
-          <div id="allSection" class="tab-content">
-            <div id="allContent"></div>
+            <div id="assignmentsListContent"></div>
           </div>
         </div>
-      </div>
-      
-      <!-- IEP Goals (existing, with Portal B enhancements) -->
-      <div style="grid-column:1/-1">
-        <div class="card">
-          <div class="card-header">
-            <div>🎯 IEP Goals</div>
-            <span id="goalsCount" class="badge info">0</span>
-          </div>
-          <div id="goalsContent"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
 
-<!-- Portal B: Resubmission Confirmation Modal -->
-<div id="resubmitModal" class="modal-overlay hidden">
-  <div class="modal">
-    <div class="modal-header">Confirm Resubmission</div>
-    <div class="modal-body">
-      <p>You are about to resubmit this assignment. You have <strong>one resubmission opportunity</strong> per assignment.</p>
-      <p>After resubmitting, you won't be able to submit again for this assignment.</p>
-      <p>Do you want to proceed?</p>
-    </div>
-    <div class="modal-footer">
-      <button id="btnCancelResubmit" class="btn">Cancel</button>
-      <button id="btnConfirmResubmit" class="btn primary">Confirm Resubmission</button>
-    </div>
-  </div>
-</div>
-
-<!-- Portal B: Assignment Detail Modal -->
-<div id="assignmentDetailModal" class="assignment-detail-modal hidden" role="dialog" aria-modal="true" aria-labelledby="assignmentDetailTitle">
-  <div class="assignment-detail-content">
-    <div class="assignment-detail-header">
-      <div style="flex:1">
-        <div id="assignmentDetailTitle" class="assignment-detail-title"></div>
-        <div id="assignmentDetailMeta" class="assignment-detail-meta"></div>
-      </div>
-      <button id="assignmentDetailClose" class="assignment-detail-close" aria-label="Close assignment details">×</button>
-    </div>
-    <div class="assignment-detail-body" id="assignmentDetailBody"></div>
-    <div class="assignment-detail-footer">
-      <div class="assignment-detail-nav">
-        <button id="assignmentDetailPrev" class="btn small" aria-label="Previous assignment">← Prev</button>
-        <button id="assignmentDetailNext" class="btn small" aria-label="Next assignment">Next →</button>
-      </div>
-      <div class="assignment-detail-actions" id="assignmentDetailActions"></div>
-    </div>
-  </div>
-</div>
-
-<!-- Portal C: Advanced Filters Drawer -->
-<div id="advancedFiltersDrawer" class="filter-drawer"></div>
-
-<!-- Teacher Center View -->
-<div id="teacherCenterView" class="hidden">
-  <div class="container">
-    <h1 style="margin-bottom:24px">Teacher Center</h1>
-    
-    <div class="tabs">
-      <div class="tab active" data-teacher-tab="assignments">📝 Assignments</div>
-      <div class="tab" data-teacher-tab="gradebook">📊 Gradebook</div>
-      <div class="tab" data-teacher-tab="iep-progress">🎯 IEP Progress</div>
-      <div class="tab" data-teacher-tab="upload">📤 Upload</div>
-      <div class="tab" data-teacher-tab="review">✅ Review</div>
-      <div class="tab" data-teacher-tab="export">💾 Export</div>
-    </div>
-    
-    <!-- Assignments Tab -->
-    <div id="tab-assignments" class="tab-content active">
-      <div class="card">
-        <div class="card-header">
-          <div>Assignment Manager</div>
-          <button id="btnRefreshAssignments" class="btn small">Refresh</button>
-        </div>
-        <div id="assignmentsListContent"></div>
-      </div>
-    </div>
-    
-    <!-- Gradebook Tab -->
-    <div id="tab-gradebook" class="tab-content">
-      <div class="card">
-        <div class="card-header">
-          <div>📊 Gradebook</div>
-          <div style="display:flex; gap:8px">
-            <button id="btnImportGradebook" class="btn small">Import CSV</button>
-            <button id="btnExportGradebook" class="btn small">Export CSV</button>
-            <button id="btnIEPSummary" class="btn small primary">IEP Progress Summary</button>
+        <!-- Gradebook Tab -->
+        <div id="tab-gradebook" class="tab-content">
+          <div class="card">
+            <div class="card-header">
+              <div>📊 Gradebook</div>
+              <div style="display: flex; gap: 8px">
+                <button id="btnImportGradebook" class="btn small">Import CSV</button>
+                <button id="btnExportGradebook" class="btn small">Export CSV</button>
+                <button id="btnIEPSummary" class="btn small primary">IEP Progress Summary</button>
+              </div>
+            </div>
+            <input type="file" id="gradebookFileInput" accept=".csv" class="hidden" />
+            <div id="gradebookContent" class="spreadsheet-container">
+              <div class="subtle" style="text-align: center; padding: 40px">
+                Import a gradebook CSV or create entries
+              </div>
+            </div>
           </div>
         </div>
-        <input type="file" id="gradebookFileInput" accept=".csv" class="hidden" />
-        <div id="gradebookContent" class="spreadsheet-container">
-          <div class="subtle" style="text-align:center; padding:40px">Import a gradebook CSV or create entries</div>
-        </div>
-      </div>
-    </div>
-    
-    <!-- IEP Progress Tab -->
-    <div id="tab-iep-progress" class="tab-content">
-      <div class="card">
-        <div class="card-header">
-          <div>🎯 IEP Goal Progress</div>
-          <div style="display:flex; gap:8px">
-            <button id="btnImportIEP" class="btn small">Import CSV</button>
-            <button id="btnExportIEP" class="btn small">Export CSV</button>
+
+        <!-- IEP Progress Tab -->
+        <div id="tab-iep-progress" class="tab-content">
+          <div class="card">
+            <div class="card-header">
+              <div>🎯 IEP Goal Progress</div>
+              <div style="display: flex; gap: 8px">
+                <button id="btnImportIEP" class="btn small">Import CSV</button>
+                <button id="btnExportIEP" class="btn small">Export CSV</button>
+              </div>
+            </div>
+            <input type="file" id="iepFileInput" accept=".csv" class="hidden" />
+            <div id="iepValidationErrors"></div>
+            <div id="iepProgressContent">
+              <div class="subtle" style="text-align: center; padding: 40px">
+                Import IEP progress CSV
+              </div>
+            </div>
           </div>
         </div>
-        <input type="file" id="iepFileInput" accept=".csv" class="hidden" />
-        <div id="iepValidationErrors"></div>
-        <div id="iepProgressContent">
-          <div class="subtle" style="text-align:center; padding:40px">Import IEP progress CSV</div>
-        </div>
-      </div>
-    </div>
-    
-    <!-- Upload Tab -->
-    <div id="tab-upload" class="tab-content">
-      <div class="card">
-        <div class="card-header">
-          <div>📤 Upload Assignment CSV → Progress</div>
-        </div>
-        <p class="subtle">Upload a CSV file containing assignment progress data to import into the system.</p>
-        <label>Select CSV File
-          <input type="file" id="uploadAssignmentCSV" accept=".csv" />
-        </label>
-        <button id="btnProcessUpload" class="btn primary" style="margin-top:12px">Process Upload</button>
-        <div id="uploadResult" class="hidden" style="margin-top:16px"></div>
-      </div>
-    </div>
-    
-    <!-- Review Tab -->
-    <div id="tab-review" class="tab-content">
-      <div class="card">
-        <div class="card-header">
-          <div>✅ Review Queue</div>
-          <button id="btnRefreshReview" class="btn small">Refresh</button>
-        </div>
-        <div id="reviewQueueContent">
-          <div class="subtle" style="text-align:center; padding:40px">No submissions pending review</div>
-        </div>
-      </div>
-    </div>
-    
-    <!-- Export Tab -->
-    <div id="tab-export" class="tab-content">
-      <div class="card">
-        <div class="card-header">
-          <div>💾 Export Data</div>
-        </div>
-        <div style="display:flex; flex-direction:column; gap:12px; max-width:400px">
-          <button id="btnExportStudents" class="btn">Export Students CSV</button>
-          <button id="btnExportAssignments" class="btn">Export Assignments CSV</button>
-          <button id="btnExportProgress" class="btn">Export Progress CSV</button>
-          <button id="btnExportAllData" class="btn primary">Export All Data (JSON)</button>
-        </div>
-        <div id="exportResult" class="hidden" style="margin-top:16px"></div>
-      </div>
-    </div>
-  </div>
-</div>
 
-<script type="module" src="../web/student-portal.js"></script>
+        <!-- Upload Tab -->
+        <div id="tab-upload" class="tab-content">
+          <div class="card">
+            <div class="card-header">
+              <div>📤 Upload Assignment CSV → Progress</div>
+            </div>
+            <p class="subtle">
+              Upload a CSV file containing assignment progress data to import into the system.
+            </p>
+            <label
+              >Select CSV File
+              <input type="file" id="uploadAssignmentCSV" accept=".csv" />
+            </label>
+            <button id="btnProcessUpload" class="btn primary" style="margin-top: 12px">
+              Process Upload
+            </button>
+            <div id="uploadResult" class="hidden" style="margin-top: 16px"></div>
+          </div>
+        </div>
 
-</body>
+        <!-- Review Tab -->
+        <div id="tab-review" class="tab-content">
+          <div class="card">
+            <div class="card-header">
+              <div>✅ Review Queue</div>
+              <button id="btnRefreshReview" class="btn small">Refresh</button>
+            </div>
+            <div id="reviewQueueContent">
+              <div class="subtle" style="text-align: center; padding: 40px">
+                No submissions pending review
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Export Tab -->
+        <div id="tab-export" class="tab-content">
+          <div class="card">
+            <div class="card-header">
+              <div>💾 Export Data</div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 12px; max-width: 400px">
+              <button id="btnExportStudents" class="btn">Export Students CSV</button>
+              <button id="btnExportAssignments" class="btn">Export Assignments CSV</button>
+              <button id="btnExportProgress" class="btn">Export Progress CSV</button>
+              <button id="btnExportAllData" class="btn primary">Export All Data (JSON)</button>
+            </div>
+            <div id="exportResult" class="hidden" style="margin-top: 16px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="../web/student-portal.js"></script>
+  </body>
 </html>
