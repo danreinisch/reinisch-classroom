@@ -1,0 +1,137 @@
+// Student submissions endpoint - returns submissions for a student
+// GET /.netlify/functions/student-submissions?code=XXX
+// Auth: Requires code parameter
+const {
+  generateRequestId,
+  jsonResponse,
+  handleCorsPreFlight,
+} = require('./_lib/http');
+
+const {
+  getSupabaseConfig,
+} = require('./_lib/supa');
+
+// Get Supabase configuration
+const { url: SUPABASE_URL, key: SUPABASE_SERVICE_ROLE_KEY } = getSupabaseConfig();
+
+exports.handler = async (event) => {
+  const requestId = generateRequestId();
+  console.log(`[student-submissions] [${requestId}] Request received`);
+
+  // Handle CORS preflight
+  if (event.httpMethod === 'OPTIONS') {
+    return handleCorsPreFlight(event, ['GET', 'OPTIONS'], ['Content-Type']);
+  }
+  
+  if (event.httpMethod !== 'GET') {
+    console.log(`[student-submissions] [${requestId}] Method not allowed: ${event.httpMethod}`);
+    return jsonResponse(event, 405, { error: 'Method Not Allowed' }, {}, requestId);
+  }
+
+  // Check if Supabase is configured
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    console.log(`[student-submissions] [${requestId}] Supabase not configured`);
+    return jsonResponse(
+      event, 
+      503, 
+      { ok: false, error: 'Service unavailable' },
+      { 'Cache-Control': 'no-store' },
+      requestId
+    );
+  }
+
+  // Parse query params
+  const params = event.queryStringParameters || {};
+  const code = params.code;
+
+  // Validate input
+  if (!code || typeof code !== 'string' || code.trim().length === 0) {
+    console.log(`[student-submissions] [${requestId}] Missing or invalid code`);
+    return jsonResponse(
+      event,
+      400,
+      { ok: false, error: 'Student code is required' },
+      { 'Cache-Control': 'no-store' },
+      requestId
+    );
+  }
+
+  // Normalize student code to uppercase
+  const codeNorm = code.trim().toUpperCase();
+
+  try {
+    // First, get student ID from code
+    const studentUrl = `${SUPABASE_URL}/rest/v1/students?select=id&code=eq.${encodeURIComponent(codeNorm)}&limit=1`;
+    
+    console.log(`[student-submissions] [${requestId}] Looking up student ID for code:`, codeNorm);
+    
+    const studentResponse = await fetch(studentUrl, {
+      method: 'GET',
+      headers: {
+        'apikey': SUPABASE_SERVICE_ROLE_KEY,
+        'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!studentResponse.ok) {
+      throw new Error(`Student lookup failed: ${studentResponse.status}`);
+    }
+
+    const studentData = await studentResponse.json();
+    
+    if (!studentData || studentData.length === 0) {
+      console.log(`[student-submissions] [${requestId}] Student not found:`, codeNorm);
+      return jsonResponse(
+        event,
+        404,
+        { ok: false, error: 'Student not found' },
+        { 'Cache-Control': 'no-store' },
+        requestId
+      );
+    }
+
+    const studentId = studentData[0].id;
+
+    // Fetch submissions via assignment_instances join
+    // Query submissions with nested joins: submissions -> assignment_instances (filtered by student_id)
+    const submissionsUrl = `${SUPABASE_URL}/rest/v1/submissions?select=*,assignment_instances!inner(id,assignment_id,student_id)&assignment_instances.student_id=eq.${studentId}&order=submitted_at.desc`;
+    
+    console.log(`[student-submissions] [${requestId}] Fetching submissions for student ID:`, studentId);
+    
+    const submissionsResponse = await fetch(submissionsUrl, {
+      method: 'GET',
+      headers: {
+        'apikey': SUPABASE_SERVICE_ROLE_KEY,
+        'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation'
+      }
+    });
+
+    if (!submissionsResponse.ok) {
+      throw new Error(`Submissions query failed: ${submissionsResponse.status}`);
+    }
+
+    const submissions = await submissionsResponse.json();
+    
+    console.log(`[student-submissions] [${requestId}] Successfully fetched ${submissions.length} submissions`);
+    
+    return jsonResponse(
+      event,
+      200,
+      { ok: true, submissions: submissions || [] },
+      { 'Cache-Control': 'no-store' },
+      requestId
+    );
+  } catch (err) {
+    console.error(`[student-submissions] [${requestId}] Error:`, err);
+    return jsonResponse(
+      event,
+      500,
+      { ok: false, error: 'Failed to fetch student submissions' },
+      { 'Cache-Control': 'no-store' },
+      requestId
+    );
+  }
+};
