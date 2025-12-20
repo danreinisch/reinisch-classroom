@@ -616,24 +616,27 @@ import './diagnostics.js';
     }
   });
   
-  // Logout
-  qs('#btnLogout').addEventListener('click', () => {
-    console.log('[portal-auth] Logout initiated');
-    
-    currentUser = null;
-    userRole = null;
-    
-    // Phase 3: Reset authReady flag to allow login view to show
-    authReady = false;
-    
-    // Clear only auth-related sessionStorage keys
-    sessionStorage.removeItem('rc_user_code');
-    sessionStorage.removeItem('rc_user_role');
-    clearAuth(); // Clear 24-hour auth handoff
-    
-    // Redirect to site root instead of showing in-page login
-    window.location.href = '/';
-  });
+  // Legacy #btnLogout event handler - used by teacher center only
+  const legacyLogoutBtn = qs('#btnLogout');
+  if (legacyLogoutBtn) {
+    legacyLogoutBtn.addEventListener('click', () => {
+      console.log('[portal-auth] Logout initiated from legacy button (teacher)');
+      
+      currentUser = null;
+      userRole = null;
+      
+      // Phase 3: Reset authReady flag to allow login view to show
+      authReady = false;
+      
+      // Clear only auth-related sessionStorage keys
+      sessionStorage.removeItem('rc_user_code');
+      sessionStorage.removeItem('rc_user_role');
+      clearAuth(); // Clear 24-hour auth handoff
+      
+      // Redirect to site root instead of showing in-page login
+      window.location.href = '/';
+    });
+  }
   
   // Enter key handlers
   qs('#loginPassword').addEventListener('keypress', e => {
@@ -667,13 +670,12 @@ import './diagnostics.js';
     const loginView = qs('#loginView');
     const dashboardView = qs('#studentDashboardView');
     const teacherView = qs('#teacherCenterView');
-    const userChip = qs('#userChip');
-    const btnLogout = qs('#btnLogout');
     const loginCode = qs('#loginCode');
     const loginPassword = qs('#loginPassword');
     const teacherPassword = qs('#teacherPassword');
     const loginError = qs('#loginError');
     const portalTopBar = qs('#portalTopBar');
+    const legacyHeader = qs('#legacyHeader');
     
     // Always unhide login view - never bail
     if (loginView) {
@@ -686,10 +688,7 @@ import './diagnostics.js';
     if (dashboardView) dashboardView.classList.add('hidden');
     if (teacherView) teacherView.classList.add('hidden');
     if (portalTopBar) portalTopBar.classList.add('hidden');
-    
-    // Hide user chip and logout button
-    if (userChip) userChip.classList.add('hidden');
-    if (btnLogout) btnLogout.classList.add('hidden');
+    if (legacyHeader) legacyHeader.style.display = 'none';
     
     // Clear form fields
     if (loginCode) loginCode.value = '';
@@ -732,8 +731,6 @@ import './diagnostics.js';
     const loginView = qs('#loginView');
     const dashboardView = qs('#studentDashboardView');
     const teacherView = qs('#teacherCenterView');
-    const userChip = qs('#userChip');
-    const logoutBtn = qs('#btnLogout');
     
     // 1. Always unhide dashboard and teacher view (order: show first)
     if (dashboardView) {
@@ -748,13 +745,7 @@ import './diagnostics.js';
     if (loginView) loginView.classList.add('hidden');
     if (teacherView) teacherView.classList.add('hidden');
     
-    if (userChip) {
-      userChip.classList.remove('hidden');
-      // Handle PII removal: prefer code if name is missing
-      userChip.textContent = currentUser.name || currentUser.code;
-    }
-    
-    if (logoutBtn) logoutBtn.classList.remove('hidden');
+    // Legacy header (#userChip, #btnLogout) removed - Portal B top bar is the only student logout UI
     
     // Portal B: Show top status bar if enabled (feature-flag controlled widget)
     if (feature.portalTopBar) {
@@ -855,9 +846,20 @@ import './diagnostics.js';
     qs('#loginView').classList.add('hidden');
     qs('#studentDashboardView').classList.add('hidden');
     qs('#teacherCenterView').classList.remove('hidden');
-    qs('#userChip').classList.remove('hidden');
-    qs('#userChip').textContent = 'Teacher';
-    qs('#btnLogout').classList.remove('hidden');
+    
+    // Show legacy header for teacher center
+    const legacyHeader = qs('#legacyHeader');
+    const userChip = qs('#userChip');
+    const btnLogout = qs('#btnLogout');
+    
+    if (legacyHeader) legacyHeader.style.display = 'block';
+    if (userChip) {
+      userChip.classList.remove('hidden');
+      userChip.textContent = 'Teacher';
+    }
+    if (btnLogout) {
+      btnLogout.classList.remove('hidden');
+    }
     
     await loadTeacherAssignments();
   }
