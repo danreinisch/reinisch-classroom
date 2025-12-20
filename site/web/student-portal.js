@@ -1022,10 +1022,12 @@ async function loadStudentGoals() {
       console.error("[student-api] Failed to fetch goal progress:", progressErr);
       progressAvailable = false;
       
-      // Check if this is an "unavailable" response vs a real error
-      const errorMsg = progressErr.message || "";
-      if (errorMsg.includes("unavailable") || errorMsg.includes("Service temporarily unavailable")) {
-        console.log("[student-dashboard] Progress service unavailable, continuing without progress data");
+      // Check if this is an "unavailable" response (schema not present) vs a real error
+      if (progressErr.code === 'SERVICE_UNAVAILABLE') {
+        console.log("[student-dashboard] Progress service unavailable (reason: " + 
+                    (progressErr.reason || 'unknown') + "), continuing without progress data");
+      } else {
+        console.warn("[student-dashboard] Progress fetch failed with error:", progressErr.message);
       }
     }
 

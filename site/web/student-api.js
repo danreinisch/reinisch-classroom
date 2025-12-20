@@ -129,7 +129,10 @@ export async function getStudentGoalProgress(code) {
   
   // Check if service is unavailable (schema not present, etc.)
   if (response.unavailable) {
-    throw new Error('Service temporarily unavailable');
+    const error = new Error('Service temporarily unavailable');
+    error.code = 'SERVICE_UNAVAILABLE';
+    error.reason = response.reason || 'unknown';
+    throw error;
   }
   
   return response.progress || [];
