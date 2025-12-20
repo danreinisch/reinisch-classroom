@@ -151,8 +151,8 @@ Follow these steps when upgrading to a new version:
      ```
 
 5. **Update this documentation**
-   - Update the version number on line 96 of this file
-   - Update the "Current pinned version" note above
+   - Update the version number in the "Vendored Supabase Library" section above
+   - Update the "Current pinned version" note in this section
 
 6. **Verify in browser console**
    - Serve the site locally or deploy to preview environment
