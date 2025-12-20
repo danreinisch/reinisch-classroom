@@ -1713,26 +1713,13 @@ qs("#btnRefreshAssignments").addEventListener("click", loadTeacherAssignments);
 
 /**
  * Auto-login helper: attempts to detect student authentication from multiple sources
+ * PR 265: Session-only authentication - disabled localStorage.rc_auth checking
  * @returns {{code: string, name: string}|null} Object with student code if found, null otherwise
  */
 function getStudentAutoAuth() {
-  try {
-    // Method 1: Check auth-handoff (with expiry validation)
-    const auth = readAuth();
-    if (auth && auth.role === "student" && auth.code) {
-      console.log("[student-portal] Found valid auth from hub:", auth.code);
-      if (DEBUG_MODE)
-        console.log("[student-portal] Auth details:", {
-          code: auth.code,
-          name: auth.name,
-          expiresAt: auth.expiresAt,
-        });
-      return { code: auth.code, name: auth.name };
-    }
-  } catch (err) {
-    console.warn("[student-portal] Failed to read auth-handoff:", err);
-  }
-
+  // PR 265: Removed Method 1 (readAuth from localStorage) - session-only auth now
+  // Students must re-login after closing tab/browser
+  
   try {
     // Method 2: Check sessionStorage rc_user_code (fallback for existing sessions)
     const sessionCode = sessionStorage.getItem("rc_user_code");

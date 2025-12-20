@@ -176,27 +176,31 @@ The Classroom Hub displays classes by their title (classes.name) instead of inte
 - Zero-enrollment duplicates are automatically hidden when another class shares the same normalized title
 - Internal codes are shown as small muted text for reference
 
-### Student Hub 24-Hour Remember-Me
+### Student Portal Session Management (PR 265)
 
-Students who log in from the Classroom Hub are automatically redirected to their Student Portal dashboard:
+Students authenticate through the Student Portal using their code and password:
 
 - **Authentication Flow:**
   1. Student logs in from Hub with code and password
-  2. Hub stores rc_auth in localStorage with 24-hour expiry
-  3. Hub redirects to `/student/?auto=1&code=CODE`
-  4. Student Portal detects valid rc_auth and auto-authenticates
-  5. Dashboard is displayed without second password prompt
+  2. Hub redirects to `/student/?auto=1&code=CODE` (deep link handoff)
+  3. Student Portal detects valid deep link and auto-authenticates
+  4. Dashboard is displayed without second password prompt
 
-- **Session Management:**
-  - 24-hour session: Students remain authenticated across page reloads
-  - Manual logout: Click "Logout" button to clear rc_auth and sessionStorage
-  - Auto-expiry: Sessions expire after 24 hours and require re-authentication
-  - Multi-tab sync: Authentication state is synchronized across browser tabs
+- **Session Management (Session-Only):**
+  - **Current session only**: Students remain authenticated within the same browser tab/session
+  - **Manual logout**: Click "Logout" button to clear session
+  - **Tab/browser close**: Requires re-login (no persistent authentication)
+  - **No cross-session resume**: Closing and reopening the browser requires new login
+
+- **Direct Access:**
+  - Students can access `/student/` directly to see the login UI
+  - `/hub/` does not auto-redirect students based on old localStorage tokens
+  - Deep-link auto-login (`?auto=1&code=...`) still works for hub→student handoff
 
 - **Security Notes:**
-  - Auth tokens are stored in localStorage with expiry timestamps
-  - Expired tokens are automatically cleared on access
-  - Logout clears both rc_auth (24h) and sessionStorage (current session)
+  - Session data stored in sessionStorage (cleared on tab close)
+  - No persistent localStorage tokens for student authentication
+  - Logout clears sessionStorage completely
 
 ---
 

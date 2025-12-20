@@ -3,89 +3,74 @@ import { test, expect } from '@playwright/test';
 /**
  * Hub Student Redirect Test
  * 
- * Validates PR E requirement:
- * Students with valid remembered auth should never land on /hub/
- * They should be immediately redirected to /student/
+ * PR 265: Session-only student authentication
+ * - Students are NO LONGER auto-redirected from /hub/ to /student/
+ * - localStorage.rc_auth no longer triggers redirect
+ * - sessionStorage no longer triggers redirect
+ * - /hub/ is accessible to all users (students, teachers, etc.)
  * 
  * Validates PR 261 requirements:
- * Teachers can bypass redirect with ?teacher=1 or active teacher session
  * Student portal has escape hatch links to /hub/?teacher=1
  * 
  * Test Coverage:
- * 1. Valid student auth redirects from /hub/ to /student/
- * 2. Valid student auth + ?teacher=1 allows hub access (PR 261)
- * 3. Valid student auth + teacher session allows hub access (PR 261)
- * 4. Expired student auth allows hub access (clears auth)
- * 5. Teacher/substitute auth allows hub access
- * 6. No auth allows hub access
- * 7. Invalid JSON auth allows hub access (clears auth)
- * 8. Hub teacher UI not visible after student redirect
- * 9. Escape hatch link visible in student portal login view (PR 261)
- * 10. Escape hatch link visible in student portal top bar (PR 261)
- * 11. Valid student auth + /student/ shows dashboard (PR 261)
+ * 1. No auto-redirect from /hub/ (even with student session)
+ * 2. Old localStorage auth does NOT redirect (PR 265)
+ * 3. Teacher/substitute auth allows hub access
+ * 4. No auth allows hub access
+ * 5. Escape hatch link visible in student portal login view (PR 261)
+ * 6. Escape hatch link visible in student portal top bar (PR 261)
  */
 
 const HUB_PATH = '/hub/';
 const STUDENT_PORTAL_PATH = '/student/';
 
 test.describe('Hub Student Redirect', () => {
-  test('should redirect to /student/ with valid student auth', async ({ context, page }) => {
-    // Set up valid student auth in localStorage before navigation
+  test('should NOT auto-redirect from /hub/ even with student session (PR 265)', async ({ context, page }) => {
+    // PR 265: Set up active student session in sessionStorage
+    // Even with a session, /hub/ should be accessible
+    await context.addInitScript(() => {
+      sessionStorage.setItem('rc_user_role', 'student');
+      sessionStorage.setItem('rc_user_code', 'S001');
+    });
+    
+    // Navigate to hub
+    await page.goto(HUB_PATH);
+    
+    // Should stay on hub (no auto-redirect)
+    await page.waitForLoadState('networkidle');
+    
+    // Verify we're still on hub
+    expect(page.url()).toContain('/hub/');
+    expect(page.url()).not.toContain('/student/');
+  });
+
+  test('should NOT redirect with old localStorage auth only (PR 265)', async ({ context, page }) => {
+    // PR 265: Set up valid student auth in localStorage (but NOT in sessionStorage)
+    // This simulates the old 24-hour remember-me behavior that should no longer work
     await context.addInitScript(() => {
       const auth = {
         role: 'student',
         code: 'S001',
         name: 'Test Student',
         issuedAt: Date.now(),
-        expiresAt: Date.now() + 24 * 60 * 60 * 1000, // 24 hours from now
+        expiresAt: Date.now() + 24 * 60 * 60 * 1000,
       };
       localStorage.setItem('rc_auth', JSON.stringify(auth));
-    });
-    
-    // Mock student portal endpoints to prevent errors
-    await page.route('**/.netlify/functions/students*', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([
-          { code: 'S001', name: 'Test Student', active: true }
-        ])
-      });
-    });
-    
-    await page.route('**/.netlify/functions/assignment-instances*', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([])
-      });
-    });
-    
-    await page.route('**/.netlify/functions/goals*', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([])
-      });
+      // Intentionally NOT setting sessionStorage
     });
     
     // Navigate to hub
     await page.goto(HUB_PATH);
     
-    // Should redirect to student portal
-    await page.waitForURL(`**${STUDENT_PORTAL_PATH}`, { timeout: 5000 });
+    // Should stay on hub (no redirect from localStorage alone)
+    await page.waitForLoadState('networkidle');
     
-    // Verify we're on student portal
-    expect(page.url()).toContain('/student/');
-    expect(page.url()).not.toContain('/hub/');
-    
-    // Verify redirect flag was set
-    const flagWasSet = await page.evaluate(() => window.__redirectingToStudentPortal === true);
-    expect(flagWasSet).toBe(true);
+    // Verify we're still on hub
+    expect(page.url()).toContain('/hub/');
   });
 
-  test('should continue to hub with expired student auth', async ({ context, page }) => {
-    // Set up EXPIRED student auth in localStorage
+  test('should continue to hub with expired student auth in localStorage', async ({ context, page }) => {
+    // PR 265: Expired auth in localStorage should not affect behavior (no longer checked)
     await context.addInitScript(() => {
       const auth = {
         role: 'student',
@@ -100,15 +85,11 @@ test.describe('Hub Student Redirect', () => {
     // Navigate to hub
     await page.goto(HUB_PATH);
     
-    // Should stay on hub (not redirect)
+    // Should stay on hub (localStorage auth not checked for redirect)
     await page.waitForLoadState('networkidle');
     
     // Verify we're still on hub
     expect(page.url()).toContain('/hub/');
-    
-    // Verify auth was cleared
-    const authAfter = await page.evaluate(() => localStorage.getItem('rc_auth'));
-    expect(authAfter).toBeNull();
   });
 
   test('should continue to hub with teacher auth', async ({ context, page }) => {
@@ -177,7 +158,7 @@ test.describe('Hub Student Redirect', () => {
   });
 
   test('should continue to hub with invalid JSON auth', async ({ context, page }) => {
-    // Set up INVALID JSON in localStorage
+    // PR 265: Invalid JSON in localStorage no longer affects behavior (not checked)
     await context.addInitScript(() => {
       localStorage.setItem('rc_auth', 'not valid json {]');
     });
@@ -190,14 +171,10 @@ test.describe('Hub Student Redirect', () => {
     
     // Verify we're still on hub
     expect(page.url()).toContain('/hub/');
-    
-    // Verify invalid auth was cleared
-    const authAfter = await page.evaluate(() => localStorage.getItem('rc_auth'));
-    expect(authAfter).toBeNull();
   });
 
   test('should continue to hub with auth missing required fields', async ({ context, page }) => {
-    // Set up auth without required fields
+    // PR 265: Auth structure in localStorage no longer affects behavior (not checked)
     await context.addInitScript(() => {
       const auth = {
         // Missing role and code
@@ -215,14 +192,10 @@ test.describe('Hub Student Redirect', () => {
     
     // Verify we're still on hub
     expect(page.url()).toContain('/hub/');
-    
-    // Verify invalid auth was cleared
-    const authAfter = await page.evaluate(() => localStorage.getItem('rc_auth'));
-    expect(authAfter).toBeNull();
   });
 
   test('should continue to hub with auth missing expiresAt', async ({ context, page }) => {
-    // Set up auth without expiresAt field
+    // PR 265: Auth structure in localStorage no longer affects behavior (not checked)
     await context.addInitScript(() => {
       const auth = {
         role: 'student',
@@ -241,139 +214,19 @@ test.describe('Hub Student Redirect', () => {
     
     // Verify we're still on hub
     expect(page.url()).toContain('/hub/');
-    
-    // Verify invalid auth was cleared
-    const authAfter = await page.evaluate(() => localStorage.getItem('rc_auth'));
-    expect(authAfter).toBeNull();
   });
 
-  test('should not show hub teacher UI elements after student redirect', async ({ context, page }) => {
-    // Set up valid student auth in localStorage
-    await context.addInitScript(() => {
-      const auth = {
-        role: 'student',
-        code: 'S001',
-        name: 'Test Student',
-        issuedAt: Date.now(),
-        expiresAt: Date.now() + 24 * 60 * 60 * 1000,
-      };
-      localStorage.setItem('rc_auth', JSON.stringify(auth));
-    });
-    
-    // Mock student portal endpoints
-    await page.route('**/.netlify/functions/students*', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([
-          { code: 'S001', name: 'Test Student', active: true }
-        ])
-      });
-    });
-    
-    await page.route('**/.netlify/functions/assignment-instances*', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([])
-      });
-    });
-    
-    await page.route('**/.netlify/functions/goals*', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([])
-      });
-    });
-    
-    // Navigate to hub
-    await page.goto(HUB_PATH);
-    
-    // Wait for redirect to student portal
-    await page.waitForURL(`**${STUDENT_PORTAL_PATH}`, { timeout: 5000 });
-    
-    // Verify we're on student portal
-    expect(page.url()).toContain('/student/');
-    
-    // Verify hub-specific UI elements are NOT present
-    // These are teacher-only elements that should never appear in student portal
-    const teacherCenterBtn = page.locator('#btnTeacher');
-    await expect(teacherCenterBtn).not.toBeVisible();
-    
-    // Verify student dashboard is visible instead
-    await page.waitForLoadState('networkidle');
-    const studentDashboard = page.locator('#studentDashboardView');
-    // Note: Dashboard may be hidden initially during login, so we just check URL
-    // The important part is we're NOT on hub
-  });
+  // PR 265: This test is no longer relevant - /hub/ no longer auto-redirects
+  // Students can access /hub/ directly
 
-  test('should handle redirect without polluting browser history', async ({ context, page }) => {
-    // Set up valid student auth
-    await context.addInitScript(() => {
-      const auth = {
-        role: 'student',
-        code: 'S001',
-        name: 'Test Student',
-        issuedAt: Date.now(),
-        expiresAt: Date.now() + 24 * 60 * 60 * 1000,
-      };
-      localStorage.setItem('rc_auth', JSON.stringify(auth));
-    });
-    
-    // Mock student portal endpoints
-    await page.route('**/.netlify/functions/students*', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([])
-      });
-    });
-    
-    await page.route('**/.netlify/functions/assignment-instances*', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([])
-      });
-    });
-    
-    await page.route('**/.netlify/functions/goals*', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([])
-      });
-    });
-    
-    // First navigate to a different page
-    await page.goto('/');
-    await page.waitForLoadState('networkidle');
-    
-    // Then navigate to hub (should redirect to student portal)
-    await page.goto(HUB_PATH);
-    await page.waitForURL(`**${STUDENT_PORTAL_PATH}`, { timeout: 5000 });
-    
-    // Try to go back - should go back to home page, not hub
-    await page.goBack();
-    await page.waitForLoadState('networkidle');
-    
-    // Should be back at home, NOT at hub
-    expect(page.url()).not.toContain('/hub/');
-    expect(page.url()).toContain('/');
-  });
+  // PR 265: This test is no longer relevant - /hub/ no longer auto-redirects
+  // Students can access /hub/ directly
 
-  test('should only redirect from /hub/ not from /student/', async ({ context, page }) => {
-    // Set up valid student auth
+  test('should only access /student/ directly (no redirect from /hub/)', async ({ context, page }) => {
+    // PR 265: Set up active student session in sessionStorage
     await context.addInitScript(() => {
-      const auth = {
-        role: 'student',
-        code: 'S001',
-        name: 'Test Student',
-        issuedAt: Date.now(),
-        expiresAt: Date.now() + 24 * 60 * 60 * 1000,
-      };
-      localStorage.setItem('rc_auth', JSON.stringify(auth));
+      sessionStorage.setItem('rc_user_role', 'student');
+      sessionStorage.setItem('rc_user_code', 'S001');
     });
     
     // Mock student portal endpoints
@@ -415,16 +268,10 @@ test.describe('Hub Student Redirect', () => {
 
   // PR 261: Test teacher override query parameter
   test('should not redirect with ?teacher=1 query parameter', async ({ context, page }) => {
-    // Set up valid student auth in localStorage
+    // PR 265: Set up active student session in sessionStorage
     await context.addInitScript(() => {
-      const auth = {
-        role: 'student',
-        code: 'S001',
-        name: 'Test Student',
-        issuedAt: Date.now(),
-        expiresAt: Date.now() + 24 * 60 * 60 * 1000,
-      };
-      localStorage.setItem('rc_auth', JSON.stringify(auth));
+      sessionStorage.setItem('rc_user_role', 'student');
+      sessionStorage.setItem('rc_user_code', 'S001');
     });
     
     // Navigate to hub with teacher override parameter
@@ -436,31 +283,14 @@ test.describe('Hub Student Redirect', () => {
     // Verify we're still on hub
     expect(page.url()).toContain('/hub/');
     expect(page.url()).toContain('teacher=1');
-    
-    // Verify auth was NOT cleared (teacher needs access)
-    const authAfter = await page.evaluate(() => {
-      const authStr = localStorage.getItem('rc_auth');
-      return authStr ? JSON.parse(authStr) : null;
-    });
-    expect(authAfter).not.toBeNull();
-    expect(authAfter.role).toBe('student');
   });
 
   // PR 261: Test teacher session bypass
   test('should not redirect with active teacher session', async ({ context, page }) => {
-    // Set up valid student auth in localStorage AND teacher session in sessionStorage
+    // PR 265: Set up teacher session in sessionStorage (student session also present for testing bypass)
     await context.addInitScript(() => {
-      const auth = {
-        role: 'student',
-        code: 'S001',
-        name: 'Test Student',
-        issuedAt: Date.now(),
-        expiresAt: Date.now() + 24 * 60 * 60 * 1000,
-      };
-      localStorage.setItem('rc_auth', JSON.stringify(auth));
-      
-      // Teacher is currently logged in
       sessionStorage.setItem('rc_user_role', 'teacher');
+      sessionStorage.setItem('rc_user_code', 'S001');  // student code but teacher role
     });
     
     // Navigate to hub
@@ -471,14 +301,6 @@ test.describe('Hub Student Redirect', () => {
     
     // Verify we're still on hub
     expect(page.url()).toContain('/hub/');
-    
-    // Verify student auth was NOT cleared (just bypassed)
-    const authAfter = await page.evaluate(() => {
-      const authStr = localStorage.getItem('rc_auth');
-      return authStr ? JSON.parse(authStr) : null;
-    });
-    expect(authAfter).not.toBeNull();
-    expect(authAfter.role).toBe('student');
   });
 
   // PR 261: Test escape hatch link in login view
@@ -498,16 +320,10 @@ test.describe('Hub Student Redirect', () => {
 
   // PR 261: Test escape hatch link in top bar
   test('should show escape hatch link in student portal top bar when logged in', async ({ context, page }) => {
-    // Set up valid student auth for auto-login
+    // PR 265: Set up session in sessionStorage (simulate active session)
     await context.addInitScript(() => {
-      const auth = {
-        role: 'student',
-        code: 'S001',
-        name: 'Test Student',
-        issuedAt: Date.now(),
-        expiresAt: Date.now() + 24 * 60 * 60 * 1000,
-      };
-      localStorage.setItem('rc_auth', JSON.stringify(auth));
+      sessionStorage.setItem('rc_user_role', 'student');
+      sessionStorage.setItem('rc_user_code', 'S001');
     });
     
     // Mock student portal endpoints
@@ -567,19 +383,8 @@ test.describe('Hub Student Redirect', () => {
   });
 
   // PR 261: Test that clicking escape hatch bypasses redirect
-  test('should allow hub access via escape hatch link', async ({ context, page }) => {
-    // Set up valid student auth
-    await context.addInitScript(() => {
-      const auth = {
-        role: 'student',
-        code: 'S001',
-        name: 'Test Student',
-        issuedAt: Date.now(),
-        expiresAt: Date.now() + 24 * 60 * 60 * 1000,
-      };
-      localStorage.setItem('rc_auth', JSON.stringify(auth));
-    });
-    
+  test('should allow hub access via escape hatch link', async ({ page }) => {
+    // PR 265: No setup needed - just navigate and test escape hatch link
     // Navigate to student portal
     await page.goto(STUDENT_PORTAL_PATH);
     await page.waitForLoadState('networkidle');
@@ -597,17 +402,11 @@ test.describe('Hub Student Redirect', () => {
   });
 
   // PR 261: Verify student dashboard routing
-  test('should show student dashboard when navigating to /student/ with valid auth', async ({ context, page }) => {
-    // Set up valid student auth
+  test('should show student dashboard when navigating to /student/ with sessionStorage', async ({ context, page }) => {
+    // PR 265: Set up active session in sessionStorage
     await context.addInitScript(() => {
-      const auth = {
-        role: 'student',
-        code: 'S001',
-        name: 'Test Student',
-        issuedAt: Date.now(),
-        expiresAt: Date.now() + 24 * 60 * 60 * 1000,
-      };
-      localStorage.setItem('rc_auth', JSON.stringify(auth));
+      sessionStorage.setItem('rc_user_role', 'student');
+      sessionStorage.setItem('rc_user_code', 'S001');
     });
     
     // Mock student portal endpoints
