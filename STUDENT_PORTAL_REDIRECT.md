@@ -31,6 +31,7 @@ The redirect is implemented in `/site/web/student-portal-redirect.js`, which:
 1. Checks for valid auto-login parameters (`auto=1` and `code`)
 2. Checks for valid remembered authentication in localStorage
 3. Redirects to `/hub/` if neither condition is met
+4. Hides `#loginView` immediately when redirecting to prevent UI flash (CSP-compliant)
 
 ### Failsafe Adjustments
 
