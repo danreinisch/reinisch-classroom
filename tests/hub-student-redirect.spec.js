@@ -25,8 +25,8 @@ import { test, expect } from '@playwright/test';
  * 11. Valid student auth + /student/ shows dashboard (PR 261)
  */
 
-const HUB_PATH = '/site/hub/';
-const STUDENT_PORTAL_PATH = '/site/student/';
+const HUB_PATH = '/hub/';
+const STUDENT_PORTAL_PATH = '/student/';
 
 test.describe('Hub Student Redirect', () => {
   test('should redirect to /student/ with valid student auth', async ({ context, page }) => {
