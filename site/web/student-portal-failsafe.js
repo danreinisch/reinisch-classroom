@@ -19,6 +19,14 @@
   }
   
   setTimeout(() => {
+    // Skip failsafe if redirect is happening
+    if (window.__redirectingToHub === true) {
+      if (DEBUG_MODE) {
+        console.log('[HOTFIX][failsafe] Skipping - redirect to hub in progress');
+      }
+      return;
+    }
+    
     // Only fire if window.authReady is not set
     if (!window.authReady) {
       const loginView = document.getElementById('loginView');

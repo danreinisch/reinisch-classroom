@@ -806,6 +806,10 @@
 </head>
 <body>
 
+<!-- HOTFIX: Early redirect for direct student portal access without auto-login -->
+<!-- Redirects to hub unless valid auto-login parameters are present -->
+<script src="../web/student-portal-redirect.js"></script>
+
 <!-- HOTFIX: Early failsafe timer to guarantee login view visibility -->
 <!-- TODO: Fold this into existing diagnostics work after hotfix is stable -->
 <!-- Guardrails Stage 3B: Externalized to student-portal-failsafe.js -->
