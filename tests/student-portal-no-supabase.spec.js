@@ -31,7 +31,7 @@ function setupSupabaseGuard(page) {
         url,
         method: request.method(),
         timestamp: Date.now(),
-        initiator: request.frame().url()
+        initiator: request.frame()?.url() || 'unknown'
       });
     }
   });

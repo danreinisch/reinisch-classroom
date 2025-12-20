@@ -1673,11 +1673,12 @@ async function findStudentByCode(code) {
 
             // PR C: Populate studentListCache directly from roster response (in-memory only)
             // This avoids calling db.upsertStudent() which could trigger browser → Supabase writes
+            // Support both `code` and `student_code` fields for backward compatibility with different roster formats
             studentListCache = data.students.map(student => ({
               code: student.code,
               name: student.name || student.code,
               class_id: student.class_id || null,
-              student_code: student.student_code || student.code, // Support both field names
+              student_code: student.student_code || student.code, // Ensure both field names are available
             }));
 
             console.log(`[student-portal] Cached ${studentListCache.length} students in memory`);
