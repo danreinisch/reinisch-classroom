@@ -12,50 +12,11 @@
   
   console.log('[student-portal-redirect] Checking access method');
   
-  try {
-    // Parse URL parameters
-    const urlParams = new URLSearchParams(window.location.search);
-    const auto = urlParams.get('auto');
-    const code = urlParams.get('code');
-    
-    // Check if this is a valid auto-login deep link
-    const hasValidAutoLogin = auto === '1' && code && code.trim().length > 0;
-    
-    if (hasValidAutoLogin) {
-      // Valid auto-login parameters present - allow access
-      console.log('[student-portal-redirect] Valid auto-login detected, proceeding to portal');
-      return;
-    }
-    
-    // Check if user has valid remembered auth
-    try {
-      const authStr = localStorage.getItem('rc_auth');
-      if (authStr) {
-        const auth = JSON.parse(authStr);
-        const now = Date.now();
-        
-        // Check if auth is valid, not expired, and for a student
-        if (auth && 
-            auth.role === 'student' && 
-            auth.code && 
-            auth.expiresAt && 
-            typeof auth.expiresAt === 'number' && 
-            now < auth.expiresAt) {
-          console.log('[student-portal-redirect] Valid remembered auth found, proceeding to portal');
-          return;
-        }
-      }
-    } catch (e) {
-      console.warn('[student-portal-redirect] Failed to check remembered auth:', e);
-    }
-    
-    // No valid auth method - show redirect message and redirect to hub
-    console.log('[student-portal-redirect] No valid auto-login or remembered auth, redirecting to hub');
-    
-    // Set flag to prevent failsafe from showing login view during redirect
+  // Helper function to inject redirect message styles and element
+  function showRedirectMessage() {
     window.__redirectingToHub = true;
     
-    // Inject redirect message and hide login view immediately (before DOM loads)
+    // Inject redirect message and hide login view immediately
     const style = document.createElement('style');
     style.textContent = `
       body { margin: 0; padding: 0; }
@@ -94,8 +55,71 @@
         document.body.appendChild(redirectDiv);
       });
     }
+  }
+  
+  try {
+    // Parse URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const auto = urlParams.get('auto');
+    const code = urlParams.get('code');
     
-    // Perform redirect immediately
+    // Check if this is a valid auto-login deep link
+    // Note: This validation logic is intentionally duplicated in the edge function
+    // (student-entry-redirect.js) for defense in depth - edge function handles
+    // server-side, this handles client-side fallback
+    const hasValidAutoLogin = auto === '1' && code && code.trim().length > 0;
+    
+    if (hasValidAutoLogin) {
+      // Valid auto-login parameters present - hide login view and allow access
+      console.log('[student-portal-redirect] Valid auto-login detected, hiding login view');
+      
+      // Hide login view immediately to prevent flash
+      const style = document.createElement('style');
+      style.id = 'deep-link-hide-login';
+      style.textContent = '#loginView { display: none !important; }';
+      document.head.appendChild(style);
+      
+      // Set flag to indicate deep-link auto-login is in progress
+      window.__deepLinkAutoLogin = true;
+      
+      return;
+    }
+    
+    // Check if auto=1 is present but code is missing or empty (invalid deep link)
+    // This is the inverse of hasValidAutoLogin check - validates same constraint
+    if (auto === '1' && (!code || code.trim().length === 0)) {
+      console.log('[student-portal-redirect] Invalid auto-login detected (missing or empty code), redirecting to hub');
+      showRedirectMessage();
+      window.location.replace(HUB_PATH);
+      return;
+    }
+    
+    // Check if user has valid remembered auth
+    try {
+      const authStr = localStorage.getItem('rc_auth');
+      if (authStr) {
+        const auth = JSON.parse(authStr);
+        const now = Date.now();
+        
+        // Check if auth is valid, not expired, and for a student
+        if (auth && 
+            auth.role === 'student' && 
+            auth.code && 
+            auth.expiresAt && 
+            typeof auth.expiresAt === 'number' && 
+            now < auth.expiresAt) {
+          console.log('[student-portal-redirect] Valid remembered auth found, proceeding to portal');
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('[student-portal-redirect] Failed to check remembered auth:', e);
+    }
+    
+    // No valid auth method - show redirect message and redirect to hub
+    console.log('[student-portal-redirect] No valid auto-login or remembered auth, redirecting to hub');
+    
+    showRedirectMessage();
     window.location.replace(HUB_PATH);
     
   } catch (err) {

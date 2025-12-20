@@ -27,6 +27,14 @@
       return;
     }
     
+    // Skip failsafe if deep-link auto-login is in progress
+    if (window.__deepLinkAutoLogin === true) {
+      if (DEBUG_MODE) {
+        console.log('[HOTFIX][failsafe] Skipping - deep-link auto-login in progress');
+      }
+      return;
+    }
+    
     // Only fire if window.authReady is not set
     if (!window.authReady) {
       const loginView = document.getElementById('loginView');

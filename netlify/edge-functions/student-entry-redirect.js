@@ -27,7 +27,22 @@ export default async (request, context) => {
   const auto = url.searchParams.get('auto');
   const code = url.searchParams.get('code');
 
+  // If auto=1 is present but code is missing or empty, redirect to hub
+  // This prevents invalid deep link attempts from showing the login UI
+  // Check invalid case first to fail fast
+  if (auto === '1' && (!code || code.trim().length === 0)) {
+    // Invalid auto-login parameters - redirect to hub
+    return new Response(null, {
+      status: 302,
+      headers: {
+        Location: '/hub/',
+        'Cache-Control': 'no-store, no-cache, must-revalidate'
+      }
+    });
+  }
+
   // Allow through if auto=1 AND code is present and non-empty
+  // This is the inverse of the invalid check above - both are needed for clarity
   const hasValidAutoLogin = auto === '1' && code && code.trim().length > 0;
 
   if (hasValidAutoLogin) {

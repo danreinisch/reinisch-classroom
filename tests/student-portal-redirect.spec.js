@@ -93,6 +93,28 @@ test.describe('Student Portal Redirect', () => {
     expect(page.url()).toContain('/hub/');
   });
 
+  test('should redirect when auto=1 but code is empty', async ({ page }) => {
+    // Navigate with auto=1 and empty code parameter
+    await page.goto(buildStudentPortalURL({ auto: '1', code: '' }));
+    
+    // Should redirect to hub
+    await page.waitForURL(`**${HUB_PATH}`, { timeout: 3000 });
+    
+    // Verify we're on the hub page
+    expect(page.url()).toContain('/hub/');
+  });
+
+  test('should redirect when auto=1 but code is whitespace', async ({ page }) => {
+    // Navigate with auto=1 and whitespace-only code parameter
+    await page.goto(buildStudentPortalURL({ auto: '1', code: '   ' }));
+    
+    // Should redirect to hub
+    await page.waitForURL(`**${HUB_PATH}`, { timeout: 3000 });
+    
+    // Verify we're on the hub page
+    expect(page.url()).toContain('/hub/');
+  });
+
   test('should redirect when code is present but auto is missing', async ({ page }) => {
     // Navigate with code but no auto=1 parameter
     await page.goto(buildStudentPortalURL({ code: 'S001' }));
