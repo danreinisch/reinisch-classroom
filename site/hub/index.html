@@ -1159,6 +1159,60 @@
       </div>
     </div>
 
+    <!-- Teacher Session Resume Banner (shown when prior teacher session is detected) -->
+    <div
+      id="teacherResumeBanner"
+      style="
+        display: none;
+        background: linear-gradient(180deg, rgba(34, 197, 94, 0.9), rgba(22, 163, 74, 0.9));
+        color: #fff;
+        padding: 14px 20px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        position: relative;
+        z-index: 50;
+      "
+    >
+      <div style="max-width: 1700px; margin: 0 auto; display: flex; align-items: center; gap: 14px">
+        <span style="font-size: 22px">👋</span>
+        <div style="flex: 1">
+          <strong style="display: block; margin-bottom: 4px; font-size: 15px">Resume Teacher Session?</strong>
+          <span style="font-size: 13px; opacity: 0.95">
+            A prior teacher session was detected. Would you like to resume or stay signed out?
+          </span>
+        </div>
+        <button
+          id="btnResumeTeacher"
+          style="
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #065f46;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 800;
+            font-size: 14px;
+          "
+        >
+          Resume
+        </button>
+        <button
+          id="btnStaySignedOut"
+          style="
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 800;
+            font-size: 14px;
+          "
+        >
+          Stay signed out
+        </button>
+      </div>
+    </div>
+
     <section id="view-teacher" class="layout" style="display: none">
       <aside class="iconrail card">
         <button class="active" data-area="overview" title="Overview" aria-label="Overview">
@@ -3895,6 +3949,9 @@
       }
 
       // Check teacher session on page load
+      // Modified for PR 267: Store session state instead of auto-entering
+      let pendingTeacherSession = null;
+      
       async function checkTeacherSession() {
         try {
           // IMPORTANT: Use same-origin relative URL (/.netlify/functions/...) to ensure
@@ -3909,22 +3966,19 @@
           if (response.ok) {
             const data = await response.json();
             if (data.ok && data.role === "teacher") {
-              // Valid session exists - restore teacher view
-              setAuth({ role: "teacher", username: data.username });
-              const chip = qs("#currentUserChip");
-              if (chip) chip.textContent = "Teacher";
-              showTeacher();
-
-              // Restore last area/tab
-              setTimeout(() => {
-                const lastArea = localStorage.getItem("rc_last_area");
-                if (lastArea) {
-                  const iconRailBtn = qs(`.iconrail button[data-area="${lastArea}"]`);
-                  if (iconRailBtn && typeof window.renderSubmenu === "function") {
-                    iconRailBtn.click();
-                  }
-                }
-              }, 100);
+              // Valid session exists - store for resume banner instead of auto-entering
+              pendingTeacherSession = {
+                role: "teacher",
+                username: data.username
+              };
+              
+              // Show resume banner instead of auto-entering teacher center
+              const banner = qs("#teacherResumeBanner");
+              if (banner) {
+                banner.style.display = "block";
+              }
+              
+              console.log("[Teacher Auth] Prior session detected - showing resume banner");
             }
           } else if (response.status === 401) {
             // 401 is expected when no active teacher session exists - treat as normal unauthenticated state
@@ -3938,15 +3992,79 @@
           console.debug("[Teacher Auth] Session check failed:", err.message);
         }
       }
+      
+      // Resume teacher session from banner
+      function resumeTeacherSession() {
+        if (!pendingTeacherSession) {
+          console.warn("[Teacher Auth] No pending session to resume");
+          return;
+        }
+        
+        // Set auth and show teacher view
+        setAuth(pendingTeacherSession);
+        const chip = qs("#currentUserChip");
+        if (chip) chip.textContent = "Teacher";
+        showTeacher();
+        
+        // Hide banner
+        const banner = qs("#teacherResumeBanner");
+        if (banner) {
+          banner.style.display = "none";
+        }
+        
+        // Restore last area/tab
+        setTimeout(() => {
+          const lastArea = localStorage.getItem("rc_last_area");
+          if (lastArea) {
+            const iconRailBtn = qs(`.iconrail button[data-area="${lastArea}"]`);
+            if (iconRailBtn && typeof window.renderSubmenu === "function") {
+              iconRailBtn.click();
+            }
+          }
+        }, 100);
+        
+        console.log("[Teacher Auth] Session resumed");
+      }
+      
+      // Stay signed out - clear all state and hide banner
+      function staySignedOut() {
+        // Clear pending session
+        pendingTeacherSession = null;
+        
+        // Clear all auth/session state
+        if (typeof window.clearAllAuthState === 'function') {
+          window.clearAllAuthState();
+        } else {
+          console.warn("[Teacher Auth] clearAllAuthState not available, using clearAuth");
+          if (typeof clearAuth === 'function') {
+            clearAuth();
+          }
+        }
+        
+        // Hide banner
+        const banner = qs("#teacherResumeBanner");
+        if (banner) {
+          banner.style.display = "none";
+        }
+        
+        console.log("[Teacher Auth] Stayed signed out, all state cleared");
+      }
 
       on("#btnTeacher", "click", async () => {
-        // Check for existing teacher session before showing login modal
-        await checkTeacherSession();
-
+        // If there's a pending session from the banner, show the banner again
+        if (pendingTeacherSession) {
+          const banner = qs("#teacherResumeBanner");
+          if (banner) {
+            banner.style.display = "block";
+          }
+          return;
+        }
+        
         // Only show modal if not already authenticated as teacher
         const currentAuth = getAuth();
         if (currentAuth && currentAuth.role === "teacher") {
-          // Already authenticated - session was restored
+          // Already authenticated - show teacher view
+          showTeacher();
           return;
         }
 
@@ -3960,6 +4078,15 @@
         const modal = qs("#teachModal");
         if (modal) modal.classList.remove("show");
         isFromSignInModal = false; // Reset flag
+      });
+      
+      // Teacher Resume Banner handlers
+      on("#btnResumeTeacher", "click", () => {
+        resumeTeacherSession();
+      });
+      
+      on("#btnStaySignedOut", "click", () => {
+        staySignedOut();
       });
 
       // Always attach login handler, even if modules fail
@@ -4060,7 +4187,12 @@
       });
 
       // Initialize: Check auth and show sign-in modal if needed
-      // Teacher session check is now deferred until user clicks Teacher button
+      // Check for prior teacher session on page load (PR 267)
+      // Shows resume banner instead of auto-entering teacher center
+      checkTeacherSession().catch((err) => {
+        console.debug(LOG_PREFIX, "Teacher session check failed:", err);
+      });
+      
       checkAndShowSignIn();
 
       // Run production asset self-check
