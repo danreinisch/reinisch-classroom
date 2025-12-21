@@ -1482,7 +1482,8 @@
                 >Type
                 <select id="aType">
                   <option value="html">HTML Package</option>
-                  <option value="google_form">Google Form</option>
+                  <option value="txt_quiz">TXT Quick Quiz</option>
+                  <option value="google_form" disabled>Google Form (Coming Soon)</option>
                 </select>
               </label>
             </div>
@@ -1528,9 +1529,25 @@
                   >ZIP File <span style="color: #f87171">*</span>
                   <input id="aZipFile" type="file" accept=".zip" />
                   <div class="subtle" style="margin-top: 4px">
-                    Upload a .zip file containing assignment.json manifest and HTML files
+                    Upload a .zip file. Can include assignment_manifest.json for per-question mapping.
                   </div>
                 </label>
+                
+                <!-- Optional separate mapping file for HTML packages without manifest in ZIP -->
+                <label style="margin-top:12px">Mapping File (optional)
+                  <select id="htmlMappingFormat">
+                    <option value="">-- No separate mapping --</option>
+                    <option value="txt">TXT (pipe-delimited)</option>
+                    <option value="json">JSON Manifest</option>
+                  </select>
+                </label>
+                
+                <div id="htmlMappingFileUpload" style="margin-top:8px;display:none">
+                  <label>Upload Mapping File
+                    <input id="aHtmlMappingFile" type="file" accept=".txt,.json" />
+                    <div class="subtle" style="margin-top:4px">Upload a separate mapping file if not included in ZIP</div>
+                  </label>
+                </div>
               </div>
 
               <!-- Single HTML File Option -->
@@ -1658,6 +1675,68 @@
                   JSON array of goal codes for progress tracking
                 </div>
               </label>
+            </div>
+            
+            <!-- TXT Quick Quiz Section -->
+            <div id="txtQuizSection" style="margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.02);display:none">
+              <div style="font-weight:800;margin-bottom:8px">📝 TXT Quick Quiz Configuration</div>
+              <div class="subtle" style="margin-bottom:12px">Upload a TXT or JSON mapping file to auto-generate a simple quiz form.</div>
+              
+              <label>Mapping File <span style="color:#f87171">*</span>
+                <select id="txtMappingFormat">
+                  <option value="txt">TXT (pipe-delimited)</option>
+                  <option value="json">JSON Manifest</option>
+                </select>
+              </label>
+              
+              <label style="margin-top:12px">Upload Mapping File <span style="color:#f87171">*</span>
+                <input id="aTxtMappingFile" type="file" accept=".txt,.json" />
+                <div class="subtle" style="margin-top:4px">
+                  TXT format: #ref|points|correct|dese_codes|goal_codes|notes<br>
+                  JSON format: See documentation for schema
+                </div>
+              </label>
+            </div>
+            
+            <!-- Mapping Preview Section (shared across types) -->
+            <div id="mappingPreviewSection" style="margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.02);display:none">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                <div style="font-weight:800">📊 Mapping Preview</div>
+                <button class="btn small" id="btnClearMapping">Clear Mapping</button>
+              </div>
+              
+              <div id="mappingValidationMessages" style="margin-bottom:8px;display:none">
+                <!-- Validation errors and warnings will be displayed here -->
+              </div>
+              
+              <div class="table-wrap" style="max-height:300px;overflow:auto">
+                <table class="table" id="mappingPreviewTable">
+                  <thead>
+                    <tr>
+                      <th>Ref</th>
+                      <th>Type</th>
+                      <th>Points</th>
+                      <th>Correct</th>
+                      <th>DESE Codes</th>
+                      <th>Goal Codes</th>
+                      <th>Weight</th>
+                    </tr>
+                  </thead>
+                  <tbody id="mappingPreviewBody">
+                    <!-- Rows will be populated by JS -->
+                  </tbody>
+                </table>
+              </div>
+              
+              <div id="mappingStats" class="subtle" style="margin-top:8px">
+                <!-- Stats will be populated by JS -->
+              </div>
+            </div>
+            
+            <!-- Version Lock Warning -->
+            <div id="versionLockWarning" style="margin-top:12px;padding:10px;background:rgba(251,191,36,.1);border-radius:8px;border:1px solid rgba(251,191,36,.5);color:#fcd34d;display:none">
+              <div style="font-weight:800;margin-bottom:6px">🔒 Assignment Locked</div>
+              <div class="subtle">This assignment has received student submissions and mapping cannot be edited. Create a new version of this assignment to change question mappings.</div>
             </div>
 
             <div style="display: flex; gap: 10px; margin-top: 12px">
@@ -3287,6 +3366,23 @@
         setFeatureFlag = (name, value) => {
           console.warn(LOG_PREFIX, `setFeatureFlag stub called for: ${name} = ${value} (no-op)`);
         };
+      }
+
+      // Assignment Mapping modules (Phase 1)
+      let parseTxtMapping, parseJsonManifest, validateMapping;
+      try {
+        const mappingParsers = await import(`/web/assignment-mapping-parsers.js?v=${cacheBust}`);
+        parseTxtMapping = mappingParsers.parseTxtMapping;
+        parseJsonManifest = mappingParsers.parseJsonManifest;
+        validateMapping = mappingParsers.validateMapping;
+        console.log(LOG_PREFIX, "Assignment mapping parsers loaded successfully");
+      } catch (err) {
+        console.error(LOG_PREFIX, "Failed to load assignment-mapping-parsers.js:", err);
+        failedModules.push("assignment-mapping-parsers.js");
+        // Provide stub implementations
+        parseTxtMapping = () => ({ format: 'txt', items: [], errors: [{ message: 'Parser not loaded' }], valid: false });
+        parseJsonManifest = () => ({ format: 'json', items: [], errors: [{ message: 'Parser not loaded' }], valid: false });
+        validateMapping = () => ({ valid: false, warnings: [], stats: {} });
       }
 
       // Auth modal extend (optional enhancement)
