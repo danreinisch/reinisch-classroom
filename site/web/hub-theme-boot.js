@@ -7,7 +7,7 @@
 
 (function() {
   const THEME_KEY = 'rc_glass_theme';
-  const currentTheme = localStorage.getItem(THEME_KEY);
+  let currentTheme = localStorage.getItem(THEME_KEY);
   
   // TC-3A: Add init gate to prevent phantom/flash on load
   let initGateComplete = false;
@@ -26,14 +26,15 @@
     
     // Default to emerald theme for first-time users
     if (!currentTheme) {
-      localStorage.setItem(THEME_KEY, 'emerald');
+      currentTheme = 'emerald';
+      localStorage.setItem(THEME_KEY, currentTheme);
     }
     
-    // Only apply glass-bold class if explicitly stored
+    // Only apply glass-bold class if explicitly stored as glass-bold
     if (currentTheme === 'glass-bold') {
       document.body.classList.add('glass-bold');
     }
-    // If emerald or no theme, let Emerald CSS apply naturally
+    // If emerald, normal, or any other theme, let Emerald CSS apply naturally
     
     initChecks.themeApplied = true;
     checkInitGate();
