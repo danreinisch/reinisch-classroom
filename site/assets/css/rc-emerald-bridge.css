@@ -1,0 +1,152 @@
+/* Emerald Hub Bridge Styles
+   Hub-only refinements to keep the UI rectangular, consistent, and glassy without pills. */
+
+[data-rc-app="hub"] {
+  --hub-radius-sm: 8px;
+  --hub-radius-md: 10px;
+  --hub-surface: rgba(18, 28, 42, 0.78);
+  --hub-surface-2: rgba(18, 28, 42, 0.64);
+  --hub-border: rgba(255, 255, 255, 0.12);
+  --hub-border-strong: rgba(255, 255, 255, 0.18);
+  --hub-shadow: 0 14px 42px rgba(0, 0, 0, 0.45);
+}
+
+[data-rc-app="hub"] .hub-tag {
+  padding: 6px 12px;
+  border-radius: var(--hub-radius-sm);
+  border: 1px solid color-mix(in oklab, var(--accent, #22c55e) 35%, transparent);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.1));
+  color: #062513;
+  font-weight: 800;
+  letter-spacing: 0.15px;
+}
+
+[data-rc-app="hub"] .badge {
+  border-radius: var(--hub-radius-sm);
+  border: 1px solid var(--hub-border);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+[data-rc-app="hub"] .btn {
+  border-radius: var(--hub-radius-md);
+  min-height: 42px;
+  letter-spacing: 0.1px;
+  box-shadow: var(--hub-shadow);
+}
+
+[data-rc-app="hub"] .btn.small {
+  min-height: 34px;
+  border-radius: var(--hub-radius-sm);
+  padding-inline: 12px;
+}
+
+[data-rc-app="hub"] .btn.primary {
+  box-shadow: 0 6px 18px rgba(34, 197, 94, 0.28);
+}
+
+[data-rc-app="hub"] input,
+[data-rc-app="hub"] select,
+[data-rc-app="hub"] textarea {
+  min-height: 42px;
+  border-radius: var(--hub-radius-md);
+  background: var(--hub-surface);
+  border: 1px solid var(--hub-border);
+  color: var(--ink, #e6edf3);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+[data-rc-app="hub"] input:focus,
+[data-rc-app="hub"] select:focus,
+[data-rc-app="hub"] textarea:focus {
+  border-color: var(--accent, #22c55e);
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.22);
+}
+
+[data-rc-app="hub"] .card {
+  border-radius: 12px;
+  border: 1px solid var(--hub-border);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent 65%),
+    var(--hub-surface-2);
+  box-shadow: var(--hub-shadow);
+}
+
+[data-rc-app="hub"] .card-header {
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 8px;
+}
+
+[data-rc-app="hub"] .ttab {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+[data-rc-app="hub"] .ttab .card {
+  margin-top: 0;
+}
+
+[data-rc-app="hub"] .table-wrap {
+  border: 1px solid var(--hub-border);
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.58);
+  overflow: hidden;
+}
+
+[data-rc-app="hub"] .table th,
+[data-rc-app="hub"] .table td {
+  padding: 12px 10px;
+}
+
+[data-rc-app="hub"] .table th {
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  font-size: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid var(--hub-border);
+}
+
+[data-rc-app="hub"] .table tbody tr:nth-child(even) td {
+  background: rgba(255, 255, 255, 0.015);
+}
+
+[data-rc-app="hub"] .scroll {
+  border-radius: 10px;
+}
+
+[data-rc-app="hub"] .ttab[data-tab="assignments"] .card,
+[data-rc-app="hub"] .ttab[data-tab="upload"] .card,
+[data-rc-app="hub"] .ttab[data-tab="data"] .card,
+[data-rc-app="hub"] .ttab[data-tab="studentManager"] .card,
+[data-rc-app="hub"] .ttab[data-tab="settings"] .card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+[data-rc-app="hub"] .ttab[data-tab="settings"] label,
+[data-rc-app="hub"] .ttab[data-tab="upload"] label,
+[data-rc-app="hub"] .ttab[data-tab="assignments"] label {
+  display: block;
+  font-weight: 700;
+  color: var(--ink, #e6edf3);
+  margin: 6px 0 2px 0;
+}
+
+[data-rc-app="hub"] .ttab[data-tab="settings"] .subtle,
+[data-rc-app="hub"] .ttab[data-tab="upload"] .subtle,
+[data-rc-app="hub"] .ttab[data-tab="assignments"] .subtle {
+  line-height: 1.6;
+}
+
+[data-rc-app="hub"] .ttab[data-tab="studentManager"] .badge {
+  background: rgba(34, 197, 94, 0.1);
+  border-color: rgba(34, 197, 94, 0.32);
+}
+
+[data-rc-app="hub"] .ttab[data-tab="settings"] .card-header,
+[data-rc-app="hub"] .ttab[data-tab="upload"] .card-header,
+[data-rc-app="hub"] .ttab[data-tab="assignments"] .card-header {
+  align-items: center;
+}
