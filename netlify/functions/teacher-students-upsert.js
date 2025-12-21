@@ -173,9 +173,10 @@ exports.handler = async (event) => {
 
     // Use upsert with resolution=merge-duplicates for idempotency
     // This will update existing records or insert new ones based on the 'code' unique constraint
-    const studentsUrl = `${SUPABASE_URL}/rest/v1/students`;
+    // TC-3.1: Add on_conflict parameter to enable true upsert (fix 409 errors)
+    const studentsUrl = `${SUPABASE_URL}/rest/v1/students?on_conflict=code`;
     
-    console.log(`[teacher-students-upsert] [${requestId}] Upserting students to Supabase`);
+    console.log(`[teacher-students-upsert] [${requestId}] Upserting students to Supabase with on_conflict=code`);
     
     const upsertResponse = await fetch(studentsUrl, {
       method: 'POST',

@@ -488,7 +488,7 @@ const remote = {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
     
-    // TC-3: Use server-backed function to avoid RLS errors
+    // TC-3.1: Use server-backed function to avoid RLS errors
     // Call teacher-students-upsert function with batch of 1 student
     try {
       const response = await fetch('/.netlify/functions/teacher-students-upsert', {
@@ -502,39 +502,50 @@ const remote = {
         })
       });
       
+      // TC-3.1: Get request ID from response headers for error tracking
+      const requestId = response.headers.get('X-Request-Id') || 'unknown';
+      
       if (!response.ok) {
-        // If unauthorized (401), fall back to direct Supabase (for student mode or local)
-        // If service unavailable (503), Supabase not configured, also fall back
-        if (response.status === 401) {
-          console.log('[data-adapter] Teacher function unauthorized, falling back to direct Supabase');
-          const { data, error } = await supabase.from('students').upsert({ code, name, class_id }, { onConflict: 'code' }).select().single();
-          if (error) throw error;
-          return data;
-        }
-        
-        if (response.status === 503) {
-          console.log('[data-adapter] Teacher function unavailable (Supabase not configured), falling back to direct Supabase');
-          const { data, error } = await supabase.from('students').upsert({ code, name, class_id }, { onConflict: 'code' }).select().single();
-          if (error) throw error;
-          return data;
-        }
-        
         const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        throw new Error(errorData.error || `Server error: ${response.status}`);
+        
+        // TC-3.1: Only allow fallback to direct Supabase in local dev environments
+        const isLocalDev = window.location.hostname === 'localhost' || 
+                          window.location.hostname === '127.0.0.1' ||
+                          window.location.origin.includes('netlify.app');
+        
+        if (isLocalDev && (response.status === 401 || response.status === 503)) {
+          console.log('[data-adapter] Local dev: Teacher function unavailable, falling back to direct Supabase');
+          const { data, error } = await supabase.from('students').upsert({ code, name, class_id }, { onConflict: 'code' }).select().single();
+          if (error) throw error;
+          return data;
+        }
+        
+        // TC-3.1: In production, throw clear error with request ID (no fallback)
+        const errorMsg = errorData.error || `Server error: ${response.status}`;
+        throw new Error(`${errorMsg} (Request ID: ${requestId})`);
       }
       
       const result = await response.json();
       if (!result.ok || !result.students || result.students.length === 0) {
-        throw new Error('Failed to upsert student: Empty result');
+        throw new Error(`Failed to upsert student: Empty result (Request ID: ${requestId})`);
       }
       
       return result.students[0];
     } catch (err) {
-      // If network error or other issue, try direct Supabase as fallback
-      console.warn('[data-adapter] Server upsert failed, attempting direct Supabase:', err.message);
-      const { data, error } = await supabase.from('students').upsert({ code, name, class_id }, { onConflict: 'code' }).select().single();
-      if (error) throw error;
-      return data;
+      // TC-3.1: Only allow fallback in local dev (no production fallback to avoid RLS violations)
+      const isLocalDev = window.location.hostname === 'localhost' || 
+                        window.location.hostname === '127.0.0.1' ||
+                        window.location.origin.includes('netlify.app');
+      
+      if (isLocalDev && err.message !== 'supabase-not-configured') {
+        console.warn('[data-adapter] Local dev: Server upsert failed, attempting direct Supabase:', err.message);
+        const { data, error } = await supabase.from('students').upsert({ code, name, class_id }, { onConflict: 'code' }).select().single();
+        if (error) throw error;
+        return data;
+      }
+      
+      // In production or if Supabase not configured, throw the original error
+      throw err;
     }
   },
   // TC-3: Batch upsert for efficient bulk operations
@@ -557,53 +568,60 @@ const remote = {
         body: JSON.stringify({ students })
       });
       
+      // TC-3.1: Get request ID from response headers for error tracking
+      const requestId = response.headers.get('X-Request-Id') || 'unknown';
+      
       if (!response.ok) {
-        // If unauthorized or service unavailable, fall back to direct Supabase
-        if (response.status === 401) {
-          console.log('[data-adapter] Teacher function unauthorized for batch, falling back to direct Supabase');
-          const studentsToUpsert = students.map(s => ({
-            code: s.code,
-            name: s.name || s.code,
-            class_id: s.class_id || null
-          }));
-          const { data, error } = await supabase.from('students').upsert(studentsToUpsert, { onConflict: 'code' }).select();
-          if (error) throw error;
-          return data;
-        }
-        
-        if (response.status === 503) {
-          console.log('[data-adapter] Teacher function unavailable for batch (Supabase not configured), falling back to direct Supabase');
-          const studentsToUpsert = students.map(s => ({
-            code: s.code,
-            name: s.name || s.code,
-            class_id: s.class_id || null
-          }));
-          const { data, error } = await supabase.from('students').upsert(studentsToUpsert, { onConflict: 'code' }).select();
-          if (error) throw error;
-          return data;
-        }
-        
         const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        throw new Error(errorData.error || `Server error: ${response.status}`);
+        
+        // TC-3.1: Only allow fallback to direct Supabase in local dev environments
+        const isLocalDev = window.location.hostname === 'localhost' || 
+                          window.location.hostname === '127.0.0.1' ||
+                          window.location.origin.includes('netlify.app');
+        
+        if (isLocalDev && (response.status === 401 || response.status === 503)) {
+          console.log('[data-adapter] Local dev: Teacher function unavailable for batch, falling back to direct Supabase');
+          const studentsToUpsert = students.map(s => ({
+            code: s.code,
+            name: s.name || s.code,
+            class_id: s.class_id || null
+          }));
+          const { data, error } = await supabase.from('students').upsert(studentsToUpsert, { onConflict: 'code' }).select();
+          if (error) throw error;
+          return data;
+        }
+        
+        // TC-3.1: In production, throw clear error with request ID (no fallback)
+        const errorMsg = errorData.error || `Server error: ${response.status}`;
+        throw new Error(`${errorMsg} (Request ID: ${requestId})`);
       }
       
       const result = await response.json();
       if (!result.ok || !result.students) {
-        throw new Error('Failed to batch upsert students');
+        throw new Error(`Failed to batch upsert students (Request ID: ${requestId})`);
       }
       
       return result.students;
     } catch (err) {
-      // Network error fallback
-      console.warn('[data-adapter] Server batch upsert failed, attempting direct Supabase:', err.message);
-      const studentsToUpsert = students.map(s => ({
-        code: s.code,
-        name: s.name || s.code,
-        class_id: s.class_id || null
-      }));
-      const { data, error } = await supabase.from('students').upsert(studentsToUpsert, { onConflict: 'code' }).select();
-      if (error) throw error;
-      return data;
+      // TC-3.1: Only allow fallback in local dev (no production fallback to avoid RLS violations)
+      const isLocalDev = window.location.hostname === 'localhost' || 
+                        window.location.hostname === '127.0.0.1' ||
+                        window.location.origin.includes('netlify.app');
+      
+      if (isLocalDev && err.message !== 'supabase-not-configured') {
+        console.warn('[data-adapter] Local dev: Server batch upsert failed, attempting direct Supabase:', err.message);
+        const studentsToUpsert = students.map(s => ({
+          code: s.code,
+          name: s.name || s.code,
+          class_id: s.class_id || null
+        }));
+        const { data, error } = await supabase.from('students').upsert(studentsToUpsert, { onConflict: 'code' }).select();
+        if (error) throw error;
+        return data;
+      }
+      
+      // In production or if Supabase not configured, throw the original error
+      throw err;
     }
   },
   async listGoalsByStudentCode(code) {
