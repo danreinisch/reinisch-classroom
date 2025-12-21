@@ -23,20 +23,30 @@
       body {
         margin: 0;
         color: var(--text0, var(--ink));
-        font-family: var(--font,
+        font-family: var(
+          --font,
           ui-sans-serif,
           -apple-system,
           Segoe UI,
           Roboto,
           Inter,
           Helvetica,
-          Arial);
+          Arial
+        );
       }
       /* Emerald theme background applied via data-theme attribute and theme CSS */
       html[data-theme="emerald"] body {
         background:
-          radial-gradient(900px 600px at 18% 10%, color-mix(in oklab, var(--accent) 22%, transparent), transparent 60%),
-          radial-gradient(700px 500px at 85% 25%, color-mix(in oklab, var(--accent2) 16%, transparent), transparent 55%),
+          radial-gradient(
+            900px 600px at 18% 10%,
+            color-mix(in oklab, var(--accent) 22%, transparent),
+            transparent 60%
+          ),
+          radial-gradient(
+            700px 500px at 85% 25%,
+            color-mix(in oklab, var(--accent2) 16%, transparent),
+            transparent 55%
+          ),
           linear-gradient(180deg, var(--bg1), var(--bg0));
       }
       .header {
@@ -83,7 +93,10 @@
         border-radius: 10px;
         font-weight: 800;
         cursor: pointer;
-        transition: transform 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+        transition:
+          transform 0.12s ease,
+          border-color 0.12s ease,
+          box-shadow 0.12s ease;
       }
       .btn:hover {
         transform: translateY(-1px);
@@ -119,7 +132,9 @@
         }
       }
       .card {
-        background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 65%), var(--surface0, rgba(15, 21, 18, 1));
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 65%),
+          var(--surface0, rgba(15, 21, 18, 1));
         border: 1px solid var(--border, var(--line));
         border-radius: 12px;
         box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
@@ -142,7 +157,10 @@
         font-weight: 800;
         margin-bottom: 8px;
         text-decoration: none;
-        transition: border-color 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
+        transition:
+          border-color 0.12s ease,
+          background 0.12s ease,
+          box-shadow 0.12s ease;
       }
       .nav a:hover {
         border-color: var(--border-strong, rgba(255, 255, 255, 0.14));
@@ -151,7 +169,7 @@
       .nav a.active {
         background: rgba(34, 197, 94, 0.16);
         border-color: rgba(34, 197, 94, 0.45);
-        box-shadow: inset 3px 0 0 var(--accent, #35E08A);
+        box-shadow: inset 3px 0 0 var(--accent, #35e08a);
       }
       .subtle {
         color: var(--text1, var(--muted));
@@ -189,7 +207,9 @@
         border-radius: 10px;
         color: var(--text0, var(--ink));
         padding: 0 12px;
-        transition: border-color 0.12s ease, box-shadow 0.12s ease;
+        transition:
+          border-color 0.12s ease,
+          box-shadow 0.12s ease;
       }
       textarea {
         height: auto;
@@ -201,13 +221,13 @@
       select:focus,
       textarea:focus {
         outline: none;
-        border-color: var(--accent, #35E08A);
+        border-color: var(--accent, #35e08a);
         box-shadow: 0 0 0 4px rgba(53, 224, 138, 0.18);
       }
       .btn:focus-visible,
       .nav a:focus-visible,
       button:focus-visible {
-        outline: 2px solid var(--accent, #35E08A);
+        outline: 2px solid var(--accent, #35e08a);
         outline-offset: 2px;
       }
       label {
@@ -288,7 +308,9 @@
         align-items: center;
         justify-content: center;
         padding: 0;
-        transition: border-color 0.12s ease, box-shadow 0.12s ease;
+        transition:
+          border-color 0.12s ease,
+          box-shadow 0.12s ease;
       }
       .iconrail button.active {
         background: linear-gradient(180deg, rgba(34, 197, 94, 0.12), rgba(34, 197, 94, 0.06));
@@ -992,7 +1014,7 @@
 
     <!-- Boot script: default to glass-bold theme on first visit -->
     <!-- Guardrails Stage 3B: Externalized to hub-theme-boot.js -->
-    <script src="/web/hub-theme-boot.js"></script>
+    <script src="/web/hub-theme-boot.js?v=emerald-6"></script>
 
     <style>
       /* Hub: always render soft-grid and keep Bold overlays when active */
@@ -1173,7 +1195,12 @@
           class="hub-tag"
           style="margin-left: auto; margin-right: 8px; font-size: 13px; font-weight: 600"
         ></span>
-        <button class="btn small" id="btnThemeToggle" title="Toggle glass theme" style="display: none;">
+        <button
+          class="btn small"
+          id="btnThemeToggle"
+          title="Toggle glass theme"
+          style="display: none"
+        >
           Glass: Bold
         </button>
         <span id="currentUserChip" class="hub-tag">Signed out</span>
@@ -1239,7 +1266,9 @@
       <div style="max-width: 1700px; margin: 0 auto; display: flex; align-items: center; gap: 14px">
         <span style="font-size: 22px">👋</span>
         <div style="flex: 1">
-          <strong style="display: block; margin-bottom: 4px; font-size: 15px">Resume Teacher Session?</strong>
+          <strong style="display: block; margin-bottom: 4px; font-size: 15px"
+            >Resume Teacher Session?</strong
+          >
           <span style="font-size: 13px; opacity: 0.95">
             A prior teacher session was detected. Would you like to resume or stay signed out?
           </span>
@@ -1311,15 +1340,26 @@
             <div style="font-size: 24px; font-weight: 800; margin-bottom: 12px">
               Welcome to Classroom Hub
             </div>
-            <div class="subtle" style="margin-bottom: 24px; max-width: 500px; margin-left: auto; margin-right: auto">
-              Choose your role to get started. Teachers can manage students, goals, and assignments. 
+            <div
+              class="subtle"
+              style="margin-bottom: 24px; max-width: 500px; margin-left: auto; margin-right: auto"
+            >
+              Choose your role to get started. Teachers can manage students, goals, and assignments.
               Students can access their portal.
             </div>
             <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap">
-              <button class="btn primary" id="btnHomeTeacher" style="padding: 14px 24px; font-size: 16px">
+              <button
+                class="btn primary"
+                id="btnHomeTeacher"
+                style="padding: 14px 24px; font-size: 16px"
+              >
                 Teacher Center 🔒
               </button>
-              <a class="btn" href="/student/" style="padding: 14px 24px; font-size: 16px; text-decoration: none">
+              <a
+                class="btn"
+                href="/student/"
+                style="padding: 14px 24px; font-size: 16px; text-decoration: none"
+              >
                 Student Portal
               </a>
             </div>
@@ -1617,23 +1657,28 @@
                   >ZIP File <span style="color: #f87171">*</span>
                   <input id="aZipFile" type="file" accept=".zip" />
                   <div class="subtle" style="margin-top: 4px">
-                    Upload a .zip file. Can include assignment_manifest.json for per-question mapping.
+                    Upload a .zip file. Can include assignment_manifest.json for per-question
+                    mapping.
                   </div>
                 </label>
-                
+
                 <!-- Optional separate mapping file for HTML packages without manifest in ZIP -->
-                <label style="margin-top:12px">Mapping File (optional)
+                <label style="margin-top: 12px"
+                  >Mapping File (optional)
                   <select id="htmlMappingFormat">
                     <option value="">-- No separate mapping --</option>
                     <option value="txt">TXT (pipe-delimited)</option>
                     <option value="json">JSON Manifest</option>
                   </select>
                 </label>
-                
-                <div id="htmlMappingFileUpload" style="margin-top:8px;display:none">
-                  <label>Upload Mapping File
+
+                <div id="htmlMappingFileUpload" style="margin-top: 8px; display: none">
+                  <label
+                    >Upload Mapping File
                     <input id="aHtmlMappingFile" type="file" accept=".txt,.json" />
-                    <div class="subtle" style="margin-top:4px">Upload a separate mapping file if not included in ZIP</div>
+                    <div class="subtle" style="margin-top: 4px">
+                      Upload a separate mapping file if not included in ZIP
+                    </div>
                   </label>
                 </div>
               </div>
@@ -1764,40 +1809,73 @@
                 </div>
               </label>
             </div>
-            
+
             <!-- TXT Quick Quiz Section -->
-            <div id="txtQuizSection" style="margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.02);display:none">
-              <div style="font-weight:800;margin-bottom:8px">📝 TXT Quick Quiz Configuration</div>
-              <div class="subtle" style="margin-bottom:12px">Upload a TXT or JSON mapping file to auto-generate a simple quiz form.</div>
-              
-              <label>Mapping File <span style="color:#f87171">*</span>
+            <div
+              id="txtQuizSection"
+              style="
+                margin-top: 12px;
+                padding: 12px;
+                border: 1px solid var(--line);
+                border-radius: 12px;
+                background: rgba(255, 255, 255, 0.02);
+                display: none;
+              "
+            >
+              <div style="font-weight: 800; margin-bottom: 8px">
+                📝 TXT Quick Quiz Configuration
+              </div>
+              <div class="subtle" style="margin-bottom: 12px">
+                Upload a TXT or JSON mapping file to auto-generate a simple quiz form.
+              </div>
+
+              <label
+                >Mapping File <span style="color: #f87171">*</span>
                 <select id="txtMappingFormat">
                   <option value="txt">TXT (pipe-delimited)</option>
                   <option value="json">JSON Manifest</option>
                 </select>
               </label>
-              
-              <label style="margin-top:12px">Upload Mapping File <span style="color:#f87171">*</span>
+
+              <label style="margin-top: 12px"
+                >Upload Mapping File <span style="color: #f87171">*</span>
                 <input id="aTxtMappingFile" type="file" accept=".txt,.json" />
-                <div class="subtle" style="margin-top:4px">
-                  TXT format: #ref|points|correct|dese_codes|goal_codes|notes<br>
+                <div class="subtle" style="margin-top: 4px">
+                  TXT format: #ref|points|correct|dese_codes|goal_codes|notes<br />
                   JSON format: See documentation for schema
                 </div>
               </label>
             </div>
-            
+
             <!-- Mapping Preview Section (shared across types) -->
-            <div id="mappingPreviewSection" style="margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.02);display:none">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-                <div style="font-weight:800">📊 Mapping Preview</div>
+            <div
+              id="mappingPreviewSection"
+              style="
+                margin-top: 12px;
+                padding: 12px;
+                border: 1px solid var(--line);
+                border-radius: 12px;
+                background: rgba(255, 255, 255, 0.02);
+                display: none;
+              "
+            >
+              <div
+                style="
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: center;
+                  margin-bottom: 8px;
+                "
+              >
+                <div style="font-weight: 800">📊 Mapping Preview</div>
                 <button class="btn small" id="btnClearMapping">Clear Mapping</button>
               </div>
-              
-              <div id="mappingValidationMessages" style="margin-bottom:8px;display:none">
+
+              <div id="mappingValidationMessages" style="margin-bottom: 8px; display: none">
                 <!-- Validation errors and warnings will be displayed here -->
               </div>
-              
-              <div class="table-wrap" style="max-height:300px;overflow:auto">
+
+              <div class="table-wrap" style="max-height: 300px; overflow: auto">
                 <table class="table" id="mappingPreviewTable">
                   <thead>
                     <tr>
@@ -1815,16 +1893,30 @@
                   </tbody>
                 </table>
               </div>
-              
-              <div id="mappingStats" class="subtle" style="margin-top:8px">
+
+              <div id="mappingStats" class="subtle" style="margin-top: 8px">
                 <!-- Stats will be populated by JS -->
               </div>
             </div>
-            
+
             <!-- Version Lock Warning -->
-            <div id="versionLockWarning" style="margin-top:12px;padding:10px;background:rgba(251,191,36,.1);border-radius:8px;border:1px solid rgba(251,191,36,.5);color:#fcd34d;display:none">
-              <div style="font-weight:800;margin-bottom:6px">🔒 Assignment Locked</div>
-              <div class="subtle">This assignment has received student submissions and mapping cannot be edited. Create a new version of this assignment to change question mappings.</div>
+            <div
+              id="versionLockWarning"
+              style="
+                margin-top: 12px;
+                padding: 10px;
+                background: rgba(251, 191, 36, 0.1);
+                border-radius: 8px;
+                border: 1px solid rgba(251, 191, 36, 0.5);
+                color: #fcd34d;
+                display: none;
+              "
+            >
+              <div style="font-weight: 800; margin-bottom: 6px">🔒 Assignment Locked</div>
+              <div class="subtle">
+                This assignment has received student submissions and mapping cannot be edited.
+                Create a new version of this assignment to change question mappings.
+              </div>
             </div>
 
             <div style="display: flex; gap: 10px; margin-top: 12px">
@@ -3455,16 +3547,16 @@
           console.warn(LOG_PREFIX, `setFeatureFlag stub called for: ${name} = ${value} (no-op)`);
         };
       }
-      
+
       // TC-3A: Mark feature flags as loaded for init gate
-      if (typeof window.markFlagsLoaded === 'function') {
+      if (typeof window.markFlagsLoaded === "function") {
         window.markFlagsLoaded();
       }
 
       // Assignment Mapping modules (Phase 1)
       // Only load if teacherCenterAssignments feature is enabled
       let parseTxtMapping, parseJsonManifest, validateMapping;
-      if (getFeatureFlag('teacherCenterAssignments')) {
+      if (getFeatureFlag("teacherCenterAssignments")) {
         try {
           const mappingParsers = await import(`/web/assignment-mapping-parsers.js?v=${cacheBust}`);
           parseTxtMapping = mappingParsers.parseTxtMapping;
@@ -3475,14 +3567,34 @@
           console.error(LOG_PREFIX, "Failed to load assignment-mapping-parsers.js:", err);
           failedModules.push("assignment-mapping-parsers.js");
           // Provide stub implementations
-          parseTxtMapping = () => ({ format: 'txt', items: [], errors: [{ message: 'Parser not loaded' }], valid: false });
-          parseJsonManifest = () => ({ format: 'json', items: [], errors: [{ message: 'Parser not loaded' }], valid: false });
+          parseTxtMapping = () => ({
+            format: "txt",
+            items: [],
+            errors: [{ message: "Parser not loaded" }],
+            valid: false,
+          });
+          parseJsonManifest = () => ({
+            format: "json",
+            items: [],
+            errors: [{ message: "Parser not loaded" }],
+            valid: false,
+          });
           validateMapping = () => ({ valid: false, warnings: [], stats: {} });
         }
       } else {
         // Feature disabled - provide no-op stubs
-        parseTxtMapping = () => ({ format: 'txt', items: [], errors: [{ message: 'Feature disabled' }], valid: false });
-        parseJsonManifest = () => ({ format: 'json', items: [], errors: [{ message: 'Feature disabled' }], valid: false });
+        parseTxtMapping = () => ({
+          format: "txt",
+          items: [],
+          errors: [{ message: "Feature disabled" }],
+          valid: false,
+        });
+        parseJsonManifest = () => ({
+          format: "json",
+          items: [],
+          errors: [{ message: "Feature disabled" }],
+          valid: false,
+        });
         validateMapping = () => ({ valid: false, warnings: [], stats: {} });
       }
 
@@ -3712,7 +3824,7 @@
       function showTeacher() {
         const view = qs("#view-teacher");
         if (view) view.style.display = "grid";
-        
+
         // TC-3.1: Hide home tab when teacher view is shown
         const homeTab = qs('.ttab[data-tab="home"]');
         if (homeTab) homeTab.style.display = "none";
@@ -3720,7 +3832,7 @@
       function hideTeacher() {
         const view = qs("#view-teacher");
         if (view) view.style.display = "none";
-        
+
         // TC-3.1: Show home tab when teacher view is hidden (logout)
         const homeTab = qs('.ttab[data-tab="home"]');
         if (homeTab) homeTab.style.display = "block";
@@ -3776,7 +3888,7 @@
           // TC-3.1: Show home tab as landing page instead of sign-in modal
           const homeTab = qs('.ttab[data-tab="home"]');
           if (homeTab) homeTab.style.display = "block";
-          
+
           // Don't show sign-in modal automatically - let user choose from home page
           // const modal = qs("#signInModal");
           // if (modal) modal.classList.add("show");
@@ -4162,7 +4274,7 @@
       // Check teacher session on page load
       // Modified for PR 267: Store session state instead of auto-entering
       let pendingTeacherSession = null;
-      
+
       async function checkTeacherSession() {
         try {
           // IMPORTANT: Use same-origin relative URL (/.netlify/functions/...) to ensure
@@ -4180,15 +4292,15 @@
               // Valid session exists - store for resume banner instead of auto-entering
               pendingTeacherSession = {
                 role: "teacher",
-                username: data.username
+                username: data.username,
               };
-              
+
               // Show resume banner instead of auto-entering teacher center
               const banner = qs("#teacherResumeBanner");
               if (banner) {
                 banner.style.display = "block";
               }
-              
+
               console.log("[Teacher Auth] Prior session detected - showing resume banner");
             }
           } else if (response.status === 401) {
@@ -4203,26 +4315,26 @@
           console.debug("[Teacher Auth] Session check failed:", err.message);
         }
       }
-      
+
       // Resume teacher session from banner
       function resumeTeacherSession() {
         if (!pendingTeacherSession) {
           console.warn("[Teacher Auth] No pending session to resume");
           return;
         }
-        
+
         // Set auth and show teacher view
         setAuth(pendingTeacherSession);
         const chip = qs("#currentUserChip");
         if (chip) chip.textContent = "Teacher";
         showTeacher();
-        
+
         // Hide banner
         const banner = qs("#teacherResumeBanner");
         if (banner) {
           banner.style.display = "none";
         }
-        
+
         // Restore last area/tab
         setTimeout(() => {
           const lastArea = localStorage.getItem("rc_last_area");
@@ -4233,31 +4345,31 @@
             }
           }
         }, 100);
-        
+
         console.log("[Teacher Auth] Session resumed");
       }
-      
+
       // Stay signed out - clear all state and hide banner
       function staySignedOut() {
         // Clear pending session
         pendingTeacherSession = null;
-        
+
         // Clear all auth/session state
-        if (typeof window.clearAllAuthState === 'function') {
+        if (typeof window.clearAllAuthState === "function") {
           window.clearAllAuthState();
         } else {
           console.warn("[Teacher Auth] clearAllAuthState not available, using clearAuth");
-          if (typeof clearAuth === 'function') {
+          if (typeof clearAuth === "function") {
             clearAuth();
           }
         }
-        
+
         // Hide banner
         const banner = qs("#teacherResumeBanner");
         if (banner) {
           banner.style.display = "none";
         }
-        
+
         console.log("[Teacher Auth] Stayed signed out, all state cleared");
       }
 
@@ -4270,7 +4382,7 @@
           }
           return;
         }
-        
+
         // Only show modal if not already authenticated as teacher
         const currentAuth = getAuth();
         if (currentAuth && currentAuth.role === "teacher") {
@@ -4290,7 +4402,7 @@
         if (modal) modal.classList.remove("show");
         isFromSignInModal = false; // Reset flag
       });
-      
+
       // TC-3.1: Home page teacher button - same as main teacher button
       on("#btnHomeTeacher", "click", async () => {
         // If there's a pending session from the banner, show the banner again
@@ -4301,7 +4413,7 @@
           }
           return;
         }
-        
+
         // Only show modal if not already authenticated as teacher
         const currentAuth = getAuth();
         if (currentAuth && currentAuth.role === "teacher") {
@@ -4316,12 +4428,12 @@
         if (userInput) userInput.focus();
         isFromSignInModal = false; // Not from sign-in modal
       });
-      
+
       // Teacher Resume Banner handlers
       on("#btnResumeTeacher", "click", () => {
         resumeTeacherSession();
       });
-      
+
       on("#btnStaySignedOut", "click", () => {
         staySignedOut();
       });
@@ -4429,7 +4541,7 @@
       checkTeacherSession()
         .then(() => {
           // TC-3A: Mark auth check as complete for init gate
-          if (typeof window.markAuthCheckComplete === 'function') {
+          if (typeof window.markAuthCheckComplete === "function") {
             window.markAuthCheckComplete();
           }
           // After checking teacher session, show sign-in modal if needed
@@ -4438,7 +4550,7 @@
         .catch((err) => {
           console.debug(LOG_PREFIX, "Teacher session check failed:", err);
           // TC-3A: Mark auth check as complete even on error
-          if (typeof window.markAuthCheckComplete === 'function') {
+          if (typeof window.markAuthCheckComplete === "function") {
             window.markAuthCheckComplete();
           }
           // Still show sign-in modal on error
@@ -4525,7 +4637,7 @@
         if (tab === "assignments") initAssignments();
         if (tab === "settings") initSettings();
         if (tab === "subPlans") initSubPlans();
-        
+
         // TC-3.1: Handle home tab (no initialization needed, just display)
         // Home tab is the default landing page when not authenticated
 
@@ -5142,46 +5254,48 @@
         const select = qs("#issueAssignmentSelect");
         try {
           // Call server function to get assignments list
-          const response = await fetch('/.netlify/functions/teacher-assignments-list', {
-            method: 'GET',
-            credentials: 'include', // Send cookies for teacher auth
+          const response = await fetch("/.netlify/functions/teacher-assignments-list", {
+            method: "GET",
+            credentials: "include", // Send cookies for teacher auth
             headers: {
-              'Content-Type': 'application/json'
-            }
+              "Content-Type": "application/json",
+            },
           });
 
           if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
-            console.error('[populateAssignmentSelect] Server error:', response.status, errorData);
+            console.error("[populateAssignmentSelect] Server error:", response.status, errorData);
             select.innerHTML = '<option value="">-- Error loading assignments --</option>';
-            
+
             if (response.status === 401) {
-              addNotif('Authentication required to load assignments', { type: 'error' });
+              addNotif("Authentication required to load assignments", { type: "error" });
             } else {
-              const requestId = response.headers.get('X-Request-Id');
-              const errorMsg = errorData.error || 'Failed to load assignments';
-              addNotif(`${errorMsg}${requestId ? ` (Request ID: ${requestId})` : ''}`, { type: 'error' });
+              const requestId = response.headers.get("X-Request-Id");
+              const errorMsg = errorData.error || "Failed to load assignments";
+              addNotif(`${errorMsg}${requestId ? ` (Request ID: ${requestId})` : ""}`, {
+                type: "error",
+              });
             }
             return;
           }
 
           const data = await response.json();
           ASSIGNMENTS_CACHE = data.assignments || [];
-          
+
           if (ASSIGNMENTS_CACHE.length === 0) {
             select.innerHTML = '<option value="">-- No assignments available --</option>';
             return;
           }
-          
+
           select.innerHTML =
             '<option value="">-- Select an assignment --</option>' +
             ASSIGNMENTS_CACHE.map(
-              (a) => `<option value="${a.id}">${a.title}${a.type ? ` (${a.type})` : ''}</option>`
+              (a) => `<option value="${a.id}">${a.title}${a.type ? ` (${a.type})` : ""}</option>`
             ).join("");
         } catch (err) {
-          console.error('[populateAssignmentSelect] Error:', err);
+          console.error("[populateAssignmentSelect] Error:", err);
           select.innerHTML = '<option value="">-- Error loading assignments --</option>';
-          addNotif('Failed to load assignments: ' + err.message, { type: 'error' });
+          addNotif("Failed to load assignments: " + err.message, { type: "error" });
         }
       }
 
@@ -5587,67 +5701,74 @@
       // ============================================================================
       // TEACHER CENTER ASSIGNMENTS: Mapping Support (Phase 1)
       // ============================================================================
-      
+
       // Configuration constants
       const MAX_DISPLAYED_MESSAGES = 5; // Max validation errors/warnings to show
-      
+
       // Global variable to store parsed mapping
       let currentAssignmentMapping = null;
-      
+
       // Clear mapping preview
       function clearMappingPreview() {
         currentAssignmentMapping = null;
-        qs('#mappingPreviewSection').style.display = 'none';
-        qs('#mappingValidationMessages').style.display = 'none';
-        qs('#mappingPreviewBody').innerHTML = '';
-        qs('#mappingStats').innerHTML = '';
+        qs("#mappingPreviewSection").style.display = "none";
+        qs("#mappingValidationMessages").style.display = "none";
+        qs("#mappingPreviewBody").innerHTML = "";
+        qs("#mappingStats").innerHTML = "";
       }
-      
+
       // Display mapping preview table (Phase 1)
       function displayMappingPreview(parsed) {
-        const tbody = qs('#mappingPreviewBody');
-        const section = qs('#mappingPreviewSection');
-        const validationMessages = qs('#mappingValidationMessages');
-        const statsDiv = qs('#mappingStats');
-        
+        const tbody = qs("#mappingPreviewBody");
+        const section = qs("#mappingPreviewSection");
+        const validationMessages = qs("#mappingValidationMessages");
+        const statsDiv = qs("#mappingStats");
+
         // Store parsed mapping
         currentAssignmentMapping = parsed;
-        
+
         // Show section
-        section.style.display = 'block';
-        
+        section.style.display = "block";
+
         // Display validation errors
         if (parsed.errors && parsed.errors.length > 0) {
-          validationMessages.style.display = 'block';
+          validationMessages.style.display = "block";
           validationMessages.innerHTML = `
             <div style="padding:10px;background:rgba(239,68,68,.1);border-radius:8px;border:1px solid rgba(239,68,68,.5);color:#fecaca">
               <div style="font-weight:800;margin-bottom:6px">⚠️ Validation Errors (${parsed.errors.length})</div>
-              ${parsed.errors.slice(0, MAX_DISPLAYED_MESSAGES).map(e => `<div class="subtle">${e.message || e}</div>`).join('')}
-              ${parsed.errors.length > MAX_DISPLAYED_MESSAGES ? `<div class="subtle">... and ${parsed.errors.length - MAX_DISPLAYED_MESSAGES} more</div>` : ''}
+              ${parsed.errors
+                .slice(0, MAX_DISPLAYED_MESSAGES)
+                .map((e) => `<div class="subtle">${e.message || e}</div>`)
+                .join("")}
+              ${parsed.errors.length > MAX_DISPLAYED_MESSAGES ? `<div class="subtle">... and ${parsed.errors.length - MAX_DISPLAYED_MESSAGES} more</div>` : ""}
             </div>
           `;
         }
-        
+
         // Validate mapping and display warnings
         const validation = validateMapping(parsed.items);
         if (validation.warnings && validation.warnings.length > 0) {
-          validationMessages.style.display = 'block';
+          validationMessages.style.display = "block";
           validationMessages.innerHTML += `
             <div style="padding:10px;background:rgba(251,191,36,.1);border-radius:8px;border:1px solid rgba(251,191,36,.5);color:#fcd34d;margin-top:8px">
               <div style="font-weight:800;margin-bottom:6px">⚠️ Warnings (${validation.warnings.length})</div>
-              ${validation.warnings.slice(0, MAX_DISPLAYED_MESSAGES).map(w => `<div class="subtle">${w.ref ? `${w.ref}: ` : ''}${w.message}</div>`).join('')}
-              ${validation.warnings.length > MAX_DISPLAYED_MESSAGES ? `<div class="subtle">... and ${validation.warnings.length - MAX_DISPLAYED_MESSAGES} more</div>` : ''}
+              ${validation.warnings
+                .slice(0, MAX_DISPLAYED_MESSAGES)
+                .map((w) => `<div class="subtle">${w.ref ? `${w.ref}: ` : ""}${w.message}</div>`)
+                .join("")}
+              ${validation.warnings.length > MAX_DISPLAYED_MESSAGES ? `<div class="subtle">... and ${validation.warnings.length - MAX_DISPLAYED_MESSAGES} more</div>` : ""}
             </div>
           `;
         }
-        
+
         // Display items
-        tbody.innerHTML = parsed.items.map(item => {
-          const deseCodes = (item.dese_codes || []).join(', ') || '—';
-          const goalCodes = (item.goal_codes || []).join(', ') || '—';
-          const correct = item.correct ? String(item.correct) : '—';
-          
-          return `
+        tbody.innerHTML = parsed.items
+          .map((item) => {
+            const deseCodes = (item.dese_codes || []).join(", ") || "—";
+            const goalCodes = (item.goal_codes || []).join(", ") || "—";
+            const correct = item.correct ? String(item.correct) : "—";
+
+            return `
             <tr>
               <td><strong>${item.ref}</strong></td>
               <td>${item.answer_type}</td>
@@ -5658,8 +5779,9 @@
               <td>${item.weight || 1.0}</td>
             </tr>
           `;
-        }).join('');
-        
+          })
+          .join("");
+
         // Display stats
         if (validation.stats) {
           const s = validation.stats;
@@ -5669,89 +5791,106 @@
             | ${s.withGoals} with goal codes 
             | ${s.withBoth} with both 
             | ${s.withNeither} with neither
-            ${Object.keys(s.byType).length > 0 ? '<br><strong>By type:</strong> ' + Object.entries(s.byType).map(([type, count]) => `${type}: ${count}`).join(' | ') : ''}
+            ${
+              Object.keys(s.byType).length > 0
+                ? "<br><strong>By type:</strong> " +
+                  Object.entries(s.byType)
+                    .map(([type, count]) => `${type}: ${count}`)
+                    .join(" | ")
+                : ""
+            }
           `;
         }
-        
-        console.log('[assignment-mapping] Displayed preview for', parsed.items.length, 'items');
+
+        console.log("[assignment-mapping] Displayed preview for", parsed.items.length, "items");
       }
-      
+
       // Handle TXT mapping file upload (Phase 1)
-      qs('#aTxtMappingFile')?.addEventListener('change', async (e) => {
+      qs("#aTxtMappingFile")?.addEventListener("change", async (e) => {
         const file = e.target.files[0];
         if (!file) return;
-        
-        const format = qs('#txtMappingFormat').value;
-        console.log('[assignment-mapping] Processing TXT mapping file:', file.name, 'format:', format);
-        
+
+        const format = qs("#txtMappingFormat").value;
+        console.log(
+          "[assignment-mapping] Processing TXT mapping file:",
+          file.name,
+          "format:",
+          format
+        );
+
         try {
           const text = await file.text();
-          
+
           let parsed;
-          if (format === 'json') {
+          if (format === "json") {
             parsed = parseJsonManifest(text);
           } else {
             parsed = parseTxtMapping(text);
           }
-          
+
           if (parsed.errors && parsed.errors.length > 0) {
-            console.warn('[assignment-mapping] Parsed with errors:', parsed.errors);
+            console.warn("[assignment-mapping] Parsed with errors:", parsed.errors);
           }
-          
+
           // Validate mapping
           const validation = validateMapping(parsed.items);
-          
+
           // Display preview
           displayMappingPreview(parsed);
         } catch (error) {
-          console.error('[assignment-mapping] Error processing mapping file:', error);
-          addNotif('Failed to parse mapping file: ' + error.message, { type: 'error' });
+          console.error("[assignment-mapping] Error processing mapping file:", error);
+          addNotif("Failed to parse mapping file: " + error.message, { type: "error" });
         }
       });
-      
+
       // Handle HTML mapping file upload (Phase 1)
-      qs('#aHtmlMappingFile')?.addEventListener('change', async (e) => {
+      qs("#aHtmlMappingFile")?.addEventListener("change", async (e) => {
         const file = e.target.files[0];
         if (!file) return;
-        
-        const format = qs('#htmlMappingFormat').value;
-        console.log('[assignment-mapping] Processing HTML mapping file:', file.name, 'format:', format);
-        
+
+        const format = qs("#htmlMappingFormat").value;
+        console.log(
+          "[assignment-mapping] Processing HTML mapping file:",
+          file.name,
+          "format:",
+          format
+        );
+
         try {
           const text = await file.text();
-          
+
           let parsed;
-          if (format === 'json') {
+          if (format === "json") {
             parsed = parseJsonManifest(text);
           } else {
             parsed = parseTxtMapping(text);
           }
-          
+
           if (parsed.errors && parsed.errors.length > 0) {
-            console.warn('[assignment-mapping] Parsed with errors:', parsed.errors);
+            console.warn("[assignment-mapping] Parsed with errors:", parsed.errors);
           }
-          
+
           // Validate mapping
           const validation = validateMapping(parsed.items);
-          
+
           // Display preview
           displayMappingPreview(parsed);
         } catch (error) {
-          console.error('[assignment-mapping] Error processing mapping file:', error);
-          addNotif('Failed to parse mapping file: ' + error.message, { type: 'error' });
+          console.error("[assignment-mapping] Error processing mapping file:", error);
+          addNotif("Failed to parse mapping file: " + error.message, { type: "error" });
         }
       });
-      
+
       // Show/hide mapping file upload based on format selection
-      qs('#htmlMappingFormat')?.addEventListener('change', (e) => {
+      qs("#htmlMappingFormat")?.addEventListener("change", (e) => {
         const format = e.target.value;
-        qs('#htmlMappingFileUpload').style.display = format ? 'block' : 'none';
+        qs("#htmlMappingFileUpload").style.display = format ? "block" : "none";
       });
-      
+
       // Clear mapping button handler
-      qs('#btnClearMapping')?.addEventListener('click', () => {
+      qs("#btnClearMapping")?.addEventListener("click", () => {
         clearMappingPreview();
-        addNotif('Mapping cleared');
+        addNotif("Mapping cleared");
       });
 
       // Toggle form sections based on type
@@ -5759,13 +5898,14 @@
         const type = qs("#aType").value;
         qs("#htmlPackageSection").style.display = type === "html" ? "block" : "none";
         qs("#googleFormSection").style.display = type === "google_form" ? "block" : "none";
-        
+
         // Only show TXT Quiz section if feature is enabled
-        const tcAssignmentsEnabled = getFeatureFlag('teacherCenterAssignments');
-        qs("#txtQuizSection").style.display = (type === "txt_quiz" && tcAssignmentsEnabled) ? "block" : "none";
-        
+        const tcAssignmentsEnabled = getFeatureFlag("teacherCenterAssignments");
+        qs("#txtQuizSection").style.display =
+          type === "txt_quiz" && tcAssignmentsEnabled ? "block" : "none";
+
         // Clear mapping preview when switching types
-        if (typeof clearMappingPreview === 'function') {
+        if (typeof clearMappingPreview === "function") {
           clearMappingPreview();
         }
       });
@@ -5794,11 +5934,11 @@
 
         // Convert student codes to student IDs
         const studentIds = studentCodes
-          .map(code => {
-            const student = STUDENTS.find(s => s.code === code);
+          .map((code) => {
+            const student = STUDENTS.find((s) => s.code === code);
             return student ? student.id : null;
           })
-          .filter(id => id !== null);
+          .filter((id) => id !== null);
 
         if (studentIds.length === 0) {
           addNotif("No valid student IDs found for selected students", { type: "error" });
@@ -5806,7 +5946,7 @@
         }
 
         if (studentIds.length < studentCodes.length) {
-          console.warn('[handleIssueAssignment] Some student codes could not be mapped to IDs');
+          console.warn("[handleIssueAssignment] Some student codes could not be mapped to IDs");
         }
 
         // Show progress
@@ -5817,33 +5957,33 @@
 
         try {
           // Call server function to issue assignment
-          const response = await fetch('/.netlify/functions/teacher-issue-assignment', {
-            method: 'POST',
-            credentials: 'include', // Send cookies for teacher auth
+          const response = await fetch("/.netlify/functions/teacher-issue-assignment", {
+            method: "POST",
+            credentials: "include", // Send cookies for teacher auth
             headers: {
-              'Content-Type': 'application/json'
+              "Content-Type": "application/json",
             },
             body: JSON.stringify({
               assignment_id: parseInt(assignmentId, 10),
               student_ids: studentIds,
               due_at: dueDate ? new Date(dueDate).toISOString() : null,
-              settings: {}
-            })
+              settings: {},
+            }),
           });
 
           if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
-            const requestId = response.headers.get('X-Request-Id');
-            console.error('[handleIssueAssignment] Server error:', response.status, errorData);
-            
-            let errorMsg = errorData.error || 'Failed to issue assignment';
+            const requestId = response.headers.get("X-Request-Id");
+            console.error("[handleIssueAssignment] Server error:", response.status, errorData);
+
+            let errorMsg = errorData.error || "Failed to issue assignment";
             if (requestId) {
               errorMsg += ` (Request ID: ${requestId})`;
             }
-            
+
             progressText.textContent = `Error: ${errorMsg}`;
-            addNotif(errorMsg, { type: 'error' });
-            
+            addNotif(errorMsg, { type: "error" });
+
             // Hide progress after 5 seconds
             setTimeout(() => {
               progressDiv.style.display = "none";
@@ -5857,7 +5997,9 @@
           progressText.textContent = `Complete: ${inserted_count} assignment(s) issued`;
 
           // Add notification
-          addNotif(`Issued "${assignmentTitle}" to ${inserted_count} student(s)`, { count: inserted_count });
+          addNotif(`Issued "${assignmentTitle}" to ${inserted_count} student(s)`, {
+            count: inserted_count,
+          });
 
           // Refresh instances table
           await renderInstancesTable();
@@ -5867,10 +6009,10 @@
             progressDiv.style.display = "none";
           }, 3000);
         } catch (err) {
-          console.error('[handleIssueAssignment] Error:', err);
+          console.error("[handleIssueAssignment] Error:", err);
           progressText.textContent = `Error: ${err.message}`;
-          addNotif('Failed to issue assignment: ' + err.message, { type: 'error' });
-          
+          addNotif("Failed to issue assignment: " + err.message, { type: "error" });
+
           // Hide progress after 5 seconds
           setTimeout(() => {
             progressDiv.style.display = "none";
@@ -6265,22 +6407,25 @@
 
         // Initialize HTML source options
         updateHtmlSourceOptions();
-        
+
         // Gate Teacher Center Assignments features
-        const tcAssignmentsEnabled = getFeatureFlag('teacherCenterAssignments');
+        const tcAssignmentsEnabled = getFeatureFlag("teacherCenterAssignments");
         if (!tcAssignmentsEnabled) {
           // Hide/disable mapping-related UI elements
           const txtQuizOption = qs('#aType option[value="txt_quiz"]');
-          if (txtQuizOption) txtQuizOption.style.display = 'none';
-          
+          if (txtQuizOption) txtQuizOption.style.display = "none";
+
           // Hide mapping sections
-          qs('#htmlMappingFormat')?.closest('label')?.setAttribute('style', 'display:none');
-          qs('#htmlMappingFileUpload')?.setAttribute('style', 'display:none');
-          qs('#txtQuizSection')?.setAttribute('style', 'display:none');
-          qs('#mappingPreviewSection')?.setAttribute('style', 'display:none');
+          qs("#htmlMappingFormat")?.closest("label")?.setAttribute("style", "display:none");
+          qs("#htmlMappingFileUpload")?.setAttribute("style", "display:none");
+          qs("#txtQuizSection")?.setAttribute("style", "display:none");
+          qs("#mappingPreviewSection")?.setAttribute("style", "display:none");
         } else {
           // Feature enabled - ensure visibility
-          qs('#txtQuizSection')?.setAttribute('style', 'margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.02);display:none');
+          qs("#txtQuizSection")?.setAttribute(
+            "style",
+            "margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.02);display:none"
+          );
         }
       }
 
@@ -7386,14 +7531,14 @@
 
           // TC-3: First pass - collect all unique student codes needed
           const neededStudentCodes = new Set();
-          
+
           for (const line of lines) {
             const parts = parseCSVLine(line);
             if (parts.length < 2) continue;
-            
+
             const goalCode = parts[1];
             if (!goalCode) continue;
-            
+
             const studentCode = parseStudentCode(goalCode);
             if (studentCode && !studentMap.has(studentCode)) {
               neededStudentCodes.add(studentCode);
@@ -7404,16 +7549,16 @@
           if (neededStudentCodes.size > 0) {
             try {
               showToolsStatus("Importing", `Creating ${neededStudentCodes.size} students...`, "");
-              const studentsToCreate = Array.from(neededStudentCodes).map(code => ({
+              const studentsToCreate = Array.from(neededStudentCodes).map((code) => ({
                 code,
                 name: code,
-                class_id: null
+                class_id: null,
               }));
-              
+
               // Use batch upsert if available, otherwise fall back to single upserts
-              if (typeof db.batchUpsertStudents === 'function') {
+              if (typeof db.batchUpsertStudents === "function") {
                 const createdStudents = await db.batchUpsertStudents(studentsToCreate);
-                createdStudents.forEach(s => studentMap.set(s.code, s));
+                createdStudents.forEach((s) => studentMap.set(s.code, s));
                 studentsCreated = createdStudents.length;
               } else {
                 // Fallback: create one by one
@@ -7435,7 +7580,7 @@
 
           // Second pass - import goals
           showToolsStatus("Importing", "Importing goals...", "");
-          
+
           for (const line of lines) {
             rowsProcessed++;
 
@@ -7463,7 +7608,9 @@
 
             // Student should exist now (or skip if creation failed)
             if (!studentMap.has(studentCode)) {
-              errors.push(`Row ${rowsProcessed}: Student ${studentCode} not found or failed to create`);
+              errors.push(
+                `Row ${rowsProcessed}: Student ${studentCode} not found or failed to create`
+              );
               continue;
             }
 
@@ -10261,7 +10408,7 @@
 
             // TC-3: Batch upsert all students at once
             const studentsToImport = [];
-            
+
             for (const row of rows) {
               try {
                 // Support both lowercase and title case headers
@@ -10284,7 +10431,7 @@
             // Use batch upsert if available
             if (studentsToImport.length > 0) {
               try {
-                if (typeof db.batchUpsertStudents === 'function') {
+                if (typeof db.batchUpsertStudents === "function") {
                   await db.batchUpsertStudents(studentsToImport);
                   imported = studentsToImport.length;
                 } else {
