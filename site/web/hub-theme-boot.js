@@ -1,6 +1,6 @@
 /**
  * Hub Theme Boot Script
- * Sets up glass-bold theme on page load and manages initialization gate
+ * Applies stored theme preference and manages initialization gate
  * Part of Guardrails Stage 3B - externalized from inline script
  * TC-3A: Added init gate to prevent phantom page flashing
  */
