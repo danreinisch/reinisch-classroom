@@ -5400,11 +5400,182 @@
         }
       });
 
+      // ============================================================================
+      // TEACHER CENTER ASSIGNMENTS: Mapping Support (Phase 1)
+      // ============================================================================
+      
+      // Global variable to store parsed mapping
+      let currentAssignmentMapping = null;
+      
+      // Clear mapping preview
+      function clearMappingPreview() {
+        currentAssignmentMapping = null;
+        qs('#mappingPreviewSection').style.display = 'none';
+        qs('#mappingValidationMessages').style.display = 'none';
+        qs('#mappingPreviewBody').innerHTML = '';
+        qs('#mappingStats').innerHTML = '';
+      }
+      
+      // Display mapping preview table (Phase 1)
+      function displayMappingPreview(parsed) {
+        const tbody = qs('#mappingPreviewBody');
+        const section = qs('#mappingPreviewSection');
+        const validationMessages = qs('#mappingValidationMessages');
+        const statsDiv = qs('#mappingStats');
+        
+        // Store parsed mapping
+        currentAssignmentMapping = parsed;
+        
+        // Show section
+        section.style.display = 'block';
+        
+        // Display validation errors
+        if (parsed.errors && parsed.errors.length > 0) {
+          validationMessages.style.display = 'block';
+          validationMessages.innerHTML = `
+            <div style="padding:10px;background:rgba(239,68,68,.1);border-radius:8px;border:1px solid rgba(239,68,68,.5);color:#fecaca">
+              <div style="font-weight:800;margin-bottom:6px">⚠️ Validation Errors (${parsed.errors.length})</div>
+              ${parsed.errors.slice(0, 5).map(e => `<div class="subtle">${e.message || e}</div>`).join('')}
+              ${parsed.errors.length > 5 ? `<div class="subtle">... and ${parsed.errors.length - 5} more</div>` : ''}
+            </div>
+          `;
+        }
+        
+        // Validate mapping and display warnings
+        const validation = validateMapping(parsed.items);
+        if (validation.warnings && validation.warnings.length > 0) {
+          validationMessages.style.display = 'block';
+          validationMessages.innerHTML += `
+            <div style="padding:10px;background:rgba(251,191,36,.1);border-radius:8px;border:1px solid rgba(251,191,36,.5);color:#fcd34d;margin-top:8px">
+              <div style="font-weight:800;margin-bottom:6px">⚠️ Warnings (${validation.warnings.length})</div>
+              ${validation.warnings.slice(0, 5).map(w => `<div class="subtle">${w.ref ? `${w.ref}: ` : ''}${w.message}</div>`).join('')}
+              ${validation.warnings.length > 5 ? `<div class="subtle">... and ${validation.warnings.length - 5} more</div>` : ''}
+            </div>
+          `;
+        }
+        
+        // Display items
+        tbody.innerHTML = parsed.items.map(item => {
+          const deseCodes = (item.dese_codes || []).join(', ') || '—';
+          const goalCodes = (item.goal_codes || []).join(', ') || '—';
+          const correct = item.correct ? String(item.correct) : '—';
+          
+          return `
+            <tr>
+              <td><strong>${item.ref}</strong></td>
+              <td>${item.answer_type}</td>
+              <td>${item.points}</td>
+              <td>${correct}</td>
+              <td><span class="subtle">${deseCodes}</span></td>
+              <td><span class="subtle">${goalCodes}</span></td>
+              <td>${item.weight || 1.0}</td>
+            </tr>
+          `;
+        }).join('');
+        
+        // Display stats
+        if (validation.stats) {
+          const s = validation.stats;
+          statsDiv.innerHTML = `
+            <strong>Summary:</strong> ${s.total} items total 
+            | ${s.withDese} with DESE codes 
+            | ${s.withGoals} with goal codes 
+            | ${s.withBoth} with both 
+            | ${s.withNeither} with neither
+            ${Object.keys(s.byType).length > 0 ? '<br><strong>By type:</strong> ' + Object.entries(s.byType).map(([type, count]) => `${type}: ${count}`).join(' | ') : ''}
+          `;
+        }
+        
+        console.log('[assignment-mapping] Displayed preview for', parsed.items.length, 'items');
+      }
+      
+      // Handle TXT mapping file upload (Phase 1)
+      qs('#aTxtMappingFile')?.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        const format = qs('#txtMappingFormat').value;
+        console.log('[assignment-mapping] Processing TXT mapping file:', file.name, 'format:', format);
+        
+        try {
+          const text = await file.text();
+          
+          let parsed;
+          if (format === 'json') {
+            parsed = parseJsonManifest(text);
+          } else {
+            parsed = parseTxtMapping(text);
+          }
+          
+          if (parsed.errors && parsed.errors.length > 0) {
+            console.warn('[assignment-mapping] Parsed with errors:', parsed.errors);
+          }
+          
+          // Validate mapping
+          const validation = validateMapping(parsed.items);
+          
+          // Display preview
+          displayMappingPreview(parsed);
+        } catch (error) {
+          console.error('[assignment-mapping] Error processing mapping file:', error);
+          addNotif('Failed to parse mapping file: ' + error.message, { type: 'error' });
+        }
+      });
+      
+      // Handle HTML mapping file upload (Phase 1)
+      qs('#aHtmlMappingFile')?.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        const format = qs('#htmlMappingFormat').value;
+        console.log('[assignment-mapping] Processing HTML mapping file:', file.name, 'format:', format);
+        
+        try {
+          const text = await file.text();
+          
+          let parsed;
+          if (format === 'json') {
+            parsed = parseJsonManifest(text);
+          } else {
+            parsed = parseTxtMapping(text);
+          }
+          
+          if (parsed.errors && parsed.errors.length > 0) {
+            console.warn('[assignment-mapping] Parsed with errors:', parsed.errors);
+          }
+          
+          // Validate mapping
+          const validation = validateMapping(parsed.items);
+          
+          // Display preview
+          displayMappingPreview(parsed);
+        } catch (error) {
+          console.error('[assignment-mapping] Error processing mapping file:', error);
+          addNotif('Failed to parse mapping file: ' + error.message, { type: 'error' });
+        }
+      });
+      
+      // Show/hide mapping file upload based on format selection
+      qs('#htmlMappingFormat')?.addEventListener('change', (e) => {
+        const format = e.target.value;
+        qs('#htmlMappingFileUpload').style.display = format ? 'block' : 'none';
+      });
+      
+      // Clear mapping button handler
+      qs('#btnClearMapping')?.addEventListener('click', () => {
+        clearMappingPreview();
+        addNotif('Mapping cleared');
+      });
+
       // Toggle form sections based on type
       qs("#aType")?.addEventListener("change", () => {
         const type = qs("#aType").value;
         qs("#htmlPackageSection").style.display = type === "html" ? "block" : "none";
         qs("#googleFormSection").style.display = type === "google_form" ? "block" : "none";
+        qs("#txtQuizSection").style.display = type === "txt_quiz" ? "block" : "none";
+        
+        // Clear mapping preview when switching types
+        clearMappingPreview();
       });
 
       // Issue assignment handler
