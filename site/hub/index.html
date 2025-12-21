@@ -5404,6 +5404,9 @@
       // TEACHER CENTER ASSIGNMENTS: Mapping Support (Phase 1)
       // ============================================================================
       
+      // Configuration constants
+      const MAX_DISPLAYED_MESSAGES = 5; // Max validation errors/warnings to show
+      
       // Global variable to store parsed mapping
       let currentAssignmentMapping = null;
       
@@ -5435,8 +5438,8 @@
           validationMessages.innerHTML = `
             <div style="padding:10px;background:rgba(239,68,68,.1);border-radius:8px;border:1px solid rgba(239,68,68,.5);color:#fecaca">
               <div style="font-weight:800;margin-bottom:6px">⚠️ Validation Errors (${parsed.errors.length})</div>
-              ${parsed.errors.slice(0, 5).map(e => `<div class="subtle">${e.message || e}</div>`).join('')}
-              ${parsed.errors.length > 5 ? `<div class="subtle">... and ${parsed.errors.length - 5} more</div>` : ''}
+              ${parsed.errors.slice(0, MAX_DISPLAYED_MESSAGES).map(e => `<div class="subtle">${e.message || e}</div>`).join('')}
+              ${parsed.errors.length > MAX_DISPLAYED_MESSAGES ? `<div class="subtle">... and ${parsed.errors.length - MAX_DISPLAYED_MESSAGES} more</div>` : ''}
             </div>
           `;
         }
@@ -5448,8 +5451,8 @@
           validationMessages.innerHTML += `
             <div style="padding:10px;background:rgba(251,191,36,.1);border-radius:8px;border:1px solid rgba(251,191,36,.5);color:#fcd34d;margin-top:8px">
               <div style="font-weight:800;margin-bottom:6px">⚠️ Warnings (${validation.warnings.length})</div>
-              ${validation.warnings.slice(0, 5).map(w => `<div class="subtle">${w.ref ? `${w.ref}: ` : ''}${w.message}</div>`).join('')}
-              ${validation.warnings.length > 5 ? `<div class="subtle">... and ${validation.warnings.length - 5} more</div>` : ''}
+              ${validation.warnings.slice(0, MAX_DISPLAYED_MESSAGES).map(w => `<div class="subtle">${w.ref ? `${w.ref}: ` : ''}${w.message}</div>`).join('')}
+              ${validation.warnings.length > MAX_DISPLAYED_MESSAGES ? `<div class="subtle">... and ${validation.warnings.length - MAX_DISPLAYED_MESSAGES} more</div>` : ''}
             </div>
           `;
         }
