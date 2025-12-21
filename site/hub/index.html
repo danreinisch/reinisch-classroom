@@ -5033,7 +5033,7 @@
           select.innerHTML =
             '<option value="">-- Select an assignment --</option>' +
             ASSIGNMENTS_CACHE.map(
-              (a) => `<option value="${a.id}">${a.title} (${a.type || 'assignment'})</option>`
+              (a) => `<option value="${a.id}">${a.title}${a.type ? ` (${a.type})` : ''}</option>`
             ).join("");
         } catch (err) {
           console.error('[populateAssignmentSelect] Error:', err);
@@ -5711,14 +5711,10 @@
           const data = await response.json();
           const { inserted_count, skipped_count, instances } = data;
 
-          progressText.textContent = `Complete: ${inserted_count} issued${skipped_count > 0 ? `, ${skipped_count} updated/skipped` : ""}`;
+          progressText.textContent = `Complete: ${inserted_count} assignment(s) issued`;
 
           // Add notification
-          if (skipped_count > 0) {
-            addNotif(`Issued "${assignmentTitle}": ${inserted_count} new, ${skipped_count} already assigned`, { count: inserted_count });
-          } else {
-            addNotif(`Issued "${assignmentTitle}" to ${inserted_count} student(s)`, { count: inserted_count });
-          }
+          addNotif(`Issued "${assignmentTitle}" to ${inserted_count} student(s)`, { count: inserted_count });
 
           // Refresh instances table
           await renderInstancesTable();

@@ -199,11 +199,13 @@ exports.handler = async (event) => {
 
     const upsertedInstances = await upsertResponse.json();
     
-    // Calculate inserted vs skipped (if DB returns count info)
+    // Note: With resolution=merge-duplicates, we can't distinguish between new inserts and updates
+    // from the response alone. All records are returned. For now, we report total as inserted_count
+    // and skipped_count as 0. To get accurate counts, we would need to query existing instances first.
     const inserted_count = upsertedInstances.length;
-    const skipped_count = instances.length - inserted_count;
+    const skipped_count = 0;
 
-    console.log(`[teacher-issue-assignment] [${requestId}] Successfully issued: ${inserted_count} new, ${skipped_count} updated/skipped`);
+    console.log(`[teacher-issue-assignment] [${requestId}] Successfully issued: ${inserted_count} instances created/updated`);
     
     return jsonResponse(
       event,
