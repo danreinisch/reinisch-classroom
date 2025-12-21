@@ -159,6 +159,13 @@ const FEATURES = {
     key: FEATURE_PREFIX + 'student_multi_goal_wizard',
     default: false,
     description: 'Enable multi-goal entry wizard for adding multiple IEP goals in one operation'
+  },
+  
+  // Teacher Center: Assignments Workflow (TC-1)
+  teacherCenterAssignments: {
+    key: FEATURE_PREFIX + 'teacher_center_assignments',
+    default: false,
+    description: 'Enable Teacher Center Assignments workflow with URL/HTML/ZIP uploads, mapping support, and student portal integration'
   }
 };
 
