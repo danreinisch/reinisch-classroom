@@ -2,8 +2,7 @@
    Hub-only refinements to keep the UI rectangular, consistent, and glassy without pills. */
 
 /* Defensive rule: Ensure Emerald visuals win even if body.glass-bold is somehow present */
-[data-rc-app="hub"] body.glass-bold,
-body[data-rc-app="hub"].glass-bold {
+[data-rc-app="hub"] body.glass-bold {
   /* Override glass-bold background with Emerald background */
   background:
     url("/assets/bg/bg5e_soft_grid.svg") center/cover no-repeat fixed,

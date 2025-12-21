@@ -17,12 +17,10 @@ const HUB_PATH = '/hub/';
 
 test.describe('Hub Theme Enforcement', () => {
   test('should enforce Emerald theme for new users', async ({ page }) => {
-    // Clear localStorage to simulate new user
+    // Navigate to Hub with cleared localStorage to simulate new user
     await page.goto(HUB_PATH);
     await page.evaluate(() => localStorage.clear());
-    
-    // Navigate to Hub
-    await page.goto(HUB_PATH);
+    await page.reload();
     
     // Wait for theme to be applied by checking localStorage
     await page.waitForFunction(() => localStorage.getItem('rc_glass_theme') === 'emerald');
