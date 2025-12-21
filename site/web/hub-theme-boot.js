@@ -1,12 +1,21 @@
 /**
  * Hub Theme Boot Script
- * Sets up glass-bold theme on page load
+ * Sets up glass-bold theme on page load and manages initialization gate
  * Part of Guardrails Stage 3B - externalized from inline script
+ * TC-3A: Added init gate to prevent phantom page flashing
  */
 
 (function() {
   const THEME_KEY = 'rc_glass_theme';
   const currentTheme = localStorage.getItem(THEME_KEY);
+  
+  // TC-3A: Add init gate to prevent phantom/flash on load
+  let initGateComplete = false;
+  const initChecks = {
+    themeApplied: false,
+    authChecked: false,
+    flagsLoaded: false
+  };
   
   // Default to glass-bold on first visit
   function applyTheme() {
@@ -21,7 +30,44 @@
     } else if (currentTheme === 'glass-bold') {
       document.body.classList.add('glass-bold');
     }
+    
+    initChecks.themeApplied = true;
+    checkInitGate();
   }
+  
+  // TC-3A: Check if all init requirements are met
+  function checkInitGate() {
+    if (initGateComplete) return;
+    
+    // All checks must pass to complete init gate
+    if (initChecks.themeApplied && initChecks.authChecked && initChecks.flagsLoaded) {
+      initGateComplete = true;
+      
+      // Remove loading indicator if present
+      const loadingIndicator = document.getElementById('hub-loading-gate');
+      if (loadingIndicator) {
+        loadingIndicator.style.display = 'none';
+      }
+      
+      // Dispatch event to signal init complete
+      window.dispatchEvent(new CustomEvent('hub:init-gate-complete'));
+      console.log('[Hub Init Gate] All checks complete, gate lifted');
+    }
+  }
+  
+  // TC-3A: Mark auth check as complete
+  // This should be called by the auth check code
+  window.markAuthCheckComplete = function() {
+    initChecks.authChecked = true;
+    checkInitGate();
+  };
+  
+  // TC-3A: Mark feature flags as loaded
+  // This should be called when feature flags are ready
+  window.markFlagsLoaded = function() {
+    initChecks.flagsLoaded = true;
+    checkInitGate();
+  };
   
   // Apply immediately if body exists, otherwise wait
   if (document.body) {
@@ -50,5 +96,59 @@
     document.addEventListener('DOMContentLoaded', setupStaticEventListeners);
   } else {
     setupStaticEventListeners();
+  }
+  
+  // TC-3A: Show init gate (loading indicator) immediately
+  // This should be called as early as possible in page load
+  function showInitGate() {
+    // Try to find or create loading gate element
+    let gate = document.getElementById('hub-loading-gate');
+    if (!gate && document.body) {
+      gate = document.createElement('div');
+      gate.id = 'hub-loading-gate';
+      
+      // Apply styles
+      gate.style.position = 'fixed';
+      gate.style.inset = '0';
+      gate.style.background = 'rgba(11,18,32,0.98)';
+      gate.style.display = 'flex';
+      gate.style.alignItems = 'center';
+      gate.style.justifyContent = 'center';
+      gate.style.zIndex = '9999';
+      
+      // Create content
+      const content = document.createElement('div');
+      content.style.textAlign = 'center';
+      content.style.color = '#e6edf3';
+      
+      const icon = document.createElement('div');
+      icon.style.fontSize = '24px';
+      icon.style.marginBottom = '16px';
+      icon.textContent = '⏳';
+      
+      const title = document.createElement('div');
+      title.style.fontSize = '16px';
+      title.style.fontWeight = '700';
+      title.textContent = 'Loading Classroom Hub...';
+      
+      const subtitle = document.createElement('div');
+      subtitle.style.fontSize = '13px';
+      subtitle.style.color = '#94a3b8';
+      subtitle.style.marginTop = '8px';
+      subtitle.textContent = 'Initializing...';
+      
+      content.appendChild(icon);
+      content.appendChild(title);
+      content.appendChild(subtitle);
+      gate.appendChild(content);
+      document.body.appendChild(gate);
+    }
+  }
+  
+  // Show gate when DOM is interactive or loaded
+  if (document.readyState !== 'loading') {
+    showInitGate();
+  } else {
+    document.addEventListener('DOMContentLoaded', showInitGate);
   }
 })();

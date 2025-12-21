@@ -3367,6 +3367,11 @@
           console.warn(LOG_PREFIX, `setFeatureFlag stub called for: ${name} = ${value} (no-op)`);
         };
       }
+      
+      // TC-3A: Mark feature flags as loaded for init gate
+      if (typeof window.markFlagsLoaded === 'function') {
+        window.markFlagsLoaded();
+      }
 
       // Assignment Mapping modules (Phase 1)
       // Only load if teacherCenterAssignments feature is enabled
@@ -4296,11 +4301,19 @@
       // Shows resume banner instead of auto-entering teacher center
       checkTeacherSession()
         .then(() => {
+          // TC-3A: Mark auth check as complete for init gate
+          if (typeof window.markAuthCheckComplete === 'function') {
+            window.markAuthCheckComplete();
+          }
           // After checking teacher session, show sign-in modal if needed
           checkAndShowSignIn();
         })
         .catch((err) => {
           console.debug(LOG_PREFIX, "Teacher session check failed:", err);
+          // TC-3A: Mark auth check as complete even on error
+          if (typeof window.markAuthCheckComplete === 'function') {
+            window.markAuthCheckComplete();
+          }
           // Still show sign-in modal on error
           checkAndShowSignIn();
         });
@@ -7241,6 +7254,58 @@
           const existingStudents = await db.listStudents();
           const studentMap = new Map(existingStudents.map((s) => [s.code, s]));
 
+          // TC-3: First pass - collect all unique student codes needed
+          const neededStudentCodes = new Set();
+          
+          for (const line of lines) {
+            const parts = parseCSVLine(line);
+            if (parts.length < 2) continue;
+            
+            const goalCode = parts[1];
+            if (!goalCode) continue;
+            
+            const studentCode = parseStudentCode(goalCode);
+            if (studentCode && !studentMap.has(studentCode)) {
+              neededStudentCodes.add(studentCode);
+            }
+          }
+
+          // TC-3: Batch create all needed students at once
+          if (neededStudentCodes.size > 0) {
+            try {
+              showToolsStatus("Importing", `Creating ${neededStudentCodes.size} students...`, "");
+              const studentsToCreate = Array.from(neededStudentCodes).map(code => ({
+                code,
+                name: code,
+                class_id: null
+              }));
+              
+              // Use batch upsert if available, otherwise fall back to single upserts
+              if (typeof db.batchUpsertStudents === 'function') {
+                const createdStudents = await db.batchUpsertStudents(studentsToCreate);
+                createdStudents.forEach(s => studentMap.set(s.code, s));
+                studentsCreated = createdStudents.length;
+              } else {
+                // Fallback: create one by one
+                for (const studentData of studentsToCreate) {
+                  try {
+                    const newStudent = await db.upsertStudent(studentData);
+                    studentMap.set(newStudent.code, newStudent);
+                    studentsCreated++;
+                  } catch (err) {
+                    console.warn(`Failed to create student ${studentData.code}:`, err.message);
+                  }
+                }
+              }
+            } catch (err) {
+              console.error("Batch student creation failed:", err);
+              // Continue with existing students
+            }
+          }
+
+          // Second pass - import goals
+          showToolsStatus("Importing", "Importing goals...", "");
+          
           for (const line of lines) {
             rowsProcessed++;
 
@@ -7266,18 +7331,10 @@
               continue;
             }
 
-            // Ensure student exists
+            // Student should exist now (or skip if creation failed)
             if (!studentMap.has(studentCode)) {
-              try {
-                const newStudent = await db.upsertStudent({ code: studentCode, name: studentCode });
-                studentMap.set(studentCode, newStudent);
-                studentsCreated++;
-              } catch (err) {
-                errors.push(
-                  `Row ${rowsProcessed}: Failed to create student ${studentCode}: ${err.message}`
-                );
-                continue;
-              }
+              errors.push(`Row ${rowsProcessed}: Student ${studentCode} not found or failed to create`);
+              continue;
             }
 
             // Upsert goal
@@ -10072,6 +10129,9 @@
             let imported = 0;
             let failed = 0;
 
+            // TC-3: Batch upsert all students at once
+            const studentsToImport = [];
+            
             for (const row of rows) {
               try {
                 // Support both lowercase and title case headers
@@ -10084,11 +10144,43 @@
                   continue;
                 }
 
-                await db.upsertStudent({ code, name: name || code, class_id });
-                imported++;
+                studentsToImport.push({ code, name: name || code, class_id });
               } catch (err) {
-                console.error("Failed to import student:", err);
+                console.error("Failed to parse row:", err);
                 failed++;
+              }
+            }
+
+            // Use batch upsert if available
+            if (studentsToImport.length > 0) {
+              try {
+                if (typeof db.batchUpsertStudents === 'function') {
+                  await db.batchUpsertStudents(studentsToImport);
+                  imported = studentsToImport.length;
+                } else {
+                  // Fallback: import one by one
+                  for (const studentData of studentsToImport) {
+                    try {
+                      await db.upsertStudent(studentData);
+                      imported++;
+                    } catch (err) {
+                      console.error("Failed to import student:", err);
+                      failed++;
+                    }
+                  }
+                }
+              } catch (err) {
+                console.error("Batch import failed:", err);
+                // Try one by one as fallback
+                for (const studentData of studentsToImport) {
+                  try {
+                    await db.upsertStudent(studentData);
+                    imported++;
+                  } catch (err2) {
+                    console.error("Failed to import student:", err2);
+                    failed++;
+                  }
+                }
               }
             }
 
