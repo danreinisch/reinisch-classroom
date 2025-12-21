@@ -504,8 +504,16 @@ const remote = {
       
       if (!response.ok) {
         // If unauthorized (401), fall back to direct Supabase (for student mode or local)
-        if (response.status === 401 || response.status === 503) {
-          console.log('[data-adapter] Teacher function unavailable, falling back to direct Supabase');
+        // If service unavailable (503), Supabase not configured, also fall back
+        if (response.status === 401) {
+          console.log('[data-adapter] Teacher function unauthorized, falling back to direct Supabase');
+          const { data, error } = await supabase.from('students').upsert({ code, name, class_id }, { onConflict: 'code' }).select().single();
+          if (error) throw error;
+          return data;
+        }
+        
+        if (response.status === 503) {
+          console.log('[data-adapter] Teacher function unavailable (Supabase not configured), falling back to direct Supabase');
           const { data, error } = await supabase.from('students').upsert({ code, name, class_id }, { onConflict: 'code' }).select().single();
           if (error) throw error;
           return data;
@@ -551,8 +559,20 @@ const remote = {
       
       if (!response.ok) {
         // If unauthorized or service unavailable, fall back to direct Supabase
-        if (response.status === 401 || response.status === 503) {
-          console.log('[data-adapter] Teacher function unavailable for batch, falling back to direct Supabase');
+        if (response.status === 401) {
+          console.log('[data-adapter] Teacher function unauthorized for batch, falling back to direct Supabase');
+          const studentsToUpsert = students.map(s => ({
+            code: s.code,
+            name: s.name || s.code,
+            class_id: s.class_id || null
+          }));
+          const { data, error } = await supabase.from('students').upsert(studentsToUpsert, { onConflict: 'code' }).select();
+          if (error) throw error;
+          return data;
+        }
+        
+        if (response.status === 503) {
+          console.log('[data-adapter] Teacher function unavailable for batch (Supabase not configured), falling back to direct Supabase');
           const studentsToUpsert = students.map(s => ({
             code: s.code,
             name: s.name || s.code,

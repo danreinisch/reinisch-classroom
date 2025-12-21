@@ -106,8 +106,41 @@
     if (!gate && document.body) {
       gate = document.createElement('div');
       gate.id = 'hub-loading-gate';
-      gate.style.cssText = 'position:fixed;inset:0;background:rgba(11,18,32,0.98);display:flex;align-items:center;justify-content:center;z-index:9999;';
-      gate.innerHTML = '<div style="text-align:center;color:#e6edf3;"><div style="font-size:24px;margin-bottom:16px;">⏳</div><div style="font-size:16px;font-weight:700;">Loading Classroom Hub...</div><div style="font-size:13px;color:#94a3b8;margin-top:8px;">Initializing...</div></div>';
+      
+      // Apply styles
+      gate.style.position = 'fixed';
+      gate.style.inset = '0';
+      gate.style.background = 'rgba(11,18,32,0.98)';
+      gate.style.display = 'flex';
+      gate.style.alignItems = 'center';
+      gate.style.justifyContent = 'center';
+      gate.style.zIndex = '9999';
+      
+      // Create content
+      const content = document.createElement('div');
+      content.style.textAlign = 'center';
+      content.style.color = '#e6edf3';
+      
+      const icon = document.createElement('div');
+      icon.style.fontSize = '24px';
+      icon.style.marginBottom = '16px';
+      icon.textContent = '⏳';
+      
+      const title = document.createElement('div');
+      title.style.fontSize = '16px';
+      title.style.fontWeight = '700';
+      title.textContent = 'Loading Classroom Hub...';
+      
+      const subtitle = document.createElement('div');
+      subtitle.style.fontSize = '13px';
+      subtitle.style.color = '#94a3b8';
+      subtitle.style.marginTop = '8px';
+      subtitle.textContent = 'Initializing...';
+      
+      content.appendChild(icon);
+      content.appendChild(title);
+      content.appendChild(subtitle);
+      gate.appendChild(content);
       document.body.appendChild(gate);
     }
   }
