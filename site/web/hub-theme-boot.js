@@ -24,17 +24,15 @@
       return;
     }
     
-    // Default to emerald theme for first-time users
-    if (!currentTheme) {
-      currentTheme = 'emerald';
-      localStorage.setItem(THEME_KEY, currentTheme);
-    }
+    // Hub-only enforcement: always use Emerald theme
+    // Remove any glass-bold class that may have been applied
+    document.body.classList.remove('glass-bold');
     
-    // Only apply glass-bold class if explicitly stored as glass-bold
-    if (currentTheme === 'glass-bold') {
-      document.body.classList.add('glass-bold');
-    }
-    // All other themes (emerald, normal, etc.) rely on Emerald CSS from stylesheets
+    // Force emerald theme for all users (new and existing)
+    currentTheme = 'emerald';
+    localStorage.setItem(THEME_KEY, currentTheme);
+    
+    // Emerald theme relies on CSS from stylesheets
     // No body class needed - Emerald theme applies via data-theme="emerald" on <html>
     
     initChecks.themeApplied = true;
