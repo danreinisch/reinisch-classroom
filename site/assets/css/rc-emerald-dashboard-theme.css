@@ -282,21 +282,28 @@ input[type="file"].rc-input::file-selector-button:hover{
   min-height: 0;
 }
 
-/* Top bar */
+/* Top bar - Glass styling */
 .hub-topbar{
   position: sticky;
   top: 0;
   z-index: 40;
   padding: 10px 0;
-  background: linear-gradient(180deg, rgba(34, 197, 94, 0.92), rgba(22, 163, 74, 0.92));
-  border-bottom: 1px solid rgba(255, 255, 255, 0.18);
-  backdrop-filter: saturate(1.1);
+  background: linear-gradient(180deg, var(--glass-hi), transparent 55%), var(--glass);
+  border: 1px solid var(--border);
+  border-bottom: 1px solid var(--border-strong);
+  box-shadow: var(--shadow-0);
+}
+@supports ((backdrop-filter: blur(14px)) or (-webkit-backdrop-filter: blur(14px))){
+  .hub-topbar{
+    backdrop-filter: blur(14px) saturate(125%);
+    -webkit-backdrop-filter: blur(14px) saturate(125%);
+  }
 }
 
 .hub-topbar-inner{
-  max-width: 1700px;
+  max-width: 1360px;
   margin: 0 auto;
-  padding: 0 12px;
+  padding: 0 18px;
   display: flex;
   gap: 12px;
   align-items: center;
@@ -305,11 +312,11 @@ input[type="file"].rc-input::file-selector-button:hover{
 /* Main grid layout */
 .hub-grid{
   display: grid;
-  grid-template-columns: 72px 240px minmax(0, 1fr) 300px;
-  gap: 14px;
-  max-width: 1700px;
+  grid-template-columns: 62px 300px minmax(0, 1fr) 320px;
+  gap: 18px;
+  max-width: 1360px;
   margin: 0 auto;
-  padding: 14px;
+  padding: 18px;
   flex: 1;
   min-height: 0;
 }
@@ -394,7 +401,7 @@ input[type="file"].rc-input::file-selector-button:hover{
 .hub-main{
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 18px;
   min-height: 0;
   overflow: auto;
 }
@@ -403,16 +410,42 @@ input[type="file"].rc-input::file-selector-button:hover{
 .hub-right{
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 18px;
 }
 
-/* Responsive behavior */
-@media (max-width: 1100px) {
+/* Responsive behavior - Progressive breakpoints */
+/* At 1400px and above: 4-column layout (rail + menu + main + right) */
+@media (max-width: 1400px) {
+  .hub-grid {
+    max-width: 100%;
+  }
+}
+
+/* At 1200px: hide right panel only */
+@media (max-width: 1200px) {
+  .hub-grid {
+    grid-template-columns: 62px 300px minmax(0, 1fr);
+  }
+  .hub-right {
+    display: none;
+  }
+}
+
+/* At 980px: collapse left menu, keep rail */
+@media (max-width: 980px) {
+  .hub-grid {
+    grid-template-columns: 62px minmax(0, 1fr);
+  }
+  .hub-menu {
+    display: none;
+  }
+}
+
+/* At 760px: single column */
+@media (max-width: 760px) {
   .hub-grid {
     grid-template-columns: 1fr;
   }
-  .hub-right,
-  .hub-menu,
   .hub-rail {
     display: none;
   }
