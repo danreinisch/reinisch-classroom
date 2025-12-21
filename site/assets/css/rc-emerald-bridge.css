@@ -3,7 +3,6 @@
 
 /* Defensive rule: Ensure Emerald visuals win even if body.glass-bold is somehow present */
 [data-rc-app="hub"] body.glass-bold,
-[data-rc-app="hub"].glass-bold,
 body[data-rc-app="hub"].glass-bold {
   /* Override glass-bold background with Emerald background */
   background:
