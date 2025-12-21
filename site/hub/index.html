@@ -3369,19 +3369,27 @@
       }
 
       // Assignment Mapping modules (Phase 1)
+      // Only load if teacherCenterAssignments feature is enabled
       let parseTxtMapping, parseJsonManifest, validateMapping;
-      try {
-        const mappingParsers = await import(`/web/assignment-mapping-parsers.js?v=${cacheBust}`);
-        parseTxtMapping = mappingParsers.parseTxtMapping;
-        parseJsonManifest = mappingParsers.parseJsonManifest;
-        validateMapping = mappingParsers.validateMapping;
-        console.log(LOG_PREFIX, "Assignment mapping parsers loaded successfully");
-      } catch (err) {
-        console.error(LOG_PREFIX, "Failed to load assignment-mapping-parsers.js:", err);
-        failedModules.push("assignment-mapping-parsers.js");
-        // Provide stub implementations
-        parseTxtMapping = () => ({ format: 'txt', items: [], errors: [{ message: 'Parser not loaded' }], valid: false });
-        parseJsonManifest = () => ({ format: 'json', items: [], errors: [{ message: 'Parser not loaded' }], valid: false });
+      if (getFeatureFlag('teacherCenterAssignments')) {
+        try {
+          const mappingParsers = await import(`/web/assignment-mapping-parsers.js?v=${cacheBust}`);
+          parseTxtMapping = mappingParsers.parseTxtMapping;
+          parseJsonManifest = mappingParsers.parseJsonManifest;
+          validateMapping = mappingParsers.validateMapping;
+          console.log(LOG_PREFIX, "Assignment mapping parsers loaded successfully");
+        } catch (err) {
+          console.error(LOG_PREFIX, "Failed to load assignment-mapping-parsers.js:", err);
+          failedModules.push("assignment-mapping-parsers.js");
+          // Provide stub implementations
+          parseTxtMapping = () => ({ format: 'txt', items: [], errors: [{ message: 'Parser not loaded' }], valid: false });
+          parseJsonManifest = () => ({ format: 'json', items: [], errors: [{ message: 'Parser not loaded' }], valid: false });
+          validateMapping = () => ({ valid: false, warnings: [], stats: {} });
+        }
+      } else {
+        // Feature disabled - provide no-op stubs
+        parseTxtMapping = () => ({ format: 'txt', items: [], errors: [{ message: 'Feature disabled' }], valid: false });
+        parseJsonManifest = () => ({ format: 'json', items: [], errors: [{ message: 'Feature disabled' }], valid: false });
         validateMapping = () => ({ valid: false, warnings: [], stats: {} });
       }
 
@@ -5575,10 +5583,15 @@
         const type = qs("#aType").value;
         qs("#htmlPackageSection").style.display = type === "html" ? "block" : "none";
         qs("#googleFormSection").style.display = type === "google_form" ? "block" : "none";
-        qs("#txtQuizSection").style.display = type === "txt_quiz" ? "block" : "none";
+        
+        // Only show TXT Quiz section if feature is enabled
+        const tcAssignmentsEnabled = getFeatureFlag('teacherCenterAssignments');
+        qs("#txtQuizSection").style.display = (type === "txt_quiz" && tcAssignmentsEnabled) ? "block" : "none";
         
         // Clear mapping preview when switching types
-        clearMappingPreview();
+        if (typeof clearMappingPreview === 'function') {
+          clearMappingPreview();
+        }
       });
 
       // Issue assignment handler
@@ -6033,6 +6046,23 @@
 
         // Initialize HTML source options
         updateHtmlSourceOptions();
+        
+        // Gate Teacher Center Assignments features
+        const tcAssignmentsEnabled = getFeatureFlag('teacherCenterAssignments');
+        if (!tcAssignmentsEnabled) {
+          // Hide/disable mapping-related UI elements
+          const txtQuizOption = qs('#aType option[value="txt_quiz"]');
+          if (txtQuizOption) txtQuizOption.style.display = 'none';
+          
+          // Hide mapping sections
+          qs('#htmlMappingFormat')?.closest('label')?.setAttribute('style', 'display:none');
+          qs('#htmlMappingFileUpload')?.setAttribute('style', 'display:none');
+          qs('#txtQuizSection')?.setAttribute('style', 'display:none');
+          qs('#mappingPreviewSection')?.setAttribute('style', 'display:none');
+        } else {
+          // Feature enabled - ensure visibility
+          qs('#txtQuizSection')?.setAttribute('style', 'margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.02);display:none');
+        }
       }
 
       // Event listeners for assignments
