@@ -24,16 +24,22 @@
       }
       body {
         margin: 0;
-        background: linear-gradient(180deg, #0b0f14, #0e131a);
-        color: var(--ink);
-        font-family:
+        color: var(--text0, var(--ink));
+        font-family: var(--font,
           ui-sans-serif,
           -apple-system,
           Segoe UI,
           Roboto,
           Inter,
           Helvetica,
-          Arial;
+          Arial);
+      }
+      /* Emerald theme background applied via data-theme attribute and theme CSS */
+      html[data-theme="emerald"] body {
+        background:
+          radial-gradient(900px 600px at 18% 10%, color-mix(in oklab, var(--accent) 22%, transparent), transparent 60%),
+          radial-gradient(700px 500px at 85% 25%, color-mix(in oklab, var(--accent2) 16%, transparent), transparent 55%),
+          linear-gradient(180deg, var(--bg1), var(--bg0));
       }
       .header {
         position: sticky;
@@ -68,13 +74,22 @@
         font-weight: 800;
       }
       .btn {
-        border: 1px solid var(--line);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        height: 42px;
+        padding: 0 14px;
+        border: 1px solid var(--border, var(--line));
         background: rgba(255, 255, 255, 0.06);
-        color: var(--ink);
-        padding: 10px 14px;
-        border-radius: 10px;
+        color: var(--text0, var(--ink));
+        border-radius: 14px;
         font-weight: 800;
         cursor: pointer;
+        transition: transform 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+      }
+      .btn:hover {
+        transform: translateY(-1px);
+        border-color: var(--border-strong, rgba(255, 255, 255, 0.14));
       }
       .btn.primary {
         background: linear-gradient(180deg, rgba(34, 197, 94, 0.96), rgba(22, 163, 74, 0.96));
@@ -82,7 +97,10 @@
         border: 0;
       }
       .btn.small {
-        padding: 6px 10px;
+        height: 34px;
+        padding: 0 10px;
+        border-radius: 10px;
+        font-size: 13px;
       }
       .layout {
         display: grid;
@@ -103,11 +121,11 @@
         }
       }
       .card {
-        background: rgba(255, 255, 255, 0.06);
-        border: 1px solid var(--line);
-        border-radius: 14px;
-        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
-        padding: 14px;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 65%), var(--surface0, rgba(15, 21, 18, 1));
+        border: 1px solid var(--border, var(--line));
+        border-radius: 18px;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+        padding: 16px;
       }
       .card-header {
         display: flex;
@@ -153,11 +171,26 @@
       select,
       textarea {
         width: 100%;
-        background: rgba(255, 255, 255, 0.06);
-        border: 1px solid var(--line);
-        border-radius: 10px;
-        color: var(--ink);
-        padding: 8px 10px;
+        height: 42px;
+        background: rgba(10, 14, 12, 0.55);
+        border: 1px solid var(--border, var(--line));
+        border-radius: 14px;
+        color: var(--text0, var(--ink));
+        padding: 0 12px;
+        transition: border-color 0.12s ease, box-shadow 0.12s ease;
+      }
+      textarea {
+        height: auto;
+        min-height: 120px;
+        padding: 12px;
+        resize: vertical;
+      }
+      input:focus,
+      select:focus,
+      textarea:focus {
+        outline: none;
+        border-color: var(--accent, #35E08A);
+        box-shadow: 0 0 0 4px rgba(53, 224, 138, 0.18);
       }
       label {
         display: block;
@@ -250,11 +283,15 @@
         margin-left: 12px;
       }
       .topnav button {
-        padding: 8px 16px;
-        border-radius: 8px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        height: 34px;
+        padding: 0 16px;
+        border-radius: 10px;
         border: 1px solid rgba(255, 255, 255, 0.12);
         background: rgba(255, 255, 255, 0.06);
-        color: var(--ink);
+        color: var(--text0, var(--ink));
         font-weight: 800;
         cursor: pointer;
         transition: 0.15s;
