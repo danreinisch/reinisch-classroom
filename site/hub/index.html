@@ -1,10 +1,12 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="emerald">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Reinisch Classroom — Classroom Hub</title>
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <!-- Emerald Glass Dashboard Theme -->
+    <link rel="stylesheet" href="/assets/css/rc-emerald-dashboard-theme.css" />
     <style>
       :root {
         --base: #0b0f14;
@@ -22,16 +24,22 @@
       }
       body {
         margin: 0;
-        background: linear-gradient(180deg, #0b0f14, #0e131a);
-        color: var(--ink);
-        font-family:
+        color: var(--text0, var(--ink));
+        font-family: var(--font,
           ui-sans-serif,
           -apple-system,
           Segoe UI,
           Roboto,
           Inter,
           Helvetica,
-          Arial;
+          Arial);
+      }
+      /* Emerald theme background applied via data-theme attribute and theme CSS */
+      html[data-theme="emerald"] body {
+        background:
+          radial-gradient(900px 600px at 18% 10%, color-mix(in oklab, var(--accent) 22%, transparent), transparent 60%),
+          radial-gradient(700px 500px at 85% 25%, color-mix(in oklab, var(--accent2) 16%, transparent), transparent 55%),
+          linear-gradient(180deg, var(--bg1), var(--bg0));
       }
       .header {
         position: sticky;
@@ -60,19 +68,28 @@
         align-items: center;
         gap: 8px;
         padding: 6px 10px;
-        border-radius: 999px;
+        border-radius: 10px;
         background: rgba(255, 255, 255, 0.18);
         color: #062513;
         font-weight: 800;
       }
       .btn {
-        border: 1px solid var(--line);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        height: 42px;
+        padding: 0 14px;
+        border: 1px solid var(--border, var(--line));
         background: rgba(255, 255, 255, 0.06);
-        color: var(--ink);
-        padding: 10px 14px;
-        border-radius: 10px;
+        color: var(--text0, var(--ink));
+        border-radius: 14px;
         font-weight: 800;
         cursor: pointer;
+        transition: transform 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+      }
+      .btn:hover {
+        transform: translateY(-1px);
+        border-color: var(--border-strong, rgba(255, 255, 255, 0.14));
       }
       .btn.primary {
         background: linear-gradient(180deg, rgba(34, 197, 94, 0.96), rgba(22, 163, 74, 0.96));
@@ -80,7 +97,10 @@
         border: 0;
       }
       .btn.small {
-        padding: 6px 10px;
+        height: 34px;
+        padding: 0 10px;
+        border-radius: 10px;
+        font-size: 13px;
       }
       .layout {
         display: grid;
@@ -101,11 +121,11 @@
         }
       }
       .card {
-        background: rgba(255, 255, 255, 0.06);
-        border: 1px solid var(--line);
-        border-radius: 14px;
-        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
-        padding: 14px;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 65%), var(--surface0, rgba(15, 21, 18, 1));
+        border: 1px solid var(--border, var(--line));
+        border-radius: 18px;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+        padding: 16px;
       }
       .card-header {
         display: flex;
@@ -118,18 +138,25 @@
         display: block;
         padding: 10px 12px;
         border-radius: 12px;
-        border: 1px solid var(--line);
+        border: 1px solid var(--border, var(--line));
         background: rgba(255, 255, 255, 0.06);
-        color: var(--ink);
+        color: var(--text0, var(--ink));
         font-weight: 800;
         margin-bottom: 8px;
         text-decoration: none;
+        transition: border-color 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
+      }
+      .nav a:hover {
+        border-color: var(--border-strong, rgba(255, 255, 255, 0.14));
+        background: rgba(255, 255, 255, 0.08);
       }
       .nav a.active {
-        outline: 2px solid rgba(34, 197, 94, 0.35);
+        background: rgba(34, 197, 94, 0.16);
+        border-color: rgba(34, 197, 94, 0.45);
+        box-shadow: inset 3px 0 0 var(--accent, #35E08A);
       }
       .subtle {
-        color: var(--muted);
+        color: var(--text1, var(--muted));
         font-size: 13px;
       }
       .table {
@@ -139,9 +166,16 @@
       .table th,
       .table td {
         padding: 10px;
-        border-bottom: 1px solid var(--line);
+        border-bottom: 1px solid var(--border, var(--line));
         text-align: left;
         font-size: 14px;
+      }
+      .table th {
+        color: var(--text1, var(--muted));
+        font-weight: 700;
+      }
+      .table tr:hover td {
+        background: rgba(255, 255, 255, 0.02);
       }
       .scroll {
         max-height: 56vh;
@@ -151,11 +185,26 @@
       select,
       textarea {
         width: 100%;
-        background: rgba(255, 255, 255, 0.06);
-        border: 1px solid var(--line);
-        border-radius: 10px;
-        color: var(--ink);
-        padding: 8px 10px;
+        height: 42px;
+        background: rgba(10, 14, 12, 0.55);
+        border: 1px solid var(--border, var(--line));
+        border-radius: 14px;
+        color: var(--text0, var(--ink));
+        padding: 0 12px;
+        transition: border-color 0.12s ease, box-shadow 0.12s ease;
+      }
+      textarea {
+        height: auto;
+        min-height: 120px;
+        padding: 12px;
+        resize: vertical;
+      }
+      input:focus,
+      select:focus,
+      textarea:focus {
+        outline: none;
+        border-color: var(--accent, #35E08A);
+        box-shadow: 0 0 0 4px rgba(53, 224, 138, 0.18);
       }
       label {
         display: block;
@@ -167,24 +216,27 @@
         align-items: center;
         gap: 6px;
         padding: 4px 8px;
-        border-radius: 999px;
-        border: 1px solid var(--line);
+        border-radius: 10px;
+        border: 1px solid var(--border, var(--line));
         background: rgba(255, 255, 255, 0.08);
         font-size: 12px;
+        font-weight: 700;
       }
       .goal-item {
         display: flex;
         gap: 10px;
         align-items: flex-start;
         padding: 10px;
-        border: 1px solid var(--line);
+        border: 1px solid var(--border, var(--line));
         border-radius: 12px;
         background: rgba(255, 255, 255, 0.04);
       }
       .modal-backdrop {
         position: fixed;
         inset: 0;
-        background: rgba(5, 7, 9, 0.6);
+        background: rgba(5, 7, 9, 0.75);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
         display: none;
         align-items: center;
         justify-content: center;
@@ -223,23 +275,24 @@
         width: 56px;
         height: 56px;
         border-radius: 12px;
-        border: 1px solid var(--line);
+        border: 1px solid var(--border, var(--line));
         background: rgba(255, 255, 255, 0.06);
-        color: var(--ink);
+        color: var(--text0, var(--ink));
         font-size: 24px;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
         padding: 0;
+        transition: border-color 0.12s ease, box-shadow 0.12s ease;
       }
       .iconrail button.active {
         background: linear-gradient(180deg, rgba(34, 197, 94, 0.12), rgba(34, 197, 94, 0.06));
-        border-color: rgba(34, 197, 94, 0.4);
+        border-color: var(--accent, rgba(34, 197, 94, 0.4));
         box-shadow: 0 4px 16px rgba(34, 197, 94, 0.3);
       }
       .iconrail button:hover {
-        border-color: rgba(255, 255, 255, 0.18);
+        border-color: var(--border-strong, rgba(255, 255, 255, 0.18));
       }
       .topnav {
         display: flex;
@@ -248,11 +301,15 @@
         margin-left: 12px;
       }
       .topnav button {
-        padding: 8px 16px;
-        border-radius: 8px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        height: 34px;
+        padding: 0 16px;
+        border-radius: 10px;
         border: 1px solid rgba(255, 255, 255, 0.12);
         background: rgba(255, 255, 255, 0.06);
-        color: var(--ink);
+        color: var(--text0, var(--ink));
         font-weight: 800;
         cursor: pointer;
         transition: 0.15s;
@@ -435,7 +492,7 @@
       }
       .scroll::-webkit-scrollbar-thumb {
         background: rgba(255, 255, 255, 0.14);
-        border-radius: 999px;
+        border-radius: 6px;
       }
       .scroll::-webkit-scrollbar-thumb:hover {
         background: rgba(255, 255, 255, 0.22);
@@ -1095,7 +1152,7 @@
       }
     </style>
   </head>
-  <body class="glass-bold">
+  <body>
     <div class="header">
       <div class="bar">
         <div class="brand">Reinisch Classroom — Classroom Hub</div>
