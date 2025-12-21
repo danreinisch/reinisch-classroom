@@ -1,18 +1,25 @@
-Mastercard Interview Prep (Presentation Slot)
+Mastercard Interview Prep — CSP-safe bundle
 
-Drop BOTH files into:
-  site/life-skills/presentations/presentation-31/
-(or whichever presentation folder you want to use)
+Why this exists:
+Your site uses a Content Security Policy (CSP) that blocks inline <script> execution (no 'unsafe-inline').
+So single-file HTML modules with inline JS will render but won't work.
 
-Required files:
-  1) entry.html   (this is what the Life Skills presentation shell loads)
-  2) mastercard_interview_prep_stephanie.html (the actual module)
+Files:
+- entry.html      -> wrapper your presentation shell can load (iframe)
+- module.html     -> the actual app UI
+- styles.css      -> all styling (no inline styles)
+- app.js          -> all logic (no inline scripts)
+- entry.css       -> makes the iframe full-screen
 
-Why this works:
-- The shell expects an entry.html for the slot.
-- entry.html is a safe fragment that embeds the full module in an iframe.
+Install:
+Copy ALL files into the same folder:
+site/life-skills/presentations/presentation-32/
+(or whichever presentation folder you want)
 
-Quick test after deploy:
-- Open /life-skills/presentations/presentation-31/
-- In DevTools > Network, verify entry.html is 200 (not 404)
-- If the shell still says "No entry HTML found", check it isn't requesting a different filename.
+Test URLs after deploy:
+.../presentation-32/entry.html
+.../presentation-32/module.html
+
+Notes:
+- entry.html works even if your shell injects HTML into a div, because the iframe executes separately.
+- Everything autosaves in localStorage per browser.
