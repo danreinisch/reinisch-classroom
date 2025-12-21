@@ -8,10 +8,11 @@ const store = {
 };
 
 // TC-3.1: Helper to detect local dev environment
+// Only allows fallback in true dev environments (localhost, 127.0.0.1)
+// Netlify preview deployments are excluded to maintain security
 const isLocalDev = () => {
   return window.location.hostname === 'localhost' || 
-         window.location.hostname === '127.0.0.1' ||
-         window.location.origin.includes('netlify.app');
+         window.location.hostname === '127.0.0.1';
 };
 
 const local = {

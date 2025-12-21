@@ -1240,7 +1240,7 @@
         </div>
 
         <!-- TC-3.1: Default Home view - shown when no role selected -->
-        <div class="card ttab" data-tab="home">
+        <div class="card ttab" data-tab="home" style="display: none">
           <div class="card-header"><div>🏠 Classroom Hub</div></div>
           <div style="padding: 20px; text-align: center">
             <div style="font-size: 48px; margin-bottom: 20px">👋</div>
@@ -3709,8 +3709,13 @@
         const auth = getAuth();
         // Don't show sign-in modal if there's a pending teacher session
         if (!auth && !pendingTeacherSession) {
-          const modal = qs("#signInModal");
-          if (modal) modal.classList.add("show");
+          // TC-3.1: Show home tab as landing page instead of sign-in modal
+          const homeTab = qs('.ttab[data-tab="home"]');
+          if (homeTab) homeTab.style.display = "block";
+          
+          // Don't show sign-in modal automatically - let user choose from home page
+          // const modal = qs("#signInModal");
+          // if (modal) modal.classList.add("show");
         } else {
           updateUserChip();
         }
