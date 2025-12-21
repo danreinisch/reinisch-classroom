@@ -123,7 +123,7 @@
       .card {
         background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 65%), var(--surface0, rgba(15, 21, 18, 1));
         border: 1px solid var(--border, var(--line));
-        border-radius: 18px;
+        border-radius: 14px;
         box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
         padding: 16px;
       }
@@ -205,6 +205,12 @@
         outline: none;
         border-color: var(--accent, #35E08A);
         box-shadow: 0 0 0 4px rgba(53, 224, 138, 0.18);
+      }
+      .btn:focus-visible,
+      .nav a:focus-visible,
+      button:focus-visible {
+        outline: 2px solid var(--accent, #35E08A);
+        outline-offset: 2px;
       }
       label {
         display: block;
