@@ -17,18 +17,23 @@
     flagsLoaded: false
   };
   
-  // Apply theme if stored (no longer defaults to glass-bold)
+  // Apply theme if stored, default to emerald for first-time users
   function applyTheme() {
     if (!document.body) {
       console.warn('[Theme Boot] Body not ready, waiting for DOMContentLoaded');
       return;
     }
     
+    // Default to emerald theme for first-time users
+    if (!currentTheme) {
+      localStorage.setItem(THEME_KEY, 'emerald');
+    }
+    
     // Only apply glass-bold class if explicitly stored
     if (currentTheme === 'glass-bold') {
       document.body.classList.add('glass-bold');
     }
-    // If no theme is set, do not default to glass-bold - let Emerald apply
+    // If emerald or no theme, let Emerald CSS apply naturally
     
     initChecks.themeApplied = true;
     checkInitGate();
