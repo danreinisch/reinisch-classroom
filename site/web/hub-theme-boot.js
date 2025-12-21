@@ -34,7 +34,8 @@
     if (currentTheme === 'glass-bold') {
       document.body.classList.add('glass-bold');
     }
-    // If emerald, normal, or any other theme, let Emerald CSS apply naturally
+    // All other themes (emerald, normal, etc.) rely on Emerald CSS from stylesheets
+    // No body class needed - Emerald theme applies via data-theme="emerald" on <html>
     
     initChecks.themeApplied = true;
     checkInitGate();
