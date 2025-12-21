@@ -63,12 +63,12 @@
         margin-right: auto;
         color: #031f11;
       }
-      .chip {
+      .hub-tag {
         display: inline-flex;
         align-items: center;
         gap: 8px;
         padding: 6px 10px;
-        border-radius: 10px;
+        border-radius: 8px;
         background: rgba(255, 255, 255, 0.18);
         color: #062513;
         font-weight: 800;
@@ -82,7 +82,7 @@
         border: 1px solid var(--border, var(--line));
         background: rgba(255, 255, 255, 0.06);
         color: var(--text0, var(--ink));
-        border-radius: 14px;
+        border-radius: 10px;
         font-weight: 800;
         cursor: pointer;
         transition: transform 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
@@ -99,7 +99,7 @@
       .btn.small {
         height: 34px;
         padding: 0 10px;
-        border-radius: 10px;
+        border-radius: 8px;
         font-size: 13px;
       }
       .layout {
@@ -123,7 +123,7 @@
       .card {
         background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 65%), var(--surface0, rgba(15, 21, 18, 1));
         border: 1px solid var(--border, var(--line));
-        border-radius: 14px;
+        border-radius: 12px;
         box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
         padding: 16px;
       }
@@ -137,7 +137,7 @@
       .nav a {
         display: block;
         padding: 10px 12px;
-        border-radius: 12px;
+        border-radius: 10px;
         border: 1px solid var(--border, var(--line));
         background: rgba(255, 255, 255, 0.06);
         color: var(--text0, var(--ink));
@@ -188,7 +188,7 @@
         height: 42px;
         background: rgba(10, 14, 12, 0.55);
         border: 1px solid var(--border, var(--line));
-        border-radius: 14px;
+        border-radius: 10px;
         color: var(--text0, var(--ink));
         padding: 0 12px;
         transition: border-color 0.12s ease, box-shadow 0.12s ease;
@@ -222,7 +222,7 @@
         align-items: center;
         gap: 6px;
         padding: 4px 8px;
-        border-radius: 10px;
+        border-radius: 8px;
         border: 1px solid var(--border, var(--line));
         background: rgba(255, 255, 255, 0.08);
         font-size: 12px;
@@ -234,7 +234,7 @@
         align-items: flex-start;
         padding: 10px;
         border: 1px solid var(--border, var(--line));
-        border-radius: 12px;
+        border-radius: 10px;
         background: rgba(255, 255, 255, 0.04);
       }
       .modal-backdrop {
@@ -280,7 +280,7 @@
       .iconrail button {
         width: 56px;
         height: 56px;
-        border-radius: 12px;
+        border-radius: 10px;
         border: 1px solid var(--border, var(--line));
         background: rgba(255, 255, 255, 0.06);
         color: var(--text0, var(--ink));
@@ -312,7 +312,7 @@
         justify-content: center;
         height: 34px;
         padding: 0 16px;
-        border-radius: 10px;
+        border-radius: 8px;
         border: 1px solid rgba(255, 255, 255, 0.12);
         background: rgba(255, 255, 255, 0.06);
         color: var(--text0, var(--ink));
@@ -329,11 +329,11 @@
         border-color: rgba(34, 197, 94, 0.45);
         color: #fff;
       }
-      .role-switch-chip {
+      .role-switch-tag {
         cursor: pointer;
         display: none;
       }
-      .role-switch-chip.visible {
+      .role-switch-tag.visible {
         display: inline-flex;
       }
     </style>
@@ -533,12 +533,13 @@
         background: linear-gradient(90deg, rgba(34, 197, 94, 0.08), rgba(6, 182, 212, 0.06));
       }
 
-      /* Top header chips */
-      .chip {
+      /* Top header tags */
+      .hub-tag {
         background: linear-gradient(180deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.18));
         color: #062513;
       }
     </style>
+    <link rel="stylesheet" href="/assets/css/rc-emerald-bridge.css" />
     <link rel="stylesheet" href="/web/teacher-center-theme.css" />
 
     <!-- Bold Glass Theme v3: Subtle soft-grid background with gentle emerald mist, improved readability, and enhanced glassmorphism -->
@@ -958,8 +959,8 @@
         color: #e0e6ed !important;
       }
 
-      /* === Improve chip contrast in header === */
-      body.glass-bold .chip {
+      /* === Improve header tag contrast === */
+      body.glass-bold .hub-tag {
         background: linear-gradient(
           180deg,
           rgba(255, 255, 255, 0.3),
@@ -1169,14 +1170,14 @@
         </nav>
         <span
           id="datetimeDisplay"
-          class="chip"
+          class="hub-tag"
           style="margin-left: auto; margin-right: 8px; font-size: 13px; font-weight: 600"
         ></span>
         <button class="btn small" id="btnThemeToggle" title="Toggle glass theme">
           Glass: Bold
         </button>
-        <span id="currentUserChip" class="chip">Signed out</span>
-        <span id="roleSwitchChip" class="chip role-switch-chip" title="Switch role"
+        <span id="currentUserChip" class="hub-tag">Signed out</span>
+        <span id="roleSwitchChip" class="hub-tag role-switch-tag" title="Switch role"
           >Switch Role</span
         >
         <a class="btn small" id="btnStudent" href="/student/">Student Portal</a>
