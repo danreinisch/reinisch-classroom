@@ -1231,10 +1231,34 @@
 
       <main class="content">
         <!-- Student Portal Manager (placeholder) -->
-        <div class="card ttab" data-tab="studentPortal">
+        <!-- TC-3.1: Hide by default to prevent phantom/flash on Hub load -->
+        <div class="card ttab" data-tab="studentPortal" style="display: none">
           <div class="card-header"><div>🧑 Student Portal Manager</div></div>
           <div class="subtle">
             WIP: This will show students, goals, and per-student portal details.
+          </div>
+        </div>
+
+        <!-- TC-3.1: Default Home view - shown when no role selected -->
+        <div class="card ttab" data-tab="home">
+          <div class="card-header"><div>🏠 Classroom Hub</div></div>
+          <div style="padding: 20px; text-align: center">
+            <div style="font-size: 48px; margin-bottom: 20px">👋</div>
+            <div style="font-size: 24px; font-weight: 800; margin-bottom: 12px">
+              Welcome to Classroom Hub
+            </div>
+            <div class="subtle" style="margin-bottom: 24px; max-width: 500px; margin-left: auto; margin-right: auto">
+              Choose your role to get started. Teachers can manage students, goals, and assignments. 
+              Students can access their portal.
+            </div>
+            <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap">
+              <button class="btn primary" id="btnHomeTeacher" style="padding: 14px 24px; font-size: 16px">
+                Teacher Center 🔒
+              </button>
+              <a class="btn" href="/student/" style="padding: 14px 24px; font-size: 16px; text-decoration: none">
+                Student Portal
+              </a>
+            </div>
           </div>
         </div>
 
@@ -4188,6 +4212,32 @@
         const modal = qs("#teachModal");
         if (modal) modal.classList.remove("show");
         isFromSignInModal = false; // Reset flag
+      });
+      
+      // TC-3.1: Home page teacher button - same as main teacher button
+      on("#btnHomeTeacher", "click", async () => {
+        // If there's a pending session from the banner, show the banner again
+        if (pendingTeacherSession) {
+          const banner = qs("#teacherResumeBanner");
+          if (banner) {
+            banner.style.display = "block";
+          }
+          return;
+        }
+        
+        // Only show modal if not already authenticated as teacher
+        const currentAuth = getAuth();
+        if (currentAuth && currentAuth.role === "teacher") {
+          // Already authenticated - show teacher view
+          showTeacher();
+          return;
+        }
+
+        const modal = qs("#teachModal");
+        const userInput = qs("#teachUser");
+        if (modal) modal.classList.add("show");
+        if (userInput) userInput.focus();
+        isFromSignInModal = false; // Not from sign-in modal
       });
       
       // Teacher Resume Banner handlers
