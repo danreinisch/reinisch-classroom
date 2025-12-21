@@ -24,8 +24,8 @@ test.describe('Hub Theme Enforcement', () => {
     // Navigate to Hub
     await page.goto(HUB_PATH);
     
-    // Wait for theme to be applied
-    await page.waitForTimeout(500);
+    // Wait for theme to be applied by checking localStorage
+    await page.waitForFunction(() => localStorage.getItem('rc_glass_theme') === 'emerald');
     
     // Verify localStorage is set to 'emerald'
     const theme = await page.evaluate(() => localStorage.getItem('rc_glass_theme'));
@@ -46,8 +46,8 @@ test.describe('Hub Theme Enforcement', () => {
     // Navigate to Hub (this should force migration to emerald)
     await page.goto(HUB_PATH);
     
-    // Wait for theme to be applied
-    await page.waitForTimeout(500);
+    // Wait for theme migration by checking localStorage
+    await page.waitForFunction(() => localStorage.getItem('rc_glass_theme') === 'emerald');
     
     // Verify localStorage is now 'emerald'
     const theme = await page.evaluate(() => localStorage.getItem('rc_glass_theme'));
@@ -97,7 +97,7 @@ test.describe('Hub Theme Enforcement', () => {
   test('should maintain emerald theme after page reload', async ({ page }) => {
     // First visit
     await page.goto(HUB_PATH);
-    await page.waitForTimeout(500);
+    await page.waitForFunction(() => localStorage.getItem('rc_glass_theme') === 'emerald');
     
     // Verify initial state
     let theme = await page.evaluate(() => localStorage.getItem('rc_glass_theme'));
@@ -105,7 +105,7 @@ test.describe('Hub Theme Enforcement', () => {
     
     // Reload page
     await page.reload();
-    await page.waitForTimeout(500);
+    await page.waitForFunction(() => localStorage.getItem('rc_glass_theme') === 'emerald');
     
     // Verify theme persists
     theme = await page.evaluate(() => localStorage.getItem('rc_glass_theme'));
@@ -118,7 +118,7 @@ test.describe('Hub Theme Enforcement', () => {
   
   test('should prevent manual glass-bold class injection', async ({ page }) => {
     await page.goto(HUB_PATH);
-    await page.waitForTimeout(500);
+    await page.waitForFunction(() => localStorage.getItem('rc_glass_theme') === 'emerald');
     
     // Try to manually add glass-bold class
     await page.evaluate(() => {
@@ -128,7 +128,7 @@ test.describe('Hub Theme Enforcement', () => {
     
     // Reload page
     await page.reload();
-    await page.waitForTimeout(500);
+    await page.waitForFunction(() => localStorage.getItem('rc_glass_theme') === 'emerald');
     
     // Verify theme is forced back to emerald
     const theme = await page.evaluate(() => localStorage.getItem('rc_glass_theme'));
