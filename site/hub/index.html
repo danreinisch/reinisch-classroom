@@ -4994,19 +4994,52 @@
         };
       }
 
-      // Populate assignment select dropdown
+      // Populate assignment select dropdown (server-backed)
       async function populateAssignmentSelect() {
-        ASSIGNMENTS_CACHE = await db.listAssignments();
         const select = qs("#issueAssignmentSelect");
-        if (!ASSIGNMENTS_CACHE || ASSIGNMENTS_CACHE.length === 0) {
-          select.innerHTML = '<option value="">-- No assignments available --</option>';
-          return;
+        try {
+          // Call server function to get assignments list
+          const response = await fetch('/.netlify/functions/teacher-assignments-list', {
+            method: 'GET',
+            credentials: 'include', // Send cookies for teacher auth
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            console.error('[populateAssignmentSelect] Server error:', response.status, errorData);
+            select.innerHTML = '<option value="">-- Error loading assignments --</option>';
+            
+            if (response.status === 401) {
+              addNotif('Authentication required to load assignments', { type: 'error' });
+            } else {
+              const requestId = response.headers.get('X-Request-Id');
+              const errorMsg = errorData.error || 'Failed to load assignments';
+              addNotif(`${errorMsg}${requestId ? ` (Request ID: ${requestId})` : ''}`, { type: 'error' });
+            }
+            return;
+          }
+
+          const data = await response.json();
+          ASSIGNMENTS_CACHE = data.assignments || [];
+          
+          if (ASSIGNMENTS_CACHE.length === 0) {
+            select.innerHTML = '<option value="">-- No assignments available --</option>';
+            return;
+          }
+          
+          select.innerHTML =
+            '<option value="">-- Select an assignment --</option>' +
+            ASSIGNMENTS_CACHE.map(
+              (a) => `<option value="${a.id}">${a.title} (${a.type || 'assignment'})</option>`
+            ).join("");
+        } catch (err) {
+          console.error('[populateAssignmentSelect] Error:', err);
+          select.innerHTML = '<option value="">-- Error loading assignments --</option>';
+          addNotif('Failed to load assignments: ' + err.message, { type: 'error' });
         }
-        select.innerHTML =
-          '<option value="">-- Select an assignment --</option>' +
-          ASSIGNMENTS_CACHE.map(
-            (a) => `<option value="${a.id}">${a.title} (${a.type})</option>`
-          ).join("");
       }
 
       // Populate students select dropdown
@@ -5595,6 +5628,7 @@
       });
 
       // Issue assignment handler
+      // Issue assignment handler (server-backed)
       async function handleIssueAssignment() {
         const assignmentId = qs("#issueAssignmentSelect").value;
         const dueDate = qs("#issueDueDate").value || null;
@@ -5615,48 +5649,94 @@
         const assignment = ASSIGNMENTS_CACHE.find((a) => String(a.id) === String(assignmentId));
         const assignmentTitle = assignment ? assignment.title : "Assignment";
 
+        // Convert student codes to student IDs
+        const studentIds = studentCodes
+          .map(code => {
+            const student = STUDENTS.find(s => s.code === code);
+            return student ? student.id : null;
+          })
+          .filter(id => id !== null);
+
+        if (studentIds.length === 0) {
+          addNotif("No valid student IDs found for selected students", { type: "error" });
+          return;
+        }
+
+        if (studentIds.length < studentCodes.length) {
+          console.warn('[handleIssueAssignment] Some student codes could not be mapped to IDs');
+        }
+
         // Show progress
         const progressDiv = qs("#issueProgress");
         const progressText = qs("#issueProgressText");
         progressDiv.style.display = "block";
-        progressText.textContent = `Issuing to ${studentCodes.length} student(s)...`;
+        progressText.textContent = `Issuing to ${studentIds.length} student(s)...`;
 
-        let issued = 0;
-        let failed = 0;
+        try {
+          // Call server function to issue assignment
+          const response = await fetch('/.netlify/functions/teacher-issue-assignment', {
+            method: 'POST',
+            credentials: 'include', // Send cookies for teacher auth
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              assignment_id: parseInt(assignmentId, 10),
+              student_ids: studentIds,
+              due_at: dueDate ? new Date(dueDate).toISOString() : null,
+              settings: {}
+            })
+          });
 
-        for (const studentCode of studentCodes) {
-          try {
-            const student = STUDENTS.find((s) => s.code === studentCode);
-            // Convert ID to number only if it's actually numeric (for Supabase)
-            const aid = /^\d+$/.test(assignmentId) ? parseInt(assignmentId, 10) : assignmentId;
-            await db.upsertAssignmentInstance({
-              assignment_id: aid,
-              student_code: studentCode,
-              student_name: student ? student.name : studentCode,
-              due_at: dueDate,
-              status: "Assigned",
-              settings: {},
-            });
-            issued++;
-            progressText.textContent = `Issued ${issued} of ${studentCodes.length}...`;
-          } catch (err) {
-            console.error(`Failed to issue to ${studentCode}:`, err);
-            failed++;
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            const requestId = response.headers.get('X-Request-Id');
+            console.error('[handleIssueAssignment] Server error:', response.status, errorData);
+            
+            let errorMsg = errorData.error || 'Failed to issue assignment';
+            if (requestId) {
+              errorMsg += ` (Request ID: ${requestId})`;
+            }
+            
+            progressText.textContent = `Error: ${errorMsg}`;
+            addNotif(errorMsg, { type: 'error' });
+            
+            // Hide progress after 5 seconds
+            setTimeout(() => {
+              progressDiv.style.display = "none";
+            }, 5000);
+            return;
           }
+
+          const data = await response.json();
+          const { inserted_count, skipped_count, instances } = data;
+
+          progressText.textContent = `Complete: ${inserted_count} issued${skipped_count > 0 ? `, ${skipped_count} updated/skipped` : ""}`;
+
+          // Add notification
+          if (skipped_count > 0) {
+            addNotif(`Issued "${assignmentTitle}": ${inserted_count} new, ${skipped_count} already assigned`, { count: inserted_count });
+          } else {
+            addNotif(`Issued "${assignmentTitle}" to ${inserted_count} student(s)`, { count: inserted_count });
+          }
+
+          // Refresh instances table
+          await renderInstancesTable();
+
+          // Hide progress after 3 seconds
+          setTimeout(() => {
+            progressDiv.style.display = "none";
+          }, 3000);
+        } catch (err) {
+          console.error('[handleIssueAssignment] Error:', err);
+          progressText.textContent = `Error: ${err.message}`;
+          addNotif('Failed to issue assignment: ' + err.message, { type: 'error' });
+          
+          // Hide progress after 5 seconds
+          setTimeout(() => {
+            progressDiv.style.display = "none";
+          }, 5000);
         }
-
-        progressText.textContent = `Complete: ${issued} issued${failed > 0 ? `, ${failed} failed` : ""}`;
-
-        // Add notification
-        addNotif(`Issued "${assignmentTitle}" to ${issued} student(s)`, { count: issued });
-
-        // Refresh instances table
-        await renderInstancesTable();
-
-        // Hide progress after 3 seconds
-        setTimeout(() => {
-          progressDiv.style.display = "none";
-        }, 3000);
       }
 
       // Render instances table
