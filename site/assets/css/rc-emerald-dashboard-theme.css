@@ -25,6 +25,9 @@ html[data-theme="emerald"]{
   --text0:#E8F1EC; --text1:#A9BBB1;
   --accent:#35E08A; --accent2:#14B86A; --glow: rgba(53,224,138,.20);
   --glass: rgba(17,26,21,.58);
+  --ink: #E8F1EC;
+  --muted: #A9BBB1;
+  --line: rgba(255,255,255,.08);
 }
 
 html{ color-scheme: dark; }
@@ -258,3 +261,159 @@ input[type="file"].rc-input::file-selector-button:hover{
 .rc-table th, .rc-table td{ padding: 10px 10px; border-bottom: 1px solid rgba(255,255,255,.06); }
 .rc-table th{ text-align:left; color: var(--text1); font-weight: 700; }
 .rc-table tr:hover td{ background: rgba(255,255,255,.02); }
+
+/* ============================================================================
+   HUB LAYOUT SHELL
+   Complete responsive dashboard layout system with topbar, rail, menu, main, and right panel
+   ============================================================================ */
+
+/* Main wrapper */
+.hub-wrap{
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Shell container */
+.hub-shell{
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* Top bar */
+.hub-topbar{
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  padding: 10px 0;
+  background: linear-gradient(180deg, rgba(34, 197, 94, 0.92), rgba(22, 163, 74, 0.92));
+  border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+  backdrop-filter: saturate(1.1);
+}
+
+.hub-topbar-inner{
+  max-width: 1700px;
+  margin: 0 auto;
+  padding: 0 12px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+/* Main grid layout */
+.hub-grid{
+  display: grid;
+  grid-template-columns: 72px 240px minmax(0, 1fr) 300px;
+  gap: 14px;
+  max-width: 1700px;
+  margin: 0 auto;
+  padding: 14px;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Left side structure */
+.hub-left{
+  display: contents;
+}
+
+/* Icon rail */
+.hub-rail{
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hub-rail-item{
+  width: 56px;
+  height: 56px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text0);
+  font-size: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.hub-rail-item.active{
+  background: linear-gradient(180deg, rgba(34, 197, 94, 0.12), rgba(34, 197, 94, 0.06));
+  border-color: var(--accent, rgba(34, 197, 94, 0.4));
+  box-shadow: 0 4px 16px rgba(34, 197, 94, 0.3);
+}
+
+.hub-rail-item:hover{
+  border-color: var(--border-strong);
+}
+
+/* Menu sidebar */
+.hub-menu{
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hub-menu-header{
+  font-weight: 900;
+  letter-spacing: 0.2px;
+  margin-bottom: 8px;
+  padding: 0 4px;
+}
+
+.hub-item{
+  display: block;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text0);
+  font-weight: 800;
+  text-decoration: none;
+  transition: border-color 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
+  cursor: pointer;
+}
+
+.hub-item:hover{
+  border-color: var(--border-strong);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.hub-item.active{
+  background: rgba(34, 197, 94, 0.16);
+  border-color: rgba(34, 197, 94, 0.45);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+/* Main content area */
+.hub-main{
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 0;
+  overflow: auto;
+}
+
+/* Right panel */
+.hub-right{
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Responsive behavior */
+@media (max-width: 1100px) {
+  .hub-grid {
+    grid-template-columns: 1fr;
+  }
+  .hub-right,
+  .hub-menu,
+  .hub-rail {
+    display: none;
+  }
+}

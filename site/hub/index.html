@@ -49,6 +49,8 @@
           ),
           linear-gradient(180deg, var(--bg1), var(--bg0));
       }
+      /* Legacy CSS - Now handled by hub-* layout classes in rc-emerald-dashboard-theme.css */
+      /*
       .header {
         position: sticky;
         top: 0;
@@ -65,12 +67,15 @@
         gap: 12px;
         align-items: center;
       }
+      */
       .brand {
         font-weight: 900;
         letter-spacing: 0.2px;
         margin-right: auto;
         color: #031f11;
       }
+      /* Legacy hub-tag, btn, and layout now handled by CSS files */
+      /*
       .hub-tag {
         display: inline-flex;
         align-items: center;
@@ -131,6 +136,7 @@
           display: none;
         }
       }
+      */
       .card {
         background:
           linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 65%),
@@ -290,6 +296,8 @@
         background: rgba(255, 255, 255, 0.06);
         font-size: 12px;
       }
+      /* Legacy iconrail now handled by hub-rail-item */
+      /*
       .iconrail {
         display: flex;
         flex-direction: column;
@@ -320,6 +328,7 @@
       .iconrail button:hover {
         border-color: var(--border-strong, rgba(255, 255, 255, 0.18));
       }
+      */
       .topnav {
         display: flex;
         gap: 8px;
@@ -1182,147 +1191,151 @@
     <link rel="stylesheet" href="/assets/css/rc-emerald-bridge.css?v=emerald-5" />
   </head>
   <body>
-    <div class="header">
-      <div class="bar">
-        <div class="brand">Reinisch Classroom — Classroom Hub</div>
-        <nav class="topnav">
-          <button id="navPrev">◀ Previous</button>
-          <button id="navNext">Next ▶</button>
-          <button id="navExit">Exit</button>
-        </nav>
-        <span
-          id="datetimeDisplay"
-          class="hub-tag"
-          style="margin-left: auto; margin-right: 8px; font-size: 13px; font-weight: 600"
-        ></span>
-        <button
-          class="btn small"
-          id="btnThemeToggle"
-          title="Toggle glass theme"
-          style="display: none"
-        >
-          Glass: Bold
-        </button>
-        <span id="currentUserChip" class="hub-tag">Signed out</span>
-        <span id="roleSwitchChip" class="hub-tag role-switch-tag" title="Switch role"
-          >Switch Role</span
-        >
-        <a class="btn small" id="btnStudent" href="/student/">Student Portal</a>
-        <button class="btn primary small" id="btnTeacher">Teacher Center 🔒</button>
-      </div>
-    </div>
-
-    <!-- Critical Asset Error Banner (shown only if module loading fails) -->
-    <div
-      id="criticalAssetBanner"
-      style="
-        display: none;
-        background: linear-gradient(180deg, rgba(239, 68, 68, 0.9), rgba(220, 38, 38, 0.9));
-        color: #fff;
-        padding: 12px 20px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-        position: relative;
-        z-index: 50;
-      "
-    >
-      <div style="max-width: 1700px; margin: 0 auto; display: flex; align-items: center; gap: 12px">
-        <span style="font-size: 20px">⚠️</span>
-        <div style="flex: 1">
-          <strong style="display: block; margin-bottom: 4px">Module Loading Error</strong>
-          <span id="criticalAssetMessage" style="font-size: 13px; opacity: 0.95"
-            >One or more critical scripts failed to load. Login functionality may be limited.</span
+    <div class="hub-wrap">
+      <header class="hub-topbar">
+        <div class="hub-topbar-inner">
+          <div class="brand">Reinisch Classroom — Classroom Hub</div>
+          <nav class="topnav">
+            <button id="navPrev">◀ Previous</button>
+            <button id="navNext">Next ▶</button>
+            <button id="navExit">Exit</button>
+          </nav>
+          <span
+            id="datetimeDisplay"
+            class="hub-tag"
+            style="margin-left: auto; margin-right: 8px; font-size: 13px; font-weight: 600"
+          ></span>
+          <button
+            class="btn small"
+            id="btnThemeToggle"
+            title="Toggle glass theme"
+            style="display: none"
           >
-        </div>
-        <button
-          id="dismissCriticalAssetBanner"
-          style="
-            background: rgba(255, 255, 255, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            color: #fff;
-            padding: 6px 12px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 800;
-          "
-        >
-          Dismiss
-        </button>
-      </div>
-    </div>
-
-    <!-- Teacher Session Resume Banner (shown when prior teacher session is detected) -->
-    <div
-      id="teacherResumeBanner"
-      style="
-        display: none;
-        background: linear-gradient(180deg, rgba(34, 197, 94, 0.9), rgba(22, 163, 74, 0.9));
-        color: #fff;
-        padding: 14px 20px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-        position: relative;
-        z-index: 50;
-      "
-    >
-      <div style="max-width: 1700px; margin: 0 auto; display: flex; align-items: center; gap: 14px">
-        <span style="font-size: 22px">👋</span>
-        <div style="flex: 1">
-          <strong style="display: block; margin-bottom: 4px; font-size: 15px"
-            >Resume Teacher Session?</strong
+            Glass: Bold
+          </button>
+          <span id="currentUserChip" class="hub-tag">Signed out</span>
+          <span id="roleSwitchChip" class="hub-tag role-switch-tag" title="Switch role"
+            >Switch Role</span
           >
-          <span style="font-size: 13px; opacity: 0.95">
-            A prior teacher session was detected. Would you like to resume or stay signed out?
-          </span>
+          <a class="btn small" id="btnStudent" href="/student/">Student Portal</a>
+          <button class="btn primary small" id="btnTeacher">Teacher Center 🔒</button>
         </div>
-        <button
-          id="btnResumeTeacher"
-          style="
-            background: rgba(255, 255, 255, 0.95);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            color: #065f46;
-            padding: 8px 16px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 800;
-            font-size: 14px;
-          "
-        >
-          Resume
-        </button>
-        <button
-          id="btnStaySignedOut"
-          style="
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            color: #fff;
-            padding: 8px 16px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 800;
-            font-size: 14px;
-          "
-        >
-          Stay signed out
-        </button>
+      </header>
+
+      </header>
+
+      <!-- Critical Asset Error Banner (shown only if module loading fails) -->
+      <div
+        id="criticalAssetBanner"
+        style="
+          display: none;
+          background: linear-gradient(180deg, rgba(239, 68, 68, 0.9), rgba(220, 38, 38, 0.9));
+          color: #fff;
+          padding: 12px 20px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+          position: relative;
+          z-index: 50;
+        "
+      >
+        <div style="max-width: 1700px; margin: 0 auto; display: flex; align-items: center; gap: 12px">
+          <span style="font-size: 20px">⚠️</span>
+          <div style="flex: 1">
+            <strong style="display: block; margin-bottom: 4px">Module Loading Error</strong>
+            <span id="criticalAssetMessage" style="font-size: 13px; opacity: 0.95"
+              >One or more critical scripts failed to load. Login functionality may be limited.</span
+            >
+          </div>
+          <button
+            id="dismissCriticalAssetBanner"
+            style="
+              background: rgba(255, 255, 255, 0.2);
+              border: 1px solid rgba(255, 255, 255, 0.3);
+              color: #fff;
+              padding: 6px 12px;
+              border-radius: 6px;
+              cursor: pointer;
+              font-weight: 800;
+            "
+          >
+            Dismiss
+          </button>
+        </div>
       </div>
-    </div>
 
-    <section id="view-teacher" class="layout" style="display: none">
-      <aside class="iconrail card">
-        <button class="active" data-area="overview" title="Overview" aria-label="Overview">
-          🏠
-        </button>
-        <button data-area="work" title="Work" aria-label="Work">📝</button>
-        <button data-area="data" title="Data" aria-label="Data">📊</button>
-      </aside>
-
-      <aside class="sidebar card">
-        <div class="card-header" style="margin: 0"><div id="submenuTitle">Overview</div></div>
-        <div class="nav" id="submenu">
-          <!-- Submenu items will be populated by JS -->
+      <!-- Teacher Session Resume Banner (shown when prior teacher session is detected) -->
+      <div
+        id="teacherResumeBanner"
+        style="
+          display: none;
+          background: linear-gradient(180deg, rgba(34, 197, 94, 0.9), rgba(22, 163, 74, 0.9));
+          color: #fff;
+          padding: 14px 20px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+          position: relative;
+          z-index: 50;
+        "
+      >
+        <div style="max-width: 1700px; margin: 0 auto; display: flex; align-items: center; gap: 14px">
+          <span style="font-size: 22px">👋</span>
+          <div style="flex: 1">
+            <strong style="display: block; margin-bottom: 4px; font-size: 15px"
+              >Resume Teacher Session?</strong
+            >
+            <span style="font-size: 13px; opacity: 0.95">
+              A prior teacher session was detected. Would you like to resume or stay signed out?
+            </span>
+          </div>
+          <button
+            id="btnResumeTeacher"
+            style="
+              background: rgba(255, 255, 255, 0.95);
+              border: 1px solid rgba(255, 255, 255, 0.3);
+              color: #065f46;
+              padding: 8px 16px;
+              border-radius: 8px;
+              cursor: pointer;
+              font-weight: 800;
+              font-size: 14px;
+            "
+          >
+            Resume
+          </button>
+          <button
+            id="btnStaySignedOut"
+            style="
+              background: rgba(255, 255, 255, 0.1);
+              border: 1px solid rgba(255, 255, 255, 0.3);
+              color: #fff;
+              padding: 8px 16px;
+              border-radius: 8px;
+              cursor: pointer;
+              font-weight: 800;
+              font-size: 14px;
+            "
+          >
+            Stay signed out
+          </button>
         </div>
-      </aside>
+      </div>
 
-      <main class="content">
+      <div class="hub-shell">
+        <section id="view-teacher" class="hub-grid" style="display: none">
+          <aside class="hub-rail rc-glass">
+            <button class="hub-rail-item active" data-area="overview" title="Overview" aria-label="Overview">
+              🏠
+            </button>
+            <button class="hub-rail-item" data-area="work" title="Work" aria-label="Work">📝</button>
+            <button class="hub-rail-item" data-area="data" title="Data" aria-label="Data">📊</button>
+          </aside>
+
+          <aside class="hub-menu rc-card">
+            <div class="hub-menu-header" id="submenuTitle">Overview</div>
+            <div class="nav" id="submenu">
+              <!-- Submenu items will be populated by JS -->
+            </div>
+          </aside>
+
+          <main class="hub-main">
         <!-- Student Portal Manager (placeholder) -->
         <!-- TC-3.1: Hide by default to prevent phantom/flash on Hub load -->
         <div class="card ttab" data-tab="studentPortal" style="display: none">
@@ -2752,31 +2765,33 @@
             </div>
           </div>
         </div>
-      </main>
+          </main>
 
-      <aside class="rightpanel card">
-        <div class="card">
-          <div class="card-header"><div>KPIs</div></div>
-          <div style="display: flex; justify-content: space-between; margin: 6px 0">
-            <div>IEP Goals</div>
-            <div style="font-weight: 900; font-size: 28px" id="kGoals">0</div>
-          </div>
-          <div style="display: flex; justify-content: space-between; margin: 6px 0">
-            <div>Manual/Share Updates</div>
-            <div style="font-weight: 900; font-size: 28px" id="kUpdates">0</div>
-          </div>
-        </div>
-        <div class="card">
-          <div class="card-header">
-            <div>Notifications</div>
-            <span class="badge" id="notifCount">0</span>
-          </div>
-          <ul id="notifList" class="subtle" style="margin: 0 0 0 16px">
-            <li>No alerts</li>
-          </ul>
-        </div>
-      </aside>
-    </section>
+          <aside class="hub-right">
+            <div class="rc-card">
+              <div class="card-header"><div>KPIs</div></div>
+              <div style="display: flex; justify-content: space-between; margin: 6px 0">
+                <div>IEP Goals</div>
+                <div style="font-weight: 900; font-size: 28px" id="kGoals">0</div>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin: 6px 0">
+                <div>Manual/Share Updates</div>
+                <div style="font-weight: 900; font-size: 28px" id="kUpdates">0</div>
+              </div>
+            </div>
+            <div class="rc-card">
+              <div class="card-header">
+                <div>Notifications</div>
+                <span class="badge" id="notifCount">0</span>
+              </div>
+              <ul id="notifList" class="subtle" style="margin: 0 0 0 16px">
+                <li>No alerts</li>
+              </ul>
+            </div>
+          </aside>
+        </section>
+      </div>
+    </div>
 
     <!-- Teacher password modal -->
     <div class="modal-backdrop" id="teachModal">
@@ -4227,7 +4242,7 @@
             setTimeout(() => {
               const lastArea = localStorage.getItem("rc_last_area");
               if (lastArea) {
-                const iconRailBtn = qs(`.iconrail button[data-area="${lastArea}"]`);
+                const iconRailBtn = qs(`.hub-rail button[data-area="${lastArea}"]`);
                 if (iconRailBtn && typeof window.renderSubmenu === "function") {
                   iconRailBtn.click();
                 }
@@ -4339,7 +4354,7 @@
         setTimeout(() => {
           const lastArea = localStorage.getItem("rc_last_area");
           if (lastArea) {
-            const iconRailBtn = qs(`.iconrail button[data-area="${lastArea}"]`);
+            const iconRailBtn = qs(`.hub-rail button[data-area="${lastArea}"]`);
             if (iconRailBtn && typeof window.renderSubmenu === "function") {
               iconRailBtn.click();
             }
@@ -4657,7 +4672,7 @@
       }
 
       // Icon rail clicks
-      on(".iconrail", "click", (e) => {
+      on(".hub-rail", "click", (e) => {
         const btn = e.target.closest("button");
         if (!btn) return;
 
@@ -4665,7 +4680,7 @@
         if (!area) return;
 
         // Update rail active state
-        qsa(".iconrail button").forEach((b) => b.classList.remove("active"));
+        qsa(".hub-rail button").forEach((b) => b.classList.remove("active"));
         btn.classList.add("active");
 
         // Update submenu and activate first tab
