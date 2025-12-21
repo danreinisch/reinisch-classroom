@@ -3648,10 +3648,18 @@
       function showTeacher() {
         const view = qs("#view-teacher");
         if (view) view.style.display = "grid";
+        
+        // TC-3.1: Hide home tab when teacher view is shown
+        const homeTab = qs('.ttab[data-tab="home"]');
+        if (homeTab) homeTab.style.display = "none";
       }
       function hideTeacher() {
         const view = qs("#view-teacher");
         if (view) view.style.display = "none";
+        
+        // TC-3.1: Show home tab when teacher view is hidden (logout)
+        const homeTab = qs('.ttab[data-tab="home"]');
+        if (homeTab) homeTab.style.display = "block";
       }
 
       // Theme toggle: Bold vs Normal glassmorphism
@@ -4448,6 +4456,9 @@
         if (tab === "assignments") initAssignments();
         if (tab === "settings") initSettings();
         if (tab === "subPlans") initSubPlans();
+        
+        // TC-3.1: Handle home tab (no initialization needed, just display)
+        // Home tab is the default landing page when not authenticated
 
         // New tabs initialization (dispatches custom event for module script)
         if (
