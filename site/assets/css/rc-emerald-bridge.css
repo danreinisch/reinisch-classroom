@@ -150,3 +150,260 @@
 [data-rc-app="hub"] .ttab[data-tab="assignments"] .card-header {
   align-items: center;
 }
+
+/* Enhanced styling for the five "crummy pages" */
+
+/* Assignments Page Improvements */
+[data-rc-app="hub"] .ttab[data-tab="assignments"] {
+  gap: 16px;
+}
+
+[data-rc-app="hub"] .ttab[data-tab="assignments"] .card {
+  margin-top: 0;
+}
+
+[data-rc-app="hub"] .ttab[data-tab="assignments"] .card > .card {
+  margin-top: 14px;
+}
+
+[data-rc-app="hub"] .ttab[data-tab="assignments"] label {
+  margin-top: 14px;
+  margin-bottom: 6px;
+}
+
+[data-rc-app="hub"] .ttab[data-tab="assignments"] label:first-of-type {
+  margin-top: 0;
+}
+
+/* Upload & IEP Goal Mapping Page Improvements */
+[data-rc-app="hub"] .ttab[data-tab="upload"] {
+  gap: 16px;
+}
+
+[data-rc-app="hub"] .ttab[data-tab="upload"] .card {
+  margin-top: 0;
+}
+
+[data-rc-app="hub"] .ttab[data-tab="upload"] .card > .card {
+  margin-top: 14px;
+}
+
+[data-rc-app="hub"] .ttab[data-tab="upload"] label {
+  margin-top: 14px;
+  margin-bottom: 6px;
+}
+
+[data-rc-app="hub"] .ttab[data-tab="upload"] label:first-of-type {
+  margin-top: 0;
+}
+
+[data-rc-app="hub"] .ttab[data-tab="upload"] .table-wrap {
+  border-radius: 10px;
+  margin-top: 12px;
+}
+
+/* Data Import/Export Page Improvements */
+[data-rc-app="hub"] .ttab[data-tab="data"] {
+  gap: 16px;
+}
+
+[data-rc-app="hub"] .ttab[data-tab="data"] .card {
+  margin-top: 0;
+}
+
+[data-rc-app="hub"] .ttab[data-tab="data"] .card > .card {
+  margin-top: 14px;
+}
+
+[data-rc-app="hub"] .ttab[data-tab="data"] label {
+  margin-top: 14px;
+  margin-bottom: 6px;
+}
+
+[data-rc-app="hub"] .ttab[data-tab="data"] label:first-of-type {
+  margin-top: 0;
+}
+
+[data-rc-app="hub"] .ttab[data-tab="data"] .btn {
+  min-width: 140px;
+}
+
+/* Student Manager Page Improvements */
+[data-rc-app="hub"] .ttab[data-tab="studentManager"] {
+  gap: 16px;
+}
+
+[data-rc-app="hub"] .ttab[data-tab="studentManager"] .card {
+  margin-top: 0;
+}
+
+[data-rc-app="hub"] .ttab[data-tab="studentManager"] .card-header {
+  padding-bottom: 12px;
+}
+
+[data-rc-app="hub"] .ttab[data-tab="studentManager"] .subtle {
+  line-height: 1.6;
+  font-size: 14px;
+}
+
+/* Settings Page Improvements */
+[data-rc-app="hub"] .ttab[data-tab="settings"] {
+  gap: 16px;
+}
+
+[data-rc-app="hub"] .ttab[data-tab="settings"] .card {
+  margin-top: 0;
+}
+
+[data-rc-app="hub"] .ttab[data-tab="settings"] .card > .card {
+  margin-top: 14px;
+}
+
+[data-rc-app="hub"] .ttab[data-tab="settings"] label {
+  margin-top: 14px;
+  margin-bottom: 6px;
+}
+
+[data-rc-app="hub"] .ttab[data-tab="settings"] label:first-of-type {
+  margin-top: 0;
+}
+
+[data-rc-app="hub"] .ttab[data-tab="settings"] .badge {
+  font-size: 13px;
+  padding: 6px 12px;
+}
+
+/* Common improvements for all five pages */
+[data-rc-app="hub"] .ttab .card .card-header {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(0, 0, 0, 0.02));
+  padding: 12px 16px;
+  margin: -16px -16px 14px -16px;
+  border-radius: 12px 12px 0 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+[data-rc-app="hub"] .ttab .subtle {
+  color: var(--text1, #94a3b8);
+  line-height: 1.6;
+}
+
+[data-rc-app="hub"] .ttab code {
+  background: rgba(255, 255, 255, 0.08);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: var(--mono, monospace);
+  font-size: 12px;
+}
+
+[data-rc-app="hub"] .ttab strong {
+  font-weight: 800;
+  color: var(--ink, #e6edf3);
+}
+
+/* Better form button groups */
+[data-rc-app="hub"] .ttab .card [style*="display: flex"][style*="gap"],
+[data-rc-app="hub"] .ttab .card [style*="display:flex"][style*="gap"] {
+  margin-top: 14px;
+}
+
+/* Status boxes styling */
+[data-rc-app="hub"] .ttab [id$="Status"],
+[data-rc-app="hub"] .ttab [id$="Summary"],
+[data-rc-app="hub"] .ttab [id$="Details"] {
+  border-radius: 10px;
+  padding: 14px;
+  margin-top: 14px;
+}
+
+/* Error message boxes */
+[data-rc-app="hub"] .ttab [id$="ErrorMessage"],
+[data-rc-app="hub"] .ttab [id$="Error"] {
+  border-radius: 10px;
+}
+
+/* Table improvements within pages */
+[data-rc-app="hub"] .ttab .table {
+  font-size: 13px;
+}
+
+[data-rc-app="hub"] .ttab .table th {
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 11px;
+  padding: 10px 12px;
+}
+
+[data-rc-app="hub"] .ttab .table td {
+  padding: 12px;
+  vertical-align: middle;
+}
+
+/* Section dividers */
+[data-rc-app="hub"] .ttab [style*="border-top"] {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Grid layouts in forms */
+[data-rc-app="hub"] .ttab [style*="grid-template-columns"] {
+  gap: 14px;
+}
+
+/* Select and input improvements */
+[data-rc-app="hub"] .ttab select,
+[data-rc-app="hub"] .ttab input[type="text"],
+[data-rc-app="hub"] .ttab input[type="password"],
+[data-rc-app="hub"] .ttab input[type="file"],
+[data-rc-app="hub"] .ttab textarea {
+  transition: all 0.2s ease;
+}
+
+[data-rc-app="hub"] .ttab select:hover,
+[data-rc-app="hub"] .ttab input:hover,
+[data-rc-app="hub"] .ttab textarea:hover {
+  border-color: var(--hub-border-strong, rgba(255, 255, 255, 0.18));
+}
+
+/* Button improvements */
+[data-rc-app="hub"] .ttab .btn {
+  transition: all 0.2s ease;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+}
+
+[data-rc-app="hub"] .ttab .btn.small {
+  font-weight: 700;
+}
+
+[data-rc-app="hub"] .ttab .btn:active {
+  transform: translateY(0) scale(0.98);
+}
+
+/* Badge improvements */
+[data-rc-app="hub"] .ttab .badge {
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  border-radius: var(--hub-radius-sm, 8px);
+}
+
+/* Help text and notes */
+[data-rc-app="hub"] .ttab .subtle[style*="background"] {
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+/* Checkbox and radio improvements */
+[data-rc-app="hub"] .ttab input[type="checkbox"],
+[data-rc-app="hub"] .ttab input[type="radio"] {
+  cursor: pointer;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+}
+
+/* Required field indicator */
+[data-rc-app="hub"] .ttab span[style*="color: #f87171"],
+[data-rc-app="hub"] .ttab span[style*="color:#f87171"] {
+  font-weight: 800;
+  margin-left: 2px;
+}
