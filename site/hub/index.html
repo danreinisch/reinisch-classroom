@@ -3018,8 +3018,14 @@
       }
 
       function showTeacher() {
+        console.log(LOG_PREFIX, "showTeacher() called - setting teacher view to display:grid");
         const view = qs("#view-teacher");
-        if (view) view.style.display = "grid";
+        if (view) {
+          view.style.display = "grid";
+          console.log(LOG_PREFIX, "Teacher view display set to:", view.style.display);
+        } else {
+          console.error(LOG_PREFIX, "Teacher view element (#view-teacher) not found!");
+        }
 
         // TC-3.1: Hide home tab when teacher view is shown
         const homeTab = qs('.ttab[data-tab="home"]');
@@ -3394,16 +3400,19 @@
             // Check if coming from sign-in modal
             if (isFromSignInModal) {
               // User signed in as teacher via sign-in modal
-              setAuth({ role: "teacher", username: inputUser });
+              console.log(LOG_PREFIX, "Writing auth for teacher (from sign-in modal)");
+              writeAuth({ role: "teacher", username: inputUser });
               updateUserChip();
               isFromSignInModal = false; // Reset flag
             } else {
               // Direct teacher center access (not from sign-in)
-              setAuth({ role: "teacher", username: inputUser });
+              console.log(LOG_PREFIX, "Writing auth for teacher (direct access)");
+              writeAuth({ role: "teacher", username: inputUser });
               const chip = qs("#currentUserChip");
               if (chip) chip.textContent = "Teacher";
             }
 
+            console.log(LOG_PREFIX, "Calling showTeacher() after successful login");
             showTeacher();
 
             // Restore last area/tab if available
@@ -3471,7 +3480,22 @@
 
           if (response.ok) {
             const data = await response.json();
-            if (data.ok && data.role === "teacher") {
+            // Accept both "teacher" and "admin" roles for teacher mode
+            const isTeacherRole = data.ok && (data.role === "teacher" || data.role === "admin");
+            
+            console.log(
+              LOG_PREFIX,
+              "Session check result:",
+              {
+                ok: data.ok,
+                role: data.role,
+                raw_role: data.raw_role,
+                username: data.username,
+                isTeacherRole
+              }
+            );
+            
+            if (isTeacherRole) {
               // Valid session exists - store for resume banner instead of auto-entering
               pendingTeacherSession = {
                 role: "teacher",
@@ -3484,7 +3508,11 @@
                 banner.style.display = "block";
               }
 
-              console.log("[Teacher Auth] Prior session detected - showing resume banner");
+              console.log(
+                LOG_PREFIX,
+                "Prior session detected (role:",
+                data.role + ") - showing resume banner"
+              );
             }
           } else if (response.status === 401) {
             // 401 is expected when no active teacher session exists - treat as normal unauthenticated state
@@ -3507,9 +3535,11 @@
         }
 
         // Set auth and show teacher view
-        setAuth(pendingTeacherSession);
+        writeAuth(pendingTeacherSession);
         const chip = qs("#currentUserChip");
         if (chip) chip.textContent = "Teacher";
+        
+        console.log(LOG_PREFIX, "Showing teacher view after session resume");
         showTeacher();
 
         // Hide banner
