@@ -8,6 +8,15 @@
   'use strict';
 
   const LOG_PREFIX = '[hub-gate]';
+  
+  // DOM selectors
+  const SELECTORS = {
+    TEACH_MODAL: '#teachModal',
+    TEACH_PASSWORD_INPUT: '#teachUser',
+    GATE_PANEL: '#hubGatePanel',
+    TEACHER_VIEW: '#view-teacher',
+    RESUME_BANNER: '#teacherResumeBanner',
+  };
 
   /**
    * Check if user has valid teacher/admin session
@@ -65,13 +74,13 @@
     console.log(LOG_PREFIX, 'Showing login gate');
 
     // Hide teacher view
-    const teacherView = document.querySelector('#view-teacher');
+    const teacherView = document.querySelector(SELECTORS.TEACHER_VIEW);
     if (teacherView) {
       teacherView.style.display = 'none';
     }
 
     // Hide resume banner
-    const resumeBanner = document.querySelector('#teacherResumeBanner');
+    const resumeBanner = document.querySelector(SELECTORS.RESUME_BANNER);
     if (resumeBanner) {
       resumeBanner.style.display = 'none';
     }
@@ -288,8 +297,8 @@
     console.log(LOG_PREFIX, 'Teacher gate clicked - triggering login');
 
     // Find and show the teacher modal directly
-    const teachModal = document.querySelector('#teachModal');
-    const passInput = document.querySelector('#teachUser');
+    const teachModal = document.querySelector(SELECTORS.TEACH_MODAL);
+    const passInput = document.querySelector(SELECTORS.TEACH_PASSWORD_INPUT);
     
     if (teachModal) {
       teachModal.classList.add('show');
@@ -305,7 +314,7 @@
    * Hide the gate panel
    */
   function hideGate() {
-    const gatePanel = document.getElementById('hubGatePanel');
+    const gatePanel = document.getElementById(SELECTORS.GATE_PANEL.substring(1)); // Remove # prefix
     if (gatePanel) {
       gatePanel.remove();
     }
@@ -316,7 +325,7 @@
    */
   function showResumeBanner() {
     console.log(LOG_PREFIX, 'Showing resume banner');
-    const banner = document.querySelector('#teacherResumeBanner');
+    const banner = document.querySelector(SELECTORS.RESUME_BANNER);
     if (banner) {
       banner.style.display = 'block';
     }
@@ -347,8 +356,8 @@
       console.log(LOG_PREFIX, 'Entry parameter detected - auto-opening teacher login');
       // Wait a bit for DOM to be ready
       setTimeout(() => {
-        const teachModal = document.querySelector('#teachModal');
-        const passInput = document.querySelector('#teachUser');
+        const teachModal = document.querySelector(SELECTORS.TEACH_MODAL);
+        const passInput = document.querySelector(SELECTORS.TEACH_PASSWORD_INPUT);
         
         if (teachModal) {
           teachModal.classList.add('show');
