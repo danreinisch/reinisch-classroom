@@ -384,38 +384,46 @@
 
 // Load app shell after site.js initializes
 (function() {
+  // Runtime check timeout (ms) - gives time for deferred scripts to load
+  const ASSET_CHECK_TIMEOUT = 2000;
+  
   function loadAppShell() {
     // Check if already loaded
     if (document.querySelector('link[href*="app-shell.css"]')) {
       return;
     }
 
-    // Load CSS
+    // Load CSS with error handling
     const css = document.createElement('link');
     css.rel = 'stylesheet';
     css.href = '/assets/css/app-shell.css';
+    css.onerror = () => {
+      console.warn('[site.js] Failed to load app-shell.css');
+    };
     document.head.appendChild(css);
 
-    // Load JS
+    // Load JS with error handling
     const script = document.createElement('script');
     script.src = '/assets/js/app-shell.js';
     script.defer = true;
+    script.onerror = () => {
+      console.warn('[site.js] Failed to load app-shell.js');
+    };
     document.head.appendChild(script);
 
     console.log('[site.js] App shell loaded');
     
     // Runtime self-check: verify assets loaded successfully
+    // Waits for deferred scripts to execute before checking
     setTimeout(() => {
-      const cssLoaded = document.querySelector('link[href*="app-shell.css"]');
       const jsLoaded = typeof window.AppShell !== 'undefined';
       
-      if (!cssLoaded || !jsLoaded) {
+      if (!jsLoaded) {
         console.warn('[site.js] App shell asset loading issue detected:', {
-          css: cssLoaded ? 'loaded' : 'failed',
-          js: jsLoaded ? 'loaded' : 'failed'
+          js: 'failed - AppShell API not available'
         });
       }
-    }, 2000);
+    }, ASSET_CHECK_TIMEOUT);
   }
 
   if (document.readyState === 'loading') {
