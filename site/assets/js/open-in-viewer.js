@@ -72,7 +72,9 @@
   global.openInViewer = openInViewer;
 
   // Also support module exports if available
-  if (typeof module !== 'undefined' && module.exports) {
+  /* eslint-disable no-undef */
+  if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
     module.exports = { buildViewerUrl, openInViewer };
   }
+  /* eslint-enable no-undef */
 })(typeof window !== 'undefined' ? window : this);
