@@ -96,9 +96,14 @@
       let card;
       if (l){
         card = document.createElement('a');
-        // Route through viewer with return parameter
-        const returnUrl = encodeURIComponent(location.pathname + location.search);
-        card.href = '/viewer/?src=' + encodeURIComponent(l) + '&return=' + returnUrl;
+        // Use shared viewer helper to build canonical URL
+        if (typeof window.buildViewerUrl === 'function') {
+          card.href = window.buildViewerUrl(l, { title: title });
+        } else {
+          // Fallback if helper not loaded
+          const returnUrl = encodeURIComponent(location.pathname + location.search);
+          card.href = '/viewer/?src=' + encodeURIComponent(l) + '&return=' + returnUrl;
+        }
         card.className = 'card';
         card.setAttribute('aria-label', `Open ${title}`);
       } else {
