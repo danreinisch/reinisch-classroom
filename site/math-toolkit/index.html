@@ -97,7 +97,7 @@
       const thumb = m.thumbnail ? `<img class="thumb" src="${m.thumbnail}" alt="" loading="lazy" decoding="async">` : '';
       const desc = m.description ? `${m.description}` : 'Module';
       // Route through viewer so every module shows a persistent back button without modifying module files
-      const viewerURL = `./viewer.html?p=${encodeURIComponent(m.url)}`;
+      const viewerURL = `/viewer/?src=${encodeURIComponent(m.url)}`;
       return `
         <a class="card-link" href="${viewerURL}" role="listitem" aria-label="Open module">
           <article class="card">
