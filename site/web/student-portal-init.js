@@ -8,10 +8,6 @@
 
   const LOG_PREFIX = '[student-portal]';
 
-  // State
-  let rosterLoaded = false;
-  let useManualEntry = false;
-
   /**
    * Initialize the portal
    */
@@ -65,8 +61,6 @@
           option.textContent = student.code;
           selectEl.appendChild(option);
         });
-
-        rosterLoaded = true;
       } else {
         // No students or roster unavailable
         console.warn(LOG_PREFIX, 'No students in roster');
@@ -92,7 +86,6 @@
     // Show manual entry
     const manualSection = document.getElementById('manualEntrySection');
     manualSection.classList.add('show');
-    useManualEntry = true;
   }
 
   /**
