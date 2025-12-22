@@ -107,6 +107,12 @@
   to = "/site/assets/css/theme.css"
   status = 200
 
+# Redirect for student-portal-init.js to canonical location in site/web
+[[redirects]]
+  from = "/web/student-portal-init.js"
+  to = "/site/web/student-portal-init.js"
+  status = 200
+
 # Edge Functions Configuration
 # Student entry redirect - server-side redirect to hub (preserves deep links)
 [[edge_functions]]
