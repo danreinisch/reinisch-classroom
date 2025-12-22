@@ -96,8 +96,9 @@
       let card;
       if (l){
         card = document.createElement('a');
-        // Route through viewer
-        card.href = '/viewer/?src=' + encodeURIComponent(l);
+        // Route through viewer with return parameter
+        const returnUrl = encodeURIComponent(location.pathname + location.search);
+        card.href = '/viewer/?src=' + encodeURIComponent(l) + '&return=' + returnUrl;
         card.className = 'card';
         card.setAttribute('aria-label', `Open ${title}`);
       } else {

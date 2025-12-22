@@ -21,23 +21,26 @@
    * Initialize the viewer
    */
   function init() {
-    // Get src from query parameter
+    // Get params from query string
     const params = new URLSearchParams(window.location.search);
-    const src = params.get('src');
+    let src = params.get('src');
+    const returnParam = params.get('return');
 
     if (!src) {
       showError('No content source provided', 'Please provide a src parameter in the URL.');
       return;
     }
 
-    // Load content in iframe
-    loadContent(src);
+    // Support directory URLs ending with / by appending index.html
+    if (src.endsWith('/')) {
+      src = src + 'index.html';
+    }
 
-    // Setup event handlers
-    setupEventHandlers();
-
-    // Store referrer for close button
-    if (document.referrer) {
+    // Store return parameter if provided
+    if (returnParam) {
+      referrer = returnParam;
+    } else if (document.referrer) {
+      // Fallback to document.referrer
       try {
         const referrerUrl = new URL(document.referrer);
         const currentUrl = new URL(window.location.href);
@@ -50,7 +53,13 @@
       }
     }
 
-    console.log('[viewer] Initialized with src:', src);
+    // Load content in iframe
+    loadContent(src);
+
+    // Setup event handlers
+    setupEventHandlers();
+
+    console.log('[viewer] Initialized with src:', src, 'return:', referrer);
   }
 
   /**
@@ -136,11 +145,57 @@
    * Handle close button
    */
   function handleClose() {
-    // Try to go back to referrer if same-origin
+    // Close algorithm:
+    // 1) If return param exists and is safe same-origin, navigate there
+    // 2) else if history back is same-origin, history.back()
+    // 3) else infer fallback based on src prefix
+
     if (referrer) {
-      window.location.href = referrer;
+      // Return parameter or referrer provided - validate it's safe
+      try {
+        const returnUrl = new URL(referrer, window.location.origin);
+        if (returnUrl.origin === window.location.origin) {
+          window.location.href = referrer;
+          return;
+        }
+      } catch (e) {
+        console.warn('[viewer] Invalid return URL:', referrer);
+      }
+    }
+
+    // Try history.back() if available and we can detect same-origin
+    if (window.history.length > 1 && document.referrer) {
+      try {
+        const referrerUrl = new URL(document.referrer);
+        if (referrerUrl.origin === window.location.origin) {
+          window.history.back();
+          return;
+        }
+      } catch (e) {
+        console.warn('[viewer] Could not use history.back:', e);
+      }
+    }
+
+    // Infer fallback based on src prefix
+    const params = new URLSearchParams(window.location.search);
+    const src = params.get('src') || '';
+
+    if (src.startsWith('/life-skills/')) {
+      window.location.href = '/life-skills/';
+    } else if (src.startsWith('/language-arts/toolkit/')) {
+      window.location.href = '/language-arts/toolkit/';
+    } else if (src.startsWith('/math-toolkit/')) {
+      window.location.href = '/math-toolkit/';
+    } else if (src.startsWith('/language-arts/')) {
+      // Could be a unit page - try to extract unit
+      const unitMatch = src.match(/^\/language-arts\/([^\/]+)\//);
+      if (unitMatch && unitMatch[1] && !['toolkit', 'assignment-hub'].includes(unitMatch[1])) {
+        window.location.href = `/language-arts/${unitMatch[1]}/`;
+      } else {
+        window.location.href = '/language-arts/';
+      }
     } else {
-      // Default to home page
+      // Default fallback to home
       window.location.href = '/';
     }
   }
