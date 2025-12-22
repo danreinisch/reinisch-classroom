@@ -1,0 +1,278 @@
+/* Context Navigation - Right Sidebar for Hierarchical Navigation */
+/* Provides context-driven navigation based on current route */
+
+:root {
+  --context-nav-width: 280px;
+  --context-nav-bg: rgba(15, 23, 42, 0.92);
+  --context-nav-border: rgba(255, 255, 255, 0.12);
+  --context-nav-hover: rgba(255, 255, 255, 0.08);
+  --context-nav-active: rgba(34, 197, 94, 0.15);
+  --context-nav-text: #e6edf3;
+  --context-nav-text-dim: #cbd5e1;
+  --context-nav-accent: #22c55e;
+  --context-nav-z: 999;
+}
+
+/* Context nav container - right side */
+.context-nav-rail {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: var(--context-nav-width);
+  height: 100vh;
+  background: var(--context-nav-bg);
+  border-left: 1px solid var(--context-nav-border);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: var(--context-nav-z);
+  display: flex;
+  flex-direction: column;
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.3);
+  overflow-y: auto;
+  overflow-x: hidden;
+  transition: transform 0.3s ease;
+}
+
+/* Hide by default, show when has-context-nav class is on body */
+.context-nav-rail {
+  transform: translateX(100%);
+}
+
+body.has-context-nav .context-nav-rail {
+  transform: translateX(0);
+}
+
+/* Context nav header */
+.context-nav-header {
+  padding: 20px 16px 16px;
+  border-bottom: 1px solid var(--context-nav-border);
+  flex-shrink: 0;
+}
+
+.context-nav-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--context-nav-text);
+  margin: 0 0 4px 0;
+  letter-spacing: 0.3px;
+}
+
+.context-nav-subtitle {
+  font-size: 12px;
+  color: var(--context-nav-text-dim);
+  opacity: 0.8;
+  margin: 0;
+}
+
+/* Context nav content area */
+.context-nav-content {
+  flex: 1;
+  padding: 8px 0;
+  overflow-y: auto;
+}
+
+/* Section in context nav */
+.context-nav-section {
+  margin-bottom: 20px;
+}
+
+.context-nav-section-title {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--context-nav-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  padding: 8px 16px;
+  margin: 0 0 4px 0;
+}
+
+/* Unit in context nav */
+.context-nav-unit {
+  margin-bottom: 12px;
+}
+
+.context-nav-unit-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--context-nav-text);
+  padding: 8px 16px;
+  margin: 0;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* Items (presentations, modules, etc.) */
+.context-nav-items {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.context-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px 8px 32px;
+  color: var(--context-nav-text-dim);
+  text-decoration: none;
+  font-size: 13px;
+  transition: all 0.15s ease;
+  cursor: pointer;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  line-height: 1.4;
+}
+
+.context-nav-item:hover {
+  background: var(--context-nav-hover);
+  color: var(--context-nav-text);
+  padding-left: 36px;
+}
+
+.context-nav-item.active {
+  background: var(--context-nav-active);
+  color: var(--context-nav-accent);
+  font-weight: 600;
+}
+
+.context-nav-item-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.context-nav-item-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Empty state */
+.context-nav-empty {
+  padding: 16px;
+  text-align: center;
+  color: var(--context-nav-text-dim);
+  font-size: 13px;
+  font-style: italic;
+}
+
+/* Loading state */
+.context-nav-loading {
+  padding: 16px;
+  text-align: center;
+  color: var(--context-nav-text-dim);
+  font-size: 13px;
+}
+
+/* Mobile toggle button for context nav */
+.context-nav-toggle {
+  display: none;
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: calc(var(--context-nav-z) + 1);
+  width: 44px;
+  height: 44px;
+  background: var(--context-nav-bg);
+  border: 1px solid var(--context-nav-border);
+  border-radius: 8px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  cursor: pointer;
+  padding: 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.context-nav-toggle-icon {
+  font-size: 20px;
+  color: var(--context-nav-text);
+}
+
+/* Responsive behavior */
+@media (max-width: 1024px) {
+  .context-nav-rail {
+    transform: translateX(100%);
+  }
+
+  body.has-context-nav .context-nav-rail {
+    transform: translateX(100%);
+  }
+
+  body.has-context-nav .context-nav-rail.open {
+    transform: translateX(0);
+  }
+
+  .context-nav-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+/* Adjust body padding to prevent content from being hidden under context nav */
+/* Only applies on desktop */
+@media (min-width: 1025px) {
+  body.has-context-nav {
+    padding-right: var(--context-nav-width);
+  }
+}
+
+@media (max-width: 1024px) {
+  body.has-context-nav {
+    padding-right: 0;
+  }
+}
+
+/* When both app-shell and context-nav are present */
+@media (min-width: 769px) and (min-width: 1025px) {
+  body.has-app-shell.has-context-nav {
+    padding-left: var(--shell-width, 260px);
+    padding-right: var(--context-nav-width);
+  }
+}
+
+/* Scrollbar styling for context nav */
+.context-nav-rail::-webkit-scrollbar {
+  width: 8px;
+}
+
+.context-nav-rail::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.context-nav-rail::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+.context-nav-rail::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Accessibility */
+.context-nav-item:focus,
+.context-nav-toggle:focus {
+  outline: 2px solid var(--context-nav-accent);
+  outline-offset: -2px;
+}
+
+/* Hidden class for conditional display */
+.context-nav-hidden {
+  display: none !important;
+}
+
+/* Presentation Mode: Hide context nav */
+body.presentation-mode .context-nav-rail {
+  display: none;
+}
+
+body.presentation-mode .context-nav-toggle {
+  display: none;
+}
+
+body.presentation-mode.has-context-nav {
+  padding-right: 0;
+}
