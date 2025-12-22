@@ -50,9 +50,9 @@ test.describe("Teacher Session Resume Confirmation (PR 267)", () => {
     const isVisible = await teacherView.isVisible();
     expect(isVisible).toBe(false);
 
-    // Verify hub content is shown (not entered teacher center)
-    const hubContent = await page.locator(".header");
-    await expect(hubContent).toBeVisible();
+    // Verify hub topbar is shown (not entered teacher center)
+    const hubTopbar = await page.locator(".hub-topbar");
+    await expect(hubTopbar).toBeVisible();
   });
 
   test("should show resume confirmation banner when prior session detected", async ({ page }) => {
