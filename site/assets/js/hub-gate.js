@@ -103,26 +103,22 @@
     panel.innerHTML = `
       <div class="hub-gate-content">
         <div class="hub-gate-header">
-          <div class="hub-gate-icon">🏫</div>
           <h1 class="hub-gate-title">Welcome to Classroom Hub</h1>
           <p class="hub-gate-subtitle">Choose your role to get started</p>
         </div>
 
         <div class="hub-gate-actions">
           <button class="hub-gate-btn hub-gate-btn-teacher" id="gateTeacherBtn">
-            <span class="hub-gate-btn-icon">👨‍🏫</span>
             <span class="hub-gate-btn-label">Teacher Center</span>
             <span class="hub-gate-btn-desc">Manage students, goals, and assignments</span>
           </button>
 
           <a href="/student/" class="hub-gate-btn hub-gate-btn-student">
-            <span class="hub-gate-btn-icon">👨‍🎓</span>
             <span class="hub-gate-btn-label">Student Portal</span>
             <span class="hub-gate-btn-desc">Access your assignments and goals</span>
           </a>
 
           <a href="/sub/" class="hub-gate-btn hub-gate-btn-substitute">
-            <span class="hub-gate-btn-icon">📋</span>
             <span class="hub-gate-btn-label">Substitute</span>
             <span class="hub-gate-btn-desc">View today's lesson plans</span>
           </a>
@@ -179,11 +175,6 @@
         margin-bottom: 48px;
       }
 
-      .hub-gate-icon {
-        font-size: 72px;
-        margin-bottom: 24px;
-      }
-
       .hub-gate-title {
         font-size: 36px;
         font-weight: 900;
@@ -234,10 +225,6 @@
 
       .hub-gate-btn-teacher:hover {
         border-color: rgba(34, 197, 94, 0.6);
-      }
-
-      .hub-gate-btn-icon {
-        font-size: 48px;
       }
 
       .hub-gate-btn-label {
@@ -300,14 +287,17 @@
   function handleTeacherGateClick() {
     console.log(LOG_PREFIX, 'Teacher gate clicked - triggering login');
 
-    // Trigger the existing teacher login button click
-    // The hub page already has login logic wired to #btnTeacher
-    const btnTeacher = document.getElementById('btnTeacher');
-    if (btnTeacher) {
-      btnTeacher.click();
+    // Find and show the teacher modal directly
+    const teachModal = document.querySelector('#teachModal');
+    const passInput = document.querySelector('#teachUser');
+    
+    if (teachModal) {
+      teachModal.classList.add('show');
+      if (passInput) {
+        passInput.focus();
+      }
     } else {
-      console.warn(LOG_PREFIX, 'Teacher button not found, redirecting to hub');
-      window.location.reload();
+      console.warn(LOG_PREFIX, 'Teacher modal not found');
     }
   }
 
@@ -346,6 +336,28 @@
       // Don't show gate, let hub load normally
       console.log(LOG_PREFIX, 'Valid local auth found - skipping gate');
       return;
+    }
+
+    // Check for entry parameter (e.g., ?entry=teacher)
+    const urlParams = new URLSearchParams(window.location.search);
+    const entry = urlParams.get('entry');
+
+    if (entry === 'teacher') {
+      // Auto-open teacher login modal
+      console.log(LOG_PREFIX, 'Entry parameter detected - auto-opening teacher login');
+      // Wait a bit for DOM to be ready
+      setTimeout(() => {
+        const teachModal = document.querySelector('#teachModal');
+        const passInput = document.querySelector('#teachUser');
+        
+        if (teachModal) {
+          teachModal.classList.add('show');
+          if (passInput) {
+            passInput.focus();
+          }
+        }
+      }, 100);
+      return; // Don't show gate
     }
 
     // Check if user has pending server session

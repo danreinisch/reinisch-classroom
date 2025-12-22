@@ -46,7 +46,6 @@
       <div class="app-shell-nav">
         <!-- Lessons -->
         <button class="app-shell-item" data-shell-nav="lessons" aria-expanded="false">
-          <span class="app-shell-item-icon">📚</span>
           <span class="app-shell-item-label">Lessons</span>
           <span class="app-shell-item-arrow">▶</span>
         </button>
@@ -57,7 +56,6 @@
 
         <!-- Toolkits -->
         <button class="app-shell-item" data-shell-nav="toolkits" aria-expanded="false">
-          <span class="app-shell-item-icon">🔧</span>
           <span class="app-shell-item-label">Toolkits</span>
           <span class="app-shell-item-arrow">▶</span>
         </button>
@@ -68,7 +66,6 @@
 
         <!-- Teacher -->
         <button class="app-shell-item" data-shell-nav="teacher" data-requires-auth="teacher" aria-expanded="false">
-          <span class="app-shell-item-icon">👨‍🏫</span>
           <span class="app-shell-item-label">Teacher</span>
           <span class="app-shell-item-arrow">▶</span>
         </button>
@@ -79,20 +76,17 @@
 
         <!-- Student -->
         <button class="app-shell-item" data-shell-nav="student" data-requires-auth="student">
-          <span class="app-shell-item-icon">👨‍🎓</span>
           <span class="app-shell-item-label">Student</span>
         </button>
 
         <!-- Substitute -->
         <button class="app-shell-item" data-shell-nav="substitute" data-requires-auth="substitute">
-          <span class="app-shell-item-icon">📋</span>
           <span class="app-shell-item-label">Substitute</span>
         </button>
       </div>
 
       <div class="app-shell-footer">
         <button class="app-shell-footer-btn app-shell-hidden" data-shell-action="signout">
-          <span>🚪</span>
           <span>Sign Out</span>
         </button>
       </div>
@@ -229,8 +223,8 @@
     console.log('[app-shell] Auth required for role:', role);
     
     if (role === 'teacher') {
-      // Redirect to hub which will show teacher login
-      window.location.href = '/hub/';
+      // Navigate to hub with entry parameter to auto-open teacher login
+      window.location.href = '/hub/?entry=teacher';
     } else if (role === 'student') {
       window.location.href = '/student/';
     } else if (role === 'substitute') {
