@@ -1,23 +1,36 @@
 /life-skills/presentations/presentation-03         /life-skills/presentations/presentation-03/index.html 200
 /life-skills/presentations/presentation-03.html    /life-skills/presentations/presentation-03/ 301
 
-# Admin redirects - map pretty paths to /site/admin assets
-/admin             /site/admin/index.html    200
-/admin/*           /site/admin/:splat        200
+# ============================================================================
+# REDIRECT RULES - IMPORTANT NOTE
+# ============================================================================
+# All destination paths in this file must be relative to Netlify's publish 
+# directory, which is configured as "site" in netlify.toml.
+#
+# Correct:   /hub  ->  /hub/index.html       (resolves to site/hub/index.html)
+# Incorrect: /hub  ->  /site/hub/index.html  (would resolve to site/site/hub/index.html)
+#
+# This ensures that deployed content matches the repository structure and that
+# GitHub main branch remains the reliable source of truth for production.
+# ============================================================================
+
+# Admin redirects - map pretty paths to admin assets
+/admin             /admin/index.html         200
+/admin/*           /admin/:splat             200
 
 # Admin Login redirects
-/admin-login       /site/admin-login/index.html    200
-/admin-login/*     /site/admin-login/:splat        200
+/admin-login       /admin-login/index.html   200
+/admin-login/*     /admin-login/:splat       200
 
-# Hub redirects - map pretty paths to /site/hub assets
-/hub               /site/hub/index.html      200
-/hub/*             /site/hub/:splat          200
+# Hub redirects - map pretty paths to hub assets
+/hub               /hub/index.html           200
+/hub/*             /hub/:splat               200
 
 # Student Portal redirects - handle deep links and query parameters
-# The client-side script in /site/student/index.html handles redirect logic:
+# The client-side script in student/index.html handles redirect logic:
 # - If no auto-login params and no valid remembered auth: redirects to /hub/
 # - If valid auto-login params (?auto=1&code=...): stays and loads portal
 # - If valid remembered auth in localStorage: stays and loads portal
-/student           /site/student/index.html  200
-/student/          /site/student/index.html  200
-/student/*         /site/student/index.html  200
+/student           /student/index.html       200
+/student/          /student/index.html       200
+/student/*         /student/index.html       200
