@@ -1,4 +1,4 @@
-/* Global App Shell - Right-side Navigation Rail */
+/* Global App Shell - Left-side Navigation Rail */
 /* Provides consistent navigation across reinischclassroom.com */
 
 :root {
@@ -17,17 +17,17 @@
 .app-shell-rail {
   position: fixed;
   top: 0;
-  right: 0;
+  left: 0;
   width: var(--shell-width);
   height: 100vh;
   background: var(--shell-bg);
-  border-left: 1px solid var(--shell-border);
+  border-right: 1px solid var(--shell-border);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   z-index: var(--shell-z);
   display: flex;
   flex-direction: column;
-  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.3);
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3);
   overflow-y: auto;
   overflow-x: hidden;
 }
@@ -186,7 +186,7 @@
   display: none;
   position: fixed;
   top: 16px;
-  right: 16px;
+  left: 16px;
   z-index: calc(var(--shell-z) + 1);
   width: 44px;
   height: 44px;
@@ -207,7 +207,7 @@
 /* Responsive behavior */
 @media (max-width: 768px) {
   .app-shell-rail {
-    transform: translateX(100%);
+    transform: translateX(-100%);
     transition: transform 0.3s ease;
   }
 
@@ -226,13 +226,13 @@
 /* Only applies on desktop - mobile uses overlay behavior */
 @media (min-width: 769px) {
   body.has-app-shell {
-    padding-right: var(--shell-width);
+    padding-left: var(--shell-width);
   }
 }
 
 @media (max-width: 768px) {
   body.has-app-shell {
-    padding-right: 0;
+    padding-left: 0;
   }
 }
 
@@ -266,3 +266,44 @@
 .app-shell-hidden {
   display: none !important;
 }
+
+/* Presentation Mode: Hide rail and expand content */
+body.presentation-mode .app-shell-rail {
+  display: none;
+}
+
+body.presentation-mode .app-shell-toggle {
+  display: none;
+}
+
+body.presentation-mode.has-app-shell {
+  padding-left: 0;
+}
+
+/* Presentation mode toggle button (will be added to top bars) */
+.presentation-mode-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  color: var(--ink, #e6edf3);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.presentation-mode-toggle:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+body.presentation-mode .presentation-mode-toggle {
+  background: rgba(34, 197, 94, 0.15);
+  border-color: rgba(34, 197, 94, 0.35);
+  color: #22c55e;
+}
+
