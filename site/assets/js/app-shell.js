@@ -6,6 +6,16 @@
 (function () {
   'use strict';
 
+  // State for lessons navigator
+  let lessonsData = null;
+  let viewerState = {
+    isOpen: false,
+    currentUrl: null,
+    section: null,
+    unit: null,
+    presentation: null
+  };
+
   /**
    * Initialize the app shell
    */
@@ -22,11 +32,23 @@
     // Add body class for layout adjustment
     document.body.classList.add('has-app-shell');
 
+    // Create lessons navigator panel
+    createLessonsNavigator();
+
+    // Create presentation viewer
+    createPresentationViewer();
+
     // Setup event handlers
     setupEventHandlers();
 
     // Update auth state
     updateAuthState();
+
+    // Load lessons data
+    loadLessonsData();
+
+    // Check URL params for deep linking
+    initDeepLinking();
   }
 
   /**
@@ -151,6 +173,12 @@
 
       if (navId === 'substitute') {
         window.location.href = '/sub/';
+        return;
+      }
+
+      // Special handling for lessons - open navigator panel instead of submenu
+      if (navId === 'lessons') {
+        toggleLessonsNavigator();
         return;
       }
 
@@ -369,6 +397,336 @@
   }
 
   /**
+   * Load lessons data from manifest
+   */
+  async function loadLessonsData() {
+    try {
+      const response = await fetch('/assets/content/lessons-index.json');
+      if (response.ok) {
+        lessonsData = await response.json();
+        console.log('[app-shell] Loaded lessons data');
+      } else {
+        console.warn('[app-shell] Failed to load lessons data:', response.status);
+      }
+    } catch (err) {
+      console.warn('[app-shell] Error loading lessons data:', err);
+    }
+  }
+
+  /**
+   * Create lessons navigator panel
+   */
+  function createLessonsNavigator() {
+    const navigator = document.createElement('div');
+    navigator.className = 'lessons-navigator';
+    navigator.setAttribute('aria-label', 'Lessons navigator');
+    navigator.innerHTML = `
+      <div class="lessons-navigator-header">
+        <h2 class="lessons-navigator-title">Lessons</h2>
+        <button class="lessons-navigator-close" aria-label="Close navigator">×</button>
+      </div>
+      <div class="lessons-navigator-content">
+        <div class="lessons-loading">Loading lessons...</div>
+      </div>
+    `;
+    document.body.appendChild(navigator);
+
+    // Close button handler
+    const closeBtn = navigator.querySelector('.lessons-navigator-close');
+    closeBtn.addEventListener('click', closeLessonsNavigator);
+
+    // Close on outside click
+    navigator.addEventListener('click', (e) => {
+      if (e.target === navigator) {
+        closeLessonsNavigator();
+      }
+    });
+  }
+
+  /**
+   * Toggle lessons navigator visibility
+   */
+  function toggleLessonsNavigator() {
+    const navigator = document.querySelector('.lessons-navigator');
+    if (!navigator) return;
+
+    const isOpen = navigator.classList.contains('open');
+    
+    if (isOpen) {
+      closeLessonsNavigator();
+    } else {
+      openLessonsNavigator();
+    }
+  }
+
+  /**
+   * Open lessons navigator
+   */
+  function openLessonsNavigator() {
+    const navigator = document.querySelector('.lessons-navigator');
+    if (!navigator) return;
+
+    navigator.classList.add('open');
+    
+    // Update rail button state
+    const lessonsBtn = document.querySelector('[data-shell-nav="lessons"]');
+    if (lessonsBtn) {
+      lessonsBtn.classList.add('active');
+      lessonsBtn.setAttribute('aria-expanded', 'true');
+    }
+
+    // Render content if we have data
+    if (lessonsData) {
+      renderLessonsContent();
+    }
+  }
+
+  /**
+   * Close lessons navigator
+   */
+  function closeLessonsNavigator() {
+    const navigator = document.querySelector('.lessons-navigator');
+    if (!navigator) return;
+
+    navigator.classList.remove('open');
+    
+    // Update rail button state
+    const lessonsBtn = document.querySelector('[data-shell-nav="lessons"]');
+    if (lessonsBtn) {
+      lessonsBtn.classList.remove('active');
+      lessonsBtn.setAttribute('aria-expanded', 'false');
+    }
+  }
+
+  /**
+   * Render lessons navigator content
+   */
+  function renderLessonsContent() {
+    const content = document.querySelector('.lessons-navigator-content');
+    if (!content || !lessonsData) return;
+
+    let html = '';
+
+    // Render sections
+    for (const section of lessonsData.sections) {
+      html += `<div class="lessons-section">`;
+      html += `<div class="lessons-section-title">${section.name}</div>`;
+      
+      // Render units
+      if (section.units && section.units.length > 0) {
+        for (const unit of section.units) {
+          html += `<div class="lessons-unit">`;
+          html += `<div class="lessons-unit-title">${unit.name}</div>`;
+          
+          // Render presentations
+          if (unit.presentations && unit.presentations.length > 0) {
+            html += `<div class="lessons-presentations">`;
+            for (const pres of unit.presentations) {
+              html += `<button class="lessons-presentation" 
+                data-section="${section.id}" 
+                data-unit="${unit.id}" 
+                data-presentation="${pres.id}"
+                data-url="${pres.url}">
+                ${pres.name}
+              </button>`;
+            }
+            html += `</div>`;
+          }
+          
+          html += `</div>`;
+        }
+      } else {
+        html += `<div class="lessons-empty">No units available yet</div>`;
+      }
+      
+      html += `</div>`;
+    }
+
+    content.innerHTML = html;
+
+    // Add click handlers for presentations
+    content.querySelectorAll('.lessons-presentation').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const section = btn.dataset.section;
+        const unit = btn.dataset.unit;
+        const presentation = btn.dataset.presentation;
+        const url = btn.dataset.url;
+        
+        openPresentationViewer(url, section, unit, presentation);
+      });
+    });
+  }
+
+  /**
+   * Create presentation viewer
+   */
+  function createPresentationViewer() {
+    const viewer = document.createElement('div');
+    viewer.className = 'presentation-viewer';
+    viewer.innerHTML = `
+      <div class="presentation-viewer-controls">
+        <button class="presentation-viewer-btn" data-viewer-action="close">Close</button>
+        <button class="presentation-viewer-btn" data-viewer-action="presentation-mode">Presentation Mode</button>
+        <button class="presentation-viewer-btn" data-viewer-action="fullscreen">Full screen</button>
+      </div>
+      <div class="presentation-viewer-frame">
+        <iframe class="presentation-iframe" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals" allowfullscreen></iframe>
+      </div>
+    `;
+    document.body.appendChild(viewer);
+
+    // Control button handlers
+    viewer.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-viewer-action]');
+      if (!btn) return;
+
+      const action = btn.dataset.viewerAction;
+      
+      if (action === 'close') {
+        closePresentationViewer();
+      } else if (action === 'presentation-mode') {
+        togglePresentationMode();
+      } else if (action === 'fullscreen') {
+        requestFullscreen();
+      }
+    });
+  }
+
+  /**
+   * Open presentation viewer
+   */
+  function openPresentationViewer(url, section, unit, presentation) {
+    const viewer = document.querySelector('.presentation-viewer');
+    const iframe = viewer.querySelector('.presentation-iframe');
+    
+    if (!viewer || !iframe) return;
+
+    // Update state
+    viewerState = {
+      isOpen: true,
+      currentUrl: url,
+      section: section,
+      unit: unit,
+      presentation: presentation
+    };
+
+    // Load presentation in iframe
+    iframe.src = url;
+
+    // Show viewer
+    viewer.classList.add('open');
+    document.body.classList.add('viewer-open');
+
+    // Update URL with query params
+    updateViewerUrl();
+
+    // Close navigator
+    closeLessonsNavigator();
+
+    console.log('[app-shell] Opened presentation:', url);
+  }
+
+  /**
+   * Close presentation viewer
+   */
+  function closePresentationViewer() {
+    const viewer = document.querySelector('.presentation-viewer');
+    const iframe = viewer.querySelector('.presentation-iframe');
+    
+    if (!viewer || !iframe) return;
+
+    // Update state
+    viewerState = {
+      isOpen: false,
+      currentUrl: null,
+      section: null,
+      unit: null,
+      presentation: null
+    };
+
+    // Clear iframe
+    iframe.src = '';
+
+    // Hide viewer
+    viewer.classList.remove('open');
+    document.body.classList.remove('viewer-open');
+
+    // Update URL (remove query params)
+    const url = new URL(window.location);
+    url.searchParams.delete('viewer');
+    url.searchParams.delete('section');
+    url.searchParams.delete('unit');
+    url.searchParams.delete('presentation');
+    window.history.pushState({}, '', url.toString());
+
+    console.log('[app-shell] Closed presentation viewer');
+  }
+
+  /**
+   * Update URL with viewer state
+   */
+  function updateViewerUrl() {
+    if (!viewerState.isOpen) return;
+
+    const url = new URL(window.location);
+    url.searchParams.set('viewer', '1');
+    url.searchParams.set('section', viewerState.section);
+    url.searchParams.set('unit', viewerState.unit);
+    url.searchParams.set('presentation', viewerState.presentation);
+    
+    window.history.pushState({ viewer: viewerState }, '', url.toString());
+  }
+
+  /**
+   * Initialize deep linking (restore state from URL params)
+   */
+  function initDeepLinking() {
+    const params = new URLSearchParams(window.location.search);
+    const viewer = params.get('viewer');
+    
+    if (viewer === '1') {
+      const section = params.get('section');
+      const unit = params.get('unit');
+      const presentation = params.get('presentation');
+      
+      // Wait for lessons data to load
+      const checkData = setInterval(() => {
+        if (lessonsData) {
+          clearInterval(checkData);
+          
+          // Find the presentation URL
+          const sectionData = lessonsData.sections.find(s => s.id === section);
+          if (sectionData) {
+            const unitData = sectionData.units.find(u => u.id === unit);
+            if (unitData) {
+              const presData = unitData.presentations.find(p => p.id === presentation);
+              if (presData) {
+                openPresentationViewer(presData.url, section, unit, presentation);
+              }
+            }
+          }
+        }
+      }, 100);
+      
+      // Timeout after 5 seconds
+      setTimeout(() => clearInterval(checkData), 5000);
+    }
+
+    // Handle popstate for back/forward
+    window.addEventListener('popstate', (e) => {
+      if (e.state && e.state.viewer) {
+        const { section, unit, presentation, currentUrl } = e.state.viewer;
+        openPresentationViewer(currentUrl, section, unit, presentation);
+      } else {
+        // No viewer state, close if open
+        if (viewerState.isOpen) {
+          closePresentationViewer();
+        }
+      }
+    });
+  }
+
+  /**
    * Public API
    */
   window.AppShell = {
@@ -376,6 +734,8 @@
     updateAuthState: updateAuthState,
     togglePresentationMode: togglePresentationMode,
     requestFullscreen: requestFullscreen,
+    openPresentationViewer: openPresentationViewer,
+    closePresentationViewer: closePresentationViewer,
   };
 
   // Auto-initialize when DOM is ready
