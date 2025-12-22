@@ -307,3 +307,236 @@ body.presentation-mode .presentation-mode-toggle {
   color: #22c55e;
 }
 
+/* Lessons Navigator Panel */
+.lessons-navigator {
+  position: fixed;
+  top: 0;
+  left: var(--shell-width);
+  width: 340px;
+  height: 100vh;
+  background: var(--shell-bg);
+  border-right: 1px solid var(--shell-border);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: calc(var(--shell-z) - 1);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3);
+  transform: translateX(-100%);
+  transition: transform 0.3s ease;
+  overflow: hidden;
+}
+
+.lessons-navigator.open {
+  transform: translateX(0);
+}
+
+.lessons-navigator-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 16px;
+  border-bottom: 1px solid var(--shell-border);
+  flex-shrink: 0;
+}
+
+.lessons-navigator-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--shell-text);
+  margin: 0;
+}
+
+.lessons-navigator-close {
+  background: none;
+  border: none;
+  color: var(--shell-text);
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background 0.15s ease;
+}
+
+.lessons-navigator-close:hover {
+  background: var(--shell-hover);
+}
+
+.lessons-navigator-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.lessons-loading {
+  text-align: center;
+  color: var(--shell-text-dim);
+  padding: 20px;
+}
+
+.lessons-section {
+  margin-bottom: 24px;
+}
+
+.lessons-section-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--shell-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+}
+
+.lessons-unit {
+  margin-bottom: 16px;
+}
+
+.lessons-unit-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--shell-text);
+  margin-bottom: 8px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+}
+
+.lessons-presentations {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.lessons-presentation {
+  background: none;
+  border: none;
+  color: var(--shell-text-dim);
+  text-align: left;
+  padding: 8px 12px 8px 24px;
+  font-size: 13px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.lessons-presentation:hover {
+  background: var(--shell-hover);
+  color: var(--shell-text);
+  padding-left: 28px;
+}
+
+.lessons-empty {
+  color: var(--shell-text-dim);
+  font-size: 13px;
+  font-style: italic;
+  padding: 8px 12px;
+}
+
+/* Presentation Viewer */
+.presentation-viewer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  background: var(--base, #0b1220);
+  z-index: calc(var(--shell-z) - 2);
+  display: none;
+  flex-direction: column;
+}
+
+.presentation-viewer.open {
+  display: flex;
+  z-index: calc(var(--shell-z) + 10);
+}
+
+.presentation-viewer-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--shell-bg);
+  border-bottom: 1px solid var(--shell-border);
+  flex-shrink: 0;
+}
+
+.presentation-viewer-btn {
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 6px;
+  color: var(--shell-text);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.presentation-viewer-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+.presentation-viewer-btn[data-viewer-action="close"] {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+}
+
+.presentation-viewer-btn[data-viewer-action="close"]:hover {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+.presentation-viewer-frame {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.presentation-iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+/* Presentation Mode adjustments for viewer */
+body.presentation-mode .presentation-viewer-controls {
+  display: none;
+}
+
+body.presentation-mode .lessons-navigator {
+  display: none;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .lessons-navigator {
+    left: 0;
+    width: 100%;
+    max-width: 340px;
+  }
+  
+  .lessons-navigator.open {
+    transform: translateX(0);
+  }
+}
+
+/* When viewer is open, adjust layout */
+@media (min-width: 769px) {
+  body.has-app-shell.viewer-open {
+    padding-left: 0;
+  }
+}
+
