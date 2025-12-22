@@ -274,24 +274,37 @@ input[type="file"].rc-input::file-selector-button:hover{
   flex-direction: column;
 }
 
-/* Shell container */
+/* Shell container - Prominent rounded frame with large shadow */
 .hub-shell{
   flex: 1;
   display: flex;
   flex-direction: column;
   min-height: 0;
+  max-width: 1400px;
+  margin: 24px auto;
+  border-radius: 24px;
+  border: 1px solid var(--border-strong);
+  background: linear-gradient(180deg, rgba(255,255,255,.02), transparent 50%), rgba(15,23,42,.45);
+  box-shadow: 0 24px 80px rgba(0,0,0,.65), 0 0 0 1px rgba(255,255,255,.08);
+  overflow: hidden;
+}
+@supports ((backdrop-filter: blur(16px)) or (-webkit-backdrop-filter: blur(16px))){
+  .hub-shell{
+    backdrop-filter: blur(16px) saturate(135%);
+    -webkit-backdrop-filter: blur(16px) saturate(135%);
+  }
 }
 
-/* Top bar - Glass styling */
+/* Top bar - Glass styling (no border since shell provides frame) */
 .hub-topbar{
   position: sticky;
   top: 0;
   z-index: 40;
   padding: 10px 0;
   background: linear-gradient(180deg, var(--glass-hi), transparent 55%), var(--glass);
-  border: 1px solid var(--border);
+  border: none;
   border-bottom: 1px solid var(--border-strong);
-  box-shadow: var(--shadow-0);
+  box-shadow: none;
 }
 @supports ((backdrop-filter: blur(14px)) or (-webkit-backdrop-filter: blur(14px))){
   .hub-topbar{
@@ -301,21 +314,21 @@ input[type="file"].rc-input::file-selector-button:hover{
 }
 
 .hub-topbar-inner{
-  max-width: 1360px;
-  margin: 0 auto;
+  width: 100%;
+  margin: 0;
   padding: 0 18px;
   display: flex;
   gap: 12px;
   align-items: center;
 }
 
-/* Main grid layout */
+/* Main grid layout - Edge-aligned within shell */
 .hub-grid{
   display: grid;
-  grid-template-columns: 62px 300px minmax(0, 1fr) 320px;
+  grid-template-columns: 100px 240px minmax(0, 1fr) 300px;
   gap: 18px;
-  max-width: 1360px;
-  margin: 0 auto;
+  max-width: 100%;
+  margin: 0;
   padding: 18px;
   flex: 1;
   min-height: 0;
@@ -326,7 +339,7 @@ input[type="file"].rc-input::file-selector-button:hover{
   display: contents;
 }
 
-/* Icon rail */
+/* Text-based rail (wider for labels) */
 .hub-rail{
   display: flex;
   flex-direction: column;
@@ -334,29 +347,33 @@ input[type="file"].rc-input::file-selector-button:hover{
 }
 
 .hub-rail-item{
-  width: 56px;
-  height: 56px;
-  border-radius: 10px;
+  width: 100%;
+  min-height: 48px;
+  border-radius: 8px;
   border: 1px solid var(--border);
   background: rgba(255, 255, 255, 0.06);
   color: var(--text0);
-  font-size: 24px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0;
-  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+  padding: 10px 8px;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+  text-align: center;
 }
 
 .hub-rail-item.active{
-  background: linear-gradient(180deg, rgba(34, 197, 94, 0.12), rgba(34, 197, 94, 0.06));
+  background: linear-gradient(180deg, rgba(34, 197, 94, 0.14), rgba(34, 197, 94, 0.08));
   border-color: var(--accent, rgba(34, 197, 94, 0.4));
-  box-shadow: 0 4px 16px rgba(34, 197, 94, 0.3);
+  box-shadow: 0 2px 12px rgba(34, 197, 94, 0.25);
 }
 
 .hub-rail-item:hover{
   border-color: var(--border-strong);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 /* Menu sidebar */
@@ -416,15 +433,15 @@ input[type="file"].rc-input::file-selector-button:hover{
 /* Responsive behavior - Progressive breakpoints */
 /* At 1400px and above: 4-column layout (rail + menu + main + right) */
 @media (max-width: 1400px) {
-  .hub-grid {
-    max-width: 100%;
+  .hub-shell {
+    margin: 16px;
   }
 }
 
 /* At 1200px: hide right panel only */
 @media (max-width: 1200px) {
   .hub-grid {
-    grid-template-columns: 62px 300px minmax(0, 1fr);
+    grid-template-columns: 100px 240px minmax(0, 1fr);
   }
   .hub-right {
     display: none;
@@ -434,7 +451,7 @@ input[type="file"].rc-input::file-selector-button:hover{
 /* At 980px: collapse left menu, keep rail */
 @media (max-width: 980px) {
   .hub-grid {
-    grid-template-columns: 62px minmax(0, 1fr);
+    grid-template-columns: 100px minmax(0, 1fr);
   }
   .hub-menu {
     display: none;
@@ -448,5 +465,9 @@ input[type="file"].rc-input::file-selector-button:hover{
   }
   .hub-rail {
     display: none;
+  }
+  .hub-shell {
+    margin: 8px;
+    border-radius: 16px;
   }
 }
