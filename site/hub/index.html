@@ -10099,15 +10099,14 @@
           if (icon) icon.textContent = '📺';
           if (label) label.textContent = 'Exit';
           
-          // Optionally request fullscreen
-          const shouldFullscreen = confirm('Enter fullscreen mode?');
-          if (shouldFullscreen) {
-            const elem = document.documentElement;
-            if (elem.requestFullscreen) {
-              elem.requestFullscreen().catch((err) => {
-                console.warn('[Hub] Could not enter fullscreen:', err);
-              });
-            }
+          // Automatically request fullscreen (no blocking prompt)
+          // User can exit fullscreen with Esc key or exit button
+          const elem = document.documentElement;
+          if (elem.requestFullscreen) {
+            elem.requestFullscreen().catch((err) => {
+              console.warn('[Hub] Could not enter fullscreen:', err);
+              // Continue with presentation mode even if fullscreen fails
+            });
           }
           
           console.log('[Hub] Entered presentation mode');
