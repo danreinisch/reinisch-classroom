@@ -1,0 +1,147 @@
+/**
+ * Viewer CSS - Dedicated viewer for presentations and modules
+ */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  background: #0a0f1a;
+  color: #e8edf5;
+}
+
+.viewer-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+}
+
+.viewer-controls {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: rgba(10, 15, 26, 0.95);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  flex-shrink: 0;
+  z-index: 1000;
+}
+
+.viewer-btn {
+  padding: 0.5rem 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 0.5rem;
+  color: #e8edf5;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.viewer-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.viewer-btn:active {
+  transform: translateY(0);
+}
+
+.viewer-btn:focus {
+  outline: 2px solid rgba(99, 179, 237, 0.5);
+  outline-offset: 2px;
+}
+
+.viewer-frame {
+  flex: 1;
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.viewer-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+}
+
+/* Presentation mode: hide controls and maximize iframe */
+body.presentation-mode .viewer-controls {
+  display: none;
+}
+
+body.presentation-mode .viewer-frame {
+  height: 100vh;
+}
+
+/* Loading state */
+.viewer-loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #a0aec0;
+  font-size: 1rem;
+}
+
+/* Error state */
+.viewer-error {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  max-width: 500px;
+  padding: 2rem;
+}
+
+.viewer-error-title {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+  color: #fc8181;
+}
+
+.viewer-error-message {
+  color: #cbd5e0;
+  line-height: 1.6;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .viewer-controls {
+    gap: 0.25rem;
+    padding: 0.5rem;
+  }
+
+  .viewer-btn {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.85rem;
+  }
+}
+
+/* Fullscreen mode adjustments */
+body:fullscreen,
+body:-webkit-full-screen,
+body:-moz-full-screen {
+  background: #000;
+}
+
+body:fullscreen .viewer-controls,
+body:-webkit-full-screen .viewer-controls,
+body:-moz-full-screen .viewer-controls {
+  background: rgba(0, 0, 0, 0.9);
+}

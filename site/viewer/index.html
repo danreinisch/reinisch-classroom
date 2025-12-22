@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Viewer – Reinisch Classroom</title>
+  <link rel="stylesheet" href="/assets/css/viewer.css">
+</head>
+<body>
+  <div class="viewer-container">
+    <div class="viewer-controls" id="viewerControls">
+      <button class="viewer-btn" id="closeBtn" aria-label="Close viewer">Close</button>
+      <button class="viewer-btn" id="presentationModeBtn" aria-label="Toggle presentation mode">Presentation Mode</button>
+      <button class="viewer-btn" id="fullscreenBtn" aria-label="Toggle fullscreen">Full Screen</button>
+    </div>
+    <div class="viewer-frame" id="viewerFrame">
+      <iframe 
+        id="contentIframe" 
+        class="viewer-iframe"
+        sandbox="allow-scripts allow-same-origin allow-forms"
+        allowfullscreen
+        title="Content viewer"></iframe>
+    </div>
+  </div>
+  <script src="/assets/js/viewer.js"></script>
+</body>
+</html>
