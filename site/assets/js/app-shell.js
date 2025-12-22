@@ -6,6 +6,10 @@
 (function () {
   'use strict';
 
+  // Constants
+  const DEEP_LINK_CHECK_INTERVAL = 500; // ms
+  const DEEP_LINK_TIMEOUT = 5000; // ms
+
   // State for lessons navigator
   let lessonsData = null;
   let viewerState = {
@@ -505,56 +509,66 @@
     const content = document.querySelector('.lessons-navigator-content');
     if (!content || !lessonsData) return;
 
-    let html = '';
+    // Clear content
+    content.innerHTML = '';
 
     // Render sections
     for (const section of lessonsData.sections) {
-      html += `<div class="lessons-section">`;
-      html += `<div class="lessons-section-title">${section.name}</div>`;
+      const sectionDiv = document.createElement('div');
+      sectionDiv.className = 'lessons-section';
+      
+      const sectionTitle = document.createElement('div');
+      sectionTitle.className = 'lessons-section-title';
+      sectionTitle.textContent = section.name;
+      sectionDiv.appendChild(sectionTitle);
       
       // Render units
       if (section.units && section.units.length > 0) {
         for (const unit of section.units) {
-          html += `<div class="lessons-unit">`;
-          html += `<div class="lessons-unit-title">${unit.name}</div>`;
+          const unitDiv = document.createElement('div');
+          unitDiv.className = 'lessons-unit';
+          
+          const unitTitle = document.createElement('div');
+          unitTitle.className = 'lessons-unit-title';
+          unitTitle.textContent = unit.name;
+          unitDiv.appendChild(unitTitle);
           
           // Render presentations
           if (unit.presentations && unit.presentations.length > 0) {
-            html += `<div class="lessons-presentations">`;
+            const presContainer = document.createElement('div');
+            presContainer.className = 'lessons-presentations';
+            
             for (const pres of unit.presentations) {
-              html += `<button class="lessons-presentation" 
-                data-section="${section.id}" 
-                data-unit="${unit.id}" 
-                data-presentation="${pres.id}"
-                data-url="${pres.url}">
-                ${pres.name}
-              </button>`;
+              const btn = document.createElement('button');
+              btn.className = 'lessons-presentation';
+              btn.textContent = pres.name;
+              btn.dataset.section = section.id;
+              btn.dataset.unit = unit.id;
+              btn.dataset.presentation = pres.id;
+              btn.dataset.url = pres.url;
+              
+              btn.addEventListener('click', () => {
+                openPresentationViewer(pres.url, section.id, unit.id, pres.id);
+              });
+              
+              presContainer.appendChild(btn);
             }
-            html += `</div>`;
+            
+            unitDiv.appendChild(presContainer);
           }
           
-          html += `</div>`;
+          sectionDiv.appendChild(unitDiv);
         }
       } else {
-        html += `<div class="lessons-empty">No units available yet</div>`;
+        const emptyMsg = document.createElement('div');
+        emptyMsg.className = 'lessons-empty';
+        emptyMsg.textContent = 'No units available yet';
+        emptyMsg.setAttribute('role', 'status');
+        sectionDiv.appendChild(emptyMsg);
       }
       
-      html += `</div>`;
+      content.appendChild(sectionDiv);
     }
-
-    content.innerHTML = html;
-
-    // Add click handlers for presentations
-    content.querySelectorAll('.lessons-presentation').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const section = btn.dataset.section;
-        const unit = btn.dataset.unit;
-        const presentation = btn.dataset.presentation;
-        const url = btn.dataset.url;
-        
-        openPresentationViewer(url, section, unit, presentation);
-      });
-    });
   }
 
   /**
@@ -570,10 +584,16 @@
         <button class="presentation-viewer-btn" data-viewer-action="fullscreen">Full screen</button>
       </div>
       <div class="presentation-viewer-frame">
-        <iframe class="presentation-iframe" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals" allowfullscreen></iframe>
+        <iframe class="presentation-iframe" 
+          sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals" 
+          allowfullscreen
+          title="Presentation content"></iframe>
       </div>
     `;
     document.body.appendChild(viewer);
+
+    // Note: allow-same-origin is required because presentations are interactive HTML
+    // from the same domain that need access to their resources and scripts.
 
     // Control button handlers
     viewer.addEventListener('click', (e) => {
@@ -689,7 +709,7 @@
       const unit = params.get('unit');
       const presentation = params.get('presentation');
       
-      // Wait for lessons data to load
+      // Wait for lessons data to load with less aggressive polling
       const checkData = setInterval(() => {
         if (lessonsData) {
           clearInterval(checkData);
@@ -706,10 +726,10 @@
             }
           }
         }
-      }, 100);
+      }, DEEP_LINK_CHECK_INTERVAL);
       
-      // Timeout after 5 seconds
-      setTimeout(() => clearInterval(checkData), 5000);
+      // Timeout to prevent infinite polling
+      setTimeout(() => clearInterval(checkData), DEEP_LINK_TIMEOUT);
     }
 
     // Handle popstate for back/forward
