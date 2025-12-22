@@ -274,32 +274,28 @@ input[type="file"].rc-input::file-selector-button:hover{
   flex-direction: column;
 }
 
-/* Shell container - Prominent rounded frame with large shadow */
+/* Shell container - Full-bleed layout (no framing) */
 .hub-shell{
   flex: 1;
   display: flex;
   flex-direction: column;
-  min-height: calc(100vh - 36px);
-  max-width: 1400px;
-  margin: 18px auto;
-  border-radius: 24px;
-  border: 1px solid var(--border);
-  background: linear-gradient(180deg, rgba(255,255,255,.02), transparent 60%), rgba(10,14,12,.55);
-  box-shadow: 0 24px 80px rgba(0,0,0,.65);
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  min-height: 100vh;
+  border-radius: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
   overflow: hidden;
 }
-@supports ((backdrop-filter: blur(16px)) or (-webkit-backdrop-filter: blur(16px))){
-  .hub-shell{
-    backdrop-filter: blur(16px) saturate(135%);
-    -webkit-backdrop-filter: blur(16px) saturate(135%);
-  }
-}
 
-/* Top bar - Glass styling (no border since shell provides frame) */
+/* Top bar - Glass styling (full-width) */
 .hub-topbar{
   position: sticky;
   top: 0;
   z-index: 40;
+  width: 100%;
   padding: 10px 0;
   background: linear-gradient(180deg, var(--glass-hi), transparent 55%), var(--glass);
   border: none;
@@ -315,6 +311,7 @@ input[type="file"].rc-input::file-selector-button:hover{
 
 .hub-topbar-inner{
   width: 100%;
+  max-width: none;
   margin: 0;
   padding: 0 18px;
   display: flex;
@@ -322,12 +319,13 @@ input[type="file"].rc-input::file-selector-button:hover{
   align-items: center;
 }
 
-/* Main grid layout - Edge-aligned within shell */
+/* Main grid layout - Full-width with comfortable padding */
 .hub-grid{
   display: grid;
   grid-template-columns: 100px 300px minmax(0, 1fr) 320px;
   gap: 18px;
-  max-width: 100%;
+  width: 100%;
+  max-width: none;
   margin: 0;
   padding: 18px;
   flex: 1;
@@ -432,11 +430,6 @@ input[type="file"].rc-input::file-selector-button:hover{
 
 /* Responsive behavior - Progressive breakpoints */
 /* At 1400px and above: 4-column layout (rail + menu + main + right) */
-@media (max-width: 1400px) {
-  .hub-shell {
-    margin: 16px;
-  }
-}
 
 /* At 1200px: hide right panel only */
 @media (max-width: 1200px) {
@@ -465,9 +458,5 @@ input[type="file"].rc-input::file-selector-button:hover{
   }
   .hub-rail {
     display: none;
-  }
-  .hub-shell {
-    margin: 8px;
-    border-radius: 16px;
   }
 }

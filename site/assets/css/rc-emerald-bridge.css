@@ -27,13 +27,13 @@
   align-items: center;
   gap: 8px;
   padding: 6px 12px;
-  border-radius: var(--hub-radius-sm);
+  border-radius: 4px;
   border: 1px solid var(--hub-border);
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.06);
   color: var(--text0, var(--ink));
   font-weight: 700;
   letter-spacing: 0.15px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  box-shadow: none;
 }
 
 [data-rc-app="hub"] .btn {
@@ -45,19 +45,18 @@
   border: 1px solid var(--hub-border);
   background: rgba(255, 255, 255, 0.05);
   color: var(--text0, var(--ink));
-  border-radius: var(--hub-radius-md);
+  border-radius: 4px;
   font-weight: 800;
   cursor: pointer;
   text-decoration: none;
   transition:
-    transform 0.12s ease,
     border-color 0.12s ease,
     background 0.12s ease;
   box-shadow: none;
 }
 
 [data-rc-app="hub"] .btn:hover {
-  transform: translateY(-1px);
+  transform: none;
   border-color: var(--hub-border-strong);
   background: rgba(255, 255, 255, 0.08);
 }
@@ -66,13 +65,13 @@
   background: linear-gradient(180deg, rgba(34, 197, 94, 0.92), rgba(22, 163, 74, 0.88));
   color: #032313;
   border: 0;
-  box-shadow: 0 4px 14px rgba(34, 197, 94, 0.22);
+  box-shadow: 0 2px 8px rgba(34, 197, 94, 0.15);
 }
 
 [data-rc-app="hub"] .btn.small {
   height: 34px;
   padding: 0 10px;
-  border-radius: var(--hub-radius-sm);
+  border-radius: 4px;
   font-size: 13px;
   min-height: 34px;
 }
@@ -87,7 +86,7 @@
   align-items: center;
   gap: 6px;
   padding: 4px 8px;
-  border-radius: var(--hub-radius-sm);
+  border-radius: 4px;
   border: 1px solid var(--hub-border);
   background: rgba(255, 255, 255, 0.06);
   font-size: 12px;
@@ -99,11 +98,11 @@
 [data-rc-app="hub"] select,
 [data-rc-app="hub"] textarea {
   min-height: 42px;
-  border-radius: var(--hub-radius-md);
+  border-radius: 4px;
   background: var(--hub-surface);
   border: 1px solid var(--hub-border);
   color: var(--ink, #e6edf3);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  box-shadow: none;
 }
 
 [data-rc-app="hub"] input:focus,
@@ -470,7 +469,7 @@
 [data-rc-app="hub"] .ttab .badge {
   font-weight: 800;
   letter-spacing: 0.3px;
-  border-radius: var(--hub-radius-sm, 8px);
+  border-radius: 4px;
 }
 
 /* Help text and notes */
