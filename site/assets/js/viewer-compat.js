@@ -1,6 +1,7 @@
 /**
  * Viewer Compatibility Redirect
  * Handles legacy ?viewer=1 URLs and redirects to canonical /viewer/?src=... format
+ * Works on any page (/, /hub/, or elsewhere) to ensure legacy links redirect properly
  */
 
 (function () {
@@ -17,6 +18,7 @@
     const section = params.get('section') || '';
     const unit = params.get('unit') || '';
     const presentation = params.get('presentation') || '';
+    const legacyReturn = params.get('return') || '';
 
     // Build the src path based on legacy parameters
     let src = '';
@@ -35,12 +37,28 @@
     }
 
     if (src) {
-      // Build return parameter to preserve navigation context
-      const returnUrl = window.location.pathname + (window.location.search.replace(/[?&]viewer=1/, '').replace(/[?&]section=[^&]*/, '').replace(/[?&]unit=[^&]*/, '').replace(/[?&]presentation=[^&]*/, '') || '');
-      const cleanReturn = returnUrl.replace(/\?$/, '').replace(/&+$/, '').replace(/\?&/, '?') || '/';
+      // Determine return URL with 3-tier priority:
+      // 1. Use legacy return param if provided and valid (same-origin path)
+      // 2. Use /hub/ if on hub page
+      // 3. Use / as fallback
+      let returnUrl = '/';
+      
+      if (legacyReturn && legacyReturn.startsWith('/')) {
+        // Use provided return parameter (already validated as same-origin path)
+        returnUrl = legacyReturn;
+      } else if (window.location.pathname.startsWith('/hub')) {
+        // Default to hub if on hub page
+        returnUrl = '/hub/';
+      }
 
-      // Build canonical viewer URL
-      const viewerUrl = `/viewer/?src=${encodeURIComponent(src)}&return=${encodeURIComponent(cleanReturn)}`;
+      // Use shared helper if available, otherwise build manually
+      let viewerUrl;
+      if (typeof window.buildViewerUrl === 'function') {
+        viewerUrl = window.buildViewerUrl(src, { return: returnUrl });
+      } else {
+        // Fallback manual construction
+        viewerUrl = `/viewer/?src=${encodeURIComponent(src)}&return=${encodeURIComponent(returnUrl)}`;
+      }
 
       console.log('[viewer-compat] Redirecting to:', viewerUrl);
       

@@ -29,9 +29,17 @@
     function cardTemplate(m) {
       const thumb = m.thumbnail ? `<img class="thumb" src="${m.thumbnail}" alt="" loading="lazy" decoding="async">` : '';
       const desc = m.description ? `${m.description}` : 'Module';
-      // Route through viewer with return parameter
-      const returnUrl = encodeURIComponent(location.pathname + location.search);
-      const viewerURL = `/viewer/?src=${encodeURIComponent(m.url)}&return=${returnUrl}`;
+      
+      // Use shared viewer helper to build canonical URL
+      let viewerURL;
+      if (typeof window.buildViewerUrl === 'function') {
+        viewerURL = window.buildViewerUrl(m.url, { title: m.title || m.description });
+      } else {
+        // Fallback if helper not loaded
+        const returnUrl = encodeURIComponent(location.pathname + location.search);
+        viewerURL = `/viewer/?src=${encodeURIComponent(m.url)}&return=${returnUrl}`;
+      }
+      
       return `
         <a class="card-link" href="${viewerURL}" role="listitem" aria-label="Open module">
           <article class="card">

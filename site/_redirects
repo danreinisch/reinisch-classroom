@@ -38,3 +38,4 @@
 # Viewer redirects - dedicated presentation/module viewer
 /viewer            /viewer/index.html        200
 /viewer/           /viewer/index.html        200
+/viewer/*          /viewer/index.html        200
