@@ -381,3 +381,33 @@
     init();
   }
 })();
+
+// Load app shell after site.js initializes
+(function() {
+  function loadAppShell() {
+    // Check if already loaded
+    if (document.querySelector('link[href*="app-shell.css"]')) {
+      return;
+    }
+
+    // Load CSS
+    const css = document.createElement('link');
+    css.rel = 'stylesheet';
+    css.href = '/site/assets/css/app-shell.css';
+    document.head.appendChild(css);
+
+    // Load JS
+    const script = document.createElement('script');
+    script.src = '/site/assets/js/app-shell.js';
+    script.defer = true;
+    document.head.appendChild(script);
+
+    console.log('[site.js] App shell loaded');
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', loadAppShell);
+  } else {
+    loadAppShell();
+  }
+})();

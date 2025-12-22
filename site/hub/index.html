@@ -243,6 +243,10 @@
     <!-- Must run before hub initialization to prevent hub UI from rendering -->
     <script src="/web/hub-student-redirect.js"></script>
 
+    <!-- Hub Gate: Show login/role chooser when not authenticated -->
+    <!-- Must run early to prevent teacher UI from auto-loading -->
+    <script defer src="/site/assets/js/hub-gate.js"></script>
+
     <!-- Boot script: Ensures Emerald theme is applied -->
     <!-- Guardrails Stage 3B: Externalized to hub-theme-boot.js -->
     <script src="/web/hub-theme-boot.js?v=emerald-7"></script>
@@ -371,6 +375,9 @@
     <!-- Emerald Glass Dashboard Theme - Moved to end of head to win CSS cascade -->
     <link rel="stylesheet" href="/assets/css/rc-emerald-dashboard-theme.css?v=emerald-5" />
     <link rel="stylesheet" href="/assets/css/rc-emerald-bridge.css?v=emerald-5" />
+
+    <!-- Global App Shell CSS -->
+    <link rel="stylesheet" href="/site/assets/css/app-shell.css" />
   </head>
   <body>
     <div class="hub-wrap">
@@ -9949,5 +9956,8 @@
 
       console.log("[Classroom Hub] Tab implementations loaded");
     </script>
+
+    <!-- Global App Shell JS -->
+    <script defer src="/site/assets/js/app-shell.js"></script>
   </body>
 </html>
