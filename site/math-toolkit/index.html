@@ -50,18 +50,7 @@
     .search::placeholder{color:#c7d2fe}
   </style>
 
-  <script>
-    // Load shared site assets (CSS/JS) to get the same background as the home page
-    (function(){
-      var root = location.pathname.indexOf('/site/') >= 0
-        ? location.pathname.slice(0, location.pathname.indexOf('/site/') + 6)
-        : '/';
-      function addCSS(href){ var l=document.createElement('link'); l.rel='stylesheet'; l.href=href; document.head.appendChild(l); }
-      function addJS(src){ var s=document.createElement('script'); s.defer=true; s.src=src; document.head.appendChild(s); }
-      addCSS(root + 'assets/css/site.css');
-      addJS(root + 'assets/js/site.js');
-    })();
-  </script>
+  <script src="/assets/js/site-assets-loader.js"></script>
 </head>
 <body>
   <!-- Static background anchor (video + overlay will be injected by site.js before this element) -->
@@ -87,59 +76,6 @@
     </main>
   </div>
 
-  <script>
-    const listEl = document.getElementById('modules');
-    const emptyEl = document.getElementById('empty');
-    const searchEl = document.getElementById('search');
-    let allModules = [];
-
-    function cardTemplate(m) {
-      const thumb = m.thumbnail ? `<img class="thumb" src="${m.thumbnail}" alt="" loading="lazy" decoding="async">` : '';
-      const desc = m.description ? `${m.description}` : 'Module';
-      // Route through viewer with return parameter
-      const returnUrl = encodeURIComponent(location.pathname + location.search);
-      const viewerURL = `/viewer/?src=${encodeURIComponent(m.url)}&return=${returnUrl}`;
-      return `
-        <a class="card-link" href="${viewerURL}" role="listitem" aria-label="Open module">
-          <article class="card">
-            ${thumb}
-            <div class="desc">${desc}</div>
-          </article>
-        </a>
-      `;
-    }
-
-    function render(items) {
-      listEl.innerHTML = items.map(cardTemplate).join('');
-      listEl.hidden = items.length === 0;
-      emptyEl.hidden = items.length !== 0;
-    }
-
-    function filter(query) {
-      const q = (query || '').trim().toLowerCase();
-      if (!q) return allModules;
-      return allModules.filter(m =>
-        (m.title || '').toLowerCase().includes(q) ||
-        (m.description || '').toLowerCase().includes(q)
-      );
-    }
-
-    async function load() {
-      try {
-        const res = await fetch('./modules.json?' + Date.now(), { cache: 'no-store' });
-        if (!res.ok) throw new Error('modules.json not found');
-        const data = await res.json();
-        allModules = Array.isArray(data) ? data : (data.modules || []);
-        render(allModules);
-      } catch (e) {
-        console.warn('Failed to load modules.json', e);
-        allModules = [];
-        render(allModules);
-      }
-    }
-
-    searchEl.addEventListener('input', () => render(filter(searchEl.value)));
-    load();
-  </script>
+  <script src="/assets/js/math-toolkit-loader.js"></script>
 </body>
 </html>
