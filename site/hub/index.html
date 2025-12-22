@@ -3066,13 +3066,15 @@
         const auth = getAuth();
         // Don't show sign-in modal if there's a pending teacher session
         if (!auth && !pendingTeacherSession) {
-          // TC-3.1: Show home tab as landing page instead of sign-in modal
-          const homeTab = qs('.ttab[data-tab="home"]');
-          if (homeTab) homeTab.style.display = "block";
-
-          // Don't show sign-in modal automatically - let user choose from home page
-          // const modal = qs("#signInModal");
-          // if (modal) modal.classList.add("show");
+          // Show role chooser modal as unauth landing
+          // Note: home tab lives inside #view-teacher which is hidden when logged out,
+          // so we show the modal instead to let users choose their role
+          const modal = qs("#signInModal");
+          if (modal) {
+            modal.classList.add("show");
+          } else {
+            console.warn("[Hub] Sign-in modal not found - unable to show landing UI");
+          }
         } else {
           updateUserChip();
         }
