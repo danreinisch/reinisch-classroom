@@ -115,8 +115,8 @@
 [data-rc-app="hub"] .card {
   border-radius: 12px;
   border: 1px solid var(--hub-border);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent 65%),
-    var(--hub-surface-2);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent 65%), var(--hub-surface-2);
   box-shadow: var(--hub-shadow);
 }
 
