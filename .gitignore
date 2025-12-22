@@ -62,3 +62,5 @@ supabase-export.sql
 supabase/supabase-export.sql
 
 deno.lock
+site/student/index-old.html
+site/student/index.html.backup
