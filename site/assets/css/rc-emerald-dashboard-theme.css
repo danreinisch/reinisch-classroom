@@ -279,13 +279,13 @@ input[type="file"].rc-input::file-selector-button:hover{
   flex: 1;
   display: flex;
   flex-direction: column;
-  min-height: 0;
+  min-height: calc(100vh - 36px);
   max-width: 1400px;
-  margin: 24px auto;
+  margin: 18px auto;
   border-radius: 24px;
-  border: 1px solid var(--border-strong);
-  background: linear-gradient(180deg, rgba(255,255,255,.02), transparent 50%), rgba(15,23,42,.45);
-  box-shadow: 0 24px 80px rgba(0,0,0,.65), 0 0 0 1px rgba(255,255,255,.08);
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(255,255,255,.02), transparent 60%), rgba(10,14,12,.55);
+  box-shadow: 0 24px 80px rgba(0,0,0,.65);
   overflow: hidden;
 }
 @supports ((backdrop-filter: blur(16px)) or (-webkit-backdrop-filter: blur(16px))){
@@ -325,7 +325,7 @@ input[type="file"].rc-input::file-selector-button:hover{
 /* Main grid layout - Edge-aligned within shell */
 .hub-grid{
   display: grid;
-  grid-template-columns: 100px 240px minmax(0, 1fr) 300px;
+  grid-template-columns: 100px 300px minmax(0, 1fr) 320px;
   gap: 18px;
   max-width: 100%;
   margin: 0;
@@ -441,7 +441,7 @@ input[type="file"].rc-input::file-selector-button:hover{
 /* At 1200px: hide right panel only */
 @media (max-width: 1200px) {
   .hub-grid {
-    grid-template-columns: 100px 240px minmax(0, 1fr);
+    grid-template-columns: 100px 300px minmax(0, 1fr);
   }
   .hub-right {
     display: none;
