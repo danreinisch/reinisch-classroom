@@ -3081,13 +3081,18 @@
           } else {
             console.warn("[Hub] Sign-in modal not found - unable to show landing UI");
           }
-        } else if (auth) {
+        } else if (auth && !pendingTeacherSession) {
           updateUserChip();
-          // If teacher auth exists in localStorage, auto-show teacher view
-          if (auth.role === "teacher") {
+          // If teacher auth exists in localStorage AND no pending session (from server cookie),
+          // auto-show teacher view. If pending session exists, wait for user to click "Resume".
+          // Validate auth structure before proceeding (similar to auth-handoff validation)
+          if (auth.role === "teacher" && auth.code) {
             console.log(LOG_PREFIX, "Valid teacher auth found in localStorage, auto-showing teacher view");
             showTeacher();
           }
+        } else if (auth && pendingTeacherSession) {
+          // Both localStorage auth and server session exist - prefer server session flow (show banner)
+          updateUserChip();
         }
       }
 
@@ -3406,12 +3411,14 @@
             if (isFromSignInModal) {
               // User signed in as teacher via sign-in modal
               console.log(LOG_PREFIX, "Writing auth for teacher (from sign-in modal)");
+              // Note: Using inputUser for both code and name since teacher login uses username as identifier
               writeAuth({ role: "teacher", code: inputUser, name: inputUser });
               updateUserChip();
               isFromSignInModal = false; // Reset flag
             } else {
               // Direct teacher center access (not from sign-in)
               console.log(LOG_PREFIX, "Writing auth for teacher (direct access)");
+              // Note: Using inputUser for both code and name since teacher login uses username as identifier
               writeAuth({ role: "teacher", code: inputUser, name: inputUser });
               const chip = qs("#currentUserChip");
               if (chip) chip.textContent = "Teacher";
@@ -3502,6 +3509,7 @@
             
             if (isTeacherRole) {
               // Valid session exists - store for resume banner instead of auto-entering
+              // Note: Using data.username for both code and name since teacher auth uses username as identifier
               pendingTeacherSession = {
                 role: "teacher",
                 code: data.username,
