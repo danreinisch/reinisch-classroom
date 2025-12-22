@@ -3081,18 +3081,20 @@
           } else {
             console.warn("[Hub] Sign-in modal not found - unable to show landing UI");
           }
-        } else if (auth && !pendingTeacherSession) {
+        } else if (auth) {
           updateUserChip();
-          // If teacher auth exists in localStorage AND no pending session (from server cookie),
-          // auto-show teacher view. If pending session exists, wait for user to click "Resume".
-          // Validate auth structure before proceeding (similar to auth-handoff validation)
-          if (auth.role === "teacher" && auth.code) {
-            console.log(LOG_PREFIX, "Valid teacher auth found in localStorage, auto-showing teacher view");
-            showTeacher();
+          
+          // If no pending teacher session from server cookie, check localStorage auth
+          if (!pendingTeacherSession) {
+            // If teacher auth exists in localStorage, auto-show teacher view
+            // Validate auth structure before proceeding (similar to auth-handoff validation)
+            if (auth.role === "teacher" && auth.code) {
+              console.log(LOG_PREFIX, "Valid teacher auth found in localStorage, auto-showing teacher view");
+              showTeacher();
+            }
           }
-        } else if (auth && pendingTeacherSession) {
-          // Both localStorage auth and server session exist - prefer server session flow (show banner)
-          updateUserChip();
+          // If pendingTeacherSession exists, prefer server session flow (resume banner already shown)
+          // and don't auto-show teacher view - wait for user to click "Resume"
         }
       }
 
