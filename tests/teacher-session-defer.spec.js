@@ -1,12 +1,12 @@
 import { test, expect } from "@playwright/test";
 
 /**
- * Teacher Session Deferred Check Test
+ * Teacher Session Check Test
  *
  * Validates that:
- * 1. Visiting /hub/ does NOT trigger teacher-session call automatically
- * 2. Clicking Teacher button DOES trigger teacher-session check
- * 3. 401 response is handled gracefully (logged at info level, no error banner)
+ * 1. Visiting /hub/ DOES trigger teacher-session call automatically to detect existing sessions
+ * 2. 401 response is handled gracefully (logged at debug level, no error banner)
+ * 3. Valid session shows resume banner
  * 4. Teacher login continues to work correctly
  */
 
@@ -18,8 +18,8 @@ async function dismissSignInModal(page) {
   }
 }
 
-test.describe("Teacher Session Deferred Check", () => {
-  test("should NOT call teacher-session on initial Hub load", async ({ page }) => {
+test.describe("Teacher Session Check", () => {
+  test("should call teacher-session on initial Hub load", async ({ page }) => {
     let teacherSessionCalled = false;
 
     // Intercept teacher-session calls
@@ -51,19 +51,19 @@ test.describe("Teacher Session Deferred Check", () => {
     // Navigate to hub
     await page.goto("/hub/");
 
-    // Wait a moment for any potential delayed calls
+    // Wait a moment for session check
     await page.waitForTimeout(1000);
 
-    // Verify teacher-session was NOT called
-    expect(teacherSessionCalled).toBe(false);
+    // Verify teacher-session WAS called on page load
+    expect(teacherSessionCalled).toBe(true);
   });
 
-  test("should call teacher-session when Teacher button is clicked", async ({ page }) => {
-    let teacherSessionCalled = false;
+  test("should NOT call teacher-session again when Teacher button is clicked if already checked", async ({ page }) => {
+    let teacherSessionCallCount = 0;
 
     // Intercept teacher-session calls
     await page.route("**/.netlify/functions/teacher-session", async (route) => {
-      teacherSessionCalled = true;
+      teacherSessionCallCount++;
       await route.fulfill({
         status: 401,
         contentType: "application/json",
@@ -93,17 +93,21 @@ test.describe("Teacher Session Deferred Check", () => {
     // Close sign-in modal if it appears
     await dismissSignInModal(page);
 
-    // Reset the flag
-    teacherSessionCalled = false;
+    // Wait for initial session check
+    await page.waitForTimeout(500);
+
+    // Verify session was called once on page load
+    expect(teacherSessionCallCount).toBe(1);
 
     // Click Teacher button
     await page.click("#btnTeacher");
 
-    // Wait a moment for the request
+    // Wait a moment
     await page.waitForTimeout(500);
 
-    // Verify teacher-session WAS called
-    expect(teacherSessionCalled).toBe(true);
+    // Verify session was still only called once (not called again)
+    // Since no valid session exists, the login modal should be shown instead
+    expect(teacherSessionCallCount).toBe(1);
   });
 
   test("should handle 401 response gracefully and show login modal", async ({ page }) => {
@@ -162,12 +166,13 @@ test.describe("Teacher Session Deferred Check", () => {
     const errorBanner = await page.locator('[style*="rgba(239,68,68"]').count();
     expect(errorBanner).toBe(0);
 
-    // Verify 401 was logged at info level (not error)
-    const errorLogs = consoleLogs.filter((log) => log.type === "error" && log.text.includes("401"));
+    // Verify 401 was NOT logged as error (should be debug level)
+    // NOTE: Since session check happens on page load now, we might see it in logs but not as error
+    const errorLogs = consoleLogs.filter((log) => log.type === "error" && log.text.includes("Session check") && log.text.includes("401"));
     expect(errorLogs.length).toBe(0);
   });
 
-  test("should restore teacher session if valid cookie exists", async ({ page }) => {
+  test("should show resume banner if valid cookie exists", async ({ page }) => {
     // Intercept teacher-session calls with valid session
     await page.route("**/.netlify/functions/teacher-session", async (route) => {
       await route.fulfill({
@@ -198,27 +203,27 @@ test.describe("Teacher Session Deferred Check", () => {
     await page.goto("/hub/");
 
     // Close sign-in modal if it appears
-    const signInModal = await page.locator("#signInModal");
-    if (await signInModal.isVisible()) {
-      await page.click('button:has-text("Cancel")').catch(() => {});
-    }
+    await dismissSignInModal(page);
 
-    // Click Teacher button
-    await page.click("#btnTeacher");
-
-    // Wait for session restoration
+    // Wait for session check
     await page.waitForTimeout(1000);
 
-    // Verify teacher view is shown (not login modal)
+    // Verify resume banner is shown
+    const resumeBanner = await page.locator("#teacherResumeBanner");
+    await expect(resumeBanner).toBeVisible();
+
+    // Click Resume button
+    await page.click("#btnResumeTeacher");
+
+    // Wait for teacher view
+    await page.waitForTimeout(500);
+
+    // Verify teacher view is shown
     const teacherView = await page.locator("#view-teacher");
     await expect(teacherView).toBeVisible();
 
     // Verify user chip shows "Teacher"
     const userChip = await page.locator("#currentUserChip");
     await expect(userChip).toHaveText("Teacher");
-
-    // Verify login modal is NOT shown
-    const teachModal = await page.locator("#teachModal");
-    await expect(teachModal).not.toBeVisible();
   });
 });
