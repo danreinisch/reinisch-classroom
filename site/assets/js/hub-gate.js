@@ -62,9 +62,7 @@
       // Phase 302C: 401 is expected when no session exists - not an error
       // Treat all non-200 responses (including 401) as no valid session
       if (response.status === 401) {
-        if (LOG_PREFIX) {
-          console.log(LOG_PREFIX, 'No active teacher session (401 - expected)');
-        }
+        console.log(LOG_PREFIX, 'No active teacher session (401 - expected)');
       }
 
       return false;

@@ -38,18 +38,19 @@
       console.error(LOG_PREFIX, 'Error parsing rc_auth:', err);
     }
     
-    // Phase 302C: Fallback to sessionStorage for legacy compatibility
-    const sessionRole = sessionStorage.getItem('rc_user_role');
-    if (sessionRole) {
-      console.log(LOG_PREFIX, 'Using legacy sessionStorage role:', sessionRole);
-      return { role: sessionRole, expired: false };
-    }
+    // Phase 302C: Fallback to sessionStorage/localStorage for legacy compatibility
+    // Check legacy storage locations in order of preference
+    const legacyChecks = [
+      { key: 'rc_user_role', storage: sessionStorage, label: 'sessionStorage' },
+      { key: 'rc_user_role', storage: localStorage, label: 'localStorage' }
+    ];
     
-    // Also check localStorage for legacy role storage
-    const legacyRole = localStorage.getItem('rc_user_role');
-    if (legacyRole) {
-      console.log(LOG_PREFIX, 'Using legacy localStorage role:', legacyRole);
-      return { role: legacyRole, expired: false };
+    for (const { key, storage, label } of legacyChecks) {
+      const legacyRole = storage.getItem(key);
+      if (legacyRole) {
+        console.log(LOG_PREFIX, `Using legacy ${label} role:`, legacyRole);
+        return { role: legacyRole, expired: false };
+      }
     }
     
     return { role: null, expired: false };

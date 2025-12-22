@@ -152,11 +152,8 @@
     document.addEventListener('click', (e) => {
       if (window.innerWidth > 768) return;
       
-      // Check toggle exists before calling contains
-      if (toggle && !rail.contains(e.target) && !toggle.contains(e.target)) {
-        rail.classList.remove('open');
-      } else if (!toggle && !rail.contains(e.target)) {
-        // Fallback if toggle doesn't exist
+      // Close if clicked outside rail and not on toggle (if toggle exists)
+      if (!rail.contains(e.target) && (!toggle || !toggle.contains(e.target))) {
         rail.classList.remove('open');
       }
     });
