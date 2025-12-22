@@ -1,14 +1,11 @@
 /**
  * Hub Theme Boot Script
- * Applies stored theme preference and manages initialization gate
+ * Ensures Emerald theme is applied and manages initialization gate
  * Part of Guardrails Stage 3B - externalized from inline script
  * TC-3A: Added init gate to prevent phantom page flashing
  */
 
 (function() {
-  const THEME_KEY = 'rc_glass_theme';
-  let currentTheme = localStorage.getItem(THEME_KEY);
-  
   // TC-3A: Add init gate to prevent phantom/flash on load
   let initGateComplete = false;
   const initChecks = {
@@ -17,20 +14,19 @@
     flagsLoaded: false
   };
   
-  // Apply theme if stored, default to emerald for first-time users
+  // Apply theme - Emerald is the only theme now
   function applyTheme() {
     if (!document.body) {
       console.warn('[Theme Boot] Body not ready, waiting for DOMContentLoaded');
       return;
     }
     
-    // Hub-only enforcement: always use Emerald theme
-    // Remove any glass-bold class that may have been applied
+    // Hub always uses Emerald theme
+    // Remove any legacy glass-bold class that may exist
     document.body.classList.remove('glass-bold');
     
-    // Force emerald theme for all users (new and existing)
-    currentTheme = 'emerald';
-    localStorage.setItem(THEME_KEY, currentTheme);
+    // Clean up any legacy localStorage keys
+    localStorage.removeItem('rc_glass_theme');
     
     // Emerald theme relies on CSS from stylesheets
     // No body class needed - Emerald theme applies via data-theme="emerald" on <html>
