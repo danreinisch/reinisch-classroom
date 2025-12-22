@@ -188,6 +188,10 @@
     if (elem.requestFullscreen) {
       elem.requestFullscreen().catch((err) => {
         console.warn('[viewer] Could not enter fullscreen:', err);
+        // Show user-friendly message - fullscreen typically requires user gesture
+        if (err.name === 'NotAllowedError') {
+          console.info('[viewer] Fullscreen requires a user interaction (button click)');
+        }
       });
     } else if (elem.webkitRequestFullscreen) {
       elem.webkitRequestFullscreen();
@@ -195,6 +199,8 @@
       elem.mozRequestFullScreen();
     } else if (elem.msRequestFullscreen) {
       elem.msRequestFullscreen();
+    } else {
+      console.warn('[viewer] Fullscreen API not supported in this browser');
     }
   }
 
@@ -203,7 +209,9 @@
    */
   function exitFullscreen() {
     if (document.exitFullscreen) {
-      document.exitFullscreen().catch(() => {});
+      document.exitFullscreen().catch((err) => {
+        console.warn('[viewer] Could not exit fullscreen:', err);
+      });
     } else if (document.webkitExitFullscreen) {
       document.webkitExitFullscreen();
     } else if (document.mozCancelFullScreen) {
@@ -230,6 +238,13 @@
    * Handle keyboard shortcuts
    */
   function handleKeyboard(e) {
+    // Only handle shortcuts if the active element is not inside the iframe
+    // This prevents conflicts with content inside the iframe
+    const activeElement = document.activeElement;
+    if (activeElement && activeElement.tagName === 'IFRAME') {
+      return;
+    }
+
     // Escape key: exit presentation mode or fullscreen
     if (e.key === 'Escape') {
       if (document.fullscreenElement) {
@@ -241,20 +256,16 @@
       }
     }
 
-    // F key: toggle fullscreen
-    if (e.key === 'f' || e.key === 'F') {
-      if (!e.ctrlKey && !e.metaKey) {
-        e.preventDefault();
-        toggleFullscreen();
-      }
+    // Alt+F: toggle fullscreen (avoid conflicts with browser shortcuts)
+    if ((e.key === 'f' || e.key === 'F') && e.altKey && !e.ctrlKey && !e.metaKey) {
+      e.preventDefault();
+      toggleFullscreen();
     }
 
-    // P key: toggle presentation mode
-    if (e.key === 'p' || e.key === 'P') {
-      if (!e.ctrlKey && !e.metaKey) {
-        e.preventDefault();
-        togglePresentationMode();
-      }
+    // Alt+P: toggle presentation mode (avoid conflicts with browser shortcuts)
+    if ((e.key === 'p' || e.key === 'P') && e.altKey && !e.ctrlKey && !e.metaKey) {
+      e.preventDefault();
+      togglePresentationMode();
     }
   }
 
