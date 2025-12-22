@@ -38,10 +38,16 @@ exports.handler = async (event) => {
   }
   
   // Session is valid
-  console.log(`[teacher-session] [${requestId}] Valid session for user:`, result.user.username);
+  // Normalize admin role to teacher for Hub compatibility
+  const normalizedRole = result.user.role === 'admin' ? 'teacher' : result.user.role;
+  
+  console.log(`[teacher-session] [${requestId}] Valid session for user:`, result.user.username, 
+    `(role: ${result.user.role}, normalized: ${normalizedRole})`);
+  
   return jsonResponse(event, 200, { 
     ok: true, 
-    role: result.user.role,
+    role: normalizedRole,
+    raw_role: result.user.role,
     username: result.user.username 
   }, {}, requestId);
 };
