@@ -63,7 +63,7 @@
         </button>
         <div class="app-shell-submenu" data-shell-submenu="toolkits">
           <a href="/language-arts/toolkit/" class="app-shell-submenu-item">Language Arts Toolkit</a>
-          <a href="/site/math-toolkit/" class="app-shell-submenu-item">Math Toolkit</a>
+          <a href="/math-toolkit/" class="app-shell-submenu-item">Math Toolkit</a>
         </div>
 
         <!-- Teacher -->

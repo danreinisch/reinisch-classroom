@@ -393,16 +393,29 @@
     // Load CSS
     const css = document.createElement('link');
     css.rel = 'stylesheet';
-    css.href = '/site/assets/css/app-shell.css';
+    css.href = '/assets/css/app-shell.css';
     document.head.appendChild(css);
 
     // Load JS
     const script = document.createElement('script');
-    script.src = '/site/assets/js/app-shell.js';
+    script.src = '/assets/js/app-shell.js';
     script.defer = true;
     document.head.appendChild(script);
 
     console.log('[site.js] App shell loaded');
+    
+    // Runtime self-check: verify assets loaded successfully
+    setTimeout(() => {
+      const cssLoaded = document.querySelector('link[href*="app-shell.css"]');
+      const jsLoaded = typeof window.AppShell !== 'undefined';
+      
+      if (!cssLoaded || !jsLoaded) {
+        console.warn('[site.js] App shell asset loading issue detected:', {
+          css: cssLoaded ? 'loaded' : 'failed',
+          js: jsLoaded ? 'loaded' : 'failed'
+        });
+      }
+    }, 2000);
   }
 
   if (document.readyState === 'loading') {
