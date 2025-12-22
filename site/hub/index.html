@@ -1334,6 +1334,14 @@
           </aside>
 
           <main class="hub-main">
+            <!-- Dynamic pagehead - reflects selected menu item -->
+            <div class="hub-pagehead">
+              <div class="hub-pagehead-title" id="hubPageheadTitle">Student Portal</div>
+              <div class="hub-pagehead-helper" id="hubPageheadHelper"></div>
+            </div>
+
+            <!-- Main content canvas with subtle background wash -->
+            <div class="hub-main-canvas">
         <!-- Student Portal Manager (placeholder) -->
         <!-- TC-3.1: Hide by default to prevent phantom/flash on Hub load -->
         <div class="card ttab" data-tab="studentPortal" style="display: none">
@@ -2763,6 +2771,7 @@
             </div>
           </div>
         </div>
+            </div><!-- end hub-main-canvas -->
           </main>
 
           <aside class="hub-right">
@@ -4643,6 +4652,14 @@
         qsa(".ttab").forEach(
           (t) => (t.style.display = t.getAttribute("data-tab") === tab ? "block" : "none")
         );
+
+        // Update pagehead title to reflect selected menu item
+        const pageheadTitle = qs("#hubPageheadTitle");
+        if (pageheadTitle && link) {
+          // Extract label text from the menu link (remove icon emoji)
+          const labelText = link.textContent.trim().replace(/^[\u{1F300}-\u{1F9FF}]\s*/u, '');
+          pageheadTitle.textContent = labelText;
+        }
 
         // Initialize tab if needed
         if (tab === "iepProgress") initIEP();

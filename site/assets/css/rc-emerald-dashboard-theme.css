@@ -413,19 +413,21 @@ input[type="file"].rc-input::file-selector-button:hover {
   display: contents;
 }
 
-/* Text-based rail (wider for labels) */
+/* Text-based rail - minimal visuals */
 .hub-rail {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  background: transparent;
+  border: none;
 }
 
 .hub-rail-item {
   width: 100%;
   min-height: 48px;
   border-radius: 8px;
-  border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.02);
   color: var(--text0);
   font-size: 13px;
   font-weight: 700;
@@ -437,20 +439,22 @@ input[type="file"].rc-input::file-selector-button:hover {
   padding: 10px 8px;
   transition:
     border-color 0.12s ease,
-    box-shadow 0.12s ease,
+    outline 0.12s ease,
     background 0.12s ease;
   text-align: center;
 }
 
 .hub-rail-item.active {
-  background: linear-gradient(180deg, rgba(34, 197, 94, 0.14), rgba(34, 197, 94, 0.08));
-  border-color: var(--accent, rgba(34, 197, 94, 0.4));
-  box-shadow: 0 2px 12px rgba(34, 197, 94, 0.25);
+  background: rgba(34, 197, 94, 0.06);
+  border-color: rgba(34, 197, 94, 0.2);
+  outline: 1px solid rgba(34, 197, 94, 0.3);
+  outline-offset: -1px;
+  box-shadow: none;
 }
 
 .hub-rail-item:hover {
-  border-color: var(--border-strong);
-  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 /* Menu sidebar */
@@ -501,6 +505,44 @@ input[type="file"].rc-input::file-selector-button:hover {
   gap: 18px;
   min-height: 0;
   overflow: auto;
+}
+
+/* Pagehead - shows current menu item title */
+.hub-pagehead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 18px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.hub-pagehead-title {
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: 0.2px;
+  color: var(--text0);
+}
+
+.hub-pagehead-helper {
+  font-size: 13px;
+  color: var(--text1);
+  font-weight: 500;
+}
+
+/* Main canvas - subtle background wash */
+.hub-main-canvas {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 18px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.03);
 }
 
 /* Right panel */
