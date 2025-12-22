@@ -1,5 +1,5 @@
 /**
- * Global App Shell - Right-side Navigation Rail
+ * Global App Shell - Left-side Navigation Rail
  * Provides consistent navigation across reinischclassroom.com
  */
 
@@ -240,48 +240,39 @@
 
   /**
    * Handle sign out
+   * Signs out of all roles (teacher, admin, substitute) and clears all auth state
    */
   async function handleSignOut() {
-    console.log('[app-shell] Sign out requested');
+    console.log('[app-shell] Sign out requested - clearing all sessions');
 
     try {
-      // Get current auth
-      const authStr = localStorage.getItem('rc_auth');
-      const auth = authStr ? JSON.parse(authStr) : null;
-
-      // Call appropriate logout endpoint
-      if (auth && auth.role === 'teacher') {
-        await fetch('/.netlify/functions/teacher-logout', {
-          method: 'POST',
-          credentials: 'include',
-        }).catch(() => {
-          // Ignore errors - continue with local cleanup
-        });
-      } else if (auth && auth.role === 'admin') {
-        await fetch('/.netlify/functions/admin-logout', {
-          method: 'POST',
-          credentials: 'include',
-        }).catch(() => {
-          // Ignore errors
-        });
-      } else if (auth && auth.role === 'substitute') {
-        await fetch('/.netlify/functions/substitute-logout', {
-          method: 'POST',
-          credentials: 'include',
-        }).catch(() => {
-          // Ignore errors
-        });
-      }
-
-      // Clear local auth
+      // Clear local auth immediately
       localStorage.removeItem('rc_auth');
+
+      // Call all logout endpoints as best-effort (ignore errors, continue)
+      const logoutPromises = [
+        fetch('/.netlify/functions/teacher-logout', {
+          method: 'POST',
+          credentials: 'include',
+        }).catch(() => {}),
+        fetch('/.netlify/functions/admin-logout', {
+          method: 'POST',
+          credentials: 'include',
+        }).catch(() => {}),
+        fetch('/.netlify/functions/substitute-logout', {
+          method: 'POST',
+          credentials: 'include',
+        }).catch(() => {}),
+      ];
+
+      // Wait for all logout attempts (but don't block on errors)
+      await Promise.allSettled(logoutPromises);
 
       // Redirect to home
       window.location.href = '/';
     } catch (err) {
       console.error('[app-shell] Error during sign out:', err);
-      // Still clear local auth and redirect
-      localStorage.removeItem('rc_auth');
+      // Still redirect on error
       window.location.href = '/';
     }
   }
@@ -330,18 +321,78 @@
   }
 
   /**
+   * Toggle presentation mode
+   */
+  function togglePresentationMode() {
+    const isActive = document.body.classList.contains('presentation-mode');
+    
+    if (isActive) {
+      // Exit presentation mode
+      document.body.classList.remove('presentation-mode');
+      localStorage.removeItem('presentation-mode');
+      
+      // Exit fullscreen if active
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+      }
+      
+      console.log('[app-shell] Exited presentation mode');
+    } else {
+      // Enter presentation mode
+      document.body.classList.add('presentation-mode');
+      localStorage.setItem('presentation-mode', 'true');
+      
+      console.log('[app-shell] Entered presentation mode');
+    }
+    
+    // Dispatch event for other components to react
+    window.dispatchEvent(new CustomEvent('presentation-mode-changed', {
+      detail: { active: !isActive }
+    }));
+  }
+
+  /**
+   * Request fullscreen mode
+   */
+  function requestFullscreen() {
+    const elem = document.documentElement;
+    
+    if (elem.requestFullscreen) {
+      elem.requestFullscreen().catch((err) => {
+        console.warn('[app-shell] Could not enter fullscreen:', err);
+      });
+    }
+  }
+
+  /**
+   * Initialize presentation mode from localStorage
+   */
+  function initPresentationMode() {
+    const isPresentationMode = localStorage.getItem('presentation-mode') === 'true';
+    if (isPresentationMode) {
+      document.body.classList.add('presentation-mode');
+    }
+  }
+
+  /**
    * Public API
    */
   window.AppShell = {
     init: initAppShell,
     updateAuthState: updateAuthState,
+    togglePresentationMode: togglePresentationMode,
+    requestFullscreen: requestFullscreen,
   };
 
   // Auto-initialize when DOM is ready
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initAppShell);
+    document.addEventListener('DOMContentLoaded', () => {
+      initAppShell();
+      initPresentationMode();
+    });
   } else {
     initAppShell();
+    initPresentationMode();
   }
 
   // Listen for auth changes

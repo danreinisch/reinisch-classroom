@@ -13,10 +13,51 @@
       html,
       body {
         height: 100%;
+        overflow: hidden; /* Prevent page-level scrolling */
       }
       body {
         margin: 0;
         font-family: ui-sans-serif, -apple-system, Segoe UI, Roboto, Inter, Helvetica, Arial, sans-serif;
+      }
+      
+      /* Hub viewport-locked layout - prevent long scrolling document feel */
+      .hub-wrap {
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      
+      .hub-shell {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      
+      .hub-topbar {
+        flex-shrink: 0;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+      }
+      
+      #view-teacher {
+        flex: 1;
+        overflow: hidden;
+        display: flex;
+      }
+      
+      .hub-main {
+        flex: 1;
+        overflow-y: auto;
+        overflow-x: hidden;
+      }
+      
+      .hub-gate-panel {
+        flex: 1;
+        overflow-y: auto;
+        overflow-x: hidden;
       }
     </style>
 
@@ -385,22 +426,29 @@
         <header class="hub-topbar rc-glass">
           <div class="hub-topbar-inner">
             <div class="brand">Reinisch Classroom — Classroom Hub</div>
-            <nav class="topnav">
-              <button id="navPrev">◀ Previous</button>
-              <button id="navNext">Next ▶</button>
-              <button id="navExit">Exit</button>
-            </nav>
             <span
               id="datetimeDisplay"
               class="hub-tag"
               style="margin-left: auto; margin-right: 8px; font-size: 13px; font-weight: 600"
             ></span>
-            <span id="currentUserChip" class="hub-tag">Signed out</span>
-            <span id="roleSwitchChip" class="hub-tag role-switch-tag" title="Switch role"
-              >Switch Role</span
+            <!-- Presentation Mode Toggle -->
+            <button 
+              class="presentation-mode-toggle" 
+              id="presentationModeToggle"
+              title="Toggle Presentation Mode"
+              style="display: none;"
             >
-            <a class="btn small" id="btnStudent" href="/student/">Student Portal</a>
-            <button class="btn primary small" id="btnTeacher">Teacher Center 🔒</button>
+              <span id="presentationModeIcon">📺</span>
+              <span id="presentationModeLabel">Present</span>
+            </button>
+            <!-- Sign out button - only shown when authenticated -->
+            <button 
+              class="btn small" 
+              id="btnSignOut" 
+              style="display: none; background: rgba(239, 68, 68, 0.15); border-color: rgba(239, 68, 68, 0.3); color: #fca5a5;"
+            >
+              🚪 Sign Out
+            </button>
           </div>
         </header>
 
@@ -9955,6 +10003,158 @@
       }
 
       console.log("[Classroom Hub] Tab implementations loaded");
+
+      // ============================================================================
+      // HUB TOP BAR HANDLERS
+      // ============================================================================
+      
+      /**
+       * Update top bar based on auth state
+       */
+      function updateHubTopBar() {
+        try {
+          const authStr = localStorage.getItem('rc_auth');
+          const auth = authStr ? JSON.parse(authStr) : null;
+          const isAuthed = auth && auth.role && auth.code && (!auth.expiresAt || Date.now() < auth.expiresAt);
+          
+          // Update sign out button visibility
+          const signOutBtn = document.getElementById('btnSignOut');
+          if (signOutBtn) {
+            signOutBtn.style.display = isAuthed ? 'inline-flex' : 'none';
+          }
+          
+          // Update presentation mode toggle visibility (show when authenticated)
+          const presentationToggle = document.getElementById('presentationModeToggle');
+          if (presentationToggle) {
+            presentationToggle.style.display = isAuthed ? 'inline-flex' : 'none';
+          }
+        } catch (err) {
+          console.error('[Hub] Error updating top bar:', err);
+        }
+      }
+      
+      /**
+       * Handle sign out from Hub
+       */
+      async function handleHubSignOut() {
+        console.log('[Hub] Sign out requested - clearing all sessions');
+        
+        try {
+          // Clear local auth immediately
+          localStorage.removeItem('rc_auth');
+          
+          // Call all logout endpoints as best-effort (ignore errors, continue)
+          const logoutPromises = [
+            fetch('/.netlify/functions/teacher-logout', {
+              method: 'POST',
+              credentials: 'include',
+            }).catch(() => {}),
+            fetch('/.netlify/functions/admin-logout', {
+              method: 'POST',
+              credentials: 'include',
+            }).catch(() => {}),
+            fetch('/.netlify/functions/substitute-logout', {
+              method: 'POST',
+              credentials: 'include',
+            }).catch(() => {}),
+          ];
+          
+          // Wait for all logout attempts (but don't block on errors)
+          await Promise.allSettled(logoutPromises);
+          
+          // Redirect to home
+          window.location.href = '/';
+        } catch (err) {
+          console.error('[Hub] Error during sign out:', err);
+          // Still redirect on error
+          window.location.href = '/';
+        }
+      }
+      
+      /**
+       * Handle presentation mode toggle
+       */
+      function handlePresentationModeToggle() {
+        const isActive = document.body.classList.contains('presentation-mode');
+        const icon = document.getElementById('presentationModeIcon');
+        const label = document.getElementById('presentationModeLabel');
+        
+        if (isActive) {
+          // Exit presentation mode
+          document.body.classList.remove('presentation-mode');
+          localStorage.removeItem('presentation-mode');
+          if (icon) icon.textContent = '📺';
+          if (label) label.textContent = 'Present';
+          
+          // Exit fullscreen if active
+          if (document.fullscreenElement) {
+            document.exitFullscreen().catch(() => {});
+          }
+          
+          console.log('[Hub] Exited presentation mode');
+        } else {
+          // Enter presentation mode
+          document.body.classList.add('presentation-mode');
+          localStorage.setItem('presentation-mode', 'true');
+          if (icon) icon.textContent = '📺';
+          if (label) label.textContent = 'Exit';
+          
+          // Optionally request fullscreen
+          const shouldFullscreen = confirm('Enter fullscreen mode?');
+          if (shouldFullscreen) {
+            const elem = document.documentElement;
+            if (elem.requestFullscreen) {
+              elem.requestFullscreen().catch((err) => {
+                console.warn('[Hub] Could not enter fullscreen:', err);
+              });
+            }
+          }
+          
+          console.log('[Hub] Entered presentation mode');
+        }
+      }
+      
+      // Wire up event handlers
+      document.addEventListener('DOMContentLoaded', () => {
+        // Sign out button
+        const signOutBtn = document.getElementById('btnSignOut');
+        if (signOutBtn) {
+          signOutBtn.addEventListener('click', handleHubSignOut);
+        }
+        
+        // Presentation mode toggle
+        const presentationToggle = document.getElementById('presentationModeToggle');
+        if (presentationToggle) {
+          presentationToggle.addEventListener('click', handlePresentationModeToggle);
+        }
+        
+        // Update top bar on page load
+        updateHubTopBar();
+        
+        // Listen for auth changes
+        window.addEventListener('storage', (e) => {
+          if (e.key === 'rc_auth') {
+            updateHubTopBar();
+          }
+        });
+        
+        // Listen for teacher login success
+        window.addEventListener('teacher:login-success', () => {
+          updateHubTopBar();
+        });
+        
+        // Initialize presentation mode from localStorage
+        const isPresentationMode = localStorage.getItem('presentation-mode') === 'true';
+        if (isPresentationMode) {
+          document.body.classList.add('presentation-mode');
+          const icon = document.getElementById('presentationModeIcon');
+          const label = document.getElementById('presentationModeLabel');
+          if (icon) icon.textContent = '📺';
+          if (label) label.textContent = 'Exit';
+        }
+      });
+      
+      console.log("[Classroom Hub] Top bar handlers initialized");
     </script>
 
     <!-- Global App Shell JS -->
