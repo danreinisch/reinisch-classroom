@@ -6,50 +6,44 @@ import { test, expect } from '@playwright/test';
  * Validates that Emerald is the only theme ever shown on Hub
  * 
  * Test Coverage:
- * 1. localStorage is set to 'emerald' on Hub load
- * 2. body does NOT have 'glass-bold' class
- * 3. Emerald CSS is loaded with cache-busting
- * 4. Theme toggle button is hidden
- * 5. Existing users with 'glass-bold' stored are migrated to 'emerald'
+ * 1. body does NOT have 'glass-bold' class
+ * 2. Emerald CSS is loaded with cache-busting
+ * 3. Theme toggle button does not exist
+ * 4. Legacy glass theme localStorage key is removed
  */
 
 const HUB_PATH = '/hub/';
 
 test.describe('Hub Theme Enforcement', () => {
-  test('should enforce Emerald theme for new users', async ({ page }) => {
-    // Navigate to Hub with cleared localStorage to simulate new user
+  test('should enforce Emerald theme (no glass-bold)', async ({ page }) => {
+    // Navigate to Hub
     await page.goto(HUB_PATH);
-    await page.evaluate(() => localStorage.clear());
-    await page.reload();
     
-    // Wait for theme to be applied by checking localStorage
-    await page.waitForFunction(() => localStorage.getItem('rc_glass_theme') === 'emerald');
-    
-    // Verify localStorage is set to 'emerald'
-    const theme = await page.evaluate(() => localStorage.getItem('rc_glass_theme'));
-    expect(theme).toBe('emerald');
+    // Wait for page to load
+    await page.waitForLoadState('domcontentloaded');
     
     // Verify body does NOT have 'glass-bold' class
     const hasGlassBold = await page.evaluate(() => document.body.classList.contains('glass-bold'));
     expect(hasGlassBold).toBe(false);
   });
   
-  test('should migrate existing users from glass-bold to emerald', async ({ page }) => {
+  test('should clean up legacy glass theme localStorage', async ({ page }) => {
     // Set localStorage to 'glass-bold' to simulate existing user
     await page.goto(HUB_PATH);
     await page.evaluate(() => {
       localStorage.setItem('rc_glass_theme', 'glass-bold');
     });
     
-    // Navigate to Hub (this should force migration to emerald)
+    // Navigate to Hub (this should clean up the legacy key)
     await page.goto(HUB_PATH);
+    await page.waitForLoadState('domcontentloaded');
     
-    // Wait for theme migration by checking localStorage
-    await page.waitForFunction(() => localStorage.getItem('rc_glass_theme') === 'emerald');
+    // Give theme boot script time to execute
+    await page.waitForTimeout(500);
     
-    // Verify localStorage is now 'emerald'
+    // Verify localStorage key is removed
     const theme = await page.evaluate(() => localStorage.getItem('rc_glass_theme'));
-    expect(theme).toBe('emerald');
+    expect(theme).toBe(null);
     
     // Verify body does NOT have 'glass-bold' class
     const hasGlassBold = await page.evaluate(() => document.body.classList.contains('glass-bold'));
@@ -78,45 +72,38 @@ test.describe('Hub Theme Enforcement', () => {
     expect(hasCorrectVersion).toBe(true);
   });
   
-  test('should hide Glass: Bold toggle button', async ({ page }) => {
+  test('should not have theme toggle button', async ({ page }) => {
     await page.goto(HUB_PATH);
     
     // Wait for page to load
     await page.waitForLoadState('domcontentloaded');
     
-    // Check that the theme toggle button exists but is hidden
+    // Verify the theme toggle button does not exist
     const toggleButton = page.locator('#btnThemeToggle');
-    await expect(toggleButton).toBeAttached();
-    
-    // Verify button is not visible
-    await expect(toggleButton).not.toBeVisible();
+    await expect(toggleButton).not.toBeAttached();
   });
   
   test('should maintain emerald theme after page reload', async ({ page }) => {
     // First visit
     await page.goto(HUB_PATH);
-    await page.waitForFunction(() => localStorage.getItem('rc_glass_theme') === 'emerald');
+    await page.waitForLoadState('domcontentloaded');
     
-    // Verify initial state
-    let theme = await page.evaluate(() => localStorage.getItem('rc_glass_theme'));
-    expect(theme).toBe('emerald');
+    // Verify no glass-bold class
+    let hasGlassBold = await page.evaluate(() => document.body.classList.contains('glass-bold'));
+    expect(hasGlassBold).toBe(false);
     
     // Reload page
     await page.reload();
-    await page.waitForFunction(() => localStorage.getItem('rc_glass_theme') === 'emerald');
+    await page.waitForLoadState('domcontentloaded');
     
-    // Verify theme persists
-    theme = await page.evaluate(() => localStorage.getItem('rc_glass_theme'));
-    expect(theme).toBe('emerald');
-    
-    // Verify no glass-bold class
-    const hasGlassBold = await page.evaluate(() => document.body.classList.contains('glass-bold'));
+    // Verify no glass-bold class persists
+    hasGlassBold = await page.evaluate(() => document.body.classList.contains('glass-bold'));
     expect(hasGlassBold).toBe(false);
   });
   
   test('should prevent manual glass-bold class injection', async ({ page }) => {
     await page.goto(HUB_PATH);
-    await page.waitForFunction(() => localStorage.getItem('rc_glass_theme') === 'emerald');
+    await page.waitForLoadState('domcontentloaded');
     
     // Try to manually add glass-bold class
     await page.evaluate(() => {
@@ -126,14 +113,15 @@ test.describe('Hub Theme Enforcement', () => {
     
     // Reload page
     await page.reload();
-    await page.waitForFunction(() => localStorage.getItem('rc_glass_theme') === 'emerald');
-    
-    // Verify theme is forced back to emerald
-    const theme = await page.evaluate(() => localStorage.getItem('rc_glass_theme'));
-    expect(theme).toBe('emerald');
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(500);
     
     // Verify glass-bold class is removed
     const hasGlassBold = await page.evaluate(() => document.body.classList.contains('glass-bold'));
     expect(hasGlassBold).toBe(false);
+    
+    // Verify legacy localStorage key is removed
+    const theme = await page.evaluate(() => localStorage.getItem('rc_glass_theme'));
+    expect(theme).toBe(null);
   });
 });
