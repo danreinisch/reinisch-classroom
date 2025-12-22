@@ -328,7 +328,9 @@
    * Phase 302C: Added defensive null-check
    */
   function hideGate() {
-    const gatePanel = document.getElementById(SELECTORS.GATE_PANEL.substring(1)); // Remove # prefix
+    // Phase 302C: Remove # prefix explicitly for clarity
+    const panelId = SELECTORS.GATE_PANEL.replace('#', '');
+    const gatePanel = document.getElementById(panelId);
     if (gatePanel) {
       gatePanel.remove();
     }

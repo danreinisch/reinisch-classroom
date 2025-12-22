@@ -39,14 +39,14 @@
     }
     
     // Phase 302C: Fallback to sessionStorage/localStorage for legacy compatibility
-    // Check legacy storage locations in order of preference
+    const LEGACY_ROLE_KEY = 'rc_user_role';
     const legacyChecks = [
-      { key: 'rc_user_role', storage: sessionStorage, label: 'sessionStorage' },
-      { key: 'rc_user_role', storage: localStorage, label: 'localStorage' }
+      { storage: sessionStorage, label: 'sessionStorage' },
+      { storage: localStorage, label: 'localStorage' }
     ];
     
-    for (const { key, storage, label } of legacyChecks) {
-      const legacyRole = storage.getItem(key);
+    for (const { storage, label } of legacyChecks) {
+      const legacyRole = storage.getItem(LEGACY_ROLE_KEY);
       if (legacyRole) {
         console.log(LOG_PREFIX, `Using legacy ${label} role:`, legacyRole);
         return { role: legacyRole, expired: false };
@@ -67,8 +67,9 @@
   }
   
   // Phase 302C: For admin pages (not admin-login), require authentication
-  const isAdminPage = window.location.pathname.startsWith('/admin/') || 
-                      window.location.pathname === '/admin';
+  // Simplified check: /admin or /admin/* (startsWith catches both)
+  const isAdminPage = window.location.pathname === '/admin' || 
+                      window.location.pathname.startsWith('/admin/');
   
   if (isAdminPage && !authResult.role) {
     // Phase 302C: Unauthenticated user trying to access admin - redirect to login with return URL
