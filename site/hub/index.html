@@ -1192,37 +1192,36 @@
   </head>
   <body>
     <div class="hub-wrap">
-      <header class="hub-topbar rc-glass">
-        <div class="hub-topbar-inner">
-          <div class="brand">Reinisch Classroom — Classroom Hub</div>
-          <nav class="topnav">
-            <button id="navPrev">◀ Previous</button>
-            <button id="navNext">Next ▶</button>
-            <button id="navExit">Exit</button>
-          </nav>
-          <span
-            id="datetimeDisplay"
-            class="hub-tag"
-            style="margin-left: auto; margin-right: 8px; font-size: 13px; font-weight: 600"
-          ></span>
-          <button
-            class="btn small"
-            id="btnThemeToggle"
-            title="Toggle glass theme"
-            style="display: none"
-          >
-            Glass: Bold
-          </button>
-          <span id="currentUserChip" class="hub-tag">Signed out</span>
-          <span id="roleSwitchChip" class="hub-tag role-switch-tag" title="Switch role"
-            >Switch Role</span
-          >
-          <a class="btn small" id="btnStudent" href="/student/">Student Portal</a>
-          <button class="btn primary small" id="btnTeacher">Teacher Center 🔒</button>
-        </div>
-      </header>
-
-      </header>
+      <div class="hub-shell">
+        <header class="hub-topbar rc-glass">
+          <div class="hub-topbar-inner">
+            <div class="brand">Reinisch Classroom — Classroom Hub</div>
+            <nav class="topnav">
+              <button id="navPrev">◀ Previous</button>
+              <button id="navNext">Next ▶</button>
+              <button id="navExit">Exit</button>
+            </nav>
+            <span
+              id="datetimeDisplay"
+              class="hub-tag"
+              style="margin-left: auto; margin-right: 8px; font-size: 13px; font-weight: 600"
+            ></span>
+            <button
+              class="btn small"
+              id="btnThemeToggle"
+              title="Toggle glass theme"
+              style="display: none"
+            >
+              Glass: Bold
+            </button>
+            <span id="currentUserChip" class="hub-tag">Signed out</span>
+            <span id="roleSwitchChip" class="hub-tag role-switch-tag" title="Switch role"
+              >Switch Role</span
+            >
+            <a class="btn small" id="btnStudent" href="/student/">Student Portal</a>
+            <button class="btn primary small" id="btnTeacher">Teacher Center 🔒</button>
+          </div>
+        </header>
 
       <!-- Critical Asset Error Banner (shown only if module loading fails) -->
       <div
@@ -1318,14 +1317,13 @@
         </div>
       </div>
 
-      <div class="hub-shell">
         <section id="view-teacher" class="hub-grid" style="display: none">
           <aside class="hub-rail rc-glass">
             <button class="hub-rail-item active" data-area="overview" title="Overview" aria-label="Overview">
-              🏠
+              Overview
             </button>
-            <button class="hub-rail-item" data-area="work" title="Work" aria-label="Work">📝</button>
-            <button class="hub-rail-item" data-area="data" title="Data" aria-label="Data">📊</button>
+            <button class="hub-rail-item" data-area="work" title="Work" aria-label="Work">Work</button>
+            <button class="hub-rail-item" data-area="data" title="Data" aria-label="Data">Data</button>
           </aside>
 
           <aside class="hub-menu rc-card">
