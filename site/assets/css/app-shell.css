@@ -454,6 +454,7 @@ body.presentation-mode .presentation-mode-toggle {
 
 .presentation-viewer.open {
   display: flex;
+  z-index: calc(var(--shell-z) + 10);
 }
 
 .presentation-viewer-controls {
