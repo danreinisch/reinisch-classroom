@@ -1,0 +1,265 @@
+/* Global App Shell - Right-side Navigation Rail */
+/* Provides consistent navigation across reinischclassroom.com */
+
+:root {
+  --shell-bg: rgba(15, 23, 42, 0.92);
+  --shell-border: rgba(255, 255, 255, 0.12);
+  --shell-hover: rgba(255, 255, 255, 0.08);
+  --shell-active: rgba(34, 197, 94, 0.15);
+  --shell-text: #e6edf3;
+  --shell-text-dim: #cbd5e1;
+  --shell-accent: #22c55e;
+  --shell-width: 260px;
+  --shell-z: 1000;
+}
+
+/* Navigation rail container */
+.app-shell-rail {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: var(--shell-width);
+  height: 100vh;
+  background: var(--shell-bg);
+  border-left: 1px solid var(--shell-border);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: var(--shell-z);
+  display: flex;
+  flex-direction: column;
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.3);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Shell header */
+.app-shell-header {
+  padding: 20px 16px 16px;
+  border-bottom: 1px solid var(--shell-border);
+  flex-shrink: 0;
+}
+
+.app-shell-brand {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--shell-text);
+  margin-bottom: 8px;
+  letter-spacing: 0.3px;
+}
+
+.app-shell-tagline {
+  font-size: 12px;
+  color: var(--shell-text-dim);
+  opacity: 0.8;
+}
+
+/* Navigation items */
+.app-shell-nav {
+  flex: 1;
+  padding: 8px 0;
+  overflow-y: auto;
+}
+
+.app-shell-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  color: var(--shell-text);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.app-shell-item:hover {
+  background: var(--shell-hover);
+}
+
+.app-shell-item.active {
+  background: var(--shell-active);
+  color: var(--shell-accent);
+}
+
+.app-shell-item-icon {
+  font-size: 18px;
+  width: 24px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.app-shell-item-label {
+  flex: 1;
+}
+
+.app-shell-item-arrow {
+  font-size: 12px;
+  opacity: 0.6;
+  transition: transform 0.2s ease;
+}
+
+.app-shell-item.expanded .app-shell-item-arrow {
+  transform: rotate(90deg);
+}
+
+/* Submenu */
+.app-shell-submenu {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.app-shell-submenu.show {
+  max-height: 500px;
+}
+
+.app-shell-submenu-item {
+  display: block;
+  padding: 10px 16px 10px 52px;
+  color: var(--shell-text-dim);
+  text-decoration: none;
+  font-size: 13px;
+  transition: all 0.15s ease;
+  cursor: pointer;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+}
+
+.app-shell-submenu-item:hover {
+  color: var(--shell-text);
+  background: var(--shell-hover);
+  padding-left: 56px;
+}
+
+/* Footer actions */
+.app-shell-footer {
+  padding: 12px 16px;
+  border-top: 1px solid var(--shell-border);
+  flex-shrink: 0;
+}
+
+.app-shell-footer-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 16px;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  color: #fca5a5;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-decoration: none;
+}
+
+.app-shell-footer-btn:hover {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+/* Status indicator */
+.app-shell-status {
+  padding: 8px 16px;
+  font-size: 11px;
+  color: var(--shell-text-dim);
+  opacity: 0.7;
+  text-align: center;
+  border-top: 1px solid var(--shell-border);
+}
+
+/* Mobile toggle button */
+.app-shell-toggle {
+  display: none;
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: calc(var(--shell-z) + 1);
+  width: 44px;
+  height: 44px;
+  background: var(--shell-bg);
+  border: 1px solid var(--shell-border);
+  border-radius: 8px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  cursor: pointer;
+  padding: 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.app-shell-toggle-icon {
+  font-size: 20px;
+}
+
+/* Responsive behavior */
+@media (max-width: 768px) {
+  .app-shell-rail {
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+  }
+
+  .app-shell-rail.open {
+    transform: translateX(0);
+  }
+
+  .app-shell-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+/* Adjust body padding to prevent content from being hidden under rail */
+body.has-app-shell {
+  padding-right: var(--shell-width);
+}
+
+@media (max-width: 768px) {
+  body.has-app-shell {
+    padding-right: 0;
+  }
+}
+
+/* Scrollbar styling for rail */
+.app-shell-rail::-webkit-scrollbar {
+  width: 8px;
+}
+
+.app-shell-rail::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.app-shell-rail::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+.app-shell-rail::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Accessibility */
+.app-shell-item:focus,
+.app-shell-submenu-item:focus,
+.app-shell-footer-btn:focus {
+  outline: 2px solid var(--shell-accent);
+  outline-offset: -2px;
+}
+
+/* Hidden class for conditional display */
+.app-shell-hidden {
+  display: none !important;
+}
