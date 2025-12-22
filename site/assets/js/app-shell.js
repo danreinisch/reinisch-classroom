@@ -134,12 +134,13 @@
 
   /**
    * Setup event handlers
+   * Phase 302C: Added defensive null-checks for toggle and rail elements
    */
   function setupEventHandlers() {
     const rail = document.querySelector('.app-shell-rail');
     if (!rail) return;
 
-    // Toggle button handler (mobile)
+    // Phase 302C: Defensive - Toggle button handler (mobile)
     const toggle = document.querySelector('.app-shell-toggle');
     if (toggle) {
       toggle.addEventListener('click', () => {
@@ -147,10 +148,15 @@
       });
     }
 
-    // Close rail when clicking outside (mobile)
+    // Phase 302C: Defensive - Close rail when clicking outside (mobile)
     document.addEventListener('click', (e) => {
       if (window.innerWidth > 768) return;
-      if (!rail.contains(e.target) && !toggle.contains(e.target)) {
+      
+      // Check toggle exists before calling contains
+      if (toggle && !rail.contains(e.target) && !toggle.contains(e.target)) {
+        rail.classList.remove('open');
+      } else if (!toggle && !rail.contains(e.target)) {
+        // Fallback if toggle doesn't exist
         rail.classList.remove('open');
       }
     });
@@ -211,7 +217,7 @@
       }
     });
 
-    // Sign out button
+    // Phase 302C: Defensive - Sign out button may not exist
     const signOutBtn = rail.querySelector('[data-shell-action="signout"]');
     if (signOutBtn) {
       signOutBtn.addEventListener('click', handleSignOut);
@@ -305,6 +311,7 @@
 
   /**
    * Update auth state in UI
+   * Phase 302C: Added defensive null-checks for optional UI elements
    */
   function updateAuthState() {
     const rail = document.querySelector('.app-shell-rail');
@@ -315,7 +322,7 @@
       const auth = authStr ? JSON.parse(authStr) : null;
       const isAuthed = auth && auth.role && auth.code && (!auth.expiresAt || Date.now() < auth.expiresAt);
 
-      // Update sign out button visibility
+      // Phase 302C: Defensive - Update sign out button visibility if present
       const signOutBtn = rail.querySelector('[data-shell-action="signout"]');
       if (signOutBtn) {
         if (isAuthed) {
@@ -325,7 +332,7 @@
         }
       }
 
-      // Update admin link visibility (only for admin role)
+      // Phase 302C: Defensive - Update admin link visibility if present (only for admin role)
       const adminLink = rail.querySelector('[data-admin-only]');
       if (adminLink) {
         if (auth && auth.role === 'admin') {
@@ -335,7 +342,7 @@
         }
       }
 
-      // Update status
+      // Phase 302C: Defensive - Update status if element present
       const status = rail.querySelector('[data-shell-status]');
       if (status && isAuthed) {
         const roleLabel = auth.role.charAt(0).toUpperCase() + auth.role.slice(1);

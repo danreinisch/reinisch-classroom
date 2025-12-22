@@ -44,6 +44,7 @@
 
   /**
    * Check if user has pending teacher session cookie (from prior login)
+   * Phase 302C: Defensive error handling for 401 responses
    */
   async function hasPendingTeacherSession() {
     try {
@@ -58,10 +59,18 @@
         return data.ok === true;
       }
 
-      // Any non-200 response means no valid session
+      // Phase 302C: 401 is expected when no session exists - not an error
+      // Treat all non-200 responses (including 401) as no valid session
+      if (response.status === 401) {
+        if (LOG_PREFIX) {
+          console.log(LOG_PREFIX, 'No active teacher session (401 - expected)');
+        }
+      }
+
       return false;
     } catch (err) {
-      // Network error or endpoint unavailable - treat as no session
+      // Phase 302C: Network error or endpoint unavailable - treat as no session
+      // Don't log as error, just warn - this keeps UI clean when backend is down
       console.warn(LOG_PREFIX, 'Could not check pending session:', err.message);
       return false;
     }
@@ -69,17 +78,18 @@
 
   /**
    * Show the login/role chooser gate
+   * Phase 302C: Added defensive null-checks for optional DOM nodes
    */
   function showGate() {
     console.log(LOG_PREFIX, 'Showing login gate');
 
-    // Hide teacher view
+    // Phase 302C: Defensive - Hide teacher view if present
     const teacherView = document.querySelector(SELECTORS.TEACHER_VIEW);
     if (teacherView) {
       teacherView.style.display = 'none';
     }
 
-    // Hide resume banner
+    // Phase 302C: Defensive - Hide resume banner if present
     const resumeBanner = document.querySelector(SELECTORS.RESUME_BANNER);
     if (resumeBanner) {
       resumeBanner.style.display = 'none';
@@ -97,6 +107,7 @@
         hubShell.appendChild(gatePanel);
       }
     } else {
+      // Phase 302C: Defensive - fallback to body if shell not found
       document.body.appendChild(gatePanel);
     }
   }
@@ -292,42 +303,52 @@
 
   /**
    * Handle teacher gate button click
+   * Phase 302C: Added defensive null-checks for modal elements
    */
   function handleTeacherGateClick() {
     console.log(LOG_PREFIX, 'Teacher gate clicked - triggering login');
 
-    // Find and show the teacher modal directly
+    // Phase 302C: Defensive - Find and show the teacher modal if it exists
     const teachModal = document.querySelector(SELECTORS.TEACH_MODAL);
-    const passInput = document.querySelector(SELECTORS.TEACH_PASSWORD_INPUT);
     
     if (teachModal) {
       teachModal.classList.add('show');
+      
+      // Phase 302C: Defensive - Focus password input if present
+      const passInput = document.querySelector(SELECTORS.TEACH_PASSWORD_INPUT);
       if (passInput) {
         passInput.focus();
       }
     } else {
-      console.warn(LOG_PREFIX, 'Teacher modal not found');
+      // Phase 302C: Defensive - Log warning but don't throw error
+      console.warn(LOG_PREFIX, 'Teacher modal not found - hub may not be fully initialized');
     }
   }
 
   /**
    * Hide the gate panel
+   * Phase 302C: Added defensive null-check
    */
   function hideGate() {
     const gatePanel = document.getElementById(SELECTORS.GATE_PANEL.substring(1)); // Remove # prefix
     if (gatePanel) {
       gatePanel.remove();
     }
+    // Phase 302C: Defensive - No error if panel doesn't exist
   }
 
   /**
    * Show teacher resume banner
+   * Phase 302C: Added defensive null-check
    */
   function showResumeBanner() {
     console.log(LOG_PREFIX, 'Showing resume banner');
     const banner = document.querySelector(SELECTORS.RESUME_BANNER);
     if (banner) {
       banner.style.display = 'block';
+    } else {
+      // Phase 302C: Defensive - Banner may not exist on all pages
+      console.log(LOG_PREFIX, 'Resume banner element not found (expected on some pages)');
     }
   }
 
