@@ -40,7 +40,7 @@
     params.set('return', returnUrl);
     
     // Add optional title
-    if (opts.title && typeof opts.title === 'string') {
+    if (opts.title && typeof opts.title === 'string' && opts.title.trim()) {
       params.set('title', opts.title);
     }
 
