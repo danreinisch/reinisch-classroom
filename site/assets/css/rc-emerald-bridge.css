@@ -12,8 +12,8 @@
 }
 
 [data-rc-app="hub"] {
-  --hub-radius-sm: 6px;
-  --hub-radius-md: 8px;
+  --hub-radius-sm: 4px;
+  --hub-radius-md: 4px;
   --hub-surface: rgba(10, 14, 12, 0.55);
   --hub-surface-2: rgba(15, 21, 18, 0.45);
   --hub-border: rgba(255, 255, 255, 0.12);
@@ -29,11 +29,11 @@
   padding: 6px 12px;
   border-radius: var(--hub-radius-sm);
   border: 1px solid var(--hub-border);
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.06);
   color: var(--text0, var(--ink));
   font-weight: 700;
   letter-spacing: 0.15px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  box-shadow: none;
 }
 
 [data-rc-app="hub"] .btn {
@@ -50,14 +50,13 @@
   cursor: pointer;
   text-decoration: none;
   transition:
-    transform 0.12s ease,
     border-color 0.12s ease,
     background 0.12s ease;
   box-shadow: none;
 }
 
 [data-rc-app="hub"] .btn:hover {
-  transform: translateY(-1px);
+  transform: none;
   border-color: var(--hub-border-strong);
   background: rgba(255, 255, 255, 0.08);
 }
@@ -66,7 +65,7 @@
   background: linear-gradient(180deg, rgba(34, 197, 94, 0.92), rgba(22, 163, 74, 0.88));
   color: #032313;
   border: 0;
-  box-shadow: 0 4px 14px rgba(34, 197, 94, 0.22);
+  box-shadow: 0 2px 8px rgba(34, 197, 94, 0.15);
 }
 
 [data-rc-app="hub"] .btn.small {
@@ -103,7 +102,7 @@
   background: var(--hub-surface);
   border: 1px solid var(--hub-border);
   color: var(--ink, #e6edf3);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  box-shadow: none;
 }
 
 [data-rc-app="hub"] input:focus,
@@ -116,8 +115,8 @@
 [data-rc-app="hub"] .card {
   border-radius: 12px;
   border: 1px solid var(--hub-border);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent 65%),
-    var(--hub-surface-2);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent 65%), var(--hub-surface-2);
   box-shadow: var(--hub-shadow);
 }
 
@@ -470,7 +469,7 @@
 [data-rc-app="hub"] .ttab .badge {
   font-weight: 800;
   letter-spacing: 0.3px;
-  border-radius: var(--hub-radius-sm, 8px);
+  border-radius: var(--hub-radius-sm);
 }
 
 /* Help text and notes */
