@@ -43,14 +43,17 @@
         credentials: 'include',
       });
 
+      // Only return true if we get a successful response with ok: true
       if (response.ok) {
         const data = await response.json();
         return data.ok === true;
       }
 
+      // Any non-200 response means no valid session
       return false;
     } catch (err) {
-      console.error(LOG_PREFIX, 'Error checking pending session:', err);
+      // Network error or endpoint unavailable - treat as no session
+      console.warn(LOG_PREFIX, 'Could not check pending session:', err.message);
       return false;
     }
   }

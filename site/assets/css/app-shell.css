@@ -223,8 +223,11 @@
 }
 
 /* Adjust body padding to prevent content from being hidden under rail */
-body.has-app-shell {
-  padding-right: var(--shell-width);
+/* Only applies on desktop - mobile uses overlay behavior */
+@media (min-width: 769px) {
+  body.has-app-shell {
+    padding-right: var(--shell-width);
+  }
 }
 
 @media (max-width: 768px) {

@@ -6,9 +6,6 @@
 (function () {
   'use strict';
 
-  // Import auth utilities if available
-  const authUtils = window.authHandoff || {};
-
   /**
    * Initialize the app shell
    */
@@ -278,10 +275,6 @@
 
       // Clear local auth
       localStorage.removeItem('rc_auth');
-
-      // Clear any other auth-related storage
-      localStorage.removeItem('teacher_session');
-      localStorage.removeItem('student_auth');
 
       // Redirect to home
       window.location.href = '/';
