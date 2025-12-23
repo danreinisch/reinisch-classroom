@@ -253,8 +253,14 @@
       console.error(LOG_PREFIX, 'Login error:', err);
       
       let errorMsg = 'Unable to connect to authentication service. ';
-      if (err.name === 'TypeError' && err.message.includes('fetch')) {
-        errorMsg += 'Please check your internet connection and try again.';
+      // Check for network/fetch errors more reliably
+      if (err instanceof TypeError) {
+        // Fetch API throws TypeError for network failures
+        if (typeof navigator !== 'undefined' && !navigator.onLine) {
+          errorMsg += 'You appear to be offline. Please check your internet connection.';
+        } else {
+          errorMsg += 'Please check your internet connection and try again.';
+        }
       } else {
         errorMsg += 'Please try again or contact your teacher if this persists.';
       }

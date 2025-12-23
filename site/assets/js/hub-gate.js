@@ -111,8 +111,8 @@
   }
 
   /**
-   * Create the gate panel HTML
-   * Phase 2: Added guard to prevent duplicate creation
+   * Get or create the gate panel HTML
+   * Phase 2: Returns existing panel if already created, otherwise creates new one
    */
   function createGatePanel() {
     // Phase 2: Guard - check if panel already exists

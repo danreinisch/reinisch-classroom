@@ -78,8 +78,8 @@
 
     // Inject each CSS file if not already loaded (idempotent)
     themeFiles.forEach(file => {
-      // Check if already loaded by href or id
-      const existingByHref = document.querySelector(`link[href="${file.href}"]`);
+      // Check if already loaded - use attribute selector for safety
+      const existingByHref = document.querySelector(`link[href="${CSS.escape ? CSS.escape(file.href) : file.href}"]`);
       const existingById = file.id ? document.getElementById(file.id) : null;
       
       if (!existingByHref && !existingById) {
