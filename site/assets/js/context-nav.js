@@ -9,7 +9,6 @@
   'use strict';
 
   // State
-  let contextData = null;
   let currentSection = null;
 
   /**
@@ -224,7 +223,7 @@
   /**
    * Load specific Language Arts unit presentations
    */
-  async function loadLanguageArtsUnit(section) {
+  async function loadLanguageArtsUnit(_section) {
     // Try to load from unit grid data or parse from page
     const presentations = await extractPresentationsFromPage();
     
