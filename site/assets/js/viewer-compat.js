@@ -37,15 +37,19 @@
     }
 
     if (src) {
-      // Determine return URL with 3-tier priority:
+      // Determine return URL with priority:
       // 1. Use legacy return param if provided and valid (same-origin path)
-      // 2. Use /hub/ if on hub page
-      // 3. Use / as fallback
+      // 2. For language-arts with unit, default to unit root (e.g., /language-arts/a-door-into-time/)
+      // 3. Use /hub/ if on hub page
+      // 4. Use / as fallback
       let returnUrl = '/';
       
       if (legacyReturn && legacyReturn.startsWith('/')) {
         // Use provided return parameter (already validated as same-origin path)
         returnUrl = legacyReturn;
+      } else if (section === 'language-arts' && unit) {
+        // Default to unit root for Language Arts units
+        returnUrl = `/language-arts/${unit}/`;
       } else if (window.location.pathname.startsWith('/hub')) {
         // Default to hub if on hub page
         returnUrl = '/hub/';

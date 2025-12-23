@@ -177,7 +177,7 @@
     btns.forEach((btn) => (btn.disabled = true));
 
     try {
-      const response = await fetch('/.netlify/functions/student-signin', {
+      const response = await fetch('/.netlify/functions/student-login', {
         method: 'POST',
         credentials: 'include',
         headers: {
