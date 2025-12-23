@@ -420,6 +420,10 @@
   window.addEventListener('teacher:login-success', () => {
     console.log(LOG_PREFIX, 'Teacher login success detected - hiding gate');
     hideGate();
+    // PR 310: Ensure scroll-lock is cleaned up after login (uses shared utility)
+    if (window.ScrollLockCleanup) {
+      window.ScrollLockCleanup.schedule();
+    }
   });
 
   // Auto-initialize when DOM is ready

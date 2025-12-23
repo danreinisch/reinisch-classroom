@@ -234,6 +234,12 @@
             if (modal && modal.classList.contains('show')) {
               modal.classList.remove('show');
               e.preventDefault();
+              // Fix: Ensure scroll-lock is cleaned up after modal close
+              if (window.ScrollLockCleanup) {
+                window.ScrollLockCleanup.schedule();
+              }
+              // Dispatch event for other listeners
+              window.dispatchEvent(new CustomEvent('modal:closed'));
               break;
             }
           }
@@ -249,6 +255,12 @@
           // Only close if clicking the backdrop itself, not the modal content
           if (e.target === modal) {
             modal.classList.remove('show');
+            // Fix: Ensure scroll-lock is cleaned up after modal close
+            if (window.ScrollLockCleanup) {
+              window.ScrollLockCleanup.schedule();
+            }
+            // Dispatch event for other listeners
+            window.dispatchEvent(new CustomEvent('modal:closed'));
           }
         });
       });
@@ -256,6 +268,26 @@
       console.debug('[Hub UX] Modal enhancements installed');
     } catch (err) {
       console.error('[Hub UX] Failed to enhance modals:', err);
+    }
+  }
+  
+  // ============================================================================
+  // SCROLL-LOCK CLEANUP FAILSAFE (PR 310 - Teacher Center Scroll Fix)
+  // ============================================================================
+  /**
+   * Initialize scroll-lock cleanup failsafe
+   * Uses shared utility from scroll-lock-cleanup.js
+   */
+  function initScrollLockFailsafe() {
+    try {
+      // Run initial cleanup on page load (defensive)
+      if (window.ScrollLockCleanup) {
+        window.ScrollLockCleanup.cleanup();
+      }
+      
+      console.debug('[Hub UX] Scroll-lock failsafe initialized (using shared utility)');
+    } catch (err) {
+      console.error('[Hub UX] Failed to init scroll-lock failsafe:', err);
     }
   }
   
@@ -392,6 +424,7 @@
       enhanceModals();
       initRoleSwitch();
       initSubstituteRole();
+      initScrollLockFailsafe(); // PR 310: Add scroll-lock cleanup failsafe
       
       // Restore last state after a delay to ensure all async scripts have loaded
       setTimeout(restoreLastState, STATE_RESTORE_DELAY);

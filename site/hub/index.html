@@ -13,7 +13,8 @@
       html,
       body {
         height: 100%;
-        overflow: hidden; /* Prevent page-level scrolling */
+        /* Fix: Use auto instead of visible for better control over absolutely positioned elements */
+        overflow: auto;
       }
       body {
         margin: 0;
@@ -30,6 +31,8 @@
       
       .hub-shell {
         flex: 1;
+        /* Fix: Add min-height: 0 to allow flex child to shrink and enable scrolling */
+        min-height: 0;
         display: flex;
         flex-direction: column;
         overflow: hidden;
@@ -44,20 +47,28 @@
       
       #view-teacher {
         flex: 1;
+        /* Fix: Add min-height: 0 to enable scrolling in flex child */
+        min-height: 0;
         overflow: hidden;
         display: flex;
       }
       
       .hub-main {
         flex: 1;
+        /* Fix: Add min-height: 0 - critical for flex child scrolling */
+        min-height: 0;
         overflow-y: auto;
         overflow-x: hidden;
+        /* Fix: Ensure smooth scrolling on touch devices */
+        -webkit-overflow-scrolling: touch;
       }
       
       .hub-gate-panel {
         flex: 1;
+        min-height: 0;
         overflow-y: auto;
         overflow-x: hidden;
+        -webkit-overflow-scrolling: touch;
       }
     </style>
 
@@ -230,11 +241,34 @@
       /* Modal readability fixes */
       .modal-backdrop {
         background: rgba(5, 7, 9, 0.75);
+        /* Fix: Hidden modals must not intercept pointer/wheel events */
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        /* Critical: Prevent hidden modals from blocking scrolling */
+        pointer-events: none;
       }
+      
+      /* Fix: Only visible modals should capture pointer events */
+      .modal-backdrop.show {
+        display: flex;
+        pointer-events: auto;
+      }
+      
       .modal.card {
         background: rgba(15, 23, 42, 0.98);
         border: 1px solid var(--line-strong);
         box-shadow: var(--shadow-2);
+        max-width: 500px;
+        width: 90%;
+        max-height: 90vh;
+        overflow-y: auto;
       }
       .modal .card-header {
         background: transparent;
@@ -10154,6 +10188,9 @@
 
     <!-- Legacy viewer compatibility redirect -->
     <script src="/assets/js/viewer-compat.js"></script>
+
+    <!-- PR 310: Scroll-lock cleanup utility (must load before app-shell and hub modules) -->
+    <script src="/assets/js/scroll-lock-cleanup.js"></script>
 
     <!-- Global App Shell JS -->
     <script defer src="/assets/js/app-shell.js"></script>

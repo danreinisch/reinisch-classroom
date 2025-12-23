@@ -683,6 +683,12 @@
     url.searchParams.delete('presentation');
     window.history.pushState({}, '', url.toString());
 
+    // PR 310: Dispatch event and cleanup scroll-lock (uses shared utility)
+    window.dispatchEvent(new CustomEvent('viewer:closed'));
+    if (window.ScrollLockCleanup) {
+      window.ScrollLockCleanup.schedule();
+    }
+
     console.log('[app-shell] Closed presentation viewer');
   }
 
