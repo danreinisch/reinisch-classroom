@@ -13,8 +13,8 @@
       html,
       body {
         height: 100%;
-        /* Fix: Remove overflow hidden from body - let flex containers handle scrolling */
-        overflow: visible;
+        /* Fix: Use auto instead of visible for better control over absolutely positioned elements */
+        overflow: auto;
       }
       body {
         margin: 0;

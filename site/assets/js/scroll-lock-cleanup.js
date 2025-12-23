@@ -43,11 +43,17 @@
   
   /**
    * Schedule cleanup using requestAnimationFrame for deterministic timing
-   * This ensures cleanup runs after the browser has processed pending DOM changes
+   * 
+   * Uses double-RAF pattern for reliability:
+   * - First RAF: Schedules after current frame's script execution
+   * - Second RAF: Ensures execution after layout/paint, when DOM is fully updated
+   * 
+   * This eliminates race conditions that occur with arbitrary timeouts,
+   * ensuring cleanup runs after the browser has processed all pending DOM changes.
    */
   function scheduleCleanup() {
     requestAnimationFrame(() => {
-      // Double-RAF pattern for more reliable execution after DOM updates
+      // Double-RAF: Execute after layout and paint phases
       requestAnimationFrame(() => {
         cleanupScrollLock();
       });
