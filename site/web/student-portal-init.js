@@ -198,7 +198,9 @@
 
       // Phase 3: Enhanced error handling with clear messages
       if (!response.ok) {
-        const data = await response.json().catch(() => ({ error: 'Unknown error' }));
+        const data = await response.json().catch(() => ({ 
+          error: 'Failed to parse server response. Please try again.' 
+        }));
         
         // Provide specific error messages based on status code
         // Check specific codes first, then ranges
@@ -269,10 +271,11 @@
       // Check for network/fetch errors more reliably
       if (err instanceof TypeError) {
         // Fetch API throws TypeError for network failures
+        // Note: navigator.onLine is not always reliable but provides a basic check
         if (!navigator.onLine) {
           errorMsg += 'You appear to be offline. Please check your internet connection.';
         } else {
-          errorMsg += 'Please check your internet connection and try again.';
+          errorMsg += 'Please check your network connection and try again.';
         }
       } else {
         errorMsg += 'Please try again or contact your teacher if this persists.';

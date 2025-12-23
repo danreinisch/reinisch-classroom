@@ -69,7 +69,9 @@
       document.documentElement.dataset.theme = 'emerald';
     }
 
-    // Define required theme CSS files with same-origin URLs
+    // Define required theme CSS files
+    // Note: These paths match the canonical theme assets used by /hub/
+    // If these files are moved, update paths here and in hub HTML
     const themeFiles = [
       { href: '/assets/css/rc-emerald-dashboard-theme.css', id: 'rc-emerald-dashboard-theme' },
       { href: '/assets/css/rc-emerald-bridge.css', id: 'rc-emerald-bridge' },
