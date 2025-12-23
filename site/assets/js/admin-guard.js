@@ -59,23 +59,36 @@
   // Phase 302C: Perform auth check
   const authResult = checkAuth();
   
-  // Phase 302C: Block students from admin areas
-  if (authResult.role === 'student') {
+  // PR 308: Check if accessing admin or admin-login areas
+  // Handle both /admin/ and /site/admin/ paths (for local testing vs production)
+  const path = window.location.pathname;
+  
+  /**
+   * Check if path matches admin area (handles production and test paths)
+   */
+  function matchesPath(basePath) {
+    return path === basePath || path.startsWith(basePath + '/') ||
+           path === '/site' + basePath || path.startsWith('/site' + basePath + '/');
+  }
+  
+  const isAdminPage = matchesPath('/admin');
+  const isAdminLogin = matchesPath('/admin-login');
+  
+  // PR 308: Block students from both admin and admin-login areas
+  if (authResult.role === 'student' && (isAdminPage || isAdminLogin)) {
     console.warn(LOG_PREFIX, 'Student role detected, redirecting to home');
     window.location.replace('/');
     return;
   }
   
   // Phase 302C: For admin pages (not admin-login), require authentication
-  // Simplified check: /admin or /admin/* (startsWith catches both)
-  const isAdminPage = window.location.pathname === '/admin' || 
-                      window.location.pathname.startsWith('/admin/');
-  
   if (isAdminPage && !authResult.role) {
     // Phase 302C: Unauthenticated user trying to access admin - redirect to login with return URL
     const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
     console.log(LOG_PREFIX, 'Unauthenticated access to admin, redirecting to admin-login');
-    window.location.replace('/admin-login/?return=' + returnUrl);
+    // PR 308: Use /site/admin-login/ for test environment compatibility
+    const loginPath = window.location.pathname.includes('/site/') ? '/site/admin-login/' : '/admin-login/';
+    window.location.replace(loginPath + '?return=' + returnUrl);
     return;
   }
   
