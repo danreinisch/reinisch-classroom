@@ -279,8 +279,9 @@
           srcPath = url.searchParams.get('src');
         } catch (e) {
           // If URL parsing fails, try direct href if it starts with /
-          if (card.getAttribute('href')?.startsWith('/')) {
-            srcPath = card.getAttribute('href');
+          const hrefAttr = card.getAttribute('href');
+          if (hrefAttr?.startsWith('/')) {
+            srcPath = hrefAttr;
           }
         }
       }
