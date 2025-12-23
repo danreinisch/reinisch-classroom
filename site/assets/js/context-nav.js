@@ -15,6 +15,14 @@
    * Initialize context navigation
    */
   function initContextNav() {
+    // Feature flag: Disable context nav by default (PR 312)
+    // The left-side app-shell navigation now provides comprehensive navigation
+    const CONTEXT_NAV_ENABLED = false;
+    
+    if (!CONTEXT_NAV_ENABLED) {
+      return;
+    }
+    
     // Check if context nav should be enabled for this page
     if (!shouldEnableContextNav()) {
       return;
