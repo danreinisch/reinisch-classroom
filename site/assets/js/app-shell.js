@@ -29,6 +29,9 @@
       return;
     }
 
+    // Phase 1: Ensure global theme is loaded before shell initialization
+    ensureGlobalTheme();
+
     // Create and inject shell
     const shell = createShell();
     document.body.appendChild(shell);
@@ -53,6 +56,43 @@
 
     // Check URL params for deep linking
     initDeepLinking();
+  }
+
+  /**
+   * Phase 1: Ensure global Emerald theme CSS is loaded
+   * Injects required theme CSS files if not already present
+   * This ensures consistent GUI across all pages, not just /hub/
+   */
+  function ensureGlobalTheme() {
+    // Set root theme marker if absent
+    if (!document.documentElement.dataset.theme) {
+      document.documentElement.dataset.theme = 'emerald';
+    }
+
+    // Define required theme CSS files with same-origin URLs
+    const themeFiles = [
+      { href: '/assets/css/rc-emerald-dashboard-theme.css', id: 'rc-emerald-dashboard-theme' },
+      { href: '/assets/css/rc-emerald-bridge.css', id: 'rc-emerald-bridge' },
+      { href: '/assets/css/app-shell.css', id: 'app-shell-css' }
+    ];
+
+    // Inject each CSS file if not already loaded (idempotent)
+    themeFiles.forEach(file => {
+      // Check if already loaded by href or id
+      const existingByHref = document.querySelector(`link[href="${file.href}"]`);
+      const existingById = file.id ? document.getElementById(file.id) : null;
+      
+      if (!existingByHref && !existingById) {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = file.href;
+        if (file.id) {
+          link.id = file.id;
+        }
+        document.head.appendChild(link);
+        console.log('[app-shell] Injected theme CSS:', file.href);
+      }
+    });
   }
 
   /**
