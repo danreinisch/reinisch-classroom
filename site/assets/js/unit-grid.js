@@ -18,13 +18,7 @@
       const r = await getJSON('/assets/data/site-state.json');
       return r;
     } catch(rootErr) {
-      // Fallback to site path if root fails
-      try {
-        const r = await getJSON('/site/assets/data/site-state.json');
-        return r;
-      } catch(siteErr) {
-        return { categories:{} }; 
-      }
+      return { categories:{} }; 
     }
   }
 

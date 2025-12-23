@@ -508,10 +508,9 @@
           
           log(`Verification attempt ${attempt + 1}/${MAX_RETRIES}…`);
           
-          // Try root path first, then site path
+          // Try root path first
           const paths = [
-            '/assets/data/site-state.json',
-            '/site/assets/data/site-state.json'
+            '/assets/data/site-state.json'
           ];
           
           let fetchSuccess = false;
