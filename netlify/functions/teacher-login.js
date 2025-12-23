@@ -124,7 +124,7 @@ async function handleTeacherLogin(event) {
   }
 
   // Dev bootstrap: allow 'teacher_local' on localhost only
-  const host = event.headers.host || event.headers.Host || '';
+  // (host already declared at function start)
   const isLocalhost = host.startsWith('localhost') || host.startsWith('127.0.0.1');
   
   if (username === 'teacher_local' && isLocalhost) {
