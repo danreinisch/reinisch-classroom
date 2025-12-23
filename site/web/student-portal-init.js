@@ -15,23 +15,79 @@
 
   /**
    * Initialize the portal
+   * PR 315: Handle authenticated state and show dashboard
    */
   async function init() {
     console.log(LOG_PREFIX, 'Initializing student portal');
 
-    // Check if already authenticated
+    // Check if already authenticated (from auto-login or existing session)
     if (isAuthenticated()) {
-      console.log(LOG_PREFIX, 'Already authenticated, redirecting to dashboard');
-      // For now, just show a message. In production, redirect to actual dashboard.
-      showMessage('You are already signed in!', 'success');
+      console.log(LOG_PREFIX, 'Already authenticated, showing dashboard');
+      showDashboard();
       return;
     }
 
+    // Not authenticated - show login form
+    console.log(LOG_PREFIX, 'Not authenticated, showing login');
+    showLogin();
+    
     // Load student roster
     await loadStudentRoster();
 
     // Setup event handlers
     setupEventHandlers();
+  }
+
+  /**
+   * Show login view
+   */
+  function showLogin() {
+    const loginView = document.getElementById('loginView');
+    const dashboardView = document.getElementById('studentDashboardView');
+    
+    if (loginView) loginView.classList.remove('hidden');
+    if (dashboardView) dashboardView.classList.add('hidden');
+  }
+
+  /**
+   * Show dashboard view (PR 315)
+   */
+  function showDashboard() {
+    const loginView = document.getElementById('loginView');
+    const dashboardView = document.getElementById('studentDashboardView');
+    const studentCodeDisplay = document.getElementById('studentCodeDisplay');
+    const btnLogout = document.getElementById('btnLogout');
+    
+    // Hide login, show dashboard
+    if (loginView) loginView.classList.add('hidden');
+    if (dashboardView) dashboardView.classList.remove('hidden');
+    
+    // Display student code
+    const studentCode = sessionStorage.getItem('rc_user_code');
+    if (studentCodeDisplay && studentCode) {
+      studentCodeDisplay.textContent = studentCode;
+    }
+    
+    // Setup logout handler
+    if (btnLogout) {
+      btnLogout.addEventListener('click', handleLogout);
+    }
+    
+    console.log(LOG_PREFIX, 'Dashboard view shown for:', studentCode);
+  }
+
+  /**
+   * Handle logout (PR 315)
+   */
+  function handleLogout() {
+    console.log(LOG_PREFIX, 'Logout requested');
+    
+    // Clear session
+    sessionStorage.removeItem('rc_user_code');
+    sessionStorage.removeItem('rc_user_role');
+    
+    // Redirect to login page (removes auto-login params)
+    window.location.href = '/student/';
   }
 
   /**
@@ -241,22 +297,20 @@
         // Login successful
         console.log(LOG_PREFIX, 'Login successful');
 
-        // Store auth in localStorage
-        const auth = {
-          role: 'student',
-          code: studentCode,
-          timestamp: Date.now(),
-        };
-        localStorage.setItem('rc_auth', JSON.stringify(auth));
+        // Phase 4 (PR 315): Session-only auth - use sessionStorage instead of localStorage
+        // This ensures students must re-login after closing tab/browser
+        sessionStorage.setItem('rc_user_code', studentCode);
+        sessionStorage.setItem('rc_user_role', 'student');
 
-        showMessage('Login successful! Redirecting...', 'success');
+        showMessage('Login successful! Loading your portal...', 'success');
 
-        // Redirect to student dashboard
-        // TODO: Implement student dashboard at /student/dashboard/ (tracked in issue #XXX)
+        // PR 315: Redirect to student portal with auto-login parameters
+        // This triggers the full portal experience with authenticated UI
         setTimeout(() => {
-          // window.location.href = '/student/dashboard/';
-          showMessage('Student dashboard would load here. (Feature in development)', 'info');
-        }, 1500);
+          const portalUrl = `/student/?auto=1&code=${encodeURIComponent(studentCode)}`;
+          console.log(LOG_PREFIX, 'Redirecting to:', portalUrl);
+          window.location.href = portalUrl;
+        }, 800);
       } else {
         // Login failed with ok: false
         const errorMsg = data.error || 'Invalid student code or password';
@@ -290,22 +344,19 @@
 
   /**
    * Check if user is authenticated
+   * PR 315: Session-only auth - check sessionStorage instead of localStorage
    */
   function isAuthenticated() {
     try {
-      const authStr = localStorage.getItem('rc_auth');
-      if (!authStr) return false;
+      // Check sessionStorage for active session
+      const sessionRole = sessionStorage.getItem('rc_user_role');
+      const sessionCode = sessionStorage.getItem('rc_user_code');
 
-      const auth = JSON.parse(authStr);
-      if (!auth || !auth.role || !auth.code) return false;
+      if (sessionRole === 'student' && sessionCode && sessionCode.trim().length > 0) {
+        return true;
+      }
 
-      // Check if student role
-      if (auth.role !== 'student') return false;
-
-      // Check expiry if present
-      if (auth.expiresAt && Date.now() >= auth.expiresAt) return false;
-
-      return true;
+      return false;
     } catch (err) {
       console.error(LOG_PREFIX, 'Error checking auth:', err);
       return false;
