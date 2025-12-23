@@ -206,19 +206,24 @@
         
         switch (response.status) {
           case 400:
-            errorMsg = data.error || 'Invalid request. Please check your student code and password.';
+            // Bad request - typically malformed input
+            errorMsg = data.error || 'Request format error. Please ensure you entered a valid student code.';
             break;
           case 401:
-            errorMsg = data.error || 'Invalid student code or password. Please check your credentials.';
+            // Unauthorized - authentication failed
+            errorMsg = data.error || 'Invalid student code or password. Please check your credentials and try again.';
             break;
           case 403:
+            // Forbidden - account issue
             errorMsg = data.error || 'Your account is inactive. Please contact your teacher.';
             break;
           case 503:
+            // Service unavailable
             errorMsg = 'Authentication service is currently unavailable. Please try again in a moment.';
             break;
           default:
             if (response.status >= 500) {
+              // Server error
               errorMsg = 'Server error occurred. Please contact your teacher if this persists.';
             }
         }
@@ -264,7 +269,7 @@
       // Check for network/fetch errors more reliably
       if (err instanceof TypeError) {
         // Fetch API throws TypeError for network failures
-        if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        if (!navigator.onLine) {
           errorMsg += 'You appear to be offline. Please check your internet connection.';
         } else {
           errorMsg += 'Please check your internet connection and try again.';

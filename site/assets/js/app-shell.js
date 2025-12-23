@@ -87,8 +87,8 @@
       // Check by href - iterate through link elements to avoid selector injection
       let existingByHref = false;
       const links = document.querySelectorAll('link[rel="stylesheet"]');
-      for (let i = 0; i < links.length; i++) {
-        if (links[i].getAttribute('href') === file.href) {
+      for (const link of links) {
+        if (link.getAttribute('href') === file.href) {
           existingByHref = true;
           break;
         }
