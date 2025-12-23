@@ -284,10 +284,10 @@
       const logoutPromises = [];
       
       // Determine current surface/role from pathname
-      const isStudentPage = pathname.startsWith('/student');
       const isSubPage = pathname.startsWith('/sub');
       const isAdminPage = pathname.startsWith('/admin');
       const isTeacherPage = pathname.startsWith('/hub') || pathname.startsWith('/teacher');
+      // Note: Student pages only clear localStorage, no server-side logout needed
       
       // Only call logout endpoints relevant to current role/surface
       if (isTeacherPage || isAdminPage) {
