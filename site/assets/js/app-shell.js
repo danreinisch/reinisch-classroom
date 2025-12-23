@@ -683,7 +683,32 @@
     url.searchParams.delete('presentation');
     window.history.pushState({}, '', url.toString());
 
+    // PR 310: Dispatch event for scroll-lock cleanup
+    window.dispatchEvent(new CustomEvent('viewer:closed'));
+    
+    // PR 310: Cleanup any scroll-lock state
+    cleanupScrollLock();
+
     console.log('[app-shell] Closed presentation viewer');
+  }
+  
+  /**
+   * PR 310: Cleanup scroll-lock to ensure scrolling works
+   */
+  function cleanupScrollLock() {
+    try {
+      // Remove any scroll-lock classes
+      document.body.classList.remove('modal-open', 'no-scroll', 'scroll-lock');
+      
+      // Ensure body overflow is not hidden (shouldn't be, but defensive)
+      if (document.body.style.overflow === 'hidden') {
+        document.body.style.overflow = '';
+      }
+      
+      console.log('[app-shell] Scroll-lock cleanup completed');
+    } catch (err) {
+      console.error('[app-shell] Scroll-lock cleanup failed:', err);
+    }
   }
 
   /**

@@ -234,6 +234,8 @@
             if (modal && modal.classList.contains('show')) {
               modal.classList.remove('show');
               e.preventDefault();
+              // Fix: Ensure scroll-lock is cleaned up after modal close
+              cleanupScrollLock();
               break;
             }
           }
@@ -249,6 +251,8 @@
           // Only close if clicking the backdrop itself, not the modal content
           if (e.target === modal) {
             modal.classList.remove('show');
+            // Fix: Ensure scroll-lock is cleaned up after modal close
+            cleanupScrollLock();
           }
         });
       });
@@ -256,6 +260,65 @@
       console.debug('[Hub UX] Modal enhancements installed');
     } catch (err) {
       console.error('[Hub UX] Failed to enhance modals:', err);
+    }
+  }
+  
+  // ============================================================================
+  // SCROLL-LOCK CLEANUP (PR 310 - Teacher Center Scroll Fix)
+  // ============================================================================
+  /**
+   * Defensive cleanup of any scroll-lock state
+   * Ensures body and containers are scrollable after modal/viewer closes
+   */
+  function cleanupScrollLock() {
+    try {
+      // Remove any scroll-lock classes that might be lingering
+      document.body.classList.remove('modal-open', 'no-scroll', 'scroll-lock');
+      
+      // Ensure body overflow is not hidden
+      if (document.body.style.overflow === 'hidden') {
+        document.body.style.overflow = '';
+      }
+      
+      // Ensure html overflow is not hidden
+      if (document.documentElement.style.overflow === 'hidden') {
+        document.documentElement.style.overflow = '';
+      }
+      
+      // Ensure position is not fixed (some scroll-lock techniques use this)
+      if (document.body.style.position === 'fixed') {
+        document.body.style.position = '';
+      }
+      
+      console.debug('[Hub UX] Scroll-lock cleanup completed');
+    } catch (err) {
+      console.error('[Hub UX] Scroll-lock cleanup failed:', err);
+    }
+  }
+  
+  /**
+   * Failsafe scroll-lock cleanup - runs after login and periodically
+   */
+  function initScrollLockFailsafe() {
+    try {
+      // Listen for successful teacher login
+      window.addEventListener('teacher:login-success', () => {
+        console.debug('[Hub UX] Login success detected - running scroll-lock cleanup');
+        setTimeout(cleanupScrollLock, 100);
+      });
+      
+      // Also cleanup when viewer closes
+      window.addEventListener('viewer:closed', () => {
+        console.debug('[Hub UX] Viewer closed - running scroll-lock cleanup');
+        cleanupScrollLock();
+      });
+      
+      // Run initial cleanup on page load (defensive)
+      cleanupScrollLock();
+      
+      console.debug('[Hub UX] Scroll-lock failsafe initialized');
+    } catch (err) {
+      console.error('[Hub UX] Failed to init scroll-lock failsafe:', err);
     }
   }
   
@@ -392,6 +455,7 @@
       enhanceModals();
       initRoleSwitch();
       initSubstituteRole();
+      initScrollLockFailsafe(); // PR 310: Add scroll-lock cleanup failsafe
       
       // Restore last state after a delay to ensure all async scripts have loaded
       setTimeout(restoreLastState, STATE_RESTORE_DELAY);
