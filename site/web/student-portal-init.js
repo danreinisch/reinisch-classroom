@@ -200,19 +200,27 @@
       if (!response.ok) {
         const data = await response.json().catch(() => ({ error: 'Unknown error' }));
         
-        // Provide specific error messages based on status
+        // Provide specific error messages based on status code
+        // Check specific codes first, then ranges
         let errorMsg = 'Login failed. Please try again.';
         
-        if (response.status === 401) {
-          errorMsg = data.error || 'Invalid student code or password. Please check your credentials.';
-        } else if (response.status === 403) {
-          errorMsg = data.error || 'Your account is inactive. Please contact your teacher.';
-        } else if (response.status === 503) {
-          errorMsg = 'Authentication service is currently unavailable. Please try again in a moment.';
-        } else if (response.status >= 500) {
-          errorMsg = 'Server error occurred. Please contact your teacher if this persists.';
-        } else if (response.status === 400) {
-          errorMsg = data.error || 'Invalid request. Please check your student code and password.';
+        switch (response.status) {
+          case 400:
+            errorMsg = data.error || 'Invalid request. Please check your student code and password.';
+            break;
+          case 401:
+            errorMsg = data.error || 'Invalid student code or password. Please check your credentials.';
+            break;
+          case 403:
+            errorMsg = data.error || 'Your account is inactive. Please contact your teacher.';
+            break;
+          case 503:
+            errorMsg = 'Authentication service is currently unavailable. Please try again in a moment.';
+            break;
+          default:
+            if (response.status >= 500) {
+              errorMsg = 'Server error occurred. Please contact your teacher if this persists.';
+            }
         }
         
         console.error(LOG_PREFIX, 'Login failed:', response.status, errorMsg);

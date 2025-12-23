@@ -78,11 +78,23 @@
 
     // Inject each CSS file if not already loaded (idempotent)
     themeFiles.forEach(file => {
-      // Check if already loaded - use attribute selector for safety
-      const existingByHref = document.querySelector(`link[href="${CSS.escape ? CSS.escape(file.href) : file.href}"]`);
+      // First check by ID (most reliable)
       const existingById = file.id ? document.getElementById(file.id) : null;
+      if (existingById) {
+        return; // Already loaded
+      }
       
-      if (!existingByHref && !existingById) {
+      // Check by href - iterate through link elements to avoid selector injection
+      let existingByHref = false;
+      const links = document.querySelectorAll('link[rel="stylesheet"]');
+      for (let i = 0; i < links.length; i++) {
+        if (links[i].getAttribute('href') === file.href) {
+          existingByHref = true;
+          break;
+        }
+      }
+      
+      if (!existingByHref) {
         const link = document.createElement('link');
         link.rel = 'stylesheet';
         link.href = file.href;
