@@ -134,6 +134,8 @@ function getCorsHeaders(event, methods = ['GET', 'POST', 'OPTIONS'], headers = [
   // Only echo origin if it's allowed
   if (isOriginAllowed(origin)) {
     corsHeaders['Access-Control-Allow-Origin'] = origin;
+    // When allowing credentials, we must set this header
+    corsHeaders['Access-Control-Allow-Credentials'] = 'true';
   }
   
   return corsHeaders;
