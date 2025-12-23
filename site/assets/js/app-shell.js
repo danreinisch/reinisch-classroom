@@ -270,6 +270,7 @@
   /**
    * Handle sign out
    * Signs out of all roles (teacher, admin, substitute) and clears all auth state
+   * P0.2: Role-aware logout - only calls appropriate endpoints based on current page/role
    */
   async function handleSignOut() {
     console.log('[app-shell] Sign out requested - clearing all sessions');
@@ -278,24 +279,52 @@
       // Clear local auth immediately
       localStorage.removeItem('rc_auth');
 
-      // Call all logout endpoints as best-effort (ignore errors, continue)
-      const logoutPromises = [
-        fetch('/.netlify/functions/teacher-logout', {
-          method: 'POST',
-          credentials: 'include',
-        }).catch(() => {}),
-        fetch('/.netlify/functions/admin-logout', {
-          method: 'POST',
-          credentials: 'include',
-        }).catch(() => {}),
-        fetch('/.netlify/functions/substitute-logout', {
-          method: 'POST',
-          credentials: 'include',
-        }).catch(() => {}),
-      ];
+      // P0.2: Role-based gate - determine which logout endpoints to call
+      const pathname = window.location.pathname.toLowerCase();
+      const logoutPromises = [];
+      
+      // Determine current surface/role from pathname
+      const isStudentPage = pathname.startsWith('/student');
+      const isSubPage = pathname.startsWith('/sub');
+      const isAdminPage = pathname.startsWith('/admin');
+      const isTeacherPage = pathname.startsWith('/hub') || pathname.startsWith('/teacher');
+      
+      // Only call logout endpoints relevant to current role/surface
+      if (isTeacherPage || isAdminPage) {
+        // Teacher and admin pages can call teacher/admin logout
+        logoutPromises.push(
+          fetch('/.netlify/functions/teacher-logout', {
+            method: 'POST',
+            credentials: 'include',
+          }).catch(() => {})
+        );
+        
+        if (isAdminPage) {
+          logoutPromises.push(
+            fetch('/.netlify/functions/admin-logout', {
+              method: 'POST',
+              credentials: 'include',
+            }).catch(() => {})
+          );
+        }
+      } else if (isSubPage) {
+        // Substitute pages only call substitute logout
+        logoutPromises.push(
+          fetch('/.netlify/functions/substitute-logout', {
+            method: 'POST',
+            credentials: 'include',
+          }).catch(() => {})
+        );
+      }
+      // P0.2: Student pages do NOT call any teacher/admin/substitute endpoints
+      // They only clear local storage (already done above)
+      
+      console.log(`[app-shell] Calling ${logoutPromises.length} role-appropriate logout endpoint(s)`);
 
       // Wait for all logout attempts (but don't block on errors)
-      await Promise.allSettled(logoutPromises);
+      if (logoutPromises.length > 0) {
+        await Promise.allSettled(logoutPromises);
+      }
 
       // Redirect to home
       window.location.href = '/';

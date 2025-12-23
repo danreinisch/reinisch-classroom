@@ -27,11 +27,43 @@ const INVALID_CREDS_DELAY_MS = 150 + Math.floor(Math.random() * 150); // 150-300
 
 const { SESSION_SECRET } = process.env;
 
+// P0.1: Enhanced module-level diagnostics (no secrets logged)
+console.log('[teacher-login] Environment check:', {
+  SUPABASE_URL: !!SUPABASE_URL,
+  SUPABASE_SERVICE_ROLE_KEY: !!SUPABASE_SERVICE_ROLE_KEY,
+  SESSION_SECRET: !!SESSION_SECRET,
+});
+
 exports.handler = async (event) => {
+  // P0.1: Top-level try-catch to prevent uncaught exceptions (502 errors)
+  try {
+    return await handleTeacherLogin(event);
+  } catch (error) {
+    // Catch-all for any uncaught errors
+    const requestId = generateRequestId();
+    console.error(`[teacher-login] [${requestId}] Uncaught error:`, {
+      message: error.message,
+      stack: error.stack,
+    });
+    return jsonResponse(event, 500, { error: 'Internal server error' }, {}, requestId);
+  }
+};
+
+async function handleTeacherLogin(event) {
   const requestId = generateRequestId();
   const host = event.headers.host || 'unknown';
   const origin = event.headers.origin || 'none';
-  console.log(`[teacher-login] [${requestId}] Request received - host: ${host}, origin: ${origin}`);
+  const contentType = event.headers['content-type'] || event.headers['Content-Type'] || '';
+  const bodyLength = event.body ? event.body.length : 0;
+  
+  // P0.1: Enhanced request logging
+  console.log(`[teacher-login] [${requestId}] Request received:`, {
+    host,
+    origin,
+    contentType,
+    bodyLength,
+    method: event.httpMethod,
+  });
 
   // Handle CORS preflight
   if (event.httpMethod === 'OPTIONS') {
@@ -43,8 +75,7 @@ exports.handler = async (event) => {
     return jsonResponse(event, 405, { error: 'Method Not Allowed' }, {}, requestId);
   }
 
-  // Validate Content-Type
-  const contentType = event.headers['content-type'] || event.headers['Content-Type'] || '';
+  // Validate Content-Type (already declared above)
   if (!contentType.includes('application/json')) {
     console.log(`[teacher-login] [${requestId}] Invalid Content-Type: ${contentType}`);
     return jsonResponse(event, 400, { error: 'Content-Type must be application/json' }, {}, requestId);
@@ -134,8 +165,22 @@ exports.handler = async (event) => {
       p_password: password
     });
 
+    // P0.1: Enhanced RPC error logging
     if (!verifyRes.ok) {
-      console.error(`[teacher-login] [${requestId}] Supabase RPC error - status:`, verifyRes.status);
+      console.error(`[teacher-login] [${requestId}] Supabase RPC error:`, {
+        status: verifyRes.status,
+        statusText: verifyRes.statusText,
+      });
+      
+      // Try to parse error body (truncate to prevent log spam)
+      try {
+        const errorText = await verifyRes.text();
+        const truncated = errorText.length > 500 ? errorText.substring(0, 500) + '...' : errorText;
+        console.error(`[teacher-login] [${requestId}] RPC error body:`, truncated);
+      } catch (parseErr) {
+        console.error(`[teacher-login] [${requestId}] Could not parse RPC error body`);
+      }
+      
       return jsonResponse(event, 500, { error: 'Authentication service unavailable' }, {}, requestId);
     }
 
@@ -196,7 +241,7 @@ exports.handler = async (event) => {
     console.error(`[teacher-login] [${requestId}] Error processing request:`, e.message);
     return jsonResponse(event, 500, { error: 'Authentication service error' }, {}, requestId);
   }
-};
+}
 
 // Simple per-IP throttling using cookies
 function checkThrottle(event, clientIp) {
