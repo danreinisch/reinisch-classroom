@@ -111,9 +111,17 @@
   }
 
   /**
-   * Create the gate panel HTML
+   * Get or create the gate panel HTML
+   * Phase 2: Returns existing panel if already created, otherwise creates new one
    */
   function createGatePanel() {
+    // Phase 2: Guard - check if panel already exists
+    const existingPanel = document.getElementById('hubGatePanel');
+    if (existingPanel) {
+      console.log(LOG_PREFIX, 'Gate panel already exists, returning existing panel');
+      return existingPanel;
+    }
+
     const panel = document.createElement('div');
     panel.className = 'hub-gate-panel';
     panel.id = 'hubGatePanel';
@@ -302,9 +310,17 @@
   /**
    * Handle teacher gate button click
    * Phase 302C: Added defensive null-checks for modal elements
+   * Phase 2: Added guard to prevent multiple active modals
    */
   function handleTeacherGateClick() {
     console.log(LOG_PREFIX, 'Teacher gate clicked - triggering login');
+
+    // Phase 2: Guard - check if any modal is already active
+    const activeModal = document.querySelector('.modal-backdrop.show');
+    if (activeModal) {
+      console.log(LOG_PREFIX, 'Modal already active, not opening another');
+      return;
+    }
 
     // Phase 302C: Defensive - Find and show the teacher modal if it exists
     const teachModal = document.querySelector(SELECTORS.TEACH_MODAL);

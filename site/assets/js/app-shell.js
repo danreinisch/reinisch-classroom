@@ -29,6 +29,9 @@
       return;
     }
 
+    // Phase 1: Ensure global theme is loaded before shell initialization
+    ensureGlobalTheme();
+
     // Create and inject shell
     const shell = createShell();
     document.body.appendChild(shell);
@@ -53,6 +56,57 @@
 
     // Check URL params for deep linking
     initDeepLinking();
+  }
+
+  /**
+   * Phase 1: Ensure global Emerald theme CSS is loaded
+   * Injects required theme CSS files if not already present
+   * This ensures consistent GUI across all pages, not just /hub/
+   */
+  function ensureGlobalTheme() {
+    // Set root theme marker if absent
+    if (!document.documentElement.dataset.theme) {
+      document.documentElement.dataset.theme = 'emerald';
+    }
+
+    // Define required theme CSS files
+    // Note: These paths match the canonical theme assets used by /hub/
+    // If these files are moved, update paths here and in hub HTML
+    const themeFiles = [
+      { href: '/assets/css/rc-emerald-dashboard-theme.css', id: 'rc-emerald-dashboard-theme' },
+      { href: '/assets/css/rc-emerald-bridge.css', id: 'rc-emerald-bridge' },
+      { href: '/assets/css/app-shell.css', id: 'app-shell-css' }
+    ];
+
+    // Inject each CSS file if not already loaded (idempotent)
+    themeFiles.forEach(file => {
+      // First check by ID (most reliable)
+      const existingById = file.id ? document.getElementById(file.id) : null;
+      if (existingById) {
+        return; // Already loaded
+      }
+      
+      // Check by href - iterate through link elements to avoid selector injection
+      let existingByHref = false;
+      const links = document.querySelectorAll('link[rel="stylesheet"]');
+      for (const link of links) {
+        if (link.getAttribute('href') === file.href) {
+          existingByHref = true;
+          break;
+        }
+      }
+      
+      if (!existingByHref) {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = file.href;
+        if (file.id) {
+          link.id = file.id;
+        }
+        document.head.appendChild(link);
+        console.log('[app-shell] Injected theme CSS:', file.href);
+      }
+    });
   }
 
   /**

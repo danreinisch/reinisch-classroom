@@ -1,6 +1,11 @@
 /**
  * Student Portal Initialization
  * Handles student login form, roster loading, and authentication
+ * 
+ * Phase 3: Uses canonical endpoint /.netlify/functions/student-login
+ * - student-signin remains available as backwards-compatible alias
+ * - Enhanced error messages for common failure scenarios
+ * - No teacher/admin/substitute endpoints called from student pages
  */
 
 (function () {
@@ -168,6 +173,7 @@
 
   /**
    * Perform login
+   * Phase 3: Enhanced error surfacing with clear, actionable messages
    */
   async function performLogin(studentCode, password) {
     console.log(LOG_PREFIX, 'Attempting login for:', studentCode);
@@ -177,6 +183,7 @@
     btns.forEach((btn) => (btn.disabled = true));
 
     try {
+      // Phase 3: Use canonical student-login endpoint
       const response = await fetch('/.netlify/functions/student-login', {
         method: 'POST',
         credentials: 'include',
@@ -189,9 +196,48 @@
         }),
       });
 
+      // Phase 3: Enhanced error handling with clear messages
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({ 
+          error: 'Failed to parse server response. Please try again.' 
+        }));
+        
+        // Provide specific error messages based on status code
+        // Check specific codes first, then ranges
+        let errorMsg = 'Login failed. Please try again.';
+        
+        switch (response.status) {
+          case 400:
+            // Bad request - typically malformed input
+            errorMsg = data.error || 'Request format error. Please ensure you entered a valid student code.';
+            break;
+          case 401:
+            // Unauthorized - authentication failed
+            errorMsg = data.error || 'Invalid student code or password. Please check your credentials and try again.';
+            break;
+          case 403:
+            // Forbidden - account issue
+            errorMsg = data.error || 'Your account is inactive. Please contact your teacher.';
+            break;
+          case 503:
+            // Service unavailable
+            errorMsg = 'Authentication service is currently unavailable. Please try again in a moment.';
+            break;
+          default:
+            if (response.status >= 500) {
+              // Server error
+              errorMsg = 'Server error occurred. Please contact your teacher if this persists.';
+            }
+        }
+        
+        console.error(LOG_PREFIX, 'Login failed:', response.status, errorMsg);
+        showMessage(errorMsg, 'error');
+        return;
+      }
+
       const data = await response.json();
 
-      if (response.ok && data.ok) {
+      if (data.ok) {
         // Login successful
         console.log(LOG_PREFIX, 'Login successful');
 
@@ -212,14 +258,30 @@
           showMessage('Student dashboard would load here. (Feature in development)', 'info');
         }, 1500);
       } else {
-        // Login failed
+        // Login failed with ok: false
         const errorMsg = data.error || 'Invalid student code or password';
         console.error(LOG_PREFIX, 'Login failed:', errorMsg);
         showMessage(errorMsg, 'error');
       }
     } catch (err) {
+      // Phase 3: Enhanced network error handling
       console.error(LOG_PREFIX, 'Login error:', err);
-      showMessage('An error occurred during login. Please try again.', 'error');
+      
+      let errorMsg = 'Unable to connect to authentication service. ';
+      // Check for network/fetch errors more reliably
+      if (err instanceof TypeError) {
+        // Fetch API throws TypeError for network failures
+        // Note: navigator.onLine is not always reliable but provides a basic check
+        if (!navigator.onLine) {
+          errorMsg += 'You appear to be offline. Please check your internet connection.';
+        } else {
+          errorMsg += 'Please check your network connection and try again.';
+        }
+      } else {
+        errorMsg += 'Please try again or contact your teacher if this persists.';
+      }
+      
+      showMessage(errorMsg, 'error');
     } finally {
       // Re-enable buttons
       btns.forEach((btn) => (btn.disabled = false));
