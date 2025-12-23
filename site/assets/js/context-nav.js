@@ -55,7 +55,9 @@
       '/language-arts/toolkit/',
       '/math-toolkit/',
       '/language-arts/a-door-into-time/',
+      '/language-arts/lost-in-kragdon-ah/',
       '/language-arts/return-from-kragdon-ah/',
+      '/language-arts/warrior-of-kragdon-ah/',
       '/language-arts/assignment-hub/'
     ];
 
@@ -74,8 +76,14 @@
     if (path.startsWith('/language-arts/a-door-into-time/')) {
       return 'language-arts-adit';
     }
+    if (path.startsWith('/language-arts/lost-in-kragdon-ah/')) {
+      return 'language-arts-lik';
+    }
     if (path.startsWith('/language-arts/return-from-kragdon-ah/')) {
       return 'language-arts-rfk';
+    }
+    if (path.startsWith('/language-arts/warrior-of-kragdon-ah/')) {
+      return 'language-arts-wok';
     }
     if (path.startsWith('/language-arts/assignment-hub/')) {
       return 'language-arts-ah';
@@ -206,14 +214,19 @@
         path: '/language-arts/a-door-into-time/'
       },
       {
+        id: 'lik',
+        name: 'Lost in Kragdon-Ah',
+        path: '/language-arts/lost-in-kragdon-ah/'
+      },
+      {
         id: 'rfk',
         name: 'Return from Kragdon-Ah',
         path: '/language-arts/return-from-kragdon-ah/'
       },
       {
-        id: 'ah',
-        name: 'Assignment Hub',
-        path: '/language-arts/assignment-hub/'
+        id: 'wok',
+        name: 'Warrior of Kragdon-Ah',
+        path: '/language-arts/warrior-of-kragdon-ah/'
       }
     ];
 
@@ -242,21 +255,40 @@
     await new Promise(resolve => setTimeout(resolve, 500));
 
     const presentations = [];
-    const gridElement = document.getElementById('grid');
+    
+    // Try multiple selectors to find the grid element
+    const gridElement = document.querySelector('section.grid#grid') || 
+                        document.getElementById('grid') ||
+                        document.querySelector('.grid');
     
     if (!gridElement) {
       console.log('[context-nav] No grid element found');
       return presentations;
     }
 
-    // Look for presentation cards/links
-    const cards = gridElement.querySelectorAll('.card, [data-src]');
+    // Look for presentation cards/links - prioritize enabled cards with links
+    const cards = gridElement.querySelectorAll('.card:not(.disabled)');
     
     cards.forEach((card) => {
-      const srcPath = card.dataset.src || card.getAttribute('href');
-      const title = card.querySelector('.t, .title')?.textContent?.trim() || 
-                    card.textContent?.trim() || 
-                    'Untitled';
+      // Extract src from data-src attribute or href
+      let srcPath = card.dataset.src;
+      if (!srcPath && card.href) {
+        // Parse the href to extract the src parameter from viewer URL
+        try {
+          const url = new URL(card.href, window.location.origin);
+          srcPath = url.searchParams.get('src');
+        } catch (e) {
+          // If URL parsing fails, try direct href if it starts with /
+          const hrefAttr = card.getAttribute('href');
+          if (hrefAttr?.startsWith('/')) {
+            srcPath = hrefAttr;
+          }
+        }
+      }
+      
+      // Extract title from .t element or card text
+      const titleEl = card.querySelector('.t, .title');
+      const title = titleEl?.textContent?.trim() || 'Untitled';
       
       if (srcPath && srcPath.startsWith('/')) {
         presentations.push({
@@ -349,7 +381,7 @@
 
     const title = document.createElement('div');
     title.className = 'context-nav-section-title';
-    title.textContent = 'Units';
+    title.textContent = 'Books';
     section.appendChild(title);
 
     const items = document.createElement('div');
