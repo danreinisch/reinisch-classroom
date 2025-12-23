@@ -57,6 +57,7 @@
     const dashboardView = document.getElementById('studentDashboardView');
     const studentCodeDisplay = document.getElementById('studentCodeDisplay');
     const btnLogout = document.getElementById('btnLogout');
+    const btnReturnHub = document.getElementById('btnReturnHub');
     
     // Hide login, show dashboard
     if (loginView) loginView.classList.add('hidden');
@@ -71,6 +72,13 @@
     // Setup logout handler
     if (btnLogout) {
       btnLogout.addEventListener('click', handleLogout);
+    }
+    
+    // Setup return to hub handler (PR 315: CSP-compliant, no inline onclick)
+    if (btnReturnHub) {
+      btnReturnHub.addEventListener('click', () => {
+        window.location.href = '/hub/';
+      });
     }
     
     console.log(LOG_PREFIX, 'Dashboard view shown for:', studentCode);
