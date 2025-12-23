@@ -292,6 +292,8 @@
       // Only call logout endpoints relevant to current role/surface
       if (isTeacherPage || isAdminPage) {
         // Teacher and admin pages can call teacher/admin logout
+        // Note: Admin users may have both teacher (tc) and admin cookies,
+        // so we clear teacher cookie on both surfaces
         logoutPromises.push(
           fetch('/.netlify/functions/teacher-logout', {
             method: 'POST',
@@ -300,6 +302,7 @@
         );
         
         if (isAdminPage) {
+          // Also clear admin-specific cookie (rc_admin_session_v2) if present
           logoutPromises.push(
             fetch('/.netlify/functions/admin-logout', {
               method: 'POST',

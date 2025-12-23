@@ -75,7 +75,7 @@ async function handleTeacherLogin(event) {
     return jsonResponse(event, 405, { error: 'Method Not Allowed' }, {}, requestId);
   }
 
-  // Validate Content-Type (already declared above)
+  // Validate Content-Type (moved from below to avoid duplicate declaration)
   if (!contentType.includes('application/json')) {
     console.log(`[teacher-login] [${requestId}] Invalid Content-Type: ${contentType}`);
     return jsonResponse(event, 400, { error: 'Content-Type must be application/json' }, {}, requestId);
@@ -124,7 +124,7 @@ async function handleTeacherLogin(event) {
   }
 
   // Dev bootstrap: allow 'teacher_local' on localhost only
-  // (host already declared at function start)
+  // Host variable already declared at function start
   const isLocalhost = host.startsWith('localhost') || host.startsWith('127.0.0.1');
   
   if (username === 'teacher_local' && isLocalhost) {
