@@ -11,9 +11,9 @@ const { SESSION_SECRET } = process.env;
 
 exports.handler = async (event) => {
   const requestId = generateRequestId();
-  const host = event.headers.host || event.headers.Host || 'unknown';
-  const origin = event.headers.origin || event.headers.Origin || 'none';
-  const cookieHeader = event.headers.cookie || event.headers.Cookie || '';
+  const host = event.headers.host || 'unknown';
+  const origin = event.headers.origin || 'none';
+  const cookieHeader = event.headers.cookie || '';
   const hasTcCookie = cookieHeader.includes('tc=');
   
   console.log(`[teacher-session] [${requestId}] Request received - host: ${host}, origin: ${origin}, tc cookie present: ${hasTcCookie}`);

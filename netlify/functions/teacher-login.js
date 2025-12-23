@@ -29,8 +29,8 @@ const { SESSION_SECRET } = process.env;
 
 exports.handler = async (event) => {
   const requestId = generateRequestId();
-  const host = event.headers.host || event.headers.Host || 'unknown';
-  const origin = event.headers.origin || event.headers.Origin || 'none';
+  const host = event.headers.host || 'unknown';
+  const origin = event.headers.origin || 'none';
   console.log(`[teacher-login] [${requestId}] Request received - host: ${host}, origin: ${origin}`);
 
   // Handle CORS preflight
