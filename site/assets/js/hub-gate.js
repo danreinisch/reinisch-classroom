@@ -416,36 +416,14 @@
     hide: hideGate,
   };
 
-  /**
-   * PR 310: Cleanup scroll-lock after login to ensure scrolling works
-   */
-  function cleanupScrollLock() {
-    try {
-      // Remove any scroll-lock classes
-      document.body.classList.remove('modal-open', 'no-scroll', 'scroll-lock');
-      
-      // Ensure body overflow is not hidden
-      if (document.body.style.overflow === 'hidden') {
-        document.body.style.overflow = '';
-      }
-      
-      // Ensure html overflow is not hidden
-      if (document.documentElement.style.overflow === 'hidden') {
-        document.documentElement.style.overflow = '';
-      }
-      
-      console.log(LOG_PREFIX, 'Scroll-lock cleanup completed');
-    } catch (err) {
-      console.error(LOG_PREFIX, 'Scroll-lock cleanup failed:', err);
-    }
-  }
-
   // Listen for successful teacher login
   window.addEventListener('teacher:login-success', () => {
     console.log(LOG_PREFIX, 'Teacher login success detected - hiding gate');
     hideGate();
-    // PR 310: Ensure scroll-lock is cleaned up after login
-    setTimeout(cleanupScrollLock, 100);
+    // PR 310: Ensure scroll-lock is cleaned up after login (uses shared utility)
+    if (window.ScrollLockCleanup) {
+      window.ScrollLockCleanup.schedule();
+    }
   });
 
   // Auto-initialize when DOM is ready
