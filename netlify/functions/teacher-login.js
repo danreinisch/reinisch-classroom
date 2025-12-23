@@ -29,7 +29,9 @@ const { SESSION_SECRET } = process.env;
 
 exports.handler = async (event) => {
   const requestId = generateRequestId();
-  console.log(`[teacher-login] [${requestId}] Request received`);
+  const host = event.headers.host || 'unknown';
+  const origin = event.headers.origin || 'none';
+  console.log(`[teacher-login] [${requestId}] Request received - host: ${host}, origin: ${origin}`);
 
   // Handle CORS preflight
   if (event.httpMethod === 'OPTIONS') {
@@ -56,9 +58,15 @@ exports.handler = async (event) => {
   }
 
   // Check if Supabase is configured
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !SESSION_SECRET) {
-    console.error(`[teacher-login] [${requestId}] Server not configured: Missing required Supabase or session configuration`);
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    console.error(`[teacher-login] [${requestId}] Server not configured: Missing required Supabase configuration`);
     return jsonResponse(event, 500, { error: 'Server not configured' }, {}, requestId);
+  }
+
+  // Check if SESSION_SECRET is configured (explicit diagnostic)
+  if (!SESSION_SECRET) {
+    console.error(`[teacher-login] [${requestId}] Server not configured: SESSION_SECRET environment variable is missing`);
+    return jsonResponse(event, 500, { error: 'Server not configured: SESSION_SECRET missing' }, {}, requestId);
   }
 
   // Parse JSON safely
@@ -94,6 +102,7 @@ exports.handler = async (event) => {
     const setCookie = teacherCookie('tc', token, { secure: false, maxAge: SESSION_DURATION_SECONDS });
     
     console.log(`[teacher-login] [${requestId}] Dev mode: teacher_local login on localhost`);
+    console.log(`[teacher-login] [${requestId}] Set-Cookie header will be sent (secure=false for localhost)`);
     
     const securityHeaders = getSecurityHeaders(requestId);
     const corsHeaders = getCorsHeaders(event, ['POST', 'OPTIONS'], ['Content-Type']);
@@ -168,6 +177,7 @@ exports.handler = async (event) => {
     const setCookie = teacherCookie('tc', token, { secure: true, maxAge: SESSION_DURATION_SECONDS });
 
     console.log(`[teacher-login] [${requestId}] Successful login for user:`, user.username, 'role:', user.role);
+    console.log(`[teacher-login] [${requestId}] Set-Cookie header will be sent (secure=true, SameSite=Lax, HttpOnly, Path=/)`);
     
     const securityHeaders = getSecurityHeaders(requestId);
     const corsHeaders = getCorsHeaders(event, ['POST', 'OPTIONS'], ['Content-Type']);

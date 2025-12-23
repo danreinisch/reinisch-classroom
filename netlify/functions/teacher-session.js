@@ -11,7 +11,12 @@ const { SESSION_SECRET } = process.env;
 
 exports.handler = async (event) => {
   const requestId = generateRequestId();
-  console.log(`[teacher-session] [${requestId}] Request received`);
+  const host = event.headers.host || 'unknown';
+  const origin = event.headers.origin || 'none';
+  const cookieHeader = event.headers.cookie || '';
+  const hasTcCookie = cookieHeader.includes('tc=');
+  
+  console.log(`[teacher-session] [${requestId}] Request received - host: ${host}, origin: ${origin}, tc cookie present: ${hasTcCookie}`);
 
   // Handle CORS preflight
   if (event.httpMethod === 'OPTIONS') {
@@ -25,8 +30,8 @@ exports.handler = async (event) => {
 
   // Check if environment variable is configured
   if (!SESSION_SECRET) {
-    console.error(`[teacher-session] [${requestId}] Server not configured: Missing SESSION_SECRET`);
-    return jsonResponse(event, 500, { error: 'Server not configured' }, {}, requestId);
+    console.error(`[teacher-session] [${requestId}] Server not configured: SESSION_SECRET environment variable is missing`);
+    return jsonResponse(event, 500, { error: 'Server not configured: SESSION_SECRET missing' }, {}, requestId);
   }
 
   // Verify session
