@@ -1,0 +1,63 @@
+/* App Shell Layout - Consistent Layout Utilities
+   Provides consistent padding/margins and scrolling behavior across all routes */
+
+/* Body with app shell - add left padding for the rail on desktop */
+@media (min-width: 769px) {
+  body.has-app-shell {
+    padding-left: var(--shell-width, 260px);
+  }
+}
+
+@media (max-width: 768px) {
+  body.has-app-shell {
+    padding-left: 0;
+  }
+}
+
+/* Main content container - ensure proper scrolling */
+.app-content {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Scrollable content area - fix for flex containers */
+.scrollable-content {
+  flex: 1;
+  min-height: 0; /* Critical: allows flex item to shrink below content size */
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Consistent padding for main content areas */
+.content-padding {
+  padding: 18px;
+}
+
+@media (max-width: 768px) {
+  .content-padding {
+    padding: 12px;
+  }
+}
+
+/* Viewport-locked layout - prevents long scrolling document feel */
+.viewport-locked {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Flex row with gap - common utility */
+.flex-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+/* Flex column with gap - common utility */
+.flex-col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}

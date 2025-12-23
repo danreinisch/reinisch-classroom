@@ -1,15 +1,14 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="emerald">
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Reinisch Classroom — Admin</title>
 
-  <!-- Global App Shell CSS -->
+  <!-- Emerald Dashboard Theme -->
+  <link rel="stylesheet" href="/assets/css/rc-emerald-dashboard-theme.css"/>
   <link rel="stylesheet" href="/assets/css/app-shell.css"/>
-
-  <!-- Shared theme + auto “glass” nav -->
-  <link rel="stylesheet" href="/assets/css/theme.css"/>
+  <link rel="stylesheet" href="/assets/css/app-shell-layout.css"/>
   <script src="/assets/js/admin-guard.js"></script>
   <script src="/assets/js/section-nav.js" defer></script>
   <script src="./gate.js" defer></script>
@@ -17,40 +16,66 @@
   <style>
     .wrap{
       max-width:1100px;margin:32px auto;padding:20px;
-      background:var(--panel);border:1px solid var(--panel-brd);border-radius:12px
+      background:var(--surface0, #0f1512);border:1px solid var(--border, rgba(255, 255, 255, 0.08));border-radius:14px;
+      box-shadow: var(--shadow-0, 0 12px 30px rgba(0, 0, 0, 0.45));
     }
     .bar{
       display:flex;justify-content:space-between;align-items:center;margin-bottom:12px
     }
     .row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px}
     .row > *{flex:1 1 220px}
-    label{display:block;margin-bottom:6px;font-weight:600;color:var(--muted)}
+    label{display:block;margin-bottom:6px;font-weight:700;color:var(--text1, #a9bbb1)}
     input,select,button,textarea{
-      width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.2);
-      background:rgba(255,255,255,.08);color:#fff
+      width:100%;padding:10px;border-radius:var(--r-md, 14px);border:1px solid var(--border, rgba(255, 255, 255, 0.08));
+      background:rgba(10, 14, 12, 0.55);color:var(--text0, #e8f1ec)
+    }
+    input:focus,select:focus,textarea:focus{
+      outline: none;
+      border-color: color-mix(in oklab, var(--accent, #35e08a) 55%, transparent);
+      box-shadow:
+        0 0 0 4px color-mix(in oklab, var(--accent, #35e08a) 18%, transparent),
+        var(--shadow-1, 0 18px 50px rgba(0, 0, 0, 0.6));
     }
     button.primary{
-      border:1px solid #5aa9ff;background:linear-gradient(180deg,#90c4ff,#5aa9ff);cursor:pointer
+      border:0;background:linear-gradient(180deg, color-mix(in oklab, var(--accent, #35e08a) 80%, transparent), color-mix(in oklab, var(--accent2, #14b86a) 80%, transparent));
+      cursor:pointer;color:#032313;font-weight:800;
+      box-shadow: 0 4px 16px var(--glow, rgba(53, 224, 138, 0.2));
+    }
+    button.primary:hover{
+      box-shadow: 0 6px 22px var(--glow, rgba(53, 224, 138, 0.3));
     }
     button.warn{
-      border:1px solid #f59e0b;background:linear-gradient(180deg,#fbbf24,#f59e0b);cursor:pointer;color:#1b2437
+      border:1px solid #f59e0b;background:linear-gradient(180deg,#fbbf24,#f59e0b);cursor:pointer;color:#1b2437;font-weight:800;
+    }
+    .btn{
+      display:inline-flex;align-items:center;justify-content:center;gap:0.4rem;
+      padding:0.5rem 0.85rem;border-radius:var(--r-md, 14px);
+      background:var(--glass, rgba(17, 26, 21, 0.58));border:1px solid var(--border, rgba(255, 255, 255, 0.08));
+      color:var(--text0, #e8f1ec);text-decoration:none;font-weight:700;cursor:pointer;
+      transition: all 0.12s ease;
+    }
+    .btn:hover{
+      border-color:var(--border-strong, rgba(255, 255, 255, 0.14));
+      transform:translateY(-1px);
     }
     .drop{
-      border:2px dashed rgba(255,255,255,.25);padding:18px;border-radius:12px;text-align:center;color:var(--muted)
+      border:2px dashed var(--border, rgba(255, 255, 255, 0.08));padding:18px;border-radius:12px;text-align:center;color:var(--text1, #a9bbb1)
     }
-    .drop.drag{border-color:#90c4ff;color:#fff;background:rgba(144,196,255,.10)}
+    .drop.drag{border-color:var(--accent, #35e08a);color:var(--text0, #e8f1ec);background:var(--glow, rgba(53, 224, 138, 0.1))}
     .list{
-      max-height:220px;overflow:auto;background:#0e1629;border:1px solid rgba(255,255,255,.14);
-      border-radius:10px;padding:8px;font:12px ui-monospace,Menlo,Consolas,monospace
+      max-height:220px;overflow:auto;background:rgba(10, 14, 12, 0.55);border:1px solid var(--border, rgba(255, 255, 255, 0.08));
+      border-radius:10px;padding:8px;font:12px var(--mono, ui-monospace, Menlo, Consolas, monospace)
     }
     .log{
-      margin-top:16px;background:#0e1629;border:1px solid rgba(255,255,255,.14);
-      border-radius:10px;padding:10px;height:260px;overflow:auto;font:12px ui-monospace,Menlo,Consolas,monospace;
-      color:#dbeafe;white-space:pre-wrap
+      margin-top:16px;background:rgba(10, 14, 12, 0.55);border:1px solid var(--border, rgba(255, 255, 255, 0.08));
+      border-radius:10px;padding:10px;height:260px;overflow:auto;font:12px var(--mono, ui-monospace, Menlo, Consolas, monospace);
+      color:var(--text0, #e8f1ec);white-space:pre-wrap;
+      min-height:0; /* Enable proper scrolling */
     }
     .sp{flex:1}
-    .hint{font-size:12px;color:var(--muted);margin-top:4px}
+    .hint{font-size:12px;color:var(--text1, #a9bbb1);margin-top:4px}
     .taken-note{font-size:12px;color:#fde68a;margin-top:4px}
+    h1{color:var(--text0, #e8f1ec)}
   </style>
 </head>
 <body>

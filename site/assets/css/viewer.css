@@ -1,5 +1,6 @@
 /**
  * Viewer CSS - Dedicated viewer for presentations and modules
+ * Updated to use emerald dashboard theme tokens
  */
 
 * {
@@ -15,9 +16,9 @@ body {
 }
 
 body {
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  background: #0a0f1a;
-  color: #e8edf5;
+  font-family: var(--font, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif);
+  background: var(--bg0, #070a08);
+  color: var(--text0, #e8f1ec);
 }
 
 .viewer-container {
@@ -31,38 +32,42 @@ body {
   display: flex;
   gap: 0.5rem;
   padding: 0.75rem 1rem;
-  background: rgba(10, 15, 26, 0.95);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: linear-gradient(180deg, var(--glass-hi, rgba(255, 255, 255, 0.06)), transparent 55%), var(--glass, rgba(17, 26, 21, 0.58));
+  border-bottom: 1px solid var(--border-strong, rgba(255, 255, 255, 0.14));
+  backdrop-filter: blur(14px) saturate(125%);
+  -webkit-backdrop-filter: blur(14px) saturate(125%);
   flex-shrink: 0;
   z-index: 1000;
 }
 
 .viewer-btn {
   padding: 0.5rem 1rem;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 0.5rem;
-  color: #e8edf5;
+  background: linear-gradient(180deg, var(--glass-hi, rgba(255, 255, 255, 0.06)), transparent 60%), var(--glass, rgba(17, 26, 21, 0.58));
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  border-radius: var(--r-md, 14px);
+  color: var(--text0, #e8f1ec);
   font-size: 0.9rem;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.12s ease;
+  box-shadow: var(--shadow-0, 0 12px 30px rgba(0, 0, 0, 0.45));
 }
 
 .viewer-btn:hover {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.3);
   transform: translateY(-1px);
+  border-color: var(--border-strong, rgba(255, 255, 255, 0.14));
+  box-shadow: var(--shadow-1, 0 18px 50px rgba(0, 0, 0, 0.6));
 }
 
 .viewer-btn:active {
-  transform: translateY(0);
+  transform: translateY(0) scale(0.99);
 }
 
 .viewer-btn:focus {
-  outline: 2px solid rgba(99, 179, 237, 0.5);
+  outline: 2px solid color-mix(in oklab, var(--accent, #35e08a) 55%, transparent);
   outline-offset: 2px;
+  box-shadow:
+    0 0 0 4px color-mix(in oklab, var(--accent, #35e08a) 18%, transparent),
+    var(--shadow-1, 0 18px 50px rgba(0, 0, 0, 0.6));
 }
 
 .viewer-frame {
@@ -70,6 +75,7 @@ body {
   width: 100%;
   position: relative;
   overflow: hidden;
+  min-height: 0; /* Critical: allows proper scrolling */
 }
 
 .viewer-iframe {
@@ -94,7 +100,7 @@ body.presentation-mode .viewer-frame {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  color: #a0aec0;
+  color: var(--text1, #a9bbb1);
   font-size: 1rem;
 }
 
@@ -116,7 +122,7 @@ body.presentation-mode .viewer-frame {
 }
 
 .viewer-error-message {
-  color: #cbd5e0;
+  color: var(--text1, #a9bbb1);
   line-height: 1.6;
 }
 
@@ -137,7 +143,7 @@ body.presentation-mode .viewer-frame {
 body:fullscreen,
 body:-webkit-full-screen,
 body:-moz-full-screen {
-  background: #000;
+  background: var(--bg0, #070a08);
 }
 
 body:fullscreen .viewer-controls,
