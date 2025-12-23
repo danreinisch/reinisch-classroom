@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "updated": "2025-12-22T15:53:00Z",
+  "updated": "2025-12-23T15:47:00Z",
   "sections": [
     {
       "id": "language-arts",
@@ -81,13 +81,71 @@
               "url": "/presentations/a-door-into-time/presentation-16/"
             }
           ]
+        },
+        {
+          "id": "lost-in-kragdon-ah",
+          "name": "Lost in Kragdon-Ah",
+          "presentations": []
+        },
+        {
+          "id": "return-from-kragdon-ah",
+          "name": "Return from Kragdon-Ah",
+          "presentations": []
+        },
+        {
+          "id": "warrior-of-kragdon-ah",
+          "name": "Warrior of Kragdon-Ah",
+          "presentations": [
+            {
+              "id": "presentation-01",
+              "name": "Presentation 1",
+              "url": "/presentations/warrior-of-kragdon-ah/presentation-01/"
+            }
+          ]
         }
       ]
     },
     {
       "id": "life-skills",
       "name": "Life Skills",
-      "units": []
+      "units": [
+        {
+          "id": "life-skills-main",
+          "name": "Life Skills",
+          "presentations": [
+            {
+              "id": "presentation-01",
+              "name": "Presentation 1",
+              "url": "/life-skills/presentations/presentation-01/"
+            },
+            {
+              "id": "presentation-02",
+              "name": "Presentation 2",
+              "url": "/life-skills/presentations/presentation-02/"
+            },
+            {
+              "id": "presentation-03",
+              "name": "Presentation 3",
+              "url": "/life-skills/presentations/presentation-03/"
+            },
+            {
+              "id": "presentation-04",
+              "name": "Presentation 4",
+              "url": "/life-skills/presentations/presentation-04/"
+            },
+            {
+              "id": "presentation-05",
+              "name": "Presentation 5",
+              "url": "/life-skills/presentations/presentation-05/"
+            },
+            {
+              "id": "presentation-32",
+              "name": "Presentation 32",
+              "url": "/life-skills/presentations/presentation-32/"
+            }
+          ]
+        }
+      ]
     }
   ]
 }

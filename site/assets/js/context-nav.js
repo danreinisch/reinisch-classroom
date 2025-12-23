@@ -6,7 +6,7 @@
  */
 
 (function () {
-  'use strict';
+  "use strict";
 
   // State
   let currentSection = null;
@@ -15,6 +15,14 @@
    * Initialize context navigation
    */
   function initContextNav() {
+    // Feature flag: Disable context nav by default (PR 312)
+    // The left-side app-shell navigation now provides comprehensive navigation
+    const CONTEXT_NAV_ENABLED = false;
+
+    if (!CONTEXT_NAV_ENABLED) {
+      return;
+    }
+
     // Check if context nav should be enabled for this page
     if (!shouldEnableContextNav()) {
       return;
@@ -23,17 +31,17 @@
     // Detect current section
     currentSection = detectSection();
     if (!currentSection) {
-      console.log('[context-nav] No section detected for this page');
+      console.log("[context-nav] No section detected for this page");
       return;
     }
 
-    console.log('[context-nav] Initializing for section:', currentSection);
+    console.log("[context-nav] Initializing for section:", currentSection);
 
     // Create and inject context nav UI
     createContextNavUI();
 
     // Add body class for layout adjustment
-    document.body.classList.add('has-context-nav');
+    document.body.classList.add("has-context-nav");
 
     // Setup event handlers
     setupEventHandlers();
@@ -47,21 +55,21 @@
    */
   function shouldEnableContextNav() {
     const path = window.location.pathname;
-    
+
     // Enable for these paths
     const enablePaths = [
-      '/language-arts/',
-      '/life-skills/',
-      '/language-arts/toolkit/',
-      '/math-toolkit/',
-      '/language-arts/a-door-into-time/',
-      '/language-arts/lost-in-kragdon-ah/',
-      '/language-arts/return-from-kragdon-ah/',
-      '/language-arts/warrior-of-kragdon-ah/',
-      '/language-arts/assignment-hub/'
+      "/language-arts/",
+      "/life-skills/",
+      "/language-arts/toolkit/",
+      "/math-toolkit/",
+      "/language-arts/a-door-into-time/",
+      "/language-arts/lost-in-kragdon-ah/",
+      "/language-arts/return-from-kragdon-ah/",
+      "/language-arts/warrior-of-kragdon-ah/",
+      "/language-arts/assignment-hub/",
     ];
 
-    return enablePaths.some(p => path.startsWith(p));
+    return enablePaths.some((p) => path.startsWith(p));
   }
 
   /**
@@ -70,32 +78,32 @@
   function detectSection() {
     const path = window.location.pathname;
 
-    if (path.startsWith('/language-arts/toolkit/')) {
-      return 'language-arts-toolkit';
+    if (path.startsWith("/language-arts/toolkit/")) {
+      return "language-arts-toolkit";
     }
-    if (path.startsWith('/language-arts/a-door-into-time/')) {
-      return 'language-arts-adit';
+    if (path.startsWith("/language-arts/a-door-into-time/")) {
+      return "language-arts-adit";
     }
-    if (path.startsWith('/language-arts/lost-in-kragdon-ah/')) {
-      return 'language-arts-lik';
+    if (path.startsWith("/language-arts/lost-in-kragdon-ah/")) {
+      return "language-arts-lik";
     }
-    if (path.startsWith('/language-arts/return-from-kragdon-ah/')) {
-      return 'language-arts-rfk';
+    if (path.startsWith("/language-arts/return-from-kragdon-ah/")) {
+      return "language-arts-rfk";
     }
-    if (path.startsWith('/language-arts/warrior-of-kragdon-ah/')) {
-      return 'language-arts-wok';
+    if (path.startsWith("/language-arts/warrior-of-kragdon-ah/")) {
+      return "language-arts-wok";
     }
-    if (path.startsWith('/language-arts/assignment-hub/')) {
-      return 'language-arts-ah';
+    if (path.startsWith("/language-arts/assignment-hub/")) {
+      return "language-arts-ah";
     }
-    if (path.startsWith('/language-arts/')) {
-      return 'language-arts';
+    if (path.startsWith("/language-arts/")) {
+      return "language-arts";
     }
-    if (path.startsWith('/life-skills/')) {
-      return 'life-skills';
+    if (path.startsWith("/life-skills/")) {
+      return "life-skills";
     }
-    if (path.startsWith('/math-toolkit/')) {
-      return 'math-toolkit';
+    if (path.startsWith("/math-toolkit/")) {
+      return "math-toolkit";
     }
 
     return null;
@@ -105,9 +113,9 @@
    * Create context nav UI structure
    */
   function createContextNavUI() {
-    const rail = document.createElement('nav');
-    rail.className = 'context-nav-rail';
-    rail.setAttribute('aria-label', 'Context navigation');
+    const rail = document.createElement("nav");
+    rail.className = "context-nav-rail";
+    rail.setAttribute("aria-label", "Context navigation");
 
     rail.innerHTML = `
       <div class="context-nav-header">
@@ -122,9 +130,9 @@
     document.body.appendChild(rail);
 
     // Create mobile toggle button
-    const toggle = document.createElement('button');
-    toggle.className = 'context-nav-toggle';
-    toggle.setAttribute('aria-label', 'Toggle context navigation');
+    const toggle = document.createElement("button");
+    toggle.className = "context-nav-toggle";
+    toggle.setAttribute("aria-label", "Toggle context navigation");
     toggle.innerHTML = '<span class="context-nav-toggle-icon">☰</span>';
     document.body.appendChild(toggle);
   }
@@ -133,47 +141,47 @@
    * Setup event handlers
    */
   function setupEventHandlers() {
-    const rail = document.querySelector('.context-nav-rail');
-    const toggle = document.querySelector('.context-nav-toggle');
+    const rail = document.querySelector(".context-nav-rail");
+    const toggle = document.querySelector(".context-nav-toggle");
 
     if (!rail) return;
 
     // Mobile toggle handler
     if (toggle) {
-      toggle.addEventListener('click', () => {
-        rail.classList.toggle('open');
+      toggle.addEventListener("click", () => {
+        rail.classList.toggle("open");
       });
     }
 
     // Close on outside click (mobile)
-    document.addEventListener('click', (e) => {
+    document.addEventListener("click", (e) => {
       if (window.innerWidth > 1024) return;
-      
+
       if (!rail.contains(e.target) && (!toggle || !toggle.contains(e.target))) {
-        rail.classList.remove('open');
+        rail.classList.remove("open");
       }
     });
 
     // Handle item clicks (delegate to content area)
-    rail.addEventListener('click', (e) => {
-      const item = e.target.closest('.context-nav-item');
+    rail.addEventListener("click", (e) => {
+      const item = e.target.closest(".context-nav-item");
       if (!item) return;
 
       const srcPath = item.dataset.src;
       if (!srcPath) {
-        console.warn('[context-nav] Item has no src path');
+        console.warn("[context-nav] Item has no src path");
         return;
       }
 
       // Use canonical viewer launch pattern via open-in-viewer.js helper
-      if (typeof window.openInViewer === 'function') {
+      if (typeof window.openInViewer === "function") {
         const returnUrl = window.location.pathname + window.location.search;
-        window.openInViewer(srcPath, { 
+        window.openInViewer(srcPath, {
           return: returnUrl,
-          title: item.dataset.title || ''
+          title: item.dataset.title || "",
         });
       } else {
-        console.error('[context-nav] openInViewer not available');
+        console.error("[context-nav] openInViewer not available");
       }
     });
   }
@@ -183,23 +191,23 @@
    */
   async function loadContextData() {
     try {
-      if (currentSection === 'language-arts') {
+      if (currentSection === "language-arts") {
         await loadLanguageArtsUnits();
-      } else if (currentSection.startsWith('language-arts-')) {
+      } else if (currentSection.startsWith("language-arts-")) {
         // Specific unit page
         await loadLanguageArtsUnit(currentSection);
-      } else if (currentSection === 'life-skills') {
+      } else if (currentSection === "life-skills") {
         await loadLifeSkillsPresentations();
-      } else if (currentSection === 'language-arts-toolkit') {
+      } else if (currentSection === "language-arts-toolkit") {
         await loadLanguageArtsToolkit();
-      } else if (currentSection === 'math-toolkit') {
+      } else if (currentSection === "math-toolkit") {
         await loadMathToolkit();
       } else {
-        renderEmpty('No navigation items available');
+        renderEmpty("No navigation items available");
       }
     } catch (err) {
-      console.error('[context-nav] Error loading data:', err);
-      renderEmpty('Failed to load navigation');
+      console.error("[context-nav] Error loading data:", err);
+      renderEmpty("Failed to load navigation");
     }
   }
 
@@ -209,25 +217,25 @@
   async function loadLanguageArtsUnits() {
     const units = [
       {
-        id: 'adit',
-        name: 'A Door Into Time',
-        path: '/language-arts/a-door-into-time/'
+        id: "adit",
+        name: "A Door Into Time",
+        path: "/language-arts/a-door-into-time/",
       },
       {
-        id: 'lik',
-        name: 'Lost in Kragdon-Ah',
-        path: '/language-arts/lost-in-kragdon-ah/'
+        id: "lik",
+        name: "Lost in Kragdon-Ah",
+        path: "/language-arts/lost-in-kragdon-ah/",
       },
       {
-        id: 'rfk',
-        name: 'Return from Kragdon-Ah',
-        path: '/language-arts/return-from-kragdon-ah/'
+        id: "rfk",
+        name: "Return from Kragdon-Ah",
+        path: "/language-arts/return-from-kragdon-ah/",
       },
       {
-        id: 'wok',
-        name: 'Warrior of Kragdon-Ah',
-        path: '/language-arts/warrior-of-kragdon-ah/'
-      }
+        id: "wok",
+        name: "Warrior of Kragdon-Ah",
+        path: "/language-arts/warrior-of-kragdon-ah/",
+      },
     ];
 
     renderUnitsOverview(units);
@@ -239,11 +247,11 @@
   async function loadLanguageArtsUnit(_section) {
     // Try to load from unit grid data or parse from page
     const presentations = await extractPresentationsFromPage();
-    
+
     if (presentations && presentations.length > 0) {
       renderPresentations(presentations);
     } else {
-      renderEmpty('No presentations available');
+      renderEmpty("No presentations available");
     }
   }
 
@@ -252,23 +260,24 @@
    */
   async function extractPresentationsFromPage() {
     // Wait a bit for unit-grid.js to populate the page
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 500));
 
     const presentations = [];
-    
+
     // Try multiple selectors to find the grid element
-    const gridElement = document.querySelector('section.grid#grid') || 
-                        document.getElementById('grid') ||
-                        document.querySelector('.grid');
-    
+    const gridElement =
+      document.querySelector("section.grid#grid") ||
+      document.getElementById("grid") ||
+      document.querySelector(".grid");
+
     if (!gridElement) {
-      console.log('[context-nav] No grid element found');
+      console.log("[context-nav] No grid element found");
       return presentations;
     }
 
     // Look for presentation cards/links - prioritize enabled cards with links
-    const cards = gridElement.querySelectorAll('.card:not(.disabled)');
-    
+    const cards = gridElement.querySelectorAll(".card:not(.disabled)");
+
     cards.forEach((card) => {
       // Extract src from data-src attribute or href
       let srcPath = card.dataset.src;
@@ -276,30 +285,30 @@
         // Parse the href to extract the src parameter from viewer URL
         try {
           const url = new URL(card.href, window.location.origin);
-          srcPath = url.searchParams.get('src');
+          srcPath = url.searchParams.get("src");
         } catch (e) {
           // If URL parsing fails, try direct href if it starts with /
-          const hrefAttr = card.getAttribute('href');
-          if (hrefAttr?.startsWith('/')) {
+          const hrefAttr = card.getAttribute("href");
+          if (hrefAttr?.startsWith("/")) {
             srcPath = hrefAttr;
           }
         }
       }
-      
+
       // Extract title from .t element or card text
-      const titleEl = card.querySelector('.t, .title');
-      const title = titleEl?.textContent?.trim() || 'Untitled';
-      
-      if (srcPath && srcPath.startsWith('/')) {
+      const titleEl = card.querySelector(".t, .title");
+      const title = titleEl?.textContent?.trim() || "Untitled";
+
+      if (srcPath && srcPath.startsWith("/")) {
         presentations.push({
           id: presentations.length + 1,
           name: title,
-          src: srcPath
+          src: srcPath,
         });
       }
     });
 
-    console.log('[context-nav] Extracted', presentations.length, 'presentations from page');
+    console.log("[context-nav] Extracted", presentations.length, "presentations from page");
     return presentations;
   }
 
@@ -308,11 +317,11 @@
    */
   async function loadLifeSkillsPresentations() {
     const presentations = await extractPresentationsFromPage();
-    
+
     if (presentations && presentations.length > 0) {
       renderPresentations(presentations);
     } else {
-      renderEmpty('No presentations available');
+      renderEmpty("No presentations available");
     }
   }
 
@@ -321,11 +330,11 @@
    */
   async function loadLanguageArtsToolkit() {
     const presentations = await extractPresentationsFromPage();
-    
+
     if (presentations && presentations.length > 0) {
-      renderPresentations(presentations, 'Toolkit Modules');
+      renderPresentations(presentations, "Toolkit Modules");
     } else {
-      renderEmpty('No toolkit modules available');
+      renderEmpty("No toolkit modules available");
     }
   }
 
@@ -334,36 +343,36 @@
    */
   async function loadMathToolkit() {
     // Wait for math-toolkit-loader.js to populate modules
-    await new Promise(resolve => setTimeout(resolve, 800));
+    await new Promise((resolve) => setTimeout(resolve, 800));
 
     const modules = [];
-    const modulesContainer = document.getElementById('modules');
-    
+    const modulesContainer = document.getElementById("modules");
+
     if (!modulesContainer) {
-      renderEmpty('No modules available');
+      renderEmpty("No modules available");
       return;
     }
 
     // Look for module cards
-    const cards = modulesContainer.querySelectorAll('.card-link');
-    
+    const cards = modulesContainer.querySelectorAll(".card-link");
+
     cards.forEach((link) => {
-      const title = link.querySelector('.desc')?.textContent?.trim() || 'Untitled Module';
-      const href = link.getAttribute('href');
-      
-      if (href && href.startsWith('/')) {
+      const title = link.querySelector(".desc")?.textContent?.trim() || "Untitled Module";
+      const href = link.getAttribute("href");
+
+      if (href && href.startsWith("/")) {
         modules.push({
           id: modules.length + 1,
           name: title,
-          src: href
+          src: href,
         });
       }
     });
 
     if (modules.length > 0) {
-      renderPresentations(modules, 'Math Modules');
+      renderPresentations(modules, "Math Modules");
     } else {
-      renderEmpty('No modules available yet');
+      renderEmpty("No modules available yet");
     }
   }
 
@@ -371,25 +380,25 @@
    * Render units overview (for language arts index)
    */
   function renderUnitsOverview(units) {
-    const content = document.querySelector('.context-nav-content');
+    const content = document.querySelector(".context-nav-content");
     if (!content) return;
 
-    content.innerHTML = '';
+    content.innerHTML = "";
 
-    const section = document.createElement('div');
-    section.className = 'context-nav-section';
+    const section = document.createElement("div");
+    section.className = "context-nav-section";
 
-    const title = document.createElement('div');
-    title.className = 'context-nav-section-title';
-    title.textContent = 'Books';
+    const title = document.createElement("div");
+    title.className = "context-nav-section-title";
+    title.textContent = "Books";
     section.appendChild(title);
 
-    const items = document.createElement('div');
-    items.className = 'context-nav-items';
+    const items = document.createElement("div");
+    items.className = "context-nav-items";
 
-    units.forEach(unit => {
-      const link = document.createElement('a');
-      link.className = 'context-nav-item';
+    units.forEach((unit) => {
+      const link = document.createElement("a");
+      link.className = "context-nav-item";
       link.href = unit.path;
       link.innerHTML = `
         <span class="context-nav-item-icon">📚</span>
@@ -405,26 +414,26 @@
   /**
    * Render presentations/modules list
    */
-  function renderPresentations(presentations, sectionTitle = 'Presentations') {
-    const content = document.querySelector('.context-nav-content');
+  function renderPresentations(presentations, sectionTitle = "Presentations") {
+    const content = document.querySelector(".context-nav-content");
     if (!content) return;
 
-    content.innerHTML = '';
+    content.innerHTML = "";
 
-    const section = document.createElement('div');
-    section.className = 'context-nav-section';
+    const section = document.createElement("div");
+    section.className = "context-nav-section";
 
-    const title = document.createElement('div');
-    title.className = 'context-nav-section-title';
+    const title = document.createElement("div");
+    title.className = "context-nav-section-title";
     title.textContent = sectionTitle;
     section.appendChild(title);
 
-    const items = document.createElement('div');
-    items.className = 'context-nav-items';
+    const items = document.createElement("div");
+    items.className = "context-nav-items";
 
-    presentations.forEach(pres => {
-      const item = document.createElement('button');
-      item.className = 'context-nav-item';
+    presentations.forEach((pres) => {
+      const item = document.createElement("button");
+      item.className = "context-nav-item";
       item.dataset.src = pres.src;
       item.dataset.title = pres.name;
       item.innerHTML = `
@@ -442,7 +451,7 @@
    * Render empty state
    */
   function renderEmpty(message) {
-    const content = document.querySelector('.context-nav-content');
+    const content = document.querySelector(".context-nav-content");
     if (!content) return;
 
     content.innerHTML = `
@@ -454,7 +463,7 @@
    * Escape HTML to prevent XSS
    */
   function escapeHtml(text) {
-    const div = document.createElement('div');
+    const div = document.createElement("div");
     div.textContent = text;
     return div.innerHTML;
   }
@@ -464,12 +473,12 @@
    */
   window.ContextNav = {
     init: initContextNav,
-    refresh: loadContextData
+    refresh: loadContextData,
   };
 
   // Auto-initialize when DOM is ready
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initContextNav);
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initContextNav);
   } else {
     initContextNav();
   }
