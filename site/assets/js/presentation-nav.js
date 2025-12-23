@@ -270,7 +270,7 @@
     // Try to load presentations manifest
     let manifest = null;
     try {
-      const response = await fetch('/site/assets/data/presentations.json');
+      const response = await fetch('/assets/data/presentations.json');
       if (response.ok) {
         manifest = await response.json();
       }
