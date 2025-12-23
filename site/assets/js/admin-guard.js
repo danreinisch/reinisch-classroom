@@ -62,10 +62,17 @@
   // PR 308: Check if accessing admin or admin-login areas
   // Handle both /admin/ and /site/admin/ paths (for local testing vs production)
   const path = window.location.pathname;
-  const isAdminPage = path === '/admin' || path.startsWith('/admin/') ||
-                      path === '/site/admin' || path.startsWith('/site/admin/');
-  const isAdminLogin = path === '/admin-login' || path.startsWith('/admin-login/') ||
-                       path === '/site/admin-login' || path.startsWith('/site/admin-login/');
+  
+  /**
+   * Check if path matches admin area (handles production and test paths)
+   */
+  function matchesPath(basePath) {
+    return path === basePath || path.startsWith(basePath + '/') ||
+           path === '/site' + basePath || path.startsWith('/site' + basePath + '/');
+  }
+  
+  const isAdminPage = matchesPath('/admin');
+  const isAdminLogin = matchesPath('/admin-login');
   
   // PR 308: Block students from both admin and admin-login areas
   if (authResult.role === 'student' && (isAdminPage || isAdminLogin)) {

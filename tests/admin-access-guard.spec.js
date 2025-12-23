@@ -24,8 +24,13 @@ test.describe('Admin Access Guard - Unauthenticated Users', () => {
     // Navigate to admin without authentication
     await page.goto(ADMIN_PATH);
     
-    // Wait for client-side redirect
-    await page.waitForTimeout(1000);
+    // Wait for client-side redirect to complete
+    await page.waitForFunction(() => {
+      return window.location.pathname.includes('admin-login');
+    }, { timeout: 5000 }).catch(() => {
+      // If redirect doesn't happen, that's okay for local testing
+    });
+    
     await page.waitForLoadState('networkidle');
     
     // Should be redirected to admin-login by client-side guard
@@ -67,8 +72,13 @@ test.describe('Admin Access Guard - Student Users', () => {
     // Try to navigate to admin
     await page.goto(ADMIN_PATH);
     
-    // Wait for client-side redirect
-    await page.waitForTimeout(1000);
+    // Wait for client-side redirect to complete
+    await page.waitForFunction(() => {
+      return !window.location.pathname.includes('admin');
+    }, { timeout: 5000 }).catch(() => {
+      // If no redirect, that's okay for this test
+    });
+    
     await page.waitForLoadState('networkidle');
     
     // Should be redirected to home (blocked by client-side guard)
@@ -90,8 +100,13 @@ test.describe('Admin Access Guard - Student Users', () => {
     // Try to navigate to admin-login
     await page.goto(ADMIN_LOGIN_PATH);
     
-    // Wait for client-side redirect
-    await page.waitForTimeout(1000);
+    // Wait for client-side redirect to complete
+    await page.waitForFunction(() => {
+      return !window.location.pathname.includes('admin-login');
+    }, { timeout: 5000 }).catch(() => {
+      // If no redirect, that's okay for this test
+    });
+    
     await page.waitForLoadState('networkidle');
     
     // Should be redirected to home (blocked by client-side guard)
@@ -114,11 +129,15 @@ test.describe('Admin Access Guard - Student Users', () => {
     await page.reload();
     await page.waitForLoadState('networkidle');
     
-    // Wait for app shell to initialize
-    await page.waitForTimeout(1000);
+    // Wait for app shell to initialize and auth state to update
+    await page.waitForFunction(() => {
+      const rail = document.querySelector('.app-shell-rail');
+      return rail !== null;
+    }, { timeout: 5000 });
     
     // Admin link should be hidden or not present
-    const adminLink = page.locator('a[href="/admin/"][data-admin-only]');
+    // Check for admin link with flexible href matching (handles both /admin/ and /site/admin/)
+    const adminLink = page.locator('a[data-admin-only]');
     
     // Check if element exists and is hidden
     const count = await adminLink.count();
@@ -146,11 +165,15 @@ test.describe('Admin Access Guard - Admin Users', () => {
     await page.reload();
     await page.waitForLoadState('networkidle');
     
-    // Wait for app shell to initialize
-    await page.waitForTimeout(1000);
+    // Wait for app shell to initialize and auth state to update
+    await page.waitForFunction(() => {
+      const rail = document.querySelector('.app-shell-rail');
+      return rail !== null;
+    }, { timeout: 5000 });
     
     // Admin link should be visible (not hidden)
-    const adminLink = page.locator('a[href="/admin/"][data-admin-only]');
+    // Use data-admin-only attribute without href restriction for flexibility
+    const adminLink = page.locator('a[data-admin-only]');
     
     // Link should exist
     await expect(adminLink).toBeAttached({ timeout: 5000 });
@@ -180,8 +203,13 @@ test.describe('Admin Access Guard - Return URL Handling', () => {
     const targetPath = '/site/admin/?test=1';
     await page.goto(targetPath);
     
-    // Wait for client-side redirect
-    await page.waitForTimeout(1000);
+    // Wait for client-side redirect to complete
+    await page.waitForFunction(() => {
+      return window.location.pathname.includes('admin-login');
+    }, { timeout: 5000 }).catch(() => {
+      // If redirect doesn't happen, that's okay for local testing
+    });
+    
     await page.waitForLoadState('networkidle');
     
     // Should be redirected to admin-login with return parameter (client-side guard adds this)
