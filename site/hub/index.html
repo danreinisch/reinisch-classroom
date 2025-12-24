@@ -2898,7 +2898,6 @@
       }
 
       // Student Manager UI module - dual-path loader with fallback (A.2.3)
-      // Attempts /web/ paths first, then falls back to /site/web/ paths
       // Tracks all attempts for diagnostics
       const loadStudentManagerAttempts = [];
       let StudentManagerUI;
@@ -2991,16 +2990,12 @@
         window.StudentManagerUI = StudentManagerUI;
         console.log(LOG_PREFIX, "Student Manager UI loaded from /web/ path");
       } else {
-        // Fallback to /site/web/ path
-        console.warn(LOG_PREFIX, "Primary path failed, trying fallback /site/web/ path...");
 
-        const fallbackAttempt = await attemptModuleLoad("/site/web/student-manager-ui.js");
         loadStudentManagerAttempts.push(fallbackAttempt);
 
         if (fallbackAttempt.ok) {
           StudentManagerUI = fallbackAttempt.module;
           window.StudentManagerUI = StudentManagerUI;
-          console.log(LOG_PREFIX, "Student Manager UI loaded from /site/web/ fallback path");
         } else {
           console.error(LOG_PREFIX, "All Student Manager module load attempts failed");
           failedModules.push("student-manager-ui.js");
@@ -3082,15 +3077,13 @@
 
       /**
        * Phase 2: Helper to compute student portal base path
-       * Supports both /site/student/ and /student/ deployments
        * @param {string} code - Student code
        * @param {string} [name] - Optional student name
        * @returns {string} Full student portal URL with auto-login params
        */
       function getStudentPortalURL(code, name = null) {
-        // Detect if we're in a /site/ deployment by checking current pathname
         const currentPath = window.location.pathname;
-        const basePath = currentPath.includes("/site/") ? "/site/student/" : "/student/";
+        const basePath = "/student/";
 
         // Build URL with auto-login parameters
         let url = `${basePath}?auto=1&code=${encodeURIComponent(code)}`;

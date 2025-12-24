@@ -300,22 +300,6 @@
   }
 
   // Add an Admin link at top-right on home page
-  function addAdminLink() {
-    const p = location.pathname.replace(/index\.html$/i, '');
-    const isRootHome = (p === '/' || p === '');
-    const isSubSiteHome = (p === '/site/' || p === '/site');
-    if (!isRootHome && !isSubSiteHome) return;
-    // Check for existing Admin link by class or by href="/admin/"
-    if (document.querySelector('.admin-link')) return;
-    if (document.querySelector('a[href="/admin/"]')) return;
-
-    const a = document.createElement('a');
-    a.className = 'admin-link';
-    a.href = '/admin/';
-    a.textContent = 'Admin';
-    a.setAttribute('aria-label', 'Open Admin Uploader');
-    document.body.appendChild(a);
-  }
 
   /**
    * Make "Classroom Hub" links role-aware
@@ -368,9 +352,6 @@
 
     // Then, inject the quick links if they’re missing
     addHomeQuickLinks();
-
-    addAdminLink();
-    
     // Make "Classroom Hub" links role-aware (route students to /student/)
     makeClassroomHubLinksRoleAware();
   }
@@ -389,27 +370,30 @@
   
   function loadAppShell() {
     // Check if already loaded
-    if (document.querySelector('link[href*="app-shell.css"]')) {
-      return;
+    if (!document.querySelector('link[rel="stylesheet"][href="/assets/css/app-shell.css"]')) {
+          if (document.querySelector('link[href*="app-shell.css"]')) {
+            return;
+          }
+                // Load CSS with error handling
+          const css = document.createElement('link');
+          css.rel = 'stylesheet';
+          css.href = '/assets/css/app-shell.css';
+          css.onerror = () => {
+            console.warn('[site.js] Failed to load app-shell.css');
+          };
+          document.head.appendChild(css);
     }
 
-    // Load CSS with error handling
-    const css = document.createElement('link');
-    css.rel = 'stylesheet';
-    css.href = '/assets/css/app-shell.css';
-    css.onerror = () => {
-      console.warn('[site.js] Failed to load app-shell.css');
-    };
-    document.head.appendChild(css);
-
     // Load JS with error handling
-    const script = document.createElement('script');
-    script.src = '/assets/js/app-shell.js';
-    script.defer = true;
-    script.onerror = () => {
-      console.warn('[site.js] Failed to load app-shell.js');
-    };
-    document.head.appendChild(script);
+    if (!document.querySelector('script[src="/assets/js/app-shell.js"]')) {
+          const script = document.createElement('script');
+          script.src = '/assets/js/app-shell.js';
+          script.defer = true;
+          script.onerror = () => {
+            console.warn('[site.js] Failed to load app-shell.js');
+          };
+          document.head.appendChild(script);
+    }
 
     console.log('[site.js] App shell loaded');
     

@@ -1,33 +1,35 @@
-/**
- * Site Assets Loader
- * Dynamically loads site.css and site.js based on current path
- * Replaces inline asset loading scripts for CSP compliance
- */
+(()=>{'use strict';
 
-(function(){
-  'use strict';
-  
-  // Determine root: if path contains "/site/", assets live under that; else assets are at root
-  const root = location.pathname.indexOf('/site/') >= 0 
-    ? location.pathname.slice(0, location.pathname.indexOf('/site/') + 6) 
-    : '/';
-  
-  function addCSS(href) { 
-    const link = document.createElement('link'); 
-    link.rel = 'stylesheet'; 
-    link.href = href; 
-    document.head.appendChild(link); 
-  }
-  
-  function addJS(src) { 
-    const script = document.createElement('script'); 
-    script.defer = true; 
-    script.src = src; 
-    document.head.appendChild(script); 
-  }
-  
-  addCSS(root + 'assets/css/site.css');
-  addJS(root + 'assets/js/site.js');
-  
-  console.log('[site-assets] Loaded from:', root);
+  // CSP-compliant dynamic asset loader for site shell.
+  // Always use root-only /assets paths (no /site root detection).
+  const CSS_HREF='/assets/css/site.css';
+  const JS_SRC='/assets/js/site.js';
+
+  const ensureCssLoaded=(href)=>{
+    // avoid duplicates
+    const links=[...document.querySelectorAll('link[rel="stylesheet"]')];
+    if(links.some(l=>(l.getAttribute('href')||'')===href)) return;
+
+    const link=document.createElement('link');
+    link.rel='stylesheet';
+    link.href=href;
+    document.head.appendChild(link);
+  };
+
+  const ensureJsLoaded=(src)=>{
+    // avoid duplicates
+    const scripts=[...document.querySelectorAll('script[src]')];
+    if(scripts.some(s=>(s.getAttribute('src')||'')===src)) return;
+
+    const script=document.createElement('script');
+    script.src=src;
+    // keep CSP compliance: no inline code, no dynamic eval
+    // (type/module left unspecified to match server-delivered asset)
+    document.head.appendChild(script);
+  };
+
+  // Load required assets
+  ensureCssLoaded(CSS_HREF);
+  ensureJsLoaded(JS_SRC);
+
 })();
