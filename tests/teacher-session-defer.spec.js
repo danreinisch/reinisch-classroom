@@ -4,9 +4,9 @@ import { test, expect } from "@playwright/test";
  * Teacher Session Check Test
  *
  * Validates that:
- * 1. Visiting /hub/ DOES trigger teacher-session call automatically to detect existing sessions
+ * 1. Teacher-session check is deferred until a teacher/admin action is taken
  * 2. 401 response is handled gracefully (logged at debug level, no error banner)
- * 3. Valid session shows resume banner
+ * 3. Valid session shows resume banner when teacher action is taken
  * 4. Teacher login continues to work correctly
  */
 
@@ -19,7 +19,7 @@ async function dismissSignInModal(page) {
 }
 
 test.describe("Teacher Session Check", () => {
-  test("should call teacher-session on initial Hub load", async ({ page }) => {
+  test("should NOT call teacher-session on initial Hub load", async ({ page }) => {
     let teacherSessionCalled = false;
 
     // Intercept teacher-session calls
@@ -51,14 +51,14 @@ test.describe("Teacher Session Check", () => {
     // Navigate to hub
     await page.goto("/hub/");
 
-    // Wait a moment for session check
+    // Wait a moment to ensure no automatic call fired
     await page.waitForTimeout(1000);
 
-    // Verify teacher-session WAS called on page load
-    expect(teacherSessionCalled).toBe(true);
+    // Verify teacher-session was NOT called on page load
+    expect(teacherSessionCalled).toBe(false);
   });
 
-  test("should NOT call teacher-session again when Teacher button is clicked if already checked", async ({ page }) => {
+  test("should call teacher-session when Teacher button is clicked", async ({ page }) => {
     let teacherSessionCallCount = 0;
 
     // Intercept teacher-session calls
@@ -93,20 +93,13 @@ test.describe("Teacher Session Check", () => {
     // Close sign-in modal if it appears
     await dismissSignInModal(page);
 
-    // Wait for initial session check
-    await page.waitForTimeout(500);
-
-    // Verify session was called once on page load
-    expect(teacherSessionCallCount).toBe(1);
-
     // Click Teacher button
     await page.click("#btnTeacher");
 
     // Wait a moment
     await page.waitForTimeout(500);
 
-    // Verify session was still only called once (not called again)
-    // Since no valid session exists, the login modal should be shown instead
+    // Verify session was called once after clicking Teacher
     expect(teacherSessionCallCount).toBe(1);
   });
 
@@ -167,7 +160,6 @@ test.describe("Teacher Session Check", () => {
     expect(errorBanner).toBe(0);
 
     // Verify 401 was NOT logged as error (should be debug level)
-    // NOTE: Since session check happens on page load now, we might see it in logs but not as error
     const errorLogs = consoleLogs.filter((log) => log.type === "error" && log.text.includes("Session check") && log.text.includes("401"));
     expect(errorLogs.length).toBe(0);
   });
@@ -204,6 +196,9 @@ test.describe("Teacher Session Check", () => {
 
     // Close sign-in modal if it appears
     await dismissSignInModal(page);
+
+    // Trigger teacher-session check
+    await page.click("#btnTeacher");
 
     // Wait for session check
     await page.waitForTimeout(1000);
