@@ -3681,6 +3681,8 @@
       }
 
       on("#btnTeacher", "click", async () => {
+        await checkTeacherSession();
+
         // If there's a pending session from the banner, show the banner again
         if (pendingTeacherSession) {
           const banner = qs("#teacherResumeBanner");
@@ -3712,6 +3714,8 @@
 
       // TC-3.1: Home page teacher button - same as main teacher button
       on("#btnHomeTeacher", "click", async () => {
+        await checkTeacherSession();
+
         // If there's a pending session from the banner, show the banner again
         if (pendingTeacherSession) {
           const banner = qs("#teacherResumeBanner");
@@ -3843,26 +3847,13 @@
       });
 
       // Initialize: Check auth and show sign-in modal if needed
-      // Check for prior teacher session on page load (PR 267)
-      // Shows resume banner instead of auto-entering teacher center
-      checkTeacherSession()
-        .then(() => {
-          // TC-3A: Mark auth check as complete for init gate
-          if (typeof window.markAuthCheckComplete === "function") {
-            window.markAuthCheckComplete();
-          }
-          // After checking teacher session, show sign-in modal if needed
-          checkAndShowSignIn();
-        })
-        .catch((err) => {
-          console.debug(LOG_PREFIX, "Teacher session check failed:", err);
-          // TC-3A: Mark auth check as complete even on error
-          if (typeof window.markAuthCheckComplete === "function") {
-            window.markAuthCheckComplete();
-          }
-          // Still show sign-in modal on error
-          checkAndShowSignIn();
-        });
+      // Teacher-session check is deferred to explicit teacher/admin actions to avoid unnecessary 401s
+      // for users who never open teacher/admin features
+      checkAndShowSignIn().finally(() => {
+        if (typeof window.markAuthCheckComplete === "function") {
+          window.markAuthCheckComplete();
+        }
+      });
 
       // Run production asset self-check
       checkCriticalAssets().catch((err) => {

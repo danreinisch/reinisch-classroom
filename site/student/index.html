@@ -5,32 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Reinisch Classroom - Student Portal</title>
     
-    <!-- Auto-login handler (PR 315) - Must load early to set session before main scripts -->
-    <script>
-      (function() {
-        'use strict';
-        
-        try {
-          // Parse URL parameters
-          const urlParams = new URLSearchParams(window.location.search);
-          const auto = urlParams.get('auto');
-          const urlCode = urlParams.get('code');
-          
-          // Check for valid deep-link handoff from hub
-          if (auto === '1' && urlCode && urlCode.trim().length > 0) {
-            console.log('[auto-login] Valid deep-link detected:', urlCode.trim());
-            
-            // Set session storage for main init to pick up
-            sessionStorage.setItem('rc_user_code', urlCode.trim());
-            sessionStorage.setItem('rc_user_role', 'student');
-            
-            console.log('[auto-login] Session set, dashboard will load');
-          }
-        } catch (err) {
-          console.error('[auto-login] Error:', err);
-        }
-      })();
-    </script>
+    <!-- Auto-login handler (PR 315) - Loads early with defer -->
+    <script defer src="/assets/js/student-auto-login.js"></script>
     
     <!-- Emerald Dashboard Theme -->
     <link rel="stylesheet" href="/assets/css/rc-emerald-dashboard-theme.css" />
@@ -281,8 +257,6 @@
       }
     </style>
     
-    <!-- Global App Shell CSS -->
-    <link rel="stylesheet" href="/assets/css/app-shell.css" />
   </head>
   <body>
     <!-- Login View -->
@@ -419,7 +393,7 @@
     </div>
     
     <!-- Student Portal Initialization -->
-    <script src="/web/student-portal-init.js"></script>
+    <script defer src="/web/student-portal-init.js"></script>
     
     <!-- Global App Shell JS -->
     <script defer src="/assets/js/app-shell.js"></script>
