@@ -3077,13 +3077,11 @@
 
       /**
        * Phase 2: Helper to compute student portal base path
-       * Supports both /site/student/ and /student/ deployments
        * @param {string} code - Student code
        * @param {string} [name] - Optional student name
        * @returns {string} Full student portal URL with auto-login params
        */
       function getStudentPortalURL(code, name = null) {
-        // Detect if we're in a /site/ deployment by checking current pathname
         const currentPath = window.location.pathname;
         const basePath = "/student/";
 
