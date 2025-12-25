@@ -183,4 +183,150 @@ test.describe("Teacher Entry - No Student Manager", () => {
     const hubWrap = page.locator(".hub-wrap");
     await expect(hubWrap).toBeVisible();
   });
+
+  test("should NOT show role chooser modal on entry=teacher", async ({ page }) => {
+    // Mock endpoints
+    await page.route("**/.netlify/functions/student-roster", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          students: [],
+          source: "mock",
+        }),
+      });
+    });
+
+    await page.route("**/.netlify/functions/teacher-session", async (route) => {
+      await route.fulfill({
+        status: 401,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: false,
+          error: "No active session",
+        }),
+      });
+    });
+
+    // Navigate with entry=teacher
+    await page.goto("/hub/?entry=teacher");
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(1500);
+
+    // Verify the role chooser modal is NOT visible
+    const signInModal = page.locator("#signInModal");
+    const roleChooserVisible = await signInModal.isVisible().catch(() => false);
+    expect(roleChooserVisible).toBe(false);
+
+    // Verify teacher login modal IS visible
+    const teachModal = page.locator("#teachModal");
+    const teacherModalVisible = await teachModal.isVisible().catch(() => false);
+    expect(teacherModalVisible).toBe(true);
+  });
+
+  test("should have Admin button in hub rail", async ({ page }) => {
+    // Mock endpoints
+    await page.route("**/.netlify/functions/student-roster", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          students: [],
+          source: "mock",
+        }),
+      });
+    });
+
+    await page.route("**/.netlify/functions/teacher-session", async (route) => {
+      await route.fulfill({
+        status: 401,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: false,
+          error: "No active session",
+        }),
+      });
+    });
+
+    // Navigate to hub
+    await page.goto("/hub/");
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(1000);
+
+    // Admin button should exist in the rail with correct href and title
+    const adminButton = page.locator('a[href="/admin/"][title="Admin"]');
+    await expect(adminButton).toHaveCount(1);
+    await expect(adminButton).toHaveAttribute("href", "/admin/");
+    await expect(adminButton).toHaveAttribute("title", "Admin");
+    
+    // Verify the button text
+    await expect(adminButton).toContainText("Admin");
+  });
+
+  test("should NOT default to Student Portal tab on entry=teacher", async ({ page }) => {
+    // Mock endpoints
+    await page.route("**/.netlify/functions/student-roster", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          students: [],
+          source: "mock",
+        }),
+      });
+    });
+
+    // Mock successful teacher login
+    await page.route("**/.netlify/functions/teacher-login", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          code: "teacher1",
+        }),
+      });
+    });
+
+    await page.route("**/.netlify/functions/teacher-session", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          session: { code: "teacher1" },
+        }),
+      });
+    });
+
+    // Navigate with entry=teacher
+    await page.goto("/hub/?entry=teacher");
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(1000);
+
+    // Perform teacher login
+    await page.fill("#teachUser", "testuser");
+    await page.fill("#teachPass", "testpass");
+    await page.click("#teachGo");
+    
+    // Wait for login to complete and view to show
+    await page.waitForTimeout(2000);
+
+    // Verify the active tab is NOT Student Portal
+    const activeSubmenuLink = page.locator("#submenu a.active");
+    const activeTabText = await activeSubmenuLink.textContent();
+    
+    // The active tab should NOT contain "Student Portal"
+    expect(activeTabText).not.toContain("Student Portal");
+    
+    // It should be IEP Progress or another tab (anything but Student Portal)
+    // Verify that Student Portal tab content is not displayed
+    const studentPortalTab = page.locator('.ttab[data-tab="studentPortal"]');
+    const isStudentPortalVisible = await studentPortalTab.isVisible().catch(() => false);
+    expect(isStudentPortalVisible).toBe(false);
+  });
 });
+

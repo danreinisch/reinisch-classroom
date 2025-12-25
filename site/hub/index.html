@@ -586,6 +586,9 @@
             </button>
             <button class="hub-rail-item" data-area="work" title="Work" aria-label="Work">Work</button>
             <button class="hub-rail-item" data-area="data" title="Data" aria-label="Data">Data</button>
+            <a href="/admin/" class="hub-rail-item" title="Admin" aria-label="Admin" style="text-decoration: none;">
+              Admin
+            </a>
           </aside>
 
           <aside class="hub-menu rc-card">
@@ -3162,6 +3165,22 @@
       // Show sign-in modal on first visit if not authenticated
       async function checkAndShowSignIn() {
         const auth = getAuth();
+        
+        // Check if entry=teacher parameter is present
+        const urlParams = new URLSearchParams(window.location.search);
+        const isTeacherEntry = urlParams.get('entry') === 'teacher';
+        
+        // If entry=teacher, show teacher login modal directly (no role chooser)
+        if (isTeacherEntry && !auth && !pendingTeacherSession) {
+          const teachModal = qs("#teachModal");
+          if (teachModal) {
+            teachModal.classList.add("show");
+            const userInput = qs("#teachUser");
+            if (userInput) userInput.focus();
+          }
+          return;
+        }
+        
         // Don't show sign-in modal if there's a pending teacher session
         if (!auth && !pendingTeacherSession) {
           // Show role chooser modal as unauth landing
@@ -3920,16 +3939,27 @@
         const titleMap = { overview: "Overview", work: "Work", data: "Data" };
         qs("#submenuTitle").textContent = titleMap[area] || area;
 
+        // Check if entry=teacher to skip Student Portal tab
+        const urlParams = new URLSearchParams(window.location.search);
+        const isTeacherEntry = urlParams.get('entry') === 'teacher';
+        
+        // Determine which tab should be active by default
+        let defaultTabIndex = 0;
+        if (isTeacherEntry && area === "overview" && items.length > 0) {
+          // Skip Student Portal (first item) on teacher entry, use second item if available
+          defaultTabIndex = items.length > 1 ? 1 : 0;
+        }
+
         submenu.innerHTML = items
           .map(
             (item, idx) =>
-              `<a href="#" class="${idx === 0 ? "active" : ""}" data-tab="${item.tab}">${item.icon} ${item.label}</a>`
+              `<a href="#" class="${idx === defaultTabIndex ? "active" : ""}" data-tab="${item.tab}">${item.icon} ${item.label}</a>`
           )
           .join("");
 
-        // Activate first tab in area
+        // Activate default tab in area
         if (items.length > 0) {
-          switchTab(items[0].tab);
+          switchTab(items[defaultTabIndex].tab);
         }
       }
 
