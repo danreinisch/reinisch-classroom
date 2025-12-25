@@ -6,6 +6,11 @@
 (function () {
   'use strict';
 
+  // Debug logger helpers - fall back to console if DebugLogger not available
+  const debugLog = (...args) => window.DebugLogger?.log(...args);
+  const debugWarn = (...args) => window.DebugLogger?.warn(...args);
+  const debugError = console.error.bind(console); // Always log errors
+
   // Constants
   const DEEP_LINK_CHECK_INTERVAL = 500; // ms
   const DEEP_LINK_TIMEOUT = 5000; // ms
@@ -104,7 +109,7 @@
           link.id = file.id;
         }
         document.head.appendChild(link);
-        console.log('[app-shell] Injected theme CSS:', file.href);
+        debugLog('[app-shell] Injected theme CSS:', file.href);
       }
     });
   }
@@ -300,7 +305,7 @@
 
       return true;
     } catch (err) {
-      console.error('[app-shell] Error checking auth:', err);
+      debugError('[app-shell] Error checking auth:', err);
       return false;
     }
   }
@@ -309,7 +314,7 @@
    * Handle authentication required
    */
   function handleAuthRequired(role) {
-    console.log('[app-shell] Auth required for role:', role);
+    debugLog('[app-shell] Auth required for role:', role);
     
     if (role === 'teacher') {
       // Navigate to hub with entry parameter to auto-open teacher login
@@ -327,7 +332,7 @@
    * P0.2: Role-aware logout - only calls appropriate endpoints based on current page/role
    */
   async function handleSignOut() {
-    console.log('[app-shell] Sign out requested - clearing all sessions');
+    debugLog('[app-shell] Sign out requested - clearing all sessions');
 
     try {
       // Clear local auth immediately
@@ -376,7 +381,7 @@
       // P0.2: Student pages do NOT call any teacher/admin/substitute endpoints
       // They only clear local storage (already done above)
       
-      console.log(`[app-shell] Calling ${logoutPromises.length} role-appropriate logout endpoint(s)`);
+      debugLog(`[app-shell] Calling ${logoutPromises.length} role-appropriate logout endpoint(s)`);
 
       // Wait for all logout attempts (but don't block on errors)
       if (logoutPromises.length > 0) {
@@ -386,7 +391,7 @@
       // Redirect to home
       window.location.href = '/';
     } catch (err) {
-      console.error('[app-shell] Error during sign out:', err);
+      debugError('[app-shell] Error during sign out:', err);
       // Still redirect on error
       window.location.href = '/';
     }
@@ -432,7 +437,7 @@
         status.innerHTML = `<span>Signed in as ${roleLabel}</span>`;
       }
     } catch (err) {
-      console.error('[app-shell] Error updating auth state:', err);
+      debugError('[app-shell] Error updating auth state:', err);
     }
   }
 
@@ -452,13 +457,13 @@
         document.exitFullscreen().catch(() => {});
       }
       
-      console.log('[app-shell] Exited presentation mode');
+      debugLog('[app-shell] Exited presentation mode');
     } else {
       // Enter presentation mode
       document.body.classList.add('presentation-mode');
       localStorage.setItem('presentation-mode', 'true');
       
-      console.log('[app-shell] Entered presentation mode');
+      debugLog('[app-shell] Entered presentation mode');
     }
     
     // Dispatch event for other components to react
@@ -475,7 +480,7 @@
     
     if (elem.requestFullscreen) {
       elem.requestFullscreen().catch((err) => {
-        console.warn('[app-shell] Could not enter fullscreen:', err);
+        debugWarn('[app-shell] Could not enter fullscreen:', err);
       });
     }
   }
@@ -498,12 +503,12 @@
       const response = await fetch('/assets/content/lessons-index.json');
       if (response.ok) {
         lessonsData = await response.json();
-        console.log('[app-shell] Loaded lessons data');
+        debugLog('[app-shell] Loaded lessons data');
       } else {
-        console.warn('[app-shell] Failed to load lessons data:', response.status);
+        debugWarn('[app-shell] Failed to load lessons data:', response.status);
       }
     } catch (err) {
-      console.warn('[app-shell] Error loading lessons data:', err);
+      debugWarn('[app-shell] Error loading lessons data:', err);
     }
   }
 
@@ -733,7 +738,7 @@
     // Close navigator
     closeLessonsNavigator();
 
-    console.log('[app-shell] Opened presentation:', url);
+    debugLog('[app-shell] Opened presentation:', url);
   }
 
   /**
@@ -775,7 +780,7 @@
       window.ScrollLockCleanup.schedule();
     }
 
-    console.log('[app-shell] Closed presentation viewer');
+    debugLog('[app-shell] Closed presentation viewer');
   }
 
   /**
