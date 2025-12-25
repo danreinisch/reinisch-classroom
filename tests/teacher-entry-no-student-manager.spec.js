@@ -255,10 +255,11 @@ test.describe("Teacher Entry - No Student Manager", () => {
     await page.waitForLoadState("networkidle");
     await page.waitForTimeout(1000);
 
-    // Admin button should exist in the rail with correct href
-    const adminButton = page.locator('.hub-rail a.hub-rail-item[href="/admin/"]');
+    // Admin button should exist in the rail with correct href and title
+    const adminButton = page.locator('a[href="/admin/"][title="Admin"]');
     await expect(adminButton).toHaveCount(1);
     await expect(adminButton).toHaveAttribute("href", "/admin/");
+    await expect(adminButton).toHaveAttribute("title", "Admin");
     
     // Verify the button text
     await expect(adminButton).toContainText("Admin");
