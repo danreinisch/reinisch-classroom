@@ -7,6 +7,11 @@
 (function () {
   'use strict';
 
+  // Debug logger helpers - fall back to console if DebugLogger not available
+  const debugLog = (...args) => window.DebugLogger?.log(...args);
+  const debugWarn = (...args) => window.DebugLogger?.warn(...args);
+  const debugError = console.error.bind(console); // Always log errors
+
   const LOG_PREFIX = '[hub-gate]';
   
   // DOM selectors
@@ -37,7 +42,7 @@
 
       return true;
     } catch (err) {
-      console.error(LOG_PREFIX, 'Error checking auth:', err);
+      debugError(LOG_PREFIX, 'Error checking auth:', err);
       return false;
     }
   }
@@ -62,14 +67,14 @@
       // Phase 302C: 401 is expected when no session exists - not an error
       // Treat all non-200 responses (including 401) as no valid session
       if (response.status === 401) {
-        console.log(LOG_PREFIX, 'No active teacher session (401 - expected)');
+        debugLog(LOG_PREFIX, 'No active teacher session (401 - expected)');
       }
 
       return false;
     } catch (err) {
       // Phase 302C: Network error or endpoint unavailable - treat as no session
       // Don't log as error, just warn - this keeps UI clean when backend is down
-      console.warn(LOG_PREFIX, 'Could not check pending session:', err.message);
+      debugWarn(LOG_PREFIX, 'Could not check pending session:', err.message);
       return false;
     }
   }
@@ -79,7 +84,7 @@
    * Phase 302C: Added defensive null-checks for optional DOM nodes
    */
   function showGate() {
-    console.log(LOG_PREFIX, 'Showing login gate');
+    debugLog(LOG_PREFIX, 'Showing login gate');
 
     // Phase 302C: Defensive - Hide teacher view if present
     const teacherView = document.querySelector(SELECTORS.TEACHER_VIEW);
@@ -118,7 +123,7 @@
     // Phase 2: Guard - check if panel already exists
     const existingPanel = document.getElementById('hubGatePanel');
     if (existingPanel) {
-      console.log(LOG_PREFIX, 'Gate panel already exists, returning existing panel');
+      debugLog(LOG_PREFIX, 'Gate panel already exists, returning existing panel');
       return existingPanel;
     }
 
@@ -313,12 +318,12 @@
    * Phase 2: Added guard to prevent multiple active modals
    */
   function handleTeacherGateClick() {
-    console.log(LOG_PREFIX, 'Teacher gate clicked - triggering login');
+    debugLog(LOG_PREFIX, 'Teacher gate clicked - triggering login');
 
     // Phase 2: Guard - check if any modal is already active
     const activeModal = document.querySelector('.modal-backdrop.show');
     if (activeModal) {
-      console.log(LOG_PREFIX, 'Modal already active, not opening another');
+      debugLog(LOG_PREFIX, 'Modal already active, not opening another');
       return;
     }
 
@@ -335,7 +340,7 @@
       }
     } else {
       // Phase 302C: Defensive - Log warning but don't throw error
-      console.warn(LOG_PREFIX, 'Teacher modal not found - hub may not be fully initialized');
+      debugWarn(LOG_PREFIX, 'Teacher modal not found - hub may not be fully initialized');
     }
   }
 
@@ -358,13 +363,13 @@
    * Phase 302C: Added defensive null-check
    */
   function showResumeBanner() {
-    console.log(LOG_PREFIX, 'Showing resume banner');
+    debugLog(LOG_PREFIX, 'Showing resume banner');
     const banner = document.querySelector(SELECTORS.RESUME_BANNER);
     if (banner) {
       banner.style.display = 'block';
     } else {
       // Phase 302C: Defensive - Banner may not exist on all pages
-      console.log(LOG_PREFIX, 'Resume banner element not found (expected on some pages)');
+      debugLog(LOG_PREFIX, 'Resume banner element not found (expected on some pages)');
     }
   }
 
@@ -372,7 +377,7 @@
    * Initialize hub gating
    */
   async function initHubGate() {
-    console.log(LOG_PREFIX, 'Initializing hub gate');
+    debugLog(LOG_PREFIX, 'Initializing hub gate');
 
     // Check if user has valid local auth
     const hasLocalAuth = hasValidTeacherSession();
@@ -380,7 +385,7 @@
     if (hasLocalAuth) {
       // User has valid local auth - they're already logged in
       // Don't show gate, let hub load normally
-      console.log(LOG_PREFIX, 'Valid local auth found - skipping gate');
+      debugLog(LOG_PREFIX, 'Valid local auth found - skipping gate');
       return;
     }
 
@@ -390,7 +395,7 @@
 
     if (entry === 'teacher') {
       // Auto-open teacher login modal
-      console.log(LOG_PREFIX, 'Entry parameter detected - auto-opening teacher login');
+      debugLog(LOG_PREFIX, 'Entry parameter detected - auto-opening teacher login');
       // Wait a bit for DOM to be ready
       setTimeout(() => {
         const teachModal = document.querySelector(SELECTORS.TEACH_MODAL);
@@ -412,13 +417,13 @@
     if (hasPendingSession) {
       // User has server session but no local auth
       // Show resume banner instead of gate
-      console.log(LOG_PREFIX, 'Pending server session found - showing resume banner');
+      debugLog(LOG_PREFIX, 'Pending server session found - showing resume banner');
       showResumeBanner();
       // Still show gate as primary view
       showGate();
     } else {
       // No auth at all - show gate
-      console.log(LOG_PREFIX, 'No auth found - showing gate');
+      debugLog(LOG_PREFIX, 'No auth found - showing gate');
       showGate();
     }
   }
@@ -434,7 +439,7 @@
 
   // Listen for successful teacher login
   window.addEventListener('teacher:login-success', () => {
-    console.log(LOG_PREFIX, 'Teacher login success detected - hiding gate');
+    debugLog(LOG_PREFIX, 'Teacher login success detected - hiding gate');
     hideGate();
     // PR 310: Ensure scroll-lock is cleaned up after login (uses shared utility)
     if (window.ScrollLockCleanup) {
