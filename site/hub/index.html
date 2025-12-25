@@ -3541,12 +3541,26 @@
             showTeacher();
 
             // Restore last area/tab if available
+            // PR1: Override stale lastArea when entry=teacher (always default to Overview)
             setTimeout(() => {
-              const lastArea = localStorage.getItem("rc_last_area");
-              if (lastArea) {
-                const iconRailBtn = qs(`.hub-rail button[data-area="${lastArea}"]`);
-                if (iconRailBtn && typeof window.renderSubmenu === "function") {
-                  iconRailBtn.click();
+              const urlParams = new URLSearchParams(window.location.search);
+              const isTeacherEntry = urlParams.get('entry') === 'teacher';
+              
+              if (isTeacherEntry) {
+                // Teacher entry: Always default to Overview tab, ignore stale lastArea
+                console.log(LOG_PREFIX, "Teacher entry detected - defaulting to Overview (ignoring lastArea)");
+                const overviewBtn = qs('.hub-rail button[data-area="overview"]');
+                if (overviewBtn && typeof window.renderSubmenu === "function") {
+                  overviewBtn.click();
+                }
+              } else {
+                // Normal flow: Restore last area if available
+                const lastArea = localStorage.getItem("rc_last_area");
+                if (lastArea) {
+                  const iconRailBtn = qs(`.hub-rail button[data-area="${lastArea}"]`);
+                  if (iconRailBtn && typeof window.renderSubmenu === "function") {
+                    iconRailBtn.click();
+                  }
                 }
               }
             }, 100);
@@ -3676,12 +3690,26 @@
         }
 
         // Restore last area/tab
+        // PR1: Override stale lastArea when entry=teacher (always default to Overview)
         setTimeout(() => {
-          const lastArea = localStorage.getItem("rc_last_area");
-          if (lastArea) {
-            const iconRailBtn = qs(`.hub-rail button[data-area="${lastArea}"]`);
-            if (iconRailBtn && typeof window.renderSubmenu === "function") {
-              iconRailBtn.click();
+          const urlParams = new URLSearchParams(window.location.search);
+          const isTeacherEntry = urlParams.get('entry') === 'teacher';
+          
+          if (isTeacherEntry) {
+            // Teacher entry: Always default to Overview tab, ignore stale lastArea
+            console.log(LOG_PREFIX, "Teacher entry detected on resume - defaulting to Overview (ignoring lastArea)");
+            const overviewBtn = qs('.hub-rail button[data-area="overview"]');
+            if (overviewBtn && typeof window.renderSubmenu === "function") {
+              overviewBtn.click();
+            }
+          } else {
+            // Normal flow: Restore last area if available
+            const lastArea = localStorage.getItem("rc_last_area");
+            if (lastArea) {
+              const iconRailBtn = qs(`.hub-rail button[data-area="${lastArea}"]`);
+              if (iconRailBtn && typeof window.renderSubmenu === "function") {
+                iconRailBtn.click();
+              }
             }
           }
         }, 100);
