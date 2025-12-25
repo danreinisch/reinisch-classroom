@@ -4,7 +4,7 @@
     try{
       const r = await fetch('/.netlify/functions/admin-session-check', { cache:'no-store', credentials:'same-origin' });
       if (!r.ok) {
-        const data = await r.json().catch(() => ({}));
+        const data = await r.json().catch(() => ({ code: null }));
         
         // If admin not configured, redirect to not-configured page
         if (data.code === 'ADMIN_NOT_CONFIGURED' || r.status === 503) {

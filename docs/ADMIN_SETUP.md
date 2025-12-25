@@ -13,7 +13,7 @@ The following environment variables must be set in Netlify:
 ### `ADMIN_SESSION_SECRET`
 - **Description:** A secret key used to sign session cookies
 - **Format:** Random string of at least 32 characters
-- **Example:** `your-very-secure-random-32-char-secret-key-here-12345`
+- **Example:** `DO-NOT-USE-THIS-EXAMPLE-USE-openssl-rand-base64-32`
 - **Generation:** Use a secure random generator like `openssl rand -base64 32`
 
 ### `ADMIN_USER`
