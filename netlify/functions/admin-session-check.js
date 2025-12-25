@@ -12,7 +12,15 @@ const COOKIE_NAME_LEGACY = 'rc_admin_session';
 exports.handler = async (event) => {
   try {
     const secret = (process.env.ADMIN_SESSION_SECRET || '').trim();
-    if (!secret) return json(503, { ok: false, message: 'Admin not configured' });
+    if (!secret) {
+      // Return a more informative response for not configured state
+      return json(503, { 
+        ok: false, 
+        code: 'ADMIN_NOT_CONFIGURED',
+        message: 'Admin not configured - missing ADMIN_SESSION_SECRET',
+        redirect: '/admin-not-configured/'
+      });
+    }
 
     const cookieHeader = event.headers.cookie || event.headers.Cookie || '';
 
