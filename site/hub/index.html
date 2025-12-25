@@ -2897,8 +2897,18 @@
         failedModules.push("diagnostics.js");
       }
 
+      // Check for entry parameter to determine if Student Manager should load
+      const urlParams = new URLSearchParams(window.location.search);
+      const entryParam = urlParams.get('entry');
+      const isTeacherEntry = entryParam === 'teacher';
+      
+      if (isTeacherEntry) {
+        console.log(LOG_PREFIX, "Teacher entry detected - skipping Student Manager load");
+      }
+
       // Student Manager UI module - dual-path loader with fallback (A.2.3)
       // Tracks all attempts for diagnostics
+      // Skip loading if entry=teacher (teacher login should not load Student Manager)
       const loadStudentManagerAttempts = [];
       let StudentManagerUI;
 
@@ -2981,24 +2991,27 @@
         }
       }
 
-      // Try primary paths first (/web/)
-      const primaryAttempt = await attemptModuleLoad("/web/student-manager-ui.js");
-      loadStudentManagerAttempts.push(primaryAttempt);
+      // Only load Student Manager if NOT on teacher entry path
+      if (!isTeacherEntry) {
+        // Try primary paths first (/web/)
+        const primaryAttempt = await attemptModuleLoad("/web/student-manager-ui.js");
+        loadStudentManagerAttempts.push(primaryAttempt);
 
-      if (primaryAttempt.ok) {
-        StudentManagerUI = primaryAttempt.module;
-        window.StudentManagerUI = StudentManagerUI;
-        console.log(LOG_PREFIX, "Student Manager UI loaded from /web/ path");
-      } else {
-
-        loadStudentManagerAttempts.push(fallbackAttempt);
-
-        if (fallbackAttempt.ok) {
-          StudentManagerUI = fallbackAttempt.module;
+        if (primaryAttempt.ok) {
+          StudentManagerUI = primaryAttempt.module;
           window.StudentManagerUI = StudentManagerUI;
+          console.log(LOG_PREFIX, "Student Manager UI loaded from /web/ path");
         } else {
-          console.error(LOG_PREFIX, "All Student Manager module load attempts failed");
-          failedModules.push("student-manager-ui.js");
+
+          loadStudentManagerAttempts.push(fallbackAttempt);
+
+          if (fallbackAttempt.ok) {
+            StudentManagerUI = fallbackAttempt.module;
+            window.StudentManagerUI = StudentManagerUI;
+          } else {
+            console.error(LOG_PREFIX, "All Student Manager module load attempts failed");
+            failedModules.push("student-manager-ui.js");
+          }
         }
       }
 
@@ -3009,6 +3022,7 @@
       window.hubHealth.studentManager = {
         loaded: !!StudentManagerUI,
         attempts: loadStudentManagerAttempts,
+        skippedForTeacherEntry: isTeacherEntry,
       };
 
       // Log attempts table for debugging
@@ -9868,6 +9882,14 @@
       // ============================================================================
 
       async function initStudentManager() {
+        // Guard: Do not initialize Student Manager on teacher entry
+        const urlParams = new URLSearchParams(window.location.search);
+        const entryParam = urlParams.get('entry');
+        if (entryParam === 'teacher') {
+          console.log('[student-manager] Skipping initialization - teacher entry detected');
+          return;
+        }
+        
         const startTime = Date.now();
         const container = qs('.ttab[data-tab="studentManager"]');
 
