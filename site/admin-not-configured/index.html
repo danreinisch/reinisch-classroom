@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="emerald">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="robots" content="noindex"/>
+  <title>Admin Not Configured — Reinisch Classroom</title>
+  
+  <!-- Emerald Dashboard Theme -->
+  <link rel="stylesheet" href="/assets/css/rc-emerald-dashboard-theme.css"/>
+  <link rel="stylesheet" href="/assets/css/app-shell.css"/>
+  <link rel="stylesheet" href="/assets/css/app-shell-layout.css"/>
+  
+  <script src="/assets/js/section-nav.js" defer></script>
+  
+  <style>
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .wrap {
+      max-width: 700px;
+      margin: 0 auto;
+      padding: 32px;
+      background: var(--surface0, #0f1512);
+      border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+      border-radius: 14px;
+      box-shadow: var(--shadow-0, 0 12px 30px rgba(0, 0, 0, 0.45));
+    }
+    h1 {
+      margin: 0 0 16px 0;
+      color: var(--text0, #e8f1ec);
+      font-size: 28px;
+    }
+    .icon {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 193, 7, 0.15);
+      border: 2px solid rgba(255, 193, 7, 0.4);
+      border-radius: 50%;
+      color: #ffc107;
+      font-size: 32px;
+    }
+    .message {
+      color: var(--text1, #a9bbb1);
+      line-height: 1.6;
+      margin-bottom: 20px;
+    }
+    .info-box {
+      background: rgba(10, 14, 12, 0.55);
+      border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+      border-radius: var(--r-md, 14px);
+      padding: 16px;
+      margin: 20px 0;
+    }
+    .info-box h2 {
+      margin: 0 0 12px 0;
+      color: var(--text0, #e8f1ec);
+      font-size: 16px;
+      font-weight: 700;
+    }
+    .info-box ul {
+      margin: 0;
+      padding-left: 20px;
+      color: var(--text1, #a9bbb1);
+    }
+    .info-box li {
+      margin-bottom: 8px;
+    }
+    .info-box code {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: var(--mono, ui-monospace, Menlo, Consolas, monospace);
+      color: #35e08a;
+      font-size: 13px;
+    }
+    .steps {
+      background: rgba(53, 224, 138, 0.08);
+      border: 1px solid rgba(53, 224, 138, 0.2);
+      border-radius: var(--r-md, 14px);
+      padding: 16px;
+      margin: 20px 0;
+    }
+    .steps h2 {
+      margin: 0 0 12px 0;
+      color: var(--accent, #35e08a);
+      font-size: 16px;
+      font-weight: 700;
+    }
+    .steps ol {
+      margin: 0;
+      padding-left: 20px;
+      color: var(--text1, #a9bbb1);
+    }
+    .steps li {
+      margin-bottom: 8px;
+    }
+    .actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 24px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      padding: 0.65rem 1rem;
+      border-radius: var(--r-md, 14px);
+      background: var(--glass, rgba(17, 26, 21, 0.58));
+      border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+      color: var(--text0, #e8f1ec);
+      text-decoration: none;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.12s ease;
+    }
+    .btn:hover {
+      border-color: var(--border-strong, rgba(255, 255, 255, 0.14));
+      transform: translateY(-1px);
+    }
+    .btn.primary {
+      background: linear-gradient(180deg, color-mix(in oklab, var(--accent, #35e08a) 80%, transparent), color-mix(in oklab, var(--accent2, #14b86a) 80%, transparent));
+      border: 0;
+      color: #032313;
+      font-weight: 800;
+      box-shadow: 0 4px 16px var(--glow, rgba(53, 224, 138, 0.2));
+    }
+    .btn.primary:hover {
+      box-shadow: 0 6px 22px var(--glow, rgba(53, 224, 138, 0.3));
+    }
+    .context-note {
+      font-size: 13px;
+      color: var(--text1, #a9bbb1);
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="icon">⚠️</div>
+    <h1>Admin Not Configured</h1>
+    
+    <p class="message">
+      The admin uploader is currently disabled because required environment variables are not configured. 
+      This is a security feature to ensure the admin interface is only accessible when properly set up.
+    </p>
+    
+    <div class="info-box">
+      <h2>Required Environment Variables</h2>
+      <ul>
+        <li><code>ADMIN_SESSION_SECRET</code> — A random 32+ character string used to sign session cookies</li>
+        <li><code>ADMIN_USER</code> — Admin username for authentication</li>
+        <li><code>ADMIN_PASS</code> — Admin password (hashed or plain, depending on configuration)</li>
+      </ul>
+    </div>
+    
+    <div class="steps">
+      <h2>How to Configure in Netlify</h2>
+      <ol>
+        <li>Go to your Netlify site dashboard</li>
+        <li>Navigate to <strong>Site settings → Environment variables</strong></li>
+        <li>Add the required variables listed above with appropriate values</li>
+        <li>For Deploy Preview contexts, ensure variables are scoped to the correct context (Production, Deploy Preview, or Branch Deploy)</li>
+        <li>Redeploy your site for the changes to take effect</li>
+      </ol>
+    </div>
+    
+    <p class="message">
+      For detailed setup instructions, see the repository documentation or 
+      <a href="https://docs.netlify.com/environment-variables/overview/" target="_blank" rel="noopener noreferrer" style="color: var(--accent, #35e08a); text-decoration: underline;">Netlify's Environment Variables Guide</a>.
+    </p>
+    
+    <div class="actions">
+      <a href="/" class="btn primary">Go to Home</a>
+      <a href="/admin-login/" class="btn">Admin Login</a>
+    </div>
+    
+    <p class="context-note">
+      <strong>Note:</strong> If you're seeing this in a Deploy Preview, make sure your environment variables 
+      are configured for the Deploy Preview context, not just Production.
+    </p>
+  </main>
+  
+  <!-- Global App Shell JS -->
+  <script defer src="/assets/js/app-shell.js"></script>
+</body>
+</html>

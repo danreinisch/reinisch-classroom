@@ -43,6 +43,13 @@
   [headers.values]
     Cache-Control = "no-store, no-cache, must-revalidate"
 
+# Admin not configured page: prevent caching and search indexing
+[[headers]]
+  for = "/admin-not-configured/*"
+  [headers.values]
+    Cache-Control = "no-store, no-cache, must-revalidate"
+    X-Robots-Tag = "noindex"
+
 # Cache-Control for video assets: long cache with immutable
 [[headers]]
   for = "/assets/*.mp4"

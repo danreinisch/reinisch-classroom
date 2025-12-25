@@ -33,8 +33,9 @@ export default async (request, context) => {
   const url = new URL(request.url);
   const path = url.pathname;
 
-  // Allow the login page and health check without a session
+  // Allow the login page, not-configured page, and health check without a session
   if (path === '/admin-login' || path.startsWith('/admin-login/')
+      || path === '/admin-not-configured' || path.startsWith('/admin-not-configured/')
       || path === '/edge-ping') {
     return context.next();
   }
@@ -46,10 +47,10 @@ export default async (request, context) => {
     return context.next();
   }
 
-  // If ADMIN_SESSION_SECRET not configured, fail closed
+  // If ADMIN_SESSION_SECRET not configured, fail closed (redirect to not-configured page)
   const configured = !!(context.env?.ADMIN_SESSION_SECRET);
   if (!configured) {
-    return unauthorized();
+    return redirectToNotConfigured();
   }
 
   const acceptLegacy = String(context.env?.ADMIN_ACCEPT_LEGACY || 'true').toLowerCase() === 'true';
@@ -157,10 +158,24 @@ function redirectToLogin() {
   });
 }
 
+function redirectToNotConfigured() {
+  return new Response(null, {
+    status: 302,
+    headers: {
+      Location: '/admin-not-configured/',
+      'Cache-Control': 'no-store',
+      'X-Robots-Tag': 'noindex'
+    }
+  });
+}
+
 function unauthorized() {
   return new Response('Admin not configured', {
     status: 503,
-    headers: { 'Cache-Control': 'no-store' }
+    headers: { 
+      'Cache-Control': 'no-store',
+      'X-Robots-Tag': 'noindex'
+    }
   });
 }
 
