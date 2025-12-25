@@ -78,7 +78,7 @@ test.describe("Teacher Entry - No Student Manager", () => {
 
     // If modal is visible, verify it has the correct title
     if (modalVisible) {
-      const modalTitle = page.locator("#teachModal .modal-title");
+      const modalTitle = page.locator("#teachModal .card-header");
       await expect(modalTitle).toContainText(/Teacher Login|Classroom Hub/i);
     }
 
