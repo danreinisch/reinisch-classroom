@@ -3112,6 +3112,15 @@
         return url;
       }
 
+      /**
+       * PR1: Check if current request has entry=teacher parameter
+       * Extracted to avoid code duplication
+       */
+      function isTeacherEntryRequest() {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get('entry') === 'teacher';
+      }
+
       function showTeacher() {
         console.log(LOG_PREFIX, "showTeacher() called - setting teacher view to display:grid");
         const view = qs("#view-teacher");
@@ -3543,10 +3552,7 @@
             // Restore last area/tab if available
             // PR1: Override stale lastArea when entry=teacher (always default to Overview)
             setTimeout(() => {
-              const urlParams = new URLSearchParams(window.location.search);
-              const isTeacherEntry = urlParams.get('entry') === 'teacher';
-              
-              if (isTeacherEntry) {
+              if (isTeacherEntryRequest()) {
                 // Teacher entry: Always default to Overview tab, ignore stale lastArea
                 console.log(LOG_PREFIX, "Teacher entry detected - defaulting to Overview (ignoring lastArea)");
                 const overviewBtn = qs('.hub-rail button[data-area="overview"]');
@@ -3692,10 +3698,7 @@
         // Restore last area/tab
         // PR1: Override stale lastArea when entry=teacher (always default to Overview)
         setTimeout(() => {
-          const urlParams = new URLSearchParams(window.location.search);
-          const isTeacherEntry = urlParams.get('entry') === 'teacher';
-          
-          if (isTeacherEntry) {
+          if (isTeacherEntryRequest()) {
             // Teacher entry: Always default to Overview tab, ignore stale lastArea
             console.log(LOG_PREFIX, "Teacher entry detected on resume - defaulting to Overview (ignoring lastArea)");
             const overviewBtn = qs('.hub-rail button[data-area="overview"]');
