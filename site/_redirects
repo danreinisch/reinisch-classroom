@@ -18,10 +18,6 @@
 /admin             /admin/index.html         200
 /admin/*           /admin/:splat             200
 
-# Admin Login redirects
-/admin-login       /admin-login/index.html   200
-/admin-login/*     /admin-login/:splat       200
-
 # Hub redirects - map pretty paths to hub assets
 /hub               /hub/index.html           200
 /hub/*             /hub/:splat               200

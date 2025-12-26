@@ -838,6 +838,9 @@
         
         // PR fix-student-watchdog-login: Clear resume failure flag on successful login
         sessionStorage.removeItem('portal_resume_failed_at');
+        
+        // PR 335: Clear auto-login attempted flag so redirect with ?auto=1 works
+        sessionStorage.removeItem('studentAutoLoginAttempted');
 
         showMessage('Login successful! Loading your portal...', 'success');
 
