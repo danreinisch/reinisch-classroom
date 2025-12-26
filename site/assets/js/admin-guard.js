@@ -1,9 +1,10 @@
 /**
  * Admin Access Guard
- * Phase 302C: Enhanced to check rc_auth role and block student access
+ * PR 335: Admin SSO via Teacher Center
  * Blocks student accounts from accessing admin areas
  * Redirects students to home page
- * Redirects unauthenticated users to admin-login with return parameter
+ * Redirects unauthenticated users to Teacher Center
+ * Note: Server-side guard (admin-auth-guard.js edge function) enforces teacher session requirement
  */
 
 (function() {
@@ -13,11 +14,11 @@
   
   /**
    * Check rc_auth localStorage for role
-   * Phase 302C: Primary auth check using rc_auth
+   * PR 335: Primary auth check using rc_auth
    */
   function checkAuth() {
     try {
-      // Phase 302C: Check localStorage rc_auth first (primary auth storage)
+      // PR 335: Check localStorage rc_auth first (primary auth storage)
       const authStr = localStorage.getItem('rc_auth');
       if (authStr) {
         const auth = JSON.parse(authStr);
@@ -38,7 +39,7 @@
       console.error(LOG_PREFIX, 'Error parsing rc_auth:', err);
     }
     
-    // Phase 302C: Fallback to sessionStorage/localStorage for legacy compatibility
+    // PR 335: Fallback to sessionStorage/localStorage for legacy compatibility
     const LEGACY_ROLE_KEY = 'rc_user_role';
     const legacyChecks = [
       { storage: sessionStorage, label: 'sessionStorage' },
@@ -56,10 +57,10 @@
     return { role: null, expired: false };
   }
   
-  // Phase 302C: Perform auth check
+  // PR 335: Perform auth check
   const authResult = checkAuth();
   
-  // PR 308: Check if accessing admin or admin-login areas
+  // PR 335: Check if accessing admin or admin-not-configured areas
   // Handle both /admin/ and /site/admin/ paths (for local testing vs production)
   const path = window.location.pathname;
   
@@ -72,26 +73,18 @@
   }
   
   const isAdminPage = matchesPath('/admin');
-  const isAdminLogin = matchesPath('/admin-login');
   const isAdminNotConfigured = matchesPath('/admin-not-configured');
   
-  // PR 308: Block students from admin, admin-login, and admin-not-configured areas
-  if (authResult.role === 'student' && (isAdminPage || isAdminLogin || isAdminNotConfigured)) {
+  // PR 335: Block students from admin and admin-not-configured areas
+  if (authResult.role === 'student' && (isAdminPage || isAdminNotConfigured)) {
     console.warn(LOG_PREFIX, 'Student role detected, redirecting to home');
     window.location.replace('/');
     return;
   }
   
-  // Phase 302C: For admin pages (not admin-login), require authentication
-  if (isAdminPage && !authResult.role) {
-    // Phase 302C: Unauthenticated user trying to access admin - redirect to login with return URL
-    const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
-    console.log(LOG_PREFIX, 'Unauthenticated access to admin, redirecting to admin-login');
-    // PR 308: Use /site/admin-login/ for test environment compatibility
-    const loginPath = window.location.pathname.includes('/site/') ? '/site/admin-login/' : '/admin-login/';
-    window.location.replace(loginPath + '?return=' + returnUrl);
-    return;
-  }
+  // PR 335: Client-side guard defers to server-side admin-auth-guard edge function
+  // No client-side redirect needed - edge function will handle unauthenticated access
+  // This guard only blocks students from accessing admin areas
   
   console.log(LOG_PREFIX, 'Access check passed');
 })();

@@ -66,7 +66,7 @@ function redirectToHub() {
   return new Response(null, {
     status: 302,
     headers: {
-      Location: '/hub/',
+      Location: '/hub/?entry=teacher',
       'Cache-Control': 'no-store',
       'X-Robots-Tag': 'noindex'
     }
