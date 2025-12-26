@@ -126,12 +126,16 @@
     const form = document.querySelector('form');
     if (!form) return;
     
-    // Intercept form submission to handle return URL
+    // Intercept form submission to handle return URL and inline errors
     form.addEventListener('submit', async function(e) {
       e.preventDefault();
       
       const formData = new FormData(form);
       const submitButton = form.querySelector('button[type="submit"]');
+      const originalButtonText = submitButton ? submitButton.textContent.trim() : 'Sign in';
+      
+      // Clear any existing error messages
+      clearInlineError();
       
       // Disable button during submission
       if (submitButton) {
@@ -140,14 +144,22 @@
       }
       
       try {
+        // Use redirect: 'manual' to prevent fetch from auto-following redirects
+        // This allows us to inspect the 302 response and ensure cookies are set
         const response = await fetch('/.netlify/functions/admin-session', {
           method: 'POST',
           body: formData,
-          credentials: 'same-origin'
+          credentials: 'same-origin',
+          redirect: 'manual'
         });
         
-        if (response.ok) {
-          // Success - redirect to return URL or /admin/
+        // 302 redirect indicates success (cookies are set in the response)
+        // When using redirect: 'manual', successful redirects result in:
+        // - response.type === 'opaqueredirect' (spec-compliant browsers)
+        // - response.status === 0 (due to opaque response)
+        // - response.status === 302 (some implementations)
+        if (response.type === 'opaqueredirect' || response.status === 302) {
+          // Success - cookies are now set, redirect to return URL or /admin/
           const params = new URLSearchParams(window.location.search);
           const returnUrl = params.get('return');
           
@@ -167,14 +179,105 @@
           // Default redirect to /admin/
           window.location.href = '/admin/';
         } else {
-          // Error - reload page with error code
-          const errorCode = response.status === 401 ? 'invalid' : 'error';
-          window.location.href = '/admin-login/?e=' + errorCode;
+          // Error response - parse error code from response body
+          let errorCode = 'error';
+          try {
+            const data = await response.json();
+            errorCode = data.code || mapStatusToErrorCode(response.status);
+          } catch (e) {
+            // If JSON parsing fails, use status code to determine error
+            errorCode = mapStatusToErrorCode(response.status);
+          }
+          
+          showInlineError(errorCode);
+          
+          // Re-enable button
+          if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.textContent = originalButtonText;
+          }
         }
       } catch (err) {
         console.error('Admin login error:', err);
-        window.location.href = '/admin-login/?e=network';
+        showInlineError('network');
+        
+        // Re-enable button
+        if (submitButton) {
+          submitButton.disabled = false;
+          submitButton.textContent = originalButtonText;
+        }
       }
     });
+  }
+  
+  function mapStatusToErrorCode(status) {
+    if (status === 401) return 'invalid';
+    if (status === 429) return 'throttle';
+    if (status === 503) return 'cfg';
+    return 'error';
+  }
+  
+  function showInlineError(errorCode) {
+    const errorContainer = document.getElementById('errorContainer');
+    if (!errorContainer) return;
+    
+    // Remove any existing error messages
+    clearInlineError();
+    
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'error-message inline-error';
+    errorDiv.setAttribute('data-error-code', errorCode);
+    
+    // Show user-friendly error message (all messages are hardcoded, not from server)
+    let errorMessage = 'Login failed. Please try again.';
+    let isConfigError = false;
+    
+    if (errorCode === 'invalid') {
+      errorMessage = 'Invalid username or password. Please try again.';
+    } else if (errorCode === 'network') {
+      errorMessage = 'Network error. Please check your connection and try again.';
+    } else if (errorCode === 'throttle') {
+      errorMessage = 'Too many login attempts. Please wait a moment and try again.';
+    } else if (errorCode === 'cfg') {
+      isConfigError = true;
+      errorMessage = '⚠️ Configuration Required: Admin system is not configured. Please check environment variables.';
+    } else if (errorCode === 'role') {
+      errorMessage = 'Access denied. Your account does not have permission to access the admin area.';
+    } else if (errorCode === 'parse') {
+      errorMessage = 'Invalid request. Please try again.';
+    } else if (errorCode === 'rpc_error') {
+      errorMessage = 'Database error. Please try again or contact support.';
+    } else if (errorCode === 'internal') {
+      errorMessage = 'Server error. Please try again or contact support.';
+    }
+    
+    // Create error message elements safely using textContent
+    const messageDiv = document.createElement('div');
+    messageDiv.textContent = errorMessage;
+    
+    errorDiv.appendChild(messageDiv);
+    
+    // Add support text for errors that benefit from it (not configuration errors)
+    if (!isConfigError) {
+      const supportDiv = document.createElement('div');
+      supportDiv.className = 'support-text';
+      supportDiv.textContent = 'If the problem persists, contact support.';
+      errorDiv.appendChild(supportDiv);
+    }
+    
+    // Add special styling for configuration error
+    if (isConfigError) {
+      errorDiv.classList.add('error-config');
+    }
+    
+    errorContainer.appendChild(errorDiv);
+  }
+  
+  function clearInlineError() {
+    const errorContainer = document.getElementById('errorContainer');
+    if (!errorContainer) return;
+    
+    const inlineErrors = errorContainer.querySelectorAll('.inline-error');
+    inlineErrors.forEach(error => error.remove());
   }
 })();
