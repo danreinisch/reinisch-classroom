@@ -33,7 +33,8 @@ export default async (request, context) => {
   const url = new URL(request.url);
   const path = url.pathname;
 
-  // Allow the login page, not-configured page, and health check without a session
+  // Allow the login page and health check without a session
+  // Note: /admin-not-configured is kept accessible for backwards compatibility
   if (path === '/admin-login' || path.startsWith('/admin-login/')
       || path === '/admin-not-configured' || path.startsWith('/admin-not-configured/')
       || path === '/edge-ping') {
@@ -47,10 +48,11 @@ export default async (request, context) => {
     return context.next();
   }
 
-  // If ADMIN_SESSION_SECRET not configured, fail closed (redirect to not-configured page)
+  // If ADMIN_SESSION_SECRET not configured, redirect to login page
+  // The login page will display a setup-required message via admin-session-check
   const configured = !!(context.env?.ADMIN_SESSION_SECRET);
   if (!configured) {
-    return redirectToNotConfigured();
+    return redirectToLogin();
   }
 
   const acceptLegacy = String(context.env?.ADMIN_ACCEPT_LEGACY || 'true').toLowerCase() === 'true';
@@ -153,7 +155,8 @@ function redirectToLogin() {
     status: 302,
     headers: {
       Location: '/admin-login',
-      'Cache-Control': 'no-store'
+      'Cache-Control': 'no-store',
+      'X-Robots-Tag': 'noindex'
     }
   });
 }

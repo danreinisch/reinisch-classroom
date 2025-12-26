@@ -15,8 +15,63 @@
   }
   
   function init() {
+    checkAdminSetup();
     displayError();
     setupFormHandler();
+  }
+  
+  async function checkAdminSetup() {
+    try {
+      // Check if admin is configured by calling admin-session-check
+      const response = await fetch('/.netlify/functions/admin-session-check', {
+        cache: 'no-store',
+        credentials: 'same-origin'
+      });
+      
+      // If we get a 503 or ADMIN_NOT_CONFIGURED response, show setup message
+      if (response.status === 503) {
+        const data = await response.json().catch(() => ({}));
+        if (data.code === 'ADMIN_NOT_CONFIGURED') {
+          displaySetupMessage();
+        }
+      }
+    } catch (err) {
+      // Fail silently - user can still try to login
+      console.error('Error checking admin setup:', err);
+    }
+  }
+  
+  function displaySetupMessage() {
+    const errorContainer = document.getElementById('errorContainer');
+    if (!errorContainer) return;
+    
+    const setupDiv = document.createElement('div');
+    setupDiv.className = 'error-message';
+    setupDiv.style.background = 'rgba(255, 193, 7, 0.15)';
+    setupDiv.style.borderColor = 'rgba(255, 193, 7, 0.4)';
+    setupDiv.style.color = '#ffc107';
+    
+    setupDiv.innerHTML = `
+      <div style="font-weight: 700; margin-bottom: 8px;">⚠️ Admin Setup Required</div>
+      <div style="font-size: 13px;">The admin interface is not configured. Required environment variables are missing:</div>
+      <ul style="margin: 8px 0; padding-left: 20px; font-size: 12px;">
+        <li><code style="background: rgba(0,0,0,0.3); padding: 2px 4px; border-radius: 3px;">ADMIN_SESSION_SECRET</code></li>
+        <li><code style="background: rgba(0,0,0,0.3); padding: 2px 4px; border-radius: 3px;">ADMIN_USER</code></li>
+        <li><code style="background: rgba(0,0,0,0.3); padding: 2px 4px; border-radius: 3px;">ADMIN_PASS</code></li>
+      </ul>
+      <div class="support-text" style="font-size: 12px; margin-top: 8px;">
+        Configure these in <strong>Netlify → Site settings → Environment variables</strong>. See documentation for details.
+      </div>
+    `;
+    
+    errorContainer.appendChild(setupDiv);
+    
+    // Disable the form since login won't work without configuration
+    const form = document.querySelector('form');
+    if (form) {
+      const inputs = form.querySelectorAll('input, button');
+      inputs.forEach(input => input.disabled = true);
+    }
   }
   
   function displayError() {
