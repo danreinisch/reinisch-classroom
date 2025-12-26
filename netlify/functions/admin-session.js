@@ -30,7 +30,14 @@ exports.handler = async (event) => {
 
   // Redirect non-POST back to login
   if (event.httpMethod !== 'POST') {
-    return { statusCode: 302, headers: { Location: '/admin-login', 'Cache-Control': 'no-store' } };
+    return {
+      statusCode: 405,
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-store'
+      },
+      body: JSON.stringify({ ok: false, error: 'Method not allowed', code: 'method' })
+    };
   }
 
   // Check if Supabase is configured
@@ -48,7 +55,7 @@ exports.handler = async (event) => {
         'Content-Type': 'application/json',
         'Cache-Control': 'no-store'
       },
-      body: JSON.stringify({ error: 'Configuration missing', code: 'cfg' })
+      body: JSON.stringify({ ok: false, error: 'Configuration missing', code: 'cfg' })
     };
   }
 
@@ -77,7 +84,7 @@ exports.handler = async (event) => {
         'Content-Type': 'application/json',
         'Cache-Control': 'no-store'
       },
-      body: JSON.stringify({ error: 'Invalid request body', code: 'parse' })
+      body: JSON.stringify({ ok: false, error: 'Invalid request body', code: 'parse' })
     };
   }
 
@@ -89,7 +96,7 @@ exports.handler = async (event) => {
         'Content-Type': 'application/json',
         'Cache-Control': 'no-store'
       },
-      body: JSON.stringify({ error: 'Missing credentials', code: 'parse' })
+      body: JSON.stringify({ ok: false, error: 'Missing credentials', code: 'parse' })
     };
   }
 
@@ -105,7 +112,7 @@ exports.handler = async (event) => {
         'Cache-Control': 'no-store',
         'Set-Cookie': createThrottleCookie(clientIp)
       },
-      body: JSON.stringify({ error: 'Too many attempts', code: 'throttle' })
+      body: JSON.stringify({ ok: false, error: 'Too many attempts', code: 'throttle' })
     };
   }
 
@@ -135,7 +142,7 @@ exports.handler = async (event) => {
           'Content-Type': 'application/json',
           'Cache-Control': 'no-store'
         },
-        body: JSON.stringify({ error: 'Database error', code: 'rpc_error' })
+        body: JSON.stringify({ ok: false, error: 'Database error', code: 'rpc_error' })
       };
     }
 
@@ -156,7 +163,7 @@ exports.handler = async (event) => {
           'Set-Cookie': createThrottleCookie(clientIp),
           'Cache-Control': 'no-store'
         },
-        body: JSON.stringify({ error: 'Invalid credentials', code: 'invalid' })
+        body: JSON.stringify({ ok: false, error: 'Invalid credentials', code: 'invalid' })
       };
     }
 
@@ -171,7 +178,7 @@ exports.handler = async (event) => {
           'Content-Type': 'application/json',
           'Cache-Control': 'no-store'
         },
-        body: JSON.stringify({ error: 'Insufficient permissions', code: 'role' })
+        body: JSON.stringify({ ok: false, error: 'Insufficient permissions', code: 'role' })
       };
     }
 
@@ -190,14 +197,15 @@ exports.handler = async (event) => {
     );
 
     return {
-      statusCode: 302,
+      statusCode: 200,
       headers: {
-        Location: '/admin/',
+        'Content-Type': 'application/json',
         'Cache-Control': 'no-store'
       },
       multiValueHeaders: {
         'Set-Cookie': cookies
-      }
+      },
+      body: JSON.stringify({ ok: true })
     };
   } catch (e) {
     console.error('[admin-session] Error during authentication:', e.message);
@@ -208,7 +216,7 @@ exports.handler = async (event) => {
         'Content-Type': 'application/json',
         'Cache-Control': 'no-store'
       },
-      body: JSON.stringify({ error: 'Internal server error', code: 'internal' })
+      body: JSON.stringify({ ok: false, error: 'Internal server error', code: 'internal' })
     };
   }
 };

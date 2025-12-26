@@ -144,21 +144,48 @@
       }
       
       try {
-        // Use redirect: 'manual' to prevent fetch from auto-following redirects
-        // This allows us to inspect the 302 response and ensure cookies are set
+        // Send credentials as JSON
+        const username = formData.get('username');
+        const password = formData.get('password');
+        
+        // Validate both fields are present (browser required attribute should catch this, but double-check)
+        if (!username || !password) {
+          showInlineError('parse');
+          if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.textContent = originalButtonText;
+          }
+          return;
+        }
+        
         const response = await fetch('/.netlify/functions/admin-session', {
           method: 'POST',
-          body: formData,
-          credentials: 'same-origin',
-          redirect: 'manual'
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ username, password }),
+          credentials: 'include'
         });
         
-        // 302 redirect indicates success (cookies are set in the response)
-        // When using redirect: 'manual', successful redirects result in:
-        // - response.type === 'opaqueredirect' (spec-compliant browsers)
-        // - response.status === 0 (due to opaque response)
-        // - response.status === 302 (some implementations)
-        if (response.type === 'opaqueredirect' || response.status === 302) {
+        // Parse JSON response
+        let data = {};
+        try {
+          data = await response.json();
+        } catch (e) {
+          // If JSON parsing fails, log details and treat as generic error
+          console.error('[admin-login] Failed to parse response:', e);
+          console.error('[admin-login] Response status:', response.status, 'Content-Type:', response.headers.get('content-type'));
+          // Use generic error code when response is not parseable as JSON
+          showInlineError('error');
+          if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.textContent = originalButtonText;
+          }
+          return;
+        }
+        
+        // Check for success (200 with ok: true)
+        if (response.ok && data.ok === true) {
           // Success - cookies are now set, redirect to return URL or /admin/
           const params = new URLSearchParams(window.location.search);
           const returnUrl = params.get('return');
@@ -180,15 +207,7 @@
           window.location.href = '/admin/';
         } else {
           // Error response - parse error code from response body
-          let errorCode = 'error';
-          try {
-            const data = await response.json();
-            errorCode = data.code || mapStatusToErrorCode(response.status);
-          } catch (e) {
-            // If JSON parsing fails, use status code to determine error
-            errorCode = mapStatusToErrorCode(response.status);
-          }
-          
+          const errorCode = data.code || mapStatusToErrorCode(response.status);
           showInlineError(errorCode);
           
           // Re-enable button

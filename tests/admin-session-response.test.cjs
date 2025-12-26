@@ -50,18 +50,21 @@ test('Response structure uses multiValueHeaders for cookie array', () => {
   
   // This is the correct response structure
   const response = {
-    statusCode: 302,
+    statusCode: 200,
     headers: {
-      Location: '/admin/',
+      'Content-Type': 'application/json',
       'Cache-Control': 'no-store'
     },
     multiValueHeaders: {
       'Set-Cookie': cookies
-    }
+    },
+    body: JSON.stringify({ ok: true })
   };
   
-  assert.strictEqual(response.statusCode, 302, 'Should be a redirect');
-  assert.strictEqual(response.headers.Location, '/admin/', 'Should redirect to /admin/');
+  assert.strictEqual(response.statusCode, 200, 'Should return 200 OK');
+  assert.strictEqual(response.headers['Content-Type'], 'application/json', 'Should return JSON');
+  const body = JSON.parse(response.body);
+  assert.strictEqual(body.ok, true, 'Response body should indicate success');
   assert(response.multiValueHeaders, 'Should have multiValueHeaders');
   assert(response.multiValueHeaders['Set-Cookie'], 'multiValueHeaders should have Set-Cookie');
   assert(Array.isArray(response.multiValueHeaders['Set-Cookie']), 'Set-Cookie should be an array in multiValueHeaders');
