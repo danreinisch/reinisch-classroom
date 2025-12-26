@@ -578,6 +578,7 @@ qs("#btnStudentLogin").addEventListener("click", async () => {
     // (see comment in /hub/index.html for detailed explanation)
     const response = await fetch("/.netlify/functions/student-login", {
       method: "POST",
+      credentials: "include", // Include credentials for session cookies
       headers: {
         "Content-Type": "application/json",
       },

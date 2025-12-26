@@ -4,7 +4,8 @@
   async function gate(){
     try{
       // Check Teacher Center session instead of admin session
-      const r = await fetch('/.netlify/functions/teacher-session', { cache:'no-store', credentials:'same-origin' });
+      // Use 'include' for credentials to ensure cookies are sent
+      const r = await fetch('/.netlify/functions/teacher-session', { cache:'no-store', credentials:'include' });
       if (!r.ok) {
         // If Teacher Center session not valid, redirect to hub
         location.replace('/hub/');
