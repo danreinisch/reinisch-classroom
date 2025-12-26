@@ -49,6 +49,37 @@
     const urlParams = new URLSearchParams(window.location.search);
     const DEBUG_MODE = urlParams.get('debug') === '1';
     
+    // PR fix-student-watchdog-login: Check if we recently failed resume (loop prevention)
+    // This is the PRIMARY guard against infinite loops
+    try {
+      const resumeFailedAt = sessionStorage.getItem('portal_resume_failed_at');
+      if (resumeFailedAt) {
+        const failedTime = parseInt(resumeFailedAt, 10);
+        const elapsed = Date.now() - failedTime;
+        if (elapsed < 60000) { // Within last 60 seconds
+          if (DEBUG_MODE) {
+            console.log(LOG_PREFIX, `Boot watchdog disabled: resume failed ${Math.round(elapsed/1000)}s ago (loop prevention)`);
+          }
+          return;
+        } else {
+          // Expired, clear the flag
+          sessionStorage.removeItem('portal_resume_failed_at');
+        }
+      }
+    } catch (err) {
+      console.error(LOG_PREFIX, 'Failed to check resume failure flag:', err);
+    }
+    
+    // PR fix-student-watchdog-login: Check URL for reason parameter (came from watchdog redirect)
+    // Skip if already on resume failed page to avoid re-triggering
+    const reason = urlParams.get('reason');
+    if (reason === 'portal_resume_failed') {
+      if (DEBUG_MODE) {
+        console.log(LOG_PREFIX, 'Boot watchdog disabled: already on resume failed page');
+      }
+      return;
+    }
+    
     // Watchdog timeout: 8 seconds default, can be overridden with ?watchdog_ms=N
     const WATCHDOG_MS = parseInt(urlParams.get('watchdog_ms'), 10) || 8000;
     
@@ -58,12 +89,16 @@
       return;
     }
     
-    console.log(LOG_PREFIX, `Boot watchdog starting (timeout: ${WATCHDOG_MS}ms)`);
+    if (DEBUG_MODE) {
+      console.log(LOG_PREFIX, `Boot watchdog starting (timeout: ${WATCHDOG_MS}ms)`);
+    }
     
     state.bootWatchdogTimer = setTimeout(() => {
       // Skip if already redirecting
       if (state.redirectingToHub) {
-        console.log(LOG_PREFIX, 'Boot watchdog: redirect already in progress');
+        if (DEBUG_MODE) {
+          console.log(LOG_PREFIX, 'Boot watchdog: redirect already in progress');
+        }
         return;
       }
       
@@ -75,11 +110,14 @@
         dashboardView.offsetParent !== null;
       
       if (isDashboardVisible) {
-        console.log(LOG_PREFIX, 'Boot watchdog: dashboard is visible, all good');
+        if (DEBUG_MODE) {
+          console.log(LOG_PREFIX, 'Boot watchdog: dashboard is visible, all good');
+        }
         return;
       }
       
       // Dashboard is not visible - unhealthy state detected
+      // PR fix-student-watchdog-login: Single warning (watchdog fires once then redirects)
       console.warn(
         LOG_PREFIX,
         `Boot watchdog: dashboard not visible after ${WATCHDOG_MS}ms, clearing auth and redirecting to login`
@@ -90,9 +128,18 @@
         sessionStorage.removeItem('rc_user_code');
         sessionStorage.removeItem('rc_user_role');
         localStorage.removeItem('rc_auth');
-        console.log(LOG_PREFIX, 'Boot watchdog: auth cleared');
+        if (DEBUG_MODE) {
+          console.log(LOG_PREFIX, 'Boot watchdog: auth cleared');
+        }
       } catch (err) {
         console.error(LOG_PREFIX, 'Boot watchdog: failed to clear auth:', err);
+      }
+      
+      // PR fix-student-watchdog-login: Set timestamp flag to prevent loop
+      try {
+        sessionStorage.setItem('portal_resume_failed_at', Date.now().toString());
+      } catch (err) {
+        console.error(LOG_PREFIX, 'Failed to set resume failure flag:', err);
       }
       
       // Set redirect flag to prevent loops
@@ -104,6 +151,88 @@
   }
 
   // ============================================================================
+  // PR fix-student-watchdog-login: Form input preservation
+  // ============================================================================
+  // Save form inputs to sessionStorage to preserve during re-renders
+  function saveFormInputs() {
+    try {
+      const formData = {
+        studentCode: document.getElementById('studentCodeSelect')?.value || '',
+        studentPassword: document.getElementById('studentPassword')?.value || '',
+        manualCode: document.getElementById('manualStudentCode')?.value || '',
+        manualPassword: document.getElementById('manualPassword')?.value || '',
+        manualEntryVisible: document.getElementById('manualEntrySection')?.classList.contains('show') || false,
+        timestamp: Date.now()
+      };
+      sessionStorage.setItem('rc_student_form_inputs', JSON.stringify(formData));
+    } catch (err) {
+      console.error(LOG_PREFIX, 'Failed to save form inputs:', err);
+    }
+  }
+  
+  // Restore form inputs from sessionStorage
+  function restoreFormInputs() {
+    try {
+      const saved = sessionStorage.getItem('rc_student_form_inputs');
+      if (!saved) return false;
+      
+      const formData = JSON.parse(saved);
+      
+      // Only restore if saved within last 5 minutes (avoid stale data)
+      if (Date.now() - formData.timestamp > 300000) {
+        sessionStorage.removeItem('rc_student_form_inputs');
+        return false;
+      }
+      
+      // Restore dropdown form
+      const studentCodeSelect = document.getElementById('studentCodeSelect');
+      const studentPassword = document.getElementById('studentPassword');
+      if (studentCodeSelect && formData.studentCode) {
+        studentCodeSelect.value = formData.studentCode;
+      }
+      if (studentPassword && formData.studentPassword) {
+        studentPassword.value = formData.studentPassword;
+      }
+      
+      // Restore manual entry form
+      const manualCode = document.getElementById('manualStudentCode');
+      const manualPassword = document.getElementById('manualPassword');
+      if (manualCode && formData.manualCode) {
+        manualCode.value = formData.manualCode;
+      }
+      if (manualPassword && formData.manualPassword) {
+        manualPassword.value = formData.manualPassword;
+      }
+      
+      // Restore manual entry visibility
+      if (formData.manualEntryVisible) {
+        const manualSection = document.getElementById('manualEntrySection');
+        const toggleBtn = document.getElementById('btnToggleManualEntry');
+        if (manualSection) {
+          manualSection.classList.add('show');
+        }
+        if (toggleBtn) {
+          toggleBtn.textContent = 'Use dropdown instead';
+        }
+      }
+      
+      return true;
+    } catch (err) {
+      console.error(LOG_PREFIX, 'Failed to restore form inputs:', err);
+      return false;
+    }
+  }
+  
+  // Clear saved form inputs (after successful login)
+  function clearSavedFormInputs() {
+    try {
+      sessionStorage.removeItem('rc_student_form_inputs');
+    } catch (err) {
+      console.error(LOG_PREFIX, 'Failed to clear saved form inputs:', err);
+    }
+  }
+
+  // ============================================================================
   // PR student-portal-reliability: Network guardrails
   // ============================================================================
   // Block or warn about calls to teacher/admin/substitute endpoints from student pages
@@ -111,6 +240,8 @@
     if (!window.fetch) return; // No fetch API support
     
     const originalFetch = window.fetch;
+    const DEBUG_MODE = new URLSearchParams(window.location.search).get('debug') === '1';
+    
     window.fetch = function(...args) {
       const url = args[0];
       // Handle both string URLs and Request objects with robust type checking
@@ -134,11 +265,12 @@
             pathname.startsWith('/.netlify/functions/substitute-')) {
           console.error(
             LOG_PREFIX,
-            'BLOCKED: Unauthorized endpoint access attempt'
+            'BLOCKED: Unauthorized endpoint access attempt:',
+            pathname
           );
           
           // Return a rejected promise to prevent the call
-          return Promise.reject(new Error('Access denied'));
+          return Promise.reject(new Error('Access denied: Student pages cannot access privileged endpoints'));
         }
       } catch (parseErr) {
         // If URL parsing fails, fall back to substring check
@@ -149,7 +281,7 @@
             LOG_PREFIX,
             'BLOCKED: Unauthorized endpoint access attempt'
           );
-          return Promise.reject(new Error('Access denied'));
+          return Promise.reject(new Error('Access denied: Student pages cannot access privileged endpoints'));
         }
       }
       
@@ -157,13 +289,16 @@
       return originalFetch.apply(this, args);
     };
     
-    console.log(LOG_PREFIX, 'Network guardrails initialized');
+    if (DEBUG_MODE) {
+      console.log(LOG_PREFIX, 'Network guardrails initialized');
+    }
   }
 
   /**
    * Initialize the portal
    * PR 315: Handle authenticated state and show dashboard
    * PR student-portal-reliability: Added try/catch and error handling
+   * PR fix-student-watchdog-login: Handle resume failure and preserve form inputs
    */
   async function init() {
     try {
@@ -172,7 +307,39 @@
       // Initialize guardrails
       initNetworkGuardrails();
       
-      // Initialize boot watchdog
+      // PR fix-student-watchdog-login: Check for resume failure reason
+      const urlParams = new URLSearchParams(window.location.search);
+      const reason = urlParams.get('reason');
+      
+      if (reason === 'portal_resume_failed') {
+        // Resume failed - show login without starting watchdog
+        // Show one-time warning message
+        console.warn(LOG_PREFIX, 'Portal resume failed, please sign in again');
+        
+        // Clear the reason parameter from URL (don't propagate it)
+        const newUrl = window.location.pathname + window.location.hash;
+        window.history.replaceState({}, '', newUrl);
+        
+        // Show login form (watchdog won't start due to reason param check)
+        showLogin();
+        
+        // Show friendly message to user
+        showMessage('Your session could not be restored. Please sign in again.', 'info');
+        
+        // Load student roster with error handling
+        try {
+          await loadStudentRoster();
+        } catch (err) {
+          console.error(LOG_PREFIX, 'Failed to load student roster:', err);
+          // Continue - manual entry will be available
+        }
+
+        // Setup event handlers
+        setupEventHandlers();
+        return;
+      }
+      
+      // Initialize boot watchdog (will check auth state and only start if authenticated)
       initBootWatchdog();
 
       // Check if already authenticated (from auto-login or existing session)
@@ -290,6 +457,7 @@
   /**
    * Show login view
    * PR student-portal-reliability: Added null checks
+   * PR fix-student-watchdog-login: Restore form inputs if available
    * Note: Watchdog continues running to detect unhealthy states
    */
   function showLogin() {
@@ -305,6 +473,15 @@
     if (dashboardView) {
       dashboardView.classList.add('hidden');
     }
+    
+    // PR fix-student-watchdog-login: Try to restore form inputs
+    // This preserves user input during re-renders
+    setTimeout(() => {
+      const restored = restoreFormInputs();
+      if (restored) {
+        console.log(LOG_PREFIX, 'Form inputs restored from previous session');
+      }
+    }, 100); // Small delay to ensure DOM is ready
   }
 
   /**
@@ -579,9 +756,13 @@
    * Perform login
    * Phase 3: Enhanced error surfacing with clear, actionable messages
    * PR student-portal-reliability: Better Supabase unavailability handling
+   * PR fix-student-watchdog-login: Preserve inputs on error, clear on success
    */
   async function performLogin(studentCode, password) {
     console.log(LOG_PREFIX, 'Attempting login for:', studentCode);
+
+    // PR fix-student-watchdog-login: Save form inputs before login attempt
+    saveFormInputs();
 
     // Disable buttons
     const btns = document.querySelectorAll('.btn');
@@ -637,6 +818,7 @@
         
         console.error(LOG_PREFIX, 'Login failed:', response.status, errorMsg);
         showMessage(errorMsg, 'error');
+        // PR fix-student-watchdog-login: Keep form inputs on error (already saved)
         return;
       }
 
@@ -650,6 +832,12 @@
         // This ensures students must re-login after closing tab/browser
         sessionStorage.setItem('rc_user_code', studentCode);
         sessionStorage.setItem('rc_user_role', 'student');
+        
+        // PR fix-student-watchdog-login: Clear saved form inputs on success
+        clearSavedFormInputs();
+        
+        // PR fix-student-watchdog-login: Clear resume failure flag on successful login
+        sessionStorage.removeItem('portal_resume_failed_at');
 
         showMessage('Login successful! Loading your portal...', 'success');
 
@@ -665,6 +853,7 @@
         const errorMsg = data.error || 'Invalid student code or password';
         console.error(LOG_PREFIX, 'Login failed:', errorMsg);
         showMessage(errorMsg, 'error');
+        // PR fix-student-watchdog-login: Keep form inputs on error (already saved)
       }
     } catch (err) {
       // Phase 3: Enhanced network error handling
@@ -686,6 +875,7 @@
       }
       
       showMessage(errorMsg, 'error');
+      // PR fix-student-watchdog-login: Keep form inputs on error (already saved)
     } finally {
       // Re-enable buttons
       btns.forEach((btn) => (btn.disabled = false));
