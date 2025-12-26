@@ -148,6 +148,16 @@
         const username = formData.get('username');
         const password = formData.get('password');
         
+        // Validate both fields are present (browser required attribute should catch this, but double-check)
+        if (!username || !password) {
+          showInlineError('parse');
+          if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.textContent = originalButtonText;
+          }
+          return;
+        }
+        
         const response = await fetch('/.netlify/functions/admin-session', {
           method: 'POST',
           headers: {
@@ -162,8 +172,16 @@
         try {
           data = await response.json();
         } catch (e) {
-          // If JSON parsing fails, treat as error
+          // If JSON parsing fails, log details and treat as generic error
           console.error('[admin-login] Failed to parse response:', e);
+          console.error('[admin-login] Response status:', response.status, 'Content-Type:', response.headers.get('content-type'));
+          // Use generic error code when response is not parseable as JSON
+          showInlineError('error');
+          if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.textContent = originalButtonText;
+          }
+          return;
         }
         
         // Check for success (200 with ok: true)
