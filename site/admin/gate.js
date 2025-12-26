@@ -1,21 +1,20 @@
-// Server-side session gate
+// Server-side session gate - check Teacher Center session
+// PR 335: Admin SSO via Teacher Center
 (function(){
   async function gate(){
     try{
-      const r = await fetch('/.netlify/functions/admin-session-check', { cache:'no-store', credentials:'same-origin' });
+      // Check Teacher Center session instead of admin session
+      const r = await fetch('/.netlify/functions/teacher-session', { cache:'no-store', credentials:'same-origin' });
       if (!r.ok) {
-        // If admin not configured or session expired, redirect to admin-login
-        // The login page will display appropriate setup or login message
-        const returnUrl = encodeURIComponent(location.pathname + location.search);
-        location.replace('/admin-login/?return=' + returnUrl);
+        // If Teacher Center session not valid, redirect to hub
+        location.replace('/hub/');
         return;
       }
       document.getElementById('app').style.display='block';
       document.getElementById('gate').style.display='none';
     }catch{
-      // On error, redirect to admin-login with return parameter
-      const returnUrl = encodeURIComponent(location.pathname + location.search);
-      location.replace('/admin-login/?return=' + returnUrl);
+      // On error, redirect to Teacher Center
+      location.replace('/hub/');
     }
   }
   gate();

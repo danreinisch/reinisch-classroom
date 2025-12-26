@@ -3,6 +3,7 @@
  * PR 266: Session-only authentication (no localStorage remember-me)
  * Part of Guardrails Stage 3B - externalized from inline script
  * PR fix-student-watchdog-login: Skip auto-login if resume recently failed (loop prevention)
+ * PR 335: Fix double-login issue - attempt actual login on ?auto=1&code=...
  * 
  * Auto-login is allowed ONLY for:
  * 1) Same-tab session restore using sessionStorage (reload only)
@@ -43,6 +44,9 @@
       console.error('[auto-login] Failed to check resume failure flag:', err);
     }
     
+    // PR 335: Check if auto-login already attempted in this tab
+    const autoLoginAttempted = sessionStorage.getItem('studentAutoLoginAttempted');
+    
     // PR 266: Legacy cleanup - remove old localStorage auth keys
     // This ensures old clients don't persist auth across sessions
     if (localStorage.getItem('rc_auth')) {
@@ -56,27 +60,6 @@
     
     const auto = urlParams.get('auto');
     const urlCode = urlParams.get('code');
-    
-    // Check for valid deep-link handoff from hub
-    if (auto === '1' && urlCode && urlCode.trim().length > 0) {
-      console.log('[auto-login] Valid deep-link handoff detected:', urlCode.trim());
-      
-      // Set session storage for main init to pick up
-      sessionStorage.setItem('rc_user_code', urlCode.trim());
-      sessionStorage.setItem('rc_user_role', 'student');
-      
-      // Set global flag to prevent main init from showing login
-      window.__autoLoginOk = true;
-      
-      // Hide login container immediately to avoid flicker
-      const style = document.createElement('style');
-      style.id = 'auto-login-style';
-      style.textContent = '#loginView { display: none !important; }';
-      document.head.appendChild(style);
-      
-      console.log('[auto-login] Deep-link bypass enabled, dashboard will load');
-      return;
-    }
     
     // Check for existing session in sessionStorage (same-tab reload)
     const sessionRole = sessionStorage.getItem('rc_user_role');
@@ -95,6 +78,38 @@
       document.head.appendChild(style);
       
       console.log('[auto-login] Session restore enabled, dashboard will load');
+      return;
+    }
+    
+    // PR 335: Check for valid deep-link handoff from hub with auto-login
+    if (auto === '1' && urlCode && urlCode.trim().length > 0) {
+      console.log('[auto-login] Valid deep-link handoff detected:', urlCode.trim());
+      
+      // PR 335: Check if already attempted in this tab (loop prevention)
+      if (autoLoginAttempted === '1') {
+        console.log('[auto-login] Auto-login already attempted in this tab, showing login form');
+        return;
+      }
+      
+      // Mark as attempted to prevent loops
+      sessionStorage.setItem('studentAutoLoginAttempted', '1');
+      
+      // PR 335: Attempt automatic login via server
+      // We'll set sessionStorage optimistically and hide login UI
+      // The main init will validate the session
+      sessionStorage.setItem('rc_user_code', urlCode.trim());
+      sessionStorage.setItem('rc_user_role', 'student');
+      
+      // Set global flag to prevent main init from showing login
+      window.__autoLoginOk = true;
+      
+      // Hide login container immediately to avoid flicker
+      const style = document.createElement('style');
+      style.id = 'auto-login-style';
+      style.textContent = '#loginView { display: none !important; }';
+      document.head.appendChild(style);
+      
+      console.log('[auto-login] Deep-link bypass enabled, dashboard will load');
       return;
     }
     
