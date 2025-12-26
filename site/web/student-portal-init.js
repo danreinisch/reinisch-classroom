@@ -20,8 +20,13 @@
   // Constants
   const LOG_PREFIX = '[student-portal]';
   const STUDENT_PORTAL_PATH = '/student/';
-  let bootWatchdogTimer = null;
-  let dashboardHandlersAttached = false; // Prevent duplicate event listeners
+  
+  // State management
+  const state = {
+    bootWatchdogTimer: null,
+    dashboardHandlersAttached: false,
+    redirectingToHub: false,
+  };
 
   // ============================================================================
   // PR student-portal-reliability: bfcache restore hardening
@@ -55,9 +60,9 @@
     
     console.log(LOG_PREFIX, `Boot watchdog starting (timeout: ${WATCHDOG_MS}ms)`);
     
-    bootWatchdogTimer = setTimeout(() => {
-      // Skip if already redirecting (use window.__redirectingToHub for compatibility with Portal B)
-      if (window.__redirectingToHub === true) {
+    state.bootWatchdogTimer = setTimeout(() => {
+      // Skip if already redirecting
+      if (state.redirectingToHub) {
         console.log(LOG_PREFIX, 'Boot watchdog: redirect already in progress');
         return;
       }
@@ -91,7 +96,7 @@
       }
       
       // Set redirect flag to prevent loops
-      window.__redirectingToHub = true;
+      state.redirectingToHub = true;
       
       // Redirect to student portal root with reason parameter
       window.location.replace(STUDENT_PORTAL_PATH + '?reason=portal_resume_failed');
@@ -108,8 +113,15 @@
     const originalFetch = window.fetch;
     window.fetch = function(...args) {
       const url = args[0];
-      // Handle both string URLs and Request objects
-      const urlString = typeof url === 'string' ? url : (url instanceof Request ? url.url : (url?.href || ''));
+      // Handle both string URLs and Request objects with robust type checking
+      let urlString = '';
+      if (typeof url === 'string') {
+        urlString = url;
+      } else if (url instanceof Request) {
+        urlString = url.url;
+      } else if (url && typeof url === 'object' && url.href) {
+        urlString = url.href;
+      }
       
       // Parse URL to check pathname (more secure than substring check)
       try {
@@ -122,12 +134,11 @@
             pathname.startsWith('/.netlify/functions/substitute-')) {
           console.error(
             LOG_PREFIX,
-            'BLOCKED: Attempt to call privileged endpoint from student page:',
-            pathname
+            'BLOCKED: Unauthorized endpoint access attempt'
           );
           
           // Return a rejected promise to prevent the call
-          return Promise.reject(new Error('Unauthorized: Student pages cannot access teacher/admin/substitute endpoints'));
+          return Promise.reject(new Error('Access denied'));
         }
       } catch (parseErr) {
         // If URL parsing fails, fall back to substring check
@@ -136,10 +147,9 @@
             urlString.includes('/.netlify/functions/substitute-')) {
           console.error(
             LOG_PREFIX,
-            'BLOCKED: Attempt to call privileged endpoint from student page:',
-            urlString
+            'BLOCKED: Unauthorized endpoint access attempt'
           );
-          return Promise.reject(new Error('Unauthorized: Student pages cannot access teacher/admin/substitute endpoints'));
+          return Promise.reject(new Error('Access denied'));
         }
       }
       
@@ -264,6 +274,11 @@
     // Setup retry handlers
     btnRetry.addEventListener('click', () => {
       errorPanel.remove();
+      // Clear any existing watchdog timer before reinitializing
+      if (state.bootWatchdogTimer) {
+        clearTimeout(state.bootWatchdogTimer);
+        state.bootWatchdogTimer = null;
+      }
       init();
     });
     
@@ -294,14 +309,13 @@
 
   /**
    * Show dashboard view (PR 315)
-   * PR student-portal-reliability: Added null checks
-   * Note: Watchdog continues running to detect unhealthy state changes, cleared when dashboard shows
+   * PR student-portal-reliability: Added null checks and proper cleanup
    */
   function showDashboard() {
     // Clear watchdog now that dashboard is successfully showing
-    if (bootWatchdogTimer) {
-      clearTimeout(bootWatchdogTimer);
-      bootWatchdogTimer = null;
+    if (state.bootWatchdogTimer) {
+      clearTimeout(state.bootWatchdogTimer);
+      state.bootWatchdogTimer = null;
       console.log(LOG_PREFIX, 'Boot watchdog cleared - dashboard visible');
     }
     
@@ -333,7 +347,7 @@
     }
     
     // Setup event handlers only once to prevent duplicates
-    if (!dashboardHandlersAttached) {
+    if (!state.dashboardHandlersAttached) {
       if (btnLogout) {
         btnLogout.addEventListener('click', handleLogout);
       }
@@ -344,7 +358,7 @@
         });
       }
       
-      dashboardHandlersAttached = true;
+      state.dashboardHandlersAttached = true;
     }
     
     console.log(LOG_PREFIX, 'Dashboard view shown for:', studentCode);
@@ -358,9 +372,9 @@
     console.log(LOG_PREFIX, 'Logout requested');
     
     // Clear watchdog timer if active
-    if (bootWatchdogTimer) {
-      clearTimeout(bootWatchdogTimer);
-      bootWatchdogTimer = null;
+    if (state.bootWatchdogTimer) {
+      clearTimeout(state.bootWatchdogTimer);
+      state.bootWatchdogTimer = null;
     }
     
     // Clear session storage (student portal uses sessionStorage)
@@ -374,8 +388,9 @@
     localStorage.removeItem('rc_user_code');
     localStorage.removeItem('rc_user_role');
     
-    // Reset handlers flag for next login
-    dashboardHandlersAttached = false;
+    // Reset state flags for next login
+    state.dashboardHandlersAttached = false;
+    state.redirectingToHub = false;
     
     // Redirect to home page as specified in requirements
     window.location.href = '/';
