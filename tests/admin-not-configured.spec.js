@@ -36,20 +36,23 @@ test.describe('Admin Not Configured Page', () => {
     await page.goto(ADMIN_NOT_CONFIGURED_PATH);
     await page.waitForLoadState('networkidle');
     
-    // Check for ADMIN_SESSION_SECRET
+    // Check for ADMIN_SESSION_SECRET (required)
     const secretText = await page.locator('text=ADMIN_SESSION_SECRET').count();
     expect(secretText).toBeGreaterThan(0);
     
-    // Check for ADMIN_USER
+    // ADMIN_USER and ADMIN_PASS should still be mentioned as optional
     const userText = await page.locator('text=ADMIN_USER').count();
     expect(userText).toBeGreaterThan(0);
     
-    // Check for ADMIN_PASS
     const passText = await page.locator('text=ADMIN_PASS').count();
     expect(passText).toBeGreaterThan(0);
+    
+    // Verify "optional" is mentioned
+    const optionalText = await page.locator('text=optional').count();
+    expect(optionalText).toBeGreaterThan(0);
   });
 
-  test('should have navigation links to Home and Admin Login', async ({ page }) => {
+  test('should have navigation links to Home and Teacher areas', async ({ page }) => {
     await page.goto(ADMIN_NOT_CONFIGURED_PATH);
     await page.waitForLoadState('networkidle');
     
@@ -57,9 +60,13 @@ test.describe('Admin Not Configured Page', () => {
     const homeLink = page.locator('.actions a[href="/"]').filter({ hasText: 'Home' });
     await expect(homeLink).toBeVisible();
     
-    // Check for Admin Login link
-    const adminLoginLink = page.locator('a[href="/admin-login/"]').filter({ hasText: 'Admin Login' });
-    await expect(adminLoginLink).toBeVisible();
+    // Check for Teacher Center link in actions section
+    const teacherCenterLink = page.locator('.actions a[href="/hub/"]').filter({ hasText: 'Teacher Center' });
+    await expect(teacherCenterLink).toBeVisible();
+    
+    // Check for Teacher Hub link in actions section
+    const teacherHubLink = page.locator('.actions a[href="/teacher/"]').filter({ hasText: 'Teacher Hub' });
+    await expect(teacherHubLink).toBeVisible();
   });
 
   test('should display warning icon and styling', async ({ page }) => {
@@ -148,19 +155,19 @@ test.describe('Admin Not Configured Page', () => {
     expect(page.url()).toMatch(/\/$/);
   });
 
-  test('Admin Login link should navigate correctly', async ({ page }) => {
+  test('Teacher Center link should navigate correctly', async ({ page }) => {
     await page.goto(ADMIN_NOT_CONFIGURED_PATH);
     await page.waitForLoadState('networkidle');
     
-    // Click Admin Login link
-    const adminLoginLink = page.locator('a[href="/admin-login/"]').filter({ hasText: 'Admin Login' }).first();
-    await adminLoginLink.click();
+    // Click Teacher Center link in actions section
+    const teacherCenterLink = page.locator('.actions a[href="/hub/"]').filter({ hasText: 'Teacher Center' }).first();
+    await teacherCenterLink.click();
     
     // Wait for navigation
     await page.waitForLoadState('networkidle');
     
-    // Should be on admin-login page
-    expect(page.url()).toContain('/admin-login');
+    // Should be on hub page
+    expect(page.url()).toContain('/hub/');
   });
 });
 

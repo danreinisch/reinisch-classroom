@@ -73,9 +73,10 @@
   
   const isAdminPage = matchesPath('/admin');
   const isAdminLogin = matchesPath('/admin-login');
+  const isAdminNotConfigured = matchesPath('/admin-not-configured');
   
-  // PR 308: Block students from both admin and admin-login areas
-  if (authResult.role === 'student' && (isAdminPage || isAdminLogin)) {
+  // PR 308: Block students from admin, admin-login, and admin-not-configured areas
+  if (authResult.role === 'student' && (isAdminPage || isAdminLogin || isAdminNotConfigured)) {
     console.warn(LOG_PREFIX, 'Student role detected, redirecting to home');
     window.location.replace('/');
     return;

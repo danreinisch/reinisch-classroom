@@ -48,11 +48,11 @@ export default async (request, context) => {
     return context.next();
   }
 
-  // If ADMIN_SESSION_SECRET not configured, redirect to login page
-  // The login page will display a setup-required message via admin-session-check
+  // If ADMIN_SESSION_SECRET not configured, redirect to not-configured page
+  // This provides a friendly UX with clear instructions on what's missing
   const configured = !!(context.env?.ADMIN_SESSION_SECRET);
   if (!configured) {
-    return redirectToLogin();
+    return redirectToNotConfigured();
   }
 
   const acceptLegacy = String(context.env?.ADMIN_ACCEPT_LEGACY || 'true').toLowerCase() === 'true';
