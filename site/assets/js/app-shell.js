@@ -398,8 +398,53 @@
   }
 
   /**
+   * Get the current page role context based on pathname
+   * This ensures student pages always show student context, even if user has teacher auth
+   * @returns {string|null} Role string ('student', 'teacher', 'substitute', 'admin') or null
+   */
+  function getCurrentPageRole() {
+    const pathname = window.location.pathname.toLowerCase();
+    
+    // Map of path prefixes to roles (order matters - checked sequentially)
+    const pathRoleMap = [
+      { prefix: '/student', role: 'student' },
+      { prefix: '/sub', role: 'substitute' },
+      { prefix: '/admin', role: 'admin' },
+      { prefix: '/hub', role: 'teacher' },
+      { prefix: '/teacher', role: 'teacher' }
+    ];
+    
+    // Check page-based role first (highest priority)
+    for (const { prefix, role } of pathRoleMap) {
+      if (pathname.startsWith(prefix)) return role;
+    }
+    
+    // For other pages, check sessionStorage for active role (student portal uses sessionStorage)
+    try {
+      const sessionRole = sessionStorage.getItem('rc_user_role');
+      if (sessionRole) return sessionRole;
+    } catch (err) {
+      // sessionStorage not available
+    }
+    
+    // Fall back to localStorage auth
+    try {
+      const authStr = localStorage.getItem('rc_auth');
+      if (authStr) {
+        const auth = JSON.parse(authStr);
+        if (auth && auth.role) return auth.role;
+      }
+    } catch (err) {
+      // localStorage not available or invalid
+    }
+    
+    return null;
+  }
+
+  /**
    * Update auth state in UI
    * Phase 302C: Added defensive null-checks for optional UI elements
+   * PR-student-portal-fallback: Use page context for role display (no teacher bleed on student pages)
    */
   function updateAuthState() {
     const rail = document.querySelector('.app-shell-rail');
@@ -409,11 +454,17 @@
       const authStr = localStorage.getItem('rc_auth');
       const auth = authStr ? JSON.parse(authStr) : null;
       const isAuthed = auth && auth.role && auth.code && (!auth.expiresAt || Date.now() < auth.expiresAt);
+      
+      // PR-student-portal-fallback: Get role from page context (not just auth)
+      const pageRole = getCurrentPageRole();
 
       // Phase 302C: Defensive - Update sign out button visibility if present
       const signOutBtn = rail.querySelector('[data-shell-action="signout"]');
       if (signOutBtn) {
-        if (isAuthed) {
+        // Show sign out if there's any authentication (page role or auth)
+        // Note: pageRole alone means user is on a role-specific page (e.g., /student/)
+        // and should have sign out available even if rc_auth isn't set (session-only auth)
+        if (isAuthed || pageRole) {
           signOutBtn.classList.remove('app-shell-hidden');
         } else {
           signOutBtn.classList.add('app-shell-hidden');
@@ -423,7 +474,8 @@
       // Phase 302C: Defensive - Update admin link visibility if present (only for admin role)
       const adminLink = rail.querySelector('[data-admin-only]');
       if (adminLink) {
-        if (auth && auth.role === 'admin') {
+        // Only show admin link if current page role is admin (not just if user has admin auth)
+        if (pageRole === 'admin') {
           adminLink.classList.remove('app-shell-hidden');
         } else {
           adminLink.classList.add('app-shell-hidden');
@@ -431,10 +483,15 @@
       }
 
       // Phase 302C: Defensive - Update status if element present
+      // PR-student-portal-fallback: Use page role for display (prevents "Signed in as Teacher" on student pages)
       const status = rail.querySelector('[data-shell-status]');
-      if (status && isAuthed) {
-        const roleLabel = auth.role.charAt(0).toUpperCase() + auth.role.slice(1);
-        status.innerHTML = `<span>Signed in as ${roleLabel}</span>`;
+      if (status && (isAuthed || pageRole)) {
+        // Use page role if available (overrides auth role), otherwise fall back to auth role
+        const displayRole = pageRole || (auth && auth.role);
+        if (displayRole) {
+          const roleLabel = displayRole.charAt(0).toUpperCase() + displayRole.slice(1);
+          status.innerHTML = `<span>Signed in as ${roleLabel}</span>`;
+        }
       }
     } catch (err) {
       debugError('[app-shell] Error updating auth state:', err);

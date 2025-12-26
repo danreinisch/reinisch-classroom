@@ -86,16 +86,24 @@
 
   /**
    * Handle logout (PR 315)
+   * PR-student-portal-fallback: Also clear localStorage rc_auth and legacy keys
    */
   function handleLogout() {
     console.log(LOG_PREFIX, 'Logout requested');
     
-    // Clear session
+    // Clear session storage (student portal uses sessionStorage)
     sessionStorage.removeItem('rc_user_code');
     sessionStorage.removeItem('rc_user_role');
     
-    // Redirect to login page (removes auto-login params)
-    window.location.href = '/student/';
+    // PR-student-portal-fallback: Clear localStorage rc_auth (prevents role bleed from teacher/admin)
+    localStorage.removeItem('rc_auth');
+    
+    // Clear any legacy role keys that might exist
+    localStorage.removeItem('rc_user_code');
+    localStorage.removeItem('rc_user_role');
+    
+    // Redirect to home page as specified in requirements
+    window.location.href = '/';
   }
 
   /**
