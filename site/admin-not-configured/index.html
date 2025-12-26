@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="/assets/css/app-shell.css"/>
   <link rel="stylesheet" href="/assets/css/app-shell-layout.css"/>
   
+  <script src="/assets/js/admin-guard.js"></script>
   <script src="/assets/js/section-nav.js" defer></script>
   
   <style>
@@ -164,9 +165,15 @@
     <div class="info-box">
       <h2>Required Environment Variables</h2>
       <ul>
-        <li><code>ADMIN_SESSION_SECRET</code> — A random 32+ character string used to sign session cookies</li>
-        <li><code>ADMIN_USER</code> — Admin username for authentication</li>
-        <li><code>ADMIN_PASS</code> — Admin password (hashed or plain, depending on configuration)</li>
+        <li><code>ADMIN_SESSION_SECRET</code> — A random 32+ character string used to sign session cookies (required)</li>
+      </ul>
+      <p style="margin-top: 12px; color: var(--text1, #a9bbb1); font-size: 14px;">
+        <strong>Note:</strong> The admin system uses Supabase for authentication. 
+        If you need basic authentication instead, you can also configure:
+      </p>
+      <ul style="margin-top: 8px;">
+        <li><code>ADMIN_USER</code> — Admin username for basic authentication (optional)</li>
+        <li><code>ADMIN_PASS</code> — Admin password for basic authentication (optional)</li>
       </ul>
     </div>
     
@@ -188,7 +195,8 @@
     
     <div class="actions">
       <a href="/" class="btn primary">Go to Home</a>
-      <a href="/admin-login/" class="btn">Admin Login</a>
+      <a href="/hub/" class="btn">Teacher Center</a>
+      <a href="/teacher/" class="btn">Teacher Hub</a>
     </div>
     
     <p class="context-note">
