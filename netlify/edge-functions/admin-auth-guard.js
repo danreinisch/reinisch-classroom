@@ -50,13 +50,15 @@ export default async (request, context) => {
 
   // If ADMIN_SESSION_SECRET not configured, redirect to not-configured page
   // This provides a friendly UX with clear instructions on what's missing
-  const configured = !!(context.env?.ADMIN_SESSION_SECRET);
+  // Use Netlify.env.get() for edge runtime environment variable access
+  const secret = (Netlify.env.get('ADMIN_SESSION_SECRET') || '').trim();
+  const configured = secret.length > 0;
   if (!configured) {
     return redirectToNotConfigured();
   }
 
-  const acceptLegacy = String(context.env?.ADMIN_ACCEPT_LEGACY || 'true').toLowerCase() === 'true';
-  const enableLog = String(context.env?.ADMIN_SESSION_LOG || '0').trim() === '1';
+  const acceptLegacy = String(Netlify.env.get('ADMIN_ACCEPT_LEGACY') || 'true').toLowerCase() === 'true';
+  const enableLog = String(Netlify.env.get('ADMIN_SESSION_LOG') || '0').trim() === '1';
   const isApiRequest = request.headers.get('accept')?.includes('application/json');
 
   // Parse cookies
@@ -70,8 +72,6 @@ export default async (request, context) => {
       v1: getCookie(cookieHeader, COOKIE_V1_LEGACY)
     }
   };
-
-  const secret = context.env.ADMIN_SESSION_SECRET;
 
   // Try v4 access token first
   if (cookies.access) {
