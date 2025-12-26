@@ -17,7 +17,9 @@
 (function () {
   'use strict';
 
+  // Constants
   const LOG_PREFIX = '[student-portal]';
+  const STUDENT_PORTAL_PATH = '/student/';
   let bootWatchdogTimer = null;
 
   // ============================================================================
@@ -91,7 +93,7 @@
       window.__redirectingToHub = true;
       
       // Redirect to student portal root with reason parameter
-      window.location.replace('/student/?reason=portal_resume_failed');
+      window.location.replace(STUDENT_PORTAL_PATH + '?reason=portal_resume_failed');
     }, WATCHDOG_MS);
   }
 
@@ -105,20 +107,39 @@
     const originalFetch = window.fetch;
     window.fetch = function(...args) {
       const url = args[0];
-      const urlString = typeof url === 'string' ? url : (url?.url || '');
+      // Handle both string URLs and Request objects
+      const urlString = typeof url === 'string' ? url : (url instanceof Request ? url.url : (url?.href || ''));
       
-      // Check if this is a teacher/admin/substitute endpoint call
-      if (urlString.includes('/.netlify/functions/teacher-') ||
-          urlString.includes('/.netlify/functions/admin-') ||
-          urlString.includes('/.netlify/functions/substitute-')) {
-        console.error(
-          LOG_PREFIX,
-          'BLOCKED: Attempt to call privileged endpoint from student page:',
-          urlString
-        );
+      // Parse URL to check pathname (more secure than substring check)
+      try {
+        const parsedUrl = new URL(urlString, window.location.origin);
+        const pathname = parsedUrl.pathname;
         
-        // Return a rejected promise to prevent the call
-        return Promise.reject(new Error('Unauthorized: Student pages cannot access teacher/admin/substitute endpoints'));
+        // Check if pathname starts with privileged endpoint patterns
+        if (pathname.startsWith('/.netlify/functions/teacher-') ||
+            pathname.startsWith('/.netlify/functions/admin-') ||
+            pathname.startsWith('/.netlify/functions/substitute-')) {
+          console.error(
+            LOG_PREFIX,
+            'BLOCKED: Attempt to call privileged endpoint from student page:',
+            pathname
+          );
+          
+          // Return a rejected promise to prevent the call
+          return Promise.reject(new Error('Unauthorized: Student pages cannot access teacher/admin/substitute endpoints'));
+        }
+      } catch (parseErr) {
+        // If URL parsing fails, fall back to substring check
+        if (urlString.includes('/.netlify/functions/teacher-') ||
+            urlString.includes('/.netlify/functions/admin-') ||
+            urlString.includes('/.netlify/functions/substitute-')) {
+          console.error(
+            LOG_PREFIX,
+            'BLOCKED: Attempt to call privileged endpoint from student page:',
+            urlString
+          );
+          return Promise.reject(new Error('Unauthorized: Student pages cannot access teacher/admin/substitute endpoints'));
+        }
       }
       
       // Allow the call
@@ -182,27 +203,53 @@
     if (loginView) loginView.classList.add('hidden');
     if (dashboardView) dashboardView.classList.add('hidden');
     
-    // Create error panel
+    // Create error panel using DOM API to prevent XSS
     const errorPanel = document.createElement('div');
     errorPanel.id = 'fatalErrorPanel';
     errorPanel.className = 'portal-container';
-    errorPanel.innerHTML = `
-      <div class="portal-card">
-        <header class="portal-header">
-          <h1 class="portal-title">⚠️ Error</h1>
-          <p class="portal-subtitle">Something went wrong</p>
-        </header>
-        
-        <div class="message error">
-          ${message}
-        </div>
-        
-        <div style="display: flex; gap: 12px; justify-content: center; margin-top: 24px;">
-          <button class="btn" id="btnRetryInit">Retry</button>
-          <button class="btn" id="btnReload">Reload Page</button>
-        </div>
-      </div>
-    `;
+    
+    const card = document.createElement('div');
+    card.className = 'portal-card';
+    
+    const header = document.createElement('header');
+    header.className = 'portal-header';
+    
+    const title = document.createElement('h1');
+    title.className = 'portal-title';
+    title.textContent = '⚠️ Error';
+    
+    const subtitle = document.createElement('p');
+    subtitle.className = 'portal-subtitle';
+    subtitle.textContent = 'Something went wrong';
+    
+    header.appendChild(title);
+    header.appendChild(subtitle);
+    
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'message error';
+    messageDiv.textContent = message; // Use textContent to prevent XSS
+    
+    const buttonContainer = document.createElement('div');
+    buttonContainer.style.cssText = 'display: flex; gap: 12px; justify-content: center; margin-top: 24px;';
+    
+    const btnRetry = document.createElement('button');
+    btnRetry.className = 'btn';
+    btnRetry.id = 'btnRetryInit';
+    btnRetry.textContent = 'Retry';
+    
+    const btnReload = document.createElement('button');
+    btnReload.className = 'btn';
+    btnReload.id = 'btnReload';
+    btnReload.textContent = 'Reload Page';
+    
+    buttonContainer.appendChild(btnRetry);
+    buttonContainer.appendChild(btnReload);
+    
+    card.appendChild(header);
+    card.appendChild(messageDiv);
+    card.appendChild(buttonContainer);
+    
+    errorPanel.appendChild(card);
     
     // Remove existing error panel if any
     const existingPanel = document.getElementById('fatalErrorPanel');
@@ -214,21 +261,14 @@
     document.body.appendChild(errorPanel);
     
     // Setup retry handlers
-    const btnRetry = document.getElementById('btnRetryInit');
-    const btnReload = document.getElementById('btnReload');
+    btnRetry.addEventListener('click', () => {
+      errorPanel.remove();
+      init();
+    });
     
-    if (btnRetry) {
-      btnRetry.addEventListener('click', () => {
-        errorPanel.remove();
-        init();
-      });
-    }
-    
-    if (btnReload) {
-      btnReload.addEventListener('click', () => {
-        window.location.reload();
-      });
-    }
+    btnReload.addEventListener('click', () => {
+      window.location.reload();
+    });
   }
 
   /**
@@ -550,9 +590,8 @@
             break;
           case 503:
             // Service unavailable - Supabase/backend issue
-            errorMsg = 'Authentication service is temporarily unavailable. Please try again in a moment. If this persists, you can still access the portal offline.';
-            // Show additional message about graceful degradation
-            showMessage('Note: The student portal can work in offline mode if the database is unavailable.', 'info');
+            errorMsg = 'Authentication service is temporarily unavailable. Please try again in a moment.';
+            // Note: Manual entry form is available as a fallback option
             break;
           default:
             if (response.status >= 500) {
@@ -605,8 +644,7 @@
           errorMsg += 'You appear to be offline. Please check your internet connection and try again.';
         } else {
           // Network error but browser thinks we're online - likely Supabase/backend unreachable
-          errorMsg += 'The authentication database may be temporarily unavailable. ';
-          errorMsg += 'Please try again in a moment. If this persists, the portal can work in offline mode.';
+          errorMsg += 'The authentication database may be temporarily unavailable. Please try again in a moment.';
         }
       } else {
         errorMsg += 'Please try again or contact your teacher if this persists.';
