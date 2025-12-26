@@ -89,11 +89,9 @@
           const rcAuth = localStorage.getItem('rc_auth');
           if (rcAuth) {
             const auth = JSON.parse(rcAuth);
-            if (auth.role === 'student' && auth.code && auth.code.trim().length > 0) {
-              // Allow if expiresAt is not set (backward compatibility) or not expired
-              if (!auth.expiresAt || auth.expiresAt > Date.now()) {
-                authenticated = true;
-              }
+            // Simple check: if it looks like student auth, allow watchdog
+            if (auth && auth.role === 'student' && (auth.code || auth.student_code)) {
+              authenticated = true;
             }
           }
         } catch (parseErr) {
