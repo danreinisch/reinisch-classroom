@@ -19,7 +19,6 @@
 
   const LOG_PREFIX = '[student-portal]';
   let bootWatchdogTimer = null;
-  let redirectingToHub = false;
 
   // ============================================================================
   // PR student-portal-reliability: bfcache restore hardening
@@ -54,8 +53,8 @@
     console.log(LOG_PREFIX, `Boot watchdog starting (timeout: ${WATCHDOG_MS}ms)`);
     
     bootWatchdogTimer = setTimeout(() => {
-      // Skip if already redirecting
-      if (redirectingToHub) {
+      // Skip if already redirecting (use window.__redirectingToHub for compatibility with Portal B)
+      if (window.__redirectingToHub === true) {
         console.log(LOG_PREFIX, 'Boot watchdog: redirect already in progress');
         return;
       }
@@ -96,7 +95,7 @@
       }
       
       // Set redirect flag to prevent loops
-      redirectingToHub = true;
+      window.__redirectingToHub = true;
       
       // Redirect to student portal root with reason parameter
       window.location.replace('/student/?reason=portal_resume_failed');
