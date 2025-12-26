@@ -92,12 +92,26 @@
           errorDiv.className = 'error-message';
           errorDiv.setAttribute('data-error-code', errorCode);
           
-          // User-friendly generic message
-          errorDiv.innerHTML = `
-            <div>Login failed. Please try again.</div>
-            <div class="support-text">If the problem persists, contact support.</div>
-            <!-- Error code for debugging: ${errorCode} -->
-          `;
+          // Special handling for configuration error
+          if (errorCode === 'cfg') {
+            errorDiv.style.background = 'rgba(255, 193, 7, 0.15)';
+            errorDiv.style.borderColor = 'rgba(255, 193, 7, 0.4)';
+            errorDiv.style.color = '#ffc107';
+            errorDiv.innerHTML = `
+              <div style="font-weight: 700; margin-bottom: 8px;">⚠️ Configuration Required</div>
+              <div style="font-size: 13px;">The admin system is not fully configured. Please check the required environment variables.</div>
+              <div class="support-text" style="font-size: 12px; margin-top: 8px;">
+                <a href="/admin-not-configured/" style="color: #35e08a; text-decoration: underline;">View detailed setup instructions</a>
+              </div>
+            `;
+          } else {
+            // User-friendly generic message for other errors
+            errorDiv.innerHTML = `
+              <div>Login failed. Please try again.</div>
+              <div class="support-text">If the problem persists, contact support.</div>
+              <!-- Error code for debugging: ${errorCode} -->
+            `;
+          }
           
           errorContainer.appendChild(errorDiv);
         }
