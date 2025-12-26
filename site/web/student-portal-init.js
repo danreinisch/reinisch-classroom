@@ -21,6 +21,7 @@
   const LOG_PREFIX = '[student-portal]';
   const STUDENT_PORTAL_PATH = '/student/';
   let bootWatchdogTimer = null;
+  let dashboardHandlersAttached = false; // Prevent duplicate event listeners
 
   // ============================================================================
   // PR student-portal-reliability: bfcache restore hardening
@@ -294,9 +295,16 @@
   /**
    * Show dashboard view (PR 315)
    * PR student-portal-reliability: Added null checks
-   * Note: Watchdog continues running in background to detect unhealthy state changes
+   * Note: Watchdog continues running to detect unhealthy state changes, cleared when dashboard shows
    */
   function showDashboard() {
+    // Clear watchdog now that dashboard is successfully showing
+    if (bootWatchdogTimer) {
+      clearTimeout(bootWatchdogTimer);
+      bootWatchdogTimer = null;
+      console.log(LOG_PREFIX, 'Boot watchdog cleared - dashboard visible');
+    }
+    
     const loginView = document.getElementById('loginView');
     const dashboardView = document.getElementById('studentDashboardView');
     const studentCodeDisplay = document.getElementById('studentCodeDisplay');
@@ -324,16 +332,19 @@
       studentCodeDisplay.textContent = studentCode;
     }
     
-    // Setup logout handler
-    if (btnLogout) {
-      btnLogout.addEventListener('click', handleLogout);
-    }
-    
-    // Setup return to hub handler (PR 315: CSP-compliant, no inline onclick)
-    if (btnReturnHub) {
-      btnReturnHub.addEventListener('click', () => {
-        window.location.href = '/hub/';
-      });
+    // Setup event handlers only once to prevent duplicates
+    if (!dashboardHandlersAttached) {
+      if (btnLogout) {
+        btnLogout.addEventListener('click', handleLogout);
+      }
+      
+      if (btnReturnHub) {
+        btnReturnHub.addEventListener('click', () => {
+          window.location.href = '/hub/';
+        });
+      }
+      
+      dashboardHandlersAttached = true;
     }
     
     console.log(LOG_PREFIX, 'Dashboard view shown for:', studentCode);
@@ -346,6 +357,12 @@
   function handleLogout() {
     console.log(LOG_PREFIX, 'Logout requested');
     
+    // Clear watchdog timer if active
+    if (bootWatchdogTimer) {
+      clearTimeout(bootWatchdogTimer);
+      bootWatchdogTimer = null;
+    }
+    
     // Clear session storage (student portal uses sessionStorage)
     sessionStorage.removeItem('rc_user_code');
     sessionStorage.removeItem('rc_user_role');
@@ -356,6 +373,9 @@
     // Clear any legacy role keys that might exist
     localStorage.removeItem('rc_user_code');
     localStorage.removeItem('rc_user_role');
+    
+    // Reset handlers flag for next login
+    dashboardHandlersAttached = false;
     
     // Redirect to home page as specified in requirements
     window.location.href = '/';
