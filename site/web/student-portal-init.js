@@ -50,6 +50,7 @@
     const DEBUG_MODE = urlParams.get('debug') === '1';
     
     // PR fix-student-watchdog-login: Check if we recently failed resume (loop prevention)
+    // This is the PRIMARY guard against infinite loops
     try {
       const resumeFailedAt = sessionStorage.getItem('portal_resume_failed_at');
       if (resumeFailedAt) {
@@ -69,50 +70,8 @@
       console.error(LOG_PREFIX, 'Failed to check resume failure flag:', err);
     }
     
-    // PR fix-student-watchdog-login: Don't start watchdog if showing login or not authenticated
-    // Watchdog should ONLY run when we expect dashboard to be visible (authenticated session)
-    // Inline authentication check to avoid any hoisting issues
-    let authenticated = false;
-    try {
-      // Check sessionStorage for active session (primary method)
-      const sessionRole = sessionStorage.getItem('rc_user_role');
-      const sessionCode = sessionStorage.getItem('rc_user_code');
-      
-      if (sessionRole === 'student' && sessionCode && sessionCode.trim().length > 0) {
-        authenticated = true;
-      }
-      
-      // Fallback: Check localStorage.rc_auth for 24-hour auth handoff
-      // This is used by hub auto-login and test scenarios
-      if (!authenticated) {
-        try {
-          const rcAuth = localStorage.getItem('rc_auth');
-          if (rcAuth) {
-            const auth = JSON.parse(rcAuth);
-            // Simple check: if it looks like student auth, allow watchdog
-            if (auth && auth.role === 'student' && (auth.code || auth.student_code)) {
-              authenticated = true;
-            }
-          }
-        } catch (parseErr) {
-          // Invalid rc_auth JSON - ignore
-          if (DEBUG_MODE) {
-            console.warn(LOG_PREFIX, 'Failed to parse rc_auth:', parseErr);
-          }
-        }
-      }
-    } catch (err) {
-      console.error(LOG_PREFIX, 'Error checking auth:', err);
-    }
-    
-    if (!authenticated) {
-      if (DEBUG_MODE) {
-        console.log(LOG_PREFIX, 'Boot watchdog disabled: not authenticated');
-      }
-      return;
-    }
-    
     // PR fix-student-watchdog-login: Check URL for reason parameter (came from watchdog redirect)
+    // Skip if already on resume failed page to avoid re-triggering
     const reason = urlParams.get('reason');
     if (reason === 'portal_resume_failed') {
       if (DEBUG_MODE) {
@@ -126,9 +85,7 @@
     
     // In debug mode, disable watchdog by default (unless explicitly set)
     if (DEBUG_MODE && !urlParams.has('watchdog_ms')) {
-      if (DEBUG_MODE) {
-        console.log(LOG_PREFIX, 'Boot watchdog disabled in debug mode');
-      }
+      console.log(LOG_PREFIX, 'Boot watchdog disabled in debug mode');
       return;
     }
     
@@ -160,7 +117,7 @@
       }
       
       // Dashboard is not visible - unhealthy state detected
-      // PR fix-student-watchdog-login: Only log warning once per session
+      // PR fix-student-watchdog-login: Single warning (watchdog fires once then redirects)
       console.warn(
         LOG_PREFIX,
         `Boot watchdog: dashboard not visible after ${WATCHDOG_MS}ms, clearing auth and redirecting to login`
@@ -353,7 +310,6 @@
       // PR fix-student-watchdog-login: Check for resume failure reason
       const urlParams = new URLSearchParams(window.location.search);
       const reason = urlParams.get('reason');
-      const DEBUG_MODE = urlParams.get('debug') === '1';
       
       if (reason === 'portal_resume_failed') {
         // Resume failed - show login without starting watchdog
