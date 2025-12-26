@@ -239,7 +239,7 @@
     let errorMessage = 'Login failed. Please try again.';
     let isConfigError = false;
     
-    if (errorCode === 'invalid' || errorCode === 'creds') {
+    if (errorCode === 'invalid') {
       errorMessage = 'Invalid username or password. Please try again.';
     } else if (errorCode === 'network') {
       errorMessage = 'Network error. Please check your connection and try again.';
@@ -271,9 +271,6 @@
     
     errorDiv.appendChild(messageDiv);
     errorDiv.appendChild(supportDiv);
-    
-    // Add debug comment
-    errorDiv.appendChild(document.createComment(`Error code for debugging: ${errorCode}`));
     
     errorContainer.appendChild(errorDiv);
   }
