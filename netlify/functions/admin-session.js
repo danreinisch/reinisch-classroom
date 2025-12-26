@@ -156,7 +156,7 @@ exports.handler = async (event) => {
           'Set-Cookie': createThrottleCookie(clientIp),
           'Cache-Control': 'no-store'
         },
-        body: JSON.stringify({ error: 'Invalid credentials' })
+        body: JSON.stringify({ error: 'Invalid credentials', code: 'invalid' })
       };
     }
 

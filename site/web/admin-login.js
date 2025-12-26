@@ -154,7 +154,11 @@
         });
         
         // 302 redirect indicates success (cookies are set in the response)
-        if (response.type === 'opaqueredirect' || response.status === 302 || response.status === 0) {
+        // When using redirect: 'manual', successful redirects result in:
+        // - response.type === 'opaqueredirect' (spec-compliant browsers)
+        // - response.status === 0 (due to opaque response)
+        // - response.status === 302 (some implementations)
+        if (response.type === 'opaqueredirect' || response.status === 302) {
           // Success - cookies are now set, redirect to return URL or /admin/
           const params = new URLSearchParams(window.location.search);
           const returnUrl = params.get('return');
@@ -231,8 +235,10 @@
     errorDiv.className = 'error-message inline-error';
     errorDiv.setAttribute('data-error-code', errorCode);
     
-    // Show user-friendly error message
+    // Show user-friendly error message (all messages are hardcoded, not from server)
     let errorMessage = 'Login failed. Please try again.';
+    let isConfigError = false;
+    
     if (errorCode === 'invalid' || errorCode === 'creds') {
       errorMessage = 'Invalid username or password. Please try again.';
     } else if (errorCode === 'network') {
@@ -240,10 +246,7 @@
     } else if (errorCode === 'throttle') {
       errorMessage = 'Too many login attempts. Please wait a moment and try again.';
     } else if (errorCode === 'cfg') {
-      // Configuration error - show special styling
-      errorDiv.style.background = 'rgba(255, 193, 7, 0.15)';
-      errorDiv.style.borderColor = 'rgba(255, 193, 7, 0.4)';
-      errorDiv.style.color = '#ffc107';
+      isConfigError = true;
       errorMessage = '⚠️ Configuration Required: Admin system is not configured. Please check environment variables.';
     } else if (errorCode === 'role') {
       errorMessage = 'Access denied. Your account does not have permission to access the admin area.';
@@ -253,11 +256,24 @@
       errorMessage = 'Database error. Please try again or contact support.';
     }
     
-    errorDiv.innerHTML = `
-      <div>${errorMessage}</div>
-      <div class="support-text">If the problem persists, contact support.</div>
-      <!-- Error code for debugging: ${errorCode} -->
-    `;
+    // Create error message elements safely using textContent
+    const messageDiv = document.createElement('div');
+    messageDiv.textContent = errorMessage;
+    
+    const supportDiv = document.createElement('div');
+    supportDiv.className = 'support-text';
+    supportDiv.textContent = 'If the problem persists, contact support.';
+    
+    // Add special styling for configuration error
+    if (isConfigError) {
+      errorDiv.classList.add('error-config');
+    }
+    
+    errorDiv.appendChild(messageDiv);
+    errorDiv.appendChild(supportDiv);
+    
+    // Add debug comment
+    errorDiv.appendChild(document.createComment(`Error code for debugging: ${errorCode}`));
     
     errorContainer.appendChild(errorDiv);
   }
