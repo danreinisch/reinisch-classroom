@@ -135,7 +135,7 @@ exports.handler = async (event) => {
           'Content-Type': 'application/json',
           'Cache-Control': 'no-store'
         },
-        body: JSON.stringify({ error: 'Database error', code: `rpc${verifyRes.status}` })
+        body: JSON.stringify({ error: 'Database error', code: 'rpc_error' })
       };
     }
 
@@ -208,7 +208,7 @@ exports.handler = async (event) => {
         'Content-Type': 'application/json',
         'Cache-Control': 'no-store'
       },
-      body: JSON.stringify({ error: 'Internal server error', code: '1' })
+      body: JSON.stringify({ error: 'Internal server error', code: 'internal' })
     };
   }
 };

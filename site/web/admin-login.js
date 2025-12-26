@@ -132,7 +132,7 @@
       
       const formData = new FormData(form);
       const submitButton = form.querySelector('button[type="submit"]');
-      const originalButtonText = submitButton ? submitButton.textContent : 'Sign in';
+      const originalButtonText = submitButton ? submitButton.textContent.trim() : 'Sign in';
       
       // Clear any existing error messages
       clearInlineError();
@@ -252,8 +252,10 @@
       errorMessage = 'Access denied. Your account does not have permission to access the admin area.';
     } else if (errorCode === 'parse') {
       errorMessage = 'Invalid request. Please try again.';
-    } else if (errorCode && errorCode.startsWith('rpc')) {
+    } else if (errorCode === 'rpc_error') {
       errorMessage = 'Database error. Please try again or contact support.';
+    } else if (errorCode === 'internal') {
+      errorMessage = 'Server error. Please try again or contact support.';
     }
     
     // Create error message elements safely using textContent
