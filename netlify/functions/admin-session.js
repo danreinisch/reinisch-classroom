@@ -42,7 +42,14 @@ exports.handler = async (event) => {
     if (!SUPABASE_SERVICE_ROLE_KEY) missing.push('SUPABASE_SERVICE_ROLE_KEY/SUPABASE_SERVICE_KEY_RUNTIME');
     if (!secret) missing.push('ADMIN_SESSION_SECRET');
     console.error('[admin-session] Missing env vars:', missing.join(', '));
-    return redirect('/admin-login?e=cfg');
+    return {
+      statusCode: 503,
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-store'
+      },
+      body: JSON.stringify({ error: 'Configuration missing', code: 'cfg' })
+    };
   }
 
   // Robust body parsing (handles base64, form, and JSON)
@@ -64,12 +71,26 @@ exports.handler = async (event) => {
     }
   } catch (parseErr) {
     console.error('[admin-session] Body parsing failed:', parseErr.message);
-    return redirect('/admin-login?e=parse');
+    return {
+      statusCode: 400,
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-store'
+      },
+      body: JSON.stringify({ error: 'Invalid request body', code: 'parse' })
+    };
   }
 
   if (!inUser || !inPass) {
     console.error('[admin-session] Missing username or password in request body');
-    return redirect('/admin-login?e=parse');
+    return {
+      statusCode: 400,
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-store'
+      },
+      body: JSON.stringify({ error: 'Missing credentials', code: 'parse' })
+    };
   }
 
   // Check throttling (per-IP attempt limit via cookie)
@@ -77,7 +98,15 @@ exports.handler = async (event) => {
   const throttleResult = checkThrottle(event, clientIp);
   if (!throttleResult.allowed) {
     console.log('[admin-session] Throttled login attempt from', clientIp);
-    return redirect('/admin-login?e=throttle');
+    return {
+      statusCode: 429,
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-store',
+        'Set-Cookie': createThrottleCookie(clientIp)
+      },
+      body: JSON.stringify({ error: 'Too many attempts', code: 'throttle' })
+    };
   }
 
   // Verify credentials via Supabase RPC
@@ -100,7 +129,14 @@ exports.handler = async (event) => {
         console.error('[admin-session] Could not read RPC response body:', bodyErr.message);
       }
       
-      return redirect(`/admin-login?e=rpc${verifyRes.status}`);
+      return {
+        statusCode: 502,
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-store'
+        },
+        body: JSON.stringify({ error: 'Database error', code: `rpc${verifyRes.status}` })
+      };
     }
 
     const users = await verifyRes.json();
@@ -112,14 +148,15 @@ exports.handler = async (event) => {
       // Add fixed delay to reduce brute-force timing attacks
       await new Promise(resolve => setTimeout(resolve, INVALID_CREDS_DELAY_MS));
       
-      // Set throttle cookie and redirect
+      // Return 401 with throttle cookie so client-side can show error without clearing form
       return {
-        statusCode: 302,
+        statusCode: 401,
         headers: {
-          Location: '/admin-login?e=creds',
+          'Content-Type': 'application/json',
           'Set-Cookie': createThrottleCookie(clientIp),
           'Cache-Control': 'no-store'
-        }
+        },
+        body: JSON.stringify({ error: 'Invalid credentials' })
       };
     }
 
@@ -128,7 +165,14 @@ exports.handler = async (event) => {
     // Only allow teacher or admin roles for admin panel
     if (user.role !== 'teacher' && user.role !== 'admin') {
       console.log('[admin-session] User has invalid role for admin access:', user.role);
-      return redirect('/admin-login?e=role');
+      return {
+        statusCode: 403,
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-store'
+        },
+        body: JSON.stringify({ error: 'Insufficient permissions', code: 'role' })
+      };
     }
 
     // Create dual-token session (access + refresh)
@@ -158,7 +202,14 @@ exports.handler = async (event) => {
   } catch (e) {
     console.error('[admin-session] Error during authentication:', e.message);
     console.error('[admin-session] Error stack:', e.stack);
-    return redirect('/admin-login?e=1');
+    return {
+      statusCode: 500,
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-store'
+      },
+      body: JSON.stringify({ error: 'Internal server error', code: '1' })
+    };
   }
 };
 
