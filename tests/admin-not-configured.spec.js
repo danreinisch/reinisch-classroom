@@ -60,12 +60,12 @@ test.describe('Admin Not Configured Page', () => {
     const homeLink = page.locator('.actions a[href="/"]').filter({ hasText: 'Home' });
     await expect(homeLink).toBeVisible();
     
-    // Check for Teacher Center link
-    const teacherCenterLink = page.locator('a[href="/hub/"]').filter({ hasText: 'Teacher Center' });
+    // Check for Teacher Center link in actions section
+    const teacherCenterLink = page.locator('.actions a[href="/hub/"]').filter({ hasText: 'Teacher Center' });
     await expect(teacherCenterLink).toBeVisible();
     
-    // Check for Teacher Hub link
-    const teacherHubLink = page.locator('a[href="/teacher/"]').filter({ hasText: 'Teacher Hub' });
+    // Check for Teacher Hub link in actions section
+    const teacherHubLink = page.locator('.actions a[href="/teacher/"]').filter({ hasText: 'Teacher Hub' });
     await expect(teacherHubLink).toBeVisible();
   });
 
@@ -159,8 +159,8 @@ test.describe('Admin Not Configured Page', () => {
     await page.goto(ADMIN_NOT_CONFIGURED_PATH);
     await page.waitForLoadState('networkidle');
     
-    // Click Teacher Center link
-    const teacherCenterLink = page.locator('a[href="/hub/"]').filter({ hasText: 'Teacher Center' }).first();
+    // Click Teacher Center link in actions section
+    const teacherCenterLink = page.locator('.actions a[href="/hub/"]').filter({ hasText: 'Teacher Center' }).first();
     await teacherCenterLink.click();
     
     // Wait for navigation
