@@ -83,7 +83,11 @@ function b64urlDecode(str) {
 function json(status, data) {
   return {
     statusCode: status,
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-store, no-cache, must-revalidate',
+      'X-Robots-Tag': 'noindex'
+    },
     body: JSON.stringify(data),
   };
 }
