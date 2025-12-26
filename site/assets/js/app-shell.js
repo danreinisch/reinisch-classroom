@@ -405,11 +405,19 @@
   function getCurrentPageRole() {
     const pathname = window.location.pathname.toLowerCase();
     
+    // Map of path prefixes to roles (order matters - checked sequentially)
+    const pathRoleMap = [
+      { prefix: '/student', role: 'student' },
+      { prefix: '/sub', role: 'substitute' },
+      { prefix: '/admin', role: 'admin' },
+      { prefix: '/hub', role: 'teacher' },
+      { prefix: '/teacher', role: 'teacher' }
+    ];
+    
     // Check page-based role first (highest priority)
-    if (pathname.startsWith('/student')) return 'student';
-    if (pathname.startsWith('/sub')) return 'substitute';
-    if (pathname.startsWith('/admin')) return 'admin';
-    if (pathname.startsWith('/hub') || pathname.startsWith('/teacher')) return 'teacher';
+    for (const { prefix, role } of pathRoleMap) {
+      if (pathname.startsWith(prefix)) return role;
+    }
     
     // For other pages, check sessionStorage for active role (student portal uses sessionStorage)
     try {
@@ -454,6 +462,8 @@
       const signOutBtn = rail.querySelector('[data-shell-action="signout"]');
       if (signOutBtn) {
         // Show sign out if there's any authentication (page role or auth)
+        // Note: pageRole alone means user is on a role-specific page (e.g., /student/)
+        // and should have sign out available even if rc_auth isn't set (session-only auth)
         if (isAuthed || pageRole) {
           signOutBtn.classList.remove('app-shell-hidden');
         } else {
