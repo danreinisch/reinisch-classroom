@@ -45,10 +45,7 @@ export default async (request, context) => {
     
     if (sessionResponse.ok) {
       // Valid Teacher Center session
-      const sessionData = await sessionResponse.json().catch(() => ({}));
-      
-      // Optional: Check for specific allowlist (e.g., username "dreinisch")
-      // For now, any valid teacher session is allowed
+      // Optional: Future validation could check for specific roles or allowlist here
       
       console.log('[admin-auth-guard] Valid Teacher Center session, allowing access');
       return addDiagnosticHeader(context.next(), 'teacher-session-valid');
