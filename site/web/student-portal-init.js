@@ -90,15 +90,17 @@
           if (rcAuth) {
             const auth = JSON.parse(rcAuth);
             if (auth.role === 'student' && auth.code && auth.code.trim().length > 0) {
-              // Check if not expired
-              if (auth.expiresAt && auth.expiresAt > Date.now()) {
+              // Allow if expiresAt is not set (backward compatibility) or not expired
+              if (!auth.expiresAt || auth.expiresAt > Date.now()) {
                 authenticated = true;
               }
             }
           }
         } catch (parseErr) {
           // Invalid rc_auth JSON - ignore
-          console.warn(LOG_PREFIX, 'Failed to parse rc_auth:', parseErr);
+          if (DEBUG_MODE) {
+            console.warn(LOG_PREFIX, 'Failed to parse rc_auth:', parseErr);
+          }
         }
       }
     } catch (err) {
