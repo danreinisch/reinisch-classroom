@@ -30,7 +30,7 @@ exports.handler = async (event) => {
 
   // Redirect non-POST back to login
   if (event.httpMethod !== 'POST') {
-    return redirect('/admin-login');
+    return { statusCode: 302, headers: { Location: '/admin-login', 'Cache-Control': 'no-store' } };
   }
 
   // Check if Supabase is configured
@@ -212,10 +212,6 @@ exports.handler = async (event) => {
     };
   }
 };
-
-function redirect(to) {
-  return { statusCode: 302, headers: { Location: to, 'Cache-Control': 'no-store' } };
-}
 
 function getCookie(header, name) {
   if (!header) return '';

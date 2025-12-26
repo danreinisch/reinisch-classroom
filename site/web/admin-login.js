@@ -183,24 +183,10 @@
           let errorCode = 'error';
           try {
             const data = await response.json();
-            if (data.code) {
-              errorCode = data.code;
-            } else if (response.status === 401) {
-              errorCode = 'invalid';
-            } else if (response.status === 429) {
-              errorCode = 'throttle';
-            } else if (response.status === 503) {
-              errorCode = 'cfg';
-            }
+            errorCode = data.code || mapStatusToErrorCode(response.status);
           } catch (e) {
             // If JSON parsing fails, use status code to determine error
-            if (response.status === 401) {
-              errorCode = 'invalid';
-            } else if (response.status === 429) {
-              errorCode = 'throttle';
-            } else if (response.status === 503) {
-              errorCode = 'cfg';
-            }
+            errorCode = mapStatusToErrorCode(response.status);
           }
           
           showInlineError(errorCode);
@@ -222,6 +208,13 @@
         }
       }
     });
+  }
+  
+  function mapStatusToErrorCode(status) {
+    if (status === 401) return 'invalid';
+    if (status === 429) return 'throttle';
+    if (status === 503) return 'cfg';
+    return 'error';
   }
   
   function showInlineError(errorCode) {
@@ -262,17 +255,20 @@
     const messageDiv = document.createElement('div');
     messageDiv.textContent = errorMessage;
     
-    const supportDiv = document.createElement('div');
-    supportDiv.className = 'support-text';
-    supportDiv.textContent = 'If the problem persists, contact support.';
+    errorDiv.appendChild(messageDiv);
+    
+    // Add support text for errors that benefit from it (not configuration errors)
+    if (!isConfigError) {
+      const supportDiv = document.createElement('div');
+      supportDiv.className = 'support-text';
+      supportDiv.textContent = 'If the problem persists, contact support.';
+      errorDiv.appendChild(supportDiv);
+    }
     
     // Add special styling for configuration error
     if (isConfigError) {
       errorDiv.classList.add('error-config');
     }
-    
-    errorDiv.appendChild(messageDiv);
-    errorDiv.appendChild(supportDiv);
     
     errorContainer.appendChild(errorDiv);
   }
