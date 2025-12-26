@@ -586,9 +586,9 @@
             </button>
             <button class="hub-rail-item" data-area="work" title="Work" aria-label="Work">Work</button>
             <button class="hub-rail-item" data-area="data" title="Data" aria-label="Data">Data</button>
-            <a href="/admin/" class="hub-rail-item" title="Admin" aria-label="Admin" style="text-decoration: none;">
+            <button class="hub-rail-item" onclick="window.location.assign('/admin/')" title="Admin" aria-label="Admin" style="text-decoration: none; cursor: pointer;">
               Admin
-            </a>
+            </button>
           </aside>
 
           <aside class="hub-menu rc-card">
@@ -3371,6 +3371,7 @@
             headers: {
               "Content-Type": "application/json",
             },
+            credentials: "include", // Important: include cookies to set session
             body: JSON.stringify({ code, password }),
           });
 
