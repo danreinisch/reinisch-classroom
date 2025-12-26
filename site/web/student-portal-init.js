@@ -71,7 +71,41 @@
     
     // PR fix-student-watchdog-login: Don't start watchdog if showing login or not authenticated
     // Watchdog should ONLY run when we expect dashboard to be visible (authenticated session)
-    if (!isAuthenticated()) {
+    // Inline authentication check to avoid any hoisting issues
+    let authenticated = false;
+    try {
+      // Check sessionStorage for active session (primary method)
+      const sessionRole = sessionStorage.getItem('rc_user_role');
+      const sessionCode = sessionStorage.getItem('rc_user_code');
+      
+      if (sessionRole === 'student' && sessionCode && sessionCode.trim().length > 0) {
+        authenticated = true;
+      }
+      
+      // Fallback: Check localStorage.rc_auth for 24-hour auth handoff
+      // This is used by hub auto-login and test scenarios
+      if (!authenticated) {
+        try {
+          const rcAuth = localStorage.getItem('rc_auth');
+          if (rcAuth) {
+            const auth = JSON.parse(rcAuth);
+            if (auth.role === 'student' && auth.code && auth.code.trim().length > 0) {
+              // Check if not expired
+              if (auth.expiresAt && auth.expiresAt > Date.now()) {
+                authenticated = true;
+              }
+            }
+          }
+        } catch (parseErr) {
+          // Invalid rc_auth JSON - ignore
+          console.warn(LOG_PREFIX, 'Failed to parse rc_auth:', parseErr);
+        }
+      }
+    } catch (err) {
+      console.error(LOG_PREFIX, 'Error checking auth:', err);
+    }
+    
+    if (!authenticated) {
       if (DEBUG_MODE) {
         console.log(LOG_PREFIX, 'Boot watchdog disabled: not authenticated');
       }
