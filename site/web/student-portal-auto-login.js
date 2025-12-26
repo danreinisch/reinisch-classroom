@@ -2,6 +2,7 @@
  * Student Portal Auto-Login Bootstrap
  * PR 266: Session-only authentication (no localStorage remember-me)
  * Part of Guardrails Stage 3B - externalized from inline script
+ * PR fix-student-watchdog-login: Skip auto-login if resume recently failed (loop prevention)
  * 
  * Auto-login is allowed ONLY for:
  * 1) Same-tab session restore using sessionStorage (reload only)
@@ -14,6 +15,34 @@
   console.log('[auto-login] Starting early bypass check (session-only mode)');
   
   try {
+    // Parse URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const reason = urlParams.get('reason');
+    
+    // PR fix-student-watchdog-login: Skip auto-login if we came from watchdog redirect
+    if (reason === 'portal_resume_failed') {
+      console.log('[auto-login] Skipping auto-login: portal resume failed (showing login form)');
+      return;
+    }
+    
+    // PR fix-student-watchdog-login: Check if resume recently failed (loop prevention)
+    try {
+      const resumeFailedAt = sessionStorage.getItem('portal_resume_failed_at');
+      if (resumeFailedAt) {
+        const failedTime = parseInt(resumeFailedAt, 10);
+        const elapsed = Date.now() - failedTime;
+        if (elapsed < 60000) { // Within last 60 seconds
+          console.log(`[auto-login] Skipping auto-login: resume failed ${Math.round(elapsed/1000)}s ago (loop prevention)`);
+          return;
+        } else {
+          // Expired, clear the flag
+          sessionStorage.removeItem('portal_resume_failed_at');
+        }
+      }
+    } catch (err) {
+      console.error('[auto-login] Failed to check resume failure flag:', err);
+    }
+    
     // PR 266: Legacy cleanup - remove old localStorage auth keys
     // This ensures old clients don't persist auth across sessions
     if (localStorage.getItem('rc_auth')) {
@@ -25,8 +54,6 @@
       localStorage.removeItem('rc_auth_expires');
     }
     
-    // Parse URL parameters
-    const urlParams = new URLSearchParams(window.location.search);
     const auto = urlParams.get('auto');
     const urlCode = urlParams.get('code');
     
