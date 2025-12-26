@@ -59,29 +59,22 @@
         return;
       }
       
-      // Check if dashboard is visible and healthy
+      // Skip if dashboard is visible and healthy
       const dashboardView = document.getElementById('studentDashboardView');
-      const loginView = document.getElementById('loginView');
-      
       const isDashboardVisible = 
         dashboardView && 
         !dashboardView.classList.contains('hidden') &&
         dashboardView.offsetParent !== null;
-        
-      const isLoginVisible = 
-        loginView && 
-        !loginView.classList.contains('hidden') &&
-        loginView.offsetParent !== null;
       
-      if (isDashboardVisible || isLoginVisible) {
-        console.log(LOG_PREFIX, 'Boot watchdog: UI is visible, all good');
+      if (isDashboardVisible) {
+        console.log(LOG_PREFIX, 'Boot watchdog: dashboard is visible, all good');
         return;
       }
       
-      // Neither dashboard nor login is visible - unhealthy state detected
+      // Dashboard is not visible - unhealthy state detected
       console.warn(
         LOG_PREFIX,
-        `Boot watchdog: no visible UI after ${WATCHDOG_MS}ms, clearing auth and redirecting to login`
+        `Boot watchdog: dashboard not visible after ${WATCHDOG_MS}ms, clearing auth and redirecting to login`
       );
       
       // Clear auth and session
