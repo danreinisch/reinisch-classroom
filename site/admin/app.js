@@ -376,7 +376,7 @@
             alert('Session expired and refresh failed. Please sign in again.');
             persistQueue();
             persistFormState();
-            location.replace('/admin-login');
+            location.replace('/hub/?entry=teacher');
             return { success: false };
           }
         } else {
@@ -384,7 +384,7 @@
           alert('Session expired. Please sign in again.');
           persistQueue();
           persistFormState();
-          location.replace('/admin-login');
+          location.replace('/hub/?entry=teacher');
           return { success: false };
         }
       }
@@ -436,7 +436,7 @@
         const refreshed = await refreshSession();
         if (!refreshed) {
           alert('Failed to refresh session. Please log in again.');
-          location.replace('/admin-login');
+          location.replace('/hub/?entry=teacher');
           return;
         }
       }
@@ -628,7 +628,7 @@
       if (res.status === 401) { 
         alert('Session expired. Please sign in again.'); 
         persistFormState();
-        location.replace('/admin-login'); 
+        location.replace('/hub/?entry=teacher'); 
         return; 
       }
       if (!res.ok) { alert(`Delete failed: ${res.status}\n${(text||'').slice(0,400)}`); return; }

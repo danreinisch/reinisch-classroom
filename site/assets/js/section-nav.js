@@ -17,7 +17,7 @@
   function sectionFor(pathname){
     if (pathname.startsWith('/language-arts/')) return 'language-arts';
     if (pathname.startsWith('/life-skills/'))   return 'life-skills';
-    if (pathname.startsWith('/admin') || pathname.startsWith('/admin-login')) return 'admin';
+    if (pathname.startsWith('/admin')) return 'admin';
     return '';
   }
   function addThemeOnce(){
