@@ -242,14 +242,9 @@
   /**
    * Show login view
    * PR student-portal-reliability: Added null checks
+   * Note: Watchdog continues running to detect unhealthy states
    */
   function showLogin() {
-    // Clear watchdog if showing login (means we successfully loaded)
-    if (bootWatchdogTimer) {
-      clearTimeout(bootWatchdogTimer);
-      bootWatchdogTimer = null;
-    }
-    
     const loginView = document.getElementById('loginView');
     const dashboardView = document.getElementById('studentDashboardView');
     
@@ -266,16 +261,10 @@
 
   /**
    * Show dashboard view (PR 315)
-   * PR student-portal-reliability: Added null checks and watchdog clearing
+   * PR student-portal-reliability: Added null checks
+   * Note: Watchdog continues running in background to detect unhealthy state changes
    */
   function showDashboard() {
-    // Clear watchdog if showing dashboard (successful boot)
-    if (bootWatchdogTimer) {
-      clearTimeout(bootWatchdogTimer);
-      bootWatchdogTimer = null;
-      console.log(LOG_PREFIX, 'Boot watchdog cleared - dashboard visible');
-    }
-    
     const loginView = document.getElementById('loginView');
     const dashboardView = document.getElementById('studentDashboardView');
     const studentCodeDisplay = document.getElementById('studentCodeDisplay');
@@ -641,15 +630,37 @@
   /**
    * Check if user is authenticated
    * PR 315: Session-only auth - check sessionStorage instead of localStorage
+   * PR student-portal-reliability: Also check localStorage.rc_auth as fallback for compatibility
    */
   function isAuthenticated() {
     try {
-      // Check sessionStorage for active session
+      // Check sessionStorage for active session (primary method)
       const sessionRole = sessionStorage.getItem('rc_user_role');
       const sessionCode = sessionStorage.getItem('rc_user_code');
 
       if (sessionRole === 'student' && sessionCode && sessionCode.trim().length > 0) {
         return true;
+      }
+
+      // Fallback: Check localStorage.rc_auth for 24-hour auth handoff
+      // This is used by hub auto-login and test scenarios
+      try {
+        const rcAuth = localStorage.getItem('rc_auth');
+        if (rcAuth) {
+          const auth = JSON.parse(rcAuth);
+          if (auth.role === 'student' && auth.code && auth.code.trim().length > 0) {
+            // Check if not expired
+            if (auth.expiresAt && auth.expiresAt > Date.now()) {
+              // Upgrade to sessionStorage for current session
+              sessionStorage.setItem('rc_user_code', auth.code);
+              sessionStorage.setItem('rc_user_role', 'student');
+              return true;
+            }
+          }
+        }
+      } catch (parseErr) {
+        // Invalid rc_auth JSON - ignore
+        console.warn(LOG_PREFIX, 'Failed to parse rc_auth:', parseErr);
       }
 
       return false;
