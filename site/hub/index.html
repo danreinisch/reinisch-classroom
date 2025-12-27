@@ -586,7 +586,7 @@
             </button>
             <button class="hub-rail-item" data-area="work" title="Work" aria-label="Work">Work</button>
             <button class="hub-rail-item" data-area="data" title="Data" aria-label="Data">Data</button>
-            <button class="hub-rail-item" onclick="window.location.assign('/admin/')" title="Admin" aria-label="Admin" style="text-decoration: none; cursor: pointer;">
+            <button class="hub-rail-item" id="adminNavBtn" title="Admin" aria-label="Admin" style="text-decoration: none; cursor: pointer;">
               Admin
             </button>
           </aside>
@@ -4074,6 +4074,38 @@
         const tab = e.target.getAttribute("data-tab");
         switchTab(tab);
       });
+
+      // Admin button click handler - check for admin session
+      const adminNavBtn = qs("#adminNavBtn");
+      if (adminNavBtn) {
+        adminNavBtn.addEventListener("click", async (e) => {
+          e.preventDefault();
+          
+          // Check if we have a valid teacher session first
+          try {
+            const sessionCheckResponse = await fetch("/.netlify/functions/teacher-session", {
+              credentials: "include"
+            });
+            
+            if (!sessionCheckResponse.ok) {
+              // No teacher session - redirect to admin-login with reason
+              console.log("[hub] No teacher session, redirecting to /admin-login");
+              window.location.assign("/admin-login/?reason=missing_admin_session");
+              return;
+            }
+            
+            // Teacher session exists - try to access admin
+            // The admin-auth-guard edge function will handle the actual validation
+            console.log("[hub] Teacher session valid, navigating to /admin");
+            window.location.assign("/admin/");
+            
+          } catch (err) {
+            console.error("[hub] Error checking admin session:", err);
+            // On error, go to admin-login
+            window.location.assign("/admin-login/?reason=missing_admin_session");
+          }
+        });
+      }
 
       // Initialize with default area
       renderSubmenu(currentArea);

@@ -259,8 +259,17 @@
     
   </head>
   <body>
-    <!-- Login View -->
-    <div id="loginView" class="portal-container">
+    <!-- Loading View (shown by default during auth check) -->
+    <div id="loadingView" class="portal-container">
+      <div class="portal-card" style="text-align: center;">
+        <div style="font-size: 48px; margin-bottom: 16px;">⏳</div>
+        <h2 style="margin: 0 0 8px 0; color: var(--ink);">Loading...</h2>
+        <p style="color: var(--ink-dim); margin: 0;">Checking your session</p>
+      </div>
+    </div>
+    
+    <!-- Login View (hidden by default) -->
+    <div id="loginView" class="portal-container hidden">
       <div class="portal-card">
         <header class="portal-header">
           <h1 class="portal-title">Student Portal</h1>

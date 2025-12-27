@@ -134,15 +134,15 @@
   path = "/admin/*"
   function = "admin-auth-guard"
 
-# Legacy admin-login redirect (PR 335)
-# Redirect old admin-login URLs to admin area (which requires Teacher Center SSO)
+# Admin-login page - serve the login page
+# Users without admin session are redirected here by admin-auth-guard
 [[redirects]]
   from = "/admin-login"
-  to = "/admin/"
-  status = 302
+  to = "/admin-login/index.html"
+  status = 200
 
 [[redirects]]
   from = "/admin-login/*"
-  to = "/admin/"
-  status = 302
+  to = "/admin-login/index.html"
+  status = 200
 

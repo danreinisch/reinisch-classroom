@@ -581,6 +581,7 @@ qs("#btnStudentLogin").addEventListener("click", async () => {
       headers: {
         "Content-Type": "application/json",
       },
+      credentials: "include",
       body: JSON.stringify({ code, password }),
     });
 
@@ -750,9 +751,11 @@ function showError(msg) {
 }
 
 function showLogin() {
-  // HOTFIX: Removed authReady guard - always allow showing login view
-  // This ensures login is always visible on errors/failures
-  // TODO: Review guard logic after hotfix is stable
+  // Prevent double-initialization with a global flag
+  if (window.__rcStudentAuthInProgress) {
+    console.log("[student-portal] Auth in progress, deferring showLogin");
+    return;
+  }
 
   if (DEBUG_MODE) {
     console.log("[student-portal] showLogin() called, authReady:", authReady);
@@ -760,17 +763,16 @@ function showLogin() {
 
   console.log("[student-portal] Showing login view");
 
-  // HOTFIX: Defensive hardening - always unhide login, always hide others
-  // Do not bail early due to prior state flags
+  // Hide loading view and other views
+  const loadingView = qs("#loadingView");
   const loginView = qs("#loginView");
   const dashboardView = qs("#studentDashboardView");
   const teacherView = qs("#teacherCenterView");
-  const loginCode = qs("#loginCode");
-  const loginPassword = qs("#loginPassword");
-  const teacherPassword = qs("#teacherPassword");
-  const loginError = qs("#loginError");
   const portalTopBar = qs("#portalTopBar");
   const legacyHeader = qs("#legacyHeader");
+
+  // Hide loading view
+  if (loadingView) loadingView.classList.add("hidden");
 
   // Always unhide login view - never bail
   if (loginView) {
@@ -784,24 +786,6 @@ function showLogin() {
   if (teacherView) teacherView.classList.add("hidden");
   if (portalTopBar) portalTopBar.classList.add("hidden");
   if (legacyHeader) legacyHeader.style.display = "none";
-
-  // Clear form fields
-  if (loginCode) loginCode.value = "";
-  if (loginPassword) loginPassword.value = "";
-  if (teacherPassword) teacherPassword.value = "";
-
-  // Clear error state
-  if (loginError) loginError.classList.add("hidden");
-
-  // Restore login UI elements (tabs and forms) - ensure they're visible
-  const studentForm = qs("#studentLoginForm");
-  const teacherForm = qs("#teacherLoginForm");
-  const tabs = document.querySelector("#loginView .tabs");
-  const subtitle = document.querySelector("#loginView .subtle");
-
-  if (studentForm) studentForm.classList.remove("hidden");
-  if (tabs) tabs.classList.remove("hidden");
-  if (subtitle) subtitle.classList.remove("hidden");
 
   console.log("[student-portal] Login view restored successfully");
 }
@@ -824,6 +808,10 @@ async function showStudentDashboard() {
 
   // Phase 3: Mark auth as ready to prevent login view from reappearing
   window.authReady = true;
+
+  // Hide loading view
+  const loadingView = qs("#loadingView");
+  if (loadingView) loadingView.classList.add("hidden");
 
   // HOTFIX: Always reveal dashboard FIRST, then hide login (order matters!)
   const loginView = qs("#loginView");
@@ -1239,7 +1227,9 @@ async function showProgressUnavailableBanner(reason) {
   // If diagnostic mode is enabled or reason is supabase_not_configured, check auth-health
   if (diagMode || reason === 'supabase_not_configured') {
     try {
-      const healthResponse = await fetch('/.netlify/functions/auth-health');
+      const healthResponse = await fetch('/.netlify/functions/auth-health', {
+        credentials: 'include'
+      });
       if (healthResponse.ok) {
         const health = await healthResponse.json();
         
@@ -1862,7 +1852,9 @@ async function findStudentByCode(code) {
       try {
         // Fetch roster from same-origin endpoint (preview deploy compatible)
         // IMPORTANT: Same-origin relative URL required for preview deploys compatibility
-        const response = await fetch("/.netlify/functions/student-roster");
+        const response = await fetch("/.netlify/functions/student-roster", {
+          credentials: "include"
+        });
 
         if (response.ok) {
           let data;
@@ -1996,6 +1988,13 @@ async function attemptStudentAutoLogin(code, name = null) {
 (async function init() {
   const initStartTime = Date.now();
 
+  // Set auth in progress flag to prevent race conditions
+  if (window.__rcStudentAuthInProgress) {
+    console.warn("[student-portal] Init already in progress, aborting duplicate call");
+    return;
+  }
+  window.__rcStudentAuthInProgress = true;
+
   try {
     if (DEBUG_MODE) console.log("[student-portal] Initialization started");
 
@@ -2023,7 +2022,6 @@ async function attemptStudentAutoLogin(code, name = null) {
       // D) If bootstrap flag was set but session restore failed, clear and show login
       console.warn("[student-portal] Bootstrap flag set but session restore failed");
       window.__autoLoginOk = false;
-      hideLoginLoading();
       showLogin();
       return;
     }
@@ -2034,24 +2032,19 @@ async function attemptStudentAutoLogin(code, name = null) {
     if (autoAuth && autoAuth.code) {
       console.log("[student-portal] Auto-login detected for code:", autoAuth.code);
 
-      // Show loading state
-      showLoginLoading();
-
       // D) Attempt auto-login with name from auth handoff
       const success = await attemptStudentAutoLogin(autoAuth.code, autoAuth.name);
 
       if (success) {
         // Auto-login successful - show dashboard
-        hideLoginLoading();
         showStudentDashboard();
         if (DEBUG_MODE)
           console.log("[student-portal] Init completed in", Date.now() - initStartTime, "ms");
         return;
       } else {
-        // D) Auto-login failed - explicitly call hideLoginLoading() and showLogin()
+        // D) Auto-login failed - explicitly call showLogin()
         console.warn("[student-portal] Auto-login failed, falling back to login form");
         window.__autoLoginOk = false;
-        hideLoginLoading();
         showLogin();
         return;
       }
@@ -2110,10 +2103,12 @@ async function attemptStudentAutoLogin(code, name = null) {
   } catch (err) {
     console.error("[student-portal] Initialization error:", err);
     // HOTFIX: On any error, show login form
-    hideLoginLoading();
     if (!window.__autoLoginOk) {
       showLogin();
     }
+  } finally {
+    // Clear the auth in progress flag
+    window.__rcStudentAuthInProgress = false;
   }
 })();
 

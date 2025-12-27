@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="emerald">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Admin Login Required — Reinisch Classroom</title>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+  <link rel="stylesheet" href="/assets/css/rc-emerald-dashboard-theme.css"/>
+  <style>
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, -apple-system, Segoe UI, Roboto, Inter, Helvetica, Arial, sans-serif;
+      background: linear-gradient(180deg, #0b1220, #0c1322 60%, #0b0f14);
+      color: #e6edf3;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .container {
+      max-width: 600px;
+      width: 100%;
+    }
+    .card {
+      background: #0f172a;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 40px;
+      text-align: center;
+      box-shadow: 0 6px 28px rgba(0, 0, 0, 0.35);
+    }
+    h1 {
+      margin: 0 0 12px 0;
+      font-size: 28px;
+      color: #e6edf3;
+    }
+    .icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+    .message {
+      color: #cbd5e1;
+      margin-bottom: 24px;
+      line-height: 1.6;
+    }
+    .diagnostic-info {
+      background: rgba(245, 158, 11, 0.1);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 24px;
+      font-size: 14px;
+      color: #fbbf24;
+    }
+    .btn {
+      display: inline-block;
+      padding: 12px 24px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.12s ease;
+      margin: 0 6px;
+    }
+    .btn-primary {
+      background: linear-gradient(180deg, #22c55e, #16a34a);
+      color: #031f11;
+      border: none;
+    }
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 22px rgba(34, 197, 94, 0.3);
+    }
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.05);
+      color: #e6edf3;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.14);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="icon">🔐</div>
+      <h1>Admin Access Required</h1>
+      <p class="message">
+        You need to be logged in through the Teacher Center to access the Admin area.
+      </p>
+      <div id="diagnosticInfo" style="display: none;" class="diagnostic-info"></div>
+      <div>
+        <a href="/hub/?entry=teacher" class="btn btn-primary">Go to Teacher Center</a>
+        <a href="/" class="btn btn-secondary">Return to Home</a>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // Check for diagnostic query parameter
+    (function() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const reason = urlParams.get('reason');
+      
+      if (reason) {
+        const diagnosticInfo = document.getElementById('diagnosticInfo');
+        let message = '';
+        
+        switch(reason) {
+          case 'missing_admin_session':
+            message = 'Admin session not found. Please log in through the Teacher Center.';
+            break;
+          case 'session_expired':
+            message = 'Your admin session has expired. Please log in again.';
+            break;
+          default:
+            message = 'Authentication required.';
+        }
+        
+        if (diagnosticInfo && message) {
+          diagnosticInfo.textContent = message;
+          diagnosticInfo.style.display = 'block';
+        }
+      }
+    })();
+  </script>
+</body>
+</html>

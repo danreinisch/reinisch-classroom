@@ -1,7 +1,7 @@
 // Edge guard: requires a valid Teacher Center session to access /admin/*
-// PR 335: Admin SSO via Teacher Center - removed standalone admin login
+// Admin SSO via Teacher Center - checks Teacher Center session
 //
-// This guard now verifies Teacher Center sessions by calling teacher-session function
+// This guard verifies Teacher Center sessions by calling teacher-session function
 // Users must be logged in via Teacher Center (/hub/) to access admin areas
 //
 // Required env vars (Netlify → Environment variables):
@@ -12,6 +12,7 @@
 //   - /.netlify/functions/incremental-deploy
 // It allows these without a session:
 //   - /edge-ping (health check)
+// It redirects to /admin-login (not /hub) when no valid session found
 
 export default async (request, context) => {
   const url = new URL(request.url);
@@ -51,22 +52,23 @@ export default async (request, context) => {
       return addDiagnosticHeader(context.next(), 'teacher-session-valid');
     }
     
-    // No valid session - redirect to Teacher Center
-    console.log('[admin-auth-guard] No valid Teacher Center session, redirecting to /hub/');
-    return redirectToHub();
+    // No valid session - redirect to /admin-login with reason
+    console.log('[admin-auth-guard] No valid Teacher Center session, redirecting to /admin-login');
+    return redirectToAdminLogin('missing_admin_session');
     
   } catch (error) {
     console.error('[admin-auth-guard] Error checking Teacher Center session:', error);
-    // On error, redirect to Teacher Center
-    return redirectToHub();
+    // On error, redirect to /admin-login
+    return redirectToAdminLogin('missing_admin_session');
   }
 };
 
-function redirectToHub() {
+function redirectToAdminLogin(reason = 'missing_admin_session') {
+  const location = reason ? `/admin-login/?reason=${reason}` : '/admin-login/';
   return new Response(null, {
     status: 302,
     headers: {
-      Location: '/hub/?entry=teacher',
+      Location: location,
       'Cache-Control': 'no-store',
       'X-Robots-Tag': 'noindex'
     }
