@@ -586,6 +586,7 @@
             </button>
             <button class="hub-rail-item" data-area="work" title="Work" aria-label="Work">Work</button>
             <button class="hub-rail-item" data-area="data" title="Data" aria-label="Data">Data</button>
+            <button class="hub-rail-item hub-admin-only" data-area="admin" title="Admin" aria-label="Admin" style="display:none">Admin</button>
             <button class="hub-rail-item" onclick="window.location.assign('/admin/')" title="Admin" aria-label="Admin" style="text-decoration: none; cursor: pointer;">
               Admin
             </button>
@@ -10270,5 +10271,49 @@
 
     <!-- Global App Shell JS -->
     <script defer src="/assets/js/app-shell.js"></script>
-  </body>
+  
+<!-- RC_HUB_ADMIN_BUTTON_V1 -->
+<script>
+(function () {
+  const btn = document.querySelector('.hub-admin-only');
+  if (!btn) return;
+
+  // Ensure this never gets treated like a normal hub tab.
+  btn.addEventListener('click', function (e) {
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    window.location.assign('/admin/');
+  }, true);
+
+  function isAdminSession(data) {
+    if (!data) return false;
+    if (data.role === 'admin') return true;
+    if (data.is_admin === true || data.isAdmin === true) return true;
+    if (data.user && (data.user.role === 'admin' || data.user.is_admin === true || data.user.isAdmin === true)) return true;
+    return false;
+  }
+
+  async function refresh() {
+    try {
+      const res = await fetch('/.netlify/functions/teacher-session', {
+        method: 'GET',
+        credentials: 'include',
+        headers: { 'Accept': 'application/json' }
+      });
+      const data = await res.json().catch(() => ({}));
+      btn.style.display = isAdminSession(data) ? '' : 'none';
+    } catch (_) {
+      btn.style.display = 'none';
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', refresh);
+  } else {
+    refresh();
+  }
+})();
+</script>
+
+</body>
 </html>
