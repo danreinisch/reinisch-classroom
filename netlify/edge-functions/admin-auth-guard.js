@@ -13,7 +13,7 @@
 function redirectToAdminLogin() {
   return new Response(null, {
     status: 302,
-    headers: { Location: "/admin-login/?reason=missing_admin_session" },
+    headers: { Location: "/hub/?reason=missing_admin_session&next=%2Fadmin%2F" },
   });
 }
 

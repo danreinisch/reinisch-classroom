@@ -5,7 +5,7 @@ exports.handler = async () => {
   return {
     statusCode: 302,
     headers: {
-      Location: '/admin-login',
+      Location: '/hub/?reason=admin_logged_out',
       'Set-Cookie': `${COOKIE_NAME}=; Max-Age=0; Path=/; HttpOnly; Secure; SameSite=Lax`,
       'Cache-Control': 'no-store'
     }
