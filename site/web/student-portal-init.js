@@ -844,13 +844,13 @@
 
         showMessage('Login successful! Loading your portal...', 'success');
 
-        // PR 315: Redirect to student portal with auto-login parameters
-        // This triggers the full portal experience with authenticated UI
+        // FIX: Show dashboard directly instead of redirecting
+        // This avoids unnecessary page reload and ensures session persists
+        // The redirect was causing issues with session persistence and watchdog timing
         setTimeout(() => {
-          const portalUrl = `/student/?auto=1&code=${encodeURIComponent(studentCode)}`;
-          console.log(LOG_PREFIX, 'Redirecting to:', portalUrl);
-          window.location.href = portalUrl;
-        }, 800);
+          console.log(LOG_PREFIX, 'Showing dashboard for:', studentCode);
+          showDashboard();
+        }, 500);
       } else {
         // Login failed with ok: false
         const errorMsg = data.error || 'Invalid student code or password';

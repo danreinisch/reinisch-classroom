@@ -115,15 +115,13 @@ test.describe('PR 315: Student Portal Login End-to-End', () => {
     // Click login button
     await page.click('#btnLogin');
     
-    // Should redirect to auto-login URL (wait for navigation)
-    await page.waitForURL(/\/student\/\?auto=1&code=S005/);
-    
-    // Wait for dashboard to appear
-    await page.waitForTimeout(500);
+    // FIX: No longer redirects, dashboard shows directly
+    // Wait for dashboard to appear (no redirect)
+    await page.waitForTimeout(1000);
     
     // Should show dashboard view
     const dashboardView = page.locator('#studentDashboardView');
-    await expect(dashboardView).toBeVisible();
+    await expect(dashboardView).toBeVisible({ timeout: 5000 });
     
     // Should hide login view
     const loginView = page.locator('#loginView');
