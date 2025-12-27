@@ -365,15 +365,16 @@
       if (res.status === 401) {
         // Check if it's a structured error with SESSION_EXPIRED code
         if (data && data.code === 'SESSION_EXPIRED' && data.retryable && retryCount < maxRetries) {
-          log('Session expired, attempting to refresh and retry...');
-          
+          log('Auth missing/expired; redirecting to /hub for SSO re-auth...');
+          window.location.assign('/hub/?reason=tc_session_expired&next=%2Fadmin%2F');
+          return;
           const refreshed = await refreshSession();
           if (refreshed) {
             log('Session refreshed successfully, retrying batch...');
             return await uploadBatchWithRetry(payload, batchNum, totalBatches, retryCount + 1);
           } else {
             log('Session refresh failed');
-            alert('Session expired and refresh failed. Please sign in again.');
+            window.location.assign('/hub/?reason=tc_session_expired&next=%2Fadmin%2F');
             persistQueue();
             persistFormState();
             location.replace('/hub/?entry=teacher');
@@ -381,7 +382,7 @@
           }
         } else {
           // Non-retryable 401 or retry limit reached
-          alert('Session expired. Please sign in again.');
+          window.location.assign('/hub/?reason=tc_session_expired&next=%2Fadmin%2F');
           persistQueue();
           persistFormState();
           location.replace('/hub/?entry=teacher');
@@ -626,7 +627,7 @@
       log(`Delete response ${res.status} -> ${text}`);
       
       if (res.status === 401) { 
-        alert('Session expired. Please sign in again.'); 
+        window.location.assign('/hub/?reason=tc_session_expired&next=%2Fadmin%2F');
         persistFormState();
         location.replace('/hub/?entry=teacher'); 
         return; 
@@ -742,7 +743,8 @@
     renderList();
 
     // Initialize session management
-    log('Initializing session management...');
+    log('Skipping legacy admin session management (SSO-only).');
+    return;
     await touchSession();
     
     // Set up periodic session touch
