@@ -2,7 +2,7 @@
  * Netlify Edge Function: Admin access guard
  *
  * Required behavior:
- * - Unauth GET /admin/ => 302 to /admin-login/?reason=missing_admin_session (NOT /hub)
+ * - Unauth GET /admin/ => 302 to /hub/?reason=missing_admin_session&next=/admin/ (SSO entry)
  * - Auth teacher (tc cookie valid) => allow /admin/ and add: X-Admin-Session: teacher-session-valid
  * - Validation must call SAME ORIGIN: /.netlify/functions/teacher-session and forward cookies
  *
@@ -10,10 +10,10 @@
  * - DO NOT edit netlify.toml here (edge routing handled elsewhere)
  */
 
-function redirectToAdminLogin() {
+function redirectToHubSSO() {
   return new Response(null, {
     status: 302,
-    headers: { Location: "/admin-login/?reason=missing_admin_session" },
+    headers: { Location: "/hub/?reason=missing_admin_session&next=%2Fadmin%2F" },
   });
 }
 
@@ -35,7 +35,7 @@ export default async (request, context) => {
   const cookie = request.headers.get("cookie") || "";
 
   // If no tc cookie at all, short-circuit to admin-login (no session to validate)
-  if (!hasTcCookie(cookie)) return redirectToAdminLogin();
+  if (!hasTcCookie(cookie)) return redirectToHubSSO();
 
   // Validate teacher session via SAME ORIGIN function call, forwarding cookies
   try {
@@ -45,12 +45,12 @@ export default async (request, context) => {
       headers: cookie ? { cookie } : {},
     });
 
-    if (verifyRes.status !== 200) return redirectToAdminLogin();
+    if (verifyRes.status !== 200) return redirectToHubSSO();
 
     const res = await context.next();
     res.headers.set("X-Admin-Session", "teacher-session-valid");
     return res;
   } catch (_err) {
-    return redirectToAdminLogin();
+    return redirectToHubSSO();
   }
 };

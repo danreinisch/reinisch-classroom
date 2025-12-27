@@ -17,8 +17,3 @@
   Pragma: no-cache
   X-Robots-Tag: noindex
 
-# Login page: also no-store
-/admin-login
-  Cache-Control: no-store, no-cache, must-revalidate
-  Pragma: no-cache
-  X-Robots-Tag: noindex

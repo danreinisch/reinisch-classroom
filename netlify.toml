@@ -138,12 +138,12 @@
 # Redirect old admin-login URLs to admin area (which requires Teacher Center SSO)
 [[redirects]]
   from = "/admin-login"
-  to = "/admin/"
+  to = "/hub/?next=%2Fadmin%2F"
   status = 302
 
 [[redirects]]
   from = "/admin-login/*"
-  to = "/admin/"
+  to = "/hub/?next=%2Fadmin%2F"
   status = 302
 
 # Edge healthcheck
