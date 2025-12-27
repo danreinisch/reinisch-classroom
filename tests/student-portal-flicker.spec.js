@@ -77,9 +77,15 @@ test.describe('Student Portal - Fetch Calls', () => {
     await page.goto(STUDENT_PORTAL_PATH);
     await page.waitForLoadState('networkidle');
     
-    // All requests should be to same origin (relative URLs)
+    // All API requests should use relative URLs (start with /.netlify/functions/)
+    // and be to the same origin
+    const pageOrigin = new URL(page.url()).origin;
     for (const req of requests) {
-      expect(req.url).toContain(new URL(STUDENT_PORTAL_PATH, page.url()).origin);
+      const reqUrl = new URL(req.url);
+      // Verify it's to same origin
+      expect(reqUrl.origin).toBe(pageOrigin);
+      // Verify it uses relative path format
+      expect(reqUrl.pathname).toContain('/.netlify/functions/');
     }
   });
 });

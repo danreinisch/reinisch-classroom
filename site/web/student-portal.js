@@ -1688,9 +1688,6 @@ function downloadCSV(csv, filename) {
   URL.revokeObjectURL(url);
 }
 
-// Auto-login constants
-const AUTO_LOGIN_LOADING_MESSAGE = "Signing you in...";
-
 // Simple in-memory cache for student lookups to avoid redundant fetches
 // Cache is invalidated on page refresh (intentional for now)
 let studentListCache = null;
@@ -1742,76 +1739,6 @@ function getStudentAutoAuth() {
 
   if (DEBUG_MODE) console.log("[student-portal] No auto-auth detected");
   return null;
-}
-
-/**
- * Show loading state in login box
- * @param {string} [message=AUTO_LOGIN_LOADING_MESSAGE] - Optional loading message
- */
-function showLoginLoading(message = AUTO_LOGIN_LOADING_MESSAGE) {
-  const loginBox = qs(".login-box");
-  if (loginBox) {
-    const loadingDiv = document.createElement("div");
-    loadingDiv.id = "autoLoginLoading";
-    loadingDiv.style.cssText = "text-align:center; padding:40px 20px;";
-
-    // Create elements safely to avoid XSS
-    const titleDiv = document.createElement("div");
-    titleDiv.style.cssText = "font-size:20px; font-weight:800; margin-bottom:12px";
-    titleDiv.textContent = message; // Use textContent to prevent XSS
-
-    const subtitleDiv = document.createElement("div");
-    subtitleDiv.className = "subtle";
-    subtitleDiv.textContent = "Please wait...";
-
-    loadingDiv.appendChild(titleDiv);
-    loadingDiv.appendChild(subtitleDiv);
-
-    // Hide other elements
-    const studentForm = qs("#studentLoginForm");
-    const teacherForm = qs("#teacherLoginForm");
-    const tabs = loginBox.querySelector(".tabs");
-    const subtitle = loginBox.querySelector(".subtle");
-
-    if (studentForm) studentForm.classList.add("hidden");
-    if (teacherForm) teacherForm.classList.add("hidden");
-    if (tabs) tabs.classList.add("hidden");
-    if (subtitle) subtitle.classList.add("hidden");
-
-    loginBox.appendChild(loadingDiv);
-  }
-}
-
-/**
- * Hide loading state and restore login form
- * D) Ensure this cannot exit early due to authReady guard unless dashboard is visible
- */
-function hideLoginLoading() {
-  // D) Only skip restoration if dashboard is actually visible
-  const dashboardView = qs("#studentDashboardView");
-  const isDashboardVisible = dashboardView && !dashboardView.classList.contains("hidden");
-
-  if (authReady && isDashboardVisible) {
-    console.log("[student-portal] hideLoginLoading blocked - dashboard is visible");
-    return;
-  }
-
-  const loadingDiv = qs("#autoLoginLoading");
-  if (loadingDiv) {
-    loadingDiv.remove();
-  }
-
-  const loginBox = qs(".login-box");
-  if (loginBox) {
-    const studentForm = qs("#studentLoginForm");
-    const teacherForm = qs("#teacherLoginForm");
-    const tabs = loginBox.querySelector(".tabs");
-    const subtitle = loginBox.querySelector(".subtle");
-
-    if (studentForm) studentForm.classList.remove("hidden");
-    if (tabs) tabs.classList.remove("hidden");
-    if (subtitle) subtitle.classList.remove("hidden");
-  }
 }
 
 /**
