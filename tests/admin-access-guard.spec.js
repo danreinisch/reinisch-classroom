@@ -1,22 +1,23 @@
 import { test, expect } from '@playwright/test';
 
 /**
- * Admin Access Guard Test (PR 335)
+ * Admin Access Guard Test
  * 
  * Validates that:
- * 1. Unauthenticated users are redirected from /admin/ to /hub/ (Teacher Center)
- * 2. /admin-login redirects to /admin/ (which then redirects to /hub/ if not authenticated)
+ * 1. Unauthenticated users are redirected from /admin/ to /admin-login (not /hub)
+ * 2. /admin-login shows a clear message and link to Teacher Center
  * 3. Students are blocked from /admin/
  * 4. Admin users can access /admin/ with Teacher Center session
  */
 
 // Test constants
 const ADMIN_PATH = '/site/admin/';
+const ADMIN_LOGIN_PATH = '/site/admin-login/';
 const HUB_PATH = '/site/hub/';
 const HOME_PATH = '/';
 
-test.describe('Admin Access Guard - Unauthenticated Users (PR 335)', () => {
-  test('should redirect unauthenticated user from /admin/ to /hub/ (Teacher Center)', async ({ page }) => {
+test.describe('Admin Access Guard - Unauthenticated Users', () => {
+  test('should redirect unauthenticated user from /admin/ to /admin-login', async ({ page }) => {
     // Note: Edge function only runs on Netlify; in local test environment,
     // the client-side gate.js handles the redirect
     
@@ -25,38 +26,54 @@ test.describe('Admin Access Guard - Unauthenticated Users (PR 335)', () => {
     
     // Wait for client-side redirect to complete
     await page.waitForFunction(() => {
-      return window.location.pathname.includes('hub');
+      return window.location.pathname.includes('admin-login');
     }, { timeout: 5000 }).catch(() => {
       // If redirect doesn't happen, that's okay for local testing
     });
     
     await page.waitForLoadState('networkidle');
     
-    // Should be redirected to hub (Teacher Center) by client-side gate
-    expect(page.url()).toContain('/hub');
+    // Should be redirected to admin-login (not /hub)
+    expect(page.url()).toContain('/admin-login');
   });
 
-  test('should redirect /admin-login to /admin/', async ({ page }) => {
-    // PR 335: /admin-login is now a legacy path that redirects to /admin/
-    // Navigate to admin-login (should redirect to /admin/, which then redirects to /hub/)
-    await page.goto('/site/admin-login/');
+  test('should show admin-login page with clear message', async ({ page }) => {
+    // Navigate to admin-login page
+    await page.goto(ADMIN_LOGIN_PATH);
     
-    // Wait for redirects to complete
     await page.waitForLoadState('networkidle');
     
-    // Should ultimately end up at hub (after /admin-login -> /admin/ -> /hub/)
-    await page.waitForFunction(() => {
-      return window.location.pathname.includes('hub') || window.location.pathname.includes('admin');
-    }, { timeout: 5000 }).catch(() => {
-      // If redirect doesn't happen, that's okay for local testing
-    });
+    // Should show the admin-login page
+    expect(page.url()).toContain('/admin-login');
     
-    // The path should NOT be admin-login
-    expect(page.url()).not.toContain('/admin-login');
+    // Check for key elements
+    const heading = await page.locator('h1').textContent();
+    expect(heading).toContain('Admin Access Required');
+    
+    // Should have a link to Teacher Center
+    const hubLink = page.locator('a[href*="/hub/"]');
+    await expect(hubLink).toBeVisible();
+  });
+
+  test('should show diagnostic message with reason query parameter', async ({ page }) => {
+    // Navigate to admin-login with reason parameter
+    await page.goto(ADMIN_LOGIN_PATH + '?reason=missing_admin_session');
+    
+    await page.waitForLoadState('networkidle');
+    
+    // Wait a bit for JavaScript to process the query parameter
+    await page.waitForTimeout(100);
+    
+    // Check for diagnostic message
+    const diagnosticInfo = page.locator('#diagnosticInfo');
+    await expect(diagnosticInfo).toBeVisible();
+    
+    const message = await diagnosticInfo.textContent();
+    expect(message).toContain('Admin session not found');
   });
 });
 
-test.describe('Admin Access Guard - Student Users (PR 335)', () => {
+test.describe('Admin Access Guard - Student Users', () => {
   test('should block student from accessing /admin/ (client-side)', async ({ page }) => {
     // Set up student role in localStorage
     await page.goto(HOME_PATH);
