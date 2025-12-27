@@ -1,79 +1,56 @@
-// Edge guard: requires a valid Teacher Center session to access /admin/*
-// PR 335: Admin SSO via Teacher Center - removed standalone admin login
-//
-// This guard now verifies Teacher Center sessions by calling teacher-session function
-// Users must be logged in via Teacher Center (/hub/) to access admin areas
-//
-// Required env vars (Netlify → Environment variables):
-// - SESSION_SECRET (for Teacher Center session validation)
-//
-// Note: This guard protects:
-//   - /admin and /admin/*
-//   - /.netlify/functions/incremental-deploy
-// It allows these without a session:
-//   - /edge-ping (health check)
-
-export default async (request, context) => {
-  const url = new URL(request.url);
-  const path = url.pathname;
-
-  // Allow health check without a session
-  if (path === '/edge-ping') {
-    return context.next();
-  }
-
-  // Only guard these routes
-  const isAdminArea = path === '/admin' || path.startsWith('/admin/');
-  const isUploadFn  = path === '/.netlify/functions/incremental-deploy';
-  if (!isAdminArea && !isUploadFn) {
-    return context.next();
-  }
-
-  // Check Teacher Center session by calling teacher-session function
-  try {
-    const sessionCheckUrl = new URL('/.netlify/functions/teacher-session', url.origin);
-    
-    // Forward cookies to teacher-session
-    const sessionCheckRequest = new Request(sessionCheckUrl, {
-      method: 'GET',
-      headers: {
-        'cookie': request.headers.get('cookie') || ''
-      }
-    });
-
-    const sessionResponse = await fetch(sessionCheckRequest);
-    
-    if (sessionResponse.ok) {
-      // Valid Teacher Center session
-      // Optional: Future validation could check for specific roles or allowlist here
-      
-      console.log('[admin-auth-guard] Valid Teacher Center session, allowing access');
-      return addDiagnosticHeader(context.next(), 'teacher-session-valid');
-    }
-    
-    // No valid session - redirect to admin login
-    console.log('[admin-auth-guard] No valid Teacher Center session, redirecting to /admin-login/');
-    return redirectToAdminLogin();
-    
-  } catch (error) {
-    console.error('[admin-auth-guard] Error checking Teacher Center session:', error);
-    // On error, redirect to admin login
-    return redirectToAdminLogin();
-  }
-};
+/**
+ * Netlify Edge Function: Admin access guard
+ *
+ * Required behavior:
+ * - Unauth GET /admin/ => 302 to /admin-login/?reason=missing_admin_session (NOT /hub)
+ * - Auth teacher (tc cookie valid) => allow /admin/ and add: X-Admin-Session: teacher-session-valid
+ * - Validation must call SAME ORIGIN: /.netlify/functions/teacher-session and forward cookies
+ *
+ * Guardrails:
+ * - DO NOT edit netlify.toml here (edge routing handled elsewhere)
+ */
 
 function redirectToAdminLogin() {
   return new Response(null, {
     status: 302,
-    headers: {
-      Location: '/admin-login/?reason=missing_admin_session',
-      'Cache-Control': 'no-store',
-      'X-Robots-Tag': 'noindex'
-    }
+    headers: { Location: "/admin-login/?reason=missing_admin_session" },
   });
 }
 
-function addDiagnosticHeader(response, status) {
-  response.headers.set('X-Admin-Session', status);
-  return response;
+function isAdminPath(pathname) {
+  return pathname === "/admin" || pathname.startsWith("/admin/");
 }
+
+function hasTcCookie(cookieHeader) {
+  // Matches "tc=" at start or after a semicolon delimiter.
+  return /(^|;\s*)tc=/.test(cookieHeader || "");
+}
+
+export default async (request, context) => {
+  const url = new URL(request.url);
+
+  // Only guard /admin and /admin/* (avoid accidental matches like /admin-login)
+  if (!isAdminPath(url.pathname)) return context.next();
+
+  const cookie = request.headers.get("cookie") || "";
+
+  // If no tc cookie at all, short-circuit to admin-login (no session to validate)
+  if (!hasTcCookie(cookie)) return redirectToAdminLogin();
+
+  // Validate teacher session via SAME ORIGIN function call, forwarding cookies
+  try {
+    const verifyUrl = new URL("/.netlify/functions/teacher-session", url.origin);
+    const verifyRes = await fetch(verifyUrl.toString(), {
+      method: "GET",
+      headers: cookie ? { cookie } : {},
+    });
+
+    if (verifyRes.status !== 200) return redirectToAdminLogin();
+
+    const res = await context.next();
+    res.headers.set("X-Admin-Session", "teacher-session-valid");
+    return res;
+  } catch (_err) {
+    return redirectToAdminLogin();
+  }
+};
