@@ -2,16 +2,13 @@
 // Provides security headers, CORS, and response utilities
 const crypto = require('crypto');
 
-// Trusted origins for CORS
-const TRUSTED_ORIGINS = [
-  'https://reinischclassroom.com',
-  'https://www.reinischclassroom.com',
+// Local dev origins for CORS (explicit)
+const LOCAL_TRUSTED_ORIGINS = [
   'http://localhost:8888',
   'http://localhost:3000',
   'http://127.0.0.1:8888',
   'http://127.0.0.1:3000',
 ];
-
 // Default security headers used across all responses
 const DEFAULT_SEC_HEADERS = {
   'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
@@ -21,6 +18,46 @@ const DEFAULT_SEC_HEADERS = {
   'X-Frame-Options': 'SAMEORIGIN',
 };
 
+
+function getRequestOrigin(event) {
+  const headers = (event && event.headers) || {};
+  const protoRaw = headers['x-forwarded-proto'] || headers['X-Forwarded-Proto'] || 'https';
+  const hostRaw = headers['x-forwarded-host'] || headers['X-Forwarded-Host'] || headers.host || headers.Host || '';
+  const proto = String(protoRaw).split(',')[0].trim() || 'https';
+  const host = String(hostRaw).split(',')[0].trim();
+  if (!host) return '';
+  return `${proto}://${host}`;
+}
+
+function getEnvSiteOrigins() {
+  const out = new Set();
+  const candidates = [
+    process.env.DEPLOY_PRIME_URL,
+    process.env.DEPLOY_URL,
+    process.env.URL,
+    process.env.SITE_URL,
+  ].filter(Boolean);
+
+  for (const raw of candidates) {
+    try {
+      const u = new URL(raw);
+      out.add(`${u.protocol}//${u.host}`);
+
+      // If this is a custom domain, allow the www/apex sibling too.
+      // Avoid generating nonsense like www.<site>.netlify.app.
+      if (!u.hostname.endsWith('.netlify.app')) {
+        if (u.hostname.startsWith('www.')) {
+          out.add(`${u.protocol}//${u.host.replace(/^www\./, '')}`);
+        } else {
+          out.add(`${u.protocol}//www.${u.host}`);
+        }
+      }
+    } catch (_) {
+      // ignore invalid URL
+    }
+  }
+  return out;
+}
 /**
  * Generate a unique request ID
  * @returns {string} UUID v4 format request ID
@@ -99,19 +136,26 @@ function htmlResponse(event, status, body, extraHeaders = {}, requestId = null) 
  * @param {string} origin - Origin header from request
  * @returns {boolean} True if origin is allowed
  */
-function isOriginAllowed(origin) {
+function isOriginAllowed(origin, event) {
   if (!origin) return false;
-  
-  // Check trusted origins
-  if (TRUSTED_ORIGINS.includes(origin)) {
+
+  // Local dev
+  if (LOCAL_TRUSTED_ORIGINS.includes(origin)) {
     return true;
   }
-  
-  // Allow Netlify deploy previews
-  if (origin.match(/^https:\/\/[a-z0-9-]+\.netlify\.app$/)) {
+
+  // Same-origin (deploy previews / branch deploys / custom domains)
+  const reqOrigin = getRequestOrigin(event);
+  if (reqOrigin && origin === reqOrigin) {
     return true;
   }
-  
+
+  // Env site origins (custom domain or netlify URL; includes www/apex sibling when applicable)
+  const envOrigins = getEnvSiteOrigins();
+  if (envOrigins.has(origin)) {
+    return true;
+  }
+
   return false;
 }
 
@@ -132,7 +176,7 @@ function getCorsHeaders(event, methods = ['GET', 'POST', 'OPTIONS'], headers = [
   };
   
   // Only echo origin if it's allowed
-  if (isOriginAllowed(origin)) {
+  if (isOriginAllowed(origin, event)) {
     corsHeaders['Access-Control-Allow-Origin'] = origin;
     // When allowing credentials, we must set this header
     corsHeaders['Access-Control-Allow-Credentials'] = 'true';
@@ -273,4 +317,5 @@ module.exports = {
   validateBodySize,
   safeJsonParse,
   validateStringField,
+  getRequestOrigin,
 };
