@@ -146,3 +146,12 @@
   to = "/admin/"
   status = 302
 
+# Edge healthcheck
+[[edge_functions]]
+  path = "/edge-ping"
+  function = "edge-ping"
+
+[[edge_functions]]
+  path = "/edge-ping/*"
+  function = "edge-ping"
+
