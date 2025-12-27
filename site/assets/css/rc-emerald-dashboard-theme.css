@@ -584,3 +584,25 @@ input[type="file"].rc-input::file-selector-button:hover {
     display: none;
   }
 }
+
+
+/* RC_EMERALD_GLOBAL_BG_V1 */
+/* Global background: make Emerald truly global (not just Hub) */
+html[data-theme="emerald"] body,
+html[data-theme="emerald"] body.glass-bold,
+html[data-theme="emerald"] #app,
+html[data-theme="emerald"] #app-shell,
+html[data-theme="emerald"] .app-shell {
+  background:
+    url("/assets/bg/bg5e_soft_grid.svg") center/cover no-repeat fixed,
+    radial-gradient(1200px 800px at 20% -10%, rgba(34, 197, 94, 0.08), transparent 50%),
+    radial-gradient(1200px 800px at 120% 20%, rgba(6, 182, 212, 0.06), transparent 50%),
+    linear-gradient(180deg, #0b1220, #0c1322 60%, #0b0f14) !important;
+}
+
+/* If any grid overlay/pseudo-element is used, kill it in Emerald mode */
+html[data-theme="emerald"] body::before,
+html[data-theme="emerald"] body::after {
+  background: none !important;
+}
+
