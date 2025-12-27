@@ -51,22 +51,22 @@ export default async (request, context) => {
       return addDiagnosticHeader(context.next(), 'teacher-session-valid');
     }
     
-    // No valid session - redirect to Teacher Center
-    console.log('[admin-auth-guard] No valid Teacher Center session, redirecting to /hub/');
-    return redirectToHub();
+    // No valid session - redirect to admin login
+    console.log('[admin-auth-guard] No valid Teacher Center session, redirecting to /admin-login/');
+    return redirectToAdminLogin();
     
   } catch (error) {
     console.error('[admin-auth-guard] Error checking Teacher Center session:', error);
-    // On error, redirect to Teacher Center
-    return redirectToHub();
+    // On error, redirect to admin login
+    return redirectToAdminLogin();
   }
 };
 
-function redirectToHub() {
+function redirectToAdminLogin() {
   return new Response(null, {
     status: 302,
     headers: {
-      Location: '/hub/?entry=teacher',
+      Location: '/admin-login/?reason=missing_admin_session',
       'Cache-Control': 'no-store',
       'X-Robots-Tag': 'noindex'
     }
