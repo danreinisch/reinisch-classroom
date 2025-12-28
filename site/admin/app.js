@@ -809,12 +809,6 @@
       return (input && input.value ? input.value : '').trim();
     }
 
-    function refreshPreview() {
-      const t = currentTitle() || '<<enter a unit title>>';
-      const cmds = buildCommands(t, True);
-      setPreview(preview, cmds.full.replace('True', ''));
-    }
-
     // Don’t use True (pythonism) — just show something useful
     function previewFull(title) {
       const t = title || '<<enter a unit title>>';
