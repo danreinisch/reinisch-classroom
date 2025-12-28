@@ -1,6 +1,6 @@
 {
   "version": "v1",
-  "updated": "2025-12-28T02:37:24.591Z",
+  "updated": "2025-12-28T02:38:43.370Z",
   "categories": {
     "toolkit": {
       "slots": 8,
@@ -145,7 +145,7 @@
     "wok": {
       "slots": 16,
       "titles": [
-        "Interview Prep",
+        "",
         "",
         "",
         "",
@@ -163,7 +163,7 @@
         ""
       ],
       "links": [
-        "/presentations/warrior-of-kragdon-ah/presentation-01/",
+        "",
         "",
         "",
         "",
