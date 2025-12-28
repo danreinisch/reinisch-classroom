@@ -675,9 +675,11 @@
    * Render lessons navigator content
    */
   
+
   // Lessons sidebar hardening:
-  // - Hide entries whose URLs no longer exist
+  // - Hide entries whose URLs no longer exist (stale index entries)
   // - Replace generic names ("Presentation 7") with the page <title>
+  // - Hide units with zero existing presentations
   // - Run once per page load (cached in-memory)
   let lessonsDataHydrated = false;
 
@@ -709,79 +711,63 @@
     }
   }
 
-  async function urlExists(url) {
+  async function urlLooksAlive(url) {
     try {
       const head = await fetch(url, { method: 'HEAD', cache: 'no-store' });
-      if (head.ok) return True;
-      // Some setups reject HEAD (405). Fall back to GET.
-      if (head.status == 405 or head.status == 403):
-        pass
+      if (head.ok) return true;
+      if (head.status !== 405 && head.status !== 403) return false;
     } catch (_) {
-      pass
-
+      // fall through to GET
+    }
     try {
       const get = await fetch(url, { method: 'GET', cache: 'no-store' });
-      return get.ok;
+      return !!get.ok;
     } catch (_) {
       return false;
     }
   }
 
   async function normalizeLessonsData(data) {
-    // Mutates a shallow-cloned structure; keeps units even if empty (no stale presentation links).
     const clone = JSON.parse(JSON.stringify(data || {}));
     const sections = Array.isArray(clone.sections) ? clone.sections : [];
 
     for (const section of sections) {
       const units = Array.isArray(section.units) ? section.units : [];
+      const cleanedUnits = [];
+
       for (const unit of units) {
         const pres = Array.isArray(unit.presentations) ? unit.presentations : [];
-        const cleaned = [];
+        const cleanedPres = [];
 
-        for (const p of pres) {
-          const url = p && p.url ? String(p.url) : '';
+        for (const presItem of pres) {
+          const url = presItem && presItem.url ? String(presItem.url) : '';
           if (!url) continue;
 
-          // Drop if the target URL doesn't exist anymore (stale index entry)
-          let exists = false;
-          try {
-            // HEAD first (fast), then GET fallback
-            const head = await fetch(url, { method: 'HEAD', cache: 'no-store' });
-            if (head.ok) {
-              exists = true;
-            } else if (head.status === 405 || head.status === 403) {
-              const get = await fetch(url, { method: 'GET', cache: 'no-store' });
-              exists = get.ok;
-            }
-          } catch (_) {
-            try {
-              const get = await fetch(url, { method: 'GET', cache: 'no-store' });
-              exists = get.ok;
-            } catch (_) {
-              exists = false;
-            }
-          }
-
+          const exists = await urlLooksAlive(url);
           if (!exists) continue;
 
-          // If name is generic, replace with <title>
-          if (looksGenericPresentationName(p.name)) {
+          if (looksGenericPresentationName(presItem.name)) {
             const title = await fetchTitleFromPage(url);
-            if (title) p.name = title;
+            if (title) presItem.name = title;
           }
 
-          cleaned.push(p);
+          cleanedPres.push(presItem);
         }
 
-        unit.presentations = cleaned;
+        // Hide empty units (no existing presentations)
+        if (cleanedPres.length > 0) {
+          unit.presentations = cleanedPres;
+          cleanedUnits.push(unit);
+        }
       }
+
+      section.units = cleanedUnits;
     }
 
     return clone;
   }
 
-
-  function renderLessonsContent() {
+function renderLessonsContent() {
     const content = document.querySelector('.lessons-navigator-content');
     if (!content || !lessonsData) return;
 
