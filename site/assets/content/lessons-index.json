@@ -91,17 +91,6 @@
           "id": "return-from-kragdon-ah",
           "name": "Return from Kragdon-Ah",
           "presentations": []
-        },
-        {
-          "id": "warrior-of-kragdon-ah",
-          "name": "Warrior of Kragdon-Ah",
-          "presentations": [
-            {
-              "id": "presentation-01",
-              "name": "Presentation 1",
-              "url": "/presentations/warrior-of-kragdon-ah/presentation-01/"
-            }
-          ]
         }
       ]
     },
