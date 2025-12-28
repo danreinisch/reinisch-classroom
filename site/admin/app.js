@@ -412,8 +412,17 @@
 
       // SSO-only: skip legacy admin session preflight/refresh.
 
-      log('Preparing files…');
-      const encoded = [];
+            let totalBytes = 0;
+
+            for (const q of queue) totalBytes += q.file.size;
+
+      
+
+      
+
+            log('Preparing files…');
+
+            const encoded = [];
       let doneBytes = 0;
       for (const q of queue) {
         const b64 = await toBase64(q.file);
