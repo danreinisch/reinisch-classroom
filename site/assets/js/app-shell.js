@@ -474,14 +474,14 @@
       // Phase 302C: Defensive - Update admin link visibility if present (only for admin role)
       const adminLink = rail.querySelector('[data-admin-only]');
       if (adminLink) {
-        // Only show admin link if current page role is admin (not just if user has admin auth)
-        if (pageRole === 'admin') {
+        // Show Admin link if authenticated as admin (or already on an admin page)
+        const isAdminAuthed = isAuthed && auth && auth.role === 'admin';
+        if (pageRole === 'admin' || isAdminAuthed) {
           adminLink.classList.remove('app-shell-hidden');
         } else {
           adminLink.classList.add('app-shell-hidden');
         }
       }
-
       // Phase 302C: Defensive - Update status if element present
       // PR-student-portal-fallback: Use page role for display (prevents "Signed in as Teacher" on student pages)
       const status = rail.querySelector('[data-shell-status]');
