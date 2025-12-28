@@ -734,3 +734,128 @@
     }catch(e){ log('Diagnostics failed', e?.message||String(e)); }
   })();
 })();
+
+/* initUnitScaffolderHelper__v1
+ * Admin helper: generate copy/paste terminal commands to scaffold a new Language Arts unit
+ * and regenerate lessons-index.json. This does NOT attempt to write to GitHub from the browser.
+ */
+(function () {
+  function shellQuoteBash(s) {
+    // Wrap in single quotes; escape internal single quotes safely for bash/zsh.
+    // abc'def -> 'abc'"'"'def'
+    const str = String(s || '').trim();
+    if (!str) return "''";
+    return "'" + str.replace(/'/g, "'\"'\"'") + "'";
+  }
+
+  async function copyToClipboard(text) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch (_) {
+      // Fallback
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+        return !!ok;
+      } catch (_) {
+        return false;
+      }
+    }
+  }
+
+  function buildCommands(title, withPresentation) {
+    const q = shellQuoteBash(title);
+    const scaffold = withPresentation
+      ? `node scripts/new-lesson-unit.mjs ${q} --with-presentation`
+      : `node scripts/new-lesson-unit.mjs ${q}`;
+
+    const gen = `node scripts/generate-lessons-index.mjs`;
+    const full = [
+      `cd ~/reinisch-classroom || exit 1`,
+      scaffold,
+      gen,
+      `git status`
+    ].join('\n');
+
+    return { scaffold, gen, full };
+  }
+
+  function setPreview(el, text) {
+    if (!el) return;
+    el.textContent = text || '';
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const card = document.getElementById('unitScaffolderCard');
+    if (!card) return;
+
+    const input = document.getElementById('newUnitTitle');
+    const preview = document.getElementById('unitCmdPreview');
+
+    const btnWith = document.getElementById('copyNewUnitCmd');
+    const btnNo = document.getElementById('copyNewUnitCmdNoPres');
+    const btnGen = document.getElementById('copyGenerateIndexCmd');
+    const btnFull = document.getElementById('copyFullWorkflowCmd');
+
+    function currentTitle() {
+      return (input && input.value ? input.value : '').trim();
+    }
+
+    // Don’t use True (pythonism) — just show something useful
+    function previewFull(title) {
+      const t = title || '<<enter a unit title>>';
+      const cmds = buildCommands(t, true);
+      setPreview(preview, cmds.full);
+    }
+
+    if (input) {
+      input.addEventListener('input', () => previewFull(currentTitle()));
+      previewFull(currentTitle());
+    } else {
+      previewFull('');
+    }
+
+    if (btnWith) btnWith.addEventListener('click', async () => {
+      const t = currentTitle();
+      const cmds = buildCommands(t, true);
+      const ok = await copyToClipboard(cmds.scaffold);
+      previewFull(t);
+      if (ok) btnWith.textContent = 'Copied ✅';
+      setTimeout(() => { btnWith.textContent = 'Copy: scaffold category + Presentation 1'; }, 900);
+    });
+
+    if (btnNo) btnNo.addEventListener('click', async () => {
+      const t = currentTitle();
+      const cmds = buildCommands(t, false);
+      const ok = await copyToClipboard(cmds.scaffold);
+      previewFull(t);
+      if (ok) btnNo.textContent = 'Copied ✅';
+      setTimeout(() => { btnNo.textContent = 'Copy: scaffold category only'; }, 900);
+    });
+
+    if (btnGen) btnGen.addEventListener('click', async () => {
+      const cmds = buildCommands('x', true);
+      const ok = await copyToClipboard(cmds.gen);
+      if (ok) btnGen.textContent = 'Copied ✅';
+      setTimeout(() => { btnGen.textContent = 'Copy: regenerate Lessons index'; }, 900);
+    });
+
+    if (btnFull) btnFull.addEventListener('click', async () => {
+      const t = currentTitle();
+      const cmds = buildCommands(t, true);
+      const ok = await copyToClipboard(cmds.full);
+      previewFull(t);
+      if (ok) btnFull.textContent = 'Copied ✅';
+      setTimeout(() => { btnFull.textContent = 'Copy: full workflow'; }, 900);
+    });
+  });
+})();
+    

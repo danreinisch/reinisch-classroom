@@ -159,5 +159,30 @@
 
   <!-- Global App Shell JS -->
   <script defer src="/assets/js/app-shell.js"></script>
+        <!-- New Category helper (Language Arts) -->
+        <section class="panel" id="unitScaffolderCard" style="margin-top: 1rem;">
+          <h2 style="margin: 0 0 .5rem 0;">New Category (Language Arts)</h2>
+          <div class="hint" style="margin-bottom:.75rem;">
+            This does not modify the live site directly. It generates the exact commands to run locally to scaffold a new unit folder and regenerate the Lessons index.
+          </div>
+
+          <label for="newUnitTitle" style="display:block; font-weight:600; margin:.5rem 0 .25rem;">Unit title</label>
+          <input id="newUnitTitle" type="text" placeholder="e.g., Long Way Down" style="width:100%; padding:.6rem .7rem; border-radius:.5rem; border:1px solid rgba(255,255,255,.2); background: rgba(255,255,255,.08); color: inherit;" />
+
+          <div style="display:flex; flex-wrap:wrap; gap:.5rem; margin:.75rem 0;">
+            <button class="primary" id="copyNewUnitCmd">Copy: scaffold category + Presentation 1</button>
+            <button class="warn" id="copyNewUnitCmdNoPres">Copy: scaffold category only</button>
+            <button class="primary" id="copyGenerateIndexCmd">Copy: regenerate Lessons index</button>
+            <button class="warn" id="copyFullWorkflowCmd">Copy: full workflow</button>
+          </div>
+
+          <pre id="unitCmdPreview" style="white-space:pre-wrap; padding:.75rem; border-radius:.5rem; border:1px solid rgba(255,255,255,.2); background: rgba(0,0,0,.25); margin:0;"></pre>
+
+          <div class="hint" style="margin-top:.5rem;">
+            Paste into Terminal at repo root. Then commit + push (or open a PR) like normal.
+          </div>
+        </section>
+    
+
 </body>
 </html>
