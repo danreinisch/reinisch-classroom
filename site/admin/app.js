@@ -741,7 +741,6 @@
 
     // Initialize session management
     log('Skipping legacy admin session management (SSO-only).');
-    return;
 }, SESSION_TOUCH_INTERVAL_MS);
 
     // Check for and offer to restore previous queue
