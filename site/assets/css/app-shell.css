@@ -540,3 +540,5 @@ body.presentation-mode .lessons-navigator {
   }
 }
 
+/* Hide Netlify deploy-preview toolbar placeholder (blocked by CSP -> white slab) */
+[data-netlify-deploy-id] { display: none !important; }
