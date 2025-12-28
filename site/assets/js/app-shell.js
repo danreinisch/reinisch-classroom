@@ -557,7 +557,7 @@
    */
   async function loadLessonsData() {
     try {
-      const response = await fetch('/assets/content/lessons-index.json');
+      const response = await fetch('/assets/content/lessons-index.json?ts=' + Date.now(), { cache: 'no-store' });
       if (response.ok) {
         lessonsData = await response.json();
         debugLog('[app-shell] Loaded lessons data');
@@ -631,9 +631,26 @@
       lessonsBtn.setAttribute('aria-expanded', 'true');
     }
 
-    // Render content if we have data
+    // Render content if we have data (hydrate titles + hide stale entries once)
     if (lessonsData) {
-      renderLessonsContent();
+      if (lessonsDataHydrated) {
+        renderLessonsContent();
+      } else {
+        const content = navigator.querySelector('.lessons-navigator-content');
+        if (content) content.innerHTML = '<div class="lessons-loading">Loading lessons...</div>';
+
+        normalizeLessonsData(lessonsData)
+          .then((normalized) => {
+            lessonsData = normalized;
+            lessonsDataHydrated = true;
+            renderLessonsContent();
+          })
+          .catch((err) => {
+            lessonsDataHydrated = true;
+            debugWarn('[app-shell] Lessons normalize failed:', err);
+            renderLessonsContent();
+          });
+      }
     }
   }
 
@@ -657,7 +674,100 @@
   /**
    * Render lessons navigator content
    */
-  function renderLessonsContent() {
+  
+
+  // Lessons sidebar hardening:
+  // - Hide entries whose URLs no longer exist (stale index entries)
+  // - Replace generic names ("Presentation 7") with the page <title>
+  // - Hide units with zero existing presentations
+  // - Run once per page load (cached in-memory)
+  let lessonsDataHydrated = false;
+
+  function decodeHtmlEntities(str) {
+    try {
+      const txt = document.createElement('textarea');
+      txt.innerHTML = String(str || '');
+      return txt.value;
+    } catch (_) {
+      return String(str || '');
+    }
+  }
+
+  function looksGenericPresentationName(name) {
+    const n = String(name || '').trim();
+    return /^presentation\s+\d+$/i.test(n) || n.toLowerCase() === 'open' || n === '';
+  }
+
+  async function fetchTitleFromPage(url) {
+    try {
+      const res = await fetch(url, { method: 'GET', cache: 'no-store' });
+      if (!res.ok) return null;
+      const html = await res.text();
+      const m = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+      if (!m) return null;
+      return decodeHtmlEntities(m[1].trim());
+    } catch (_) {
+      return null;
+    }
+  }
+
+  async function urlLooksAlive(url) {
+    try {
+      const head = await fetch(url, { method: 'HEAD', cache: 'no-store' });
+      if (head.ok) return true;
+      if (head.status !== 405 && head.status !== 403) return false;
+    } catch (_) {
+      // fall through to GET
+    }
+    try {
+      const get = await fetch(url, { method: 'GET', cache: 'no-store' });
+      return !!get.ok;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  async function normalizeLessonsData(data) {
+    const clone = JSON.parse(JSON.stringify(data || {}));
+    const sections = Array.isArray(clone.sections) ? clone.sections : [];
+
+    for (const section of sections) {
+      const units = Array.isArray(section.units) ? section.units : [];
+      const cleanedUnits = [];
+
+      for (const unit of units) {
+        const pres = Array.isArray(unit.presentations) ? unit.presentations : [];
+        const cleanedPres = [];
+
+        for (const presItem of pres) {
+          const url = presItem && presItem.url ? String(presItem.url) : '';
+          if (!url) continue;
+
+          const exists = await urlLooksAlive(url);
+          if (!exists) continue;
+
+          if (looksGenericPresentationName(presItem.name)) {
+            const title = await fetchTitleFromPage(url);
+            if (title) presItem.name = title;
+          }
+
+          cleanedPres.push(presItem);
+        }
+
+        // Hide empty units (no existing presentations)
+        if (cleanedPres.length > 0) {
+          unit.presentations = cleanedPres;
+          cleanedUnits.push(unit);
+        }
+      }
+
+      section.units = cleanedUnits;
+    }
+
+    return clone;
+  }
+
+function renderLessonsContent() {
     const content = document.querySelector('.lessons-navigator-content');
     if (!content || !lessonsData) return;
 
