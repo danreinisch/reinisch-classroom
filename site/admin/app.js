@@ -3,8 +3,6 @@
   const BATCH_TARGET = 3.5 * 1024 * 1024;
   
   // Session management constants
-  const SESSION_TOUCH_INTERVAL_MS = 5 * 60 * 1000; // Touch session every 5 minutes
-  const SESSION_SAFETY_BUFFER_SECONDS = 180; // 3 minute safety buffer
   const QUEUE_STORAGE_KEY = 'adminUploadQueueDraft';
   const FORM_STATE_KEY = 'adminFormStateDraft';
 
@@ -365,23 +363,21 @@
       if (res.status === 401) {
         // Check if it's a structured error with SESSION_EXPIRED code
         if (data && data.code === 'SESSION_EXPIRED' && data.retryable && retryCount < maxRetries) {
-          log('Session expired, attempting to refresh and retry...');
-          
-          const refreshed = await refreshSession();
-          if (refreshed) {
-            log('Session refreshed successfully, retrying batch...');
-            return await uploadBatchWithRetry(payload, batchNum, totalBatches, retryCount + 1);
-          } else {
-            log('Session refresh failed');
-            alert('Session expired and refresh failed. Please sign in again.');
-            persistQueue();
-            persistFormState();
-            location.replace('/hub/?entry=teacher');
-            return { success: false };
-          }
+
+          log('Auth missing/expired; redirecting to /hub for SSO re-auth...');
+
+          persistQueue();
+
+          persistFormState();
+
+          window.location.assign('/hub/?reason=tc_session_expired&next=%2Fadmin%2F');
+
+          return;
+
         } else {
+
           // Non-retryable 401 or retry limit reached
-          alert('Session expired. Please sign in again.');
+          window.location.assign('/hub/?reason=tc_session_expired&next=%2Fadmin%2F');
           persistQueue();
           persistFormState();
           location.replace('/hub/?entry=teacher');
@@ -414,32 +410,7 @@
       if (!title) { alert('Please enter a title'); return; }
       if (!queue.length) { alert('Please add at least one file'); return; }
 
-      // Pre-flight session check
-      log('Checking session before upload...');
-      const sessionOk = await touchSession();
-      if (!sessionOk) {
-        alert('Session check failed. Please refresh the page and try again.');
-        return;
-      }
-
-      // Calculate estimated encoding time
-      let totalBytes = 0;
-      for (const q of queue) totalBytes += q.file.size;
-      const estimatedEncodingSeconds = Math.ceil(totalBytes / (1024 * 1024 * 2)); // ~2MB/sec estimate
-      
-      log(`Estimated encoding time: ${estimatedEncodingSeconds}s`);
-      log(`Session TTL: ${sessionInfo.expiresIn}s`);
-
-      // Proactive refresh if TTL is too low
-      if (sessionInfo.expiresIn < (estimatedEncodingSeconds + SESSION_SAFETY_BUFFER_SECONDS)) {
-        log('Session TTL too low for estimated work, refreshing...');
-        const refreshed = await refreshSession();
-        if (!refreshed) {
-          alert('Failed to refresh session. Please log in again.');
-          location.replace('/hub/?entry=teacher');
-          return;
-        }
-      }
+      // SSO-only: skip legacy admin session preflight/refresh.
 
       log('Preparing files…');
       const encoded = [];
@@ -626,7 +597,7 @@
       log(`Delete response ${res.status} -> ${text}`);
       
       if (res.status === 401) { 
-        alert('Session expired. Please sign in again.'); 
+        window.location.assign('/hub/?reason=tc_session_expired&next=%2Fadmin%2F');
         persistFormState();
         location.replace('/hub/?entry=teacher'); 
         return; 
@@ -742,13 +713,7 @@
     renderList();
 
     // Initialize session management
-    log('Initializing session management...');
-    await touchSession();
-    
-    // Set up periodic session touch
-    sessionTouchTimer = setInterval(async () => {
-      await touchSession();
-    }, SESSION_TOUCH_INTERVAL_MS);
+    log('Skipping legacy admin session management (SSO-only).');
 
     // Check for and offer to restore previous queue
     promptQueueRestore();
