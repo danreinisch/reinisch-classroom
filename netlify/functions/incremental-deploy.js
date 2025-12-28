@@ -7,6 +7,7 @@
 
 const crypto = require('crypto');
 const { verifySession, createErrorResponse } = require('./_lib/token-utils');
+const { requireTeacher } = require('./_lib/auth');
 
 const GH_API = 'https://api.github.com';
 const DELETE = Symbol('DELETE');
@@ -181,52 +182,52 @@ async function handleDelete(body, remainingTTL){
 
 // ---------- Auth helper ----------
 async function requireAdmin(event){
+  // ✅ SSO path: Teacher Center cookie (tc) signed with SESSION_SECRET
+  const tcSecret = (process.env.SESSION_SECRET || '').trim();
+  if (tcSecret) {
+    const tc = requireTeacher(event, tcSecret);
+
+    // requireTeacher() accepts both teacher/admin — we ONLY allow admin into incremental deploy
+    if (tc.ok && tc.user && tc.user.role === 'admin') {
+      const now = Math.floor(Date.now() / 1000);
+      const remainingTTL = (tc.user.exp ? (tc.user.exp - now) : 0);
+      return { ok: true, remainingTTL: Math.max(0, remainingTTL) };
+    }
+
+    // Logged in but not admin → deny (this is NOT a "session expired" case)
+    if (tc.ok && tc.user && tc.user.role !== 'admin') {
+      return { ok: false, response: createErrorResponse('FORBIDDEN', 'Admin access required', false, 403) };
+    }
+  }
+
+  // Fallback: legacy admin cookies (rc_admin_session_v4) signed with ADMIN_SESSION_SECRET
   const secret = (process.env.ADMIN_SESSION_SECRET || '').trim();
-  
   if (!secret) {
-    return {
-      ok: false,
-      response: createErrorResponse('SERVER_ERROR', 'Server configuration error', false, 503)
-    };
+    return { ok: false, response: createErrorResponse('SERVER_ERROR', 'Server configuration error', false, 503) };
   }
 
   const sessionInfo = verifySession(event.headers, secret);
-  
+
+  // ADMIN_KEY header fallback (old tooling)
   if (!sessionInfo.valid) {
-    if (ENABLE_SESSION_LOG) {
-      console.log('[incremental-deploy] Session verification failed');
+    const requiredKey = process.env.ADMIN_KEY;
+    if (requiredKey) {
+      const hdrs = event.headers || {};
+      const sentKey = hdrs['x-admin-key'] || hdrs['X-Admin-Key'] || hdrs['x-Admin-Key'];
+      if (sentKey && sentKey === requiredKey) {
+        return { ok: true, remainingTTL: 3600 };
+      }
     }
-    return {
-      ok: false,
-      response: createErrorResponse('SESSION_EXPIRED', 'Session expired or invalid', true, 401)
-    };
+
+    if (ENABLE_SESSION_LOG) console.log('[incremental-deploy] Session verification failed');
+    return { ok: false, response: createErrorResponse('SESSION_EXPIRED', 'Session expired or invalid', true, 401) };
   }
 
   if (sessionInfo.needsUpgrade && ENABLE_SESSION_LOG) {
     console.log('[incremental-deploy] Legacy session detected (version:', sessionInfo.legacyVersion, ')');
   }
 
-  // Check for ADMIN_KEY fallback (legacy support)
-  const requiredKey = process.env.ADMIN_KEY;
-  if (!sessionInfo.valid && requiredKey) {
-    const hdrs = event.headers || {};
-    const sentKey = hdrs['x-admin-key'] || hdrs['X-Admin-Key'] || hdrs['x-Admin-Key'];
-    if (sentKey && sentKey === requiredKey) {
-      return { ok: true, remainingTTL: 3600 }; // Fallback TTL
-    }
-  }
-
-  if (!sessionInfo.valid) {
-    return {
-      ok: false,
-      response: createErrorResponse('SESSION_EXPIRED', 'Session expired or invalid', true, 401)
-    };
-  }
-
-  return { 
-    ok: true, 
-    remainingTTL: sessionInfo.remainingTTL || 0 
-  };
+  return { ok: true, remainingTTL: sessionInfo.remainingTTL || 0 };
 }
 
 // ---------- Units loader ----------
