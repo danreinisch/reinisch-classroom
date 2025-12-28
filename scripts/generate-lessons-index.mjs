@@ -1,5 +1,27 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { execSync } from "node:child_process";
+
+function stableGeneratedAt() {
+  // Stable timestamp so running the generator doesn't create a fake git diff.
+  // We use the latest commit time affecting presentation directories.
+  try {
+    const out = execSync(
+      "git log -1 --format=%cI -- site/presentations site/life-skills/presentations",
+      { stdio: ["ignore", "pipe", "ignore"] }
+    ).toString().trim();
+    if (out) return out;
+  } catch (_) {}
+
+  // Fallback: keep existing generatedAt if present, otherwise current time.
+  try {
+    const existing = JSON.parse(fs.readFileSync("site/assets/content/lessons-index.json", "utf8"));
+    if (existing && existing.generatedAt) return existing.generatedAt;
+  } catch (_) {}
+
+  return new Date().toISOString();
+}
+
 
 const SITE_DIR = path.join(process.cwd(), 'site');
 const OUT_PATH = path.join(SITE_DIR, 'assets', 'content', 'lessons-index.json');
@@ -181,7 +203,7 @@ async function main() {
 
   const out = {
     version: 1,
-    generatedAt: new Date().toISOString(),
+    generatedAt: stableGeneratedAt(),
     sections
   };
 
