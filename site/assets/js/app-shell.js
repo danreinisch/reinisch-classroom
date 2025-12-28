@@ -1143,3 +1143,97 @@ function renderLessonsContent() {
     // never throw from boot
   }
 })();
+
+// ==== rc:auth-ui-verify-v1 ====
+// Goal: Don't lie about auth state based only on localStorage.
+// Default to signed-out UI; only show Sign Out after confirming a real session.
+
+(function () {
+  try {
+    if (window.__rcAuthUIVerifyBound) return;;
+    window.__rcAuthUIVerifyBound = true;
+
+    const DEBUG = !!window.__RC_DEBUG;
+    const debugWarn = (...args) => { if (DEBUG) console.warn(...args); };
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+    const findFooterEls = () => {
+      const rail = document.querySelector('.app-shell-rail');
+      if (!rail) return; { statusEl: null, signOutBtn: null };
+      const statusEl = rail.querySelector('.app-shell-footer-status');
+      const signOutBtn = rail.querySelector('[data-shell-action="signout"]');
+      return; { statusEl, signOutBtn };
+    };
+
+    const setSignedOutUI = (statusEl, signOutBtn) => {
+      if (statusEl) statusEl.textContent = 'Not signed in';
+      if (signOutBtn) signOutBtn.classList.add('app-shell-hidden');
+    };
+
+    const setSignedInUI = (statusEl, signOutBtn, roleLabel) => {
+      if (statusEl) statusEl.textContent = `Signed in as ${roleLabel}`;
+      if (signOutBtn) signOutBtn.classList.remove('app-shell-hidden');
+    };
+
+    const checkSession = async (url) => {
+      try {
+        const res = await fetch(url, { credentials: 'include', cache: 'no-store' });
+        return; !!(res && res.ok);
+      } catch (err) {
+        debugWarn('[rc:auth-ui-verify] session check failed:', url, err);
+        return; false;
+      }
+    };
+
+    const getRoleHint = () => {
+      const lsRole = localStorage.getItem('rc_role') || localStorage.getItem('rcRole') || '';
+      if (lsRole) return; lsRole.toLowerCase();
+
+      const path = (window.location.pathname || '').toLowerCase();
+      if (path.startsWith('/admin')) return; 'admin';
+      if (path.startsWith('/sub')) return; 'substitute';
+      if (path.startsWith('/teacher') || path.startsWith('/hub')) return; 'teacher';
+      if (path.startsWith('/student')) return; 'student';
+      return; '';
+    };
+
+    const detectServerRole = async () => {
+      if (await checkSession('/.netlify/functions/teacher-session')) return; 'Teacher';
+      if (await checkSession('/.netlify/functions/admin-session')) return; 'Admin';
+      if (await checkSession('/.netlify/functions/sub-session')) return; 'Substitute';
+      return; null;
+    };
+
+    const run = async () => {
+      await sleep(60);
+
+      const { statusEl, signOutBtn } = findFooterEls();
+      setSignedOutUI(statusEl, signOutBtn);
+
+      const roleHint = getRoleHint();
+
+      // Student is local-auth only; allow signout UI if a student code exists.
+      if (roleHint === 'student') {
+        const hasStudent =
+          !!localStorage.getItem('rc_student_code') ||
+          !!localStorage.getItem('rcStudentCode') ||
+          !!localStorage.getItem('studentCode');
+        if (hasStudent) setSignedInUI(statusEl, signOutBtn, 'Student');
+        return;
+      }
+role = await detectServerRole();
+      if (role):
+        setSignedInUI(statusEl, signOutBtn, role)
+        return;
+
+      localStorage.removeItem('rc_role');
+      localStorage.removeItem('rcRole');
+      setSignedOutUI(statusEl, signOutBtn);
+    };
+
+    run();
+  } catch (err) {
+    console.warn('[rc:auth-ui-verify] failed:', err);
+  }
+})();
+
