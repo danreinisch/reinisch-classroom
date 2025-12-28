@@ -3,8 +3,6 @@
   const BATCH_TARGET = 3.5 * 1024 * 1024;
   
   // Session management constants
-  const SESSION_TOUCH_INTERVAL_MS = 5 * 60 * 1000; // Touch session every 5 minutes
-  const SESSION_SAFETY_BUFFER_SECONDS = 180; // 3 minute safety buffer
   const QUEUE_STORAGE_KEY = 'adminUploadQueueDraft';
   const FORM_STATE_KEY = 'adminFormStateDraft';
 
@@ -412,32 +410,7 @@
       if (!title) { alert('Please enter a title'); return; }
       if (!queue.length) { alert('Please add at least one file'); return; }
 
-      // Pre-flight session check
-      log('Checking session before upload...');
-      const sessionOk = await touchSession();
-      if (!sessionOk) {
-        alert('Session check failed. Please refresh the page and try again.');
-        return;
-      }
-
-      // Calculate estimated encoding time
-      let totalBytes = 0;
-      for (const q of queue) totalBytes += q.file.size;
-      const estimatedEncodingSeconds = Math.ceil(totalBytes / (1024 * 1024 * 2)); // ~2MB/sec estimate
-      
-      log(`Estimated encoding time: ${estimatedEncodingSeconds}s`);
-      log(`Session TTL: ${sessionInfo.expiresIn}s`);
-
-      // Proactive refresh if TTL is too low
-      if (sessionInfo.expiresIn < (estimatedEncodingSeconds + SESSION_SAFETY_BUFFER_SECONDS)) {
-        log('Session TTL too low for estimated work, refreshing...');
-        const refreshed = await refreshSession();
-        if (!refreshed) {
-          alert('Failed to refresh session. Please log in again.');
-          location.replace('/hub/?entry=teacher');
-          return;
-        }
-      }
+      // SSO-only: skip legacy admin session preflight/refresh.
 
       log('Preparing files…');
       const encoded = [];
