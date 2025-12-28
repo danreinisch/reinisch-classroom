@@ -124,7 +124,7 @@
 
     rail.innerHTML = `
       <div class="app-shell-header">
-        <div class="app-shell-brand">Reinisch Classroom</div>
+        <a href="/hub/" class="app-shell-brand" aria-label="Return to Home" title="Return to Home">Reinisch Classroom</a>
         <div class="app-shell-tagline">Empowering Every Learner</div>
       </div>
 
@@ -1043,4 +1043,103 @@ function renderLessonsContent() {
       updateAuthState();
     }
   });
+})();
+
+
+// rc:auth-ui-verify-v1
+// Side-eye note: UI should not claim you're signed in just because localStorage says so.
+// We verify a real server session (teacher/admin/sub) before showing Sign Out or "Signed in as ...".
+(function () {
+  try {
+    if (window.__rcAuthUiVerifyV1) return;
+    window.__rcAuthUiVerifyV1 = true;
+
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+    function findFooterEls() {
+      const signOutBtn = document.querySelector('.app-shell-footer-btn[data-shell-action="signout"]')
+        || Array.from(document.querySelectorAll('button, a')).find(el =>
+            /sign out/i.test((el.textContent || '').trim()) && el.closest('.app-shell-footer')
+          );
+
+      const statusEl = document.querySelector('.app-shell-footer-status')
+        || Array.from(document.querySelectorAll('.app-shell-footer *')).find(el =>
+            /signed in as/i.test((el.textContent || '').trim())
+          );
+
+      return { signOutBtn, statusEl };
+    }
+
+    function setSignedInUI(isSignedIn, roleLabel) {
+      const { signOutBtn, statusEl } = findFooterEls();
+      if (signOutBtn) {
+        // Keep the existing class semantics if present; also hard-hide when not signed in
+        if (!isSignedIn) {
+          signOutBtn.classList.add('app-shell-hidden');
+          signOutBtn.style.display = 'none';
+        } else {
+          signOutBtn.classList.remove('app-shell-hidden');
+          signOutBtn.style.display = '';
+        }
+      }
+      if (statusEl) {
+        statusEl.innerHTML = isSignedIn
+          ? `<span>Signed in as ${roleLabel}</span>`
+          : `<span>Not signed in</span>`;
+      }
+    }
+
+    async function checkSession(url) {
+      try {
+        const res = await fetch(url, { credentials: 'include', cache: 'no-store' });
+        if (res.status === 200) return true;
+        if (res.status === 401 || res.status === 403) return false;
+        // 404 or other -> treat as not available
+        return false;
+      } catch {
+        return false;
+      }
+    }
+
+    async function detectRoleSession() {
+      const path = location.pathname || '';
+      const candidates = [];
+
+      // Prefer likely surface based on path, but allow hub to detect any
+      if (path.startsWith('/teacher')) candidates.push(['Teacher', '/.netlify/functions/teacher-session']);
+      if (path.startsWith('/admin')) candidates.push(['Admin', '/.netlify/functions/admin-session']);
+      if (path.startsWith('/sub')) candidates.push(['Substitute', '/.netlify/functions/substitute-session']);
+
+      if (path.startsWith('/hub')) {
+        candidates.push(['Teacher', '/.netlify/functions/teacher-session']);
+        candidates.push(['Admin', '/.netlify/functions/admin-session']);
+        candidates.push(['Substitute', '/.netlify/functions/substitute-session']);
+      }
+
+      // Default fallback: try teacher session only (cheap + common)
+      if (candidates.length === 0) candidates.push(['Teacher', '/.netlify/functions/teacher-session']);
+
+      for (const [label, url] of candidates) {
+        const ok = await checkSession(url);
+        if (ok) return { signedIn: true, label };
+      }
+      return { signedIn: false, label: '' };
+    }
+
+    async function run() {
+      // Wait briefly for shell DOM to exist (app-shell injects itself)
+      for (let i = 0; i < 10; i++) {
+        const { signOutBtn, statusEl } = findFooterEls();
+        if (signOutBtn || statusEl) break;
+        await sleep(100);
+      }
+
+      const r = await detectRoleSession();
+      setSignedInUI(r.signedIn, r.label || 'User');
+    }
+
+    run();
+  } catch {
+    // never throw from boot
+  }
 })();
