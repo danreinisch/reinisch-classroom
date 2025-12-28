@@ -2893,7 +2893,8 @@
 
       // Auth modal extend (optional enhancement)
       try {
-        await import(`/web/auth-modal-extend.js?v=${cacheBust}`);
+        // rc: legacy auth-modal-extend disabled (hub uses inline role cards)
+        // await import(`/web/auth-modal-extend.js?v=${cacheBust}`);
         debugLog(LOG_PREFIX, "Auth modal extend loaded successfully");
       } catch (err) {
         debugError(LOG_PREFIX, "Failed to load auth-modal-extend.js:", err);
@@ -10312,6 +10313,39 @@
   } else {
     refresh();
   }
+})();
+</script>
+
+
+<!-- rc:auth-modal-overlay-killer-v1 -->
+<script>
+(() => {
+  try {
+    // Only relevant when hub is reached via auth redirects (e.g., ?reason=missing_admin_session&next=/admin/)
+    const qs = new URLSearchParams(location.search);
+    const reason = qs.get('reason') || '';
+    if (!reason) return;
+
+    const kill = () => {
+      const selectors = [
+        '#authModal', '#roleModal', '#signinModal',
+        '.auth-modal', '.auth-modal-overlay', '.modal-overlay', '.modal-backdrop',
+        '[data-auth-modal]', '[data-role-modal]'
+      ];
+      selectors.forEach(sel => {
+        document.querySelectorAll(sel).forEach(el => {
+          el.style.display = 'none';
+          el.setAttribute('aria-hidden', 'true');
+        });
+      });
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', kill, { once: true });
+    } else {
+      kill();
+    }
+  } catch {}
 })();
 </script>
 

@@ -124,7 +124,7 @@
 
     rail.innerHTML = `
       <div class="app-shell-header">
-        <div class="app-shell-brand">Reinisch Classroom</div>
+        <a href="/" class="app-shell-brand" aria-label="Return to Home" title="Return to Home">Reinisch Classroom</a>
         <div class="app-shell-tagline">Empowering Every Learner</div>
       </div>
 
@@ -1044,3 +1044,118 @@ function renderLessonsContent() {
     }
   });
 })();
+
+
+// rc:auth-ui-verify-v1
+// Goal: Don't lie about auth state based solely on localStorage. Verify server session before showing Sign Out.
+(() => {
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  const findFooterEls = () => {
+    const signOutBtn =
+      document.querySelector('[data-rc-signout]') ||
+      document.querySelector('#btnSignOut') ||
+      document.querySelector('.btn-signout') ||
+      document.querySelector('.signout-btn');
+    const statusEl =
+      document.querySelector('[data-rc-auth-status]') ||
+      document.querySelector('#rcAuthStatus') ||
+      document.querySelector('#authStatus') ||
+      document.querySelector('.auth-status');
+    return { signOutBtn, statusEl };
+  };
+
+  const setUI = (signedIn, label) => {
+    const { signOutBtn, statusEl } = findFooterEls();
+    if (signOutBtn) signOutBtn.style.display = signedIn ? '' : 'none';
+    if (statusEl) statusEl.textContent = signedIn ? `Signed in as: ${label}` : 'Not signed in';
+  };
+
+  const checkSession = async (url) => {
+    try {
+      const res = await fetch(url, { credentials: 'include', cache: 'no-store' });
+      if (res.status === 200) return true;
+      if (res.status === 401 || res.status === 403) return false;
+      return false;
+    } catch {
+      return false;
+    }
+  };
+
+  const detectRoleSession = async () => {
+    const path = location.pathname || '';
+    const candidates = [];
+
+    if (path.startsWith('/teacher')) candidates.push(['Teacher', '/.netlify/functions/teacher-session']);
+    if (path.startsWith('/admin')) candidates.push(['Admin', '/.netlify/functions/admin-session']);
+    if (path.startsWith('/sub')) candidates.push(['Substitute', '/.netlify/functions/substitute-session']);
+
+    if (path.startsWith('/hub')) {
+      candidates.push(['Teacher', '/.netlify/functions/teacher-session']);
+      candidates.push(['Admin', '/.netlify/functions/admin-session']);
+      candidates.push(['Substitute', '/.netlify/functions/substitute-session']);
+    }
+
+    if (candidates.length === 0) {
+      candidates.push(['Teacher', '/.netlify/functions/teacher-session']);
+    }
+
+    for (const [label, url] of candidates) {
+      const ok = await checkSession(url);
+      if (ok) return { signedIn: true, label };
+    }
+    return { signedIn: false, label: '' };
+  };
+
+  const run = async () => {
+    // Wait briefly for shell DOM to exist (app-shell injects itself)
+    for (let i = 0; i < 10; i++) {
+      const { signOutBtn, statusEl } = findFooterEls();
+      if (signOutBtn || statusEl) break;
+      await sleep(100);
+    }
+
+    const r = await detectRoleSession();
+    setUI(r.signedIn, r.label || 'User');
+
+    if (!r.signedIn) {
+      localStorage.removeItem('rc_role');
+      localStorage.removeItem('rcRole');
+    }
+  };
+
+  run().catch((e) => {
+    if (typeof console !== 'undefined' && typeof console.debug === 'function') {
+      console.debug('[rc:auth-ui-verify-v1] boot error:', e);
+    }
+  });
+})();
+// ==== rc:auth-ui-verify-v1 ====
+// Goal: Don't lie about auth state based only on localStorage.
+// Default to signed-out UI; only show Sign Out after confirming a real session.
+
+
+// removed invalid injected auth verify block
+
+
+// rc:brand-home — Make the brand act like “Return to Home”
+(function rcBrandHome(){
+  try {
+    const bind = () => {
+      const brand = document.querySelector('.app-shell-brand');
+      if (!brand) return;
+      if (brand.dataset && brand.dataset.rcHomeBound === "1") return;
+      if (brand.dataset) brand.dataset.rcHomeBound = "1";
+      brand.style.cursor = 'pointer';
+      brand.title = 'Return to Home';
+      brand.addEventListener('click', () => { window.location.href = '/'; });
+    };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind);
+    else bind();
+  } catch (e) {
+    console.warn('[rc:brand-home] failed:', e);
+  }
+})();
+
+
+
