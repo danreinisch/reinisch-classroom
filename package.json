@@ -13,7 +13,9 @@
     "check:inline-scripts": "node scripts/check-inline-scripts.cjs",
     "check:nav-script": "node scripts/check-asset-paths.cjs",
     "check:schema-sync": "node scripts/schema-sync-check.mjs",
-    "postbuild": "node scripts/check-env-leaks.js && node scripts/check-inline-scripts.cjs && node scripts/check-asset-paths.cjs"
+    "postbuild": "node scripts/check-env-leaks.js && node scripts/check-inline-scripts.cjs && node scripts/check-asset-paths.cjs",
+    "generate:lessons-index": "node scripts/generate-lessons-index.mjs",
+    "prebuild": "node scripts/generate-lessons-index.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.40.0",
