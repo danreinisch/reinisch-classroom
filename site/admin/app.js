@@ -365,22 +365,19 @@
       if (res.status === 401) {
         // Check if it's a structured error with SESSION_EXPIRED code
         if (data && data.code === 'SESSION_EXPIRED' && data.retryable && retryCount < maxRetries) {
+
           log('Auth missing/expired; redirecting to /hub for SSO re-auth...');
+
+          persistQueue();
+
+          persistFormState();
+
           window.location.assign('/hub/?reason=tc_session_expired&next=%2Fadmin%2F');
+
           return;
-          const refreshed = await refreshSession();
-          if (refreshed) {
-            log('Session refreshed successfully, retrying batch...');
-            return await uploadBatchWithRetry(payload, batchNum, totalBatches, retryCount + 1);
-          } else {
-            log('Session refresh failed');
-            window.location.assign('/hub/?reason=tc_session_expired&next=%2Fadmin%2F');
-            persistQueue();
-            persistFormState();
-            location.replace('/hub/?entry=teacher');
-            return { success: false };
-          }
+
         } else {
+
           // Non-retryable 401 or retry limit reached
           window.location.assign('/hub/?reason=tc_session_expired&next=%2Fadmin%2F');
           persistQueue();
@@ -745,12 +742,7 @@
     // Initialize session management
     log('Skipping legacy admin session management (SSO-only).');
     return;
-    await touchSession();
-    
-    // Set up periodic session touch
-    sessionTouchTimer = setInterval(async () => {
-      await touchSession();
-    }, SESSION_TOUCH_INTERVAL_MS);
+}, SESSION_TOUCH_INTERVAL_MS);
 
     // Check for and offer to restore previous queue
     promptQueueRestore();
