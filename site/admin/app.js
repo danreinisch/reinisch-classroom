@@ -865,12 +865,12 @@
 
  */
 
-/* eslint-disable no-alert */
 function showPRResult(pr){
   if(!pr || !pr.url) return;
   const msg = (pr.existing ? "Draft updated. PR already open:" : "Draft saved. PR created:")
     + "\n" + pr.url + "\n\nOpen PR now?";
   try { navigator.clipboard && navigator.clipboard.writeText(pr.url); } catch(e) {}
+  // eslint-disable-next-line no-alert
   if (confirm(msg)) window.open(pr.url, "_blank", "noopener");
 }
 
