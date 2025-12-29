@@ -1,0 +1,5 @@
+[
+  { "id": "S001", "first": "Ava",  "last": "Johnson",  "grade": 10, "caseManager": "Reinisch", "iepDue": "2026-02-15" },
+  { "id": "S002", "first": "Liam", "last": "Martinez", "grade": 9,  "caseManager": "Reinisch", "iepDue": "2026-01-30" },
+  { "id": "S003", "first": "Noah", "last": "Nguyen",   "grade": 12, "caseManager": "Reinisch", "iepDue": "2026-03-22" }
+]
