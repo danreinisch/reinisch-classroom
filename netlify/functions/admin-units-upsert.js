@@ -277,6 +277,8 @@ exports.handler = async (event) => {
   // Parse request body once (used for branch + confirmMain)
   const body = safeJsonParse(event.body || '{}') || {};
 
+  const requestId = (event.headers && (event.headers['x-nf-request-id'] || event.headers['x-request-id'])) || '';
+
   try {
     if (event.httpMethod !== 'POST') return json(405, { ok: false, error: 'Method not allowed' });
 
