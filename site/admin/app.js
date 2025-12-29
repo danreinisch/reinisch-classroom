@@ -861,7 +861,20 @@
 
 /* initUnitCategoryManager__v1
  * Admin UI: Create/Update categories by calling /.netlify/functions/admin-units-upsert
+
+
  */
+
+function showPRResult(pr){
+  if(!pr || !pr.url) return;
+  const msg = (pr.existing ? "Draft updated. PR already open:" : "Draft saved. PR created:")
+    + "\n" + pr.url + "\n\nOpen PR now?";
+  try { navigator.clipboard && navigator.clipboard.writeText(pr.url); } catch (e) { /* ignore */ }
+  // eslint-disable-next-line no-alert
+  if (confirm(msg)) window.open(pr.url, "_blank", "noopener");
+}
+
+
 (function () {
   function slugify(s) {
     return String(s || '')
@@ -926,19 +939,20 @@
         headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
         cache: 'no-store',
-        body: JSON.stringify(p),
+        body: JSON.stringify(Object.assign({}, p, { createPr: true })),
       });
 
       const text = await res.text();
       let data = null;
       try { data = JSON.parse(text); } catch { data = { ok: false, error: text }; }
-
       if (!res.ok || !data.ok) {
         console.error('[Category Manager] error:', data);
         alert('Create/Update failed: ' + (data.error || res.status));
         setStatus('Error');
         return;
       }
+
+      try { showPRResult((data && data.pr) ? data.pr : null); } catch (e) { /* ignore */ }
 
       setStatus('Saved ✓');
       alert(`Saved! Commit: ${data.commit}\nIndex created: ${data.createdIndex ? 'YES' : 'NO'}`);
