@@ -47,16 +47,8 @@
       "baseOut": "life-skills/presentations",
       "slots": 32,
       "pagePath": "/life-skills/"
-    },
-    {
-      "id": "demo-unit",
-      "title": "Demo Unit",
-      "section": "language-arts",
-      "slots": 16,
-      "baseOut": "presentations/demo-unit",
-      "pagePath": "/language-arts/demo-unit/"
     }
   ],
-  "updated": "2025-12-29T18:41:35.515Z",
+  "updated": "2025-10-31T00:00:00Z",
   "version": "v1"
 }
