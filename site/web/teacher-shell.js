@@ -4,7 +4,7 @@
 
   function setCollapsed(isCollapsed){
     document.documentElement.classList.toggle('tc-collapsed', isCollapsed);
-    try{ localStorage.setItem(KEY, isCollapsed ? 'collapsed' : 'expanded'); }catch(_){}
+    try{ localStorage.setItem(KEY, isCollapsed ? 'collapsed' : 'expanded'); }catch(_){ /* noop */ }
     const btn = document.getElementById('tcSidebarToggle');
     if(btn) btn.setAttribute('aria-expanded', String(!isCollapsed));
   }
@@ -79,14 +79,14 @@
     el.src.includes("app.netlify.com/cdp");
 
   const nuke = (el) => {
-    try { el.remove(); } catch(e) {}
+    try { el.remove(); } catch(e) { /* noop */ }
     try {
       el.style.setProperty("display","none","important");
       el.style.setProperty("height","0","important");
       el.style.setProperty("width","0","important");
       el.style.setProperty("opacity","0","important");
       el.style.setProperty("pointer-events","none","important");
-    } catch(e) {}
+    } catch(e) { /* noop */ }
   };
 
   const run = () => {
