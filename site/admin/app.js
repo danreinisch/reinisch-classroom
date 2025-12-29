@@ -945,15 +945,14 @@ function showPRResult(pr){
       const text = await res.text();
       let data = null;
       try { data = JSON.parse(text); } catch { data = { ok: false, error: text }; }
-
-      
-      try { showPRResult((data && data.pr) ? data.pr : null); } catch (e) { /* ignore */ }
-if (!res.ok || !data.ok) {
+      if (!res.ok || !data.ok) {
         console.error('[Category Manager] error:', data);
         alert('Create/Update failed: ' + (data.error || res.status));
         setStatus('Error');
         return;
       }
+
+      try { showPRResult((data && data.pr) ? data.pr : null); } catch (e) { /* ignore */ }
 
       setStatus('Saved ✓');
       alert(`Saved! Commit: ${data.commit}\nIndex created: ${data.createdIndex ? 'YES' : 'NO'}`);
