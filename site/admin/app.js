@@ -865,6 +865,7 @@
 
  */
 
+/* eslint-disable no-alert */
 function showPRResult(pr){
   if(!pr || !pr.url) return;
   const msg = (pr.existing ? "Draft updated. PR already open:" : "Draft saved. PR created:")
