@@ -858,4 +858,140 @@
     });
   });
 })();
-    
+
+/* initUnitCategoryManager__v1
+ * Admin UI: Create/Update categories by calling /.netlify/functions/admin-units-upsert
+ */
+(function () {
+  function slugify(s) {
+    return String(s || '')
+      .toLowerCase()
+      .trim()
+      .replace(/&/g, 'and')
+      .replace(/['"]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+  }
+
+  function qs(id) { return document.getElementById(id); }
+
+  function setStatus(msg) {
+    const el = qs('unitMgrStatus');
+    if (el) el.textContent = msg || '';
+  }
+
+  function buildPayload() {
+    const title = (qs('unitMgrTitle')?.value || '').trim();
+    const id = (qs('unitMgrId')?.value || '').trim();
+    const section = (qs('unitMgrSection')?.value || 'language-arts').trim();
+    const slots = Number(qs('unitMgrSlots')?.value || 16);
+
+    const baseOut = (qs('unitMgrBaseOut')?.value || '').trim();
+    const pagePath = (qs('unitMgrPagePath')?.value || '').trim();
+
+    return { id, title, section, slots, baseOut, pagePath };
+  }
+
+  function renderPreview(payload) {
+    const pre = qs('unitMgrPreview');
+    if (!pre) return;
+    pre.textContent = JSON.stringify(payload, null, 2);
+  }
+
+  function validateClient(p) {
+    if (!p.title) return 'Title is required';
+    if (!/^[a-z0-9][a-z0-9_-]{1,31}$/.test(p.id)) return 'Invalid Unit ID (use lowercase a–z, 0–9, - or _)';
+    if (!['language-arts', 'life-skills'].includes(p.section)) return 'Invalid section';
+    if (!Number.isFinite(p.slots) || p.slots < 1 || p.slots > 64) return 'Slots must be 1–64';
+    if (!p.baseOut || p.baseOut.startsWith('/') || p.baseOut.includes('..')) return 'baseOut must be a relative path (no leading "/" or "..")';
+    if (!p.pagePath.startsWith('/') || !p.pagePath.endsWith('/')) return 'pagePath must start and end with "/"';
+    return '';
+  }
+
+  async function upsert() {
+    const btn = qs('btnUnitMgrUpsert');
+    const p = buildPayload();
+    renderPreview(p);
+
+    const err = validateClient(p);
+    if (err) { alert(err); return; }
+
+    try {
+      if (btn) btn.disabled = true;
+      setStatus('Saving…');
+
+      const res = await fetch('/.netlify/functions/admin-units-upsert', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        cache: 'no-store',
+        body: JSON.stringify(p),
+      });
+
+      const text = await res.text();
+      let data = null;
+      try { data = JSON.parse(text); } catch { data = { ok: false, error: text }; }
+
+      if (!res.ok || !data.ok) {
+        console.error('[Category Manager] error:', data);
+        alert('Create/Update failed: ' + (data.error || res.status));
+        setStatus('Error');
+        return;
+      }
+
+      setStatus('Saved ✓');
+      alert(`Saved! Commit: ${data.commit}\nIndex created: ${data.createdIndex ? 'YES' : 'NO'}`);
+
+      location.reload();
+    } catch (e) {
+      console.error(e);
+      alert('Create/Update failed: ' + (e?.message || String(e)));
+      setStatus('Error');
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  function autofill() {
+    const title = (qs('unitMgrTitle')?.value || '').trim();
+    if (!title) { alert('Enter a Title first'); return; }
+
+    const slug = slugify(title);
+    const section = (qs('unitMgrSection')?.value || 'language-arts').trim();
+
+    if (qs('unitMgrId') && !qs('unitMgrId').value.trim()) qs('unitMgrId').value = slug.slice(0, 32);
+    if (qs('unitMgrBaseOut') && !qs('unitMgrBaseOut').value.trim()) {
+      qs('unitMgrBaseOut').value = section === 'life-skills'
+        ? 'life-skills/presentations'
+        : `presentations/${slug}`;
+    }
+    if (qs('unitMgrPagePath') && !qs('unitMgrPagePath').value.trim()) {
+      qs('unitMgrPagePath').value = section === 'life-skills'
+        ? '/life-skills/'
+        : `/language-arts/${slug}/`;
+    }
+
+    const p = buildPayload();
+    renderPreview(p);
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const card = qs('unitManagerCard');
+    if (!card) return;
+
+    const btnAuto = qs('btnUnitMgrAutofill');
+    const btnUp = qs('btnUnitMgrUpsert');
+
+    btnAuto?.addEventListener('click', autofill);
+    btnUp?.addEventListener('click', upsert);
+
+    ['unitMgrTitle','unitMgrId','unitMgrSection','unitMgrSlots','unitMgrBaseOut','unitMgrPagePath'].forEach((id) => {
+      qs(id)?.addEventListener('input', () => renderPreview(buildPayload()));
+      qs(id)?.addEventListener('change', () => renderPreview(buildPayload()));
+    });
+
+    renderPreview(buildPayload());
+  });
+})();
+
