@@ -131,3 +131,23 @@ html.tc-collapsed .tc-nav a{justify-content:center}
   opacity: 0 !important;
   pointer-events: none !important;
 }
+
+
+
+/* --- Teacher Shell: UI patches --- */
+
+/* Make the (currently empty) Home button render an icon */
+.tc-btn[aria-label="Home"]::before{
+  content: "⌂";
+  font-size: 18px;
+  line-height: 1;
+  display: inline-block;
+  transform: translateY(-0.5px);
+}
+
+/* Deploy Preview annoyance: hide Netlify/app iframe injected by extensions (CSP-blocked -> white box) */
+iframe[src*="app.netlify.com"]{
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
