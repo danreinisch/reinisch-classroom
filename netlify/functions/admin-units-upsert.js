@@ -134,6 +134,12 @@ function parseRepo() {
   return { owner, repo };
 }
 
+
+async function getRepoInfo() {
+  const { owner, repo } = parseRepo();
+  return await ghGET(`/repos/${owner}/${repo}`);
+}
+
 async function getRepoDefaultBranch() {
   const { owner, repo } = parseRepo();
   const info = await ghGET(`/repos/${owner}/${repo}`);
