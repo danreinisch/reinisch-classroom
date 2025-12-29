@@ -237,14 +237,12 @@ async function verifySession(event) {
 
   if (!r.ok) return { ok: false, response: json(401, { ok: false, error: 'Session expired or invalid' }) };
 
-    // HARD GATE: must be admin (raw_role from teacher-session)
-    const rawRole = (r && (r.raw_role ?? r.rawRole ?? r.role)) || null;
-    if (rawRole !== 'admin') {
-      return jsonResponse(event, 403, { ok: false, error: 'Admin required' }, {}, requestId);
-    }
 
   const text = await r.text().catch(() => '');
   const j = safeJsonParse(text);
+  // HARD GATE: must be admin (raw_role from teacher-session)
+  const rawRole = (j && (j.raw_role ?? j.rawRole ?? j.role)) || null;
+  if (rawRole !== 'admin') return { ok: false, response: json(403, { ok: false, error: 'Admin required' }) };
   if (j && j.ok === false) return { ok: false, response: json(401, { ok: false, error: 'Session expired or invalid' }) };
 
   return { ok: true };
