@@ -228,7 +228,13 @@ async function getOrCreatePR(owner, repo, headBranch, baseBranch, unit, commitSh
 
 // Tree helper: used only to decide whether to also write root copies + whether index already exists
 async function getHeadTreePaths(owner, repo, branch) {
-  const head = await ghGET(`/repos/${owner}/${repo}/git/ref/heads/${encodeURIComponent(branch)}`);
+  let head;
+  try {
+    head = await ghGET(`/repos/${owner}/${repo}/git/ref/heads/${encodeURIComponent(branch)}`);
+  } catch (e) {
+    if (String(e?.message || e).includes(' 404 ')) return new Set();
+    throw e;
+  }
   const commit = await ghGET(`/repos/${owner}/${repo}/git/commits/${head.object.sha}`);
   const tree = await ghGET(`/repos/${owner}/${repo}/git/trees/${commit.tree.sha}?recursive=1`);
   const set = new Set();
