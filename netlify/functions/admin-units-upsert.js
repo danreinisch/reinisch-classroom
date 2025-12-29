@@ -390,3 +390,7 @@ exports.handler = async (event) => {
     return json(500, { ok: false, error: String(e?.message || e) });
   }
 };
+
+function jsonResponse(_event, statusCode, obj, _headers = {}, _requestId = '') {
+  return json(statusCode, obj);
+}
