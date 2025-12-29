@@ -14,6 +14,12 @@ html, body { height: 100%; }
 body{
   margin:0;
   color: var(--tc-text);
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans";
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  letter-spacing: 0.1px;
 
   /* Calm the background so the UI doesn't scream over the content */
   background:
@@ -96,8 +102,10 @@ body{
 
 .tc-main h1{
   margin:0 0 10px;
-  font-size:34px;
-  letter-spacing:.2px;
+  font-size:38px;
+  line-height:1.05;
+  letter-spacing:-0.02em;
+  font-weight:850;
   color: var(--tc-text);
 }
 
