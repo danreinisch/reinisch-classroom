@@ -946,7 +946,9 @@ function showPRResult(pr){
       let data = null;
       try { data = JSON.parse(text); } catch { data = { ok: false, error: text }; }
 
-      if (!res.ok || !data.ok) {
+      
+      try { showPRResult((data && data.pr) ? data.pr : null); } catch (e) { /* ignore */ }
+if (!res.ok || !data.ok) {
         console.error('[Category Manager] error:', data);
         alert('Create/Update failed: ' + (data.error || res.status));
         setStatus('Error');
