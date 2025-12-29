@@ -268,6 +268,9 @@ function validatePayload(p) {
 }
 
 exports.handler = async (event) => {
+  // Parse request body once (used for branch + confirmMain)
+  const body = safeJsonParse(event.body || '{}') || {};
+
   try {
     if (event.httpMethod !== 'POST') return json(405, { ok: false, error: 'Method not allowed' });
 
