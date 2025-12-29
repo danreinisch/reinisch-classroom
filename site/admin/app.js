@@ -861,6 +861,15 @@
 
 /* initUnitCategoryManager__v1
  * Admin UI: Create/Update categories by calling /.netlify/functions/admin-units-upsert
+
+function showPRResult(pr){
+  if(!pr || !pr.url) return;
+  const msg = (pr.existing ? "Draft updated. PR already open:" : "Draft saved. PR created:")
+    + "\n" + pr.url + "\n\nOpen PR now?";
+  try { navigator.clipboard && navigator.clipboard.writeText(pr.url); } catch(e) {}
+  if (confirm(msg)) window.open(pr.url, "_blank", "noopener");
+}
+
  */
 (function () {
   function slugify(s) {
