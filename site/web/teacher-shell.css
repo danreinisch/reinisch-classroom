@@ -119,3 +119,15 @@ body{
 html.tc-collapsed .tc-sidebar{width:var(--tc-rail-w)}
 html.tc-collapsed .tc-label{display:none}
 html.tc-collapsed .tc-nav a{justify-content:center}
+
+
+/* SAFETY: hide stray file inputs */
+.tc-shell input[type="file"]{
+  position: fixed !important;
+  left: -9999px !important;
+  top: -9999px !important;
+  width: 1px !important;
+  height: 1px !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
