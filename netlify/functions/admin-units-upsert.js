@@ -144,6 +144,40 @@ async function getBranch() {
   return process.env.GH_BRANCH || await getRepoDefaultBranch();
 }
 
+// Safer branch selection: default to admin/units-<id> unless explicitly provided
+async function getBranchSafe({ unitId, requestedBranch }) {
+  const info = await getRepoInfo();
+  const base = info.default_branch || 'main';
+  const clean = (requestedBranch || '').trim();
+  if (clean) return { branch: clean, base };
+  if (unitId) return { branch: `admin/units-${unitId}`, base };
+  return { branch: base, base };
+}
+
+// Ensure a branch exists before we commit to it
+async function ensureBranchExists(owner, repo, branch, baseBranch) {
+  try {
+    await ghGET(`/repos/${owner}/${repo}/git/ref/heads/${encodeURIComponent(branch)}`);
+    return { created: false };
+  } catch (err) {
+    const msg = String(err?.message || err);
+    if (!msg.includes('404') && !msg.toLowerCase().includes('not found')) throw err;
+
+    const baseRef = await ghGET(`/repos/${owner}/${repo}/git/ref/heads/${encodeURIComponent(baseBranch)}`);
+    const sha = baseRef?.object?.sha;
+    const res = await fetch(`${GH_API}/repos/${owner}/${repo}/git/refs`, {
+      method: 'POST',
+      headers: ghHeaders(),
+      body: JSON.stringify({ ref: `refs/heads/${branch}`, sha })
+    });
+    if (!res.ok) {
+      const t = await res.text().catch(()=>'');
+      throw new Error(`Failed to create branch ${branch}: ${res.status} ${t}`);
+    }
+    return { created: true, sha };
+  }
+}
+
 // Tree helper: used only to decide whether to also write root copies + whether index already exists
 async function getHeadTreePaths(owner, repo, branch) {
   const head = await ghGET(`/repos/${owner}/${repo}/git/ref/heads/${encodeURIComponent(branch)}`);
@@ -203,8 +237,12 @@ async function verifySession(event) {
 
   if (!r.ok) return { ok: false, response: json(401, { ok: false, error: 'Session expired or invalid' }) };
 
+
   const text = await r.text().catch(() => '');
   const j = safeJsonParse(text);
+  // HARD GATE: must be admin (raw_role from teacher-session)
+  const rawRole = (j && (j.raw_role ?? j.rawRole ?? j.role)) || null;
+  if (rawRole !== 'admin') return { ok: false, response: json(403, { ok: false, error: 'Admin required' }) };
   if (j && j.ok === false) return { ok: false, response: json(401, { ok: false, error: 'Session expired or invalid' }) };
 
   return { ok: true };
@@ -250,7 +288,13 @@ exports.handler = async (event) => {
     };
 
     const { owner, repo } = parseRepo();
-    const branch = await getBranch();
+    const requestedBranch = body?.branch;
+    const confirmMain = body?.confirmMain === true;
+    const { branch, base } = await getBranchSafe({ unitId: unit.id, requestedBranch });
+    if (branch === 'main' && !confirmMain) {
+      return jsonResponse(event, 400, { ok: false, error: 'Refusing to write to main without confirmMain:true' }, {}, requestId);
+    }
+    await ensureBranchExists(owner, repo, branch, base);
 
     const paths = await getHeadTreePaths(owner, repo, branch);
 
