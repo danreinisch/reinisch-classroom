@@ -184,5 +184,63 @@
         </section>
     
 
+
+<div class="card" id="unitManagerCard" style="margin-top:12px">
+  <div class="card-header">
+    <div>Category Manager</div>
+  </div>
+
+  <div class="hint" style="margin-bottom:10px">
+    Creates/updates a category by writing <code>units.json</code> + initializing <code>site-state.json</code>.
+    Also creates a safe default unit landing page if missing (won’t overwrite custom pages).
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    <div>
+      <label style="display:block;font-weight:700;margin-bottom:6px">Title</label>
+      <input id="unitMgrTitle" class="input" placeholder="Fahrenheit 451" />
+    </div>
+
+    <div>
+      <label style="display:block;font-weight:700;margin-bottom:6px">Unit ID (lowercase)</label>
+      <input id="unitMgrId" class="input" placeholder="f451" />
+      <div class="hint">2–32 chars: a–z, 0–9, <code>-</code>, <code>_</code></div>
+    </div>
+
+    <div>
+      <label style="display:block;font-weight:700;margin-bottom:6px">Section</label>
+      <select id="unitMgrSection" class="input">
+        <option value="language-arts">Language Arts</option>
+        <option value="life-skills">Life Skills</option>
+      </select>
+    </div>
+
+    <div>
+      <label style="display:block;font-weight:700;margin-bottom:6px">Slots</label>
+      <input id="unitMgrSlots" class="input" type="number" min="1" max="64" value="16" />
+    </div>
+
+    <div style="grid-column:1 / -1">
+      <label style="display:block;font-weight:700;margin-bottom:6px">baseOut</label>
+      <input id="unitMgrBaseOut" class="input" placeholder="presentations/fahrenheit-451" />
+      <div class="hint">Where presentations live (relative path). No leading slash.</div>
+    </div>
+
+    <div style="grid-column:1 / -1">
+      <label style="display:block;font-weight:700;margin-bottom:6px">pagePath</label>
+      <input id="unitMgrPagePath" class="input" placeholder="/language-arts/fahrenheit-451/" />
+      <div class="hint">Must start and end with <code>/</code></div>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:10px;align-items:center;margin-top:12px">
+    <button class="btn" id="btnUnitMgrAutofill">Auto-fill from Title</button>
+    <button class="btn primary" id="btnUnitMgrUpsert">Create / Update Category</button>
+    <div class="hint" id="unitMgrStatus" style="margin-left:auto"></div>
+  </div>
+
+  <pre id="unitMgrPreview" class="mono" style="margin-top:10px;white-space:pre-wrap"></pre>
+</div>
+
 </body>
 </html>
