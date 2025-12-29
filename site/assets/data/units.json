@@ -47,8 +47,16 @@
       "baseOut": "life-skills/presentations",
       "slots": 32,
       "pagePath": "/life-skills/"
+    },
+    {
+      "id": "smk1767044516",
+      "title": "Smoke Unit",
+      "section": "language-arts",
+      "slots": 1,
+      "baseOut": "presentations/smk1767044516",
+      "pagePath": "/language-arts/smk1767044516/"
     }
   ],
-  "updated": "2025-10-31T00:00:00Z",
+  "updated": "2025-12-29T21:41:58.513Z",
   "version": "v1"
 }
