@@ -5,6 +5,33 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Teacher Center — Reporting</title>
   <link rel="stylesheet" href="/web/teacher-shell.css" />
+  <style>
+    .tc-stack { display: grid; gap: 14px; }
+    .tc-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+    @media (max-width: 1100px){ .tc-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 640px){ .tc-kpis { grid-template-columns: 1fr; } }
+
+    .tc-card {
+      border-radius: 14px;
+      padding: 14px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.18);
+      backdrop-filter: blur(10px);
+    }
+    .tc-kpi-label { font-size: 12px; opacity: .80; }
+    .tc-kpi-value { font-size: 28px; font-weight: 900; line-height: 1.1; margin-top: 6px; }
+    .tc-row { display:flex; gap:10px; align-items:center; flex-wrap: wrap; }
+    .tc-subtle { opacity: .78; }
+    .tc-table { width: 100%; border-collapse: collapse; }
+    .tc-table th, .tc-table td { padding: 10px 10px; border-top: 1px solid rgba(255,255,255,.10); vertical-align: top; }
+    .tc-table thead th { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; opacity: .85; border-top: none; }
+    .tc-pill { display:inline-flex; align-items:center; gap:6px; padding: 3px 10px; border-radius: 999px; font-size: 12px; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.06); }
+    .tc-btnrow { display:flex; gap:10px; align-items:center; justify-content: space-between; flex-wrap: wrap; }
+    .tc-actions { display:flex; gap:10px; align-items:center; flex-wrap: wrap; }
+    .tc-small { font-size: 12px; opacity: .85; }
+    .tc-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    .tc-note { font-size: 12px; opacity: .80; }
+  </style>
 </head>
 <body>
   <div class="tc-app">
@@ -32,49 +59,88 @@
       </aside>
 
       <main class="tc-main">
-        <h1>Work</h1>
-        <p><div style="max-width: 980px;">
-        <p style="margin-top:0;">
-          Reporting MVP: pick a report type + date range, then generate. (Controls are placeholders for now.)
-        </p>
+        <div class="tc-stack">
+          <div class="tc-row">
+            <h1 style="margin: 0">Reporting</h1>
+            <span class="tc-pill" id="pillMode">Local (browser)</span>
+            <span class="tc-pill tc-mono" id="pillSource">drafts: —</span>
+          </div>
 
-        <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; margin:16px 0;">
-          <label style="display:flex; flex-direction:column; gap:6px; min-width:240px;">
-            <span>Report type</span>
-            <select>
-              <option>Student Report (placeholder)</option>
-              <option>Class Report (placeholder)</option>
-              <option>IEP Goal Report (placeholder)</option>
-            </select>
-          </label>
+          <div class="tc-card">
+            <div class="tc-btnrow">
+              <div>
+                <div style="font-weight: 800">Snapshot</div>
+                <div class="tc-note">Scaffold: summarizes browser-local Work drafts for now. Next step is wiring real submissions + gradebook.</div>
+              </div>
+              <div class="tc-actions">
+                <a class="tc-btn" href="/teacher/work/" aria-label="Go to Work">🗂️ Work</a>
+                <button class="tc-btn" id="btnRefresh" type="button">↻ Refresh</button>
+                <button class="tc-btn" id="btnExport" type="button">⬇︎ Export JSON</button>
+              </div>
+            </div>
+          </div>
 
-          <label style="display:flex; flex-direction:column; gap:6px;">
-            <span>Start date</span>
-            <input type="date" />
-          </label>
+          <div class="tc-kpis" aria-label="Reporting KPIs">
+            <div class="tc-card">
+              <div class="tc-kpi-label">Drafts</div>
+              <div class="tc-kpi-value" id="kpiDrafts">—</div>
+              <div class="tc-small tc-subtle">Work drafts found in localStorage</div>
+            </div>
+            <div class="tc-card">
+              <div class="tc-kpi-label">With Mapping</div>
+              <div class="tc-kpi-value" id="kpiWithMapping">—</div>
+              <div class="tc-small tc-subtle">Mapping artifact attached</div>
+            </div>
+            <div class="tc-card">
+              <div class="tc-kpi-label">Assignment Type</div>
+              <div class="tc-kpi-value" id="kpiTypeMix">—</div>
+              <div class="tc-small tc-subtle">Link vs file</div>
+            </div>
+            <div class="tc-card">
+              <div class="tc-kpi-label">Most Recent</div>
+              <div class="tc-kpi-value" id="kpiRecent">—</div>
+              <div class="tc-small tc-subtle">Latest draft timestamp</div>
+            </div>
+          </div>
 
-          <label style="display:flex; flex-direction:column; gap:6px;">
-            <span>End date</span>
-            <input type="date" />
-          </label>
+          <div class="tc-card">
+            <div class="tc-btnrow" style="margin-bottom: 10px;">
+              <div style="font-weight: 800">Latest Drafts</div>
+              <div class="tc-small tc-subtle">Showing up to 20</div>
+            </div>
+            <div style="overflow:auto">
+              <table class="tc-table" aria-label="Drafts table">
+                <thead>
+                  <tr>
+                    <th>Title</th>
+                    <th>Assignment</th>
+                    <th>Mapping</th>
+                    <th>Created</th>
+                    <th class="tc-mono">ID</th>
+                  </tr>
+                </thead>
+                <tbody id="draftsBody">
+                  <tr><td colspan="5" class="tc-subtle">Loading…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
 
-          <button type="button">Generate</button>
+          <div class="tc-card">
+            <div style="font-weight: 800; margin-bottom: 6px;">Next wiring (not in this PR)</div>
+            <ul style="margin: 0; padding-left: 18px;" class="tc-subtle">
+              <li>Publish drafts into Library</li>
+              <li>Student Portal sees released assignments</li>
+              <li>Submissions + resubmits</li>
+              <li>Teacher Review + Gradebook + IEP progress</li>
+            </ul>
+          </div>
         </div>
-
-        <div style="border:1px solid rgba(255,255,255,0.12); border-radius:12px; padding:12px; min-height:140px;">
-          <div style="opacity:0.85; margin-bottom:8px;">Output</div>
-          <pre style="margin:0; white-space:pre-wrap;">(Report output will appear here.)</pre>
-        </div>
-
-        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:12px;">
-          <button type="button" disabled>Export CSV</button>
-          <button type="button" disabled>Print</button>
-        </div>
-      </div></p>
       </main>
     </div>
   </div>
 
   <script defer src="/web/teacher-shell.js"></script>
+  <script defer src="/web/tc-reporting.js"></script>
 </body>
 </html>
