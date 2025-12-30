@@ -1,50 +1,32 @@
 (function () {
-  "use strict";
-
-  function uniq(arr) {
-    return Array.from(new Set((arr || []).map(String).map((s) => s.trim()).filter(Boolean)));
+  function uniqSorted(xs) {
+    return Array.from(new Set(xs.map(String))).filter(Boolean).sort();
   }
 
-  function splitCodes(s) {
-    return String(s || "")
-      .split(/[,;]+/g)
-      .map((x) => x.trim())
-      .filter(Boolean);
-  }
+  function parse(text) {
+    const src = String(text || "");
+    const tags = { dese: [], iep: [] };
 
-  // Parses tags like [[DESE:RL.9-10.1]] [[IEP:IG:D.H.12.1]]
-  // Returns { cleanText, tags: { dese:[], iep:[] }, matches:[] }
-  function rcParseAssignmentTags(text) {
-    const raw = String(text || "");
     const re = /\[\[\s*(DESE|IEP)\s*:\s*([^\]]+?)\s*\]\]/gi;
 
-    const dese = [];
-    const iep = [];
-    const matches = [];
-
     let m;
-    while ((m = re.exec(raw))) {
-      const kind = String(m[1] || "").toUpperCase();
-      const payload = String(m[2] || "");
-      const codes = splitCodes(payload);
-
-      matches.push({ kind, raw: m[0], payload, codes });
-
-      if (kind === "DESE") dese.push(...codes);
-      if (kind === "IEP") iep.push(...codes);
+    while ((m = re.exec(src)) !== null) {
+      const kind = String(m[1] || "").toLowerCase();
+      const raw = String(m[2] || "");
+      const parts = raw.split(",").map((x) => x.trim()).filter(Boolean);
+      if (kind === "dese") tags.dese.push(...parts);
+      if (kind === "iep") tags.iep.push(...parts);
     }
 
-    // Remove tags, then tidy whitespace per-line (keep newlines)
-    const cleanText = raw
-      .replace(re, "")
-      .split("\n")
-      .map((ln) => ln.replace(/[ \t]+$/g, ""))
-      .join("\n")
-      .replace(/\n{3,}/g, "\n\n")
-      .trim();
+    // Reset lastIndex before reuse (paranoia that pays rent)
+    re.lastIndex = 0;
+    const cleanText = src.replace(re, "").replace(/[ \t]+\n/g, "\n").trim();
 
-    return { cleanText, tags: { dese: uniq(dese), iep: uniq(iep) }, matches };
+    tags.dese = uniqSorted(tags.dese);
+    tags.iep = uniqSorted(tags.iep);
+
+    return { cleanText, tags };
   }
 
-  window.rcParseAssignmentTags = rcParseAssignmentTags;
+  window.rcParseAssignmentTags = parse;
 })();
