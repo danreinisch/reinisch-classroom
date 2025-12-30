@@ -366,7 +366,7 @@
     $("workDraftForm").addEventListener("submit", onSaveDraft);
     $("btnExportAll").addEventListener("click", exportAll);
     $("btnClearAll").addEventListener("click", clearAll);
-    $("btnFillExample").addEventListener("click", fillExample);
+// btnFillExample removed (use draft row Preview/Export)
 
     wireModal();
   }
