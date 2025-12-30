@@ -5,6 +5,52 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Teacher Center — Work</title>
   <link rel="stylesheet" href="/web/teacher-shell.css" />
+  <style>
+    .work-subtle{opacity:.85}
+    .work-card{border:1px solid rgba(255,255,255,.12); border-radius:16px; padding:16px; background:rgba(255,255,255,.04)}
+    .work-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px}
+    .work-row{display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:space-between}
+    .work-field label{display:block; font-size:12px; opacity:.9; margin-bottom:6px}
+    .work-field input,.work-field select,.work-field textarea{
+      width:100%; padding:10px 12px; border-radius:12px;
+      border:1px solid rgba(255,255,255,.14); background:rgba(0,0,0,.18); color:inherit;
+      outline:none;
+    }
+    .work-field textarea{min-height:96px; resize:vertical}
+    .work-actions{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+    .work-btn{
+      padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.16);
+      background:rgba(255,255,255,.06); color:inherit; cursor:pointer;
+    }
+    .work-btn.primary{background:rgba(34,197,94,.18); border-color:rgba(34,197,94,.35)}
+    .work-btn.danger{background:rgba(239,68,68,.12); border-color:rgba(239,68,68,.35)}
+    .work-btn:disabled{opacity:.6; cursor:not-allowed}
+    .work-tablewrap{overflow:auto; border-radius:14px; border:1px solid rgba(255,255,255,.10)}
+    table.work-table{width:100%; border-collapse:collapse; font-size:14px}
+    table.work-table th, table.work-table td{padding:10px 12px; border-bottom:1px solid rgba(255,255,255,.08); vertical-align:top}
+    table.work-table th{font-size:12px; letter-spacing:.02em; text-transform:uppercase; opacity:.9}
+    .work-pill{display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; border:1px solid rgba(255,255,255,.16); opacity:.95}
+    .work-msg{margin-top:10px; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.04)}
+    .work-msg.ok{border-color:rgba(34,197,94,.35); background:rgba(34,197,94,.10)}
+    .work-msg.err{border-color:rgba(239,68,68,.35); background:rgba(239,68,68,.08)}
+    .work-overlay[hidden]{display:none !important}
+    .work-overlay{
+      position:fixed; inset:0; background:rgba(0,0,0,.55);
+      display:flex; align-items:center; justify-content:center; padding:18px; z-index:9999;
+    }
+    .work-dialog{
+      width:min(980px, 100%); max-height:85vh; overflow:auto;
+      border-radius:18px; border:1px solid rgba(255,255,255,.14);
+      background:rgba(20,20,20,.92); padding:14px;
+    }
+    .work-dialog pre{
+      white-space:pre-wrap; word-break:break-word; margin:0;
+      padding:12px; border-radius:14px; border:1px solid rgba(255,255,255,.10);
+      background:rgba(0,0,0,.25);
+      font-size:12px; line-height:1.45;
+    }
+    .work-dialog h3{margin:0}
+  </style>
 </head>
 <body>
   <div class="tc-app">
@@ -32,12 +78,139 @@
       </aside>
 
       <main class="tc-main">
-        <h1>Work</h1>
-        <p>Shell ready. Next PR will wire real Teacher Center modules into these routes.</p>
+        <h1 style="margin-top:0">Work</h1>
+        <p class="work-subtle" style="margin-top:-6px">
+          MVP: create <strong>assignment drafts</strong> (client-side only). Requires two inputs:
+          <span class="work-pill">Assignment</span> + <span class="work-pill">Mapping</span>.
+          Drafts persist in your browser and can be exported as JSON.
+        </p>
+
+        <section class="work-card" aria-label="Create assignment draft">
+          <div class="work-row" style="gap:14px">
+            <h2 style="margin:0">Create Draft</h2>
+            <div class="work-actions">
+              <button class="work-btn" type="button" id="btnFillExample">Fill Example</button>
+              <button class="work-btn primary" type="submit" form="workDraftForm" id="btnSaveDraft">Save Draft</button>
+            </div>
+          </div>
+
+          <form id="workDraftForm" style="margin-top:14px">
+            <div class="work-grid">
+              <div class="work-field">
+                <label for="draftTitle">Title (required)</label>
+                <input id="draftTitle" name="title" placeholder="Week 1 — ADIT — Day 1 Assignment" required />
+              </div>
+
+              <div class="work-field">
+                <label for="draftClass">Class (required)</label>
+                <select id="draftClass" name="class" required>
+                  <option value="">Select…</option>
+                  <option>LA 1 SC</option>
+                  <option>LA 2 SC</option>
+                  <option>LA 3 SC</option>
+                  <option>LA 4 SC</option>
+                  <option>Life Skills LA</option>
+                </select>
+              </div>
+
+              <div class="work-field">
+                <label for="draftRelease">Release (optional)</label>
+                <input id="draftRelease" name="release" type="datetime-local" />
+              </div>
+
+              <div class="work-field">
+                <label for="draftDue">Due (optional)</label>
+                <input id="draftDue" name="due" type="datetime-local" />
+              </div>
+            </div>
+
+            <div class="work-grid" style="margin-top:12px">
+              <div class="work-field">
+                <label>Assignment (file OR link)</label>
+                <input id="assignmentFile" type="file" accept=".html,.htm,.txt" />
+                <div style="height:10px"></div>
+                <input id="assignmentLink" type="url" placeholder="https://docs.google.com/forms/d/..." />
+                <div class="work-subtle" style="font-size:12px; margin-top:8px">
+                  If you attach a file, it must be small (stored in browser). Link is preferred for large content.
+                </div>
+              </div>
+
+              <div class="work-field">
+                <label>Mapping file (required)</label>
+                <input id="mappingFile" type="file" accept=".csv,.json,.txt" required />
+                <div class="work-subtle" style="font-size:12px; margin-top:8px">
+                  MVP accepts CSV or JSON. This will evolve into your official “question → DESE/IEP tags” artifact.
+                </div>
+                <details style="margin-top:10px">
+                  <summary class="work-subtle" style="cursor:pointer">Show mapping examples</summary>
+<pre style="margin-top:10px">CSV (recommended MVP):
+question_id,dese,iep
+q1,RL.9-10.1,IG:D.H.12.1
+q2,RI.9-10.2,OBJ:S.J.12.3
+
+JSON:
+[
+  {"question_id":"q1","dese":["RL.9-10.1"],"iep":["IG:D.H.12.1"]},
+  {"question_id":"q2","dese":["RI.9-10.2"],"iep":["OBJ:S.J.12.3"]}
+]</pre>
+                </details>
+              </div>
+            </div>
+
+            <div class="work-field" style="margin-top:12px">
+              <label for="draftNotes">Notes (optional)</label>
+              <textarea id="draftNotes" placeholder="Any teacher-only notes…"></textarea>
+            </div>
+
+            <div id="workMsg" class="work-msg" style="display:none"></div>
+          </form>
+        </section>
+
+        <section class="work-card" aria-label="Draft list" style="margin-top:16px">
+          <div class="work-row">
+            <h2 style="margin:0">Drafts</h2>
+            <div class="work-actions">
+              <button class="work-btn" type="button" id="btnExportAll">Export all</button>
+              <button class="work-btn danger" type="button" id="btnClearAll">Clear all</button>
+            </div>
+          </div>
+
+          <div id="draftsEmpty" class="work-subtle" style="margin-top:10px">No drafts yet.</div>
+
+          <div class="work-tablewrap" style="margin-top:10px">
+            <table class="work-table" id="draftsTable" style="display:none">
+              <thead>
+                <tr>
+                  <th>Title</th>
+                  <th>Class</th>
+                  <th>Release / Due</th>
+                  <th>Source</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="draftsTbody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <div class="work-overlay" id="draftOverlay" hidden>
+          <div class="work-dialog" role="dialog" aria-modal="true" aria-label="Draft preview">
+            <div class="work-row" style="margin-bottom:10px">
+              <h3 id="previewTitle">Draft Preview</h3>
+              <div class="work-actions">
+                <button class="work-btn" type="button" id="btnDownloadOne">Export JSON</button>
+                <button class="work-btn" type="button" id="btnClosePreview">Close</button>
+              </div>
+            </div>
+            <pre id="previewBody">(preview)</pre>
+          </div>
+        </div>
+
       </main>
     </div>
   </div>
 
   <script defer src="/web/teacher-shell.js"></script>
+  <script defer src="/web/tc-work.js"></script>
 </body>
 </html>
