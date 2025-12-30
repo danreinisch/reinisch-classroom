@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Teacher Center — Library</title>
+  <title>Teacher Center — Reporting</title>
   <link rel="stylesheet" href="/web/teacher-shell.css" />
 </head>
 <body>
@@ -11,7 +11,7 @@
     <header class="tc-topbar">
       <button class="tc-btn" id="tcSidebarToggle" aria-label="Toggle sidebar" aria-expanded="false">☰</button>
       <a class="tc-btn" href="/" target="_blank" rel="noopener" aria-label="Home">🏠</a>
-      <div class="tc-title">Teacher Center — Library</div>
+      <div class="tc-title">Teacher Center — Reporting</div>
     </header>
 
     <div class="tc-shell">
@@ -32,8 +32,45 @@
       </aside>
 
       <main class="tc-main">
-        <h1>Library</h1>
-        <p>Shell ready. Next PR will wire real Teacher Center modules into these routes.</p>
+        <h1>Data</h1>
+        <p><div style="max-width: 980px;">
+        <p style="margin-top:0;">
+          Reporting MVP: select a report type + date range, then generate. Output/export are placeholders for now.
+        </p>
+
+        <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; margin:16px 0;">
+          <label style="display:flex; flex-direction:column; gap:6px; min-width:240px;">
+            <span>Report type</span>
+            <select disabled>
+              <option>Student Report (placeholder)</option>
+              <option>Class Report (placeholder)</option>
+              <option>IEP Goal Report (placeholder)</option>
+            </select>
+          </label>
+
+          <label style="display:flex; flex-direction:column; gap:6px;">
+            <span>Start date</span>
+            <input type="date" />
+          </label>
+
+          <label style="display:flex; flex-direction:column; gap:6px;">
+            <span>End date</span>
+            <input type="date" />
+          </label>
+
+          <button type="button" disabled style="padding:10px 14px;">Generate</button>
+        </div>
+
+        <div style="border:1px solid rgba(255,255,255,0.12); border-radius:12px; padding:12px; min-height:140px;">
+          <div style="opacity:0.85; margin-bottom:8px;">Output</div>
+          <pre style="margin:0; white-space:pre-wrap;">(Report output will appear here.)</pre>
+        </div>
+
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:12px;">
+          <button type="button" disabled style="padding:10px 14px;">Export CSV</button>
+          <button type="button" disabled style="padding:10px 14px;">Print</button>
+        </div>
+      </div></p>
       </main>
     </div>
   </div>
