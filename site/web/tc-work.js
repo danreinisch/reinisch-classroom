@@ -371,7 +371,17 @@ async function onSaveDraft(e) {
 
     if (assignmentFile && rcIsTextFile(assignmentFile)) {
 
-      try { assignmentTextRaw = await assignmentFile.text(); } catch (_) { /* noop */ }
+      try { assignmentTextRaw = await assignmentFile.text();
+
+      const selectedClassName = safeStr(
+        (typeof className !== "undefined" ? className : "") ||
+        ($("className") && $("className").value) ||
+        ""
+      ).trim();
+      const sliceInfoRaw = globalThis.rcSliceTeacherMegaText(assignmentTextRaw, selectedClassName);
+      if (sliceInfoRaw && sliceInfoRaw.text) assignmentTextRaw = sliceInfoRaw.text;
+      if (sliceInfoRaw && sliceInfoRaw.notice) setMsg(sliceInfoRaw.sliced ? "ok" : "warn", sliceInfoRaw.notice);
+ } catch (_) { /* noop */ }
 
     }
 
@@ -424,7 +434,7 @@ draft.mapping.text = mappingText;
       draft.assignment.kind = "link";
       draft.assignment.link = assignmentLink;
     } else if (assignmentFile) {
-      const assignmentText = await readFileAsText(assignmentFile);
+      let assignmentText = assignmentTextRaw || await readFileAsText(assignmentFile);
       if (bytesOf(assignmentText) > MAX_TEXT_BYTES) {
         // store metadata only
         draft.assignment.kind = "file";
@@ -490,6 +500,93 @@ draft.mapping.text = mappingText;
       mf.addEventListener("change", mupd);
       mupd();
     }
+// --- Mega TXT slicer (multi-class files) ---
+globalThis.rcSliceTeacherMegaText = function (txt, className) {
+  const safe = (x) => (x == null ? "" : String(x));
+  const raw = safe(txt);
+
+  function normalizeKey(v) {
+    return safe(v).toUpperCase().replace(/[^A-Z0-9]+/g, " ").trim();
+  }
+
+  function classToSectionKey(name) {
+    const cn = normalizeKey(name);
+    let m = cn.match(/^LA\s*(\d+)\s*SC$/);
+    if (m) return normalizeKey("LANGUAGE ARTS " + m[1] + " SC");
+    m = cn.match(/^LANGUAGE\s*ARTS\s*(\d+)\s*SC$/);
+    if (m) return normalizeKey("LANGUAGE ARTS " + m[1] + " SC");
+    if (cn.startsWith("LIFE SKILLS")) return normalizeKey("LIFE SKILLS");
+    return cn;
+  }
+
+  function isSectionHeader(line) {
+    return /^\s*(LANGUAGE\s+ARTS|LIFE\s+SKILLS)\b/i.test(line || "");
+  }
+
+  function cleanHeader(line) {
+    return safe(line).replace(/\s*[=._-]{3,}\s*$/, "").trim();
+  }
+
+  const lines = raw.split(/\r?\n/);
+  const sections = [];
+  for (let i = 0; i < lines.length; i++) {
+    if (isSectionHeader(lines[i])) {
+      const header = cleanHeader(lines[i]);
+      sections.push({ i, header, key: normalizeKey(header) });
+    }
+  }
+
+  if (sections.length <= 1) {
+    return { text: raw, sliced: false, sections: sections.map((x) => x.header) };
+  }
+
+  const want = classToSectionKey(className);
+  if (!want) {
+    return {
+      text: raw,
+      sliced: false,
+      sections: sections.map((x) => x.header),
+      notice:
+        "Multi-class file detected (" +
+        sections.map((x) => x.header).join(" | ") +
+        "). Select a Class to auto-slice."
+    };
+  }
+
+  let idx = sections.findIndex((x) => x.key === want || x.key.startsWith(want) || want.startsWith(x.key));
+  if (idx < 0 && /^LANGUAGE ARTS/.test(want)) {
+    const base = want.replace(/\s*SC$/, "").trim();
+    idx = sections.findIndex((x) => x.key.startsWith(base));
+  }
+
+  if (idx < 0) {
+    return {
+      text: raw,
+      sliced: false,
+      sections: sections.map((x) => x.header),
+      notice:
+        'Could not match class "' +
+        className +
+        '" to any section header. Detected: ' +
+        sections.map((x) => x.header).join(" | ")
+    };
+  }
+
+  const start = sections[idx].i;
+  const end = idx + 1 < sections.length ? sections[idx + 1].i : lines.length;
+  const sliced = lines.slice(start, end).join("\n").trim() + "\n";
+
+  return {
+    text: sliced,
+    sliced: true,
+    header: sections[idx].header,
+    sections: sections.map((x) => x.header),
+    notice: "Using section: " + sections[idx].header + " (from multi-class file)"
+  };
+};
+// --- end mega TXT slicer ---
+
+
 $("workDraftForm").addEventListener("submit", onSaveDraft);
     const af = $("assignmentFile");
     const afn = $("assignmentFileName");
