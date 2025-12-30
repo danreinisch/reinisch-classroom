@@ -241,7 +241,8 @@
     setMsg("ok", "All drafts cleared.");
     setTimeout(clearMsg, 1200);
   }
-  function rcIsTextFile(file) {
+
+    function rcIsTextFile(file) {
     if (!file) return false;
     const name = String(file.name || "").toLowerCase();
     const type = String(file.type || "").toLowerCase();
@@ -249,6 +250,14 @@
     return name.endsWith(".txt");
   }
 
+function fillExample() {
+    $("draftTitle").value = "Week 1 — ADIT — Day 1 Assignment";
+    $("draftClass").value = "LA 1 SC";
+    $("draftNotes").value = "MVP example draft. Replace with real content.";
+    $("assignmentLink").value = "https://docs.google.com/forms/d/EXAMPLE/viewform";
+  }
+
+  
 
   function autoMapFromTeacherTxt(text) {
   const out = { version: 1, sections: [], warnings: [], counts: { sections: 0, items: 0, warnings: 0 } };
@@ -355,7 +364,7 @@
   return out;
 }
 
-async function onSaveDraft(e, opts) { opts = opts || {}; if (arguments[0] && arguments[0].preventDefault) arguments[0].preventDefault();
+async function onSaveDraft(e) {
     e.preventDefault();
     clearMsg();
 
@@ -366,32 +375,18 @@ async function onSaveDraft(e, opts) { opts = opts || {}; if (arguments[0] && arg
     const notes = safeStr($("draftNotes").value).trim();
 
     const assignmentFile = $("assignmentFile").files && $("assignmentFile").files[0];
-
-    let assignmentTextRaw = "";
-
-    if (assignmentFile && rcIsTextFile(assignmentFile)) {
-
-      try { assignmentTextRaw = await assignmentFile.text();
-
-      const selectedClassName = safeStr(
-        (typeof className !== "undefined" ? className : "") ||
-        ($("className") && $("className").value) ||
-        ""
-      ).trim();
-      const sliceInfoRaw = globalThis.rcSliceTeacherMegaText(assignmentTextRaw, selectedClassName);
-      if (sliceInfoRaw && sliceInfoRaw.text) assignmentTextRaw = sliceInfoRaw.text;
-      if (sliceInfoRaw && sliceInfoRaw.notice) setMsg(sliceInfoRaw.sliced ? "ok" : "warn", sliceInfoRaw.notice);
- } catch (_) { /* noop */ }
-
-    }
-
-    if (opts.assignmentTextRaw != null) assignmentTextRaw = String(opts.assignmentTextRaw);
-const assignmentLink = safeStr($("assignmentLink").value).trim();
+    const assignmentLink = safeStr($("assignmentLink").value).trim();
     const mappingFile = $("mappingFile").files && $("mappingFile").files[0];
 
     if (!title) return setMsg("err", "Title is required.");
     if (!className) return setMsg("err", "Class is required.");
-// Mapping file optional: we will auto-generate mapping from assignment tags if missing.
+    // Mapping file is optional ONLY when we can auto-map from a tagged TXT upload.
+    if (!mappingFile) {
+      if (assignmentLink) return setMsg("err", "Mapping file is required when using a link.");
+      if (assignmentFile && typeof rcIsTextFile === "function" && !rcIsTextFile(assignmentFile)) {
+        return setMsg("err", "Mapping file is required for non-TXT uploads (or use a tagged TXT).");
+      }
+    }
     if (!assignmentFile && !assignmentLink) return setMsg("err", "Assignment is required (file OR link).");
 
     const draft = {
@@ -408,54 +403,48 @@ const assignmentLink = safeStr($("assignmentLink").value).trim();
 
     // Mapping text (required) — but keep size sane
     let mappingText = null;
-
-if (mappingFile) {
-  mappingText = await readFileAsText(mappingFile);
-  if (!mappingText) return setMsg("err", "Could not read mapping file.");
-  if (mappingText.length > 50000) {
-    return setMsg("err", "Mapping file is too large for MVP local storage. Keep it smaller for now.");
-  }
-} else {
-  // Auto-map from the teacher TXT tags ([MLS.*] and [IG:*]) when available
-  const src = (typeof assignmentTextRaw === "string" && assignmentTextRaw.trim())
-    ? assignmentTextRaw
-    : "";
-  const autoMapping = autoMapFromTeacherTxt(src);
-  mappingText = JSON.stringify(autoMapping, null, 2);
-
-  const w = (autoMapping && autoMapping.counts) ? (autoMapping.counts.warnings || 0) : 0;
-  const n = (autoMapping && autoMapping.counts) ? (autoMapping.counts.items || 0) : 0;
-  setMsg(w ? "warn" : "ok", "Auto-mapped " + n + " item(s) from tags" + (w ? " (" + w + " missing-code warning(s))" : ""));
-}
-
-draft.mapping.text = mappingText;
+    if (mappingFile) {
+      mappingText = await readFileAsText(mappingFile);
+      if (bytesOf(mappingText) > MAX_TEXT_BYTES) {
+        return setMsg("err", "Mapping file is too large for MVP local storage. Keep it smaller for now.");
+      }
+      draft.mapping.text = mappingText;
+    } else {
+      // Auto-map from tags in the teacher TXT when no mapping file is provided.
+      let assignmentTextRaw = "";
+      if (assignmentFile && typeof rcIsTextFile === "function" && rcIsTextFile(assignmentFile)) {
+        try { assignmentTextRaw = await assignmentFile.text(); } catch (_) {}
+      }
+      const autoMapping = (typeof autoMapFromTeacherTxt === "function") ? autoMapFromTeacherTxt(assignmentTextRaw) : null;
+      mappingText = JSON.stringify(autoMapping || { version: 1, sections: [], warnings: ["Auto-mapping unavailable"], counts: { sections: 0, items: 0, warnings: 1 } }, null, 2);
+      if (bytesOf(mappingText) > MAX_TEXT_BYTES) {
+        return setMsg("err", "Auto-generated mapping is too large for MVP local storage.");
+      }
+      draft.mapping.text = mappingText;
+      const w = (autoMapping && autoMapping.counts) ? (autoMapping.counts.warnings || 0) : 0;
+      const n = (autoMapping && autoMapping.counts) ? (autoMapping.counts.items || 0) : 0;
+      setMsg(w ? "warn" : "ok", "Auto-mapped " + n + " item(s) from tags" + (w ? " (" + w + " missing-code warning(s))" : ""));
+    }
 
     // Assignment: prefer link; file stored only if small
     if (assignmentLink) {
       draft.assignment.kind = "link";
       draft.assignment.link = assignmentLink;
     } else if (assignmentFile) {
-      let assignmentText = assignmentTextRaw || await readFileAsText(assignmentFile);
+      const assignmentText = await readFileAsText(assignmentFile);
       if (bytesOf(assignmentText) > MAX_TEXT_BYTES) {
         // store metadata only
         draft.assignment.kind = "file";
-        draft.assignment.name = (opts.assignmentFileName != null ? String(opts.assignmentFileName) : assignmentFile.name);
+        draft.assignment.name = assignmentFile.name;
         draft.assignment.text = null;
       } else {
         draft.assignment.kind = "file";
-        draft.assignment.name = (opts.assignmentFileName != null ? String(opts.assignmentFileName) : assignmentFile.name);
+        draft.assignment.name = assignmentFile.name;
         draft.assignment.text = assignmentText;
       }
     }
 
     const drafts = readDrafts();
-    if (assignmentTextRaw && !draft.assignmentTextRaw) draft.assignmentTextRaw = assignmentTextRaw;
-    if (assignmentTextRaw && window.rcParseAssignmentTags) {
-      const parsed = window.rcParseAssignmentTags(assignmentTextRaw);
-      if (!draft.assignmentTextClean) draft.assignmentTextClean = parsed.cleanText;
-      if (!draft.assignmentTags) draft.assignmentTags = parsed.tags;
-      if (!draft.native) draft.native = { type: "txt", textRaw: assignmentTextRaw, textClean: parsed.cleanText, tags: parsed.tags };
-    }
     drafts.unshift(draft);
     writeDrafts(drafts);
     renderTable(drafts);
@@ -489,495 +478,10 @@ draft.mapping.text = mappingText;
     const drafts = readDrafts();
     renderTable(drafts);
 
-    
-    // Mapping file name display
-    const mf = $("mappingFile");
-    const mfn = $("mappingFileName");
-    if (mf && mfn) {
-      const mupd = () => {
-        const f = mf.files && mf.files[0];
-        mfn.textContent = f ? ("Selected: " + f.name) : "No file selected";
-      };
-      mf.addEventListener("change", mupd);
-      mupd();
-    }
-// --- Mega TXT slicer (multi-class files) ---
-globalThis.rcSliceTeacherMegaText = function (txt, className) {
-  const safe = (x) => (x == null ? "" : String(x));
-  const raw = safe(txt);
-
-  function normalizeKey(v) {
-    return safe(v).toUpperCase().replace(/[^A-Z0-9]+/g, " ").trim();
-  }
-
-  function classToSectionKey(name) {
-    const cn = normalizeKey(name);
-    let m = cn.match(/^LA\s*(\d+)\s*SC$/);
-    if (m) return normalizeKey("LANGUAGE ARTS " + m[1] + " SC");
-    m = cn.match(/^LANGUAGE\s*ARTS\s*(\d+)\s*SC$/);
-    if (m) return normalizeKey("LANGUAGE ARTS " + m[1] + " SC");
-    if (cn.startsWith("LIFE SKILLS")) return normalizeKey("LIFE SKILLS");
-    return cn;
-  }
-
-  function isSectionHeader(line) {
-    return /^\s*(LANGUAGE\s+ARTS|LIFE\s+SKILLS)\b/i.test(line || "");
-  }
-
-  function cleanHeader(line) {
-    return safe(line).replace(/\s*[=._-]{3,}\s*$/, "").trim();
-  }
-
-  const lines = raw.split(/\r?\n/);
-  const sections = [];
-  for (let i = 0; i < lines.length; i++) {
-    if (isSectionHeader(lines[i])) {
-      const header = cleanHeader(lines[i]);
-      sections.push({ i, header, key: normalizeKey(header) });
-    }
-  }
-
-  if (sections.length <= 1) {
-    return { text: raw, sliced: false, sections: sections.map((x) => x.header) };
-  }
-
-  const want = classToSectionKey(className);
-  if (!want) {
-    return {
-      text: raw,
-      sliced: false,
-      sections: sections.map((x) => x.header),
-      notice:
-        "Multi-class file detected (" +
-        sections.map((x) => x.header).join(" | ") +
-        "). Select a Class to auto-slice."
-    };
-  }
-
-  let idx = sections.findIndex((x) => x.key === want || x.key.startsWith(want) || want.startsWith(x.key));
-  if (idx < 0 && /^LANGUAGE ARTS/.test(want)) {
-    const base = want.replace(/\s*SC$/, "").trim();
-    idx = sections.findIndex((x) => x.key.startsWith(base));
-  }
-
-  if (idx < 0) {
-    return {
-      text: raw,
-      sliced: false,
-      sections: sections.map((x) => x.header),
-      notice:
-        'Could not match class "' +
-        className +
-        '" to any section header. Detected: ' +
-        sections.map((x) => x.header).join(" | ")
-    };
-  }
-
-  const start = sections[idx].i;
-  const end = idx + 1 < sections.length ? sections[idx + 1].i : lines.length;
-  const sliced = lines.slice(start, end).join("\n").trim() + "\n";
-
-  return {
-    text: sliced,
-    sliced: true,
-    header: sections[idx].header,
-    sections: sections.map((x) => x.header),
-    notice: "Using section: " + sections[idx].header + " (from multi-class file)"
-  };
-};
-// --- end mega TXT slicer ---
-// --- Mega TXT helpers (normalize/split/slice) ---
-globalThis.rcNormalizeClassLabel = function (v) {
-  return String(v || "")
-    .toUpperCase()
-    .replace(/LANGUAGE\s+ARTS/g, "LA")
-    .replace(/LIFE\s+SKILLS/g, "LIFE SKILLS")
-    .replace(/[^A-Z0-9]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-};
-
-globalThis.rcSplitTeacherMegaText = function (text) {
-  const raw = String(text || "");
-  const lines = raw.split(/\r?\n/);
-  const isSectionLine = (line) => /^\s*(LANGUAGE\s+ARTS|LIFE\s+SKILLS)\b/i.test(line);
-
-  const sections = [];
-  for (let i = 0; i < lines.length; i++) {
-    if (isSectionLine(lines[i])) sections.push({ i, header: lines[i].trim() });
-  }
-
-  if (sections.length <= 1) {
-    return [{ header: sections[0] ? sections[0].header : "Assignment", text: raw.trim() + "\n" }];
-  }
-
-  const out = [];
-  for (let k = 0; k < sections.length; k++) {
-    const start = sections[k].i;
-    const end = (k + 1 < sections.length) ? sections[k + 1].i : lines.length;
-    const sliced = lines.slice(start, end).join("\n").trim() + "\n";
-    out.push({ header: sections[k].header, text: sliced });
-  }
-  return out;
-};
-
-globalThis.rcSliceTeacherMegaText = function (text, selectedClassName) {
-  const parts = globalThis.rcSplitTeacherMegaText(text);
-  if (!parts || !parts.length) {
-    return { text: String(text || ""), sliced: false, sections: [], notice: "Empty text" };
-  }
-  if (parts.length === 1) {
-    return {
-      text: parts[0].text,
-      sliced: false,
-      header: parts[0].header,
-      sections: [parts[0].header],
-      notice: "Single-section file"
-    };
-  }
-
-  const want = globalThis.rcNormalizeClassLabel(selectedClassName);
-  let idx = -1;
-
-  if (want) {
-    idx = parts.findIndex((p) => globalThis.rcNormalizeClassLabel(p.header) === want);
-    if (idx < 0) {
-      idx = parts.findIndex((p) => {
-        const h = globalThis.rcNormalizeClassLabel(p.header);
-        return (h && h.indexOf(want) >= 0) || (want && want.indexOf(h) >= 0);
-      });
-    }
-  }
-
-  if (idx < 0) {
-    return {
-      text: parts[0].text,
-      sliced: false,
-      header: parts[0].header,
-      sections: parts.map((p) => p.header),
-      notice: "Multi-class file detected, but class did not match. Using first section: " + parts[0].header
-    };
-  }
-
-  return {
-    text: parts[idx].text,
-    sliced: true,
-    header: parts[idx].header,
-    sections: parts.map((p) => p.header),
-    notice: "Using section: " + parts[idx].header + " (from multi-class file)"
-  };
-};
-// --- end Mega TXT helpers ---
-function rcResolveClassValueFromHeader(header) {
-  const sel = $("className");
-  const want = globalThis.rcNormalizeClassLabel(header);
-  if (!sel || !sel.options || !want) return safeStr(header).trim();
-
-  for (const opt of sel.options) {
-    const val = safeStr(opt.value).trim();
-    const label = safeStr(opt.textContent || opt.label || opt.value).trim();
-    if (!val) continue;
-
-    const nVal = globalThis.rcNormalizeClassLabel(val);
-    const nLab = globalThis.rcNormalizeClassLabel(label);
-
-    if (want === nVal || want === nLab) return val;
-    if (nLab && want.indexOf(nLab) >= 0) return val;
-    if (nVal && want.indexOf(nVal) >= 0) return val;
-  }
-
-  // fallback: convert LANGUAGE ARTS -> LA for best-effort match
-  return safeStr(header).replace(/^LANGUAGE\s+ARTS/i, "LA").replace(/\s+/g, " ").trim();
-}
-
-async function onSplitMega() {
-  const assignmentFile = $("assignmentFile") && $("assignmentFile").files ? $("assignmentFile").files[0] : null;
-  if (!assignmentFile) return setMsg("err", "Choose a TXT mega file first.");
-  if (!rcIsTextFile(assignmentFile)) return setMsg("err", "Split Mega TXT works only for .txt files.");
-
-  let raw = "";
-  try { raw = await assignmentFile.text(); } catch (_) { raw = ""; }
-
-  const parts = globalThis.rcSplitTeacherMegaText(raw);
-  if (!parts || parts.length <= 1) return setMsg("warn", "No multiple sections found to split.");
-
-  const baseTitle = safeStr($("title").value).trim() || assignmentFile.name.replace(/\.[^.]+$/, "");
-  let created = 0;
-
-  for (const part of parts) {
-    const clsVal = rcResolveClassValueFromHeader(part.header);
-    const t = baseTitle + " — " + clsVal;
-    await onSaveDraft(null, {
-      title: t,
-      className: clsVal,
-      assignmentTextRaw: part.text,
-      assignmentFileName: assignmentFile.name
-    });
-    created += 1;
-  }
-
-  setMsg("ok", "Split into " + created + " draft(s) from mega file.");
-}
-// --- Mega TXT splitter (multi-class) ---
-(function () {
-  // Normalize a section header into a canonical class name used by the dropdown.
-  function rcNormalizeClassFromHeader(header) {
-    const h = String(header || "").trim();
-    const up = h.toUpperCase();
-
-    if (up.includes("LIFE SKILLS")) return "Life Skills LA";
-
-    // Matches: "LANGUAGE ARTS 1", "LANGUAGE ARTS 1 SC", "LA 1", etc.
-    let m = up.match(/(?:LANGUAGE\s+ARTS|LA)\s*([1-4])\b/);
-    if (m) return "LA " + m[1] + " SC";
-
-    // Matches already-canonical-ish strings
-    m = up.match(/\bLA\s*([1-4])\s*SC\b/);
-    if (m) return "LA " + m[1] + " SC";
-
-    return h;
-  }
-
-  function rcGetMegaSections(text) {
-    const lines = String(text || "").split(/\r?\n/);
-    const heads = [];
-    for (let i = 0; i < lines.length; i++) {
-      if (/^\s*(LANGUAGE\s+ARTS|LIFE\s+SKILLS)\b/i.test(lines[i])) {
-        heads.push({ i, header: lines[i].trim() });
-      }
-    }
-    if (!heads.length) return [];
-    return heads.map((h, idx) => {
-      const end = idx + 1 < heads.length ? heads[idx + 1].i : lines.length;
-      const sliced = lines.slice(h.i, end).join("\n").trim() + "\n";
-      return {
-        header: h.header,
-        className: rcNormalizeClassFromHeader(h.header),
-        text: sliced,
-      };
-    });
-  }
-
-  function rcEnsureLifeSkillsOption() {
-    // Try common ids used in this page
-    const sel =
-      (typeof $ === "function" && ($("className") || $("class") || $("classSelect"))) ||
-      document.getElementById("className") ||
-      document.getElementById("class") ||
-      document.getElementById("classSelect");
-
-    if (!sel || !sel.options) return;
-
-    const want = "Life Skills LA";
-    const has = Array.from(sel.options).some((o) => {
-      const v = (o.value || "").toLowerCase();
-      const t = (o.textContent || "").toLowerCase();
-      return v === want.toLowerCase() || t.includes("life skills");
-    });
-    if (!has) {
-      const opt = document.createElement("option");
-      opt.value = want;
-      opt.textContent = want;
-      sel.appendChild(opt);
-    }
-  }
-
-  function rcWorkLoadDrafts() {
-    try {
-      return JSON.parse(localStorage.getItem("rc_tc_work_drafts_v1") || "[]");
-    } catch (_e) {
-      return [];
-    }
-  }
-
-  function rcWorkSaveDrafts(drafts) {
-    localStorage.setItem("rc_tc_work_drafts_v1", JSON.stringify(drafts));
-    if (typeof globalThis.renderDrafts === "function") globalThis.renderDrafts();
-    if (typeof globalThis.renderWorkDrafts === "function") globalThis.renderWorkDrafts();
-  }
-
-  function rcWorkAddDraft(draft) {
-    const drafts = rcWorkLoadDrafts();
-    drafts.unshift(draft);
-    rcWorkSaveDrafts(drafts);
-  }
-
-  function rcWorkNewId() {
-    return "d_" + Math.random().toString(36).slice(2, 8) + "_" + Date.now().toString(36);
-  }
-
-  function rcVal(id, fallbackIds=[]) {
-    const getById = (x) => (typeof $ === "function" ? $(x) : document.getElementById(x));
-    const el = getById(id) || fallbackIds.map(getById).find(Boolean);
-    return el ? (el.value || "").trim() : "";
-  }
-
-  async function rcSplitMegaCreateDrafts() {
-    const getById = (x) => (typeof $ === "function" ? $(x) : document.getElementById(x));
-    const setMsgSafe = (lvl, msg) => (typeof setMsg === "function" ? setMsg(lvl, msg) : console.log(lvl + ": " + msg));
-
-    const af = getById("assignmentFile");
-    const f = af && af.files && af.files[0];
-    if (!f) return setMsgSafe("err", "Choose an assignment TXT first.");
-
-    const raw = await f.text();
-    const sections = rcGetMegaSections(raw);
-
-    if (sections.length <= 1) {
-      return setMsgSafe("warn", "This doesn’t look like a multi-class mega TXT (only one section found).");
-    }
-
-    // Two-click confirm (avoids window.confirm and accidental duplicates)
-    const btn = getById("splitMegaBtn");
-    if (btn && btn.dataset.confirming !== "1") {
-      btn.dataset.confirming = "1";
-      btn.dataset.megaCount = String(sections.length);
-      const old = btn.textContent;
-      btn.dataset.oldText = old;
-      btn.textContent = "Confirm Split (" + sections.length + " drafts)";
-      setMsgSafe("warn", "Click Split Mega TXT again to create " + sections.length + " drafts.");
-      setTimeout(() => {
-        if (btn.dataset.confirming === "1") {
-          btn.dataset.confirming = "0";
-          btn.textContent = btn.dataset.oldText || "Split Mega TXT";
-        }
-      }, 8000);
-      return;
-    }
-    if (btn) {
-      btn.dataset.confirming = "0";
-      btn.textContent = btn.dataset.oldText || "Split Mega TXT";
-    }
-
-    const titleBase = rcVal("title", ["draftTitle"]) || "Untitled";
-    const releaseAt = rcVal("releaseAt", ["release"]) || null;
-    const dueAt = rcVal("dueAt", ["due"]) || null;
-    const notes = rcVal("notes", ["draftNotes"]) || "";
-
-    let created = 0;
-    let warnings = 0;
-
-    for (const sec of sections) {
-      const assignmentText = sec.text;
-      const snippet = assignmentText.slice(0, 3500);
-
-      let mappingText = null;
-      if (typeof autoMapFromTeacherTxt === "function") {
-        const res = autoMapFromTeacherTxt(assignmentText);
-        mappingText = res && res.mappingText ? res.mappingText : null;
-        if (res && res.counts && res.counts.warnings) warnings += res.counts.warnings;
-      }
-
-      const draft = {
-        id: rcWorkNewId(),
-        title: titleBase + " — " + sec.className,
-        className: sec.className,
-        releaseAt,
-        dueAt,
-        createdAt: new Date().toISOString(),
-        notes,
-        assignment: {
-          kind: "file",
-          name: f.name,
-          link: null,
-          snippet,
-          text: assignmentText,
-        },
-        mapping: mappingText
-          ? { kind: "auto", name: "auto-mapping.json", text: mappingText }
-          : { kind: "none", name: null, text: null },
-      };
-
-      rcWorkAddDraft(draft);
-      created += 1;
-    }
-
-    setMsgSafe(warnings ? "warn" : "ok", "Split mega TXT into " + created + " draft(s)" + (warnings ? " (" + warnings + " missing-code warning(s))" : ""));
-  }
-
-  function rcWireSplitMega() {
-    rcEnsureLifeSkillsOption();
-
-    const getById = (x) => (typeof $ === "function" ? $(x) : document.getElementById(x));
-    const btn = getById("splitMegaBtn");
-    if (!btn || btn.dataset.wired === "1") return;
-    btn.dataset.wired = "1";
-
-    // Hide until a mega file is detected
-    btn.style.display = "none";
-
-    btn.addEventListener("click", (e) => {
-      e.preventDefault();
-      rcSplitMegaCreateDrafts();
-    });
-
-    const af = getById("assignmentFile");
-    if (af && af.dataset.megaDetect !== "1") {
-      af.dataset.megaDetect = "1";
-      af.addEventListener("change", async () => {
-        try {
-          const f = af.files && af.files[0];
-          if (!f) { btn.style.display = "none"; return; }
-          const raw = await f.text();
-          const n = rcGetMegaSections(raw).length;
-          btn.style.display = n > 1 ? "" : "none";
-        } catch (_e) {
-          btn.style.display = "none";
-        }
-      });
-    }
-  }
-
-  // Run after existing init
-  setTimeout(rcWireSplitMega, 0);
-})();
-// --- end Mega TXT splitter ---
-
-
-
-
-
-
-$("workDraftForm").addEventListener("submit", onSaveDraft);
-// Auto-toggle Split Mega button (show only when TXT contains multiple sections)
-(() => {
-  const af = $("assignmentFile");
-  const sb = $("btnSplitMega");
-  if (!af || !sb) return;
-
-  const toggle = async () => {
-    try {
-      const f = af.files && af.files[0];
-      if (!f || !rcIsTextFile(f)) { sb.style.display = "none"; return; }
-      const t = await f.text();
-      const parts = globalThis.rcSplitTeacherMegaText(t);
-      sb.style.display = (parts && parts.length > 1) ? "" : "none";
-    } catch (_) {
-      sb.style.display = "none";
-    }
-  };
-
-  af.addEventListener("change", toggle);
-  sb.addEventListener("click", onSplitMega);
-  toggle();
-})();
-// Auto-toggle Split Mega (end)
-
-
-    const af = $("assignmentFile");
-    const afn = $("assignmentFileName");
-    if (af && afn) {
-      const upd = () => {
-        const f = af.files && af.files[0];
-        afn.textContent = f ? ("Selected: " + f.name) : "No file selected";
-      };
-      af.addEventListener("change", upd);
-      upd();
-    }
-
+    $("workDraftForm").addEventListener("submit", onSaveDraft);
     $("btnExportAll").addEventListener("click", exportAll);
     $("btnClearAll").addEventListener("click", clearAll);
-// btnFillExample removed (use draft row Preview/Export)
+    $("btnFillExample").addEventListener("click", fillExample);
 
     wireModal();
   }
@@ -987,15 +491,14 @@ $("workDraftForm").addEventListener("submit", onSaveDraft);
 })();
 
 
-// RC_MEGA_TXT_V2_BLOCK
+// BEGIN rc-work-mega-ux v1
 (() => {
-  "use strict";
+  if (window.__rcWorkMegaUxV1) return;
+  window.__rcWorkMegaUxV1 = true;
 
-  const DRAFTS_KEY = "rc_tc_work_drafts_v1";
-  const WIRE_FLAG = "rcMegaV2Wired";
+  const DRAFT_KEY = "rc_tc_work_drafts_v1";
 
-  // -------- Fuzzy class normalization --------
-  const CLASS_CATALOG = [
+  const CANON_CLASSES = [
     "LA 1 SC",
     "LA 2 SC",
     "LA 3 SC",
@@ -1004,223 +507,305 @@ $("workDraftForm").addEventListener("submit", onSaveDraft);
     "Life Skills LA",
   ];
 
+  const LA_TOKENS = /\b(la|ela)\b|english\s+language\s+arts|language\s+arts/i;
+
   function norm(s) {
-    return (s || "")
+    return String(s || "")
       .toLowerCase()
-      .replace(/lifeskillsla/g, "life skills la")
-      .replace(/life\s*skills\s*la/g, "life skills la")
-      .replace(/lifeskills/g, "life skills")
-      .replace(/english\s+language\s+arts/g, "ela")
-      .replace(/language\s+arts/g, "la")
       .replace(/[^a-z0-9]+/g, " ")
-      .replace(/\s+/g, " ")
       .trim();
   }
 
-  function classNameFromAnyText(s) {
-    const t = norm(s);
+  function normalizeHeaderToClass(rawHeader) {
+    const t = norm(rawHeader);
 
-    // Distinguish Life Skills vs Life Skills LA
-    if (t.includes("life skills")) {
-      const isLA = /\b(la|ela)\b/.test(t) || t.includes("language arts");
-      return isLA ? "Life Skills LA" : "Life Skills";
-    }
+    const hasLifeSkills = t.includes("life") && t.includes("skills");
+    const hasLA = LA_TOKENS.test(t);
 
-    // LA 1-4 SC (accept: "LA1", "LA 1", "ELA 1", "Language Arts 1", with/without SC)
-    const m = t.match(/\b(?:la|ela)\s*([1-4])\b/);
-    if (m) return `LA ${m[1]} SC`;
+    // IMPORTANT: Life Skills vs Life Skills LA must remain distinct.
+    if (hasLifeSkills && hasLA) return "Life Skills LA";
+    if (hasLifeSkills) return "Life Skills";
+
+    // LA 1-4 (accepts: "LA1", "LA 1", "ELA 2", "Language Arts 3", "English Language Arts 4", etc.)
+    const m = t.match(/\b(?:la|ela|language\s+arts|english\s+language\s+arts)\s*([1-4])\b/);
+    if (m && m[1]) return `LA ${m[1]} SC`;
 
     return null;
   }
 
-  function extractMegaSections(text) {
-    const lines = (text || "").split(/\r?\n/);
-    const headers = [];
-
-    for (let i = 0; i < lines.length; i++) {
-      const raw = (lines[i] || "").trim();
-      if (!raw) continue;
-      const cn = classNameFromAnyText(raw);
-      if (!cn) continue;
-      headers.push({ i, className: cn, raw });
-    }
-
-    const distinct = Array.from(new Set(headers.map(h => h.className)));
-    if (distinct.length < 2) return null;
-
-    const segs = [];
-    for (let k = 0; k < headers.length; k++) {
-      const start = headers[k].i;
-      const end = (k + 1 < headers.length) ? headers[k + 1].i : lines.length;
-      const chunk = lines.slice(start, end).join("\n").trim();
-      if (chunk) segs.push({ className: headers[k].className, chunk });
-    }
-
-    const byClass = new Map();
-    for (const s of segs) {
-      const cur = byClass.get(s.className) || [];
-      cur.push(s.chunk);
-      byClass.set(s.className, cur);
-    }
-
-    return Array.from(byClass.entries()).map(([className, chunks]) => ({
-      className,
-      text: chunks.join("\n\n").trim() + "\n",
-    }));
-  }
-
-  // -------- LocalStorage draft list helpers (tolerant to schema shape) --------
-  function readDraftList() {
-    const raw = localStorage.getItem(DRAFTS_KEY);
-    if (!raw) return { container: null, list: [] };
-    try {
-      const v = JSON.parse(raw);
-      if (Array.isArray(v)) return { container: null, list: v };
-      if (v && Array.isArray(v.drafts)) return { container: v, list: v.drafts };
-      if (v && Array.isArray(v.items)) return { container: v, list: v.items };
-    } catch (_) { /* ignore */ }
-    return { container: null, list: [] };
-  }
-
-  function writeDraftList(container, list) {
-    if (container && typeof container === "object") {
-      if (Array.isArray(container.drafts)) container.drafts = list;
-      else if (Array.isArray(container.items)) container.items = list;
-      localStorage.setItem(DRAFTS_KEY, JSON.stringify(container));
-      return;
-    }
-    localStorage.setItem(DRAFTS_KEY, JSON.stringify(list));
-  }
-
-  function uid() {
-    return "d_" + Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 10);
-  }
-
-  function ensureClassOptions() {
+  function ensureClassDropdown() {
     const sel = document.getElementById("className");
     if (!sel) return;
+
+    // Don’t force single-class selection when using mega mode.
+    try { sel.required = false; } catch (e) { /* ignore */ }
+
     const existing = new Set(Array.from(sel.options || []).map(o => o.value));
-    for (const v of CLASS_CATALOG) {
-      if (!existing.has(v)) {
+    for (const c of CANON_CLASSES) {
+      if (!existing.has(c)) {
         const opt = document.createElement("option");
-        opt.value = v;
-        opt.textContent = v;
+        opt.value = c;
+        opt.textContent = c;
         sel.appendChild(opt);
       }
     }
   }
 
-  function getFormBits() {
-    const form = document.getElementById("workDraftForm") || document.querySelector("form");
+  function ensureMegaCheckbox() {
     const sel = document.getElementById("className");
-    const classVal = (sel && sel.value ? sel.value : "").trim();
+    if (!sel) return;
 
-    const titleEl = document.getElementById("title") || (form ? form.querySelector('input[type="text"]') : null);
-    const title = (titleEl && titleEl.value ? titleEl.value : "").trim();
+    if (document.getElementById("rcMegaMode")) return;
 
-    const notesEl = document.getElementById("notes") || (form ? form.querySelector("textarea") : null);
-    const notes = (notesEl && notesEl.value ? notesEl.value : "").trim();
+    const wrap = document.createElement("label");
+    wrap.style.display = "flex";
+    wrap.style.alignItems = "center";
+    wrap.style.gap = "8px";
+    wrap.style.marginTop = "6px";
+    wrap.style.userSelect = "none";
 
-    const releaseEl = document.getElementById("releaseAt") || document.getElementById("release") || null;
-    const dueEl     = document.getElementById("dueAt") || document.getElementById("due") || null;
+    wrap.innerHTML = `
+      <input type="checkbox" id="rcMegaMode" />
+      <span>Multi-class mega TXT (auto-split; no single class selection)</span>
+    `;
 
-    const fileInputs = form ? Array.from(form.querySelectorAll('input[type="file"]')) : Array.from(document.querySelectorAll('input[type="file"]'));
-    const assignmentFileInput = document.getElementById("assignmentFile") || fileInputs[0] || null;
+    sel.insertAdjacentElement("afterend", wrap);
 
-    return {
-      form,
-      classVal,
-      title,
-      notes,
-      releaseAt: releaseEl && releaseEl.value ? releaseEl.value : null,
-      dueAt: dueEl && dueEl.value ? dueEl.value : null,
-      assignmentFile: assignmentFileInput && assignmentFileInput.files && assignmentFileInput.files[0] ? assignmentFileInput.files[0] : null,
+    const cb = document.getElementById("rcMegaMode");
+
+    const sync = () => {
+      if (!cb) return;
+      if (cb.checked) {
+        sel.value = "";
+        sel.disabled = true;
+      } else {
+        sel.disabled = false;
+      }
     };
+
+    cb.addEventListener("change", sync);
+    sync();
   }
 
-  async function splitMegaToDraftsFromCurrentForm() {
-    const bits = getFormBits();
-    if (!bits.assignmentFile) {
-      alert("Pick an assignment TXT file first.");
-      return false;
+  function getFormEl(id, fallbackSelector) {
+    return document.getElementById(id) || (fallbackSelector ? document.querySelector(fallbackSelector) : null);
+  }
+
+  function getVal(el) {
+    return el ? String(el.value || "").trim() : "";
+  }
+
+  function toIsoMaybe(v) {
+    if (!v) return null;
+    const d = new Date(v);
+    return Number.isNaN(d.getTime()) ? null : d.toISOString();
+  }
+
+  function pickFileInputs(form) {
+    const inputs = Array.from(form.querySelectorAll('input[type="file"]'));
+    const assignment = getFormEl("assignmentFile", null) || inputs[0] || null;
+    const mapping = getFormEl("mappingFile", null) || inputs[1] || null;
+    return { assignment, mapping };
+  }
+
+  async function readFileText(file) {
+    return String(await file.text());
+  }
+
+  function parseMegaSections(text) {
+    const lines = String(text || "").split(/\r?\n/);
+    const isSep = (ln) => /^\s*={3,}\s*$/.test(ln);
+
+    const hits = [];
+    for (let i = 0; i < lines.length; i++) {
+      if (!isSep(lines[i])) continue;
+
+      // Header is usually the previous non-empty line (allow a small gap)
+      let h = i - 1;
+      while (h >= 0 && lines[h].trim() === "" && i - h <= 3) h--;
+      const rawHeader = h >= 0 ? lines[h].trim() : "";
+      const cls = normalizeHeaderToClass(rawHeader);
+      if (!cls) continue;
+
+      hits.push({ cls, sepIndex: i });
     }
 
-    const raw = await bits.assignmentFile.text();
-    const mega = extractMegaSections(raw);
-    if (!mega) {
-      alert("This doesn’t look like a multi-class mega TXT (couldn’t find 2+ class headers).");
-      return false;
+    if (hits.length < 2) return [];
+
+    const sections = [];
+    for (let j = 0; j < hits.length; j++) {
+      const start = hits[j].sepIndex + 1;
+      const end = (j + 1 < hits.length) ? (hits[j + 1].sepIndex - 1) : lines.length;
+      const body = lines.slice(start, end).join("\n").trim();
+      sections.push({ cls: hits[j].cls, body });
+    }
+    return sections;
+  }
+
+  function looksMega(text) {
+    return parseMegaSections(text).length >= 2;
+  }
+
+  function loadDrafts() {
+    try { return JSON.parse(localStorage.getItem(DRAFT_KEY) || "[]"); }
+    catch (e) { return []; }
+  }
+
+  function saveDrafts(ds) {
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(ds));
+  }
+
+  function makeId() {
+    return "d_" + Math.random().toString(36).slice(2, 10) + "_" + Date.now().toString(36);
+  }
+
+  function titleIncludesClass(title, cls) {
+    return norm(title).includes(norm(cls));
+  }
+
+  async function splitMegaFromCurrentForm() {
+    const form = document.getElementById("workDraftForm");
+    if (!form) return;
+
+    const titleEl = getFormEl("title", 'input[name="title"]');
+    const classSel = getFormEl("className", 'select[name="className"]');
+    const releaseEl = getFormEl("releaseAt", 'input[name="releaseAt"]');
+    const dueEl = getFormEl("dueAt", 'input[name="dueAt"]');
+    const notesEl = getFormEl("notes", 'textarea[name="notes"]');
+
+    const { assignment: aIn, mapping: mIn } = pickFileInputs(form);
+    const aFile = aIn && aIn.files && aIn.files[0] ? aIn.files[0] : null;
+    const mFile = mIn && mIn.files && mIn.files[0] ? mIn.files[0] : null;
+
+    if (!aFile) {
+      alert("Choose a mega TXT assignment file first.");
+      return;
     }
 
-    const baseTitle = bits.title || bits.assignmentFile.name.replace(/\.[^.]+$/, "");
-    const { container, list } = readDraftList();
+    const raw = await readFileText(aFile);
+    const sections = parseMegaSections(raw);
 
-    const now = new Date().toISOString();
-    for (const sec of mega) {
-      const d = {
-        id: uid(),
-        title: `${baseTitle} — ${sec.className}`,
-        className: sec.className,
-        releaseAt: bits.releaseAt || null,
-        dueAt: bits.dueAt || null,
-        createdAt: now,
-        notes: bits.notes || "",
+    if (sections.length < 2) {
+      alert("That file doesn’t look like a multi-class mega TXT (need 2+ recognizable class headers).");
+      return;
+    }
+
+    const baseTitle = getVal(titleEl) || aFile.name;
+    const notes = getVal(notesEl) || "";
+    const releaseAt = toIsoMaybe(getVal(releaseEl));
+    const dueAt = toIsoMaybe(getVal(dueEl));
+
+    let mappingSnippet = "(no mapping text stored?)";
+    if (mFile) {
+      try {
+        const mt = await readFileText(mFile);
+        mappingSnippet = mt.length > 20000 ? (mt.slice(0, 20000) + "\n…(truncated)\n") : mt;
+      } catch (e) {
+        console.warn("Mapping read failed:", e);
+      }
+    }
+
+    const drafts = loadDrafts();
+
+    for (const sec of sections) {
+      const cls = sec.cls;
+
+      // Keep snippet bounded (localStorage limits). Enough now; student-view preview comes next PR.
+      const chunk = `${cls}\n===\n${sec.body}\n`;
+      const ensureBound = (t) => (t.length > 20000 ? (t.slice(0, 20000) + "\n…(truncated)\n") : t);
+
+      const t = titleIncludesClass(baseTitle, cls) ? baseTitle : `${baseTitle} — ${cls}`;
+
+      drafts.unshift({
+        id: makeId(),
+        title: t,
+        className: cls,
+        releaseAt,
+        dueAt,
+        createdAt: new Date().toISOString(),
+        notes,
         assignment: {
           kind: "file",
-          name: bits.assignmentFile.name,
+          name: aFile.name,
           link: null,
-          snippet: sec.text,
+          snippet: ensureBound(chunk),
         },
-        mapping: null,
-      };
-      list.unshift(d);
+        mapping: {
+          name: mFile ? mFile.name : null,
+          kind: mFile ? "file" : null,
+          link: null,
+          snippet: mappingSnippet,
+        },
+      });
     }
 
-    writeDraftList(container, list);
+    saveDrafts(drafts);
+
+    // Reset single-class selection to avoid confusion post-split
+    const cb = document.getElementById("rcMegaMode");
+    if (cb && classSel) {
+      classSel.value = "";
+      classSel.disabled = true;
+    }
+
+    alert(`Created ${sections.length} drafts (one per class).`);
     location.reload();
-    return true;
   }
 
-  function wireSplitMega() {
-    ensureClassOptions();
-
-    const btn = document.getElementById("btnSplitMega");
-    if (btn && !btn.dataset[WIRE_FLAG]) {
-      btn.dataset[WIRE_FLAG] = "1";
-      btn.addEventListener("click", async (ev) => {
-        ev.preventDefault();
-        ev.stopImmediatePropagation();
-        await splitMegaToDraftsFromCurrentForm();
-      }, true);
-    }
-
+  function wire() {
     const form = document.getElementById("workDraftForm");
-    if (form && !form.dataset[WIRE_FLAG]) {
-      form.dataset[WIRE_FLAG] = "1";
-      form.addEventListener("submit", async (ev) => {
-        const bits = getFormBits();
-        if (bits.classVal) return;
+    const btn = document.getElementById("btnSplitMega");
 
-        ev.preventDefault();
-        ev.stopImmediatePropagation();
+    ensureClassDropdown();
+    ensureMegaCheckbox();
 
-        if (!bits.assignmentFile) {
-          alert("Choose a class OR upload a mega TXT to auto-split.");
-          return;
-        }
+    const classSel = document.getElementById("className");
+    const cb = document.getElementById("rcMegaMode");
 
-        const raw = await bits.assignmentFile.text();
-        const mega = extractMegaSections(raw);
-        if (!mega) {
-          alert("Choose a class (single-class save) OR use a multi-class mega TXT (2+ class headers) to auto-split.");
-          return;
-        }
+    // Auto-detect mega files and flip on mega mode
+    if (form) {
+      const { assignment: aIn } = pickFileInputs(form);
+      if (aIn) {
+        aIn.addEventListener("change", async () => {
+          try {
+            const f = aIn.files && aIn.files[0] ? aIn.files[0] : null;
+            if (!f || !cb || !classSel) return;
+            const txt = await readFileText(f);
+            if (looksMega(txt)) {
+              cb.checked = true;
+              classSel.value = "";
+              classSel.disabled = true;
+            }
+          } catch (e) {
+            console.warn("Mega auto-detect failed:", e);
+          }
+        });
+      }
+    }
 
-        await splitMegaToDraftsFromCurrentForm();
+    // Replace Split Mega behavior (capture so we win even if older listeners exist)
+    if (btn) {
+      try { btn.type = "button"; } catch (e) { /* ignore */ }
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        splitMegaFromCurrentForm().catch(err => console.warn(err));
+      }, true);
+    }
+
+    // If mega mode is checked, Save Draft should auto-split instead of requiring a class
+    if (form) {
+      form.addEventListener("submit", (e) => {
+        const isMega = !!(cb && cb.checked);
+        if (!isMega) return;
+
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        splitMegaFromCurrentForm().catch(err => console.warn(err));
       }, true);
     }
   }
 
-  window.addEventListener("DOMContentLoaded", wireSplitMega);
+  window.addEventListener("DOMContentLoaded", wire);
 })();
-// end RC_MEGA_TXT_V2_BLOCK
+// END rc-work-mega-ux v1
