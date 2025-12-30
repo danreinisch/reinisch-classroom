@@ -718,6 +718,222 @@ async function onSplitMega() {
 
   setMsg("ok", "Split into " + created + " draft(s) from mega file.");
 }
+// --- Mega TXT splitter (multi-class) ---
+(function () {
+  // Normalize a section header into a canonical class name used by the dropdown.
+  function rcNormalizeClassFromHeader(header) {
+    const h = String(header || "").trim();
+    const up = h.toUpperCase();
+
+    if (up.includes("LIFE SKILLS")) return "Life Skills LA";
+
+    // Matches: "LANGUAGE ARTS 1", "LANGUAGE ARTS 1 SC", "LA 1", etc.
+    let m = up.match(/(?:LANGUAGE\s+ARTS|LA)\s*([1-4])\b/);
+    if (m) return "LA " + m[1] + " SC";
+
+    // Matches already-canonical-ish strings
+    m = up.match(/\bLA\s*([1-4])\s*SC\b/);
+    if (m) return "LA " + m[1] + " SC";
+
+    return h;
+  }
+
+  function rcGetMegaSections(text) {
+    const lines = String(text || "").split(/\r?\n/);
+    const heads = [];
+    for (let i = 0; i < lines.length; i++) {
+      if (/^\s*(LANGUAGE\s+ARTS|LIFE\s+SKILLS)\b/i.test(lines[i])) {
+        heads.push({ i, header: lines[i].trim() });
+      }
+    }
+    if (!heads.length) return [];
+    return heads.map((h, idx) => {
+      const end = idx + 1 < heads.length ? heads[idx + 1].i : lines.length;
+      const sliced = lines.slice(h.i, end).join("\n").trim() + "\n";
+      return {
+        header: h.header,
+        className: rcNormalizeClassFromHeader(h.header),
+        text: sliced,
+      };
+    });
+  }
+
+  function rcEnsureLifeSkillsOption() {
+    // Try common ids used in this page
+    const sel =
+      (typeof $ === "function" && ($("className") || $("class") || $("classSelect"))) ||
+      document.getElementById("className") ||
+      document.getElementById("class") ||
+      document.getElementById("classSelect");
+
+    if (!sel || !sel.options) return;
+
+    const want = "Life Skills LA";
+    const has = Array.from(sel.options).some((o) => {
+      const v = (o.value || "").toLowerCase();
+      const t = (o.textContent || "").toLowerCase();
+      return v === want.toLowerCase() || t.includes("life skills");
+    });
+    if (!has) {
+      const opt = document.createElement("option");
+      opt.value = want;
+      opt.textContent = want;
+      sel.appendChild(opt);
+    }
+  }
+
+  function rcWorkLoadDrafts() {
+    try {
+      return JSON.parse(localStorage.getItem("rc_tc_work_drafts_v1") || "[]");
+    } catch (_e) {
+      return [];
+    }
+  }
+
+  function rcWorkSaveDrafts(drafts) {
+    localStorage.setItem("rc_tc_work_drafts_v1", JSON.stringify(drafts));
+    if (typeof globalThis.renderDrafts === "function") globalThis.renderDrafts();
+    if (typeof globalThis.renderWorkDrafts === "function") globalThis.renderWorkDrafts();
+  }
+
+  function rcWorkAddDraft(draft) {
+    const drafts = rcWorkLoadDrafts();
+    drafts.unshift(draft);
+    rcWorkSaveDrafts(drafts);
+  }
+
+  function rcWorkNewId() {
+    return "d_" + Math.random().toString(36).slice(2, 8) + "_" + Date.now().toString(36);
+  }
+
+  function rcVal(id, fallbackIds=[]) {
+    const getById = (x) => (typeof $ === "function" ? $(x) : document.getElementById(x));
+    const el = getById(id) || fallbackIds.map(getById).find(Boolean);
+    return el ? (el.value || "").trim() : "";
+  }
+
+  async function rcSplitMegaCreateDrafts() {
+    const getById = (x) => (typeof $ === "function" ? $(x) : document.getElementById(x));
+    const setMsgSafe = (lvl, msg) => (typeof setMsg === "function" ? setMsg(lvl, msg) : console.log(lvl + ": " + msg));
+
+    const af = getById("assignmentFile");
+    const f = af && af.files && af.files[0];
+    if (!f) return setMsgSafe("err", "Choose an assignment TXT first.");
+
+    const raw = await f.text();
+    const sections = rcGetMegaSections(raw);
+
+    if (sections.length <= 1) {
+      return setMsgSafe("warn", "This doesn’t look like a multi-class mega TXT (only one section found).");
+    }
+
+    // Two-click confirm (avoids window.confirm and accidental duplicates)
+    const btn = getById("splitMegaBtn");
+    if (btn && btn.dataset.confirming !== "1") {
+      btn.dataset.confirming = "1";
+      btn.dataset.megaCount = String(sections.length);
+      const old = btn.textContent;
+      btn.dataset.oldText = old;
+      btn.textContent = "Confirm Split (" + sections.length + " drafts)";
+      setMsgSafe("warn", "Click Split Mega TXT again to create " + sections.length + " drafts.");
+      setTimeout(() => {
+        if (btn.dataset.confirming === "1") {
+          btn.dataset.confirming = "0";
+          btn.textContent = btn.dataset.oldText || "Split Mega TXT";
+        }
+      }, 8000);
+      return;
+    }
+    if (btn) {
+      btn.dataset.confirming = "0";
+      btn.textContent = btn.dataset.oldText || "Split Mega TXT";
+    }
+
+    const titleBase = rcVal("title", ["draftTitle"]) || "Untitled";
+    const releaseAt = rcVal("releaseAt", ["release"]) || null;
+    const dueAt = rcVal("dueAt", ["due"]) || null;
+    const notes = rcVal("notes", ["draftNotes"]) || "";
+
+    let created = 0;
+    let warnings = 0;
+
+    for (const sec of sections) {
+      const assignmentText = sec.text;
+      const snippet = assignmentText.slice(0, 3500);
+
+      let mappingText = null;
+      if (typeof autoMapFromTeacherTxt === "function") {
+        const res = autoMapFromTeacherTxt(assignmentText);
+        mappingText = res && res.mappingText ? res.mappingText : null;
+        if (res && res.counts && res.counts.warnings) warnings += res.counts.warnings;
+      }
+
+      const draft = {
+        id: rcWorkNewId(),
+        title: titleBase + " — " + sec.className,
+        className: sec.className,
+        releaseAt,
+        dueAt,
+        createdAt: new Date().toISOString(),
+        notes,
+        assignment: {
+          kind: "file",
+          name: f.name,
+          link: null,
+          snippet,
+          text: assignmentText,
+        },
+        mapping: mappingText
+          ? { kind: "auto", name: "auto-mapping.json", text: mappingText }
+          : { kind: "none", name: null, text: null },
+      };
+
+      rcWorkAddDraft(draft);
+      created += 1;
+    }
+
+    setMsgSafe(warnings ? "warn" : "ok", "Split mega TXT into " + created + " draft(s)" + (warnings ? " (" + warnings + " missing-code warning(s))" : ""));
+  }
+
+  function rcWireSplitMega() {
+    rcEnsureLifeSkillsOption();
+
+    const getById = (x) => (typeof $ === "function" ? $(x) : document.getElementById(x));
+    const btn = getById("splitMegaBtn");
+    if (!btn || btn.dataset.wired === "1") return;
+    btn.dataset.wired = "1";
+
+    // Hide until a mega file is detected
+    btn.style.display = "none";
+
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      rcSplitMegaCreateDrafts();
+    });
+
+    const af = getById("assignmentFile");
+    if (af && af.dataset.megaDetect !== "1") {
+      af.dataset.megaDetect = "1";
+      af.addEventListener("change", async () => {
+        try {
+          const f = af.files && af.files[0];
+          if (!f) { btn.style.display = "none"; return; }
+          const raw = await f.text();
+          const n = rcGetMegaSections(raw).length;
+          btn.style.display = n > 1 ? "" : "none";
+        } catch (_e) {
+          btn.style.display = "none";
+        }
+      });
+    }
+  }
+
+  // Run after existing init
+  setTimeout(rcWireSplitMega, 0);
+})();
+// --- end Mega TXT splitter ---
+
+
 
 
 
