@@ -18,7 +18,7 @@
 
   async function gateTeacher(){
     // Same-origin is mandatory for preview deploys.
-    const next = encodeURIComponent(location.pathname);
+    const next = encodeURIComponent(location.pathname + location.search);
     try{
       const r = await fetch('/.netlify/functions/teacher-session', { cache:'no-store', credentials:'same-origin' });
       if(!r.ok){
