@@ -137,8 +137,9 @@
 
               <div class="work-field">
                 <label>Mapping file (required)</label>
-                <input id="mappingFile" type="file" accept=".csv,.json,.txt" required />
-                <div class="work-subtle" style="font-size:12px; margin-top:8px">
+                <input class="tc-file-input" id="mappingFile" name="mappingFile" type="file" accept=".json,application/json,.csv,text/csv" required />
+                <div class="tc-subtle" id="mappingFileName">No file selected</div>
+<div class="work-subtle" style="font-size:12px; margin-top:8px">
                   MVP accepts CSV or JSON. This will evolve into your official “question → DESE/IEP tags” artifact.
                 </div>
                 <details style="margin-top:10px">

@@ -356,7 +356,19 @@
     const drafts = readDrafts();
     renderTable(drafts);
 
-    $("workDraftForm").addEventListener("submit", onSaveDraft);
+    
+    // Mapping file name display
+    const mf = $("mappingFile");
+    const mfn = $("mappingFileName");
+    if (mf && mfn) {
+      const mupd = () => {
+        const f = mf.files && mf.files[0];
+        mfn.textContent = f ? ("Selected: " + f.name) : "No file selected";
+      };
+      mf.addEventListener("change", mupd);
+      mupd();
+    }
+$("workDraftForm").addEventListener("submit", onSaveDraft);
     const af = $("assignmentFile");
     const afn = $("assignmentFileName");
     if (af && afn) {
