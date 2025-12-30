@@ -248,6 +248,14 @@
     $("draftNotes").value = "MVP example draft. Replace with real content.";
     $("assignmentLink").value = "https://docs.google.com/forms/d/EXAMPLE/viewform";
   }
+  function rcIsTextFile(file) {
+    if (!file) return false;
+    const name = String(file.name || "").toLowerCase();
+    const type = String(file.type || "").toLowerCase();
+    if (type.startsWith("text/")) return true;
+    return name.endsWith(".txt");
+  }
+
 
   async function onSaveDraft(e) {
     e.preventDefault();
@@ -260,6 +268,15 @@
     const notes = safeStr($("draftNotes").value).trim();
 
     const assignmentFile = $("assignmentFile").files && $("assignmentFile").files[0];
+
+    let assignmentTextRaw = "";
+
+    if (assignmentFile && rcIsTextFile(assignmentFile)) {
+
+      try { assignmentTextRaw = await assignmentFile.text(); } catch (_) { /* noop */ }
+
+    }
+
     const assignmentLink = safeStr($("assignmentLink").value).trim();
     const mappingFile = $("mappingFile").files && $("mappingFile").files[0];
 
@@ -306,6 +323,13 @@
     }
 
     const drafts = readDrafts();
+    if (assignmentTextRaw && !draft.assignmentTextRaw) draft.assignmentTextRaw = assignmentTextRaw;
+    if (assignmentTextRaw && window.rcParseAssignmentTags) {
+      const parsed = window.rcParseAssignmentTags(assignmentTextRaw);
+      if (!draft.assignmentTextClean) draft.assignmentTextClean = parsed.cleanText;
+      if (!draft.assignmentTags) draft.assignmentTags = parsed.tags;
+      if (!draft.native) draft.native = { type: "txt", textRaw: assignmentTextRaw, textClean: parsed.cleanText, tags: parsed.tags };
+    }
     drafts.unshift(draft);
     writeDrafts(drafts);
     renderTable(drafts);
