@@ -3134,7 +3134,21 @@
        * PR1: Check if current request has entry=teacher parameter
        * Extracted to avoid code duplication
        */
-      function isTeacherEntryRequest() {
+      
+      function rcSafeNextPath(){
+        try{
+          const u = new URL(window.location.href);
+          const raw = (u.searchParams.get("next") || "").trim();
+          if(!raw) return "";
+          if(!raw.startswith("/")) return "";           // same-origin only
+          if(raw.startswith("//")) return "";          // no protocol-relative
+          return raw;
+        }catch(_){
+          return "";
+        }
+      }
+
+function isTeacherEntryRequest() {
         const urlParams = new URLSearchParams(window.location.search);
         return urlParams.get('entry') === 'teacher';
       }
@@ -3566,6 +3580,12 @@
             }
 
             console.log(LOG_PREFIX, "Calling showTeacher() after successful login");
+                        const nx = rcSafeNextPath();
+            if (nx) {
+              console.log("[Teacher Auth] Redirecting to next on login:", nx);
+              window.location.assign(nx);
+              return;
+            }
             showTeacher();
 
             // Restore last area/tab if available
@@ -3706,6 +3726,12 @@
         if (chip) chip.textContent = "Teacher";
         
         console.log(LOG_PREFIX, "Showing teacher view after session resume");
+                const nx = rcSafeNextPath();
+        if (nx) {
+          console.log("[Teacher Auth] Redirecting to next on resume:", nx);
+          window.location.assign(nx);
+          return;
+        }
         showTeacher();
 
         // Hide banner
