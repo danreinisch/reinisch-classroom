@@ -136,9 +136,10 @@
               </div>
 
               <div class="work-field">
-                <label>Mapping file (required)</label>
-                <input class="tc-file-input" id="mappingFile" name="mappingFile" type="file" accept=".json,application/json,.csv,text/csv" required />
+                <label>Mapping file (optional)</label>
+                <input class="tc-file-input" id="mappingFile" name="mappingFile" type="file" accept=".json,application/json,.csv,text/csv" />
                 <div class="tc-subtle" id="mappingFileName">No file selected</div>
+<div class="tc-subtle">If omitted, mapping is auto-generated from [MLS.*] and [IG:*] tags in the assignment TXT.</div>
 <div class="work-subtle" style="font-size:12px; margin-top:8px">
                   MVP accepts CSV or JSON. This will evolve into your official “question → DESE/IEP tags” artifact.
                 </div>

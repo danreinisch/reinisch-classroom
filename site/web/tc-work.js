@@ -250,7 +250,112 @@
   }
 
 
-  async function onSaveDraft(e) {
+  function autoMapFromTeacherTxt(text) {
+  const out = { version: 1, sections: [], warnings: [], counts: { sections: 0, items: 0, warnings: 0 } };
+  const lines = String(text || "").split(/\r?\n/);
+
+  let cur = null;
+  let pendingWR = null;
+  let wrIndex = 0;
+
+  const uniq = (arr) => Array.from(new Set((arr || []).map(x => String(x || "").trim()).filter(Boolean)));
+
+  const startSection = (title) => {
+    const t = String(title || "Assignment").trim() || "Assignment";
+    cur = { title: t, items: [] };
+    out.sections.push(cur);
+  };
+
+  const addItem = (key, tags) => {
+    if (!cur) startSection("Assignment");
+    const item = { key: String(key), dese: uniq(tags?.dese), iep: uniq(tags?.iep) };
+    cur.items.push(item);
+  };
+
+  const parseTagsFromLine = (line) => {
+    const tags = { dese: [], iep: [] };
+    const matches = String(line || "").match(/\[[^\]]+\]/g) || [];
+    for (const raw of matches) {
+      const inner = raw.slice(1, -1).trim();
+      if (!inner) continue;
+
+      // Examples:
+      // [MLS.R.1.A]
+      // [DESE: MLS.R.1.A]
+      // [IG: C.H.9.1]
+      // [IEP: C.H.9.1]
+      if (/^(MLS\.|DESE:)/i.test(inner)) {
+        tags.dese.push(inner.replace(/^DESE:\s*/i, "").trim());
+      } else if (/^(IG:|IEP:)/i.test(inner)) {
+        tags.iep.push(inner.replace(/^(IG:|IEP:)\s*/i, "").trim());
+      }
+    }
+    return tags;
+  };
+
+  const isSectionLine = (line) => /^\s*(LANGUAGE\s+ARTS|LIFE\s+SKILLS)\b/i.test(line);
+  const isQuestionLine = (line) => /^\s*(?:Q\s*)?\d+\s*[.)]\s*/i.test(line);
+  const isTagLine = (line) =>
+    /\[[^\]]+\]/.test(line) && (/\bMLS\./i.test(line) || /\bIG:/i.test(line) || /\bIEP:/i.test(line) || /\bDESE:/i.test(line));
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    if (isSectionLine(line)) {
+      startSection(line.trim());
+      pendingWR = null;
+      continue;
+    }
+
+    if (/^\s*WRITTEN\s+RESPONSE\b/i.test(line)) {
+      wrIndex += 1;
+      pendingWR = "WR" + wrIndex;
+      continue;
+    }
+
+    if (isQuestionLine(line)) {
+      const qm = line.match(/^\s*(?:Q\s*)?(\d+)\s*[.)]/i);
+      const qNum = qm ? qm[1] : "";
+      let tags = { dese: [], iep: [] };
+
+      // look ahead for the first tag line before the next question/section
+      for (let j = i + 1; j < lines.length; j++) {
+        const l2 = lines[j];
+        if (isQuestionLine(l2) || isSectionLine(l2)) break;
+        if (isTagLine(l2)) { tags = parseTagsFromLine(l2); break; }
+      }
+
+      addItem("Q" + qNum, tags);
+      pendingWR = null;
+      continue;
+    }
+
+    if (pendingWR && isTagLine(line)) {
+      addItem(pendingWR, parseTagsFromLine(line));
+      pendingWR = null;
+      continue;
+    }
+  }
+
+  // warnings + counts
+  let warn = 0;
+  let items = 0;
+  for (const s of out.sections) {
+    for (const it of (s.items || [])) {
+      items += 1;
+      if ((!it.dese || it.dese.length === 0) && (!it.iep || it.iep.length === 0)) {
+        out.warnings.push("No codes found for " + s.title + " " + it.key);
+        warn += 1;
+      }
+    }
+  }
+  out.counts.sections = out.sections.length;
+  out.counts.items = items;
+  out.counts.warnings = warn;
+  return out;
+}
+
+async function onSaveDraft(e) {
     e.preventDefault();
     clearMsg();
 
@@ -275,7 +380,7 @@
 
     if (!title) return setMsg("err", "Title is required.");
     if (!className) return setMsg("err", "Class is required.");
-    if (!mappingFile) return setMsg("err", "Mapping file is required.");
+// Mapping file optional: we will auto-generate mapping from assignment tags if missing.
     if (!assignmentFile && !assignmentLink) return setMsg("err", "Assignment is required (file OR link).");
 
     const draft = {
@@ -287,15 +392,32 @@
       notes: notes || null,
       createdAt: nowISO(),
       assignment: { kind: null, name: null, link: null, text: null },
-      mapping: { kind: "file", name: mappingFile.name, text: null },
+      mapping: { kind: (mappingFile ? "file" : "auto"), name: (mappingFile ? mappingFile.name : "auto-mapping.json"), text: null },
     };
 
     // Mapping text (required) — but keep size sane
-    const mappingText = await readFileAsText(mappingFile);
-    if (bytesOf(mappingText) > MAX_TEXT_BYTES) {
-      return setMsg("err", "Mapping file is too large for MVP local storage. Keep it smaller for now.");
-    }
-    draft.mapping.text = mappingText;
+    let mappingText = null;
+
+if (mappingFile) {
+  mappingText = await readFileAsText(mappingFile);
+  if (!mappingText) return setMsg("err", "Could not read mapping file.");
+  if (mappingText.length > 50000) {
+    return setMsg("err", "Mapping file is too large for MVP local storage. Keep it smaller for now.");
+  }
+} else {
+  // Auto-map from the teacher TXT tags ([MLS.*] and [IG:*]) when available
+  const src = (typeof assignmentTextRaw === "string" && assignmentTextRaw.trim())
+    ? assignmentTextRaw
+    : "";
+  const autoMapping = autoMapFromTeacherTxt(src);
+  mappingText = JSON.stringify(autoMapping, null, 2);
+
+  const w = (autoMapping && autoMapping.counts) ? (autoMapping.counts.warnings || 0) : 0;
+  const n = (autoMapping && autoMapping.counts) ? (autoMapping.counts.items || 0) : 0;
+  setMsg(w ? "warn" : "ok", "Auto-mapped " + n + " item(s) from tags" + (w ? " (" + w + " missing-code warning(s))" : ""));
+}
+
+draft.mapping.text = mappingText;
 
     // Assignment: prefer link; file stored only if small
     if (assignmentLink) {
