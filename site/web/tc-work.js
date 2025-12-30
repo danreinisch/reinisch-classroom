@@ -355,7 +355,7 @@
   return out;
 }
 
-async function onSaveDraft(e) {
+async function onSaveDraft(e, opts) { opts = opts || {}; if (arguments[0] && arguments[0].preventDefault) arguments[0].preventDefault();
     e.preventDefault();
     clearMsg();
 
@@ -385,7 +385,8 @@ async function onSaveDraft(e) {
 
     }
 
-    const assignmentLink = safeStr($("assignmentLink").value).trim();
+    if (opts.assignmentTextRaw != null) assignmentTextRaw = String(opts.assignmentTextRaw);
+const assignmentLink = safeStr($("assignmentLink").value).trim();
     const mappingFile = $("mappingFile").files && $("mappingFile").files[0];
 
     if (!title) return setMsg("err", "Title is required.");
@@ -438,11 +439,11 @@ draft.mapping.text = mappingText;
       if (bytesOf(assignmentText) > MAX_TEXT_BYTES) {
         // store metadata only
         draft.assignment.kind = "file";
-        draft.assignment.name = assignmentFile.name;
+        draft.assignment.name = (opts.assignmentFileName != null ? String(opts.assignmentFileName) : assignmentFile.name);
         draft.assignment.text = null;
       } else {
         draft.assignment.kind = "file";
-        draft.assignment.name = assignmentFile.name;
+        draft.assignment.name = (opts.assignmentFileName != null ? String(opts.assignmentFileName) : assignmentFile.name);
         draft.assignment.text = assignmentText;
       }
     }
@@ -585,9 +586,168 @@ globalThis.rcSliceTeacherMegaText = function (txt, className) {
   };
 };
 // --- end mega TXT slicer ---
+// --- Mega TXT helpers (normalize/split/slice) ---
+globalThis.rcNormalizeClassLabel = function (v) {
+  return String(v || "")
+    .toUpperCase()
+    .replace(/LANGUAGE\s+ARTS/g, "LA")
+    .replace(/LIFE\s+SKILLS/g, "LIFE SKILLS")
+    .replace(/[^A-Z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+};
+
+globalThis.rcSplitTeacherMegaText = function (text) {
+  const raw = String(text || "");
+  const lines = raw.split(/\r?\n/);
+  const isSectionLine = (line) => /^\s*(LANGUAGE\s+ARTS|LIFE\s+SKILLS)\b/i.test(line);
+
+  const sections = [];
+  for (let i = 0; i < lines.length; i++) {
+    if (isSectionLine(lines[i])) sections.push({ i, header: lines[i].trim() });
+  }
+
+  if (sections.length <= 1) {
+    return [{ header: sections[0] ? sections[0].header : "Assignment", text: raw.trim() + "\n" }];
+  }
+
+  const out = [];
+  for (let k = 0; k < sections.length; k++) {
+    const start = sections[k].i;
+    const end = (k + 1 < sections.length) ? sections[k + 1].i : lines.length;
+    const sliced = lines.slice(start, end).join("\n").trim() + "\n";
+    out.push({ header: sections[k].header, text: sliced });
+  }
+  return out;
+};
+
+globalThis.rcSliceTeacherMegaText = function (text, selectedClassName) {
+  const parts = globalThis.rcSplitTeacherMegaText(text);
+  if (!parts || !parts.length) {
+    return { text: String(text || ""), sliced: false, sections: [], notice: "Empty text" };
+  }
+  if (parts.length === 1) {
+    return {
+      text: parts[0].text,
+      sliced: false,
+      header: parts[0].header,
+      sections: [parts[0].header],
+      notice: "Single-section file"
+    };
+  }
+
+  const want = globalThis.rcNormalizeClassLabel(selectedClassName);
+  let idx = -1;
+
+  if (want) {
+    idx = parts.findIndex((p) => globalThis.rcNormalizeClassLabel(p.header) === want);
+    if (idx < 0) {
+      idx = parts.findIndex((p) => {
+        const h = globalThis.rcNormalizeClassLabel(p.header);
+        return (h && h.indexOf(want) >= 0) || (want && want.indexOf(h) >= 0);
+      });
+    }
+  }
+
+  if (idx < 0) {
+    return {
+      text: parts[0].text,
+      sliced: false,
+      header: parts[0].header,
+      sections: parts.map((p) => p.header),
+      notice: "Multi-class file detected, but class did not match. Using first section: " + parts[0].header
+    };
+  }
+
+  return {
+    text: parts[idx].text,
+    sliced: true,
+    header: parts[idx].header,
+    sections: parts.map((p) => p.header),
+    notice: "Using section: " + parts[idx].header + " (from multi-class file)"
+  };
+};
+// --- end Mega TXT helpers ---
+function rcResolveClassValueFromHeader(header) {
+  const sel = $("className");
+  const want = globalThis.rcNormalizeClassLabel(header);
+  if (!sel || !sel.options || !want) return safeStr(header).trim();
+
+  for (const opt of sel.options) {
+    const val = safeStr(opt.value).trim();
+    const label = safeStr(opt.textContent || opt.label || opt.value).trim();
+    if (!val) continue;
+
+    const nVal = globalThis.rcNormalizeClassLabel(val);
+    const nLab = globalThis.rcNormalizeClassLabel(label);
+
+    if (want === nVal || want === nLab) return val;
+    if (nLab && want.indexOf(nLab) >= 0) return val;
+    if (nVal && want.indexOf(nVal) >= 0) return val;
+  }
+
+  // fallback: convert LANGUAGE ARTS -> LA for best-effort match
+  return safeStr(header).replace(/^LANGUAGE\s+ARTS/i, "LA").replace(/\s+/g, " ").trim();
+}
+
+async function onSplitMega() {
+  const assignmentFile = $("assignmentFile") && $("assignmentFile").files ? $("assignmentFile").files[0] : null;
+  if (!assignmentFile) return setMsg("err", "Choose a TXT mega file first.");
+  if (!rcIsTextFile(assignmentFile)) return setMsg("err", "Split Mega TXT works only for .txt files.");
+
+  let raw = "";
+  try { raw = await assignmentFile.text(); } catch (_) { raw = ""; }
+
+  const parts = globalThis.rcSplitTeacherMegaText(raw);
+  if (!parts || parts.length <= 1) return setMsg("warn", "No multiple sections found to split.");
+
+  const baseTitle = safeStr($("title").value).trim() || assignmentFile.name.replace(/\.[^.]+$/, "");
+  let created = 0;
+
+  for (const part of parts) {
+    const clsVal = rcResolveClassValueFromHeader(part.header);
+    const t = baseTitle + " — " + clsVal;
+    await onSaveDraft(null, {
+      title: t,
+      className: clsVal,
+      assignmentTextRaw: part.text,
+      assignmentFileName: assignmentFile.name
+    });
+    created += 1;
+  }
+
+  setMsg("ok", "Split into " + created + " draft(s) from mega file.");
+}
+
+
 
 
 $("workDraftForm").addEventListener("submit", onSaveDraft);
+// Auto-toggle Split Mega button (show only when TXT contains multiple sections)
+(() => {
+  const af = $("assignmentFile");
+  const sb = $("btnSplitMega");
+  if (!af || !sb) return;
+
+  const toggle = async () => {
+    try {
+      const f = af.files && af.files[0];
+      if (!f || !rcIsTextFile(f)) { sb.style.display = "none"; return; }
+      const t = await f.text();
+      const parts = globalThis.rcSplitTeacherMegaText(t);
+      sb.style.display = (parts && parts.length > 1) ? "" : "none";
+    } catch (_) {
+      sb.style.display = "none";
+    }
+  };
+
+  af.addEventListener("change", toggle);
+  sb.addEventListener("click", onSplitMega);
+  toggle();
+})();
+// Auto-toggle Split Mega (end)
+
+
     const af = $("assignmentFile");
     const afn = $("assignmentFileName");
     if (af && afn) {
