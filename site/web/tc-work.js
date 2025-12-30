@@ -216,7 +216,7 @@
     const drafts = readDrafts();
     const d = drafts.find((x) => x.id === id);
     if (!d) return;
-    const safeName = (safeStr(d.title) || "draft").replace(/[^\w\-]+/g, "_").slice(0, 64);
+    const safeName = (safeStr(d.title) || "draft").replace(/[^\w-]+/g, "_").slice(0, 64);
     download(`tc-draft_${safeName}_${d.id}.json`, JSON.stringify(d, null, 2));
   }
 
