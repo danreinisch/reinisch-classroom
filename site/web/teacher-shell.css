@@ -210,3 +210,15 @@ iframe[src*="app.netlify.com"]{
   .tc-students{ grid-template-columns:1fr; }
   .tc-input{ width:100%; max-width:100%; }
 }
+
+/* ---- RC: allow visible file inputs where explicitly opted-in ---- */
+.tc-shell input[type="file"].tc-file-input{
+  opacity: 1 !important;
+  display: block !important;
+  position: static !important;
+  width: 100% !important;
+  height: auto !important;
+  clip: auto !important;
+  clip-path: none !important;
+  pointer-events: auto !important;
+}

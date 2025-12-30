@@ -241,13 +241,6 @@
     setMsg("ok", "All drafts cleared.");
     setTimeout(clearMsg, 1200);
   }
-
-  function fillExample() {
-    $("draftTitle").value = "Week 1 — ADIT — Day 1 Assignment";
-    $("draftClass").value = "LA 1 SC";
-    $("draftNotes").value = "MVP example draft. Replace with real content.";
-    $("assignmentLink").value = "https://docs.google.com/forms/d/EXAMPLE/viewform";
-  }
   function rcIsTextFile(file) {
     if (!file) return false;
     const name = String(file.name || "").toLowerCase();
@@ -364,6 +357,17 @@
     renderTable(drafts);
 
     $("workDraftForm").addEventListener("submit", onSaveDraft);
+    const af = $("assignmentFile");
+    const afn = $("assignmentFileName");
+    if (af && afn) {
+      const upd = () => {
+        const f = af.files && af.files[0];
+        afn.textContent = f ? ("Selected: " + f.name) : "No file selected";
+      };
+      af.addEventListener("change", upd);
+      upd();
+    }
+
     $("btnExportAll").addEventListener("click", exportAll);
     $("btnClearAll").addEventListener("click", clearAll);
 // btnFillExample removed (use draft row Preview/Export)
