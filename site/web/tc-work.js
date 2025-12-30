@@ -985,3 +985,242 @@ $("workDraftForm").addEventListener("submit", onSaveDraft);
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else init();
 })();
+
+
+// RC_MEGA_TXT_V2_BLOCK
+(() => {
+  "use strict";
+
+  const DRAFTS_KEY = "rc_tc_work_drafts_v1";
+  const WIRE_FLAG = "rcMegaV2Wired";
+
+  // -------- Fuzzy class normalization --------
+  const CLASS_CATALOG = [
+    "LA 1 SC",
+    "LA 2 SC",
+    "LA 3 SC",
+    "LA 4 SC",
+    "Life Skills",
+    "Life Skills LA",
+  ];
+
+  function norm(s) {
+    return (s || "")
+      .toLowerCase()
+      .replace(/lifeskillsla/g, "life skills la")
+      .replace(/life\s*skills\s*la/g, "life skills la")
+      .replace(/lifeskills/g, "life skills")
+      .replace(/english\s+language\s+arts/g, "ela")
+      .replace(/language\s+arts/g, "la")
+      .replace(/[^a-z0-9]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function classNameFromAnyText(s) {
+    const t = norm(s);
+
+    // Distinguish Life Skills vs Life Skills LA
+    if (t.includes("life skills")) {
+      const isLA = /\b(la|ela)\b/.test(t) || t.includes("language arts");
+      return isLA ? "Life Skills LA" : "Life Skills";
+    }
+
+    // LA 1-4 SC (accept: "LA1", "LA 1", "ELA 1", "Language Arts 1", with/without SC)
+    const m = t.match(/\b(?:la|ela)\s*([1-4])\b/);
+    if (m) return `LA ${m[1]} SC`;
+
+    return null;
+  }
+
+  function extractMegaSections(text) {
+    const lines = (text || "").split(/\r?\n/);
+    const headers = [];
+
+    for (let i = 0; i < lines.length; i++) {
+      const raw = (lines[i] || "").trim();
+      if (!raw) continue;
+      const cn = classNameFromAnyText(raw);
+      if (!cn) continue;
+      headers.push({ i, className: cn, raw });
+    }
+
+    const distinct = Array.from(new Set(headers.map(h => h.className)));
+    if (distinct.length < 2) return null;
+
+    const segs = [];
+    for (let k = 0; k < headers.length; k++) {
+      const start = headers[k].i;
+      const end = (k + 1 < headers.length) ? headers[k + 1].i : lines.length;
+      const chunk = lines.slice(start, end).join("\n").trim();
+      if (chunk) segs.push({ className: headers[k].className, chunk });
+    }
+
+    const byClass = new Map();
+    for (const s of segs) {
+      const cur = byClass.get(s.className) || [];
+      cur.push(s.chunk);
+      byClass.set(s.className, cur);
+    }
+
+    return Array.from(byClass.entries()).map(([className, chunks]) => ({
+      className,
+      text: chunks.join("\n\n").trim() + "\n",
+    }));
+  }
+
+  // -------- LocalStorage draft list helpers (tolerant to schema shape) --------
+  function readDraftList() {
+    const raw = localStorage.getItem(DRAFTS_KEY);
+    if (!raw) return { container: null, list: [] };
+    try {
+      const v = JSON.parse(raw);
+      if (Array.isArray(v)) return { container: null, list: v };
+      if (v && Array.isArray(v.drafts)) return { container: v, list: v.drafts };
+      if (v && Array.isArray(v.items)) return { container: v, list: v.items };
+    } catch (_) { /* ignore */ }
+    return { container: null, list: [] };
+  }
+
+  function writeDraftList(container, list) {
+    if (container && typeof container === "object") {
+      if (Array.isArray(container.drafts)) container.drafts = list;
+      else if (Array.isArray(container.items)) container.items = list;
+      localStorage.setItem(DRAFTS_KEY, JSON.stringify(container));
+      return;
+    }
+    localStorage.setItem(DRAFTS_KEY, JSON.stringify(list));
+  }
+
+  function uid() {
+    return "d_" + Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 10);
+  }
+
+  function ensureClassOptions() {
+    const sel = document.getElementById("className");
+    if (!sel) return;
+    const existing = new Set(Array.from(sel.options || []).map(o => o.value));
+    for (const v of CLASS_CATALOG) {
+      if (!existing.has(v)) {
+        const opt = document.createElement("option");
+        opt.value = v;
+        opt.textContent = v;
+        sel.appendChild(opt);
+      }
+    }
+  }
+
+  function getFormBits() {
+    const form = document.getElementById("workDraftForm") || document.querySelector("form");
+    const sel = document.getElementById("className");
+    const classVal = (sel && sel.value ? sel.value : "").trim();
+
+    const titleEl = document.getElementById("title") || (form ? form.querySelector('input[type="text"]') : null);
+    const title = (titleEl && titleEl.value ? titleEl.value : "").trim();
+
+    const notesEl = document.getElementById("notes") || (form ? form.querySelector("textarea") : null);
+    const notes = (notesEl && notesEl.value ? notesEl.value : "").trim();
+
+    const releaseEl = document.getElementById("releaseAt") || document.getElementById("release") || null;
+    const dueEl     = document.getElementById("dueAt") || document.getElementById("due") || null;
+
+    const fileInputs = form ? Array.from(form.querySelectorAll('input[type="file"]')) : Array.from(document.querySelectorAll('input[type="file"]'));
+    const assignmentFileInput = document.getElementById("assignmentFile") || fileInputs[0] || null;
+
+    return {
+      form,
+      classVal,
+      title,
+      notes,
+      releaseAt: releaseEl && releaseEl.value ? releaseEl.value : null,
+      dueAt: dueEl && dueEl.value ? dueEl.value : null,
+      assignmentFile: assignmentFileInput && assignmentFileInput.files && assignmentFileInput.files[0] ? assignmentFileInput.files[0] : null,
+    };
+  }
+
+  async function splitMegaToDraftsFromCurrentForm() {
+    const bits = getFormBits();
+    if (!bits.assignmentFile) {
+      alert("Pick an assignment TXT file first.");
+      return false;
+    }
+
+    const raw = await bits.assignmentFile.text();
+    const mega = extractMegaSections(raw);
+    if (!mega) {
+      alert("This doesn’t look like a multi-class mega TXT (couldn’t find 2+ class headers).");
+      return false;
+    }
+
+    const baseTitle = bits.title || bits.assignmentFile.name.replace(/\.[^.]+$/, "");
+    const { container, list } = readDraftList();
+
+    const now = new Date().toISOString();
+    for (const sec of mega) {
+      const d = {
+        id: uid(),
+        title: `${baseTitle} — ${sec.className}`,
+        className: sec.className,
+        releaseAt: bits.releaseAt || null,
+        dueAt: bits.dueAt || null,
+        createdAt: now,
+        notes: bits.notes || "",
+        assignment: {
+          kind: "file",
+          name: bits.assignmentFile.name,
+          link: null,
+          snippet: sec.text,
+        },
+        mapping: null,
+      };
+      list.unshift(d);
+    }
+
+    writeDraftList(container, list);
+    location.reload();
+    return true;
+  }
+
+  function wireSplitMega() {
+    ensureClassOptions();
+
+    const btn = document.getElementById("btnSplitMega");
+    if (btn && !btn.dataset[WIRE_FLAG]) {
+      btn.dataset[WIRE_FLAG] = "1";
+      btn.addEventListener("click", async (ev) => {
+        ev.preventDefault();
+        ev.stopImmediatePropagation();
+        await splitMegaToDraftsFromCurrentForm();
+      }, true);
+    }
+
+    const form = document.getElementById("workDraftForm");
+    if (form && !form.dataset[WIRE_FLAG]) {
+      form.dataset[WIRE_FLAG] = "1";
+      form.addEventListener("submit", async (ev) => {
+        const bits = getFormBits();
+        if (bits.classVal) return;
+
+        ev.preventDefault();
+        ev.stopImmediatePropagation();
+
+        if (!bits.assignmentFile) {
+          alert("Choose a class OR upload a mega TXT to auto-split.");
+          return;
+        }
+
+        const raw = await bits.assignmentFile.text();
+        const mega = extractMegaSections(raw);
+        if (!mega) {
+          alert("Choose a class (single-class save) OR use a multi-class mega TXT (2+ class headers) to auto-split.");
+          return;
+        }
+
+        await splitMegaToDraftsFromCurrentForm();
+      }, true);
+    }
+  }
+
+  window.addEventListener("DOMContentLoaded", wireSplitMega);
+})();
+// end RC_MEGA_TXT_V2_BLOCK
