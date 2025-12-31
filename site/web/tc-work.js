@@ -157,6 +157,74 @@
 
   let previewingId = null;
 
+  function escapeHtml(str) {
+    return String(str || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function stripTeacherTags(text) {
+    const raw = String(text || "");
+    const lines = raw.split(/\r?\n/);
+    const tagRe = /\[\s*(?:(?:DESE:\s*)?MLS\.[^\]]+|(?:IG:|IEP:)\s*[^\]]+)\s*\]/ig;
+    const out = [];
+    for (const line of lines) {
+      const cleaned = line.replace(tagRe, "").replace(/[ \t]{2,}/g, " ").trimEnd();
+      out.push(cleaned);
+    }
+    return out.join("\n")
+      .replace(/\n{4,}/g, "\n\n\n")
+      .trim();
+  }
+
+  function renderStudentPreviewHtml(d) {
+    const title = escapeHtml((d && d.title) || "Draft Preview");
+    const cls = escapeHtml((d && (d.className || d.class)) || "");
+    const notes = escapeHtml((d && d.notes) || "");
+
+    const kind = (d && d.assignment && d.assignment.kind) || "";
+    const link = (d && d.assignment && d.assignment.link) || "";
+    const text = (d && d.assignment && d.assignment.text) || "";
+
+    let bodyHtml = "";
+    if (kind === "link" && link) {
+      const safeLink = escapeHtml(link);
+      bodyHtml = `
+        <div style="margin:0 0 10px 0;">
+          <div style="font-weight:700;">Google Form link</div>
+          <div><a href="${safeLink}" target="_blank" rel="noopener noreferrer">${safeLink}</a></div>
+          <div style="opacity:.8;margin-top:6px;">Student view will open this link in a new tab.</div>
+        </div>
+      `;
+    } else if (kind === "file") {
+      const studentText = stripTeacherTags(text);
+      const shown = studentText ? escapeHtml(studentText) : "(No assignment text stored for this draft.)";
+      bodyHtml = `
+        <div style="white-space:pre-wrap; font-family:system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; line-height:1.5; font-size:14px;">
+${shown}
+        </div>
+      `;
+    } else {
+      bodyHtml = `<div style="opacity:.85;">(No assignment content found for this draft.)</div>`;
+    }
+
+    const meta = `
+      <div style="margin-bottom:10px;">
+        <div style="font-weight:800; font-size:16px;">${title}</div>
+        ${cls ? `<div style="opacity:.85; margin-top:2px;"><strong>Class:</strong> ${cls}</div>` : ``}
+        ${notes ? `<div style="opacity:.85; margin-top:2px;"><strong>Notes:</strong> ${notes}</div>` : ``}
+        <div style="opacity:.7; margin-top:6px;">Preview: <strong>Student View</strong> (DESE/IEP tags hidden)</div>
+      </div>
+      <hr style="border:none; border-top:1px solid rgba(255,255,255,.15); margin:12px 0;">
+    `
+
+    return `<div>${meta}${bodyHtml}</div>`;
+  }
+
+
   function openPreview(id) {
     const drafts = readDrafts();
     const d = drafts.find((x) => x.id === id);
@@ -202,7 +270,7 @@
       },
     };
 
-    body.textContent = JSON.stringify(payload, null, 2);
+    body.innerHTML = renderStudentPreviewHtml(d);
     overlay.hidden = false;
   }
 
