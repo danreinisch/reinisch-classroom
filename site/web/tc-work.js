@@ -241,16 +241,6 @@ ${shown}
     if (!overlay || !title || !body) return;
 
     title.textContent = safeStr(d.title) || "Draft Preview";
-
-    const mappingSnippet = (safeStr(d.mapping && d.mapping.text) || "")
-      .split("\n")
-      .slice(0, 60)
-      .join("\n");
-
-    const assignmentSnippet = (safeStr(d.assignment && d.assignment.text) || "")
-      .split("\n")
-      .slice(0, 80)
-      .join("\n");
     body.innerHTML = renderStudentPreviewHtml(d);
     overlay.hidden = false;
   }
@@ -540,12 +530,13 @@ async function onSaveDraft(e) {
 })();
 
 
-// BEGIN rc-work-mega-ux v1
+// BEGIN rc-work-mega-ux v2
 (() => {
-  if (window.__rcWorkMegaUxV1) return;
-  window.__rcWorkMegaUxV1 = true;
+  if (window.__rcWorkMegaUxV2) return;
+  window.__rcWorkMegaUxV2 = true;
 
   const DRAFT_KEY = "rc_tc_work_drafts_v1";
+  const MAX_TEXT_BYTES = 800_000; // keep localStorage safe-ish (MVP only)
 
   const CANON_CLASSES = [
     "LA 1 SC",
@@ -557,6 +548,11 @@ async function onSaveDraft(e) {
   ];
 
   const LA_TOKENS = /\b(la|ela)\b|english\s+language\s+arts|language\s+arts/i;
+
+  function bytesOf(str) {
+    try { return new TextEncoder().encode(String(str || "")).length; }
+    catch (_) { return String(str || "").length; }
+  }
 
   function norm(s) {
     return String(s || "")
@@ -582,8 +578,12 @@ async function onSaveDraft(e) {
     return null;
   }
 
+  function getClassSelect() {
+    return document.getElementById("draftClass") || document.getElementById("className");
+  }
+
   function ensureClassDropdown() {
-    const sel = document.getElementById("className");
+    const sel = getClassSelect();
     if (!sel) return;
 
     // Don’t force single-class selection when using mega mode.
@@ -601,7 +601,7 @@ async function onSaveDraft(e) {
   }
 
   function ensureMegaCheckbox() {
-    const sel = document.getElementById("className");
+    const sel = getClassSelect();
     if (!sel) return;
 
     if (document.getElementById("rcMegaMode")) return;
@@ -690,11 +690,6 @@ async function onSaveDraft(e) {
     }
     return sections;
   }
-
-  function looksMega(text) {
-    return parseMegaSections(text).length >= 2;
-  }
-
   function loadDrafts() {
     try { return JSON.parse(localStorage.getItem(DRAFT_KEY) || "[]"); }
     catch (e) { return []; }
@@ -712,15 +707,108 @@ async function onSaveDraft(e) {
     return norm(title).includes(norm(cls));
   }
 
+  function fileSig(f) {
+    if (!f) return "";
+    return `${f.name}|${f.size}|${f.lastModified || 0}`;
+  }
+
+  function ensureMegaPrompt() {
+    if (document.getElementById("rcMegaPromptOverlay")) return;
+
+    const overlay = document.createElement("div");
+    overlay.id = "rcMegaPromptOverlay";
+    overlay.hidden = true;
+    overlay.style.cssText = "position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:9999; display:flex; align-items:center; justify-content:center; padding:16px;";
+
+    overlay.innerHTML = `
+      <div style="max-width:760px; width:100%; background:rgba(20,24,28,.98); color:#fff; border:1px solid rgba(255,255,255,.12); border-radius:14px; padding:16px; box-shadow:0 10px 30px rgba(0,0,0,.5);">
+        <div style="font-size:18px; font-weight:800; margin-bottom:8px;">Multi-class headers detected</div>
+        <div id="rcMegaPromptMsg" style="opacity:.95; line-height:1.35; margin-bottom:12px;"></div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end;">
+          <button type="button" id="rcMegaPromptEnable" class="work-btn">Enable Mega (split on Save)</button>
+          <button type="button" id="rcMegaPromptSingle" class="work-btn">Treat as single-class anyway</button>
+          <button type="button" id="rcMegaPromptExit" class="work-btn">Exit</button>
+        </div>
+      </div>
+    `;
+
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) {
+        // Click outside = Exit
+        const btn = document.getElementById("rcMegaPromptExit");
+        if (btn) btn.click();
+      }
+    });
+
+    document.body.appendChild(overlay);
+  }
+
+  function askMegaDecision(detectedClasses) {
+    return new Promise((resolve) => {
+      ensureMegaPrompt();
+      const overlay = document.getElementById("rcMegaPromptOverlay");
+      const msg = document.getElementById("rcMegaPromptMsg");
+      const bEnable = document.getElementById("rcMegaPromptEnable");
+      const bSingle = document.getElementById("rcMegaPromptSingle");
+      const bExit = document.getElementById("rcMegaPromptExit");
+      if (!overlay || !msg || !bEnable || !bSingle || !bExit) {
+        // Fallback: if UI fails, treat as Exit.
+        resolve("exit");
+        return;
+      }
+
+      const list = (detectedClasses && detectedClasses.length)
+        ? detectedClasses.join(", ")
+        : "multiple classes";
+
+      msg.textContent = `This TXT appears to contain multiple class sections (${list}). What do you want to do?`;
+
+      const cleanup = () => {
+        overlay.hidden = true;
+        bEnable.removeEventListener("click", onEnable);
+        bSingle.removeEventListener("click", onSingle);
+        bExit.removeEventListener("click", onExit);
+      };
+
+      const onEnable = () => { cleanup(); resolve("mega"); };
+      const onSingle = () => { cleanup(); resolve("single"); };
+      const onExit = () => { cleanup(); resolve("exit"); };
+
+      bEnable.addEventListener("click", onEnable);
+      bSingle.addEventListener("click", onSingle);
+      bExit.addEventListener("click", onExit);
+
+      overlay.hidden = false;
+    });
+  }
+
   async function splitMegaFromCurrentForm() {
-    const form = document.getElementById("workDraftForm");
+    const form =
+      document.getElementById("workDraftForm") ||
+      document.getElementById("draftForm") ||
+      document.querySelector("form");
+
     if (!form) return;
 
-    const titleEl = getFormEl("title", 'input[name="title"]');
-    const classSel = getFormEl("className", 'select[name="className"]');
-    const releaseEl = getFormEl("releaseAt", 'input[name="releaseAt"]');
-    const dueEl = getFormEl("dueAt", 'input[name="dueAt"]');
-    const notesEl = getFormEl("notes", 'textarea[name="notes"]');
+    const titleEl =
+      getFormEl("draftTitle", 'input[name="title"]') ||
+      getFormEl("title", 'input[name="title"]');
+
+    const classSel =
+      getFormEl("draftClass", 'select[name="className"]') ||
+      getFormEl("className", 'select[name="className"]');
+
+    const releaseEl =
+      getFormEl("draftRelease", 'input[name="releaseAt"]') ||
+      getFormEl("releaseAt", 'input[name="releaseAt"]');
+
+    const dueEl =
+      getFormEl("draftDue", 'input[name="dueAt"]') ||
+      getFormEl("dueAt", 'input[name="dueAt"]');
+
+    const notesEl =
+      getFormEl("draftNotes", 'textarea[name="notes"]') ||
+      getFormEl("notes", 'textarea[name="notes"]');
 
     const { assignment: aIn, mapping: mIn } = pickFileInputs(form);
     const aFile = aIn && aIn.files && aIn.files[0] ? aIn.files[0] : null;
@@ -744,13 +832,14 @@ async function onSaveDraft(e) {
     const releaseAt = toIsoMaybe(getVal(releaseEl));
     const dueAt = toIsoMaybe(getVal(dueEl));
 
-    let mappingSnippet = "(no mapping text stored?)";
+    // Read mapping once if provided; otherwise we auto-map per class when possible.
+    let mappingTextFromFile = null;
     if (mFile) {
-      try {
-        const mt = await readFileText(mFile);
-        mappingSnippet = mt.length > 20000 ? (mt.slice(0, 20000) + "\n…(truncated)\n") : mt;
-      } catch (e) {
-        console.warn("Mapping read failed:", e);
+      try { mappingTextFromFile = await readFileText(mFile); }
+      catch (e) { console.warn("Mapping read failed:", e); }
+      if (mappingTextFromFile && bytesOf(mappingTextFromFile) > MAX_TEXT_BYTES) {
+        alert("Mapping file is too large for MVP local storage. Keep it smaller for now.");
+        return;
       }
     }
 
@@ -759,38 +848,54 @@ async function onSaveDraft(e) {
     for (const sec of sections) {
       const cls = sec.cls;
 
-      // Keep snippet bounded (localStorage limits). Enough now; student-view preview comes next PR.
       const chunk = `${cls}\n===\n${sec.body}\n`;
-      const ensureBound = (t) => (t.length > 20000 ? (t.slice(0, 20000) + "\n…(truncated)\n") : t);
 
       const t = titleIncludesClass(baseTitle, cls) ? baseTitle : `${baseTitle} — ${cls}`;
+
+      let mappingText = null;
+      if (mappingTextFromFile != null) {
+        mappingText = mappingTextFromFile;
+      } else if (typeof window.autoMapFromTeacherTxt === "function") {
+        const auto = window.autoMapFromTeacherTxt(chunk);
+        mappingText = JSON.stringify(auto || { version: 1, sections: [], warnings: ["Auto-mapping unavailable"], counts: { sections: 0, items: 0, warnings: 1 } }, null, 2);
+      } else {
+        mappingText = JSON.stringify({ version: 1, sections: [], warnings: ["Auto-mapping unavailable"], counts: { sections: 0, items: 0, warnings: 1 } }, null, 2);
+      }
+
+      if (bytesOf(chunk) > MAX_TEXT_BYTES) {
+        alert("One of the split class chunks is too large for MVP local storage.");
+        return;
+      }
+      if (bytesOf(mappingText) > MAX_TEXT_BYTES) {
+        alert("Auto-generated mapping is too large for MVP local storage.");
+        return;
+      }
 
       drafts.unshift({
         id: makeId(),
         title: t,
         className: cls,
-        releaseAt,
-        dueAt,
+        releaseAt: releaseAt || null,
+        dueAt: dueAt || null,
+        notes: notes || null,
         createdAt: new Date().toISOString(),
-        notes,
         assignment: {
           kind: "file",
           name: aFile.name,
           link: null,
-          snippet: ensureBound(chunk),
+          text: chunk,
         },
         mapping: {
-          name: mFile ? mFile.name : null,
-          kind: mFile ? "file" : null,
-          link: null,
-          snippet: mappingSnippet,
+          kind: (mFile ? "file" : "auto"),
+          name: (mFile ? mFile.name : "auto-mapping.json"),
+          text: mappingText,
         },
       });
     }
 
     saveDrafts(drafts);
 
-    // Reset single-class selection to avoid confusion post-split
+    // keep mega mode enabled after split
     const cb = document.getElementById("rcMegaMode");
     if (cb && classSel) {
       classSel.value = "";
@@ -802,37 +907,83 @@ async function onSaveDraft(e) {
   }
 
   function wire() {
-    const form = document.getElementById("workDraftForm");
+    const form =
+      document.getElementById("workDraftForm") ||
+      document.getElementById("draftForm") ||
+      document.querySelector("form");
+
     const btn = document.getElementById("btnSplitMega");
 
     ensureClassDropdown();
     ensureMegaCheckbox();
 
-    const classSel = document.getElementById("className");
+    const classSel = getClassSelect();
     const cb = document.getElementById("rcMegaMode");
 
-    // Auto-detect mega files and flip on mega mode
+    let confirmedSingleSig = "";
+    let cachedLooksMegaSig = "";
+    let cachedDetected = [];
+
+    const sync = () => {
+      if (!cb || !classSel) return;
+      if (cb.checked) {
+        classSel.value = "";
+        classSel.disabled = true;
+      } else {
+        classSel.disabled = false;
+      }
+    };
+
+    if (cb) cb.addEventListener("change", sync);
+    sync();
+
+    // When a file is chosen and mega is OFF: if 2+ headers detected, prompt with 3 options.
     if (form) {
       const { assignment: aIn } = pickFileInputs(form);
       if (aIn) {
         aIn.addEventListener("change", async () => {
           try {
             const f = aIn.files && aIn.files[0] ? aIn.files[0] : null;
-            if (!f || !cb || !classSel) return;
+            if (!f) return;
+            const sig = fileSig(f);
+
+            cachedLooksMegaSig = "";
+            cachedDetected = [];
+
             const txt = await readFileText(f);
-            if (looksMega(txt)) {
-              cb.checked = true;
-              classSel.value = "";
-              classSel.disabled = true;
+            const secs = parseMegaSections(txt);
+            if (secs.length >= 2) {
+              cachedLooksMegaSig = sig;
+              cachedDetected = Array.from(new Set(secs.map(x => x.cls)));
+
+              // Only prompt when Mega is OFF and user hasn't already chosen "single-class anyway" for this file
+              if (cb && !cb.checked && confirmedSingleSig != sig) {
+                const decision = await askMegaDecision(cachedDetected);
+                if (decision === "mega") {
+                  cb.checked = true;
+                  confirmedSingleSig = ""; // not relevant anymore
+                  sync();
+                } else if (decision === "single") {
+                  confirmedSingleSig = sig;
+                  sync();
+                } else {
+                  // exit
+                  aIn.value = "";
+                  confirmedSingleSig = "";
+                  cachedLooksMegaSig = "";
+                  cachedDetected = [];
+                  sync();
+                }
+              }
             }
           } catch (e) {
-            console.warn("Mega auto-detect failed:", e);
+            console.warn("Mega detection/prompt failed:", e);
           }
         });
       }
     }
 
-    // Replace Split Mega behavior (capture so we win even if older listeners exist)
+    // Split button (if present) still works
     if (btn) {
       try { btn.type = "button"; } catch (e) { /* ignore */ }
       btn.addEventListener("click", (e) => {
@@ -842,19 +993,74 @@ async function onSaveDraft(e) {
       }, true);
     }
 
-    // If mega mode is checked, Save Draft should auto-split instead of requiring a class
+    // Submit behavior:
+    // - If Mega ON: split
+    // - If Mega OFF but file looks mega: popup with 3 options
+    // - Otherwise: normal single-class save (handled elsewhere)
     if (form) {
-      form.addEventListener("submit", (e) => {
-        const isMega = !!(cb && cb.checked);
-        if (!isMega) return;
+      form.addEventListener("submit", async (e) => {
+        if (form.dataset.rcMegaBypassOnce === "1") {
+          delete form.dataset.rcMegaBypassOnce;
+          return;
+        }
 
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        splitMegaFromCurrentForm().catch(err => console.warn(err));
+        const isMega = !!(cb && cb.checked);
+        if (isMega) {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          await splitMegaFromCurrentForm().catch(err => console.warn(err));
+          return;
+        }
+
+        const { assignment: aIn } = pickFileInputs(form);
+        const f = aIn && aIn.files && aIn.files[0] ? aIn.files[0] : null;
+        if (!f) return;
+
+        const sig = fileSig(f);
+
+        // If we already confirmed "treat single" for this file, allow normal save
+        if (confirmedSingleSig == sig) return;
+
+        // If cached said mega, or we can quickly detect, prompt
+        let detected = cachedLooksMegaSig == sig ? cachedDetected : null;
+
+        if (!detected) {
+          try {
+            const txt = await readFileText(f);
+            const secs = parseMegaSections(txt);
+            if (secs.length >= 2) detected = Array.from(new Set(secs.map(x => x.cls)));
+          } catch (err) { /* ignore */ }
+        }
+
+        if (detected && detected.length >= 2) {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+
+          const decision = await askMegaDecision(detected);
+
+          if (decision === "mega") {
+            if (cb) cb.checked = true;
+            sync();
+            await splitMegaFromCurrentForm().catch(err => console.warn(err));
+            return;
+          }
+
+          if (decision === "single") {
+            confirmedSingleSig = sig;
+            // Re-submit once, letting the normal single-class handler run
+            form.dataset.rcMegaBypassOnce = "1";
+            try { form.requestSubmit(); } catch (_) { form.submit(); }
+            return;
+          }
+
+          // exit
+          return;
+        }
       }, true);
     }
   }
 
   window.addEventListener("DOMContentLoaded", wire);
 })();
-// END rc-work-mega-ux v1
+// END rc-work-mega-ux v2
+
