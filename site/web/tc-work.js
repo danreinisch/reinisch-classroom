@@ -172,7 +172,10 @@
     const tagRe = /\[\s*(?:(?:DESE:\s*)?MLS\.[^\]]+|(?:IG:|IEP:)\s*[^\]]+)\s*\]/ig;
     const out = [];
     for (const line of lines) {
-      const cleaned = line.replace(tagRe, "").replace(/[ \t]{2,}/g, " ").trimEnd();
+      let cleaned = line.replace(tagRe, "").replace(/[ \t]{2,}/g, " ").trimEnd();
+      // Student View: strip common inline answer markers at end of option lines (✓/✔)
+      if (/^\s*[a-dA-D][.)]\s+/.test(cleaned)) cleaned = cleaned.replace(/[ \t]*\(?[✓✔]\)?\s*$/, "");
+
       out.push(cleaned);
     }
     return out.join("\n")
