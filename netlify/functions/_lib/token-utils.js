@@ -228,7 +228,7 @@ function verifySession(headers, secret) {
 function serializeCookie(name, value, options = {}) {
   const parts = [`${name}=${value}`];
   if (options.maxAge) parts.push(`Max-Age=${options.maxAge}`);
-  if (options.domain) parts.push(`Domain=${options.domain}`);
+  // Domain attribute intentionally omitted (breaks Netlify deploy previews).
   if (options.path) parts.push(`Path=${options.path}`);
   if (options.expires) parts.push(`Expires=${options.expires.toUTCString()}`);
   if (options.httpOnly) parts.push('HttpOnly');

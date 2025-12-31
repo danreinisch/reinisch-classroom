@@ -38,7 +38,7 @@ function teacherCookie(name, value, { domain, secure = true, maxAge = 60 * 60 * 
     `Max-Age=${maxAge}`,
   ];
   if (secure) parts.push('Secure');
-  if (domain) parts.push(`Domain=${domain}`);
+  // Domain attribute intentionally omitted (breaks Netlify deploy previews).
   return parts.join('; ');
 }
 
