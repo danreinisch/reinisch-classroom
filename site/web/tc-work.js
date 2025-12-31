@@ -131,7 +131,7 @@
       btnPreview.type = "button";
       btnPreview.className = "work-btn";
       btnPreview.textContent = "Preview";
-      btnPreview.addEventListener("click", () => openPreview(d.id));
+      btnPreview?.addEventListener("click", () => openPreview(d.id));
       tdActions.appendChild(btnPreview);
 
       const btnExport = document.createElement("button");
@@ -139,7 +139,7 @@
       btnExport.className = "work-btn";
       btnExport.style.marginLeft = "8px";
       btnExport.textContent = "Export";
-      btnExport.addEventListener("click", () => exportOne(d.id));
+      btnExport?.addEventListener("click", () => exportOne(d.id));
       tdActions.appendChild(btnExport);
 
       const btnDel = document.createElement("button");
@@ -147,7 +147,7 @@
       btnDel.className = "work-btn danger";
       btnDel.style.marginLeft = "8px";
       btnDel.textContent = "Delete";
-      btnDel.addEventListener("click", () => deleteOne(d.id));
+      btnDel?.addEventListener("click", () => deleteOne(d.id));
       tdActions.appendChild(btnDel);
 
       tr.appendChild(tdActions);
@@ -499,16 +499,16 @@ async function onSaveDraft(e) {
     const dlBtn = $("btnDownloadOne");
     if (!overlay || !closeBtn || !dlBtn) return;
 
-    closeBtn.addEventListener("click", closePreview);
-    dlBtn.addEventListener("click", () => {
+    closeBtn?.addEventListener("click", closePreview);
+    dlBtn?.addEventListener("click", () => {
       if (previewingId) exportOne(previewingId);
     });
 
-    overlay.addEventListener("click", (e) => {
+    overlay?.addEventListener("click", (e) => {
       if (e.target === overlay) closePreview();
     });
 
-    document.addEventListener("keydown", (e) => {
+    document?.addEventListener("keydown", (e) => {
       if (e.key === "Escape" && !overlay.hidden) closePreview();
     });
   }
@@ -525,7 +525,7 @@ async function onSaveDraft(e) {
     wireModal();
   }
 
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
+  if (document.readyState === "loading") document?.addEventListener("DOMContentLoaded", init);
   else init();
 })();
 
@@ -632,7 +632,7 @@ async function onSaveDraft(e) {
       }
     };
 
-    cb.addEventListener("change", sync);
+    cb?.addEventListener("change", sync);
     sync();
   }
 
@@ -732,7 +732,7 @@ async function onSaveDraft(e) {
       </div>
     `;
 
-    overlay.addEventListener("click", (e) => {
+    overlay?.addEventListener("click", (e) => {
       if (e.target === overlay) {
         // Click outside = Exit
         const btn = document.getElementById("rcMegaPromptExit");
@@ -774,9 +774,9 @@ async function onSaveDraft(e) {
       const onSingle = () => { cleanup(); resolve("single"); };
       const onExit = () => { cleanup(); resolve("exit"); };
 
-      bEnable.addEventListener("click", onEnable);
-      bSingle.addEventListener("click", onSingle);
-      bExit.addEventListener("click", onExit);
+      bEnable?.addEventListener("click", onEnable);
+      bSingle?.addEventListener("click", onSingle);
+      bExit?.addEventListener("click", onExit);
 
       overlay.hidden = false;
     });
@@ -934,14 +934,14 @@ async function onSaveDraft(e) {
       }
     };
 
-    if (cb) cb.addEventListener("change", sync);
+    if (cb) cb?.addEventListener("change", sync);
     sync();
 
     // When a file is chosen and mega is OFF: if 2+ headers detected, prompt with 3 options.
     if (form) {
       const { assignment: aIn } = pickFileInputs(form);
       if (aIn) {
-        aIn.addEventListener("change", async () => {
+        aIn?.addEventListener("change", async () => {
           try {
             const f = aIn.files && aIn.files[0] ? aIn.files[0] : null;
             if (!f) return;
@@ -986,7 +986,7 @@ async function onSaveDraft(e) {
     // Split button (if present) still works
     if (btn) {
       try { btn.type = "button"; } catch (e) { /* ignore */ }
-      btn.addEventListener("click", (e) => {
+      btn?.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopImmediatePropagation();
         splitMegaFromCurrentForm().catch(err => console.warn(err));
@@ -998,7 +998,7 @@ async function onSaveDraft(e) {
     // - If Mega OFF but file looks mega: popup with 3 options
     // - Otherwise: normal single-class save (handled elsewhere)
     if (form) {
-      form.addEventListener("submit", async (e) => {
+      form?.addEventListener("submit", async (e) => {
         if (form.dataset.rcMegaBypassOnce === "1") {
           delete form.dataset.rcMegaBypassOnce;
           return;
@@ -1060,7 +1060,643 @@ async function onSaveDraft(e) {
     }
   }
 
-  window.addEventListener("DOMContentLoaded", wire);
+  window?.addEventListener("DOMContentLoaded", wire);
 })();
 // END rc-work-mega-ux v2
 
+// BEGIN rc-tc-work-qol v1
+(() => {
+  "use strict";
+  try {
+    if (!/\/teacher\/work\/?/.test(location.pathname)) return;
+
+    const TAG = "[tc-work-qol]";
+    const log = (...a) => console.log(TAG, ...a);
+
+    const CLASS_LABELS = ["LA 1 SC","LA 2 SC","LA 3 SC","LA 4 SC","Life Skills","Life Skills LA"];
+    const CLASS_CANON = Object.fromEntries(CLASS_LABELS.map(x => [x.toUpperCase(), x]));
+
+    const byId = (...ids) => {
+      for (const id of ids) {
+        const el = document.getElementById(id);
+        if (el) return el;
+      }
+      return null;
+    };
+
+    const findByLabelPrefix = (prefix) => {
+      const want = String(prefix || "").trim().toLowerCase();
+      if (!want) return null;
+      const labels = Array.from(document.querySelectorAll("label"));
+      const lab = labels.find(l => (l.textContent || "").trim().toLowerCase().startsWith(want));
+      if (!lab) return null;
+      const forId = lab.getAttribute("for");
+      if (forId) return document.getElementById(forId);
+      return lab.querySelector("input,select,textarea") || lab.parentElement?.querySelector("input,select,textarea") || null;
+    };
+
+    const elTitle = byId("draftTitle","title") || findByLabelPrefix("Title");
+    const elClass = byId("draftClass","className","class") || findByLabelPrefix("Class");
+    const elRelease = byId("draftRelease","release") || findByLabelPrefix("Release");
+    const elDue = byId("draftDue","due") || findByLabelPrefix("Due");
+    const elLink = byId("draftLink","assignmentLink","link") || findByLabelPrefix("Assignment");
+    const elNotes = byId("draftNotes","notes") || findByLabelPrefix("Notes");
+
+    // Two file inputs exist in the UI: assignment + mapping
+    const fileInputs = Array.from(document.querySelectorAll('input[type="file"]'));
+    const elAssignmentFile = byId("draftAssignmentFile","assignmentFile") || fileInputs[0] || null;
+    const elMappingFile = byId("draftMappingFile","mappingFile") || fileInputs[1] || null;
+
+    const findSaveButton = () => {
+      const byText = Array.from(document.querySelectorAll("button")).find(b => (b.textContent || "").trim().toLowerCase() === "save draft");
+      return byId("btnSaveDraft","saveDraft") || byText || null;
+    };
+
+    const saveBtn = findSaveButton();
+
+    // --- Ensure class dropdown includes Life Skills ---
+    const ensureClassOptions = () => {
+      if (!elClass || elClass.tagName !== "SELECT") return;
+      const seen = new Set(Array.from(elClass.options).map(o => (o.value || o.textContent || "").trim().toUpperCase()));
+      for (const label of CLASS_LABELS) {
+        if (!seen.has(label.toUpperCase())) {
+          const opt = document.createElement("option");
+          opt.value = label;
+          opt.textContent = label;
+          elClass.appendChild(opt);
+        }
+      }
+    };
+    ensureClassOptions();
+
+    // --- Draft storage discovery ---
+    const looksLikeDraftArray = (arr) => {
+      if (!Array.isArray(arr) || !arr.length) return false;
+      return arr.some(x => x && typeof x === "object" && (
+        "title" in x || "class" in x || "className" in x || "draftClass" in x || "assignment" in x
+      ));
+    };
+
+    const findDraftsKey = () => {
+      const keys = Object.keys(localStorage);
+      const candidates = [];
+      for (const k of keys) {
+        const v = localStorage.getItem(k);
+        if (!v || v[0] !== "[") continue;
+        let parsed = null;
+        try { parsed = JSON.parse(v); } catch { continue; }
+        if (!Array.isArray(parsed)) continue;
+        // scoring: prefer keys with work/draft
+        const score =
+          (/(tc|teacher)/i.test(k) ? 2 : 0) +
+          (/work/i.test(k) ? 3 : 0) +
+          (/draft/i.test(k) ? 3 : 0) +
+          (parsed.length ? 1 : 0);
+        // heuristic: any object-y entries
+        const ok = parsed.some(x => x && typeof x === "object" && ("title" in x || "class" in x || "className" in x || "assignment" in x));
+        if (ok) candidates.push([score, k]);
+      }
+      candidates.sort((a,b) => b[0] - a[0]);
+      return candidates[0]?.[1] || null;
+    };
+
+    const draftsKey = findDraftsKey();
+    if (!draftsKey) log("No drafts key found in localStorage (yet). Will still enable UI QOL.");
+    else log("Drafts key:", draftsKey);
+
+    const readDrafts = () => {
+      if (!draftsKey) return [];
+      try {
+        const v = localStorage.getItem(draftsKey) || "[]";
+        const arr = JSON.parse(v);
+        return Array.isArray(arr) ? arr : [];
+      } catch {
+        return [];
+      }
+    };
+
+    const writeDrafts = (arr) => {
+      if (!draftsKey) return;
+      localStorage.setItem(draftsKey, JSON.stringify(arr));
+    };
+
+    const getTextField = (d, kind) => {
+      // kind: "assignment" or "mapping"
+      const a = d?.[kind];
+      if (typeof a === "string") return a;
+      if (a && typeof a === "object") {
+        if (typeof a.text === "string") return a.text;
+        if (typeof a.content === "string") return a.content;
+        if (typeof a.body === "string") return a.body;
+      }
+      const alt = d?.[kind + "Text"];
+      if (typeof alt === "string") return alt;
+      return "";
+    };
+
+    const setTextField = (d, kind, text) => {
+      if (!d || typeof d !== "object") return;
+      if (d[kind] && typeof d[kind] === "object") {
+        if ("text" in d[kind]) d[kind].text = text;
+        else d[kind].text = text;
+        return;
+      }
+      if (typeof d[kind] === "string") { d[kind] = text; return; }
+      if ((kind + "Text") in d) { d[kind + "Text"] = text; return; }
+      d[kind] = { text };
+    };
+
+    // --- Mega detection + splitting ---
+    const isSep = (line) => /^[=-]{8,}$/.test((line || "").trim());
+    const normalizeLabel = (line) => CLASS_CANON[String(line || "").trim().toUpperCase()] || null;
+
+    const splitMegaText = (text) => {
+      const src = String(text || "").replace(/\r\n/g, "\n");
+      const lines = src.split("\n");
+
+      const blocks = [];
+      let pre = [];
+      let cur = null;
+
+      let i = 0;
+      while (i < lines.length) {
+        const L = lines[i];
+        const N = lines[i+1];
+        const P = lines[i+2];
+
+        // Pattern: SEP, LABEL, SEP  => start block at SEP
+        const lab = normalizeLabel(N);
+        if (isSep(L) && lab && isSep(P)) {
+          if (cur) blocks.push(cur);
+          cur = { label: lab, lines: [L, N, P] };
+          i += 3;
+          continue;
+        }
+
+        // Pattern: LABEL alone
+        const lab2 = normalizeLabel(L);
+        if (lab2) {
+          if (cur) blocks.push(cur);
+          cur = { label: lab2, lines: [L] };
+          i += 1;
+          continue;
+        }
+
+        if (!cur) pre.push(L);
+        else cur.lines.push(L);
+
+        i += 1;
+      }
+      if (cur) blocks.push(cur);
+
+      const preamble = pre.join("\n").rstrip?.() ?? pre.join("\n"); // tolerate older engines
+      const out = blocks.map(b => {
+        const body = b.lines.join("\n").trim();
+        const merged = (preamble && preamble.trim())
+          ? (preamble.trimEnd() + "\n\n" + body + "\n")
+          : (body + "\n");
+        return { label: b.label, text: merged };
+      }).filter(x => x.text.trim().length > 0);
+
+      return out;
+    };
+
+    // --- Inject mega checkbox UI ---
+    const megaPrefKey = "rc.tc.work.mega.enabled";
+    const getMegaEnabled = () => (localStorage.getItem(megaPrefKey) || "") === "1";
+    const setMegaEnabled = (v) => localStorage.setItem(megaPrefKey, v ? "1" : "0");
+
+    const injectMegaToggle = () => {
+      if (!elClass) return null;
+      if (document.getElementById("rcMegaToggle")) return document.getElementById("rcMegaToggle");
+
+      const wrap = document.createElement("div");
+      wrap.id = "rcMegaToggle";
+      wrap.style.marginTop = "8px";
+      wrap.style.display = "flex";
+      wrap.style.alignItems = "center";
+      wrap.style.gap = "10px";
+
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.id = "rcMegaEnabled";
+      cb.checked = getMegaEnabled();
+
+      const lab = document.createElement("label");
+      lab.setAttribute("for", cb.id);
+      lab.textContent = "Multi-class (mega TXT)";
+
+      const help = document.createElement("div");
+      help.style.opacity = "0.85";
+      help.style.fontSize = "12px";
+      help.textContent = "If your TXT contains multiple class sections, split into separate drafts on Save.";
+
+      cb.addEventListener("change", () => setMegaEnabled(cb.checked));
+
+      wrap.appendChild(cb);
+      wrap.appendChild(lab);
+      wrap.appendChild(help);
+
+      // place it near the Class control
+      const host = elClass.closest(".field") || elClass.parentElement || elClass;
+      host.appendChild(wrap);
+
+      return wrap;
+    };
+
+    injectMegaToggle();
+
+    // --- Popup for “looks mega” when mega is OFF ---
+    const showMegaPopup = () => {
+      if (document.getElementById("rcMegaPopup")) return;
+
+      const overlay = document.createElement("div");
+      overlay.id = "rcMegaPopup";
+      overlay.style.position = "fixed";
+      overlay.style.inset = "0";
+      overlay.style.background = "rgba(0,0,0,0.6)";
+      overlay.style.zIndex = "9999";
+      overlay.style.display = "grid";
+      overlay.style.placeItems = "center";
+
+      const card = document.createElement("div");
+      card.style.maxWidth = "720px";
+      card.style.width = "min(720px, 92vw)";
+      card.style.background = "#111";
+      card.style.border = "1px solid rgba(255,255,255,0.12)";
+      card.style.borderRadius = "14px";
+      card.style.padding = "18px";
+      card.style.boxShadow = "0 20px 70px rgba(0,0,0,0.55)";
+
+      const h = document.createElement("div");
+      h.style.fontSize = "16px";
+      h.style.fontWeight = "700";
+      h.textContent = "This TXT looks like it contains multiple classes.";
+
+      const p = document.createElement("div");
+      p.style.marginTop = "8px";
+      p.style.opacity = "0.9";
+      p.style.fontSize = "13px";
+      p.textContent = "Choose what to do:";
+
+      const row = document.createElement("div");
+      row.style.display = "flex";
+      row.style.flexWrap = "wrap";
+      row.style.gap = "10px";
+      row.style.marginTop = "14px";
+
+      const mkBtn = (label) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.textContent = label;
+        b.style.padding = "8px 12px";
+        b.style.borderRadius = "10px";
+        b.style.border = "1px solid rgba(255,255,255,0.14)";
+        b.style.background = "rgba(255,255,255,0.06)";
+        b.style.color = "#fff";
+        b.style.cursor = "pointer";
+        return b;
+      };
+
+      const bEnable = mkBtn("Enable multi-class split");
+      const bSingle = mkBtn("Treat as single-class anyway");
+      const bExit = mkBtn("Exit (clear file)");
+
+      bEnable.addEventListener("click", () => {
+        setMegaEnabled(true);
+        const cb = document.getElementById("rcMegaEnabled");
+        if (cb) cb.checked = true;
+        overlay.remove();
+      });
+
+      bSingle.addEventListener("click", () => overlay.remove());
+
+      bExit.addEventListener("click", () => {
+        try { if (elAssignmentFile) elAssignmentFile.value = ""; } catch { /* noop */ }
+        overlay.remove();
+      });
+
+      row.appendChild(bEnable);
+      row.appendChild(bSingle);
+      row.appendChild(bExit);
+
+      card.appendChild(h);
+      card.appendChild(p);
+      card.appendChild(row);
+      overlay.appendChild(card);
+      document.body.appendChild(overlay);
+    };
+
+    // Read files so we can split later without touching base code
+    let lastAssignmentText = "";
+    let lastMappingText = "";
+
+    const readFileAsText = (input, cb) => {
+      try {
+        const f = input?.files?.[0];
+        if (!f) return cb("");
+        const r = new FileReader();
+        r.onload = () => cb(String(r.result || ""));
+        r.onerror = () => cb("");
+        r.readAsText(f);
+      } catch {
+        cb("");
+      }
+    };
+
+    elAssignmentFile?.addEventListener("change", () => {
+      readFileAsText(elAssignmentFile, (txt) => {
+        lastAssignmentText = txt;
+        const parts = splitMegaText(txt);
+        if (parts.length >= 2 && !getMegaEnabled()) showMegaPopup();
+      });
+    });
+
+    elMappingFile?.addEventListener("change", () => {
+      readFileAsText(elMappingFile, (txt) => { lastMappingText = txt; });
+    });
+
+    // After a Save, if mega enabled and file looks mega, rewrite localStorage drafts:
+    const megaLastProcessedKey = "rc.tc.work.mega.lastProcessed";
+    const isProcessed = (id) => localStorage.getItem(megaLastProcessedKey) === String(id || "");
+    const markProcessed = (id) => localStorage.setItem(megaLastProcessedKey, String(id || ""));
+
+    const getDraftId = (d) => d?.id || d?.draftId || d?.createdAt || d?.created || (d?.title + "::" + (d?.class || d?.className || ""));
+    const getDraftTime = (d) => {
+      const t = d?.updatedAt || d?.createdAt || d?.created || d?.ts;
+      const n = Number(t);
+      return Number.isFinite(n) ? n : 0;
+    };
+
+    const splitLastDraftIfNeeded = () => {
+      if (!draftsKey) return;
+      if (!getMegaEnabled()) return;
+      const parts = splitMegaText(lastAssignmentText);
+      if (parts.length < 2) return;
+
+      const drafts = readDrafts();
+      if (!drafts.length) return;
+
+      // pick most recent draft
+      let idx = 0;
+      for (let i = 1; i < drafts.length; i++) {
+        if (getDraftTime(drafts[i]) >= getDraftTime(drafts[idx])) idx = i;
+      }
+      const base = drafts[idx];
+      const baseId = getDraftId(base);
+      if (isProcessed(baseId)) return;
+
+      const baseTitle = base?.title || base?.draftTitle || "Draft";
+      const baseRelease = base?.release || base?.draftRelease || "";
+      const baseDue = base?.due || base?.draftDue || "";
+
+      const clones = parts.map((part) => {
+        const d = JSON.parse(JSON.stringify(base));
+        // class fields
+        if ("class" in d) d.class = part.label;
+        if ("className" in d) d.className = part.label;
+        if ("draftClass" in d) d.draftClass = part.label;
+
+        // title fields
+        if ("title" in d) d.title = `${baseTitle} — ${part.label}`;
+        if ("draftTitle" in d) d.draftTitle = `${baseTitle} — ${part.label}`;
+
+        // release/due keep as-is
+        if ("release" in d) d.release = baseRelease;
+        if ("due" in d) d.due = baseDue;
+
+        // assignment/mapping
+        setTextField(d, "assignment", part.text);
+        if (lastMappingText && lastMappingText.trim()) setTextField(d, "mapping", lastMappingText);
+
+        // new id/time so UI doesn't collapse them
+        const now = Date.now() + Math.floor(Math.random() * 1000);
+        d.id = `${now}-${part.label.replace(/\s+/g,"-")}`;
+        d.createdAt = now;
+        d.updatedAt = now;
+
+        return d;
+      });
+
+      // Replace the base mega draft with the per-class drafts
+      drafts.splice(idx, 1, ...clones);
+      writeDrafts(drafts);
+      markProcessed(baseId);
+      log("Mega split applied:", clones.map(x => x.class || x.className || x.draftClass));
+
+      // Reload so the built-in renderer re-renders cleanly
+      location.reload();
+    };
+
+    // Hook Save Draft clicks (we let base save first, then split)
+    saveBtn?.addEventListener("click", () => {
+      // If user never re-selected file this session, try to read now
+      if (elAssignmentFile?.files?.[0] && !lastAssignmentText) {
+        readFileAsText(elAssignmentFile, (txt) => { lastAssignmentText = txt; });
+      }
+      if (elMappingFile?.files?.[0] && !lastMappingText) {
+        readFileAsText(elMappingFile, (txt) => { lastMappingText = txt; });
+      }
+      setTimeout(splitLastDraftIfNeeded, 80);
+    }, true);
+
+    // --- Preview Close failsafe: delegate-close any modal "Close" button ---
+    const closeAnyDialog = (btn) => {
+      const dialog = btn.closest('[role="dialog"], .modal, .rc-modal, .dialog') || btn.closest("div");
+      if (dialog) dialog.remove();
+      const overlay = document.querySelector(".modal-overlay,.rc-overlay,.overlay");
+      if (overlay) overlay.remove();
+      document.body.classList.remove("modal-open");
+    };
+
+    document.addEventListener("click", (e) => {
+      const b = e.target.closest("button");
+      if (!b) return;
+      if ((b.textContent || "").trim().toLowerCase() === "close") {
+        closeAnyDialog(b);
+      }
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        const btn = Array.from(document.querySelectorAll("button")).find(x => (x.textContent || "").trim().toLowerCase() === "close");
+        if (btn) closeAnyDialog(btn);
+      }
+    });
+
+    // --- Draft Edit: inject Edit button + update localStorage ---
+    const editStateKey = "rc.tc.work.editing.id";
+
+    const getEditingId = () => localStorage.getItem(editStateKey) || "";
+    const setEditingId = (v) => localStorage.setItem(editStateKey, String(v || ""));
+    const clearEditing = () => localStorage.removeItem(editStateKey);
+
+    const ensureEditButtons = () => {
+      const table = document.querySelector("table");
+      if (!table) return;
+      const body = table.querySelector("tbody");
+      if (!body) return;
+      const rows = Array.from(body.querySelectorAll("tr"));
+      rows.forEach((row) => {
+        const actionsCell = row.querySelector("td:last-child");
+        if (!actionsCell) return;
+        if (actionsCell.querySelector("button[data-rc-edit]")) return;
+
+        const sampleBtn = actionsCell.querySelector("button");
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.textContent = "Edit";
+        btn.dataset.rcEdit = "1";
+        if (sampleBtn && sampleBtn.className) btn.className = sampleBtn.className;
+        actionsCell.prepend(btn);
+      });
+    };
+
+    const matchDraftFromRow = (row, drafts) => {
+      const t = (row.querySelector("td:nth-child(1)")?.textContent || "").trim();
+      const c = (row.querySelector("td:nth-child(2)")?.textContent || "").trim();
+      const source = (row.querySelector("td:nth-child(4)")?.textContent || "").trim();
+
+      // Find best match: title+class (source as tie-breaker)
+      let best = null;
+      let bestScore = -1;
+      drafts.forEach((d) => {
+        const dt = (d.title || d.draftTitle || "").trim();
+        const dc = (d.class || d.className || d.draftClass || "").trim();
+        const ds = (d.source || d.assignment?.name || d.assignmentName || "").trim();
+        let score = 0;
+        if (dt && dt === t) score += 3;
+        if (dc && dc === c) score += 3;
+        if (source && ds && source.includes(ds)) score += 1;
+        if (score > bestScore) { bestScore = score; best = d; }
+      });
+      return bestScore >= 3 ? best : null;
+    };
+
+    const injectEditBanner = (label) => {
+      if (document.getElementById("rcEditBanner")) return;
+      const host = elTitle?.closest(".card") || elTitle?.parentElement || document.body;
+      const b = document.createElement("div");
+      b.id = "rcEditBanner";
+      b.style.margin = "8px 0 10px";
+      b.style.padding = "10px 12px";
+      b.style.border = "1px solid rgba(255,255,255,0.14)";
+      b.style.borderRadius = "12px";
+      b.style.background = "rgba(255,255,255,0.06)";
+      b.style.display = "flex";
+      b.style.alignItems = "center";
+      b.style.justifyContent = "space-between";
+      b.style.gap = "10px";
+
+      const left = document.createElement("div");
+      left.textContent = `Editing: ${label}`;
+
+      const right = document.createElement("div");
+      right.style.display = "flex";
+      right.style.gap = "8px";
+
+      const mk = (txt) => {
+        const x = document.createElement("button");
+        x.type = "button";
+        x.textContent = txt;
+        x.style.padding = "6px 10px";
+        x.style.borderRadius = "10px";
+        x.style.border = "1px solid rgba(255,255,255,0.14)";
+        x.style.background = "rgba(255,255,255,0.06)";
+        x.style.color = "#fff";
+        x.style.cursor = "pointer";
+        return x;
+      };
+
+      const cancel = mk("Cancel Edit");
+      cancel.addEventListener("click", () => { clearEditing(); location.reload(); });
+
+      right.appendChild(cancel);
+      b.appendChild(left);
+      b.appendChild(right);
+
+      host.prepend(b);
+    };
+
+    document.addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-rc-edit]");
+      if (!btn) return;
+      const row = btn.closest("tr");
+      if (!row) return;
+
+      const drafts = readDrafts();
+      const d = matchDraftFromRow(row, drafts);
+      if (!d) {
+        log("Could not match row to draft for Edit.");
+        return;
+      }
+
+      const id = getDraftId(d);
+      setEditingId(id);
+
+      // Populate editable fields
+      const title = d.title || d.draftTitle || "";
+      const cls = d.class || d.className || d.draftClass || "";
+      const rel = d.release || d.draftRelease || "";
+      const due = d.due || d.draftDue || "";
+      const link = d.link || d.draftLink || "";
+      const notes = d.notes || d.draftNotes || "";
+
+      if (elTitle) elTitle.value = title.replace(/\s+—\s+.*$/, ""); // strip class suffix if present
+      if (elClass && elClass.tagName === "SELECT") elClass.value = cls || elClass.value;
+      if (elRelease) elRelease.value = rel;
+      if (elDue) elDue.value = due;
+      if (elLink) elLink.value = link;
+      if (elNotes) elNotes.value = notes;
+
+      injectEditBanner(title);
+      const sb = findSaveButton();
+      if (sb) sb.textContent = "Update Draft";
+    });
+
+    // Update instead of creating a new draft when editing
+    saveBtn?.addEventListener("click", (e) => {
+      const editingId = getEditingId();
+      if (!editingId || !draftsKey) return;
+
+      // We handle update; block base save to avoid duplicates
+      e.preventDefault();
+      e.stopPropagation();
+
+      const drafts = readDrafts();
+      const idx = drafts.findIndex(d => String(getDraftId(d)) === String(editingId));
+      if (idx < 0) {
+        clearEditing();
+        location.reload();
+        return;
+      }
+
+      const d = drafts[idx];
+      const newTitle = (elTitle?.value || d.title || d.draftTitle || "").trim();
+      const newClass = (elClass?.value || d.class || d.className || d.draftClass || "").trim();
+
+      if ("title" in d) d.title = newTitle;
+      if ("draftTitle" in d) d.draftTitle = newTitle;
+      if ("class" in d) d.class = newClass;
+      if ("className" in d) d.className = newClass;
+      if ("draftClass" in d) d.draftClass = newClass;
+
+      if (elRelease) { if ("release" in d) d.release = elRelease.value; if ("draftRelease" in d) d.draftRelease = elRelease.value; }
+      if (elDue) { if ("due" in d) d.due = elDue.value; if ("draftDue" in d) d.draftDue = elDue.value; }
+      if (elLink) { if ("link" in d) d.link = elLink.value; if ("draftLink" in d) d.draftLink = elLink.value; }
+      if (elNotes) { if ("notes" in d) d.notes = elNotes.value; if ("draftNotes" in d) d.draftNotes = elNotes.value; }
+
+      d.updatedAt = Date.now();
+      writeDrafts(drafts);
+      clearEditing();
+      location.reload();
+    }, true);
+
+    // Keep Edit buttons present as drafts table rerenders
+    setInterval(ensureEditButtons, 500);
+
+  } catch (err) {
+    console.error("[tc-work-qol] fatal:", err);
+  }
+})();
+// END rc-tc-work-qol v1
