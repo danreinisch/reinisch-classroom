@@ -413,7 +413,7 @@ async function onSaveDraft(e) {
       // Auto-map from tags in the teacher TXT when no mapping file is provided.
       let assignmentTextRaw = "";
       if (assignmentFile && typeof rcIsTextFile === "function" && rcIsTextFile(assignmentFile)) {
-        try { assignmentTextRaw = await assignmentFile.text(); } catch (_) {}
+        try { assignmentTextRaw = await assignmentFile.text(); } catch (_) { /* noop */ }
       }
       const autoMapping = (typeof autoMapFromTeacherTxt === "function") ? autoMapFromTeacherTxt(assignmentTextRaw) : null;
       mappingText = JSON.stringify(autoMapping || { version: 1, sections: [], warnings: ["Auto-mapping unavailable"], counts: { sections: 0, items: 0, warnings: 1 } }, null, 2);
