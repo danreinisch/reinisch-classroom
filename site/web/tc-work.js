@@ -517,10 +517,10 @@ async function onSaveDraft(e) {
     const drafts = readDrafts();
     renderTable(drafts);
 
-    $("workDraftForm").addEventListener("submit", onSaveDraft);
-    $("btnExportAll").addEventListener("click", exportAll);
-    $("btnClearAll").addEventListener("click", clearAll);
-    $("btnFillExample").addEventListener("click", fillExample);
+    $("workDraftForm")?.addEventListener("submit", onSaveDraft);
+    $("btnExportAll")?.addEventListener("click", exportAll);
+    $("btnClearAll")?.addEventListener("click", clearAll);
+    $("btnFillExample")?.addEventListener("click", fillExample);
 
     wireModal();
   }
@@ -1291,7 +1291,7 @@ async function onSaveDraft(e) {
       help.style.fontSize = "12px";
       help.textContent = "If your TXT contains multiple class sections, split into separate drafts on Save.";
 
-      cb.addEventListener("change", () => setMegaEnabled(cb.checked));
+      cb?.addEventListener("change", () => setMegaEnabled(cb.checked));
 
       wrap.appendChild(cb);
       wrap.appendChild(lab);
@@ -1362,16 +1362,16 @@ async function onSaveDraft(e) {
       const bSingle = mkBtn("Treat as single-class anyway");
       const bExit = mkBtn("Exit (clear file)");
 
-      bEnable.addEventListener("click", () => {
+      bEnable?.addEventListener("click", () => {
         setMegaEnabled(true);
         const cb = document.getElementById("rcMegaEnabled");
         if (cb) cb.checked = true;
         overlay.remove();
       });
 
-      bSingle.addEventListener("click", () => overlay.remove());
+      bSingle?.addEventListener("click", () => overlay.remove());
 
-      bExit.addEventListener("click", () => {
+      bExit?.addEventListener("click", () => {
         try { if (elAssignmentFile) elAssignmentFile.value = ""; } catch { /* noop */ }
         overlay.remove();
       });
@@ -1509,7 +1509,7 @@ async function onSaveDraft(e) {
       document.body.classList.remove("modal-open");
     };
 
-    document.addEventListener("click", (e) => {
+    document?.addEventListener("click", (e) => {
       const b = e.target.closest("button");
       if (!b) return;
       if ((b.textContent || "").trim().toLowerCase() === "close") {
@@ -1517,7 +1517,7 @@ async function onSaveDraft(e) {
       }
     });
 
-    document.addEventListener("keydown", (e) => {
+    document?.addEventListener("keydown", (e) => {
       if (e.key === "Escape") {
         const btn = Array.from(document.querySelectorAll("button")).find(x => (x.textContent || "").trim().toLowerCase() === "close");
         if (btn) closeAnyDialog(btn);
@@ -1609,7 +1609,7 @@ async function onSaveDraft(e) {
       };
 
       const cancel = mk("Cancel Edit");
-      cancel.addEventListener("click", () => { clearEditing(); location.reload(); });
+      cancel?.addEventListener("click", () => { clearEditing(); location.reload(); });
 
       right.appendChild(cancel);
       b.appendChild(left);
@@ -1618,7 +1618,7 @@ async function onSaveDraft(e) {
       host.prepend(b);
     };
 
-    document.addEventListener("click", (e) => {
+    document?.addEventListener("click", (e) => {
       const btn = e.target.closest("button[data-rc-edit]");
       if (!btn) return;
       const row = btn.closest("tr");
@@ -1805,7 +1805,7 @@ async function onSaveDraft(e) {
       }
     }
 
-    cb.addEventListener('change', () => {
+    cb?.addEventListener('change', () => {
       err.style.display = 'none';
       if (cb.checked) {
         rebuildList();
@@ -1913,7 +1913,7 @@ async function onSaveDraft(e) {
   }
 
   function installCloseGuards() {
-    document.addEventListener('click', (e) => {
+    document?.addEventListener('click', (e) => {
       const t = e.target;
       if (!(t instanceof Element)) return;
       if (t.matches('button') && (t.textContent || '').trim().toLowerCase() === 'close') {
@@ -1923,7 +1923,7 @@ async function onSaveDraft(e) {
       }
     }, true);
 
-    document.addEventListener('keydown', (e) => {
+    document?.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') closePreviewFallback();
     });
   }
@@ -1934,7 +1934,7 @@ async function onSaveDraft(e) {
 
     let inBatch = false;
 
-    saveBtn.addEventListener('click', (e) => {
+    saveBtn?.addEventListener('click', (e) => {
       if (inBatch) return;
       const { cb, list, err } = wrap.__rc;
       if (!cb.checked) {
@@ -2010,3 +2010,233 @@ async function onSaveDraft(e) {
   }, 100);
 })();
 // END rc-tc-work-qol v2
+
+// BEGIN rc-work-fixes v1
+(() => {
+  if (window.__rcWorkFixesV1) return;
+  window.__rcWorkFixesV1 = true;
+
+  const BUILD = "8006f91";
+  console.info(`[rc-work-fixes v1] build ${BUILD}`);
+
+  const qs  = (sel, root=document) => root.querySelector(sel);
+  const qsa = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+
+  function findClassSelect() {
+    return (
+      qs("#draftClass") ||
+      qs('select[name="class"]') ||
+      qs('select[id*="Class"]') ||
+      qs('select[id*="class"]')
+    );
+  }
+
+  function findSaveButton() {
+    return (
+      qs("#saveDraft") ||
+      qs('button[data-action="saveDraft"]') ||
+      qsa("button").find(b => (b.textContent || "").trim() === "Save Draft") ||
+      null
+    );
+  }
+
+  function ensureOption(sel, label) {
+    if (!sel) return;
+    const exists = Array.from(sel.options || []).some(o => ((o.value || o.textContent || "")).trim() === label);
+    if (exists) return;
+    const opt = document.createElement("option");
+    opt.value = label;
+    opt.textContent = label;
+    sel.appendChild(opt);
+  }
+
+  function installCloseFailsafe() {
+    document.addEventListener("click", (e) => {
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+      if (!t.matches("button")) return;
+      if ((t.textContent || "").trim().toLowerCase() !== "close") return;
+
+      // Try very hard to close whatever modal system is in play
+      e.preventDefault();
+      e.stopPropagation();
+
+      const dlg = qs("dialog[open]");
+      if (dlg && typeof dlg.close === "function") {
+        dlg.close();
+        return;
+      }
+
+      let cur = t;
+      while (cur && cur !== document.body) {
+        const pos = window.getComputedStyle(cur).position;
+        if (pos === "fixed") {
+          cur.style.display = "none";
+          cur.setAttribute("aria-hidden", "true");
+          return;
+        }
+        cur = cur.parentElement;
+      }
+    }, true);
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key !== "Escape") return;
+      const dlg = qs("dialog[open]");
+      if (dlg && typeof dlg.close === "function") dlg.close();
+    });
+  }
+
+  function installMultiClassUI(sel) {
+    if (!sel || qs("#rcMultiClassWrap")) return null;
+
+    const wrap = document.createElement("div");
+    wrap.id = "rcMultiClassWrap";
+    wrap.style.marginTop = "8px";
+    wrap.style.display = "grid";
+    wrap.style.gap = "8px";
+
+    const row = document.createElement("label");
+    row.style.display = "flex";
+    row.style.alignItems = "center";
+    row.style.gap = "10px";
+
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.id = "rcMultiToggle";
+
+    const txt = document.createElement("span");
+    txt.textContent = "Multiple classes";
+
+    row.appendChild(cb);
+    row.appendChild(txt);
+
+    const list = document.createElement("div");
+    list.id = "rcMultiList";
+    list.style.display = "none";
+    list.style.gridTemplateColumns = "repeat(2, minmax(0, 1fr))";
+    list.style.gap = "6px 14px";
+
+    const err = document.createElement("div");
+    err.id = "rcMultiErr";
+    err.style.display = "none";
+    err.style.fontSize = "12px";
+    err.style.opacity = "0.9";
+    err.textContent = "Pick at least one class.";
+
+    function rebuild() {
+      list.innerHTML = "";
+      const opts = Array.from(sel.options || [])
+        .map(o => ({
+          v: (o.value || "").trim(),
+          t: (o.textContent || "").trim()
+        }))
+        .filter(o => o.v && o.v.toLowerCase() !== "select...");
+
+      for (const o of opts) {
+        const lab = document.createElement("label");
+        lab.style.display = "flex";
+        lab.style.alignItems = "center";
+        lab.style.gap = "8px";
+
+        const c = document.createElement("input");
+        c.type = "checkbox";
+        c.dataset.rcClass = o.v;
+        c.checked = (sel.value || "").trim() === o.v;
+
+        const s = document.createElement("span");
+        s.textContent = o.t || o.v;
+
+        lab.appendChild(c);
+        lab.appendChild(s);
+        list.appendChild(lab);
+      }
+    }
+
+    cb.addEventListener("change", () => {
+      err.style.display = "none";
+      if (cb.checked) {
+        rebuild();
+        list.style.display = "grid";
+        sel.required = false; // avoid native "select an item" blocker
+      } else {
+        list.style.display = "none";
+        sel.required = true;
+      }
+    });
+
+    (sel.parentElement || document.body).appendChild(wrap);
+    wrap.appendChild(row);
+    wrap.appendChild(list);
+    wrap.appendChild(err);
+
+    wrap.__rc = { cb, list, err };
+    wrap.__rc.rebuild = rebuild;
+    return wrap;
+  }
+
+  function installMultiSave(sel, wrap) {
+    const btn = findSaveButton();
+    if (!btn || !wrap || !wrap.__rc) return;
+
+    btn.addEventListener("click", (e) => {
+      if (window.__rcMultiSaveRunning) return;
+
+      const { cb, list, err } = wrap.__rc;
+      if (!cb.checked) return;
+
+      const checks = qsa('input[type="checkbox"][data-rc-class]', list);
+      const selected = checks.filter(x => x.checked).map(x => x.dataset.rcClass);
+
+      if (selected.length === 0) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        err.style.display = "block";
+        return;
+      }
+
+      // We will replay the existing Save Draft logic once per class.
+      e.preventDefault();
+      e.stopImmediatePropagation();
+
+      (async () => {
+        window.__rcMultiSaveRunning = true;
+        try {
+          for (const cls of selected) {
+            sel.value = cls;
+            sel.dispatchEvent(new Event("change", { bubbles: true }));
+            await new Promise(r => setTimeout(r, 0));
+            btn.click(); // our handler bypasses because __rcMultiSaveRunning = true
+            await new Promise(r => setTimeout(r, 25));
+          }
+          console.info("[rc-work-fixes v1] saved drafts for:", selected.join(", "));
+        } finally {
+          window.__rcMultiSaveRunning = false;
+        }
+      })();
+    }, true);
+  }
+
+  function boot() {
+    if (!location.pathname.startsWith("/teacher/work")) return false;
+
+    const sel = findClassSelect();
+    if (!sel) return false;
+
+    // Add the missing option you actually wanted.
+    ensureOption(sel, "Life Skills");
+
+    const wrap = installMultiClassUI(sel);
+    installMultiSave(sel, wrap);
+    installCloseFailsafe();
+
+    return true;
+  }
+
+  let tries = 0;
+  const t = setInterval(() => {
+    tries++;
+    if (boot()) clearInterval(t);
+    if (tries > 200) clearInterval(t);
+  }, 100);
+})();
+// END rc-work-fixes v1
