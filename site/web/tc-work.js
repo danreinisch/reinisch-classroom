@@ -2152,7 +2152,7 @@ async function onSaveDraft(e) {
       }
     }
 
-    cb.addEventListener("change", () => {
+    if (cb) cb.addEventListener("change", () => {
       err.style.display = "none";
       if (cb.checked) {
         rebuild();
@@ -2178,7 +2178,7 @@ async function onSaveDraft(e) {
     const btn = findSaveButton();
     if (!btn || !wrap || !wrap.__rc) return;
 
-    btn.addEventListener("click", (e) => {
+    if (btn) btn.addEventListener("click", (e) => {
       if (window.__rcMultiSaveRunning) return;
 
       const { cb, list, err } = wrap.__rc;
@@ -2240,3 +2240,69 @@ async function onSaveDraft(e) {
   }, 100);
 })();
 // END rc-work-fixes v1
+
+
+/* rc-tc-work-qol patch: cleanup duplicates + hide accidental dump + modal button delegation */
+(() => {
+  try {
+    if (!location.pathname.startsWith("/teacher/work")) return;
+
+    // Style patch (keeps toggles from looking like they were dropped from orbit)
+    const styleId = "rcTcWorkQolPatchStyle";
+    if (!document.getElementById(styleId)) {
+      const s = document.createElement("style");
+      s.id = styleId;
+      s.textContent = `
+        #rcQolControls { display:flex; flex-wrap:wrap; gap:16px; align-items:center; justify-content:center; margin:10px 0 6px; }
+        #rcQolControls label { display:flex; gap:8px; align-items:center; font-size:12px; opacity:.95; }
+        #rcQolControls input[type="checkbox"] { transform: translateY(1px); }
+      `;
+      document.head.appendChild(s);
+    }
+
+    const cleanup = () => {
+      // Remove duplicate controls blocks if injected multiple times
+      const blocks = document.querySelectorAll("#rcQolControls");
+      blocks.forEach((b, idx) => { if (idx > 0) b.remove(); });
+
+      // Hide/remove any accidental DOM dump of the QOL script itself
+      const bad = Array.from(document.querySelectorAll("pre, code, textarea, div"))
+        .filter(el => (el.textContent || "").includes("BEGIN rc-tc-work-qol"));
+      bad.forEach(el => { el.style.display = "none"; el.setAttribute("data-rc-qol-hidden", "1"); });
+    };
+
+    const onReady = (fn) => {
+      if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", fn, { once:true });
+      else fn();
+    };
+
+    onReady(() => {
+      cleanup();
+      setTimeout(cleanup, 400);
+      setTimeout(cleanup, 1200);
+    });
+
+    // Modal button delegation: makes the "Enable Mega / Treat single / Exit" buttons work even if they were created without listeners.
+    if (!window.__RC_TC_WORK_QOL_MODAL_DELEGATE__) {
+      window.__RC_TC_WORK_QOL_MODAL_DELEGATE__ = true;
+      document.addEventListener("click", (e) => {
+        const btn = e.target.closest("button");
+        if (!btn) return;
+
+        const t = (btn.textContent || "").trim();
+        if (t === "Enable Mega (split on Save)") {
+          localStorage.setItem("rc_tc_work_mega_split", "1");
+          document.querySelector("#rcQolHeaderModal, #rcMegaModal, .rc-qol-modal-backdrop")?.remove?.();
+        } else if (t === "Treat as single-class anyway") {
+          localStorage.setItem("rc_tc_work_mega_split", "0");
+          document.querySelector("#rcQolHeaderModal, #rcMegaModal, .rc-qol-modal-backdrop")?.remove?.();
+        } else if (t === "Exit") {
+          document.querySelector("#rcQolHeaderModal, #rcMegaModal, .rc-qol-modal-backdrop")?.remove?.();
+        }
+      }, true);
+    }
+  } catch (err) {
+    console.warn("[tc-work-qol patch] failed", err);
+  }
+})();
+
