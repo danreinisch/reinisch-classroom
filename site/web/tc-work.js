@@ -1700,3 +1700,313 @@ async function onSaveDraft(e) {
   }
 })();
 // END rc-tc-work-qol v1
+
+// BEGIN rc-tc-work-qol v2
+(() => {
+  if (window.__rcTcWorkQolV2) return;
+  window.__rcTcWorkQolV2 = true;
+
+  const BUILD = "e53477b";
+  console.info(`[rc-tc-work-qol v2] build ${BUILD}`);
+
+  const qs = (sel, root = document) => root.querySelector(sel);
+  const qsa = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+
+  function findClassSelect() {
+    return (
+      qs('#draftClass') ||
+      qs('select[name="class"]') ||
+      qs('select[id*="Class"]') ||
+      qs('select[id*="class"]')
+    );
+  }
+
+  function ensureOption(sel, value, label) {
+    if (!sel) return;
+    const exists = Array.from(sel.options || []).some(o => ((o.value || o.textContent || '').trim() === value));
+    if (exists) return;
+    const opt = document.createElement('option');
+    opt.value = value;
+    opt.textContent = label;
+    sel.appendChild(opt);
+  }
+
+  function buildMultiUI(sel) {
+    if (!sel) return null;
+    if (qs('#rcMultiClassWrap')) return qs('#rcMultiClassWrap');
+
+    const wrap = document.createElement('div');
+    wrap.id = 'rcMultiClassWrap';
+    wrap.style.marginTop = '8px';
+    wrap.style.display = 'grid';
+    wrap.style.gap = '8px';
+
+    const row = document.createElement('label');
+    row.style.display = 'flex';
+    row.style.alignItems = 'center';
+    row.style.gap = '10px';
+    row.style.userSelect = 'none';
+
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.id = 'rcMultiClassToggle';
+
+    const text = document.createElement('span');
+    text.textContent = 'Multiple classes';
+
+    row.appendChild(cb);
+    row.appendChild(text);
+
+    const hint = document.createElement('div');
+    hint.id = 'rcMultiClassHint';
+    hint.style.fontSize = '12px';
+    hint.style.opacity = '0.8';
+    hint.textContent = 'When enabled, one draft will be saved per checked class.';
+
+    const list = document.createElement('div');
+    list.id = 'rcMultiClassList';
+    list.style.display = 'none';
+    list.style.gridTemplateColumns = 'repeat(2, minmax(0, 1fr))';
+    list.style.gap = '6px 14px';
+
+    const err = document.createElement('div');
+    err.id = 'rcMultiClassErr';
+    err.style.display = 'none';
+    err.style.fontSize = '12px';
+    err.style.opacity = '0.9';
+    err.style.padding = '6px 8px';
+    err.style.borderRadius = '8px';
+    err.style.border = '1px solid rgba(255,255,255,0.12)';
+    err.textContent = 'Pick at least one class.';
+
+    function rebuildList() {
+      list.innerHTML = '';
+      const opts = Array.from(sel.options || [])
+        .map(o => ({ value: (o.value || '').trim(), label: (o.textContent || '').trim() }))
+        .filter(o => o.value && o.value.toLowerCase() !== 'select...' && o.value !== '');
+
+      for (const o of opts) {
+        const lab = document.createElement('label');
+        lab.style.display = 'flex';
+        lab.style.alignItems = 'center';
+        lab.style.gap = '8px';
+
+        const c = document.createElement('input');
+        c.type = 'checkbox';
+        c.dataset.rcClassValue = o.value;
+        c.checked = ((sel.value || '').trim() === o.value);
+
+        const t = document.createElement('span');
+        t.textContent = o.label || o.value;
+
+        lab.appendChild(c);
+        lab.appendChild(t);
+        list.appendChild(lab);
+      }
+    }
+
+    cb.addEventListener('change', () => {
+      err.style.display = 'none';
+      if (cb.checked) {
+        rebuildList();
+        list.style.display = 'grid';
+        sel.disabled = true; // avoid required single-select blocking save
+      } else {
+        list.style.display = 'none';
+        sel.disabled = false;
+      }
+    });
+
+    wrap.appendChild(row);
+    wrap.appendChild(hint);
+    wrap.appendChild(list);
+    wrap.appendChild(err);
+
+    (sel.parentElement || document.body).appendChild(wrap);
+    wrap.__rc = { cb, list, err, rebuildList };
+    return wrap;
+  }
+
+  function findSaveButton() {
+    return (
+      qs('#saveDraft') ||
+      qs('button[data-action="saveDraft"]') ||
+      qsa('button').find(b => (b.textContent || '').trim() === 'Save Draft') ||
+      null
+    );
+  }
+
+  function parseJsonMaybe(v) {
+    try { return JSON.parse(v); } catch (_) { return null; }
+  }
+
+  function looksLikeDraftObj(o) {
+    return !!(o && typeof o === 'object' && (
+      'title' in o || 'assignment' in o || 'mapping' in o ||
+      'class' in o || 'draftClass' in o || 'className' in o
+    ));
+  }
+
+  function looksLikeDraftArray(x) {
+    return Array.isArray(x) && x.length > 0 && x.every(looksLikeDraftObj);
+  }
+
+  function findDraftStorage() {
+    let best = null;
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      const v = localStorage.getItem(k);
+      const parsed = parseJsonMaybe(v);
+      if (!parsed) continue;
+      if (!looksLikeDraftArray(parsed)) continue;
+      const score = parsed.length;
+      if (!best || score > best.score) best = { key: k, arr: parsed, score };
+    }
+    return best;
+  }
+
+  function normalizeDraftClassFields() {
+    const hit = findDraftStorage();
+    if (!hit) return;
+
+    let changed = false;
+    for (const d of hit.arr) {
+      const cls = (d.class || d.draftClass || d.className || '').toString().trim();
+      if (cls) {
+        if (d.class !== cls) { d.class = cls; changed = true; }
+        if (d.draftClass !== cls) { d.draftClass = cls; changed = true; }
+        if (d.className !== cls) { d.className = cls; changed = true; }
+      }
+    }
+
+    if (changed) {
+      try {
+        localStorage.setItem(hit.key, JSON.stringify(hit.arr));
+      } catch (err) {
+        console.warn('[rc-tc-work-qol v2] could not rewrite drafts storage:', err);
+      }
+    }
+  }
+
+  function closePreviewFallback() {
+    // Prefer real <dialog>
+    const dlg = qs('dialog[open]');
+    if (dlg && typeof dlg.close === 'function') {
+      dlg.close();
+      return;
+    }
+
+    // Otherwise: hide nearest fixed ancestor of any "Close" button inside a preview-ish container
+    const closeBtns = qsa('button').filter(b => (b.textContent || '').trim().toLowerCase() === 'close');
+    for (const b of closeBtns) {
+      let cur = b;
+      while (cur && cur !== document.body) {
+        const pos = window.getComputedStyle(cur).position;
+        if (pos === 'fixed') {
+          cur.style.display = 'none';
+          cur.setAttribute('aria-hidden', 'true');
+          return;
+        }
+        cur = cur.parentElement;
+      }
+    }
+  }
+
+  function installCloseGuards() {
+    document.addEventListener('click', (e) => {
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+      if (t.matches('button') && (t.textContent || '').trim().toLowerCase() === 'close') {
+        e.preventDefault();
+        e.stopPropagation();
+        closePreviewFallback();
+      }
+    }, true);
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closePreviewFallback();
+    });
+  }
+
+  function installMultiClassSave(sel, wrap) {
+    const saveBtn = findSaveButton();
+    if (!saveBtn || !wrap || !wrap.__rc) return;
+
+    let inBatch = false;
+
+    saveBtn.addEventListener('click', (e) => {
+      if (inBatch) return;
+      const { cb, list, err } = wrap.__rc;
+      if (!cb.checked) {
+        // Still normalize class fields after normal saves
+        setTimeout(normalizeDraftClassFields, 0);
+        return;
+      }
+
+      const checks = qsa('input[type="checkbox"][data-rc-class-value]', list);
+      const selected = checks.filter(c => c.checked).map(c => c.dataset.rcClassValue);
+
+      if (selected.length === 0) {
+        err.style.display = 'block';
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        return;
+      }
+
+      err.style.display = 'none';
+
+      // Run the built-in save handler once per class by temporarily setting the select value
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+
+      const priorDisabled = sel.disabled;
+      const priorValue = sel.value;
+
+      // enable select temporarily so existing handler reads it
+      sel.disabled = false;
+
+      inBatch = true;
+      try {
+        for (const cls of selected) {
+          sel.value = cls;
+          sel.dispatchEvent(new Event('change', { bubbles: true }));
+          saveBtn.click(); // re-enters; inBatch=true allows passthrough
+        }
+      } finally {
+        inBatch = false;
+        sel.value = priorValue;
+        sel.disabled = priorDisabled;
+        setTimeout(normalizeDraftClassFields, 0);
+      }
+    }, true);
+  }
+
+  function bootOnceReady() {
+    const sel = findClassSelect();
+    if (!sel) return false;
+
+    // Add the missing class option
+    ensureOption(sel, 'Life Skills', 'Life Skills');
+
+    const wrap = buildMultiUI(sel);
+
+    // Install close + multi-class behavior
+    installCloseGuards();
+    installMultiClassSave(sel, wrap);
+
+    return true;
+  }
+
+  // Poll until the form exists (prevents the init crash from killing our wiring)
+  let tries = 0;
+  const timer = setInterval(() => {
+    tries++;
+    if (bootOnceReady()) {
+      clearInterval(timer);
+    }
+    if (tries > 200) clearInterval(timer); // ~20s max
+  }, 100);
+})();
+// END rc-tc-work-qol v2
