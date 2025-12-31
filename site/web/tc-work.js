@@ -251,28 +251,6 @@ ${shown}
       .split("\n")
       .slice(0, 80)
       .join("\n");
-
-    const payload = {
-      id: d.id,
-      title: d.title,
-      className: d.className,
-      releaseAt: d.releaseAt,
-      dueAt: d.dueAt,
-      createdAt: d.createdAt,
-      notes: d.notes || "",
-      assignment: {
-        kind: d.assignment ? d.assignment.kind : null,
-        name: d.assignment ? d.assignment.name : null,
-        link: d.assignment ? d.assignment.link : null,
-        snippet: assignmentSnippet || "(no stored assignment text — link or file too large?)",
-      },
-      mapping: {
-        name: d.mapping ? d.mapping.name : null,
-        kind: d.mapping ? d.mapping.kind : null,
-        snippet: mappingSnippet || "(no mapping text stored?)",
-      },
-    };
-
     body.innerHTML = renderStudentPreviewHtml(d);
     overlay.hidden = false;
   }
