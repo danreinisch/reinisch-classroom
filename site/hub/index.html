@@ -453,7 +453,37 @@
 
     <!-- Global App Shell CSS -->
     <link rel="stylesheet" href="/assets/css/app-shell.css" />
-  </head>
+  <!-- rc-hub-auth-bounce-fix v1 BEGIN -->
+<script>
+(() => {
+  const params = new URLSearchParams(location.search);
+  const reason = (params.get("reason") || "");
+  if (!reason.startsWith("missing_teacher_session")) return;
+
+  // We got bounced from a teacher-only route but the hub may still think we're logged in.
+  // Clear auth-ish localStorage keys (but keep Work drafts).
+  const KEEP = new Set(["rc_tc_work_drafts_v1"]);
+
+  try {
+    for (const k of Object.keys(localStorage)) {
+      if (KEEP.has(k)) continue;
+      // Conservative: only remove keys that look auth/teacher-related.
+      if (/teacher|auth|session|token|tc_/i.test(k) && !/draft/i.test(k)) {
+        localStorage.removeItem(k);
+      }
+    }
+  } catch (e) {}
+
+  // If the runtime helper exists, use it too (best-effort).
+  try { window.clearAllAuthState?.(); } catch (e) {}
+
+  // Optional breadcrumb for debugging
+  try { sessionStorage.setItem("rc_last_auth_bounce_reason", reason); } catch (e) {}
+})();
+</script>
+<!-- rc-hub-auth-bounce-fix v1 END -->
+
+</head>
   <body>
     <div class="hub-wrap">
       <div class="hub-shell">
