@@ -22,7 +22,7 @@
     try{
       const r = await fetch('/.netlify/functions/teacher-session', { cache:'no-store', credentials:'same-origin' });
       if(!r.ok){
-        location.replace(`/hub/?reason=missing_teacher_session&next=${next}`);
+        location.replace(`/hub/?reason=missing_teacher_session_${r.status}&next=${next}`);
         return false;
       }
       return true;
