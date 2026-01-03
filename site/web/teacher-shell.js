@@ -1,67 +1,44 @@
-/* rc: teacher gate (deploy-preview safe) */
 (() => {
-  if (!location.pathname.startsWith("/teacher")) return;
+  const DEBUG =
+    localStorage.getItem("rc_debug_auth") === "1" ||
+    new URLSearchParams(location.search).has("rc_debug_auth");
 
-  const params = new URLSearchParams(location.search);
-  if (params.get("nogate") === "1") return;
-
-  const debug = localStorage.getItem("rc_debug_auth") === "1";
   const next = encodeURIComponent(location.pathname + location.search);
+  const url = "/.netlify/functions/teacher-session";
 
-  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const log = (...args) => { if (DEBUG) console.warn("[teacher-gate]", ...args); };
+  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-  async function checkTeacherSession() {
-    let lastStatus = 0;
-    let lastBody = "";
-
-    for (let attempt = 1; attempt <= 2; attempt++) {
-      try {
-        const r = await fetch("/.netlify/functions/teacher-session", {
-          cache: "no-store",
-          credentials: "include",
-        });
-
-        lastStatus = r.status;
-
-        const txt = await r.text();
-        lastBody = (txt || "").slice(0, 200);
-
-        // Treat 200 as success if body is valid JSON with ok:true,
-        // OR if the endpoint is returning non-JSON but still 200.
-        if (r.status === 200) {
-          try {
-            const j = JSON.parse(txt);
-            if (j && j.ok) return { ok: true, status: 200, body: j }; // noqa: F821 (string literal below rewrites)
-          } catch (e) { void e; }
-          return { ok: true, status: 200, body: txt };
-        }
-      } catch (err) {
-        lastStatus = 0
-        lastBody = String(err && err.message || err).slice(0, 200);
-      }
-
-      if (debug) console.warn("[teacher-shell] teacher-session attempt", attempt, "failed:", lastStatus, lastBody);
-      await sleep(250);
-    }
-
-    return { ok: false, status: lastStatus, body: lastBody };
+  async function checkOnce() {
+    const t0 = Date.now();
+    const r = await fetch(url, {
+      cache: "no-store",
+      credentials: "include",
+      headers: { "x-rc-client": "teacher-gate" },
+    });
+    let text = "";
+    try { text = await r.text(); } catch (e) { void e; }
+    log("teacher-session", r.status, (Date.now() - t0) + "ms", text.slice(0, 200));
+    return { status: r.status, body: text };
   }
 
   (async () => {
-    const res = await checkTeacherSession();
+    let last = { status: 0, body: "" };
 
-    if (res.ok) {
-      if (debug) console.info("[teacher-shell] teacher-session OK");
-      return;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        last = await checkOnce();
+        if (last.status === 200) return;
+        if (last.status === 401 || last.status === 403) break;
+      } catch (e) {
+        log("fetch error", e && (e.message || String(e)));
+      }
+      await sleep(150 * attempt);
     }
 
-    // Clear any client-side auth hints so Hub shows login cleanly
-    try { window.__clearAllAuthState?.(); } catch (e) { void e; }
-    try { window.__clearAllAuth?.(); } catch (e) { void e; }
-
-    const reason = "missing_teacher_session_" + (res.status || "net");
-    if (debug) console.warn("[teacher-shell] redirect -> /hub/", reason, res.body);
-
+    const status = last.status || "net";
+    const reason = `missing_teacher_session_teacher_${status}`;
+    log("redirect -> /hub/", reason);
     location.replace(`/hub/?reason=${encodeURIComponent(reason)}&next=${next}`);
   })();
 })();
