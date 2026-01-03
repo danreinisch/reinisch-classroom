@@ -3,7 +3,7 @@
 (function(){
   async function gate(){
     try{
-      const r = await fetch('/.netlify/functions/teacher-session', { cache:'no-store', credentials:'same-origin' });
+      const r = await fetch('/.netlify/functions/teacher-session', { cache:'no-store', credentials:"include" });
       if (!r.ok) {
         location.replace('/hub/?reason=missing_teacher_session&next=%2Fadmin%2F');
         return;

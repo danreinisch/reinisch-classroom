@@ -459,20 +459,6 @@
   const params = new URLSearchParams(location.search);
   const reason = (params.get("reason") || "");
   if (!reason.startsWith("missing_teacher_session")) return;
-  // rc: break redirect loop — remove ?next= so Hub doesn't immediately bounce back to /teacher/*
-  try {
-    const u = new URL(location.href);
-    if (u.searchParams.get("next")) {
-      u.searchParams.delete("next");
-      const qs = u.searchParams.toString();
-      history.replaceState({}, "", u.pathname + (qs ? ("?" + qs) : ""));
-    }
-  } catch {}
-
-  // rc: clear stale teacher auth hints so we prompt login again instead of pretending we're still good
-  try { window.__clearAllAuthState?.(); } catch {}
-  try { window.__clearAllAuth?.(); } catch {}
-
 
   // We got bounced from a teacher-only route but the hub may still think we're logged in.
   // Clear auth-ish localStorage keys (but keep Work drafts).
