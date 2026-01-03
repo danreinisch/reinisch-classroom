@@ -1,116 +1,67 @@
-(function(){
-  const KEY = 'rc_tc_sidebar';
-  const DEFAULT = 'collapsed';
+/* rc: teacher gate (deploy-preview safe) */
+(() => {
+  if (!location.pathname.startsWith("/teacher")) return;
 
-  function setCollapsed(isCollapsed){
-    document.documentElement.classList.toggle('tc-collapsed', isCollapsed);
-    try{ localStorage.setItem(KEY, isCollapsed ? 'collapsed' : 'expanded'); }catch(_){ /* noop */ }
-    const btn = document.getElementById('tcSidebarToggle');
-    if(btn) btn.setAttribute('aria-expanded', String(!isCollapsed));
-  }
+  const params = new URLSearchParams(location.search);
+  if (params.get("nogate") === "1") return;
 
-  function getCollapsed(){
-    try{
-      const v = localStorage.getItem(KEY) || DEFAULT;
-      return v !== 'expanded';
-    }catch(_){ return true; }
-  }
+  const debug = localStorage.getItem("rc_debug_auth") === "1";
+  const next = encodeURIComponent(location.pathname + location.search);
 
-  async function gateTeacher(){
-    // Same-origin is mandatory for preview deploys.
-    const next = encodeURIComponent(location.pathname + location.search);
-    try{
-      const r = await fetch('/.netlify/functions/teacher-session', { cache:'no-store', credentials:"include" });
-      if(!r.ok){
-        location.replace(`/hub/?reason=missing_teacher_session_${r.status}&next=${next}`);
-        return false;
-      }
-      return true;
-    }catch(_){
-      location.replace(`/hub/?reason=gate_error&next=${next}`);
-      return false;
-    }
-  }
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-  function wireNavActive(){
-    const path = location.pathname.replace(/\/+$/, '/') || '/teacher/';
-    document.querySelectorAll('.tc-nav a[data-href]').forEach(a=>{
-      const href = a.getAttribute('data-href');
-      const isActive = href === path;
-      if(isActive) a.setAttribute('aria-current','page');
-      else a.removeAttribute('aria-current');
-      // Tooltips in collapsed mode
-      const label = a.querySelector('.tc-label');
-      if(label) a.title = label.textContent.trim();
-    });
-  }
+  async function checkTeacherSession() {
+    let lastStatus = 0;
+    let lastBody = "";
 
-  async function init(){
-    const ok = await gateTeacher();
-    if(!ok) return;
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        const r = await fetch("/.netlify/functions/teacher-session", {
+          cache: "no-store",
+          credentials: "include",
+        });
 
-    setCollapsed(getCollapsed());
+        lastStatus = r.status;
 
-    const toggle = document.getElementById('tcSidebarToggle');
-    if(toggle){
-      toggle.addEventListener('click', ()=>{
-        const isCollapsed = document.documentElement.classList.contains('tc-collapsed');
-        setCollapsed(!isCollapsed);
-      });
-    }
+        const txt = await r.text();
+        lastBody = (txt || "").slice(0, 200);
 
-    wireNavActive();
-  }
-
-  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
-  else init();
-})();
-
-
-/* NETLIFY DRAWER KILL SWITCH
-   Deploy previews sometimes inject a CSP-blocked Netlify iframe ("Netlify Drawer")
-   that renders as a white bar at the bottom. It uses inline !important styles,
-   so CSS cannot reliably hide it. Remove it + keep removing it if re-injected.
-*/
-(function(){
-  const isDrawer = (el) =>
-    el && el.tagName === "IFRAME" &&
-    typeof el.src === "string" &&
-    el.src.includes("app.netlify.com/cdp");
-
-  const nuke = (el) => {
-    try { el.remove(); } catch(e) { /* noop */ }
-    try {
-      el.style.setProperty("display","none","important");
-      el.style.setProperty("height","0","important");
-      el.style.setProperty("width","0","important");
-      el.style.setProperty("opacity","0","important");
-      el.style.setProperty("pointer-events","none","important");
-    } catch(e) { /* noop */ }
-  };
-
-  const run = () => {
-    // Home button fallback: if the Home link is empty, give it a glyph.
-    const home = document.querySelector('.tc-btn[aria-label="Home"]');
-    if (home && !home.textContent.trim()) home.textContent = "⌂";
-
-    document.querySelectorAll('iframe[src*="app.netlify.com/cdp"]').forEach(nuke);
-
-    const mo = new MutationObserver((muts) => {
-      for (const m of muts) {
-        for (const node of m.addedNodes) {
-          if (!(node instanceof Element)) continue;
-          if (isDrawer(node)) nuke(node);
-          node.querySelectorAll?.('iframe[src*="app.netlify.com/cdp"]').forEach(nuke);
+        // Treat 200 as success if body is valid JSON with ok:true,
+        // OR if the endpoint is returning non-JSON but still 200.
+        if (r.status === 200) {
+          try {
+            const j = JSON.parse(txt);
+            if (j && j.ok) return { ok: true, status: 200, body: j }; // noqa: F821 (string literal below rewrites)
+          } catch (e) { void e; }
+          return { ok: true, status: 200, body: txt };
         }
+      } catch (err) {
+        lastStatus = 0
+        lastBody = String(err && err.message || err).slice(0, 200);
       }
-    });
-    mo.observe(document.documentElement, { childList: true, subtree: true });
-  };
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", run, { once: true });
-  } else {
-    run();
+      if (debug) console.warn("[teacher-shell] teacher-session attempt", attempt, "failed:", lastStatus, lastBody);
+      await sleep(250);
+    }
+
+    return { ok: false, status: lastStatus, body: lastBody };
   }
+
+  (async () => {
+    const res = await checkTeacherSession();
+
+    if (res.ok) {
+      if (debug) console.info("[teacher-shell] teacher-session OK");
+      return;
+    }
+
+    // Clear any client-side auth hints so Hub shows login cleanly
+    try { window.__clearAllAuthState?.(); } catch (e) { void e; }
+    try { window.__clearAllAuth?.(); } catch (e) { void e; }
+
+    const reason = "missing_teacher_session_" + (res.status || "net");
+    if (debug) console.warn("[teacher-shell] redirect -> /hub/", reason, res.body);
+
+    location.replace(`/hub/?reason=${encodeURIComponent(reason)}&next=${next}`);
+  })();
 })();
