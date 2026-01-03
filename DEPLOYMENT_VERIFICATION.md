@@ -639,7 +639,7 @@ curl -i "${PREVIEW_URL}/"
 - `Referrer-Policy: strict-origin-when-cross-origin`
 - `Permissions-Policy: geolocation=(), microphone=(), camera=()`
 - `X-Frame-Options: SAMEORIGIN`
-- `Content-Security-Policy-Report-Only: default-src 'self'; ...`
+- `Content-Security-Policy-Report-Only: default-src 'self'; frame-src 'self' https://app.netlify.com; ...`
 
 ✅ **Pass Criteria:** All security headers present in response
 

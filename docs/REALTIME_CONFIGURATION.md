@@ -53,7 +53,7 @@ In `_headers` or Netlify configuration:
 
 ```
 /*
-  Content-Security-Policy: connect-src 'self' https://*.supabase.co wss://*.supabase.co
+  Content-Security-Policy: connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-src 'self' https://app.netlify.com
 ```
 
 ### Step 2: Update Runtime Configuration
