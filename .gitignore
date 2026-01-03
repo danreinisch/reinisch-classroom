@@ -70,3 +70,6 @@ site/admin/*.bak.*
 
 # Local patch backups
 *.bak.*
+
+# RC patch artifacts
+.rc_patched_files.txt

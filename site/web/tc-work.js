@@ -35,8 +35,10 @@
   function setMsg(kind, text) {
     const el = $("workMsg");
     if (!el) return;
-    el.classList.remove("ok", "err");
-    el.classList.add(kind === "ok" ? "ok" : "err");
+    el.classList.remove("ok", "err", "warn");
+    if (kind === "ok") el.classList.add("ok");
+    else if (kind === "warn") el.classList.add("warn");
+    else el.classList.add("err");
     el.textContent = text;
     el.style.display = "block";
   }
@@ -131,7 +133,7 @@
       btnPreview.type = "button";
       btnPreview.className = "work-btn";
       btnPreview.textContent = "Preview";
-      btnPreview?.addEventListener("click", () => openPreview(d.id));
+      btnPreview.addEventListener("click", () => openPreview(d.id));
       tdActions.appendChild(btnPreview);
 
       const btnExport = document.createElement("button");
@@ -139,7 +141,7 @@
       btnExport.className = "work-btn";
       btnExport.style.marginLeft = "8px";
       btnExport.textContent = "Export";
-      btnExport?.addEventListener("click", () => exportOne(d.id));
+      btnExport.addEventListener("click", () => exportOne(d.id));
       tdActions.appendChild(btnExport);
 
       const btnDel = document.createElement("button");
@@ -147,7 +149,7 @@
       btnDel.className = "work-btn danger";
       btnDel.style.marginLeft = "8px";
       btnDel.textContent = "Delete";
-      btnDel?.addEventListener("click", () => deleteOne(d.id));
+      btnDel.addEventListener("click", () => deleteOne(d.id));
       tdActions.appendChild(btnDel);
 
       tr.appendChild(tdActions);
@@ -166,6 +168,14 @@
       .replace(/'/g, "&#39;");
   }
 
+  // Back-compat: mega-split drafts used .snippet; canonical is .text.
+  function getAssignmentText(d) {
+    return safeStr(d && d.assignment && (d.assignment.text || d.assignment.snippet)) || "";
+  }
+  function getMappingText(d) {
+    return safeStr(d && d.mapping && (d.mapping.text || d.mapping.snippet)) || "";
+  }
+
   function stripTeacherTags(text) {
     const raw = String(text || "");
     const lines = raw.split(/\r?\n/);
@@ -175,12 +185,15 @@
       let cleaned = line.replace(tagRe, "").replace(/[ \t]{2,}/g, " ").trimEnd();
       // Student View: strip common inline answer markers at end of option lines (✓/✔)
       if (/^\s*[a-dA-D][.)]\s+/.test(cleaned)) cleaned = cleaned.replace(/[ \t]*\(?[✓✔]\)?\s*$/, "");
-
       out.push(cleaned);
     }
-    return out.join("\n")
-      .replace(/\n{4,}/g, "\n\n\n")
-      .trim();
+    return out.join("\n").replace(/\n{4,}/g, "\n\n\n").trim();
+  }
+
+  function fileExt(name) {
+    const n = String(name || "").toLowerCase();
+    const m = n.match(/\.([a-z0-9]+)$/i);
+    return m ? m[1] : "";
   }
 
   function renderStudentPreviewHtml(d) {
@@ -190,7 +203,8 @@
 
     const kind = (d && d.assignment && d.assignment.kind) || "";
     const link = (d && d.assignment && d.assignment.link) || "";
-    const text = (d && d.assignment && d.assignment.text) || "";
+    const name = (d && d.assignment && d.assignment.name) || "";
+    const text = getAssignmentText(d);
 
     let bodyHtml = "";
     if (kind === "link" && link) {
@@ -203,13 +217,26 @@
         </div>
       `;
     } else if (kind === "file") {
-      const studentText = stripTeacherTags(text);
-      const shown = studentText ? escapeHtml(studentText) : "(No assignment text stored for this draft.)";
-      bodyHtml = `
-        <div style="white-space:pre-wrap; font-family:system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; line-height:1.5; font-size:14px;">
+      const ext = fileExt(name);
+      if (ext === "pdf") {
+        bodyHtml = `<div style="opacity:.85;">PDF uploaded. MVP preview can’t render PDFs yet (will work once upload/storage is implemented).</div>`;
+      } else if (ext === "html" || ext === "htm") {
+        const studentHtml = stripTeacherTags(text);
+        const srcdoc = escapeHtml(studentHtml || "<p>(No HTML stored for this draft.)</p>");
+        bodyHtml = `
+          <div style="opacity:.7; margin-bottom:6px;">Rendered Student View (sandboxed)</div>
+          <iframe sandbox="allow-same-origin" style="width:100%; height:520px; border:1px solid rgba(255,255,255,.12); border-radius:12px; background:#0b0f0d;"
+            srcdoc="${srcdoc}"></iframe>
+        `;
+      } else {
+        const studentText = stripTeacherTags(text);
+        const shown = studentText ? escapeHtml(studentText) : "(No assignment text stored for this draft.)";
+        bodyHtml = `
+          <div style="white-space:pre-wrap; font-family:system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; line-height:1.5; font-size:14px;">
 ${shown}
-        </div>
-      `;
+          </div>
+        `;
+      }
     } else {
       bodyHtml = `<div style="opacity:.85;">(No assignment content found for this draft.)</div>`;
     }
@@ -222,11 +249,178 @@ ${shown}
         <div style="opacity:.7; margin-top:6px;">Preview: <strong>Student View</strong> (DESE/IEP tags hidden)</div>
       </div>
       <hr style="border:none; border-top:1px solid rgba(255,255,255,.15); margin:12px 0;">
-    `
+    `;
 
     return `<div>${meta}${bodyHtml}</div>`;
   }
 
+  function renderTeacherPreviewHtml(d) {
+    const title = escapeHtml((d && d.title) || "Draft Preview");
+    const cls = escapeHtml((d && (d.className || d.class)) || "");
+    const notes = escapeHtml((d && d.notes) || "");
+
+    const kind = (d && d.assignment && d.assignment.kind) || "";
+    const link = (d && d.assignment && d.assignment.link) || "";
+    const name = (d && d.assignment && d.assignment.name) || "";
+    const text = getAssignmentText(d);
+
+    let bodyHtml = "";
+    if (kind === "link" && link) {
+      const safeLink = escapeHtml(link);
+      bodyHtml = `
+        <div style="margin:0 0 10px 0;">
+          <div style="font-weight:700;">Google Form link</div>
+          <div><a href="${safeLink}" target="_blank" rel="noopener noreferrer">${safeLink}</a></div>
+          <div style="opacity:.8;margin-top:6px;">Teacher view: mapping required when using links.</div>
+        </div>
+      `;
+    } else if (kind === "file") {
+      const ext = fileExt(name);
+      if (ext === "pdf") {
+        bodyHtml = `<div style="opacity:.85;">PDF uploaded. Teacher preview can’t render PDFs yet (will work once upload/storage is implemented).</div>`;
+      } else {
+        const shown = text ? escapeHtml(text) : "(No assignment text stored for this draft.)";
+        bodyHtml = `<pre style="white-space:pre-wrap; line-height:1.4; padding:12px; border-radius:12px; border:1px solid rgba(255,255,255,.12); background:rgba(0,0,0,.22);">${shown}</pre>`;
+      }
+    } else {
+      bodyHtml = `<div style="opacity:.85;">(No assignment content found for this draft.)</div>`;
+    }
+
+    const meta = `
+      <div style="margin-bottom:10px;">
+        <div style="font-weight:800; font-size:16px;">${title}</div>
+        ${cls ? `<div style="opacity:.85; margin-top:2px;"><strong>Class:</strong> ${cls}</div>` : ``}
+        ${notes ? `<div style="opacity:.85; margin-top:2px;"><strong>Notes:</strong> ${notes}</div>` : ``}
+        <div style="opacity:.7; margin-top:6px;">Preview: <strong>Teacher View</strong> (codes visible)</div>
+      </div>
+      <hr style="border:none; border-top:1px solid rgba(255,255,255,.15); margin:12px 0;">
+    `;
+
+    return `<div>${meta}${bodyHtml}</div>`;
+  }
+
+  function renderMappingPreviewHtml(d) {
+    const raw = getMappingText(d);
+    if (!raw) return `<div style="opacity:.85;">(No mapping content stored for this draft.)</div>`;
+
+    // Try JSON first (auto-map + JSON mapping)
+    try {
+      const obj = JSON.parse(raw);
+
+      const sections = Array.isArray(obj.sections) ? obj.sections : [];
+      const warnings = Array.isArray(obj.warnings) ? obj.warnings : [];
+      const counts = obj.counts || {};
+      const sectionCount = Number.isFinite(counts.sections) ? counts.sections : sections.length;
+
+      let itemsCount = 0;
+      for (const s of sections) itemsCount += Array.isArray(s.items) ? s.items.length : 0;
+      if (Number.isFinite(counts.items)) itemsCount = counts.items;
+
+      const warnCount = Number.isFinite(counts.warnings) ? counts.warnings : warnings.length;
+
+      const secList = sections.slice(0, 8).map((s) => {
+        const t = escapeHtml(s && s.title ? s.title : "Section");
+        const n = Array.isArray(s.items) ? s.items.length : 0;
+        return `<li>${t} <span style="opacity:.75;">(${n} items)</span></li>`;
+      }).join("");
+
+      // Sample first ~12 items across sections
+      const sampleRows = [];
+      for (const s of sections) {
+        const title = escapeHtml(s && s.title ? s.title : "Section");
+        const items = Array.isArray(s.items) ? s.items : [];
+        for (const it of items) {
+          const key = escapeHtml(it && it.key ? it.key : "");
+          const dese = Array.isArray(it && it.dese) ? it.dese.join(", ") : "";
+          const iep = Array.isArray(it && it.iep) ? it.iep.join(", ") : "";
+          sampleRows.push({ title, key, dese, iep });
+          if (sampleRows.length >= 12) break;
+        }
+        if (sampleRows.length >= 12) break;
+      }
+
+      const table = sampleRows.length ? `
+        <div style="opacity:.8; margin:10px 0 6px;">Sample items</div>
+        <table style="width:100%; border-collapse:collapse; font-size:13px;">
+          <thead>
+            <tr>
+              <th style="text-align:left; padding:6px; border-bottom:1px solid rgba(255,255,255,.12);">Section</th>
+              <th style="text-align:left; padding:6px; border-bottom:1px solid rgba(255,255,255,.12);">Key</th>
+              <th style="text-align:left; padding:6px; border-bottom:1px solid rgba(255,255,255,.12);">DESE</th>
+              <th style="text-align:left; padding:6px; border-bottom:1px solid rgba(255,255,255,.12);">IEP</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${sampleRows.map(r => `
+              <tr>
+                <td style="padding:6px; border-bottom:1px solid rgba(255,255,255,.08); opacity:.9;">${r.title}</td>
+                <td style="padding:6px; border-bottom:1px solid rgba(255,255,255,.08);">${r.key}</td>
+                <td style="padding:6px; border-bottom:1px solid rgba(255,255,255,.08); opacity:.9;">${escapeHtml(r.dese)}</td>
+                <td style="padding:6px; border-bottom:1px solid rgba(255,255,255,.08); opacity:.9;">${escapeHtml(r.iep)}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      ` : "";
+
+      const warnHtml = warnCount ? `
+        <details style="margin-top:10px;">
+          <summary style="cursor:pointer;">Warnings (${warnCount})</summary>
+          <pre style="white-space:pre-wrap; margin-top:8px; padding:10px; border-radius:12px; border:1px solid rgba(255,255,255,.12); background:rgba(0,0,0,.22);">${escapeHtml(warnings.slice(0, 40).join("\n"))}${warnings.length > 40 ? "\n…(truncated)\n" : ""}</pre>
+        </details>
+      ` : "";
+
+      return `
+        <div style="margin-bottom:10px;">
+          <div style="opacity:.7;">Preview: <strong>Mapping</strong></div>
+          <div style="margin-top:6px;">
+            <span style="display:inline-block; margin-right:14px;"><strong>Sections:</strong> ${sectionCount}</span>
+            <span style="display:inline-block; margin-right:14px;"><strong>Items:</strong> ${itemsCount}</span>
+            <span style="display:inline-block;"><strong>Warnings:</strong> ${warnCount}</span>
+          </div>
+        </div>
+        ${secList ? `<div style="opacity:.8;">Sections</div><ul style="margin:6px 0 0 18px;">${secList}</ul>` : ""}
+        ${table}
+        ${warnHtml}
+        <details style="margin-top:12px;">
+          <summary style="cursor:pointer;">Raw mapping JSON</summary>
+          <pre style="white-space:pre-wrap; margin-top:8px; padding:10px; border-radius:12px; border:1px solid rgba(255,255,255,.12); background:rgba(0,0,0,.22);">${escapeHtml(raw.slice(0, 120000))}${raw.length > 120000 ? "\n…(truncated)\n" : ""}</pre>
+        </details>
+      `;
+    } catch (_) {
+      // Not JSON (CSV or other): just show raw
+      return `
+        <div style="opacity:.7; margin-bottom:6px;">Preview: <strong>Mapping</strong> (raw)</div>
+        <pre style="white-space:pre-wrap; line-height:1.4; padding:12px; border-radius:12px; border:1px solid rgba(255,255,255,.12); background:rgba(0,0,0,.22);">${escapeHtml(raw.slice(0, 120000))}${raw.length > 120000 ? "\n…(truncated)\n" : ""}</pre>
+      `;
+    }
+  }
+
+  function wirePreviewTabs(root) {
+    const btns = Array.from(root.querySelectorAll("[data-pv-tab]"));
+    const panes = {
+      student: root.querySelector("[data-pv-pane='student']"),
+      teacher: root.querySelector("[data-pv-pane='teacher']"),
+      mapping: root.querySelector("[data-pv-pane='mapping']"),
+    };
+
+    const setActive = (name) => {
+      for (const b of btns) {
+        const isOn = b.getAttribute("data-pv-tab") === name;
+        b.style.opacity = isOn ? "1" : ".7";
+        b.style.borderColor = isOn ? "rgba(255,255,255,.28)" : "rgba(255,255,255,.12)";
+      }
+      for (const k of Object.keys(panes)) {
+        if (panes[k]) panes[k].hidden = (k !== name);
+      }
+    };
+
+    for (const b of btns) {
+      b.addEventListener("click", () => setActive(b.getAttribute("data-pv-tab")));
+    }
+
+    setActive("student");
+  }
 
   function openPreview(id) {
     const drafts = readDrafts();
@@ -241,7 +435,21 @@ ${shown}
     if (!overlay || !title || !body) return;
 
     title.textContent = safeStr(d.title) || "Draft Preview";
-    body.innerHTML = renderStudentPreviewHtml(d);
+
+    body.innerHTML = `
+      <div style="display:flex; gap:8px; margin-bottom:10px;">
+        <button type="button" class="work-btn" data-pv-tab="student">Student</button>
+        <button type="button" class="work-btn" data-pv-tab="teacher">Teacher</button>
+        <button type="button" class="work-btn" data-pv-tab="mapping">Mapping</button>
+      </div>
+
+      <div data-pv-pane="student">${renderStudentPreviewHtml(d)}</div>
+      <div data-pv-pane="teacher" hidden>${renderTeacherPreviewHtml(d)}</div>
+      <div data-pv-pane="mapping" hidden>${renderMappingPreviewHtml(d)}</div>
+    `;
+
+    wirePreviewTabs(body);
+
     overlay.hidden = false;
   }
 
@@ -281,129 +489,120 @@ ${shown}
     setTimeout(clearMsg, 1200);
   }
 
-    function rcIsTextFile(file) {
+  function rcIsTextFile(file) {
     if (!file) return false;
     const name = String(file.name || "").toLowerCase();
     const type = String(file.type || "").toLowerCase();
     if (type.startsWith("text/")) return true;
-    return name.endsWith(".txt");
+    return name.endsWith(".txt") || name.endsWith(".md") || name.endsWith(".csv") || name.endsWith(".json") || name.endsWith(".html") || name.endsWith(".htm");
   }
 
-function fillExample() {
+  function fillExample() {
     $("draftTitle").value = "Week 1 — ADIT — Day 1 Assignment";
     $("draftClass").value = "LA 1 SC";
     $("draftNotes").value = "MVP example draft. Replace with real content.";
     $("assignmentLink").value = "https://docs.google.com/forms/d/EXAMPLE/viewform";
   }
 
-  
-
   function autoMapFromTeacherTxt(text) {
-  const out = { version: 1, sections: [], warnings: [], counts: { sections: 0, items: 0, warnings: 0 } };
-  const lines = String(text || "").split(/\r?\n/);
+    const out = { version: 1, sections: [], warnings: [], counts: { sections: 0, items: 0, warnings: 0 } };
+    const lines = String(text || "").split(/\r?\n/);
 
-  let cur = null;
-  let pendingWR = null;
-  let wrIndex = 0;
+    let cur = null;
+    let pendingWR = null;
+    let wrIndex = 0;
 
-  const uniq = (arr) => Array.from(new Set((arr || []).map(x => String(x || "").trim()).filter(Boolean)));
+    const uniq = (arr) => Array.from(new Set((arr || []).map(x => String(x || "").trim()).filter(Boolean)));
 
-  const startSection = (title) => {
-    const t = String(title || "Assignment").trim() || "Assignment";
-    cur = { title: t, items: [] };
-    out.sections.push(cur);
-  };
+    const startSection = (title) => {
+      const t = String(title || "Assignment").trim() || "Assignment";
+      cur = { title: t, items: [] };
+      out.sections.push(cur);
+    };
 
-  const addItem = (key, tags) => {
-    if (!cur) startSection("Assignment");
-    const item = { key: String(key), dese: uniq(tags?.dese), iep: uniq(tags?.iep) };
-    cur.items.push(item);
-  };
+    const addItem = (key, tags) => {
+      if (!cur) startSection("Assignment");
+      const item = { key: String(key), dese: uniq(tags?.dese), iep: uniq(tags?.iep) };
+      cur.items.push(item);
+    };
 
-  const parseTagsFromLine = (line) => {
-    const tags = { dese: [], iep: [] };
-    const matches = String(line || "").match(/\[[^\]]+\]/g) || [];
-    for (const raw of matches) {
-      const inner = raw.slice(1, -1).trim();
-      if (!inner) continue;
+    const parseTagsFromLine = (line) => {
+      const tags = { dese: [], iep: [] };
+      const matches = String(line || "").match(/\[[^\]]+\]/g) || [];
+      for (const raw of matches) {
+        const inner = raw.slice(1, -1).trim();
+        if (!inner) continue;
 
-      // Examples:
-      // [MLS.R.1.A]
-      // [DESE: MLS.R.1.A]
-      // [IG: C.H.9.1]
-      // [IEP: C.H.9.1]
-      if (/^(MLS\.|DESE:)/i.test(inner)) {
-        tags.dese.push(inner.replace(/^DESE:\s*/i, "").trim());
-      } else if (/^(IG:|IEP:)/i.test(inner)) {
-        tags.iep.push(inner.replace(/^(IG:|IEP:)\s*/i, "").trim());
+        if (/^(MLS\.|DESE:)/i.test(inner)) {
+          tags.dese.push(inner.replace(/^DESE:\s*/i, "").trim());
+        } else if (/^(IG:|IEP:)/i.test(inner)) {
+          tags.iep.push(inner.replace(/^(IG:|IEP:)\s*/i, "").trim());
+        }
       }
-    }
-    return tags;
-  };
+      return tags;
+    };
 
-  const isSectionLine = (line) => /^\s*(LANGUAGE\s+ARTS|LIFE\s+SKILLS)\b/i.test(line);
-  const isQuestionLine = (line) => /^\s*(?:Q\s*)?\d+\s*[.)]\s*/i.test(line);
-  const isTagLine = (line) =>
-    /\[[^\]]+\]/.test(line) && (/\bMLS\./i.test(line) || /\bIG:/i.test(line) || /\bIEP:/i.test(line) || /\bDESE:/i.test(line));
+    const isSectionLine = (line) => /^\s*(LANGUAGE\s+ARTS|LIFE\s+SKILLS)\b/i.test(line);
+    const isQuestionLine = (line) => /^\s*(?:Q\s*)?\d+\s*[.)]\s*/i.test(line);
+    const isTagLine = (line) =>
+      /\[[^\]]+\]/.test(line) && (/\bMLS\./i.test(line) || /\bIG:/i.test(line) || /\bIEP:/i.test(line) || /\bDESE:/i.test(line));
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
 
-    if (isSectionLine(line)) {
-      startSection(line.trim());
-      pendingWR = null;
-      continue;
-    }
-
-    if (/^\s*WRITTEN\s+RESPONSE\b/i.test(line)) {
-      wrIndex += 1;
-      pendingWR = "WR" + wrIndex;
-      continue;
-    }
-
-    if (isQuestionLine(line)) {
-      const qm = line.match(/^\s*(?:Q\s*)?(\d+)\s*[.)]/i);
-      const qNum = qm ? qm[1] : "";
-      let tags = { dese: [], iep: [] };
-
-      // look ahead for the first tag line before the next question/section
-      for (let j = i + 1; j < lines.length; j++) {
-        const l2 = lines[j];
-        if (isQuestionLine(l2) || isSectionLine(l2)) break;
-        if (isTagLine(l2)) { tags = parseTagsFromLine(l2); break; }
+      if (isSectionLine(line)) {
+        startSection(line.trim());
+        pendingWR = null;
+        continue;
       }
 
-      addItem("Q" + qNum, tags);
-      pendingWR = null;
-      continue;
+      if (/^\s*WRITTEN\s+RESPONSE\b/i.test(line)) {
+        wrIndex += 1;
+        pendingWR = "WR" + wrIndex;
+        continue;
+      }
+
+      if (isQuestionLine(line)) {
+        const qm = line.match(/^\s*(?:Q\s*)?(\d+)\s*[.)]/i);
+        const qNum = qm ? qm[1] : "";
+        let tags = { dese: [], iep: [] };
+
+        for (let j = i + 1; j < lines.length; j++) {
+          const l2 = lines[j];
+          if (isQuestionLine(l2) || isSectionLine(l2)) break;
+          if (isTagLine(l2)) { tags = parseTagsFromLine(l2); break; }
+        }
+
+        addItem("Q" + qNum, tags);
+        pendingWR = null;
+        continue;
+      }
+
+      if (pendingWR && isTagLine(line)) {
+        addItem(pendingWR, parseTagsFromLine(line));
+        pendingWR = null;
+        continue;
+      }
     }
 
-    if (pendingWR && isTagLine(line)) {
-      addItem(pendingWR, parseTagsFromLine(line));
-      pendingWR = null;
-      continue;
+    let warn = 0;
+    let items = 0;
+    for (const s of out.sections) {
+      for (const it of (s.items || [])) {
+        items += 1;
+        if ((!it.dese || it.dese.length === 0) && (!it.iep || it.iep.length === 0)) {
+          out.warnings.push("No codes found for " + s.title + " " + it.key);
+          warn += 1;
+        }
+      }
     }
+    out.counts.sections = out.sections.length;
+    out.counts.items = items;
+    out.counts.warnings = warn;
+    return out;
   }
 
-  // warnings + counts
-  let warn = 0;
-  let items = 0;
-  for (const s of out.sections) {
-    for (const it of (s.items || [])) {
-      items += 1;
-      if ((!it.dese || it.dese.length === 0) && (!it.iep || it.iep.length === 0)) {
-        out.warnings.push("No codes found for " + s.title + " " + it.key);
-        warn += 1;
-      }
-    }
-  }
-  out.counts.sections = out.sections.length;
-  out.counts.items = items;
-  out.counts.warnings = warn;
-  return out;
-}
-
-async function onSaveDraft(e) {
+  async function onSaveDraft(e) {
     e.preventDefault();
     clearMsg();
 
@@ -419,11 +618,10 @@ async function onSaveDraft(e) {
 
     if (!title) return setMsg("err", "Title is required.");
     if (!className) return setMsg("err", "Class is required.");
-    // Mapping file is optional ONLY when we can auto-map from a tagged TXT upload.
     if (!mappingFile) {
       if (assignmentLink) return setMsg("err", "Mapping file is required when using a link.");
       if (assignmentFile && typeof rcIsTextFile === "function" && !rcIsTextFile(assignmentFile)) {
-        return setMsg("err", "Mapping file is required for non-TXT uploads (or use a tagged TXT).");
+        return setMsg("err", "Mapping file is required for non-text uploads (or use a tagged TXT/HTML/JSON/CSV).");
       }
     }
     if (!assignmentFile && !assignmentLink) return setMsg("err", "Assignment is required (file OR link).");
@@ -440,7 +638,6 @@ async function onSaveDraft(e) {
       mapping: { kind: (mappingFile ? "file" : "auto"), name: (mappingFile ? mappingFile.name : "auto-mapping.json"), text: null },
     };
 
-    // Mapping text (required) — but keep size sane
     let mappingText = null;
     if (mappingFile) {
       mappingText = await readFileAsText(mappingFile);
@@ -449,13 +646,16 @@ async function onSaveDraft(e) {
       }
       draft.mapping.text = mappingText;
     } else {
-      // Auto-map from tags in the teacher TXT when no mapping file is provided.
       let assignmentTextRaw = "";
       if (assignmentFile && typeof rcIsTextFile === "function" && rcIsTextFile(assignmentFile)) {
         try { assignmentTextRaw = await assignmentFile.text(); } catch (_) { /* noop */ }
       }
       const autoMapping = (typeof autoMapFromTeacherTxt === "function") ? autoMapFromTeacherTxt(assignmentTextRaw) : null;
-      mappingText = JSON.stringify(autoMapping || { version: 1, sections: [], warnings: ["Auto-mapping unavailable"], counts: { sections: 0, items: 0, warnings: 1 } }, null, 2);
+      mappingText = JSON.stringify(
+        autoMapping || { version: 1, sections: [], warnings: ["Auto-mapping unavailable"], counts: { sections: 0, items: 0, warnings: 1 } },
+        null,
+        2
+      );
       if (bytesOf(mappingText) > MAX_TEXT_BYTES) {
         return setMsg("err", "Auto-generated mapping is too large for MVP local storage.");
       }
@@ -465,20 +665,18 @@ async function onSaveDraft(e) {
       setMsg(w ? "warn" : "ok", "Auto-mapped " + n + " item(s) from tags" + (w ? " (" + w + " missing-code warning(s))" : ""));
     }
 
-    // Assignment: prefer link; file stored only if small
     if (assignmentLink) {
       draft.assignment.kind = "link";
       draft.assignment.link = assignmentLink;
     } else if (assignmentFile) {
       const assignmentText = await readFileAsText(assignmentFile);
+      draft.assignment.kind = "file";
+      draft.assignment.name = assignmentFile.name;
+
       if (bytesOf(assignmentText) > MAX_TEXT_BYTES) {
-        // store metadata only
-        draft.assignment.kind = "file";
-        draft.assignment.name = assignmentFile.name;
-        draft.assignment.text = null;
+        // store a bounded preview (so Preview isn't blank)
+        draft.assignment.text = assignmentText.slice(0, 120000) + "\n…(truncated for MVP)\n";
       } else {
-        draft.assignment.kind = "file";
-        draft.assignment.name = assignmentFile.name;
         draft.assignment.text = assignmentText;
       }
     }
@@ -499,16 +697,16 @@ async function onSaveDraft(e) {
     const dlBtn = $("btnDownloadOne");
     if (!overlay || !closeBtn || !dlBtn) return;
 
-    closeBtn?.addEventListener("click", closePreview);
-    dlBtn?.addEventListener("click", () => {
+    closeBtn.addEventListener("click", closePreview);
+    dlBtn.addEventListener("click", () => {
       if (previewingId) exportOne(previewingId);
     });
 
-    overlay?.addEventListener("click", (e) => {
+    overlay.addEventListener("click", (e) => {
       if (e.target === overlay) closePreview();
     });
 
-    document?.addEventListener("keydown", (e) => {
+    document.addEventListener("keydown", (e) => {
       if (e.key === "Escape" && !overlay.hidden) closePreview();
     });
   }
@@ -517,628 +715,325 @@ async function onSaveDraft(e) {
     const drafts = readDrafts();
     renderTable(drafts);
 
-    $("workDraftForm")?.addEventListener("submit", onSaveDraft);
-    $("btnExportAll")?.addEventListener("click", exportAll);
-    $("btnClearAll")?.addEventListener("click", clearAll);
-    $("btnFillExample")?.addEventListener("click", fillExample);
+    $("workDraftForm").addEventListener("submit", onSaveDraft);
+    $("btnExportAll").addEventListener("click", exportAll);
+    $("btnClearAll").addEventListener("click", clearAll);
+    $("btnFillExample").addEventListener("click", fillExample);
 
     wireModal();
   }
 
-  if (document.readyState === "loading") document?.addEventListener("DOMContentLoaded", init);
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else init();
 })();
 
 
-
-
-
-
-
-/* rc-tc-work-qol patch: cleanup duplicates + hide accidental dump + modal button delegation */
+// BEGIN rc-work-mega-ux v1
 (() => {
-  try {
-    if (!location.pathname.startsWith("/teacher/work")) return;
+  if (window.__rcWorkMegaUxV1) return;
+  window.__rcWorkMegaUxV1 = true;
 
-    // Style patch (keeps toggles from looking like they were dropped from orbit)
-    const styleId = "rcTcWorkQolPatchStyle";
-    if (!document.getElementById(styleId)) {
-      const s = document.createElement("style");
-      s.id = styleId;
-      s.textContent = `
-        #rcQolControls { display:flex; flex-wrap:wrap; gap:16px; align-items:center; justify-content:center; margin:10px 0 6px; }
-        #rcQolControls label { display:flex; gap:8px; align-items:center; font-size:12px; opacity:.95; }
-        #rcQolControls input[type="checkbox"] { transform: translateY(1px); }
-      `;
-      document.head.appendChild(s);
-    }
+  const DRAFT_KEY = "rc_tc_work_drafts_v1";
 
-    const cleanup = () => {
-      // Remove duplicate controls blocks if injected multiple times
-      const blocks = document.querySelectorAll("#rcQolControls");
-      blocks.forEach((b, idx) => { if (idx > 0) b.remove(); });
+  const CANON_CLASSES = [
+    "LA 1 SC",
+    "LA 2 SC",
+    "LA 3 SC",
+    "LA 4 SC",
+    "Life Skills",
+    "Life Skills LA",
+  ];
 
-      // Hide/remove any accidental DOM dump of the QOL script itself
-      const bad = Array.from(document.querySelectorAll("pre, code, textarea, div"))
-        .filter(el => (el.textContent || "").includes("BEGIN rc-tc-work-qol"));
-      bad.forEach(el => { el.style.display = "none"; el.setAttribute("data-rc-qol-hidden", "1"); });
-    };
+  const LA_TOKENS = /\b(la|ela)\b|english\s+language\s+arts|language\s+arts/i;
 
-    const onReady = (fn) => {
-      if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", fn, { once:true });
-      else fn();
-    };
-
-    onReady(() => {
-      cleanup();
-      setTimeout(cleanup, 400);
-      setTimeout(cleanup, 1200);
-    });
-
-    // Modal button delegation: makes the "Enable Mega / Treat single / Exit" buttons work even if they were created without listeners.
-    if (!window.__RC_TC_WORK_QOL_MODAL_DELEGATE__) {
-      window.__RC_TC_WORK_QOL_MODAL_DELEGATE__ = true;
-      document.addEventListener("click", (e) => {
-        const btn = e.target.closest("button");
-        if (!btn) return;
-
-        const t = (btn.textContent || "").trim();
-        if (t === "Enable Mega (split on Save)") {
-          localStorage.setItem("rc_tc_work_mega_split", "1");
-          document.querySelector("#rcQolHeaderModal, #rcMegaModal, .rc-qol-modal-backdrop")?.remove?.();
-        } else if (t === "Treat as single-class anyway") {
-          localStorage.setItem("rc_tc_work_mega_split", "0");
-          document.querySelector("#rcQolHeaderModal, #rcMegaModal, .rc-qol-modal-backdrop")?.remove?.();
-        } else if (t === "Exit") {
-          document.querySelector("#rcQolHeaderModal, #rcMegaModal, .rc-qol-modal-backdrop")?.remove?.();
-        }
-      }, true);
-    }
-  } catch (err) {
-    console.warn("[tc-work-qol patch] failed", err);
-  }
-})();
-
-// BEGIN rc-tc-work-unified v3
-(() => {
-  const BUILD = "2025-12-31-v3b";
-  const PATH_OK =
-    location.pathname === "/teacher/work/" ||
-    location.pathname === "/teacher/work" ||
-    location.pathname.startsWith("/teacher/work");
-
-  if (!PATH_OK) return;
-  if (window.__RC_TC_WORK_UNIFIED_V3__) return;
-  window.__RC_TC_WORK_UNIFIED_V3__ = true;
-
-  const log = (...a) => console.debug("[tc-work v3]", ...a);
-
-  // ---------- Style ----------
-  const ensureStyle = () => {
-    if (document.getElementById("rcTcWorkUnifiedV3Style")) return;
-    const css = `
-      #rcWorkOptionsRowV3 {
-        display: flex;
-        gap: 14px;
-        align-items: center;
-        flex-wrap: wrap;
-        margin-top: 10px;
-        padding: 10px 12px;
-        border: 1px solid rgba(255,255,255,.10);
-        border-radius: 12px;
-        background: rgba(0,0,0,.18);
-      }
-      #rcWorkOptionsRowV3 .rcOptGroup {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 6px 10px;
-        border: 1px solid rgba(255,255,255,.10);
-        border-radius: 999px;
-        background: rgba(0,0,0,.10);
-      }
-      #rcWorkOptionsRowV3 input[type="checkbox"] { transform: translateY(1px); }
-      #rcWorkOptionsRowV3 .rcOptLabel { font-size: 12px; opacity: .95; }
-      #rcWorkMultiSelectWrapV3 {
-        display: none;
-        width: 100%;
-        margin-top: 10px;
-      }
-      #rcWorkMultiSelectWrapV3 select[multiple] {
-        width: 100%;
-        min-height: 120px;
-        border-radius: 12px;
-        border: 1px solid rgba(255,255,255,.10);
-        background: rgba(0,0,0,.12);
-        color: inherit;
-        padding: 8px;
-      }
-      dialog#rcWorkPreviewDialogV3 {
-        width: min(920px, calc(100vw - 40px));
-        border: 1px solid rgba(255,255,255,.16);
-        border-radius: 16px;
-        background: rgba(8,10,12,.92);
-        color: inherit;
-        padding: 0;
-      }
-      #rcWorkPreviewDialogV3 .rcHdr {
-        display:flex; justify-content: space-between; align-items:center;
-        padding: 14px 16px;
-        border-bottom: 1px solid rgba(255,255,255,.10);
-      }
-      #rcWorkPreviewDialogV3 .rcHdr h3 { margin:0; font-size: 16px; }
-      #rcWorkPreviewDialogV3 .rcBody { padding: 14px 16px; max-height: 72vh; overflow:auto; }
-      #rcWorkPreviewDialogV3 .qCard {
-        border: 1px solid rgba(255,255,255,.10);
-        border-radius: 14px;
-        padding: 12px;
-        margin: 10px 0;
-        background: rgba(255,255,255,.04);
-      }
-      #rcWorkPreviewDialogV3 .qStem { font-weight: 700; margin-bottom: 10px; }
-      #rcWorkPreviewDialogV3 .qOpt { display:flex; gap:10px; align-items:flex-start; margin: 8px 0; }
-      #rcWorkPreviewDialogV3 textarea {
-        width:100%;
-        min-height: 180px;
-        border-radius: 12px;
-        border: 1px solid rgba(255,255,255,.10);
-        background: rgba(0,0,0,.12);
-        color: inherit;
-        padding: 10px;
-      }
-      #rcWorkPreviewDialogV3 .btn {
-        border: 1px solid rgba(255,255,255,.14);
-        background: rgba(255,255,255,.06);
-        color: inherit;
-        border-radius: 999px;
-        padding: 8px 12px;
-        cursor: pointer;
-      }
-    `;
-    const st = document.createElement("style");
-    st.id = "rcTcWorkUnifiedV3Style";
-    st.textContent = css;
-    document.head.appendChild(st);
-  };
-  ensureStyle();
-
-  // ---------- 1) Nuke accidental on-page source dump ----------
-  const removeSourceDump = () => {
-    const needles = ["BEGIN rc-", "rc-tc-work-qol", "rc-work-mega-ux", "rc-work-fixes"];
-    const nodes = Array.from(document.querySelectorAll("pre, code, div, p, section, article"))
-      .filter(n => n && typeof n.textContent === "string")
-      .filter(n => (n.textContent || "").length > 1500)
-      .filter(n => needles.some(x => (n.textContent || "").includes(x)));
-
-    for (const n of nodes) {
-      const t = (n.textContent || "").trimStart();
-      if (
-        t.startsWith("/*") ||
-        t.startsWith("//") ||
-        t.includes("(() => {") ||
-        t.includes("document.addEventListener")
-      ) n.remove();
-    }
-  };
-  removeSourceDump();
-  new MutationObserver(removeSourceDump).observe(document.documentElement, { subtree: true, childList: true });
-
-  // ---------- Helpers ----------
-  const byText = (sel, re) =>
-    Array.from(document.querySelectorAll(sel)).find(el => re.test((el.textContent || "").trim()));
-
-  const findControlByLabel = (labelRe) => {
-    const lab = byText("label", labelRe);
-    if (!lab) return null;
-    const forId = lab.getAttribute("for");
-    if (forId) return document.getElementById(forId);
-    return lab.closest(".form-field, .field, .input, .form-group, .row, div")?.querySelector("input, select, textarea") || null;
-  };
-
-  const findClassSelect = () => {
-    const s = findControlByLabel(/class/i);
-    if (s && s.tagName === "SELECT") return s;
-    const sels = Array.from(document.querySelectorAll("select"));
-    return sels.find(x => Array.from(x.options || []).some(o => /LA\s*\d/i.test((o.textContent || "")))) || null;
-  };
-
-  const classSel = findClassSelect();
-  const saveBtn = byText("button", /save draft/i);
-
-  if (!classSel || !saveBtn) {
-    log("Missing class select or Save Draft button; will retry.");
-    new MutationObserver(() => {
-      const cs = findClassSelect();
-      const sb = byText("button", /save draft/i);
-      if (cs && sb) location.reload();
-    }).observe(document.documentElement, { subtree: true, childList: true });
-    return;
+  function norm(s) {
+    return String(s || "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, " ")
+      .trim();
   }
 
-  const ensureLifeSkillsOptions = () => {
-    const texts = Array.from(classSel.options || []).map(o => (o.textContent || "").trim());
-    if (!texts.includes("Life Skills")) {
-      const opt = document.createElement("option");
-      opt.value = "Life Skills";
-      opt.textContent = "Life Skills";
-      classSel.appendChild(opt);
-    }
-    if (!texts.includes("Life Skills LA")) {
-      const opt = document.createElement("option");
-      opt.value = "Life Skills LA";
-      opt.textContent = "Life Skills LA";
-      classSel.appendChild(opt);
-    }
-  };
-  ensureLifeSkillsOptions();
+  function normalizeHeaderToClass(rawHeader) {
+    const t = norm(rawHeader);
 
-  const scanCheckboxes = () => {
-    const cbs = Array.from(document.querySelectorAll('input[type="checkbox"]'));
-    const meta = cbs.map(cb => {
-      const label = cb.closest("label");
-      const t = (label?.textContent || cb.parentElement?.textContent || "").replace(/\s+/g, " ").trim();
-      return { cb, t };
-    });
-    const mega = meta.find(m => /mega/i.test(m.t) && /multi|class/i.test(m.t))?.cb || null;
-    const apply = meta.find(m => /apply/i.test(m.t) && /multiple classes/i.test(m.t))?.cb || null;
-    return { mega, apply, meta };
-  };
+    const hasLifeSkills = t.includes("life") && t.includes("skills");
+    const hasLA = LA_TOKENS.test(t);
 
-  // ---------- 2) Deduplicate multi-class controls + mount one clean row ----------
-  const mountRow = () => {
-    ensureStyle();
-    ensureLifeSkillsOptions();
+    if (hasLifeSkills && hasLA) return "Life Skills LA";
+    if (hasLifeSkills) return "Life Skills";
 
-    const { mega, apply, meta } = scanCheckboxes();
+    const m = t.match(/\b(?:la|ela|language\s+arts|english\s+language\s+arts)\s*([1-4])\b/);
+    if (m && m[1]) return `LA ${m[1]} SC`;
 
-    for (const m of meta) {
-      const t = (m.t || "").toLowerCase();
-      const isMega = t.includes("mega") && (t.includes("multi") || t.includes("class"));
-      const isApply = t.includes("apply") && t.includes("multiple classes");
-      const shouldHide = (isMega && mega && m.cb !== mega) || (isApply && apply && m.cb !== apply);
+    return null;
+  }
 
-      if (shouldHide) {
-        const wrap = m.cb.closest("label") || m.cb.parentElement;
-        if (wrap) wrap.style.display = "none";
-      }
-    }
+  function ensureClassDropdown() {
+    const sel = document.getElementById("className");
+    if (!sel) return;
 
-    let row = document.getElementById("rcWorkOptionsRowV3");
-    if (!row) {
-      row = document.createElement("div");
-      row.id = "rcWorkOptionsRowV3";
+    try { sel.required = false; } catch (e) { /* ignore */ }
 
-      const g1 = document.createElement("div");
-      g1.className = "rcOptGroup";
-      const cbApply = document.createElement("input");
-      cbApply.type = "checkbox";
-      cbApply.id = "rcApplyMultiV3";
-      const lbApply = document.createElement("label");
-      lbApply.className = "rcOptLabel";
-      lbApply.setAttribute("for", cbApply.id);
-      lbApply.textContent = "Apply to multiple classes";
-      g1.append(cbApply, lbApply);
-
-      const g2 = document.createElement("div");
-      g2.className = "rcOptGroup";
-      const cbMega = document.createElement("input");
-      cbMega.type = "checkbox";
-      cbMega.id = "rcMegaSplitV3";
-      const lbMega = document.createElement("label");
-      lbMega.className = "rcOptLabel";
-      lbMega.setAttribute("for", cbMega.id);
-      lbMega.textContent = "Mega-split by class headers (TXT)";
-      g2.append(cbMega, lbMega);
-
-      const hint = document.createElement("div");
-      hint.style.fontSize = "12px";
-      hint.style.opacity = ".85";
-      hint.textContent = "Clean controls only — underlying logic still uses the original checkboxes.";
-
-      row.append(g1, g2, hint);
-
-      const wrap = document.createElement("div");
-      wrap.id = "rcWorkMultiSelectWrapV3";
-      wrap.innerHTML = '<div style="font-size:12px; opacity:.85; margin-bottom:8px;">Choose classes:</div>';
-      const sel = document.createElement("select");
-      sel.id = "rcMultiSelectV3";
-      sel.multiple = true;
-      wrap.appendChild(sel);
-      row.appendChild(wrap);
-
-      const host = classSel.closest(".form-field, .field, .input, .form-group, .row, div") || classSel.parentElement;
-      (host?.parentElement || host).appendChild(row);
-    }
-
-    const ms = document.getElementById("rcMultiSelectV3");
-    if (ms && ms.options.length === 0) {
-      const opts = Array.from(classSel.options || [])
-        .map(o => ({ value: o.value, text: (o.textContent || "").trim() }))
-        .filter(o => o.text && !/select/i.test(o.text))
-        .filter(o => o.value !== "");
-      for (const o of opts) {
+    const existing = new Set(Array.from(sel.options || []).map(o => o.value));
+    for (const c of CANON_CLASSES) {
+      if (!existing.has(c)) {
         const opt = document.createElement("option");
-        opt.value = o.value;
-        opt.textContent = o.text;
-        ms.appendChild(opt);
+        opt.value = c;
+        opt.textContent = c;
+        sel.appendChild(opt);
+      }
+    }
+  }
+
+  function ensureMegaCheckbox() {
+    const sel = document.getElementById("className");
+    if (!sel) return;
+
+    if (document.getElementById("rcMegaMode")) return;
+
+    const wrap = document.createElement("label");
+    wrap.style.display = "flex";
+    wrap.style.alignItems = "center";
+    wrap.style.gap = "8px";
+    wrap.style.marginTop = "6px";
+    wrap.style.userSelect = "none";
+
+    wrap.innerHTML = `
+      <input type="checkbox" id="rcMegaMode" />
+      <span>Multi-class mega TXT (auto-split; no single class selection)</span>
+    `;
+
+    sel.insertAdjacentElement("afterend", wrap);
+
+    const cb = document.getElementById("rcMegaMode");
+
+    const sync = () => {
+      if (!cb) return;
+      if (cb.checked) {
+        sel.value = "";
+        sel.disabled = true;
+      } else {
+        sel.disabled = false;
+      }
+    };
+
+    cb.addEventListener("change", sync);
+    sync();
+  }
+
+  function getFormEl(id, fallbackSelector) {
+    return document.getElementById(id) || (fallbackSelector ? document.querySelector(fallbackSelector) : null);
+  }
+
+  function getVal(el) {
+    return el ? String(el.value || "").trim() : "";
+  }
+
+  function toIsoMaybe(v) {
+    if (!v) return null;
+    const d = new Date(v);
+    return Number.isNaN(d.getTime()) ? null : d.toISOString();
+  }
+
+  function pickFileInputs(form) {
+    const inputs = Array.from(form.querySelectorAll('input[type="file"]'));
+    const assignment = getFormEl("assignmentFile", null) || inputs[0] || null;
+    const mapping = getFormEl("mappingFile", null) || inputs[1] || null;
+    return { assignment, mapping };
+  }
+
+  async function readFileText(file) {
+    return String(await file.text());
+  }
+
+  function parseMegaSections(text) {
+    const lines = String(text || "").split(/\r?\n/);
+    const isSep = (ln) => /^\s*={3,}\s*$/.test(ln);
+
+    const hits = [];
+    for (let i = 0; i < lines.length; i++) {
+      if (!isSep(lines[i])) continue;
+
+      let h = i - 1;
+      while (h >= 0 && lines[h].trim() === "" && i - h <= 3) h--;
+      const rawHeader = h >= 0 ? lines[h].trim() : "";
+      const cls = normalizeHeaderToClass(rawHeader);
+      if (!cls) continue;
+
+      hits.push({ cls, sepIndex: i });
+    }
+
+    if (hits.length < 2) return [];
+
+    const sections = [];
+    for (let j = 0; j < hits.length; j++) {
+      const start = hits[j].sepIndex + 1;
+      const end = (j + 1 < hits.length) ? (hits[j + 1].sepIndex - 1) : lines.length;
+      const body = lines.slice(start, end).join("\n").trim();
+      sections.push({ cls: hits[j].cls, body });
+    }
+    return sections;
+  }
+
+  function looksMega(text) {
+    return parseMegaSections(text).length >= 2;
+  }
+
+  function loadDrafts() {
+    try { return JSON.parse(localStorage.getItem(DRAFT_KEY) || "[]"); }
+    catch (e) { return []; }
+  }
+
+  function saveDrafts(ds) {
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(ds));
+  }
+
+  function makeId() {
+    return "d_" + Math.random().toString(36).slice(2, 10) + "_" + Date.now().toString(36);
+  }
+
+  function titleIncludesClass(title, cls) {
+    return norm(title).includes(norm(cls));
+  }
+
+  async function splitMegaFromCurrentForm() {
+    const form = document.getElementById("workDraftForm");
+    if (!form) return;
+
+    const titleEl = getFormEl("title", 'input[name="title"]');
+    const classSel = getFormEl("className", 'select[name="className"]');
+    const releaseEl = getFormEl("releaseAt", 'input[name="releaseAt"]');
+    const dueEl = getFormEl("dueAt", 'input[name="dueAt"]');
+    const notesEl = getFormEl("notes", 'textarea[name="notes"]');
+
+    const { assignment: aIn, mapping: mIn } = pickFileInputs(form);
+    const aFile = aIn && aIn.files && aIn.files[0] ? aIn.files[0] : null;
+    const mFile = mIn && mIn.files && mIn.files[0] ? mIn.files[0] : null;
+
+    if (!aFile) {
+      alert("Choose a mega TXT assignment file first.");
+      return;
+    }
+
+    const raw = await readFileText(aFile);
+    const sections = parseMegaSections(raw);
+
+    if (sections.length < 2) {
+      alert("That file doesn’t look like a multi-class mega TXT (need 2+ recognizable class headers).");
+      return;
+    }
+
+    const baseTitle = getVal(titleEl) || aFile.name;
+    const notes = getVal(notesEl) || "";
+    const releaseAt = toIsoMaybe(getVal(releaseEl));
+    const dueAt = toIsoMaybe(getVal(dueEl));
+
+    let mappingText = null;
+    if (mFile) {
+      try {
+        const mt = await readFileText(mFile);
+        mappingText = mt.length > 120000 ? (mt.slice(0, 120000) + "\n…(truncated)\n") : mt;
+      } catch (e) {
+        console.warn("Mapping read failed:", e);
       }
     }
 
-    const { mega: megaCb, apply: applyCb } = scanCheckboxes();
-    const cbApplyUI = document.getElementById("rcApplyMultiV3");
-    const cbMegaUI = document.getElementById("rcMegaSplitV3");
-    const msWrap = document.getElementById("rcWorkMultiSelectWrapV3");
-
-    if (cbApplyUI && applyCb) cbApplyUI.checked = !!applyCb.checked;
-    if (cbMegaUI && megaCb) cbMegaUI.checked = !!megaCb.checked;
-    if (msWrap) msWrap.style.display = (cbApplyUI?.checked ? "block" : "none");
-
-    cbApplyUI?.addEventListener("change", () => {
-      if (applyCb) {
-        applyCb.checked = cbApplyUI.checked;
-        applyCb.dispatchEvent(new Event("change", { bubbles: true }));
-      }
-      if (msWrap) msWrap.style.display = (cbApplyUI.checked ? "block" : "none");
-    });
-
-    cbMegaUI?.addEventListener("change", () => {
-      if (megaCb) {
-        megaCb.checked = cbMegaUI.checked;
-        megaCb.dispatchEvent(new Event("change", { bubbles: true }));
-      }
-    });
-  };
-
-  mountRow();
-  new MutationObserver(() => mountRow()).observe(document.documentElement, { subtree: true, childList: true });
-
-  // ---------- 3) Fix modal buttons that sometimes become dead ----------
-  const closeNearestDialog = (el) => {
-    const dlg = el?.closest?.("dialog");
-    if (dlg && dlg.open) dlg.close();
-  };
-
-  document.addEventListener("click", (e) => {
-    const btn = e.target.closest("button");
-    if (!btn) return;
-    const t = (btn.textContent || "").trim().toLowerCase();
-
-    if (t.includes("enable mega")) {
-      e.preventDefault(); e.stopPropagation();
-      document.getElementById("rcMegaSplitV3")?.click();
-      closeNearestDialog(btn);
-      return;
-    }
-    if (t.includes("treat as single-class")) {
-      e.preventDefault(); e.stopPropagation();
-      const megaUI = document.getElementById("rcMegaSplitV3");
-      if (megaUI && megaUI.checked) megaUI.click();
-      closeNearestDialog(btn);
-      return;
-    }
-    if (t === "exit" || t === "close") {
-      e.preventDefault(); e.stopPropagation();
-      closeNearestDialog(btn);
-      return;
-    }
-  }, true);
-
-  // ---------- 4) Draft Preview/Edit takeover ----------
-  const DRAFTS_KEY = "rc_tc_work_drafts_v1";
-  const safeJson = (s) => { try { return JSON.parse(s); } catch (err) { return null; } };
-  const loadDrafts = () => {
-    const raw = localStorage.getItem(DRAFTS_KEY);
-    const val = safeJson(raw);
-    if (!val) return [];
-    if (Array.isArray(val)) return val;
-    if (typeof val === "object") return Object.values(val);
-    return [];
-  };
-
-  const norm = (s) => (s || "").toLowerCase().replace(/\s+/g, " ").trim();
-  const draftTitle = (d) => d?.title || d?.name || d?.draftTitle || d?.assignmentTitle || "";
-  const draftClass = (d) => d?.classLabel || d?.class || d?.className || d?.class_name || d?.classId || d?.class_id || "";
-  const draftText  = (d) => d?.assignmentText || d?.assignment || d?.text || d?.content || d?.body || d?.sourceText || "";
-
-  const findDraftFromCard = (card) => {
-    const lines = (card?.innerText || "").split("\n").map(x => x.trim()).filter(Boolean);
-    const titleGuess = lines[0] || "";
-    const classGuess = lines.find(x => /^LA\s*\d+\s*SC$/i.test(x) || /^life skills/i.test(x)) || "";
+    const ensureBound = (t) => (t && t.length > 120000 ? (t.slice(0, 120000) + "\n…(truncated)\n") : (t || ""));
 
     const drafts = loadDrafts();
-    const tN = norm(titleGuess);
-    const cN = norm(classGuess);
 
-    return drafts.find(d => norm(draftTitle(d)) === tN && (!cN || norm(draftClass(d)) === cN))
-        || drafts.find(d => norm(draftTitle(d)) === tN)
-        || null;
-  };
+    for (const sec of sections) {
+      const cls = sec.cls;
+      const chunk = `${cls}\n===\n${sec.body}\n`;
 
-  const ensurePreviewDialog = () => {
-    let dlg = document.getElementById("rcWorkPreviewDialogV3");
-    if (dlg) return dlg;
+      const t = titleIncludesClass(baseTitle, cls) ? baseTitle : `${baseTitle} — ${cls}`;
 
-    dlg = document.createElement("dialog");
-    dlg.id = "rcWorkPreviewDialogV3";
-    dlg.innerHTML = `
-      <div class="rcHdr">
-        <h3 id="rcWorkPreviewTitleV3">Preview</h3>
-        <button class="btn" type="button" data-rc-close="1">Close</button>
-      </div>
-      <div class="rcBody" id="rcWorkPreviewBodyV3"></div>
-    `;
-    document.body.appendChild(dlg);
-
-    dlg.addEventListener("click", (e) => {
-      if (e.target?.getAttribute?.("data-rc-close") === "1") dlg.close();
-    });
-
-    return dlg;
-  };
-
-  const parseItems = (text) => {
-    const lines = String(text || "").split(/\r?\n/);
-    const items = [];
-    let cur = null;
-
-    const pushCur = () => { if (cur) items.push(cur); cur = null; };
-    const start = (kind, stem) => { pushCur(); cur = { kind, stem: (stem || "").trim(), opts: [] }; };
-
-    for (const raw of lines) {
-      const s = (raw || "").trim();
-      if (!s) continue;
-
-      if (/written response|short answer|paragraph/i.test(s)) {
-        start("wr", s);
-        continue;
-      }
-
-      // eslint-friendly + actually-correct regex (no double escaping)
-      const q = s.match(/^(\d+)\s*[.)\-:]\s*(.+)$/);
-      if (q) { start("mc", q[2]); continue; }
-
-      const o = s.match(/^[A-C]\s*[.)\-:]\s*(.+)$/);
-      if (o) {
-        if (!cur) start("mc", "Question");
-        cur.opts.push(o[1]);
-        continue;
-      }
-
-      if (!cur) start("text", s);
-      else cur.stem = cur.stem ? (cur.stem + " " + s) : s;
+      drafts.unshift({
+        id: makeId(),
+        title: t,
+        className: cls,
+        releaseAt,
+        dueAt,
+        createdAt: new Date().toISOString(),
+        notes,
+        assignment: {
+          kind: "file",
+          name: aFile.name,
+          link: null,
+          text: ensureBound(chunk), // ✅ canonical field (preview expects .text)
+        },
+        mapping: {
+          name: mFile ? mFile.name : null,
+          kind: mFile ? "file" : null,
+          link: null,
+          text: ensureBound(mappingText), // ✅ canonical field
+        },
+      });
     }
 
-    pushCur();
-    if (!items.length && text) return [{ kind: "text", stem: String(text), opts: [] }];
-    return items;
-  };
+    saveDrafts(drafts);
 
-  const renderStudentishPreview = (draft) => {
-    const dlg = ensurePreviewDialog();
-    const title = `${draftTitle(draft) || "Draft"} — ${draftClass(draft) || "Class"}`;
-    dlg.querySelector("#rcWorkPreviewTitleV3").textContent = title;
+    const cb = document.getElementById("rcMegaMode");
+    if (cb && classSel) {
+      classSel.value = "";
+      classSel.disabled = true;
+    }
 
-    const body = dlg.querySelector("#rcWorkPreviewBodyV3");
-    body.innerHTML = "";
+    alert(`Created ${sections.length} drafts (one per class).`);
+    location.reload();
+  }
 
-    const text = draftText(draft);
+  function wire() {
+    const form = document.getElementById("workDraftForm");
+    const btn = document.getElementById("btnSplitMega");
 
-    if (!text) {
-      const pre = document.createElement("pre");
-      pre.textContent = "No assignment text found for this draft.";
-      pre.style.whiteSpace = "pre-wrap";
-      body.appendChild(pre);
-    } else {
-      const items = parseItems(text);
-      let idx = 0;
+    ensureClassDropdown();
+    ensureMegaCheckbox();
 
-      for (const it of items) {
-        idx += 1;
-        const card = document.createElement("div");
-        card.className = "qCard";
+    const classSel = document.getElementById("className");
+    const cb = document.getElementById("rcMegaMode");
 
-        const stem = document.createElement("div");
-        stem.className = "qStem";
-        stem.textContent = `${idx}. ${it.stem}`;
-        card.appendChild(stem);
-
-        if (it.kind === "mc" && it.opts.length) {
-          const group = `q${idx}_${Math.random().toString(16).slice(2)}`;
-          for (const opt of it.opts.slice(0, 6)) {
-            const row = document.createElement("label");
-            row.className = "qOpt";
-            row.innerHTML = `<input type="radio" name="${group}"><span>${opt}</span>`;
-            card.appendChild(row);
+    if (form) {
+      const { assignment: aIn } = pickFileInputs(form);
+      if (aIn) {
+        aIn.addEventListener("change", async () => {
+          try {
+            const f = aIn.files && aIn.files[0] ? aIn.files[0] : null;
+            if (!f || !cb || !classSel) return;
+            const txt = await readFileText(f);
+            if (looksMega(txt)) {
+              cb.checked = true;
+              classSel.value = "";
+              classSel.disabled = true;
+            }
+          } catch (e) {
+            console.warn("Mega auto-detect failed:", e);
           }
-        } else if (it.kind === "wr") {
-          const ta = document.createElement("textarea");
-          ta.placeholder = "Student written response… (teacher preview)";
-          card.appendChild(ta);
-        } else {
-          const pre = document.createElement("pre");
-          pre.textContent = it.stem;
-          pre.style.whiteSpace = "pre-wrap";
-          pre.style.margin = "0";
-          pre.style.opacity = ".95";
-          card.appendChild(pre);
-        }
-
-        body.appendChild(card);
+        });
       }
     }
 
-    // Ensure modal can be opened repeatedly without InvalidStateError
-    try { if (dlg.open) dlg.close(); } catch (err) { /* ignore */ }
-    dlg.showModal();
-  };
-
-  const fillFormFromDraft = (draft) => {
-    const titleInput =
-      findControlByLabel(/title/i) ||
-      document.querySelector('input[type="text"]');
-
-    const linkInput =
-      document.querySelector('input[type="url"]') ||
-      document.querySelector('input[placeholder^="https://"]');
-
-    const notes =
-      findControlByLabel(/notes/i) ||
-      document.querySelector("textarea");
-
-    if (titleInput) titleInput.value = draftTitle(draft) || "";
-
-    const want = norm(draftClass(draft));
-    if (want) {
-      const opt = Array.from(classSel.options || []).find(o =>
-        norm((o.textContent || "")) === want || norm(o.value) === want
-      );
-      if (opt) {
-        classSel.value = opt.value;
-        classSel.dispatchEvent(new Event("change", { bubbles: true }));
-      }
+    if (btn) {
+      try { btn.type = "button"; } catch (e) { /* ignore */ }
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        splitMegaFromCurrentForm().catch(err => console.warn(err));
+      }, true);
     }
 
-    if (linkInput) {
-      const link = draft?.link || draft?.assignmentLink || draft?.url || "";
-      if (link) linkInput.value = link;
+    if (form) {
+      form.addEventListener("submit", (e) => {
+        const isMega = !!(cb && cb.checked);
+        if (!isMega) return;
+
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        splitMegaFromCurrentForm().catch(err => console.warn(err));
+      }, true);
     }
+  }
 
-    if (notes) notes.value = draft?.notes || draft?.teacherNotes || "";
-
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  const findDraftCard = (btn) => {
-    let el = btn.closest("tr") || btn.closest('[role="row"]') || btn.closest("div");
-    while (el && el !== document.body) {
-      const txt = (el.innerText || "");
-      if (/release:/i.test(txt) && /preview/i.test(txt) && /export/i.test(txt)) return el;
-      el = el.parentElement;
-    }
-    return null;
-  };
-
-  document.addEventListener("click", (e) => {
-    const btn = e.target.closest("button");
-    if (!btn) return;
-
-    const label = (btn.textContent || "").trim().toLowerCase();
-    if (label !== "preview" && label !== "edit") return;
-
-    const card = findDraftCard(btn);
-    if (!card) return;
-
-    const draft = findDraftFromCard(card);
-    if (!draft) return;
-
-    e.preventDefault();
-    e.stopPropagation();
-
-    if (label === "preview") renderStudentishPreview(draft);
-    if (label === "edit") fillFormFromDraft(draft);
-  }, true);
-
-  log("build", BUILD);
+  window.addEventListener("DOMContentLoaded", wire);
 })();
-// END rc-tc-work-unified v3
-
+// END rc-work-mega-ux v1
