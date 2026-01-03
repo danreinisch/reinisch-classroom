@@ -1,9 +1,17 @@
 (() => {
-  const DEBUG =
-    localStorage.getItem("rc_debug_auth") === "1" ||
-    new URLSearchParams(location.search).has("rc_debug_auth");
+  const qs = new URLSearchParams(location.search);
+const DEBUG = (
+  localStorage.getItem("rc_debug_auth") === "1" ||
+  qs.get("rc_debug_auth") === "1"
+);
 
-  const next = encodeURIComponent(location.pathname + location.search);
+// If debug was enabled via URL param, strip it so it doesn’t linger.
+if (qs.has("rc_debug_auth")) {
+  qs.delete("rc_debug_auth");
+  const q = qs.toString();
+  history.replaceState({}, "", location.pathname + (q ? ("?" + q) : "") + location.hash);
+}
+const next = encodeURIComponent(location.pathname + location.search);
   const url = "/.netlify/functions/teacher-session";
 
   const log = (...args) => { if (DEBUG) console.warn("[admin-gate]", ...args); };
