@@ -826,51 +826,50 @@ ${shown}
 
 
 
-function normalizeTaggedAssignmentText(src) {
-  if (src == null) return "";
-  const rawLines = String(src).replace(/\r\n?/g, "\n").split("\n");
-  const out = [];
-  let lastTextIdx = -1;
-  let lastQIdx = -1;
 
-  const qRe = /^\s*\d+\.\s+/;
-  const tagTokenRe = /\[(IG|MLS)([:.])\s*([^\]]+?)\]/gi;
-  const tagOnlyRe = /^\s*(\[(?:IG|MLS)(?:[:.])\s*[^\]]+\]\s*)+$/i;
+  function normalizeTaggedAssignmentText(src) {
+    if (src == null) return "";
+    const lines = String(src)
+      .replace(/\r\n/g, "\n")
+      .replace(/\r/g, "\n")
+      .split("\n");
 
-  for (let i = 0; i < rawLines.length; i++) {
-    let line = rawLines[i];
+    const out = [];
+    const tagOnlyRe = /^\s*(\[(?:IG|MLS)[^\]]+\]\s*)+$/i;
 
-    // Normalize tag variants:
-    //   [MLS.R.1.A]   -> [MLS: R.1.A]
-    //   [IG:   X]     -> [IG: X]
-    line = line.replace(tagTokenRe, (_m, kind, _sep, code) => {
-      const k = String(kind).toUpperCase();
-      const c = String(code).trim();
-      return `[${k}: ${c}]`;
-    });
+    const normLine = (line) =>
+      line
+        // allow [MLS.R.1.A] -> [MLS: R.1.A]
+        .replace(/\[(MLS)\.([^\]]+)\]/gi, "[MLS: $2]")
+        .replace(/\[(IG)\.([^\]]+)\]/gi, "[IG: $2]")
+        // normalize spacing in colon forms
+        .replace(/\[(MLS)\s*:\s*([^\]]+)\]/gi, "[MLS: $2]")
+        .replace(/\[(IG)\s*:\s*([^\]]+)\]/gi, "[IG: $2]");
 
-    // If line is ONLY tags, attach them to the most recent QUESTION line if possible.
-    // This prevents accidentally attaching tags to answer choice lines.
-    if (tagOnlyRe.test(line)) {
-      const target = (lastQIdx >= 0) ? lastQIdx : lastTextIdx;
-      if (target >= 0) {
-        out[target] = (out[target].replace(/\s+$/g, "") + " " + line.trim()).trimEnd();
-      } else {
-        out.push(line.trim());
-        lastTextIdx = out.length - 1;
+    const lastNonEmptyIndex = () => {
+      for (let i = out.length - 1; i >= 0; i--) {
+        if (String(out[i]).trim()) return i;
       }
-      continue;
+      return -1;
+    };
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = normLine(lines[i]);
+      if (tagOnlyRe.test(line.trim())) {
+        const j = lastNonEmptyIndex();
+        if (j >= 0) {
+          out[j] = String(out[j]).replace(/[ \t]+$/g, "") + " " + line.trim();
+        } else {
+          out.push(line.trim());
+        }
+      } else {
+        out.push(line);
+      }
     }
 
-    out.push(line);
-
-    if (line.trim()) lastTextIdx = out.length - 1;
-    if (qRe.test(line)) lastQIdx = out.length - 1;
+    return out.join("\n");
   }
 
-  // Collapse excessive blank gaps after normalization
-  return out.join("\n").replace(/\n{3,}/g, "\n\n");
-}
 
 
 
