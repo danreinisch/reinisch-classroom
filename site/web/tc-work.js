@@ -429,6 +429,29 @@ ${shown}
 
     previewingId = id;
 
+    // rc-mapping-regenerate v1
+    // Backstop: if this draft has no stored mapping, regenerate it from assignment text
+    // (fixes older drafts + formats where tags land on separate lines).
+    try {
+      const rawMap = getMappingText(d);
+      const rawAsn = getAssignmentText(d);
+      if (!rawMap && rawAsn) {
+        const norm = (typeof normalizeTaggedAssignmentText === "function") ? normalizeTaggedAssignmentText(rawAsn) : rawAsn;
+        const auto = autoMapFromTeacherTxt(norm);
+        const mappingText = JSON.stringify(
+          auto || { version: 1, sections: [], warnings: ["Auto-mapping unavailable"], counts: { sections: 0, items: 0, warnings: 1 } },
+          null,
+          2
+        );
+        d.mapping = d.mapping || { kind: "auto", name: "auto-mapping.json", text: null };
+        d.mapping.kind = d.mapping.kind || "auto";
+        d.mapping.name = d.mapping.name || "auto-mapping.json";
+        d.mapping.text = mappingText;
+        writeDrafts(drafts);
+      }
+    } catch (_) { /* ignore */ }
+
+
     const overlay = $("draftOverlay");
     const title = $("previewTitle");
     const body = $("previewBody");
