@@ -720,12 +720,74 @@ ${shown}
     const _ca=$("btnClearAll"); if (_ca) _ca.addEventListener("click", clearAll);
     const _fe=$("btnFillExample"); if (_fe) _fe.addEventListener("click", fillExample);
 
+    installStudentPreviewSanitizer();
+
     wireModal();
-  }
+}
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else init();
 })();
+
+
+
+
+  function sanitizeStudentPreviewText(src) {
+    if (src == null) return "";
+    const rawLines = String(src).split(/\r?\n/);
+    const out = [];
+    let prevNonEmpty = "";
+
+    for (let i = 0; i < rawLines.length; i++) {
+      let line = rawLines[i];
+
+      // Strip common "answer key" markers
+      line = line.replace(/[✓✔✅]/g, "").replace(/[ \t]+$/g, "");
+
+      // Drop obvious answer-key lines
+      if (/^\s*(Answer|Correct Answer|Correct)\s*[:-]/i.test(line)) continue;
+
+      // TRUE/FALSE: many keys only include the correct line (e.g., "TRUE ✓").
+      // If the stem says TRUE or FALSE and the next non-empty line is just TRUE/FALSE,
+      // expand to both options so the student preview doesn't leak the answer.
+      if (/TRUE\s*OR\s*FALSE/i.test(prevNonEmpty) && /^\s*(TRUE|FALSE)\s*$/i.test(line)) {
+        out.push("TRUE");
+        out.push("FALSE");
+
+        // Skip any additional TRUE/FALSE key lines right after
+        while (i + 1 < rawLines.length) {
+          const peek = rawLines[i + 1].replace(/[✓✔✅]/g, "").trim();
+          if (/^(TRUE|FALSE)$/i.test(peek)) { i += 1; continue; }
+          break;
+        }
+
+        prevNonEmpty = "FALSE";
+        continue;
+      }
+
+      out.push(line);
+      if (line.trim()) prevNonEmpty = line;
+    }
+
+    // Prevent giant blank gaps after removals
+    return out.join("\n").replace(/\n{3,}/g, "\n\n");
+  }
+
+  function installStudentPreviewSanitizer() {
+    const el = document.getElementById("previewBody");
+    if (!el || el.__rcStudentPreviewSanitizer) return;
+    el.__rcStudentPreviewSanitizer = true;
+
+    const run = () => {
+      const raw = el.textContent || "";
+      const clean = sanitizeStudentPreviewText(raw);
+      if (clean !== raw) el.textContent = clean;
+    };
+
+    const obs = new MutationObserver(run);
+    obs.observe(el, { childList: true, characterData: true, subtree: true });
+    run();
+  }
 
 
 // BEGIN rc-work-mega-ux v1
