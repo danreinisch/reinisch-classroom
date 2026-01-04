@@ -35,8 +35,10 @@
   function setMsg(kind, text) {
     const el = $("workMsg");
     if (!el) return;
-    el.classList.remove("ok", "err");
-    el.classList.add(kind === "ok" ? "ok" : "err");
+    el.classList.remove("ok", "err", "warn");
+    if (kind === "ok") el.classList.add("ok");
+    else if (kind === "warn") el.classList.add("warn");
+    else el.classList.add("err");
     el.textContent = text;
     el.style.display = "block";
   }
@@ -166,6 +168,14 @@
       .replace(/'/g, "&#39;");
   }
 
+  // Back-compat: mega-split drafts used .snippet; canonical is .text.
+  function getAssignmentText(d) {
+    return safeStr(d && d.assignment && (d.assignment.text || d.assignment.snippet)) || "";
+  }
+  function getMappingText(d) {
+    return safeStr(d && d.mapping && (d.mapping.text || d.mapping.snippet)) || "";
+  }
+
   function stripTeacherTags(text) {
     const raw = String(text || "");
     const lines = raw.split(/\r?\n/);
@@ -175,12 +185,15 @@
       let cleaned = line.replace(tagRe, "").replace(/[ \t]{2,}/g, " ").trimEnd();
       // Student View: strip common inline answer markers at end of option lines (✓/✔)
       if (/^\s*[a-dA-D][.)]\s+/.test(cleaned)) cleaned = cleaned.replace(/[ \t]*\(?[✓✔]\)?\s*$/, "");
-
       out.push(cleaned);
     }
-    return out.join("\n")
-      .replace(/\n{4,}/g, "\n\n\n")
-      .trim();
+    return out.join("\n").replace(/\n{4,}/g, "\n\n\n").trim();
+  }
+
+  function fileExt(name) {
+    const n = String(name || "").toLowerCase();
+    const m = n.match(/\.([a-z0-9]+)$/i);
+    return m ? m[1] : "";
   }
 
   function renderStudentPreviewHtml(d) {
@@ -190,7 +203,8 @@
 
     const kind = (d && d.assignment && d.assignment.kind) || "";
     const link = (d && d.assignment && d.assignment.link) || "";
-    const text = (d && d.assignment && d.assignment.text) || "";
+    const name = (d && d.assignment && d.assignment.name) || "";
+    const text = getAssignmentText(d);
 
     let bodyHtml = "";
     if (kind === "link" && link) {
@@ -203,13 +217,26 @@
         </div>
       `;
     } else if (kind === "file") {
-      const studentText = stripTeacherTags(text);
-      const shown = studentText ? escapeHtml(studentText) : "(No assignment text stored for this draft.)";
-      bodyHtml = `
-        <div style="white-space:pre-wrap; font-family:system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; line-height:1.5; font-size:14px;">
+      const ext = fileExt(name);
+      if (ext === "pdf") {
+        bodyHtml = `<div style="opacity:.85;">PDF uploaded. MVP preview can’t render PDFs yet (will work once upload/storage is implemented).</div>`;
+      } else if (ext === "html" || ext === "htm") {
+        const studentHtml = stripTeacherTags(text);
+        const srcdoc = escapeHtml(studentHtml || "<p>(No HTML stored for this draft.)</p>");
+        bodyHtml = `
+          <div style="opacity:.7; margin-bottom:6px;">Rendered Student View (sandboxed)</div>
+          <iframe sandbox="allow-same-origin" style="width:100%; height:520px; border:1px solid rgba(255,255,255,.12); border-radius:12px; background:#0b0f0d;"
+            srcdoc="${srcdoc}"></iframe>
+        `;
+      } else {
+        const studentText = stripTeacherTags(text);
+        const shown = studentText ? escapeHtml(studentText) : "(No assignment text stored for this draft.)";
+        bodyHtml = `
+          <div style="white-space:pre-wrap; font-family:system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; line-height:1.5; font-size:14px;">
 ${shown}
-        </div>
-      `;
+          </div>
+        `;
+      }
     } else {
       bodyHtml = `<div style="opacity:.85;">(No assignment content found for this draft.)</div>`;
     }
@@ -222,11 +249,178 @@ ${shown}
         <div style="opacity:.7; margin-top:6px;">Preview: <strong>Student View</strong> (DESE/IEP tags hidden)</div>
       </div>
       <hr style="border:none; border-top:1px solid rgba(255,255,255,.15); margin:12px 0;">
-    `
+    `;
 
     return `<div>${meta}${bodyHtml}</div>`;
   }
 
+  function renderTeacherPreviewHtml(d) {
+    const title = escapeHtml((d && d.title) || "Draft Preview");
+    const cls = escapeHtml((d && (d.className || d.class)) || "");
+    const notes = escapeHtml((d && d.notes) || "");
+
+    const kind = (d && d.assignment && d.assignment.kind) || "";
+    const link = (d && d.assignment && d.assignment.link) || "";
+    const name = (d && d.assignment && d.assignment.name) || "";
+    const text = getAssignmentText(d);
+
+    let bodyHtml = "";
+    if (kind === "link" && link) {
+      const safeLink = escapeHtml(link);
+      bodyHtml = `
+        <div style="margin:0 0 10px 0;">
+          <div style="font-weight:700;">Google Form link</div>
+          <div><a href="${safeLink}" target="_blank" rel="noopener noreferrer">${safeLink}</a></div>
+          <div style="opacity:.8;margin-top:6px;">Teacher view: mapping required when using links.</div>
+        </div>
+      `;
+    } else if (kind === "file") {
+      const ext = fileExt(name);
+      if (ext === "pdf") {
+        bodyHtml = `<div style="opacity:.85;">PDF uploaded. Teacher preview can’t render PDFs yet (will work once upload/storage is implemented).</div>`;
+      } else {
+        const shown = text ? escapeHtml(text) : "(No assignment text stored for this draft.)";
+        bodyHtml = `<pre style="white-space:pre-wrap; line-height:1.4; padding:12px; border-radius:12px; border:1px solid rgba(255,255,255,.12); background:rgba(0,0,0,.22);">${shown}</pre>`;
+      }
+    } else {
+      bodyHtml = `<div style="opacity:.85;">(No assignment content found for this draft.)</div>`;
+    }
+
+    const meta = `
+      <div style="margin-bottom:10px;">
+        <div style="font-weight:800; font-size:16px;">${title}</div>
+        ${cls ? `<div style="opacity:.85; margin-top:2px;"><strong>Class:</strong> ${cls}</div>` : ``}
+        ${notes ? `<div style="opacity:.85; margin-top:2px;"><strong>Notes:</strong> ${notes}</div>` : ``}
+        <div style="opacity:.7; margin-top:6px;">Preview: <strong>Teacher View</strong> (codes visible)</div>
+      </div>
+      <hr style="border:none; border-top:1px solid rgba(255,255,255,.15); margin:12px 0;">
+    `;
+
+    return `<div>${meta}${bodyHtml}</div>`;
+  }
+
+  function renderMappingPreviewHtml(d) {
+    const raw = getMappingText(d);
+    if (!raw) return `<div style="opacity:.85;">(No mapping content stored for this draft.)</div>`;
+
+    // Try JSON first (auto-map + JSON mapping)
+    try {
+      const obj = JSON.parse(raw);
+
+      const sections = Array.isArray(obj.sections) ? obj.sections : [];
+      const warnings = Array.isArray(obj.warnings) ? obj.warnings : [];
+      const counts = obj.counts || {};
+      const sectionCount = Number.isFinite(counts.sections) ? counts.sections : sections.length;
+
+      let itemsCount = 0;
+      for (const s of sections) itemsCount += Array.isArray(s.items) ? s.items.length : 0;
+      if (Number.isFinite(counts.items)) itemsCount = counts.items;
+
+      const warnCount = Number.isFinite(counts.warnings) ? counts.warnings : warnings.length;
+
+      const secList = sections.slice(0, 8).map((s) => {
+        const t = escapeHtml(s && s.title ? s.title : "Section");
+        const n = Array.isArray(s.items) ? s.items.length : 0;
+        return `<li>${t} <span style="opacity:.75;">(${n} items)</span></li>`;
+      }).join("");
+
+      // Sample first ~12 items across sections
+      const sampleRows = [];
+      for (const s of sections) {
+        const title = escapeHtml(s && s.title ? s.title : "Section");
+        const items = Array.isArray(s.items) ? s.items : [];
+        for (const it of items) {
+          const key = escapeHtml(it && it.key ? it.key : "");
+          const dese = Array.isArray(it && it.dese) ? it.dese.join(", ") : "";
+          const iep = Array.isArray(it && it.iep) ? it.iep.join(", ") : "";
+          sampleRows.push({ title, key, dese, iep });
+          if (sampleRows.length >= 12) break;
+        }
+        if (sampleRows.length >= 12) break;
+      }
+
+      const table = sampleRows.length ? `
+        <div style="opacity:.8; margin:10px 0 6px;">Sample items</div>
+        <table style="width:100%; border-collapse:collapse; font-size:13px;">
+          <thead>
+            <tr>
+              <th style="text-align:left; padding:6px; border-bottom:1px solid rgba(255,255,255,.12);">Section</th>
+              <th style="text-align:left; padding:6px; border-bottom:1px solid rgba(255,255,255,.12);">Key</th>
+              <th style="text-align:left; padding:6px; border-bottom:1px solid rgba(255,255,255,.12);">DESE</th>
+              <th style="text-align:left; padding:6px; border-bottom:1px solid rgba(255,255,255,.12);">IEP</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${sampleRows.map(r => `
+              <tr>
+                <td style="padding:6px; border-bottom:1px solid rgba(255,255,255,.08); opacity:.9;">${r.title}</td>
+                <td style="padding:6px; border-bottom:1px solid rgba(255,255,255,.08);">${r.key}</td>
+                <td style="padding:6px; border-bottom:1px solid rgba(255,255,255,.08); opacity:.9;">${escapeHtml(r.dese)}</td>
+                <td style="padding:6px; border-bottom:1px solid rgba(255,255,255,.08); opacity:.9;">${escapeHtml(r.iep)}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      ` : "";
+
+      const warnHtml = warnCount ? `
+        <details style="margin-top:10px;">
+          <summary style="cursor:pointer;">Warnings (${warnCount})</summary>
+          <pre style="white-space:pre-wrap; margin-top:8px; padding:10px; border-radius:12px; border:1px solid rgba(255,255,255,.12); background:rgba(0,0,0,.22);">${escapeHtml(warnings.slice(0, 40).join("\n"))}${warnings.length > 40 ? "\n…(truncated)\n" : ""}</pre>
+        </details>
+      ` : "";
+
+      return `
+        <div style="margin-bottom:10px;">
+          <div style="opacity:.7;">Preview: <strong>Mapping</strong></div>
+          <div style="margin-top:6px;">
+            <span style="display:inline-block; margin-right:14px;"><strong>Sections:</strong> ${sectionCount}</span>
+            <span style="display:inline-block; margin-right:14px;"><strong>Items:</strong> ${itemsCount}</span>
+            <span style="display:inline-block;"><strong>Warnings:</strong> ${warnCount}</span>
+          </div>
+        </div>
+        ${secList ? `<div style="opacity:.8;">Sections</div><ul style="margin:6px 0 0 18px;">${secList}</ul>` : ""}
+        ${table}
+        ${warnHtml}
+        <details style="margin-top:12px;">
+          <summary style="cursor:pointer;">Raw mapping JSON</summary>
+          <pre style="white-space:pre-wrap; margin-top:8px; padding:10px; border-radius:12px; border:1px solid rgba(255,255,255,.12); background:rgba(0,0,0,.22);">${escapeHtml(raw.slice(0, 120000))}${raw.length > 120000 ? "\n…(truncated)\n" : ""}</pre>
+        </details>
+      `;
+    } catch (_) {
+      // Not JSON (CSV or other): just show raw
+      return `
+        <div style="opacity:.7; margin-bottom:6px;">Preview: <strong>Mapping</strong> (raw)</div>
+        <pre style="white-space:pre-wrap; line-height:1.4; padding:12px; border-radius:12px; border:1px solid rgba(255,255,255,.12); background:rgba(0,0,0,.22);">${escapeHtml(raw.slice(0, 120000))}${raw.length > 120000 ? "\n…(truncated)\n" : ""}</pre>
+      `;
+    }
+  }
+
+  function wirePreviewTabs(root) {
+    const btns = Array.from(root.querySelectorAll("[data-pv-tab]"));
+    const panes = {
+      student: root.querySelector("[data-pv-pane='student']"),
+      teacher: root.querySelector("[data-pv-pane='teacher']"),
+      mapping: root.querySelector("[data-pv-pane='mapping']"),
+    };
+
+    const setActive = (name) => {
+      for (const b of btns) {
+        const isOn = b.getAttribute("data-pv-tab") === name;
+        b.style.opacity = isOn ? "1" : ".7";
+        b.style.borderColor = isOn ? "rgba(255,255,255,.28)" : "rgba(255,255,255,.12)";
+      }
+      for (const k of Object.keys(panes)) {
+        if (panes[k]) panes[k].hidden = (k !== name);
+      }
+    };
+
+    for (const b of btns) {
+      b.addEventListener("click", () => setActive(b.getAttribute("data-pv-tab")));
+    }
+
+    setActive("student");
+  }
 
   function openPreview(id) {
     const drafts = readDrafts();
@@ -235,6 +429,29 @@ ${shown}
 
     previewingId = id;
 
+    // rc-mapping-regenerate v1
+    // Backstop: if this draft has no stored mapping, regenerate it from assignment text
+    // (fixes older drafts + formats where tags land on separate lines).
+    try {
+      const rawMap = getMappingText(d);
+      const rawAsn = getAssignmentText(d);
+      if (!rawMap && rawAsn) {
+        const norm = (typeof normalizeTaggedAssignmentText === "function") ? normalizeTaggedAssignmentText(rawAsn) : rawAsn;
+        const auto = autoMapFromTeacherTxt(norm);
+        const mappingText = JSON.stringify(
+          auto || { version: 1, sections: [], warnings: ["Auto-mapping unavailable"], counts: { sections: 0, items: 0, warnings: 1 } },
+          null,
+          2
+        );
+        d.mapping = d.mapping || { kind: "auto", name: "auto-mapping.json", text: null };
+        d.mapping.kind = d.mapping.kind || "auto";
+        d.mapping.name = d.mapping.name || "auto-mapping.json";
+        d.mapping.text = mappingText;
+        writeDrafts(drafts);
+      }
+    } catch (_) { /* ignore */ }
+
+
     const overlay = $("draftOverlay");
     const title = $("previewTitle");
     const body = $("previewBody");
@@ -242,16 +459,20 @@ ${shown}
 
     title.textContent = safeStr(d.title) || "Draft Preview";
 
-    const mappingSnippet = (safeStr(d.mapping && d.mapping.text) || "")
-      .split("\n")
-      .slice(0, 60)
-      .join("\n");
+    body.innerHTML = `
+      <div style="display:flex; gap:8px; margin-bottom:10px;">
+        <button type="button" class="work-btn" data-pv-tab="student">Student</button>
+        <button type="button" class="work-btn" data-pv-tab="teacher">Teacher</button>
+        <button type="button" class="work-btn" data-pv-tab="mapping">Mapping</button>
+      </div>
 
-    const assignmentSnippet = (safeStr(d.assignment && d.assignment.text) || "")
-      .split("\n")
-      .slice(0, 80)
-      .join("\n");
-    body.innerHTML = renderStudentPreviewHtml(d);
+      <div data-pv-pane="student">${renderStudentPreviewHtml(d)}</div>
+      <div data-pv-pane="teacher" hidden>${renderTeacherPreviewHtml(d)}</div>
+      <div data-pv-pane="mapping" hidden>${renderMappingPreviewHtml(d)}</div>
+    `;
+
+    wirePreviewTabs(body);
+
     overlay.hidden = false;
   }
 
@@ -291,129 +512,120 @@ ${shown}
     setTimeout(clearMsg, 1200);
   }
 
-    function rcIsTextFile(file) {
+  function rcIsTextFile(file) {
     if (!file) return false;
     const name = String(file.name || "").toLowerCase();
     const type = String(file.type || "").toLowerCase();
     if (type.startsWith("text/")) return true;
-    return name.endsWith(".txt");
+    return name.endsWith(".txt") || name.endsWith(".md") || name.endsWith(".csv") || name.endsWith(".json") || name.endsWith(".html") || name.endsWith(".htm");
   }
 
-function fillExample() {
+  function fillExample() {
     $("draftTitle").value = "Week 1 — ADIT — Day 1 Assignment";
     $("draftClass").value = "LA 1 SC";
     $("draftNotes").value = "MVP example draft. Replace with real content.";
     $("assignmentLink").value = "https://docs.google.com/forms/d/EXAMPLE/viewform";
   }
 
-  
-
   function autoMapFromTeacherTxt(text) {
-  const out = { version: 1, sections: [], warnings: [], counts: { sections: 0, items: 0, warnings: 0 } };
-  const lines = String(text || "").split(/\r?\n/);
+    const out = { version: 1, sections: [], warnings: [], counts: { sections: 0, items: 0, warnings: 0 } };
+    const lines = String(text || "").split(/\r?\n/);
 
-  let cur = null;
-  let pendingWR = null;
-  let wrIndex = 0;
+    let cur = null;
+    let pendingWR = null;
+    let wrIndex = 0;
 
-  const uniq = (arr) => Array.from(new Set((arr || []).map(x => String(x || "").trim()).filter(Boolean)));
+    const uniq = (arr) => Array.from(new Set((arr || []).map(x => String(x || "").trim()).filter(Boolean)));
 
-  const startSection = (title) => {
-    const t = String(title || "Assignment").trim() || "Assignment";
-    cur = { title: t, items: [] };
-    out.sections.push(cur);
-  };
+    const startSection = (title) => {
+      const t = String(title || "Assignment").trim() || "Assignment";
+      cur = { title: t, items: [] };
+      out.sections.push(cur);
+    };
 
-  const addItem = (key, tags) => {
-    if (!cur) startSection("Assignment");
-    const item = { key: String(key), dese: uniq(tags?.dese), iep: uniq(tags?.iep) };
-    cur.items.push(item);
-  };
+    const addItem = (key, tags) => {
+      if (!cur) startSection("Assignment");
+      const item = { key: String(key), dese: uniq(tags?.dese), iep: uniq(tags?.iep) };
+      cur.items.push(item);
+    };
 
-  const parseTagsFromLine = (line) => {
-    const tags = { dese: [], iep: [] };
-    const matches = String(line || "").match(/\[[^\]]+\]/g) || [];
-    for (const raw of matches) {
-      const inner = raw.slice(1, -1).trim();
-      if (!inner) continue;
+    const parseTagsFromLine = (line) => {
+      const tags = { dese: [], iep: [] };
+      const matches = String(line || "").match(/\[[^\]]+\]/g) || [];
+      for (const raw of matches) {
+        const inner = raw.slice(1, -1).trim();
+        if (!inner) continue;
 
-      // Examples:
-      // [MLS.R.1.A]
-      // [DESE: MLS.R.1.A]
-      // [IG: C.H.9.1]
-      // [IEP: C.H.9.1]
-      if (/^(MLS\.|DESE:)/i.test(inner)) {
-        tags.dese.push(inner.replace(/^DESE:\s*/i, "").trim());
-      } else if (/^(IG:|IEP:)/i.test(inner)) {
-        tags.iep.push(inner.replace(/^(IG:|IEP:)\s*/i, "").trim());
+        if (/^(MLS\.|DESE:)/i.test(inner)) {
+          tags.dese.push(inner.replace(/^DESE:\s*/i, "").trim());
+        } else if (/^(IG:|IEP:)/i.test(inner)) {
+          tags.iep.push(inner.replace(/^(IG:|IEP:)\s*/i, "").trim());
+        }
       }
-    }
-    return tags;
-  };
+      return tags;
+    };
 
-  const isSectionLine = (line) => /^\s*(LANGUAGE\s+ARTS|LIFE\s+SKILLS)\b/i.test(line);
-  const isQuestionLine = (line) => /^\s*(?:Q\s*)?\d+\s*[.)]\s*/i.test(line);
-  const isTagLine = (line) =>
-    /\[[^\]]+\]/.test(line) && (/\bMLS\./i.test(line) || /\bIG:/i.test(line) || /\bIEP:/i.test(line) || /\bDESE:/i.test(line));
+    const isSectionLine = (line) => /^\s*(LANGUAGE\s+ARTS|LIFE\s+SKILLS)\b/i.test(line);
+    const isQuestionLine = (line) => /^\s*(?:Q\s*)?\d+\s*[.)]\s*/i.test(line);
+    const isTagLine = (line) =>
+      /\[[^\]]+\]/.test(line) && (/\bMLS\b/i.test(line) || /\bIG:/i.test(line) || /\bIEP:/i.test(line) || /\bDESE:/i.test(line));
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
 
-    if (isSectionLine(line)) {
-      startSection(line.trim());
-      pendingWR = null;
-      continue;
-    }
-
-    if (/^\s*WRITTEN\s+RESPONSE\b/i.test(line)) {
-      wrIndex += 1;
-      pendingWR = "WR" + wrIndex;
-      continue;
-    }
-
-    if (isQuestionLine(line)) {
-      const qm = line.match(/^\s*(?:Q\s*)?(\d+)\s*[.)]/i);
-      const qNum = qm ? qm[1] : "";
-      let tags = { dese: [], iep: [] };
-
-      // look ahead for the first tag line before the next question/section
-      for (let j = i + 1; j < lines.length; j++) {
-        const l2 = lines[j];
-        if (isQuestionLine(l2) || isSectionLine(l2)) break;
-        if (isTagLine(l2)) { tags = parseTagsFromLine(l2); break; }
+      if (isSectionLine(line)) {
+        startSection(line.trim());
+        pendingWR = null;
+        continue;
       }
 
-      addItem("Q" + qNum, tags);
-      pendingWR = null;
-      continue;
+      if (/^\s*WRITTEN\s+RESPONSE\b/i.test(line)) {
+        wrIndex += 1;
+        pendingWR = "WR" + wrIndex;
+        continue;
+      }
+
+      if (isQuestionLine(line)) {
+        const qm = line.match(/^\s*(?:Q\s*)?(\d+)\s*[.)]/i);
+        const qNum = qm ? qm[1] : "";
+        let tags = { dese: [], iep: [] };
+
+        for (let j = i + 1; j < lines.length; j++) {
+          const l2 = lines[j];
+          if (isQuestionLine(l2) || isSectionLine(l2)) break;
+          if (isTagLine(l2)) { tags = parseTagsFromLine(l2); break; }
+        }
+
+        addItem("Q" + qNum, tags);
+        pendingWR = null;
+        continue;
+      }
+
+      if (pendingWR && isTagLine(line)) {
+        addItem(pendingWR, parseTagsFromLine(line));
+        pendingWR = null;
+        continue;
+      }
     }
 
-    if (pendingWR && isTagLine(line)) {
-      addItem(pendingWR, parseTagsFromLine(line));
-      pendingWR = null;
-      continue;
+    let warn = 0;
+    let items = 0;
+    for (const s of out.sections) {
+      for (const it of (s.items || [])) {
+        items += 1;
+        if ((!it.dese || it.dese.length === 0) && (!it.iep || it.iep.length === 0)) {
+          out.warnings.push("No codes found for " + s.title + " " + it.key);
+          warn += 1;
+        }
+      }
     }
+    out.counts.sections = out.sections.length;
+    out.counts.items = items;
+    out.counts.warnings = warn;
+    return out;
   }
 
-  // warnings + counts
-  let warn = 0;
-  let items = 0;
-  for (const s of out.sections) {
-    for (const it of (s.items || [])) {
-      items += 1;
-      if ((!it.dese || it.dese.length === 0) && (!it.iep || it.iep.length === 0)) {
-        out.warnings.push("No codes found for " + s.title + " " + it.key);
-        warn += 1;
-      }
-    }
-  }
-  out.counts.sections = out.sections.length;
-  out.counts.items = items;
-  out.counts.warnings = warn;
-  return out;
-}
-
-async function onSaveDraft(e) {
+  async function onSaveDraft(e) {
     e.preventDefault();
     clearMsg();
 
@@ -429,11 +641,10 @@ async function onSaveDraft(e) {
 
     if (!title) return setMsg("err", "Title is required.");
     if (!className) return setMsg("err", "Class is required.");
-    // Mapping file is optional ONLY when we can auto-map from a tagged TXT upload.
     if (!mappingFile) {
       if (assignmentLink) return setMsg("err", "Mapping file is required when using a link.");
       if (assignmentFile && typeof rcIsTextFile === "function" && !rcIsTextFile(assignmentFile)) {
-        return setMsg("err", "Mapping file is required for non-TXT uploads (or use a tagged TXT).");
+        return setMsg("err", "Mapping file is required for non-text uploads (or use a tagged TXT/HTML/JSON/CSV).");
       }
     }
     if (!assignmentFile && !assignmentLink) return setMsg("err", "Assignment is required (file OR link).");
@@ -450,7 +661,6 @@ async function onSaveDraft(e) {
       mapping: { kind: (mappingFile ? "file" : "auto"), name: (mappingFile ? mappingFile.name : "auto-mapping.json"), text: null },
     };
 
-    // Mapping text (required) — but keep size sane
     let mappingText = null;
     if (mappingFile) {
       mappingText = await readFileAsText(mappingFile);
@@ -459,13 +669,16 @@ async function onSaveDraft(e) {
       }
       draft.mapping.text = mappingText;
     } else {
-      // Auto-map from tags in the teacher TXT when no mapping file is provided.
       let assignmentTextRaw = "";
       if (assignmentFile && typeof rcIsTextFile === "function" && rcIsTextFile(assignmentFile)) {
         try { assignmentTextRaw = await assignmentFile.text(); } catch (_) { /* noop */ }
       }
       const autoMapping = (typeof autoMapFromTeacherTxt === "function") ? autoMapFromTeacherTxt(assignmentTextRaw) : null;
-      mappingText = JSON.stringify(autoMapping || { version: 1, sections: [], warnings: ["Auto-mapping unavailable"], counts: { sections: 0, items: 0, warnings: 1 } }, null, 2);
+      mappingText = JSON.stringify(
+        autoMapping || { version: 1, sections: [], warnings: ["Auto-mapping unavailable"], counts: { sections: 0, items: 0, warnings: 1 } },
+        null,
+        2
+      );
       if (bytesOf(mappingText) > MAX_TEXT_BYTES) {
         return setMsg("err", "Auto-generated mapping is too large for MVP local storage.");
       }
@@ -475,20 +688,18 @@ async function onSaveDraft(e) {
       setMsg(w ? "warn" : "ok", "Auto-mapped " + n + " item(s) from tags" + (w ? " (" + w + " missing-code warning(s))" : ""));
     }
 
-    // Assignment: prefer link; file stored only if small
     if (assignmentLink) {
       draft.assignment.kind = "link";
       draft.assignment.link = assignmentLink;
     } else if (assignmentFile) {
-      const assignmentText = await readFileAsText(assignmentFile);
+      const assignmentText = normalizeTaggedAssignmentText(await readFileAsText(assignmentFile));
+      draft.assignment.kind = "file";
+      draft.assignment.name = assignmentFile.name;
+
       if (bytesOf(assignmentText) > MAX_TEXT_BYTES) {
-        // store metadata only
-        draft.assignment.kind = "file";
-        draft.assignment.name = assignmentFile.name;
-        draft.assignment.text = null;
+        // store a bounded preview (so Preview isn't blank)
+        draft.assignment.text = assignmentText.slice(0, 120000) + "\n…(truncated for MVP)\n";
       } else {
-        draft.assignment.kind = "file";
-        draft.assignment.name = assignmentFile.name;
         draft.assignment.text = assignmentText;
       }
     }
@@ -527,17 +738,167 @@ async function onSaveDraft(e) {
     const drafts = readDrafts();
     renderTable(drafts);
 
-    $("workDraftForm").addEventListener("submit", onSaveDraft);
-    $("btnExportAll").addEventListener("click", exportAll);
-    $("btnClearAll").addEventListener("click", clearAll);
-    $("btnFillExample").addEventListener("click", fillExample);
+    const _f=$("workDraftForm"); if (_f) _f.addEventListener("submit", onSaveDraft);
+    const _ea=$("btnExportAll"); if (_ea) _ea.addEventListener("click", exportAll);
+    const _ca=$("btnClearAll"); if (_ca) _ca.addEventListener("click", clearAll);
+    const _fe=$("btnFillExample"); if (_fe) _fe.addEventListener("click", fillExample);
+
+    installStudentPreviewSanitizer();
 
     wireModal();
-  }
+}
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else init();
 })();
+
+
+
+
+  function sanitizeStudentPreviewText(src) {
+    if (src == null) return "";
+    const rawLines = String(src).split(/\r?\n/);
+    const out = [];
+    let prevNonEmpty = "";
+
+    for (let i = 0; i < rawLines.length; i++) {
+      let line = rawLines[i];
+
+      // Strip common "answer key" markers
+      line = line.replace(/[✓✔✅]/g, "").replace(/[ \t]+$/g, "");
+
+      // Drop obvious answer-key lines
+      if (/^\s*(Answer|Correct Answer|Correct)\s*[:-]/i.test(line)) continue;
+
+      // TRUE/FALSE: many keys only include the correct line (e.g., "TRUE ✓").
+      // If the stem says TRUE or FALSE and the next non-empty line is just TRUE/FALSE,
+      // expand to both options so the student preview doesn't leak the answer.
+      if (/TRUE\s*OR\s*FALSE/i.test(prevNonEmpty) && /^\s*(TRUE|FALSE)\s*$/i.test(line)) {
+        out.push("TRUE");
+        out.push("FALSE");
+
+        // Skip any additional TRUE/FALSE key lines right after
+        while (i + 1 < rawLines.length) {
+          const peek = rawLines[i + 1].replace(/[✓✔✅]/g, "").trim();
+          if (/^(TRUE|FALSE)$/i.test(peek)) { i += 1; continue; }
+          break;
+        }
+
+        prevNonEmpty = "FALSE";
+        continue;
+      }
+
+      out.push(line);
+      if (line.trim()) prevNonEmpty = line;
+    }
+
+    // Prevent giant blank gaps after removals
+    return out.join("\n").replace(/\n{3,}/g, "\n\n");
+  }
+
+  function installStudentPreviewSanitizer() {
+  // Only sanitize the Student preview TEXT (never clobber the tab UI).
+  if (window.__rcStudentPreviewSanitizerInstalled) return;
+  window.__rcStudentPreviewSanitizerInstalled = true;
+
+  function pickStudentTextNode() {
+    // Mega preview: student pane exists (teacher/mapping are separate panes).
+    const pane = document.querySelector('[data-pv-pane="student"]');
+    if (pane) {
+      return (
+        pane.querySelector("#previewBody") ||
+        pane.querySelector("pre") ||
+        pane.querySelector('[data-preview-text]') ||
+        pane.querySelector('div[style*="white-space:pre-wrap"]') ||
+        pane.querySelector('div[style*="white-space: pre-wrap"]') ||
+        null
+      );
+    }
+
+    // Fallback (older single-pane preview): only touch the PRE itself.
+    const pb = document.getElementById("previewBody");
+    return pb && pb.tagName === "PRE" ? pb : null;
+  }
+
+  function sanitizeNode(node) {
+    if (!node) return;
+
+    // Critical safety: NEVER overwrite a container that has element children.
+    // That’s how tab buttons disappeared.
+    if (node.tagName !== "PRE" && node.childElementCount > 0) return;
+
+    const cur = node.textContent || "";
+    const next = sanitizeStudentPreviewText(cur);
+    if (next !== cur) node.textContent = next;
+  }
+
+  function run() {
+    sanitizeNode(pickStudentTextNode());
+  }
+
+  const root =
+    document.getElementById("draftOverlay") ||
+    document.querySelector(".work-dialog") ||
+    document.body;
+
+  const obs = new MutationObserver(() => run());
+  obs.observe(root, { childList: true, subtree: true, characterData: true });
+
+  run();
+}
+
+
+
+
+  
+  function normalizeTaggedAssignmentText(input) {
+    let text = String(input || "");
+
+    // Make adjacent tags parseable: "][ " -> "] ["
+    text = text.replace(/\]\s*\[/g, "] [");
+
+    // Normalize common tag variants to canonical forms used by the mapper.
+    text = text
+      // MLS / DESE (treat DESE: as MLS: for mapping)
+      .replace(/\[(MLS)\.([^\]]+)\]/gi, "[MLS: $2]")
+      .replace(/\[(MLS)\s*:\s*([^\]]+)\]/gi, "[MLS: $2]")
+      .replace(/\[(DESE)\s*:\s*([^\]]+)\]/gi, "[MLS: $2]")
+      // IG / IEP
+      .replace(/\[(IG)\.([^\]]+)\]/gi, "[IG: $2]")
+      .replace(/\[(IG)\s*:\s*([^\]]+)\]/gi, "[IG: $2]")
+      .replace(/\[(IEP)\.([^\]]+)\]/gi, "[IEP: $2]")
+      .replace(/\[(IEP)\s*:\s*([^\]]+)\]/gi, "[IEP: $2]");
+
+    // Week-11 style: if a line is ONLY tags, attach it to the previous non-empty line.
+    const lines = text.split(/\r?\n/);
+    const bracketTag = /\[[^\]]+\]/g;
+
+    const isTagOnly = (ln) => {
+      const l = String(ln || "");
+      const tags = l.match(bracketTag) || [];
+      if (!tags.length) return false;
+      const rest = l.replace(bracketTag, "").replace(/\s+/g, "");
+      return rest.length === 0;
+    };
+
+    let lastContent = -1;
+    for (let k = 0; k < lines.length; k++) {
+      const ln = String(lines[k] || "");
+      if (!ln.trim()) continue;
+
+      if (isTagOnly(ln) && lastContent >= 0) {
+        lines[lastContent] = (String(lines[lastContent] || "").trimEnd() + " " + ln.trim()).trim();
+        lines[k] = "";
+        continue;
+      }
+      lastContent = k;
+    }
+
+    return lines.join("\n");
+  }
+
+
+
 
 
 // BEGIN rc-work-mega-ux v1
@@ -571,11 +932,9 @@ async function onSaveDraft(e) {
     const hasLifeSkills = t.includes("life") && t.includes("skills");
     const hasLA = LA_TOKENS.test(t);
 
-    // IMPORTANT: Life Skills vs Life Skills LA must remain distinct.
     if (hasLifeSkills && hasLA) return "Life Skills LA";
     if (hasLifeSkills) return "Life Skills";
 
-    // LA 1-4 (accepts: "LA1", "LA 1", "ELA 2", "Language Arts 3", "English Language Arts 4", etc.)
     const m = t.match(/\b(?:la|ela|language\s+arts|english\s+language\s+arts)\s*([1-4])\b/);
     if (m && m[1]) return `LA ${m[1]} SC`;
 
@@ -583,10 +942,9 @@ async function onSaveDraft(e) {
   }
 
   function ensureClassDropdown() {
-    const sel = document.getElementById("className");
+    const sel = document.getElementById("draftClass");
     if (!sel) return;
 
-    // Don’t force single-class selection when using mega mode.
     try { sel.required = false; } catch (e) { /* ignore */ }
 
     const existing = new Set(Array.from(sel.options || []).map(o => o.value));
@@ -601,7 +959,7 @@ async function onSaveDraft(e) {
   }
 
   function ensureMegaCheckbox() {
-    const sel = document.getElementById("className");
+    const sel = document.getElementById("draftClass");
     if (!sel) return;
 
     if (document.getElementById("rcMegaMode")) return;
@@ -669,7 +1027,6 @@ async function onSaveDraft(e) {
     for (let i = 0; i < lines.length; i++) {
       if (!isSep(lines[i])) continue;
 
-      // Header is usually the previous non-empty line (allow a small gap)
       let h = i - 1;
       while (h >= 0 && lines[h].trim() === "" && i - h <= 3) h--;
       const rawHeader = h >= 0 ? lines[h].trim() : "";
@@ -716,11 +1073,11 @@ async function onSaveDraft(e) {
     const form = document.getElementById("workDraftForm");
     if (!form) return;
 
-    const titleEl = getFormEl("title", 'input[name="title"]');
-    const classSel = getFormEl("className", 'select[name="className"]');
-    const releaseEl = getFormEl("releaseAt", 'input[name="releaseAt"]');
-    const dueEl = getFormEl("dueAt", 'input[name="dueAt"]');
-    const notesEl = getFormEl("notes", 'textarea[name="notes"]');
+    const titleEl = getFormEl("draftTitle", 'input[name="title"]');
+    const classSel = getFormEl("draftClass", 'select[name="className"]');
+    const releaseEl = getFormEl("draftRelease", 'input[name="releaseAt"]');
+    const dueEl = getFormEl("draftDue", 'input[name="dueAt"]');
+    const notesEl = getFormEl("draftNotes", 'textarea[name="notes"]');
 
     const { assignment: aIn, mapping: mIn } = pickFileInputs(form);
     const aFile = aIn && aIn.files && aIn.files[0] ? aIn.files[0] : null;
@@ -744,24 +1101,23 @@ async function onSaveDraft(e) {
     const releaseAt = toIsoMaybe(getVal(releaseEl));
     const dueAt = toIsoMaybe(getVal(dueEl));
 
-    let mappingSnippet = "(no mapping text stored?)";
+    let mappingText = null;
     if (mFile) {
       try {
         const mt = await readFileText(mFile);
-        mappingSnippet = mt.length > 20000 ? (mt.slice(0, 20000) + "\n…(truncated)\n") : mt;
+        mappingText = mt.length > 120000 ? (mt.slice(0, 120000) + "\n…(truncated)\n") : mt;
       } catch (e) {
         console.warn("Mapping read failed:", e);
       }
     }
 
+    const ensureBound = (t) => (t && t.length > 120000 ? (t.slice(0, 120000) + "\n…(truncated)\n") : (t || ""));
+
     const drafts = loadDrafts();
 
     for (const sec of sections) {
       const cls = sec.cls;
-
-      // Keep snippet bounded (localStorage limits). Enough now; student-view preview comes next PR.
       const chunk = `${cls}\n===\n${sec.body}\n`;
-      const ensureBound = (t) => (t.length > 20000 ? (t.slice(0, 20000) + "\n…(truncated)\n") : t);
 
       const t = titleIncludesClass(baseTitle, cls) ? baseTitle : `${baseTitle} — ${cls}`;
 
@@ -777,20 +1133,19 @@ async function onSaveDraft(e) {
           kind: "file",
           name: aFile.name,
           link: null,
-          snippet: ensureBound(chunk),
+          text: ensureBound(chunk), // ✅ canonical field (preview expects .text)
         },
         mapping: {
           name: mFile ? mFile.name : null,
           kind: mFile ? "file" : null,
           link: null,
-          snippet: mappingSnippet,
+          text: ensureBound(mappingText), // ✅ canonical field
         },
       });
     }
 
     saveDrafts(drafts);
 
-    // Reset single-class selection to avoid confusion post-split
     const cb = document.getElementById("rcMegaMode");
     if (cb && classSel) {
       classSel.value = "";
@@ -808,10 +1163,9 @@ async function onSaveDraft(e) {
     ensureClassDropdown();
     ensureMegaCheckbox();
 
-    const classSel = document.getElementById("className");
+    const classSel = document.getElementById("draftClass");
     const cb = document.getElementById("rcMegaMode");
 
-    // Auto-detect mega files and flip on mega mode
     if (form) {
       const { assignment: aIn } = pickFileInputs(form);
       if (aIn) {
@@ -832,7 +1186,6 @@ async function onSaveDraft(e) {
       }
     }
 
-    // Replace Split Mega behavior (capture so we win even if older listeners exist)
     if (btn) {
       try { btn.type = "button"; } catch (e) { /* ignore */ }
       btn.addEventListener("click", (e) => {
@@ -842,7 +1195,6 @@ async function onSaveDraft(e) {
       }, true);
     }
 
-    // If mega mode is checked, Save Draft should auto-split instead of requiring a class
     if (form) {
       form.addEventListener("submit", (e) => {
         const isMega = !!(cb && cb.checked);
