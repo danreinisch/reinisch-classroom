@@ -774,20 +774,55 @@ ${shown}
   }
 
   function installStudentPreviewSanitizer() {
-    const el = document.getElementById("previewBody");
-    if (!el || el.__rcStudentPreviewSanitizer) return;
-    el.__rcStudentPreviewSanitizer = true;
+  // Only sanitize the Student preview TEXT (never clobber the tab UI).
+  if (window.__rcStudentPreviewSanitizerInstalled) return;
+  window.__rcStudentPreviewSanitizerInstalled = true;
 
-    const run = () => {
-      const raw = el.textContent || "";
-      const clean = sanitizeStudentPreviewText(raw);
-      if (clean !== raw) el.textContent = clean;
-    };
+  function pickStudentTextNode() {
+    // Mega preview: student pane exists (teacher/mapping are separate panes).
+    const pane = document.querySelector('[data-pv-pane="student"]');
+    if (pane) {
+      return (
+        pane.querySelector("#previewBody") ||
+        pane.querySelector("pre") ||
+        pane.querySelector('[data-preview-text]') ||
+        pane.querySelector('div[style*="white-space:pre-wrap"]') ||
+        pane.querySelector('div[style*="white-space: pre-wrap"]') ||
+        null
+      );
+    }
 
-    const obs = new MutationObserver(run);
-    obs.observe(el, { childList: true, characterData: true, subtree: true });
-    run();
+    // Fallback (older single-pane preview): only touch the PRE itself.
+    const pb = document.getElementById("previewBody");
+    return pb && pb.tagName === "PRE" ? pb : null;
   }
+
+  function sanitizeNode(node) {
+    if (!node) return;
+
+    // Critical safety: NEVER overwrite a container that has element children.
+    // That’s how tab buttons disappeared.
+    if (node.tagName !== "PRE" && node.childElementCount > 0) return;
+
+    const cur = node.textContent || "";
+    const next = sanitizeStudentPreviewText(cur);
+    if (next !== cur) node.textContent = next;
+  }
+
+  function run() {
+    sanitizeNode(pickStudentTextNode());
+  }
+
+  const root =
+    document.getElementById("draftOverlay") ||
+    document.querySelector(".work-dialog") ||
+    document.body;
+
+  const obs = new MutationObserver(() => run());
+  obs.observe(root, { childList: true, subtree: true, characterData: true });
+
+  run();
+}
 
 
 // BEGIN rc-work-mega-ux v1
