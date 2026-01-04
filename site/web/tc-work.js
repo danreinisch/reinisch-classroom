@@ -715,10 +715,10 @@ ${shown}
     const drafts = readDrafts();
     renderTable(drafts);
 
-    $("workDraftForm").addEventListener("submit", onSaveDraft);
-    $("btnExportAll").addEventListener("click", exportAll);
-    $("btnClearAll").addEventListener("click", clearAll);
-    $("btnFillExample").addEventListener("click", fillExample);
+    const _f=$("workDraftForm"); if (_f) _f.addEventListener("submit", onSaveDraft);
+    const _ea=$("btnExportAll"); if (_ea) _ea.addEventListener("click", exportAll);
+    const _ca=$("btnClearAll"); if (_ca) _ca.addEventListener("click", clearAll);
+    const _fe=$("btnFillExample"); if (_fe) _fe.addEventListener("click", fillExample);
 
     wireModal();
   }
@@ -769,7 +769,7 @@ ${shown}
   }
 
   function ensureClassDropdown() {
-    const sel = document.getElementById("className");
+    const sel = document.getElementById("draftClass");
     if (!sel) return;
 
     try { sel.required = false; } catch (e) { /* ignore */ }
@@ -786,7 +786,7 @@ ${shown}
   }
 
   function ensureMegaCheckbox() {
-    const sel = document.getElementById("className");
+    const sel = document.getElementById("draftClass");
     if (!sel) return;
 
     if (document.getElementById("rcMegaMode")) return;
@@ -900,11 +900,11 @@ ${shown}
     const form = document.getElementById("workDraftForm");
     if (!form) return;
 
-    const titleEl = getFormEl("title", 'input[name="title"]');
-    const classSel = getFormEl("className", 'select[name="className"]');
-    const releaseEl = getFormEl("releaseAt", 'input[name="releaseAt"]');
-    const dueEl = getFormEl("dueAt", 'input[name="dueAt"]');
-    const notesEl = getFormEl("notes", 'textarea[name="notes"]');
+    const titleEl = getFormEl("draftTitle", 'input[name="title"]');
+    const classSel = getFormEl("draftClass", 'select[name="className"]');
+    const releaseEl = getFormEl("draftRelease", 'input[name="releaseAt"]');
+    const dueEl = getFormEl("draftDue", 'input[name="dueAt"]');
+    const notesEl = getFormEl("draftNotes", 'textarea[name="notes"]');
 
     const { assignment: aIn, mapping: mIn } = pickFileInputs(form);
     const aFile = aIn && aIn.files && aIn.files[0] ? aIn.files[0] : null;
@@ -990,7 +990,7 @@ ${shown}
     ensureClassDropdown();
     ensureMegaCheckbox();
 
-    const classSel = document.getElementById("className");
+    const classSel = document.getElementById("draftClass");
     const cb = document.getElementById("rcMegaMode");
 
     if (form) {
