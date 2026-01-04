@@ -850,48 +850,53 @@ ${shown}
 
 
 
-  function normalizeTaggedAssignmentText(src) {
-    if (src == null) return "";
-    const lines = String(src)
-      .replace(/\r\n/g, "\n")
-      .replace(/\r/g, "\n")
-      .split("\n");
+  
+  function normalizeTaggedAssignmentText(input) {
+    let text = String(input || "");
 
-    const out = [];
-    const tagOnlyRe = /^\s*(\[(?:IG|MLS)[^\]]+\]\s*)+$/i;
+    // Make adjacent tags parseable: "][ " -> "] ["
+    text = text.replace(/\]\s*\[/g, "] [");
 
-    const normLine = (line) =>
-      line
-        // allow [MLS.R.1.A] -> [MLS: R.1.A]
-        .replace(/\[(MLS)\.([^\]]+)\]/gi, "[MLS: $2]")
-        .replace(/\[(IG)\.([^\]]+)\]/gi, "[IG: $2]")
-        // normalize spacing in colon forms
-        .replace(/\[(MLS)\s*:\s*([^\]]+)\]/gi, "[MLS: $2]")
-        .replace(/\[(IG)\s*:\s*([^\]]+)\]/gi, "[IG: $2]");
+    // Normalize common tag variants to canonical forms used by the mapper.
+    text = text
+      // MLS / DESE (treat DESE: as MLS: for mapping)
+      .replace(/\[(MLS)\.([^\]]+)\]/gi, "[MLS: $2]")
+      .replace(/\[(MLS)\s*:\s*([^\]]+)\]/gi, "[MLS: $2]")
+      .replace(/\[(DESE)\s*:\s*([^\]]+)\]/gi, "[MLS: $2]")
+      // IG / IEP
+      .replace(/\[(IG)\.([^\]]+)\]/gi, "[IG: $2]")
+      .replace(/\[(IG)\s*:\s*([^\]]+)\]/gi, "[IG: $2]")
+      .replace(/\[(IEP)\.([^\]]+)\]/gi, "[IEP: $2]")
+      .replace(/\[(IEP)\s*:\s*([^\]]+)\]/gi, "[IEP: $2]");
 
-    const lastNonEmptyIndex = () => {
-      for (let i = out.length - 1; i >= 0; i--) {
-        if (String(out[i]).trim()) return i;
-      }
-      return -1;
+    // Week-11 style: if a line is ONLY tags, attach it to the previous non-empty line.
+    const lines = text.split(/\r?\n/);
+    const bracketTag = /\[[^\]]+\]/g;
+
+    const isTagOnly = (ln) => {
+      const l = String(ln || "");
+      const tags = l.match(bracketTag) || [];
+      if (!tags.length) return false;
+      const rest = l.replace(bracketTag, "").replace(/\s+/g, "");
+      return rest.length === 0;
     };
 
-    for (let i = 0; i < lines.length; i++) {
-      const line = normLine(lines[i]);
-      if (tagOnlyRe.test(line.trim())) {
-        const j = lastNonEmptyIndex();
-        if (j >= 0) {
-          out[j] = String(out[j]).replace(/[ \t]+$/g, "") + " " + line.trim();
-        } else {
-          out.push(line.trim());
-        }
-      } else {
-        out.push(line);
+    let lastContent = -1;
+    for (let k = 0; k < lines.length; k++) {
+      const ln = String(lines[k] || "");
+      if (!ln.trim()) continue;
+
+      if (isTagOnly(ln) && lastContent >= 0) {
+        lines[lastContent] = (String(lines[lastContent] || "").trimEnd() + " " + ln.trim()).trim();
+        lines[k] = "";
+        continue;
       }
+      lastContent = k;
     }
 
-    return out.join("\n");
+    return lines.join("\n");
   }
+
 
 
 
