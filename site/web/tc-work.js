@@ -568,7 +568,7 @@ ${shown}
     const isSectionLine = (line) => /^\s*(LANGUAGE\s+ARTS|LIFE\s+SKILLS)\b/i.test(line);
     const isQuestionLine = (line) => /^\s*(?:Q\s*)?\d+\s*[.)]\s*/i.test(line);
     const isTagLine = (line) =>
-      /\[[^\]]+\]/.test(line) && (/\bMLS\./i.test(line) || /\bIG:/i.test(line) || /\bIEP:/i.test(line) || /\bDESE:/i.test(line));
+      /\[[^\]]+\]/.test(line) && (/\bMLS\b/i.test(line) || /\bIG:/i.test(line) || /\bIEP:/i.test(line) || /\bDESE:/i.test(line));
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
