@@ -669,7 +669,7 @@ ${shown}
       draft.assignment.kind = "link";
       draft.assignment.link = assignmentLink;
     } else if (assignmentFile) {
-      const assignmentText = await readFileAsText(assignmentFile);
+      const assignmentText = normalizeTaggedAssignmentText(await readFileAsText(assignmentFile));
       draft.assignment.kind = "file";
       draft.assignment.name = assignmentFile.name;
 
@@ -824,6 +824,43 @@ ${shown}
   run();
 }
 
+
+
+function normalizeTaggedAssignmentText(src) {
+  if (src == null) return "";
+  const lines = String(src).split(/\r?\n/);
+
+  // Only lines that are *nothing but* [MLS.*] and/or [IG: *] tags
+  const isTagOnlyLine = (line) =>
+    /^\s*(?:\[(?:MLS\.[^\]]+|IG:\s*[^\]]+)\]\s*)+\s*$/i.test(line);
+
+  const isQuestionLine = (line) => /^\s*\d+\.\s+/.test(line);
+  const isOptionLine = (line) => /^\s*[A-C]\)\s+/.test(line) || /^\s*(TRUE|FALSE)\s*$/i.test(line);
+
+  let lastQ = -1;
+  let beforeOptions = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    const t = lines[i];
+
+    if (isQuestionLine(t)) {
+      lastQ = i;
+      beforeOptions = true;
+      continue;
+    }
+
+    if (lastQ >= 0 && beforeOptions && isOptionLine(t)) {
+      beforeOptions = false;
+    }
+
+    if (lastQ >= 0 && beforeOptions && isTagOnlyLine(t)) {
+      lines[lastQ] = lines[lastQ].replace(/\s*$/, "") + " " + t.trim();
+      lines[i] = "";
+    }
+  }
+
+  return lines.join("\n").replace(/\n{3,}/g, "\n\n").trimEnd() + "\n";
+}
 
 // BEGIN rc-work-mega-ux v1
 (() => {
