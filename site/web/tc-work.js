@@ -189,6 +189,21 @@
     }
     return out.join("\n").replace(/\n{4,}/g, "\n\n\n").trim();
   }
+  // Join tag-only lines onto the preceding question line so auto-mapping can see them.
+  function __rc_joinTagOnlyLines(text) {
+    const lines = String(text || "").split(/\r?\n/);
+    const tagOnlyRe = /^\s*(?:\[(?:MLS|DESE|IG|IEP)\s*[.:][^\]]+\]\s*)+$/i;
+    const qStartRe = /^\s*\d+[.)]\s+/;
+    for (let i = 1; i < lines.length; i++) {
+      if (tagOnlyRe.test(lines[i]) && qStartRe.test(lines[i - 1])) {
+        lines[i - 1] = lines[i - 1].replace(/\s*$/, " ") + lines[i].trim();
+        lines[i] = "";
+      }
+    }
+    return lines.join("\n");
+  }
+
+
 
   function fileExt(name) {
     const n = String(name || "").toLowerCase();
@@ -557,9 +572,9 @@ ${shown}
         if (!inner) continue;
 
         if (/^(MLS\.|DESE:)/i.test(inner)) {
-          tags.dese.push(inner.replace(/^DESE:\s*/i, "").trim());
+          tags.dese.push(inner.replace(/^(?:DESE|MLS)\s*[.:]\s*/i, "").trim());
         } else if (/^(IG:|IEP:)/i.test(inner)) {
-          tags.iep.push(inner.replace(/^(IG:|IEP:)\s*/i, "").trim());
+          tags.iep.push(inner.replace(/^(?:IG|IEP)\s*:\s*/i, "").trim());
         }
       }
       return tags;
@@ -588,12 +603,16 @@ ${shown}
       if (isQuestionLine(line)) {
         const qm = line.match(/^\s*(?:Q\s*)?(\d+)\s*[.)]/i);
         const qNum = qm ? qm[1] : "";
-        let tags = { dese: [], iep: [] };
+        let tags = parseTagsFromLine(line);
 
         for (let j = i + 1; j < lines.length; j++) {
           const l2 = lines[j];
           if (isQuestionLine(l2) || isSectionLine(l2)) break;
-          if (isTagLine(l2)) { tags = parseTagsFromLine(l2); break; }
+          if (isTagLine(l2)) {
+            const more = parseTagsFromLine(l2);
+            tags = { dese: (tags.dese || []).concat(more.dese || []), iep: (tags.iep || []).concat(more.iep || []) };
+            break;
+          }
         }
 
         addItem("Q" + qNum, tags);
@@ -673,7 +692,7 @@ ${shown}
       if (assignmentFile && typeof rcIsTextFile === "function" && rcIsTextFile(assignmentFile)) {
         try { assignmentTextRaw = await assignmentFile.text(); } catch (_) { /* noop */ }
       }
-      const autoMapping = (typeof autoMapFromTeacherTxt === "function") ? autoMapFromTeacherTxt(assignmentTextRaw) : null;
+      const autoMapping = (typeof autoMapFromTeacherTxt === "function") ? autoMapFromTeacherTxt(__rc_joinTagOnlyLines(normalizeTaggedAssignmentText(assignmentTextRaw || ""))) : null;
       mappingText = JSON.stringify(
         autoMapping || { version: 1, sections: [], warnings: ["Auto-mapping unavailable"], counts: { sections: 0, items: 0, warnings: 1 } },
         null,
