@@ -1,39 +1,44 @@
 (() => {
   const DEBUG = (() => {
-    try { return new URLSearchParams(location.search).get('rc_debug') === '1'; }
+    try { return new URLSearchParams(location.search).get("rc_debug") === "1"; }
     catch (_) { return false; }
   })();
+
+  const next = encodeURIComponent(location.pathname + location.search + location.hash);
 
   const lsGet = (k) => { try { return localStorage.getItem(k); } catch (_) { return null; } };
   const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (_) { /* noop */ } };
 
   const isPreviewHost = () => {
     const h = String(location.hostname || "");
-    return (
-      h.includes("--") ||
-      h.startsWith("deploy-preview-") ||
-      h === "localhost" ||
-      h === "127.0.0.1"
-    );
+    return h === "localhost" || h === "127.0.0.1" || (h.endsWith(".netlify.app") && h.includes("--"));
   };
 
-  // Deploy previews often can't authorize Netlify session functions (401).
-  // If teacher auth exists in localStorage, allow teacher pages to load for UI work.
-  const teacherPreviewBypass = () => {
-    try {
-      if (!isPreviewHost()) return false;
-      if (!localStorage.getItem("rc_auth")) return false;
+  const hydrateTeacherFromAuth = () => {
+    const raw = lsGet("rc_auth");
+    if (!raw) return;
 
-      // Keep other code paths happy
-      try { sessionStorage.setItem("rc_user_role", "teacher"); } catch (_) { /* noop */ }
-      return true;
-    } catch (_) {
-      return false;
-    }
+    try {
+      sessionStorage.setItem("rc_user_role", "teacher");
+    } catch (_) { /* noop */ }
+
+    try {
+      const auth = JSON.parse(raw);
+      const code = auth && (auth.code || auth.userCode || auth.user_code);
+      if (code) {
+        try {
+          if (!sessionStorage.getItem("rc_user_code")) sessionStorage.setItem("rc_user_code", String(code));
+        } catch (_) { /* noop */ }
+      }
+    } catch (_) { /* noop */ }
   };
 
   const isTeacherSession = async () => {
-    if (teacherPreviewBypass()) return true;
+    // In preview/localhost: if you have rc_auth, let teacher pages load.
+    if (isPreviewHost() && !!lsGet("rc_auth")) {
+      hydrateTeacherFromAuth();
+      return true;
+    }
 
     try {
       const r = await fetch("/.netlify/functions/teacher-session", {
@@ -41,13 +46,15 @@
         credentials: "same-origin",
       });
       return !!(r && r.ok);
-    } catch (e) {
-      if (DEBUG) console.warn("[teacher-shell] teacher-session fetch failed", e);
+    } catch (_) {
       return false;
     }
   };
 
-  const next = encodeURIComponent(location.pathname + location.search + location.hash);
+  // Small localStorage helpers (optional UI state)
+  const NAV_KEY = "rc_teacher_nav";
+  const DEFAULT_NAV = "expanded";
+  const lsGetSafe = (k) => { try { return localStorage.getItem(k); } catch (_) { return null; } };
 
   (async () => {
     const ok = await isTeacherSession();
@@ -57,14 +64,9 @@
       return;
     }
 
-    // Expose tiny hook (optional)
     window.RC_TEACHER_SHELL = window.RC_TEACHER_SHELL || {};
     window.RC_TEACHER_SHELL.isTeacherSession = () => true;
-
-    // Nav collapse state (harmless)
-    const NAV_KEY = "rc_teacher_nav";
-    const DEFAULT_NAV = "expanded";
-    window.RC_TEACHER_SHELL.getNavState = () => lsGet(NAV_KEY) || DEFAULT_NAV;
+    window.RC_TEACHER_SHELL.getNavState = () => lsGetSafe(NAV_KEY) || DEFAULT_NAV;
     window.RC_TEACHER_SHELL.setNavState = (collapsed) =>
       lsSet(NAV_KEY, collapsed ? "collapsed" : "expanded");
   })();

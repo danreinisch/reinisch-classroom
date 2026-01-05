@@ -1,3 +1,58 @@
+/* rc-preview-bypass-teacher-session-v1
+   Purpose: In Netlify deploy-previews/localhost, treat teacher-session as OK when rc_auth exists.
+   This prevents /teacher/* redirects caused by Netlify function 401s on preview domains.
+*/
+(() => {
+  try {
+    const host = String(location.hostname || "");
+    const isPreview =
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      (host.endsWith(".netlify.app") && host.includes("--"));
+
+    if (!isPreview) return;
+
+    const hasAuth = (() => {
+      try { return !!localStorage.getItem("rc_auth"); } catch (_) { return false; }
+    })();
+    if (!hasAuth) return;
+
+    const origFetch = window.fetch;
+    if (typeof origFetch !== "function") return;
+
+    const debug = (() => {
+      try { return new URLSearchParams(location.search).get("rc_debug") === "1"; }
+      catch (_) { return false; }
+    })();
+
+    window.fetch = (input, init) => {
+      let url = "";
+      try {
+        url = (typeof input === "string") ? input : (input && input.url) ? input.url : "";
+      } catch (_) {
+        url = "";
+      }
+
+      // Only intercept the teacher-session gate
+      if (url && url.includes("/.netlify/functions/teacher-session")) {
+        try { sessionStorage.setItem("rc_user_role", "teacher"); } catch (_) { /* noop */ }
+        if (debug) console.warn("[rc preview] bypassing teacher-session gate");
+        return Promise.resolve(
+          new Response(JSON.stringify({ ok: true, role: "teacher", previewBypass: true }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" }
+          })
+        );
+      }
+
+      return origFetch(input, init);
+    };
+  } catch (_) {
+    /* noop */
+  }
+})();
+
+
 /**
  * Global App Shell - Left-side Navigation Rail
  * Provides consistent navigation across reinischclassroom.com
