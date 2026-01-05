@@ -1,116 +1,75 @@
-(function(){
-  const KEY = 'rc_tc_sidebar';
-  const DEFAULT = 'collapsed';
+(() => {
+  // Teacher shell: guard + session hydration
+  // Debug: add ?rc_debug=1 and check DevTools console.
+  const DEBUG = (() => {
+    try { return new URLSearchParams(location.search).get('rc_debug') === '1'; }
+    catch (_) { return false; }
+  })();
 
-  function setCollapsed(isCollapsed){
-    document.documentElement.classList.toggle('tc-collapsed', isCollapsed);
-    try{ localStorage.setItem(KEY, isCollapsed ? 'collapsed' : 'expanded'); }catch(_){ /* noop */ }
-    const btn = document.getElementById('tcSidebarToggle');
-    if(btn) btn.setAttribute('aria-expanded', String(!isCollapsed));
-  }
+  const lsGet = (k) => { try { return localStorage.getItem(k); } catch (_) { return null; } };
+  const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (_) { /* noop */ } };
 
-  function getCollapsed(){
-    try{
-      const v = localStorage.getItem(KEY) || DEFAULT;
-      return v !== 'expanded';
-    }catch(_){ return true; }
-  }
+  const isTeacherSession = () =>
+    String(sessionStorage.getItem('rc_user_role') || '').toLowerCase() === 'teacher';
 
-  async function gateTeacher(){
-    // Same-origin is mandatory for preview deploys.
-    const next = encodeURIComponent(location.pathname + location.search);
-    try{
-      const r = await fetch('/.netlify/functions/teacher-session', { cache:'no-store', credentials:'same-origin' });
-      if(!r.ok){
-        location.replace(`/hub/?reason=missing_teacher_session&next=${next}`);
-        return false;
+  const hydrateTeacherFromRcAuth = () => {
+    try {
+      if (isTeacherSession()) return true;
+
+      const raw = lsGet('rc_auth');
+      if (!raw) return false;
+
+      const auth = JSON.parse(raw) || {};
+      const role = String(
+        auth.role || auth.userRole || auth.user_role || auth.rc_role || ''
+      ).toLowerCase();
+
+      const isTeacher =
+        role === 'teacher' ||
+        auth.isTeacher === true ||
+        auth.teacher === true ||
+        auth.admin === true;
+
+      if (!isTeacher) return false;
+
+      sessionStorage.setItem('rc_user_role', 'teacher');
+
+      const code = String(auth.code || auth.userCode || auth.user_code || '');
+      if (code && !sessionStorage.getItem('rc_user_code')) {
+        sessionStorage.setItem('rc_user_code', code);
       }
+
       return true;
-    }catch(_){
-      location.replace(`/hub/?reason=gate_error&next=${next}`);
+    } catch (_) {
       return false;
     }
-  }
+  };
 
-  function wireNavActive(){
-    const path = location.pathname.replace(/\/+$/, '/') || '/teacher/';
-    document.querySelectorAll('.tc-nav a[data-href]').forEach(a=>{
-      const href = a.getAttribute('data-href');
-      const isActive = href === path;
-      if(isActive) a.setAttribute('aria-current','page');
-      else a.removeAttribute('aria-current');
-      // Tooltips in collapsed mode
-      const label = a.querySelector('.tc-label');
-      if(label) a.title = label.textContent.trim();
-    });
-  }
+  const next = encodeURIComponent(location.pathname + location.search + location.hash);
 
-  async function init(){
-    const ok = await gateTeacher();
-    if(!ok) return;
-
-    setCollapsed(getCollapsed());
-
-    const toggle = document.getElementById('tcSidebarToggle');
-    if(toggle){
-      toggle.addEventListener('click', ()=>{
-        const isCollapsed = document.documentElement.classList.contains('tc-collapsed');
-        setCollapsed(!isCollapsed);
-      });
+  if (!isTeacherSession()) {
+    const hydrated = hydrateTeacherFromRcAuth();
+    if (DEBUG) {
+      console.log('[teacher-shell] hydrated=', hydrated,
+        'rc_user_role=', sessionStorage.getItem('rc_user_role'),
+        'has rc_auth=', !!lsGet('rc_auth'));
     }
-
-    wireNavActive();
   }
 
-  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
-  else init();
-})();
-
-
-/* NETLIFY DRAWER KILL SWITCH
-   Deploy previews sometimes inject a CSP-blocked Netlify iframe ("Netlify Drawer")
-   that renders as a white bar at the bottom. It uses inline !important styles,
-   so CSS cannot reliably hide it. Remove it + keep removing it if re-injected.
-*/
-(function(){
-  const isDrawer = (el) =>
-    el && el.tagName === "IFRAME" &&
-    typeof el.src === "string" &&
-    el.src.includes("app.netlify.com/cdp");
-
-  const nuke = (el) => {
-    try { el.remove(); } catch(e) { /* noop */ }
-    try {
-      el.style.setProperty("display","none","important");
-      el.style.setProperty("height","0","important");
-      el.style.setProperty("width","0","important");
-      el.style.setProperty("opacity","0","important");
-      el.style.setProperty("pointer-events","none","important");
-    } catch(e) { /* noop */ }
-  };
-
-  const run = () => {
-    // Home button fallback: if the Home link is empty, give it a glyph.
-    const home = document.querySelector('.tc-btn[aria-label="Home"]');
-    if (home && !home.textContent.trim()) home.textContent = "⌂";
-
-    document.querySelectorAll('iframe[src*="app.netlify.com/cdp"]').forEach(nuke);
-
-    const mo = new MutationObserver((muts) => {
-      for (const m of muts) {
-        for (const node of m.addedNodes) {
-          if (!(node instanceof Element)) continue;
-          if (isDrawer(node)) nuke(node);
-          node.querySelectorAll?.('iframe[src*="app.netlify.com/cdp"]').forEach(nuke);
-        }
-      }
-    });
-    mo.observe(document.documentElement, { childList: true, subtree: true });
-  };
-
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", run, { once: true });
-  } else {
-    run();
+  if (!isTeacherSession()) {
+    if (DEBUG) console.warn('[teacher-shell] redirecting: missing_teacher_session');
+    location.replace(`/hub/?reason=missing_teacher_session&next=${next}`);
+    return;
   }
+
+  // Expose tiny hook (optional)
+  window.RC_TEACHER_SHELL = window.RC_TEACHER_SHELL || {};
+  window.RC_TEACHER_SHELL.isTeacherSession = isTeacherSession;
+
+  // Nav collapse state (harmless)
+  const NAV_KEY = 'rc_teacher_nav';
+  const DEFAULT_NAV = 'expanded';
+  window.RC_TEACHER_SHELL.getNavState = () => lsGet(NAV_KEY) || DEFAULT_NAV;
+  window.RC_TEACHER_SHELL.setNavState = (collapsed) =>
+    lsSet(NAV_KEY, collapsed ? 'collapsed' : 'expanded');
 })();
