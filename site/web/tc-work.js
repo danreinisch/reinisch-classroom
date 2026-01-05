@@ -323,7 +323,6 @@ ${shown}
       const obj = JSON.parse(raw);
 
       const sections = Array.isArray(obj.sections) ? obj.sections : [];
-      const warnings = Array.isArray(obj.warnings) ? obj.warnings : [];
       const counts = obj.counts || {};
       const sectionCount = Number.isFinite(counts.sections) ? counts.sections : sections.length;
 
@@ -331,46 +330,54 @@ ${shown}
       for (const s of sections) itemsCount += Array.isArray(s.items) ? s.items.length : 0;
       if (Number.isFinite(counts.items)) itemsCount = counts.items;
 
-      const warnCount = Number.isFinite(counts.warnings) ? counts.warnings : warnings.length;
+      const asArr = (v) => (Array.isArray(v) ? v : []);
+      const uniq = (arr) => Array.from(new Set(arr.filter(Boolean)));
 
-      // Build "missing code" lists from parsed mapping JSON
-      const _items = [];
-      for (const _sec of sections) {
-        const _it = Array.isArray(_sec && _sec.items) ? _sec.items : [];
-        for (const _x of _it) _items.push(_x || {});
+      const fmtList = (arr) => {
+        if (!arr.length) return `<span style="opacity:.75;">none ✅</span>`;
+        const max = 60;
+        const head = arr.slice(0, max).map((x) => escapeHtml(String(x)));
+        const rest = arr.length - head.length;
+        return head.join(", ") + (rest > 0 ? ` <span style="opacity:.75;">… (+${rest} more)</span>` : ``);
+      };
+
+      // Compute missing codes from ITEMS (trust items, not obj.warnings which can be stale/duplicated)
+      const missingDese = [];
+      const missingIep = [];
+      const missingBoth = [];
+
+      for (const sec of sections) {
+        const secTitle = (sec && sec.title != null) ? String(sec.title).trim() : "Section";
+        const items = asArr(sec && sec.items);
+
+        for (const it of items) {
+          const key = (it && it.key != null) ? String(it.key).trim() : "";
+          if (!key) continue;
+
+          const dese = asArr(it && it.dese);
+          const iep = asArr(it && it.iep);
+
+          const hasDese = dese.length > 0;
+          const hasIep = iep.length > 0;
+
+          if (hasDese && hasIep) continue;
+
+          const full = `${secTitle} ${key}`.trim();
+
+          if (!hasDese && !hasIep) {
+            missingBoth.push(full);
+          } else {
+            if (!hasDese) missingDese.push(full);
+            if (!hasIep) missingIep.push(full);
+          }
+        }
       }
 
-      const _missBoth = [];
-      const _missDese = [];
-      const _missIep  = [];
-
-      for (const _it of _items) {
-        const _key  = String((_it && _it.key) || "").trim();
-        const _dese = Array.isArray(_it && _it.dese) ? _it.dese : [];
-        const _iep  = Array.isArray(_it && _it.iep)  ? _it.iep  : [];
-
-        if (!_key) continue;
-
-        if (!_dese.length) _missDese.push(_key);
-        if (!_iep.length)  _missIep.push(_key);
-        if (!_dese.length && !_iep.length) _missBoth.push(_key);
-      }
-
-      const _uniqSort = (arr) => Array.from(new Set(arr)).filter(Boolean)
-        .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
-
-      const missBoth = _uniqSort(_missBoth);
-      const missDese = _uniqSort(_missDese);
-      const missIep  = _uniqSort(_missIep);
-
-      const _cap = (arr, n=60) => (arr.length > n) ? (arr.slice(0, n).concat([`…(+${arr.length-n} more)`])) : arr;
-
-      const missingCodesHtml =
-        `<div style="flex-basis:100%; width:100%; margin-top:10px; line-height:1.35;">` +
-          `<div><strong>Missing BOTH</strong> (DESE + IEP): ${missBoth.length ? _cap(missBoth).map(escapeHtml).join(", ") : "<strong>none</strong>"}</div>` +
-          `<div style="opacity:.9; margin-top:6px;"><strong>Missing DESE</strong>: ${missDese.length ? _cap(missDese).map(escapeHtml).join(", ") : "<strong>none</strong>"}</div>` +
-          `<div style="opacity:.9; margin-top:6px;"><strong>Missing IEP</strong>: ${missIep.length ? _cap(missIep).map(escapeHtml).join(", ") : "<strong>none</strong>"}</div>` +
-        `</div>`;
+      const md = uniq(missingDese);
+      const mi = uniq(missingIep);
+      const mb = uniq(missingBoth);
+      const missingAny = uniq([...md, ...mi, ...mb]);
+      const warnCount = missingAny.length;
 
       const secList = sections.slice(0, 8).map((s) => {
         const t = escapeHtml(s && s.title ? s.title : "Section");
@@ -397,57 +404,78 @@ ${shown}
         <div style="opacity:.8; margin:10px 0 6px;">Sample items</div>
         <table style="width:100%; border-collapse:collapse; font-size:13px;">
           <thead>
-            <tr>
-              <th style="text-align:left; padding:6px; border-bottom:1px solid rgba(255,255,255,.12);">Section</th>
-              <th style="text-align:left; padding:6px; border-bottom:1px solid rgba(255,255,255,.12);">Key</th>
-              <th style="text-align:left; padding:6px; border-bottom:1px solid rgba(255,255,255,.12);">DESE</th>
-              <th style="text-align:left; padding:6px; border-bottom:1px solid rgba(255,255,255,.12);">IEP</th>
+            <tr style="text-align:left; border-bottom:1px solid rgba(255,255,255,.12);">
+              <th style="padding:8px 10px;">Section</th>
+              <th style="padding:8px 10px;">Key</th>
+              <th style="padding:8px 10px;">DESE</th>
+              <th style="padding:8px 10px;">IEP</th>
             </tr>
           </thead>
           <tbody>
             ${sampleRows.map(r => `
-              <tr>
-                <td style="padding:6px; border-bottom:1px solid rgba(255,255,255,.08); opacity:.9;">${r.title}</td>
-                <td style="padding:6px; border-bottom:1px solid rgba(255,255,255,.08);">${r.key}</td>
-                <td style="padding:6px; border-bottom:1px solid rgba(255,255,255,.08); opacity:.9;">${escapeHtml(r.dese)}</td>
-                <td style="padding:6px; border-bottom:1px solid rgba(255,255,255,.08); opacity:.9;">${escapeHtml(r.iep)}</td>
+              <tr style="border-bottom:1px solid rgba(255,255,255,.08);">
+                <td style="padding:8px 10px; opacity:.9;">${r.title}</td>
+                <td style="padding:8px 10px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace;">${r.key}</td>
+                <td style="padding:8px 10px; opacity:.9;">${escapeHtml(r.dese || "")}</td>
+                <td style="padding:8px 10px; opacity:.9;">${escapeHtml(r.iep || "")}</td>
               </tr>
             `).join("")}
           </tbody>
         </table>
-      ` : "";
+      ` : `<div style="opacity:.85; margin-top:10px;">(No items found in mapping JSON.)</div>`;
 
-      const warnHtml = warnCount ? `
+      const missingSummary = `
+        <div style="margin-top:12px;">
+          <div style="opacity:.8; margin:10px 0 6px;">Missing codes (by question)</div>
+          <div><strong>Missing DESE (${md.length}):</strong> ${fmtList(md)}</div>
+          <div style="margin-top:6px;"><strong>Missing IEP (${mi.length}):</strong> ${fmtList(mi)}</div>
+          ${mb.length ? `<div style="margin-top:6px;"><strong>Missing BOTH (${mb.length}):</strong> ${fmtList(mb)}</div>` : ``}
+        </div>
+      `;
+
+      const warnLines = [];
+      for (const k of mb) warnLines.push(`Missing DESE + IEP: ${k}`);
+      for (const k of md) warnLines.push(`Missing DESE: ${k}`);
+      for (const k of mi) warnLines.push(`Missing IEP: ${k}`);
+      warnLines.sort((a,b) => a.localeCompare(b));
+
+      const warnDetails = warnLines.length ? `
         <details style="margin-top:10px;">
           <summary style="cursor:pointer;">Warnings (${warnCount})</summary>
-          <pre style="white-space:pre-wrap; margin-top:8px; padding:10px; border-radius:12px; border:1px solid rgba(255,255,255,.12); background:rgba(0,0,0,.22);">${escapeHtml(warnings.slice(0, 40).join("\n"))}${warnings.length > 40 ? "\n…(truncated)\n" : ""}</pre>
+          <pre style="white-space:pre-wrap; line-height:1.4; padding:12px; border-radius:12px; border:1px solid rgba(255,255,255,.12); background:rgba(0,0,0,.22); margin-top:10px;">${escapeHtml(warnLines.join("\n"))}</pre>
         </details>
-      ` : "";
+      ` : `<div style="margin-top:10px; opacity:.85;">No missing-code warnings ✅</div>`;
+
+      const rawDetails = `
+        <details style="margin-top:10px;">
+          <summary style="cursor:pointer;">Raw mapping JSON</summary>
+          <pre style="white-space:pre-wrap; line-height:1.4; padding:12px; border-radius:12px; border:1px solid rgba(255,255,255,.12); background:rgba(0,0,0,.22); margin-top:10px;">${escapeHtml(raw)}</pre>
+        </details>
+      `;
 
       return `
-        <div style="margin-bottom:10px;">
-          <div style="opacity:.7;">Preview: <strong>Mapping</strong></div>
-          <div style="margin-top:6px;">
+        <div>
+          <div style="opacity:.7; margin-top:6px;">Preview: <strong>Mapping</strong></div>
+
+          <div style="margin-top:12px;">
             <span style="display:inline-block; margin-right:14px;"><strong>Sections:</strong> ${sectionCount}</span>
             <span style="display:inline-block; margin-right:14px;"><strong>Items:</strong> ${itemsCount}</span>
             <span style="display:inline-block;"><strong>Warnings:</strong> ${warnCount}</span>
-            ${missingCodesHtml}
           </div>
+
+          <div style="margin-top:16px; opacity:.8;">Sections</div>
+          <ul style="margin:6px 0 0 20px;">${secList || "<li>(none)</li>"}</ul>
+
+          ${table}
+          ${missingSummary}
+          ${warnDetails}
+          ${rawDetails}
         </div>
-        ${secList ? `<div style="opacity:.8;">Sections</div><ul style="margin:6px 0 0 18px;">${secList}</ul>` : ""}
-        ${table}
-        ${warnHtml}
-        <details style="margin-top:12px;">
-          <summary style="cursor:pointer;">Raw mapping JSON</summary>
-          <pre style="white-space:pre-wrap; margin-top:8px; padding:10px; border-radius:12px; border:1px solid rgba(255,255,255,.12); background:rgba(0,0,0,.22);">${escapeHtml(raw.slice(0, 120000))}${raw.length > 120000 ? "\n…(truncated)\n" : ""}</pre>
-        </details>
       `;
-    } catch (_) {
-      // Not JSON (CSV or other): just show raw
-      return `
-        <div style="opacity:.7; margin-bottom:6px;">Preview: <strong>Mapping</strong> (raw)</div>
-        <pre style="white-space:pre-wrap; line-height:1.4; padding:12px; border-radius:12px; border:1px solid rgba(255,255,255,.12); background:rgba(0,0,0,.22);">${escapeHtml(raw.slice(0, 120000))}${raw.length > 120000 ? "\n…(truncated)\n" : ""}</pre>
-      `;
+    } catch (e) {
+      // Fallback: show raw mapping text
+      const shown = escapeHtml(raw);
+      return `<pre style="white-space:pre-wrap; line-height:1.4; padding:12px; border-radius:12px; border:1px solid rgba(255,255,255,.12); background:rgba(0,0,0,.22);">${shown}</pre>`;
     }
   }
 
