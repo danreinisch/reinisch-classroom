@@ -202,6 +202,50 @@
     }
     return lines.join("\n");
   }
+  // Prep assignment text ONLY for auto-mapping:
+  // - Duplicate bare [MLS.*] tags into a DESE-prefixed copy (so either parser style works)
+  // - Scrub numbered lines inside Hints/Rubric/etc blocks so they aren’t mistaken for questions
+  function __rc_autoMapPrep(text) {
+    let t = String(text || "");
+
+    // Duplicate bare [MLS.R.1.A] into "[MLS.R.1.A] [DESE: MLS.R.1.A]"
+    t = t.replace(/\[\s*MLS\.([^\]\s]+)\s*\]/ig, (m, rest) => {
+      const mls = ("MLS." + rest).replace(/\s+/g, "");
+      return `[${mls}] [DESE: ${mls}]`;
+    });
+
+    const lines = t.split(/\r?\n/);
+
+    const headerRe = /^\s*(?:Hints?|Helpful Hints|Rubric|Writing Structure|Structure to Use|Grading|Answer Key)\b.*$/i;
+    const qStartRe = /^\s*\d+[.)]\s+/;
+
+    let inBlock = false;
+    for (let i = 0; i < lines.length; i++) {
+      const raw = String(lines[i] || "");
+      const trimmed = raw.trim();
+
+      if (headerRe.test(trimmed)) {
+        inBlock = true;
+        continue;
+      }
+      if (inBlock) {
+        if (!trimmed) {
+          inBlock = false;
+          continue;
+        }
+        // If a real question starts, stop scrubbing and let the question detector work.
+        if (qStartRe.test(trimmed)) {
+          inBlock = false;
+          continue;
+        }
+        // Convert numbered list items into bullets so they don’t trip question detection.
+        lines[i] = raw.replace(/^\s*\d+[.)]\s+/, "• ");
+      }
+    }
+
+    return lines.join("\n");
+  }
+
 
 
 
@@ -520,7 +564,7 @@ ${shown}
       const rawAsn = getAssignmentText(d);
       if (!rawMap && rawAsn) {
         const norm = (typeof normalizeTaggedAssignmentText === "function") ? normalizeTaggedAssignmentText(rawAsn) : rawAsn;
-        const auto = autoMapFromTeacherTxt(norm);
+        const auto = autoMapFromTeacherTxt(__rc_autoMapPrep(__rc_joinTagOnlyLines(norm)));
         const mappingText = JSON.stringify(
           auto || { version: 1, sections: [], warnings: ["Auto-mapping unavailable"], counts: { sections: 0, items: 0, warnings: 1 } },
           null,
@@ -760,7 +804,7 @@ ${shown}
       if (assignmentFile && typeof rcIsTextFile === "function" && rcIsTextFile(assignmentFile)) {
         try { assignmentTextRaw = await assignmentFile.text(); } catch (_) { /* noop */ }
       }
-      const autoMapping = (typeof autoMapFromTeacherTxt === "function") ? autoMapFromTeacherTxt(__rc_joinTagOnlyLines(normalizeTaggedAssignmentText(assignmentTextRaw || ""))) : null;
+      const autoMapping = (typeof autoMapFromTeacherTxt === "function") ? autoMapFromTeacherTxt(__rc_autoMapPrep(__rc_joinTagOnlyLines(normalizeTaggedAssignmentText(assignmentTextRaw || "")))) : null;
       mappingText = JSON.stringify(
         autoMapping || { version: 1, sections: [], warnings: ["Auto-mapping unavailable"], counts: { sections: 0, items: 0, warnings: 1 } },
         null,
