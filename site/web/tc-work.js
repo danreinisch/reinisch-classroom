@@ -333,6 +333,45 @@ ${shown}
 
       const warnCount = Number.isFinite(counts.warnings) ? counts.warnings : warnings.length;
 
+      // Build "missing code" lists from parsed mapping JSON
+      const _items = [];
+      for (const _sec of sections) {
+        const _it = Array.isArray(_sec && _sec.items) ? _sec.items : [];
+        for (const _x of _it) _items.push(_x || {});
+      }
+
+      const _missBoth = [];
+      const _missDese = [];
+      const _missIep  = [];
+
+      for (const _it of _items) {
+        const _key  = String((_it && _it.key) || "").trim();
+        const _dese = Array.isArray(_it && _it.dese) ? _it.dese : [];
+        const _iep  = Array.isArray(_it && _it.iep)  ? _it.iep  : [];
+
+        if (!_key) continue;
+
+        if (!_dese.length) _missDese.push(_key);
+        if (!_iep.length)  _missIep.push(_key);
+        if (!_dese.length && !_iep.length) _missBoth.push(_key);
+      }
+
+      const _uniqSort = (arr) => Array.from(new Set(arr)).filter(Boolean)
+        .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+
+      const missBoth = _uniqSort(_missBoth);
+      const missDese = _uniqSort(_missDese);
+      const missIep  = _uniqSort(_missIep);
+
+      const _cap = (arr, n=60) => (arr.length > n) ? (arr.slice(0, n).concat([`…(+${arr.length-n} more)`])) : arr;
+
+      const missingCodesHtml =
+        `<div style="flex-basis:100%; width:100%; margin-top:10px; line-height:1.35;">` +
+          `<div><strong>Missing BOTH</strong> (DESE + IEP): ${missBoth.length ? _cap(missBoth).map(escapeHtml).join(", ") : "<strong>none</strong>"}</div>` +
+          `<div style="opacity:.9; margin-top:6px;"><strong>Missing DESE</strong>: ${missDese.length ? _cap(missDese).map(escapeHtml).join(", ") : "<strong>none</strong>"}</div>` +
+          `<div style="opacity:.9; margin-top:6px;"><strong>Missing IEP</strong>: ${missIep.length ? _cap(missIep).map(escapeHtml).join(", ") : "<strong>none</strong>"}</div>` +
+        `</div>`;
+
       const secList = sections.slice(0, 8).map((s) => {
         const t = escapeHtml(s && s.title ? s.title : "Section");
         const n = Array.isArray(s.items) ? s.items.length : 0;
@@ -392,6 +431,7 @@ ${shown}
             <span style="display:inline-block; margin-right:14px;"><strong>Sections:</strong> ${sectionCount}</span>
             <span style="display:inline-block; margin-right:14px;"><strong>Items:</strong> ${itemsCount}</span>
             <span style="display:inline-block;"><strong>Warnings:</strong> ${warnCount}</span>
+            ${missingCodesHtml}
           </div>
         </div>
         ${secList ? `<div style="opacity:.8;">Sections</div><ul style="margin:6px 0 0 18px;">${secList}</ul>` : ""}
