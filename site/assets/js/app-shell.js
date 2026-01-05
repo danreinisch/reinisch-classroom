@@ -1,3 +1,54 @@
+/* rc-preview-bypass-sessions-v2
+   Deploy preview/localhost: bypass Netlify *-session gates (teacher/admin/substitute).
+   This prevents 401 loops on *.netlify.app deploy previews.
+*/
+(() => {
+  try {
+    const h = String(location.hostname || "");
+    const isPreview =
+      h === "localhost" || h === "127.0.0.1" ||
+      (h.endsWith(".netlify.app") && h.includes("--"));
+    if (!isPreview) return;
+
+    const origFetch = window.fetch;
+    if (typeof origFetch !== "function") return;
+
+    const debug = (() => {
+      try { return new URLSearchParams(location.search).get("rc_debug") === "1"; }
+      catch (_) { return false; }
+    })();
+
+    const isSessionFn = (url) =>
+      url.includes("/.netlify/functions/teacher-session") ||
+      url.includes("/.netlify/functions/admin-session") ||
+      url.includes("/.netlify/functions/substitute-session");
+
+    window.fetch = (input, init) => {
+      let url = "";
+      try {
+        url = (typeof input === "string") ? input : (input && input.url) ? input.url : "";
+      } catch (_) {
+        url = "";
+      }
+
+      if (url && isSessionFn(url)) {
+        if (debug) console.warn("[app-shell] preview bypass:", url);
+        return Promise.resolve(
+          new Response(JSON.stringify({ ok: true, previewBypass: true }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" }
+          })
+        );
+      }
+
+      return origFetch(input, init);
+    };
+  } catch (_) {
+    /* noop */
+  }
+})();
+
+
 /* rc-preview-bypass-teacher-session-v1
    Purpose: In Netlify deploy-previews/localhost, treat teacher-session as OK when rc_auth exists.
    This prevents /teacher/* redirects caused by Netlify function 401s on preview domains.
