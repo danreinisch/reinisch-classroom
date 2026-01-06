@@ -3242,7 +3242,7 @@ function isTeacherEntryRequest() {
             // Validate auth structure before proceeding (similar to auth-handoff validation)
             if (auth.role === "teacher" && auth.code) {
               console.log(LOG_PREFIX, "Valid teacher auth found in localStorage, auto-showing teacher view");
-              showTeacher();
+              window.location.assign('/teacher/');
             }
           }
           // If pendingTeacherSession exists, prefer server session flow (resume banner already shown)
@@ -3586,7 +3586,7 @@ function isTeacherEntryRequest() {
               window.location.assign(nx);
               return;
             }
-            showTeacher();
+            window.location.assign('/teacher/');
 
             // Restore last area/tab if available
             // PR1: Override stale lastArea when entry=teacher (always default to Overview)
@@ -3732,7 +3732,7 @@ function isTeacherEntryRequest() {
           window.location.assign(nx);
           return;
         }
-        showTeacher();
+        window.location.assign('/teacher/');
 
         // Hide banner
         const banner = qs("#teacherResumeBanner");
@@ -3805,7 +3805,7 @@ function isTeacherEntryRequest() {
         const currentAuth = getAuth();
         if (currentAuth && currentAuth.role === "teacher") {
           // Already authenticated - show teacher view
-          showTeacher();
+          window.location.assign('/teacher/');
           return;
         }
 
@@ -3838,7 +3838,7 @@ function isTeacherEntryRequest() {
         const currentAuth = getAuth();
         if (currentAuth && currentAuth.role === "teacher") {
           // Already authenticated - show teacher view
-          showTeacher();
+          window.location.assign('/teacher/');
           return;
         }
 
@@ -6044,7 +6044,7 @@ function isTeacherEntryRequest() {
       });
 
       // Optional: auto-open Classroom Hub for local dev
-      // showTeacher(); initIEP();
+      // window.location.assign('/teacher/'); initIEP();
 
       // =======================
       // Settings: Supabase Configuration (using supabase-settings.js helper)
