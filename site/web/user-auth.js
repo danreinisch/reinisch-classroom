@@ -307,7 +307,7 @@ export function saveAuthSession(authData) {
   try {
     const role = authData && authData.role;
     if (role === 'teacher' && location.pathname.startsWith('/hub')) {
-      location.assign('/teacher/work/');
+      location.assign('/teacher/');
     } else if (role === 'admin' && location.pathname.startsWith('/hub')) {
       location.assign('/admin/');
     }

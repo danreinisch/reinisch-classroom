@@ -241,7 +241,7 @@ const __rcHasRole = (role) => {
           <span class="app-shell-item-arrow">▶</span>
         </button>
         <div class="app-shell-submenu" data-shell-submenu="teacher">
-          <a href="/hub/" class="app-shell-submenu-item">Teacher Center</a>
+          <a href="/teacher/" class="app-shell-submenu-item">Teacher Center</a>
           <a href="/admin/" class="app-shell-submenu-item app-shell-hidden" data-admin-only>Admin</a>
         </div>
 
