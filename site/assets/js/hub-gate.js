@@ -1,3 +1,24 @@
+/* compat: entry=teacher -> /teacher/ */
+(() => {
+  try {
+    const params = new URLSearchParams(location.search);
+    if (params.get('entry') !== 'teacher') return;
+
+    // If a next= is provided and it already points at /teacher, keep it.
+    const next = params.get('next');
+    if (next && next.startsWith('/teacher')) {
+      location.replace(next);
+      return;
+    }
+
+    // Otherwise: teachers land on /teacher/ (Overview)
+    location.replace('/teacher/');
+  } catch (_) {
+    // noop
+  }
+})();
+
+
 /* RC_HUB_TEACHER_REDIRECT_SHIM_v1
  * Goal:
  * - Keep /hub as the role hub (no teacher content hosted here long-term)
