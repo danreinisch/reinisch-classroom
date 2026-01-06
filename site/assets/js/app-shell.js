@@ -1,103 +1,50 @@
-/* rc-preview-bypass-sessions-v2
-   Deploy preview/localhost: bypass Netlify *-session gates (teacher/admin/substitute).
-   This prevents 401 loops on *.netlify.app deploy previews.
-*/
+/* RC_PREVIEW_BYPASS_SESSION_GATES */
 (() => {
   try {
-    const h = String(location.hostname || "");
+    const h = (location && location.hostname) ? location.hostname : "";
     const isPreview =
       h === "localhost" || h === "127.0.0.1" ||
-      (h.endsWith(".netlify.app") && h.includes("--"));
+      h.endsWith(".netlify.app") || h.endsWith(".netlify.live");
     if (!isPreview) return;
 
-    const origFetch = window.fetch;
-    if (typeof origFetch !== "function") return;
+    let debug = false;
+    try {
+      debug = new URLSearchParams(location.search).get("rc_debug") === "1";
+    } catch (_) { /* noop */ }
 
-    const debug = (() => {
-      try { return new URLSearchParams(location.search).get("rc_debug") === "1"; }
-      catch (_) { return false; }
-    })();
+    const origFetch = window.fetch ? window.fetch.bind(window) : null;
+    if (!origFetch) return;
 
-    const isSessionFn = (url) =>
-      url.includes("/.netlify/functions/teacher-session") ||
-      url.includes("/.netlify/functions/admin-session") ||
-      url.includes("/.netlify/functions/substitute-session");
+    const mkOk = (role) =>
+      new Response(JSON.stringify({ ok: true, role, previewBypass: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" }
+      });
+
+    const asPath = (input) => {
+      try {
+        const url = (typeof input === "string")
+          ? input
+          : (input && input.url) ? input.url : "";
+        if (!url) return "";
+        if (url.startsWith("http")) return new URL(url, location.href).pathname;
+        return url; // already relative
+      } catch (_) {
+        return "";
+      }
+    };
 
     window.fetch = (input, init) => {
-      let url = "";
       try {
-        url = (typeof input === "string") ? input : (input && input.url) ? input.url : "";
-      } catch (_) {
-        url = "";
-      }
-
-      if (url && isSessionFn(url)) {
-        if (debug) console.warn("[app-shell] preview bypass:", url);
-        return Promise.resolve(
-          new Response(JSON.stringify({ ok: true, previewBypass: true }), {
-            status: 200,
-            headers: { "Content-Type": "application/json" }
-          })
-        );
-      }
-
+        const path = asPath(input);
+        if (path === "/.netlify/functions/teacher-session") return Promise.resolve(mkOk("teacher"));
+        if (path === "/.netlify/functions/substitute-session") return Promise.resolve(mkOk("substitute"));
+        if (path === "/.netlify/functions/admin-session") return Promise.resolve(mkOk("admin"));
+      } catch (_) { /* noop */ }
       return origFetch(input, init);
     };
-  } catch (_) {
-    /* noop */
-  }
-})();
 
-
-/* rc-preview-bypass-teacher-session-v1
-   Purpose: In Netlify deploy-previews/localhost, treat teacher-session as OK when rc_auth exists.
-   This prevents /teacher/* redirects caused by Netlify function 401s on preview domains.
-*/
-(() => {
-  try {
-    const host = String(location.hostname || "");
-    const isPreview =
-      host === "localhost" ||
-      host === "127.0.0.1" ||
-      (host.endsWith(".netlify.app") && host.includes("--"));
-
-    if (!isPreview) return;
-
-    const hasAuth = (() => {
-      try { return !!localStorage.getItem("rc_auth"); } catch (_) { return false; }
-    })();
-    if (!hasAuth) return;
-
-    const origFetch = window.fetch;
-    if (typeof origFetch !== "function") return;
-
-    const debug = (() => {
-      try { return new URLSearchParams(location.search).get("rc_debug") === "1"; }
-      catch (_) { return false; }
-    })();
-
-    window.fetch = (input, init) => {
-      let url = "";
-      try {
-        url = (typeof input === "string") ? input : (input && input.url) ? input.url : "";
-      } catch (_) {
-        url = "";
-      }
-
-      // Only intercept the teacher-session gate
-      if (url && url.includes("/.netlify/functions/teacher-session")) {
-        try { sessionStorage.setItem("rc_user_role", "teacher"); } catch (_) { /* noop */ }
-        if (debug) console.warn("[rc preview] bypassing teacher-session gate");
-        return Promise.resolve(
-          new Response(JSON.stringify({ ok: true, role: "teacher", previewBypass: true }), {
-            status: 200,
-            headers: { "Content-Type": "application/json" }
-          })
-        );
-      }
-
-      return origFetch(input, init);
-    };
+    if (debug) console.warn("[app-shell] preview bypass enabled");
   } catch (_) {
     /* noop */
   }

@@ -1,115 +1,135 @@
-(() => {
-  'use strict';
+/* RC_TEACHER_PREVIEW_BYPASS */
+const __rcIsPreviewHost = () => {
+  try {
+    const h = (location && location.hostname) ? location.hostname : "";
+    return (
+      h === "localhost" || h === "127.0.0.1" ||
+      h.endsWith(".netlify.app") || h.endsWith(".netlify.live")
+    );
+  } catch (_) {
+    return false;
+  }
+};
 
-  const DEBUG = (() => {
-    try {
-      return new URLSearchParams(location.search).get('rc_debug') === '1';
-    } catch (_) {
-      return false;
-    }
-  })();
+(function(){
+  const KEY = 'rc_tc_sidebar';
+  const DEFAULT = 'collapsed';
 
-  const log = (...args) => { if (DEBUG) console.log('[teacher-shell]', ...args); };
-  const warn = (...args) => { if (DEBUG) console.warn('[teacher-shell]', ...args); };
+  function setCollapsed(isCollapsed){
+    document.documentElement.classList.toggle('tc-collapsed', isCollapsed);
+    try{ localStorage.setItem(KEY, isCollapsed ? 'collapsed' : 'expanded'); }catch(_){ /* noop */ }
+    const btn = document.getElementById('tcSidebarToggle');
+    if(btn) btn.setAttribute('aria-expanded', String(!isCollapsed));
+  }
 
-  const isDeployPreview = () => {
-    const h = location.hostname || '';
-    // Deploy preview URLs look like: <hash>--<site>.netlify.app
-    return h === 'localhost' || h === '127.0.0.1' || h.includes('--');
-  };
+  function getCollapsed(){
+    try{
+      const v = localStorage.getItem(KEY) || DEFAULT;
+      return v !== 'expanded';
+    }catch(_){ return true; }
+  }
 
-  const safeJson = (s) => {
-    try { return JSON.parse(s); } catch (_) { return null; }
-  };
-
-  const hasTeacherHint = () => {
-    // 1) sessionStorage role
-    try {
-      const r = (sessionStorage.getItem('rc_user_role') || '').toLowerCase();
-      if (r === 'teacher' || r === 'admin') return true;
-    } catch (_) { /* noop */ }
-
-    // 2) localStorage rc_auth presence (role optional in previews)
-    let authStr = null;
-    try { authStr = localStorage.getItem('rc_auth'); } catch (_) { /* noop */ }
-    if (!authStr) return false;
-
-    const auth = safeJson(authStr);
-    if (!auth) return true; // rc_auth exists but isn't JSON? still treat as "present"
-
-    const role =
-      (auth.role || auth.userRole || auth.user_role ||
-       (auth.user && (auth.user.role || auth.user.userRole || auth.user.user_role)) ||
-       ''
-      ).toString().toLowerCase();
-
-    if (role === 'teacher' || role === 'admin') return true;
-
-    // If rc_auth exists but role isn't stored, allow in deploy previews only
-    return isDeployPreview();
-  };
-
-  const setTeacherRole = () => {
-    try { sessionStorage.setItem('rc_user_role', 'teacher'); } catch (_) { /* noop */ }
-  };
-
-  const fetchTeacherSession = async () => {
-    try {
-      const r = await fetch('/.netlify/functions/teacher-session', {
-        cache: 'no-store',
-        credentials: 'same-origin',
-      });
-
-      if (r.ok) return true;
-
-      // In deploy previews, this function commonly 401s. If we have local hints, allow.
-      if (isDeployPreview() && (r.status === 401 || r.status === 404)) {
-        return hasTeacherHint();
+  async function gateTeacher(){
+    // Same-origin is mandatory for preview deploys.
+    const next = encodeURIComponent(location.pathname + location.search);
+    try{
+      // Deploy preview bypass: load Teacher UI without Netlify session cookies
+      if (__rcIsPreviewHost()) {
+        try { sessionStorage.setItem('rc_user_role', 'teacher'); } catch (_) { /* noop */ }
+        return true;
       }
 
+      const r = await fetch('/.netlify/functions/teacher-session', { cache:'no-store', credentials:'same-origin' });
+      if(!r.ok){
+        location.replace(`/hub/?reason=missing_teacher_session&next=${next}`);
+        return false;
+      }
+      return true;
+    }catch(_){
+      location.replace(`/hub/?reason=gate_error&next=${next}`);
       return false;
-    } catch (_) {
-      // In previews, treat fetch failures as bypassable *only if* we have local hints
-      return isDeployPreview() && hasTeacherHint();
     }
+  }
+
+  function wireNavActive(){
+    const path = location.pathname.replace(/\/+$/, '/') || '/teacher/';
+    document.querySelectorAll('.tc-nav a[data-href]').forEach(a=>{
+      const href = a.getAttribute('data-href');
+      const isActive = href === path;
+      if(isActive) a.setAttribute('aria-current','page');
+      else a.removeAttribute('aria-current');
+      // Tooltips in collapsed mode
+      const label = a.querySelector('.tc-label');
+      if(label) a.title = label.textContent.trim();
+    });
+  }
+
+  async function init(){
+    const ok = await gateTeacher();
+    if(!ok) return;
+
+    setCollapsed(getCollapsed());
+
+    const toggle = document.getElementById('tcSidebarToggle');
+    if(toggle){
+      toggle.addEventListener('click', ()=>{
+        const isCollapsed = document.documentElement.classList.contains('tc-collapsed');
+        setCollapsed(!isCollapsed);
+      });
+    }
+
+    wireNavActive();
+  }
+
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
+
+
+/* NETLIFY DRAWER KILL SWITCH
+   Deploy previews sometimes inject a CSP-blocked Netlify iframe ("Netlify Drawer")
+   that renders as a white bar at the bottom. It uses inline !important styles,
+   so CSS cannot reliably hide it. Remove it + keep removing it if re-injected.
+*/
+(function(){
+  const isDrawer = (el) =>
+    el && el.tagName === "IFRAME" &&
+    typeof el.src === "string" &&
+    el.src.includes("app.netlify.com/cdp");
+
+  const nuke = (el) => {
+    try { el.remove(); } catch(e) { /* noop */ }
+    try {
+      el.style.setProperty("display","none","important");
+      el.style.setProperty("height","0","important");
+      el.style.setProperty("width","0","important");
+      el.style.setProperty("opacity","0","important");
+      el.style.setProperty("pointer-events","none","important");
+    } catch(e) { /* noop */ }
   };
 
-  const next = encodeURIComponent(location.pathname + location.search + location.hash);
+  const run = () => {
+    // Home button fallback: if the Home link is empty, give it a glyph.
+    const home = document.querySelector('.tc-btn[aria-label="Home"]');
+    if (home && !home.textContent.trim()) home.textContent = "⌂";
 
-  (async () => {
-    // ✅ The actual gate: bypass BEFORE any redirect decision
-    const previewBypass = isDeployPreview() && hasTeacherHint();
+    document.querySelectorAll('iframe[src*="app.netlify.com/cdp"]').forEach(nuke);
 
-    let ok = false;
-    if (previewBypass) {
-      ok = true;
-      setTeacherRole();
-      warn('preview bypass active (skipping teacher-session function)');
-    } else {
-      ok = await fetchTeacherSession();
-    }
+    const mo = new MutationObserver((muts) => {
+      for (const m of muts) {
+        for (const node of m.addedNodes) {
+          if (!(node instanceof Element)) continue;
+          if (isDrawer(node)) nuke(node);
+          node.querySelectorAll?.('iframe[src*="app.netlify.com/cdp"]').forEach(nuke);
+        }
+      }
+    });
+    mo.observe(document.documentElement, { childList: true, subtree: true });
+  };
 
-    if (!ok) {
-      warn('redirecting: missing_teacher_session');
-      location.replace(`/hub/?reason=missing_teacher_session&next=${next}`);
-      return;
-    }
-
-    // Expose tiny hook (optional)
-    window.RC_TEACHER_SHELL = window.RC_TEACHER_SHELL || {};
-    window.RC_TEACHER_SHELL.isTeacherSession = () => true;
-
-    // Nav collapse state
-    const NAV_KEY = 'rc_teacher_nav';
-    const DEFAULT_NAV = 'expanded';
-
-    const lsGetSafe = (k) => { try { return localStorage.getItem(k); } catch (_) { return null; } };
-    const lsSetSafe = (k, v) => { try { localStorage.setItem(k, v); } catch (_) { /* noop */ } };
-
-    window.RC_TEACHER_SHELL.getNavState = () => lsGetSafe(NAV_KEY) || DEFAULT_NAV;
-    window.RC_TEACHER_SHELL.setNavState = (collapsed) =>
-      lsSetSafe(NAV_KEY, collapsed ? 'collapsed' : 'expanded');
-
-    log('teacher shell ok');
-  })();
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", run, { once: true });
+  } else {
+    run();
+  }
 })();
