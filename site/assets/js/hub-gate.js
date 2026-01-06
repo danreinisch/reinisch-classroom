@@ -1,3 +1,53 @@
+/* RC_HUB_TEACHER_REDIRECT_SHIM_v1
+ * Goal:
+ * - Keep /hub as the role hub (no teacher content hosted here long-term)
+ * - After teacher auth is set, navigate to /teacher/ (or honor ?next=/teacher/...)
+ * - Works even when login happens without a page reload (same-tab).
+ */
+(function () {
+  try {
+    const isHub = location.pathname === "/hub" || location.pathname.startsWith("/hub/");
+    if (!isHub) return;
+
+    const safePath = (v) => typeof v === "string" && v.startsWith("/") && !v.startswith("//");
+
+    const computeDest = (authRole) => {
+      const qs = new URLSearchParams(location.search);
+      const next = qs.get("next") || "";
+      const nextOk = safePath(next) && next.startsWith("/teacher");
+      if (authRole === "teacher") return nextOk ? next : "/teacher/";
+      return null;
+    };
+
+    // 1) If teacher auth already exists on page load, redirect
+    try {
+      const authStr = localStorage.getItem("rc_auth");
+      if (authStr) {
+        const auth = JSON.parse(authStr);
+        const role = auth && auth.role;
+        const dest = computeDest(role);
+        if (dest) return location.replace(dest);
+      }
+    } catch (_) { /* noop */ }
+
+    // 2) If teacher logs in without reload, rc_auth will be written -> intercept and redirect
+    const origSetItem = localStorage.setItem.bind(localStorage);
+    localStorage.setItem = function (k, v) {
+      origSetItem(k, v);
+      try {
+        if (k !== "rc_auth") return;
+        const auth = JSON.parse(v);
+        const role = auth && auth.role;
+        const dest = computeDest(role);
+        if (dest) location.replace(dest);
+      } catch (_) { /* noop */ }
+    };
+  } catch (_) {
+    /* noop */
+  }
+})();
+
+
 /**
  * Hub Gating Module
  * Ensures /hub/ shows a login/role chooser gate when user is not authenticated
