@@ -303,6 +303,16 @@ function setLocalPassword(username, password, role, studentId) {
  */
 export function saveAuthSession(authData) {
   localStorage.setItem('rc_auth', JSON.stringify(authData));
+  // RC_AUTH_ROUTE_AFTER_LOGIN: prefer role-based routes (teacher/admin) instead of hosting teacher UI in /hub
+  try {
+    const role = authData && authData.role;
+    if (role === 'teacher' && location.pathname.startsWith('/hub')) {
+      location.assign('/teacher/work/');
+    } else if (role === 'admin' && location.pathname.startsWith('/hub')) {
+      location.assign('/admin/');
+    }
+  } catch (_) { /* noop */ }
+
 }
 
 /**

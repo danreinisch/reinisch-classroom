@@ -50,6 +50,39 @@
   }
 })();
 
+// RC guard: prefer localStorage rc_auth role over Netlify *-session checks
+const __rcAuthRead = () => {
+  try {
+    const raw = localStorage.getItem("rc_auth");
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (_) {
+    return null;
+  }
+};
+const __rcAuthExpired = (auth) => {
+  try {
+    if (!auth) return true;
+    if (auth.isExpired === true) return true;
+    const exp = auth.expiresAt ?? auth.expires ?? auth.exp ?? null;
+    if (!exp) return false;
+    const t = (typeof exp === "number") ? exp : Date.parse(exp);
+    if (!Number.isFinite(t)) return false;
+    return Date.now() > t;
+  } catch (_) {
+    return false;
+  }
+};
+const __rcHasRole = (role) => {
+  const a = __rcAuthRead();
+  if (!a) return false;
+  if (a.role !== role) return false;
+  if (__rcAuthExpired(a)) return false;
+  return true;
+};
+
+
+
 
 /**
  * Global App Shell - Left-side Navigation Rail
@@ -1139,18 +1172,18 @@ function renderLessonsContent() {
     const path = location.pathname || '';
     const candidates = [];
 
-    if (path.startsWith('/teacher')) candidates.push(['Teacher', '/.netlify/functions/teacher-session']);
-    if (path.startsWith('/admin')) candidates.push(['Admin', '/.netlify/functions/admin-session']);
-    if (path.startsWith('/sub')) candidates.push(['Substitute', '/.netlify/functions/substitute-session']);
+    if (path.startsWith('/teacher')) if (!__rcHasRole('teacher')) candidates.push(['Teacher', '/.netlify/functions/teacher-session']);
+    if (path.startsWith('/admin')) if (!__rcHasRole('admin')) candidates.push(['Admin', '/.netlify/functions/admin-session']);
+    if (path.startsWith('/sub')) if (!__rcHasRole('substitute')) candidates.push(['Substitute', '/.netlify/functions/substitute-session']);
 
     if (path.startsWith('/hub')) {
-      candidates.push(['Teacher', '/.netlify/functions/teacher-session']);
-      candidates.push(['Admin', '/.netlify/functions/admin-session']);
-      candidates.push(['Substitute', '/.netlify/functions/substitute-session']);
+      if (!__rcHasRole('teacher')) candidates.push(['Teacher', '/.netlify/functions/teacher-session']);
+      if (!__rcHasRole('admin')) candidates.push(['Admin', '/.netlify/functions/admin-session']);
+      if (!__rcHasRole('substitute')) candidates.push(['Substitute', '/.netlify/functions/substitute-session']);
     }
 
     if (candidates.length === 0) {
-      candidates.push(['Teacher', '/.netlify/functions/teacher-session']);
+      if (!__rcHasRole('teacher')) candidates.push(['Teacher', '/.netlify/functions/teacher-session']);
     }
 
     for (const [label, url] of candidates) {
