@@ -380,7 +380,7 @@
           window.location.assign('/hub/?reason=tc_session_expired&next=%2Fadmin%2F');
           persistQueue();
           persistFormState();
-          location.replace('/hub/?entry=teacher');
+          location.replace('/teacher/');
           return { success: false };
         }
       }
@@ -608,7 +608,7 @@
       if (res.status === 401) { 
         window.location.assign('/hub/?reason=tc_session_expired&next=%2Fadmin%2F');
         persistFormState();
-        location.replace('/hub/?entry=teacher'); 
+        location.replace('/teacher/'); 
         return; 
       }
       if (!res.ok) { alert(`Delete failed: ${res.status}\n${(text||'').slice(0,400)}`); return; }

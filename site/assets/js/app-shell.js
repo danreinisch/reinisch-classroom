@@ -404,7 +404,7 @@ const __rcHasRole = (role) => {
     
     if (role === 'teacher') {
       // Navigate to hub with entry parameter to auto-open teacher login
-      window.location.href = '/hub/?entry=teacher';
+      window.location.href = '/teacher/';
     } else if (role === 'student') {
       window.location.href = '/student/';
     } else if (role === 'substitute') {
