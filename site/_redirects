@@ -1,13 +1,15 @@
-# Pretty URLs: serve ONE shell for hub + teacher
-/teacher/*   /hub/index.html   200
-/teacher     /hub/index.html   200
-/teacher/    /hub/index.html   200
+# Teacher Center: real shell + deep links
+/teacher/*   /teacher/index.html  200
+/teacher     /teacher/index.html  200
+/teacher/    /teacher/index.html  200
 
-/hub/*       /hub/index.html   200
-/hub         /hub/index.html   200
-/hub/        /hub/index.html   200
+# Admin: separate shell + deep links
+/admin/*     /admin/index.html    200
+/admin       /admin/index.html    200
+/admin/      /admin/index.html    200
 
-# Keep admin stable (separate shell), but allow deep links
-/admin/*     /admin/index.html 200
-/admin       /admin/index.html 200
-/admin/      /admin/index.html 200
+# Hub: legacy shell (keep if you still use it anywhere)
+# If you truly want hub obsolete later, we can convert /hub -> /admin or /teacher.
+#/hub/*       /hub/index.html      200
+#/hub         /hub/index.html      200
+#/hub/        /hub/index.html      200
