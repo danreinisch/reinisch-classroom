@@ -1,3 +1,18 @@
+function __rcRedirectTeacherIfForced(){
+  try{
+    const params = new URLSearchParams(location.search);
+    const next = params.get('next') || '';
+    const forced = (params.get('entry') === 'teacher') || next.startsWith('/teacher/');
+    if(!forced) return false;
+    const dest = next.startsWith('/teacher/') ? next : '/teacher/';
+    window.location.assign(dest);
+    return true;
+  }catch(_){
+    window.location.assign('/teacher/');
+    return true;
+  }
+}
+
 <!doctype html>
 <html lang="en" data-theme="emerald" data-rc-app="hub">
   <head>
