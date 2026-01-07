@@ -3154,7 +3154,15 @@ function isTeacherEntryRequest() {
       }
 
       function showTeacher() {
-        debugLog(LOG_PREFIX, "showTeacher() called - setting teacher view to display:grid");
+        
+        // RC_TEACHER_ENTRY_REDIRECT_GUARD
+        try {
+          if (typeof isTeacherEntryRequest === "function" && isTeacherEntryRequest()) {
+            window.location.replace("/teacher/");
+            return;
+          }
+        } catch (_) {}
+debugLog(LOG_PREFIX, "showTeacher() called - setting teacher view to display:grid");
         const view = qs("#view-teacher");
         if (view) {
           view.style.display = "grid";

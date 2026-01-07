@@ -30,7 +30,7 @@
     const isHub = location.pathname === "/hub" || location.pathname.startsWith("/hub/");
     if (!isHub) return;
 
-    const safePath = (v) => typeof v === "string" && v.startsWith("/") && !v.startswith("//");
+    const safePath = (v) => typeof v === "string" && v.startsWith("/") && !v.startsWith("//");
 
     const computeDest = (authRole) => {
       const qs = new URLSearchParams(location.search);
