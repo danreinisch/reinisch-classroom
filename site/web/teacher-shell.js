@@ -83,7 +83,7 @@
     const ok = await serverTeacherSessionOk();
     if (!ok) {
       log("redirecting: missing_teacher_session");
-      location.replace(`/hub/?reason=missing_teacher_session&next=${next}`);
+      location.replace(`/hub/?entry=teacher&reason=missing_teacher_session&next=${next}`);
       return;
     }
 
