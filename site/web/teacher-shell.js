@@ -1,7 +1,15 @@
 (() => {
   "use strict";
 
-  const DEBUG = (() => {
+  function __rcHasLocalTeacherAuth(){
+  try{
+    const raw = localStorage.getItem('rc_auth');
+    if(!raw) return false;
+    const a = JSON.parse(raw);
+    return !!a && (a.role === 'teacher' || a.role === 'admin');
+  }catch(_){ return false; }
+}
+const DEBUG = (() => {
     try { return new URLSearchParams(location.search).get("rc_debug") === "1"; }
     catch (_) { return false; }
   })();
