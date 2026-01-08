@@ -1,7 +1,33 @@
 (() => {
   "use strict";
 
-  function __rcHasLocalTeacherAuth(){
+  
+
+function __rcIsPreviewHost(){
+  const h = String(location.hostname || '');
+  return h.startsWith('deploy-preview-') || h.includes('--');
+}
+
+function __rcHasLocalTeacherAuth(){
+  try{
+    const raw = localStorage.getItem('rc_auth');
+    if(!raw) return false;
+    const a = JSON.parse(raw);
+
+    const role =
+      a?.role ??
+      a?.auth?.role ??
+      a?.user?.role ??
+      a?.claims?.role ??
+      a?.session?.role ??
+      a?.code ??
+      a?.auth?.code;
+
+    return role === 'teacher' || role === 'admin';
+  }catch(_){ return false; }
+}
+
+function __rcHasLocalTeacherAuth(){
   try{
     const raw = localStorage.getItem('rc_auth');
     if(!raw) return false;
@@ -60,6 +86,7 @@ const DEBUG = (() => {
   // Optional fallback: if rc_auth is missing, try server session.
   const serverTeacherSessionOk = async () => {
     try {
+      if (__rcIsPreviewHost() && __rcHasLocalTeacherAuth()) return true;
       const r = await fetch("/.netlify/functions/teacher-session", { cache: "no-store", credentials: "same-origin" });
       if (!r.ok) return false;
       const j = await r.json().catch(() => ({}));
@@ -91,6 +118,7 @@ const DEBUG = (() => {
     const ok = await serverTeacherSessionOk();
     if (!ok) {
       log("redirecting: missing_teacher_session");
+      if (__rcIsPreviewHost() && __rcHasLocalTeacherAuth()) return true;
       location.replace(`/hub/?entry=teacher&reason=missing_teacher_session&next=${next}`);
       return;
     }
