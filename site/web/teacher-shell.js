@@ -9,32 +9,22 @@ function __rcIsPreviewHost(){
 }
 
 function __rcHasLocalTeacherAuth(){
+  if (__rcIsPreviewHost() && __rcHasLocalTeacherAuth()) return true;
   try{
     const raw = localStorage.getItem('rc_auth');
     if(!raw) return false;
     const a = JSON.parse(raw);
-
     const role =
-      a?.role ??
-      a?.auth?.role ??
-      a?.user?.role ??
-      a?.claims?.role ??
-      a?.session?.role ??
-      a?.code ??
-      a?.auth?.code;
-
+      (a && a.role) ||
+      (a && a.auth && a.auth.role) ||
+      (a && a.user && a.user.role) ||
+      (a && a.session && a.session.role);
     return role === 'teacher' || role === 'admin';
-  }catch(_){ return false; }
+  }catch(_){
+    return false;
+  }
 }
 
-function __rcHasLocalTeacherAuth(){
-  try{
-    const raw = localStorage.getItem('rc_auth');
-    if(!raw) return false;
-    const a = JSON.parse(raw);
-    return !!a && (a.role === 'teacher' || a.role === 'admin');
-  }catch(_){ return false; }
-}
 const DEBUG = (() => {
     try { return new URLSearchParams(location.search).get("rc_debug") === "1"; }
     catch (_) { return false; }

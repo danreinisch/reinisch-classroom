@@ -1,22 +1,38 @@
+<!doctype html>
+<html lang="en" data-theme="emerald" data-rc-app="hub">
+  <head>
+    
+<script>
 function __rcRedirectTeacherIfForced(){
   try{
     const params = new URLSearchParams(location.search);
+    const entry = params.get('entry') || '';
     const next = params.get('next') || '';
-    const forced = (params.get('entry') === 'teacher') || next.startsWith('/teacher/');
-    if(!forced) return false;
+    const reason = params.get('reason') || '';
+
+    // 🔥 Loop breaker: if teacher page bounced us here, DO NOT bounce back.
+    if (reason === 'missing_teacher_session' || reason === 'gate_error') return false;
+
+    const forced = (entry === 'teacher') || next.startsWith('/teacher/');
+    if (!forced) return false;
+
+    // Only redirect if local auth clearly indicates teacher/admin
+    let role = '';
+    try{
+      const a = JSON.parse(localStorage.getItem('rc_auth') || 'null');
+      role = (a && a.role) || (a && a.auth && a.auth.role) || (a && a.user && a.user.role) || (a && a.session && a.session.role) || '';
+    }catch(_){}
+    if (role !== 'teacher' && role !== 'admin') return false;
+
     const dest = next.startsWith('/teacher/') ? next : '/teacher/';
     window.location.assign(dest);
     return true;
   }catch(_){
-    window.location.assign('/teacher/');
-    return true;
+    return false;
   }
 }
-
-<!doctype html>
-<html lang="en" data-theme="emerald" data-rc-app="hub">
-  <head>
-    <meta charset="utf-8" />
+</script>
+<meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Reinisch Classroom — Classroom Hub</title>
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
