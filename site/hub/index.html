@@ -3,6 +3,37 @@
   <head>
     
 <script>
+(function(){
+  try{
+    const params = new URLSearchParams(location.search);
+    const next = params.get('next') || '';
+    const forced = (params.get('entry') === 'teacher') || next.startsWith('/teacher/');
+    if (!forced) return;
+
+    // If /teacher/ bounces for any reason, don't loop forever.
+    const latchKey = 'rc_teacher_entry_latch';
+    const last = Number(sessionStorage.getItem(latchKey) || '0');
+    const now = Date.now();
+    if (now - last < 4000) return; // 4s cooldown
+    sessionStorage.setItem(latchKey, String(now));
+
+    let role = '';
+    try{
+      const a = JSON.parse(localStorage.getItem('rc_auth') || 'null');
+      role =
+        (a && a.role) ||
+        (a && a.auth && a.auth.role) ||
+        (a && a.user && a.user.role) ||
+        (a && a.session && a.session.role) || '';
+    }catch(_){}
+    if (role !== 'teacher' && role !== 'admin') return;
+
+    const dest = next.startsWith('/teacher/') ? next : '/teacher/';
+    location.replace(dest);
+  }catch(_){}
+})();
+</script>
+<script>
 function __rcRedirectTeacherIfForced(){
   try{
     const params = new URLSearchParams(location.search);
