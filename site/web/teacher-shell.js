@@ -1,128 +1,116 @@
-(() => {
-  "use strict";
+(function(){
+  const KEY = 'rc_tc_sidebar';
+  const DEFAULT = 'collapsed';
 
-  
-
-function __rcIsPreviewHost(){
-  const h = String(location.hostname || '');
-  return h.startsWith('deploy-preview-') || h.includes('--');
-}
-
-function __rcHasLocalTeacherAuth(){
-  if (__rcIsPreviewHost() && __rcHasLocalTeacherAuth()) return true;
-  try{
-    const raw = localStorage.getItem('rc_auth');
-    if(!raw) return false;
-    const a = JSON.parse(raw);
-    const role =
-      (a && a.role) ||
-      (a && a.auth && a.auth.role) ||
-      (a && a.user && a.user.role) ||
-      (a && a.session && a.session.role);
-    return role === 'teacher' || role === 'admin';
-  }catch(_){
-    return false;
+  function setCollapsed(isCollapsed){
+    document.documentElement.classList.toggle('tc-collapsed', isCollapsed);
+    try{ localStorage.setItem(KEY, isCollapsed ? 'collapsed' : 'expanded'); }catch(_){ /* noop */ }
+    const btn = document.getElementById('tcSidebarToggle');
+    if(btn) btn.setAttribute('aria-expanded', String(!isCollapsed));
   }
-}
 
-const DEBUG = (() => {
-    try { return new URLSearchParams(location.search).get("rc_debug") === "1"; }
-    catch (_) { return false; }
-  })();
+  function getCollapsed(){
+    try{
+      const v = localStorage.getItem(KEY) || DEFAULT;
+      return v !== 'expanded';
+    }catch(_){ return true; }
+  }
 
-  const log = (...args) => { if (DEBUG) console.log("[teacher-shell]", ...args); };
-
-  const next = encodeURIComponent(location.pathname + location.search + location.hash);
-
-  const safeGet = (k) => { try { return localStorage.getItem(k); } catch (_) { return null; } };
-  const safeSetSession = (k, v) => { try { sessionStorage.setItem(k, v); } catch (_) { /* noop */ } };
-  const safeGetLS = (k) => { try { return localStorage.getItem(k); } catch (_) { return null; } };
-  const safeSetLS = (k, v) => { try { localStorage.setItem(k, v); } catch (_) { /* noop */ } };
-
-  const parseAuth = () => {
-    const raw = safeGet("rc_auth");
-    if (!raw) return null;
-    try { return JSON.parse(raw); } catch (_) { return { error: "bad_json" }; }
-  };
-
-  const authExpired = (auth) => {
-    try {
-      if (!auth) return true;
-      if (auth.isExpired === true) return true;
-
-      const exp = auth.expiresAt ?? auth.expires ?? auth.exp ?? null;
-      if (!exp) return false; // compat: missing exp => treat as valid
-      const t = (typeof exp === "number") ? exp : Date.parse(exp);
-      if (!Number.isFinite(t)) return false;
-      return Date.now() > t;
-    } catch (_) {
-      return false;
-    }
-  };
-
-  const hasTeacherAuth = () => {
-    const auth = parseAuth();
-    if (!auth || auth.error) return false;
-    if (auth.role !== "teacher") return false;
-    if (authExpired(auth)) return false;
-    return true;
-  };
-
-  const isPreviewHost = () => {
-    const h = (location.hostname || "").toLowerCase();
-    return h.endsWith(".netlify.app") || h.endsWith(".netlify.live") || h.includes("--");
-  };
-
-  // Optional fallback: if rc_auth is missing, try server session.
-  const serverTeacherSessionOk = async () => {
-    try {
-      if (__rcIsPreviewHost() && __rcHasLocalTeacherAuth()) return true;
-      const r = await fetch("/.netlify/functions/teacher-session", { cache: "no-store", credentials: "same-origin" });
-      if (!r.ok) return false;
-      const j = await r.json().catch(() => ({}));
-      return !!(j && (j.ok === true || j.role === "teacher"));
-    } catch (_) {
-      return false;
-    }
-  };
-
-  (async () => {
-    // Primary: rc_auth
-    if (hasTeacherAuth()) {
-      safeSetSession("rc_user_role", "teacher");
-      log("teacher auth ok (rc_auth)");
-      return;
-    }
-
-    // Deploy preview: allow UI load if preview + rc_auth exists at all (helps iteration)
-    if (isPreviewHost()) {
-      const raw = safeGet("rc_auth");
-      if (raw) {
-        safeSetSession("rc_user_role", "teacher");
-        log("preview host + rc_auth present: allowing teacher UI");
-        return;
+  async function gateTeacher(){
+    // Same-origin is mandatory for preview deploys.
+    const next = encodeURIComponent(location.pathname + location.search);
+    try{
+      const r = await fetch('/.netlify/functions/teacher-session', { cache:'no-store', credentials:'same-origin' });
+      if(!r.ok){
+        location.replace(`/hub/?entry=teacher&reason=missing_teacher_session&next=${next}`);
+        return false;
       }
+      return true;
+    }catch(_){
+      location.replace(`/hub/?entry=teacher&reason=gate_error&next=${next}`);
+      return false;
+    }
+  }
+
+  function wireNavActive(){
+    const path = location.pathname.replace(/\/+$/, '/') || '/teacher/';
+    document.querySelectorAll('.tc-nav a[data-href]').forEach(a=>{
+      const href = a.getAttribute('data-href');
+      const isActive = href === path;
+      if(isActive) a.setAttribute('aria-current','page');
+      else a.removeAttribute('aria-current');
+      // Tooltips in collapsed mode
+      const label = a.querySelector('.tc-label');
+      if(label) a.title = label.textContent.trim();
+    });
+  }
+
+  async function init(){
+    const ok = await gateTeacher();
+    if(!ok) return;
+
+    setCollapsed(getCollapsed());
+
+    const toggle = document.getElementById('tcSidebarToggle');
+    if(toggle){
+      toggle.addEventListener('click', ()=>{
+        const isCollapsed = document.documentElement.classList.contains('tc-collapsed');
+        setCollapsed(!isCollapsed);
+      });
     }
 
-    // Fallback: server session (only when rc_auth isn't available)
-    const ok = await serverTeacherSessionOk();
-    if (!ok) {
-      log("redirecting: missing_teacher_session");
-      if (__rcIsPreviewHost() && __rcHasLocalTeacherAuth()) return true;
-      location.replace(`/hub/?entry=teacher&reason=missing_teacher_session&next=${next}`);
-      return;
-    }
+    wireNavActive();
+  }
 
-    safeSetSession("rc_user_role", "teacher");
-    log("teacher auth ok (server session)");
-  })();
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
 
-  // Expose tiny hook + nav collapse state (harmless)
-  window.RC_TEACHER_SHELL = window.RC_TEACHER_SHELL || {};
-  window.RC_TEACHER_SHELL.isTeacherSession = () => true;
 
-  const NAV_KEY = "rc_teacher_nav";
-  const DEFAULT_NAV = "expanded";
-  window.RC_TEACHER_SHELL.getNavState = () => safeGetLS(NAV_KEY) || DEFAULT_NAV;
-  window.RC_TEACHER_SHELL.setNavState = (collapsed) => safeSetLS(NAV_KEY, collapsed ? "collapsed" : "expanded");
+/* NETLIFY DRAWER KILL SWITCH
+   Deploy previews sometimes inject a CSP-blocked Netlify iframe ("Netlify Drawer")
+   that renders as a white bar at the bottom. It uses inline !important styles,
+   so CSS cannot reliably hide it. Remove it + keep removing it if re-injected.
+*/
+(function(){
+  const isDrawer = (el) =>
+    el && el.tagName === "IFRAME" &&
+    typeof el.src === "string" &&
+    el.src.includes("app.netlify.com/cdp");
+
+  const nuke = (el) => {
+    try { el.remove(); } catch(e) { /* noop */ }
+    try {
+      el.style.setProperty("display","none","important");
+      el.style.setProperty("height","0","important");
+      el.style.setProperty("width","0","important");
+      el.style.setProperty("opacity","0","important");
+      el.style.setProperty("pointer-events","none","important");
+    } catch(e) { /* noop */ }
+  };
+
+  const run = () => {
+    // Home button fallback: if the Home link is empty, give it a glyph.
+    const home = document.querySelector('.tc-btn[aria-label="Home"]');
+    if (home && !home.textContent.trim()) home.textContent = "⌂";
+
+    document.querySelectorAll('iframe[src*="app.netlify.com/cdp"]').forEach(nuke);
+
+    const mo = new MutationObserver((muts) => {
+      for (const m of muts) {
+        for (const node of m.addedNodes) {
+          if (!(node instanceof Element)) continue;
+          if (isDrawer(node)) nuke(node);
+          node.querySelectorAll?.('iframe[src*="app.netlify.com/cdp"]').forEach(nuke);
+        }
+      }
+    });
+    mo.observe(document.documentElement, { childList: true, subtree: true });
+  };
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", run, { once: true });
+  } else {
+    run();
+  }
 })();
