@@ -1,9 +1,10 @@
-
-/* RC_ROUTING_PATCH_BEGIN */
 function __rcIsPreviewHost(){
   const h = String(location.hostname || '');
   return h.startsWith('deploy-preview-') || h.includes('--');
 }
+
+
+/* RC_ROUTING_PATCH_BEGIN */
 /* RC_ROUTING_PATCH_END */
 
 
@@ -30,7 +31,7 @@ function __rcIsPreviewHost(){
     const next = encodeURIComponent(location.pathname + location.search);
     try{
       const r = await (__rcIsPreviewHost() ? Promise.resolve({ ok:true, status:200, __rcPreviewBypass:true }) : fetch('/.netlify/functions/teacher-session', { cache:'no-store', credentials:'same-origin' }));
-      if(!r.ok){
+      if (!r.ok && !__rcIsPreviewHost()){
         if (!__rcIsPreviewHost()) location.replace(`/hub/?reason=missing_teacher_session&next=${next}`);
         return false;
       }
