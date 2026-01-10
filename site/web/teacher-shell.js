@@ -1,7 +1,27 @@
+/* RC_PREVIEW_GUARDS_START */
 function __rcIsPreviewHost(){
   const h = String(location.hostname || '');
   return h.startsWith('deploy-preview-') || h.includes('--');
 }
+
+function __rcHasLocalTeacherAuth(){
+  try{
+    const raw = localStorage.getItem('rc_auth');
+    if(!raw) return false;
+    const a = JSON.parse(raw);
+    const role =
+      (a && a.role) ||
+      (a && a.auth && a.auth.role) ||
+      (a && a.user && a.user.role) ||
+      (a && a.session && a.session.role) || '';
+    return role === 'teacher' || role === 'admin';
+  }catch(_){
+    return false;
+  }
+}
+/* RC_PREVIEW_GUARDS_END */
+
+
 
 
 /* RC_ROUTING_PATCH_BEGIN */
