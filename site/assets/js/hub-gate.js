@@ -7,9 +7,43 @@
 (function () {
   'use strict';
 
-  const __rcHubParams = new URLSearchParams(location.search);
-const __rcNext = __rcHubParams.get('next') || '';
-const __rcForceTeacherEntry = (__rcHubParams.get('entry') === 'teacher') || __rcNext.startsWith('/teacher/');
+  
+/* RC_HUB_ENTRY_BEGIN */
+(function(){
+  'use strict';
+
+  function __rcIsPreviewHost(){
+    const h = String(location.hostname || '');
+    return h.startsWith('deploy-preview-') || h.includes('--');
+  }
+
+  const p = new URLSearchParams(location.search);
+  const next = p.get('next') || '';
+  const forceTeacher = (p.get('entry') === 'teacher') || next.startsWith('/teacher/');
+
+  if (!forceTeacher) return;
+
+  // small latch so we don't thrash if something else is misconfigured
+  const latchKey = 'rc_teacher_entry_latch';
+  const now = Date.now();
+  const last = Number(sessionStorage.getItem(latchKey) || '0');
+  if (now - last < 4000) return;
+  sessionStorage.setItem(latchKey, String(now));
+
+  const dest = next.startsWith('/teacher/') ? next : '/teacher/';
+
+  // In deploy previews / branch deploys: go to teacher immediately.
+  if (__rcIsPreviewHost()){
+    location.replace(dest);
+    return;
+  }
+
+  // In non-preview: only redirect if teacher-session is actually valid.
+  fetch('/.netlify/functions/teacher-session', { cache: 'no-store', credentials: 'same-origin' })
+    .then(r => { if (r && r.ok) location.replace(dest); })
+    .catch(() => {});
+})();
+ /* RC_HUB_ENTRY_END */
 
 // Debug logger helpers - fall back to console if DebugLogger not available
   const debugLog = (...args) => window.DebugLogger?.log(...args);
