@@ -8,6 +8,38 @@
   'use strict';
 
   
+
+/* RC_HUB_ENTRY_BEGIN */
+(function(){
+  try{
+    const params = new URLSearchParams(location.search || '');
+    const entry = String(params.get('entry') || '');
+    if (entry !== 'teacher') return;
+
+    const nextRaw = params.get('next');
+    const next = nextRaw ? decodeURIComponent(nextRaw) : '';
+    const dest = (next && next.startsWith('/teacher/')) ? next : '/teacher/';
+
+    const h = String(location.hostname || '');
+    const isPreview = h.startsWith('deploy-preview-') || h.includes('--');
+
+    let role = '';
+    try{
+      const a = JSON.parse(localStorage.getItem('rc_auth') || 'null');
+      role = (a && a.role) || (a && a.auth && a.auth.role) || (a && a.user && a.user.role) || (a && a.session && a.session.role) || '';
+    }catch (_) { /* ignore */ }
+
+    const hasLocalTeacher = (role === 'teacher' || role === 'admin');
+
+    // Deploy preview: teacher-session often 401 — if local role says teacher/admin, allow entry without bouncing.
+    if (isPreview && hasLocalTeacher){
+      location.replace(dest);
+      return;
+    }
+  }catch (_) { /* ignore */ }
+})();
+/* RC_HUB_ENTRY_END */
+
 /* RC_HUB_ENTRY_BEGIN */
 (function(){
   'use strict';
@@ -41,7 +73,7 @@
   // In non-preview: only redirect if teacher-session is actually valid.
   fetch('/.netlify/functions/teacher-session', { cache: 'no-store', credentials: 'same-origin' })
     .then(r => { if (r && r.ok) location.replace(dest); })
-    .catch(() => {});
+    .catch(() => { /* ignore */ });
 })();
  /* RC_HUB_ENTRY_END */
 
@@ -418,7 +450,7 @@
     debugLog(LOG_PREFIX, 'Initializing hub gate');
 
     // Check if user has valid local auth
-    const hasLocalAuth = hasValidTeacherSession();
+    const hasLocalAuth = ((new URLSearchParams(location.search||'')).get('entry') === 'teacher') ? hasValidTeacherSession() : false;
 
     if (hasLocalAuth) {
       // User has valid local auth - they're already logged in
