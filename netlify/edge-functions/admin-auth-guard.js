@@ -13,7 +13,7 @@
 function redirectToHubSSO() {
   return new Response(null, {
     status: 302,
-    headers: { Location: "/hub/?reason=missing_admin_session&next=%2Fadmin%2F" },
+    headers: { Location: "/admin/?reason=missing_admin_session&next=%2Fadmin%2F" },
   });
 }
 
@@ -29,13 +29,21 @@ function hasTcCookie(cookieHeader) {
 export default async (request, context) => {
   const url = new URL(request.url);
 
-  
+  // RC_ADMIN_SHELL_V2
+  // Keep the user on /admin while showing a session-required shell (avoid /hub bounce + avoid loops).
+  if ((url.pathname === '/admin' || url.pathname === '/admin/') && url.searchParams) {
+    const sp = url.searchParams;
+    if (sp.has('reason') || sp.has('entry') || sp.has('shell')) return context.next();
+  }
   // RC_ALLOW_ADMIN_SHELL_NO_HUB_BOUNCE_V1
-  // Allow /admin to load and let the client render an Admin Session Required shell.
-  // Downstream Netlify Functions still enforce auth; this avoids hub-bounce loops.
-  if (url && (url.pathname === '/admin' || url.pathname.startsWith('/admin/'))) {
+  // Deploy previews / branch deploys: allow /admin to load and let the client render an Admin Session Required shell.
+  // Production: keep existing redirect-based guard.
+  const host = (url && url.hostname) ? url.hostname : '';
+  const isPreviewHost = String(host).includes('--');
+  if (isPreviewHost && isAdminPath(url.pathname)) {
     return context.next();
   }
+
 // Only guard /admin and /admin/* (avoid accidental matches like /admin-login)
   if (!isAdminPath(url.pathname)) return context.next();
 
