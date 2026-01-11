@@ -370,17 +370,17 @@
 
           persistFormState();
 
-          window.location.assign('/hub/?reason=tc_session_expired&next=%2Fadmin%2F');
+          if (window.__rcShowAdminShell) window.__rcShowAdminShell({ reason: 'tc_session_expired', next: '/admin/' });
 
           return;
 
         } else {
 
           // Non-retryable 401 or retry limit reached
-          window.location.assign('/hub/?reason=tc_session_expired&next=%2Fadmin%2F');
+          if (window.__rcShowAdminShell) window.__rcShowAdminShell({ reason: 'tc_session_expired', next: '/admin/' });
           persistQueue();
           persistFormState();
-          location.replace('/teacher/');
+          if (window.__rcShowAdminShell) window.__rcShowAdminShell({ reason: 'tc_session_expired', next: '/admin/' });
           return { success: false };
         }
       }
@@ -606,9 +606,9 @@
       log(`Delete response ${res.status} -> ${text}`);
       
       if (res.status === 401) { 
-        window.location.assign('/hub/?reason=tc_session_expired&next=%2Fadmin%2F');
+        if (window.__rcShowAdminShell) window.__rcShowAdminShell({ reason: 'tc_session_expired', next: '/admin/' });
         persistFormState();
-        location.replace('/teacher/'); 
+        if (window.__rcShowAdminShell) window.__rcShowAdminShell({ reason: 'tc_session_expired', next: '/admin/' }); 
         return; 
       }
       if (!res.ok) { alert(`Delete failed: ${res.status}\n${(text||'').slice(0,400)}`); return; }

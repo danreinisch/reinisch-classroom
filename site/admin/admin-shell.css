@@ -1,0 +1,119 @@
+/* Admin shell (teacher-shell vibe, but admin-flavored) */
+:root {
+  --rc-bg0: #060b0f;
+  --rc-bg1: #07141a;
+  --rc-card: rgba(10, 28, 34, 0.72);
+  --rc-border: rgba(255,255,255,0.10);
+  --rc-text: rgba(255,255,255,0.92);
+  --rc-muted: rgba(255,255,255,0.70);
+  --rc-accent: #2dd4bf;
+  --rc-accent2: #22c55e;
+  --rc-danger: #f87171;
+}
+
+.rc-admin-shell-root{
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background:
+    radial-gradient(1200px 600px at 20% 20%, rgba(45,212,191,0.10), transparent 60%),
+    radial-gradient(900px 500px at 80% 30%, rgba(34,197,94,0.08), transparent 55%),
+    linear-gradient(180deg, var(--rc-bg0), var(--rc-bg1));
+}
+
+.rc-admin-shell-card{
+  width: min(820px, 100%);
+  border-radius: 18px;
+  border: 1px solid var(--rc-border);
+  background: var(--rc-card);
+  box-shadow: 0 18px 55px rgba(0,0,0,0.55);
+  padding: 22px 22px 18px;
+}
+
+.rc-admin-shell-top{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap: 16px;
+}
+
+.rc-admin-shell-title{
+  margin: 0;
+  font-size: 26px;
+  color: var(--rc-text);
+  letter-spacing: 0.2px;
+}
+
+.rc-admin-shell-sub{
+  margin: 8px 0 0;
+  color: var(--rc-muted);
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.rc-admin-shell-badge{
+  display:inline-flex;
+  align-items:center;
+  gap: 8px;
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--rc-border);
+  color: var(--rc-muted);
+  background: rgba(0,0,0,0.18);
+  user-select:none;
+}
+
+.rc-admin-shell-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.rc-btn{
+  appearance:none;
+  border: 1px solid var(--rc-border);
+  background: rgba(0,0,0,0.18);
+  color: var(--rc-text);
+  padding: 10px 14px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 600;
+  letter-spacing: 0.15px;
+}
+
+.rc-btn:hover{ filter: brightness(1.06); }
+.rc-btn:active{ transform: translateY(1px); }
+
+.rc-btn-primary{
+  border-color: rgba(45,212,191,0.45);
+  background: rgba(45,212,191,0.16);
+}
+
+.rc-btn-good{
+  border-color: rgba(34,197,94,0.45);
+  background: rgba(34,197,94,0.14);
+}
+
+.rc-btn-danger{
+  border-color: rgba(248,113,113,0.45);
+  background: rgba(248,113,113,0.14);
+}
+
+.rc-admin-shell-hr{
+  margin: 18px 0 14px;
+  border: none;
+  height: 1px;
+  background: rgba(255,255,255,0.10);
+}
+
+.rc-admin-shell-mini{
+  font-size: 12px;
+  color: rgba(255,255,255,0.55);
+  line-height: 1.4;
+}

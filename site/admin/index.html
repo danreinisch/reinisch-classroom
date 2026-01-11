@@ -11,8 +11,6 @@
   <link rel="stylesheet" href="/assets/css/app-shell-layout.css"/>
   <script src="/assets/js/admin-guard.js"></script>
   <script src="/assets/js/section-nav.js" defer></script>
-  <script src="./gate.js" defer></script>
-
   <style>
     .wrap{
       max-width:1100px;margin:32px auto;padding:20px;
@@ -77,8 +75,10 @@
     .taken-note{font-size:12px;color:#fde68a;margin-top:4px}
     h1{color:var(--text0, #e8f1ec)}
   </style>
+  <link rel="stylesheet" href="/admin/admin-shell.css" />
 </head>
 <body>
+  <div id="rc-admin-shell-root" class="rc-admin-shell-root"></div>
   <!-- glass top-nav is injected by section-nav.js; we also keep explicit Home/Sign out in the header -->
   <div id="gate" style="min-height:100vh;display:grid;place-items:center">Checking session…</div>
 
@@ -242,5 +242,6 @@
   <pre id="unitMgrPreview" class="mono" style="margin-top:10px;white-space:pre-wrap"></pre>
 </div>
 
+  <script src="/web/user-auth.js" defer></script>
 </body>
 </html>

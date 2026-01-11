@@ -1,28 +1,38 @@
-// Server-side session gate - check Teacher Center session
-// PR 335: Admin SSO via Teacher Center
+// Legacy Admin Gate (non-bouncy)
+// Kept for backwards compatibility.
+// IMPORTANT: This file MUST NOT hard-redirect to /hub. Admin UX should stay on /admin/ and show the Admin shell.
+
 (function(){
+  'use strict';
+
   async function gate(){
     try{
-      const r = await fetch('/.netlify/functions/teacher-session', { cache:'no-store', credentials:'same-origin' });
+      const r = await fetch('/.netlify/functions/teacher-session', {
+        cache: 'no-store',
+        credentials: 'same-origin'
+      });
+
       if (!r.ok) {
-        location.replace('/hub/?reason=missing_teacher_session&next=%2Fadmin%2F');
+        if (window.__rcShowAdminShell) window.__rcShowAdminShell({ reason: 'missing_teacher_session', next: '/admin/' });
         return;
       }
 
       const data = await r.json().catch(() => null);
       const raw = data && (data.raw_role || data.role);
 
-      // Only allow real admins into /admin/
       if (raw !== 'admin') {
-        location.replace('/hub/?reason=not_admin&next=%2Fadmin%2F');
+        if (window.__rcShowAdminShell) window.__rcShowAdminShell({ reason: 'not_admin', next: '/admin/' });
         return;
       }
 
-      document.getElementById('app').style.display='block';
-      document.getElementById('gate').style.display='none';
-    }catch{
-      location.replace('/hub/?reason=gate_error&next=%2Fadmin%2F');
+      const app = document.getElementById('app');
+      const gateEl = document.getElementById('gate');
+      if (app) app.style.display = 'block';
+      if (gateEl) gateEl.style.display = 'none';
+    } catch (_) {
+      if (window.__rcShowAdminShell) window.__rcShowAdminShell({ reason: 'gate_error', next: '/admin/' });
     }
   }
+
   gate();
 })();
