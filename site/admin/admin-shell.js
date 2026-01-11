@@ -77,7 +77,7 @@
   async function fetchAdminSession() {
     // Prefer admin-session if present; teacher-session can also surface role.
     const urls = [
-      '/.netlify/functions/admin-session',
+      '/.netlify/functions/teacher-session',
       '/.netlify/functions/teacher-session'
     ];
 
