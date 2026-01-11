@@ -29,7 +29,14 @@ function hasTcCookie(cookieHeader) {
 export default async (request, context) => {
   const url = new URL(request.url);
 
-  // Only guard /admin and /admin/* (avoid accidental matches like /admin-login)
+  
+  // RC_ALLOW_ADMIN_SHELL_NO_HUB_BOUNCE_V1
+  // Allow /admin to load and let the client render an Admin Session Required shell.
+  // Downstream Netlify Functions still enforce auth; this avoids hub-bounce loops.
+  if (url && (url.pathname === '/admin' || url.pathname.startsWith('/admin/'))) {
+    return context.next();
+  }
+// Only guard /admin and /admin/* (avoid accidental matches like /admin-login)
   if (!isAdminPath(url.pathname)) return context.next();
 
   const cookie = request.headers.get("cookie") || "";
