@@ -90,8 +90,16 @@
 
       const data = await r.json().catch(() => null);
       const role = data && (data.raw_role || data.role);
+      // RC_ADMIN_PREVIEW_BYPASS_V1
+      // Deploy previews/local dev: allow loading /admin UI when preview bypass is enabled.
+      // Production remains strict.
+      const __rcIsDeployPreview = /deploy-preview-/.test(location.hostname) || location.hostname === 'localhost';
+      const __rcAdminPreviewBypass = localStorage.getItem('rc_admin_preview_bypass') === '1';
+      const __rcServerPreviewBypass = !!(data && data.previewBypass); // optional if server ever provides it
+      const __rcAllowAdminUi = (role === 'admin') || (__rcIsDeployPreview && (__rcAdminPreviewBypass || __rcServerPreviewBypass));
 
-      if (role !== 'admin') {
+
+      if (!__rcAllowAdminUi) {
         renderShell({ reason: 'not_admin', next });
         return;
       }
