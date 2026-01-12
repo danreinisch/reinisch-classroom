@@ -54,7 +54,12 @@
     `;
 
     const retry = el('rc-admin-shell-retry');
-    if (retry) retry.onclick = () => location.reload();
+    if (retry) retry.onclick = () => {
+      const u = new URL(location.href);
+      u.searchParams.delete('reason');
+      u.searchParams.delete('next');
+      location.href = u.pathname + (u.search || '');
+    };
   }
 
   function loadAdminApp() {
@@ -71,7 +76,7 @@
     // If we were redirected here with a reason, just show the shell.
     if (initialReason) {
       renderShell({ reason: initialReason, next });
-      return;
+      // NOTE: no return — still run the gate check (important for deploy-preview bypass + Retry).
     }
 
     // Default: hide app until proven admin.
@@ -96,7 +101,7 @@
       const __rcIsDeployPreview = /deploy-preview-/.test(location.hostname) || location.hostname === 'localhost';
       const __rcAdminPreviewBypass = localStorage.getItem('rc_admin_preview_bypass') === '1';
       const __rcServerPreviewBypass = !!(data && data.previewBypass); // optional if server ever provides it
-      const __rcAllowAdminUi = (role === 'admin') || (__rcIsDeployPreview && (__rcAdminPreviewBypass || __rcServerPreviewBypass));
+      const __rcAllowAdminUi = (role === 'admin') || (__rcIsDeployPreview && data && data.ok) || (__rcIsDeployPreview && __rcAdminPreviewBypass);
 
 
       if (!__rcAllowAdminUi) {
