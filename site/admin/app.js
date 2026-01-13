@@ -594,8 +594,11 @@
       try {
         const contentType = res.headers.get('content-type');
         if (contentType && contentType.includes('application/json')) {
-          const data = await res.json();
-          text = JSON.stringify(data);
+          const data = await res.json().catch(() => ({ success: false, error: `HTTP ${res.status}` }));
+      if (!res.ok) {
+        throw new Error(data && data.error ? data.error : `HTTP ${res.status}`);
+      }
+text = JSON.stringify(data);
         } else {
           text = await res.text();
         }
