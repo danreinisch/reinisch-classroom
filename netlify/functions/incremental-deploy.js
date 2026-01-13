@@ -21,15 +21,15 @@ exports.handler = async (event) => {
 
     if (event.httpMethod === 'GET') {
       if (actionQS === 'diagnostics') {
-        return json(200, {
-          ok: true,
+        return json(200, { ok: true, success: true,
+          success: true,
           hasGithubToken: !!process.env.GITHUB_TOKEN,
           ghRepo: process.env.GH_REPO || '',
           ghBranch: process.env.GH_BRANCH || '',
           hasPublicSiteUrl: !!process.env.PUBLIC_SITE_URL
         });
       }
-      return json(200, { ok: true, message: 'Use POST to upload or delete; GET ?action=diagnostics' });
+      return json(200, { ok: true, success: true, message: 'Use POST to upload or delete; GET ?action=diagnostics' });
     }
 
     if (event.httpMethod !== 'POST') return json(405, { message: 'Method not allowed' });
@@ -121,8 +121,8 @@ async function handleUpload(body, remainingTTL){
     : `Upload ${category} #${slot} (batch)`;
 
   const commitSha = await commitTreeWithRetry(owner, repo, branch, blobs, message);
-  return json(200, { 
-    ok: true, 
+  return json(200, { ok: true, success: true,
+    success: true,
     commit: commitSha, 
     final: !!final, 
     files: files.length,
@@ -172,8 +172,8 @@ async function handleDelete(body, remainingTTL){
   }
 
   const commitSha = await commitTreeWithRetry(owner, repo, branch, blobs, `Delete ${category} #${slot}`);
-  return json(200, { 
-    ok: true, 
+  return json(200, { ok: true, success: true,
+    success: true,
     deleted: true, 
     commit: commitSha,
     sessionRemainingSeconds: remainingTTL 
@@ -187,15 +187,24 @@ async function requireAdmin(event){
   if (tcSecret) {
     const tc = requireTeacher(event, tcSecret);
 
-    // requireTeacher() accepts both teacher/admin — we ONLY allow admin into incremental deploy
-    if (tc.ok && tc.user && tc.user.role === 'admin') {
+    const hdrs = event.headers || {};
+    const host = String(hdrs['x-forwarded-host'] || hdrs.host || '');
+    const isDeployPreview = /deploy-preview-/.test(host) || host === 'localhost';
+
+    // requireTeacher() accepts both teacher/admin — in deploy previews, allow teacher to run admin tools.
+    const allowed = tc.ok && tc.user && (
+      tc.user.role === 'admin' ||
+      (isDeployPreview && tc.user.role === 'teacher')
+    );
+
+    if (allowed) {
       const now = Math.floor(Date.now() / 1000);
       const remainingTTL = (tc.user.exp ? (tc.user.exp - now) : 0);
       return { ok: true, remainingTTL: Math.max(0, remainingTTL) };
     }
 
-    // Logged in but not admin → deny (this is NOT a "session expired" case)
-    if (tc.ok && tc.user && tc.user.role !== 'admin') {
+    // Logged in but not allowed → deny (NOT expired)
+    if (tc.ok && tc.user) {
       return { ok: false, response: createErrorResponse('FORBIDDEN', 'Admin access required', false, 403) };
     }
   }
