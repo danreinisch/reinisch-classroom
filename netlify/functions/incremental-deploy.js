@@ -183,7 +183,11 @@ async function handleDelete(body, remainingTTL){
 // ---------- Auth helper ----------
 async function requireAdmin(event){
   // ✅ SSO path: Teacher Center cookie (tc) signed with SESSION_SECRET
-  const tcSecret = (process.env.SESSION_SECRET || '').trim();
+  const tcSecret =
+  (process.env.TEACHER_SESSION_SECRET ||
+   process.env.TEACHER_SECRET ||
+   process.env.SESSION_SECRET ||
+   '').trim();
   if (tcSecret) {
     const tc = requireTeacher(event, tcSecret);
 
