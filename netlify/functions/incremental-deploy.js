@@ -20,6 +20,51 @@ exports.handler = async (event) => {
     const actionQS = qs.action || '';
 
     if (event.httpMethod === 'GET') {
+      if (actionQS === 'authdiag') {
+        const hdrs = event.headers || {};
+        const cookieHeader = String(hdrs.cookie || hdrs.Cookie || '');
+        const host = String(hdrs['x-forwarded-host'] || hdrs.host || '');
+        const isDeployPreview = /deploy-preview-/.test(host) || host === 'localhost';
+
+        const candidates = [
+          ['TEACHER_SESSION_SECRET', (process.env.TEACHER_SESSION_SECRET || '').trim()],
+          ['TEACHER_SECRET', (process.env.TEACHER_SECRET || '').trim()],
+          ['SESSION_SECRET', (process.env.SESSION_SECRET || '').trim()],
+        ];
+
+        let matched = '';
+        let role = '';
+        let exp = 0;
+
+        for (const [name, secret] of candidates) {
+          if (!secret) continue;
+          const tc = requireTeacher(event, secret);
+          if (tc && tc.ok && tc.user) {
+            matched = name;
+            role = String(tc.user.role || '');
+            exp = Number(tc.user.exp || 0);
+            break;
+          }
+        }
+
+        return json(200, {
+          ok: true,
+          isDeployPreview,
+          host,
+          hasTcCookie: cookieHeader.includes('tc='),
+          secretsPresent: {
+            TEACHER_SESSION_SECRET: !!(process.env.TEACHER_SESSION_SECRET || '').trim(),
+            TEACHER_SECRET: !!(process.env.TEACHER_SECRET || '').trim(),
+            SESSION_SECRET: !!(process.env.SESSION_SECRET || '').trim(),
+            ADMIN_SESSION_SECRET: !!(process.env.ADMIN_SESSION_SECRET || '').trim(),
+          },
+          tcVerified: !!matched,
+          matchedSecret: matched,
+          role,
+          exp
+        });
+      }
+
       if (actionQS === 'diagnostics') {
         return json(200, { ok: true, success: true,
           success: true,
