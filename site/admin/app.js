@@ -452,7 +452,7 @@
           category, slot, title, files, final: isFinal
         }, i + 1, batches.length);
         
-        if (!uploadResult.success) {
+        if (!(uploadResult && (uploadResult.success || uploadResult.ok))) {
           // Upload failed after retries
           return;
         }
