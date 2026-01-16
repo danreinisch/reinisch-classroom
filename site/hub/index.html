@@ -3580,12 +3580,27 @@ function isTeacherEntryRequest() {
             }
 
             console.log(LOG_PREFIX, "Calling showTeacher() after successful login");
-                        const nx = rcSafeNextPath();
+            
+            // Check for next parameter
+            const nx = rcSafeNextPath();
             if (nx) {
               console.log("[Teacher Auth] Redirecting to next on login:", nx);
               window.location.assign(nx);
               return;
             }
+            
+            // Check for entry=teacher parameter - redirect to /teacher/ if present
+            // Guard: Only redirect if not already on /teacher/ path to prevent loops
+            const urlParams = new URLSearchParams(window.location.search);
+            const isTeacherEntry = urlParams.get('entry') === 'teacher';
+            const currentPath = window.location.pathname;
+            
+            if (isTeacherEntry && !currentPath.startsWith('/teacher')) {
+              console.log("[Teacher Auth] entry=teacher detected, redirecting to /teacher/");
+              window.location.assign('/teacher/');
+              return;
+            }
+            
             showTeacher();
 
             // Restore last area/tab if available
@@ -3726,12 +3741,27 @@ function isTeacherEntryRequest() {
         if (chip) chip.textContent = "Teacher";
         
         console.log(LOG_PREFIX, "Showing teacher view after session resume");
-                const nx = rcSafeNextPath();
+        
+        // Check for next parameter
+        const nx = rcSafeNextPath();
         if (nx) {
           console.log("[Teacher Auth] Redirecting to next on resume:", nx);
           window.location.assign(nx);
           return;
         }
+        
+        // Check for entry=teacher parameter - redirect to /teacher/ if present
+        // Guard: Only redirect if not already on /teacher/ path to prevent loops
+        const urlParams = new URLSearchParams(window.location.search);
+        const isTeacherEntry = urlParams.get('entry') === 'teacher';
+        const currentPath = window.location.pathname;
+        
+        if (isTeacherEntry && !currentPath.startsWith('/teacher')) {
+          console.log("[Teacher Auth] entry=teacher detected on resume, redirecting to /teacher/");
+          window.location.assign('/teacher/');
+          return;
+        }
+        
         showTeacher();
 
         // Hide banner
