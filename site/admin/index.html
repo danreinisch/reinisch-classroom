@@ -248,7 +248,7 @@
 
   <script>
     // Show preview-only hint on deploy-preview hosts
-    if (window.location.hostname.includes('deploy-preview-')) {
+    if (window.location.hostname.startsWith('deploy-preview-')) {
       const hint = document.getElementById('preview-hint');
       if (hint) hint.style.display = 'block';
     }

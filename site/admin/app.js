@@ -942,7 +942,10 @@ function showPRResult(pr){
         body: JSON.stringify(Object.assign({}, p, { createPr: true })),
       });
 
-      const bodyText = await res.text().catch(() => '');
+      const bodyText = await res.text().catch((err) => {
+        console.warn('[Category Manager] Failed to read response body:', err);
+        return '';
+      });
       let data = null;
       try { data = JSON.parse(bodyText); } catch { data = { ok: false, error: bodyText }; }
       if (!res.ok || !data.ok) {
