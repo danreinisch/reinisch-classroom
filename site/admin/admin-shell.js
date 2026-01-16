@@ -4,6 +4,7 @@
   const qs = new URLSearchParams(location.search);
   const initialReason = qs.get('reason') || '';
   const next = qs.get('next') || '/admin/';
+  const isPreviewHost = /deploy-preview-/.test(location.hostname);
 
   const el = (id) => document.getElementById(id);
 
@@ -22,9 +23,10 @@
   }
 
   function hubLink(reason) {
+    // Always send teachers through the Teacher entry so the TC cookie is minted for this host.
     const r = encodeURIComponent(reason || 'missing_admin_session');
     const n = encodeURIComponent(next || '/admin/');
-    return `/hub/?entry=admin&reason=${r}&next=${n}`;
+    return `/hub/?entry=teacher&reason=${r}&next=${n}`;
   }
 
   function renderShell(opts) {
@@ -40,6 +42,11 @@
 
     hideAppShowGate();
     root.style.display = 'block';
+
+    const previewNote = isPreviewHost
+      ? `<div class="rc-admin-shell-foot">Tip: In deploy previews, sign in on this domain so the Teacher Center cookie is set here.</div>`
+      : '';
+
     root.innerHTML = `
       <div class="rc-admin-shell-card">
         <div class="rc-admin-shell-title">Admin</div>
@@ -50,6 +57,7 @@
           <button class="rc-admin-shell-btn" id="rc-admin-shell-retry">Retry</button>
         </div>
         <div class="rc-admin-shell-foot">Stays on <code>/admin/</code>. No bounce-loops. No drama.</div>
+        ${previewNote}
       </div>
     `;
 
@@ -58,7 +66,8 @@
       const u = new URL(location.href);
       u.searchParams.delete('reason');
       u.searchParams.delete('next');
-      location.href = u.pathname + (u.search || '');
+      // Force reload to drop stale reason state.
+      location.replace(u.pathname + (u.search || ''));
     };
   }
 
@@ -98,11 +107,10 @@
       // RC_ADMIN_PREVIEW_BYPASS_V1
       // Deploy previews/local dev: allow loading /admin UI when preview bypass is enabled.
       // Production remains strict.
-      const __rcIsDeployPreview = /deploy-preview-/.test(location.hostname) || location.hostname === 'localhost';
+      const __rcIsDeployPreview = isPreviewHost || location.hostname === 'localhost';
       const __rcAdminPreviewBypass = localStorage.getItem('rc_admin_preview_bypass') === '1';
       const __rcServerPreviewBypass = !!(data && data.previewBypass); // optional if server ever provides it
       const __rcAllowAdminUi = (role === 'admin') || (__rcIsDeployPreview && data && data.ok) || (__rcIsDeployPreview && __rcAdminPreviewBypass);
-
 
       if (!__rcAllowAdminUi) {
         renderShell({ reason: 'not_admin', next });
