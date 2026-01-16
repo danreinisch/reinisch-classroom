@@ -92,6 +92,10 @@
         </div>
       </div>
 
+      <div id="preview-hint" style="display:none;padding:12px;margin-bottom:12px;background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.3);border-radius:8px;color:#fbbf24;">
+        ⚠️ <strong>Preview Deploy:</strong> Make sure you sign in on this deploy-preview domain so the Teacher Center session cookie is minted here.
+      </div>
+
       <div class="row">
         <div>
           <label for="cat">Category</label>
@@ -242,5 +246,12 @@
   <pre id="unitMgrPreview" class="mono" style="margin-top:10px;white-space:pre-wrap"></pre>
 </div>
 
+  <script>
+    // Show preview-only hint on deploy-preview hosts
+    if (window.location.hostname.includes('deploy-preview-')) {
+      const hint = document.getElementById('preview-hint');
+      if (hint) hint.style.display = 'block';
+    }
+  </script>
 </body>
 </html>

@@ -942,12 +942,12 @@ function showPRResult(pr){
         body: JSON.stringify(Object.assign({}, p, { createPr: true })),
       });
 
-      const text = await res.text();
+      const bodyText = await res.text().catch(() => '');
       let data = null;
-      try { data = JSON.parse(text); } catch { data = { ok: false, error: text }; }
+      try { data = JSON.parse(bodyText); } catch { data = { ok: false, error: bodyText }; }
       if (!res.ok || !data.ok) {
-        console.error('[Category Manager] error:', data);
-        alert('Create/Update failed: ' + (data.error || res.status));
+        console.error('[Category Manager] error:', { status: res.status, body: bodyText, parsed: data });
+        alert(`Create/Update failed: ${data.error || bodyText || res.status}`);
         setStatus('Error');
         return;
       }
