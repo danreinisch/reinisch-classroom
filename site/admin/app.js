@@ -386,6 +386,7 @@
       }
 
       if (!res.ok) {
+        console.error('[Incremental Deploy] Upload error:', { status: res.status, body: text });
         alert(`Upload failed: ${res.status}\n${text.slice(0, 400)}`);
         return { success: false };
       }
@@ -611,7 +612,11 @@
         location.replace('/hub/?entry=teacher'); 
         return; 
       }
-      if (!res.ok) { alert(`Delete failed: ${res.status}\n${(text||'').slice(0,400)}`); return; }
+      if (!res.ok) { 
+        console.error('[Incremental Deploy] Delete error:', { status: res.status, body: text });
+        alert(`Delete failed: ${res.status}\n${(text||'').slice(0,400)}`); 
+        return; 
+      }
 
       if (siteState?.categories?.[category]) {
         const titles = siteState.categories[category].titles || [];
