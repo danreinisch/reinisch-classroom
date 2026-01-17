@@ -2,11 +2,17 @@
 (() => {
   try {
     const h = (location && location.hostname) ? location.hostname : "";
-    const isPreview =
-      h === "localhost" || h === "127.0.0.1" ||
-      h.endsWith(".netlify.app") || h.endsWith(".netlify.live");
-    if (!isPreview) return;
+    const isLocal = (h === "localhost" || h === "127.0.0.1");
+    const isNetlifyPreview = h.endsWith(".netlify.app") || h.endsWith(".netlify.live");
 
+    // Only bypass sessions on localhost by default.
+    // For deploy previews, opt-in with ?rc_preview_bypass=1
+    let enableBypass = isLocal;
+    try {
+      enableBypass = enableBypass || (new URLSearchParams(location.search).get("rc_preview_bypass") === "1");
+    } catch (_) { /* noop */ }
+
+    if (!(enableBypass && (isLocal || isNetlifyPreview))) return;
     let debug = false;
     try {
       debug = new URLSearchParams(location.search).get("rc_debug") === "1";

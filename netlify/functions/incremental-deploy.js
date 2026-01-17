@@ -242,7 +242,7 @@ async function requireAdmin(event){
 
     // requireTeacher() accepts both teacher/admin — in deploy previews, allow teacher to run admin tools.
     const allowed = tc.ok && tc.user && (
-      tc.user.role === 'admin' ||
+      (tc.user.role === 'admin' || tc.user.raw_role === 'admin') ||
       (isDeployPreview && tc.user.role === 'teacher')
     );
 
