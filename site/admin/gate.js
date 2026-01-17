@@ -9,7 +9,7 @@
     try{
       const r = await fetch('/.netlify/functions/teacher-session', {
         cache: 'no-store',
-        credentials: 'same-origin'
+        credentials: 'include'
       });
 
       if (!r.ok) {

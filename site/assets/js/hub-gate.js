@@ -71,7 +71,7 @@
   }
 
   // In non-preview: only redirect if teacher-session is actually valid.
-  fetch('/.netlify/functions/teacher-session', { cache: 'no-store', credentials: 'same-origin' })
+  fetch('/.netlify/functions/teacher-session', { cache: 'no-store', credentials: 'include' })
     .then(r => { if (r && r.ok) location.replace(dest); })
     .catch(() => { /* ignore */ });
 })();

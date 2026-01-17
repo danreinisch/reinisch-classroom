@@ -49,6 +49,14 @@ async function wrapFetch(url, opts = {}) {
     ...opts,
     headers,
   };
+
+  // If caller didn't specify credentials, default to sending cookies to Netlify Functions.
+  const urlStr = (typeof url === 'string')
+    ? url
+    : (url && typeof url === 'object' && 'url' in url ? url.url : String(url || ''));
+  const isNetlifyFn = urlStr.includes('/.netlify/functions/');
+  if (isNetlifyFn && wrappedOpts.credentials == null) wrappedOpts.credentials = 'include';
+  if (isNetlifyFn && wrappedOpts.cache == null) wrappedOpts.cache = 'no-store';
   
   // Attempt fetch with timeout and retry
   for (let attempt = 0; attempt <= maxRetries; attempt++) {

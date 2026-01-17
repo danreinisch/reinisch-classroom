@@ -34,7 +34,7 @@
     try {
       const r = await fetch('/.netlify/functions/admin-session-touch', {
         method: 'POST',
-        credentials: 'same-origin',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' }
       });
       
@@ -66,7 +66,7 @@
     try {
       const r = await fetch('/.netlify/functions/admin-session-refresh', {
         method: 'POST',
-        credentials: 'same-origin',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' }
       });
       
@@ -339,7 +339,7 @@
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
-        credentials: 'same-origin',
+        credentials: 'include',
         body: JSON.stringify(payload)
       });
 
@@ -586,7 +586,7 @@
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
-        credentials: 'same-origin',
+        credentials: 'include',
         body: JSON.stringify({ action:'delete', category, slot })
       });
       
@@ -732,7 +732,7 @@ text = JSON.stringify(data);
 
     // Quick function diagnostics
     try{
-      const r=await fetch('/.netlify/functions/incremental-deploy?action=diagnostics',{cache:'no-store', credentials:'same-origin'});
+      const r=await fetch('/.netlify/functions/incremental-deploy?action=diagnostics',{cache:'no-store', credentials:'include'});
       const t=await r.text().catch(()=> ''); log('GET diagnostics ->', r.status, t.slice(0, 300));
     }catch(e){ log('Diagnostics failed', e?.message||String(e)); }
   })();
@@ -940,7 +940,7 @@ function showPRResult(pr){
       const res = await fetch('/.netlify/functions/admin-units-upsert', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
+        credentials: 'include',
         cache: 'no-store',
         body: JSON.stringify(Object.assign({}, p, { createPr: true })),
       });
