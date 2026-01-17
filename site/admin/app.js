@@ -612,10 +612,11 @@
         location.replace('/hub/?entry=teacher'); 
         return; 
       }
-      if (!res.ok) { 
+      
+      if (!res.ok) {
         console.error('[Incremental Deploy] Delete error:', { status: res.status, body: text });
-        alert(`Delete failed: ${res.status}\n${(text||'').slice(0,400)}`); 
-        return; 
+        alert(`Delete failed: ${res.status}\n${(text||'').slice(0,400)}`);
+        return;
       }
 
       if (siteState?.categories?.[category]) {
