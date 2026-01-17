@@ -389,7 +389,7 @@
       }
 
       if (!res.ok) {
-        const errorMsg = `Upload failed with status ${res.status}:\n\n${text.slice(0, MAX_ERROR_MESSAGE_LENGTH)}`;
+        const errorMsg = `Upload failed with status ${res.status}:\n\n${(text||'').slice(0, MAX_ERROR_MESSAGE_LENGTH)}`;
         console.error('[Incremental Deploy] Upload error:', { status: res.status, body: text });
         log(`ERROR: ${errorMsg}`);
         alert(errorMsg);
