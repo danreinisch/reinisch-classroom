@@ -5,6 +5,9 @@
   // Session management constants
   const QUEUE_STORAGE_KEY = 'adminUploadQueueDraft';
   const FORM_STATE_KEY = 'adminFormStateDraft';
+  
+  // Error message display constants
+  const MAX_ERROR_MESSAGE_LENGTH = 400;
 
   const catEl   = document.getElementById('cat');
   const slotSel = document.getElementById('slotSel');
@@ -386,7 +389,7 @@
       }
 
       if (!res.ok) {
-        const errorMsg = `Upload failed with status ${res.status}:\n\n${text.slice(0, 400)}`;
+        const errorMsg = `Upload failed with status ${res.status}:\n\n${text.slice(0, MAX_ERROR_MESSAGE_LENGTH)}`;
         console.error('[Incremental Deploy] Upload error:', { status: res.status, body: text });
         log(`ERROR: ${errorMsg}`);
         alert(errorMsg);
@@ -618,7 +621,7 @@
       }
       
       if (!res.ok) {
-        const errorMsg = `Delete failed with status ${res.status}:\n\n${(text||'').slice(0, 400)}`;
+        const errorMsg = `Delete failed with status ${res.status}:\n\n${(text||'').slice(0, MAX_ERROR_MESSAGE_LENGTH)}`;
         console.error('[Incremental Deploy] Delete error:', { status: res.status, body: text });
         log(`ERROR: ${errorMsg}`);
         alert(errorMsg);
