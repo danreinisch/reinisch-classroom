@@ -386,15 +386,19 @@
       }
 
       if (!res.ok) {
+        const errorMsg = `Upload failed with status ${res.status}:\n\n${text.slice(0, 400)}`;
         console.error('[Incremental Deploy] Upload error:', { status: res.status, body: text });
-        alert(`Upload failed: ${res.status}\n${text.slice(0, 400)}`);
+        log(`ERROR: ${errorMsg}`);
+        alert(errorMsg);
         return { success: false };
       }
 
       return { success: true, data };
     } catch (e) {
-      log('Upload error:', e?.message || String(e));
-      alert('Upload error: ' + (e?.message || String(e)));
+      const errorMsg = `Upload error: ${e?.message || String(e)}`;
+      console.error('[Incremental Deploy] Upload exception:', e);
+      log(`ERROR: ${errorMsg}`);
+      alert(errorMsg);
       return { success: false };
     }
   }
@@ -614,8 +618,10 @@
       }
       
       if (!res.ok) {
+        const errorMsg = `Delete failed with status ${res.status}:\n\n${(text||'').slice(0, 400)}`;
         console.error('[Incremental Deploy] Delete error:', { status: res.status, body: text });
-        alert(`Delete failed: ${res.status}\n${(text||'').slice(0,400)}`);
+        log(`ERROR: ${errorMsg}`);
+        alert(errorMsg);
         return;
       }
 
@@ -627,9 +633,10 @@
       renderSlots();
       alert('Slot deleted');
     }catch(e){
-      console.error(e);
-      log('Error:', e && e.message ? e.message : String(e));
-      alert('Error: ' + (e && e.message ? e.message : String(e)));
+      const errorMsg = `Delete error: ${e && e.message ? e.message : String(e)}`;
+      console.error('[Incremental Deploy] Delete exception:', e);
+      log(`ERROR: ${errorMsg}`);
+      alert(errorMsg);
     }
   });
 

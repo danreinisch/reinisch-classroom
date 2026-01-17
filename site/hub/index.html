@@ -3581,26 +3581,48 @@ function isTeacherEntryRequest() {
 
             console.log(LOG_PREFIX, "Calling showTeacher() after successful login");
             
-            // Check for next parameter
-            const nx = rcSafeNextPath();
-            if (nx) {
-              console.log("[Teacher Auth] Redirecting to next on login:", nx);
-              window.location.assign(nx);
+            // Enhanced teacher redirect logic - check both entry and next params
+            // Guard: Only redirect if not already on /teacher/ path to prevent loops
+            const currentPath = window.location.pathname;
+            const urlParams = new URLSearchParams(window.location.search);
+            const entryParam = urlParams.get('entry');
+            const nextParam = rcSafeNextPath();
+            
+            // Debug logging for redirect decision
+            if (window.rc_debug) {
+              console.log('[Teacher Redirect Debug]', {
+                currentPath,
+                entryParam,
+                nextParam,
+                alreadyOnTeacher: currentPath.startsWith('/teacher')
+              });
+            }
+            
+            // Priority 1: If next parameter points to /teacher, redirect there
+            if (nextParam && nextParam.startsWith('/teacher')) {
+              console.log("[Teacher Auth] Redirecting to next (teacher path) on login:", nextParam);
+              window.location.assign(nextParam);
               return;
             }
             
-            // Check for entry=teacher parameter - redirect to /teacher/ if present
-            // Guard: Only redirect if not already on /teacher/ path to prevent loops
-            const urlParams = new URLSearchParams(window.location.search);
-            const isTeacherEntry = urlParams.get('entry') === 'teacher';
-            const currentPath = window.location.pathname;
-            
-            if (isTeacherEntry && !currentPath.startsWith('/teacher')) {
+            // Priority 2: If entry=teacher and not on /teacher, redirect to /teacher/
+            if (entryParam === 'teacher' && !currentPath.startsWith('/teacher')) {
               console.log("[Teacher Auth] entry=teacher detected, redirecting to /teacher/");
               window.location.assign('/teacher/');
               return;
             }
             
+            // Priority 3: Any other next parameter
+            if (nextParam) {
+              console.log("[Teacher Auth] Redirecting to next on login:", nextParam);
+              window.location.assign(nextParam);
+              return;
+            }
+            
+            // No redirect needed - show teacher UI on /hub/
+            if (window.rc_debug) {
+              console.log('[Teacher Redirect Debug] No redirect - staying on /hub/');
+            }
             showTeacher();
 
             // Restore last area/tab if available
@@ -3742,26 +3764,48 @@ function isTeacherEntryRequest() {
         
         console.log(LOG_PREFIX, "Showing teacher view after session resume");
         
-        // Check for next parameter
-        const nx = rcSafeNextPath();
-        if (nx) {
-          console.log("[Teacher Auth] Redirecting to next on resume:", nx);
-          window.location.assign(nx);
+        // Enhanced teacher redirect logic - check both entry and next params
+        // Guard: Only redirect if not already on /teacher/ path to prevent loops
+        const currentPath = window.location.pathname;
+        const urlParams = new URLSearchParams(window.location.search);
+        const entryParam = urlParams.get('entry');
+        const nextParam = rcSafeNextPath();
+        
+        // Debug logging for redirect decision
+        if (window.rc_debug) {
+          console.log('[Teacher Redirect Debug] Session resume:', {
+            currentPath,
+            entryParam,
+            nextParam,
+            alreadyOnTeacher: currentPath.startsWith('/teacher')
+          });
+        }
+        
+        // Priority 1: If next parameter points to /teacher, redirect there
+        if (nextParam && nextParam.startsWith('/teacher')) {
+          console.log("[Teacher Auth] Redirecting to next (teacher path) on resume:", nextParam);
+          window.location.assign(nextParam);
           return;
         }
         
-        // Check for entry=teacher parameter - redirect to /teacher/ if present
-        // Guard: Only redirect if not already on /teacher/ path to prevent loops
-        const urlParams = new URLSearchParams(window.location.search);
-        const isTeacherEntry = urlParams.get('entry') === 'teacher';
-        const currentPath = window.location.pathname;
-        
-        if (isTeacherEntry && !currentPath.startsWith('/teacher')) {
+        // Priority 2: If entry=teacher and not on /teacher, redirect to /teacher/
+        if (entryParam === 'teacher' && !currentPath.startsWith('/teacher')) {
           console.log("[Teacher Auth] entry=teacher detected on resume, redirecting to /teacher/");
           window.location.assign('/teacher/');
           return;
         }
         
+        // Priority 3: Any other next parameter
+        if (nextParam) {
+          console.log("[Teacher Auth] Redirecting to next on resume:", nextParam);
+          window.location.assign(nextParam);
+          return;
+        }
+        
+        // No redirect needed - show teacher UI on /hub/
+        if (window.rc_debug) {
+          console.log('[Teacher Redirect Debug] No redirect on resume - staying on /hub/');
+        }
         showTeacher();
 
         // Hide banner
