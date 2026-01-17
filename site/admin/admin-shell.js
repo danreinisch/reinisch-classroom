@@ -98,7 +98,7 @@
       // RC_ADMIN_PREVIEW_BYPASS_V1
       // Deploy previews/local dev: allow loading /admin UI when preview bypass is enabled.
       // Production remains strict.
-      const __rcIsDeployPreview = /deploy-preview-/.test(location.hostname) || location.hostname === 'localhost';
+      const __rcIsDeployPreview = (typeof window.__rcIsPreviewHost === 'function' && window.__rcIsPreviewHost()) || /deploy-preview-/.test(location.hostname) || location.hostname.includes('--') || location.hostname === 'localhost';
       const __rcAdminPreviewBypass = localStorage.getItem('rc_admin_preview_bypass') === '1';
       const __rcServerPreviewBypass = !!(data && data.previewBypass); // optional if server ever provides it
       const __rcAllowAdminUi = (role === 'admin') || (__rcIsDeployPreview && data && data.ok) || (__rcIsDeployPreview && __rcAdminPreviewBypass);
