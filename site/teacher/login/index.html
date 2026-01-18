@@ -2,72 +2,42 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Reinisch Classroom — Teacher Sign In</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Reinisch Classroom — Teacher Center Sign In</title>
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-    <style>
-      html, body { height: 100%; margin: 0; }
-      body {
-        font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-        background: radial-gradient(1200px 800px at 20% 10%, rgba(0,180,160,.18), transparent 55%),
-                    radial-gradient(900px 600px at 85% 35%, rgba(120,90,255,.14), transparent 60%),
-                    #061415;
-        color: rgba(255,255,255,.9);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 24px;
-      }
-      .card {
-        width: min(720px, 100%);
-        border-radius: 18px;
-        padding: 22px 22px 18px;
-        background: rgba(10, 30, 32, 0.55);
-        border: 1px solid rgba(255,255,255,.10);
-        box-shadow: 0 10px 30px rgba(0,0,0,.35);
-        backdrop-filter: blur(10px);
-      }
-      .title { font-size: 22px; font-weight: 800; margin: 0 0 8px; }
-      .sub { font-size: 14px; opacity: .8; margin: 0 0 14px; }
-      .small { font-size: 12px; opacity: .7; margin-top: 10px; }
-      a { color: rgba(140, 240, 220, 0.95); text-decoration: none; }
-      a:hover { text-decoration: underline; }
-    </style>
+    <link rel="stylesheet" href="/teacher/login/login.css" />
   </head>
   <body>
-    <div class="card">
-      <p class="title">Teacher Sign In</p>
-      <p class="sub">Redirecting to Classroom Hub…</p>
-      <p class="small">
-        If you’re not redirected, <a id="fallback" href="/hub/?entry=teacher">click here</a>.
-      </p>
-    </div>
+    <main class="wrap">
+      <section class="card" aria-labelledby="title">
+        <h1 id="title">Teacher Center Sign In</h1>
+        <p class="sub" id="reason"></p>
 
-    <script>
-      (function () {
-        const params = new URLSearchParams(location.search);
-        const reason = params.get("reason") || "";
-        let next = params.get("next") || "";
+        <form id="loginForm" autocomplete="off" novalidate>
+          <label>
+            Username
+            <input id="username" name="username" autocomplete="username" required />
+          </label>
 
-        // Decode next up to twice to avoid %252Fteacher%252F loops
-        for (let i = 0; i < 2; i++) {
-          try {
-            const d = decodeURIComponent(next);
-            if (d === next) break;
-            next = d;
-          } catch {
-            break;
-          }
-        }
+          <label>
+            Password
+            <input id="password" name="password" type="password" autocomplete="current-password" required />
+          </label>
 
-        const u = new URL("/hub/", location.origin);
-        u.searchParams.set("entry", "teacher");
-        if (reason) u.searchParams.set("reason", reason);
-        if (next) u.searchParams.set("next", next);
+          <div class="actions">
+            <button class="btn primary" id="submitBtn" type="submit">Sign In</button>
+            <a class="btn" id="backLink" href="/teacher/">Back to Teacher Center</a>
+          </div>
 
-        document.getElementById("fallback").href = u.pathname + u.search;
-        location.replace(u.pathname + u.search);
-      })();
-    </script>
+          <div class="msg" id="msg" aria-live="polite"></div>
+        </form>
+
+        <p class="tiny">
+          If you got here from an expired session, logging in will return you to <code id="nextLabel">/teacher/</code>.
+        </p>
+      </section>
+    </main>
+
+    <script src="/teacher/login/login.js" defer></script>
   </body>
 </html>
