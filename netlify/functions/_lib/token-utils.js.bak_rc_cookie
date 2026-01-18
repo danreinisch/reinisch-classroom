@@ -293,18 +293,13 @@ function createErrorResponse(code, message, retryable = false, status = 401) {
  * @returns {string} - Cookie value or empty string
  */
 function getCookie(header, name) {
-  if (!header || !name) return null;
-  const parts = String(header).split(';');
-  let found = null;
-  for (let part of parts) {
-    part = part.trim();
-    if (!part) continue;
-    const eq = part.indexOf('=');
-    if (eq < 1) continue;
-    const k = part.slice(0, eq).trim();
-    if (k === name) found = part.slice(eq + 1); // keep going; LAST wins
+  if (!header) return '';
+  const parts = header.split(/;\s*/);
+  for (const part of parts) {
+    const [k, ...v] = part.split('=');
+    if (k === name) return v.join('=');
   }
-  return found;
+  return '';
 }
 
 /**
