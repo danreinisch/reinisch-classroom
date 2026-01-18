@@ -52,7 +52,7 @@ function getCookie(event, name) {
 }
 
 function requireTeacher(event, secret) {
-  const token = getCookie(event, 'tc');
+  const token = getCookie(event, '__Host-tc') || getCookie(event, 'tc');
   const payload = token ? verify(token, secret) : null;
   // Accept both 'teacher' and 'admin' roles
   if (!payload || (payload.role !== 'teacher' && payload.role !== 'admin')) {

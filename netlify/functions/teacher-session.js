@@ -13,7 +13,7 @@ exports.handler = async (event) => {
   const requestId = generateRequestId();
   const host = event.headers.host || 'unknown';
   const origin = event.headers.origin || 'none';
-  const cookieHeader = event.headers.cookie || '';
+  const cookieHeader = event.headers.cookie || event.headers.Cookie || '';
   const hasTcCookie = cookieHeader.includes('tc=');
   
   console.log(`[teacher-session] [${requestId}] Request received - host: ${host}, origin: ${origin}, tc cookie present: ${hasTcCookie}`);

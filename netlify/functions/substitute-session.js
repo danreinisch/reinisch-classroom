@@ -38,7 +38,7 @@ exports.handler = async (event) => {
 
   try {
     // Extract cookie
-    const cookieHeader = event.headers.cookie || event.headers.cookie || '';
+    const cookieHeader = event.headers.cookie || event.headers.Cookie || '';
     const token = getCookie(cookieHeader, 'sub_session');
 
     if (!token) {
