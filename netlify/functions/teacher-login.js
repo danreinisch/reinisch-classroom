@@ -245,7 +245,7 @@ async function handleTeacherLogin(event) {
 
 // Simple per-IP throttling using cookies
 function checkThrottle(event, clientIp) {
-  const cookieHeader = event.headers.cookie || event.headers.Cookie || '';
+  const cookieHeader = event.headers.cookie || event.headers.cookie || '';
   const throttleCookie = getCookie(cookieHeader, 'tc_throttle');
   
   if (!throttleCookie) {

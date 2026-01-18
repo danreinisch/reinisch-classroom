@@ -318,7 +318,7 @@ function truncateStack(stack, maxLength) {
  * @returns {Object} { allowed: boolean, count: number }
  */
 function checkThrottle(event, throttleKey) {
-  const cookieHeader = event.headers.cookie || event.headers.Cookie || '';
+  const cookieHeader = event.headers.cookie || event.headers.cookie || '';
   const throttleCookie = getCookie(cookieHeader, 'ce_throttle');
   
   if (!throttleCookie) {

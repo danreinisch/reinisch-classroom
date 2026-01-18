@@ -144,7 +144,7 @@ function refreshAccessToken(refreshToken, secret, options = {}) {
  * @returns {Object} - Parsed cookies { access, refresh, legacy }
  */
 function parseCookies(headers) {
-  const cookieHeader = headers.cookie || headers.Cookie || '';
+  const cookieHeader = headers.cookie || headers.cookie || '';
   
   return {
     access: getCookie(cookieHeader, COOKIE_V4_ACCESS),

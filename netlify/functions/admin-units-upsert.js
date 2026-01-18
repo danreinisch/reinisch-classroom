@@ -273,7 +273,7 @@ async function commitTree(owner, repo, branch, pathToBufferMap, message) {
 async function verifySession(event) {
   const host = (event.headers['x-forwarded-host'] || event.headers.host || '').split(',')[0].trim();
   const proto = (event.headers['x-forwarded-proto'] || 'https').split(',')[0].trim();
-  const cookie = event.headers.cookie || event.headers.Cookie || '';
+  const cookie = event.headers.cookie || event.headers.cookie || '';
 
   if (!host) return { ok: false, response: json(401, { ok: false, error: 'Missing host' }) };
 
