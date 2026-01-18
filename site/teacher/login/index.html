@@ -33,7 +33,7 @@
       </div>
 
       <div class="rc-glass-card-body">
-        <form id="form">
+        <form id="form" method="post">
           <div class="row">
             <div>
               <label class="rc-label" for="username">Username</label>
@@ -55,109 +55,13 @@
             <a class="glass-button" href="/teacher/">Teacher Center</a>
             <a class="glass-button" href="/admin/">Admin</a>
           </div>
-        </form>
+          <div id="login-msg" style="margin-top:8px;color:#b00020;"></div>
+</form>
       </div>
     </div>
   </div>
 
-<script>
-(() => {
-  const qs = new URLSearchParams(location.search);
-  const entry = (qs.get('entry') || 'teacher').toLowerCase();
-  const reason = qs.get('reason') || '';
-  const rawNext = qs.get('next') || '';
 
-  const $ = (id) => document.getElementById(id);
-  const msgEl = $('msg');
-  const btn = $('btn');
-
-  const fallbackNext = entry === 'admin' ? '/admin/' : '/teacher/';
-
-  function safeNext(v) {
-    if (!v || typeof v !== 'string') return fallbackNext;
-    if (!v.startsWith('/')) return fallbackNext;
-    if (v.startsWith('//')) return fallbackNext;
-    if (v.includes('://')) return fallbackNext;
-    return v;
-  }
-
-  const next = safeNext(rawNext);
-
-  function setMsg(text, kind) {
-    msgEl.style.display = 'block';
-    msgEl.className = 'msg ' + (kind || '');
-    msgEl.textContent = text;
-  }
-
-  const subtitleBits = [];
-  if (entry === 'admin') subtitleBits.push('Admin access requested.');
-  if (reason) subtitleBits.push('Reason: ' + reason);
-  if (rawNext) subtitleBits.push('Next: ' + next);
-  $('subtitle').textContent = subtitleBits.join('  •  ');
-
-  async function getSession() {
-    const r = await fetch('/.netlify/functions/teacher-session', {
-      credentials: 'include',
-      cache: 'no-store',
-      credentials: 'include'
-    });
-    const j = await r.json().catch(() => null);
-    return { ok: r.ok, status: r.status, json: j };
-  }
-
-  $('form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    const username = $('username').value.trim();
-    const password = $('password').value;
-
-    if (!username || !password) {
-      setMsg('Enter username and password.', 'err');
-      return;
-    }
-
-    btn.disabled = true;
-    setMsg('Signing in…', '');
-
-    try {
-      const r = await fetch('/.netlify/functions/teacher-login', {
-      credentials: 'include',
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ username, password })
-      });
-
-      const j = await r.json().catch(() => null);
-
-      if (!r.ok) {
-        setMsg((j && (j.error || j.message)) ? (j.error || j.message) : `Sign in failed (${r.status}).`, 'err');
-        btn.disabled = false;
-        return;
-      }
-
-      const s = await getSession();
-      if (!s.ok) {
-        setMsg(`Login succeeded but session check failed (${s.status}).`, 'err');
-        btn.disabled = false;
-        return;
-      }
-
-      if (entry === 'admin' && s.json && s.json.user && s.json.user.role !== 'admin') {
-        setMsg('Signed in, but this account is not an admin. Use an admin account for /admin/.', 'err');
-        btn.disabled = false;
-        return;
-      }
-
-      setMsg('Signed in. Redirecting…', 'ok');
-      location.replace(next);
-
-    } catch (err) {
-      setMsg('Login error: ' + (err && err.message ? err.message : String(err)), 'err');
-      btn.disabled = false;
-    }
-  });
-})();
-</script>
+  <script src="/teacher/login/login.js" defer></script>
 </body>
 </html>
