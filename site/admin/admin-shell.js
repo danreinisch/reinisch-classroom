@@ -24,7 +24,7 @@
   function hubLink(reason) {
     const r = encodeURIComponent(reason || 'missing_admin_session');
     const n = encodeURIComponent(next || '/admin/');
-    return `/hub/?entry=admin&reason=${r}&next=${n}`;
+    return `/teacher/login/?entry=admin&reason=${r}&next=${n}`;
   }
 
   function renderShell(opts) {
@@ -46,7 +46,7 @@
         <div class="rc-admin-shell-sub">${msg}</div>
         <div class="rc-admin-shell-meta">Reason: <code>${reason}</code></div>
         <div class="rc-admin-shell-actions">
-          <a class="rc-admin-shell-btn primary" href="${hubLink(reason)}">Go to Classroom Hub (sign in)</a>
+          <a class="rc-admin-shell-btn primary" href="${hubLink(reason)}">Go to Teacher Center (sign in)</a>
           <button class="rc-admin-shell-btn" id="rc-admin-shell-retry">Retry</button>
         </div>
         <div class="rc-admin-shell-foot">Stays on <code>/admin/</code>. No bounce-loops. No drama.</div>

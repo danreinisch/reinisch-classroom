@@ -62,12 +62,12 @@ window.__rcPreviewTeacherBypass = window.__rcPreviewTeacherBypass || function(){
     try{
       const r = await (window.__rcIsPreviewHost() ? Promise.resolve({ ok:true, status:200, __rcPreviewBypass:true }) : fetch('/.netlify/functions/teacher-session', { cache:'no-store', credentials:'include' }));
       if (!r.ok && !window.__rcIsPreviewHost()){
-        if (!window.__rcPreviewTeacherBypass()) if (!window.__rcIsPreviewHost()) location.replace(`/hub/?reason=missing_teacher_session&next=${next}`);
+        if (!window.__rcPreviewTeacherBypass()) if (!window.__rcIsPreviewHost()) location.replace(`/teacher/login/?reason=missing_teacher_session&next=${encodeURIComponent(next)}`);
         return false;
       }
       return true;
     }catch(_){
-      if (!window.__rcPreviewTeacherBypass()) if (!window.__rcIsPreviewHost()) location.replace(`/hub/?reason=gate_error&next=${next}`);
+      if (!window.__rcPreviewTeacherBypass()) if (!window.__rcIsPreviewHost()) location.replace(`/teacher/login/?reason=gate_error&next=${encodeURIComponent(next)}`);
       return false;
     }
   }

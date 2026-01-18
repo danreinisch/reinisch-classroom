@@ -13,3 +13,5 @@
 #/hub/*       /hub/index.html      200
 #/hub         /hub/index.html      200
 #/hub/        /hub/index.html      200
+
+/teacher/login/*  /teacher/login/index.html  200
