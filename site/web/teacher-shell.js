@@ -60,8 +60,8 @@ window.__rcPreviewTeacherBypass = window.__rcPreviewTeacherBypass || function(){
     // Same-origin is mandatory for preview deploys.
     const next = encodeURIComponent(location.pathname + location.search);
     try{
-      const r = await (window.__rcIsPreviewHost() ? Promise.resolve({ ok:true, status:200, __rcPreviewBypass:true }) : fetch('/.netlify/functions/teacher-session', { cache:'no-store', credentials:'include' }));
-      if (!r.ok && !window.__rcIsPreviewHost()){
+      const r = await (fetch('/.netlify/functions/teacher-session', { cache:'no-store', credentials:'include' }));
+      if (!r.ok){
         if (!window.__rcPreviewTeacherBypass()) location.replace(`/teacher/login/?reason=missing_teacher_session&next=${encodeURIComponent(next)}`);
         return false;
       }
