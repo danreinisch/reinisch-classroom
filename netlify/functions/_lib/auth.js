@@ -38,7 +38,10 @@ function teacherCookie(name, value, { domain, secure = true, maxAge = 60 * 60 * 
     `Max-Age=${maxAge}`,
   ];
   if (secure) parts.push('Secure');
-  if (domain) parts.push(`Domain=${domain}`);
+  // IMPORTANT: Do NOT set cookie Domain here.
+// Deploy previews live on *.netlify.app; a Domain like reinischclassroom.com makes Chrome drop the cookie.
+// Host-only cookies are correct for our per-environment single-origin setup.
+// if (domain) parts.push(`Domain=${domain}`);
   return parts.join('; ');
 }
 

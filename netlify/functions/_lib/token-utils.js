@@ -228,7 +228,10 @@ function verifySession(headers, secret) {
 function serializeCookie(name, value, options = {}) {
   const parts = [`${name}=${value}`];
   if (options.maxAge) parts.push(`Max-Age=${options.maxAge}`);
-  if (options.domain) parts.push(`Domain=${options.domain}`);
+  // IMPORTANT: Do NOT set cookie Domain here.
+// Deploy previews live on *.netlify.app; a Domain like reinischclassroom.com makes Chrome drop the cookie.
+// Host-only cookies are correct for our per-environment single-origin setup.
+// if (options.domain) parts.push(`Domain=${options.domain}`);
   if (options.path) parts.push(`Path=${options.path}`);
   if (options.expires) parts.push(`Expires=${options.expires.toUTCString()}`);
   if (options.httpOnly) parts.push('HttpOnly');
