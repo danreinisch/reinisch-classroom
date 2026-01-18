@@ -334,6 +334,7 @@
     
     try {
       const res = await fetch('/.netlify/functions/incremental-deploy', {
+        cache: 'no-store',
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -581,6 +582,7 @@
     try{
       log('Deleting…');
       const res = await fetch('/.netlify/functions/incremental-deploy', {
+        cache: 'no-store',
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
