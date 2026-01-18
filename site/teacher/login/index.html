@@ -97,6 +97,7 @@
 
   async function getSession() {
     const r = await fetch('/.netlify/functions/teacher-session', {
+      credentials: 'include',
       cache: 'no-store',
       credentials: 'include'
     });
@@ -120,6 +121,7 @@
 
     try {
       const r = await fetch('/.netlify/functions/teacher-login', {
+      credentials: 'include',
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
