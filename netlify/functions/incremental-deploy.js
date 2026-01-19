@@ -15,6 +15,18 @@ const REGENERATE_CATEGORY_INDEX = String(process.env.REGENERATE_CATEGORY_INDEX |
 const ENABLE_SESSION_LOG = String(process.env.ADMIN_SESSION_LOG || '').trim() === '1';
 
 exports.handler = async (event) => {
+  // __rcAuthGateIncrementalDeploy
+  const __rcUser = requireTeacher(event);
+  if (!__rcUser) {
+    const h = (event && event.headers) ? event.headers : {};
+    const ch = h.cookie || h.Cookie || '';
+    return {
+      statusCode: 401,
+      headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' },
+      body: JSON.stringify({ reason: 'tc_invalid_or_expired', hasCookie: !!ch, cookieBytes: ch.length }, null, 2)
+    };
+  }
+
   try {
     const qs = event.queryStringParameters || {};
     const actionQS = qs.action || '';
