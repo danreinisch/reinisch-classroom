@@ -12,6 +12,39 @@ const {
 } = require('./_lib/token-utils');
 
 exports.handler = async (event) => {
+  // RC_PREVIEW_TC_BYPASS_V1
+  // Deploy previews: if TC cookie is valid (SESSION_SECRET), don't demand a separate admin-session cookie.
+  try {
+    const hdrs = event && event.headers ? event.headers : {};
+    const host = String(hdrs['x-forwarded-host'] || hdrs.host || '');
+    const isPreview = /deploy-preview-/.test(host) || host.includes('--') || host === 'localhost';
+
+    if (isPreview) {
+      const { requireTeacher } = require('./_lib/auth');
+      const secret = String(process.env.SESSION_SECRET || '').trim();
+
+      if (secret) {
+        const tc = requireTeacher(event, secret);
+        if (tc && tc.ok && tc.user && (tc.user.role === 'admin' || tc.user.role === 'teacher')) {
+          const now = Math.floor(Date.now() / 1000);
+          const ttl = tc.user.exp ? Math.max(0, tc.user.exp - now) : 0;
+
+          return {
+            statusCode: 200,
+            headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' },
+            body: JSON.stringify(
+              { ok: true, source: 'tc', role: tc.user.role, username: tc.user.username, accessTTL: ttl },
+              null,
+              2
+            ),
+          };
+        }
+      }
+    }
+  } catch (e) {
+    // fall through to existing logic
+  }
+
   // Allow preflight
   if (event.httpMethod === 'OPTIONS') {
     return {
