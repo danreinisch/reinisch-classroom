@@ -71,3 +71,7 @@ site/admin/*.bak.*
 # Local one-off backups (do not commit)
 *.bak_rc_cookie
 *.bak_rc_secret
+
+# Local one-off backups (do not commit)
+*.bak_rc_incdeploy
+*.bak_rc_wrap
