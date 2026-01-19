@@ -1,0 +1,1184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Week 1: Lost in Kragdon-ah - Chapters 1-3</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            background-attachment: fixed;
+            color: #ffffff;
+            overflow-x: hidden;
+        }
+
+        .bg-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+        }
+
+        .bg-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            opacity: 0;
+            transition: opacity 2s ease-in-out;
+        }
+
+        .bg-image.active {
+            opacity: 0.4;
+        }
+
+        .bg-image:nth-child(1) { background-image: url('image1.jpg'); }
+        .bg-image:nth-child(2) { background-image: url('image11.jpg'); }
+        .bg-image:nth-child(3) { background-image: url('image10.jpg'); }
+        .bg-image:nth-child(4) { background-image: url('image8.jpg'); }
+        .bg-image:nth-child(5) { background-image: url('image2.jpg'); }
+        .bg-image:nth-child(6) { background-image: url('image7.jpg'); }
+        .bg-image:nth-child(7) { background-image: url('image3.jpg'); }
+        .bg-image:nth-child(8) { background-image: url('image4.jpg'); }
+        .bg-image:nth-child(9) { background-image: url('image6.jpg'); }
+        .bg-image:nth-child(10) { background-image: url('image9.jpg'); }
+        .bg-image:nth-child(11) { background-image: url('image12.jpg'); }
+        .bg-image:nth-child(12) { background-image: url('image5.jpg'); }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 40px 20px;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 20px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        header h2 {
+            font-size: 1.5em;
+            color: #ffd700;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            font-size: 1.2em;
+            color: #a0d2eb;
+        }
+
+        .theme-banner {
+            background: linear-gradient(90deg, rgba(231, 76, 60, 0.5), rgba(155, 89, 182, 0.5));
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            padding: 15px 30px;
+            border-radius: 10px;
+            margin-top: 20px;
+            display: inline-block;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+        }
+
+        .theme-banner h3 {
+            font-size: 1.3em;
+            color: #fff;
+        }
+
+        nav {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+        }
+
+        nav h3 {
+            text-align: center;
+            margin-bottom: 15px;
+            color: #ffd700;
+        }
+
+        .nav-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .nav-btn {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.4) 0%, rgba(118, 75, 162, 0.4) 100%);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 25px;
+            color: white;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+        }
+
+        .nav-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+        }
+
+        .nav-btn.day1 { 
+            background: linear-gradient(135deg, rgba(240, 147, 251, 0.4) 0%, rgba(245, 87, 108, 0.4) 100%); 
+        }
+        .nav-btn.day2 { 
+            background: linear-gradient(135deg, rgba(79, 172, 254, 0.4) 0%, rgba(0, 242, 254, 0.4) 100%); 
+        }
+        .nav-btn.day3 { 
+            background: linear-gradient(135deg, rgba(67, 233, 123, 0.4) 0%, rgba(56, 249, 215, 0.4) 100%); 
+        }
+        .nav-btn.day4 { 
+            background: linear-gradient(135deg, rgba(250, 112, 154, 0.4) 0%, rgba(254, 225, 64, 0.4) 100%); 
+        }
+
+        .slide {
+            display: none;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+            animation: fadeIn 0.5s ease;
+        }
+
+        .slide.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .slide h2 {
+            color: #ffd700;
+            font-size: 2em;
+            margin-bottom: 20px;
+            text-align: center;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .slide h3 {
+            color: #a0d2eb;
+            font-size: 1.5em;
+            margin: 20px 0 15px 0;
+        }
+
+        .slide p, .slide li {
+            font-size: 1.2em;
+            line-height: 1.8;
+            margin-bottom: 15px;
+        }
+
+        .slide ul {
+            list-style-type: none;
+            padding-left: 20px;
+        }
+
+        .slide ul li::before {
+            content: "• ";
+            color: #ffd700;
+        }
+
+        /* KEY FACT BOX - Glass effect with red tint */
+        .key-fact {
+            background: linear-gradient(135deg, rgba(231, 76, 60, 0.5) 0%, rgba(192, 57, 43, 0.5) 100%);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 20px 25px;
+            border-radius: 15px;
+            margin: 20px 0;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-left: 6px solid #ffd700;
+            box-shadow: 0 8px 32px rgba(231, 76, 60, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+
+        .key-fact h4 {
+            color: #ffd700;
+            font-size: 1.1em;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .key-fact p {
+            font-size: 1.3em;
+            margin: 0;
+            font-weight: bold;
+        }
+
+        /* GRAMMAR BOX - Glass effect with purple tint */
+        .grammar-box {
+            background: linear-gradient(135deg, rgba(155, 89, 182, 0.5) 0%, rgba(142, 68, 173, 0.5) 100%);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 20px 25px;
+            border-radius: 15px;
+            margin: 20px 0;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-left: 6px solid #f1c40f;
+            box-shadow: 0 8px 32px rgba(155, 89, 182, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+
+        .grammar-box h4 {
+            color: #f1c40f;
+            font-size: 1.1em;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .grammar-box p {
+            font-size: 1.2em;
+            margin: 0;
+        }
+
+        /* HIGHLIGHT BOX - Glass effect with blue/purple tint */
+        .highlight {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.4) 0%, rgba(118, 75, 162, 0.4) 100%);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(102, 126, 234, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+
+        /* VOCAB BOX - Glass effect with gold tint */
+        .vocab-box {
+            background: rgba(255, 215, 0, 0.15);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            border-left: 4px solid #ffd700;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 0 10px 10px 0;
+            box-shadow: 0 4px 16px rgba(255, 215, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+
+        .vocab-word {
+            font-weight: bold;
+            color: #ffd700;
+            font-size: 1.3em;
+        }
+
+        /* EXAMPLE BOX - Glass effect with green tint */
+        .example-box {
+            background: rgba(76, 175, 80, 0.15);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(76, 175, 80, 0.3);
+            border-left: 4px solid #4CAF50;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 0 10px 10px 0;
+            box-shadow: 0 4px 16px rgba(76, 175, 80, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+
+        /* PUNCTUATION EXAMPLE - Glass effect */
+        .punctuation-example {
+            background: rgba(155, 89, 182, 0.2);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            padding: 15px 25px;
+            border-radius: 10px;
+            margin: 10px 0;
+            font-size: 1.4em;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 4px 16px rgba(155, 89, 182, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+
+        .punctuation-mark {
+            color: #ffd700;
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+
+        .capital-letter {
+            color: #f1c40f;
+            font-size: 1.3em;
+            font-weight: bold;
+        }
+
+        .correct {
+            color: #4CAF50;
+        }
+
+        .incorrect {
+            color: #f44336;
+            text-decoration: line-through;
+        }
+
+        /* QUESTION BOX - Glass effect with red tint */
+        .question-box {
+            background: rgba(231, 76, 60, 0.15);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(231, 76, 60, 0.3);
+            border-left: 4px solid #e74c3c;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 0 10px 10px 0;
+            box-shadow: 0 4px 16px rgba(231, 76, 60, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+
+        /* WRITING PROMPT - Glass effect with teal/green tint */
+        .writing-prompt {
+            background: linear-gradient(135deg, rgba(17, 153, 142, 0.5) 0%, rgba(56, 239, 125, 0.5) 100%);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 25px;
+            border-radius: 15px;
+            margin: 20px 0;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(17, 153, 142, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+
+        /* WRITING STRUCTURE - Glass effect with dark tint */
+        .writing-structure {
+            background: rgba(0, 0, 0, 0.25);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+        }
+
+        .slide-nav {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .slide-nav button {
+            padding: 15px 30px;
+            font-size: 1.1em;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.6) 0%, rgba(118, 75, 162, 0.6) 100%);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 25px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .slide-nav button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+        }
+
+        .slide-nav button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 4px;
+            margin-bottom: 20px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .progress {
+            height: 100%;
+            background: linear-gradient(90deg, #ffd700, #ff6b6b);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        /* CHARACTER CARD - Glass effect */
+        .character-card {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            padding: 15px 25px;
+            border-radius: 15px;
+            margin: 10px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .character-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .character-name {
+            font-weight: bold;
+            color: #ffd700;
+            font-size: 1.2em;
+        }
+
+        .character-role {
+            color: #a0d2eb;
+            font-size: 0.9em;
+        }
+
+        footer {
+            text-align: center;
+            padding: 30px;
+            margin-top: 30px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        @media (max-width: 768px) {
+            header h1 { font-size: 1.8em; }
+            header h2 { font-size: 1.2em; }
+            .slide { padding: 20px; }
+            .slide h2 { font-size: 1.5em; }
+            .slide p, .slide li { font-size: 1em; }
+            .key-fact p { font-size: 1.1em; }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-container">
+        <div class="bg-image active"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>Lost in Kragdon-ah</h1>
+            <h2>Week 1: Chapters 1-3</h2>
+            <p>By Shawn Inmon</p>
+            <div class="theme-banner">
+                <h3>ELA Theme: Punctuation and Capitalization</h3>
+            </div>
+        </header>
+
+        <nav>
+            <h3>Quick Navigation</h3>
+            <div class="nav-buttons">
+                <button class="nav-btn day1" onclick="goToSlide(0)">Day 1: Chapter 1</button>
+                <button class="nav-btn day2" onclick="goToSlide(6)">Day 2: Grammar and Chapter 2</button>
+                <button class="nav-btn day3" onclick="goToSlide(13)">Day 3: Chapter 3</button>
+                <button class="nav-btn day4" onclick="goToSlide(20)">Day 4: Writing Workshop</button>
+            </div>
+        </nav>
+
+        <div class="progress-bar">
+            <div class="progress" id="progress"></div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- DAY 1: CHAPTER 1 - SLIDES 0-5 -->
+        <!-- ============================================ -->
+        
+        <div class="slide active" id="slide-0">
+            <h2>Day 1: Chapter 1 - Alex's Oath</h2>
+            <h3>Welcome to Week 1</h3>
+            <p>This week we are reading Chapters 1-3 of <strong>Lost in Kragdon-ah</strong> by Shawn Inmon.</p>
+            
+            <div class="grammar-box">
+                <h4>This Week's ELA Focus: Punctuation and Capitalization</h4>
+                <p>As we read, pay attention to how sentences start with <span class="capital-letter">capital letters</span> and end with punctuation marks like periods <span class="punctuation-mark">.</span> question marks <span class="punctuation-mark">?</span> and exclamation points <span class="punctuation-mark">!</span></p>
+            </div>
+            
+            <p>Let us start by meeting our main character. Notice how every name starts with a capital letter.</p>
+            
+            <div class="highlight">
+                <h3>Main Character</h3>
+                <div style="text-align: center;">
+                    <div class="character-card">
+                        <div class="character-name"><span class="capital-letter">M</span>anta-ak</div>
+                        <div class="character-role">Hero (also called Alex)</div>
+                    </div>
+                </div>
+                <p style="text-align: center; margin-top: 15px;">Notice the capital <span class="capital-letter">M</span> because names always start with capital letters.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-1">
+            <h2>Day 1: Manta-ak's Plans</h2>
+            <h3>Where We Begin</h3>
+            <p>Manta-ak has just returned from the Battle of Denta-ah. He was making plans to leave.</p>
+            
+            <div class="key-fact">
+                <h4>Key Fact Number 1</h4>
+                <p>Manta-ak was planning to return home through the magical door to see his daughter Amy.</p>
+            </div>
+            
+            <p>But before he could leave, Ganku-eh (the chieftain) asked him to stay for an important mission.</p>
+            
+            <div class="grammar-box">
+                <h4>Capitalization Rule</h4>
+                <p>Notice how <span class="capital-letter">A</span>my is capitalized because it is a name. People's names always start with capital letters.</p>
+            </div>
+            
+            <div class="grammar-box">
+                <h4>Punctuation Rule: The Period</h4>
+                <p>The sentence "He was making plans to leave" ends with a period <span class="punctuation-mark">.</span> because it is a telling sentence.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-2">
+            <h2>Day 1: The Kidnapping</h2>
+            <h3>What Happened While the Warriors Were Away?</h3>
+            <p>While the warriors were fighting at the Battle of Denta-ah, invaders attacked Winten-ah and kidnapped children.</p>
+            
+            <div class="key-fact">
+                <h4>Key Fact Number 2</h4>
+                <p>Lanta-eh was kidnapped by the invaders. It was not Amy and not Senta-eh. It was Lanta-eh.</p>
+            </div>
+            
+            <div class="key-fact">
+                <h4>Key Fact Number 3</h4>
+                <p>The invaders have a two-week head start. It is not one week and not one month. It is two weeks.</p>
+            </div>
+            
+            <div class="grammar-box">
+                <h4>Capital Letters for Names</h4>
+                <p><span class="capital-letter">L</span>anta-eh, <span class="capital-letter">S</span>enta-eh, and <span class="capital-letter">A</span>my all start with capital letters because they are names.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-3">
+            <h2>Day 1: Ganku-eh Steps Down</h2>
+            <h3>A Sad Decision</h3>
+            <p>Ganku-eh announces that she is stepping down as chieftain. Why is she stepping down?</p>
+            
+            <div class="key-fact">
+                <h4>Key Fact Number 4</h4>
+                <p>Ganku-eh is stepping down because she is grieving and feels she failed the tribe.</p>
+            </div>
+            
+            <p>Her husband Banda-ak died in battle. Children were also kidnapped while she was supposed to protect them. She is not stepping down because she is too old or because she wants to go on the mission.</p>
+            
+            <div class="key-fact">
+                <h4>Key Fact Number 5</h4>
+                <p>Sekun-ak becomes the new chieftain. It is not Manta-ak and not Werda-ak. It is Sekun-ak.</p>
+            </div>
+            
+            <div class="grammar-box">
+                <h4>Punctuation Rule: The Question Mark</h4>
+                <p>The sentence "Why is she stepping down?" ends with a question mark <span class="punctuation-mark">?</span> because it is asking something.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-4">
+            <h2>Day 1: The Rescue Team</h2>
+            <h3>Why a Small Team?</h3>
+            
+            <div class="key-fact">
+                <h4>Key Fact Number 6</h4>
+                <p>Manta-ak wants a small team because they can travel quickly to catch up with the invaders.</p>
+            </div>
+            
+            <p>A large army would be slow. A small team can move fast.</p>
+            
+            <div class="highlight">
+                <h3>The Team Members</h3>
+                <div style="text-align: center;">
+                    <div class="character-card">
+                        <div class="character-name"><span class="capital-letter">M</span>anta-ak</div>
+                        <div class="character-role">Leader</div>
+                    </div>
+                    <div class="character-card">
+                        <div class="character-name"><span class="capital-letter">S</span>enta-eh</div>
+                        <div class="character-role">Archer</div>
+                    </div>
+                    <div class="character-card">
+                        <div class="character-name"><span class="capital-letter">W</span>erda-ak</div>
+                        <div class="character-role">Tracker</div>
+                    </div>
+                    <div class="character-card">
+                        <div class="character-name"><span class="capital-letter">M</span>onda-ak</div>
+                        <div class="character-role">Dog</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="grammar-box">
+                <h4>Every Name Gets a Capital Letter</h4>
+                <p>Even the dog's name (<span class="capital-letter">M</span>onda-ak) starts with a capital letter because it is a name.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-5">
+            <h2>Day 1: Who is Monda-ak?</h2>
+            <h3>An Important Team Member</h3>
+            
+            <div class="key-fact">
+                <h4>Key Fact Number 7</h4>
+                <p>Monda-ak is Manta-ak's huge, loyal dog. He is not a tracker and not the high priestess. He is a dog.</p>
+            </div>
+            
+            <p>Monda-ak has four legs and a great sense of smell. He will help track the invaders.</p>
+            
+            <div class="grammar-box">
+                <h4>Punctuation Rule: The Apostrophe</h4>
+                <p>In "Manta-ak<span class="punctuation-mark">'</span>s dog," the apostrophe shows that the dog belongs to Manta-ak.</p>
+            </div>
+            
+            <div class="highlight">
+                <h3>Chapter 1 Review: Remember These Facts</h3>
+                <ul>
+                    <li>Manta-ak was planning to return home to see his daughter <strong>Amy</strong>.</li>
+                    <li><strong>Lanta-eh</strong> was kidnapped by the invaders.</li>
+                    <li>The invaders have a <strong>two-week</strong> head start.</li>
+                    <li>Ganku-eh steps down because she is <strong>grieving and feels she failed</strong>.</li>
+                    <li><strong>Sekun-ak</strong> becomes the new chieftain.</li>
+                    <li>A small team can <strong>travel quickly</strong> to catch up.</li>
+                    <li>Monda-ak is Manta-ak's <strong>huge, loyal dog</strong>.</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- DAY 2: PUNCTUATION + CHAPTER 2 - SLIDES 6-12 -->
+        <!-- ============================================ -->
+
+        <div class="slide" id="slide-6">
+            <h2>Day 2: Punctuation and Capitalization</h2>
+            <h3>Today's Main Grammar Lesson</h3>
+            <p>Yesterday we learned that names start with capital letters and that periods end telling sentences. Today we will learn more rules.</p>
+            
+            <div class="highlight">
+                <h3>Why Does Punctuation Matter?</h3>
+                <p>Punctuation helps readers understand your writing. Without it, sentences are confusing.</p>
+            </div>
+            
+            <div class="punctuation-example">
+                <span class="incorrect">lets eat grandma</span> (confusing)
+            </div>
+            <div class="punctuation-example">
+                <span class="correct">Let's eat, Grandma!</span> (clear)
+            </div>
+            <p style="text-align: center;"><em>Punctuation saves lives.</em></p>
+        </div>
+
+        <div class="slide" id="slide-7">
+            <h2>Day 2: The Period</h2>
+            
+            <div class="vocab-box">
+                <p><span class="vocab-word">Period <span class="punctuation-mark">.</span></span></p>
+                <p>A dot used at the end of a telling sentence (also called a statement).</p>
+            </div>
+            
+            <div class="key-fact">
+                <h4>Grammar Fact Number 1</h4>
+                <p>A period goes at the end of a telling sentence.</p>
+            </div>
+            
+            <div class="punctuation-example">
+                The team followed the trail<span class="punctuation-mark">.</span>
+            </div>
+            
+            <p>This sentence tells us something. It is not asking a question. It ends with a period.</p>
+            
+            <div class="example-box">
+                <p><strong>More Examples:</strong></p>
+                <p>Manta-ak led the rescue team<span class="punctuation-mark">.</span></p>
+                <p>The invaders have a two-week head start<span class="punctuation-mark">.</span></p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-8">
+            <h2>Day 2: Capital Letters at the Start</h2>
+            
+            <div class="key-fact">
+                <h4>Grammar Fact Number 2</h4>
+                <p>The first word of every sentence starts with a capital letter.</p>
+            </div>
+            
+            <div class="punctuation-example">
+                <span class="incorrect">the invaders came from far away.</span> (incorrect)
+            </div>
+            <div class="punctuation-example">
+                <span class="correct"><span class="capital-letter">T</span>he invaders came from far away.</span> (correct)
+            </div>
+            
+            <p>In the sentence "the invaders came from far away," which word should have a capital letter? The answer is "the" because it is the first word.</p>
+            
+            <div class="grammar-box">
+                <h4>Two Rules for Capital Letters</h4>
+                <p>1. The first word of a sentence gets a capital letter.<br>
+                2. Names of people, animals, and places get capital letters.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-9">
+            <h2>Day 2: The Apostrophe</h2>
+            
+            <div class="vocab-box">
+                <p><span class="vocab-word">Apostrophe <span class="punctuation-mark">'</span></span></p>
+                <p>A mark used to show ownership (something belongs to someone).</p>
+            </div>
+            
+            <div class="key-fact">
+                <h4>Grammar Fact Number 3</h4>
+                <p>An apostrophe shows that something belongs to someone.</p>
+            </div>
+            
+            <div class="punctuation-example">
+                Manta-ak<span class="punctuation-mark">'s</span> dog
+            </div>
+            
+            <p>The apostrophe plus the letter s shows that the dog belongs to Manta-ak.</p>
+            
+            <div class="example-box">
+                <p><strong>The apostrophe is not a period or comma.</strong></p>
+                <p>Period = <span class="punctuation-mark">.</span> (ends a telling sentence)</p>
+                <p>Comma = <span class="punctuation-mark">,</span> (separates items in a list)</p>
+                <p>Apostrophe = <span class="punctuation-mark">'</span> (shows ownership)</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-10">
+            <h2>Day 2: The Question Mark</h2>
+            
+            <div class="vocab-box">
+                <p><span class="vocab-word">Question Mark <span class="punctuation-mark">?</span></span></p>
+                <p>A mark used at the end of an asking sentence (a question).</p>
+            </div>
+            
+            <div class="key-fact">
+                <h4>Grammar Fact Number 4</h4>
+                <p>A question mark goes at the end of an asking sentence.</p>
+            </div>
+            
+            <div class="punctuation-example">
+                Did the invaders set a trap<span class="punctuation-mark">?</span>
+            </div>
+            
+            <p>This sentence is asking something. Questions end with a question mark.</p>
+            
+            <div class="example-box">
+                <p><strong>How to tell the difference:</strong></p>
+                <p>Telling: The invaders set a trap<span class="punctuation-mark">.</span> (period)</p>
+                <p>Asking: Did the invaders set a trap<span class="punctuation-mark">?</span> (question mark)</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-11">
+            <h2>Day 2: Capital Letters for Names</h2>
+            
+            <div class="key-fact">
+                <h4>Grammar Fact Number 5</h4>
+                <p>Names of people, animals, and places always start with a capital letter.</p>
+            </div>
+            
+            <div class="punctuation-example">
+                <span class="incorrect">monda-ak</span> (incorrect) becomes <span class="correct"><span class="capital-letter">M</span>onda-ak</span> (correct)
+            </div>
+            
+            <p>Why should "monda-ak" be written as "Monda-ak"? Because it is a name.</p>
+            
+            <div class="example-box">
+                <p><strong>All of these need capital letters because they are names:</strong></p>
+                <p><span class="capital-letter">M</span>anta-ak (person's name)</p>
+                <p><span class="capital-letter">M</span>onda-ak (animal's name)</p>
+                <p><span class="capital-letter">W</span>inten-ah (place name)</p>
+                <p><span class="capital-letter">K</span>randa-ah (place name)</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-12">
+            <h2>Day 2: Chapter 2 - Following the Trail</h2>
+            <h3>Important Story Events</h3>
+            
+            <div class="key-fact">
+                <h4>Key Fact Number 8</h4>
+                <p>Werda-ak shows the group a piece of red-patterned cloth from a dead invader. This proves the invaders came from far away.</p>
+            </div>
+            
+            <p>No one in Winten-ah has ever seen this pattern before. Monda-ak (the dog) smells the cloth so he can track the invaders.</p>
+            
+            <div class="key-fact">
+                <h4>Key Fact Number 9</h4>
+                <p>The invaders set a spike trap. It is a deep hole with sharp spikes at the bottom. It is not a rope and not fire. It is spikes.</p>
+            </div>
+            
+            <p>Werda-ak almost fell into this trap around a blind corner.</p>
+            
+            <div class="grammar-box">
+                <h4>Day 2 Grammar Review</h4>
+                <p>Period <span class="punctuation-mark">.</span> for telling sentences. Question mark <span class="punctuation-mark">?</span> for asking sentences. Apostrophe <span class="punctuation-mark">'</span> for ownership. <span class="capital-letter">Capital letters</span> for names and sentence beginnings.</p>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- DAY 3: CHAPTER 3 - SLIDES 13-19 -->
+        <!-- ============================================ -->
+
+        <div class="slide" id="slide-13">
+            <h2>Day 3: Chapter 3 - The First Mighty River</h2>
+            <h3>The Journey Continues</h3>
+            
+            <div class="key-fact">
+                <h4>Key Fact Number 10</h4>
+                <p>The team travels for six days before reaching the mighty river. It is not three days and not ten days. It is six days.</p>
+            </div>
+            
+            <p>During these six days, they hunt and fish for food and sleep in trees at night for safety.</p>
+            
+            <div class="key-fact">
+                <h4>Key Fact Number 11</h4>
+                <p>The Kranda-ah is a mighty river (the Columbia River). It is not an animal and not a mountain. It is a river.</p>
+            </div>
+            
+            <div class="grammar-box">
+                <h4>Capital Letter for Place Names</h4>
+                <p><span class="capital-letter">K</span>randa-ah is a place name, so it starts with a capital letter.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-14">
+            <h2>Day 3: Strange Creatures</h2>
+            <h3>Giant Skinks</h3>
+            <p>Near the river, the team discovers unusual creatures sunning themselves on rocks.</p>
+            
+            <div class="key-fact">
+                <h4>Key Fact Number 12</h4>
+                <p>They find giant skinks with bright blue tails. They are not snakes and not birds. They are skinks with blue tails.</p>
+            </div>
+            
+            <p>These lizards are two to three feet long. That is much bigger than normal lizards.</p>
+            
+            <div class="key-fact">
+                <h4>Key Fact Number 13</h4>
+                <p>When Monda-ak tries to catch a skink, he only catches the tail. The skink escapes.</p>
+            </div>
+            
+            <p>Skinks can drop their tails when grabbed. The tail comes off, and the skink runs away.</p>
+            
+            <div class="grammar-box">
+                <h4>Punctuation Rule: The Comma</h4>
+                <p>In "The tail comes off<span class="punctuation-mark">,</span> and the skink runs away," the comma separates two complete thoughts joined by "and."</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-15">
+            <h2>Day 3: The River Problem</h2>
+            <h3>Why Can They Not Just Swim?</h3>
+            
+            <div class="key-fact">
+                <h4>Key Fact Number 14</h4>
+                <p>The team cannot swim across because the river is too fast. They would be swept away.</p>
+            </div>
+            
+            <p>The Kranda-ah is huge and rushing incredibly fast. Swimming would be deadly. The problem is the speed of the current.</p>
+            
+            <div class="grammar-box">
+                <h4>Apostrophe in Contractions</h4>
+                <p>Can't equals can plus not. The apostrophe shows that letters are missing.</p>
+                <p>Examples: can't, don't, won't, isn't</p>
+            </div>
+            
+            <div class="grammar-box">
+                <h4>Question Mark Practice</h4>
+                <p>Why can they not just swim<span class="punctuation-mark">?</span> This sentence asks a question, so it ends with a question mark.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-16">
+            <h2>Day 3: The Invaders' Trap</h2>
+            <h3>How Did the Invaders Cross?</h3>
+            <p>The team finds a rope system spanning the river with a boat attached. But there is a problem.</p>
+            
+            <div class="key-fact">
+                <h4>Key Fact Number 15</h4>
+                <p>The invaders crossed using a boat and then left it on the other side to trap their pursuers.</p>
+            </div>
+            
+            <p>They did not burn a bridge. They did not swim across. They used a boat and then left it out of reach.</p>
+            
+            <div class="grammar-box">
+                <h4>Punctuation Check</h4>
+                <p>How did the invaders cross the river<span class="punctuation-mark">?</span> This is a question, so it needs a question mark.</p>
+                <p>The invaders used a boat<span class="punctuation-mark">.</span> This is a telling sentence, so it needs a period.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-17">
+            <h2>Day 3: Werda-ak's Mistake</h2>
+            <h3>A Dangerous Decision</h3>
+            <p>Young Werda-ak volunteers to walk across the rope to get the boat. Manta-ak says no because it is too dangerous.</p>
+            <p>But Werda-ak is young and wants to prove himself.</p>
+            
+            <div class="key-fact">
+                <h4>Key Fact Number 16</h4>
+                <p>Werda-ak disobeys Manta-ak, tries to cross the rope, and falls into the Kranda-ah River.</p>
+            </div>
+            
+            <p>He does not successfully cross. He does not find another way. He falls in.</p>
+            
+            <div class="grammar-box">
+                <h4>Exclamation Point</h4>
+                <p>He falls into the river<span class="punctuation-mark">!</span> The exclamation point shows strong feeling or excitement.</p>
+            </div>
+            
+            <div class="question-box">
+                <p><strong>Cliffhanger:</strong> Will Werda-ak survive? We will find out in Chapter 4.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-18">
+            <h2>Day 3: Chapter 3 Review</h2>
+            <h3>Remember These Facts</h3>
+            
+            <div class="highlight">
+                <ul>
+                    <li>The team traveled for <strong>six days</strong> before reaching the river.</li>
+                    <li>The <strong>Kranda-ah</strong> is a <strong>mighty river</strong> (the Columbia River).</li>
+                    <li>They found <strong>giant skinks</strong> with <strong>bright blue tails</strong>.</li>
+                    <li>Monda-ak <strong>only catches the tail</strong>, and the skink escapes.</li>
+                    <li>They cannot swim because the river is <strong>too fast</strong>.</li>
+                    <li>The invaders used a <strong>boat</strong> and <strong>left it on the other side</strong>.</li>
+                    <li>Werda-ak <strong>falls into</strong> the Kranda-ah River.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-19">
+            <h2>Day 3: Grammar Review</h2>
+            <h3>What We Have Learned This Week</h3>
+            
+            <div class="vocab-box">
+                <p><span class="vocab-word">Capital Letters</span></p>
+                <p>Use at the start of sentences and for names of people, animals, and places.</p>
+            </div>
+            
+            <div class="vocab-box">
+                <p><span class="vocab-word">Period <span class="punctuation-mark">.</span></span></p>
+                <p>Use at the end of a telling sentence (statement).</p>
+            </div>
+            
+            <div class="vocab-box">
+                <p><span class="vocab-word">Question Mark <span class="punctuation-mark">?</span></span></p>
+                <p>Use at the end of an asking sentence (question).</p>
+            </div>
+            
+            <div class="vocab-box">
+                <p><span class="vocab-word">Exclamation Point <span class="punctuation-mark">!</span></span></p>
+                <p>Use to show strong feeling or excitement.</p>
+            </div>
+            
+            <div class="vocab-box">
+                <p><span class="vocab-word">Apostrophe <span class="punctuation-mark">'</span></span></p>
+                <p>Use to show ownership (Manta-ak's dog) or in contractions (can't, don't).</p>
+            </div>
+            
+            <div class="vocab-box">
+                <p><span class="vocab-word">Comma <span class="punctuation-mark">,</span></span></p>
+                <p>Use to separate items in a list or to join two complete thoughts.</p>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- DAY 4: WRITING WORKSHOP - SLIDES 20-22 -->
+        <!-- ============================================ -->
+
+        <div class="slide" id="slide-20">
+            <h2>Day 4: Writing Workshop</h2>
+            <h3>Today We Write</h3>
+            <p>Use what you have learned about the story and about punctuation and capitalization.</p>
+            
+            <div class="writing-structure">
+                <h3>Writing Structure: Topic Plus Three Details Plus Conclusion</h3>
+                <ul>
+                    <li><strong>Topic Sentence:</strong> Tell the main idea.</li>
+                    <li><strong>Detail 1:</strong> Give your first piece of evidence.</li>
+                    <li><strong>Detail 2:</strong> Give your second piece of evidence.</li>
+                    <li><strong>Detail 3:</strong> Give your third piece of evidence.</li>
+                    <li><strong>Conclusion:</strong> Wrap it up.</li>
+                </ul>
+            </div>
+            
+            <div class="grammar-box">
+                <h4>Remember Your Punctuation Rules</h4>
+                <p>Every sentence starts with a <span class="capital-letter">capital letter</span> and ends with a <span class="punctuation-mark">.</span> or <span class="punctuation-mark">?</span> or <span class="punctuation-mark">!</span></p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-21">
+            <h2>Day 4: Writing Prompt</h2>
+            
+            <div class="writing-prompt">
+                <h3>Your Prompt</h3>
+                <p><strong>How do the invaders try to stop Manta-ak's team from following them? Use details from Chapters 2 and 3 in your answer.</strong></p>
+            </div>
+            
+            <h3>Think About These Details</h3>
+            <ul>
+                <li><strong>Chapter 2:</strong> The spike trap (a deep hole with sharp spikes).</li>
+                <li><strong>Chapter 2:</strong> Splitting their trail to confuse pursuers.</li>
+                <li><strong>Chapter 3:</strong> Leaving the boat on the other side of the river.</li>
+            </ul>
+            
+            <div class="example-box">
+                <p><strong>Sentence Starter:</strong> "<span class="capital-letter">T</span>he invaders use several tricks to stop Manta-ak's team from following them<span class="punctuation-mark">.</span>"</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-22">
+            <h2>Day 4: Writing Checklist</h2>
+            <h3>Before You Turn In Your Writing</h3>
+            
+            <div class="highlight">
+                <h3>Punctuation and Capitalization Check</h3>
+                <ul>
+                    <li>Does every sentence start with a <strong>capital letter</strong>?</li>
+                    <li>Are all names capitalized? (<span class="capital-letter">M</span>anta-ak, <span class="capital-letter">W</span>erda-ak, <span class="capital-letter">K</span>randa-ah)</li>
+                    <li>Does every sentence end with a <strong>period <span class="punctuation-mark">.</span></strong> or <strong>question mark <span class="punctuation-mark">?</span></strong> or <strong>exclamation point <span class="punctuation-mark">!</span></strong>?</li>
+                    <li>Did you use <strong>apostrophes</strong> correctly? (Manta-ak<span class="punctuation-mark">'</span>s team)</li>
+                    <li>Did you use <strong>commas</strong> to separate items in a list?</li>
+                </ul>
+            </div>
+            
+            <div class="writing-structure">
+                <h3>Content Check</h3>
+                <ul>
+                    <li>Do you have a topic sentence that answers the question?</li>
+                    <li>Do you have at least three details from the story?</li>
+                    <li>Do you have a conclusion sentence?</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide-nav">
+            <button onclick="prevSlide()" id="prevBtn">Previous</button>
+            <button onclick="nextSlide()" id="nextBtn">Next</button>
+        </div>
+
+        <footer>
+            <p>Week 1: Lost in Kragdon-ah, Chapters 1-3</p>
+            <p>ELA Theme: Punctuation and Capitalization</p>
+            <p><a href="https://www.reinischclassroom.com" style="color: #ffd700;">Return to Classroom Website</a></p>
+        </footer>
+    </div>
+
+    <script>
+        let currentSlide = 0;
+        const totalSlides = 23;
+
+        let currentBg = 0;
+        const bgImages = document.querySelectorAll('.bg-image');
+        const totalBgImages = 12;
+        
+        function rotateBg() {
+            bgImages[currentBg].classList.remove('active');
+            currentBg = (currentBg + 1) % totalBgImages;
+            bgImages[currentBg].classList.add('active');
+        }
+        
+        setInterval(rotateBg, 6000);
+
+        function updateSlide() {
+            document.querySelectorAll('.slide').forEach((slide, index) => {
+                slide.classList.remove('active');
+                if (index === currentSlide) {
+                    slide.classList.add('active');
+                }
+            });
+            
+            document.getElementById('prevBtn').disabled = currentSlide === 0;
+            document.getElementById('nextBtn').disabled = currentSlide === totalSlides - 1;
+            
+            const progress = ((currentSlide + 1) / totalSlides) * 100;
+            document.getElementById('progress').style.width = progress + '%';
+        }
+
+        function nextSlide() {
+            if (currentSlide < totalSlides - 1) {
+                currentSlide++;
+                updateSlide();
+            }
+        }
+
+        function prevSlide() {
+            if (currentSlide > 0) {
+                currentSlide--;
+                updateSlide();
+            }
+        }
+
+        function goToSlide(slideIndex) {
+            currentSlide = slideIndex;
+            updateSlide();
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight') nextSlide();
+            if (e.key === 'ArrowLeft') prevSlide();
+        });
+
+        updateSlide();
+    </script>
+</body>
+</html>
