@@ -56,3 +56,20 @@ exports.handler = async (event) => {
     username: result.user.username 
   }, {}, requestId);
 };
+
+// __RC_WRAP_HANDLER__
+// Prevent Netlify 502s by catching unexpected exceptions and returning JSON.
+const __rc_orig_handler = exports.handler;
+exports.handler = async function(event, context) {
+  try {
+    return await __rc_orig_handler(event, context);
+  } catch (e) {
+    const msg = (e && e.message) ? String(e.message) : String(e);
+    return {
+      statusCode: 500,
+      headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' },
+      body: JSON.stringify({ error: 'teacher_session_exception', message: msg.slice(0, 200) }, null, 2)
+    };
+  }
+};
+
