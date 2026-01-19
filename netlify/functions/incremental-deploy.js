@@ -15,9 +15,13 @@ const REGENERATE_CATEGORY_INDEX = String(process.env.REGENERATE_CATEGORY_INDEX |
 const ENABLE_SESSION_LOG = String(process.env.ADMIN_SESSION_LOG || '').trim() === '1';
 
 exports.handler = async (event) => {
-  // __rcAuthGateIncrementalDeploy
-  const __rcUser = requireTeacher(event);
-  if (!__rcUser) {
+  // __rcAuthGateIncrementalDeploy (tc cookie; supports SESSION_SECRET)
+  const __rcTcSecret = (process.env.TEACHER_SESSION_SECRET ||
+    process.env.TEACHER_SECRET ||
+    process.env.SESSION_SECRET ||
+    '').trim();
+  const __rcUser = __rcTcSecret ? requireTeacher(event, __rcTcSecret) : requireTeacher(event);
+  if (!(__rcUser && __rcUser.ok && __rcUser.user)) {
     const h = (event && event.headers) ? event.headers : {};
     const ch = h.cookie || h.Cookie || '';
     return {
@@ -26,6 +30,7 @@ exports.handler = async (event) => {
       body: JSON.stringify({ reason: 'tc_invalid_or_expired', hasCookie: !!ch, cookieBytes: ch.length }, null, 2)
     };
   }
+
 
   try {
     const qs = event.queryStringParameters || {};
