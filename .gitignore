@@ -75,3 +75,7 @@ site/admin/*.bak.*
 # Local one-off backups (do not commit)
 *.bak_rc_incdeploy
 *.bak_rc_wrap
+
+# Local one-off backups / debug artifacts (do not commit)
+*.bak_rc_*
+_rc_*
