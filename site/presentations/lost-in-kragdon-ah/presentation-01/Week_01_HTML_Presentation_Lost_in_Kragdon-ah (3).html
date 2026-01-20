@@ -14,8 +14,8 @@
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             min-height: 100vh;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-            background-attachment: fixed;
+            background: #000;
+            background-image: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);background-attachment: fixed;
             color: #ffffff;
             overflow-x: hidden;
         }
@@ -28,6 +28,8 @@
             height: 100%;
             z-index: -1;
             overflow: hidden;
+            inset: 0;
+            background: #000;
         }
 
         .bg-image {
@@ -40,6 +42,10 @@
             background-position: center;
             opacity: 0;
             transition: opacity 2s ease-in-out;
+            inset: 0;
+            will-change: opacity;
+            transform: translateZ(0);
+            backface-visibility: hidden;
         }
 
         .bg-image.active {
@@ -516,7 +522,10 @@
             .slide p, .slide li { font-size: 1em; }
             .key-fact p { font-size: 1.1em; }
         }
-    </style>
+    
+
+.bg-image.active{ opacity: 1; }
+</style>
 </head>
 <body>
     <div class="bg-container">
@@ -1170,10 +1179,19 @@
         const totalBgImages = 12;
         
         function rotateBg() {
-            bgImages[currentBg].classList.remove('active');
-            currentBg = (currentBg + 1) % totalBgImages;
-            bgImages[currentBg].classList.add('active');
-        }
+  const bgImages = document.querySelectorAll('.bg-image');
+  if (!bgImages.length) return;
+
+  const outgoing = bgImages[currentBg];
+  const nextIdx = (currentBg + 1) % bgImages.length;
+  const incoming = bgImages[nextIdx];
+
+  // Crossfade: incoming ON first, outgoing OFF next tick (prevents blank-frame flicker)
+  incoming.classList.add('active');
+  setTimeout(() => outgoing.classList.remove('active'), 50);
+
+  currentBg = nextIdx;
+}
         
         setInterval(rotateBg, 6000);
 
