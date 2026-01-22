@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Written Response Builder</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #7e22ce 100%);
+      min-height: 100vh; padding: 20px; color: #e8edf5;
+    }
+    .container { max-width: 1400px; margin: 0 auto; background: rgba(30,41,59,.95); border-radius: 20px; box-shadow: 0 25px 50px rgba(0,0,0,.3); overflow: hidden; border: 1px solid rgba(255,255,255,.1); }
+    .header { background: linear-gradient(135deg, rgba(59,130,246,.3), rgba(147,51,234,.3)); backdrop-filter: blur(10px); color: white; padding: 30px 40px; border-bottom: 1px solid rgba(255,255,255,.1); }
+    .header h1 { font-size: 2em; margin-bottom: 8px; font-weight: 600; }
+    .header p { font-size: 1em; opacity: .8; }
+    .content { padding: 30px 40px; display: grid; gap: 20px; }
+    .writing-section { background: rgba(51,65,85,.6); border: 1px solid rgba(255,255,255,.1); padding: 20px; border-radius: 12px; transition: all .3s ease; }
+    .writing-section:hover { border-color: rgba(59,130,246,.5); background: rgba(51,65,85,.7); }
+    .section-header { display: flex; align-items: center; margin-bottom: 15px; gap: 15px; }
+    .section-title { background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; padding: 8px 16px; border-radius: 6px; font-weight: 600; font-size: .9em; text-transform: uppercase; letter-spacing: .5px; }
+    .topic-sentence .section-title { background: linear-gradient(135deg, #10b981, #059669); }
+    .supporting-detail-1 .section-title { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
+    .supporting-detail-2 .section-title { background: linear-gradient(135deg, #8b5cf6, #6d28d9); }
+    .supporting-detail-3 .section-title { background: linear-gradient(135deg, #f59e0b, #d97706); }
+    .conclusion .section-title { background: linear-gradient(135deg, #ef4444, #dc2626); }
+    .writing-content { display: flex; gap: 15px; align-items: flex-start; }
+    .transition-dropdown { min-width: 180px; }
+    .transition-dropdown select {
+      width: 100%; padding: 10px; border: 1px solid rgba(255,255,255,.2); border-radius: 8px;
+      font-size: .95em; background: rgba(30,41,59,.8); color: #e8edf5; cursor: pointer;
+    }
+    .transition-dropdown select:focus { outline: none; border-color: #3b82f6; }
+    .content-input { flex: 1; }
+    .content-textarea {
+      width: 100%; padding: 12px 15px; border: 1px solid rgba(255,255,255,.2); border-radius: 8px;
+      min-height: 100px; font-size: 1em; resize: vertical; font-family: inherit; line-height: 1.6;
+      background: rgba(30,41,59,.8); color: #e8edf5;
+    }
+    .content-textarea:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,.1); }
+    .topic-sentence .content-textarea { min-height: 70px; }
+    .tips { margin-top: 10px; padding: 10px; background: rgba(59,130,246,.1); border-radius: 6px; border-left: 3px solid #3b82f6; font-size: .85em; color: #cbd5e1; }
+    .word-count { background: rgba(30,41,59,.8); padding: 8px 14px; border-radius: 6px; font-size: .85em; color: #94a3b8; border: 1px solid rgba(255,255,255,.1); margin-left: auto; }
+    .feedback { margin-top: 10px; }
+    .feedback p { margin: 6px 0; padding: 8px 12px; background: rgba(16,185,129,.1); border-left: 3px solid #10b981; border-radius: 6px; font-size: .85em; }
+    .feedback p.warn { background: rgba(245,158,11,.1); border-left-color: #f59e0b; }
+    .feedback p.error { background: rgba(239,68,68,.1); border-left-color: #ef4444; }
+    .actions { display: flex; gap: 12px; justify-content: center; margin-top: 20px; padding: 20px; background: rgba(51,65,85,.4); border-radius: 12px; }
+    .btn { padding: 12px 24px; border: none; border-radius: 8px; font-size: .95em; font-weight: 600; cursor: pointer; transition: all .3s ease; border: 1px solid transparent; }
+    .btn-primary { background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; }
+    .btn-secondary { background: rgba(100,116,139,.8); color: white; border: 1px solid rgba(255,255,255,.2); }
+    .btn-success { background: linear-gradient(135deg, #10b981, #059669); color: white; }
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,.3); }
+    .preview-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,.7); z-index: 1000; backdrop-filter: blur(5px); }
+    .preview-content {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      background: rgba(30,41,59,.98); padding: 30px; border-radius: 15px; max-width: 80%; max-height: 80%;
+      overflow-y: auto; box-shadow: 0 25px 50px rgba(0,0,0,.5); border: 1px solid rgba(255,255,255,.1);
+    }
+    .preview-content h2 { color: #e8edf5; margin-bottom: 20px; }
+    .preview-text { line-height: 1.8; font-size: 1.05em; color: #cbd5e1; }
+    textarea::placeholder, select option:first-child { color: #64748b; }
+    ::-webkit-scrollbar { width: 10px; }
+    ::-webkit-scrollbar-track { background: rgba(30,41,59,.5); }
+    ::-webkit-scrollbar-thumb { background: rgba(59,130,246,.5); border-radius: 5px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(59,130,246,.7); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>📝 Written Response Builder</h1>
+      <p>Structure your essay with clear organization and smooth transitions</p>
+    </div>
+
+    <div class="content">
+      <!-- Topic Sentence -->
+      <div class="writing-section topic-sentence">
+        <div class="section-header">
+          <div class="section-title">Topic Sentence</div>
+          <div class="word-count" id="topicWordCount">0 words</div>
+        </div>
+        <div class="writing-content">
+          <div class="content-input">
+            <textarea class="content-textarea" id="topicSentence" placeholder="Write your main thesis or topic sentence here. This should clearly state your position or main argument..."></textarea>
+            <div class="feedback" id="topicFeedback"></div>
+            <div class="tips">💡 <strong>Tip:</strong> Your topic sentence should clearly state your main argument and preview what you'll discuss in your supporting details.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Supporting Detail 1 -->
+      <div class="writing-section supporting-detail-1">
+        <div class="section-header">
+          <div class="section-title">Supporting Detail 1</div>
+          <div class="word-count" id="detail1WordCount">0 words</div>
+        </div>
+        <div class="writing-content">
+          <div class="transition-dropdown">
+            <select id="transition1">
+              <option value="">Choose transition...</option>
+              <option value="First,">First,</option>
+              <option value="To begin with,">To begin with,</option>
+              <option value="Initially,">Initially,</option>
+              <option value="One reason is that">One reason is that</option>
+              <option value="The first point is">The first point is</option>
+              <option value="For instance,">For instance,</option>
+              <option value="For example,">For example,</option>
+            </select>
+          </div>
+          <div class="content-input">
+            <textarea class="content-textarea" id="supportingDetail1" placeholder="Provide your first supporting point with evidence and explanation..."></textarea>
+            <div class="feedback" id="detail1Feedback"></div>
+            <div class="tips">💡 <strong>Tip:</strong> Include specific evidence, examples, or reasoning to support your main argument.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Supporting Detail 2 -->
+      <div class="writing-section supporting-detail-2">
+        <div class="section-header">
+          <div class="section-title">Supporting Detail 2</div>
+          <div class="word-count" id="detail2WordCount">0 words</div>
+        </div>
+        <div class="writing-content">
+          <div class="transition-dropdown">
+            <select id="transition2">
+              <option value="">Choose transition...</option>
+              <option value="Second,">Second,</option>
+              <option value="Additionally,">Additionally,</option>
+              <option value="Furthermore,">Furthermore,</option>
+              <option value="Another reason is">Another reason is</option>
+              <option value="In addition,">In addition,</option>
+              <option value="Moreover,">Moreover,</option>
+              <option value="Also,">Also,</option>
+            </select>
+          </div>
+          <div class="content-input">
+            <textarea class="content-textarea" id="supportingDetail2" placeholder="Provide your second supporting point with evidence and explanation..."></textarea>
+            <div class="feedback" id="detail2Feedback"></div>
+            <div class="tips">💡 <strong>Tip:</strong> Make sure this point is different from your first detail but still supports your main argument.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Supporting Detail 3 -->
+      <div class="writing-section supporting-detail-3">
+        <div class="section-header">
+          <div class="section-title">Supporting Detail 3</div>
+          <div class="word-count" id="detail3WordCount">0 words</div>
+        </div>
+        <div class="writing-content">
+          <div class="transition-dropdown">
+            <select id="transition3">
+              <option value="">Choose transition...</option>
+              <option value="Third,">Third,</option>
+              <option value="Finally,">Finally,</option>
+              <option value="Lastly,">Lastly,</option>
+              <option value="Most importantly,">Most importantly,</option>
+              <option value="The final reason is">The final reason is</option>
+              <option value="In conclusion,">In conclusion,</option>
+              <option value="Above all,">Above all,</option>
+            </select>
+          </div>
+          <div class="content-input">
+            <textarea class="content-textarea" id="supportingDetail3" placeholder="Provide your third supporting point with evidence and explanation..."></textarea>
+            <div class="feedback" id="detail3Feedback"></div>
+            <div class="tips">💡 <strong>Tip:</strong> Consider making this your strongest point to leave a lasting impression.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Conclusion -->
+      <div class="writing-section conclusion">
+        <div class="section-header">
+          <div class="section-title">Conclusion</div>
+          <div class="word-count" id="conclusionWordCount">0 words</div>
+        </div>
+        <div class="writing-content">
+          <div class="transition-dropdown">
+            <select id="transitionConclusion">
+              <option value="">Choose transition...</option>
+              <option value="In conclusion,">In conclusion,</option>
+              <option value="To summarize,">To summarize,</option>
+              <option value="In summary,">In summary,</option>
+              <option value="Therefore,">Therefore,</option>
+              <option value="As a result,">As a result,</option>
+              <option value="That is why,">That is why,</option>
+              <option value="Ultimately,">Ultimately,</option>
+            </select>
+          </div>
+          <div class="content-input">
+            <textarea class="content-textarea" id="conclusion" placeholder="Restate your main argument and summarize your key points. End with a strong closing thought..."></textarea>
+            <div class="feedback" id="conclusionFeedback"></div>
+            <div class="tips">💡 <strong>Tip:</strong> Restate your thesis in different words and leave the reader with something to think about.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-secondary">🗑️ Clear All</button>
+        <button class="btn btn-primary">👁️ Preview Response</button>
+        <button class="btn btn-success">📋 Copy to Clipboard</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hidden aria-live region for status announcements -->
+  <div id="status-announcements" role="status" aria-live="polite" aria-atomic="true" style="position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden;"></div>
+
+  <div class="preview-modal" id="previewModal">
+    <div class="preview-content">
+      <h2>📄 Your Written Response</h2>
+      <div class="preview-text" id="previewText"></div>
+      <div style="text-align: center; margin-top: 20px;">
+        <button class="btn btn-secondary">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- External JavaScript -->
+  <script src="written-response-builder.js"></script>
+</body>
+</html>
