@@ -1,4 +1,18 @@
 
+// ---- MIQ v11 boot marker ----
+try { console.log("[MIQ] v11 app.js loaded ✅"); } catch(e) {}
+try {
+  const status = document.getElementById("rcLoaderStatus");
+  if(status) status.textContent = "Status: app.js loaded ✅ (initializing…)";
+} catch(e) {}
+window.addEventListener("DOMContentLoaded", () => {
+  try {
+    const loader = document.getElementById("rcLoader");
+    if(loader) loader.style.display = "none";
+  } catch(e) {}
+});
+
+
     /*****************************************************************
       TEXT-TO-SPEECH (Web Speech API)
     ******************************************************************/
