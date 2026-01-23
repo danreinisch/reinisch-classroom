@@ -1,0 +1,1604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Week 4: Lost in Kragdon-ah - Chapters 11-13</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            background-attachment: fixed;
+            color: #ffffff;
+            overflow-x: hidden;
+        }
+
+        /* ============================================
+           BACKGROUND IMAGE ROTATION SYSTEM
+           Images should be named image1.jpg through image12.jpg
+           and stored in the same folder as this HTML file
+           ============================================ */
+        .bg-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+        }
+
+        .bg-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            opacity: 0;
+            transition: opacity 3s ease-in-out;
+        }
+
+        .bg-image.active {
+            opacity: 0.55;
+        }
+
+        .bg-image:nth-child(1) { background-image: url('image1.jpg'); }
+        .bg-image:nth-child(2) { background-image: url('image2.jpg'); }
+        .bg-image:nth-child(3) { background-image: url('image3.jpg'); }
+        .bg-image:nth-child(4) { background-image: url('image4.jpg'); }
+        .bg-image:nth-child(5) { background-image: url('image5.jpg'); }
+        .bg-image:nth-child(6) { background-image: url('image6.jpg'); }
+        .bg-image:nth-child(7) { background-image: url('image7.jpg'); }
+        .bg-image:nth-child(8) { background-image: url('image8.jpg'); }
+        .bg-image:nth-child(9) { background-image: url('image9.jpg'); }
+        .bg-image:nth-child(10) { background-image: url('image10.jpg'); }
+        .bg-image:nth-child(11) { background-image: url('image11.jpg'); }
+        .bg-image:nth-child(12) { background-image: url('image12.jpg'); }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 40px 20px;
+            background: rgba(0, 0, 0, 0.35);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            border-radius: 20px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.8);
+        }
+
+        header h2 {
+            font-size: 1.5em;
+            color: #ffd700;
+            margin-bottom: 10px;
+            text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.8);
+        }
+
+        header p {
+            font-size: 1.2em;
+            color: #a0d2eb;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8);
+        }
+
+        .theme-banner {
+            background: linear-gradient(90deg, rgba(231, 76, 60, 0.5), rgba(155, 89, 182, 0.5));
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            padding: 15px 30px;
+            border-radius: 10px;
+            margin-top: 20px;
+            display: inline-block;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+        }
+
+        .theme-banner h3 {
+            font-size: 1.3em;
+            color: #fff;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8);
+        }
+
+        nav {
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        nav h3 {
+            text-align: center;
+            margin-bottom: 15px;
+            color: #ffd700;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8);
+        }
+
+        .nav-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .nav-btn {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.4) 0%, rgba(118, 75, 162, 0.4) 100%);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            border-radius: 25px;
+            color: white;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+        }
+
+        .nav-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.6) 0%, rgba(118, 75, 162, 0.6) 100%);
+        }
+
+        .nav-btn.day1 { background: linear-gradient(135deg, rgba(240, 147, 251, 0.4) 0%, rgba(245, 87, 108, 0.4) 100%); }
+        .nav-btn.day1:hover { background: linear-gradient(135deg, rgba(240, 147, 251, 0.6) 0%, rgba(245, 87, 108, 0.6) 100%); }
+        .nav-btn.day2 { background: linear-gradient(135deg, rgba(79, 172, 254, 0.4) 0%, rgba(0, 242, 254, 0.4) 100%); }
+        .nav-btn.day2:hover { background: linear-gradient(135deg, rgba(79, 172, 254, 0.6) 0%, rgba(0, 242, 254, 0.6) 100%); }
+        .nav-btn.day3 { background: linear-gradient(135deg, rgba(67, 233, 123, 0.4) 0%, rgba(56, 249, 215, 0.4) 100%); }
+        .nav-btn.day3:hover { background: linear-gradient(135deg, rgba(67, 233, 123, 0.6) 0%, rgba(56, 249, 215, 0.6) 100%); }
+        .nav-btn.day4 { background: linear-gradient(135deg, rgba(250, 112, 154, 0.4) 0%, rgba(254, 225, 64, 0.4) 100%); }
+        .nav-btn.day4:hover { background: linear-gradient(135deg, rgba(250, 112, 154, 0.6) 0%, rgba(254, 225, 64, 0.6) 100%); }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 3px;
+            margin-bottom: 30px;
+            overflow: hidden;
+        }
+
+        .progress {
+            height: 100%;
+            background: linear-gradient(90deg, #ffd700, #ff6b6b);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .slide {
+            display: none;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            animation: fadeIn 0.5s ease;
+        }
+
+        .slide.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .slide h2 {
+            color: #ffd700;
+            font-size: 2em;
+            margin-bottom: 20px;
+            text-align: center;
+            text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.8);
+        }
+
+        .slide h3 {
+            color: #a0d2eb;
+            font-size: 1.5em;
+            margin: 20px 0 15px 0;
+            text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.8);
+        }
+
+        .slide h4 {
+            color: #ffd700;
+            font-size: 1.2em;
+            margin: 15px 0 10px 0;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8);
+        }
+
+        .slide p {
+            font-size: 1.1em;
+            line-height: 1.8;
+            margin-bottom: 15px;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.6);
+        }
+
+        .slide ul, .slide ol {
+            margin-left: 30px;
+            margin-bottom: 20px;
+        }
+
+        .slide li {
+            font-size: 1.1em;
+            line-height: 1.8;
+            margin-bottom: 10px;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.6);
+        }
+
+        .highlight {
+            background: rgba(255, 215, 0, 0.10);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-left: 4px solid #ffd700;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 0 10px 10px 0;
+        }
+
+        .key-fact {
+            background: rgba(76, 175, 80, 0.15);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-left: 4px solid #4CAF50;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 0 10px 10px 0;
+        }
+
+        .key-fact h4 {
+            color: #4CAF50;
+            margin-bottom: 10px;
+        }
+
+        .vocab-box {
+            background: rgba(160, 210, 235, 0.10);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 1px solid rgba(160, 210, 235, 0.25);
+        }
+
+        .vocab-word {
+            color: #ffd700;
+            font-weight: bold;
+            font-size: 1.2em;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8);
+        }
+
+        .grammar-box {
+            background: rgba(155, 89, 182, 0.15);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 1px solid rgba(155, 89, 182, 0.25);
+        }
+
+        .grammar-box h4 {
+            color: #bb86fc;
+            margin-bottom: 10px;
+        }
+
+        .what-why-how {
+            background: rgba(255, 152, 0, 0.12);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 1px solid rgba(255, 152, 0, 0.25);
+        }
+
+        .what-why-how h4 {
+            color: #ff9800;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+
+        .what-why-how .section {
+            margin-bottom: 15px;
+            padding: 10px;
+            background: rgba(0,0,0,0.25);
+            border-radius: 8px;
+        }
+
+        .what-why-how .label {
+            color: #ffd700;
+            font-weight: bold;
+            display: block;
+            font-size: 1.1em;
+            margin-bottom: 5px;
+        }
+
+        .example-box {
+            background: rgba(67, 233, 123, 0.10);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 1px solid rgba(67, 233, 123, 0.25);
+        }
+
+        .example-box h4 {
+            color: #43e97b;
+            margin-bottom: 10px;
+        }
+
+        .rule-box {
+            background: rgba(33, 150, 243, 0.12);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 2px solid rgba(33, 150, 243, 0.4);
+        }
+
+        .rule-box h4 {
+            color: #2196F3;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+
+        .warning-box {
+            background: rgba(244, 67, 54, 0.12);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 2px solid rgba(244, 67, 54, 0.4);
+        }
+
+        .warning-box h4 {
+            color: #f44336;
+            margin-bottom: 10px;
+        }
+
+        .practice-box {
+            background: rgba(156, 39, 176, 0.12);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 2px dashed rgba(156, 39, 176, 0.4);
+        }
+
+        .practice-box h4 {
+            color: #ce93d8;
+            margin-bottom: 10px;
+        }
+
+        .pov-box {
+            background: rgba(0, 188, 212, 0.12);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 2px solid rgba(0, 188, 212, 0.4);
+        }
+
+        .pov-box h4 {
+            color: #00bcd4;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+
+        .internal-thought {
+            background: rgba(255, 193, 7, 0.15);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border-left: 4px solid #ffc107;
+            font-style: italic;
+        }
+
+        .internal-thought h4 {
+            color: #ffc107;
+            margin-bottom: 10px;
+            font-style: normal;
+        }
+
+        .compare-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+
+        .compare-table th, .compare-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.15);
+        }
+
+        .compare-table th {
+            background: rgba(0,0,0,0.3);
+            color: #ffd700;
+        }
+
+        .compare-table tr:nth-child(even) {
+            background: rgba(255,255,255,0.03);
+        }
+
+        .punctuation-mark {
+            color: #ff6b6b;
+            font-size: 1.3em;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+        }
+
+        .capital-letter {
+            color: #ffd700;
+            font-weight: bold;
+            font-size: 1.2em;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+        }
+
+        .quote-mark {
+            color: #00bcd4;
+            font-size: 1.4em;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+        }
+
+        .dialogue-example {
+            background: rgba(0, 150, 136, 0.15);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 25px;
+            margin: 15px 0;
+            border: 1px solid rgba(0, 150, 136, 0.3);
+            font-size: 1.3em;
+            text-align: center;
+        }
+
+        .question-box {
+            background: rgba(245, 87, 108, 0.12);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            border: 1px solid rgba(245, 87, 108, 0.25);
+        }
+
+        .writing-prompt {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.2), rgba(118, 75, 162, 0.2));
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .writing-structure {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .correct {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+
+        .incorrect {
+            color: #ff6b6b;
+            text-decoration: line-through;
+        }
+
+        .step-box {
+            background: rgba(0, 188, 212, 0.12);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 15px 20px;
+            margin: 10px 0;
+            border-left: 4px solid #00bcd4;
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+        }
+
+        .step-number {
+            background: #00bcd4;
+            color: #000;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .slide-nav {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .slide-nav button {
+            padding: 12px 30px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.4), rgba(118, 75, 162, 0.4));
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            border-radius: 25px;
+            color: white;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+        }
+
+        .slide-nav button:hover:not(:disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4);
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.6), rgba(118, 75, 162, 0.6));
+        }
+
+        .slide-nav button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        footer {
+            text-align: center;
+            padding: 30px;
+            background: rgba(0, 0, 0, 0.35);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            border-radius: 20px;
+            margin-top: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        footer p {
+            margin: 10px 0;
+            color: #a0d2eb;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.6);
+        }
+
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .two-column {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Background Image Container -->
+    <div class="bg-container">
+        <div class="bg-image active"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>Lost in Kragdon-ah</h1>
+            <h2>Week 4: Chapters 11-13</h2>
+            <p>By Shawn Inmon</p>
+            <div class="theme-banner">
+                <h3>ELA Theme: Dialogue & First-Person Point of View</h3>
+            </div>
+        </header>
+
+        <nav>
+            <h3>Quick Navigation</h3>
+            <div class="nav-buttons">
+                <button class="nav-btn day1" onclick="goToSlide(1)">Day 1: Chapter 11</button>
+                <button class="nav-btn day2" onclick="goToSlide(10)">Day 2: Chapter 12</button>
+                <button class="nav-btn day3" onclick="goToSlide(20)">Day 3: Chapter 13</button>
+                <button class="nav-btn day4" onclick="goToSlide(28)">Day 4: Writing</button>
+            </div>
+        </nav>
+
+        <div class="progress-bar">
+            <div class="progress" id="progress"></div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- SLIDE 0: OVERVIEW -->
+        <!-- ============================================ -->
+        <div class="slide active" id="slide-0">
+            <h2>Week 4 Overview</h2>
+            <h3>What We Will Learn This Week</h3>
+            
+            <div class="highlight">
+                <h4>Chapters We Will Read:</h4>
+                <ul>
+                    <li><strong>Day 1:</strong> Chapter 11 - Another Traveler, Another Door</li>
+                    <li><strong>Day 2:</strong> Chapter 12 - Tonton-ah (The Village in the Trees)</li>
+                    <li><strong>Day 3:</strong> Chapter 13 - The Battle of Tonton-ah</li>
+                    <li><strong>Day 4:</strong> Writing Workshop</li>
+                </ul>
+            </div>
+            
+            <div class="rule-box">
+                <h4>Grammar Skills We Will Master This Week</h4>
+                <ul>
+                    <li><strong>Dialogue Review:</strong> Quotation marks, commas, and capitalization in speech.</li>
+                    <li><strong>NEW - First-Person Point of View:</strong> Understanding "I" narration.</li>
+                    <li><strong>NEW - Internal Thoughts:</strong> How authors show what characters think.</li>
+                </ul>
+            </div>
+
+            <div class="pov-box">
+                <h4>Big Question This Week</h4>
+                <p>How does the author let us "hear" what Alex is thinking? And how is that different from what characters say out loud?</p>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- DAY 1: CHAPTER 11 - SLIDES 1-9 -->
+        <!-- ============================================ -->
+        <div class="slide" id="slide-1">
+            <h2>Day 1: Chapter 11 - Another Traveler</h2>
+            <h3>A Shocking Discovery</h3>
+            
+            <div class="highlight">
+                <h4>Last Week:</h4>
+                <p>Alex won the fight against Grunta-ak. Rinka-ak gave them supplies, salt, and a map. A storyteller named Untrin-ak joined the group. Then he said "Good morning" in ENGLISH!</p>
+            </div>
+            
+            <div class="key-fact">
+                <h4>Key Fact: Who is Untrin-ak Really?</h4>
+                <p>Untrin-ak reveals his real name is <strong>Reggie Standish</strong>. He is also a time traveler from our world! He has been in Kragdon-ah for <strong>18 years</strong> after stepping through a door when he was 16 years old.</p>
+            </div>
+            
+            <div class="grammar-box">
+                <h4>Today's Grammar Focus</h4>
+                <p>We will review <strong>dialogue punctuation</strong> and learn about <strong>first-person point of view</strong> - when a story is told using "I" and "me."</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-2">
+            <h2>Day 1: First-Person Point of View</h2>
+            <h3>A New Grammar Concept</h3>
+
+            <div class="what-why-how">
+                <h4>Understanding First-Person POV</h4>
+                <div class="section">
+                    <span class="label">WHAT IS FIRST-PERSON POINT OF VIEW?</span>
+                    First-person point of view is when the story is told by a character IN the story, using words like <strong>"I," "me," "my,"</strong> and <strong>"we."</strong> The narrator is a character who experiences the events.
+                </div>
+                <div class="section">
+                    <span class="label">WHY DO AUTHORS USE IT?</span>
+                    First-person POV lets readers feel CLOSE to the main character. We experience events through their eyes. We can hear their thoughts and feelings directly.
+                </div>
+                <div class="section">
+                    <span class="label">HOW DO I RECOGNIZE IT?</span>
+                    Look for the pronouns "I," "me," "my," and "we." If the narrator uses these words to describe themselves and their actions, it is first-person POV.
+                </div>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-3">
+            <h2>Day 1: First-Person Clue Words</h2>
+            <h3>Pronouns That Signal First-Person</h3>
+
+            <div class="rule-box">
+                <h4>First-Person Pronouns</h4>
+                <table class="compare-table">
+                    <tr>
+                        <th>Pronoun</th>
+                        <th>Example from the Story</th>
+                    </tr>
+                    <tr>
+                        <td><strong>I</strong></td>
+                        <td>"<strong>I</strong> sat down hard on the nearest log."</td>
+                    </tr>
+                    <tr>
+                        <td><strong>me</strong></td>
+                        <td>"You're smarter than <strong>me</strong>."</td>
+                    </tr>
+                    <tr>
+                        <td><strong>my</strong></td>
+                        <td>"I have a daughter at home." (<strong>my</strong> daughter)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>we</strong></td>
+                        <td>"<strong>We</strong> are not children!"</td>
+                    </tr>
+                    <tr>
+                        <td><strong>our</strong></td>
+                        <td>"These men came to <strong>our</strong> village."</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="example-box">
+                <h4>This Story Uses First-Person</h4>
+                <p>Alex is the narrator. He uses "I" to tell us what HE sees, thinks, and does. We only know what Alex knows.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-4">
+            <h2>Day 1: Internal Thoughts</h2>
+            <h3>What Characters Think (Not Say)</h3>
+
+            <div class="what-why-how">
+                <h4>Understanding Internal Thoughts</h4>
+                <div class="section">
+                    <span class="label">WHAT ARE INTERNAL THOUGHTS?</span>
+                    Internal thoughts are what a character thinks but does NOT say out loud. In books, they are often shown in <em>italics</em> (slanted text) without quotation marks.
+                </div>
+                <div class="section">
+                    <span class="label">WHY SHOW INTERNAL THOUGHTS?</span>
+                    Internal thoughts let readers know what characters are REALLY thinking - things they might not say to other characters. This helps us understand their true feelings.
+                </div>
+                <div class="section">
+                    <span class="label">HOW DO I SPOT THEM?</span>
+                    Look for <em>italicized text</em> that shows thinking, not speaking. There are NO quotation marks because the character is not speaking out loud.
+                </div>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-5">
+            <h2>Day 1: Dialogue vs. Internal Thoughts</h2>
+            <h3>Spoken Words vs. Silent Thoughts</h3>
+
+            <div class="two-column">
+                <div class="dialogue-example">
+                    <h4 style="color: #00bcd4;">DIALOGUE (Spoken Out Loud)</h4>
+                    <p><span class="quote-mark">"</span>Where did you learn to speak this language?<span class="quote-mark">"</span> Alex asked.</p>
+                    <p style="font-size: 0.8em; margin-top: 10px;"><em>Has quotation marks. Other characters can hear it.</em></p>
+                </div>
+                <div class="internal-thought">
+                    <h4>INTERNAL THOUGHT (Silent)</h4>
+                    <p><em>Smart kid. Maybe he doesn't remind me of myself after all.</em></p>
+                    <p style="font-size: 0.8em; margin-top: 10px; font-style: normal;">No quotation marks. Only Alex (and the reader) knows this thought.</p>
+                </div>
+            </div>
+
+            <div class="rule-box">
+                <h4>The Key Difference</h4>
+                <p><strong>Dialogue</strong> = Spoken out loud = Uses quotation marks <span class="quote-mark">" "</span></p>
+                <p><strong>Internal Thoughts</strong> = Silent thinking = Uses <em>italics</em>, NO quotation marks</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-6">
+            <h2>Day 1: Examples from Chapter 11</h2>
+            <h3>Alex's Internal Thoughts</h3>
+
+            <div class="internal-thought">
+                <h4>Example 1: Alex's Private Reaction</h4>
+                <p><em>I guess it would be like if two people stepped through a door in my basement and started talking about living in a group of cliffside caves and getting high on magic bird eggs. No frame of reference, so it would all sound like gobbledygook.</em></p>
+            </div>
+
+            <div class="example-box">
+                <h4>What This Tells Us</h4>
+                <p>Alex is comparing his situation to something from his old world. He realizes that Senta-eh and Werda-ak can't understand his conversations with Reggie about the modern world - just like we wouldn't understand if someone talked about things from Kragdon-ah.</p>
+            </div>
+
+            <div class="internal-thought">
+                <h4>Example 2: Alex's Opinion of Werda-ak</h4>
+                <p><em>Smart kid. Maybe he doesn't remind me of myself after all.</em></p>
+            </div>
+
+            <div class="example-box">
+                <h4>What This Tells Us</h4>
+                <p>Alex is impressed by Werda-ak figuring out how to read the map. He's thinking this to himself - he doesn't say it out loud. This shows Alex respects Werda-ak.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-7">
+            <h2>Day 1: Reggie's Story</h2>
+            <h3>How Did Reggie Get to Kragdon-ah?</h3>
+
+            <div class="key-fact">
+                <h4>Key Fact: Reggie's Background</h4>
+                <p>Reggie (Untrin-ak) was <strong>16 years old</strong> when he stepped through a door. His mother had died. He was homeless and running from dangerous people. He ducked into an old warehouse and stepped through a door into Kragdon-ah.</p>
+            </div>
+
+            <div class="key-fact">
+                <h4>Key Fact: Reggie Was Attacked</h4>
+                <p>As soon as Reggie arrived, a <strong>rutan-ta (mountain lion)</strong> attacked him. He was badly injured - he has a huge scar on his stomach. He was rescued by the <strong>Dinat-ah</strong> tribe, who nursed him back to health.</p>
+            </div>
+
+            <div class="key-fact">
+                <h4>Key Fact: How Reggie Learned the Language</h4>
+                <p>Reggie learned through <strong>"Deep Immersion"</strong> - people just kept talking to him for 6 months until one day, he suddenly understood. This is a real method the CIA uses!</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-8">
+            <h2>Day 1: The Journey Continues</h2>
+            <h3>The Long, Dry Walk</h3>
+
+            <div class="key-fact">
+                <h4>Key Fact: The Wasteland</h4>
+                <p>The team must cross a <strong>dry, barren wasteland</strong> with almost no water. They walk for several days through endless brown dirt and sand.</p>
+            </div>
+
+            <div class="key-fact">
+                <h4>Key Fact: Werda-ak Reads the Map</h4>
+                <p>Werda-ak figures out how to use the map! He understands that a small space on the map means many days of walking in real life. This is called understanding <strong>scale</strong>.</p>
+            </div>
+
+            <div class="key-fact">
+                <h4>Key Fact: They Reach the River</h4>
+                <p>After days of walking, they find the <strong>Kranda-ah River</strong> again. The river has turned north. It is gentler here, so they can <strong>swim across</strong> instead of needing a bridge.</p>
+            </div>
+
+            <div class="question-box">
+                <h4>Cliffhanger</h4>
+                <p>After crossing the river, they see something amazing ahead - a village built entirely in giant trees! This is Tonton-ah.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-9">
+            <h2>Day 1 Review</h2>
+            <h3>Grammar and Story Facts</h3>
+
+            <div class="two-column">
+                <div class="rule-box">
+                    <h4>First-Person POV</h4>
+                    <ul>
+                        <li>Narrator uses "I," "me," "my," "we"</li>
+                        <li>We see events through Alex's eyes</li>
+                        <li>We know Alex's thoughts and feelings</li>
+                    </ul>
+                </div>
+                <div class="rule-box">
+                    <h4>Internal Thoughts</h4>
+                    <ul>
+                        <li>Written in <em>italics</em></li>
+                        <li>NO quotation marks</li>
+                        <li>Only the reader knows these thoughts</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="highlight">
+                <h4>Chapter 11 Key Facts</h4>
+                <ul>
+                    <li>Untrin-ak is really <strong>Reggie Standish</strong>, another time traveler.</li>
+                    <li>Reggie has been in Kragdon-ah for <strong>18 years</strong>.</li>
+                    <li>Reggie was attacked by a <strong>rutan-ta</strong> and has a big scar.</li>
+                    <li>Werda-ak figured out how to read the <strong>map</strong>.</li>
+                    <li>They crossed a wasteland and swam across the river.</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- DAY 2: CHAPTER 12 - SLIDES 10-19 -->
+        <!-- ============================================ -->
+        <div class="slide" id="slide-10">
+            <h2>Day 2: Chapter 12 - Tonton-ah</h2>
+            <h3>The Village in the Trees</h3>
+            
+            <div class="highlight">
+                <h4>What Happens in This Chapter:</h4>
+                <p>The team arrives at <strong>Tonton-ah</strong>, a village built entirely in giant trees. They meet the chief, <strong>Preta-eh</strong>. Reggie performs a concert that moves everyone - including Alex, who hasn't heard music from his own time in four years.</p>
+            </div>
+            
+            <div class="rule-box">
+                <h4>Today's Grammar Focus</h4>
+                <ul>
+                    <li><strong>Dialogue Punctuation Review:</strong> Quotation marks, commas, capitalization</li>
+                    <li><strong>Internal Thoughts:</strong> More examples from the chapter</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-11">
+            <h2>Day 2: Dialogue Punctuation Review</h2>
+            <h3>Quick Review of the Rules</h3>
+
+            <div class="rule-box">
+                <h4>The Four Rules of Dialogue</h4>
+                <div class="step-box">
+                    <span class="step-number">1</span>
+                    <div><strong>Quotation marks</strong> go around the EXACT words someone says.</div>
+                </div>
+                <div class="step-box">
+                    <span class="step-number">2</span>
+                    <div><strong>Commas</strong> separate the dialogue from the tag (who said it).</div>
+                </div>
+                <div class="step-box">
+                    <span class="step-number">3</span>
+                    <div><strong>Capitalize</strong> the first word inside quotation marks.</div>
+                </div>
+                <div class="step-box">
+                    <span class="step-number">4</span>
+                    <div><strong>End punctuation</strong> (periods, question marks) goes INSIDE the closing quotation mark.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-12">
+            <h2>Day 2: Dialogue Examples from Chapter 12</h2>
+            <h3>Applying the Rules</h3>
+
+            <div class="dialogue-example">
+                <p><span class="quote-mark">"</span><span class="capital-letter">W</span>hose little puppy is this<span class="punctuation-mark">?</span><span class="quote-mark">"</span> Preta-eh asked.</p>
+            </div>
+
+            <div class="example-box">
+                <h4>Breaking It Down</h4>
+                <ul>
+                    <li><span class="quote-mark">" "</span> = Quotation marks around spoken words</li>
+                    <li><span class="capital-letter">W</span>hose = Capital letter starts the quote</li>
+                    <li><span class="punctuation-mark">?</span> = Question mark INSIDE the closing quote</li>
+                    <li>Preta-eh asked = Dialogue tag (tells who spoke)</li>
+                </ul>
+            </div>
+
+            <div class="dialogue-example">
+                <p>Quietly<span class="punctuation-mark">,</span> Alex asked<span class="punctuation-mark">,</span> <span class="quote-mark">"</span><span class="capital-letter">W</span>hy is that funny<span class="punctuation-mark">?</span><span class="quote-mark">"</span></p>
+            </div>
+
+            <div class="example-box">
+                <h4>Notice</h4>
+                <p>When the tag comes FIRST, put a comma after the tag, then the opening quotation mark.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-13">
+            <h2>Day 2: More Complex Dialogue</h2>
+            <h3>Split Dialogue (Tag in the Middle)</h3>
+
+            <div class="dialogue-example">
+                <p><span class="quote-mark">"</span><span class="capital-letter">I</span> should just kidnap you<span class="punctuation-mark">,</span><span class="quote-mark">"</span> she said<span class="punctuation-mark">,</span> <span class="quote-mark">"</span>and keep you here forever<span class="punctuation-mark">!</span><span class="quote-mark">"</span></p>
+            </div>
+
+            <div class="what-why-how">
+                <h4>Split Dialogue Explained</h4>
+                <div class="section">
+                    <span class="label">WHAT IS IT?</span>
+                    When the dialogue tag interrupts (splits) the spoken words.
+                </div>
+                <div class="section">
+                    <span class="label">HOW TO PUNCTUATE?</span>
+                    <ul>
+                        <li>First part ends with comma INSIDE quotes</li>
+                        <li>Tag has commas on BOTH sides</li>
+                        <li>Second part: lowercase if same sentence, capital if new sentence</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="practice-box">
+                <h4>Quick Check</h4>
+                <p>In the example above, "and" is lowercase because it continues the same sentence.</p>
+                <p>If Preta-eh said two separate sentences, the second would start with a capital.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-14">
+            <h2>Day 2: Tonton-ah - The Village</h2>
+            <h3>Built in Giant Trees</h3>
+
+            <div class="key-fact">
+                <h4>Key Fact: How is Tonton-ah Built?</h4>
+                <p>The entire village is built <strong>high up in giant trees</strong>. Houses wrap around the tree trunks. There are ramps, ladders, walkways, and rope pulley systems for water.</p>
+            </div>
+
+            <div class="key-fact">
+                <h4>Key Fact: Who is Preta-eh?</h4>
+                <p>Preta-eh is the <strong>chief</strong> of Tonton-ah. She is the largest woman Alex has ever seen - very tall and wide. She looks scary, but she has a <strong>beautiful smile</strong> and a surprisingly high-pitched voice.</p>
+            </div>
+
+            <div class="key-fact">
+                <h4>Key Fact: Who is Verda-eh?</h4>
+                <p>Verda-eh is a beautiful young woman and Reggie's <strong>"special friend"</strong> in this village. He spent time with her on his last trip through.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-15">
+            <h2>Day 2: Reggie's Concert</h2>
+            <h3>Music Brings Tears to Alex's Eyes</h3>
+
+            <div class="key-fact">
+                <h4>Key Fact: What Songs Does Reggie Play?</h4>
+                <p>Reggie plays songs from our world, translated into the Kragdon-ah language:</p>
+                <ul>
+                    <li><strong>"Ain't No Sunshine"</strong> by Bill Withers</li>
+                    <li><strong>"When a Man Loves a Woman"</strong> by Percy Sledge</li>
+                    <li><strong>"A Change Is Gonna Come"</strong> by Sam Cooke</li>
+                </ul>
+            </div>
+
+            <div class="key-fact">
+                <h4>Key Fact: Why Does Alex Cry?</h4>
+                <p>Alex hasn't heard any music from his own world in <strong>four years</strong>. He thought he only missed his daughter Amy. Now he realizes he missed music too.</p>
+            </div>
+
+            <div class="internal-thought">
+                <h4>Alex's Internal Thought</h4>
+                <p><em>If you had asked Alex what he missed about his previous life, he would have answered, 'Amy. Nothing else.' At that moment, he knew he had missed music, too.</em></p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-16">
+            <h2>Day 2: Alex Notices Danger</h2>
+            <h3>Something Is Wrong</h3>
+
+            <div class="key-fact">
+                <h4>Key Fact: Who Does Alex Notice?</h4>
+                <p>During the concert, Alex notices a <strong>row of hard-looking men</strong> who are trying NOT to look at him. They seem hostile.</p>
+            </div>
+
+            <div class="internal-thought">
+                <h4>Alex's Internal Thought</h4>
+                <p><em>Usually I have to be somewhere for longer than this before I piss somebody off. Wonder what their problem is?</em></p>
+            </div>
+
+            <div class="example-box">
+                <h4>What This Internal Thought Tells Us</h4>
+                <p>Alex's humor shows he's not too worried YET. But he's keeping an eye on them. This is <strong>foreshadowing</strong> - a hint that something bad might happen later.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-17">
+            <h2>Day 2: Alex Stays Alert</h2>
+            <h3>The Room with No Lock</h3>
+
+            <div class="key-fact">
+                <h4>Key Fact: Why Does Alex Keep Watch?</h4>
+                <p>Alex notices their room door has <strong>no way to bolt it from inside</strong>. Anyone could walk in while they sleep. So Alex stays awake to keep watch.</p>
+            </div>
+
+            <div class="dialogue-example">
+                <p><span class="quote-mark">"</span>Aren't you going to sleep?<span class="quote-mark">"</span> Werda-ak asked.</p>
+                <p><span class="quote-mark">"</span>Sure, eventually.<span class="quote-mark">"</span></p>
+            </div>
+
+            <div class="key-fact">
+                <h4>Key Fact: What Does Alex See?</h4>
+                <p>After hours of watching, Alex sees <strong>shadows moving</strong> in the crack of light under the door. Someone is outside, preparing to attack!</p>
+            </div>
+
+            <div class="question-box">
+                <h4>Cliffhanger</h4>
+                <p>The chapter ends with shadows gathering outside their door. What will happen next?</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-18">
+            <h2>Day 2: Practice - Dialogue vs. Thoughts</h2>
+            <h3>Can You Tell the Difference?</h3>
+
+            <div class="practice-box">
+                <h4>Which is Dialogue? Which is Internal Thought?</h4>
+                
+                <p><strong>1.</strong> "Only if you're not downwind," Alex muttered.</p>
+                <p><strong>2.</strong> <em>Reggie! Where are you, my fellow time traveler?</em></p>
+                <p><strong>3.</strong> "Get some rest," Alex said.</p>
+                <p><strong>4.</strong> <em>Close to the river, adequate defenses, irrigation to their crops. They've got a good set-up here.</em></p>
+            </div>
+
+            <div class="example-box">
+                <h4>Answers</h4>
+                <p><strong>1.</strong> DIALOGUE - Has quotation marks, Alex says it out loud</p>
+                <p><strong>2.</strong> INTERNAL THOUGHT - Italics, no quotes, Alex is thinking this</p>
+                <p><strong>3.</strong> DIALOGUE - Has quotation marks and a tag</p>
+                <p><strong>4.</strong> INTERNAL THOUGHT - Italics, no quotes, Alex's private assessment</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-19">
+            <h2>Day 2 Review</h2>
+            <h3>Grammar and Story Facts</h3>
+
+            <div class="highlight">
+                <h4>Dialogue Rules Reminder</h4>
+                <ul>
+                    <li>Quotation marks around spoken words</li>
+                    <li>Commas separate dialogue from tags</li>
+                    <li>First word in quotes is capitalized</li>
+                    <li>End punctuation goes INSIDE quotes</li>
+                </ul>
+            </div>
+
+            <div class="key-fact">
+                <h4>Chapter 12 Key Facts</h4>
+                <ul>
+                    <li>Tonton-ah is a village built in <strong>giant trees</strong>.</li>
+                    <li><strong>Preta-eh</strong> is the enormous chief with a beautiful smile.</li>
+                    <li>Reggie plays songs from our world - Alex <strong>cries</strong> hearing music again.</li>
+                    <li>Alex notices <strong>hostile men</strong> watching him.</li>
+                    <li>Alex <strong>keeps watch</strong> because the door has no lock.</li>
+                    <li>Shadows gather outside the door at chapter's end.</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- DAY 3: CHAPTER 13 - SLIDES 20-27 -->
+        <!-- ============================================ -->
+        <div class="slide" id="slide-20">
+            <h2>Day 3: Chapter 13 - The Battle of Tonton-ah</h2>
+            <h3>Attack in the Night</h3>
+            
+            <div class="highlight">
+                <h4>What Happens in This Chapter:</h4>
+                <p>The hostile men attack in the middle of the night. A fierce battle breaks out in the small room. The team fights for their lives and eventually escapes - but gets trapped. Preta-eh saves them in a shocking way.</p>
+            </div>
+            
+            <div class="rule-box">
+                <h4>Today's Grammar Focus</h4>
+                <ul>
+                    <li><strong>Action Beats:</strong> Actions instead of dialogue tags</li>
+                    <li><strong>Internal Thoughts During Action:</strong> How authors show thinking during intense scenes</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-21">
+            <h2>Day 3: Action Beats</h2>
+            <h3>Actions Instead of "Said"</h3>
+
+            <div class="what-why-how">
+                <h4>Understanding Action Beats</h4>
+                <div class="section">
+                    <span class="label">WHAT IS AN ACTION BEAT?</span>
+                    An action beat is when a character DOES something instead of using a dialogue tag like "said" or "asked." The action tells us who is speaking.
+                </div>
+                <div class="section">
+                    <span class="label">WHY USE ACTION BEATS?</span>
+                    They add movement and visual detail to dialogue. They show HOW a character feels without telling us directly.
+                </div>
+                <div class="section">
+                    <span class="label">HOW DO I PUNCTUATE THEM?</span>
+                    Action beats are SEPARATE sentences. Use a period (not a comma) before or after the dialogue.
+                </div>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-22">
+            <h2>Day 3: Action Beat Examples</h2>
+            <h3>From Chapter 13</h3>
+
+            <div class="dialogue-example">
+                <p>Preta-eh squealed<span class="punctuation-mark">.</span> <span class="quote-mark">"</span><span class="capital-letter">W</span>hose little puppy is this<span class="punctuation-mark">?</span><span class="quote-mark">"</span></p>
+            </div>
+
+            <div class="example-box">
+                <h4>Notice the Period</h4>
+                <p>"Preta-eh squealed" is an action, not a dialogue tag. It gets a PERIOD, not a comma. Then the dialogue is a separate sentence.</p>
+            </div>
+
+            <div class="two-column">
+                <div class="warning-box">
+                    <h4>Dialogue Tag (Comma)</h4>
+                    <p>"Whose little puppy is this?" Preta-eh <strong>asked</strong>.</p>
+                    <p><em>"Asked" = dialogue tag = comma pattern</em></p>
+                </div>
+                <div class="example-box">
+                    <h4>Action Beat (Period)</h4>
+                    <p>Preta-eh squealed. "Whose little puppy is this?"</p>
+                    <p><em>"Squealed" = action = period before dialogue</em></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-23">
+            <h2>Day 3: The Attack Begins</h2>
+            <h3>Fighting for Their Lives</h3>
+
+            <div class="key-fact">
+                <h4>Key Fact: How Many Attackers?</h4>
+                <p>There are <strong>eight attackers</strong>. They burst into the room screaming, trying to catch the team asleep. But Alex was keeping watch!</p>
+            </div>
+
+            <div class="key-fact">
+                <h4>Key Fact: What Does Monda-ak Do?</h4>
+                <p>Monda-ak attacks the first man through the door. He <strong>kills two attackers</strong> during the fight, including one whose throat he bites.</p>
+            </div>
+
+            <div class="key-fact">
+                <h4>Key Fact: What Happens to Alex?</h4>
+                <p>One attacker hits Alex in the left arm with a hammer. Alex <strong>loses all use of his arm</strong> - it hangs useless at his side.</p>
+            </div>
+
+            <div class="internal-thought">
+                <h4>Alex's Thought During the Fight</h4>
+                <p><em>We'll never survive, outnumbered, and crowded in a closed space like this.</em></p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-24">
+            <h2>Day 3: The Escape</h2>
+            <h3>Run!</h3>
+
+            <div class="key-fact">
+                <h4>Key Fact: How Do They Escape?</h4>
+                <p>Alex yells "Run!" and they flee through the tree village. Monda-ak leads the way, running through the maze of platforms and walkways.</p>
+            </div>
+
+            <div class="key-fact">
+                <h4>Key Fact: Where Do They End Up?</h4>
+                <p>They get trapped on a <strong>dead-end deck</strong> at the edge of the village. There's nowhere to go except a long drop to the ground. The five remaining attackers close in.</p>
+            </div>
+
+            <div class="internal-thought">
+                <h4>Alex's Thought</h4>
+                <p><em>Reggie! Where are you, my fellow time traveler? Right about now, we could really use one more set of hands to help us not die.</em></p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-25">
+            <h2>Day 3: Preta-eh Saves Them</h2>
+            <h3>A Shocking Display of Power</h3>
+
+            <div class="key-fact">
+                <h4>Key Fact: How Does Preta-eh Stop the Fight?</h4>
+                <p>Preta-eh arrives and yells <strong>"No!"</strong> When the attackers don't listen, she grabs one man, lifts him over her head, and <strong>throws him off the platform</strong> to his death!</p>
+            </div>
+
+            <div class="key-fact">
+                <h4>Key Fact: How Many Does Preta-eh Throw?</h4>
+                <p>Preta-eh throws <strong>two men</strong> off the platform. Senta-eh stabs another. The fight is over.</p>
+            </div>
+
+            <div class="key-fact">
+                <h4>Key Fact: Who Were the Attackers?</h4>
+                <p>Preta-eh explains: the attackers were <strong>left behind by the kidnappers</strong> to kill Alex and his team. The kidnappers knew they would come this way!</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-26">
+            <h2>Day 3: What They Learn</h2>
+            <h3>Lanta-eh Was Here</h3>
+
+            <div class="key-fact">
+                <h4>Key Fact: Did Lanta-eh Come Through Tonton-ah?</h4>
+                <p>Yes! Preta-eh confirms that Lanta-eh passed through with the kidnappers more than a moon-cycle ago. Lanta-eh prayed over the river, and the village caught <strong>more fish than ever before</strong>!</p>
+            </div>
+
+            <div class="key-fact">
+                <h4>Key Fact: Who Knows Where the Kidnappers Are From?</h4>
+                <p>Verda-eh (Reggie's special friend) says she <strong>knows where the attackers are from</strong>. This could help the team find the kidnappers!</p>
+            </div>
+
+            <div class="question-box">
+                <h4>Cliffhanger!</h4>
+                <p>Just as Verda-eh is about to share this information, the final hidden attacker charges at her with a knife raised!</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-27">
+            <h2>Day 3 Review</h2>
+            <h3>Grammar and Story Facts</h3>
+
+            <div class="two-column">
+                <div class="rule-box">
+                    <h4>Action Beats</h4>
+                    <ul>
+                        <li>Actions instead of dialogue tags</li>
+                        <li>Use a PERIOD (not comma)</li>
+                        <li>Add movement to dialogue</li>
+                    </ul>
+                </div>
+                <div class="rule-box">
+                    <h4>Internal Thoughts in Action</h4>
+                    <ul>
+                        <li>Show character's thinking during intense moments</li>
+                        <li>Still use italics, no quotes</li>
+                        <li>Reveal true fears and hopes</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="highlight">
+                <h4>Chapter 13 Key Facts</h4>
+                <ul>
+                    <li><strong>8 attackers</strong> burst into the room at night.</li>
+                    <li>Monda-ak <strong>kills 2</strong> attackers.</li>
+                    <li>Alex's <strong>left arm</strong> is disabled by a hammer.</li>
+                    <li>They flee and get <strong>trapped</strong> on a dead-end deck.</li>
+                    <li>Preta-eh <strong>throws 2 men off the platform</strong>.</li>
+                    <li>Attackers were <strong>left by the kidnappers</strong> to stop them.</li>
+                    <li>Lanta-eh <strong>came through</strong> and prayed over the river.</li>
+                    <li>Verda-eh knows where the kidnappers are from!</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- DAY 4: WRITING WORKSHOP - SLIDES 28-33 -->
+        <!-- ============================================ -->
+        <div class="slide" id="slide-28">
+            <h2>Day 4: Writing Workshop</h2>
+            <h3>Putting It All Together</h3>
+            
+            <div class="writing-structure">
+                <h3>Writing Structure: Topic Sentence + Three Details + Conclusion</h3>
+                <p style="margin-bottom: 15px;"><strong>REMEMBER:</strong> Your writing should have FIVE parts:</p>
+                <ul>
+                    <li><strong>Topic Sentence:</strong> A clear statement that answers the question.</li>
+                    <li><strong>Supporting Detail 1:</strong> First piece of proof from the story (use text evidence!).</li>
+                    <li><strong>Supporting Detail 2:</strong> Second piece of proof from the story.</li>
+                    <li><strong>Supporting Detail 3:</strong> Third piece of proof from the story.</li>
+                    <li><strong>Conclusion:</strong> Restate your main idea in different words.</li>
+                </ul>
+            </div>
+
+            <div class="warning-box">
+                <h4>Important Reminder</h4>
+                <p>Your three supporting details should include <strong>text evidence</strong> - specific facts, events, or examples from the story that BACK UP your topic sentence!</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-29">
+            <h2>Day 4: Writing Prompt 1</h2>
+            
+            <div class="writing-prompt">
+                <h3>Your Prompt</h3>
+                <p><strong>How are Alex and Reggie similar? How are they different? Use details from Chapter 11 to compare the two time travelers.</strong></p>
+            </div>
+            
+            <h3>Hints for Your Three Details</h3>
+            <ul>
+                <li>How did each one arrive in Kragdon-ah? (door/accident)</li>
+                <li>How long has each been in Kragdon-ah?</li>
+                <li>Why does Alex want to go home? Why doesn't Reggie?</li>
+                <li>What happened to each one right after arriving? (attacked by animals)</li>
+            </ul>
+            
+            <div class="example-box">
+                <h4>Topic Sentence Starter</h4>
+                <p>"Alex and Reggie are similar in some ways but different in others."</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-30">
+            <h2>Day 4: Writing Prompt 2</h2>
+            <p><em>(For Language Arts 1-4 SC only)</em></p>
+            
+            <div class="writing-prompt">
+                <h3>Your Prompt</h3>
+                <p><strong>Describe the battle in Chapter 13. What happened, and how did the team survive?</strong></p>
+            </div>
+            
+            <h3>Hints for Your Three Details</h3>
+            <ul>
+                <li>How did the attack start? Who attacked?</li>
+                <li>What role did Monda-ak play in the fight?</li>
+                <li>How did they escape the room?</li>
+                <li>How did Preta-eh save them?</li>
+            </ul>
+            
+            <div class="example-box">
+                <h4>Topic Sentence Starter</h4>
+                <p>"The team survived the battle in Tonton-ah because of quick thinking and unexpected help."</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-31">
+            <h2>Day 4: Writing Checklist</h2>
+            <h3>Check Your Work Before Submitting</h3>
+            
+            <div class="highlight">
+                <h3>Content Checklist</h3>
+                <ul>
+                    <li>☐ Do I have a clear <strong>topic sentence</strong> that answers the question?</li>
+                    <li>☐ Do I have <strong>three supporting details</strong> with text evidence?</li>
+                    <li>☐ Does each detail <strong>back up</strong> my topic sentence?</li>
+                    <li>☐ Do I have a <strong>conclusion</strong> that restates my main idea?</li>
+                </ul>
+            </div>
+            
+            <div class="highlight">
+                <h3>Grammar Checklist</h3>
+                <ul>
+                    <li>☐ Does every sentence start with a <strong>capital letter</strong>?</li>
+                    <li>☐ Does every sentence end with proper <strong>punctuation</strong>?</li>
+                    <li>☐ Are all character names <strong>capitalized</strong>?</li>
+                    <li>☐ If I used dialogue, did I use <strong>quotation marks</strong> correctly?</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-32">
+            <h2>Week 4 Complete Review</h2>
+            <h3>Grammar Reference Guide</h3>
+
+            <div class="two-column">
+                <div>
+                    <div class="pov-box">
+                        <h4>First-Person POV</h4>
+                        <p>Narrator uses: <strong>I, me, my, we, our</strong></p>
+                        <p>Reader sees events through the narrator's eyes.</p>
+                    </div>
+                    <div class="internal-thought" style="font-style: normal;">
+                        <h4>Internal Thoughts</h4>
+                        <p>Written in <em>italics</em></p>
+                        <p>NO quotation marks</p>
+                        <p>Only reader knows these thoughts</p>
+                    </div>
+                </div>
+                <div>
+                    <div class="rule-box">
+                        <h4>Dialogue Rules</h4>
+                        <p><span class="quote-mark">" "</span> around spoken words</p>
+                        <p>Comma separates tag from dialogue</p>
+                        <p>First word capitalized</p>
+                        <p>End punctuation INSIDE quotes</p>
+                    </div>
+                    <div class="example-box">
+                        <h4>Action Beats</h4>
+                        <p>Action instead of "said"</p>
+                        <p>Use a PERIOD, not comma</p>
+                        <p>Example: She smiled. "Hello."</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-33">
+            <h2>Week 4 Story Summary</h2>
+            <h3>Key Facts Reference</h3>
+
+            <div class="highlight">
+                <h4>Chapter 11: Another Traveler, Another Door</h4>
+                <ul>
+                    <li>Untrin-ak is really Reggie Standish - another time traveler</li>
+                    <li>Reggie has been in Kragdon-ah 18 years</li>
+                    <li>He was attacked by a rutan-ta, has a big scar</li>
+                    <li>Team crosses wasteland, swims across gentler river</li>
+                </ul>
+            </div>
+
+            <div class="highlight">
+                <h4>Chapter 12: Tonton-ah</h4>
+                <ul>
+                    <li>Village built in giant trees</li>
+                    <li>Preta-eh is the enormous chief</li>
+                    <li>Reggie's concert makes Alex cry</li>
+                    <li>Alex notices hostile men, keeps watch</li>
+                </ul>
+            </div>
+
+            <div class="highlight">
+                <h4>Chapter 13: The Battle of Tonton-ah</h4>
+                <ul>
+                    <li>8 attackers, Monda-ak kills 2</li>
+                    <li>Alex's arm disabled, team flees and gets trapped</li>
+                    <li>Preta-eh throws 2 attackers off platform</li>
+                    <li>Attackers were left by kidnappers</li>
+                    <li>Verda-eh knows where kidnappers are from</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide-nav">
+            <button onclick="prevSlide()" id="prevBtn">Previous</button>
+            <button onclick="nextSlide()" id="nextBtn">Next</button>
+        </div>
+
+        <footer>
+            <p>Week 4: Lost in Kragdon-ah, Chapters 11-13</p>
+            <p>ELA Theme: Dialogue & First-Person Point of View</p>
+            <p><a href="https://www.reinischclassroom.com" style="color: #ffd700;">Return to Classroom Website</a></p>
+        </footer>
+    </div>
+
+    <script>
+        let currentSlide = 0;
+        const totalSlides = 34;
+
+        // Background image rotation
+        let currentBg = 0;
+        const bgImages = document.querySelectorAll('.bg-image');
+        const totalBgImages = 12;
+        
+        function rotateBg() {
+            bgImages[currentBg].classList.remove('active');
+            currentBg = (currentBg + 1) % totalBgImages;
+            bgImages[currentBg].classList.add('active');
+        }
+        
+        setInterval(rotateBg, 8000);
+
+        function updateSlide() {
+            document.querySelectorAll('.slide').forEach((slide, index) => {
+                slide.classList.remove('active');
+                if (index === currentSlide) {
+                    slide.classList.add('active');
+                }
+            });
+            
+            document.getElementById('prevBtn').disabled = currentSlide === 0;
+            document.getElementById('nextBtn').disabled = currentSlide === totalSlides - 1;
+            
+            const progress = ((currentSlide + 1) / totalSlides) * 100;
+            document.getElementById('progress').style.width = progress + '%';
+        }
+
+        function nextSlide() {
+            if (currentSlide < totalSlides - 1) {
+                currentSlide++;
+                updateSlide();
+            }
+        }
+
+        function prevSlide() {
+            if (currentSlide > 0) {
+                currentSlide--;
+                updateSlide();
+            }
+        }
+
+        function goToSlide(slideIndex) {
+            currentSlide = slideIndex;
+            updateSlide();
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight') nextSlide();
+            if (e.key === 'ArrowLeft') prevSlide();
+        });
+
+        updateSlide();
+    </script>
+</body>
+</html>
