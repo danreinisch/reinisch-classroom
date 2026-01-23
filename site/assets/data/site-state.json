@@ -1,6 +1,6 @@
 {
   "version": "v1",
-  "updated": "2026-01-23T21:19:38.677Z",
+  "updated": "2026-01-23T21:21:50.259Z",
   "categories": {
     "toolkit": {
       "slots": 8,
@@ -68,7 +68,7 @@
       "slots": 16,
       "titles": [
         "Week 1: Capitalization and Punctuation",
-        "",
+        "Week 2 - Punctuation and Capitalization (Advanced)",
         "",
         "",
         "",
@@ -86,7 +86,7 @@
       ],
       "links": [
         "/presentations/lost-in-kragdon-ah/presentation-01/",
-        "",
+        "/presentations/lost-in-kragdon-ah/presentation-02/",
         "",
         "",
         "",
