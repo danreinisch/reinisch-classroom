@@ -879,9 +879,10 @@ function renderLessonsContent() {
    */
   function openPresentationViewer(url, section, unit, presentation) {
     const viewer = document.querySelector('.presentation-viewer');
+    if (!viewer) return;
+
     const iframe = viewer.querySelector('.presentation-iframe');
-    
-    if (!viewer || !iframe) return;
+    if (!iframe) return;
 
     // Update state
     viewerState = {
@@ -913,9 +914,10 @@ function renderLessonsContent() {
    */
   function closePresentationViewer() {
     const viewer = document.querySelector('.presentation-viewer');
+    if (!viewer) return;
+
     const iframe = viewer.querySelector('.presentation-iframe');
-    
-    if (!viewer || !iframe) return;
+    if (!iframe) return;
 
     // Update state
     viewerState = {
