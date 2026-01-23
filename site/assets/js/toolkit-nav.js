@@ -15,7 +15,7 @@
 
   function init() {
     // Get all links in the toolkit grid
-    const links = document.querySelectorAll('.grid a.card[href^="/viewer/"]');
+    const links = document.querySelectorAll('.grid a.card');
     
     if (links.length === 0) {
       return;
@@ -24,6 +24,24 @@
     // Add return parameter to each link using shared helper
     links.forEach(link => {
       const currentHref = link.getAttribute('href');
+      if (!currentHref) return;
+
+      // If a card links directly to a presentation folder/file, upgrade it into the viewer
+      if (currentHref.startsWith('/presentations/')) {
+        const title = link.querySelector('strong')?.textContent || '';
+        const returnUrl = encodeURIComponent(location.pathname + location.search);
+
+        // Prefer shared helper if present
+        if (typeof window.buildViewerUrl === 'function') {
+          link.setAttribute('href', window.buildViewerUrl(currentHref, { title }));
+        } else {
+          const src = encodeURIComponent(currentHref);
+          const t = encodeURIComponent(title);
+          link.setAttribute('href', `/viewer/?src=${src}&title=${t}&return=${returnUrl}`);
+        }
+        return;
+      }
+
       if (currentHref && !currentHref.includes('return=')) {
         try {
           // Extract src from current href
