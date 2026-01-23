@@ -1,0 +1,1634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Week 3: Lost in Kragdon-ah - Chapters 8-10</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            background-attachment: fixed;
+            color: #ffffff;
+            overflow-x: hidden;
+        }
+
+        .bg-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+        }
+
+        .bg-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            opacity: 0;
+            transition: opacity 3s ease-in-out;
+        }
+
+        .bg-image.active {
+            opacity: 0.55;
+        }
+
+        .bg-image:nth-child(1) { background-image: url('image1.jpg'); }
+        .bg-image:nth-child(2) { background-image: url('image2.jpg'); }
+        .bg-image:nth-child(3) { background-image: url('image3.jpg'); }
+        .bg-image:nth-child(4) { background-image: url('image4.jpg'); }
+        .bg-image:nth-child(5) { background-image: url('image5.jpg'); }
+        .bg-image:nth-child(6) { background-image: url('image6.jpg'); }
+        .bg-image:nth-child(7) { background-image: url('image7.jpg'); }
+        .bg-image:nth-child(8) { background-image: url('image8.jpg'); }
+        .bg-image:nth-child(9) { background-image: url('image9.jpg'); }
+        .bg-image:nth-child(10) { background-image: url('image10.jpg'); }
+        .bg-image:nth-child(11) { background-image: url('image11.jpg'); }
+        .bg-image:nth-child(12) { background-image: url('image12.jpg'); }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 40px 20px;
+            background: rgba(0, 0, 0, 0.35);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            border-radius: 20px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.8);
+        }
+
+        header h2 {
+            font-size: 1.5em;
+            color: #ffd700;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            font-size: 1.2em;
+            color: #a0d2eb;
+        }
+
+        .theme-banner {
+            background: linear-gradient(90deg, rgba(231, 76, 60, 0.5), rgba(155, 89, 182, 0.5));
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            padding: 15px 30px;
+            border-radius: 10px;
+            margin-top: 20px;
+            display: inline-block;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .theme-banner h3 {
+            font-size: 1.3em;
+            color: #fff;
+        }
+
+        nav {
+            background: rgba(0, 0, 0, 0.35);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        nav h3 {
+            text-align: center;
+            margin-bottom: 15px;
+            color: #ffd700;
+        }
+
+        .nav-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .nav-btn {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.4) 0%, rgba(118, 75, 162, 0.4) 100%);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 25px;
+            color: white;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .nav-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+        }
+
+        .nav-btn.day1 { 
+            background: linear-gradient(135deg, rgba(240, 147, 251, 0.6) 0%, rgba(245, 87, 108, 0.6) 100%); 
+        }
+        .nav-btn.day2 { 
+            background: linear-gradient(135deg, rgba(79, 172, 254, 0.6) 0%, rgba(0, 242, 254, 0.6) 100%); 
+        }
+        .nav-btn.day3 { 
+            background: linear-gradient(135deg, rgba(67, 233, 123, 0.6) 0%, rgba(56, 249, 215, 0.6) 100%); 
+        }
+        .nav-btn.day4 { 
+            background: linear-gradient(135deg, rgba(250, 112, 154, 0.6) 0%, rgba(254, 225, 64, 0.6) 100%); 
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+            margin-bottom: 30px;
+            overflow: hidden;
+        }
+
+        .progress {
+            height: 100%;
+            background: linear-gradient(90deg, #ffd700, #ff6b6b);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .slide {
+            display: none;
+            background: rgba(0, 0, 0, 0.35);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            animation: fadeIn 0.5s ease;
+        }
+
+        .slide.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .slide h2 {
+            color: #ffd700;
+            font-size: 2em;
+            margin-bottom: 20px;
+            text-align: center;
+            text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.8);
+        }
+
+        .slide h3 {
+            color: #a0d2eb;
+            font-size: 1.5em;
+            margin: 20px 0 15px 0;
+        }
+
+        .slide h4 {
+            color: #ffd700;
+            font-size: 1.2em;
+            margin: 15px 0 10px 0;
+        }
+
+        .slide p {
+            font-size: 1.1em;
+            line-height: 1.8;
+            margin-bottom: 15px;
+        }
+
+        .slide ul, .slide ol {
+            margin-left: 30px;
+            margin-bottom: 20px;
+        }
+
+        .slide li {
+            font-size: 1.1em;
+            line-height: 1.8;
+            margin-bottom: 10px;
+        }
+
+        .highlight {
+            background: rgba(255, 215, 0, 0.10);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-left: 4px solid #ffd700;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 0 10px 10px 0;
+        }
+
+        .key-fact {
+            background: rgba(76, 175, 80, 0.15);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-left: 4px solid #4CAF50;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 0 10px 10px 0;
+        }
+
+        .key-fact h4 {
+            color: #4CAF50;
+            margin-bottom: 10px;
+        }
+
+        .vocab-box {
+            background: rgba(160, 210, 235, 0.10);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 1px solid rgba(160, 210, 235, 0.3);
+        }
+
+        .vocab-word {
+            color: #ffd700;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+
+        .grammar-box {
+            background: rgba(155, 89, 182, 0.15);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 1px solid rgba(155, 89, 182, 0.3);
+        }
+
+        .grammar-box h4 {
+            color: #bb86fc;
+            margin-bottom: 10px;
+        }
+
+        .what-why-how {
+            background: rgba(255, 152, 0, 0.12);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 1px solid rgba(255, 152, 0, 0.3);
+        }
+
+        .what-why-how h4 {
+            color: #ff9800;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+
+        .what-why-how .section {
+            margin-bottom: 15px;
+            padding: 10px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+        }
+
+        .what-why-how .label {
+            color: #ffd700;
+            font-weight: bold;
+            display: block;
+            font-size: 1.1em;
+            margin-bottom: 5px;
+        }
+
+        .example-box {
+            background: rgba(67, 233, 123, 0.10);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 1px solid rgba(67, 233, 123, 0.3);
+        }
+
+        .example-box h4 {
+            color: #43e97b;
+            margin-bottom: 10px;
+        }
+
+        .rule-box {
+            background: rgba(33, 150, 243, 0.12);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 2px solid rgba(33, 150, 243, 0.5);
+        }
+
+        .rule-box h4 {
+            color: #2196F3;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+
+        .warning-box {
+            background: rgba(244, 67, 54, 0.12);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 2px solid rgba(244, 67, 54, 0.5);
+        }
+
+        .warning-box h4 {
+            color: #f44336;
+            margin-bottom: 10px;
+        }
+
+        .practice-box {
+            background: rgba(156, 39, 176, 0.12);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 2px dashed rgba(156, 39, 176, 0.5);
+        }
+
+        .practice-box h4 {
+            color: #ce93d8;
+            margin-bottom: 10px;
+        }
+
+        .dialogue-example {
+            background: rgba(0, 188, 212, 0.2);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 1px solid rgba(0, 188, 212, 0.3);
+            font-size: 1.2em;
+        }
+
+        .compare-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+
+        .compare-table th, .compare-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .compare-table th {
+            background: rgba(255,255,255,0.1);
+            color: #ffd700;
+        }
+
+        .compare-table tr:nth-child(even) {
+            background: rgba(255,255,255,0.05);
+        }
+
+        .punctuation-mark {
+            color: #ff6b6b;
+            font-size: 1.3em;
+            font-weight: bold;
+        }
+
+        .capital-letter {
+            color: #ffd700;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+
+        .quote-mark {
+            color: #00bcd4;
+            font-size: 1.4em;
+            font-weight: bold;
+        }
+
+        .question-box {
+            background: rgba(245, 87, 108, 0.2);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            border: 1px solid rgba(245, 87, 108, 0.3);
+        }
+
+        .writing-prompt {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.3), rgba(118, 75, 162, 0.3));
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .writing-structure {
+            background: rgba(0, 0, 0, 0.35);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .correct {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+
+        .incorrect {
+            color: #ff6b6b;
+            text-decoration: line-through;
+        }
+
+        .step-box {
+            background: rgba(0, 188, 212, 0.2);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 15px 20px;
+            margin: 10px 0;
+            border-left: 4px solid #00bcd4;
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+        }
+
+        .step-number {
+            background: #00bcd4;
+            color: #000;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .slide-nav {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .slide-nav button {
+            padding: 12px 30px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.4), rgba(118, 75, 162, 0.4));
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 25px;
+            color: white;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .slide-nav button:hover:not(:disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
+        }
+
+        .slide-nav button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        footer {
+            background: rgba(0, 0, 0, 0.35);
+            text-align: center;
+            padding: 30px;
+            background: rgba(0, 0, 0, 0.35);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            border-radius: 20px;
+            margin-top: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        footer p {
+            margin: 10px 0;
+            color: #a0d2eb;
+        }
+
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .two-column {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .anatomy-box {
+            background: rgba(255, 193, 7, 0.2);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 25px;
+            margin: 20px 0;
+            border: 2px solid rgba(255, 193, 7, 0.5);
+        }
+
+        .anatomy-box h4 {
+            color: #ffc107;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .anatomy-example {
+            font-size: 1.4em;
+            text-align: center;
+            padding: 20px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            margin: 15px 0;
+        }
+
+        .label-arrow {
+            display: block;
+            color: #a0d2eb;
+            font-size: 0.8em;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-container">
+        <div class="bg-image active"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>Lost in Kragdon-ah</h1>
+            <h2>Week 3: Chapters 8-10</h2>
+            <p>By Shawn Inmon</p>
+            <div class="theme-banner">
+                <h3>ELA Theme: Dialogue Punctuation</h3>
+            </div>
+        </header>
+
+        <nav>
+            <h3>Quick Navigation</h3>
+            <div class="nav-buttons">
+                <button class="nav-btn day1" onclick="goToSlide(1)">Day 1: Chapter 8</button>
+                <button class="nav-btn day2" onclick="goToSlide(9)">Day 2: Chapter 9</button>
+                <button class="nav-btn day3" onclick="goToSlide(20)">Day 3: Chapter 10</button>
+                <button class="nav-btn day4" onclick="goToSlide(28)">Day 4: Writing</button>
+            </div>
+        </nav>
+
+        <div class="progress-bar">
+            <div class="progress" id="progress"></div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- SLIDE 0: OVERVIEW -->
+        <!-- ============================================ -->
+
+        <div class="slide active" id="slide-0">
+            <h2>Week 3 Overview</h2>
+            <h3>What We Will Learn This Week</h3>
+            
+            <div class="highlight">
+                <h4>Chapters We Will Read:</h4>
+                <ul>
+                    <li><strong>Day 1:</strong> Chapter 8 - An Offer of Freedom</li>
+                    <li><strong>Day 2:</strong> Chapter 9 - Fight to the Death</li>
+                    <li><strong>Day 3:</strong> Chapter 10 - East</li>
+                    <li><strong>Day 4:</strong> Writing Workshop</li>
+                </ul>
+            </div>
+            
+            <div class="rule-box">
+                <h4>Grammar Skills We Will Master This Week</h4>
+                <ul>
+                    <li><strong>Quotation Marks:</strong> How to show the exact words someone speaks.</li>
+                    <li><strong>Dialogue Tags:</strong> Words like "said" and "asked" that tell who is speaking.</li>
+                    <li><strong>Commas in Dialogue:</strong> Where to put commas when writing what people say.</li>
+                    <li><strong>Capitalization in Dialogue:</strong> When to use capital letters inside quotation marks.</li>
+                    <li><strong>End Punctuation in Dialogue:</strong> Where periods, question marks, and exclamation points go.</li>
+                </ul>
+            </div>
+
+            <div class="grammar-box">
+                <h4>Building on What We Learned</h4>
+                <p>In Weeks 1 and 2, we learned about basic punctuation, capitalization, commas, and apostrophes. This week, we put it all together to write <strong>dialogue</strong> - the exact words characters speak!</p>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- DAY 1: CHAPTER 8 - SLIDES 1-8 -->
+        <!-- ============================================ -->
+
+        <div class="slide" id="slide-1">
+            <h2>Day 1: Chapter 8 - An Offer of Freedom</h2>
+            <h3>Story Recap and Introduction to Dialogue</h3>
+            
+            <div class="highlight">
+                <p><strong>Last Week:</strong> <span class="capital-letter">A</span>lex<span class="punctuation-mark">,</span> <span class="capital-letter">S</span>enta-eh<span class="punctuation-mark">,</span> and <span class="capital-letter">M</span>onda-ak were captured by <span class="capital-letter">G</span>runta-ak and imprisoned in a small building<span class="punctuation-mark">.</span></p>
+                <p><strong>The Cliffhanger:</strong> <span class="capital-letter">W</span>erda-ak escaped capture<span class="punctuation-mark">.</span> <span class="capital-letter">W</span>ill he rescue his friends<span class="punctuation-mark">?</span></p>
+            </div>
+            
+            <div class="key-fact">
+                <h4>Key Fact for Your Assignment</h4>
+                <p><span class="capital-letter">A</span>lex and his friends are held in a <strong>small jail cell</strong> that has a back door leading to a <strong>fenced yard</strong><span class="punctuation-mark">.</span> <span class="capital-letter">T</span>he fence is nine feet tall with sharp spikes on top<span class="punctuation-mark">.</span></p>
+            </div>
+            
+            <div class="grammar-box">
+                <h4>Today's Grammar Focus: What is Dialogue?</h4>
+                <p><strong>Dialogue</strong> is the exact words that characters speak. We use special punctuation marks to show when someone is talking.</p>
+                <p>Example from Chapter 8:</p>
+                <div class="dialogue-example">
+                    <span class="quote-mark">"</span><span class="capital-letter">I</span> can make it over that<span class="punctuation-mark">,</span><span class="quote-mark">"</span> <span class="capital-letter">S</span>enta-eh said<span class="punctuation-mark">.</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-2">
+            <h2>Day 1: Introduction to Quotation Marks</h2>
+            <h3>Showing Exact Words</h3>
+            
+            <div class="what-why-how">
+                <h4>Understanding Quotation Marks</h4>
+                <div class="section">
+                    <span class="label">WHAT ARE THEY?</span>
+                    Quotation marks are the marks <span class="quote-mark">" "</span> that go around the exact words someone speaks. They look like two small lines at the beginning and end of the spoken words.
+                </div>
+                <div class="section">
+                    <span class="label">WHY DO WE USE THEM?</span>
+                    Quotation marks tell the reader: "These are the EXACT words the character said - not a summary or description, but their actual words."
+                </div>
+                <div class="section">
+                    <span class="label">HOW DO I USE THEM?</span>
+                    Put opening quotation marks <span class="quote-mark">"</span> right before the first spoken word. Put closing quotation marks <span class="quote-mark">"</span> right after the last spoken word (after any punctuation).
+                </div>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-3">
+            <h2>Day 1: Anatomy of a Dialogue Sentence</h2>
+            <h3>The Parts of Dialogue</h3>
+
+            <div class="anatomy-box">
+                <h4>Breaking Down a Dialogue Sentence</h4>
+                <div class="anatomy-example">
+                    <span class="capital-letter">A</span>lex said<span class="punctuation-mark">,</span> <span class="quote-mark">"</span><span class="capital-letter">W</span>e need to escape<span class="punctuation-mark">.</span><span class="quote-mark">"</span>
+                </div>
+                <ul>
+                    <li><strong style="color: #ffd700;">Alex said</strong> = The <strong>dialogue tag</strong> (tells who is speaking)</li>
+                    <li><strong style="color: #ff6b6b;">,</strong> = The <strong>comma</strong> (separates the tag from the quote)</li>
+                    <li><strong style="color: #00bcd4;">"</strong> = <strong>Opening quotation mark</strong> (starts the spoken words)</li>
+                    <li><strong style="color: #ffd700;">W</strong> = <strong>Capital letter</strong> (first word of speech is always capitalized)</li>
+                    <li><strong style="color: #ff6b6b;">.</strong> = <strong>Period</strong> (ends the sentence - goes INSIDE the quotes)</li>
+                    <li><strong style="color: #00bcd4;">"</strong> = <strong>Closing quotation mark</strong> (ends the spoken words)</li>
+                </ul>
+            </div>
+
+            <div class="rule-box">
+                <h4>Key Rule: Punctuation Goes INSIDE</h4>
+                <p>Periods, question marks, exclamation points, and commas <strong>always go INSIDE</strong> the closing quotation mark.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-4">
+            <h2>Day 1: Two Dialogue Patterns</h2>
+            <h3>Tag First vs. Tag Last</h3>
+
+            <div class="two-column">
+                <div class="example-box">
+                    <h4>Pattern 1: Tag FIRST</h4>
+                    <p>The dialogue tag comes BEFORE the spoken words.</p>
+                    <div class="dialogue-example">
+                        <span class="capital-letter">A</span>lex said<span class="punctuation-mark">,</span> <span class="quote-mark">"</span><span class="capital-letter">W</span>e need to wait<span class="punctuation-mark">.</span><span class="quote-mark">"</span>
+                    </div>
+                    <p><strong>Rule:</strong> Put a <span class="punctuation-mark">comma</span> after the tag, then start the quote with a <span class="capital-letter">capital</span> letter.</p>
+                </div>
+
+                <div class="example-box">
+                    <h4>Pattern 2: Tag LAST</h4>
+                    <p>The dialogue tag comes AFTER the spoken words.</p>
+                    <div class="dialogue-example">
+                        <span class="quote-mark">"</span><span class="capital-letter">W</span>e need to wait<span class="punctuation-mark">,</span><span class="quote-mark">"</span> <span class="capital-letter">A</span>lex said<span class="punctuation-mark">.</span>
+                    </div>
+                    <p><strong>Rule:</strong> Put a <span class="punctuation-mark">comma</span> INSIDE the quotes (not a period), then the tag with a <span class="punctuation-mark">period</span> at the end.</p>
+                </div>
+            </div>
+
+            <div class="warning-box">
+                <h4>Common Mistake: Using a Period Instead of a Comma</h4>
+                <p class="incorrect">✗ "We need to wait." Alex said.</p>
+                <p class="correct">✓ "We need to wait," Alex said.</p>
+                <p>When the tag comes AFTER, use a comma inside the quotes, not a period!</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-5">
+            <h2>Day 1: Questions and Exclamations in Dialogue</h2>
+            <h3>Special End Punctuation</h3>
+
+            <div class="rule-box">
+                <h4>Questions in Dialogue</h4>
+                <p>If the spoken words are a question, use a <span class="punctuation-mark">?</span> inside the quotes.</p>
+                <div class="dialogue-example">
+                    <span class="quote-mark">"</span><span class="capital-letter">W</span>hen do <span class="capital-letter">I</span> fight<span class="punctuation-mark">?</span><span class="quote-mark">"</span> <span class="capital-letter">A</span>lex asked<span class="punctuation-mark">.</span>
+                </div>
+                <p><strong>Notice:</strong> The question mark goes INSIDE the quotes. The tag "Alex asked" still ends with a period.</p>
+            </div>
+
+            <div class="rule-box">
+                <h4>Exclamations in Dialogue</h4>
+                <p>If the spoken words show strong emotion, use an <span class="punctuation-mark">!</span> inside the quotes.</p>
+                <div class="dialogue-example">
+                    <span class="quote-mark">"</span><span class="capital-letter">H</span>e can do it<span class="punctuation-mark">!</span><span class="quote-mark">"</span> <span class="capital-letter">W</span>erda-ak shouted<span class="punctuation-mark">.</span>
+                </div>
+                <p><strong>Notice:</strong> The exclamation point goes INSIDE the quotes.</p>
+            </div>
+
+            <div class="practice-box">
+                <h4>Quick Practice</h4>
+                <p>Which is correct?</p>
+                <p>A: "Can you fight?" Rinka-ak asked.</p>
+                <p>B: "Can you fight"? Rinka-ak asked.</p>
+                <p><strong>Answer:</strong> A - The question mark goes INSIDE the quotation marks.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-6">
+            <h2>Day 1: The Jail Cell</h2>
+            <h3>Chapter 8 Key Events</h3>
+            
+            <div class="key-fact">
+                <h4>Key Fact: Why Doesn't Alex Escape Over the Fence?</h4>
+                <p><span class="capital-letter">A</span>lex and <span class="capital-letter">S</span>enta-eh could climb over the fence<span class="punctuation-mark">,</span> but <span class="capital-letter">M</span>onda-ak is <strong>too big to climb</strong><span class="punctuation-mark">.</span> <span class="capital-letter">A</span>lex refuses to leave his dog behind<span class="punctuation-mark">.</span></p>
+            </div>
+            
+            <div class="dialogue-example">
+                <span class="quote-mark">"</span><span class="capital-letter">I</span> can make it over that<span class="punctuation-mark">,</span><span class="quote-mark">"</span> <span class="capital-letter">S</span>enta-eh said<span class="punctuation-mark">.</span>
+            </div>
+
+            <div class="key-fact">
+                <h4>Key Fact: What Happens to Werda-ak?</h4>
+                <p><span class="capital-letter">W</span>erda-ak tries to rescue his friends but is <strong>captured and beaten</strong> by the guards<span class="punctuation-mark">.</span> <span class="capital-letter">G</span>runta-ak reveals he had <strong>six guards waiting</strong> for an escape attempt<span class="punctuation-mark">.</span></p>
+            </div>
+
+            <div class="dialogue-example">
+                <span class="quote-mark">"</span><span class="capital-letter">I</span><span class="punctuation-mark">'</span>m sorry<span class="punctuation-mark">,</span><span class="quote-mark">"</span> <span class="capital-letter">W</span>erda-ak said<span class="punctuation-mark">.</span>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-7">
+            <h2>Day 1: Rinka-ak's Offer</h2>
+            <h3>A Young Chief in Trouble</h3>
+            
+            <div class="key-fact">
+                <h4>Key Fact: Who is Rinka-ak?</h4>
+                <p><span class="capital-letter">R</span>inka-ak is the <strong>young chieftain of Rinta-ah</strong><span class="punctuation-mark">.</span> <span class="capital-letter">H</span>is father recently died<span class="punctuation-mark">,</span> and his mother died when he was born<span class="punctuation-mark">,</span> so leadership passed to him<span class="punctuation-mark">.</span></p>
+            </div>
+
+            <div class="key-fact">
+                <h4>Key Fact: What Problem Does Rinka-ak Face?</h4>
+                <p><span class="capital-letter">G</span>runta-ak has <strong>challenged Rinka-ak for leadership</strong><span class="punctuation-mark">.</span> <span class="capital-letter">T</span>he rules say they must fight to the death<span class="punctuation-mark">,</span> but <span class="capital-letter">R</span>inka-ak is just a boy and cannot defeat the warrior<span class="punctuation-mark">.</span></p>
+            </div>
+
+            <div class="dialogue-example">
+                <span class="quote-mark">"</span><span class="capital-letter">C</span>an you fight<span class="punctuation-mark">?</span><span class="quote-mark">"</span> <span class="capital-letter">R</span>inka-ak asked<span class="punctuation-mark">.</span>
+            </div>
+
+            <div class="key-fact">
+                <h4>Key Fact: What Happened to Rinka-ak's Bodyguard?</h4>
+                <p><span class="capital-letter">R</span>inka-ak<span class="punctuation-mark">'</span>s father<span class="punctuation-mark">'</span>s bodyguard was supposed to fight for him<span class="punctuation-mark">,</span> but he was <strong>killed in a "hunting accident"</strong> right before the challenge<span class="punctuation-mark">.</span> <span class="capital-letter">T</span>he timing is suspicious<span class="punctuation-mark">.</span></p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-8">
+            <h2>Day 1: The Deal</h2>
+            <h3>Chapter 8 Conclusion</h3>
+            
+            <div class="key-fact">
+                <h4>Key Fact: What Does Rinka-ak Promise Alex?</h4>
+                <p><span class="capital-letter">I</span>f <span class="capital-letter">A</span>lex wins the fight<span class="punctuation-mark">,</span> <span class="capital-letter">R</span>inka-ak will<span class="punctuation-mark">:</span></p>
+                <ul>
+                    <li><strong>Forgive</strong> them for destroying the bridge</li>
+                    <li>Give them <strong>information</strong> about the kidnappers</li>
+                    <li><strong>Supply</strong> them for their journey</li>
+                    <li>Let them <strong>go free</strong></li>
+                </ul>
+            </div>
+
+            <div class="key-fact">
+                <h4>Key Fact: What Does Alex Ask For?</h4>
+                <p><span class="capital-letter">A</span>lex asks that even if he <strong>loses</strong><span class="punctuation-mark">,</span> his friends and <span class="capital-letter">M</span>onda-ak should <strong>go free</strong><span class="punctuation-mark">.</span> <span class="capital-letter">T</span>his shows <span class="capital-letter">A</span>lex cares more about his team than himself<span class="punctuation-mark">.</span></p>
+            </div>
+
+            <div class="dialogue-example">
+                <span class="quote-mark">"</span><span class="capital-letter">W</span>hen do <span class="capital-letter">I</span> fight<span class="punctuation-mark">?</span><span class="quote-mark">"</span> <span class="capital-letter">A</span>lex asked<span class="punctuation-mark">.</span><br><br>
+                <span class="quote-mark">"</span><span class="capital-letter">T</span>his afternoon<span class="punctuation-mark">,</span> at apex<span class="punctuation-mark">.</span><span class="quote-mark">"</span>
+            </div>
+
+            <div class="question-box">
+                <h4>Cliffhanger</h4>
+                <p>Alex has agreed to fight Grunta-ak to the death! Can he defeat a warrior who is over a foot taller and more than 100 pounds heavier?</p>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- DAY 2: CHAPTER 9 - SLIDES 9-19 -->
+        <!-- ============================================ -->
+
+        <div class="slide" id="slide-9">
+            <h2>Day 2: Chapter 9 - Fight to the Death</h2>
+            <h3>The Battle and More Dialogue Rules</h3>
+            
+            <div class="highlight">
+                <h4>What Happens in This Chapter:</h4>
+                <p><span class="capital-letter">A</span>lex fights <span class="capital-letter">G</span>runta-ak in a battle to decide who will lead <span class="capital-letter">R</span>inta-ah<span class="punctuation-mark">.</span> <span class="capital-letter">T</span>he winner lives<span class="punctuation-mark">;</span> the loser dies<span class="punctuation-mark">.</span></p>
+            </div>
+            
+            <div class="rule-box">
+                <h4>Today's Grammar Focus</h4>
+                <ul>
+                    <li><strong>Capitalizing the First Word in Dialogue:</strong> Always capitalize the first word inside quotation marks.</li>
+                    <li><strong>Commas with Dialogue Tags:</strong> Where exactly does the comma go?</li>
+                    <li><strong>Split Dialogue:</strong> What happens when the tag is in the MIDDLE of a sentence?</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-10">
+            <h2>Day 2: Capitalizing in Dialogue</h2>
+            <h3>The First Word Rule</h3>
+            
+            <div class="what-why-how">
+                <h4>Capital Letters in Dialogue</h4>
+                <div class="section">
+                    <span class="label">WHAT IS THE RULE?</span>
+                    The first word inside quotation marks is ALWAYS capitalized, even if it comes in the middle of a sentence.
+                </div>
+                <div class="section">
+                    <span class="label">WHY?</span>
+                    When someone speaks, they are starting a new thought. A new thought begins with a capital letter.
+                </div>
+                <div class="section">
+                    <span class="label">HOW DO I APPLY IT?</span>
+                    Look at the first word INSIDE the opening quotation mark. That word gets a capital letter.
+                </div>
+            </div>
+
+            <div class="example-box">
+                <h4>Examples</h4>
+                <p class="correct">✓ Rinka-ak said, "<span class="capital-letter">T</span>his is a fight to the death."</p>
+                <p class="incorrect">✗ Rinka-ak said, "this is a fight to the death."</p>
+                <br>
+                <p class="correct">✓ "I choose no weapons," Alex said.</p>
+                <p class="incorrect">✗ "i choose no weapons," Alex said.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-11">
+            <h2>Day 2: Comma Placement - Tag First</h2>
+            <h3>When the Tag Comes Before</h3>
+
+            <div class="rule-box">
+                <h4>Pattern: Dialogue Tag FIRST</h4>
+                <p><strong>Structure:</strong> Tag + comma + opening quote + spoken words + end punctuation + closing quote</p>
+            </div>
+
+            <div class="step-box">
+                <span class="step-number">1</span>
+                <div>
+                    <strong>Write the dialogue tag:</strong> Alex said
+                </div>
+            </div>
+
+            <div class="step-box">
+                <span class="step-number">2</span>
+                <div>
+                    <strong>Add a comma:</strong> Alex said<span class="punctuation-mark">,</span>
+                </div>
+            </div>
+
+            <div class="step-box">
+                <span class="step-number">3</span>
+                <div>
+                    <strong>Add opening quotation mark:</strong> Alex said, <span class="quote-mark">"</span>
+                </div>
+            </div>
+
+            <div class="step-box">
+                <span class="step-number">4</span>
+                <div>
+                    <strong>Write the spoken words (first word capitalized):</strong> Alex said, "<span class="capital-letter">I</span> choose no weapons
+                </div>
+            </div>
+
+            <div class="step-box">
+                <span class="step-number">5</span>
+                <div>
+                    <strong>Add end punctuation INSIDE, then closing quote:</strong> Alex said, "I choose no weapons<span class="punctuation-mark">.</span><span class="quote-mark">"</span>
+                </div>
+            </div>
+
+            <div class="dialogue-example">
+                <span class="capital-letter">A</span>lex said<span class="punctuation-mark">,</span> <span class="quote-mark">"</span><span class="capital-letter">I</span> choose no weapons<span class="punctuation-mark">.</span><span class="quote-mark">"</span>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-12">
+            <h2>Day 2: Comma Placement - Tag Last</h2>
+            <h3>When the Tag Comes After</h3>
+
+            <div class="rule-box">
+                <h4>Pattern: Dialogue Tag LAST</h4>
+                <p><strong>Structure:</strong> Opening quote + spoken words + comma + closing quote + tag + period</p>
+                <p><strong>Important:</strong> Use a comma (not a period) at the end of the spoken words if the tag follows!</p>
+            </div>
+
+            <div class="step-box">
+                <span class="step-number">1</span>
+                <div>
+                    <strong>Start with opening quotation mark:</strong> <span class="quote-mark">"</span>
+                </div>
+            </div>
+
+            <div class="step-box">
+                <span class="step-number">2</span>
+                <div>
+                    <strong>Write spoken words (first word capitalized):</strong> "<span class="capital-letter">I</span> choose no weapons
+                </div>
+            </div>
+
+            <div class="step-box">
+                <span class="step-number">3</span>
+                <div>
+                    <strong>Add comma INSIDE the quotes:</strong> "I choose no weapons<span class="punctuation-mark">,</span>
+                </div>
+            </div>
+
+            <div class="step-box">
+                <span class="step-number">4</span>
+                <div>
+                    <strong>Add closing quotation mark:</strong> "I choose no weapons,"<span class="quote-mark">"</span>
+                </div>
+            </div>
+
+            <div class="step-box">
+                <span class="step-number">5</span>
+                <div>
+                    <strong>Add the tag and period:</strong> "I choose no weapons," Alex said<span class="punctuation-mark">.</span>
+                </div>
+            </div>
+
+            <div class="dialogue-example">
+                <span class="quote-mark">"</span><span class="capital-letter">I</span> choose no weapons<span class="punctuation-mark">,</span><span class="quote-mark">"</span> <span class="capital-letter">A</span>lex said<span class="punctuation-mark">.</span>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-13">
+            <h2>Day 2: Split Dialogue</h2>
+            <h3>Tag in the Middle</h3>
+
+            <div class="what-why-how">
+                <h4>Understanding Split Dialogue</h4>
+                <div class="section">
+                    <span class="label">WHAT IS IT?</span>
+                    Split dialogue is when the dialogue tag comes in the MIDDLE of what someone is saying. The spoken words are split into two parts.
+                </div>
+                <div class="section">
+                    <span class="label">WHY USE IT?</span>
+                    Split dialogue adds variety to your writing and can create natural pauses in conversation.
+                </div>
+                <div class="section">
+                    <span class="label">HOW DO I PUNCTUATE IT?</span>
+                    Use commas on BOTH sides of the tag. The second part does NOT start with a capital (unless it's a new sentence).
+                </div>
+            </div>
+
+            <div class="dialogue-example">
+                <span class="quote-mark">"</span><span class="capital-letter">I</span>f you win<span class="punctuation-mark">,</span><span class="quote-mark">"</span> <span class="capital-letter">R</span>inka-ak said<span class="punctuation-mark">,</span> <span class="quote-mark">"</span>I will set you free<span class="punctuation-mark">.</span><span class="quote-mark">"</span>
+            </div>
+
+            <div class="example-box">
+                <h4>Breaking It Down</h4>
+                <ul>
+                    <li><strong>"If you win,"</strong> - First part ends with comma inside quotes</li>
+                    <li><strong>Rinka-ak said,</strong> - Tag followed by comma</li>
+                    <li><strong>"I will set you free."</strong> - Second part starts with lowercase (same sentence)</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-14">
+            <h2>Day 2: Split Dialogue - Two Sentences</h2>
+            <h3>When to Use a Capital After the Tag</h3>
+
+            <div class="rule-box">
+                <h4>If the Second Part is a NEW Sentence...</h4>
+                <p>Use a <strong>period</strong> after the tag, and <strong>capitalize</strong> the first word of the new sentence.</p>
+            </div>
+
+            <div class="dialogue-example">
+                <span class="quote-mark">"</span><span class="capital-letter">I</span> will fight<span class="punctuation-mark">.</span><span class="quote-mark">"</span> <span class="capital-letter">A</span>lex stood up<span class="punctuation-mark">.</span> <span class="quote-mark">"</span><span class="capital-letter">W</span>hen do we begin<span class="punctuation-mark">?</span><span class="quote-mark">"</span>
+            </div>
+
+            <div class="two-column">
+                <div class="example-box">
+                    <h4>Same Sentence (comma, lowercase)</h4>
+                    <p><span class="quote-mark">"</span>If you win<span class="punctuation-mark">,</span><span class="quote-mark">"</span> he said<span class="punctuation-mark">,</span> <span class="quote-mark">"</span>you will go free<span class="punctuation-mark">.</span><span class="quote-mark">"</span></p>
+                    <p><em>One complete thought split by the tag.</em></p>
+                </div>
+
+                <div class="example-box">
+                    <h4>Two Sentences (period, capital)</h4>
+                    <p><span class="quote-mark">"</span>You will fight<span class="punctuation-mark">.</span><span class="quote-mark">"</span> <span class="capital-letter">H</span>e paused<span class="punctuation-mark">.</span> <span class="quote-mark">"</span><span class="capital-letter">A</span>re you ready<span class="punctuation-mark">?</span><span class="quote-mark">"</span></p>
+                    <p><em>Two separate thoughts with action between.</em></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-15">
+            <h2>Day 2: The Fight Begins</h2>
+            <h3>Chapter 9 Key Events</h3>
+            
+            <div class="key-fact">
+                <h4>Key Fact: What Type of Combat Does Alex Choose?</h4>
+                <p><span class="capital-letter">A</span>lex chooses to fight with <strong>bare hands - no weapons</strong><span class="punctuation-mark">.</span></p>
+            </div>
+
+            <div class="dialogue-example">
+                <span class="quote-mark">"</span><span class="capital-letter">I</span> choose no weapons<span class="punctuation-mark">.</span> <span class="capital-letter">B</span>are hands<span class="punctuation-mark">.</span><span class="quote-mark">"</span>
+            </div>
+            
+            <div class="key-fact">
+                <h4>Key Fact: Why Does Alex Choose Bare Hands?</h4>
+                <p><span class="capital-letter">A</span>lex knows that <span class="capital-letter">G</span>runta-ak has trained with weapons since childhood<span class="punctuation-mark">.</span> <span class="capital-letter">A</span>ny weapon would give <span class="capital-letter">G</span>runta-ak the advantage<span class="punctuation-mark">.</span> <span class="capital-letter">A</span>lex<span class="punctuation-mark">'</span>s <span class="capital-letter">S</span>pecial <span class="capital-letter">F</span>orces training in hand-to-hand combat gives him his best chance<span class="punctuation-mark">.</span></p>
+            </div>
+
+            <div class="key-fact">
+                <h4>Key Fact: How Big is Grunta-ak?</h4>
+                <p><span class="capital-letter">G</span>runta-ak is <strong>7 feet 4 inches tall</strong> and weighs <strong>285 pounds</strong><span class="punctuation-mark">.</span> <span class="capital-letter">A</span>lex is 6 feet 2 inches and 175 pounds<span class="punctuation-mark">.</span> <span class="capital-letter">G</span>runta-ak is over a foot taller and more than 100 pounds heavier<span class="punctuation-mark">!</span></p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-16">
+            <h2>Day 2: Alex's Strategy</h2>
+            <h3>How Alex Defeats the Giant</h3>
+            
+            <div class="key-fact">
+                <h4>Key Fact: How Does Alex Defeat Grunta-ak?</h4>
+                <p><span class="capital-letter">A</span>lex uses speed and surprise<span class="punctuation-mark">.</span> <span class="capital-letter">W</span>hen <span class="capital-letter">G</span>runta-ak kicks<span class="punctuation-mark">,</span> <span class="capital-letter">A</span>lex <strong>jumps onto his shoulders</strong> and attacks his eyes<span class="punctuation-mark">,</span> blinding him<span class="punctuation-mark">.</span> <span class="capital-letter">T</span>hen <span class="capital-letter">A</span>lex breaks his neck<span class="punctuation-mark">.</span></p>
+            </div>
+            
+            <p><strong>The fight happens in steps:</strong></p>
+            <ul>
+                <li><strong>Step 1:</strong> Alex lets Grunta-ak think he is slow.</li>
+                <li><strong>Step 2:</strong> When Grunta-ak kicks, Alex jumps onto his shoulders.</li>
+                <li><strong>Step 3:</strong> Alex attacks Grunta-ak's eyes, blinding him.</li>
+                <li><strong>Step 4:</strong> Alex breaks Grunta-ak's neck.</li>
+            </ul>
+
+            <div class="dialogue-example">
+                <span class="quote-mark">"</span><span class="capital-letter">G</span>runta-ak is dead<span class="punctuation-mark">.</span><span class="quote-mark">"</span>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-17">
+            <h2>Day 2: After the Fight</h2>
+            <h3>Victory and Its Meaning</h3>
+            
+            <div class="key-fact">
+                <h4>Key Fact: How Did the Crowd React?</h4>
+                <p><span class="capital-letter">T</span>he crowd was <strong>silent</strong><span class="punctuation-mark">.</span> <span class="capital-letter">T</span>here was no cheering or booing<span class="punctuation-mark">.</span> <span class="capital-letter">T</span>his shows that <span class="capital-letter">G</span>runta-ak ruled by <strong>fear</strong><span class="punctuation-mark">,</span> not by earning people<span class="punctuation-mark">'</span>s loyalty<span class="punctuation-mark">.</span></p>
+            </div>
+
+            <div class="dialogue-example">
+                <span class="quote-mark">"</span><span class="capital-letter">F</span>ear is one kind of motivator<span class="punctuation-mark">,</span><span class="quote-mark">"</span> <span class="capital-letter">A</span>lex said<span class="punctuation-mark">.</span> <span class="quote-mark">"</span><span class="capital-letter">I</span>t is not the best<span class="punctuation-mark">.</span><span class="quote-mark">"</span>
+            </div>
+
+            <div class="key-fact">
+                <h4>Key Fact: What Happens to Rinka-ak's Leadership?</h4>
+                <p><span class="capital-letter">R</span>inka-ak remains chief<span class="punctuation-mark">.</span> <span class="capital-letter">T</span>he rules say there can only be <strong>one challenge per changeover</strong> of leadership<span class="punctuation-mark">.</span> <span class="capital-letter">N</span>o one else can challenge him now<span class="punctuation-mark">.</span></p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-18">
+            <h2>Day 2: Practice with Dialogue</h2>
+            <h3>Check Your Understanding</h3>
+
+            <div class="practice-box">
+                <h4>Practice 1: Find the Error</h4>
+                <p>"I will fight." Alex said.</p>
+                <p><strong>Error:</strong> When the tag comes after, use a comma inside the quotes, not a period.</p>
+                <p class="correct">✓ "I will fight," Alex said.</p>
+            </div>
+
+            <div class="practice-box">
+                <h4>Practice 2: Find the Error</h4>
+                <p>Rinka-ak asked, "can you defeat him?"</p>
+                <p><strong>Error:</strong> The first word inside quotes must be capitalized.</p>
+                <p class="correct">✓ Rinka-ak asked, "Can you defeat him?"</p>
+            </div>
+
+            <div class="practice-box">
+                <h4>Practice 3: Find the Error</h4>
+                <p>"When do I fight"? Alex asked.</p>
+                <p><strong>Error:</strong> The question mark should be inside the quotation marks.</p>
+                <p class="correct">✓ "When do I fight?" Alex asked.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-19">
+            <h2>Day 2 Review</h2>
+            <h3>Dialogue Rules and Story Facts</h3>
+
+            <div class="rule-box">
+                <h4>Dialogue Punctuation Rules</h4>
+                <ul>
+                    <li><strong>Quotation marks</strong> go around the exact words someone speaks.</li>
+                    <li>The <strong>first word</strong> inside quotes is always capitalized.</li>
+                    <li><strong>End punctuation</strong> goes INSIDE the closing quotation mark.</li>
+                    <li>Use a <strong>comma</strong> (not a period) before the tag when the tag comes last.</li>
+                    <li>In <strong>split dialogue</strong>, use commas on both sides of the tag.</li>
+                </ul>
+            </div>
+            
+            <div class="highlight">
+                <h4>Day 2 Story Facts</h4>
+                <ul>
+                    <li>Alex chooses <strong>bare hands</strong> (no weapons).</li>
+                    <li>Alex <strong>jumps onto Grunta-ak's shoulders</strong> and blinds him.</li>
+                    <li>The crowd is <strong>silent</strong> because Grunta-ak ruled by fear.</li>
+                    <li>Rinka-ak <strong>remains chief</strong> with no more challenges allowed.</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- DAY 3: CHAPTER 10 - SLIDES 20-27 -->
+        <!-- ============================================ -->
+
+        <div class="slide" id="slide-20">
+            <h2>Day 3: Chapter 10 - East</h2>
+            <h3>Rewards and New Mysteries</h3>
+            
+            <div class="highlight">
+                <h4>What Happens in This Chapter:</h4>
+                <p><span class="capital-letter">R</span>inka-ak gives <span class="capital-letter">A</span>lex valuable rewards for winning the fight<span class="punctuation-mark">.</span> <span class="capital-letter">T</span>he team leaves <span class="capital-letter">R</span>inta-ah and meets a mysterious traveler named <span class="capital-letter">U</span>ntrin-ak<span class="punctuation-mark">.</span></p>
+            </div>
+            
+            <div class="rule-box">
+                <h4>Today's Grammar Focus</h4>
+                <ul>
+                    <li><strong>Review:</strong> Putting all dialogue rules together.</li>
+                    <li><strong>Dialogue Without Tags:</strong> When we know who is speaking.</li>
+                    <li><strong>Action Beats:</strong> Using actions instead of "said."</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-21">
+            <h2>Day 3: Dialogue Without Tags</h2>
+            <h3>When You Know Who is Speaking</h3>
+
+            <div class="what-why-how">
+                <h4>Dialogue Without "Said"</h4>
+                <div class="section">
+                    <span class="label">WHAT IS IT?</span>
+                    Sometimes dialogue appears without a tag like "said" or "asked." The quote stands alone or is followed by an action.
+                </div>
+                <div class="section">
+                    <span class="label">WHY USE IT?</span>
+                    It creates variety and can speed up the pace of conversation. Too many "said" tags can become boring.
+                </div>
+                <div class="section">
+                    <span class="label">HOW DO I PUNCTUATE IT?</span>
+                    Use a period at the end (inside the quotes) since there's no tag following. Actions before or after help show who is speaking.
+                </div>
+            </div>
+
+            <div class="dialogue-example">
+                <span class="capital-letter">A</span>lex accepted the bag<span class="punctuation-mark">.</span> <span class="quote-mark">"</span><span class="capital-letter">T</span>hank you<span class="punctuation-mark">.</span> <span class="capital-letter">T</span>his is very kind<span class="punctuation-mark">.</span><span class="quote-mark">"</span>
+            </div>
+
+            <div class="example-box">
+                <h4>Notice:</h4>
+                <p>The action "Alex accepted the bag" tells us who is speaking. The dialogue uses periods (not commas) because there's no dialogue tag.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-22">
+            <h2>Day 3: Action Beats</h2>
+            <h3>Showing Who Speaks Through Actions</h3>
+
+            <div class="rule-box">
+                <h4>What is an Action Beat?</h4>
+                <p>An <strong>action beat</strong> is when a character does something before or after speaking. The action shows who is talking without using "said."</p>
+            </div>
+
+            <div class="two-column">
+                <div class="example-box">
+                    <h4>With Dialogue Tag</h4>
+                    <p><span class="quote-mark">"</span>Taste it<span class="punctuation-mark">,</span><span class="quote-mark">"</span> Rinka-ak said<span class="punctuation-mark">.</span></p>
+                    <p><em>Uses "said" to show speaker.</em></p>
+                </div>
+
+                <div class="example-box">
+                    <h4>With Action Beat</h4>
+                    <p>Rinka-ak offered the bag<span class="punctuation-mark">.</span> <span class="quote-mark">"</span>Taste it<span class="punctuation-mark">.</span><span class="quote-mark">"</span></p>
+                    <p><em>Action shows who speaks. Period ends the quote.</em></p>
+                </div>
+            </div>
+
+            <div class="warning-box">
+                <h4>Important Difference</h4>
+                <p><strong>Dialogue tag:</strong> Uses comma inside quotes → <span class="quote-mark">"</span>Taste it<span class="punctuation-mark">,</span><span class="quote-mark">"</span> Rinka-ak said.</p>
+                <p><strong>Action beat:</strong> Uses period inside quotes → Rinka-ak smiled. <span class="quote-mark">"</span>Taste it<span class="punctuation-mark">.</span><span class="quote-mark">"</span></p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-23">
+            <h2>Day 3: The Rewards</h2>
+            <h3>What Rinka-ak Gives Alex</h3>
+            
+            <div class="key-fact">
+                <h4>Key Fact: What Three Types of Rewards Does Rinka-ak Give?</h4>
+                <ol>
+                    <li><strong>New leather bags</strong> filled with cured meat, dried vegetables, bandages, and medicines</li>
+                    <li><strong>Salt</strong> (called "danta") - helps preserve meat for winter</li>
+                    <li><strong>A map</strong> of Kragdon-ah - the most valuable gift</li>
+                </ol>
+            </div>
+
+            <div class="dialogue-example">
+                <span class="quote-mark">"</span><span class="capital-letter">T</span>his is not the reward <span class="capital-letter">I</span> promised you<span class="punctuation-mark">,</span><span class="quote-mark">"</span> <span class="capital-letter">R</span>inka-ak said<span class="punctuation-mark">.</span> <span class="quote-mark">"</span><span class="capital-letter">T</span>his is just a small gift<span class="punctuation-mark">.</span><span class="quote-mark">"</span>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-24">
+            <h2>Day 3: The Importance of Salt</h2>
+            <h3>Why "Danta" Matters</h3>
+            
+            <div class="key-fact">
+                <h4>Key Fact: What is "Danta"?</h4>
+                <p><strong>Danta</strong> is the word for <strong>salt</strong><span class="punctuation-mark">.</span> <span class="capital-letter">I</span>t comes from a dried-up saltwater lake on the other side of the river<span class="punctuation-mark">.</span></p>
+            </div>
+
+            <div class="key-fact">
+                <h4>Key Fact: Why is Salt Valuable?</h4>
+                <p><span class="capital-letter">S</span>alt can <strong>preserve meat</strong><span class="punctuation-mark">,</span> allowing it to last through the winter when hunting is difficult<span class="punctuation-mark">.</span> <span class="capital-letter">T</span>his is why the village built the bridge - to get more salt<span class="punctuation-mark">.</span></p>
+            </div>
+
+            <div class="dialogue-example">
+                <span class="quote-mark">"</span><span class="capital-letter">T</span>aste it<span class="punctuation-mark">.</span> <span class="capital-letter">I</span>t is delicious<span class="punctuation-mark">,</span><span class="quote-mark">"</span> <span class="capital-letter">R</span>inka-ak said<span class="punctuation-mark">.</span>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-25">
+            <h2>Day 3: The Map</h2>
+            <h3>The Most Valuable Gift</h3>
+            
+            <div class="key-fact">
+                <h4>Key Fact: How Was the Map Created?</h4>
+                <p><span class="capital-letter">T</span>he map was created over <strong>many generations</strong><span class="punctuation-mark">.</span> <span class="capital-letter">A</span> village sent out small groups to map different areas<span class="punctuation-mark">.</span> <span class="capital-letter">I</span>f a group did not return after five years<span class="punctuation-mark">,</span> they were assumed dead and a new group was sent<span class="punctuation-mark">.</span></p>
+            </div>
+
+            <div class="key-fact">
+                <h4>Key Fact: How Far Behind Are the Kidnappers?</h4>
+                <p><span class="capital-letter">R</span>inka-ak tells <span class="capital-letter">A</span>lex the kidnappers passed through <strong>eighteen days ago</strong><span class="punctuation-mark">.</span></p>
+            </div>
+
+            <div class="dialogue-example">
+                <span class="quote-mark">"</span><span class="capital-letter">E</span>ighteen sunrises have passed<span class="punctuation-mark">.</span><span class="quote-mark">"</span>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-26">
+            <h2>Day 3: Untrin-ak</h2>
+            <h3>A Mysterious Traveler</h3>
+            
+            <div class="key-fact">
+                <h4>Key Fact: Who is Untrin-ak?</h4>
+                <p><span class="capital-letter">U</span>ntrin-ak is a <strong>traveling storyteller</strong> who wanders from village to village<span class="punctuation-mark">,</span> learning and telling stories<span class="punctuation-mark">.</span> <span class="capital-letter">H</span>e asks to join <span class="capital-letter">A</span>lex<span class="punctuation-mark">'</span>s group<span class="punctuation-mark">.</span></p>
+            </div>
+
+            <div class="dialogue-example">
+                <span class="quote-mark">"</span><span class="capital-letter">I</span> am <span class="capital-letter">U</span>ntrin-ak<span class="punctuation-mark">.</span> <span class="capital-letter">I</span> am a fellow traveler<span class="punctuation-mark">.</span> <span class="capital-letter">A</span>re you heading east<span class="punctuation-mark">?</span><span class="quote-mark">"</span>
+            </div>
+
+            <div class="key-fact">
+                <h4>Key Fact: What Unusual Items Does Untrin-ak Have?</h4>
+                <ul>
+                    <li>A <strong>stringed instrument</strong> (like a small guitar) that he plays around the campfire</li>
+                    <li>A <strong>hammock</strong> that he strings between trees for sleeping</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-27">
+            <h2>Day 3: The Shocking Ending</h2>
+            <h3>A Cliffhanger!</h3>
+            
+            <div class="key-fact">
+                <h4>Key Fact: What Shocking Thing Happens at the End?</h4>
+                <p><span class="capital-letter">I</span>n the morning<span class="punctuation-mark">,</span> <span class="capital-letter">U</span>ntrin-ak says <span class="quote-mark">"</span><span class="capital-letter">G</span>ood morning<span class="quote-mark">"</span> to <span class="capital-letter">A</span>lex<span class="punctuation-mark">.</span> <span class="capital-letter">A</span>lex suddenly realizes <span class="capital-letter">U</span>ntrin-ak spoke to him <strong>in English</strong><span class="punctuation-mark">!</span></p>
+            </div>
+
+            <div class="dialogue-example">
+                <span class="capital-letter">U</span>ntrin-ak said<span class="punctuation-mark">,</span> <span class="quote-mark">"</span><span class="capital-letter">G</span>ood morning<span class="punctuation-mark">.</span><span class="quote-mark">"</span><br><br>
+                <span class="quote-mark">"</span><span class="capital-letter">G</span>ood morning<span class="punctuation-mark">,</span><span class="quote-mark">"</span> <span class="capital-letter">A</span>lex answered<span class="punctuation-mark">,</span> then stopped dead<span class="punctuation-mark">.</span>
+            </div>
+
+            <div class="question-box">
+                <h4>The Mystery</h4>
+                <p>No one in Kragdon-ah should know English! How does Untrin-ak know this language? Is he also from Alex's time? Is he connected to the kidnappers? What secrets does he hold?</p>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- DAY 4: WRITING WORKSHOP - SLIDES 28-32 -->
+        <!-- ============================================ -->
+
+        <div class="slide" id="slide-28">
+            <h2>Day 4: Writing Workshop</h2>
+            <h3>Using Dialogue in Your Writing</h3>
+            
+            <div class="writing-structure">
+                <h3>Writing Structure: Topic Sentence + Three Details + Conclusion</h3>
+                <ul>
+                    <li><strong>Topic Sentence:</strong> A clear statement that answers the question.</li>
+                    <li><strong>Supporting Detail 1:</strong> First piece of proof from the story.</li>
+                    <li><strong>Supporting Detail 2:</strong> Second piece of proof from the story.</li>
+                    <li><strong>Supporting Detail 3:</strong> Third piece of proof from the story.</li>
+                    <li><strong>Conclusion:</strong> Restate your main idea in different words.</li>
+                </ul>
+            </div>
+            
+            <div class="rule-box">
+                <h4>Dialogue Rules to Remember</h4>
+                <ul>
+                    <li><span class="quote-mark">" "</span> Quotation marks go around spoken words.</li>
+                    <li><span class="capital-letter">C</span>apitalize the first word inside quotes.</li>
+                    <li><span class="punctuation-mark">.</span> <span class="punctuation-mark">?</span> <span class="punctuation-mark">!</span> End punctuation goes INSIDE the quotes.</li>
+                    <li><span class="punctuation-mark">,</span> Use a comma before the tag when the tag comes last.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-29">
+            <h2>Day 4: Writing Prompt 1</h2>
+            
+            <div class="writing-prompt">
+                <h3>Your Prompt</h3>
+                <p><strong>Why does Alex agree to fight Grunta-ak for Rinka-ak? What does Alex hope to gain by winning the fight?</strong></p>
+            </div>
+            
+            <h3>Details to Include</h3>
+            <ul>
+                <li>What was Alex's situation before Rinka-ak's offer?</li>
+                <li>What did Rinka-ak promise if Alex won?</li>
+                <li>What information would help their mission?</li>
+                <li>What does Alex's request about his friends show about him?</li>
+            </ul>
+            
+            <div class="example-box">
+                <h4>Topic Sentence Starter</h4>
+                <p>"<span class="capital-letter">A</span>lex agrees to fight <span class="capital-letter">G</span>runta-ak because it is his only way to gain freedom and help for his mission<span class="punctuation-mark">.</span>"</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-30">
+            <h2>Day 4: Writing Prompt 2</h2>
+            <p><em>(For Language Arts 1-4 SC only)</em></p>
+            
+            <div class="writing-prompt">
+                <h3>Your Prompt</h3>
+                <p><strong>Describe the rewards Rinka-ak gives Alex after the fight. Why is each reward valuable for their journey?</strong></p>
+            </div>
+            
+            <h3>Details to Include</h3>
+            <ul>
+                <li>What three types of gifts does Rinka-ak give?</li>
+                <li>How do the supplies help their immediate needs?</li>
+                <li>Why is salt (danta) valuable?</li>
+                <li>Why is the map the most important gift?</li>
+            </ul>
+            
+            <div class="example-box">
+                <h4>Topic Sentence Starter</h4>
+                <p>"<span class="capital-letter">R</span>inka-ak rewards <span class="capital-letter">A</span>lex with three valuable gifts that will help the team on their journey<span class="punctuation-mark">.</span>"</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-31">
+            <h2>Day 4: Writing Checklist</h2>
+            <h3>Check Your Work Before Submitting</h3>
+            
+            <div class="highlight">
+                <h3>Dialogue Checklist (If You Use Dialogue)</h3>
+                <ul>
+                    <li>☐ Did you put <strong>quotation marks</strong> around spoken words?</li>
+                    <li>☐ Is the <strong>first word</strong> inside quotes capitalized?</li>
+                    <li>☐ Is the <strong>end punctuation</strong> inside the quotation marks?</li>
+                    <li>☐ Did you use a <strong>comma</strong> before the dialogue tag (if tag comes last)?</li>
+                </ul>
+            </div>
+            
+            <div class="highlight">
+                <h3>General Checklist</h3>
+                <ul>
+                    <li>☐ Does every sentence start with a <strong>capital letter</strong>?</li>
+                    <li>☐ Are all character names capitalized? (<span class="capital-letter">A</span>lex, <span class="capital-letter">R</span>inka-ak, <span class="capital-letter">G</span>runta-ak)</li>
+                    <li>☐ Does every sentence end with <span class="punctuation-mark">.</span> or <span class="punctuation-mark">?</span> or <span class="punctuation-mark">!</span>?</li>
+                    <li>☐ Did you use <strong>apostrophes</strong> correctly? (Alex<span class="punctuation-mark">'</span>s, can<span class="punctuation-mark">'</span>t)</li>
+                </ul>
+            </div>
+            
+            <div class="writing-structure">
+                <h3>Content Checklist</h3>
+                <ul>
+                    <li>☐ Do you have a topic sentence that answers the question?</li>
+                    <li>☐ Do you have at least three details from the story?</li>
+                    <li>☐ Do you have a conclusion sentence?</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-32">
+            <h2>Week 3 Complete Review</h2>
+            <h3>Dialogue Reference Guide</h3>
+
+            <div class="rule-box">
+                <h4>Dialogue Punctuation Summary</h4>
+                <table class="compare-table">
+                    <tr>
+                        <th>Pattern</th>
+                        <th>Example</th>
+                    </tr>
+                    <tr>
+                        <td>Tag First</td>
+                        <td>Alex said<span class="punctuation-mark">,</span> <span class="quote-mark">"</span>I will fight<span class="punctuation-mark">.</span><span class="quote-mark">"</span></td>
+                    </tr>
+                    <tr>
+                        <td>Tag Last</td>
+                        <td><span class="quote-mark">"</span>I will fight<span class="punctuation-mark">,</span><span class="quote-mark">"</span> Alex said<span class="punctuation-mark">.</span></td>
+                    </tr>
+                    <tr>
+                        <td>Question</td>
+                        <td><span class="quote-mark">"</span>When<span class="punctuation-mark">?</span><span class="quote-mark">"</span> Alex asked<span class="punctuation-mark">.</span></td>
+                    </tr>
+                    <tr>
+                        <td>Split Dialogue</td>
+                        <td><span class="quote-mark">"</span>If you win<span class="punctuation-mark">,</span><span class="quote-mark">"</span> he said<span class="punctuation-mark">,</span> <span class="quote-mark">"</span>you go free<span class="punctuation-mark">.</span><span class="quote-mark">"</span></td>
+                    </tr>
+                    <tr>
+                        <td>Action Beat</td>
+                        <td>Alex stood<span class="punctuation-mark">.</span> <span class="quote-mark">"</span>I will fight<span class="punctuation-mark">.</span><span class="quote-mark">"</span></td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="highlight">
+                <h4>Key Story Facts from Week 3</h4>
+                <ul>
+                    <li>Rinka-ak is the <strong>young chieftain</strong> who needs a champion.</li>
+                    <li>Alex chooses <strong>bare hands</strong> for combat.</li>
+                    <li>Alex defeats Grunta-ak by <strong>jumping on his shoulders</strong>.</li>
+                    <li>The crowd is <strong>silent</strong> (fear vs. loyalty theme).</li>
+                    <li>Rewards: <strong>bags with supplies, salt (danta), and a map</strong>.</li>
+                    <li>Kidnappers are <strong>eighteen days</strong> ahead.</li>
+                    <li>Untrin-ak is a <strong>traveling storyteller</strong> with a hammock and instrument.</li>
+                    <li>Untrin-ak <strong>speaks English</strong> - a shocking mystery!</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide-nav">
+            <button onclick="prevSlide()" id="prevBtn">Previous</button>
+            <button onclick="nextSlide()" id="nextBtn">Next</button>
+        </div>
+
+        <footer>
+            <p>Week 3: Lost in Kragdon-ah, Chapters 8-10</p>
+            <p>ELA Theme: Dialogue Punctuation</p>
+            <p><a href="https://www.reinischclassroom.com" style="color: #ffd700;">Return to Classroom Website</a></p>
+        </footer>
+    </div>
+
+    <script>
+        let currentSlide = 0;
+        const totalSlides = 33;
+
+        let currentBg = 0;
+        const bgImages = document.querySelectorAll('.bg-image');
+        const totalBgImages = 12;
+        
+        function rotateBg() {
+            bgImages[currentBg].classList.remove('active');
+            currentBg = (currentBg + 1) % totalBgImages;
+            bgImages[currentBg].classList.add('active');
+        }
+        
+        setInterval(rotateBg, 8000);
+
+        function updateSlide() {
+            document.querySelectorAll('.slide').forEach((slide, index) => {
+                slide.classList.remove('active');
+                if (index === currentSlide) {
+                    slide.classList.add('active');
+                }
+            });
+            
+            document.getElementById('prevBtn').disabled = currentSlide === 0;
+            document.getElementById('nextBtn').disabled = currentSlide === totalSlides - 1;
+            
+            const progress = ((currentSlide + 1) / totalSlides) * 100;
+            document.getElementById('progress').style.width = progress + '%';
+        }
+
+        function nextSlide() {
+            if (currentSlide < totalSlides - 1) {
+                currentSlide++;
+                updateSlide();
+            }
+        }
+
+        function prevSlide() {
+            if (currentSlide > 0) {
+                currentSlide--;
+                updateSlide();
+            }
+        }
+
+        function goToSlide(slideIndex) {
+            currentSlide = slideIndex;
+            updateSlide();
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight') nextSlide();
+            if (e.key === 'ArrowLeft') prevSlide();
+        });
+
+        updateSlide();
+    </script>
+</body>
+</html>
