@@ -1,6 +1,6 @@
 {
   "version": "v1",
-  "updated": "2026-01-23T19:28:38.864Z",
+  "updated": "2026-01-23T19:32:21.172Z",
   "categories": {
     "toolkit": {
       "slots": 8,
@@ -190,7 +190,7 @@
         "Counting Money",
         "Understanding Your Paycheck",
         "Interactive Cashier Activity",
-        "",
+        "Interactive Mock Interview",
         "",
         "",
         "",
@@ -224,7 +224,7 @@
         "/life-skills/presentations/presentation-04/",
         "/life-skills/presentations/presentation-05/",
         "/life-skills/presentations/presentation-06/",
-        "",
+        "/life-skills/presentations/presentation-07/",
         "",
         "",
         "",
