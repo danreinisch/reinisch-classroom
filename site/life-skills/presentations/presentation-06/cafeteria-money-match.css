@@ -1240,3 +1240,29 @@ header{
   min-height: 190px !important;
   padding: 10px 6px 12px !important;
 }
+
+
+/* Link styled like a button (CSP-safe navigation out of the activity) */
+.btnLink{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  padding:10px 14px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,0.14);
+  background:rgba(255,255,255,0.06);
+  color:rgba(255,255,255,0.92);
+  text-decoration:none;
+  font-weight:700;
+  font-size:13px;
+  line-height:1;
+  cursor:pointer;
+  user-select:none;
+  white-space:nowrap;
+  box-shadow:0 10px 24px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.08);
+}
+.btnLink:hover{ background:rgba(255,255,255,0.10); border-color:rgba(255,255,255,0.22); }
+.btnLink:active{ transform:translateY(1px); }
+.btnLink:focus-visible{ outline:2px solid rgba(50,226,155,0.6); outline-offset:2px; }
+

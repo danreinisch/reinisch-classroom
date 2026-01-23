@@ -1,6 +1,7 @@
 
-  const __BUILD__ = "v19-csp-safe-entry";
+  const __BUILD__ = "v21-check-safe";
   try { window.__CAFETERIA_CASHIER_BUILD = __BUILD__; } catch (_) {}
+  try { console.log("[cafeteria-money-match]", __BUILD__, "loaded"); } catch (_) {}
 
   // Storage can throw inside some sandboxed iframes; fall back to in-memory storage.
   const __memStore = new Map();
@@ -947,7 +948,17 @@
 
   chkSound?.addEventListener("change", (e) => setSound(e.target.checked));
 
-  btnStart?.addEventListener("click", () => {
+  // Safety wrapper: if anything throws (CSP edge cases, missing nodes, etc.),
+  // show a visible message instead of failing silently.
+  const safe = (fn) => (ev) => {
+    try { return fn(ev); }
+    catch (err) {
+      try { console.error(err); } catch (_) {}
+      try { setStatus(`⚠️ Error: ${err?.message || err}`, "bad"); } catch (_) {}
+    }
+  };
+
+  btnStart?.addEventListener("click", safe(() => {
     // Apply role based on selected button
     if (btnRoleCashier?.classList.contains("selected")) setRole("cashier");
     else setRole("customer");
@@ -966,38 +977,43 @@
     if (chkReadOnStart?.checked){
       setTimeout(() => speakTotal(), 250);
     }
-  });
+  }));
 
   // Rush overlay buttons
-  btnRushAgain?.addEventListener("click", () => {
+  btnRushAgain?.addEventListener("click", safe(() => {
     rushOverlay?.classList.remove("show");
     startRush(60);
-  });
-  btnRushExit?.addEventListener("click", () => {
+  }));
+  btnRushExit?.addEventListener("click", safe(() => {
     rushOverlay?.classList.remove("show");
     stopRush();
     showRoleOverlay(true);
-  });
+  }));
 
-  // Existing buttons
-  btnNew.addEventListener("click", newOrder);
-  btnClear.addEventListener("click", clearAll);
-  btnUndo.addEventListener("click", undo);
-  btnCheck.addEventListener("click", check);
-  btnSpeak.addEventListener("click", speakTotal);
-  btnHint.addEventListener("click", hint);
+  // Existing buttons (wrapped so errors surface on-screen)
+  btnNew.addEventListener("click", safe(newOrder));
+  btnClear.addEventListener("click", safe(clearAll));
+  btnUndo.addEventListener("click", safe(undo));
+  btnCheck.addEventListener("click", safe((e) => {
+    // Defensive: sometimes the drop-zone listeners can swallow clicks.
+    // This keeps the button click crisp.
+    e?.stopPropagation?.();
+    check();
+  }));
+  btnSpeak.addEventListener("click", safe(speakTotal));
+  btnHint.addEventListener("click", safe(hint));
 
-  btnReadTicket?.addEventListener("click", readTicketAloud);
-  btnReadCounter?.addEventListener("click", readCounterAloud);
-  btnReadWallet?.addEventListener("click", readWalletAloud);
+  btnReadTicket?.addEventListener("click", safe(readTicketAloud));
+  btnReadCounter?.addEventListener("click", safe(readCounterAloud));
+  btnReadWallet?.addEventListener("click", safe(readWalletAloud));
 
-  btnNextWin.addEventListener("click", () => {
+  btnNextWin.addEventListener("click", safe(() => {
     overlay.classList.remove("show");
     newOrder();
-  });
-  overlay.addEventListener("click", (e) => {
+  }));
+  overlay.addEventListener("click", safe((e) => {
     if (e.target === overlay) overlay.classList.remove("show");
-  });
+  }));
 
   // Initialize
   setSound(soundOn);
