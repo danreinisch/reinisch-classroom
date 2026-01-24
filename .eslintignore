@@ -31,3 +31,6 @@ site/admin-logout.js
 
 # Ignore legacy presentation files with lint errors
 site/life-skills/presentations/
+
+# Generated lesson presentation bundles (created in CI; not source)
+site/presentations/**
