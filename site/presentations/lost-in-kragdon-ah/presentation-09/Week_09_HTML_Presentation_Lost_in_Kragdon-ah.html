@@ -1,0 +1,1378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Week 9: Lost in Kragdon-ah - Chapters 26-28</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            background-attachment: fixed;
+            color: #ffffff;
+            overflow-x: hidden;
+        }
+
+        .bg-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+        }
+
+        .bg-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            opacity: 0;
+            transition: opacity 3s ease-in-out;
+        }
+
+        .bg-image.active {
+            opacity: 0.55;
+        }
+
+        .bg-image:nth-child(1) { background-image: url('image1.jpg'); }
+        .bg-image:nth-child(2) { background-image: url('image2.jpg'); }
+        .bg-image:nth-child(3) { background-image: url('image3.jpg'); }
+        .bg-image:nth-child(4) { background-image: url('image4.jpg'); }
+        .bg-image:nth-child(5) { background-image: url('image5.jpg'); }
+        .bg-image:nth-child(6) { background-image: url('image6.jpg'); }
+        .bg-image:nth-child(7) { background-image: url('image7.jpg'); }
+        .bg-image:nth-child(8) { background-image: url('image8.jpg'); }
+        .bg-image:nth-child(9) { background-image: url('image9.jpg'); }
+        .bg-image:nth-child(10) { background-image: url('image10.jpg'); }
+        .bg-image:nth-child(11) { background-image: url('image11.jpg'); }
+        .bg-image:nth-child(12) { background-image: url('image12.jpg'); }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 40px 20px;
+            background: rgba(0, 0, 0, 0.35);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            border-radius: 20px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.8);
+        }
+
+        header h2 {
+            font-size: 1.5em;
+            color: #ffd700;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            font-size: 1.2em;
+            color: #a0d2eb;
+        }
+
+        .theme-banner {
+            background: linear-gradient(90deg, rgba(231, 76, 60, 0.5), rgba(155, 89, 182, 0.5));
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            padding: 15px 30px;
+            border-radius: 10px;
+            margin-top: 20px;
+            display: inline-block;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .theme-banner h3 {
+            font-size: 1.3em;
+            color: #fff;
+        }
+
+        nav {
+            background: rgba(0, 0, 0, 0.35);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        nav h3 {
+            text-align: center;
+            margin-bottom: 15px;
+            color: #ffd700;
+        }
+
+        .nav-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .nav-btn {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.4) 0%, rgba(118, 75, 162, 0.4) 100%);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 25px;
+            color: white;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .nav-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+        }
+
+        .nav-btn.day1 { background: linear-gradient(135deg, rgba(240, 147, 251, 0.6) 0%, rgba(245, 87, 108, 0.6) 100%); }
+        .nav-btn.day2 { background: linear-gradient(135deg, rgba(79, 172, 254, 0.6) 0%, rgba(0, 242, 254, 0.6) 100%); }
+        .nav-btn.day3 { background: linear-gradient(135deg, rgba(67, 233, 123, 0.6) 0%, rgba(56, 249, 215, 0.6) 100%); }
+        .nav-btn.day4 { background: linear-gradient(135deg, rgba(250, 112, 154, 0.6) 0%, rgba(254, 225, 64, 0.6) 100%); }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+            margin-bottom: 30px;
+            overflow: hidden;
+        }
+
+        .progress {
+            height: 100%;
+            background: linear-gradient(90deg, #ffd700, #ff6b6b);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .slide {
+            display: none;
+            background: rgba(0, 0, 0, 0.35);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            animation: fadeIn 0.5s ease;
+        }
+
+        .slide.active { display: block; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .slide h2 {
+            color: #ffd700;
+            font-size: 2em;
+            margin-bottom: 20px;
+            text-align: center;
+            text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.8);
+        }
+
+        .slide h3 {
+            color: #a0d2eb;
+            font-size: 1.5em;
+            margin: 20px 0 15px 0;
+        }
+
+        .slide h4 {
+            color: #ffd700;
+            font-size: 1.2em;
+            margin: 15px 0 10px 0;
+        }
+
+        .slide p {
+            font-size: 1.1em;
+            line-height: 1.8;
+            margin-bottom: 15px;
+        }
+
+        .slide ul, .slide ol {
+            margin-left: 30px;
+            margin-bottom: 20px;
+        }
+
+        .slide li {
+            font-size: 1.1em;
+            line-height: 1.8;
+            margin-bottom: 10px;
+        }
+
+        .highlight {
+            background: rgba(255, 215, 0, 0.10);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-left: 4px solid #ffd700;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 0 10px 10px 0;
+        }
+
+        .key-fact {
+            background: rgba(76, 175, 80, 0.15);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-left: 4px solid #4CAF50;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 0 10px 10px 0;
+        }
+
+        .key-fact h4 { color: #4CAF50; margin-bottom: 10px; }
+
+        .vocab-box {
+            background: rgba(160, 210, 235, 0.10);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 1px solid rgba(160, 210, 235, 0.3);
+        }
+
+        .vocab-word {
+            color: #ffd700;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+
+        .grammar-box {
+            background: rgba(155, 89, 182, 0.15);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 1px solid rgba(155, 89, 182, 0.3);
+        }
+
+        .grammar-box h4 { color: #bb86fc; margin-bottom: 10px; }
+
+        .what-why-how {
+            background: rgba(255, 152, 0, 0.12);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 1px solid rgba(255, 152, 0, 0.3);
+        }
+
+        .what-why-how h4 {
+            color: #ff9800;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+
+        .what-why-how .section {
+            margin-bottom: 15px;
+            padding: 10px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+        }
+
+        .what-why-how .label {
+            color: #ffd700;
+            font-weight: bold;
+            display: block;
+            font-size: 1.1em;
+            margin-bottom: 5px;
+        }
+
+        .example-box {
+            background: rgba(67, 233, 123, 0.10);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 1px solid rgba(67, 233, 123, 0.3);
+        }
+
+        .example-box h4 { color: #43e97b; margin-bottom: 10px; }
+
+        .rule-box {
+            background: rgba(33, 150, 243, 0.12);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 2px solid rgba(33, 150, 243, 0.5);
+        }
+
+        .rule-box h4 {
+            color: #2196F3;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+
+        .warning-box {
+            background: rgba(244, 67, 54, 0.12);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 2px solid rgba(244, 67, 54, 0.5);
+        }
+
+        .warning-box h4 { color: #f44336; margin-bottom: 10px; }
+
+        .practice-box {
+            background: rgba(156, 39, 176, 0.12);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 2px dashed rgba(156, 39, 176, 0.5);
+        }
+
+        .practice-box h4 { color: #ce93d8; margin-bottom: 10px; }
+
+        .writing-prompt {
+            background: rgba(255, 193, 7, 0.15);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 25px;
+            margin: 20px 0;
+            border: 2px solid rgba(255, 193, 7, 0.5);
+        }
+
+        .writing-prompt h3 { color: #ffc107; margin-bottom: 15px; }
+
+        .writing-structure {
+            background: rgba(0, 188, 212, 0.15);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 1px solid rgba(0, 188, 212, 0.3);
+        }
+
+        .writing-structure h4 { color: #00bcd4; margin-bottom: 10px; }
+
+        .compare-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+
+        .compare-table th, .compare-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .compare-table th {
+            background: rgba(255,255,255,0.1);
+            color: #ffd700;
+        }
+
+        .compare-table tr:nth-child(even) { background: rgba(255,255,255,0.05); }
+
+        .context-clue {
+            color: #4CAF50;
+            font-weight: bold;
+            text-decoration: underline;
+        }
+
+        .unknown-word {
+            color: #ff6b6b;
+            font-weight: bold;
+        }
+
+        .prefix {
+            color: #2196F3;
+            font-weight: bold;
+        }
+
+        .root {
+            color: #ffd700;
+            font-weight: bold;
+        }
+
+        .suffix {
+            color: #9c27b0;
+            font-weight: bold;
+        }
+
+        .word-part-box {
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            text-align: center;
+        }
+
+        .word-breakdown {
+            font-size: 1.8em;
+            margin: 15px 0;
+            letter-spacing: 2px;
+        }
+
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .two-column { grid-template-columns: 1fr; }
+        }
+
+        .three-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .three-column { grid-template-columns: 1fr; }
+        }
+
+        .clue-type-box {
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .clue-type-box h4 {
+            margin-bottom: 10px;
+        }
+
+        .slide-nav {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .slide-nav button {
+            padding: 12px 30px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.4), rgba(118, 75, 162, 0.4));
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 25px;
+            color: white;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .slide-nav button:hover:not(:disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
+        }
+
+        .slide-nav button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        footer {
+            text-align: center;
+            padding: 30px;
+            background: rgba(0, 0, 0, 0.35);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            border-radius: 20px;
+            margin-top: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        footer p {
+            margin: 10px 0;
+            color: #a0d2eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-container">
+        <div class="bg-image active"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>Lost in Kragdon-ah</h1>
+            <h2>Week 9: Chapters 26-28</h2>
+            <p>By Shawn Inmon</p>
+            <div class="theme-banner">
+                <h3>ELA Theme: Context Clues & Word Parts</h3>
+            </div>
+        </header>
+
+        <nav>
+            <h3>Quick Navigation</h3>
+            <div class="nav-buttons">
+                <button class="nav-btn day1" onclick="goToSlide(1)">Day 1: Chapter 26</button>
+                <button class="nav-btn day2" onclick="goToSlide(9)">Day 2: Vocabulary & Word Parts</button>
+                <button class="nav-btn day3" onclick="goToSlide(17)">Day 3: Chapters 27-28</button>
+                <button class="nav-btn day4" onclick="goToSlide(25)">Day 4: Writing</button>
+            </div>
+        </nav>
+
+        <div class="progress-bar">
+            <div class="progress" id="progress"></div>
+        </div>
+
+        <!-- SLIDE 0: OVERVIEW -->
+        <div class="slide active" id="slide-0">
+            <h2>Week 9 Overview</h2>
+            <h3>Figuring Out Unknown Words</h3>
+            
+            <div class="highlight">
+                <h4>Chapters We Will Read:</h4>
+                <ul>
+                    <li><strong>Day 1:</strong> Chapter 26 - East Redux</li>
+                    <li><strong>Day 2:</strong> Vocabulary and Word Parts Focus</li>
+                    <li><strong>Day 3:</strong> Chapter 27 - Versa-eh & Chapter 28 - Ambush</li>
+                    <li><strong>Day 4:</strong> Writing Workshop</li>
+                </ul>
+            </div>
+            
+            <div class="rule-box">
+                <h4>This Week's ELA Skills</h4>
+                <ul>
+                    <li><strong>Context Clues:</strong> Using surrounding words and sentences to figure out unknown words.</li>
+                    <li><strong>Word Parts:</strong> Breaking words into prefixes, roots, and suffixes to understand meaning.</li>
+                    <li><strong>Vocabulary Strategies:</strong> Combining both methods to decode difficult words!</li>
+                </ul>
+            </div>
+
+            <div class="grammar-box">
+                <h4>Why This Matters</h4>
+                <p>You won't always have a dictionary nearby! Learning to figure out words on your own makes you a stronger, more independent reader.</p>
+            </div>
+        </div>
+
+        <!-- DAY 1: CHAPTER 26 - SLIDES 1-8 -->
+        <div class="slide" id="slide-1">
+            <h2>Day 1: Chapter 26 - East Redux</h2>
+            <h3>Leaving the Mountain</h3>
+            
+            <div class="highlight">
+                <p><strong>Last Week:</strong> The team spent all winter at Hakun-ah monastery. They were revitalized and ready to continue.</p>
+                <p><strong>This Week:</strong> They finally leave the mountain and head east toward the "big water" (inland sea). But dangers await!</p>
+            </div>
+            
+            <div class="key-fact">
+                <h4>Key Facts for Your Assignment</h4>
+                <ul>
+                    <li>Alex waves goodbye to Trema-ak and leads the team <strong>down</strong> the mountain</li>
+                    <li>Tokin-ak told them to travel <strong>east</strong> until they reach the big water</li>
+                    <li>A <strong>black bear</strong> visits their camp but doesn't attack</li>
+                    <li>Alex reflects on how the winter "reset" his attitude about the mission</li>
+                </ul>
+            </div>
+            
+            <div class="grammar-box">
+                <h4>Today's ELA Focus: Context Clues</h4>
+                <p>When you read an unknown word, LOOK AROUND IT! The words before and after often give hints about what it means.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-2">
+            <h2>Day 1: What Are Context Clues?</h2>
+            <h3>Clues Hidden in the Text</h3>
+            
+            <div class="what-why-how">
+                <h4>Understanding Context Clues</h4>
+                <div class="section">
+                    <span class="label">WHAT ARE CONTEXT CLUES?</span>
+                    Context clues are hints found in the words, phrases, or sentences AROUND an unknown word that help you figure out its meaning.
+                </div>
+                <div class="section">
+                    <span class="label">WHY ARE THEY IMPORTANT?</span>
+                    You can't always stop to look up every word. Context clues let you keep reading and still understand the text. They make you a faster, smarter reader!
+                </div>
+                <div class="section">
+                    <span class="label">HOW DO I FIND THEM?</span>
+                    Read the sentence with the unknown word. Then read the sentences BEFORE and AFTER it. Look for: definitions, examples, synonyms, antonyms, or descriptions that give hints.
+                </div>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-3">
+            <h2>Day 1: Types of Context Clues</h2>
+            <h3>Five Ways Authors Give Hints</h3>
+
+            <div class="two-column">
+                <div class="clue-type-box">
+                    <h4 style="color: #4CAF50;">1. Definition Clue</h4>
+                    <p>The author directly tells you what the word means.</p>
+                    <p><em>"The <span class="unknown-word">terrain</span>, <span class="context-clue">or type of land</span>, was muddy."</em></p>
+                </div>
+                <div class="clue-type-box">
+                    <h4 style="color: #2196F3;">2. Synonym Clue</h4>
+                    <p>A word with a similar meaning appears nearby.</p>
+                    <p><em>"He was <span class="unknown-word">flummoxed</span>, completely <span class="context-clue">confused</span>."</em></p>
+                </div>
+            </div>
+
+            <div class="two-column" style="margin-top: 15px;">
+                <div class="clue-type-box">
+                    <h4 style="color: #ff9800;">3. Antonym Clue</h4>
+                    <p>A word with the OPPOSITE meaning appears.</p>
+                    <p><em>"Unlike her <span class="context-clue">angry</span> father, she seemed <span class="unknown-word">guileless</span> and calm."</em></p>
+                </div>
+                <div class="clue-type-box">
+                    <h4 style="color: #9c27b0;">4. Example Clue</h4>
+                    <p>Examples help explain the word.</p>
+                    <p><em>"<span class="unknown-word">Predators</span> like <span class="context-clue">bears, wolves, and lions</span>..."</em></p>
+                </div>
+            </div>
+
+            <div class="rule-box" style="margin-top: 15px;">
+                <h4>5. Inference Clue</h4>
+                <p>You have to use logic and the overall situation to figure out the meaning. No direct hint is given - you have to think!</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-4">
+            <h2>Day 1: Context Clues in Chapter 26</h2>
+            <h3>Real Examples from the Story</h3>
+            
+            <div class="example-box">
+                <h4>Example 1: ABATED</h4>
+                <p>"As they dropped down, the constant freezing wind and temperatures that they had grown accustomed to in Hakun-ah <span class="unknown-word">abated</span>. <span class="context-clue">It wasn't toasty warm</span>, but the clothes... were well able to keep them warm."</p>
+                <p><strong>Context Clue:</strong> They were in freezing cold, then it got warmer (not freezing anymore). ABATED means <strong>lessened or stopped</strong>.</p>
+            </div>
+            
+            <div class="example-box">
+                <h4>Example 2: FLUMMOXED</h4>
+                <p>"Alex was <span class="unknown-word">flummoxed</span>. He didn't want a bear for a dinner guest, but he also <span class="context-clue">didn't know what to do</span> about its apparently mellow mood."</p>
+                <p><strong>Context Clue:</strong> Alex didn't know what to do - he was unsure. FLUMMOXED means <strong>confused or bewildered</strong>.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-5">
+            <h2>Day 1: Chapter 26 Key Events</h2>
+            <h3>The Journey Continues</h3>
+            
+            <div class="key-fact">
+                <h4>Leaving Hakun-ah</h4>
+                <ul>
+                    <li>Alex waved goodbye to Trema-ak and headed down the steep, muddy trail</li>
+                    <li>Their horses were built for mountain terrain (short, sturdy legs)</li>
+                    <li>The weather got warmer as they descended - the freezing cold <strong>abated</strong></li>
+                    <li>They could travel by moonlight thanks to the nearly-full moon</li>
+                </ul>
+            </div>
+            
+            <div class="warning-box">
+                <h4>The Black Bear Visit</h4>
+                <p>At their camp, a huge black bear walked right up to them! Monda-ak growled, Senta-eh drew her bow, but the bear just sniffed the air curiously and wandered away. Alex stayed up most of the night on watch, feeling flummoxed by the strange encounter.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-6">
+            <h2>Day 1: Alex's New Attitude</h2>
+            <h3>The Winter Reset</h3>
+            
+            <div class="highlight">
+                <h4>What Changed for Alex</h4>
+                <p>Alex realized that the months at Hakun-ah had been "like a reset button on the mission." At first, he had done the mission because of an oath, but <strong>his heart wasn't in it</strong>. He was resentful.</p>
+                <p>Now, that feeling had <strong>evaporated</strong> (disappeared). He saw things more clearly:</p>
+                <ul>
+                    <li>He <strong>wanted</strong> to rescue Lanta-eh</li>
+                    <li>He wanted to return Werda-ak and Senta-eh safely home</li>
+                    <li>He appreciated his companions more</li>
+                </ul>
+            </div>
+
+            <div class="practice-box">
+                <h4>Context Clue Practice</h4>
+                <p>"At first, he had done it because he had given an oath, but his heart wasn't in it. He was <span class="unknown-word">resentful</span>."</p>
+                <p>What does RESENTFUL mean based on context? (Hint: His heart wasn't in it - he didn't want to do it.)</p>
+                <p><strong>Answer:</strong> Bitter, annoyed, or unhappy about being forced to do something.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-7">
+            <h2>Day 1: Practice Finding Context Clues</h2>
+            <h3>Your Turn!</h3>
+            
+            <div class="practice-box">
+                <h4>Example 1:</h4>
+                <p>"The <span class="unknown-word">descent</span> was steep and the trail muddy, but this was a <span class="context-clue">terrain these horses were built for</span>."</p>
+                <p><strong>Think:</strong> They're going DOWN the mountain on a steep trail. What does DESCENT mean?</p>
+                <p><strong>Answer:</strong> Going down, moving downward.</p>
+            </div>
+            
+            <div class="practice-box">
+                <h4>Example 2:</h4>
+                <p>"The bear didn't seem angry, or <span class="context-clue">perturbed</span>, but mostly just <span class="context-clue">curious</span>."</p>
+                <p><strong>Think:</strong> The word is listed alongside "angry" and contrasted with "curious." What does PERTURBED mean?</p>
+                <p><strong>Answer:</strong> Upset, bothered, or disturbed.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-8">
+            <h2>Day 1: Day 1 Summary</h2>
+            <h3>What We Learned Today</h3>
+            
+            <div class="rule-box">
+                <h4>Context Clues Strategies</h4>
+                <ul>
+                    <li><strong>Read around</strong> the unknown word - check sentences before and after</li>
+                    <li>Look for <strong>definitions</strong> the author provides directly</li>
+                    <li>Find <strong>synonyms</strong> (similar words) or <strong>antonyms</strong> (opposite words)</li>
+                    <li>Check for <strong>examples</strong> that explain the word</li>
+                    <li>Use <strong>logic</strong> and the situation to make an inference</li>
+                </ul>
+            </div>
+
+            <div class="key-fact">
+                <h4>Chapter 26 Key Points</h4>
+                <ul>
+                    <li>Team left Hakun-ah and descended the mountain</li>
+                    <li>The freezing weather abated (lessened) as they went lower</li>
+                    <li>A black bear visited their camp but didn't attack</li>
+                    <li>Alex's attitude about the mission had changed - he now truly wanted to succeed</li>
+                    <li>Plan: Travel east to the "big water" and try to catch a boat south</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- DAY 2: VOCABULARY & WORD PARTS - SLIDES 9-16 -->
+        <div class="slide" id="slide-9">
+            <h2>Day 2: Vocabulary and Word Parts</h2>
+            <h3>Breaking Words Apart</h3>
+            
+            <div class="highlight">
+                <h4>Today's Goals:</h4>
+                <ul>
+                    <li>Learn key vocabulary words from Chapters 26-28</li>
+                    <li>Master <strong>word parts</strong>: prefixes, roots, and suffixes</li>
+                    <li>Combine context clues WITH word parts for maximum understanding!</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-10">
+            <h2>Day 2: What Are Word Parts?</h2>
+            <h3>Prefixes, Roots, and Suffixes</h3>
+            
+            <div class="what-why-how">
+                <h4>Understanding Word Parts</h4>
+                <div class="section">
+                    <span class="label">WHAT ARE WORD PARTS?</span>
+                    Words can be broken into smaller pieces: PREFIX (beginning), ROOT (middle/main meaning), and SUFFIX (ending). Each part adds meaning!
+                </div>
+                <div class="section">
+                    <span class="label">WHY ARE THEY IMPORTANT?</span>
+                    If you know common prefixes, roots, and suffixes, you can figure out thousands of words you've never seen before! It's like having a secret code.
+                </div>
+                <div class="section">
+                    <span class="label">HOW DO I USE THEM?</span>
+                    Break the word apart. Identify each piece. Add the meanings together to understand the whole word.
+                </div>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-11">
+            <h2>Day 2: Common Prefixes</h2>
+            <h3>Word Beginnings That Change Meaning</h3>
+            
+            <div class="rule-box">
+                <h4>Important Prefixes to Know</h4>
+                <table class="compare-table">
+                    <tr>
+                        <th>Prefix</th>
+                        <th>Meaning</th>
+                        <th>Example</th>
+                    </tr>
+                    <tr>
+                        <td class="prefix">UN-</td>
+                        <td>not, opposite of</td>
+                        <td><span class="prefix">un</span>comfortable = NOT comfortable</td>
+                    </tr>
+                    <tr>
+                        <td class="prefix">RE-</td>
+                        <td>again, back</td>
+                        <td><span class="prefix">re</span>vitalized = made alive AGAIN</td>
+                    </tr>
+                    <tr>
+                        <td class="prefix">PRE-</td>
+                        <td>before</td>
+                        <td><span class="prefix">pre</span>decessors = those who came BEFORE</td>
+                    </tr>
+                    <tr>
+                        <td class="prefix">IM-/IN-</td>
+                        <td>not</td>
+                        <td><span class="prefix">im</span>patient = NOT patient</td>
+                    </tr>
+                    <tr>
+                        <td class="prefix">DIS-</td>
+                        <td>not, opposite of</td>
+                        <td><span class="prefix">dis</span>appeared = NOT there anymore</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-12">
+            <h2>Day 2: Common Suffixes</h2>
+            <h3>Word Endings That Change Meaning</h3>
+            
+            <div class="rule-box">
+                <h4>Important Suffixes to Know</h4>
+                <table class="compare-table">
+                    <tr>
+                        <th>Suffix</th>
+                        <th>Meaning</th>
+                        <th>Example</th>
+                    </tr>
+                    <tr>
+                        <td class="suffix">-LESS</td>
+                        <td>without</td>
+                        <td>guile<span class="suffix">less</span> = WITHOUT guile (trickery)</td>
+                    </tr>
+                    <tr>
+                        <td class="suffix">-FUL</td>
+                        <td>full of</td>
+                        <td>resent<span class="suffix">ful</span> = FULL OF resentment</td>
+                    </tr>
+                    <tr>
+                        <td class="suffix">-ABLE/-IBLE</td>
+                        <td>can be done</td>
+                        <td>defend<span class="suffix">able</span> = CAN BE defended</td>
+                    </tr>
+                    <tr>
+                        <td class="suffix">-LY</td>
+                        <td>in a way that</td>
+                        <td>casual<span class="suffix">ly</span> = IN A casual WAY</td>
+                    </tr>
+                    <tr>
+                        <td class="suffix">-NESS</td>
+                        <td>state of being</td>
+                        <td>dark<span class="suffix">ness</span> = STATE OF BEING dark</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-13">
+            <h2>Day 2: Breaking Down Words</h2>
+            <h3>Practice with Story Words</h3>
+
+            <div class="word-part-box">
+                <h4>Word: UNCOMFORTABLE</h4>
+                <p class="word-breakdown"><span class="prefix">UN</span> + <span class="root">COMFORT</span> + <span class="suffix">ABLE</span></p>
+                <p><span class="prefix">UN</span> = not | <span class="root">COMFORT</span> = ease/relaxation | <span class="suffix">ABLE</span> = able to be</p>
+                <p><strong>Meaning:</strong> NOT able to be at ease = feeling awkward or uneasy</p>
+            </div>
+
+            <div class="word-part-box">
+                <h4>Word: REVITALIZED</h4>
+                <p class="word-breakdown"><span class="prefix">RE</span> + <span class="root">VITAL</span> + <span class="suffix">IZED</span></p>
+                <p><span class="prefix">RE</span> = again | <span class="root">VITAL</span> = life/living | <span class="suffix">IZED</span> = made into</p>
+                <p><strong>Meaning:</strong> Made alive AGAIN = given new energy and strength</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-14">
+            <h2>Day 2: Vocabulary Word 1</h2>
+            
+            <div class="vocab-box">
+                <p><span class="vocab-word">TERRAIN</span></p>
+                <p><strong>Definition:</strong> The physical features of an area of land (flat, hilly, rocky, muddy, etc.).</p>
+            </div>
+            
+            <div class="what-why-how">
+                <h4>Understanding Terrain</h4>
+                <div class="section">
+                    <span class="label">WHAT IS IT?</span>
+                    Terrain describes what the land looks like and how it feels to travel across. Mountains have rough terrain; plains have flat terrain.
+                </div>
+                <div class="section">
+                    <span class="label">WHY IS IT IN THE STORY?</span>
+                    The trail down the mountain was steep and muddy - this was "terrain these horses were built for." Their sturdy horses handled the difficult land.
+                </div>
+                <div class="section">
+                    <span class="label">WORD PARTS:</span>
+                    From Latin "terra" meaning EARTH or LAND. You see this root in: terr<strong>itory</strong>, terr<strong>ace</strong>, terr<strong>estrial</strong>.
+                </div>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-15">
+            <h2>Day 2: Vocabulary Words 2-4</h2>
+            
+            <div class="vocab-box">
+                <p><span class="vocab-word">DESOLATION</span></p>
+                <p><strong>Definition:</strong> A state of emptiness and lifelessness; a barren, lonely place.</p>
+                <p><strong>Word Parts:</strong> <span class="root">DESOL</span> (lonely, alone) + <span class="suffix">ATION</span> (state of) = state of being empty/alone</p>
+                <p><em>"Aside from the few buildings, Alex saw nothing but desolation."</em></p>
+            </div>
+
+            <div class="vocab-box">
+                <p><span class="vocab-word">GUILELESS</span></p>
+                <p><strong>Definition:</strong> Innocent and honest; without trickery or deceit.</p>
+                <p><strong>Word Parts:</strong> <span class="root">GUILE</span> (trickery) + <span class="suffix">LESS</span> (without) = without trickery = honest</p>
+                <p><em>"Versa-eh's guileless eyes convinced him of her intentions."</em></p>
+            </div>
+
+            <div class="vocab-box">
+                <p><span class="vocab-word">CONTRITE</span></p>
+                <p><strong>Definition:</strong> Feeling sorry for wrongdoing; remorseful.</p>
+                <p><em>"Werda-ak was contrite. 'Thank you for choosing me to come with you.'"</em></p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-16">
+            <h2>Day 2: Vocabulary Words 5-6</h2>
+            
+            <div class="vocab-box">
+                <p><span class="vocab-word">STAMINA</span></p>
+                <p><strong>Definition:</strong> The ability to keep doing something for a long time; lasting energy and strength.</p>
+                <p><em>"These beautiful horses will not have the stamina that our old horses did."</em></p>
+            </div>
+
+            <div class="vocab-box">
+                <p><span class="vocab-word">MALLEABLE</span></p>
+                <p><strong>Definition:</strong> Easily shaped, influenced, or controlled.</p>
+                <p><em>"Don't assume that because she is young, she is malleable or dumb."</em></p>
+            </div>
+
+            <div class="practice-box">
+                <h4>Combining Strategies</h4>
+                <p>The best readers use BOTH context clues AND word parts together! If one strategy doesn't give you enough information, try the other.</p>
+            </div>
+        </div>
+
+        <!-- DAY 3: CHAPTERS 27-28 - SLIDES 17-24 -->
+        <div class="slide" id="slide-17">
+            <h2>Day 3: Chapters 27-28</h2>
+            <h3>Versa-eh & The Ambush</h3>
+            
+            <div class="highlight">
+                <h4>Today's Reading:</h4>
+                <ul>
+                    <li><strong>Chapter 27:</strong> "Versa-eh" - Meeting a trader and making a deal</li>
+                    <li><strong>Chapter 28:</strong> "Ambush" - A dangerous encounter on the trail</li>
+                </ul>
+            </div>
+            
+            <div class="grammar-box">
+                <h4>ELA Connection</h4>
+                <p>As we read, look for unfamiliar words and practice using context clues AND word parts to figure them out!</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-18">
+            <h2>Day 3: Chapter 27 - The Trader</h2>
+            <h3>An Unusual Village</h3>
+            
+            <div class="key-fact">
+                <h4>The Strange Settlement</h4>
+                <ul>
+                    <li>The village sat completely in the open (unusual - most are in defensible positions)</li>
+                    <li>One large building (like a barn) with only a few smaller structures</li>
+                    <li>No guard house to warn of danger</li>
+                    <li>Run by a <strong>trader</strong> who buys and sells horses</li>
+                </ul>
+            </div>
+            
+            <div class="highlight">
+                <h4>The Trader's Business</h4>
+                <p>The trader explained his clever business: Travelers come to this trail - the only way over the mountains. They ride fast, beautiful horses that are great on flat ground but terrible on steep mountains. He trades them sturdy mountain horses... for a price!</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-19">
+            <h2>Day 3: The Deal</h2>
+            <h3>Horses for a Daughter</h3>
+            
+            <div class="warning-box">
+                <h4>The Trade Offer</h4>
+                <p>The trader offered Alex THREE beautiful thoroughbred horses in exchange for:</p>
+                <ul>
+                    <li>Their sturdy mountain horses</li>
+                    <li>Taking his daughter <strong>Versa-eh</strong> to Grinta-ah for an arranged marriage</li>
+                </ul>
+            </div>
+            
+            <div class="key-fact">
+                <h4>The Catch</h4>
+                <p>A boy named Rundi-ak (son of a nearby chief) wants to marry Versa-eh. The trader warned Alex: "When you go through the village ahead, they will want to stop you and take my daughter. You will have to persuade them not to do that."</p>
+            </div>
+
+            <div class="example-box">
+                <h4>Context Clue Practice</h4>
+                <p>"Grinta-ah is many day's ride away. It is the <span class="unknown-word">largest community</span> I have ever seen."</p>
+                <p>What does COMMUNITY mean? (Hint: It's described as the largest one he's seen, suggesting it's a place where people live together.)</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-20">
+            <h2>Day 3: The New Horses</h2>
+            <h3>Trading Up</h3>
+            
+            <div class="highlight">
+                <h4>The Beautiful Thoroughbreds</h4>
+                <p>The trader showed them Menta-ak, a magnificent black stallion with a white star on its forehead. Alex compared it to their old horse: "It was like comparing a Ferrari to a mud fence."</p>
+            </div>
+            
+            <div class="key-fact">
+                <h4>Meeting Versa-eh</h4>
+                <ul>
+                    <li>Young woman, daughter of the trader</li>
+                    <li>Her mother had died - she grew up without women around</li>
+                    <li>Her father arranged a marriage she "doesn't want"</li>
+                    <li>But she's smarter than she appears...</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-21">
+            <h2>Day 3: Chapter 28 - The Ambush</h2>
+            <h3>Danger on the Trail</h3>
+            
+            <div class="warning-box">
+                <h4>What Happened</h4>
+                <ul>
+                    <li>Werda-ak got excited with the fast new horse and raced ahead</li>
+                    <li>Alex yelled at him (too harshly)</li>
+                    <li>Werda-ak rode off angry, then disappeared around a corner</li>
+                    <li>Alex found him captured by Rundi-ak and his men!</li>
+                </ul>
+            </div>
+            
+            <div class="key-fact">
+                <h4>The Rescue</h4>
+                <ul>
+                    <li>Senta-eh appeared on the hill above with her bow drawn</li>
+                    <li>Monda-ak attacked Rundi-ak from behind</li>
+                    <li>The attackers fled</li>
+                    <li>Versa-eh told Rundi-ak to "Go home" - she didn't want to marry him!</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-22">
+            <h2>Day 3: Versa-eh's Secret</h2>
+            <h3>Smarter Than She Looks</h3>
+            
+            <div class="highlight">
+                <h4>The Reveal</h4>
+                <p>Alex said he wouldn't stop her if she wanted to go with Rundi-ak. But Versa-eh revealed her true plan:</p>
+                <p>"Why would I want to be the wife of a chief in a village built into a hole in the middle of nowhere? I've been <strong>waiting</strong> for father to make an arranged marriage so I can get out of here."</p>
+            </div>
+            
+            <div class="example-box">
+                <h4>Context Clue in Action</h4>
+                <p>"Alex revised his opinion of the young girl. Don't assume that because she is young, she is <span class="unknown-word">malleable</span> or dumb. She is definitely not."</p>
+                <p><strong>Context:</strong> Alex thought she could be easily controlled, but she proved him wrong. MALLEABLE = easily shaped or influenced.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-23">
+            <h2>Day 3: Word Parts in Action</h2>
+            <h3>Breaking Down Story Words</h3>
+
+            <div class="word-part-box">
+                <h4>Word: IMPATIENT</h4>
+                <p class="word-breakdown"><span class="prefix">IM</span> + <span class="root">PATIENT</span></p>
+                <p><span class="prefix">IM</span> = not | <span class="root">PATIENT</span> = able to wait calmly</p>
+                <p><strong>Story Use:</strong> "Impatient people ride fast horses... only to get here and realize their fine horses will never make it over the mountains."</p>
+            </div>
+
+            <div class="word-part-box">
+                <h4>Word: UNCOMFORTABLE</h4>
+                <p class="word-breakdown"><span class="prefix">UN</span> + <span class="root">COMFORT</span> + <span class="suffix">ABLE</span></p>
+                <p><span class="prefix">UN</span> = not | <span class="root">COMFORT</span> = ease | <span class="suffix">ABLE</span> = able to be</p>
+                <p><strong>Story Use:</strong> "Alex felt uncomfortable being so intimately involved in this man's family life."</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-24">
+            <h2>Day 3: Day 3 Summary</h2>
+            <h3>What We Learned Today</h3>
+            
+            <div class="key-fact">
+                <h4>Chapters 27-28 Key Points</h4>
+                <ul>
+                    <li>The team met a trader who offered beautiful horses for a deal</li>
+                    <li>The deal: Take his daughter Versa-eh to Grinta-ah for an arranged marriage</li>
+                    <li>Rundi-ak ambushed them, wanting to stop Versa-eh from leaving</li>
+                    <li>Senta-eh and Monda-ak saved the day</li>
+                    <li>Versa-eh revealed she WANTED to leave - she's not as naive as she seemed</li>
+                    <li>Werda-ak learned a lesson about acting impulsively</li>
+                </ul>
+            </div>
+
+            <div class="rule-box">
+                <h4>ELA Summary: Two Powerful Strategies</h4>
+                <ul>
+                    <li><strong>Context Clues:</strong> Use surrounding words to figure out meaning</li>
+                    <li><strong>Word Parts:</strong> Break words into prefix + root + suffix</li>
+                    <li><strong>Best Approach:</strong> Use BOTH strategies together!</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- DAY 4: WRITING - SLIDES 25-30 -->
+        <div class="slide" id="slide-25">
+            <h2>Day 4: Writing Workshop</h2>
+            <h3>Putting It All Together</h3>
+            
+            <div class="highlight">
+                <h4>Today's Goals:</h4>
+                <ul>
+                    <li>Write a response about the deal Alex made with the trader</li>
+                    <li>Use vocabulary words from this week</li>
+                    <li>Practice clear paragraph structure</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-26">
+            <h2>Day 4: Writing Prompt</h2>
+            
+            <div class="writing-prompt">
+                <h3>Your Prompt</h3>
+                <p><strong>What deal did Alex make with the trader, and why was it a good decision for the team?</strong></p>
+            </div>
+            
+            <h3>Details to Include</h3>
+            <ul>
+                <li>What did the trader offer?</li>
+                <li>What did Alex have to do in return?</li>
+                <li>What danger came from the deal?</li>
+                <li>Why was it still worth it?</li>
+            </ul>
+            
+            <div class="example-box">
+                <h4>Topic Sentence Starter</h4>
+                <p>"Alex made a deal with the trader to exchange their mountain horses for fast thoroughbreds if he would take the trader's daughter Versa-eh to Grinta-ah."</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-27">
+            <h2>Day 4: Writing Structure</h2>
+            <h3>Building Your Response</h3>
+
+            <div class="writing-structure">
+                <h4>Remember Your Writing Structure</h4>
+                <ul>
+                    <li><strong>Topic Sentence:</strong> State what the deal was</li>
+                    <li><strong>Supporting Detail 1:</strong> Describe the horses they received (beautiful thoroughbreds vs. their sturdy mountain horses)</li>
+                    <li><strong>Supporting Detail 2:</strong> Explain the danger (Rundi-ak's ambush)</li>
+                    <li><strong>Supporting Detail 3:</strong> Describe why it was worth it (faster travel, Versa-eh actually wanted to go)</li>
+                    <li><strong>Conclusion:</strong> Sum up why this was a good decision</li>
+                </ul>
+            </div>
+
+            <div class="grammar-box">
+                <h4>Try Using These Vocabulary Words!</h4>
+                <p>terrain, stamina, guileless, contrite, desolation, malleable</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-28">
+            <h2>Day 4: Writing Checklist</h2>
+            <h3>Check Your Work Before Submitting</h3>
+            
+            <div class="highlight">
+                <h4>Content Checklist</h4>
+                <ul>
+                    <li>Do you have a <strong>topic sentence</strong> that answers the question?</li>
+                    <li>Do you have at least <strong>three details</strong> from the story?</li>
+                    <li>Do you have a <strong>conclusion sentence</strong>?</li>
+                    <li>Did you explain <strong>WHY</strong> the deal was good?</li>
+                </ul>
+            </div>
+            
+            <div class="rule-box">
+                <h4>Grammar Reminders</h4>
+                <ul>
+                    <li>Use <strong>past tense</strong> consistently (events already happened)</li>
+                    <li>Check <strong>subject-verb agreement</strong></li>
+                    <li>Use <strong>complete sentences</strong> with capital letters and periods</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-29">
+            <h2>Day 4: Model Response</h2>
+            <h3>Example Answer</h3>
+            
+            <div class="example-box">
+                <p style="line-height: 2.0;">Alex made a deal with the trader to exchange their sturdy mountain horses for beautiful fast thoroughbreds in return for taking the trader's daughter Versa-eh to Grinta-ah. First, the new horses were magnificent - unlike their old horses built for rough terrain, these thoroughbreds could cover much more ground quickly, even if they had less stamina for long journeys. Second, the deal did bring danger when Rundi-ak ambushed them, trying to stop Versa-eh from leaving. However, Senta-eh and Monda-ak quickly defeated the attackers. Third, the deal turned out even better than expected because Versa-eh actually wanted to leave - she was not the guileless, malleable girl her father thought she was, but a clever young woman with her own plans. The trade was a good decision because the team gained faster horses for the journey ahead without having to go out of their way.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-30">
+            <h2>Week 9 Complete Review</h2>
+            <h3>Context Clues & Word Parts</h3>
+
+            <div class="rule-box">
+                <h4>What We Mastered This Week</h4>
+                <table class="compare-table">
+                    <tr>
+                        <th>Skill</th>
+                        <th>What It Means</th>
+                        <th>Example</th>
+                    </tr>
+                    <tr>
+                        <td>Context Clues</td>
+                        <td>Using surrounding words to figure out meaning</td>
+                        <td>"The cold abated" (got warmer after being cold)</td>
+                    </tr>
+                    <tr>
+                        <td>Prefixes</td>
+                        <td>Word beginnings that change meaning</td>
+                        <td>UN- (not), RE- (again), IM- (not)</td>
+                    </tr>
+                    <tr>
+                        <td>Suffixes</td>
+                        <td>Word endings that change meaning</td>
+                        <td>-LESS (without), -FUL (full of), -ABLE (can be)</td>
+                    </tr>
+                    <tr>
+                        <td>Root Words</td>
+                        <td>The main part that carries core meaning</td>
+                        <td>TERRA (earth), VITAL (life), COMFORT (ease)</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="highlight">
+                <h4>Key Story Facts from Week 9</h4>
+                <ul>
+                    <li>Team descended the mountain and headed east</li>
+                    <li>A black bear visited their camp but didn't attack</li>
+                    <li>They traded horses with a trader for taking Versa-eh to Grinta-ah</li>
+                    <li>Rundi-ak ambushed them but was defeated</li>
+                    <li>Versa-eh revealed she wanted to leave all along</li>
+                    <li>Werda-ak learned about consequences of impulsive actions</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide-nav">
+            <button onclick="prevSlide()" id="prevBtn">Previous</button>
+            <button onclick="nextSlide()" id="nextBtn">Next</button>
+        </div>
+
+        <footer>
+            <p>Week 9: Lost in Kragdon-ah, Chapters 26-28</p>
+            <p>ELA Theme: Context Clues & Word Parts (Prefixes, Roots, Suffixes)</p>
+            <p><a href="https://mrripley.weebly.com" style="color: #ffd700;">Return to Classroom Website</a></p>
+        </footer>
+    </div>
+
+    <script>
+        let currentSlide = 0;
+        const totalSlides = 31;
+
+        let currentBg = 0;
+        const bgImages = document.querySelectorAll('.bg-image');
+        const totalBgImages = 12;
+        
+        function rotateBg() {
+            bgImages[currentBg].classList.remove('active');
+            currentBg = (currentBg + 1) % totalBgImages;
+            bgImages[currentBg].classList.add('active');
+        }
+        
+        setInterval(rotateBg, 8000);
+
+        function updateSlide() {
+            document.querySelectorAll('.slide').forEach((slide, index) => {
+                slide.classList.remove('active');
+                if (index === currentSlide) {
+                    slide.classList.add('active');
+                }
+            });
+            
+            document.getElementById('prevBtn').disabled = currentSlide === 0;
+            document.getElementById('nextBtn').disabled = currentSlide === totalSlides - 1;
+            
+            const progress = ((currentSlide + 1) / totalSlides) * 100;
+            document.getElementById('progress').style.width = progress + '%';
+        }
+
+        function nextSlide() {
+            if (currentSlide < totalSlides - 1) {
+                currentSlide++;
+                updateSlide();
+            }
+        }
+
+        function prevSlide() {
+            if (currentSlide > 0) {
+                currentSlide--;
+                updateSlide();
+            }
+        }
+
+        function goToSlide(slideIndex) {
+            currentSlide = slideIndex;
+            updateSlide();
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight') nextSlide();
+            if (e.key === 'ArrowLeft') prevSlide();
+        });
+
+        updateSlide();
+    </script>
+</body>
+</html>
