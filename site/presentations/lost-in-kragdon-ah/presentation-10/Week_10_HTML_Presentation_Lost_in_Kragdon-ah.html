@@ -1,0 +1,1405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Week 10: Lost in Kragdon-ah - Chapters 29-31</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            background-attachment: fixed;
+            color: #ffffff;
+            overflow-x: hidden;
+        }
+
+        .bg-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+        }
+
+        .bg-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            opacity: 0;
+            transition: opacity 3s ease-in-out;
+        }
+
+        .bg-image.active {
+            opacity: 0.55;
+        }
+
+        .bg-image:nth-child(1) { background-image: url('image1.jpg'); }
+        .bg-image:nth-child(2) { background-image: url('image2.jpg'); }
+        .bg-image:nth-child(3) { background-image: url('image3.jpg'); }
+        .bg-image:nth-child(4) { background-image: url('image4.jpg'); }
+        .bg-image:nth-child(5) { background-image: url('image5.jpg'); }
+        .bg-image:nth-child(6) { background-image: url('image6.jpg'); }
+        .bg-image:nth-child(7) { background-image: url('image7.jpg'); }
+        .bg-image:nth-child(8) { background-image: url('image8.jpg'); }
+        .bg-image:nth-child(9) { background-image: url('image9.jpg'); }
+        .bg-image:nth-child(10) { background-image: url('image10.jpg'); }
+        .bg-image:nth-child(11) { background-image: url('image11.jpg'); }
+        .bg-image:nth-child(12) { background-image: url('image12.jpg'); }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 40px 20px;
+            background: rgba(0, 0, 0, 0.35);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            border-radius: 20px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.8);
+        }
+
+        header h2 {
+            font-size: 1.5em;
+            color: #ffd700;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            font-size: 1.2em;
+            color: #a0d2eb;
+        }
+
+        .theme-banner {
+            background: linear-gradient(90deg, rgba(33, 150, 243, 0.5), rgba(0, 188, 212, 0.5));
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            padding: 15px 30px;
+            border-radius: 10px;
+            margin-top: 20px;
+            display: inline-block;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .theme-banner h3 {
+            font-size: 1.3em;
+            color: #fff;
+        }
+
+        nav {
+            background: rgba(0, 0, 0, 0.35);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        nav h3 {
+            text-align: center;
+            margin-bottom: 15px;
+            color: #ffd700;
+        }
+
+        .nav-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .nav-btn {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.4) 0%, rgba(118, 75, 162, 0.4) 100%);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 25px;
+            color: white;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .nav-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+        }
+
+        .nav-btn.day1 { background: linear-gradient(135deg, rgba(240, 147, 251, 0.6) 0%, rgba(245, 87, 108, 0.6) 100%); }
+        .nav-btn.day2 { background: linear-gradient(135deg, rgba(79, 172, 254, 0.6) 0%, rgba(0, 242, 254, 0.6) 100%); }
+        .nav-btn.day3 { background: linear-gradient(135deg, rgba(67, 233, 123, 0.6) 0%, rgba(56, 249, 215, 0.6) 100%); }
+        .nav-btn.day4 { background: linear-gradient(135deg, rgba(250, 112, 154, 0.6) 0%, rgba(254, 225, 64, 0.6) 100%); }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+            margin-bottom: 30px;
+            overflow: hidden;
+        }
+
+        .progress {
+            height: 100%;
+            background: linear-gradient(90deg, #ffd700, #ff6b6b);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .slide {
+            display: none;
+            background: rgba(0, 0, 0, 0.35);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            animation: fadeIn 0.5s ease;
+        }
+
+        .slide.active { display: block; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .slide h2 {
+            color: #ffd700;
+            font-size: 2em;
+            margin-bottom: 20px;
+            text-align: center;
+            text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.8);
+        }
+
+        .slide h3 {
+            color: #a0d2eb;
+            font-size: 1.5em;
+            margin: 20px 0 15px 0;
+        }
+
+        .slide h4 {
+            color: #ffd700;
+            font-size: 1.2em;
+            margin: 15px 0 10px 0;
+        }
+
+        .slide p {
+            font-size: 1.1em;
+            line-height: 1.8;
+            margin-bottom: 15px;
+        }
+
+        .slide ul, .slide ol {
+            margin-left: 30px;
+            margin-bottom: 20px;
+        }
+
+        .slide li {
+            font-size: 1.1em;
+            line-height: 1.8;
+            margin-bottom: 10px;
+        }
+
+        .highlight {
+            background: rgba(255, 215, 0, 0.10);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-left: 4px solid #ffd700;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 0 10px 10px 0;
+        }
+
+        .key-fact {
+            background: rgba(76, 175, 80, 0.15);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-left: 4px solid #4CAF50;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 0 10px 10px 0;
+        }
+
+        .key-fact h4 { color: #4CAF50; margin-bottom: 10px; }
+
+        .vocab-box {
+            background: rgba(160, 210, 235, 0.10);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 1px solid rgba(160, 210, 235, 0.3);
+        }
+
+        .vocab-word {
+            color: #ffd700;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+
+        .grammar-box {
+            background: rgba(155, 89, 182, 0.15);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 1px solid rgba(155, 89, 182, 0.3);
+        }
+
+        .grammar-box h4 { color: #bb86fc; margin-bottom: 10px; }
+
+        .what-why-how {
+            background: rgba(255, 152, 0, 0.12);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 1px solid rgba(255, 152, 0, 0.3);
+        }
+
+        .what-why-how h4 {
+            color: #ff9800;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+
+        .what-why-how .section {
+            margin-bottom: 15px;
+            padding: 10px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+        }
+
+        .what-why-how .label {
+            color: #ffd700;
+            font-weight: bold;
+            display: block;
+            font-size: 1.1em;
+            margin-bottom: 5px;
+        }
+
+        .example-box {
+            background: rgba(67, 233, 123, 0.10);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 1px solid rgba(67, 233, 123, 0.3);
+        }
+
+        .example-box h4 { color: #43e97b; margin-bottom: 10px; }
+
+        .rule-box {
+            background: rgba(33, 150, 243, 0.12);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 2px solid rgba(33, 150, 243, 0.5);
+        }
+
+        .rule-box h4 {
+            color: #2196F3;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+
+        .warning-box {
+            background: rgba(244, 67, 54, 0.12);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 2px solid rgba(244, 67, 54, 0.5);
+        }
+
+        .warning-box h4 { color: #f44336; margin-bottom: 10px; }
+
+        .practice-box {
+            background: rgba(156, 39, 176, 0.12);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 2px dashed rgba(156, 39, 176, 0.5);
+        }
+
+        .practice-box h4 { color: #ce93d8; margin-bottom: 10px; }
+
+        .writing-prompt {
+            background: rgba(255, 193, 7, 0.15);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 25px;
+            margin: 20px 0;
+            border: 2px solid rgba(255, 193, 7, 0.5);
+        }
+
+        .writing-prompt h3 { color: #ffc107; margin-bottom: 15px; }
+
+        .writing-structure {
+            background: rgba(0, 188, 212, 0.15);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 1px solid rgba(0, 188, 212, 0.3);
+        }
+
+        .writing-structure h4 { color: #00bcd4; margin-bottom: 10px; }
+
+        .compare-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+
+        .compare-table th, .compare-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .compare-table th {
+            background: rgba(255,255,255,0.1);
+            color: #ffd700;
+        }
+
+        .compare-table tr:nth-child(even) { background: rgba(255,255,255,0.05); }
+
+        .subject {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+
+        .verb {
+            color: #2196F3;
+            font-weight: bold;
+        }
+
+        .complete-thought {
+            color: #ff9800;
+            font-style: italic;
+        }
+
+        .transition-word {
+            color: #e91e63;
+            font-weight: bold;
+            background: rgba(233, 30, 99, 0.2);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .conjunction {
+            color: #9c27b0;
+            font-weight: bold;
+        }
+
+        .sentence-type-box {
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            text-align: center;
+        }
+
+        .sentence-type-box h4 {
+            margin-bottom: 10px;
+        }
+
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .two-column { grid-template-columns: 1fr; }
+        }
+
+        .three-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .three-column { grid-template-columns: 1fr; }
+        }
+
+        .fragment {
+            color: #f44336;
+            text-decoration: line-through;
+        }
+
+        .complete {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+
+        .slide-nav {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .slide-nav button {
+            padding: 12px 30px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.4), rgba(118, 75, 162, 0.4));
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 25px;
+            color: white;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .slide-nav button:hover:not(:disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
+        }
+
+        .slide-nav button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        footer {
+            text-align: center;
+            padding: 30px;
+            background: rgba(0, 0, 0, 0.35);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            border-radius: 20px;
+            margin-top: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        footer p {
+            margin: 10px 0;
+            color: #a0d2eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-container">
+        <div class="bg-image active"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>Lost in Kragdon-ah</h1>
+            <h2>Week 10: Chapters 29-31</h2>
+            <p>By Shawn Inmon</p>
+            <div class="theme-banner">
+                <h3>ELA Theme: Sentence Structure & Transitions</h3>
+            </div>
+        </header>
+
+        <nav>
+            <h3>Quick Navigation</h3>
+            <div class="nav-buttons">
+                <button class="nav-btn day1" onclick="goToSlide(1)">Day 1: Chapter 29</button>
+                <button class="nav-btn day2" onclick="goToSlide(9)">Day 2: Vocabulary & Sentence Types</button>
+                <button class="nav-btn day3" onclick="goToSlide(17)">Day 3: Chapters 30-31</button>
+                <button class="nav-btn day4" onclick="goToSlide(25)">Day 4: Writing</button>
+            </div>
+        </nav>
+
+        <div class="progress-bar">
+            <div class="progress" id="progress"></div>
+        </div>
+
+        <!-- SLIDE 0: OVERVIEW -->
+        <div class="slide active" id="slide-0">
+            <h2>Week 10 Overview</h2>
+            <h3>Building Better Sentences</h3>
+            
+            <div class="highlight">
+                <h4>Chapters We Will Read:</h4>
+                <ul>
+                    <li><strong>Day 1:</strong> Chapter 29 - Arrival</li>
+                    <li><strong>Day 2:</strong> Vocabulary and Sentence Structure Focus</li>
+                    <li><strong>Day 3:</strong> Chapter 30 - Grinta-ah & Chapter 31 - Okrent-ah</li>
+                    <li><strong>Day 4:</strong> Writing Workshop</li>
+                </ul>
+            </div>
+            
+            <div class="rule-box">
+                <h4>This Week's ELA Skills</h4>
+                <ul>
+                    <li><strong>Complete Sentences:</strong> Subject + Verb + Complete Thought</li>
+                    <li><strong>Sentence Types:</strong> Simple, Compound, and Complex sentences</li>
+                    <li><strong>Transition Words:</strong> Words that connect ideas and show relationships</li>
+                    <li><strong>Paragraph Flow:</strong> Using transitions to organize writing</li>
+                </ul>
+            </div>
+
+            <div class="grammar-box">
+                <h4>Why This Matters</h4>
+                <p>Strong sentences and smooth transitions make your writing clear and easy to follow. These skills help readers understand your ideas!</p>
+            </div>
+        </div>
+
+        <!-- DAY 1: CHAPTER 29 - SLIDES 1-8 -->
+        <div class="slide" id="slide-1">
+            <h2>Day 1: Chapter 29 - Arrival</h2>
+            <h3>47 Days of Travel</h3>
+            
+            <div class="highlight">
+                <p><strong>Last Week:</strong> The team traded horses with a trader and gained Versa-eh as a traveling companion. They dealt with an ambush from Rundi-ak.</p>
+                <p><strong>This Week:</strong> After 47 days of travel, they finally reach the "big water" (Okrent-ah) and see the massive city of Grinta-ah!</p>
+            </div>
+            
+            <div class="key-fact">
+                <h4>Key Facts for Your Assignment</h4>
+                <ul>
+                    <li>It took <strong>47 days</strong> to reach the big water (not 20-25 as they hoped)</li>
+                    <li>Alex saw strange creatures: leathery-winged birds, giant rats, flying lizards</li>
+                    <li>The big water is called <strong>Okrent-ah</strong> (ok = water, rent = beyond large)</li>
+                    <li>Grinta-ah is a <strong>huge city</strong> with hundreds of buildings and a three-masted ship</li>
+                </ul>
+            </div>
+            
+            <div class="grammar-box">
+                <h4>Today's ELA Focus: Complete Sentences</h4>
+                <p>Every complete sentence needs THREE things: a <span class="subject">subject</span>, a <span class="verb">verb</span>, and a <span class="complete-thought">complete thought</span>.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-2">
+            <h2>Day 1: What Makes a Complete Sentence?</h2>
+            <h3>The Three Essential Parts</h3>
+            
+            <div class="what-why-how">
+                <h4>Understanding Complete Sentences</h4>
+                <div class="section">
+                    <span class="label">WHAT IS A COMPLETE SENTENCE?</span>
+                    A complete sentence has THREE parts: a SUBJECT (who or what), a VERB (action or being word), and a COMPLETE THOUGHT (makes sense on its own).
+                </div>
+                <div class="section">
+                    <span class="label">WHY DOES IT MATTER?</span>
+                    Incomplete sentences (fragments) confuse readers. They leave questions unanswered. Complete sentences communicate clearly!
+                </div>
+                <div class="section">
+                    <span class="label">HOW DO I CHECK?</span>
+                    Ask: "Who or what is doing something?" (subject), "What are they doing?" (verb), "Does this make sense by itself?" (complete thought).
+                </div>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-3">
+            <h2>Day 1: Subject + Verb + Complete Thought</h2>
+            <h3>Breaking Down the Parts</h3>
+
+            <div class="example-box">
+                <h4>Example from Chapter 29</h4>
+                <p>"<span class="subject">Alex</span> <span class="verb">waved</span> <span class="complete-thought">goodbye to Trema-ak.</span>"</p>
+                <ul>
+                    <li><span class="subject">Subject:</span> Alex (who is doing the action)</li>
+                    <li><span class="verb">Verb:</span> waved (the action)</li>
+                    <li><span class="complete-thought">Complete thought:</span> We know what happened - it makes sense alone</li>
+                </ul>
+            </div>
+
+            <div class="two-column">
+                <div class="warning-box">
+                    <h4>Fragment (Incomplete)</h4>
+                    <p class="fragment">"The enormous city with hundreds of buildings."</p>
+                    <p>Problem: No verb! What about the city?</p>
+                </div>
+                <div class="example-box">
+                    <h4>Complete Sentence</h4>
+                    <p class="complete">"The enormous city had hundreds of buildings."</p>
+                    <p>Fixed: Added the verb "had"!</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-4">
+            <h2>Day 1: Chapter 29 Key Events</h2>
+            <h3>Reaching the Big Water</h3>
+            
+            <div class="key-fact">
+                <h4>The Long Journey</h4>
+                <ul>
+                    <li>Traveled for <strong>47 days</strong> from the mountains to the big water</li>
+                    <li>Had some close calls with animals and people, but emerged <strong>unscathed</strong> (unhurt)</li>
+                    <li>Alex saw strange new creatures he had never seen before</li>
+                    <li>From a butte (high flat area), they finally saw the inland sea - Okrent-ah</li>
+                </ul>
+            </div>
+            
+            <div class="highlight">
+                <h4>Grinta-ah: The City</h4>
+                <p>Grinta-ah was unlike anything Alex had seen in Kragdon-ah. It stretched for <strong>miles</strong> along the water, with hundreds of buildings and boats. Most impressive: a three-masted tall ship that showed advanced technology!</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-5">
+            <h2>Day 1: The Giant Moose</h2>
+            <h3>Senta-eh in Danger</h3>
+            
+            <div class="warning-box">
+                <h4>What Happened</h4>
+                <ul>
+                    <li>Senta-eh went hunting but didn't return on time</li>
+                    <li>Alex and Werda-ak found her trapped on a cliff face</li>
+                    <li>A GIANT moose (20 feet tall at the shoulder!) was blocking her escape</li>
+                    <li>The moose was protecting her calf - mother moose are very aggressive!</li>
+                </ul>
+            </div>
+            
+            <div class="key-fact">
+                <h4>The Rescue</h4>
+                <p>Werda-ak threw a rock at the moose and shouted to distract it. When the moose charged at him, he jumped backwards off the edge of the hill! Senta-eh dropped from the cliff and ran. Everyone escaped safely - Werda-ak had found a safe ledge to land on.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-6">
+            <h2>Day 1: Fragments vs. Complete Sentences</h2>
+            <h3>Fixing Incomplete Sentences</h3>
+
+            <div class="practice-box">
+                <h4>Is This Complete or a Fragment?</h4>
+                <p><strong>Example 1:</strong> "Running toward the cliff."</p>
+                <p><span class="fragment">FRAGMENT</span> - No subject! Who is running?</p>
+                <p><strong>Fixed:</strong> "<span class="subject">Senta-eh</span> <span class="verb">was running</span> toward the cliff."</p>
+            </div>
+
+            <div class="practice-box">
+                <h4>Example 2:</h4>
+                <p><strong>"The moose with her calf."</strong></p>
+                <p><span class="fragment">FRAGMENT</span> - No verb! What about the moose?</p>
+                <p><strong>Fixed:</strong> "The moose <span class="verb">protected</span> her calf."</p>
+            </div>
+
+            <div class="practice-box">
+                <h4>Example 3:</h4>
+                <p><strong>"Because the city was so big."</strong></p>
+                <p><span class="fragment">FRAGMENT</span> - Incomplete thought! What happened because of this?</p>
+                <p><strong>Fixed:</strong> "Because the city was so big, <span class="complete-thought">Alex was amazed.</span>"</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-7">
+            <h2>Day 1: Capitalization and End Punctuation</h2>
+            <h3>Starting and Ending Sentences Correctly</h3>
+            
+            <div class="rule-box">
+                <h4>The Rules</h4>
+                <ul>
+                    <li><strong>Capital Letter:</strong> Every sentence STARTS with a capital letter</li>
+                    <li><strong>Period (.):</strong> Use for statements - "They reached the city."</li>
+                    <li><strong>Question Mark (?):</strong> Use for questions - "Where is the ship?"</li>
+                    <li><strong>Exclamation Point (!):</strong> Use for excitement or strong emotion - "The moose was enormous!"</li>
+                </ul>
+            </div>
+
+            <div class="example-box">
+                <h4>Examples from the Story</h4>
+                <p><strong>Statement:</strong> They traveled for forty-seven days<strong>.</strong></p>
+                <p><strong>Question:</strong> Have you been here before<strong>?</strong></p>
+                <p><strong>Exclamation:</strong> Run<strong>!</strong></p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-8">
+            <h2>Day 1: Day 1 Summary</h2>
+            <h3>What We Learned Today</h3>
+            
+            <div class="rule-box">
+                <h4>Complete Sentences</h4>
+                <ul>
+                    <li>Every sentence needs: <span class="subject">SUBJECT</span> + <span class="verb">VERB</span> + <span class="complete-thought">COMPLETE THOUGHT</span></li>
+                    <li>Fragments are missing one or more of these parts</li>
+                    <li>Start with a CAPITAL letter</li>
+                    <li>End with proper punctuation (. ? !)</li>
+                </ul>
+            </div>
+
+            <div class="key-fact">
+                <h4>Chapter 29 Key Points</h4>
+                <ul>
+                    <li>47 days of travel to reach Okrent-ah (the big water)</li>
+                    <li>Alex saw strange creatures: leathery birds, giant rats, flying lizards</li>
+                    <li>Grinta-ah is a massive city with advanced technology</li>
+                    <li>Senta-eh was trapped by a giant moose; Werda-ak saved her</li>
+                    <li>Versa-eh revealed her arranged marriage is to a man with three other wives</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- DAY 2: VOCABULARY & SENTENCE TYPES - SLIDES 9-16 -->
+        <div class="slide" id="slide-9">
+            <h2>Day 2: Vocabulary and Sentence Types</h2>
+            <h3>Building More Complex Sentences</h3>
+            
+            <div class="highlight">
+                <h4>Today's Goals:</h4>
+                <ul>
+                    <li>Learn key vocabulary words from Chapters 29-31</li>
+                    <li>Master three types of sentences: Simple, Compound, Complex</li>
+                    <li>Learn how to use TRANSITION WORDS to connect ideas!</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-10">
+            <h2>Day 2: Three Types of Sentences</h2>
+            <h3>Simple, Compound, and Complex</h3>
+            
+            <div class="three-column">
+                <div class="sentence-type-box">
+                    <h4 style="color: #4CAF50;">Simple Sentence</h4>
+                    <p>ONE complete thought</p>
+                    <p><em>"Alex saw the city."</em></p>
+                    <p>Subject + Verb</p>
+                </div>
+                <div class="sentence-type-box">
+                    <h4 style="color: #2196F3;">Compound Sentence</h4>
+                    <p>TWO complete thoughts joined by <span class="conjunction">and, but, or, so</span></p>
+                    <p><em>"Alex saw the city<span class="conjunction">, and</span> he was amazed."</em></p>
+                </div>
+                <div class="sentence-type-box">
+                    <h4 style="color: #ff9800;">Complex Sentence</h4>
+                    <p>One complete thought + one dependent part</p>
+                    <p><em>"<span class="transition-word">Because</span> the city was huge, Alex was amazed."</em></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-11">
+            <h2>Day 2: Compound Sentences</h2>
+            <h3>Joining Two Ideas</h3>
+            
+            <div class="what-why-how">
+                <h4>Understanding Compound Sentences</h4>
+                <div class="section">
+                    <span class="label">WHAT IS A COMPOUND SENTENCE?</span>
+                    Two complete sentences (independent clauses) joined together by a COMMA + CONJUNCTION (and, but, or, so, yet).
+                </div>
+                <div class="section">
+                    <span class="label">WHY USE THEM?</span>
+                    They show how two ideas are connected. They make writing more interesting than many short, choppy sentences.
+                </div>
+                <div class="section">
+                    <span class="label">HOW DO I WRITE ONE?</span>
+                    Take two related sentences. Add a COMMA. Add a conjunction (and, but, or, so). Combine!
+                </div>
+            </div>
+
+            <div class="example-box">
+                <h4>Example</h4>
+                <p><strong>Two Simple:</strong> "Werda-ak threw the rock. The moose charged."</p>
+                <p><strong>Compound:</strong> "Werda-ak threw the rock<span class="conjunction">, and</span> the moose charged."</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-12">
+            <h2>Day 2: Conjunctions (FANBOYS)</h2>
+            <h3>Words That Join Sentences</h3>
+            
+            <div class="rule-box">
+                <h4>Remember FANBOYS</h4>
+                <table class="compare-table">
+                    <tr>
+                        <th>Letter</th>
+                        <th>Conjunction</th>
+                        <th>Use</th>
+                        <th>Example</th>
+                    </tr>
+                    <tr>
+                        <td>F</td>
+                        <td class="conjunction">For</td>
+                        <td>Reason</td>
+                        <td>He ran, <span class="conjunction">for</span> the moose was charging.</td>
+                    </tr>
+                    <tr>
+                        <td>A</td>
+                        <td class="conjunction">And</td>
+                        <td>Addition</td>
+                        <td>She climbed, <span class="conjunction">and</span> he distracted.</td>
+                    </tr>
+                    <tr>
+                        <td>N</td>
+                        <td class="conjunction">Nor</td>
+                        <td>Negative</td>
+                        <td>She couldn't climb, <span class="conjunction">nor</span> could she jump.</td>
+                    </tr>
+                    <tr>
+                        <td>B</td>
+                        <td class="conjunction">But</td>
+                        <td>Contrast</td>
+                        <td>The city was big, <span class="conjunction">but</span> Alex wasn't scared.</td>
+                    </tr>
+                    <tr>
+                        <td>O</td>
+                        <td class="conjunction">Or</td>
+                        <td>Choice</td>
+                        <td>They could stay, <span class="conjunction">or</span> they could leave.</td>
+                    </tr>
+                    <tr>
+                        <td>Y</td>
+                        <td class="conjunction">Yet</td>
+                        <td>Contrast</td>
+                        <td>He was tired, <span class="conjunction">yet</span> he kept going.</td>
+                    </tr>
+                    <tr>
+                        <td>S</td>
+                        <td class="conjunction">So</td>
+                        <td>Result</td>
+                        <td>They were hungry, <span class="conjunction">so</span> they found food.</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-13">
+            <h2>Day 2: Transition Words</h2>
+            <h3>Connecting Ideas Smoothly</h3>
+            
+            <div class="what-why-how">
+                <h4>Understanding Transition Words</h4>
+                <div class="section">
+                    <span class="label">WHAT ARE TRANSITION WORDS?</span>
+                    Words or phrases that connect ideas and show the relationship between sentences or paragraphs. They act like bridges!
+                </div>
+                <div class="section">
+                    <span class="label">WHY ARE THEY IMPORTANT?</span>
+                    They help readers follow your thinking. Without transitions, writing feels choppy and disconnected.
+                </div>
+                <div class="section">
+                    <span class="label">HOW DO I USE THEM?</span>
+                    Place them at the beginning of a sentence (followed by a comma) or use them to connect two sentences.
+                </div>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-14">
+            <h2>Day 2: Types of Transition Words</h2>
+            <h3>Different Transitions for Different Purposes</h3>
+            
+            <div class="rule-box">
+                <h4>Transition Word Categories</h4>
+                <table class="compare-table">
+                    <tr>
+                        <th>Purpose</th>
+                        <th>Transition Words</th>
+                    </tr>
+                    <tr>
+                        <td><strong>Time/Sequence</strong></td>
+                        <td><span class="transition-word">First</span>, <span class="transition-word">Next</span>, <span class="transition-word">Then</span>, <span class="transition-word">After</span>, <span class="transition-word">Finally</span>, <span class="transition-word">Later</span>, <span class="transition-word">Meanwhile</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Addition</strong></td>
+                        <td><span class="transition-word">Also</span>, <span class="transition-word">Additionally</span>, <span class="transition-word">Furthermore</span>, <span class="transition-word">Moreover</span>, <span class="transition-word">In addition</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Contrast</strong></td>
+                        <td><span class="transition-word">However</span>, <span class="transition-word">But</span>, <span class="transition-word">Although</span>, <span class="transition-word">On the other hand</span>, <span class="transition-word">Instead</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Cause/Effect</strong></td>
+                        <td><span class="transition-word">Because</span>, <span class="transition-word">Therefore</span>, <span class="transition-word">As a result</span>, <span class="transition-word">So</span>, <span class="transition-word">Consequently</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Example</strong></td>
+                        <td><span class="transition-word">For example</span>, <span class="transition-word">For instance</span>, <span class="transition-word">Such as</span>, <span class="transition-word">Specifically</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Conclusion</strong></td>
+                        <td><span class="transition-word">In conclusion</span>, <span class="transition-word">Finally</span>, <span class="transition-word">Overall</span>, <span class="transition-word">In summary</span></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-15">
+            <h2>Day 2: Vocabulary Word 1</h2>
+            
+            <div class="vocab-box">
+                <p><span class="vocab-word">UNSCATHED</span></p>
+                <p><strong>Definition:</strong> Without being harmed or injured; unhurt.</p>
+            </div>
+            
+            <div class="what-why-how">
+                <h4>Understanding Unscathed</h4>
+                <div class="section">
+                    <span class="label">WHAT IS IT?</span>
+                    Unscathed means to escape from danger without any harm or injury. "Scathed" is an old word for "harmed."
+                </div>
+                <div class="section">
+                    <span class="label">WHY IS IT IN THE STORY?</span>
+                    "They had a few close calls on the trail—run-ins with both animals and people, but they emerged unscathed." They weren't hurt!
+                </div>
+                <div class="section">
+                    <span class="label">WORD PARTS:</span>
+                    UN- (not) + SCATHED (harmed) = NOT harmed
+                </div>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-16">
+            <h2>Day 2: Vocabulary Words 2-4</h2>
+            
+            <div class="vocab-box">
+                <p><span class="vocab-word">PREDICAMENT</span></p>
+                <p><strong>Definition:</strong> A difficult, unpleasant, or embarrassing situation.</p>
+                <p><em>"Senta-eh was a warrior... but she was in a predicament." (Stuck on a cliff with a giant moose below!)</em></p>
+            </div>
+
+            <div class="vocab-box">
+                <p><span class="vocab-word">BUREAUCRACY</span></p>
+                <p><strong>Definition:</strong> A system of government with many rules, officials, and procedures.</p>
+                <p><em>"They have a bureaucracy. Something I never thought I would see in this world." (Guards, rules, paperwork)</em></p>
+            </div>
+
+            <div class="vocab-box">
+                <p><span class="vocab-word">NEGOTIATE</span></p>
+                <p><strong>Definition:</strong> To discuss and try to reach an agreement; to bargain.</p>
+                <p><em>"Alex tried to negotiate for passage on the ship." (He bargained for a deal)</em></p>
+            </div>
+        </div>
+
+        <!-- DAY 3: CHAPTERS 30-31 - SLIDES 17-24 -->
+        <div class="slide" id="slide-17">
+            <h2>Day 3: Chapters 30-31</h2>
+            <h3>Grinta-ah & Okrent-ah</h3>
+            
+            <div class="highlight">
+                <h4>Today's Reading:</h4>
+                <ul>
+                    <li><strong>Chapter 30:</strong> "Grinta-ah" - Entering the city and making a deal</li>
+                    <li><strong>Chapter 31:</strong> "Okrent-ah" - The ship voyage begins</li>
+                </ul>
+            </div>
+            
+            <div class="grammar-box">
+                <h4>ELA Connection</h4>
+                <p>As we read, notice how the author uses different sentence types and transitions to move the story forward!</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-18">
+            <h2>Day 3: Chapter 30 - The City</h2>
+            <h3>Entering Grinta-ah</h3>
+            
+            <div class="key-fact">
+                <h4>The City of Grinta-ah</h4>
+                <ul>
+                    <li>A true <strong>city</strong> - the first one in Kragdon-ah Alex had seen</li>
+                    <li>Ran for a mile and a half along the water</li>
+                    <li>Had a 20-foot tall fence around the entire perimeter</li>
+                    <li>Guards stationed every hundred yards</li>
+                    <li>Rules: Cause trouble = get put in chains and sold to a slave ship!</li>
+                </ul>
+            </div>
+            
+            <div class="warning-box">
+                <h4>Versa-eh's Departure</h4>
+                <p>Versa-eh asked if she could stay with the team, but Alex warned her their journey would be dangerous. She said "I'll consider that" (as if Alex had begged her to come!) and then went to meet her arranged husband - a man with three wives already.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-19">
+            <h2>Day 3: The Negotiation</h2>
+            <h3>Alex Gets Outsmarted</h3>
+            
+            <div class="highlight">
+                <h4>Trading for Passage</h4>
+                <p>Alex tried to negotiate for passage to Lasta-ah (the correct name for Lusta-ah). The captain kept outmaneuvering him!</p>
+            </div>
+
+            <div class="warning-box">
+                <h4>What Alex Learned (The Hard Way)</h4>
+                <ul>
+                    <li>Their beautiful horses were worth LESS than ugly work horses here</li>
+                    <li>He traded horses + saddlebags for passage... but didn't negotiate for ROOMS</li>
+                    <li>He didn't negotiate to board the ship that night - had to sleep outside</li>
+                    <li>He didn't negotiate for good food - got watery gruel instead of stew!</li>
+                </ul>
+            </div>
+
+            <div class="grammar-box">
+                <h4>Transition Words in Action</h4>
+                <p>"<span class="transition-word">First,</span> Alex offered the horses. <span class="transition-word">However,</span> the captain said they weren't valuable enough. <span class="transition-word">Finally,</span> they made a deal."</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-20">
+            <h2>Day 3: Chapter 31 - The Ship</h2>
+            <h3>Life on Okrent-ah</h3>
+            
+            <div class="key-fact">
+                <h4>Their "Accommodations"</h4>
+                <ul>
+                    <li>No room - they stayed in the back with the animals!</li>
+                    <li>Three milk beasts and six horses shared their space</li>
+                    <li>They had to shovel animal droppings overboard</li>
+                    <li>Food was watery gruel while other passengers got stew</li>
+                    <li>Senta-eh got seasick from the rocking boat</li>
+                </ul>
+            </div>
+            
+            <div class="highlight">
+                <h4>A Surprise Visitor</h4>
+                <p>Versa-eh appeared on the ship! She had left the man she was supposed to marry (he was old, smelled bad, and beat his other wives). She stole some of his valuables and used them to pay for the team's food for the rest of the voyage!</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-21">
+            <h2>Day 3: The Man in the Robe</h2>
+            <h3>A Clue on the Ship</h3>
+            
+            <div class="warning-box">
+                <h4>Discovery</h4>
+                <p>Werda-ak noticed a man on the ship wearing a robe lined with the SAME fabric they found on the dead soldier at the beginning of their journey! This suggests the man might be from Lasta-ah - meaning they're heading in the right direction.</p>
+            </div>
+            
+            <div class="key-fact">
+                <h4>Alex's Decision</h4>
+                <p>Alex decided NOT to approach the man. If the man figured out who they were, he might warn Lasta-ah that they were coming. Better to watch quietly from a distance.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-22">
+            <h2>Day 3: Using Transitions in Paragraphs</h2>
+            <h3>Connecting Ideas in Your Writing</h3>
+
+            <div class="example-box">
+                <h4>Without Transitions (Choppy)</h4>
+                <p>"Alex tried to negotiate. The captain was smarter. Alex didn't get a room. He had to sleep with animals."</p>
+            </div>
+
+            <div class="example-box">
+                <h4>With Transitions (Smooth)</h4>
+                <p>"<span class="transition-word">First,</span> Alex tried to negotiate for passage. <span class="transition-word">However,</span> the captain was smarter and kept outmaneuvering him. <span class="transition-word">As a result,</span> Alex didn't get a room. <span class="transition-word">Instead,</span> he had to sleep with the animals."</p>
+            </div>
+
+            <div class="rule-box">
+                <h4>Notice the Difference!</h4>
+                <p>Transitions show HOW ideas connect: time order, contrast, cause/effect, or addition.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-23">
+            <h2>Day 3: Sentence Variety</h2>
+            <h3>Mixing Simple, Compound, and Complex</h3>
+
+            <div class="practice-box">
+                <h4>Example Paragraph with Variety</h4>
+                <p>"<strong>Simple:</strong> The ship departed at dawn.</p>
+                <p><strong>Compound:</strong> Senta-eh felt sick<span class="conjunction">, and</span> the smell of animals didn't help.</p>
+                <p><strong>Complex:</strong> <span class="transition-word">Although</span> the journey was uncomfortable, they were finally heading toward Lasta-ah."</p>
+            </div>
+
+            <div class="rule-box">
+                <h4>Why Mix Sentence Types?</h4>
+                <ul>
+                    <li><strong>Simple sentences:</strong> Clear, direct, punchy</li>
+                    <li><strong>Compound sentences:</strong> Show connections between equal ideas</li>
+                    <li><strong>Complex sentences:</strong> Show cause/effect, time, or conditions</li>
+                </ul>
+                <p>Using all three makes writing more interesting!</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-24">
+            <h2>Day 3: Day 3 Summary</h2>
+            <h3>What We Learned Today</h3>
+            
+            <div class="key-fact">
+                <h4>Chapters 30-31 Key Points</h4>
+                <ul>
+                    <li>Grinta-ah is a massive city with guards, rules, and a bureaucracy</li>
+                    <li>Alex traded their horses for passage but got outsmarted on many details</li>
+                    <li>They ended up sleeping with animals and eating gruel</li>
+                    <li>Versa-eh escaped her arranged marriage and joined them on the ship</li>
+                    <li>She paid for their food for the rest of the voyage</li>
+                    <li>Werda-ak spotted a man with fabric from Lasta-ah - they're on the right track!</li>
+                </ul>
+            </div>
+
+            <div class="rule-box">
+                <h4>ELA Summary: Sentence Structure & Transitions</h4>
+                <ul>
+                    <li><strong>Complete sentences:</strong> Subject + Verb + Complete Thought</li>
+                    <li><strong>Compound sentences:</strong> Two ideas joined by FANBOYS (and, but, or, so...)</li>
+                    <li><strong>Transition words:</strong> First, Next, However, Therefore, Finally, etc.</li>
+                    <li><strong>Purpose:</strong> Connect ideas and help readers follow your thinking</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- DAY 4: WRITING - SLIDES 25-30 -->
+        <div class="slide" id="slide-25">
+            <h2>Day 4: Writing Workshop</h2>
+            <h3>Putting It All Together</h3>
+            
+            <div class="highlight">
+                <h4>Today's Goals:</h4>
+                <ul>
+                    <li>Write a response using complete sentences</li>
+                    <li>Include a variety of sentence types (simple, compound)</li>
+                    <li>Use TRANSITION WORDS to connect your ideas</li>
+                    <li>Follow the Topic + 3 Details + Conclusion structure</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-26">
+            <h2>Day 4: Writing Prompt</h2>
+            
+            <div class="writing-prompt">
+                <h3>Your Prompt</h3>
+                <p><strong>What challenges did Alex and his team face when they arrived at Grinta-ah and boarded the ship?</strong></p>
+            </div>
+            
+            <h3>Details to Include</h3>
+            <ul>
+                <li>What surprised them about the city?</li>
+                <li>What happened when Alex negotiated for passage?</li>
+                <li>What were conditions like on the ship?</li>
+                <li>How did Versa-eh help them?</li>
+            </ul>
+            
+            <div class="example-box">
+                <h4>Topic Sentence Starter</h4>
+                <p>"Alex and his team faced many challenges when they arrived at Grinta-ah and boarded the ship to Lasta-ah."</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-27">
+            <h2>Day 4: Writing Structure with Transitions</h2>
+            <h3>Building Your Response</h3>
+
+            <div class="writing-structure">
+                <h4>Your Paragraph Structure</h4>
+                <ul>
+                    <li><strong>Topic Sentence:</strong> State the main idea (challenges they faced)</li>
+                    <li><span class="transition-word">First,</span> <strong>Supporting Detail 1:</strong> Describe the city and its rules</li>
+                    <li><span class="transition-word">Next,</span> <strong>Supporting Detail 2:</strong> Explain the negotiation problems</li>
+                    <li><span class="transition-word">Additionally,</span> <strong>Supporting Detail 3:</strong> Describe conditions on the ship</li>
+                    <li><span class="transition-word">However,</span> <strong>Contrast/Help:</strong> Explain how Versa-eh helped</li>
+                    <li><span class="transition-word">In conclusion,</span> <strong>Conclusion:</strong> Sum up the challenges</li>
+                </ul>
+            </div>
+
+            <div class="grammar-box">
+                <h4>Vocabulary to Include</h4>
+                <p>unscathed, predicament, bureaucracy, negotiate</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-28">
+            <h2>Day 4: Writing Checklist</h2>
+            <h3>Check Your Work Before Submitting</h3>
+            
+            <div class="highlight">
+                <h4>Sentence Structure Checklist</h4>
+                <ul>
+                    <li>Is every sentence COMPLETE? (Subject + Verb + Complete Thought)</li>
+                    <li>Did you use at least ONE compound sentence? (with and, but, or, so)</li>
+                    <li>Does every sentence start with a CAPITAL letter?</li>
+                    <li>Does every sentence end with proper PUNCTUATION? (. ? !)</li>
+                </ul>
+            </div>
+            
+            <div class="rule-box">
+                <h4>Transition Checklist</h4>
+                <ul>
+                    <li>Did you use at least THREE transition words?</li>
+                    <li>Do your transitions show the RIGHT relationship? (time, contrast, cause/effect)</li>
+                    <li>Did you put a COMMA after transition words at the start of sentences?</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-29">
+            <h2>Day 4: Model Response</h2>
+            <h3>Example Answer</h3>
+            
+            <div class="example-box">
+                <p style="line-height: 2.0;">Alex and his team faced many challenges when they arrived at Grinta-ah and boarded the ship to Lasta-ah. <span class="transition-word">First,</span> the city was unlike anything they had seen before, with guards, rules, and a bureaucracy that threatened to put troublemakers in chains. <span class="transition-word">Next,</span> Alex tried to negotiate for passage on a ship<span class="conjunction">, but</span> the captain outsmarted him at every turn. <span class="transition-word">As a result,</span> they traded their beautiful horses for passage but ended up with no room and terrible food. <span class="transition-word">Additionally,</span> they had to sleep in the back of the ship with animals and shovel manure overboard. Senta-eh got seasick<span class="conjunction">, and</span> the smell only made it worse. <span class="transition-word">However,</span> Versa-eh surprised them by appearing on the ship after escaping her arranged marriage. She paid for their food for the rest of the voyage. <span class="transition-word">In conclusion,</span> <span class="transition-word">although</span> Grinta-ah presented many challenges, they emerged unscathed and continued their journey toward Lasta-ah.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-30">
+            <h2>Week 10 Complete Review</h2>
+            <h3>Sentence Structure & Transitions</h3>
+
+            <div class="rule-box">
+                <h4>What We Mastered This Week</h4>
+                <table class="compare-table">
+                    <tr>
+                        <th>Skill</th>
+                        <th>What It Means</th>
+                        <th>Example</th>
+                    </tr>
+                    <tr>
+                        <td>Complete Sentences</td>
+                        <td>Subject + Verb + Complete Thought</td>
+                        <td>"Alex saw the city."</td>
+                    </tr>
+                    <tr>
+                        <td>Simple Sentence</td>
+                        <td>One complete thought</td>
+                        <td>"The ship departed."</td>
+                    </tr>
+                    <tr>
+                        <td>Compound Sentence</td>
+                        <td>Two thoughts joined by FANBOYS</td>
+                        <td>"He tried, but he failed."</td>
+                    </tr>
+                    <tr>
+                        <td>Transition Words</td>
+                        <td>Connect ideas and show relationships</td>
+                        <td>First, However, Therefore, Finally</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="highlight">
+                <h4>Key Story Facts from Week 10</h4>
+                <ul>
+                    <li>47 days of travel to reach Okrent-ah (the big water)</li>
+                    <li>Grinta-ah is a massive city with guards, rules, and a bureaucracy</li>
+                    <li>Senta-eh was trapped by a giant moose; Werda-ak saved her</li>
+                    <li>Alex traded horses for passage but got outsmarted on details</li>
+                    <li>They slept with animals and ate gruel on the ship</li>
+                    <li>Versa-eh escaped her arranged marriage and paid for their food</li>
+                    <li>They spotted a man with fabric from Lasta-ah on the ship</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide-nav">
+            <button onclick="prevSlide()" id="prevBtn">Previous</button>
+            <button onclick="nextSlide()" id="nextBtn">Next</button>
+        </div>
+
+        <footer>
+            <p>Week 10: Lost in Kragdon-ah, Chapters 29-31</p>
+            <p>ELA Theme: Sentence Structure & Transitions</p>
+            <p><a href="https://mrripley.weebly.com" style="color: #ffd700;">Return to Classroom Website</a></p>
+        </footer>
+    </div>
+
+    <script>
+        let currentSlide = 0;
+        const totalSlides = 31;
+
+        let currentBg = 0;
+        const bgImages = document.querySelectorAll('.bg-image');
+        const totalBgImages = 12;
+        
+        function rotateBg() {
+            bgImages[currentBg].classList.remove('active');
+            currentBg = (currentBg + 1) % totalBgImages;
+            bgImages[currentBg].classList.add('active');
+        }
+        
+        setInterval(rotateBg, 8000);
+
+        function updateSlide() {
+            document.querySelectorAll('.slide').forEach((slide, index) => {
+                slide.classList.remove('active');
+                if (index === currentSlide) {
+                    slide.classList.add('active');
+                }
+            });
+            
+            document.getElementById('prevBtn').disabled = currentSlide === 0;
+            document.getElementById('nextBtn').disabled = currentSlide === totalSlides - 1;
+            
+            const progress = ((currentSlide + 1) / totalSlides) * 100;
+            document.getElementById('progress').style.width = progress + '%';
+        }
+
+        function nextSlide() {
+            if (currentSlide < totalSlides - 1) {
+                currentSlide++;
+                updateSlide();
+            }
+        }
+
+        function prevSlide() {
+            if (currentSlide > 0) {
+                currentSlide--;
+                updateSlide();
+            }
+        }
+
+        function goToSlide(slideIndex) {
+            currentSlide = slideIndex;
+            updateSlide();
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight') nextSlide();
+            if (e.key === 'ArrowLeft') prevSlide();
+        });
+
+        updateSlide();
+    </script>
+</body>
+</html>
