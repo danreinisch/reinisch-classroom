@@ -1,9 +1,17 @@
 
-// ---- MIQ v11 boot marker ----
-try { console.log("[MIQ] v11 app.js loaded ✅"); } catch(e) {}
+(function(){
+  try{
+    const h = window.innerHeight || 900;
+    if(h < 820) document.body.classList.add("compact");
+  }catch(e){}
+})();
+
+
+// ---- MIQ v12 boot marker ----
+try { console.log("[MIQ] v12 app.js loaded ✅"); } catch(e) {}
 try {
   const status = document.getElementById("rcLoaderStatus");
-  if(status) status.textContent = "Status: app.js loaded ✅ (initializing…)";
+  if(status) status.textContent = "Status: app.js loaded ✅ (v12 initializing…)";
 } catch(e) {}
 window.addEventListener("DOMContentLoaded", () => {
   try {
