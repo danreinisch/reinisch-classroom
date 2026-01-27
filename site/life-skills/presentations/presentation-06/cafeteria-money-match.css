@@ -1,0 +1,1269 @@
+
+    :root{
+      --ink:#eaf2ff;
+      --muted: rgba(234,242,255,.72);
+      --card: rgba(12,18,32,.86);
+      --cardEdge: rgba(255,255,255,.10);
+      --shadow: 0 18px 48px rgba(0,0,0,.38);
+      --radius: 18px;
+
+      --accent:#2ac06f;
+      --accent2:#26a6ff;
+      --warn:#c78a00;
+      --bad:#c01a1d;
+
+      --btn:#eaf2ff;
+      --btnSoft: rgba(234,242,255,.10);
+
+      --tile1:#0b1326;
+      --tile2:#0f1a33;
+      --wall:#0a1224;
+    }
+
+    *{box-sizing:border-box}
+    html, body { height:100%; }
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color: var(--ink);
+      overflow:hidden; /* ✅ no scroll */
+      display:flex;
+      justify-content:center;
+      align-items:stretch;
+      padding: 10px;
+      background: radial-gradient(900px 520px at 20% 0%, #0b1326 0%, #0a1224 45%, #081021 100%);
+    }
+
+    /* Cartoon cafeteria mural (SVG background) */
+    .mural{
+      position:fixed;
+      inset:0;
+      pointer-events:none;
+      opacity:.55;
+      z-index:0;
+      background:
+        url("data:image/svg+xml;utf8,\
+        <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1400 800'>\
+          <defs>\
+            <linearGradient id='sky' x1='0' y1='0' x2='0' y2='1'>\
+              <stop offset='0' stop-color='%23ffffff'/>\
+              <stop offset='1' stop-color='%23dbe7ff'/>\
+            </linearGradient>\
+            <linearGradient id='wall' x1='0' y1='0' x2='0' y2='1'>\
+              <stop offset='0' stop-color='%23f7fcff'/>\
+              <stop offset='1' stop-color='%23eef4ff'/>\
+            </linearGradient>\
+            <linearGradient id='counter' x1='0' y1='0' x2='1' y2='1'>\
+              <stop offset='0' stop-color='%23f0cfa7'/>\
+              <stop offset='1' stop-color='%23d6ae84'/>\
+            </linearGradient>\
+            <pattern id='tiles' width='56' height='56' patternUnits='userSpaceOnUse'>\
+              <rect width='56' height='56' fill='%23dde6ff'/>\
+              <path d='M56 0H0V56' fill='none' stroke='rgba(0,0,0,.06)' stroke-width='2'/>\
+            </pattern>\
+          </defs>\
+          <rect width='1400' height='520' fill='url(%23wall)'/>\
+          <rect y='520' width='1400' height='280' fill='url(%23tiles)' opacity='.72'/>\
+          <!-- windows -->\
+          <g opacity='.88'>\
+            <rect x='90' y='90' width='260' height='170' rx='18' fill='url(%23sky)' stroke='rgba(15,42,82,.16)' stroke-width='4'/>\
+            <path d='M220 90V260' stroke='rgba(15,42,82,.14)' stroke-width='5'/>\
+            <path d='M90 175H350' stroke='rgba(15,42,82,.14)' stroke-width='5'/>\
+            <rect x='390' y='90' width='260' height='170' rx='18' fill='url(%23sky)' stroke='rgba(15,42,82,.16)' stroke-width='4'/>\
+            <path d='M520 90V260' stroke='rgba(15,42,82,.14)' stroke-width='5'/>\
+            <path d='M390 175H650' stroke='rgba(15,42,82,.14)' stroke-width='5'/>\
+          </g>\
+          <!-- posters -->\
+          <g opacity='.92'>\
+            <rect x='980' y='95' width='300' height='190' rx='18' fill='white' stroke='rgba(15,42,82,.14)' stroke-width='4'/>\
+            <text x='1130' y='155' font-family='system-ui,Segoe UI' font-size='28' font-weight='900' text-anchor='middle' fill='rgba(15,42,82,.85)'>CAFETERIA</text>\
+            <text x='1130' y='192' font-family='system-ui,Segoe UI' font-size='22' font-weight='800' text-anchor='middle' fill='rgba(42,192,111,.95)'>COUNT THE MONEY</text>\
+            <text x='1130' y='235' font-family='system-ui,Segoe UI' font-size='18' font-weight='800' text-anchor='middle' fill='rgba(15,42,82,.70)'>Pay exact totals ✨</text>\
+          </g>\
+          <!-- counter rail -->\
+          <g opacity='.95'>\
+            <path d='M0 410C260 360 520 360 780 410C1040 460 1200 460 1400 420V800H0Z' fill='url(%23counter)'/>\
+            <path d='M0 430C320 380 560 380 820 430C1040 470 1220 470 1400 440' fill='none' stroke='rgba(0,0,0,.10)' stroke-width='10'/>\
+          </g>\
+        </svg>") center / cover no-repeat;
+      filter: saturate(1.05) contrast(1.02);
+    }
+
+    .app{
+      position:relative;
+      z-index:1;
+      width: min(1560px, 98vw);
+      height: calc(100vh - 28px); /* padding compensation */
+      display:grid;
+      grid-template-rows: auto 1fr auto;
+      gap:12px;
+      overflow:hidden; /* ✅ no scroll */
+    }
+
+    header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      padding:12px 14px;
+      background: linear-gradient(180deg, rgba(18,26,46,.92), rgba(12,18,32,.78));
+      border:1px solid var(--cardEdge);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      position:relative;
+      overflow:hidden;
+    }
+    header:before{
+      content:"";
+      position:absolute; inset:-40px -40px auto -40px;
+      height:140px;
+      background:
+        radial-gradient(280px 70px at 16% 58%, rgba(42,192,111,.22), transparent 60%),
+        radial-gradient(320px 70px at 78% 44%, rgba(38,166,255,.16), transparent 60%);
+      transform: rotate(-2deg);
+      pointer-events:none;
+    }
+    .brand{
+      display:flex;
+      flex-direction:column;
+      line-height:1.12;
+      position:relative;
+      z-index:1;
+    }
+    .brand h1{
+      margin:0;
+      font-size:18px;
+      letter-spacing:.2px;
+      text-shadow: 0 2px 0 rgba(255,255,255,.65);
+    }
+    .brand .sub{
+      color: rgba(234,242,255,.78);
+      font-size:12px;
+      margin-top:3px;
+      font-weight:900;
+    }
+
+    .btnRow{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      justify-content:flex-end;
+      position:relative;
+      z-index:1;
+      align-items:center;
+    }
+    button{
+      border:1px solid rgba(234,242,255,.14);
+      background: var(--btnSoft);
+      color: var(--btn);
+      padding:9px 11px;
+      border-radius: 12px;
+      cursor:pointer;
+      font-weight:950;
+      letter-spacing:.2px;
+      transition: transform .05s ease, background .15s ease, border-color .15s ease;
+      user-select:none;
+      white-space:nowrap;
+    }
+    button:hover{ background: rgba(234,242,255,.14); border-color: rgba(234,242,255,.22); }
+    button:active{ transform: translateY(1px); }
+    button.primary{
+      background: linear-gradient(180deg, rgba(42,192,111,.95), rgba(42,192,111,.78));
+      color:#04150c;
+      border-color: rgba(42,192,111,.35);
+    }
+    button.danger{
+      background: rgba(192,26,29,.10);
+      color: #6b0b0d;
+      border-color: rgba(192,26,29,.18);
+    }
+
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:6px 10px;
+      border-radius:999px;
+      font-weight:1000;
+      letter-spacing:.2px;
+      background: rgba(234,242,255,.08);
+      border:1px solid rgba(234,242,255,.14);
+      color: rgba(234,242,255,.86);
+      font-size:12px;
+      white-space:nowrap;
+    }
+
+    /* MAIN */
+    .main{
+      display:grid;
+      grid-template-columns: 1.25fr 0.95fr;
+      gap:12px;
+      min-height:0;
+    }
+    @media (max-width: 1020px){
+      .main{ grid-template-columns: 1fr; }
+    }
+
+    .card{
+      background: var(--card);
+      border:1px solid var(--cardEdge);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+      position:relative;
+      min-height:0;
+    }
+    .cardHead{
+      padding:10px 12px;
+      border-bottom:1px solid var(--cardEdge);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      background: rgba(18,26,46,.70);
+    }
+    .cardHead .label{
+      font-weight:1100;
+      letter-spacing:.25px;
+      color: rgba(234,242,255,.86);
+      display:flex;
+      align-items:center;
+      gap:8px;
+      font-size:13px;
+    }
+    .cardBody{
+      padding:12px;
+      min-height:0;
+    }
+
+    /* Order ticket */
+    .ticket{
+      border-radius: 16px;
+      background: linear-gradient(180deg, rgba(18,26,46,.92), rgba(12,18,32,.78));
+      border:1px solid rgba(0,0,0,.10);
+      box-shadow: 0 14px 24px rgba(0,0,0,.12);
+      padding:12px;
+      height:100%;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      overflow:hidden;
+    }
+    .ticketTop{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:10px;
+    }
+    .ticketTitle{
+      font-weight:1100;
+      letter-spacing:.18em;
+      font-size:11px;
+      color: rgba(234,242,255,.62);
+    }
+    .orderLines{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      overflow:hidden;
+    }
+    .oLine{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding:8px 10px;
+      border-radius: 14px;
+      background: rgba(234,242,255,.06);
+      border:1px solid rgba(234,242,255,.12);
+    }
+    .oLeft{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      min-width:0;
+    }
+    .oIcon{
+      width:34px;
+      height:34px;
+      border-radius: 12px;
+      display:grid;
+      place-items:center;
+      background: rgba(18,26,46,.70);
+      border:1px solid rgba(0,0,0,.10);
+      box-shadow: 0 8px 14px rgba(0,0,0,.10);
+      flex:0 0 auto;
+      font-size:18px;
+    }
+    .oName{
+      font-weight:1000;
+      color: rgba(11,24,48,.90);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .oPrice{
+      font-weight:1100;
+      color: rgba(15,42,82,.90);
+      white-space:nowrap;
+    }
+    .ticketTotal{
+      margin-top:auto;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding-top:10px;
+      border-top:2px dashed rgba(0,0,0,.14);
+      font-weight:1100;
+      font-size:16px;
+    }
+    .ticketTotal strong{
+      font-size:22px;
+      letter-spacing:.3px;
+    }
+    .ticketHint{
+      font-size:12px;
+      color: rgba(11,24,48,.66);
+      font-weight:900;
+      line-height:1.35;
+    }
+
+    /* Cashier area */
+    .counter{
+      display:grid;
+      grid-template-rows: auto 1fr;
+      gap:10px;
+      height:100%;
+      min-height:0;
+    }
+    .topBar{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .totalBox{
+      background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,.76));
+      border:1px solid rgba(0,0,0,.10);
+      border-radius: 16px;
+      padding:10px 12px;
+      box-shadow: 0 12px 20px rgba(0,0,0,.12);
+      min-width: 220px;
+    }
+    .totalBox .t{
+      font-weight:1100;
+      letter-spacing:.18em;
+      font-size:11px;
+      color: rgba(234,242,255,.62);
+    }
+    .totalBox .amt{
+      font-size:34px;
+      font-weight:1200;
+      letter-spacing:.5px;
+      margin-top:2px;
+      color: rgba(11,24,48,.94);
+    }
+    .stats{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+      margin-left:auto;
+      align-items:center;
+    }
+    .stat{
+      padding:7px 10px;
+      border-radius: 999px;
+      background: rgba(15,42,82,.06);
+      border:1px solid rgba(234,242,255,.14);
+      font-weight:1100;
+      font-size:12px;
+      color: rgba(234,242,255,.86);
+    }
+
+    .talkRow{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+      margin-top:8px;
+    }
+    .cashierFace{
+      width:64px; height:64px;
+      filter: drop-shadow(0 10px 16px rgba(0,0,0,.12));
+      flex:0 0 auto;
+      animation: bob 2.6s ease-in-out infinite;
+    }
+    @keyframes bob{
+      0%,100%{ transform: translateY(0); }
+      50%{ transform: translateY(-2px); }
+    }
+    .speech{
+      flex:1;
+      min-width: 260px;
+      background: rgba(255,255,255,.78);
+      border:1px solid rgba(0,0,0,.10);
+      border-radius: 16px;
+      padding:10px 12px;
+      font-weight:950;
+      color: rgba(11,24,48,.78);
+      position:relative;
+    }
+    .speech:before{
+      content:"";
+      position:absolute;
+      left:-8px; top:18px;
+      width:0; height:0;
+      border-top:10px solid transparent;
+      border-bottom:10px solid transparent;
+      border-right:12px solid rgba(255,255,255,.78);
+      filter: drop-shadow(0 2px 0 rgba(0,0,0,.08));
+    }
+
+    .payZone{
+      border-radius: 18px;
+      border:2px dashed rgba(15,42,82,.22);
+      background:
+        linear-gradient(180deg, rgba(18,26,46,.72), rgba(12,18,32,.55));
+      padding:12px;
+      min-height:0;
+      position:relative;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.04), 0 10px 28px rgba(0,0,0,.26);
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+    .payZone:before{
+      content:"DROP MONEY ON THE COUNTER";
+      position:absolute;
+      top:10px; left:12px;
+      font-size:11px;
+      letter-spacing:.18em;
+      font-weight:1100;
+      color: rgba(15,42,82,.55);
+      opacity:.9;
+      pointer-events:none;
+    }
+    .payZone.good{
+      border-color: rgba(42,192,111,.55);
+      box-shadow: inset 0 0 0 3px rgba(42,192,111,.16);
+    }
+    .payZone.bad{
+      border-color: rgba(192,26,29,.55);
+      box-shadow: inset 0 0 0 3px rgba(192,26,29,.12);
+    }
+    .payTop{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+      padding-top:6px;
+      position:relative;
+      z-index:1;
+    }
+    /* Keep action buttons clickable even if adjacent UI overlaps in tight layouts */
+    .payTop .inlineBtns{ position: relative; z-index: 3; }
+    .payTop .inlineBtns button{ position: relative; z-index: 4; }
+    .running{
+      font-size:14px;
+      color: rgba(234,242,255,.72);
+      font-weight:1100;
+    }
+    .running strong{
+      color: rgba(15,42,82,.92);
+      font-size:20px;
+      font-weight:1200;
+    }
+    .status{
+      font-weight:1200;
+      letter-spacing:.2px;
+      padding:7px 10px;
+      border-radius: 999px;
+      background: rgba(234,242,255,.08);
+      border:1px solid rgba(234,242,255,.14);
+      min-width: 220px;
+      text-align:center;
+      font-size:12px;
+      color: rgba(15,42,82,.88);
+      /* This is just feedback text — never let it steal clicks */
+      pointer-events: none;
+    }
+    .status.ok{ background: rgba(42,192,111,.12); border-color: rgba(42,192,111,.22); color: rgba(17,138,79,.95); }
+    .status.warn{ background: rgba(199,138,0,.12); border-color: rgba(199,138,0,.22); color: rgba(137,85,0,.95); }
+    .status.nope{ background: rgba(192,26,29,.12); border-color: rgba(192,26,29,.22); color: rgba(145,12,15,.95); }
+
+    .inlineBtns{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+
+    .placedWrap{
+      position:relative;
+      z-index:1;
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      align-content:flex-start;
+      padding:8px 4px;
+      overflow:auto;
+      flex:1 1 auto;
+      min-height:120px;
+      border-radius:14px;
+      background: linear-gradient(180deg, rgba(6,10,22,.35), rgba(0,0,0,.18));
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.04);
+    }
+    .placedWrap::-webkit-scrollbar{ width:10px; height:10px; }
+    .placedWrap::-webkit-scrollbar-thumb{ background: rgba(255,255,255,.12); border-radius:999px; }
+    .placedWrap::-webkit-scrollbar-track{ background: rgba(0,0,0,.15); border-radius:999px; }
+    .miniTip{
+      position:relative;
+      z-index:1;
+      font-size:11px;
+      font-weight:900;
+      color: rgba(234,242,255,.68);
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+      opacity:.75;
+      padding-top:2px;
+    }
+    .kbd{
+      display:inline-block;
+      padding:2px 7px;
+      border-radius: 8px;
+      border:1px solid rgba(15,42,82,.18);
+      background: rgba(15,42,82,.06);
+      font-weight:1200;
+      color: rgba(15,42,82,.88);
+      font-size:12px;
+    }
+
+    /* WALLET tray pinned at bottom (no scroll) */
+    .wallet{
+      background: rgba(255,255,255,.84);
+      border:1px solid var(--cardEdge);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .walletHead{
+      padding:10px 12px;
+      border-bottom:1px solid var(--cardEdge);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      background: rgba(18,26,46,.70);
+    }
+    .walletBody{
+      padding:10px 12px 12px;
+      display:grid;
+      gap:10px;
+    }
+    .moneyLane{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      overflow-x:auto; /* horizontal ok; no vertical scrolling */
+      overflow-y:hidden;
+      padding-bottom:2px;
+      scrollbar-width: thin;
+    }
+    .laneLabel{
+      flex:0 0 auto;
+      font-weight:1100;
+      letter-spacing:.14em;
+      font-size:11px;
+      color: rgba(234,242,255,.72);
+      padding:6px 10px;
+      border-radius:999px;
+      background: rgba(15,42,82,.06);
+      border:1px solid rgba(234,242,255,.14);
+    }
+
+    /* Money sprites (cartoon "play money" — not legal tender) */
+    .money{
+      position:relative;
+      cursor: grab;
+      user-select:none;
+      touch-action:none;
+      box-shadow: 0 16px 22px rgba(0,0,0,.16);
+      transition: transform .06s ease, filter .15s ease;
+      border-radius: 14px;
+      border:1px solid rgba(0,0,0,.10);
+      background: rgba(255,255,255,.55);
+      overflow:hidden;
+      flex: 0 0 auto;
+    }
+    .money:hover{ filter: brightness(1.04); transform: translateY(-1px) rotate(-.5deg); }
+    .money:active{ cursor: grabbing; transform: translateY(1px); }
+
+    .money.bill{ width: 148px; height: 78px; border-radius: 16px; }
+    .money.coin{ width: 82px; height: 82px; border-radius: 999px; }
+
+    /* Placed money on counter */
+    .placed{
+      cursor:pointer;
+      outline: 2px solid transparent;
+      box-shadow: 0 12px 18px rgba(0,0,0,.14);
+      transform: rotate(var(--tilt, 0deg));
+      animation: pop .12s ease-out;
+    }
+    @keyframes pop{
+      from{ transform: scale(.98) rotate(var(--tilt,0deg)); opacity:.85; }
+      to{ transform: scale(1) rotate(var(--tilt,0deg)); opacity:1; }
+    }
+    .placed:hover{ outline-color: rgba(15,42,82,.16); }
+    .placed:after{
+      content:"tap to remove";
+      position:absolute;
+      left:50%; transform: translateX(-50%);
+      bottom:6px;
+      font-size:10px;
+      font-weight:1200;
+      letter-spacing:.08em;
+      color: rgba(15,42,82,.60);
+      background: rgba(255,255,255,.72);
+      border:1px solid rgba(0,0,0,.10);
+      padding:2px 6px;
+      border-radius: 999px;
+      pointer-events:none;
+    }
+
+    .ghost{
+      position:fixed;
+      z-index:9999;
+      pointer-events:none;
+      transform: translate(-50%, -50%) rotate(var(--tilt, 0deg));
+      opacity:.97;
+      filter: drop-shadow(0 18px 26px rgba(0,0,0,.22));
+    }
+
+    /* Win overlay + confetti */
+    .overlay{
+      position:fixed;
+      inset:0;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      background: rgba(0,0,0,.35);
+      z-index: 99999;
+    }
+    .overlay.show{ display:flex; }
+    .winCard{
+      width:min(560px, 92vw);
+      padding:18px;
+      border-radius: 22px;
+      background: linear-gradient(180deg, rgba(18,26,46,.92), rgba(12,18,32,.78));
+      border:1px solid rgba(0,0,0,.10);
+      box-shadow: 0 22px 52px rgba(0,0,0,.26);
+      text-align:center;
+      position:relative;
+      overflow:hidden;
+    }
+    .winCard h2{
+      margin:0;
+      font-size:34px;
+      letter-spacing:.4px;
+      color: rgba(15,42,82,.95);
+    }
+    .winCard p{
+      margin:10px 0 0;
+      color: rgba(15,42,82,.72);
+      font-weight:1100;
+    }
+    .confetti{
+      position:absolute;
+      inset:-20px;
+      pointer-events:none;
+      opacity:.95;
+    }
+    .confetti i{
+      position:absolute;
+      width:10px;
+      height:16px;
+      border-radius: 3px;
+      background: rgba(15,42,82,.85);
+      top:-20px;
+      animation: fall 900ms linear forwards;
+    }
+    @keyframes fall{
+      to{ transform: translateY(380px) rotate(260deg); opacity: 0.95; }
+    }
+
+    /* Small height tweaks */
+    @media (max-height: 760px){
+      .money.bill{ width: 138px; height: 72px; }
+      .money.coin{ width: 76px; height: 76px; }
+      .totalBox .amt{ font-size:30px; }
+      .ticketTotal strong{ font-size:20px; }
+    }
+    @media (prefers-reduced-motion: reduce){
+      .cashierFace{ animation:none; }
+      .money:hover{ transform:none; }
+      .placed{ animation:none; }
+      .confetti i{ animation:none; }
+    }
+  
+/* ============================
+   v6 polish — readability + cartoon feel
+   ============================ */
+:root{
+  --ink:#f3f7ff;
+  --muted: rgba(243,247,255,.78);
+  --card: rgba(10,14,26,.94);
+  --cardEdge: rgba(243,247,255,.12);
+  --shadow: 0 18px 46px rgba(0,0,0,.48);
+  --btn:#f3f7ff;
+  --btnSoft: rgba(243,247,255,.10);
+}
+
+.mural{ opacity:.38 !important; filter: saturate(1.12) contrast(1.08); }
+
+body{
+  color: var(--ink);
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+}
+
+.brand h1{
+  font-size:20px;
+  font-family: "Trebuchet MS","Comic Sans MS",system-ui;
+  font-weight: 1100;
+}
+.brand .sub{ font-size:13px; color: rgba(243,247,255,.78) !important; }
+
+header{
+  border-width:2px;
+  background: linear-gradient(180deg, rgba(18,26,46,.94), rgba(10,14,26,.82)) !important;
+}
+header:before{ opacity:.9; }
+
+.card, .wallet{
+  border-width:2px;
+  background: var(--card) !important;
+}
+
+.cardHead, .walletHead{
+  background: rgba(18,26,46,.88) !important;
+  border-bottom-color: rgba(243,247,255,.10) !important;
+}
+
+.cardHead .label, .walletHead .label{
+  font-size:14px;
+  font-weight:1100;
+  color: rgba(243,247,255,.88) !important;
+}
+
+.pill, .stat{
+  font-size:13px;
+  background: rgba(243,247,255,.09) !important;
+  border-color: rgba(243,247,255,.14) !important;
+  color: rgba(243,247,255,.86) !important;
+}
+
+button{
+  border-color: rgba(243,247,255,.16) !important;
+  background: rgba(243,247,255,.10) !important;
+  color: rgba(243,247,255,.92) !important;
+}
+button:hover{
+  background: rgba(243,247,255,.16) !important;
+  border-color: rgba(243,247,255,.22) !important;
+}
+button.primary{
+  background: linear-gradient(180deg, rgba(42,192,111,.98), rgba(42,192,111,.80)) !important;
+  border-color: rgba(42,192,111,.40) !important;
+  color:#04150c !important;
+}
+button.danger{
+  background: rgba(192,26,29,.18) !important;
+  border-color: rgba(192,26,29,.28) !important;
+  color: rgba(255,210,210,.95) !important;
+}
+
+.totalBox{
+  background: linear-gradient(180deg, rgba(18,26,46,.92), rgba(10,14,26,.84)) !important;
+  border-color: rgba(243,247,255,.14) !important;
+}
+.totalBox .t{ color: rgba(243,247,255,.72) !important; }
+.totalBox .amt{ color: rgba(243,247,255,.98) !important; }
+
+.speech{
+  background: rgba(243,247,255,.12) !important;
+  border-color: rgba(243,247,255,.16) !important;
+  color: rgba(243,247,255,.84) !important;
+}
+.speech:before{
+  border-right-color: rgba(243,247,255,.12) !important;
+}
+
+.ticket{
+  background: linear-gradient(180deg, rgba(14,20,38,.94), rgba(10,14,26,.84)) !important;
+  border-color: rgba(243,247,255,.12) !important;
+}
+.ticketTitle{ color: rgba(243,247,255,.68) !important; }
+
+.oLine{
+  background: rgba(243,247,255,.06) !important;
+  border-color: rgba(243,247,255,.12) !important;
+}
+.oName{ color: rgba(243,247,255,.92) !important; font-size:14px; }
+.oPrice{ color: rgba(243,247,255,.94) !important; font-weight:1100; }
+
+.ticketTotal{ color: rgba(243,247,255,.90) !important; }
+.ticketTotal strong{ color: rgba(243,247,255,.98) !important; }
+
+.ticketHint{
+  color: rgba(243,247,255,.72) !important;
+  font-size:13px;
+}
+
+.payZone{
+  background: linear-gradient(180deg, rgba(14,20,38,.80), rgba(10,14,26,.64)) !important;
+  border-width:3px !important;
+  border-color: rgba(243,247,255,.20) !important;
+}
+.payZone:before{ color: rgba(243,247,255,.60) !important; }
+.running{ color: rgba(243,247,255,.80) !important; }
+.running strong{ color: rgba(243,247,255,.98) !important; }
+.miniTip{ color: rgba(243,247,255,.70) !important; }
+
+.status{
+  background: rgba(243,247,255,.09) !important;
+  border-color: rgba(243,247,255,.14) !important;
+  color: rgba(243,247,255,.90) !important;
+}
+.status.ok{ background: rgba(42,192,111,.18) !important; border-color: rgba(42,192,111,.30) !important; color: rgba(175,255,218,.95) !important; }
+.status.warn{ background: rgba(199,138,0,.18) !important; border-color: rgba(199,138,0,.30) !important; color: rgba(255,230,175,.95) !important; }
+.status.nope{ background: rgba(192,26,29,.20) !important; border-color: rgba(192,26,29,.34) !important; color: rgba(255,205,205,.95) !important; }
+
+.wallet{
+  background: linear-gradient(180deg, rgba(18,26,46,.92), rgba(10,14,26,.86)) !important;
+}
+.walletBody{
+  background: rgba(10,14,26,.70) !important;
+}
+.moneyLane{
+  background: rgba(243,247,255,.04) !important;
+  border:1px solid rgba(243,247,255,.12) !important;
+  border-radius: 16px;
+  padding:10px;
+}
+.laneLabel{
+  background: rgba(243,247,255,.10) !important;
+  border-color: rgba(243,247,255,.16) !important;
+  color: rgba(243,247,255,.78) !important;
+}
+
+/* Cartoon "sticker" outlines */
+.card::after, header::after, .wallet::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius: var(--radius);
+  pointer-events:none;
+  box-shadow: 0 0 0 3px rgba(0,0,0,.22);
+  opacity:.45;
+}
+header::after{ opacity:.35; }
+
+.money{
+  border-width:2px !important;
+  border-color: rgba(243,247,255,.12) !important;
+  box-shadow: 0 16px 26px rgba(0,0,0,.30) !important;
+}
+.money:hover{ transform: translateY(-2px) rotate(-1deg) !important; }
+
+  
+/* ============================
+   v7 tune — cleaner cartoon background + high contrast + placed-money scaling + readable win popup
+   ============================ */
+:root{
+  --ink:#f7fbff;
+  --muted: rgba(247,251,255,.82);
+  --card: rgba(9,12,22,.97);
+  --cardEdge: rgba(247,251,255,.14);
+  --shadow: 0 18px 54px rgba(0,0,0,.54);
+  --btn:#f7fbff;
+  --btnSoft: rgba(247,251,255,.10);
+}
+
+/* Replace mural with a cleaner, simpler cartoon cafeteria (no big shapes cutting through cards) */
+.mural{
+  opacity:.33 !important;
+  filter: saturate(1.12) contrast(1.08);
+  background:
+    url("data:image/svg+xml;utf8,\
+    <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1400 800'>\
+      <defs>\
+        <linearGradient id='wall' x1='0' y1='0' x2='0' y2='1'>\
+          <stop offset='0' stop-color='%23131b33'/>\
+          <stop offset='1' stop-color='%230e142a'/>\
+        </linearGradient>\
+        <linearGradient id='floor' x1='0' y1='0' x2='0' y2='1'>\
+          <stop offset='0' stop-color='%23131b33'/>\
+          <stop offset='1' stop-color='%23090d1c'/>\
+        </linearGradient>\
+        <pattern id='tiles' width='58' height='58' patternUnits='userSpaceOnUse'>\
+          <rect width='58' height='58' fill='rgba(255,255,255,.04)'/>\
+          <path d='M58 0H0V58' fill='none' stroke='rgba(255,255,255,.06)' stroke-width='2'/>\
+        </pattern>\
+      </defs>\
+      <rect width='1400' height='520' fill='url(%23wall)'/>\
+      <rect y='520' width='1400' height='280' fill='url(%23floor)'/>\
+      <rect y='520' width='1400' height='280' fill='url(%23tiles)' opacity='.85'/>\
+      <!-- windows -->\
+      <g opacity='.70'>\
+        <rect x='90' y='90' width='270' height='180' rx='18' fill='rgba(180,220,255,.10)' stroke='rgba(255,255,255,.10)' stroke-width='4'/>\
+        <path d='M225 90V270' stroke='rgba(255,255,255,.10)' stroke-width='5'/>\
+        <path d='M90 180H360' stroke='rgba(255,255,255,.10)' stroke-width='5'/>\
+        <rect x='395' y='90' width='270' height='180' rx='18' fill='rgba(180,220,255,.10)' stroke='rgba(255,255,255,.10)' stroke-width='4'/>\
+        <path d='M530 90V270' stroke='rgba(255,255,255,.10)' stroke-width='5'/>\
+        <path d='M395 180H665' stroke='rgba(255,255,255,.10)' stroke-width='5'/>\
+      </g>\
+      <!-- simple banner -->\
+      <g opacity='.78'>\
+        <rect x='915' y='105' width='410' height='160' rx='22' fill='rgba(255,255,255,.06)' stroke='rgba(255,255,255,.10)' stroke-width='4'/>\
+        <text x='1120' y='162' font-family='system-ui,Segoe UI' font-size='34' font-weight='900' text-anchor='middle' fill='rgba(247,251,255,.86)'>CAFETERIA</text>\
+        <text x='1120' y='204' font-family='system-ui,Segoe UI' font-size='22' font-weight='800' text-anchor='middle' fill='rgba(42,192,111,.92)'>COUNT THE MONEY</text>\
+      </g>\
+      <!-- small doodles -->\
+      <g opacity='.30' fill='rgba(255,255,255,.75)'>\
+        <circle cx='104' cy='430' r='10'/>\
+        <circle cx='142' cy='452' r='6'/>\
+        <circle cx='196' cy='424' r='8'/>\
+        <circle cx='1270' cy='420' r='10'/>\
+        <circle cx='1320' cy='452' r='6'/>\
+        <circle cx='1240' cy='438' r='7'/>\
+      </g>\
+    </svg>") center / cover no-repeat !important;
+}
+
+/* Remove the "sticker outline" pseudo elements that can look like clipped background */
+.card::after, header::after, .wallet::after{
+  content:none !important;
+  box-shadow:none !important;
+}
+
+/* Make surfaces more opaque so background never looks like it's bleeding into cards */
+.card, .wallet, header{
+  background: var(--card) !important;
+  border-color: rgba(247,251,255,.14) !important;
+}
+
+/* Global text readability bump */
+.brand h1{ letter-spacing:.2px; text-shadow: 0 2px 0 rgba(0,0,0,.35); }
+.brand .sub{ font-size:13px; color: rgba(247,251,255,.86) !important; }
+
+.cardHead .label, .walletHead .label{
+  color: rgba(247,251,255,.92) !important;
+  text-shadow: 0 1px 0 rgba(0,0,0,.35);
+}
+.pill, .stat{
+  color: rgba(247,251,255,.90) !important;
+  background: rgba(247,251,255,.10) !important;
+  border-color: rgba(247,251,255,.16) !important;
+}
+
+/* Ticket items */
+.oName, .oPrice{ color: rgba(247,251,255,.94) !important; }
+.ticketTitle{ color: rgba(247,251,255,.72) !important; }
+.ticketHint{ color: rgba(247,251,255,.80) !important; }
+
+/* Pay zone should not hide money; allow wrap area to scroll within the pay box if needed */
+.placedWrap{
+  overflow:auto !important;
+  padding: 6px 4px !important;
+}
+
+/* Placed money should shrink as more is added */
+.payZone{ --placedScale: 1; }
+.placed{
+  transform: scale(var(--placedScale,1)) rotate(var(--tilt,0deg)) !important;
+  transform-origin: center;
+}
+
+/* Make placed money smaller by default */
+.placed.bill{ width: 122px !important; height: 64px !important; }
+.placed.coin{ width: 64px !important; height: 64px !important; }
+@media (max-height: 760px){
+  .placed.bill{ width: 112px !important; height: 60px !important; }
+  .placed.coin{ width: 60px !important; height: 60px !important; }
+}
+
+/* Stronger numbers */
+.totalBox .amt, .ticketTotal strong, .running strong{
+  text-shadow: 0 2px 0 rgba(0,0,0,.45);
+}
+
+/* Win popup readability */
+.overlay{ background: rgba(0,0,0,.50) !important; }
+.winCard{
+  background: linear-gradient(180deg, rgba(18,26,46,.96), rgba(9,12,22,.90)) !important;
+  border-color: rgba(247,251,255,.16) !important;
+}
+.winCard h2{ color: rgba(247,251,255,.98) !important; text-shadow: 0 2px 0 rgba(0,0,0,.45); }
+.winCard p{ color: rgba(247,251,255,.86) !important; font-size:14px !important; font-weight:1000 !important; }
+
+/* Make the small "tap to remove" label brighter */
+.placed:after{
+  color: rgba(247,251,255,.80) !important;
+  background: rgba(9,12,22,.72) !important;
+  border-color: rgba(247,251,255,.14) !important;
+}
+
+/* Read buttons should look like small icon buttons */
+#btnReadTicket, #btnReadCounter, #btnReadWallet{
+  padding: 8px 10px !important;
+}
+
+
+
+/* === v8 readability + role/rush UI tweaks === */
+:root{
+  --card: rgba(10,16,30,.92);
+}
+
+/* Make background cleaner so edges don’t visually “slice” panels */
+.mural{ opacity:.35 !important; filter: saturate(1.05) contrast(1.05) blur(.4px); }
+
+/* Ticket list should scroll instead of clipping the Total Due row */
+.ticket{ display:flex; flex-direction:column; min-height:0; overflow:hidden; }
+.orderLines{ flex:1 1 auto; min-height:0; overflow:auto !important; padding-right:8px; }
+.orderLines::-webkit-scrollbar{ height:10px; width:10px; }
+.orderLines::-webkit-scrollbar-thumb{ background: rgba(234,242,255,.14); border-radius:999px; }
+.orderLines::-webkit-scrollbar-track{ background: rgba(0,0,0,.10); border-radius:999px; }
+
+/* Brighten ticket text (was dark-on-dark) */
+.oName{ color: rgba(234,242,255,.95) !important; }
+.oPrice{ color: rgba(234,242,255,.88) !important; }
+.ticketHint{ color: rgba(234,242,255,.78) !important; }
+
+/* Make the Pay Exact pill readable in dark mode */
+.pill.good{ background: rgba(42,192,111,.22) !important; border-color: rgba(42,192,111,.40) !important; color: rgba(234,242,255,.95) !important; }
+
+/* Pay area: ensure dropped money never “cuts off” */
+.payZone{ overflow:hidden; }
+.placedWrap{ min-height:0 !important; padding:10px 10px 12px !important; }
+.money.placed{ transform: rotate(var(--tilt)) scale(var(--placedScale,1)); transform-origin:center; }
+
+/* Total box mini line */
+.totalBox .mini{ font-size:12px; color: rgba(234,242,255,.72); margin-top:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+/* Role overlay */
+.roleCard{
+  width:min(760px, 92vw);
+  background: rgba(10,16,30,.96);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 22px;
+  box-shadow: 0 24px 70px rgba(0,0,0,.55);
+  padding: 18px 18px 14px;
+  backdrop-filter: blur(10px);
+}
+.roleTitle{ font-weight:900; letter-spacing:.3px; font-size: 22px; color: rgba(234,242,255,.98); }
+.roleSubtitle{ margin-top:4px; color: rgba(234,242,255,.78); font-size: 14px; }
+
+.roleGrid{ display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-top:14px; }
+.roleBtn{
+  text-align:left;
+  padding:14px 14px 12px;
+  border-radius: 18px;
+  border:1px solid rgba(255,255,255,.14);
+  background: rgba(234,242,255,.06);
+  color: rgba(234,242,255,.92);
+  cursor:pointer;
+  transition: transform .08s ease, background .12s ease, border-color .12s ease;
+}
+.roleBtn:hover{ transform: translateY(-1px); background: rgba(234,242,255,.09); border-color: rgba(255,255,255,.20); }
+.roleBtn.selected{ outline: 2px solid rgba(42,192,111,.55); background: rgba(42,192,111,.12); }
+.roleBig{ font-weight:900; font-size:16px; }
+.roleSmall{ margin-top:4px; color: rgba(234,242,255,.72); font-size: 13px; }
+
+.roleOptions{ display:flex; gap:14px; flex-wrap:wrap; margin-top:12px; padding:10px 12px; border-radius:16px; border:1px dashed rgba(255,255,255,.16); background: rgba(0,0,0,.14); }
+.opt{ display:flex; gap:8px; align-items:center; color: rgba(234,242,255,.82); font-size: 13px; }
+.opt input{ transform: translateY(1px); }
+
+.roleActions{ display:flex; justify-content:flex-end; margin-top:12px; }
+.roleFootnote{ margin-top:10px; color: rgba(234,242,255,.62); font-size: 12px; line-height:1.35; }
+
+/* Popup readability (PAID modal) */
+.winCard{
+  background: rgba(10,16,30,.96) !important;
+  border: 1px solid rgba(255,255,255,.14) !important;
+}
+.winCard h2{ color: rgba(234,242,255,.98) !important; }
+.winCard p{ color: rgba(234,242,255,.82) !important; }
+
+/* Timer stat */
+#timerWrap{ padding: 0 10px; border-radius: 999px; background: rgba(234,242,255,.08); border:1px solid rgba(255,255,255,.10); }
+
+
+/* === v9 UI polish: role options spacing + header controls clarity === */
+
+/* Header: prevent cramped/overlapping controls in top-right */
+header{ overflow: visible !important; align-items:flex-start !important; }
+.btnRow{ align-content:flex-start; row-gap:10px; }
+.btnRow .pill{
+  flex: 1 0 100%;
+  max-width: 520px;
+  justify-content:flex-end;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Role options: one row per option with emoji + checkbox */
+.roleOptions{
+  display:flex !important;
+  flex-direction:column !important;
+  gap:10px !important;
+  margin-top:12px !important;
+  padding:12px 12px !important;
+  border-radius:16px !important;
+  border:1px dashed rgba(255,255,255,.18) !important;
+  background: rgba(0,0,0,.16) !important;
+}
+.optRow{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:10px 10px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,.10);
+  background: rgba(234,242,255,.06);
+  color: rgba(234,242,255,.90);
+  cursor:pointer;
+}
+.optRow:hover{ background: rgba(234,242,255,.09); border-color: rgba(255,255,255,.16); }
+.optEmoji{ font-size:16px; width:22px; text-align:center; }
+.optRow input{ transform: scale(1.05); }
+.optText{ color: rgba(234,242,255,.85); font-size: 13px; }
+
+/* === v10 fixes: clean header + prevent clipped totals === */
+
+/* Header controls: pill on its own row + buttons on next row */
+#hdrControls{ display:flex; flex-direction:column; align-items:flex-end; gap:8px; min-width: 360px; }
+#hdrControls .hdrPillRow{ width:100%; display:flex; justify-content:flex-end; }
+#hdrControls .hdrActions{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+#hdrControls .pill{
+  flex: 0 1 auto !important;
+  max-width: min(520px, 72vw);
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+/* Reduce odds of the top-right controls ever overlapping the header art */
+header{ align-items:flex-start !important; }
+
+/* Make Total Due lines less likely to crop (font descenders/padding) */
+.totalBox .amt{ line-height: 1.06; padding-bottom: 2px; }
+.ticket{ padding-bottom: 14px; }
+.ticketTotal{ line-height: 1.2; padding-bottom: 8px; }
+.ticketTotal strong{ line-height: 1.15; display:inline-block; padding-bottom: 1px; }
+
+/* On smaller screens, let the header stack cleanly */
+@media (max-width: 860px){
+  header{ flex-direction:column; align-items:stretch !important; gap:10px; }
+  #hdrControls{ min-width: 0; align-items:flex-start; }
+  #hdrControls .hdrPillRow{ justify-content:flex-start; }
+  #hdrControls .hdrActions{ justify-content:flex-start; }
+  #hdrControls .pill{ max-width: 100%; }
+}
+
+
+
+/* Soft button style for UI controls (do NOT use .ghost here; .ghost is for drag-preview) */
+button.soft{
+  background: rgba(234,242,255,.10);
+  border-color: rgba(234,242,255,.16);
+  color: rgba(234,242,255,.94);
+}
+button.soft:hover{ background: rgba(234,242,255,.14); border-color: rgba(234,242,255,.22); }
+
+
+
+/* v12: cashier count-up running total line */
+#runningLine{ display:flex; gap:8px; flex-wrap:wrap; align-items:baseline; }
+#runningExtra{ color: rgba(234,242,255,.72); font-size: 12px; }
+
+
+
+/* v14 layout patch: use more screen width + stop tray clipping */
+.payZone{ overflow: visible !important; } /* don't clip dropped money/shadows */
+.payZone .placedWrap{
+  min-height: 160px !important;
+  padding: 10px 10px 12px !important;
+}
+
+
+/* v15 BIG WIN: shrink wallet + reclaim vertical space for the tray */
+.app{
+  height: calc(100vh - 20px) !important; /* match 10px body padding top+bottom */
+  gap: 10px !important;
+}
+header{
+  padding: 10px 12px !important;
+}
+.walletHead{
+  padding: 8px 10px !important;
+}
+.walletBody{
+  padding: 8px 10px 10px !important;
+  gap: 8px !important;
+}
+.moneyLane{
+  gap: 8px !important;
+  padding-bottom: 0px !important;
+}
+.wallet .laneLabel{
+  font-size: 10px !important;
+  padding: 5px 8px !important;
+}
+.wallet .bill{
+  width: 124px !important;
+  height: 66px !important;
+  border-radius: 14px !important;
+}
+.wallet .coin{
+  width: 68px !important;
+  height: 68px !important;
+}
+
+/* Free more tray room by making the tip tiny + one-line */
+.miniTip{
+  font-size: 10px !important;
+  padding-top: 0 !important;
+  gap: 6px !important;
+  opacity: .70 !important;
+}
+.miniTip > div:last-child{ display:none !important; }
+
+/* Tray gets more usable height and less internal clipping */
+.payZone .placedWrap{
+  min-height: 190px !important;
+  padding: 10px 6px 12px !important;
+}
+
+/* --- Reliability: ensure action buttons always receive clicks/taps --- */
+#btnCheck, #btnUndo{
+  pointer-events: auto;
+  position: relative;
+  z-index: 50;
+}
+
+/* Link-styled button used in header */
+.linkBtn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:10px 12px;
+  border-radius:12px;
+  text-decoration:none;
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(255,255,255,.06);
+  color:inherit;
+  font-weight:600;
+}
+.linkBtn:hover{ background:rgba(255,255,255,.10); }
