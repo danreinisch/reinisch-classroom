@@ -1,21 +1,4 @@
 
-  const __BUILD__ = "v21-check-safe";
-  try { window.__CAFETERIA_CASHIER_BUILD = __BUILD__; } catch (_) {}
-  try { console.log("[cafeteria-money-match]", __BUILD__, "loaded"); } catch (_) {}
-
-  // Storage can throw inside some sandboxed iframes; fall back to in-memory storage.
-  const __memStore = new Map();
-  const storage = {
-    get(key){
-      try { return window.localStorage ? window.localStorage.getItem(key) : (__memStore.get(key) ?? null); }
-      catch (_) { return __memStore.get(key) ?? null; }
-    },
-    set(key, val){
-      try { if (window.localStorage) { window.localStorage.setItem(key, String(val)); return; } }
-      catch (_) {}
-      __memStore.set(key, String(val));
-    }
-  };
 (() => {
   // NOTE ABOUT YOUR IMAGE:
   // The image you shared contains photos of real currency.
@@ -135,6 +118,18 @@
   const fmt = (c) => `$${(c/100).toFixed(2)}`;
   const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 
+  // Embed/sandbox friendly: make "Check" robust against odd pointer/click quirks.
+  function handleCheckPress(e){
+    // Avoid duplicate firing when both click and pointer events trigger.
+    if (e && e.__cafCheckHandled) return;
+    if (e){
+      e.__cafCheckHandled = true;
+      try{ e.preventDefault(); e.stopPropagation(); }catch(_){ }
+    }
+    try{ console.log("[cafeteria-money-match] check press"); }catch(_){ }
+    check();
+  }
+
   function clampCents(c){ return Math.max(MIN_CENTS, Math.min(MAX_CENTS, c)); }
 
   function setStatus(type, text){
@@ -184,7 +179,7 @@
 
   function setSound(on){
     soundOn = !!on;
-    storage.set("money_sound", soundOn ? "1" : "0");
+    localStorage.setItem("money_sound", soundOn ? "1" : "0");
     btnSound && (btnSound.textContent = soundOn ? "🔊 Sound: On" : "🔇 Sound: Off");
     chkSound && (chkSound.checked = soundOn);
   }
@@ -235,7 +230,7 @@
 
   function setRole(nextRole){
     role = (nextRole === "cashier") ? "cashier" : "customer";
-    storage.set("money_role", role);
+    localStorage.setItem("money_role", role);
     updateModePill();
   }
 
@@ -314,8 +309,8 @@
   // ---------- State ----------
   let targetCents = 0;
   // Role + modes
-  let role = storage.get("money_role") || "customer"; // "customer" | "cashier"
-  let soundOn = (storage.get("money_sound") || "1") === "1";
+  let role = localStorage.getItem("money_role") || "customer"; // "customer" | "cashier"
+  let soundOn = (localStorage.getItem("money_sound") || "1") === "1";
 
   // For cashier mode
   let dueCents = 0;
@@ -329,9 +324,9 @@
   let rushScore = 0;
   let rushSolved = 0;
   let placed = []; // [{cents, kind}]
-  let streak = Number(storage.get("money_streak") || "0");
-  let best = Number(storage.get("money_best") || "0");
-  let points = Number(storage.get("money_points") || "0");
+  let streak = Number(localStorage.getItem("money_streak") || "0");
+  let best = Number(localStorage.getItem("money_best") || "0");
+  let points = Number(localStorage.getItem("money_points") || "0");
 
   streakEl.textContent = streak;
   bestEl.textContent = best;
@@ -692,8 +687,8 @@
 
       streak += 1;
       best = Math.max(best, streak);
-      storage.set("money_streak", String(streak));
-      storage.set("money_best", String(best));
+      localStorage.setItem("money_streak", String(streak));
+      localStorage.setItem("money_best", String(best));
 
       // Score / Rush
       if (rushActive){
@@ -714,7 +709,7 @@
       win();
     } else {
       streak = 0;
-      storage.set("money_streak", "0");
+      localStorage.setItem("money_streak", "0");
       streakEl && (streakEl.textContent = "0");
       fail();
       renderTotalAndFeedback();
@@ -908,7 +903,21 @@
   btnNew.addEventListener("click", newOrder);
   btnClear.addEventListener("click", clearAll);
   btnUndo.addEventListener("click", undo);
-  btnCheck.addEventListener("click", check);
+  btnCheck.addEventListener("click", handleCheckPress);
+  btnCheck.addEventListener("pointerup", handleCheckPress);
+
+  // Capture-phase delegate so the Check button still works even if an adjacent
+  // overlay element sits on top in some embedded layouts.
+  if (!window.__CAF_CHECK_DELEGATE__) {
+    window.__CAF_CHECK_DELEGATE__ = true;
+    const delegate = (e) => {
+      const t = e.target;
+      const b = (t && t.closest) ? t.closest("#btnCheck") : null;
+      if (b) handleCheckPress(e);
+    };
+    document.addEventListener("click", delegate, true);
+    document.addEventListener("pointerup", delegate, true);
+  }
   btnSpeak.addEventListener("click", speakTotal);
   btnHint.addEventListener("click", hint);
 
@@ -948,17 +957,7 @@
 
   chkSound?.addEventListener("change", (e) => setSound(e.target.checked));
 
-  // Safety wrapper: if anything throws (CSP edge cases, missing nodes, etc.),
-  // show a visible message instead of failing silently.
-  const safe = (fn) => (ev) => {
-    try { return fn(ev); }
-    catch (err) {
-      try { console.error(err); } catch (_) {}
-      try { setStatus(`⚠️ Error: ${err?.message || err}`, "bad"); } catch (_) {}
-    }
-  };
-
-  btnStart?.addEventListener("click", safe(() => {
+  btnStart?.addEventListener("click", () => {
     // Apply role based on selected button
     if (btnRoleCashier?.classList.contains("selected")) setRole("cashier");
     else setRole("customer");
@@ -977,43 +976,39 @@
     if (chkReadOnStart?.checked){
       setTimeout(() => speakTotal(), 250);
     }
-  }));
+  });
 
   // Rush overlay buttons
-  btnRushAgain?.addEventListener("click", safe(() => {
+  btnRushAgain?.addEventListener("click", () => {
     rushOverlay?.classList.remove("show");
     startRush(60);
-  }));
-  btnRushExit?.addEventListener("click", safe(() => {
+  });
+  btnRushExit?.addEventListener("click", () => {
     rushOverlay?.classList.remove("show");
     stopRush();
     showRoleOverlay(true);
-  }));
+  });
 
-  // Existing buttons (wrapped so errors surface on-screen)
-  btnNew.addEventListener("click", safe(newOrder));
-  btnClear.addEventListener("click", safe(clearAll));
-  btnUndo.addEventListener("click", safe(undo));
-  btnCheck.addEventListener("click", safe((e) => {
-    // Defensive: sometimes the drop-zone listeners can swallow clicks.
-    // This keeps the button click crisp.
-    e?.stopPropagation?.();
-    check();
-  }));
-  btnSpeak.addEventListener("click", safe(speakTotal));
-  btnHint.addEventListener("click", safe(hint));
+  // Existing buttons
+  btnNew.addEventListener("click", newOrder);
+  btnClear.addEventListener("click", clearAll);
+  btnUndo.addEventListener("click", undo);
+  btnCheck.addEventListener("click", handleCheckPress);
+  btnCheck.addEventListener("pointerup", handleCheckPress);
+  btnSpeak.addEventListener("click", speakTotal);
+  btnHint.addEventListener("click", hint);
 
-  btnReadTicket?.addEventListener("click", safe(readTicketAloud));
-  btnReadCounter?.addEventListener("click", safe(readCounterAloud));
-  btnReadWallet?.addEventListener("click", safe(readWalletAloud));
+  btnReadTicket?.addEventListener("click", readTicketAloud);
+  btnReadCounter?.addEventListener("click", readCounterAloud);
+  btnReadWallet?.addEventListener("click", readWalletAloud);
 
-  btnNextWin.addEventListener("click", safe(() => {
+  btnNextWin.addEventListener("click", () => {
     overlay.classList.remove("show");
     newOrder();
-  }));
-  overlay.addEventListener("click", safe((e) => {
+  });
+  overlay.addEventListener("click", (e) => {
     if (e.target === overlay) overlay.classList.remove("show");
-  }));
+  });
 
   // Initialize
   setSound(soundOn);
