@@ -1,6 +1,6 @@
 
 (() => {
-  window.__CAFETERIA_CASHIER_BUILD = 'v27-check-superclick';
+  window.__CAFETERIA_CASHIER_BUILD = 'v28-btnoptions-fix';
   console.info('[cafeteria-money-match] build', window.__CAFETERIA_CASHIER_BUILD);
 
   // NOTE ABOUT YOUR IMAGE:
@@ -93,6 +93,7 @@
   const btnSpeak = $("#btnSpeak");
   const btnHint = $("#btnHint");
   const btnRole = $("#btnRole");
+  const btnOptions = $("#btnOptions"); // optional; may be absent (btnRole is the Options button)
   const btnRush = $("#btnRush");
   const btnSound = $("#btnSound");
   const modePill = $("#modePill");
