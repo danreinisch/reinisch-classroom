@@ -1,0 +1,1565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Week 2: Lost in Kragdon-ah - Chapters 4-7</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            background-attachment: fixed;
+            color: #ffffff;
+            overflow-x: hidden;
+        }
+
+        .bg-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+        }
+
+        .bg-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            opacity: 0;
+            transition: opacity 3s ease-in-out;
+            will-change: opacity;
+            -webkit-transform: translateZ(0);
+            transform: translateZ(0);
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+        }
+
+        .bg-image.active {
+            opacity: 0.55;
+        }
+
+        .bg-image:nth-child(1) { background-image: url('image1.jpg'); }
+        .bg-image:nth-child(2) { background-image: url('image2.jpg'); }
+        .bg-image:nth-child(3) { background-image: url('image3.jpg'); }
+        .bg-image:nth-child(4) { background-image: url('image4.jpg'); }
+        .bg-image:nth-child(5) { background-image: url('image5.jpg'); }
+        .bg-image:nth-child(6) { background-image: url('image6.jpg'); }
+        .bg-image:nth-child(7) { background-image: url('image7.jpg'); }
+        .bg-image:nth-child(8) { background-image: url('image8.jpg'); }
+        .bg-image:nth-child(9) { background-image: url('image9.jpg'); }
+        .bg-image:nth-child(10) { background-image: url('image10.jpg'); }
+        .bg-image:nth-child(11) { background-image: url('image11.jpg'); }
+        .bg-image:nth-child(12) { background-image: url('image12.jpg'); }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 40px 20px;
+            background: rgba(0, 0, 0, 0.35);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            border-radius: 20px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.8);
+        }
+
+        header h2 {
+            font-size: 1.5em;
+            color: #ffd700;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            font-size: 1.2em;
+            color: #a0d2eb;
+        }
+
+        .theme-banner {
+            background: linear-gradient(90deg, rgba(231, 76, 60, 0.5), rgba(155, 89, 182, 0.5));
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            padding: 15px 30px;
+            border-radius: 10px;
+            margin-top: 20px;
+            display: inline-block;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .theme-banner h3 {
+            font-size: 1.3em;
+            color: #fff;
+        }
+
+        nav {
+            background: rgba(0, 0, 0, 0.35);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        nav h3 {
+            text-align: center;
+            margin-bottom: 15px;
+            color: #ffd700;
+        }
+
+        .nav-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .nav-btn {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.4) 0%, rgba(118, 75, 162, 0.4) 100%);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 25px;
+            color: white;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .nav-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+        }
+
+        .nav-btn.day1 { 
+            background: linear-gradient(135deg, rgba(240, 147, 251, 0.6) 0%, rgba(245, 87, 108, 0.6) 100%); 
+        }
+        .nav-btn.day2 { 
+            background: linear-gradient(135deg, rgba(79, 172, 254, 0.6) 0%, rgba(0, 242, 254, 0.6) 100%); 
+        }
+        .nav-btn.day3 { 
+            background: linear-gradient(135deg, rgba(67, 233, 123, 0.6) 0%, rgba(56, 249, 215, 0.6) 100%); 
+        }
+        .nav-btn.day4 { 
+            background: linear-gradient(135deg, rgba(250, 112, 154, 0.6) 0%, rgba(254, 225, 64, 0.6) 100%); 
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+            margin-bottom: 30px;
+            overflow: hidden;
+        }
+
+        .progress {
+            height: 100%;
+            background: linear-gradient(90deg, #ffd700, #ff6b6b);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .slide {
+            display: none;
+            background: rgba(0, 0, 0, 0.35);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            animation: fadeIn 0.5s ease;
+        }
+
+        .slide.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .slide h2 {
+            color: #ffd700;
+            font-size: 2em;
+            margin-bottom: 20px;
+            text-align: center;
+            text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.8);
+        }
+
+        .slide h3 {
+            color: #a0d2eb;
+            font-size: 1.5em;
+            margin: 20px 0 15px 0;
+        }
+
+        .slide h4 {
+            color: #ffd700;
+            font-size: 1.2em;
+            margin: 15px 0 10px 0;
+        }
+
+        .slide p {
+            font-size: 1.1em;
+            line-height: 1.8;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.6);
+            margin-bottom: 15px;
+        }
+
+        .slide ul {
+            margin-left: 30px;
+            margin-bottom: 20px;
+        }
+
+        .slide li {
+            font-size: 1.1em;
+            line-height: 1.8;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.6);
+            margin-bottom: 10px;
+        }
+
+        .highlight {
+            background: rgba(255, 215, 0, 0.10);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-left: 4px solid #ffd700;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 0 10px 10px 0;
+        }
+
+        .key-fact {
+            background: rgba(76, 175, 80, 0.15);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-left: 4px solid #4CAF50;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 0 10px 10px 0;
+        }
+
+        .key-fact h4 {
+            color: #4CAF50;
+            margin-bottom: 10px;
+        }
+
+        .vocab-box {
+            background: rgba(160, 210, 235, 0.10);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 1px solid rgba(160, 210, 235, 0.3);
+        }
+
+        .vocab-word {
+            color: #ffd700;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+
+        .grammar-box {
+            background: rgba(155, 89, 182, 0.15);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 1px solid rgba(155, 89, 182, 0.3);
+        }
+
+        .grammar-box h4 {
+            color: #bb86fc;
+            margin-bottom: 10px;
+        }
+
+        .what-why-how {
+            background: rgba(255, 152, 0, 0.12);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 1px solid rgba(255, 152, 0, 0.3);
+        }
+
+        .what-why-how h4 {
+            color: #ff9800;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+
+        .what-why-how .section {
+            margin-bottom: 15px;
+            padding: 10px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+        }
+
+        .what-why-how .label {
+            color: #ffd700;
+            font-weight: bold;
+            display: block;
+            font-size: 1.1em;
+            margin-bottom: 5px;
+        }
+
+        .example-box {
+            background: rgba(67, 233, 123, 0.10);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 1px solid rgba(67, 233, 123, 0.3);
+        }
+
+        .example-box h4 {
+            color: #43e97b;
+            margin-bottom: 10px;
+        }
+
+        .rule-box {
+            background: rgba(33, 150, 243, 0.12);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 2px solid rgba(33, 150, 243, 0.5);
+        }
+
+        .rule-box h4 {
+            color: #2196F3;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+
+        .warning-box {
+            background: rgba(244, 67, 54, 0.12);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 2px solid rgba(244, 67, 54, 0.5);
+        }
+
+        .warning-box h4 {
+            color: #f44336;
+            margin-bottom: 10px;
+        }
+
+        .practice-box {
+            background: rgba(156, 39, 176, 0.12);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 2px dashed rgba(156, 39, 176, 0.5);
+        }
+
+        .practice-box h4 {
+            color: #ce93d8;
+            margin-bottom: 10px;
+        }
+
+        .compare-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+
+        .compare-table th, .compare-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .compare-table th {
+            background: rgba(255,255,255,0.1);
+            color: #ffd700;
+        }
+
+        .compare-table tr:nth-child(even) {
+            background: rgba(255,255,255,0.05);
+        }
+
+        .punctuation-mark {
+            color: #ff6b6b;
+            font-size: 1.3em;
+            font-weight: bold;
+        }
+
+        .capital-letter {
+            color: #ffd700;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+
+        .question-box {
+            background: rgba(245, 87, 108, 0.2);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            border: 1px solid rgba(245, 87, 108, 0.3);
+        }
+
+        .writing-prompt {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.3), rgba(118, 75, 162, 0.3));
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .writing-structure {
+            background: rgba(0, 0, 0, 0.35);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .correct {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+
+        .incorrect {
+            color: #ff6b6b;
+            text-decoration: line-through;
+        }
+
+        .step-box {
+            background: rgba(0, 188, 212, 0.2);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 15px 20px;
+            margin: 10px 0;
+            border-left: 4px solid #00bcd4;
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+        }
+
+        .step-number {
+            background: #00bcd4;
+            color: #000;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .slide-nav {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .slide-nav button {
+            padding: 12px 30px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.4), rgba(118, 75, 162, 0.4));
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 25px;
+            color: white;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .slide-nav button:hover:not(:disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
+        }
+
+        .slide-nav button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        footer {
+            background: rgba(0, 0, 0, 0.35);
+            text-align: center;
+            padding: 30px;
+            background: rgba(0, 0, 0, 0.35);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            border-radius: 20px;
+            margin-top: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        footer p {
+            margin: 10px 0;
+            color: #a0d2eb;
+        }
+
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .two-column {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-container">
+        <div class="bg-image active"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+        <div class="bg-image"></div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>Lost in Kragdon-ah</h1>
+            <h2>Week 2: Chapters 4-7</h2>
+            <p>By Shawn Inmon</p>
+            <div class="theme-banner">
+                <h3>ELA Theme: Punctuation and Capitalization (Advanced)</h3>
+            </div>
+        </header>
+
+        <nav>
+            <h3>Quick Navigation</h3>
+            <div class="nav-buttons">
+                <button class="nav-btn day1" onclick="goToSlide(1)">Day 1: Chapter 4</button>
+                <button class="nav-btn day2" onclick="goToSlide(8)">Day 2: Chapters 5-6</button>
+                <button class="nav-btn day3" onclick="goToSlide(19)">Day 3: Chapter 7</button>
+                <button class="nav-btn day4" onclick="goToSlide(26)">Day 4: Writing</button>
+            </div>
+        </nav>
+
+        <div class="progress-bar">
+            <div class="progress" id="progress"></div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- SLIDE 0: OVERVIEW -->
+        <!-- ============================================ -->
+
+        <div class="slide active" id="slide-0">
+            <h2>Week 2 Overview</h2>
+            <h3>What We Will Learn This Week</h3>
+            
+            <div class="highlight">
+                <h4>Chapters We Will Read:</h4>
+                <ul>
+                    <li><strong>Day 1:</strong> Chapter 4 - Into the Kranda-ah</li>
+                    <li><strong>Day 2:</strong> Chapters 5 and 6 - The Jump and Into the Kranda-ah Redux</li>
+                    <li><strong>Day 3:</strong> Chapter 7 - The Boar</li>
+                    <li><strong>Day 4:</strong> Writing Workshop</li>
+                </ul>
+            </div>
+            
+            <div class="rule-box">
+                <h4>Grammar Skills We Will Master This Week</h4>
+                <ul>
+                    <li><strong>Commas in Compound Sentences:</strong> How to join two complete thoughts with a comma.</li>
+                    <li><strong>Commas After Introductory Words:</strong> When to pause after words like "First," "Then," and "Finally."</li>
+                    <li><strong>Common Nouns vs. Proper Nouns:</strong> Which words need capital letters and why.</li>
+                    <li><strong>Apostrophes:</strong> Two uses - showing ownership AND making contractions.</li>
+                </ul>
+            </div>
+
+            <div class="grammar-box">
+                <h4>Why These Skills Matter</h4>
+                <p>Good punctuation and capitalization help readers understand your writing. Without them, sentences can be confusing or mean something different than you intended!</p>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- DAY 1: CHAPTER 4 - SLIDES 1-7 -->
+        <!-- ============================================ -->
+
+        <div class="slide" id="slide-1">
+            <h2>Day 1: Chapter 4 - Into the Kranda-ah</h2>
+            <h3>Story Recap and Grammar Introduction</h3>
+            
+            <div class="highlight">
+                <p><strong>Last Week:</strong> <span class="capital-letter">W</span>erda-ak fell into the <span class="capital-letter">K</span>randa-ah <span class="capital-letter">R</span>iver while trying to walk across the rope bridge<span class="punctuation-mark">.</span></p>
+                <p><strong>The Cliffhanger:</strong> <span class="capital-letter">W</span>ill <span class="capital-letter">W</span>erda-ak survive<span class="punctuation-mark">?</span></p>
+            </div>
+            
+            <div class="key-fact">
+                <h4>Key Fact for Your Assignment</h4>
+                <p><span class="capital-letter">A</span>lex immediately runs to save <span class="capital-letter">W</span>erda-ak<span class="punctuation-mark">.</span> <span class="capital-letter">H</span>e sprints along the bank while calculating where the river will carry the boy<span class="punctuation-mark">.</span></p>
+            </div>
+            
+            <div class="grammar-box">
+                <h4>Today's Grammar Focus: Commas That Join Ideas</h4>
+                <p>Notice this sentence from Chapter 4:</p>
+                <p>"<span class="capital-letter">A</span>lex ran to the river<span class="punctuation-mark">,</span> and he jumped in to save <span class="capital-letter">W</span>erda-ak<span class="punctuation-mark">.</span>"</p>
+                <p>See the comma before "and"? We will learn when and why to use this comma.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-2">
+            <h2>Day 1: Commas in Compound Sentences</h2>
+            <h3>Joining Two Complete Thoughts</h3>
+            
+            <div class="what-why-how">
+                <h4>Understanding Compound Sentences</h4>
+                <div class="section">
+                    <span class="label">WHAT IS IT?</span>
+                    A compound sentence joins two complete thoughts (sentences that could stand alone) using a comma and a connecting word like "and," "but," or "so."
+                </div>
+                <div class="section">
+                    <span class="label">WHY DO WE USE IT?</span>
+                    The comma tells the reader to pause slightly. It shows where one complete idea ends and another begins. Without it, readers might get confused about which words go together.
+                </div>
+                <div class="section">
+                    <span class="label">HOW DO I KNOW WHEN TO USE IT?</span>
+                    Ask yourself: "Can both parts stand alone as their own sentences?" If YES, add a comma before the connecting word. If NO, do not add a comma.
+                </div>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-3">
+            <h2>Day 1: The Comma Test</h2>
+            <h3>Step-by-Step Instructions</h3>
+
+            <div class="rule-box">
+                <h4>The Two-Sentence Test</h4>
+                <p>Before adding a comma, split the sentence at the connecting word. Can both parts be complete sentences on their own?</p>
+            </div>
+
+            <div class="step-box">
+                <span class="step-number">1</span>
+                <div>
+                    <strong>Find the connecting word</strong> (and, but, so, or, yet)<br>
+                    Example: "Alex ran to the river <u>and</u> he jumped in."
+                </div>
+            </div>
+
+            <div class="step-box">
+                <span class="step-number">2</span>
+                <div>
+                    <strong>Split the sentence into two parts:</strong><br>
+                    Part 1: "Alex ran to the river."<br>
+                    Part 2: "He jumped in."
+                </div>
+            </div>
+
+            <div class="step-box">
+                <span class="step-number">3</span>
+                <div>
+                    <strong>Ask: Are both parts complete sentences?</strong><br>
+                    "Alex ran to the river." ✓ Complete!<br>
+                    "He jumped in." ✓ Complete!<br>
+                    <strong>YES → Add a comma!</strong>
+                </div>
+            </div>
+
+            <div class="example-box">
+                <h4>Correct Answer</h4>
+                <p class="correct">✓ Alex ran to the river<span class="punctuation-mark">,</span> and he jumped in.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-4">
+            <h2>Day 1: When NOT to Use This Comma</h2>
+            <h3>A Common Mistake to Avoid</h3>
+
+            <div class="warning-box">
+                <h4>Warning: Not Every "And" Needs a Comma!</h4>
+                <p>Only use a comma when BOTH parts are complete thoughts. If the second part cannot stand alone, do NOT use a comma.</p>
+            </div>
+
+            <div class="two-column">
+                <div class="example-box">
+                    <h4>NO Comma Needed</h4>
+                    <p class="correct">✓ Alex ran to the river and jumped in.</p>
+                    <p><strong>Test it:</strong></p>
+                    <p>"Alex ran to the river." ✓ Complete</p>
+                    <p>"Jumped in." ✗ NOT complete!</p>
+                    <p><em>"Jumped in" has no subject - who jumped?</em></p>
+                </div>
+
+                <div class="example-box">
+                    <h4>YES, Comma Needed</h4>
+                    <p class="correct">✓ Alex ran to the river<span class="punctuation-mark">,</span> and he jumped in.</p>
+                    <p><strong>Test it:</strong></p>
+                    <p>"Alex ran to the river." ✓ Complete</p>
+                    <p>"He jumped in." ✓ Complete</p>
+                    <p><em>Both parts have a subject and action!</em></p>
+                </div>
+            </div>
+
+            <div class="practice-box">
+                <h4>Quick Practice: Does This Need a Comma?</h4>
+                <p>"Senta-eh grabbed Alex and pulled him to shore."</p>
+                <p><strong>Answer:</strong> NO comma. "Pulled him to shore" is not a complete sentence by itself.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-5">
+            <h2>Day 1: The Rescue Scene</h2>
+            <h3>Chapter 4 Key Events</h3>
+            
+            <div class="key-fact">
+                <h4>Key Fact: How Alex Saves Werda-ak</h4>
+                <p><span class="capital-letter">A</span>lex runs along the bank while calculating where the river will carry <span class="capital-letter">W</span>erda-ak<span class="punctuation-mark">.</span> <span class="capital-letter">H</span>e grabs a log sticking out into the water to anchor himself<span class="punctuation-mark">.</span></p>
+            </div>
+            
+            <p><strong>The rescue happens in steps:</strong></p>
+            <ul>
+                <li><strong>Step 1:</strong> Alex sprints along the river bank to get ahead of Werda-ak.</li>
+                <li><strong>Step 2:</strong> Alex wades into the water and grabs a protruding log.</li>
+                <li><strong>Step 3:</strong> Alex leaps out and catches Werda-ak's arm.</li>
+                <li><strong>Step 4:</strong> Alex holds on, but he cannot pull them both to shore alone.</li>
+            </ul>
+            
+            <div class="key-fact">
+                <h4>Key Fact: Who Completes the Rescue?</h4>
+                <p><span class="capital-letter">S</span>enta-eh wraps her arm around <span class="capital-letter">A</span>lex<span class="punctuation-mark">'</span>s chest and uses her strength to pull both of them to shore<span class="punctuation-mark">.</span></p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-6">
+            <h2>Day 1: After the Rescue</h2>
+            <h3>Important Story Details</h3>
+            
+            <div class="key-fact">
+                <h4>Key Fact: What They Eat</h4>
+                <p>The team eats <strong>roasted lizard meat</strong> (the skink <span class="capital-letter">M</span>onda-ak caught in <span class="capital-letter">C</span>hapter 3)<span class="punctuation-mark">.</span></p>
+            </div>
+            
+            <div class="highlight">
+                <h4>Werda-ak's Admission</h4>
+                <p><span class="capital-letter">W</span>erda-ak says<span class="punctuation-mark">,</span> "<span class="capital-letter">I</span> really thought <span class="capital-letter">I</span> could do it<span class="punctuation-mark">.</span>"</p>
+                <p>He genuinely believed he could cross the rope. This shows he was overconfident, not reckless.</p>
+            </div>
+            
+            <div class="key-fact">
+                <h4>Key Fact: Why Werda-ak Takes First Watch</h4>
+                <p><span class="capital-letter">W</span>erda-ak volunteers for first watch to <strong>prove himself after his mistake</strong><span class="punctuation-mark">.</span></p>
+            </div>
+
+            <div class="key-fact">
+                <h4>Key Fact: Alex's Statement About the Team</h4>
+                <p><span class="capital-letter">A</span>lex says: "Each of us is critical to our mission<span class="punctuation-mark">.</span> <span class="capital-letter">I</span>f we lose any one of us<span class="punctuation-mark">,</span> we<span class="punctuation-mark">'</span>ll fail<span class="punctuation-mark">.</span>"</p>
+                <p>This means <strong>losing anyone would cause the mission to fail</strong>.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-7">
+            <h2>Day 1: Alex's Inspiration</h2>
+            <h3>And Day 1 Review</h3>
+            
+            <div class="key-fact">
+                <h4>Key Fact: Where Does Alex Get His Idea?</h4>
+                <p><span class="capital-letter">A</span>lex pokes at the fire and watches <strong>sparks rise up into the night sky</strong><span class="punctuation-mark">.</span> <span class="capital-letter">T</span>his gives him an idea for how to cross the river<span class="punctuation-mark">.</span></p>
+            </div>
+            
+            <div class="highlight">
+                <h3>Day 1 Key Facts Review</h3>
+                <ul>
+                    <li>Alex <strong>runs along the bank</strong> while calculating where to intercept Werda-ak.</li>
+                    <li>Alex grabs a <strong>log sticking out into the river</strong> to anchor himself.</li>
+                    <li>Alex can hold on but <strong>cannot pull them to shore alone</strong>.</li>
+                    <li><strong>Senta-eh</strong> pulls them both to shore.</li>
+                    <li>They eat <strong>roasted lizard meat</strong>.</li>
+                    <li>Werda-ak <strong>really thought he could make it</strong> across the rope.</li>
+                    <li>Werda-ak takes first watch to <strong>prove himself after his mistake</strong>.</li>
+                    <li>Alex says <strong>losing anyone would cause the mission to fail</strong>.</li>
+                    <li>Alex gets his idea from watching <strong>sparks rise from the fire</strong>.</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- DAY 2: CHAPTERS 5-6 + GRAMMAR - SLIDES 8-18 -->
+        <!-- ============================================ -->
+
+        <div class="slide" id="slide-8">
+            <h2>Day 2: Chapters 5 and 6</h2>
+            <h3>The Jump and Into the Kranda-ah Redux</h3>
+            
+            <div class="highlight">
+                <h4>What Happens in These Chapters:</h4>
+                <p><strong>Chapter 5 (The Jump):</strong> Werda-ak completes a dangerous task - climbing the rope bridge to cut and retrieve the hanger rope.</p>
+                <p><strong>Chapter 6 (Into the Kranda-ah Redux):</strong> Alex swings across the river on the rope. The landing is very painful.</p>
+            </div>
+            
+            <div class="rule-box">
+                <h4>Today's Grammar Focus</h4>
+                <ul>
+                    <li><strong>Commas After Introductory Words</strong> - "First," "Then," "Finally," etc.</li>
+                    <li><strong>Common Nouns vs. Proper Nouns</strong> - Which words need capitals?</li>
+                    <li><strong>Apostrophes</strong> - Two different uses!</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-9">
+            <h2>Day 2: Commas After Introductory Words</h2>
+            <h3>The Rule Explained</h3>
+            
+            <div class="what-why-how">
+                <h4>Understanding Introductory Words</h4>
+                <div class="section">
+                    <span class="label">WHAT IS IT?</span>
+                    Introductory words are words or phrases that come at the very beginning of a sentence and set up what comes next. Common examples include: First, Second, Third, Then, Next, Finally, However, Therefore, After that, In the morning, Before long.
+                </div>
+                <div class="section">
+                    <span class="label">WHY DO WE USE A COMMA?</span>
+                    The comma creates a small pause. It separates the "setup" part from the main sentence. This helps readers know where the introduction ends and the main idea begins.
+                </div>
+                <div class="section">
+                    <span class="label">HOW DO I USE IT?</span>
+                    If a sentence starts with a transition word or time phrase, put a comma immediately after it, then continue with your main sentence.
+                </div>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-10">
+            <h2>Day 2: Introductory Words - Examples</h2>
+            <h3>Correct Usage</h3>
+
+            <div class="rule-box">
+                <h4>The Pattern</h4>
+                <p><strong>Introductory Word</strong><span class="punctuation-mark">,</span> + <strong>rest of the sentence.</strong></p>
+            </div>
+
+            <div class="example-box">
+                <h4>Correct Examples from the Story</h4>
+                <p class="correct">✓ <span class="capital-letter">F</span>irst<span class="punctuation-mark">,</span> <span class="capital-letter">W</span>erda-ak climbed the tree<span class="punctuation-mark">.</span></p>
+                <p class="correct">✓ <span class="capital-letter">T</span>hen<span class="punctuation-mark">,</span> he cut the rope<span class="punctuation-mark">.</span></p>
+                <p class="correct">✓ <span class="capital-letter">N</span>ext<span class="punctuation-mark">,</span> he wrapped it around his body<span class="punctuation-mark">.</span></p>
+                <p class="correct">✓ <span class="capital-letter">F</span>inally<span class="punctuation-mark">,</span> he climbed back down<span class="punctuation-mark">.</span></p>
+                <p class="correct">✓ <span class="capital-letter">A</span>fter that<span class="punctuation-mark">,</span> <span class="capital-letter">A</span>lex prepared his own jump<span class="punctuation-mark">.</span></p>
+            </div>
+
+            <div class="warning-box">
+                <h4>Common Mistakes</h4>
+                <p class="incorrect">✗ First Werda-ak climbed the tree.</p>
+                <p><em>Missing comma after "First"</em></p>
+                <br>
+                <p class="incorrect">✗ First, Werda-ak climbed the tree then, he cut the rope.</p>
+                <p><em>This should be two separate sentences, each with its own comma after the introductory word.</em></p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-11">
+            <h2>Day 2: Common Nouns vs. Proper Nouns</h2>
+            <h3>Understanding the Difference</h3>
+            
+            <div class="what-why-how">
+                <h4>Two Types of Naming Words</h4>
+                <div class="section">
+                    <span class="label">WHAT IS A COMMON NOUN?</span>
+                    A common noun names a GENERAL person, place, thing, or idea. It does NOT name one specific thing. Examples: river, warrior, dog, boy, village, tree, bridge.
+                </div>
+                <div class="section">
+                    <span class="label">WHAT IS A PROPER NOUN?</span>
+                    A proper noun names a SPECIFIC person, place, or thing. It is an actual name. Examples: Kranda-ah, Grunta-ak, Monda-ak, Werda-ak, Winten-ah.
+                </div>
+                <div class="section">
+                    <span class="label">WHY DOES THIS MATTER?</span>
+                    <strong>Proper nouns ALWAYS start with a capital letter.</strong><br>
+                    <strong>Common nouns do NOT need a capital letter</strong> (unless they start a sentence).
+                </div>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-12">
+            <h2>Day 2: Common vs. Proper Nouns - Examples</h2>
+            <h3>Side-by-Side Comparison</h3>
+
+            <table class="compare-table">
+                <tr>
+                    <th>Common Noun (No Capital)</th>
+                    <th>Proper Noun (Capital Letter)</th>
+                </tr>
+                <tr>
+                    <td>river</td>
+                    <td><span class="capital-letter">K</span>randa-ah (name of this specific river)</td>
+                </tr>
+                <tr>
+                    <td>warrior</td>
+                    <td><span class="capital-letter">G</span>runta-ak (name of this specific person)</td>
+                </tr>
+                <tr>
+                    <td>dog</td>
+                    <td><span class="capital-letter">M</span>onda-ak (name of this specific dog)</td>
+                </tr>
+                <tr>
+                    <td>boy</td>
+                    <td><span class="capital-letter">W</span>erda-ak (name of this specific boy)</td>
+                </tr>
+                <tr>
+                    <td>village, tribe</td>
+                    <td><span class="capital-letter">W</span>inten-ah, <span class="capital-letter">R</span>inta-ah (names of places)</td>
+                </tr>
+            </table>
+
+            <div class="practice-box">
+                <h4>Quick Test: Which Needs a Capital?</h4>
+                <p>"The <u>warrior</u> crossed the <u>kranda-ah</u> river."</p>
+                <p><strong>Answer:</strong> "warrior" = common noun (no capital). "kranda-ah" = proper noun (it's the river's name) → should be "<span class="capital-letter">K</span>randa-ah"</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-13">
+            <h2>Day 2: The Apostrophe - Two Jobs</h2>
+            <h3>Understanding Apostrophes</h3>
+            
+            <div class="what-why-how">
+                <h4>Apostrophes Have Two Different Uses</h4>
+                <div class="section">
+                    <span class="label">JOB #1: SHOWING OWNERSHIP (Possessives)</span>
+                    An apostrophe + s shows that something belongs to someone.<br>
+                    <strong>Example:</strong> Alex<span class="punctuation-mark">'</span>s plan = the plan that belongs to Alex
+                </div>
+                <div class="section">
+                    <span class="label">JOB #2: REPLACING MISSING LETTERS (Contractions)</span>
+                    When we combine two words into one shorter word, the apostrophe shows where letters were removed.<br>
+                    <strong>Example:</strong> can<span class="punctuation-mark">'</span>t = can + not (the apostrophe replaces "no")
+                </div>
+                <div class="section">
+                    <span class="label">HOW DO I TELL WHICH IS WHICH?</span>
+                    Ask: "Does something belong to someone?" → Possessive<br>
+                    Ask: "Are two words combined into one?" → Contraction
+                </div>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-14">
+            <h2>Day 2: Possessives - Showing Ownership</h2>
+            <h3>How to Form Possessives</h3>
+
+            <div class="rule-box">
+                <h4>The Rule for Singular Possessives</h4>
+                <p>To show that something belongs to ONE person or thing, add <strong>'s</strong> (apostrophe + s) to the owner's name.</p>
+            </div>
+
+            <div class="step-box">
+                <span class="step-number">1</span>
+                <div>
+                    <strong>Identify the owner:</strong> Who does it belong to?<br>
+                    "The plan belongs to Alex."
+                </div>
+            </div>
+
+            <div class="step-box">
+                <span class="step-number">2</span>
+                <div>
+                    <strong>Add 's to the owner's name:</strong><br>
+                    Alex → Alex<span class="punctuation-mark">'</span>s
+                </div>
+            </div>
+
+            <div class="step-box">
+                <span class="step-number">3</span>
+                <div>
+                    <strong>Put the owned thing after:</strong><br>
+                    Alex<span class="punctuation-mark">'</span>s plan
+                </div>
+            </div>
+
+            <div class="example-box">
+                <h4>Examples from the Story</h4>
+                <p><span class="capital-letter">A</span>lex<span class="punctuation-mark">'</span>s plan = the plan that belongs to Alex</p>
+                <p><span class="capital-letter">W</span>erda-ak<span class="punctuation-mark">'</span>s knife = the knife that belongs to Werda-ak</p>
+                <p><span class="capital-letter">S</span>enta-eh<span class="punctuation-mark">'</span>s strength = the strength that belongs to Senta-eh</p>
+                <p>the village<span class="punctuation-mark">'</span>s bridge = the bridge that belongs to the village</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-15">
+            <h2>Day 2: Contractions - Combining Words</h2>
+            <h3>How Contractions Work</h3>
+
+            <div class="rule-box">
+                <h4>The Rule for Contractions</h4>
+                <p>When two words are combined into one shorter word, the apostrophe takes the place of the missing letters.</p>
+            </div>
+
+            <table class="compare-table">
+                <tr>
+                    <th>Two Words</th>
+                    <th>Contraction</th>
+                    <th>What's Missing?</th>
+                </tr>
+                <tr>
+                    <td>can + not</td>
+                    <td>can<span class="punctuation-mark">'</span>t</td>
+                    <td>The letters "no" are replaced</td>
+                </tr>
+                <tr>
+                    <td>do + not</td>
+                    <td>don<span class="punctuation-mark">'</span>t</td>
+                    <td>The letter "o" is replaced</td>
+                </tr>
+                <tr>
+                    <td>we + will</td>
+                    <td>we<span class="punctuation-mark">'</span>ll</td>
+                    <td>The letters "wi" are replaced</td>
+                </tr>
+                <tr>
+                    <td>I + am</td>
+                    <td>I<span class="punctuation-mark">'</span>m</td>
+                    <td>The letter "a" is replaced</td>
+                </tr>
+                <tr>
+                    <td>it + is</td>
+                    <td>it<span class="punctuation-mark">'</span>s</td>
+                    <td>The letter "i" is replaced</td>
+                </tr>
+            </table>
+
+            <div class="warning-box">
+                <h4>Tricky One: won't</h4>
+                <p><strong>will + not = won't</strong> (NOT "willn't")</p>
+                <p>This is an irregular contraction - the spelling changes completely!</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-16">
+            <h2>Day 2: Werda-ak's Dangerous Mission</h2>
+            <h3>Chapter 5 Key Events</h3>
+            
+            <div class="key-fact">
+                <h4>Key Fact: What Task Does Werda-ak Complete?</h4>
+                <p><span class="capital-letter">A</span>lex asks <span class="capital-letter">W</span>erda-ak to climb out on the rope bridge and <strong>cut the second hanger rope</strong><span class="punctuation-mark">,</span> then bring it back down<span class="punctuation-mark">.</span></p>
+            </div>
+            
+            <p><strong>Why is this dangerous?</strong></p>
+            <ul>
+                <li>Werda-ak must balance on a swaying rope 100 feet above the river.</li>
+                <li>If he drops the rope, they cannot complete the plan.</li>
+                <li>If he falls, he could die.</li>
+            </ul>
+            
+            <div class="highlight">
+                <p><strong>Werda-ak's Success:</strong> The boy completes the task! He brings the rope back safely.</p>
+                <p>This shows he can succeed when he follows a plan instead of acting rashly.</p>
+            </div>
+
+            <div class="grammar-box">
+                <h4>Notice the Possessive</h4>
+                <p>"<span class="capital-letter">W</span>erda-ak<span class="punctuation-mark">'</span>s knife" - The knife belongs to Werda-ak.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-17">
+            <h2>Day 2: Alex's Painful Landing</h2>
+            <h3>Chapter 6 Key Events</h3>
+            
+            <div class="key-fact">
+                <h4>Key Fact: What Injuries Does Alex Suffer?</h4>
+                <p><span class="capital-letter">A</span>lex hits the water face-first<span class="punctuation-mark">.</span> <span class="capital-letter">H</span>e <strong>breaks his nose</strong> and <strong>scrapes the skin off his forehead</strong><span class="punctuation-mark">.</span></p>
+            </div>
+            
+            <p><strong>What happened:</strong></p>
+            <ul>
+                <li>Alex tied the rope around himself and cut the main rope.</li>
+                <li>The rope snapped and threw him through the air.</li>
+                <li>He hit the river face-first, skipping like a stone.</li>
+                <li>The rope around his body saved him from worse injuries.</li>
+            </ul>
+            
+            <div class="key-fact">
+                <h4>Key Fact: How Does Monda-ak React?</h4>
+                <p><span class="capital-letter">M</span>onda-ak does NOT like being pulled through the river<span class="punctuation-mark">.</span> <span class="capital-letter">H</span>e <strong>howls loudly</strong> whenever his head is above water<span class="punctuation-mark">.</span></p>
+            </div>
+
+            <div class="highlight">
+                <p><strong>Who fixes Alex's nose?</strong> Senta-eh quickly snaps his broken nose back into place.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-18">
+            <h2>Day 2 Review</h2>
+            <h3>Grammar Rules and Story Facts</h3>
+
+            <div class="rule-box">
+                <h4>Grammar Rules to Remember</h4>
+                <ul>
+                    <li><strong>Comma in Compound Sentences:</strong> Use a comma before "and," "but," or "so" ONLY when joining two complete thoughts.</li>
+                    <li><strong>Comma After Introductory Words:</strong> Put a comma after words like "First," "Then," "Finally" at the start of a sentence.</li>
+                    <li><strong>Proper Nouns:</strong> Specific names (Kranda-ah, Werda-ak) get capital letters. General words (river, boy) do not.</li>
+                    <li><strong>Possessives:</strong> Add 's to show ownership (Alex's plan).</li>
+                    <li><strong>Contractions:</strong> The apostrophe replaces missing letters (can't = cannot).</li>
+                </ul>
+            </div>
+            
+            <div class="highlight">
+                <h4>Day 2 Story Facts</h4>
+                <ul>
+                    <li>Werda-ak <strong>cuts the second hanger rope</strong> and brings it back.</li>
+                    <li>Alex's injuries: <strong>broken nose and scraped forehead</strong>.</li>
+                    <li>Monda-ak <strong>howls loudly</strong> while being pulled through the water.</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- DAY 3: CHAPTER 7 - SLIDES 19-25 -->
+        <!-- ============================================ -->
+
+        <div class="slide" id="slide-19">
+            <h2>Day 3: Chapter 7 - The Boar</h2>
+            <h3>Consequences and Conflict</h3>
+            
+            <div class="key-fact">
+                <h4>Key Fact: Why Are Warriors Hunting Them?</h4>
+                <p><span class="capital-letter">A</span>lex and his team are being hunted because they <strong>destroyed the village<span class="punctuation-mark">'</span>s rope bridge</strong><span class="punctuation-mark">.</span></p>
+            </div>
+            
+            <div class="highlight">
+                <p><strong>The Consequence:</strong> The villagers built that bridge with a lot of time and work. They used it to cross the river and gather resources. Now they want to find whoever destroyed it.</p>
+            </div>
+            
+            <div class="grammar-box">
+                <h4>Today's Grammar Practice</h4>
+                <p>Notice the possessive: "the village<span class="punctuation-mark">'</span>s rope bridge"</p>
+                <p>The apostrophe + s shows the bridge belongs to the village.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-20">
+            <h2>Day 3: Capitalization Review</h2>
+            <h3>Applying What We Learned</h3>
+
+            <div class="rule-box">
+                <h4>When to Use Capital Letters</h4>
+                <ol>
+                    <li><strong>First word of every sentence</strong></li>
+                    <li><strong>Proper nouns</strong> (specific names of people, places, things)</li>
+                    <li><strong>The word "I"</strong> (always capitalized)</li>
+                    <li><strong>Titles before names</strong> (not applicable in this story)</li>
+                </ol>
+            </div>
+
+            <div class="practice-box">
+                <h4>Practice: Find the Errors</h4>
+                <p>"the warriors from rinta-ah chased alex and senta-eh."</p>
+                <p><strong>Corrected:</strong></p>
+                <p>"<span class="capital-letter">T</span>he warriors from <span class="capital-letter">R</span>inta-ah chased <span class="capital-letter">A</span>lex and <span class="capital-letter">S</span>enta-eh."</p>
+                <ul>
+                    <li>"The" - first word of sentence</li>
+                    <li>"Rinta-ah" - name of a specific place</li>
+                    <li>"Alex" - name of a specific person</li>
+                    <li>"Senta-eh" - name of a specific person</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-21">
+            <h2>Day 3: Werda-ak Gets Treed</h2>
+            <h3>A Dangerous Encounter</h3>
+            
+            <div class="key-fact">
+                <h4>Key Fact: What Animal Traps Werda-ak?</h4>
+                <p><span class="capital-letter">A</span> massive <strong>boar</strong> (wild pig) traps <span class="capital-letter">W</span>erda-ak in a tree<span class="punctuation-mark">.</span> <span class="capital-letter">S</span>he is <strong>protecting her piglets</strong><span class="punctuation-mark">.</span></p>
+            </div>
+            
+            <div class="key-fact">
+                <h4>Key Fact: How Big Is the Boar?</h4>
+                <p><span class="capital-letter">T</span>he top of the boar<span class="punctuation-mark">'</span>s curved back is at <span class="capital-letter">A</span>lex<span class="punctuation-mark">'</span>s eye level<span class="punctuation-mark">.</span></p>
+                <p>This means the pig is HUGE - as tall as a person!</p>
+            </div>
+            
+            <p><strong>What happens:</strong></p>
+            <ul>
+                <li>Werda-ak was scouting ahead and stumbled upon the boar's den.</li>
+                <li>The mother boar attacks to protect her babies.</li>
+                <li>Werda-ak climbs a tree, but the boar keeps ramming it.</li>
+            </ul>
+
+            <div class="grammar-box">
+                <h4>Notice the Possessives</h4>
+                <p>"the boar<span class="punctuation-mark">'</span>s curved back" - the back belongs to the boar</p>
+                <p>"<span class="capital-letter">A</span>lex<span class="punctuation-mark">'</span>s eye level" - the eye level belongs to Alex</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-22">
+            <h2>Day 3: The Rescue Attempt and Capture</h2>
+            <h3>Key Events</h3>
+            
+            <div class="key-fact">
+                <h4>Key Fact: How Does Alex Distract the Boar?</h4>
+                <p><span class="capital-letter">A</span>lex borrows <span class="capital-letter">S</span>enta-eh<span class="punctuation-mark">'</span>s bow and <strong>shoots an arrow into the boar<span class="punctuation-mark">'</span>s shoulder</strong><span class="punctuation-mark">.</span></p>
+            </div>
+            
+            <div class="key-fact">
+                <h4>Key Fact: Who Kills the Boar?</h4>
+                <p><strong>Hunters from the nearby village</strong> kill the giant boar with spears and an ax<span class="punctuation-mark">.</span></p>
+            </div>
+
+            <div class="key-fact">
+                <h4>Key Fact: What Happens to Werda-ak?</h4>
+                <p><span class="capital-letter">A</span>lex signals <span class="capital-letter">W</span>erda-ak to <strong>climb higher into the tree and hide</strong><span class="punctuation-mark">.</span> <span class="capital-letter">T</span>he hunters search but do not find him<span class="punctuation-mark">.</span> <span class="capital-letter">W</span>erda-ak <strong>escapes capture</strong><span class="punctuation-mark">.</span></p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-23">
+            <h2>Day 3: Grunta-ak and the Village</h2>
+            <h3>Important Characters and Details</h3>
+            
+            <div class="key-fact">
+                <h4>Key Fact: Who Is Grunta-ak?</h4>
+                <p><span class="capital-letter">G</span>runta-ak is the <strong>leader of the hunting party</strong><span class="punctuation-mark">.</span> <span class="capital-letter">H</span>e gives orders to the other warriors and carries a heavy ax<span class="punctuation-mark">.</span></p>
+            </div>
+            
+            <div class="key-fact">
+                <h4>Key Fact: What Does Grunta-ak Say About the Bridge?</h4>
+                <p><span class="capital-letter">G</span>runta-ak says the bridge took <strong>a lot of time and work to build</strong><span class="punctuation-mark">.</span> <span class="capital-letter">I</span>t allowed the village to cross the river and gather resources from the other side<span class="punctuation-mark">.</span></p>
+            </div>
+
+            <div class="grammar-box">
+                <h4>Proper Noun Practice</h4>
+                <p>"Grunta-ak" is a proper noun because it is the specific name of this person.</p>
+                <p>If we just said "the warrior" or "the leader," those would be common nouns.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-24">
+            <h2>Day 3: Imprisoned</h2>
+            <h3>The Chapter Ending</h3>
+            
+            <div class="key-fact">
+                <h4>Key Fact: Where Are They Taken?</h4>
+                <p><span class="capital-letter">A</span>lex<span class="punctuation-mark">,</span> <span class="capital-letter">S</span>enta-eh<span class="punctuation-mark">,</span> and <span class="capital-letter">M</span>onda-ak are locked in a <strong>small building with no windows and one solid door</strong><span class="punctuation-mark">.</span></p>
+            </div>
+            
+            <div class="question-box">
+                <p><strong>Cliffhanger:</strong> They are imprisoned. Werda-ak is still free, hiding in the trees. How will they escape and continue the mission?</p>
+            </div>
+            
+            <div class="grammar-box">
+                <h4>Notice the Commas in a List</h4>
+                <p>Alex<span class="punctuation-mark">,</span> Senta-eh<span class="punctuation-mark">,</span> and Monda-ak</p>
+                <p>When listing three or more items, separate them with commas.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-25">
+            <h2>Day 3 Review</h2>
+            <h3>Key Facts for Your Assignment</h3>
+            
+            <div class="highlight">
+                <h4>Chapter 7 Key Facts</h4>
+                <ul>
+                    <li>Warriors hunt them because they <strong>destroyed the rope bridge</strong>.</li>
+                    <li>A massive <strong>boar protecting her piglets</strong> traps Werda-ak.</li>
+                    <li>The boar's back is at <strong>Alex's eye level</strong> (very big!).</li>
+                    <li>Alex <strong>shoots an arrow into the boar's shoulder</strong> to distract it.</li>
+                    <li><strong>Hunters from the village</strong> kill the boar.</li>
+                    <li><strong>Grunta-ak</strong> is the leader of the hunting party.</li>
+                    <li>Werda-ak <strong>hides in the tree</strong> and escapes capture.</li>
+                    <li>Grunta-ak says the bridge took <strong>a lot of time and work</strong> to build.</li>
+                    <li>Alex and Senta-eh are imprisoned in a <strong>building with no windows and one solid door</strong>.</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- DAY 4: WRITING WORKSHOP - SLIDES 26-30 -->
+        <!-- ============================================ -->
+
+        <div class="slide" id="slide-26">
+            <h2>Day 4: Writing Workshop</h2>
+            <h3>Applying Punctuation and Capitalization</h3>
+            
+            <div class="writing-structure">
+                <h3>Writing Structure: Topic Sentence + Three Details + Conclusion</h3>
+                <ul>
+                    <li><strong>Topic Sentence:</strong> A clear statement that answers the question.</li>
+                    <li><strong>Supporting Detail 1:</strong> First piece of proof from the story.</li>
+                    <li><strong>Supporting Detail 2:</strong> Second piece of proof from the story.</li>
+                    <li><strong>Supporting Detail 3:</strong> Third piece of proof from the story.</li>
+                    <li><strong>Conclusion:</strong> Restate your main idea in different words.</li>
+                </ul>
+            </div>
+            
+            <div class="rule-box">
+                <h4>Punctuation and Capitalization Rules to Follow</h4>
+                <ul>
+                    <li>Every sentence starts with a <span class="capital-letter">capital letter</span>.</li>
+                    <li>Every sentence ends with a <span class="punctuation-mark">.</span> or <span class="punctuation-mark">?</span> or <span class="punctuation-mark">!</span></li>
+                    <li>All names (Alex, Werda-ak, Kranda-ah) have <span class="capital-letter">capital letters</span>.</li>
+                    <li>Use apostrophes for ownership (Alex<span class="punctuation-mark">'</span>s) and contractions (can<span class="punctuation-mark">'</span>t).</li>
+                    <li>Use commas after introductory words (<span class="capital-letter">F</span>irst<span class="punctuation-mark">,</span> <span class="capital-letter">T</span>hen<span class="punctuation-mark">,</span>).</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-27">
+            <h2>Day 4: Writing Prompt 1</h2>
+            
+            <div class="writing-prompt">
+                <h3>Your Prompt</h3>
+                <p><strong>How does Alex rescue Werda-ak from the river in Chapter 4? Describe what Alex does step by step.</strong></p>
+            </div>
+            
+            <h3>Details to Include</h3>
+            <ul>
+                <li>What did Alex do while running along the bank?</li>
+                <li>What did Alex grab to anchor himself in the river?</li>
+                <li>What could Alex do alone, and what did he need help with?</li>
+                <li>Who helped complete the rescue, and how?</li>
+            </ul>
+            
+            <div class="example-box">
+                <h4>Topic Sentence Starter</h4>
+                <p>"<span class="capital-letter">A</span>lex rescues <span class="capital-letter">W</span>erda-ak from the river by acting quickly and getting help from <span class="capital-letter">S</span>enta-eh<span class="punctuation-mark">.</span>"</p>
+            </div>
+
+            <div class="grammar-box">
+                <h4>Use Introductory Words</h4>
+                <p>Since this prompt asks for steps, use words like:</p>
+                <p><span class="capital-letter">F</span>irst<span class="punctuation-mark">,</span> ... <span class="capital-letter">T</span>hen<span class="punctuation-mark">,</span> ... <span class="capital-letter">N</span>ext<span class="punctuation-mark">,</span> ... <span class="capital-letter">F</span>inally<span class="punctuation-mark">,</span> ...</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-28">
+            <h2>Day 4: Writing Prompt 2</h2>
+            <p><em>(For Language Arts 1-4 SC only)</em></p>
+            
+            <div class="writing-prompt">
+                <h3>Your Prompt</h3>
+                <p><strong>Why do the village warriors capture Alex and his team? Use details from Chapter 7 to explain their reasons.</strong></p>
+            </div>
+            
+            <h3>Details to Include</h3>
+            <ul>
+                <li>What specific thing did Alex destroy to cross the river?</li>
+                <li>What did Grunta-ak say about the bridge?</li>
+                <li>How did the village find out their bridge was destroyed?</li>
+                <li>What does this show about actions having consequences?</li>
+            </ul>
+            
+            <div class="example-box">
+                <h4>Topic Sentence Starter</h4>
+                <p>"<span class="capital-letter">T</span>he village warriors capture <span class="capital-letter">A</span>lex and his team because they destroyed the village<span class="punctuation-mark">'</span>s important rope bridge<span class="punctuation-mark">.</span>"</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-29">
+            <h2>Day 4: Writing Checklist</h2>
+            <h3>Check Your Work Before Submitting</h3>
+            
+            <div class="highlight">
+                <h3>Capitalization Checklist</h3>
+                <ul>
+                    <li>☐ Does every sentence start with a <strong>capital letter</strong>?</li>
+                    <li>☐ Are all character names capitalized? (<span class="capital-letter">A</span>lex, <span class="capital-letter">W</span>erda-ak, <span class="capital-letter">S</span>enta-eh, <span class="capital-letter">G</span>runta-ak)</li>
+                    <li>☐ Are all place names capitalized? (<span class="capital-letter">K</span>randa-ah, <span class="capital-letter">R</span>inta-ah)</li>
+                    <li>☐ Is the word "I" always capitalized?</li>
+                </ul>
+            </div>
+            
+            <div class="highlight">
+                <h3>Punctuation Checklist</h3>
+                <ul>
+                    <li>☐ Does every sentence end with <span class="punctuation-mark">.</span> or <span class="punctuation-mark">?</span> or <span class="punctuation-mark">!</span>?</li>
+                    <li>☐ Did you put commas after introductory words? (<span class="capital-letter">F</span>irst<span class="punctuation-mark">,</span> <span class="capital-letter">T</span>hen<span class="punctuation-mark">,</span>)</li>
+                    <li>☐ Did you use apostrophes correctly for ownership? (Alex<span class="punctuation-mark">'</span>s plan)</li>
+                    <li>☐ Did you use apostrophes correctly in contractions? (can<span class="punctuation-mark">'</span>t, don<span class="punctuation-mark">'</span>t)</li>
+                </ul>
+            </div>
+            
+            <div class="writing-structure">
+                <h3>Content Checklist</h3>
+                <ul>
+                    <li>☐ Do you have a topic sentence that answers the question?</li>
+                    <li>☐ Do you have at least three details from the story?</li>
+                    <li>☐ Do you have a conclusion sentence?</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-30">
+            <h2>Week 2 Complete Review</h2>
+            <h3>Grammar Reference Guide</h3>
+
+            <div class="two-column">
+                <div class="rule-box">
+                    <h4>Comma Rules</h4>
+                    <p><strong>1. Compound Sentences:</strong><br>
+                    Use comma + and/but/so to join two complete thoughts.<br>
+                    <em>Alex ran<span class="punctuation-mark">,</span> and he jumped in.</em></p>
+                    
+                    <p><strong>2. Introductory Words:</strong><br>
+                    Put a comma after First, Then, Finally, etc.<br>
+                    <em><span class="capital-letter">F</span>irst<span class="punctuation-mark">,</span> Werda-ak climbed up.</em></p>
+                    
+                    <p><strong>3. Lists:</strong><br>
+                    Separate items with commas.<br>
+                    <em>Alex<span class="punctuation-mark">,</span> Senta-eh<span class="punctuation-mark">,</span> and Monda-ak</em></p>
+                </div>
+
+                <div class="rule-box">
+                    <h4>Capitalization Rules</h4>
+                    <p><strong>1. Sentence Beginnings:</strong><br>
+                    <span class="capital-letter">E</span>very sentence starts with a capital.</p>
+                    
+                    <p><strong>2. Proper Nouns (Names):</strong><br>
+                    <span class="capital-letter">A</span>lex, <span class="capital-letter">K</span>randa-ah, <span class="capital-letter">G</span>runta-ak</p>
+                    
+                    <p><strong>3. The Word "I":</strong><br>
+                    Always capitalize <span class="capital-letter">I</span>.</p>
+                </div>
+            </div>
+
+            <div class="rule-box">
+                <h4>Apostrophe Rules</h4>
+                <p><strong>Possessives (Ownership):</strong> Alex<span class="punctuation-mark">'</span>s plan = the plan belongs to Alex</p>
+                <p><strong>Contractions (Combined Words):</strong> can<span class="punctuation-mark">'</span>t = cannot, we<span class="punctuation-mark">'</span>ll = we will</p>
+            </div>
+        </div>
+
+        <div class="slide-nav">
+            <button onclick="prevSlide()" id="prevBtn">Previous</button>
+            <button onclick="nextSlide()" id="nextBtn">Next</button>
+        </div>
+
+        <footer>
+            <p>Week 2: Lost in Kragdon-ah, Chapters 4-7</p>
+            <p>ELA Theme: Punctuation and Capitalization (Advanced)</p>
+            <p><a href="https://www.reinischclassroom.com" style="color: #ffd700;">Return to Classroom Website</a></p>
+        </footer>
+    </div>
+
+    <script>
+        let currentSlide = 0;
+        const totalSlides = 31;
+
+        let currentBg = 0;
+        const bgImages = document.querySelectorAll('.bg-image');
+        const totalBgImages = 12;
+        
+        // Preload all images to prevent loading flicker
+        const imageUrls = ['image1.jpg', 'image2.jpg', 'image3.jpg', 'image4.jpg', 'image5.jpg', 'image6.jpg', 'image7.jpg', 'image8.jpg', 'image9.jpg', 'image10.jpg', 'image11.jpg', 'image12.jpg'];
+        imageUrls.forEach(url => {
+            const img = new Image();
+            img.src = url;
+        });
+        
+        function rotateBg() {
+            const oldBg = currentBg;
+            currentBg = (currentBg + 1) % totalBgImages;
+            
+            // Add active to new image (it will fade in on top of the old one)
+            bgImages[currentBg].classList.add('active');
+            
+            // Wait for the new image to fully fade in before removing the old one
+            setTimeout(() => {
+                bgImages[oldBg].classList.remove('active');
+            }, 3000); // Match the CSS transition duration
+        }
+        
+        setInterval(rotateBg, 8000);
+
+        function updateSlide() {
+            document.querySelectorAll('.slide').forEach((slide, index) => {
+                slide.classList.remove('active');
+                if (index === currentSlide) {
+                    slide.classList.add('active');
+                }
+            });
+            
+            document.getElementById('prevBtn').disabled = currentSlide === 0;
+            document.getElementById('nextBtn').disabled = currentSlide === totalSlides - 1;
+            
+            const progress = ((currentSlide + 1) / totalSlides) * 100;
+            document.getElementById('progress').style.width = progress + '%';
+        }
+
+        function nextSlide() {
+            if (currentSlide < totalSlides - 1) {
+                currentSlide++;
+                updateSlide();
+            }
+        }
+
+        function prevSlide() {
+            if (currentSlide > 0) {
+                currentSlide--;
+                updateSlide();
+            }
+        }
+
+        function goToSlide(slideIndex) {
+            currentSlide = slideIndex;
+            updateSlide();
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight') nextSlide();
+            if (e.key === 'ArrowLeft') prevSlide();
+        });
+
+        updateSlide();
+    </script>
+</body>
+</html>
