@@ -1,6 +1,6 @@
 {
   "version": "v1",
-  "updated": "2026-01-28T19:03:43.460Z",
+  "updated": "2026-01-28T19:37:05.057Z",
   "categories": {
     "toolkit": {
       "slots": 8,
@@ -189,7 +189,7 @@
         "Life Skills Presentation: Employment & Independent Living for Students",
         "Counting Money",
         "Understanding Your Paycheck",
-        "",
+        "Interactive Cashier Activity",
         "Adding and Subtracting Money",
         "",
         "",
@@ -223,7 +223,7 @@
         "/life-skills/presentations/presentation-03/",
         "/life-skills/presentations/presentation-04/",
         "/life-skills/presentations/presentation-05/",
-        "",
+        "/life-skills/presentations/presentation-06/",
         "/life-skills/presentations/presentation-07/",
         "",
         "",
