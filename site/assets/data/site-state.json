@@ -1,6 +1,6 @@
 {
   "version": "v1",
-  "updated": "2026-01-29T13:17:02.066Z",
+  "updated": "2026-01-29T13:28:29.620Z",
   "categories": {
     "toolkit": {
       "slots": 8,
@@ -68,7 +68,7 @@
       "slots": 16,
       "titles": [
         "Week 1: Capitalization and Punctuation",
-        "",
+        "Capitalization and Punctuation (Advanced)",
         "Week 3 - Dialogue Punctuation",
         "Week 4 - Dialogue & First-Person Point of View",
         "Week 5 - Sentence Fragments vs. Complete Sentences",
@@ -86,7 +86,7 @@
       ],
       "links": [
         "/presentations/lost-in-kragdon-ah/presentation-01/",
-        "",
+        "/presentations/lost-in-kragdon-ah/presentation-02/",
         "/presentations/lost-in-kragdon-ah/presentation-03/",
         "/presentations/lost-in-kragdon-ah/presentation-04/",
         "/presentations/lost-in-kragdon-ah/presentation-05/",
