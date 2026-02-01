@@ -228,6 +228,24 @@
   body.has-app-shell {
     padding-left: var(--shell-width);
   }
+
+  body.app-shell-collapsed.has-app-shell {
+    padding-left: 72px;
+  }
+
+  body.app-shell-collapsed .app-shell-rail {
+    width: 72px;
+  }
+
+  body.app-shell-collapsed .app-shell-item-label,
+  body.app-shell-collapsed .app-shell-item-arrow,
+  body.app-shell-collapsed .app-shell-tagline,
+  body.app-shell-collapsed .app-shell-footer,
+  body.app-shell-collapsed .app-shell-status,
+  body.app-shell-collapsed .app-shell-submenu,
+  body.app-shell-collapsed .lessons-navigator {
+    display: none;
+  }
 }
 
 @media (max-width: 768px) {
