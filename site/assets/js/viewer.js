@@ -11,11 +11,16 @@
   const closeBtn = document.getElementById('closeBtn');
   const presentationModeBtn = document.getElementById('presentationModeBtn');
   const fullscreenBtn = document.getElementById('fullscreenBtn');
+  const sidebarToggleBtn = document.getElementById('sidebarToggleBtn');
   const viewerFrame = document.getElementById('viewerFrame');
 
   // State
   let presentationMode = false;
   let returnUrl = null;
+  let sidebarCollapsed = false;
+
+  // LocalStorage key for sidebar state
+  const SIDEBAR_STATE_KEY = 'viewer-sidebar-collapsed';
 
   /**
    * Initialize the viewer
@@ -41,6 +46,9 @@
 
     // Setup event handlers
     setupEventHandlers();
+
+    // Restore sidebar state from localStorage (default: expanded)
+    restoreSidebarState();
 
     console.log('[viewer] Initialized with src:', src, 'return:', returnUrl);
   }
@@ -114,6 +122,11 @@
 
     // Fullscreen button
     fullscreenBtn.addEventListener('click', toggleFullscreen);
+
+    // Sidebar toggle button
+    if (sidebarToggleBtn) {
+      sidebarToggleBtn.addEventListener('click', toggleSidebar);
+    }
 
     // Keyboard shortcuts
     document.addEventListener('keydown', handleKeyboard);
@@ -357,6 +370,65 @@
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+  }
+
+  /**
+   * Toggle sidebar collapsed/expanded state
+   */
+  function toggleSidebar() {
+    sidebarCollapsed = !sidebarCollapsed;
+    applySidebarState();
+    saveSidebarState();
+    console.log('[viewer] Sidebar toggled:', sidebarCollapsed ? 'collapsed' : 'expanded');
+  }
+
+  /**
+   * Apply the sidebar state to the DOM
+   */
+  function applySidebarState() {
+    const rail = document.querySelector('.app-shell-rail');
+    const body = document.body;
+    
+    if (sidebarCollapsed) {
+      if (rail) {
+        rail.classList.add('viewer-collapsed');
+      }
+      body.classList.add('viewer-sidebar-collapsed');
+    } else {
+      if (rail) {
+        rail.classList.remove('viewer-collapsed');
+      }
+      body.classList.remove('viewer-sidebar-collapsed');
+    }
+  }
+
+  /**
+   * Save sidebar state to localStorage
+   */
+  function saveSidebarState() {
+    try {
+      localStorage.setItem(SIDEBAR_STATE_KEY, sidebarCollapsed ? 'true' : 'false');
+    } catch (e) {
+      console.warn('[viewer] Could not save sidebar state:', e);
+    }
+  }
+
+  /**
+   * Restore sidebar state from localStorage
+   * Default state is expanded (collapsed = false)
+   */
+  function restoreSidebarState() {
+    try {
+      const saved = localStorage.getItem(SIDEBAR_STATE_KEY);
+      // Default to expanded (false) if no saved state
+      sidebarCollapsed = saved === 'true';
+      applySidebarState();
+      console.log('[viewer] Restored sidebar state:', sidebarCollapsed ? 'collapsed' : 'expanded');
+    } catch (e) {
+      console.warn('[viewer] Could not restore sidebar state:', e);
+      sidebarCollapsed = false; // Default to expanded
+      applySidebarState();
+    }
   }
 
   // Initialize when DOM is ready

@@ -151,3 +151,34 @@ body:-webkit-full-screen .viewer-controls,
 body:-moz-full-screen .viewer-controls {
   background: rgba(0, 0, 0, 0.9);
 }
+
+/* Viewer-specific sidebar collapse styles */
+/* When sidebar is collapsed in viewer, hide it and adjust layout */
+body.viewer-sidebar-collapsed .app-shell-rail.viewer-collapsed {
+  transform: translateX(-100%);
+  transition: transform 0.3s ease;
+}
+
+body.viewer-sidebar-collapsed.has-app-shell {
+  padding-left: 0;
+}
+
+/* Ensure viewer container takes full width when sidebar is collapsed */
+body.viewer-sidebar-collapsed .viewer-container {
+  margin-left: 0;
+}
+
+/* Style for the sidebar toggle button */
+#sidebarToggleBtn {
+  font-size: 1.2rem;
+  padding: 0.5rem 0.8rem;
+}
+
+/* Smooth transitions for sidebar state changes */
+.app-shell-rail {
+  transition: transform 0.3s ease;
+}
+
+body.has-app-shell {
+  transition: padding-left 0.3s ease;
+}
