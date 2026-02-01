@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unit 1: Workplace Communication & Relationships</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #333;
+        }
+        .nav-bar {
+            width: 100%;
+            background: rgba(0,0,0,0.3);
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: fixed;
+            top: 0;
+            z-index: 100;
+        }
+        .back-btn {
+            background: linear-gradient(145deg, #e74c3c, #c0392b);
+            color: white;
+            padding: 8px 18px;
+            border: none;
+            border-radius: 20px;
+            font-size: 0.9em;
+            cursor: pointer;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .back-btn:hover { opacity: 0.9; }
+        .page-indicator {
+            color: white;
+            font-size: 0.85em;
+            background: rgba(255,255,255,0.15);
+            padding: 6px 16px;
+            border-radius: 15px;
+            text-align: center;
+            max-width: 350px;
+        }
+        .nav-buttons { display: flex; gap: 10px; }
+        .nav-btn {
+            background: linear-gradient(145deg, #3498db, #2980b9);
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: bold;
+        }
+        .nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .nav-btn:hover:not(:disabled) { opacity: 0.9; }
+
+        /* Day Jump Menu */
+        .day-menu {
+            width: 100%;
+            background: rgba(0,0,0,0.2);
+            padding: 8px 20px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            position: fixed;
+            top: 48px;
+            z-index: 99;
+            flex-wrap: wrap;
+        }
+        .day-jump {
+            background: rgba(255,255,255,0.15);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            padding: 5px 14px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        .day-jump:hover { background: rgba(255,255,255,0.3); }
+        .day-jump.active-day { background: #3498db; border-color: #3498db; }
+
+        .slide-container {
+            margin-top: 100px;
+            width: 95%;
+            max-width: 950px;
+            padding: 20px;
+        }
+        .page { display: none; }
+        .page.active { display: block; }
+
+        .slide {
+            background: rgba(255,255,255,0.95);
+            border-radius: 20px;
+            padding: 40px;
+            min-height: 500px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        .slide-title {
+            font-size: 2em;
+            color: #0f3460;
+            text-align: center;
+            margin-bottom: 25px;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 15px;
+        }
+        .slide p, .slide li {
+            font-size: 1.2em;
+            line-height: 1.8;
+            color: #2c3e50;
+            margin-bottom: 12px;
+        }
+        .slide ul { padding-left: 25px; }
+        .slide li { margin-bottom: 10px; }
+
+        .highlight-box { background: #e8f4fd; border-left: 5px solid #3498db; padding: 20px; border-radius: 0 12px 12px 0; margin: 20px 0; }
+        .warning-box { background: #fdf2e9; border-left: 5px solid #e67e22; padding: 20px; border-radius: 0 12px 12px 0; margin: 20px 0; }
+        .success-box { background: #eafaf1; border-left: 5px solid #27ae60; padding: 20px; border-radius: 0 12px 12px 0; margin: 20px 0; }
+        .example-box { background: #f4ecf7; border-left: 5px solid #8e44ad; padding: 20px; border-radius: 0 12px 12px 0; margin: 20px 0; }
+
+        .do-dont { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0; }
+        .do-column { background: #eafaf1; border: 2px solid #27ae60; border-radius: 12px; padding: 20px; }
+        .dont-column { background: #fdedec; border: 2px solid #e74c3c; border-radius: 12px; padding: 20px; }
+        .do-column h3 { color: #27ae60; margin-bottom: 10px; }
+        .dont-column h3 { color: #e74c3c; margin-bottom: 10px; }
+
+        .emoji-big { font-size: 1.5em; }
+
+        .scenario { background: #fff3cd; border: 2px solid #ffc107; border-radius: 12px; padding: 20px; margin: 15px 0; }
+        .scenario-label { font-weight: bold; color: #856404; font-size: 1.1em; margin-bottom: 8px; }
+
+        .title-slide {
+            display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; min-height: 500px;
+        }
+        .title-slide h1 { font-size: 2.5em; color: #0f3460; margin-bottom: 15px; }
+        .title-slide .unit-label { font-size: 1.1em; color: #7f8c8d; margin-bottom: 10px; }
+        .title-slide p { font-size: 1.3em; color: #555; }
+        .title-slide .emoji-hero { font-size: 4em; margin-bottom: 20px; }
+        .title-slide .day-label {
+            background: #3498db;
+            color: white;
+            padding: 8px 25px;
+            border-radius: 25px;
+            font-size: 1em;
+            margin-bottom: 15px;
+            display: inline-block;
+        }
+
+        .step-card {
+            background: white;
+            border: 2px solid #3498db;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 12px 0;
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+        }
+        .step-number {
+            background: #3498db;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2em;
+            flex-shrink: 0;
+        }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 1.1em;
+        }
+        .comparison-table th, .comparison-table td {
+            padding: 15px;
+            text-align: left;
+            border: 2px solid #ddd;
+        }
+        .comparison-table th { background: #0f3460; color: white; font-size: 1.15em; }
+        .comparison-table tr:nth-child(even) { background: #f2f2f2; }
+
+        .conversation-example {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 15px 0;
+        }
+        .speech-bubble {
+            padding: 12px 18px;
+            border-radius: 15px;
+            margin: 8px 0;
+            max-width: 80%;
+            font-size: 1.1em;
+        }
+        .customer-bubble { background: #e3f2fd; border: 1px solid #90caf9; margin-right: auto; }
+        .employee-bubble { background: #e8f5e9; border: 1px solid #a5d6a7; margin-left: auto; }
+        .bubble-label { font-weight: bold; font-size: 0.9em; margin-bottom: 4px; }
+
+        .phone-screen {
+            background: #1a1a2e;
+            border-radius: 25px;
+            padding: 30px 20px;
+            max-width: 380px;
+            margin: 20px auto;
+            color: white;
+        }
+        .phone-header {
+            text-align: center;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+            margin-bottom: 15px;
+        }
+        .message-bubble {
+            padding: 12px 16px;
+            border-radius: 18px;
+            margin: 8px 0;
+            max-width: 85%;
+            font-size: 1em;
+            line-height: 1.5;
+        }
+        .msg-sent {
+            background: #3498db;
+            color: white;
+            margin-left: auto;
+            border-bottom-right-radius: 4px;
+        }
+        .msg-label { font-size: 0.8em; opacity: 0.7; margin-bottom: 3px; }
+
+        .email-mock {
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            font-size: 1.05em;
+        }
+        .email-mock .email-header {
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+        .email-mock .email-field { margin: 5px 0; color: #555; }
+        .email-mock .email-field strong { color: #333; }
+        .email-mock .email-body { line-height: 1.8; }
+
+        @media print {
+            body { background: white; }
+            .nav-bar, .day-menu { display: none; }
+            .slide-container { margin-top: 0; }
+            .page { display: block !important; page-break-after: always; }
+            .slide { box-shadow: none; border: 1px solid #ccc; }
+            .phone-screen { background: #eee; color: #333; border: 2px solid #333; }
+            .msg-sent { background: #ccc; color: #333; }
+        }
+    </style>
+</head>
+<body>
+    <div class="nav-bar">
+        <a href="https://reinischclassroom.com/life-skills/" class="back-btn">← Back to Life Skills</a>
+        <div class="page-indicator" id="pageIndicator">Page 1 of 31</div>
+        <div class="nav-buttons">
+            <button class="nav-btn" id="prevBtn" onclick="prevPage()">◀ Back</button>
+            <button class="nav-btn" id="nextBtn" onclick="nextPage()">Next ▶</button>
+        </div>
+    </div>
+
+    <div class="day-menu">
+        <button class="day-jump active-day" onclick="jumpTo(1)">Unit Title</button>
+        <button class="day-jump" onclick="jumpTo(2)">Day 1: Your Boss</button>
+        <button class="day-jump" onclick="jumpTo(9)">Day 2: Coworkers</button>
+        <button class="day-jump" onclick="jumpTo(16)">Day 3: Customers</button>
+        <button class="day-jump" onclick="jumpTo(23)">Day 4: Phone & Email</button>
+    </div>
+
+    <div class="slide-container">
+
+        <!-- ============================================================ -->
+        <!-- PAGE 1: UNIT TITLE SLIDE -->
+        <!-- ============================================================ -->
+        <div class="page active" id="page1">
+            <div class="slide title-slide">
+                <div class="emoji-hero">🗣️💼🤝📱</div>
+                <h1>Workplace Communication & Relationships</h1>
+                <p style="font-size:1.1em; color:#7f8c8d; margin-bottom: 25px;">Unit 1 &bull; 4 Days</p>
+                <div style="text-align:left; max-width:500px;">
+                    <p><strong>Day 1:</strong> Talking to Your Boss</p>
+                    <p><strong>Day 2:</strong> Getting Along with Coworkers</p>
+                    <p><strong>Day 3:</strong> Customer Service Basics</p>
+                    <p><strong>Day 4:</strong> Professional Phone & Email</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- DAY 1: TALKING TO YOUR BOSS (Pages 2–8) -->
+        <!-- ============================================================ -->
+        <div class="page" id="page2">
+            <div class="slide title-slide">
+                <div class="day-label">Day 1</div>
+                <div class="emoji-hero">🗣️👔</div>
+                <h1>Talking to Your Boss</h1>
+                <p>How to communicate with your supervisor at work</p>
+            </div>
+        </div>
+
+        <div class="page" id="page3">
+            <div class="slide">
+                <h2 class="slide-title">Why Does This Matter?</h2>
+                <p>Your boss (also called your <strong>supervisor</strong> or <strong>manager</strong>) is the person in charge of you at work. You need to talk to them about many things.</p>
+                <div class="highlight-box">
+                    <p><span class="emoji-big">💡</span> <strong>Your boss is NOT your enemy.</strong> They want you to do well at your job. Good communication helps both of you.</p>
+                </div>
+                <p><strong>You might need to talk to your boss when you:</strong></p>
+                <ul>
+                    <li>Have a question about your work</li>
+                    <li>Need a day off</li>
+                    <li>Have a problem you can't fix alone</li>
+                    <li>Don't understand what they want you to do</li>
+                    <li>Are going to be late or absent</li>
+                    <li>Need help with a coworker issue</li>
+                </ul>
+                <div class="success-box">
+                    <p><span class="emoji-big">✅</span> People who communicate well with their boss are more likely to <strong>keep their job</strong> and <strong>get raises</strong>.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page4">
+            <div class="slide">
+                <h2 class="slide-title">How to Ask Your Boss a Question</h2>
+                <p>It is always okay to ask questions at work. It is better to ask than to guess and make a mistake.</p>
+                <div class="highlight-box">
+                    <p><strong>Step-by-Step: Asking a Question</strong></p>
+                    <p><strong>Step 1:</strong> Wait for a good time. Don't interrupt if your boss is on the phone or talking to someone else.</p>
+                    <p><strong>Step 2:</strong> Get their attention politely. Say: <em>"Excuse me, can I ask you a quick question?"</em></p>
+                    <p><strong>Step 3:</strong> Ask your question clearly. Be specific about what you need help with.</p>
+                    <p><strong>Step 4:</strong> Listen carefully to the answer. If you still don't understand, say: <em>"Can you show me what you mean?"</em></p>
+                    <p><strong>Step 5:</strong> Say thank you.</p>
+                </div>
+                <div class="example-box">
+                    <p><strong>🔹 Example:</strong></p>
+                    <p><em>"Excuse me, Mrs. Johnson. I'm stocking the shelves but I'm not sure where the cereal goes. Can you show me?"</em></p>
+                </div>
+                <div class="warning-box">
+                    <p><span class="emoji-big">⚠️</span> <strong>Never say:</strong> "Nobody told me" or "That's not my job." These phrases make you look bad, even if they're true.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page5">
+            <div class="slide">
+                <h2 class="slide-title">How to Request Time Off</h2>
+                <p>Sometimes you need a day off — maybe for a doctor's appointment, a family event, or a personal reason. Here's how to ask the right way.</p>
+                <div class="highlight-box">
+                    <p><strong>Step-by-Step: Requesting Time Off</strong></p>
+                    <p><strong>Step 1:</strong> Ask ahead of time. Try to ask at least 1–2 weeks before you need the day off.</p>
+                    <p><strong>Step 2:</strong> Talk to your boss in person (or follow the method they prefer — some want it in writing).</p>
+                    <p><strong>Step 3:</strong> Be polite and direct. Tell them the date you need off.</p>
+                    <p><strong>Step 4:</strong> You do NOT have to give personal details. You can just say "I have an appointment" or "I have a family thing."</p>
+                    <p><strong>Step 5:</strong> Accept the answer. If they say no, don't argue. Ask if there's another day that works.</p>
+                </div>
+                <div class="example-box">
+                    <p><strong>🔹 Good Example:</strong></p>
+                    <p><em>"Hey Mr. Thompson, I need to request off on Friday, March 14th. I have a doctor's appointment. Is that okay?"</em></p>
+                </div>
+                <div class="warning-box">
+                    <p><strong>🔹 Bad Example:</strong></p>
+                    <p><em>"I'm not coming in Friday." (This is telling, not asking. It can get you in trouble.)</em></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page6">
+            <div class="slide">
+                <h2 class="slide-title">How to Report a Problem</h2>
+                <p>Sometimes things go wrong at work. A machine breaks. A customer is angry. You see something unsafe. It's your job to let your boss know.</p>
+                <div class="highlight-box">
+                    <p><strong>Step-by-Step: Reporting a Problem</strong></p>
+                    <p><strong>Step 1:</strong> Stay calm. Don't panic or get angry.</p>
+                    <p><strong>Step 2:</strong> Go to your boss (or the manager on duty).</p>
+                    <p><strong>Step 3:</strong> Explain what happened clearly. Stick to the facts.</p>
+                    <p><strong>Step 4:</strong> Don't blame people or make stuff up. Just say what happened.</p>
+                    <p><strong>Step 5:</strong> Ask what they want you to do next.</p>
+                </div>
+                <div class="example-box">
+                    <p><strong>🔹 Example:</strong></p>
+                    <p><em>"Mrs. Davis, I wanted to let you know that the mop bucket tipped over in aisle 3 and the floor is wet. I put a caution sign up. Should I clean it up or is there something else you want me to do?"</em></p>
+                </div>
+                <div class="success-box">
+                    <p><span class="emoji-big">⭐</span> <strong>Reporting problems shows your boss that you are responsible and paying attention.</strong> That's a good thing!</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page7">
+            <div class="slide">
+                <h2 class="slide-title">Accepting Feedback from Your Boss</h2>
+                <p><strong>Feedback</strong> is when your boss tells you how you're doing — what you're doing well and what you need to work on. Everyone gets feedback. It doesn't mean you're in trouble.</p>
+                <div class="highlight-box">
+                    <p><strong>Two types of feedback:</strong></p>
+                    <p><span class="emoji-big">👍</span> <strong>Positive feedback:</strong> "Great job stocking those shelves! They look really organized."</p>
+                    <p><span class="emoji-big">📝</span> <strong>Constructive feedback:</strong> "Next time, make sure the labels face forward when you stock the shelves."</p>
+                </div>
+                <p><strong>Constructive feedback is NOT the same as being yelled at.</strong> It's your boss helping you do better.</p>
+                <div class="success-box">
+                    <p><strong>Step 1:</strong> Listen without interrupting.</p>
+                    <p><strong>Step 2:</strong> Don't get defensive or make excuses.</p>
+                    <p><strong>Step 3:</strong> Say: <em>"Okay, I'll do that next time. Thanks for letting me know."</em></p>
+                    <p><strong>Step 4:</strong> Actually make the change. Show your boss you listened.</p>
+                </div>
+                <div class="do-dont">
+                    <div class="do-column">
+                        <h3>✅ DO Say:</h3>
+                        <ul>
+                            <li>"Okay, I understand."</li>
+                            <li>"Thanks for telling me."</li>
+                            <li>"Can you show me the right way?"</li>
+                        </ul>
+                    </div>
+                    <div class="dont-column">
+                        <h3>❌ DON'T Say:</h3>
+                        <ul>
+                            <li>"That's not fair."</li>
+                            <li>"Nobody told me."</li>
+                            <li>"Whatever." (or eye rolling)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page8">
+            <div class="slide">
+                <h2 class="slide-title">Day 1 Review: Talking to Your Boss</h2>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #1:</div>
+                    <p>You don't understand how to work the cash register. What do you do?</p>
+                    <p><strong>Answer:</strong> Wait for a good time, then ask politely: <em>"Can you show me how to use the register? I want to make sure I do it right."</em></p>
+                </div>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #2:</div>
+                    <p>You need next Friday off for a doctor's appointment. What do you do?</p>
+                    <p><strong>Answer:</strong> Ask ahead of time: <em>"I have a doctor's appointment next Friday. Can I have that day off?"</em></p>
+                </div>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #3:</div>
+                    <p>Your boss says you need to sweep the floor more carefully. How do you respond?</p>
+                    <p><strong>Answer:</strong> Don't get upset. Say: <em>"Okay, I'll be more careful. Thanks for letting me know."</em></p>
+                </div>
+                <div class="success-box">
+                    <p style="text-align: center; font-size: 1.2em;"><strong>✅ End of Day 1! Next up: Getting Along with Coworkers</strong></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- DAY 2: GETTING ALONG WITH COWORKERS (Pages 9–15) -->
+        <!-- ============================================================ -->
+        <div class="page" id="page9">
+            <div class="slide title-slide">
+                <div class="day-label">Day 2</div>
+                <div class="emoji-hero">🤝👥</div>
+                <h1>Getting Along with Coworkers</h1>
+                <p>How to work well with the people around you</p>
+            </div>
+        </div>
+
+        <div class="page" id="page10">
+            <div class="slide">
+                <h2 class="slide-title">Who Are Your Coworkers?</h2>
+                <p><strong>Coworkers</strong> are the people who work at the same place as you. They might do the same job as you, or a completely different job. Either way, you have to get along with them.</p>
+                <div class="highlight-box">
+                    <p><span class="emoji-big">💡</span> <strong>You don't have to be best friends with your coworkers.</strong> But you DO have to be polite, respectful, and able to work as a team.</p>
+                </div>
+                <p><strong>Why does getting along with coworkers matter?</strong></p>
+                <ul>
+                    <li>Work goes smoother when people cooperate</li>
+                    <li>You'll be happier at your job</li>
+                    <li>Your boss notices when people work well together</li>
+                    <li>Drama and fighting can get you fired</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="page" id="page11">
+            <div class="slide">
+                <h2 class="slide-title">Small Talk: What Is It?</h2>
+                <p><strong>Small talk</strong> is casual, friendly conversation. It's how people get comfortable with each other. You don't have to share deep personal stuff — just be friendly.</p>
+                <div class="success-box">
+                    <p><strong>Good small talk topics at work:</strong></p>
+                    <ul>
+                        <li>"How's your day going?"</li>
+                        <li>"Did you do anything fun this weekend?"</li>
+                        <li>"It's really busy today, huh?"</li>
+                        <li>Sports, weather, TV shows, food</li>
+                    </ul>
+                </div>
+                <div class="warning-box">
+                    <p><strong>Topics to AVOID at work:</strong></p>
+                    <ul>
+                        <li>How much money you or they make</li>
+                        <li>Religion or politics (can start arguments)</li>
+                        <li>Gossip about other coworkers</li>
+                        <li>Very personal problems</li>
+                    </ul>
+                </div>
+                <div class="example-box">
+                    <p><strong>🔹 Example:</strong> You walk into the break room and a coworker is there.</p>
+                    <p>You: <em>"Hey! How's it going today?"</em></p>
+                    <p>Them: <em>"Pretty good. It's been busy though."</em></p>
+                    <p>You: <em>"Yeah, it really has. Hopefully it slows down after lunch."</em></p>
+                    <p>That's it! Simple and friendly.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page12">
+            <div class="slide">
+                <h2 class="slide-title">Teamwork at Work</h2>
+                <p>Most jobs require you to work with other people as a <strong>team</strong>. That means helping each other out and doing your fair share.</p>
+                <div class="highlight-box">
+                    <p><strong>What good teamwork looks like:</strong></p>
+                    <ul>
+                        <li><strong>Do your part.</strong> Finish your own tasks before standing around.</li>
+                        <li><strong>Help others.</strong> If you're done and someone else is behind, offer to help.</li>
+                        <li><strong>Communicate.</strong> Let your team know if you need help or if something changes.</li>
+                        <li><strong>Don't keep score.</strong> Don't say "I did more than you." Just do the work.</li>
+                    </ul>
+                </div>
+                <div class="example-box">
+                    <p><strong>🔹 Example:</strong> You work at a restaurant. You finished wiping tables, but your coworker is still carrying dishes. You walk over and say: <em>"Hey, need help with those dishes?"</em></p>
+                    <p>That's teamwork. Your boss will notice.</p>
+                </div>
+                <div class="warning-box">
+                    <p><span class="emoji-big">⚠️</span> <strong>Not teamwork:</strong> Standing around on your phone while your coworker does all the work.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page13">
+            <div class="slide">
+                <h2 class="slide-title">Handling Disagreements</h2>
+                <p>Sometimes you and a coworker won't agree on something. That's normal. What matters is how you handle it.</p>
+                <div class="highlight-box">
+                    <p><strong>Steps to Handle a Disagreement:</strong></p>
+                    <p><strong>Step 1:</strong> Stay calm. Take a deep breath. Don't raise your voice.</p>
+                    <p><strong>Step 2:</strong> Talk to the person privately (not in front of customers or other coworkers).</p>
+                    <p><strong>Step 3:</strong> Use "I" statements. Say <em>"I feel frustrated when..."</em> instead of <em>"You always..."</em></p>
+                    <p><strong>Step 4:</strong> Listen to their side. You don't have to agree, but let them talk.</p>
+                    <p><strong>Step 5:</strong> If you can't solve it, ask your boss for help.</p>
+                </div>
+                <div class="example-box">
+                    <p><strong>🔹 Good Example:</strong> <em>"Hey, I noticed I've been taking the trash out every night. Can we take turns?"</em></p>
+                </div>
+                <div class="warning-box">
+                    <p><strong>🔹 Bad Example:</strong> <em>"You NEVER do the trash! I'm sick of it!"</em> (This starts a fight.)</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page14">
+            <div class="slide">
+                <h2 class="slide-title">Friend vs. Coworker</h2>
+                <p>Some coworkers might become your friends — and that's great! But there's a difference between a friend and a coworker at work.</p>
+                <table class="comparison-table">
+                    <tr><th>👤 Coworker</th><th>🤝 Friend</th></tr>
+                    <tr><td>You're polite and respectful</td><td>You hang out outside of work</td></tr>
+                    <tr><td>You make small talk</td><td>You share personal stuff</td></tr>
+                    <tr><td>You work as a team</td><td>You trust them deeply</td></tr>
+                    <tr><td>You keep conversations professional</td><td>You joke around and relax together</td></tr>
+                </table>
+                <div class="warning-box">
+                    <p><span class="emoji-big">⚠️</span> <strong>Be careful about:</strong></p>
+                    <ul>
+                        <li>Sharing too much personal information with coworkers you don't know well</li>
+                        <li>Taking sides in workplace drama</li>
+                        <li>Treating a coworker-friend differently than other coworkers (favoritism)</li>
+                        <li>Letting a friendship get in the way of doing your job</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page15">
+            <div class="slide">
+                <h2 class="slide-title">Day 2 Review: Getting Along with Coworkers</h2>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #1:</div>
+                    <p>You're in the break room with a coworker. What's a safe topic to talk about?</p>
+                    <p><strong>Answer:</strong> How their day is going, the weather, weekend plans, sports, or food. Keep it light and friendly.</p>
+                </div>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #2:</div>
+                    <p>A coworker isn't doing their share of the work. What should you do?</p>
+                    <p><strong>Answer:</strong> Talk to them calmly and privately first. If it doesn't change, let your boss know.</p>
+                </div>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #3:</div>
+                    <p>A coworker starts telling you gossip about another coworker. What should you do?</p>
+                    <p><strong>Answer:</strong> Don't join in. Say <em>"I'd rather not get involved"</em> and change the subject.</p>
+                </div>
+                <div class="success-box">
+                    <p style="text-align: center; font-size: 1.2em;"><strong>✅ End of Day 2! Next up: Customer Service Basics</strong></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- DAY 3: CUSTOMER SERVICE BASICS (Pages 16–22) -->
+        <!-- ============================================================ -->
+        <div class="page" id="page16">
+            <div class="slide title-slide">
+                <div class="day-label">Day 3</div>
+                <div class="emoji-hero">😊🛒</div>
+                <h1>Customer Service Basics</h1>
+                <p>How to help customers and handle tough situations</p>
+            </div>
+        </div>
+
+        <div class="page" id="page17">
+            <div class="slide">
+                <h2 class="slide-title">What Is Customer Service?</h2>
+                <p><strong>Customer service</strong> means helping the people who come into your workplace. Customers are the people who buy things or use the services at the place where you work.</p>
+                <div class="highlight-box">
+                    <p><span class="emoji-big">💡</span> <strong>Without customers, there is no business. Without a business, there are no jobs.</strong> That's why treating customers well is so important.</p>
+                </div>
+                <p><strong>Jobs that involve customer service:</strong></p>
+                <ul>
+                    <li>Cashier at a store or restaurant</li>
+                    <li>Stocking shelves at a grocery store</li>
+                    <li>Working the front desk at a hotel or gym</li>
+                    <li>Bagging groceries</li>
+                    <li>Serving food</li>
+                    <li>Answering phones</li>
+                </ul>
+                <div class="success-box">
+                    <p><strong>Even if your job isn't "customer service," you'll probably deal with customers at some point.</strong></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page18">
+            <div class="slide">
+                <h2 class="slide-title">Greeting Customers</h2>
+                <p>When a customer comes in or walks up to you, greet them. A greeting is just a friendly hello. It makes people feel welcome.</p>
+                <div class="highlight-box">
+                    <p><strong>How to Greet a Customer:</strong></p>
+                    <div class="step-card"><div class="step-number">1</div><div><strong>Make eye contact</strong> — look at them, not at the floor or your phone.</div></div>
+                    <div class="step-card"><div class="step-number">2</div><div><strong>Smile</strong> — even a small smile makes a big difference.</div></div>
+                    <div class="step-card"><div class="step-number">3</div><div><strong>Say something friendly</strong> — "Hi! Welcome in!" or "Hello, how can I help you?"</div></div>
+                </div>
+                <div class="conversation-example">
+                    <p><strong>Example at a fast food restaurant:</strong></p>
+                    <div class="speech-bubble employee-bubble"><div class="bubble-label">👤 You:</div>"Hi! Welcome to Burger Palace. What can I get for you?"</div>
+                    <div class="speech-bubble customer-bubble"><div class="bubble-label">🧑 Customer:</div>"Can I get a cheeseburger and a small fries?"</div>
+                    <div class="speech-bubble employee-bubble"><div class="bubble-label">👤 You:</div>"Sure thing! Anything to drink with that?"</div>
+                </div>
+                <div class="warning-box">
+                    <p><span class="emoji-big">⚠️</span> <strong>Never ignore a customer.</strong> Even if you're busy, say "I'll be with you in just a moment!"</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page19">
+            <div class="slide">
+                <h2 class="slide-title">Helping Customers Find What They Need</h2>
+                <p>Sometimes customers need help finding something, understanding a product, or figuring out how something works.</p>
+                <div class="step-card"><div class="step-number">1</div><div><strong>Listen carefully</strong> to what they need. Don't interrupt them.</div></div>
+                <div class="step-card"><div class="step-number">2</div><div><strong>If you know the answer,</strong> help them right away. Walk them to the product if you can — don't just point and say "over there."</div></div>
+                <div class="step-card"><div class="step-number">3</div><div><strong>If you DON'T know,</strong> say: <em>"I'm not sure, but let me find someone who can help you."</em></div></div>
+                <div class="step-card"><div class="step-number">4</div><div><strong>Follow up.</strong> Ask: <em>"Is there anything else I can help you with?"</em></div></div>
+                <div class="example-box">
+                    <p><strong>🔹 Example at a grocery store:</strong></p>
+                    <p>Customer: <em>"Where is the pasta sauce?"</em></p>
+                    <p>You: <em>"It's in aisle 5. Follow me, I'll show you!"</em> (Then walk them there.)</p>
+                </div>
+                <div class="success-box">
+                    <p><span class="emoji-big">⭐</span> Walking a customer to what they need instead of just pointing is one of the easiest ways to give great service.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page20">
+            <div class="slide">
+                <h2 class="slide-title">When a Customer Is Upset</h2>
+                <p>Sometimes customers get frustrated or angry. Maybe their order was wrong, they waited too long, or they're just having a bad day. <strong>It's usually not about you personally.</strong></p>
+                <div class="highlight-box">
+                    <p><strong>How to Handle an Upset Customer:</strong></p>
+                    <div class="step-card"><div class="step-number">1</div><div><strong>Stay calm.</strong> Don't raise your voice, even if they raise theirs.</div></div>
+                    <div class="step-card"><div class="step-number">2</div><div><strong>Listen.</strong> Let them explain what's wrong. Don't interrupt.</div></div>
+                    <div class="step-card"><div class="step-number">3</div><div><strong>Apologize.</strong> Say: <em>"I'm sorry about that."</em> Even if it wasn't your fault.</div></div>
+                    <div class="step-card"><div class="step-number">4</div><div><strong>Fix it if you can.</strong> <em>"Let me get you the right order."</em></div></div>
+                    <div class="step-card"><div class="step-number">5</div><div><strong>Get your manager if you need to.</strong> <em>"Let me get my manager to help you."</em></div></div>
+                </div>
+                <div class="warning-box">
+                    <p><span class="emoji-big">🚫</span> <strong>NEVER:</strong> Argue with a customer, call them names, walk away, or say "that's not my problem."</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page21">
+            <div class="slide">
+                <h2 class="slide-title">When to Get Your Manager</h2>
+                <p>You don't have to handle everything yourself. There are times when the best thing to do is get your manager involved.</p>
+                <div class="highlight-box">
+                    <p><strong>Get your manager when:</strong></p>
+                    <ul>
+                        <li>A customer is yelling or threatening you</li>
+                        <li>A customer asks for a refund or discount and you're not sure</li>
+                        <li>You made a mistake and don't know how to fix it</li>
+                        <li>A customer asks a question you can't answer</li>
+                        <li>Something feels unsafe or wrong</li>
+                    </ul>
+                </div>
+                <div class="example-box">
+                    <p><strong>🔹 How to tell the customer:</strong></p>
+                    <p><em>"I want to make sure we get this right for you. Let me get my manager — they'll be able to help."</em></p>
+                </div>
+                <div class="success-box">
+                    <p><span class="emoji-big">✅</span> Getting help is <strong>not</strong> a sign of weakness. It shows you care about solving the problem.</p>
+                </div>
+                <div class="warning-box">
+                    <p><span class="emoji-big">⚠️</span> <strong>If a customer ever makes you feel unsafe</strong> — they're screaming, threatening, or acting dangerous — step back and get help right away. Your safety comes first.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page22">
+            <div class="slide">
+                <h2 class="slide-title">Day 3 Review: Customer Service Basics</h2>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #1:</div>
+                    <p>A customer walks up to you at a store. What's the first thing you should do?</p>
+                    <p><strong>Answer:</strong> Make eye contact, smile, and greet them. <em>"Hi! How can I help you?"</em></p>
+                </div>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #2:</div>
+                    <p>A customer says their food order is wrong and they're upset. What do you do?</p>
+                    <p><strong>Answer:</strong> Stay calm. Apologize. Try to fix it. If you can't, get your manager.</p>
+                </div>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #3:</div>
+                    <p>A customer asks where something is but you don't know. What do you say?</p>
+                    <p><strong>Answer:</strong> <em>"I'm not sure, but let me find someone who can help you."</em></p>
+                </div>
+                <div class="success-box">
+                    <p style="text-align: center; font-size: 1.2em;"><strong>✅ End of Day 3! Next up: Professional Phone & Email</strong></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- DAY 4: PROFESSIONAL PHONE & EMAIL (Pages 23–31) -->
+        <!-- ============================================================ -->
+        <div class="page" id="page23">
+            <div class="slide title-slide">
+                <div class="day-label">Day 4</div>
+                <div class="emoji-hero">📱📧</div>
+                <h1>Professional Phone & Email</h1>
+                <p>How to communicate professionally using phones and email</p>
+            </div>
+        </div>
+
+        <div class="page" id="page24">
+            <div class="slide">
+                <h2 class="slide-title">Why Professional Communication Matters</h2>
+                <p>At work, you'll need to use your phone, text, or email to communicate with your boss, coworkers, or customers. How you communicate says a lot about you.</p>
+                <div class="highlight-box">
+                    <p><span class="emoji-big">💡</span> <strong>The way you talk and write at work should be different from how you talk and text with your friends.</strong> It needs to be more polite and professional.</p>
+                </div>
+                <p><strong>At work, you might need to:</strong></p>
+                <ul>
+                    <li>Answer the phone at work</li>
+                    <li>Take a message for someone</li>
+                    <li>Call in sick</li>
+                    <li>Text or email your boss</li>
+                    <li>Leave a voicemail</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="page" id="page25">
+            <div class="slide">
+                <h2 class="slide-title">Answering the Phone at Work</h2>
+                <p>Some jobs require you to answer the phone. This is different from answering your personal phone.</p>
+                <div class="highlight-box">
+                    <p><strong>How to Answer the Work Phone:</strong></p>
+                    <div class="step-card"><div class="step-number">1</div><div><strong>Pick up within 2–3 rings.</strong> Don't let it ring and ring.</div></div>
+                    <div class="step-card"><div class="step-number">2</div><div><strong>Say the business name and your name.</strong> <em>"Thank you for calling Burger Palace, this is Jake. How can I help you?"</em></div></div>
+                    <div class="step-card"><div class="step-number">3</div><div><strong>Listen carefully.</strong> If you need to, say: <em>"Can you hold on one moment, please?"</em></div></div>
+                    <div class="step-card"><div class="step-number">4</div><div><strong>Help them or transfer them.</strong> <em>"Let me transfer you to someone who can help."</em></div></div>
+                </div>
+                <div class="warning-box">
+                    <p><span class="emoji-big">🚫</span> <strong>Never:</strong> Answer with just "Hello?" or "Yeah?" or "What?" at work.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page26">
+            <div class="slide">
+                <h2 class="slide-title">Taking a Message</h2>
+                <p>Sometimes the person someone is calling for isn't available. You'll need to take a message.</p>
+                <div class="highlight-box">
+                    <p><strong>What to include in a message:</strong></p>
+                    <ul>
+                        <li><strong>Who called</strong> — their name (ask them to spell it if needed)</li>
+                        <li><strong>Their phone number</strong> — read it back to make sure it's right</li>
+                        <li><strong>What they're calling about</strong> — a short summary</li>
+                        <li><strong>When they called</strong> — the date and time</li>
+                    </ul>
+                </div>
+                <div class="example-box">
+                    <p><strong>🔹 Example:</strong></p>
+                    <p><em>"Mrs. Johnson isn't here right now. Can I take a message?"</em></p>
+                    <p>Caller: "Yes, this is Mark Davis. My number is 555-1234. I'm calling about my order."</p>
+                    <p>You write: <strong>Mark Davis — 555-1234 — calling about his order — 10:30 AM Tuesday</strong></p>
+                    <p>You say: <em>"Got it. I'll make sure she gets the message."</em></p>
+                </div>
+                <div class="success-box">
+                    <p><span class="emoji-big">✅</span> Always read the phone number back to the caller to make sure you got it right!</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page27">
+            <div class="slide">
+                <h2 class="slide-title">Calling In Sick or Running Late</h2>
+                <p>If you're sick or going to be late, you <strong>must</strong> contact your boss. Don't just not show up.</p>
+                <div class="highlight-box">
+                    <p><strong>Calling in sick:</strong></p>
+                    <ul>
+                        <li>Call or text as early as possible (before your shift starts)</li>
+                        <li>Keep it short and simple</li>
+                        <li>You don't need to give lots of details</li>
+                    </ul>
+                </div>
+                <div class="phone-screen">
+                    <div class="phone-header"><div style="font-size:0.9em; opacity:0.7;">Text to: Boss (Mr. Thompson)</div></div>
+                    <div class="message-bubble msg-sent">
+                        <div class="msg-label">You:</div>
+                        Hi Mr. Thompson, this is Jake. I'm not feeling well today and won't be able to come in. I'm sorry for the short notice.
+                    </div>
+                </div>
+                <div class="example-box">
+                    <p><strong>🔹 If you're going to be late:</strong></p>
+                    <p><em>"Hi Mrs. Davis, this is Sam. I'm running about 15 minutes late — there's an accident on the highway. I'm sorry and I'll be there as soon as I can."</em></p>
+                </div>
+                <div class="warning-box">
+                    <p><span class="emoji-big">⚠️</span> <strong>Bad ways to call in:</strong></p>
+                    <ul>
+                        <li>"I can't come in today." (no name, no reason, no apology)</li>
+                        <li>Having someone else call for you (unless you physically can't)</li>
+                        <li>Not calling at all and just not showing up</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page28">
+            <div class="slide">
+                <h2 class="slide-title">Professional vs. Casual Language</h2>
+                <p>When texting or emailing your boss, your messages should look different from texts to your friends.</p>
+                <div class="do-dont">
+                    <div class="do-column">
+                        <h3>✅ Professional (for work):</h3>
+                        <ul>
+                            <li>"Hi Mr. Thompson, I have a question about my schedule."</li>
+                            <li>"Thank you for letting me know."</li>
+                            <li>"I won't be able to make it in today."</li>
+                            <li>Use full words and sentences</li>
+                            <li>Use punctuation</li>
+                        </ul>
+                    </div>
+                    <div class="dont-column">
+                        <h3>❌ Casual (NOT for work):</h3>
+                        <ul>
+                            <li>"yo wats my schedule"</li>
+                            <li>"k thx"</li>
+                            <li>"cant come in lol"</li>
+                            <li>"bruh idk"</li>
+                            <li>Too many emojis 😂🤣💀</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="success-box">
+                    <p><span class="emoji-big">💡</span> <strong>Rule of thumb:</strong> If you wouldn't say it to your boss's face, don't type it either.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page29">
+            <div class="slide">
+                <h2 class="slide-title">Writing a Professional Email</h2>
+                <p>Some jobs use email. Here's how to write one that looks professional.</p>
+                <div class="email-mock">
+                    <div class="email-header">
+                        <div class="email-field"><strong>To:</strong> manager@burgerpalace.com</div>
+                        <div class="email-field"><strong>Subject:</strong> Time Off Request — March 14</div>
+                    </div>
+                    <div class="email-body">
+                        <p>Hi Mrs. Johnson,</p>
+                        <p>I'm writing to request Friday, March 14th off. I have a doctor's appointment that day.</p>
+                        <p>Please let me know if that works. Thank you!</p>
+                        <p>Jake Behringer</p>
+                    </div>
+                </div>
+                <div class="highlight-box">
+                    <p><strong>Parts of a Professional Email:</strong></p>
+                    <ul>
+                        <li><strong>Subject line:</strong> Short and clear — tells them what it's about</li>
+                        <li><strong>Greeting:</strong> "Hi" or "Hello" + their name</li>
+                        <li><strong>Body:</strong> Keep it short. Say what you need.</li>
+                        <li><strong>Closing:</strong> "Thank you" or "Thanks"</li>
+                        <li><strong>Your name:</strong> Always sign your name at the bottom</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page30">
+            <div class="slide">
+                <h2 class="slide-title">Do's and Don'ts: Phone & Email at Work</h2>
+                <div class="do-dont">
+                    <div class="do-column">
+                        <h3>✅ DO:</h3>
+                        <ul>
+                            <li>Answer work phones professionally</li>
+                            <li>Write down messages carefully</li>
+                            <li>Call in early if you're sick</li>
+                            <li>Use full words and sentences</li>
+                            <li>Include your name in messages</li>
+                            <li>Be polite — use "please" and "thank you"</li>
+                            <li>Read your message before sending</li>
+                            <li>Keep work messages short and clear</li>
+                        </ul>
+                    </div>
+                    <div class="dont-column">
+                        <h3>❌ DON'T:</h3>
+                        <ul>
+                            <li>Answer with "Yeah?" or "What?"</li>
+                            <li>Use slang, abbreviations, or lots of emojis</li>
+                            <li>Forget to include your name</li>
+                            <li>Text personal stuff during work hours</li>
+                            <li>Send angry messages — calm down first</li>
+                            <li>Use ALL CAPS (looks like yelling)</li>
+                            <li>Ignore messages from your boss</li>
+                            <li>Have someone else call in for you</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page31">
+            <div class="slide">
+                <h2 class="slide-title">Day 4 Review: Professional Phone & Email</h2>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #1:</div>
+                    <p>The phone rings at work. How do you answer it?</p>
+                    <p><strong>Answer:</strong> <em>"Thank you for calling [business name], this is [your name]. How can I help you?"</em></p>
+                </div>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #2:</div>
+                    <p>You wake up feeling sick and can't go to work. What do you do?</p>
+                    <p><strong>Answer:</strong> Call or text your boss as early as possible. Say who you are, that you're sick, and apologize.</p>
+                </div>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #3:</div>
+                    <p>Which text is more professional? "yo cant make it 2day lol" OR "Hi Mrs. Davis, I won't be able to come in today. I'm sorry for the short notice."</p>
+                    <p><strong>Answer:</strong> The second one! Use full words, be polite, and include your name.</p>
+                </div>
+                <div class="success-box">
+                    <p style="text-align: center; font-size: 1.3em;"><strong>🎉 Great job finishing Unit 1: Workplace Communication & Relationships!</strong></p>
+                    <p style="text-align: center; font-size: 1.1em;">You've learned how to talk to your boss, get along with coworkers, help customers, and communicate professionally.</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        let currentPage = 1;
+        const totalPages = 31;
+
+        // Day start pages for the jump menu
+        const dayStarts = [1, 2, 9, 16, 23];
+        const dayNames = ['Unit Title', 'Day 1: Your Boss', 'Day 2: Coworkers', 'Day 3: Customers', 'Day 4: Phone & Email'];
+
+        function getCurrentDay(pageNum) {
+            if (pageNum >= 23) return 4;
+            if (pageNum >= 16) return 3;
+            if (pageNum >= 9) return 2;
+            if (pageNum >= 2) return 1;
+            return 0;
+        }
+
+        function updateDayMenu(pageNum) {
+            document.querySelectorAll('.day-jump').forEach((btn, idx) => {
+                btn.classList.remove('active-day');
+                if (dayStarts[idx] <= pageNum) {
+                    // Find which day range we're in
+                    let inThisDay = false;
+                    if (idx === dayStarts.length - 1) {
+                        inThisDay = pageNum >= dayStarts[idx];
+                    } else {
+                        inThisDay = pageNum >= dayStarts[idx] && pageNum < dayStarts[idx + 1];
+                    }
+                    if (inThisDay) btn.classList.add('active-day');
+                }
+            });
+        }
+
+        function showPage(num) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById('page' + num).classList.add('active');
+            document.getElementById('pageIndicator').textContent = 'Page ' + num + ' of ' + totalPages;
+            document.getElementById('prevBtn').disabled = (num === 1);
+            document.getElementById('nextBtn').disabled = (num === totalPages);
+            updateDayMenu(num);
+            window.scrollTo(0, 0);
+        }
+
+        function nextPage() { if (currentPage < totalPages) { currentPage++; showPage(currentPage); } }
+        function prevPage() { if (currentPage > 1) { currentPage--; showPage(currentPage); } }
+        function jumpTo(pageNum) { currentPage = pageNum; showPage(currentPage); }
+    </script>
+</body>
+</html>
