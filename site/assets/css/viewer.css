@@ -153,10 +153,11 @@ body:-moz-full-screen .viewer-controls {
 }
 
 /* Viewer-specific sidebar collapse styles */
-/* When sidebar is collapsed in viewer, hide it and adjust layout */
+/* When sidebar is collapsed in viewer, hide it completely and adjust layout */
 body.viewer-sidebar-collapsed .app-shell-rail.viewer-collapsed {
   transform: translateX(-100%);
   transition: transform 0.3s ease;
+  pointer-events: none; /* Prevent interaction when hidden */
 }
 
 body.viewer-sidebar-collapsed.has-app-shell {
@@ -166,6 +167,11 @@ body.viewer-sidebar-collapsed.has-app-shell {
 /* Ensure viewer container takes full width when sidebar is collapsed */
 body.viewer-sidebar-collapsed .viewer-container {
   margin-left: 0;
+}
+
+/* Also hide the mobile toggle button when sidebar is collapsed in viewer */
+body.viewer-sidebar-collapsed .app-shell-toggle {
+  display: none !important;
 }
 
 /* Style for the sidebar toggle button */
