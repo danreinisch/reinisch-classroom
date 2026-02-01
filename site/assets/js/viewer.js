@@ -407,7 +407,7 @@
    */
   function saveSidebarState() {
     try {
-      localStorage.setItem(SIDEBAR_STATE_KEY, sidebarCollapsed ? 'true' : 'false');
+      localStorage.setItem(SIDEBAR_STATE_KEY, JSON.stringify(sidebarCollapsed));
     } catch (e) {
       console.warn('[viewer] Could not save sidebar state:', e);
     }
@@ -421,7 +421,7 @@
     try {
       const saved = localStorage.getItem(SIDEBAR_STATE_KEY);
       // Default to expanded (false) if no saved state
-      sidebarCollapsed = saved === 'true';
+      sidebarCollapsed = saved !== null ? JSON.parse(saved) : false;
       applySidebarState();
       console.log('[viewer] Restored sidebar state:', sidebarCollapsed ? 'collapsed' : 'expanded');
     } catch (e) {

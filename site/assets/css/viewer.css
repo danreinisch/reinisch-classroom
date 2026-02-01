@@ -170,8 +170,9 @@ body.viewer-sidebar-collapsed .viewer-container {
 }
 
 /* Also hide the mobile toggle button when sidebar is collapsed in viewer */
+/* Higher specificity than media query ensures this takes precedence */
 body.viewer-sidebar-collapsed .app-shell-toggle {
-  display: none !important;
+  display: none;
 }
 
 /* Style for the sidebar toggle button */
