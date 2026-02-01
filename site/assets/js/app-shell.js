@@ -25,6 +25,10 @@
     presentation: null
   };
 
+  // Shell collapse persistence
+  const SHELL_COLLAPSE_KEY = 'app-shell-collapsed';
+  let shellCollapsed = false;
+
   /**
    * Initialize the app shell
    */
@@ -44,6 +48,9 @@
     // Add body class for layout adjustment
     document.body.classList.add('has-app-shell');
 
+    restoreShellCollapsed();
+    window.addEventListener('resize', applyShellCollapsed);
+
     // Create lessons navigator panel
     createLessonsNavigator();
 
@@ -61,6 +68,34 @@
 
     // Check URL params for deep linking
     initDeepLinking();
+  }
+
+  function applyShellCollapsed() {
+    const rail = document.querySelector('.app-shell-rail');
+    if (!rail) return;
+    const shouldCollapse = shellCollapsed && window.innerWidth > 768;
+    document.body.classList.toggle('app-shell-collapsed', shouldCollapse);
+    if (!shouldCollapse) {
+      rail.classList.remove('open');
+    }
+  }
+
+  function saveShellCollapsed() {
+    try {
+      localStorage.setItem(SHELL_COLLAPSE_KEY, JSON.stringify(shellCollapsed));
+    } catch (err) {
+      debugWarn('[app-shell] Could not save shell state:', err);
+    }
+  }
+
+  function restoreShellCollapsed() {
+    try {
+      const saved = localStorage.getItem(SHELL_COLLAPSE_KEY);
+      shellCollapsed = saved ? JSON.parse(saved) : false;
+    } catch (err) {
+      shellCollapsed = false;
+    }
+    applyShellCollapsed();
   }
 
   /**
@@ -203,6 +238,12 @@
     const toggle = document.querySelector('.app-shell-toggle');
     if (toggle) {
       toggle.addEventListener('click', () => {
+        if (window.innerWidth > 768) {
+          shellCollapsed = !shellCollapsed;
+          saveShellCollapsed();
+          applyShellCollapsed();
+          return;
+        }
         rail.classList.toggle('open');
       });
     }
@@ -675,7 +716,6 @@
    * Render lessons navigator content
    */
   
-
   // Lessons sidebar hardening:
   // - Hide entries whose URLs no longer exist (stale index entries)
   // - Replace generic names ("Presentation 7") with the page <title>
@@ -767,7 +807,7 @@
     return clone;
   }
 
-function renderLessonsContent() {
+  function renderLessonsContent() {
     const content = document.querySelector('.lessons-navigator-content');
     if (!content || !lessonsData) return;
 
@@ -1132,12 +1172,8 @@ function renderLessonsContent() {
     }
   });
 })();
-// ==== rc:auth-ui-verify-v1 ====
-// Goal: Don't lie about auth state based only on localStorage.
+// ==== rc:auth-ui-verify-v1 ====// Goal: Don't lie about auth state based only on localStorage.
 // Default to signed-out UI; only show Sign Out after confirming a real session.
-
-
-// removed invalid injected auth verify block
 
 
 // rc:brand-home — Make the brand act like “Return to Home”
@@ -1158,6 +1194,3 @@ function renderLessonsContent() {
     console.warn('[rc:brand-home] failed:', e);
   }
 })();
-
-
-
