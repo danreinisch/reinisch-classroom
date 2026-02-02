@@ -28,36 +28,34 @@
             height: 100%;
             z-index: -1;
             overflow: hidden;
+            contain: strict;
         }
 
-        .bg-image {
+        .bg-layer {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background-size: cover;
-            background-position: center;
-            opacity: 0;
-            transition: opacity 3s ease-in-out;
+            object-fit: cover;
+            will-change: opacity;
+            transform: translateZ(0);
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
         }
 
-        .bg-image.active {
+        #bgBase {
             opacity: 0.55;
         }
 
-        .bg-image:nth-child(1) { background-image: url('image1.jpg'); }
-        .bg-image:nth-child(2) { background-image: url('image2.jpg'); }
-        .bg-image:nth-child(3) { background-image: url('image3.jpg'); }
-        .bg-image:nth-child(4) { background-image: url('image4.jpg'); }
-        .bg-image:nth-child(5) { background-image: url('image5.jpg'); }
-        .bg-image:nth-child(6) { background-image: url('image6.jpg'); }
-        .bg-image:nth-child(7) { background-image: url('image7.jpg'); }
-        .bg-image:nth-child(8) { background-image: url('image8.jpg'); }
-        .bg-image:nth-child(9) { background-image: url('image9.jpg'); }
-        .bg-image:nth-child(10) { background-image: url('image10.jpg'); }
-        .bg-image:nth-child(11) { background-image: url('image11.jpg'); }
-        .bg-image:nth-child(12) { background-image: url('image12.jpg'); }
+        #bgFade {
+            opacity: 0;
+            transition: opacity 2.5s ease-in-out;
+        }
+
+        #bgFade.show {
+            opacity: 0.55;
+        }
 
         .container {
             max-width: 1200px;
@@ -68,9 +66,7 @@
         header {
             text-align: center;
             padding: 40px 20px;
-            background: rgba(0, 0, 0, 0.35);
-            backdrop-filter: blur(6px);
-            -webkit-backdrop-filter: blur(6px);
+            background: rgba(0, 0, 0, 0.6);
             border-radius: 20px;
             margin-bottom: 30px;
             border: 1px solid rgba(255, 255, 255, 0.2);
@@ -96,8 +92,6 @@
 
         .theme-banner {
             background: linear-gradient(90deg, rgba(231, 76, 60, 0.5), rgba(155, 89, 182, 0.5));
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
             padding: 15px 30px;
             border-radius: 10px;
             margin-top: 20px;
@@ -112,9 +106,7 @@
         }
 
         nav {
-            background: rgba(0, 0, 0, 0.35);
-            backdrop-filter: blur(6px);
-            -webkit-backdrop-filter: blur(6px);
+            background: rgba(0, 0, 0, 0.6);
             border-radius: 15px;
             padding: 20px;
             margin-bottom: 30px;
@@ -137,9 +129,7 @@
 
         .nav-btn {
             padding: 12px 24px;
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.4) 0%, rgba(118, 75, 162, 0.4) 100%);
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.55) 0%, rgba(118, 75, 162, 0.55) 100%);
             border: 1px solid rgba(255, 255, 255, 0.3);
             border-radius: 25px;
             color: white;
@@ -187,9 +177,7 @@
 
         .slide {
             display: none;
-            background: rgba(0, 0, 0, 0.35);
-            backdrop-filter: blur(6px);
-            -webkit-backdrop-filter: blur(6px);
+            background: rgba(0, 0, 0, 0.6);
             border-radius: 20px;
             padding: 40px;
             margin-bottom: 30px;
@@ -245,9 +233,7 @@
         }
 
         .highlight {
-            background: rgba(255, 215, 0, 0.10);
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
+            background: rgba(255, 215, 0, 0.18);
             border-left: 4px solid #ffd700;
             padding: 20px;
             margin: 20px 0;
@@ -255,9 +241,7 @@
         }
 
         .key-fact {
-            background: rgba(76, 175, 80, 0.15);
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
+            background: rgba(76, 175, 80, 0.22);
             border-left: 4px solid #4CAF50;
             padding: 20px;
             margin: 20px 0;
@@ -270,9 +254,7 @@
         }
 
         .vocab-box {
-            background: rgba(160, 210, 235, 0.10);
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
+            background: rgba(160, 210, 235, 0.18);
             border-radius: 10px;
             padding: 20px;
             margin: 15px 0;
@@ -286,9 +268,7 @@
         }
 
         .grammar-box {
-            background: rgba(155, 89, 182, 0.15);
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
+            background: rgba(155, 89, 182, 0.22);
             border-radius: 10px;
             padding: 20px;
             margin: 15px 0;
@@ -301,9 +281,7 @@
         }
 
         .what-why-how {
-            background: rgba(255, 152, 0, 0.12);
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
+            background: rgba(255, 152, 0, 0.2);
             border-radius: 10px;
             padding: 20px;
             margin: 15px 0;
@@ -332,9 +310,7 @@
         }
 
         .example-box {
-            background: rgba(67, 233, 123, 0.10);
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
+            background: rgba(67, 233, 123, 0.18);
             border-radius: 10px;
             padding: 20px;
             margin: 15px 0;
@@ -347,9 +323,7 @@
         }
 
         .rule-box {
-            background: rgba(33, 150, 243, 0.12);
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
+            background: rgba(33, 150, 243, 0.2);
             border-radius: 10px;
             padding: 20px;
             margin: 15px 0;
@@ -363,9 +337,7 @@
         }
 
         .warning-box {
-            background: rgba(244, 67, 54, 0.12);
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
+            background: rgba(244, 67, 54, 0.2);
             border-radius: 10px;
             padding: 20px;
             margin: 15px 0;
@@ -378,9 +350,7 @@
         }
 
         .practice-box {
-            background: rgba(156, 39, 176, 0.12);
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
+            background: rgba(156, 39, 176, 0.2);
             border-radius: 10px;
             padding: 20px;
             margin: 15px 0;
@@ -394,8 +364,6 @@
 
         .dialogue-example {
             background: rgba(0, 188, 212, 0.2);
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
             border-radius: 10px;
             padding: 20px;
             margin: 15px 0;
@@ -444,8 +412,6 @@
 
         .question-box {
             background: rgba(245, 87, 108, 0.2);
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
             border-radius: 10px;
             padding: 20px;
             margin: 20px 0;
@@ -453,9 +419,7 @@
         }
 
         .writing-prompt {
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.3), rgba(118, 75, 162, 0.3));
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.45), rgba(118, 75, 162, 0.45));
             border-radius: 15px;
             padding: 25px;
             margin: 20px 0;
@@ -463,9 +427,7 @@
         }
 
         .writing-structure {
-            background: rgba(0, 0, 0, 0.35);
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
+            background: rgba(0, 0, 0, 0.6);
             border-radius: 10px;
             padding: 20px;
             margin: 20px 0;
@@ -484,8 +446,6 @@
 
         .step-box {
             background: rgba(0, 188, 212, 0.2);
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
             border-radius: 10px;
             padding: 15px 20px;
             margin: 10px 0;
@@ -517,9 +477,7 @@
 
         .slide-nav button {
             padding: 12px 30px;
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.4), rgba(118, 75, 162, 0.4));
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.55), rgba(118, 75, 162, 0.55));
             border: 1px solid rgba(255, 255, 255, 0.3);
             border-radius: 25px;
             color: white;
@@ -540,12 +498,10 @@
         }
 
         footer {
-            background: rgba(0, 0, 0, 0.35);
+            background: rgba(0, 0, 0, 0.6);
             text-align: center;
             padding: 30px;
-            background: rgba(0, 0, 0, 0.35);
-            backdrop-filter: blur(6px);
-            -webkit-backdrop-filter: blur(6px);
+            background: rgba(0, 0, 0, 0.6);
             border-radius: 20px;
             margin-top: 30px;
             border: 1px solid rgba(255, 255, 255, 0.2);
@@ -569,9 +525,7 @@
         }
 
         .anatomy-box {
-            background: rgba(255, 193, 7, 0.2);
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
+            background: rgba(255, 193, 7, 0.28);
             border-radius: 10px;
             padding: 25px;
             margin: 20px 0;
@@ -603,18 +557,8 @@
 </head>
 <body>
     <div class="bg-container">
-        <div class="bg-image active"></div>
-        <div class="bg-image"></div>
-        <div class="bg-image"></div>
-        <div class="bg-image"></div>
-        <div class="bg-image"></div>
-        <div class="bg-image"></div>
-        <div class="bg-image"></div>
-        <div class="bg-image"></div>
-        <div class="bg-image"></div>
-        <div class="bg-image"></div>
-        <div class="bg-image"></div>
-        <div class="bg-image"></div>
+        <img class="bg-layer" id="bgBase" src="image1.jpg" alt="">
+        <img class="bg-layer" id="bgFade" src="image2.jpg" alt="">
     </div>
 
     <div class="container">
@@ -1577,17 +1521,83 @@
         let currentSlide = 0;
         const totalSlides = 33;
 
-        let currentBg = 0;
-        const bgImages = document.querySelectorAll('.bg-image');
-        const totalBgImages = 12;
-        
+        // === ROBUST 2-LAYER BACKGROUND CROSSFADE ===
+        // Designed for Newline Smart TV (Chrome) — no backdrop-filter, no stacked layers
+        const bgImageSrcs = [
+            'image1.jpg','image2.jpg','image3.jpg','image4.jpg',
+            'image5.jpg','image6.jpg','image7.jpg','image8.jpg',
+            'image9.jpg','image10.jpg','image11.jpg','image12.jpg'
+        ];
+        let currentBgIdx = 0;
+        let bgTransitioning = false;
+        const bgBase = document.getElementById('bgBase');
+        const bgFade = document.getElementById('bgFade');
+
+        // Preload all images into memory so src swaps don't trigger network/decode flicker
+        const preloaded = [];
+        let imagesReady = 0;
+        bgImageSrcs.forEach((src, i) => {
+            const img = new Image();
+            img.src = src;
+            img.onload = () => {
+                imagesReady++;
+                if (imagesReady === bgImageSrcs.length) {
+                    // All images loaded — start rotation after a short delay
+                    setTimeout(() => setInterval(rotateBg, 8000), 3000);
+                }
+            };
+            img.onerror = () => {
+                imagesReady++;
+                if (imagesReady === bgImageSrcs.length) {
+                    setTimeout(() => setInterval(rotateBg, 8000), 3000);
+                }
+            };
+            preloaded.push(img);
+        });
+
+        // Fallback: start rotation after 8s even if some images fail
+        setTimeout(() => {
+            if (imagesReady < bgImageSrcs.length) {
+                setInterval(rotateBg, 8000);
+            }
+        }, 8000);
+
         function rotateBg() {
-            bgImages[currentBg].classList.remove('active');
-            currentBg = (currentBg + 1) % totalBgImages;
-            bgImages[currentBg].classList.add('active');
+            if (bgTransitioning) return;
+            bgTransitioning = true;
+
+            const nextIdx = (currentBgIdx + 1) % bgImageSrcs.length;
+
+            // Step 1: Set the fade layer's image to the NEXT image (it's invisible, opacity 0)
+            bgFade.src = bgImageSrcs[nextIdx];
+
+            // Step 2: Force the browser to acknowledge the new src before transitioning
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    // Step 3: Fade in the top layer (transition handles the animation)
+                    bgFade.classList.add('show');
+
+                    // Step 4: After transition completes, swap the base layer instantly
+                    setTimeout(() => {
+                        // Swap base to show the new image (no transition on base — instant)
+                        bgBase.src = bgImageSrcs[nextIdx];
+
+                        // Hide the fade layer instantly (no transition during reset)
+                        bgFade.style.transition = 'none';
+                        bgFade.classList.remove('show');
+
+                        // Force reflow to apply the instant change
+                        bgFade.offsetHeight;
+
+                        // Re-enable transition for next rotation
+                        bgFade.style.transition = '';
+
+                        currentBgIdx = nextIdx;
+                        bgTransitioning = false;
+                    }, 2600); // Slightly longer than the 2.5s CSS transition
+                });
+            });
         }
-        
-        setInterval(rotateBg, 8000);
 
         function updateSlide() {
             document.querySelectorAll('.slide').forEach((slide, index) => {
