@@ -56,6 +56,8 @@ This document describes the unified authentication system for Teacher and Admin 
 
 ### Production Seeding
 
+> ⚠️ **SECURITY NOTE:** The examples below use placeholder values `<YOUR_ADMIN_USERNAME>` and `<YOUR_ADMIN_PASSWORD>`. Replace these with your actual credentials when running commands. Never commit real credentials to this file.
+
 Connect to your Supabase database and run:
 
 ```sql

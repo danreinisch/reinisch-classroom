@@ -15,6 +15,9 @@ Supabase schema + RPCs (should already be applied)
   - public.verify_user_password(text, text) returns setof app_users
 
 Seed or reset credentials
+
+> ⚠️ **SECURITY NOTE:** Replace `<YOUR_ADMIN_USERNAME>` and `<YOUR_ADMIN_PASSWORD>` with your actual credentials. Never commit real credentials to this file.
+
 ```sql
 select public.set_user_password('<YOUR_ADMIN_USERNAME>','<YOUR_ADMIN_PASSWORD>','admin');
 -- or
