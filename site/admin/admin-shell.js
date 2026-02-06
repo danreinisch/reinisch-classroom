@@ -7,6 +7,12 @@
 
   const el = (id) => document.getElementById(id);
 
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
   function hideAppShowGate() {
     const app = el('app');
     const gate = el('gate');
@@ -44,8 +50,8 @@
     root.innerHTML = ``;
     root.innerHTML += `  <div class='rc-admin-shell-card'>`;
     root.innerHTML += `    <div class='rc-admin-shell-title'>Admin</div>`;
-    root.innerHTML += `    <div class='rc-admin-shell-sub'>${msg}</div>`;
-    root.innerHTML += `    <div class='rc-admin-shell-meta'>Reason: <code>${reason}</code></div>`;
+    root.innerHTML += `    <div class='rc-admin-shell-sub'>${escapeHtml(msg)}</div>`;
+    root.innerHTML += `    <div class='rc-admin-shell-meta'>Reason: <code>${escapeHtml(reason)}</code></div>`;
     root.innerHTML += `    <div class='rc-admin-shell-actions'>`;
     root.innerHTML += `      <a class='rc-admin-shell-btn primary' href='${hubLink(reason)}'>Go to Classroom Hub (sign in)</a>`;
     root.innerHTML += `      <button class='rc-admin-shell-btn' id='rc-admin-shell-retry'>Retry</button>`;

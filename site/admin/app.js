@@ -380,10 +380,9 @@
         } else {
 
           // Non-retryable 401 or retry limit reached
-          window.location.assign('/hub/?reason=tc_session_expired&next=%2Fadmin%2F');
           persistQueue();
           persistFormState();
-          location.replace('/hub/?entry=teacher');
+          window.location.assign('/hub/?reason=tc_session_expired&next=%2Fadmin%2F');
           return { success: false };
         }
       }
