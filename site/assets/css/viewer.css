@@ -151,3 +151,13 @@ body:-webkit-full-screen .viewer-controls,
 body:-moz-full-screen .viewer-controls {
   background: rgba(0, 0, 0, 0.9);
 }
+
+/* Viewer sidebar collapse styles */
+body.viewer-sidebar-collapsed .app-shell-rail {
+  transform: translateX(-100%);
+  pointer-events: none;
+}
+
+body.viewer-sidebar-collapsed .viewer-container {
+  margin-left: 0;
+}
