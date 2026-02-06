@@ -15,10 +15,13 @@ Supabase schema + RPCs (should already be applied)
   - public.verify_user_password(text, text) returns setof app_users
 
 Seed or reset credentials
+
+> ⚠️ **SECURITY NOTE:** Replace `<YOUR_ADMIN_USERNAME>` and `<YOUR_ADMIN_PASSWORD>` with your actual credentials. Never commit real credentials to this file.
+
 ```sql
-select public.set_user_password('dreinisch','Tool462','admin');
+select public.set_user_password('<YOUR_ADMIN_USERNAME>','<YOUR_ADMIN_PASSWORD>','admin');
 -- or
--- select public.set_user_password('dreinisch','Tool462','teacher');
+-- select public.set_user_password('<YOUR_ADMIN_USERNAME>','<YOUR_ADMIN_PASSWORD>','teacher');
 ```
 
 Exposed secret unblock (Netlify)
@@ -33,7 +36,7 @@ curl -s https://<preview>/.netlify/functions/auth-health | jq
 # Teacher login
 curl -i -X POST https://<preview>/.netlify/functions/teacher-login \
   -H 'Content-Type: application/json' \
-  -d '{"username":"dreinisch","password":"Tool462"}'
+  -d '{"username":"<YOUR_ADMIN_USERNAME>","password":"<YOUR_ADMIN_PASSWORD>"}'
 
 # Session
 curl -s https://<preview>/.netlify/functions/teacher-session
@@ -41,7 +44,7 @@ curl -s https://<preview>/.netlify/functions/teacher-session
 Expected:
 - auth-health: ok: true and all required runtime keys reported as present (booleans only)
 - teacher-login: HTTP 200 with Set-Cookie: tc=...
-- teacher-session: { ok: true, role: "admin"|"teacher", username: "dreinisch" }
+- teacher-session: { ok: true, role: "admin"|"teacher", username: "<YOUR_ADMIN_USERNAME>" }
 
 Post-merge steps
 - Keep Auto Publishing locked until preview verifies
