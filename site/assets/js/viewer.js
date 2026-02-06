@@ -40,7 +40,7 @@
    */
   function saveSidebarState() {
     try {
-      localStorage.setItem(SIDEBAR_COLLAPSE_KEY, sidebarCollapsed.toString());
+      localStorage.setItem(SIDEBAR_COLLAPSE_KEY, String(sidebarCollapsed));
     } catch (e) {
       console.warn('[viewer] Could not save sidebar state:', e);
     }
