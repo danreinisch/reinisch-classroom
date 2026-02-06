@@ -1,5 +1,7 @@
 # Deployment and Verification Checklist
 
+> ⚠️ **SECURITY NOTE:** Never commit real credentials to this file. All examples below use placeholder values. Replace `<YOUR_ADMIN_USERNAME>` and `<YOUR_ADMIN_PASSWORD>` with your actual credentials when running tests locally. Store credentials securely in your password manager or Netlify environment variables.
+
 This document provides step-by-step instructions for deploying and verifying the unified Supabase authentication system.
 
 ## Content Security Policy (CSP) Compliance for Hub Pages
@@ -87,17 +89,17 @@ Connect to your Supabase database (via SQL Editor or psql) and run:
 
 ```sql
 -- Seed the admin user
-select set_user_password('dreinisch', 'Tool462', 'admin', null);
+select set_user_password('<YOUR_ADMIN_USERNAME>', '<YOUR_ADMIN_PASSWORD>', 'admin', null);
 
 -- Verify it worked
-select * from verify_user_password('dreinisch', 'Tool462');
+select * from verify_user_password('<YOUR_ADMIN_USERNAME>', '<YOUR_ADMIN_PASSWORD>');
 ```
 
 Expected output:
 ```
- username  | role  | student_id | user_id
------------+-------+------------+---------
- dreinisch | admin |       null |       1
+ username              | role  | student_id | user_id
+-----------------------+-------+------------+---------
+ <YOUR_ADMIN_USERNAME> | admin |       null |       1
 ```
 
 If you get an empty result, the password verification failed. Re-run the `set_user_password` command.
@@ -165,7 +167,7 @@ PREVIEW_URL="https://your-preview-url.netlify.app"
 # Should return 200 with Set-Cookie header
 curl -i -X POST "${PREVIEW_URL}/.netlify/functions/teacher-login" \
   -H 'Content-Type: application/json' \
-  -d '{"username":"dreinisch","password":"Tool462"}'
+  -d '{"username":"<YOUR_ADMIN_USERNAME>","password":"<YOUR_ADMIN_PASSWORD>"}'
 ```
 
 Expected response:
@@ -174,7 +176,7 @@ HTTP/2 200
 set-cookie: tc=...; Path=/; HttpOnly; SameSite=Lax; Max-Age=28800; Secure
 content-type: application/json
 
-{"ok":true,"username":"dreinisch"}
+{"ok":true,"username":"<YOUR_ADMIN_USERNAME>"}
 ```
 
 ✅ **Pass Criteria:** Status 200, `Set-Cookie` header present, response body has `ok: true`
@@ -194,7 +196,7 @@ Expected response:
 {
   "ok": true,
   "role": "admin",
-  "username": "dreinisch"
+  "username": "<YOUR_ADMIN_USERNAME>"
 }
 ```
 
@@ -206,8 +208,8 @@ Expected response:
 
 1. Open browser to `${PREVIEW_URL}/admin-login`
 2. Enter credentials:
-   - Username: `dreinisch`
-   - Password: `Tool462`
+   - Username: `<YOUR_ADMIN_USERNAME>`
+   - Password: `<YOUR_ADMIN_PASSWORD>`
 3. Click "Sign in"
 
 Expected behavior:
@@ -251,10 +253,10 @@ OR (if secrets are set):
 
 ✅ **Pass Criteria:** No warnings, clean exit
 
-**Test 7: Verify No 'dreinisch' in Site Files**
+**Test 7: Verify No Credentials in Site Files**
 
 ```bash
-grep -R 'dreinisch' site/ --include="*.js" --include="*.html"
+grep -R '<YOUR_ADMIN_USERNAME>' site/ --include="*.js" --include="*.html"
 ```
 
 Expected output: (no matches)
@@ -275,10 +277,10 @@ Expected output: (no matches)
 
 ### Acceptance Criteria from Problem Statement
 
-- [x] **AC1:** POST /.netlify/functions/teacher-login with dreinisch/Tool462 returns 200 with tc cookie
+- [x] **AC1:** POST /.netlify/functions/teacher-login with <YOUR_ADMIN_USERNAME>/<YOUR_ADMIN_PASSWORD> returns 200 with tc cookie
 - [x] **AC2:** GET /.netlify/functions/teacher-session returns ok: true with role and username  
 - [x] **AC3:** /admin-login authenticates and sets rc_admin_session_v3 cookie, allows teacher/admin
-- [x] **AC4:** grep -R 'dreinisch' site/ returns 0 occurrences
+- [x] **AC4:** grep -R '<YOUR_ADMIN_USERNAME>' site/ returns 0 occurrences
 - [x] **AC5:** Leak guard produces no warnings, Netlify deploy passes without exposed secrets
 - [x] **AC6:** auth-health returns ok: true with required env presence
 
@@ -292,7 +294,7 @@ Expected output: (no matches)
 | 4. Admin Login UI | ⏳ Pending | Run after deploy |
 | 5. Admin Session Persistence | ⏳ Pending | Run after deploy |
 | 6. Leak Guard | ⏳ Pending | Run locally |
-| 7. No dreinisch in site | ✅ Passed | Verified in PR |
+| 7. No credentials in site | ✅ Passed | Verified in PR |
 | 8. Deploy Logs Clean | ⏳ Pending | Check after deploy |
 
 ## Netlify Runtime & Configuration Verification
@@ -325,7 +327,7 @@ Expected output:
 # Should return 200 (valid) or 401 (invalid), never 502
 curl -i -X POST "${PREVIEW_URL}/.netlify/functions/teacher-login" \
   -H 'Content-Type: application/json' \
-  -d '{"username":"dreinisch","password":"WrongPass"}'
+  -d '{"username":"<YOUR_ADMIN_USERNAME>","password":"WrongPass"}'
 ```
 
 Expected: `HTTP/2 401` (not 502)
@@ -334,7 +336,7 @@ Expected: `HTTP/2 401` (not 502)
 # Try with correct password
 curl -i -X POST "${PREVIEW_URL}/.netlify/functions/teacher-login" \
   -H 'Content-Type: application/json' \
-  -d '{"username":"dreinisch","password":"Tool462"}'
+  -d '{"username":"<YOUR_ADMIN_USERNAME>","password":"<YOUR_ADMIN_PASSWORD>"}'
 ```
 
 Expected: `HTTP/2 200`
@@ -416,7 +418,7 @@ Supabase data remains (harmless, can be ignored).
 
 **Fix:** 
 1. Run seeding SQL in Supabase
-2. Verify with: `select * from verify_user_password('dreinisch', 'Tool462');`
+2. Verify with: `select * from verify_user_password('<YOUR_ADMIN_USERNAME>', '<YOUR_ADMIN_PASSWORD>');`
 
 ### Issue: Admin login succeeds but immediate redirect to /admin-login
 

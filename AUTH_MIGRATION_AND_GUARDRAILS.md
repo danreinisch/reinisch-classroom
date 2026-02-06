@@ -59,18 +59,18 @@ This document describes the unified authentication system for Teacher and Admin 
 Connect to your Supabase database and run:
 
 ```sql
--- Seed admin user (dreinisch / Tool462)
-select set_user_password('dreinisch', 'Tool462', 'admin', null);
+-- Seed admin user
+select set_user_password('<YOUR_ADMIN_USERNAME>', '<YOUR_ADMIN_PASSWORD>', 'admin', null);
 
 -- Verify it worked
-select * from verify_user_password('dreinisch', 'Tool462');
+select * from verify_user_password('<YOUR_ADMIN_USERNAME>', '<YOUR_ADMIN_PASSWORD>');
 ```
 
 Expected output:
 ```
- username  | role  | student_id | user_id
------------+-------+------------+---------
- dreinisch | admin |       null |       1
+ username              | role  | student_id | user_id
+-----------------------+-------+------------+---------
+ <YOUR_ADMIN_USERNAME> | admin |       null |       1
 ```
 
 ### Additional Users
@@ -342,7 +342,7 @@ Automatically runs as postbuild step (see `package.json`).
 ### 1. Seed User in Supabase
 
 ```sql
-select set_user_password('dreinisch', 'Tool462', 'admin', null);
+select set_user_password('<YOUR_ADMIN_USERNAME>', '<YOUR_ADMIN_PASSWORD>', 'admin', null);
 ```
 
 ### 2. Test Teacher Login
@@ -350,7 +350,7 @@ select set_user_password('dreinisch', 'Tool462', 'admin', null);
 ```bash
 curl -i -X POST https://reinischclassroom.com/.netlify/functions/teacher-login \
   -H 'Content-Type: application/json' \
-  -d '{"username":"dreinisch","password":"Tool462"}'
+  -d '{"username":"<YOUR_ADMIN_USERNAME>","password":"<YOUR_ADMIN_PASSWORD>"}'
 ```
 
 Expected: `200 OK` with `Set-Cookie: tc=...`
@@ -362,13 +362,13 @@ curl -i https://reinischclassroom.com/.netlify/functions/teacher-session \
   --cookie "tc=<token_from_step_2>"
 ```
 
-Expected: `{"ok":true,"role":"admin","username":"dreinisch"}`
+Expected: `{"ok":true,"role":"admin","username":"<YOUR_ADMIN_USERNAME>"}`
 
 ### 4. Test Admin Login
 
 Visit: `https://reinischclassroom.com/admin-login`
-- Username: `dreinisch`
-- Password: `Tool462`
+- Username: `<YOUR_ADMIN_USERNAME>`
+- Password: `<YOUR_ADMIN_PASSWORD>`
 
 Expected: Redirect to `/admin/` with `rc_admin_session_v3` cookie set
 
@@ -392,11 +392,11 @@ Expected: `{"ok":true, ...}`
 
 ## Verification Checklist
 
-- [ ] POST `/teacher-login` with dreinisch/Tool462 returns 200
+- [ ] POST `/teacher-login` with <YOUR_ADMIN_USERNAME>/<YOUR_ADMIN_PASSWORD> returns 200
 - [ ] GET `/teacher-session` returns `ok: true` with role and username
 - [ ] Admin login at `/admin-login` succeeds and redirects to `/admin/`
 - [ ] Edge guard allows access to `/admin/` with valid cookie
-- [ ] `grep -R 'dreinisch' site/` returns 0 results (excluding docs)
+- [ ] `grep -R '<YOUR_ADMIN_USERNAME>' site/` returns 0 results (excluding docs)
 - [ ] Leak guard produces no warnings on clean build
 - [ ] Netlify deploy passes without exposed secrets failure
 - [ ] Auth health endpoint returns `ok: true`
