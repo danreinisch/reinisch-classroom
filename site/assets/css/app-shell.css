@@ -204,6 +204,41 @@
   font-size: 20px;
 }
 
+/* Presentation Context: Auto-collapse sidebar */
+/* Apply to all screen sizes when presentation is active */
+body.viewer-open .app-shell-rail,
+body.viewer-sidebar-collapsed .app-shell-rail,
+body.rc-presentation-active .app-shell-rail {
+  transform: translateX(-100%);
+  transition: transform 0.3s ease;
+  pointer-events: none;
+}
+
+/* When sidebar is toggled open in presentation context, show as overlay */
+body.viewer-open .app-shell-rail.open,
+body.viewer-sidebar-collapsed .app-shell-rail.open,
+body.rc-presentation-active .app-shell-rail.open {
+  transform: translateX(0);
+  pointer-events: auto;
+  z-index: 1100;
+}
+
+/* Always show hamburger button in presentation contexts */
+body.viewer-open .app-shell-toggle,
+body.viewer-sidebar-collapsed .app-shell-toggle,
+body.rc-presentation-active .app-shell-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Remove padding when presentation is active - give full viewport width */
+body.has-app-shell.viewer-open,
+body.has-app-shell.viewer-sidebar-collapsed,
+body.has-app-shell.rc-presentation-active {
+  padding-left: 0;
+}
+
 /* Responsive behavior */
 @media (max-width: 768px) {
   .app-shell-rail {

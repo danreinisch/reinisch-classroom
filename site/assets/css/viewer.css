@@ -153,11 +153,8 @@ body:-moz-full-screen .viewer-controls {
 }
 
 /* Viewer sidebar collapse styles */
-body.viewer-sidebar-collapsed .app-shell-rail {
-  transform: translateX(-100%);
-  pointer-events: none;
-}
-
+/* Note: Sidebar transform/overlay rules are in app-shell.css */
 body.viewer-sidebar-collapsed .viewer-container {
   margin-left: 0;
+  transition: margin-left 0.3s ease;
 }

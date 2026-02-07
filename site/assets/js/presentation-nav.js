@@ -372,6 +372,9 @@
 
   // Initialize all features on DOMContentLoaded
   document.addEventListener('DOMContentLoaded', function () {
+    // Add presentation active class for sidebar collapse
+    document.body.classList.add('rc-presentation-active');
+    
     diagnostics.initialized = true;
     initBackgroundSlideshow();
     initSlideNavigation();

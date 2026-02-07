@@ -48,6 +48,9 @@
     // Add body class for layout adjustment
     document.body.classList.add('has-app-shell');
 
+    // Detect if we're in a presentation context and add appropriate class
+    detectPresentationContext();
+
     restoreShellCollapsed();
     window.addEventListener('resize', applyShellCollapsed);
 
@@ -147,6 +150,21 @@
         debugLog('[app-shell] Injected theme CSS:', file.href);
       }
     });
+  }
+
+  /**
+   * Detect if current page is a presentation context and add appropriate body class
+   */
+  function detectPresentationContext() {
+    const pathname = window.location.pathname;
+    
+    // Check if we're on a presentation page
+    // Match: /presentations/... or /life-skills/presentations/... (but not exactly /presentations/)
+    // Note: /viewer/ paths are handled by viewer.js which adds 'viewer-sidebar-collapsed'
+    if (pathname.includes('/presentations/') && pathname !== '/presentations/') {
+      document.body.classList.add('rc-presentation-active');
+      debugLog('[app-shell] Detected presentation context');
+    }
   }
 
   /**
@@ -255,6 +273,29 @@
       // Close if clicked outside rail and not on toggle (if toggle exists)
       if (!rail.contains(e.target) && (!toggle || !toggle.contains(e.target))) {
         rail.classList.remove('open');
+      }
+    });
+
+    // Handle nav link clicks in viewer/presentation contexts (close + navigate pattern)
+    rail.addEventListener('click', (e) => {
+      const link = e.target.closest('a[href]');
+      if (!link) return;
+      
+      // Check if we're in a viewer/presentation context
+      const isViewerContext = document.body.classList.contains('viewer-open') ||
+                             document.body.classList.contains('viewer-sidebar-collapsed') ||
+                             document.body.classList.contains('rc-presentation-active');
+      
+      if (isViewerContext) {
+        e.preventDefault();
+        
+        // Close presentation viewer if it's open (function is defined in this file)
+        if (viewerState.isOpen) {
+          closePresentationViewer();
+        }
+        
+        // Navigate to the link
+        window.location.href = link.href;
       }
     });
 
