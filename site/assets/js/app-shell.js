@@ -161,11 +161,8 @@
     // Check if we're on a presentation page
     // Match: /presentations/... (but not exactly /presentations/)
     // Match: /life-skills/presentations/...
-    // Match: /viewer/ or /viewer
-    if (pathname.startsWith('/viewer/') || pathname === '/viewer') {
-      document.body.classList.add('rc-presentation-active');
-      debugLog('[app-shell] Detected viewer context');
-    } else if (pathname.includes('/presentations/') && pathname !== '/presentations/') {
+    // Note: /viewer/ paths are handled by viewer.js which adds 'viewer-sidebar-collapsed'
+    if (pathname.includes('/presentations/') && pathname !== '/presentations/') {
       document.body.classList.add('rc-presentation-active');
       debugLog('[app-shell] Detected presentation context');
     } else if (pathname.includes('/life-skills/presentations/')) {
@@ -296,8 +293,8 @@
       if (isViewerContext) {
         e.preventDefault();
         
-        // Close presentation viewer if it's open
-        if (typeof closePresentationViewer === 'function') {
+        // Close presentation viewer if it's open (function is defined in this file)
+        if (viewerState.isOpen) {
           closePresentationViewer();
         }
         
