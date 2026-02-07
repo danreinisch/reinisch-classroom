@@ -29,6 +29,9 @@ const OUT_PATH = path.join(SITE_DIR, 'assets', 'content', 'lessons-index.json');
 const LANG_DIR = path.join(SITE_DIR, 'presentations');
 const LIFE_DIR = path.join(SITE_DIR, 'life-skills', 'presentations');
 
+const UNITS_JSON = path.join(SITE_DIR, 'assets', 'data', 'units.json');
+const SITE_STATE_JSON = path.join(SITE_DIR, 'assets', 'data', 'site-state.json');
+
 function decodeEntities(s) {
   return String(s || '')
     .replace(/&amp;/g, '&')
@@ -107,6 +110,64 @@ function buildExistingMaps(existing) {
   return { unitNameById, presNameByUrl };
 }
 
+/**
+ * Extract presentations from site-state.json for a given category ID
+ */
+function extractPresentationsFromSiteState(siteState, categoryId) {
+  const category = siteState?.categories?.[categoryId];
+  if (!category) return [];
+
+  const titles = category.titles || [];
+  const links = category.links || [];
+  const presentations = [];
+
+  for (let i = 0; i < Math.min(titles.length, links.length); i++) {
+    const title = String(titles[i] || '').trim();
+    const link = String(links[i] || '').trim();
+    
+    // Skip empty entries
+    if (!title || !link) continue;
+
+    // Extract presentation ID from link (e.g., "/presentations/lost-in-kragdon-ah/presentation-01/" -> "presentation-01")
+    const match = link.match(/presentation-(\d+)/i);
+    const id = match ? `presentation-${match[1]}` : `presentation-${String(i + 1).padStart(2, '0')}`;
+
+    presentations.push({ id, name: title, url: link });
+  }
+
+  return presentations;
+}
+
+/**
+ * Merge presentations from site-state into existing unit data
+ */
+function mergePresentationsFromSiteState(existingPresentations, siteStatePresentations) {
+  // Create a map of existing presentations by URL
+  const existingByUrl = new Map();
+  for (const p of existingPresentations) {
+    existingByUrl.set(p.url, p);
+  }
+
+  // Add or update presentations from site-state
+  for (const p of siteStatePresentations) {
+    if (!existingByUrl.has(p.url)) {
+      existingPresentations.push(p);
+    } else {
+      // Update name if site-state has a better title
+      const existing = existingByUrl.get(p.url);
+      const oldGeneric = /^presentation\s+\d+$/i.test(existing.name || '') || existing.name.toLowerCase() === 'open';
+      if (oldGeneric && p.name) {
+        existing.name = p.name;
+      }
+    }
+  }
+
+  // Sort by presentation number
+  existingPresentations.sort((a, b) => presNum(a.id) - presNum(b.id));
+  
+  return existingPresentations;
+}
+
 async function listDirs(dir) {
   try {
     const items = await fs.readdir(dir, { withFileTypes: true });
@@ -145,20 +206,76 @@ async function scanUnit(unitId, unitAbsDir, urlPrefix, maps) {
   return { id: unitId, name: unitName, presentations };
 }
 
-async function scanLanguageArts(maps) {
+async function scanLanguageArts(maps, unitsData, siteState) {
   const unitIds = await listDirs(LANG_DIR);
   unitIds.sort((a, b) => a.localeCompare(b));
 
+  // Build unit map by folder name for lookup
+  const unitByFolderName = new Map();
+  if (unitsData?.units) {
+    for (const u of unitsData.units) {
+      if (u.section === 'language-arts' && u.id !== 'toolkit') {
+        // Extract folder name from baseOut (e.g., "presentations/lost-in-kragdon-ah" -> "lost-in-kragdon-ah")
+        const folder = u.baseOut.split('/').pop();
+        unitByFolderName.set(folder, u);
+      }
+    }
+  }
+
   const units = [];
+  const processedIds = new Set();
+
+  // First, scan filesystem units
   for (const unitId of unitIds) {
+    // Skip toolkit - it's handled separately in the sidebar
+    if (unitId === 'language-arts-toolkit') continue;
+
     const abs = path.join(LANG_DIR, unitId);
     const u = await scanUnit(unitId, abs, '/presentations', maps);
-    if (u.presentations.length > 0) units.push(u); // hide empty categories
+    
+    // Try to get canonical name from units.json
+    const unitMeta = unitByFolderName.get(unitId);
+    if (unitMeta && unitMeta.title) {
+      u.name = unitMeta.title;
+    }
+
+    // Merge presentations from site-state if available
+    if (unitMeta && siteState?.categories?.[unitMeta.id]) {
+      const siteStatePres = extractPresentationsFromSiteState(siteState, unitMeta.id);
+      if (siteStatePres.length > 0) {
+        u.presentations = mergePresentationsFromSiteState(u.presentations, siteStatePres);
+      }
+    }
+
+    if (u.presentations.length > 0) {
+      units.push(u);
+      processedIds.add(unitId);
+    }
   }
+
+  // Second, check for units in units.json that weren't found by filesystem scan
+  for (const [folderName, unitMeta] of unitByFolderName.entries()) {
+    if (processedIds.has(folderName)) continue;
+    
+    // Check if site-state has presentations for this unit
+    if (siteState?.categories?.[unitMeta.id]) {
+      const siteStatePres = extractPresentationsFromSiteState(siteState, unitMeta.id);
+      if (siteStatePres.length > 0) {
+        // Create unit from site-state data
+        const unit = {
+          id: folderName,
+          name: unitMeta.title,
+          presentations: siteStatePres
+        };
+        units.push(unit);
+      }
+    }
+  }
+
   return { name: 'LANGUAGE ARTS', units };
 }
 
-async function scanLifeSkills(maps) {
+async function scanLifeSkills(maps, unitsData, siteState) {
   // Life Skills is a single unit, presentations live directly under /life-skills/presentations/presentation-XX/
   const dirs = (await listDirs(LIFE_DIR)).filter(isPresentationDirName);
   dirs.sort((a, b) => presNum(a) - presNum(b));
@@ -183,9 +300,26 @@ async function scanLifeSkills(maps) {
     presentations.push({ id, name, url });
   }
 
+  // Merge presentations from site-state
+  if (siteState?.categories?.life) {
+    const siteStatePres = extractPresentationsFromSiteState(siteState, 'life');
+    if (siteStatePres.length > 0) {
+      mergePresentationsFromSiteState(presentations, siteStatePres);
+    }
+  }
+
+  // Get canonical name from units.json
+  let unitName = maps.unitNameById.get('life-skills') || 'Life Skills';
+  if (unitsData?.units) {
+    const lifeUnit = unitsData.units.find(u => u.id === 'life');
+    if (lifeUnit && lifeUnit.title) {
+      unitName = lifeUnit.title;
+    }
+  }
+
   const unit = {
     id: 'life-skills',
-    name: maps.unitNameById.get('life-skills') || 'Life Skills',
+    name: unitName,
     presentations
   };
 
@@ -197,9 +331,13 @@ async function main() {
   const existing = await safeReadJson(OUT_PATH);
   const maps = buildExistingMaps(existing);
 
+  // Load additional data sources
+  const unitsData = await safeReadJson(UNITS_JSON);
+  const siteState = await safeReadJson(SITE_STATE_JSON);
+
   const sections = [];
-  if (await exists(LANG_DIR)) sections.push(await scanLanguageArts(maps));
-  if (await exists(LIFE_DIR)) sections.push(await scanLifeSkills(maps));
+  if (await exists(LANG_DIR)) sections.push(await scanLanguageArts(maps, unitsData, siteState));
+  if (await exists(LIFE_DIR)) sections.push(await scanLifeSkills(maps, unitsData, siteState));
 
   const out = {
     version: 1,

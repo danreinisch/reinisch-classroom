@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2025-12-27T20:38:44-06:00",
+  "generatedAt": "2026-02-07T16:01:43-06:00",
   "sections": [
     {
       "name": "LANGUAGE ARTS",
@@ -80,6 +80,62 @@
               "url": "/presentations/a-door-into-time/presentation-16/"
             }
           ]
+        },
+        {
+          "id": "lost-in-kragdon-ah",
+          "name": "Lost in Kragdon‑Ah",
+          "presentations": [
+            {
+              "id": "presentation-01",
+              "name": "Week 1: Capitalization and Punctuation",
+              "url": "/presentations/lost-in-kragdon-ah/presentation-01/"
+            },
+            {
+              "id": "presentation-02",
+              "name": "Capitalization and Punctuation (Advanced)",
+              "url": "/presentations/lost-in-kragdon-ah/presentation-02/"
+            },
+            {
+              "id": "presentation-03",
+              "name": "Dialogue Punctuation",
+              "url": "/presentations/lost-in-kragdon-ah/presentation-03/"
+            },
+            {
+              "id": "presentation-04",
+              "name": "Dialogue & First-Person Point of View",
+              "url": "/presentations/lost-in-kragdon-ah/presentation-04/"
+            },
+            {
+              "id": "presentation-05",
+              "name": "Week 5 - Sentence Fragments vs. Complete Sentences",
+              "url": "/presentations/lost-in-kragdon-ah/presentation-05/"
+            },
+            {
+              "id": "presentation-06",
+              "name": "Week 6 - Sentence Fragments vs. Complete Sentences (Part 2)",
+              "url": "/presentations/lost-in-kragdon-ah/presentation-06/"
+            },
+            {
+              "id": "presentation-07",
+              "name": "Week 7 - Verb Tenses - Past, Present, Future",
+              "url": "/presentations/lost-in-kragdon-ah/presentation-07/"
+            },
+            {
+              "id": "presentation-08",
+              "name": "Week 8 - Verb Tenses - Going Deeper",
+              "url": "/presentations/lost-in-kragdon-ah/presentation-08/"
+            },
+            {
+              "id": "presentation-09",
+              "name": "Week 9 - Context Clues & Word Parts (Prefixes, Roots, Suffixes)",
+              "url": "/presentations/lost-in-kragdon-ah/presentation-09/"
+            },
+            {
+              "id": "presentation-10",
+              "name": "Week 10 - Sentence Structure & Transitions",
+              "url": "/presentations/lost-in-kragdon-ah/presentation-10/"
+            }
+          ]
         }
       ]
     },
@@ -119,6 +175,16 @@
               "id": "presentation-06",
               "name": "Counting Money",
               "url": "/life-skills/presentations/presentation-06/"
+            },
+            {
+              "id": "presentation-07",
+              "name": "Adding and Subtracting Money",
+              "url": "/life-skills/presentations/presentation-07/"
+            },
+            {
+              "id": "presentation-08",
+              "name": "Workplace Communication",
+              "url": "/life-skills/presentations/presentation-08/"
             }
           ]
         }
