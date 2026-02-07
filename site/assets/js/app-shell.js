@@ -183,11 +183,20 @@
   function detectPresentationContext() {
     const pathname = window.location.pathname;
     
-    // Check if we're on a presentation page
+    // Check if we're on a presentation page or viewer page
     // Match: /presentations/... or /life-skills/presentations/... (but not exactly /presentations/)
-    // Note: /viewer/ paths are handled by viewer.js which adds 'viewer-sidebar-collapsed'
-    if (pathname.includes('/presentations/') && pathname !== '/presentations/') {
+    // Also match: /viewer/ paths
+    const isPresentation = 
+      (pathname.includes('/presentations/') && pathname !== '/presentations/') ||
+      pathname.includes('/life-skills/presentations/') ||
+      pathname.startsWith('/viewer/') || pathname.startsWith('/viewer');
+    
+    if (isPresentation) {
       document.body.classList.add('rc-presentation-active');
+      // Only add icon-only on desktop; mobile keeps existing behavior
+      if (window.innerWidth > 768) {
+        document.body.classList.add('app-shell-icon-only');
+      }
       debugLog('[app-shell] Detected presentation context');
     }
   }
@@ -207,8 +216,23 @@
       </div>
 
       <div class="app-shell-nav">
+        <!-- Home -->
+        <a href="/" class="app-shell-item" data-shell-nav="home">
+          <span class="app-shell-item-icon">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 10l7-7 7 7M4 9v9h4v-5h4v5h4V9"/>
+            </svg>
+          </span>
+          <span class="app-shell-item-label">Home</span>
+        </a>
+
         <!-- Lessons -->
         <button class="app-shell-item" data-shell-nav="lessons" aria-expanded="false">
+          <span class="app-shell-item-icon">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 4h12v12H4z M4 8h12"/>
+            </svg>
+          </span>
           <span class="app-shell-item-label">Lessons</span>
           <span class="app-shell-item-arrow">▶</span>
         </button>
@@ -219,6 +243,11 @@
 
         <!-- Toolkits -->
         <button class="app-shell-item" data-shell-nav="toolkits" aria-expanded="false">
+          <span class="app-shell-item-icon">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+            </svg>
+          </span>
           <span class="app-shell-item-label">Toolkits</span>
           <span class="app-shell-item-arrow">▶</span>
         </button>
@@ -229,6 +258,11 @@
 
         <!-- Teacher -->
         <button class="app-shell-item" data-shell-nav="teacher" data-requires-auth="teacher" aria-expanded="false">
+          <span class="app-shell-item-icon">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M12 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0"/>
+            </svg>
+          </span>
           <span class="app-shell-item-label">Teacher</span>
           <span class="app-shell-item-arrow">▶</span>
         </button>
@@ -239,17 +273,32 @@
 
         <!-- Student -->
         <button class="app-shell-item" data-shell-nav="student" data-requires-auth="student">
+          <span class="app-shell-item-icon">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M2 7l8-4 8 4M2 7l8 4M2 7v10l8 4m0-14l8 4m-8-4v14m8-10v10l-8 4"/>
+            </svg>
+          </span>
           <span class="app-shell-item-label">Student</span>
         </button>
 
         <!-- Substitute -->
         <button class="app-shell-item" data-shell-nav="substitute" data-requires-auth="substitute">
+          <span class="app-shell-item-icon">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16l4-2 4 2 4-2 4 2V4a2 2 0 0 0-2-2z M10 8h4M10 12h4M6 8h.01M6 12h.01"/>
+            </svg>
+          </span>
           <span class="app-shell-item-label">Substitute</span>
         </button>
       </div>
 
       <div class="app-shell-footer">
         <button class="app-shell-footer-btn app-shell-hidden" data-shell-action="signout">
+          <span class="app-shell-item-icon">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>
+            </svg>
+          </span>
           <span>Sign Out</span>
         </button>
       </div>
@@ -291,13 +340,27 @@
       });
     }
 
-    // Phase 302C: Defensive - Close rail when clicking outside (mobile)
+    // Close rail when clicking outside (mobile + icon-only expanded mode)
     document.addEventListener('click', (e) => {
-      if (window.innerWidth > 768) return;
+      const lessonsNav = document.querySelector('.lessons-navigator');
       
-      // Close if clicked outside rail and not on toggle (if toggle exists)
-      if (!rail.contains(e.target) && (!toggle || !toggle.contains(e.target))) {
-        rail.classList.remove('open');
+      // On mobile, close rail if clicked outside
+      if (window.innerWidth <= 768) {
+        if (!rail.contains(e.target) && (!toggle || !toggle.contains(e.target))) {
+          rail.classList.remove('open');
+        }
+        return;
+      }
+      
+      // On desktop in icon-only mode, close expanded rail if clicked outside
+      if (document.body.classList.contains('app-shell-icon-only') && rail.classList.contains('open')) {
+        if (!rail.contains(e.target) && (!toggle || !toggle.contains(e.target))) {
+          rail.classList.remove('open');
+          // Also close lessons navigator if open
+          if (lessonsNav) {
+            lessonsNav.classList.remove('open');
+          }
+        }
       }
     });
 
@@ -332,6 +395,30 @@
       const navId = navButton.dataset.shellNav;
       const requiresAuth = navButton.dataset.requiresAuth;
 
+      // Check if we're in icon-only mode and rail is not expanded
+      const isIconOnly = document.body.classList.contains('app-shell-icon-only') && !rail.classList.contains('open');
+      
+      if (isIconOnly) {
+        // In icon-only mode, first click expands the rail
+        rail.classList.add('open');
+        
+        // For direct nav items (home, teacher, student, substitute), navigate directly
+        if (navId === 'home') {
+          window.location.href = '/';
+          return;
+        }
+        if (navId === 'student') {
+          window.location.href = '/student/';
+          return;
+        }
+        if (navId === 'substitute') {
+          window.location.href = '/sub/';
+          return;
+        }
+        // For lessons and toolkits, expand rail and then proceed to open them
+        // Don't return - let the code below handle opening the submenu/navigator
+      }
+
       // Check if requires auth and user is not authenticated
       if (requiresAuth && !isAuthenticated(requiresAuth)) {
         handleAuthRequired(requiresAuth);
@@ -339,6 +426,11 @@
       }
 
       // Handle special cases (no submenu)
+      if (navId === 'home') {
+        // Home is a link, not a button, so this won't be reached
+        return;
+      }
+
       if (navId === 'student') {
         window.location.href = '/student/';
         return;
@@ -746,13 +838,26 @@
         const content = navigator.querySelector('.lessons-navigator-content');
         if (content) content.innerHTML = '<div class="lessons-loading">Loading lessons...</div>';
 
+        // Add timeout fallback: if normalization takes longer than 3 seconds, render with un-normalized data
+        const normalizeTimeout = setTimeout(() => {
+          if (!lessonsDataHydrated) {
+            lessonsDataHydrated = true;
+            debugWarn('[app-shell] Lessons normalize timed out after 3s, rendering with un-normalized data');
+            renderLessonsContent();
+          }
+        }, 3000);
+
         normalizeLessonsData(lessonsData)
           .then((normalized) => {
-            lessonsData = normalized;
-            lessonsDataHydrated = true;
-            renderLessonsContent();
+            clearTimeout(normalizeTimeout);
+            if (!lessonsDataHydrated) {
+              lessonsData = normalized;
+              lessonsDataHydrated = true;
+              renderLessonsContent();
+            }
           })
           .catch((err) => {
+            clearTimeout(normalizeTimeout);
             lessonsDataHydrated = true;
             debugWarn('[app-shell] Lessons normalize failed:', err);
             renderLessonsContent();
@@ -1333,6 +1438,11 @@
       const unit = params.get('unit');
       const presentation = params.get('presentation');
       
+      // BUG FIX: Don't auto-open Lessons Navigator on viewer page
+      // Only restore the viewer state (load presentation in iframe)
+      const isViewerPage = window.location.pathname.startsWith('/viewer/') || 
+                          window.location.pathname.startsWith('/viewer');
+      
       // Wait for lessons data to load with less aggressive polling
       const checkData = setInterval(() => {
         if (lessonsData) {
@@ -1345,7 +1455,20 @@
             if (unitData) {
               const presData = unitData.presentations.find(p => p.id === presentation);
               if (presData) {
-                openPresentationViewer(presData.url, section, unit, presentation);
+                // On viewer page, only load in iframe, don't open lessons navigator
+                if (isViewerPage) {
+                  // Just update the viewer state without opening lessons navigator
+                  viewerState = {
+                    isOpen: false,
+                    currentUrl: presData.url,
+                    section: section,
+                    unit: unit,
+                    presentation: presentation
+                  };
+                } else {
+                  // On other pages, open presentation viewer normally
+                  openPresentationViewer(presData.url, section, unit, presentation);
+                }
               }
             }
           }

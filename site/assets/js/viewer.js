@@ -22,8 +22,13 @@
    * Toggle sidebar collapsed state
    */
   function toggleSidebar() {
-    // Find the app shell rail and toggle its open class
     const rail = document.querySelector('.app-shell-rail');
+    const lessonsNav = document.querySelector('.lessons-navigator');
+    
+    // Always close lessons navigator first
+    if (lessonsNav) lessonsNav.classList.remove('open');
+    
+    // Toggle the main sidebar
     if (rail) {
       rail.classList.toggle('open');
       console.log('[viewer] Sidebar', rail.classList.contains('open') ? 'opened' : 'closed');
@@ -52,8 +57,12 @@
     // Load content in iframe
     loadContent(src);
 
-    // Auto-collapse sidebar on viewer page (always start collapsed)
-    document.body.classList.add('viewer-sidebar-collapsed');
+    // Use icon-only mode instead of complete hide on desktop
+    if (window.innerWidth > 768) {
+      document.body.classList.add('app-shell-icon-only');
+    } else {
+      document.body.classList.add('viewer-sidebar-collapsed');
+    }
 
     // Setup event handlers
     setupEventHandlers();
