@@ -159,15 +159,11 @@
     const pathname = window.location.pathname;
     
     // Check if we're on a presentation page
-    // Match: /presentations/... (but not exactly /presentations/)
-    // Match: /life-skills/presentations/...
+    // Match: /presentations/... or /life-skills/presentations/... (but not exactly /presentations/)
     // Note: /viewer/ paths are handled by viewer.js which adds 'viewer-sidebar-collapsed'
     if (pathname.includes('/presentations/') && pathname !== '/presentations/') {
       document.body.classList.add('rc-presentation-active');
       debugLog('[app-shell] Detected presentation context');
-    } else if (pathname.includes('/life-skills/presentations/')) {
-      document.body.classList.add('rc-presentation-active');
-      debugLog('[app-shell] Detected life-skills presentation context');
     }
   }
 
