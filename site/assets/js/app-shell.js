@@ -29,6 +29,31 @@
   const SHELL_COLLAPSE_KEY = 'app-shell-collapsed';
   let shellCollapsed = false;
 
+  // Lessons navigator accordion state persistence
+  const LESSONS_NAV_STATE_KEY = 'rc_lessons_nav_state';
+  
+  // Helper to load lessons nav state from localStorage
+  function loadLessonsNavState() {
+    try {
+      const stored = localStorage.getItem(LESSONS_NAV_STATE_KEY);
+      if (stored) {
+        return JSON.parse(stored);
+      }
+    } catch (e) {
+      debugWarn('[app-shell] Failed to load lessons nav state:', e);
+    }
+    return { expandedSections: [], expandedUnits: {} };
+  }
+
+  // Helper to save lessons nav state to localStorage
+  function saveLessonsNavState(state) {
+    try {
+      localStorage.setItem(LESSONS_NAV_STATE_KEY, JSON.stringify(state));
+    } catch (e) {
+      debugWarn('[app-shell] Failed to save lessons nav state:', e);
+    }
+  }
+
   /**
    * Initialize the app shell
    */
@@ -852,64 +877,188 @@
     const content = document.querySelector('.lessons-navigator-content');
     if (!content || !lessonsData) return;
 
+    // Load saved state
+    const navState = loadLessonsNavState();
+
     // Clear content
     content.innerHTML = '';
 
-    // Render sections
+    // Render sections with accordion behavior
     for (const section of lessonsData.sections) {
+      // Generate section ID from name for state tracking
+      const sectionId = section.name.toLowerCase().replace(/\s+/g, '-');
+      const isSectionExpanded = navState.expandedSections.includes(sectionId);
+
       const sectionDiv = document.createElement('div');
       sectionDiv.className = 'lessons-section';
+      sectionDiv.dataset.sectionId = sectionId;
+
+      // Section header with arrow indicator
+      const sectionHeader = document.createElement('button');
+      sectionHeader.className = 'lessons-section-title';
+      sectionHeader.setAttribute('aria-expanded', isSectionExpanded ? 'true' : 'false');
       
-      const sectionTitle = document.createElement('div');
-      sectionTitle.className = 'lessons-section-title';
-      sectionTitle.textContent = section.name;
-      sectionDiv.appendChild(sectionTitle);
+      const sectionArrow = document.createElement('span');
+      sectionArrow.className = 'lessons-arrow';
+      sectionArrow.textContent = '▸';
+      if (isSectionExpanded) {
+        sectionArrow.style.transform = 'rotate(90deg)';
+      }
       
+      const sectionName = document.createElement('span');
+      sectionName.textContent = section.name;
+      
+      sectionHeader.appendChild(sectionArrow);
+      sectionHeader.appendChild(sectionName);
+      
+      // Toggle section on click
+      sectionHeader.addEventListener('click', () => {
+        const isExpanded = sectionHeader.getAttribute('aria-expanded') === 'true';
+        const newExpanded = !isExpanded;
+        
+        sectionHeader.setAttribute('aria-expanded', newExpanded ? 'true' : 'false');
+        unitsContainer.classList.toggle('open', newExpanded);
+        
+        // Rotate arrow
+        if (newExpanded) {
+          sectionArrow.style.transform = 'rotate(90deg)';
+        } else {
+          sectionArrow.style.transform = 'rotate(0deg)';
+        }
+        
+        // Save state
+        const state = loadLessonsNavState();
+        if (newExpanded) {
+          if (!state.expandedSections.includes(sectionId)) {
+            state.expandedSections.push(sectionId);
+          }
+        } else {
+          state.expandedSections = state.expandedSections.filter(s => s !== sectionId);
+          // Clear expanded unit for this section
+          delete state.expandedUnits[sectionId];
+        }
+        saveLessonsNavState(state);
+      });
+      
+      sectionDiv.appendChild(sectionHeader);
+
+      // Container for units (collapsible)
+      const unitsContainer = document.createElement('div');
+      unitsContainer.className = 'lessons-units-container';
+      if (isSectionExpanded) {
+        unitsContainer.classList.add('open');
+      }
+
       // Render units
       if (section.units && section.units.length > 0) {
+        const expandedUnitId = navState.expandedUnits[sectionId];
+
         for (const unit of section.units) {
+          const isUnitExpanded = expandedUnitId === unit.id;
+
           const unitDiv = document.createElement('div');
           unitDiv.className = 'lessons-unit';
+          unitDiv.dataset.unitId = unit.id;
+
+          // Unit header with arrow indicator
+          const unitHeader = document.createElement('button');
+          unitHeader.className = 'lessons-unit-title';
+          unitHeader.setAttribute('aria-expanded', isUnitExpanded ? 'true' : 'false');
           
-          const unitTitle = document.createElement('div');
-          unitTitle.className = 'lessons-unit-title';
-          unitTitle.textContent = unit.name;
-          unitDiv.appendChild(unitTitle);
+          const unitArrow = document.createElement('span');
+          unitArrow.className = 'lessons-arrow';
+          unitArrow.textContent = '▸';
+          if (isUnitExpanded) {
+            unitArrow.style.transform = 'rotate(90deg)';
+          }
           
-          // Render presentations
+          const unitName = document.createElement('span');
+          unitName.textContent = unit.name;
+          
+          unitHeader.appendChild(unitArrow);
+          unitHeader.appendChild(unitName);
+
+          unitDiv.appendChild(unitHeader);
+
+          // Render presentations (collapsible) - create container first
+          const presContainer = document.createElement('div');
+          presContainer.className = 'lessons-unit-items';
+          if (isUnitExpanded) {
+            presContainer.classList.add('open');
+          }
+
           if (unit.presentations && unit.presentations.length > 0) {
-            const presContainer = document.createElement('div');
-            presContainer.className = 'lessons-presentations';
-            
             for (const pres of unit.presentations) {
               const btn = document.createElement('button');
               btn.className = 'lessons-presentation';
               btn.textContent = pres.name;
-              btn.dataset.section = section.id;
+              btn.dataset.section = sectionId;
               btn.dataset.unit = unit.id;
               btn.dataset.presentation = pres.id;
               btn.dataset.url = pres.url;
-              
+
               btn.addEventListener('click', () => {
-                openPresentationViewer(pres.url, section.id, unit.id, pres.id);
+                openPresentationViewer(pres.url, sectionId, unit.id, pres.id);
               });
-              
+
               presContainer.appendChild(btn);
             }
-            
-            unitDiv.appendChild(presContainer);
           }
-          
-          sectionDiv.appendChild(unitDiv);
+
+          unitDiv.appendChild(presContainer);
+
+          // Toggle unit on click (accordion-style: close others in same section)
+          unitHeader.addEventListener('click', () => {
+            const isExpanded = unitHeader.getAttribute('aria-expanded') === 'true';
+            const newExpanded = !isExpanded;
+
+            // If opening this unit, close any other open unit in this section (accordion behavior)
+            if (newExpanded) {
+              const otherUnits = unitsContainer.querySelectorAll('.lessons-unit');
+              otherUnits.forEach(otherUnit => {
+                if (otherUnit !== unitDiv) {
+                  const otherHeader = otherUnit.querySelector('.lessons-unit-title');
+                  const otherArrow = otherUnit.querySelector('.lessons-arrow');
+                  const otherPresContainer = otherUnit.querySelector('.lessons-unit-items');
+                  
+                  if (otherHeader) otherHeader.setAttribute('aria-expanded', 'false');
+                  if (otherArrow) otherArrow.style.transform = 'rotate(0deg)';
+                  if (otherPresContainer) otherPresContainer.classList.remove('open');
+                }
+              });
+            }
+
+            unitHeader.setAttribute('aria-expanded', newExpanded ? 'true' : 'false');
+            presContainer.classList.toggle('open', newExpanded);
+
+            // Rotate arrow
+            if (newExpanded) {
+              unitArrow.style.transform = 'rotate(90deg)';
+            } else {
+              unitArrow.style.transform = 'rotate(0deg)';
+            }
+
+            // Save state
+            const state = loadLessonsNavState();
+            if (newExpanded) {
+              state.expandedUnits[sectionId] = unit.id;
+            } else {
+              delete state.expandedUnits[sectionId];
+            }
+            saveLessonsNavState(state);
+          });
+
+          unitsContainer.appendChild(unitDiv);
         }
       } else {
         const emptyMsg = document.createElement('div');
         emptyMsg.className = 'lessons-empty';
         emptyMsg.textContent = 'No units available yet';
         emptyMsg.setAttribute('role', 'status');
-        sectionDiv.appendChild(emptyMsg);
+        unitsContainer.appendChild(emptyMsg);
       }
-      
+
+      sectionDiv.appendChild(unitsContainer);
       content.appendChild(sectionDiv);
     }
   }
