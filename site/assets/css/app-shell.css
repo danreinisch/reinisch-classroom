@@ -252,7 +252,7 @@ body.app-shell-icon-only .app-shell-rail.open .app-shell-item-label,
 body.app-shell-icon-only .app-shell-rail.open .app-shell-item-arrow,
 body.app-shell-icon-only .app-shell-rail.open .app-shell-header,
 body.app-shell-icon-only .app-shell-rail.open .app-shell-status {
-  display: initial;
+  display: block;
 }
 
 body.app-shell-icon-only .app-shell-rail.open .app-shell-item {

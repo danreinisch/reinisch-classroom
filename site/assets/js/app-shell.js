@@ -178,6 +178,14 @@
   }
 
   /**
+   * Check if current page is a viewer page
+   */
+  function isViewerPage() {
+    const pathname = window.location.pathname;
+    return pathname.startsWith('/viewer/') || pathname.startsWith('/viewer');
+  }
+
+  /**
    * Detect if current page is a presentation context and add appropriate body class
    */
   function detectPresentationContext() {
@@ -189,7 +197,7 @@
     const isPresentation = 
       (pathname.includes('/presentations/') && pathname !== '/presentations/') ||
       pathname.includes('/life-skills/presentations/') ||
-      pathname.startsWith('/viewer/') || pathname.startsWith('/viewer');
+      isViewerPage();
     
     if (isPresentation) {
       document.body.classList.add('rc-presentation-active');
@@ -219,7 +227,7 @@
         <!-- Home -->
         <a href="/" class="app-shell-item" data-shell-nav="home">
           <span class="app-shell-item-icon">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M3 10l7-7 7 7M4 9v9h4v-5h4v5h4V9"/>
             </svg>
           </span>
@@ -229,7 +237,7 @@
         <!-- Lessons -->
         <button class="app-shell-item" data-shell-nav="lessons" aria-expanded="false">
           <span class="app-shell-item-icon">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M4 4h12v12H4z M4 8h12"/>
             </svg>
           </span>
@@ -244,7 +252,7 @@
         <!-- Toolkits -->
         <button class="app-shell-item" data-shell-nav="toolkits" aria-expanded="false">
           <span class="app-shell-item-icon">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
             </svg>
           </span>
@@ -259,7 +267,7 @@
         <!-- Teacher -->
         <button class="app-shell-item" data-shell-nav="teacher" data-requires-auth="teacher" aria-expanded="false">
           <span class="app-shell-item-icon">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M12 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0"/>
             </svg>
           </span>
@@ -274,7 +282,7 @@
         <!-- Student -->
         <button class="app-shell-item" data-shell-nav="student" data-requires-auth="student">
           <span class="app-shell-item-icon">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M2 7l8-4 8 4M2 7l8 4M2 7v10l8 4m0-14l8 4m-8-4v14m8-10v10l-8 4"/>
             </svg>
           </span>
@@ -284,7 +292,7 @@
         <!-- Substitute -->
         <button class="app-shell-item" data-shell-nav="substitute" data-requires-auth="substitute">
           <span class="app-shell-item-icon">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M14 2H6a2 2 0 0 0-2 2v16l4-2 4 2 4-2 4 2V4a2 2 0 0 0-2-2z M10 8h4M10 12h4M6 8h.01M6 12h.01"/>
             </svg>
           </span>
@@ -295,7 +303,7 @@
       <div class="app-shell-footer">
         <button class="app-shell-footer-btn app-shell-hidden" data-shell-action="signout">
           <span class="app-shell-item-icon">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>
             </svg>
           </span>
@@ -402,21 +410,14 @@
         // In icon-only mode, first click expands the rail
         rail.classList.add('open');
         
-        // For direct nav items (home, teacher, student, substitute), navigate directly
-        if (navId === 'home') {
-          window.location.href = '/';
+        // For items with submenus (lessons, toolkits, teacher), just expand
+        // For direct nav items (student, substitute), expand then proceed to navigate
+        if (navId === 'student' || navId === 'substitute') {
+          // Let these fall through to the navigation code below
+        } else {
+          // For lessons and toolkits, stop here - let them open submenu on next click
           return;
         }
-        if (navId === 'student') {
-          window.location.href = '/student/';
-          return;
-        }
-        if (navId === 'substitute') {
-          window.location.href = '/sub/';
-          return;
-        }
-        // For lessons and toolkits, expand rail and then proceed to open them
-        // Don't return - let the code below handle opening the submenu/navigator
       }
 
       // Check if requires auth and user is not authenticated
@@ -426,11 +427,6 @@
       }
 
       // Handle special cases (no submenu)
-      if (navId === 'home') {
-        // Home is a link, not a button, so this won't be reached
-        return;
-      }
-
       if (navId === 'student') {
         window.location.href = '/student/';
         return;
@@ -1440,8 +1436,7 @@
       
       // BUG FIX: Don't auto-open Lessons Navigator on viewer page
       // Only restore the viewer state (load presentation in iframe)
-      const isViewerPage = window.location.pathname.startsWith('/viewer/') || 
-                          window.location.pathname.startsWith('/viewer');
+      const isOnViewerPage = isViewerPage();
       
       // Wait for lessons data to load with less aggressive polling
       const checkData = setInterval(() => {
@@ -1456,7 +1451,7 @@
               const presData = unitData.presentations.find(p => p.id === presentation);
               if (presData) {
                 // On viewer page, only load in iframe, don't open lessons navigator
-                if (isViewerPage) {
+                if (isOnViewerPage) {
                   // Just update the viewer state without opening lessons navigator
                   viewerState = {
                     isOpen: false,
