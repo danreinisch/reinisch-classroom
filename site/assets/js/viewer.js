@@ -17,45 +17,6 @@
   // State
   let presentationMode = false;
   let returnUrl = null;
-  let sidebarCollapsed = false;
-
-  // Sidebar collapse persistence key
-  const SIDEBAR_COLLAPSE_KEY = 'rc_viewer_sidebar_collapsed';
-
-  /**
-   * Restore sidebar collapsed state from localStorage
-   */
-  function restoreSidebarState() {
-    try {
-      const saved = localStorage.getItem(SIDEBAR_COLLAPSE_KEY);
-      sidebarCollapsed = saved === 'true';
-      applySidebarState();
-    } catch (e) {
-      console.warn('[viewer] Could not restore sidebar state:', e);
-    }
-  }
-
-  /**
-   * Save sidebar collapsed state to localStorage
-   */
-  function saveSidebarState() {
-    try {
-      localStorage.setItem(SIDEBAR_COLLAPSE_KEY, String(sidebarCollapsed));
-    } catch (e) {
-      console.warn('[viewer] Could not save sidebar state:', e);
-    }
-  }
-
-  /**
-   * Apply sidebar collapsed state to the body
-   */
-  function applySidebarState() {
-    if (sidebarCollapsed) {
-      document.body.classList.add('viewer-sidebar-collapsed');
-    } else {
-      document.body.classList.remove('viewer-sidebar-collapsed');
-    }
-  }
 
   /**
    * Toggle sidebar collapsed state
@@ -93,7 +54,6 @@
 
     // Auto-collapse sidebar on viewer page (always start collapsed)
     document.body.classList.add('viewer-sidebar-collapsed');
-    sidebarCollapsed = true;
 
     // Setup event handlers
     setupEventHandlers();
