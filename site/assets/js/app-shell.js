@@ -42,7 +42,7 @@
     } catch (e) {
       debugWarn('[app-shell] Failed to load lessons nav state:', e);
     }
-    return { expandedSections: [], expandedUnits: {} };
+    return { expandedSections: [], expandedUnits: {}, expandedGroups: {} };
   }
 
   // Helper to save lessons nav state to localStorage
@@ -936,6 +936,12 @@
           state.expandedSections = state.expandedSections.filter(s => s !== sectionId);
           // Clear expanded unit for this section
           delete state.expandedUnits[sectionId];
+          // Clear expanded groups for units in this section
+          if (section.units) {
+            for (const unit of section.units) {
+              delete state.expandedGroups?.[unit.id];
+            }
+          }
         }
         saveLessonsNavState(state);
       });
@@ -987,7 +993,123 @@
             presContainer.classList.add('open');
           }
 
-          if (unit.presentations && unit.presentations.length > 0) {
+          // Check if unit has groups
+          if (unit.groups && unit.groups.length > 0) {
+            // Render groups with accordion behavior
+            const expandedGroupId = navState.expandedGroups?.[unit.id];
+            
+            // Create a map of presentations for quick lookup
+            const presMap = new Map();
+            if (unit.presentations && unit.presentations.length > 0) {
+              for (const pres of unit.presentations) {
+                presMap.set(pres.id, pres);
+              }
+            }
+
+            for (const group of unit.groups) {
+              const isGroupExpanded = expandedGroupId === group.id;
+
+              const groupDiv = document.createElement('div');
+              groupDiv.className = 'lessons-group';
+              groupDiv.dataset.groupId = group.id;
+
+              // Group header with arrow indicator
+              const groupHeader = document.createElement('button');
+              groupHeader.className = 'lessons-group-title';
+              groupHeader.setAttribute('aria-expanded', isGroupExpanded ? 'true' : 'false');
+              
+              const groupArrow = document.createElement('span');
+              groupArrow.className = 'lessons-arrow';
+              groupArrow.textContent = '▸';
+              if (isGroupExpanded) {
+                groupArrow.style.transform = 'rotate(90deg)';
+              }
+              
+              const groupName = document.createElement('span');
+              groupName.textContent = group.name;
+              
+              groupHeader.appendChild(groupArrow);
+              groupHeader.appendChild(groupName);
+
+              groupDiv.appendChild(groupHeader);
+
+              // Container for presentations within this group
+              const groupItemsContainer = document.createElement('div');
+              groupItemsContainer.className = 'lessons-group-items';
+              if (isGroupExpanded) {
+                groupItemsContainer.classList.add('open');
+              }
+
+              // Render presentations in this group
+              if (group.presentationIds && group.presentationIds.length > 0) {
+                for (const presId of group.presentationIds) {
+                  const pres = presMap.get(presId);
+                  if (!pres) continue;
+
+                  const btn = document.createElement('button');
+                  btn.className = 'lessons-presentation';
+                  btn.textContent = pres.name;
+                  btn.dataset.section = sectionId;
+                  btn.dataset.unit = unit.id;
+                  btn.dataset.presentation = pres.id;
+                  btn.dataset.url = pres.url;
+
+                  btn.addEventListener('click', () => {
+                    openPresentationViewer(pres.url, sectionId, unit.id, pres.id);
+                  });
+
+                  groupItemsContainer.appendChild(btn);
+                }
+              }
+
+              groupDiv.appendChild(groupItemsContainer);
+
+              // Toggle group on click (accordion-style: close others in same unit)
+              groupHeader.addEventListener('click', () => {
+                const isExpanded = groupHeader.getAttribute('aria-expanded') === 'true';
+                const newExpanded = !isExpanded;
+
+                // If opening this group, close any other open group in this unit (accordion behavior)
+                if (newExpanded) {
+                  const otherGroups = presContainer.querySelectorAll('.lessons-group');
+                  otherGroups.forEach(otherGroup => {
+                    if (otherGroup !== groupDiv) {
+                      const otherHeader = otherGroup.querySelector('.lessons-group-title');
+                      const otherArrow = otherGroup.querySelector('.lessons-arrow');
+                      const otherItemsContainer = otherGroup.querySelector('.lessons-group-items');
+                      
+                      if (otherHeader) otherHeader.setAttribute('aria-expanded', 'false');
+                      if (otherArrow) otherArrow.style.transform = 'rotate(0deg)';
+                      if (otherItemsContainer) otherItemsContainer.classList.remove('open');
+                    }
+                  });
+                }
+
+                groupHeader.setAttribute('aria-expanded', newExpanded ? 'true' : 'false');
+                groupItemsContainer.classList.toggle('open', newExpanded);
+
+                // Rotate arrow
+                if (newExpanded) {
+                  groupArrow.style.transform = 'rotate(90deg)';
+                } else {
+                  groupArrow.style.transform = 'rotate(0deg)';
+                }
+
+                // Save state
+                const state = loadLessonsNavState();
+                if (!state.expandedGroups) state.expandedGroups = {};
+                if (newExpanded) {
+                  state.expandedGroups[unit.id] = group.id;
+                } else {
+                  delete state.expandedGroups[unit.id];
+                }
+                saveLessonsNavState(state);
+              });
+
+              presContainer.appendChild(groupDiv);
+            }
+          } else if (unit.presentations && unit.presentations.length > 0) {
+            // No groups - render presentations directly (Language Arts behavior)
             for (const pres of unit.presentations) {
               const btn = document.createElement('button');
               btn.className = 'lessons-presentation';
@@ -1044,6 +1166,8 @@
               state.expandedUnits[sectionId] = unit.id;
             } else {
               delete state.expandedUnits[sectionId];
+              // Clear expanded group for this unit
+              delete state.expandedGroups?.[unit.id];
             }
             saveLessonsNavState(state);
           });

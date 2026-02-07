@@ -32,6 +32,31 @@ const LIFE_DIR = path.join(SITE_DIR, 'life-skills', 'presentations');
 const UNITS_JSON = path.join(SITE_DIR, 'assets', 'data', 'units.json');
 const SITE_STATE_JSON = path.join(SITE_DIR, 'assets', 'data', 'site-state.json');
 
+// Life Skills grouping configuration
+const LIFE_SKILLS_GROUPS = [
+  {
+    id: 'money-finance',
+    name: '💰 Money & Finance',
+    keywords: ['money', 'paycheck', 'counting', 'cashier', 'finance', 'budget', 'bank', 'saving']
+  },
+  {
+    id: 'employment',
+    name: '💼 Employment',
+    keywords: ['job', 'employment', 'workplace', 'career', 'resume', 'interview', 'work skills', 'independent living']
+  },
+  {
+    id: 'nutrition-shopping',
+    name: '🍎 Nutrition & Shopping',
+    keywords: ['nutrition', 'grocery', 'food', 'meal', 'cooking', 'shopping', 'diet', 'health']
+  }
+];
+
+const OTHER_GROUP = {
+  id: 'other',
+  name: '📋 Other',
+  keywords: []
+};
+
 function decodeEntities(s) {
   return String(s || '')
     .replace(/&amp;/g, '&')
@@ -77,6 +102,63 @@ function niceFromId(id) {
     .replace(/\s+/g, ' ')
     .trim();
   return s.replace(/\b\w/g, c => c.toUpperCase());
+}
+
+/**
+ * Assign presentations to groups based on keyword matching
+ */
+function groupPresentations(presentations) {
+  // Initialize groups map
+  const groupsMap = new Map();
+  
+  // Assign each presentation to first matching group
+  for (const pres of presentations) {
+    const nameLower = (pres.name || '').toLowerCase();
+    let assigned = false;
+    
+    for (const groupDef of LIFE_SKILLS_GROUPS) {
+      // Check if any keyword matches (case-insensitive partial match)
+      const matches = groupDef.keywords.some(keyword => nameLower.includes(keyword.toLowerCase()));
+      if (matches) {
+        if (!groupsMap.has(groupDef.id)) {
+          groupsMap.set(groupDef.id, {
+            id: groupDef.id,
+            name: groupDef.name,
+            presentationIds: []
+          });
+        }
+        groupsMap.get(groupDef.id).presentationIds.push(pres.id);
+        assigned = true;
+        break; // First match wins
+      }
+    }
+    
+    // If no match, assign to "Other" group
+    if (!assigned) {
+      if (!groupsMap.has(OTHER_GROUP.id)) {
+        groupsMap.set(OTHER_GROUP.id, {
+          id: OTHER_GROUP.id,
+          name: OTHER_GROUP.name,
+          presentationIds: []
+        });
+      }
+      groupsMap.get(OTHER_GROUP.id).presentationIds.push(pres.id);
+    }
+  }
+  
+  // Convert map to array, preserving order of group definitions
+  const groups = [];
+  for (const groupDef of LIFE_SKILLS_GROUPS) {
+    if (groupsMap.has(groupDef.id)) {
+      groups.push(groupsMap.get(groupDef.id));
+    }
+  }
+  // Add "Other" group at the end if it exists
+  if (groupsMap.has(OTHER_GROUP.id)) {
+    groups.push(groupsMap.get(OTHER_GROUP.id));
+  }
+  
+  return groups;
 }
 
 async function safeReadJson(p) {
@@ -317,9 +399,13 @@ async function scanLifeSkills(maps, unitsData, siteState) {
     }
   }
 
+  // Generate groups for Life Skills presentations
+  const groups = groupPresentations(presentations);
+
   const unit = {
     id: 'life-skills',
     name: unitName,
+    groups, // Add groups array
     presentations
   };
 

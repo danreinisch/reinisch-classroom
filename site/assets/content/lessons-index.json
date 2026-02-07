@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-02-07T16:01:43-06:00",
+  "generatedAt": "2026-02-07T16:28:57-06:00",
   "sections": [
     {
       "name": "LANGUAGE ARTS",
@@ -145,6 +145,34 @@
         {
           "id": "life-skills",
           "name": "Life Skills",
+          "groups": [
+            {
+              "id": "money-finance",
+              "name": "💰 Money & Finance",
+              "presentationIds": [
+                "presentation-04",
+                "presentation-05",
+                "presentation-06",
+                "presentation-07"
+              ]
+            },
+            {
+              "id": "employment",
+              "name": "💼 Employment",
+              "presentationIds": [
+                "presentation-02",
+                "presentation-03",
+                "presentation-08"
+              ]
+            },
+            {
+              "id": "nutrition-shopping",
+              "name": "🍎 Nutrition & Shopping",
+              "presentationIds": [
+                "presentation-01"
+              ]
+            }
+          ],
           "presentations": [
             {
               "id": "presentation-01",

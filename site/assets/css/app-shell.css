@@ -500,6 +500,55 @@ body.presentation-mode .presentation-mode-toggle {
   margin-top: 8px;
 }
 
+/* Lessons group level (within units that have groups) */
+.lessons-group {
+  margin-bottom: 8px;
+}
+
+.lessons-group-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--shell-text);
+  margin-bottom: 0;
+  padding: 8px 12px 8px 44px;
+  background: rgba(255, 255, 255, 0.03);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+}
+
+.lessons-group-title:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.lessons-group-items {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+  padding-left: 16px;
+}
+
+.lessons-group-items.open {
+  max-height: 1500px;
+  margin-top: 8px;
+}
+
+/* Presentations within groups have deeper indent */
+.lessons-group-items .lessons-presentation {
+  padding-left: 60px;
+}
+
+.lessons-group-items .lessons-presentation:hover {
+  padding-left: 64px;
+}
+
 .lessons-presentations {
   display: flex;
   flex-direction: column;
