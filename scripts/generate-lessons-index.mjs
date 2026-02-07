@@ -53,8 +53,7 @@ const LIFE_SKILLS_GROUPS = [
 
 const OTHER_GROUP = {
   id: 'other',
-  name: '📋 Other',
-  keywords: []
+  name: '📋 Other'
 };
 
 function decodeEntities(s) {
