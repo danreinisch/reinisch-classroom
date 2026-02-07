@@ -155,9 +155,17 @@ body:-moz-full-screen .viewer-controls {
 /* Viewer sidebar collapse styles */
 body.viewer-sidebar-collapsed .app-shell-rail {
   transform: translateX(-100%);
+  transition: transform 0.3s ease;
   pointer-events: none;
+}
+
+body.viewer-sidebar-collapsed .app-shell-rail.open {
+  transform: translateX(0);
+  pointer-events: auto;
+  z-index: 1100;
 }
 
 body.viewer-sidebar-collapsed .viewer-container {
   margin-left: 0;
+  transition: margin-left 0.3s ease;
 }

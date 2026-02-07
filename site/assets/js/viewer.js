@@ -61,10 +61,12 @@
    * Toggle sidebar collapsed state
    */
   function toggleSidebar() {
-    sidebarCollapsed = !sidebarCollapsed;
-    applySidebarState();
-    saveSidebarState();
-    console.log('[viewer] Sidebar', sidebarCollapsed ? 'collapsed' : 'expanded');
+    // Find the app shell rail and toggle its open class
+    const rail = document.querySelector('.app-shell-rail');
+    if (rail) {
+      rail.classList.toggle('open');
+      console.log('[viewer] Sidebar', rail.classList.contains('open') ? 'opened' : 'closed');
+    }
   }
 
   /**
@@ -89,8 +91,9 @@
     // Load content in iframe
     loadContent(src);
 
-    // Restore sidebar state
-    restoreSidebarState();
+    // Auto-collapse sidebar on viewer page (always start collapsed)
+    document.body.classList.add('viewer-sidebar-collapsed');
+    sidebarCollapsed = true;
 
     // Setup event handlers
     setupEventHandlers();
