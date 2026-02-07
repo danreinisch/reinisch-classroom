@@ -425,6 +425,11 @@ body.presentation-mode .presentation-mode-toggle {
   overflow: hidden;
 }
 
+/* In icon-only mode, position lessons navigator next to collapsed rail */
+body.app-shell-icon-only .lessons-navigator {
+  left: var(--shell-width-collapsed);
+}
+
 .lessons-navigator.open {
   transform: translateX(0);
 }
