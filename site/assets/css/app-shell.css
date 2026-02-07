@@ -420,26 +420,84 @@ body.presentation-mode .presentation-mode-toggle {
 }
 
 .lessons-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 14px;
   font-weight: 800;
   color: var(--shell-accent);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  margin-bottom: 12px;
+  margin-bottom: 0;
+  padding: 12px 16px;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+}
+
+.lessons-section-title:hover {
+  background: var(--shell-hover);
+}
+
+.lessons-arrow {
+  display: inline-block;
+  font-size: 12px;
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.lessons-units-container {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
+.lessons-units-container.open {
+  max-height: 4000px;
 }
 
 .lessons-unit {
-  margin-bottom: 16px;
+  margin-bottom: 8px;
 }
 
 .lessons-unit-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 13px;
   font-weight: 700;
   color: var(--shell-text);
-  margin-bottom: 8px;
-  padding: 8px 12px;
+  margin-bottom: 0;
+  padding: 8px 12px 8px 28px;
   background: rgba(255, 255, 255, 0.05);
+  border: none;
   border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+}
+
+.lessons-unit-title:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.lessons-unit-items {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+  padding-left: 16px;
+}
+
+.lessons-unit-items.open {
+  max-height: 2000px;
+  margin-top: 8px;
 }
 
 .lessons-presentations {
@@ -453,7 +511,7 @@ body.presentation-mode .presentation-mode-toggle {
   border: none;
   color: var(--shell-text-dim);
   text-align: left;
-  padding: 8px 12px 8px 24px;
+  padding: 8px 12px 8px 40px;
   font-size: 13px;
   cursor: pointer;
   border-radius: 4px;
@@ -464,7 +522,7 @@ body.presentation-mode .presentation-mode-toggle {
 .lessons-presentation:hover {
   background: var(--shell-hover);
   color: var(--shell-text);
-  padding-left: 28px;
+  padding-left: 44px;
 }
 
 .lessons-empty {
