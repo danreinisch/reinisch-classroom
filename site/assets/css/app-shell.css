@@ -766,6 +766,7 @@ body.presentation-mode .lessons-navigator {
 }
 
 .sidebar-auto-close-bar.running {
+  /* Duration must match SIDEBAR_AUTO_CLOSE_DURATION constant in app-shell.js (7000ms) */
   animation: sidebarAutoCloseProgress 7s linear forwards;
 }
 
@@ -781,6 +782,7 @@ body.presentation-mode .lessons-navigator {
 /* Opacity fade when auto-closing */
 .app-shell-rail.auto-closing {
   opacity: 0.5;
+  /* Duration must match SIDEBAR_FADE_DURATION constant in app-shell.js (300ms) */
   transition: opacity 0.3s ease;
 }
 
