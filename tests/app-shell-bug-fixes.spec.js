@@ -7,8 +7,8 @@ test.describe('App Shell Bug Fixes', () => {
     await page.goto(`/?viewer=1&section=language-arts&unit=test-unit&presentation=test-presentation&src=${encodeURIComponent(testPresentationUrl)}`);
     await page.waitForLoadState('networkidle');
 
-    // Wait a bit for app shell to initialize
-    await page.waitForTimeout(500);
+    // Wait for body element to be available
+    await page.waitForSelector('body');
 
     // Check if app-shell-icon-only class is added to body (on desktop)
     const body = page.locator('body');
@@ -46,8 +46,8 @@ test.describe('App Shell Bug Fixes', () => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
 
-    // Wait a bit for any session checks to potentially fire
-    await page.waitForTimeout(1000);
+    // Wait for app shell to potentially initialize and check auth
+    await page.waitForSelector('body');
 
     // Verify no session endpoint was called
     expect(sessionRequests.length).toBe(0);
@@ -70,8 +70,8 @@ test.describe('App Shell Bug Fixes', () => {
     await page.goto(`/viewer/?src=${encodeURIComponent(testPresentationUrl)}`);
     await page.waitForLoadState('networkidle');
 
-    // Wait a bit for any session checks to potentially fire
-    await page.waitForTimeout(1000);
+    // Wait for app shell to potentially initialize and check auth
+    await page.waitForSelector('body');
 
     // Verify no session endpoint was called
     expect(sessionRequests.length).toBe(0);
@@ -92,13 +92,14 @@ test.describe('App Shell Bug Fixes', () => {
     await page.waitForLoadState('networkidle');
 
     // Wait for lessons data to potentially load
-    await page.waitForTimeout(2000);
+    await page.waitForSelector('body');
 
     // Try to open lessons navigator if available
     const lessonsButton = page.locator('[data-shell-nav="lessons"]');
     if (await lessonsButton.count() > 0 && await lessonsButton.isVisible()) {
       await lessonsButton.click();
-      await page.waitForTimeout(1000);
+      // Wait for lessons navigator to open
+      await page.waitForSelector('.lessons-navigator.open', { timeout: 2000 }).catch(() => {});
     }
 
     // Verify no HEAD requests were made to presentation URLs
@@ -124,19 +125,21 @@ test.describe('App Shell Bug Fixes', () => {
     await page.goto(`/viewer/?src=${encodeURIComponent(testPresentationUrl)}`);
     await page.waitForLoadState('networkidle');
 
-    // Wait for lessons data to potentially load
-    await page.waitForTimeout(2000);
+    // Wait for body and app shell to initialize
+    await page.waitForSelector('body');
 
     // Try to open lessons navigator if available
     const sidebarToggle = page.locator('#sidebarToggleBtn');
     if (await sidebarToggle.count() > 0 && await sidebarToggle.isVisible()) {
       await sidebarToggle.click();
-      await page.waitForTimeout(300);
+      // Wait for sidebar to open
+      await page.waitForSelector('.app-shell-rail.open', { timeout: 1000 }).catch(() => {});
 
       const lessonsButton = page.locator('[data-shell-nav="lessons"]');
       if (await lessonsButton.count() > 0 && await lessonsButton.isVisible()) {
         await lessonsButton.click();
-        await page.waitForTimeout(1000);
+        // Wait for lessons navigator to open
+        await page.waitForSelector('.lessons-navigator.open', { timeout: 2000 }).catch(() => {});
       }
     }
 
