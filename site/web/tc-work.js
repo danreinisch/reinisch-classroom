@@ -76,7 +76,8 @@
   }
 
   function inferSource(d) {
-    if (d.assignment && d.assignment.kind === "file") return `file: ${d.assignment.name || "assignment"}`;
+    if (d.assignment && d.assignment.kind === "file")
+      return `file: ${d.assignment.name || "assignment"}`;
     if (d.assignment && d.assignment.kind === "link") return `link`;
     return "—";
   }
@@ -179,15 +180,22 @@
   function stripTeacherTags(text) {
     const raw = String(text || "");
     const lines = raw.split(/\r?\n/);
-    const tagRe = /\[\s*(?:(?:DESE:\s*)?MLS\.[^\]]+|(?:IG:|IEP:)\s*[^\]]+)\s*\]/ig;
+    const tagRe = /\[\s*(?:(?:DESE:\s*)?MLS\.[^\]]+|(?:IG:|IEP:)\s*[^\]]+)\s*\]/gi;
     const out = [];
     for (const line of lines) {
-      let cleaned = line.replace(tagRe, "").replace(/[ \t]{2,}/g, " ").trimEnd();
+      let cleaned = line
+        .replace(tagRe, "")
+        .replace(/[ \t]{2,}/g, " ")
+        .trimEnd();
       // Student View: strip common inline answer markers at end of option lines (✓/✔)
-      if (/^\s*[a-dA-D][.)]\s+/.test(cleaned)) cleaned = cleaned.replace(/[ \t]*\(?[✓✔]\)?\s*$/, "");
+      if (/^\s*[a-dA-D][.)]\s+/.test(cleaned))
+        cleaned = cleaned.replace(/[ \t]*\(?[✓✔]\)?\s*$/, "");
       out.push(cleaned);
     }
-    return out.join("\n").replace(/\n{4,}/g, "\n\n\n").trim();
+    return out
+      .join("\n")
+      .replace(/\n{4,}/g, "\n\n\n")
+      .trim();
   }
   // Join tag-only lines onto the preceding question line so auto-mapping can see them.
   function __rc_joinTagOnlyLines(text) {
@@ -202,8 +210,6 @@
     }
     return lines.join("\n");
   }
-
-
 
   function fileExt(name) {
     const n = String(name || "").toLowerCase();
@@ -245,7 +251,9 @@
         `;
       } else {
         const studentText = stripTeacherTags(text);
-        const shown = studentText ? escapeHtml(studentText) : "(No assignment text stored for this draft.)";
+        const shown = studentText
+          ? escapeHtml(studentText)
+          : "(No assignment text stored for this draft.)";
         bodyHtml = `
           <div style="white-space:pre-wrap; font-family:system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; line-height:1.5; font-size:14px;">
 ${shown}
@@ -333,11 +341,14 @@ ${shown}
 
       const warnCount = Number.isFinite(counts.warnings) ? counts.warnings : warnings.length;
 
-      const secList = sections.slice(0, 8).map((s) => {
-        const t = escapeHtml(s && s.title ? s.title : "Section");
-        const n = Array.isArray(s.items) ? s.items.length : 0;
-        return `<li>${t} <span style="opacity:.75;">(${n} items)</span></li>`;
-      }).join("");
+      const secList = sections
+        .slice(0, 8)
+        .map((s) => {
+          const t = escapeHtml(s && s.title ? s.title : "Section");
+          const n = Array.isArray(s.items) ? s.items.length : 0;
+          return `<li>${t} <span style="opacity:.75;">(${n} items)</span></li>`;
+        })
+        .join("");
 
       // Sample first ~12 items across sections
       const sampleRows = [];
@@ -354,7 +365,8 @@ ${shown}
         if (sampleRows.length >= 12) break;
       }
 
-      const table = sampleRows.length ? `
+      const table = sampleRows.length
+        ? `
         <div style="opacity:.8; margin:10px 0 6px;">Sample items</div>
         <table style="width:100%; border-collapse:collapse; font-size:13px;">
           <thead>
@@ -366,24 +378,31 @@ ${shown}
             </tr>
           </thead>
           <tbody>
-            ${sampleRows.map(r => `
+            ${sampleRows
+              .map(
+                (r) => `
               <tr>
                 <td style="padding:6px; border-bottom:1px solid rgba(255,255,255,.08); opacity:.9;">${r.title}</td>
                 <td style="padding:6px; border-bottom:1px solid rgba(255,255,255,.08);">${r.key}</td>
                 <td style="padding:6px; border-bottom:1px solid rgba(255,255,255,.08); opacity:.9;">${escapeHtml(r.dese)}</td>
                 <td style="padding:6px; border-bottom:1px solid rgba(255,255,255,.08); opacity:.9;">${escapeHtml(r.iep)}</td>
               </tr>
-            `).join("")}
+            `
+              )
+              .join("")}
           </tbody>
         </table>
-      ` : "";
+      `
+        : "";
 
-      const warnHtml = warnCount ? `
+      const warnHtml = warnCount
+        ? `
         <details style="margin-top:10px;">
           <summary style="cursor:pointer;">Warnings (${warnCount})</summary>
           <pre style="white-space:pre-wrap; margin-top:8px; padding:10px; border-radius:12px; border:1px solid rgba(255,255,255,.12); background:rgba(0,0,0,.22);">${escapeHtml(warnings.slice(0, 40).join("\n"))}${warnings.length > 40 ? "\n…(truncated)\n" : ""}</pre>
         </details>
-      ` : "";
+      `
+        : "";
 
       return `
         <div style="margin-bottom:10px;">
@@ -426,7 +445,7 @@ ${shown}
         b.style.borderColor = isOn ? "rgba(255,255,255,.28)" : "rgba(255,255,255,.12)";
       }
       for (const k of Object.keys(panes)) {
-        if (panes[k]) panes[k].hidden = (k !== name);
+        if (panes[k]) panes[k].hidden = k !== name;
       }
     };
 
@@ -451,10 +470,18 @@ ${shown}
       const rawMap = getMappingText(d);
       const rawAsn = getAssignmentText(d);
       if (!rawMap && rawAsn) {
-        const norm = (typeof normalizeTaggedAssignmentText === "function") ? normalizeTaggedAssignmentText(rawAsn) : rawAsn;
+        const norm =
+          typeof normalizeTaggedAssignmentText === "function"
+            ? normalizeTaggedAssignmentText(rawAsn)
+            : rawAsn;
         const auto = autoMapFromTeacherTxt(norm);
         const mappingText = JSON.stringify(
-          auto || { version: 1, sections: [], warnings: ["Auto-mapping unavailable"], counts: { sections: 0, items: 0, warnings: 1 } },
+          auto || {
+            version: 1,
+            sections: [],
+            warnings: ["Auto-mapping unavailable"],
+            counts: { sections: 0, items: 0, warnings: 1 },
+          },
           null,
           2
         );
@@ -464,8 +491,9 @@ ${shown}
         d.mapping.text = mappingText;
         writeDrafts(drafts);
       }
-    } catch (_) { /* ignore */ }
-
+    } catch (_) {
+      /* ignore */
+    }
 
     const overlay = $("draftOverlay");
     const title = $("previewTitle");
@@ -516,7 +544,10 @@ ${shown}
 
   function exportAll() {
     const drafts = readDrafts();
-    download(`tc-drafts_${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(drafts, null, 2));
+    download(
+      `tc-drafts_${new Date().toISOString().slice(0, 10)}.json`,
+      JSON.stringify(drafts, null, 2)
+    );
   }
 
   function clearAll() {
@@ -532,7 +563,14 @@ ${shown}
     const name = String(file.name || "").toLowerCase();
     const type = String(file.type || "").toLowerCase();
     if (type.startsWith("text/")) return true;
-    return name.endsWith(".txt") || name.endsWith(".md") || name.endsWith(".csv") || name.endsWith(".json") || name.endsWith(".html") || name.endsWith(".htm");
+    return (
+      name.endsWith(".txt") ||
+      name.endsWith(".md") ||
+      name.endsWith(".csv") ||
+      name.endsWith(".json") ||
+      name.endsWith(".html") ||
+      name.endsWith(".htm")
+    );
   }
 
   function fillExample() {
@@ -543,14 +581,20 @@ ${shown}
   }
 
   function autoMapFromTeacherTxt(text) {
-    const out = { version: 1, sections: [], warnings: [], counts: { sections: 0, items: 0, warnings: 0 } };
+    const out = {
+      version: 1,
+      sections: [],
+      warnings: [],
+      counts: { sections: 0, items: 0, warnings: 0 },
+    };
     const lines = String(text || "").split(/\r?\n/);
 
     let cur = null;
     let pendingWR = null;
     let wrIndex = 0;
 
-    const uniq = (arr) => Array.from(new Set((arr || []).map(x => String(x || "").trim()).filter(Boolean)));
+    const uniq = (arr) =>
+      Array.from(new Set((arr || []).map((x) => String(x || "").trim()).filter(Boolean)));
 
     const startSection = (title) => {
       const t = String(title || "Assignment").trim() || "Assignment";
@@ -583,7 +627,11 @@ ${shown}
     const isSectionLine = (line) => /^\s*(LANGUAGE\s+ARTS|LIFE\s+SKILLS)\b/i.test(line);
     const isQuestionLine = (line) => /^\s*(?:Q\s*)?\d+\s*[.)]\s*/i.test(line);
     const isTagLine = (line) =>
-      /\[[^\]]+\]/.test(line) && (/\bMLS\b/i.test(line) || /\bIG:/i.test(line) || /\bIEP:/i.test(line) || /\bDESE:/i.test(line));
+      /\[[^\]]+\]/.test(line) &&
+      (/\bMLS\b/i.test(line) ||
+        /\bIG:/i.test(line) ||
+        /\bIEP:/i.test(line) ||
+        /\bDESE:/i.test(line));
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
@@ -610,7 +658,10 @@ ${shown}
           if (isQuestionLine(l2) || isSectionLine(l2)) break;
           if (isTagLine(l2)) {
             const more = parseTagsFromLine(l2);
-            tags = { dese: (tags.dese || []).concat(more.dese || []), iep: (tags.iep || []).concat(more.iep || []) };
+            tags = {
+              dese: (tags.dese || []).concat(more.dese || []),
+              iep: (tags.iep || []).concat(more.iep || []),
+            };
             break;
           }
         }
@@ -630,7 +681,7 @@ ${shown}
     let warn = 0;
     let items = 0;
     for (const s of out.sections) {
-      for (const it of (s.items || [])) {
+      for (const it of s.items || []) {
         items += 1;
         if ((!it.dese || it.dese.length === 0) && (!it.iep || it.iep.length === 0)) {
           out.warnings.push("No codes found for " + s.title + " " + it.key);
@@ -663,10 +714,14 @@ ${shown}
     if (!mappingFile) {
       if (assignmentLink) return setMsg("err", "Mapping file is required when using a link.");
       if (assignmentFile && typeof rcIsTextFile === "function" && !rcIsTextFile(assignmentFile)) {
-        return setMsg("err", "Mapping file is required for non-text uploads (or use a tagged TXT/HTML/JSON/CSV).");
+        return setMsg(
+          "err",
+          "Mapping file is required for non-text uploads (or use a tagged TXT/HTML/JSON/CSV)."
+        );
       }
     }
-    if (!assignmentFile && !assignmentLink) return setMsg("err", "Assignment is required (file OR link).");
+    if (!assignmentFile && !assignmentLink)
+      return setMsg("err", "Assignment is required (file OR link).");
 
     const draft = {
       id: `d_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
@@ -677,24 +732,45 @@ ${shown}
       notes: notes || null,
       createdAt: nowISO(),
       assignment: { kind: null, name: null, link: null, text: null },
-      mapping: { kind: (mappingFile ? "file" : "auto"), name: (mappingFile ? mappingFile.name : "auto-mapping.json"), text: null },
+      mapping: {
+        kind: mappingFile ? "file" : "auto",
+        name: mappingFile ? mappingFile.name : "auto-mapping.json",
+        text: null,
+      },
     };
 
     let mappingText = null;
     if (mappingFile) {
       mappingText = await readFileAsText(mappingFile);
       if (bytesOf(mappingText) > MAX_TEXT_BYTES) {
-        return setMsg("err", "Mapping file is too large for MVP local storage. Keep it smaller for now.");
+        return setMsg(
+          "err",
+          "Mapping file is too large for MVP local storage. Keep it smaller for now."
+        );
       }
       draft.mapping.text = mappingText;
     } else {
       let assignmentTextRaw = "";
       if (assignmentFile && typeof rcIsTextFile === "function" && rcIsTextFile(assignmentFile)) {
-        try { assignmentTextRaw = await assignmentFile.text(); } catch (_) { /* noop */ }
+        try {
+          assignmentTextRaw = await assignmentFile.text();
+        } catch (_) {
+          /* noop */
+        }
       }
-      const autoMapping = (typeof autoMapFromTeacherTxt === "function") ? autoMapFromTeacherTxt(__rc_joinTagOnlyLines(normalizeTaggedAssignmentText(assignmentTextRaw || ""))) : null;
+      const autoMapping =
+        typeof autoMapFromTeacherTxt === "function"
+          ? autoMapFromTeacherTxt(
+              __rc_joinTagOnlyLines(normalizeTaggedAssignmentText(assignmentTextRaw || ""))
+            )
+          : null;
       mappingText = JSON.stringify(
-        autoMapping || { version: 1, sections: [], warnings: ["Auto-mapping unavailable"], counts: { sections: 0, items: 0, warnings: 1 } },
+        autoMapping || {
+          version: 1,
+          sections: [],
+          warnings: ["Auto-mapping unavailable"],
+          counts: { sections: 0, items: 0, warnings: 1 },
+        },
         null,
         2
       );
@@ -702,9 +778,15 @@ ${shown}
         return setMsg("err", "Auto-generated mapping is too large for MVP local storage.");
       }
       draft.mapping.text = mappingText;
-      const w = (autoMapping && autoMapping.counts) ? (autoMapping.counts.warnings || 0) : 0;
-      const n = (autoMapping && autoMapping.counts) ? (autoMapping.counts.items || 0) : 0;
-      setMsg(w ? "warn" : "ok", "Auto-mapped " + n + " item(s) from tags" + (w ? " (" + w + " missing-code warning(s))" : ""));
+      const w = autoMapping && autoMapping.counts ? autoMapping.counts.warnings || 0 : 0;
+      const n = autoMapping && autoMapping.counts ? autoMapping.counts.items || 0 : 0;
+      setMsg(
+        w ? "warn" : "ok",
+        "Auto-mapped " +
+          n +
+          " item(s) from tags" +
+          (w ? " (" + w + " missing-code warning(s))" : "")
+      );
     }
 
     if (assignmentLink) {
@@ -777,66 +859,70 @@ ${shown}
     const drafts = readDrafts();
     renderTable(drafts);
 
-    const _f=$("workDraftForm"); if (_f) _f.addEventListener("submit", onSaveDraft);
-    const _ea=$("btnExportAll"); if (_ea) _ea.addEventListener("click", exportAll);
-    const _ca=$("btnClearAll"); if (_ca) _ca.addEventListener("click", clearAll);
-    const _fe=$("btnFillExample"); if (_fe) _fe.addEventListener("click", fillExample);
+    const _f = $("workDraftForm");
+    if (_f) _f.addEventListener("submit", onSaveDraft);
+    const _ea = $("btnExportAll");
+    if (_ea) _ea.addEventListener("click", exportAll);
+    const _ca = $("btnClearAll");
+    if (_ca) _ca.addEventListener("click", clearAll);
+    const _fe = $("btnFillExample");
+    if (_fe) _fe.addEventListener("click", fillExample);
 
     installStudentPreviewSanitizer();
 
     wireModal();
     wireFileLabels();
-}
+  }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else init();
 })();
 
+function sanitizeStudentPreviewText(src) {
+  if (src == null) return "";
+  const rawLines = String(src).split(/\r?\n/);
+  const out = [];
+  let prevNonEmpty = "";
 
+  for (let i = 0; i < rawLines.length; i++) {
+    let line = rawLines[i];
 
+    // Strip common "answer key" markers
+    line = line.replace(/[✓✔✅]/g, "").replace(/[ \t]+$/g, "");
 
-  function sanitizeStudentPreviewText(src) {
-    if (src == null) return "";
-    const rawLines = String(src).split(/\r?\n/);
-    const out = [];
-    let prevNonEmpty = "";
+    // Drop obvious answer-key lines
+    if (/^\s*(Answer|Correct Answer|Correct)\s*[:-]/i.test(line)) continue;
 
-    for (let i = 0; i < rawLines.length; i++) {
-      let line = rawLines[i];
+    // TRUE/FALSE: many keys only include the correct line (e.g., "TRUE ✓").
+    // If the stem says TRUE or FALSE and the next non-empty line is just TRUE/FALSE,
+    // expand to both options so the student preview doesn't leak the answer.
+    if (/TRUE\s*OR\s*FALSE/i.test(prevNonEmpty) && /^\s*(TRUE|FALSE)\s*$/i.test(line)) {
+      out.push("TRUE");
+      out.push("FALSE");
 
-      // Strip common "answer key" markers
-      line = line.replace(/[✓✔✅]/g, "").replace(/[ \t]+$/g, "");
-
-      // Drop obvious answer-key lines
-      if (/^\s*(Answer|Correct Answer|Correct)\s*[:-]/i.test(line)) continue;
-
-      // TRUE/FALSE: many keys only include the correct line (e.g., "TRUE ✓").
-      // If the stem says TRUE or FALSE and the next non-empty line is just TRUE/FALSE,
-      // expand to both options so the student preview doesn't leak the answer.
-      if (/TRUE\s*OR\s*FALSE/i.test(prevNonEmpty) && /^\s*(TRUE|FALSE)\s*$/i.test(line)) {
-        out.push("TRUE");
-        out.push("FALSE");
-
-        // Skip any additional TRUE/FALSE key lines right after
-        while (i + 1 < rawLines.length) {
-          const peek = rawLines[i + 1].replace(/[✓✔✅]/g, "").trim();
-          if (/^(TRUE|FALSE)$/i.test(peek)) { i += 1; continue; }
-          break;
+      // Skip any additional TRUE/FALSE key lines right after
+      while (i + 1 < rawLines.length) {
+        const peek = rawLines[i + 1].replace(/[✓✔✅]/g, "").trim();
+        if (/^(TRUE|FALSE)$/i.test(peek)) {
+          i += 1;
+          continue;
         }
-
-        prevNonEmpty = "FALSE";
-        continue;
+        break;
       }
 
-      out.push(line);
-      if (line.trim()) prevNonEmpty = line;
+      prevNonEmpty = "FALSE";
+      continue;
     }
 
-    // Prevent giant blank gaps after removals
-    return out.join("\n").replace(/\n{3,}/g, "\n\n");
+    out.push(line);
+    if (line.trim()) prevNonEmpty = line;
   }
 
-  function installStudentPreviewSanitizer() {
+  // Prevent giant blank gaps after removals
+  return out.join("\n").replace(/\n{3,}/g, "\n\n");
+}
+
+function installStudentPreviewSanitizer() {
   // Only sanitize the Student preview TEXT (never clobber the tab UI).
   if (window.__rcStudentPreviewSanitizerInstalled) return;
   window.__rcStudentPreviewSanitizerInstalled = true;
@@ -848,7 +934,7 @@ ${shown}
       return (
         pane.querySelector("#previewBody") ||
         pane.querySelector("pre") ||
-        pane.querySelector('[data-preview-text]') ||
+        pane.querySelector("[data-preview-text]") ||
         pane.querySelector('div[style*="white-space:pre-wrap"]') ||
         pane.querySelector('div[style*="white-space: pre-wrap"]') ||
         null
@@ -887,59 +973,51 @@ ${shown}
   run();
 }
 
+function normalizeTaggedAssignmentText(input) {
+  let text = String(input || "");
 
+  // Make adjacent tags parseable: "][ " -> "] ["
+  text = text.replace(/\]\s*\[/g, "] [");
 
+  // Normalize common tag variants to canonical forms used by the mapper.
+  text = text
+    // MLS / DESE (treat DESE: as MLS: for mapping)
+    .replace(/\[(MLS)\.([^\]]+)\]/gi, "[MLS: $2]")
+    .replace(/\[(MLS)\s*:\s*([^\]]+)\]/gi, "[MLS: $2]")
+    .replace(/\[(DESE)\s*:\s*([^\]]+)\]/gi, "[MLS: $2]")
+    // IG / IEP
+    .replace(/\[(IG)\.([^\]]+)\]/gi, "[IG: $2]")
+    .replace(/\[(IG)\s*:\s*([^\]]+)\]/gi, "[IG: $2]")
+    .replace(/\[(IEP)\.([^\]]+)\]/gi, "[IEP: $2]")
+    .replace(/\[(IEP)\s*:\s*([^\]]+)\]/gi, "[IEP: $2]");
 
-  
-  function normalizeTaggedAssignmentText(input) {
-    let text = String(input || "");
+  // Week-11 style: if a line is ONLY tags, attach it to the previous non-empty line.
+  const lines = text.split(/\r?\n/);
+  const bracketTag = /\[[^\]]+\]/g;
 
-    // Make adjacent tags parseable: "][ " -> "] ["
-    text = text.replace(/\]\s*\[/g, "] [");
+  const isTagOnly = (ln) => {
+    const l = String(ln || "");
+    const tags = l.match(bracketTag) || [];
+    if (!tags.length) return false;
+    const rest = l.replace(bracketTag, "").replace(/\s+/g, "");
+    return rest.length === 0;
+  };
 
-    // Normalize common tag variants to canonical forms used by the mapper.
-    text = text
-      // MLS / DESE (treat DESE: as MLS: for mapping)
-      .replace(/\[(MLS)\.([^\]]+)\]/gi, "[MLS: $2]")
-      .replace(/\[(MLS)\s*:\s*([^\]]+)\]/gi, "[MLS: $2]")
-      .replace(/\[(DESE)\s*:\s*([^\]]+)\]/gi, "[MLS: $2]")
-      // IG / IEP
-      .replace(/\[(IG)\.([^\]]+)\]/gi, "[IG: $2]")
-      .replace(/\[(IG)\s*:\s*([^\]]+)\]/gi, "[IG: $2]")
-      .replace(/\[(IEP)\.([^\]]+)\]/gi, "[IEP: $2]")
-      .replace(/\[(IEP)\s*:\s*([^\]]+)\]/gi, "[IEP: $2]");
+  let lastContent = -1;
+  for (let k = 0; k < lines.length; k++) {
+    const ln = String(lines[k] || "");
+    if (!ln.trim()) continue;
 
-    // Week-11 style: if a line is ONLY tags, attach it to the previous non-empty line.
-    const lines = text.split(/\r?\n/);
-    const bracketTag = /\[[^\]]+\]/g;
-
-    const isTagOnly = (ln) => {
-      const l = String(ln || "");
-      const tags = l.match(bracketTag) || [];
-      if (!tags.length) return false;
-      const rest = l.replace(bracketTag, "").replace(/\s+/g, "");
-      return rest.length === 0;
-    };
-
-    let lastContent = -1;
-    for (let k = 0; k < lines.length; k++) {
-      const ln = String(lines[k] || "");
-      if (!ln.trim()) continue;
-
-      if (isTagOnly(ln) && lastContent >= 0) {
-        lines[lastContent] = (String(lines[lastContent] || "").trimEnd() + " " + ln.trim()).trim();
-        lines[k] = "";
-        continue;
-      }
-      lastContent = k;
+    if (isTagOnly(ln) && lastContent >= 0) {
+      lines[lastContent] = (String(lines[lastContent] || "").trimEnd() + " " + ln.trim()).trim();
+      lines[k] = "";
+      continue;
     }
-
-    return lines.join("\n");
+    lastContent = k;
   }
 
-
-
-
+  return lines.join("\n");
+}
 
 // BEGIN rc-work-mega-ux v1
 (() => {
@@ -986,9 +1064,13 @@ ${shown}
     const sel = document.getElementById("draftClass");
     if (!sel) return;
 
-    try { sel.required = false; } catch (e) { /* ignore */ }
+    try {
+      sel.required = false;
+    } catch (e) {
+      /* ignore */
+    }
 
-    const existing = new Set(Array.from(sel.options || []).map(o => o.value));
+    const existing = new Set(Array.from(sel.options || []).map((o) => o.value));
     for (const c of CANON_CLASSES) {
       if (!existing.has(c)) {
         const opt = document.createElement("option");
@@ -1036,7 +1118,10 @@ ${shown}
   }
 
   function getFormEl(id, fallbackSelector) {
-    return document.getElementById(id) || (fallbackSelector ? document.querySelector(fallbackSelector) : null);
+    return (
+      document.getElementById(id) ||
+      (fallbackSelector ? document.querySelector(fallbackSelector) : null)
+    );
   }
 
   function getVal(el) {
@@ -1082,7 +1167,7 @@ ${shown}
     const sections = [];
     for (let j = 0; j < hits.length; j++) {
       const start = hits[j].sepIndex + 1;
-      const end = (j + 1 < hits.length) ? (hits[j + 1].sepIndex - 1) : lines.length;
+      const end = j + 1 < hits.length ? hits[j + 1].sepIndex - 1 : lines.length;
       const body = lines.slice(start, end).join("\n").trim();
       sections.push({ cls: hits[j].cls, body });
     }
@@ -1094,8 +1179,11 @@ ${shown}
   }
 
   function loadDrafts() {
-    try { return JSON.parse(localStorage.getItem(DRAFT_KEY) || "[]"); }
-    catch (e) { return []; }
+    try {
+      return JSON.parse(localStorage.getItem(DRAFT_KEY) || "[]");
+    } catch (e) {
+      return [];
+    }
   }
 
   function saveDrafts(ds) {
@@ -1133,7 +1221,9 @@ ${shown}
     const sections = parseMegaSections(raw);
 
     if (sections.length < 2) {
-      alert("That file doesn’t look like a multi-class mega TXT (need 2+ recognizable class headers).");
+      alert(
+        "That file doesn’t look like a multi-class mega TXT (need 2+ recognizable class headers)."
+      );
       return;
     }
 
@@ -1146,13 +1236,14 @@ ${shown}
     if (mFile) {
       try {
         const mt = await readFileText(mFile);
-        mappingText = mt.length > 120000 ? (mt.slice(0, 120000) + "\n…(truncated)\n") : mt;
+        mappingText = mt.length > 120000 ? mt.slice(0, 120000) + "\n…(truncated)\n" : mt;
       } catch (e) {
         console.warn("Mapping read failed:", e);
       }
     }
 
-    const ensureBound = (t) => (t && t.length > 120000 ? (t.slice(0, 120000) + "\n…(truncated)\n") : (t || ""));
+    const ensureBound = (t) =>
+      t && t.length > 120000 ? t.slice(0, 120000) + "\n…(truncated)\n" : t || "";
 
     const drafts = loadDrafts();
 
@@ -1228,23 +1319,35 @@ ${shown}
     }
 
     if (btn) {
-      try { btn.type = "button"; } catch (e) { /* ignore */ }
-      btn.addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        splitMegaFromCurrentForm().catch(err => console.warn(err));
-      }, true);
+      try {
+        btn.type = "button";
+      } catch (e) {
+        /* ignore */
+      }
+      btn.addEventListener(
+        "click",
+        (e) => {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          splitMegaFromCurrentForm().catch((err) => console.warn(err));
+        },
+        true
+      );
     }
 
     if (form) {
-      form.addEventListener("submit", (e) => {
-        const isMega = !!(cb && cb.checked);
-        if (!isMega) return;
+      form.addEventListener(
+        "submit",
+        (e) => {
+          const isMega = !!(cb && cb.checked);
+          if (!isMega) return;
 
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        splitMegaFromCurrentForm().catch(err => console.warn(err));
-      }, true);
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          splitMegaFromCurrentForm().catch((err) => console.warn(err));
+        },
+        true
+      );
     }
   }
 

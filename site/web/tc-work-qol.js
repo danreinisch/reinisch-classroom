@@ -73,7 +73,8 @@
     if (document.getElementById("rcQolControls")) return;
 
     // container near the class select
-    const host = classSelect.closest(".field, .form-field, .input-group, div") || classSelect.parentElement;
+    const host =
+      classSelect.closest(".field, .form-field, .input-group, div") || classSelect.parentElement;
     if (!host) return;
 
     injectStyle();
@@ -86,7 +87,9 @@
     // DEDUP GUARD: Check if rc-work-mega-ux v1 already created its mega checkbox.
     // The two mega systems are complementary (bare headers vs === separators),
     // but we prevent duplicate UI by skipping our mega toggle if theirs exists.
-    const megaBoxHtml = document.getElementById("rcMegaMode") ? "" : `
+    const megaBoxHtml = document.getElementById("rcMegaMode")
+      ? ""
+      : `
       <div class="rc-qol-box">
         <label>
           <input type="checkbox" id="rcMegaSplitToggle" />
@@ -117,11 +120,14 @@
     host.appendChild(wrap);
 
     const multiToggle = wrap.querySelector("#rcMultiClassToggle");
-    const multiPanel  = wrap.querySelector("#rcMultiClassPanel");
+    const multiPanel = wrap.querySelector("#rcMultiClassPanel");
     const multiSelect = wrap.querySelector("#rcMultiClassSelect");
 
     // populate multi-select from classSelect options
-    const opts = Array.from(classSelect.options).map((o) => ({ value: o.value, label: (o.textContent||"").trim() }));
+    const opts = Array.from(classSelect.options).map((o) => ({
+      value: o.value,
+      label: (o.textContent || "").trim(),
+    }));
     const seen = new Set();
     for (const o of opts) {
       const key = `${o.value}||${o.label}`;
@@ -139,7 +145,7 @@
       // Keep classSelect valid by defaulting to first selected
       if (multiToggle.checked) {
         const first = multiSelect.options[0];
-        if (first && !Array.from(multiSelect.selectedOptions).length) first.selected = true
+        if (first && !Array.from(multiSelect.selectedOptions).length) first.selected = true;
       }
     });
 
@@ -185,8 +191,14 @@
     changed.sort((a, b) => {
       const ak = a[0].toLowerCase();
       const bk = b[0].toLowerCase();
-      const as = (ak.includes("draft") ? 2 : 0) + (ak.includes("work") ? 2 : 0) + (ak.includes("tc") ? 1 : 0);
-      const bs = (bk.includes("draft") ? 2 : 0) + (bk.includes("work") ? 2 : 0) + (bk.includes("tc") ? 1 : 0);
+      const as =
+        (ak.includes("draft") ? 2 : 0) +
+        (ak.includes("work") ? 2 : 0) +
+        (ak.includes("tc") ? 1 : 0);
+      const bs =
+        (bk.includes("draft") ? 2 : 0) +
+        (bk.includes("work") ? 2 : 0) +
+        (bk.includes("tc") ? 1 : 0);
       return bs - as;
     });
     return changed[0] || null;
@@ -198,7 +210,11 @@
   };
 
   const deepClone = (obj) => {
-    try { return structuredClone(obj); } catch { return JSON.parse(JSON.stringify(obj)); }
+    try {
+      return structuredClone(obj);
+    } catch {
+      return JSON.parse(JSON.stringify(obj));
+    }
   };
 
   const walkStrings = (obj, out, path = []) => {
@@ -214,12 +230,6 @@
     if (typeof obj === "object") {
       Object.entries(obj).forEach(([k, v]) => walkStrings(v, out, path.concat(k)));
     }
-  };
-
-  const getByPath = (obj, path) => {
-    let cur = obj;
-    for (const p of path) cur = cur?.[p];
-    return cur;
   };
 
   const setByPath = (obj, path, value) => {
@@ -272,9 +282,11 @@
       const up = t.toUpperCase();
       // support LIFE SKILLS variants
       const normalized =
-        up === "LIFE SKILLS" ? "Life Skills" :
-        up === "LIFE SKILLS LA" ? "Life Skills LA" :
-        CLASS_LABELS.find((c) => c.toUpperCase() === up) || null;
+        up === "LIFE SKILLS"
+          ? "Life Skills"
+          : up === "LIFE SKILLS LA"
+            ? "Life Skills LA"
+            : CLASS_LABELS.find((c) => c.toUpperCase() === up) || null;
 
       if (normalized) headers.push({ i, cls: normalized });
     }
@@ -285,7 +297,7 @@
     const sections = {};
     for (let h = 0; h < headers.length; h++) {
       const start = headers[h].i;
-      const end = (h + 1 < headers.length) ? headers[h + 1].i : lines.length;
+      const end = h + 1 < headers.length ? headers[h + 1].i : lines.length;
       const cls = headers[h].cls;
       const chunk = lines.slice(start, end).join("\n").trim();
       if (chunk) sections[cls] = chunk;
@@ -295,33 +307,43 @@
 
   const forceCloseModals = () => {
     // Capture "Close" clicks even when underlying code forgets to wire handlers.
-    document.addEventListener("click", (e) => {
-      const btn = e.target?.closest?.("button, a");
-      if (!btn) return;
-      const t = norm(btn.textContent);
-      if (t !== "close") return;
+    document.addEventListener(
+      "click",
+      (e) => {
+        const btn = e.target?.closest?.("button, a");
+        if (!btn) return;
+        const t = norm(btn.textContent);
+        if (t !== "close") return;
 
-      // Try: close nearest dialog/modal-ish container
-      const modal =
-        btn.closest("[role='dialog']") ||
-        btn.closest("dialog") ||
-        btn.closest(".modal") ||
-        btn.closest(".rc-modal") ||
-        btn.closest(".overlay") ||
-        btn.closest("[data-modal]");
+        // Try: close nearest dialog/modal-ish container
+        const modal =
+          btn.closest("[role='dialog']") ||
+          btn.closest("dialog") ||
+          btn.closest(".modal") ||
+          btn.closest(".rc-modal") ||
+          btn.closest(".overlay") ||
+          btn.closest("[data-modal]");
 
-      if (modal) {
-        e.preventDefault();
-        e.stopPropagation();
-        modal.remove();
-      }
-    }, true);
+        if (modal) {
+          e.preventDefault();
+          e.stopPropagation();
+          modal.remove();
+        }
+      },
+      true
+    );
 
-    document.addEventListener("keydown", (e) => {
-      if (e.key !== "Escape") return;
-      const dlg = document.querySelector("dialog[open], [role='dialog'], .modal, .rc-modal, .overlay, [data-modal]");
-      if (dlg) dlg.remove?.();
-    }, true);
+    document.addEventListener(
+      "keydown",
+      (e) => {
+        if (e.key !== "Escape") return;
+        const dlg = document.querySelector(
+          "dialog[open], [role='dialog'], .modal, .rc-modal, .overlay, [data-modal]"
+        );
+        if (dlg) dlg.remove?.();
+      },
+      true
+    );
   };
 
   const postProcessSave = (beforeSnap, cfg) => {
@@ -345,7 +367,7 @@
     const baseClone = deepClone(base);
 
     // For mega split: use the longest text field inside the saved draft as the source to split
-    let megaSections = null
+    let megaSections = null;
     if (cfg.mega) {
       const strings = [];
       walkStrings(baseClone, strings);
@@ -358,9 +380,11 @@
     }
 
     // Determine classes to create drafts for
-    const classes =
-      megaSections ? Object.keys(megaSections)
-      : (cfg.classes && cfg.classes.length ? cfg.classes : []);
+    const classes = megaSections
+      ? Object.keys(megaSections)
+      : cfg.classes && cfg.classes.length
+        ? cfg.classes
+        : [];
 
     if (!classes.length) return;
 
@@ -401,21 +425,27 @@
       if (!saveBtn) return log("Could not find Save Draft button. QoL loaded (partial).");
 
       // Capture phase: snapshot storage BEFORE app saves, then post-process AFTER
-      saveBtn.addEventListener("click", () => {
-        const beforeSnap = snapshotLocalStorage();
+      saveBtn.addEventListener(
+        "click",
+        () => {
+          const beforeSnap = snapshotLocalStorage();
 
-        const multi = !!document.getElementById("rcMultiClassToggle")?.checked;
-        const mega  = !!document.getElementById("rcMegaSplitToggle")?.checked;
+          const multi = !!document.getElementById("rcMultiClassToggle")?.checked;
+          const mega = !!document.getElementById("rcMegaSplitToggle")?.checked;
 
-        const sel = Array.from(document.getElementById("rcMultiClassSelect")?.selectedOptions || [])
-          .map((o) => (o.value || o.textContent || "").trim())
-          .filter(Boolean);
+          const sel = Array.from(
+            document.getElementById("rcMultiClassSelect")?.selectedOptions || []
+          )
+            .map((o) => (o.value || o.textContent || "").trim())
+            .filter(Boolean);
 
-        const cfg = { multi, mega, classes: sel };
+          const cfg = { multi, mega, classes: sel };
 
-        // Let the original save happen, then duplicate/split the freshly saved draft(s)
-        setTimeout(() => postProcessSave(beforeSnap, cfg), 350);
-      }, true);
+          // Let the original save happen, then duplicate/split the freshly saved draft(s)
+          setTimeout(() => postProcessSave(beforeSnap, cfg), 350);
+        },
+        true
+      );
 
       log("Loaded ✅ (Life Skills + multi-class + mega-split + close-fix)");
     } catch (err) {
