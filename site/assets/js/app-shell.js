@@ -84,14 +84,9 @@
     detectPresentationContext();
 
     // On viewer pages, ensure rail doesn't have .open class to prevent width override
+    // The shell element was just created above, so we can access it directly
     if (isViewerPage()) {
-      // Remove any .open class that might have been added during initialization
-      setTimeout(() => {
-        const rail = document.querySelector('.app-shell-rail');
-        if (rail) {
-          rail.classList.remove('open');
-        }
-      }, 0);
+      shell.classList.remove('open');
     }
 
     restoreShellCollapsed();

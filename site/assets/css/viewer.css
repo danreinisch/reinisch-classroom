@@ -21,11 +21,12 @@ body {
   color: var(--text0, #e8f1ec);
 }
 
+/* Viewer container - fullscreen layout without body padding */
 .viewer-container {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  width: 100%;
+  width: 100%; /* Full width by default; icon-only mode uses calc() below */
 }
 
 .viewer-controls {
