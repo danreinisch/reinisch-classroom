@@ -1,153 +1,325 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Teacher Center — Work</title>
-  <link rel="stylesheet" href="/web/teacher-shell.css" />
-  <style>
-    .work-subtle{opacity:.85}
-    .work-card{border:1px solid rgba(255,255,255,.12); border-radius:16px; padding:16px; background:rgba(255,255,255,.04)}
-    .work-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px}
-    .work-row{display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:space-between}
-    .work-field label{display:block; font-size:12px; opacity:.9; margin-bottom:6px}
-    .work-field input,.work-field select,.work-field textarea{
-      width:100%; padding:10px 12px; border-radius:12px;
-      border:1px solid rgba(255,255,255,.14); background:rgba(0,0,0,.18); color:inherit;
-      outline:none;
-    }
-    .work-field textarea{min-height:96px; resize:vertical}
-    .work-actions{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
-    .work-btn{
-      padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.16);
-      background:rgba(255,255,255,.06); color:inherit; cursor:pointer;
-    }
-    .work-btn.primary{background:rgba(34,197,94,.18); border-color:rgba(34,197,94,.35)}
-    .work-btn.danger{background:rgba(239,68,68,.12); border-color:rgba(239,68,68,.35)}
-    .work-btn:disabled{opacity:.6; cursor:not-allowed}
-    .work-tablewrap{overflow:auto; border-radius:14px; border:1px solid rgba(255,255,255,.10)}
-    table.work-table{width:100%; border-collapse:collapse; font-size:14px}
-    table.work-table th, table.work-table td{padding:10px 12px; border-bottom:1px solid rgba(255,255,255,.08); vertical-align:top}
-    table.work-table th{font-size:12px; letter-spacing:.02em; text-transform:uppercase; opacity:.9}
-    .work-pill{display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; border:1px solid rgba(255,255,255,.16); opacity:.95}
-    .work-msg{margin-top:10px; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.04)}
-    .work-msg.ok{border-color:rgba(34,197,94,.35); background:rgba(34,197,94,.10)}
-    .work-msg.err{border-color:rgba(239,68,68,.35); background:rgba(239,68,68,.08)}
-    .work-overlay[hidden]{display:none !important}
-    .work-overlay{
-      position:fixed; inset:0; background:rgba(0,0,0,.55);
-      display:flex; align-items:center; justify-content:center; padding:18px; z-index:9999;
-    }
-    .work-dialog{
-      width:min(980px, 100%); max-height:85vh; overflow:auto;
-      border-radius:18px; border:1px solid rgba(255,255,255,.14);
-      background:rgba(20,20,20,.92); padding:14px;
-    }
-    .work-dialog pre{
-      white-space:pre-wrap; word-break:break-word; margin:0;
-      padding:12px; border-radius:14px; border:1px solid rgba(255,255,255,.10);
-      background:rgba(0,0,0,.25);
-      font-size:12px; line-height:1.45;
-    }
-    .work-dialog h3{margin:0}
-  </style>
-</head>
-<body>
-  <div class="tc-app">
-    <header class="tc-topbar">
-      <button class="tc-btn" id="tcSidebarToggle" aria-label="Toggle sidebar" aria-expanded="false">☰</button>
-      <a class="tc-btn" href="/" target="_blank" rel="noopener" aria-label="Home">🏠</a>
-      <div class="tc-title">Teacher Center — Work</div>
-    </header>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Teacher Center — Work</title>
+    <link rel="stylesheet" href="/web/teacher-shell.css" />
+    <style>
+      .work-subtle {
+        opacity: 0.85;
+      }
+      .work-card {
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 16px;
+        padding: 16px;
+        background: rgba(255, 255, 255, 0.04);
+      }
+      .work-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 12px;
+      }
+      .work-row {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .work-field label {
+        display: block;
+        font-size: 12px;
+        opacity: 0.9;
+        margin-bottom: 6px;
+      }
+      .work-field input,
+      .work-field select,
+      .work-field textarea {
+        width: 100%;
+        padding: 10px 12px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(0, 0, 0, 0.18);
+        color: inherit;
+        outline: none;
+      }
+      .work-field textarea {
+        min-height: 96px;
+        resize: vertical;
+      }
+      .work-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      .work-btn {
+        padding: 10px 12px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        background: rgba(255, 255, 255, 0.06);
+        color: inherit;
+        cursor: pointer;
+      }
+      .work-btn.primary {
+        background: rgba(34, 197, 94, 0.18);
+        border-color: rgba(34, 197, 94, 0.35);
+      }
+      .work-btn.danger {
+        background: rgba(239, 68, 68, 0.12);
+        border-color: rgba(239, 68, 68, 0.35);
+      }
+      .work-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+      .work-tablewrap {
+        overflow: auto;
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      table.work-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+      table.work-table th,
+      table.work-table td {
+        padding: 10px 12px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        vertical-align: top;
+      }
+      table.work-table th {
+        font-size: 12px;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+        opacity: 0.9;
+      }
+      .work-pill {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        opacity: 0.95;
+      }
+      .work-msg {
+        margin-top: 10px;
+        padding: 10px 12px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.04);
+      }
+      .work-msg.ok {
+        border-color: rgba(34, 197, 94, 0.35);
+        background: rgba(34, 197, 94, 0.1);
+      }
+      .work-msg.err {
+        border-color: rgba(239, 68, 68, 0.35);
+        background: rgba(239, 68, 68, 0.08);
+      }
+      .work-overlay[hidden] {
+        display: none !important;
+      }
+      .work-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.55);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 18px;
+        z-index: 9999;
+      }
+      .work-dialog {
+        width: min(980px, 100%);
+        max-height: 85vh;
+        overflow: auto;
+        border-radius: 18px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(20, 20, 20, 0.92);
+        padding: 14px;
+      }
+      .work-dialog pre {
+        white-space: pre-wrap;
+        word-break: break-word;
+        margin: 0;
+        padding: 12px;
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(0, 0, 0, 0.25);
+        font-size: 12px;
+        line-height: 1.45;
+      }
+      .work-dialog h3 {
+        margin: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="tc-app">
+      <header class="tc-topbar">
+        <button
+          class="tc-btn"
+          id="tcSidebarToggle"
+          aria-label="Toggle sidebar"
+          aria-expanded="false"
+        >
+          ☰
+        </button>
+        <a class="tc-btn" href="/" target="_blank" rel="noopener" aria-label="Home">🏠</a>
+        <div class="tc-title">Teacher Center — Work</div>
+      </header>
 
-    <div class="tc-shell">
-      <aside class="tc-sidebar" aria-label="Teacher navigation">
-        <nav class="tc-nav">
-          <a data-href="/teacher/" href="/teacher/"><span class="tc-icon">🏁</span><span class="tc-label">Overview</span></a>
-          <a data-href="/teacher/work/" href="/teacher/work/"><span class="tc-icon">🗂️</span><span class="tc-label">Work</span></a>
-          <a data-href="/teacher/library/" href="/teacher/library/"><span class="tc-icon">📚</span><span class="tc-label">Library</span></a>
-          <a data-href="/teacher/review/" href="/teacher/review/"><span class="tc-icon">✍️</span><span class="tc-label">Review</span></a>
-          <a data-href="/teacher/gradebook/" href="/teacher/gradebook/"><span class="tc-icon">📊</span><span class="tc-label">Gradebook</span></a>
-          <a data-href="/teacher/students/" href="/teacher/students/"><span class="tc-icon">🧑‍🎓</span><span class="tc-label">Students</span></a>
-          <a data-href="/teacher/classes/" href="/teacher/classes/"><span class="tc-icon">🏫</span><span class="tc-label">Classes</span></a>
-          <a data-href="/teacher/data/" href="/teacher/data/"><span class="tc-icon">🧾</span><span class="tc-label">Data</span></a>
-          <a data-href="/teacher/admin/" href="/teacher/admin/"><span class="tc-icon">🛡️</span><span class="tc-label">Admin</span></a>
-          <a data-href="/teacher/reporting/" href="/teacher/reporting/"><span class="tc-icon">📑</span><span class="tc-label">Reporting</span></a>
-          <a data-href="/teacher/settings/" href="/teacher/settings/"><span class="tc-icon">⚙️</span><span class="tc-label">Settings</span></a>
-        </nav>
-      </aside>
+      <div class="tc-shell">
+        <aside class="tc-sidebar" aria-label="Teacher navigation">
+          <nav class="tc-nav">
+            <a data-href="/teacher/" href="/teacher/"
+              ><span class="tc-icon">🏁</span><span class="tc-label">Overview</span></a
+            >
+            <a data-href="/teacher/work/" href="/teacher/work/"
+              ><span class="tc-icon">🗂️</span><span class="tc-label">Work</span></a
+            >
+            <a data-href="/teacher/library/" href="/teacher/library/"
+              ><span class="tc-icon">📚</span><span class="tc-label">Library</span></a
+            >
+            <a data-href="/teacher/review/" href="/teacher/review/"
+              ><span class="tc-icon">✍️</span><span class="tc-label">Review</span></a
+            >
+            <a data-href="/teacher/gradebook/" href="/teacher/gradebook/"
+              ><span class="tc-icon">📊</span><span class="tc-label">Gradebook</span></a
+            >
+            <a data-href="/teacher/students/" href="/teacher/students/"
+              ><span class="tc-icon">🧑‍🎓</span><span class="tc-label">Students</span></a
+            >
+            <a data-href="/teacher/classes/" href="/teacher/classes/"
+              ><span class="tc-icon">🏫</span><span class="tc-label">Classes</span></a
+            >
+            <a data-href="/teacher/data/" href="/teacher/data/"
+              ><span class="tc-icon">🧾</span><span class="tc-label">Data</span></a
+            >
+            <a data-href="/teacher/admin/" href="/teacher/admin/"
+              ><span class="tc-icon">🛡️</span><span class="tc-label">Admin</span></a
+            >
+            <a data-href="/teacher/reporting/" href="/teacher/reporting/"
+              ><span class="tc-icon">📑</span><span class="tc-label">Reporting</span></a
+            >
+            <a data-href="/teacher/settings/" href="/teacher/settings/"
+              ><span class="tc-icon">⚙️</span><span class="tc-label">Settings</span></a
+            >
+          </nav>
+        </aside>
 
-      <main class="tc-main">
-        <h1 style="margin-top:0">Work</h1>
-        <p class="work-subtle" style="margin-top:-6px">
-          MVP: create <strong>assignment drafts</strong> (client-side only). Requires two inputs:
-          <span class="work-pill">Assignment</span> + <span class="work-pill">Mapping</span>.
-          Drafts persist in your browser and can be exported as JSON.
-        </p>
+        <main class="tc-main">
+          <h1 style="margin-top: 0">Work</h1>
+          <p class="work-subtle" style="margin-top: -6px">
+            MVP: create <strong>assignment drafts</strong> (client-side only). Requires two inputs:
+            <span class="work-pill">Assignment</span> + <span class="work-pill">Mapping</span>.
+            Drafts persist in your browser and can be exported as JSON.
+          </p>
 
-        <section class="work-card" aria-label="Create assignment draft">
-          <div class="work-row" style="gap:14px">
-            <h2 style="margin:0">Create Draft</h2>
-            <div class="work-actions">
-<button class="work-btn" type="button" id="btnSplitMega" style="display:none">Split Mega TXT</button>
-<button class="work-btn primary" type="submit" form="workDraftForm" id="btnSaveDraft">Save Draft</button>
+          <section class="work-card" aria-label="Create assignment draft">
+            <div class="work-row" style="gap: 14px">
+              <h2 style="margin: 0">Create Draft</h2>
+              <div class="work-actions">
+                <button class="work-btn" type="button" id="btnSplitMega" style="display: none">
+                  Split Mega TXT
+                </button>
+                <button
+                  class="work-btn primary"
+                  type="submit"
+                  form="workDraftForm"
+                  id="btnSaveDraft"
+                >
+                  Save Draft
+                </button>
+              </div>
             </div>
-          </div>
 
-          <form id="workDraftForm" style="margin-top:14px">
-            <div class="work-grid">
-              <div class="work-field">
-                <label for="draftTitle">Title (required)</label>
-                <input id="draftTitle" name="title" placeholder="Week 1 — ADIT — Day 1 Assignment" required />
-              </div>
+            <form id="workDraftForm" style="margin-top: 14px">
+              <div class="work-grid">
+                <div class="work-field">
+                  <label for="draftTitle">Title (required)</label>
+                  <input
+                    id="draftTitle"
+                    name="title"
+                    placeholder="Week 1 — ADIT — Day 1 Assignment"
+                    required
+                  />
+                </div>
 
-              <div class="work-field">
-                <label for="draftClass">Class (required)</label>
-                <select id="draftClass" name="class" required>
-                  <option value="">Select…</option>
-                  <option>LA 1 SC</option>
-                  <option>LA 2 SC</option>
-                  <option>LA 3 SC</option>
-                  <option>LA 4 SC</option>
-                  <option value="Life Skills">Life Skills</option>
-                  <option>Life Skills LA</option>
-                </select>
-              </div>
+                <div class="work-field">
+                  <label for="draftClass">Class (required)</label>
+                  <select id="draftClass" name="class" required>
+                    <option value="">Select…</option>
+                    <option>LA 1 SC</option>
+                    <option>LA 2 SC</option>
+                    <option>LA 3 SC</option>
+                    <option>LA 4 SC</option>
+                    <option value="Life Skills">Life Skills</option>
+                    <option>Life Skills LA</option>
+                  </select>
+                </div>
 
-              <div class="work-field">
-                <label for="draftRelease">Release (optional)</label>
-                <input id="draftRelease" name="release" type="datetime-local" />
-              </div>
+                <div class="work-field">
+                  <label for="draftRelease">Release (optional)</label>
+                  <input id="draftRelease" name="release" type="datetime-local" />
+                </div>
 
-              <div class="work-field">
-                <label for="draftDue">Due (optional)</label>
-                <input id="draftDue" name="due" type="datetime-local" />
-              </div>
-            </div>
-
-            <div class="work-grid" style="margin-top:12px">
-              <div class="work-field">
-                <label>Assignment (file OR link)</label>
-                <input id="assignmentFile" name="assignmentFile" type="file" accept=".html,.htm,.txt" / class="tc-file-input rc-input">
-<div class="tc-subtle" id="assignmentFileName">No file selected</div>
-                <div style="height:10px"></div>
-                <input id="assignmentLink" type="url" placeholder="https://docs.google.com/forms/d/..." />
-                <div class="work-subtle" style="font-size:12px; margin-top:8px">
-                  If you attach a file, it must be small (stored in browser). Link is preferred for large content.
+                <div class="work-field">
+                  <label for="draftDue">Due (optional)</label>
+                  <input id="draftDue" name="due" type="datetime-local" />
                 </div>
               </div>
 
-              <div class="work-field">
-                <label>Mapping file (optional)</label>
-                <input class="tc-file-input" id="mappingFile" name="mappingFile" type="file" accept=".json,application/json,.csv,text/csv" />
-                <div class="tc-subtle" id="mappingFileName">No file selected</div>
-<div class="tc-subtle">If omitted, mapping is auto-generated from [MLS.*] and [IG:*] tags in the assignment TXT.</div>
-<div class="work-subtle" style="font-size:12px; margin-top:8px">
-                  MVP accepts CSV or JSON. This will evolve into your official “question → DESE/IEP tags” artifact.
+              <div class="work-grid" style="margin-top: 12px">
+                <div class="work-field">
+                  <label>Assignment (file OR link)</label>
+                  <input
+                    id="assignmentFile"
+                    name="assignmentFile"
+                    type="file"
+                    accept=".html,.htm,.txt"
+                    class="tc-file-input rc-input"
+                  />
+                  <div class="tc-subtle" id="assignmentFileName">No file selected</div>
+                  <div style="height: 10px"></div>
+                  <input
+                    id="assignmentLink"
+                    type="url"
+                    placeholder="https://docs.google.com/forms/d/..."
+                  />
+                  <div class="work-subtle" style="font-size: 12px; margin-top: 8px">
+                    If you attach a file, it must be small (stored in browser). Link is preferred
+                    for large content.
+                  </div>
                 </div>
-                <details style="margin-top:10px">
-                  <summary class="work-subtle" style="cursor:pointer">Show mapping examples</summary>
-<pre style="margin-top:10px">CSV (recommended MVP):
+
+                <div class="work-field">
+                  <label>Mapping file (optional)</label>
+                  <input
+                    class="tc-file-input"
+                    id="mappingFile"
+                    name="mappingFile"
+                    type="file"
+                    accept=".json,application/json,.csv,text/csv"
+                  />
+                  <div class="tc-subtle" id="mappingFileName">No file selected</div>
+                  <div class="tc-subtle">
+                    If omitted, mapping is auto-generated from [MLS.*] and [IG:*] tags in the
+                    assignment TXT.
+                  </div>
+                  <div class="work-subtle" style="font-size: 12px; margin-top: 8px">
+                    MVP accepts CSV or JSON. This will evolve into your official “question →
+                    DESE/IEP tags” artifact.
+                  </div>
+                  <details style="margin-top: 10px">
+                    <summary class="work-subtle" style="cursor: pointer">
+                      Show mapping examples
+                    </summary>
+                    <pre style="margin-top: 10px">
+CSV (recommended MVP):
 question_id,dese,iep
 q1,RL.9-10.1,IG:D.H.12.1
 q2,RI.9-10.2,OBJ:S.J.12.3
@@ -156,485 +328,67 @@ JSON:
 [
   {"question_id":"q1","dese":["RL.9-10.1"],"iep":["IG:D.H.12.1"]},
   {"question_id":"q2","dese":["RI.9-10.2"],"iep":["OBJ:S.J.12.3"]}
-]</pre>
-                </details>
+]</pre
+                    >
+                  </details>
+                </div>
               </div>
-            </div>
 
-            <div class="work-field" style="margin-top:12px">
-              <label for="draftNotes">Notes (optional)</label>
-              <textarea id="draftNotes" placeholder="Any teacher-only notes…"></textarea>
-            </div>
+              <div class="work-field" style="margin-top: 12px">
+                <label for="draftNotes">Notes (optional)</label>
+                <textarea id="draftNotes" placeholder="Any teacher-only notes…"></textarea>
+              </div>
 
-            <div id="workMsg" class="work-msg" style="display:none"></div>
-          </form>
-        </section>
+              <div id="workMsg" class="work-msg" style="display: none"></div>
+            </form>
+          </section>
 
-        <section class="work-card" aria-label="Draft list" style="margin-top:16px">
-          <div class="work-row">
-            <h2 style="margin:0">Drafts</h2>
-            <div class="work-actions">
-              <button class="work-btn" type="button" id="btnExportAll">Export all</button>
-              <button class="work-btn danger" type="button" id="btnClearAll">Clear all</button>
-            </div>
-          </div>
-
-          <div id="draftsEmpty" class="work-subtle" style="margin-top:10px">No drafts yet.</div>
-
-          <div class="work-tablewrap" style="margin-top:10px">
-            <table class="work-table" id="draftsTable" style="display:none">
-              <thead>
-                <tr>
-                  <th>Title</th>
-                  <th>Class</th>
-                  <th>Release / Due</th>
-                  <th>Source</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody id="draftsTbody"></tbody>
-            </table>
-          </div>
-        </section>
-
-        <div class="work-overlay" id="draftOverlay" hidden>
-          <div class="work-dialog" role="dialog" aria-modal="true" aria-label="Draft preview">
-            <div class="work-row" style="margin-bottom:10px">
-              <h3 id="previewTitle">Draft Preview</h3>
+          <section class="work-card" aria-label="Draft list" style="margin-top: 16px">
+            <div class="work-row">
+              <h2 style="margin: 0">Drafts</h2>
               <div class="work-actions">
-                <button class="work-btn" type="button" id="btnDownloadOne">Export JSON</button>
-                <button class="work-btn" type="button" id="btnClosePreview">Close</button>
+                <button class="work-btn" type="button" id="btnExportAll">Export all</button>
+                <button class="work-btn danger" type="button" id="btnClearAll">Clear all</button>
               </div>
             </div>
-            <pre id="previewBody">(preview)</pre>
+
+            <div id="draftsEmpty" class="work-subtle" style="margin-top: 10px">No drafts yet.</div>
+
+            <div class="work-tablewrap" style="margin-top: 10px">
+              <table class="work-table" id="draftsTable" style="display: none">
+                <thead>
+                  <tr>
+                    <th>Title</th>
+                    <th>Class</th>
+                    <th>Release / Due</th>
+                    <th>Source</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="draftsTbody"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <div class="work-overlay" id="draftOverlay" hidden>
+            <div class="work-dialog" role="dialog" aria-modal="true" aria-label="Draft preview">
+              <div class="work-row" style="margin-bottom: 10px">
+                <h3 id="previewTitle">Draft Preview</h3>
+                <div class="work-actions">
+                  <button class="work-btn" type="button" id="btnDownloadOne">Export JSON</button>
+                  <button class="work-btn" type="button" id="btnClosePreview">Close</button>
+                </div>
+              </div>
+              <pre id="previewBody">(preview)</pre>
+            </div>
           </div>
-        </div>
-
-      </main>
+        </main>
+      </div>
     </div>
-  </div>
 
-  <script defer src="/web/teacher-shell.js"></script>
-  <script defer src="/web/tag-parser.js"></script>
-  <script defer src="/web/tc-work.js"></script>
-</body>
+    <script defer src="/web/teacher-shell.js"></script>
+    <script defer src="/web/tag-parser.js"></script>
+    <script defer src="/web/tc-work.js"></script>
+    <script defer src="/web/tc-work-qol.js"></script>
+  </body>
 </html>
-
-/* BEGIN rc-tc-work-qol v1 */
-(() => {
-  // Only run on Teacher Center Work page
-  if (!location.pathname.startsWith("/teacher/work")) return;
-
-  const TAG = "[tc-work-qol]";
-  const log = (...a) => console.log(TAG, ...a);
-
-  const CLASS_LABELS = [
-    "LA 1 SC",
-    "LA 2 SC",
-    "LA 3 SC",
-    "LA 4 SC",
-    "Life Skills LA",
-    "Life Skills",
-  ];
-
-  const ready = (fn) => {
-    if (document.readyState !== "loading") fn();
-    else document.addEventListener("DOMContentLoaded", fn, { once: true });
-  };
-
-  const norm = (s) => (s || "").trim().toLowerCase();
-
-  const findClassSelect = () => {
-    const selects = Array.from(document.querySelectorAll("select"));
-    // pick the select that contains LA 1 SC + LA 4 SC (very likely the class dropdown)
-    const best = selects.find((sel) => {
-      const opts = Array.from(sel.options || []).map((o) => (o.textContent || "").trim());
-      return opts.includes("LA 1 SC") && opts.includes("LA 4 SC");
-    });
-    return best || null;
-  };
-
-  const findSaveButton = () => {
-    const btns = Array.from(document.querySelectorAll("button"));
-    return btns.find((b) => (b.textContent || "").trim() === "Save Draft") || null;
-  };
-
-  const injectStyle = () => {
-    if (document.getElementById("rcTcWorkQolStyle")) return;
-    const st = document.createElement("style");
-    st.id = "rcTcWorkQolStyle";
-    st.textContent = `
-      .rc-qol-row{ display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-top:10px; }
-      .rc-qol-row label{ display:flex; gap:8px; align-items:center; font-size:12px; opacity:.95; }
-      .rc-qol-box{ border:1px solid rgba(255,255,255,.10); border-radius:10px; padding:10px 12px; background:rgba(0,0,0,.18); }
-      .rc-qol-box select{ min-width: 240px; max-width: 520px; }
-      .rc-qol-hint{ font-size:11px; opacity:.8; margin-top:6px; }
-    `;
-    document.head.appendChild(st);
-  };
-
-  const ensureLifeSkillsOption = (classSelect) => {
-    const labels = Array.from(classSelect.options).map((o) => (o.textContent || "").trim());
-    if (!labels.includes("Life Skills")) {
-      const opt = document.createElement("option");
-      opt.value = "Life Skills";
-      opt.textContent = "Life Skills";
-      // put it right next to Life Skills LA if present
-      const idx = labels.indexOf("Life Skills LA");
-      if (idx >= 0 && classSelect.options[idx]) {
-        classSelect.add(opt, classSelect.options[idx]);
-      } else {
-        classSelect.add(opt);
-      }
-      log("Added class option:", "Life Skills");
-    }
-  };
-
-  const buildQolControls = (classSelect) => {
-    if (document.getElementById("rcQolControls")) return;
-
-    // container near the class select
-    const host = classSelect.closest(".field, .form-field, .input-group, div") || classSelect.parentElement;
-    if (!host) return;
-
-    injectStyle();
-    ensureLifeSkillsOption(classSelect);
-
-    const wrap = document.createElement("div");
-    wrap.id = "rcQolControls";
-    wrap.className = "rc-qol-row";
-
-    wrap.innerHTML = `
-      <div class="rc-qol-box">
-        <label>
-          <input type="checkbox" id="rcMultiClassToggle" />
-          Apply to multiple classes
-        </label>
-        <div style="margin-top:8px; display:none;" id="rcMultiClassPanel">
-          <select id="rcMultiClassSelect" multiple size="6"></select>
-          <div class="rc-qol-hint">Tip: hold ⌘/Ctrl to select multiple.</div>
-        </div>
-      </div>
-
-      <div class="rc-qol-box">
-        <label>
-          <input type="checkbox" id="rcMegaSplitToggle" />
-          Mega-split draft by class headers in the assignment file
-        </label>
-        <div class="rc-qol-hint">
-          Looks for headers like “LA 1 SC”, “LA 2 SC”, “Life Skills”, etc. Creates one draft per detected section.
-        </div>
-      </div>
-    `;
-
-    // insert after the select's host block
-    host.appendChild(wrap);
-
-    const multiToggle = wrap.querySelector("#rcMultiClassToggle");
-    const multiPanel  = wrap.querySelector("#rcMultiClassPanel");
-    const multiSelect = wrap.querySelector("#rcMultiClassSelect");
-
-    // populate multi-select from classSelect options
-    const opts = Array.from(classSelect.options).map((o) => ({ value: o.value, label: (o.textContent||"").trim() }));
-    const seen = new Set();
-    for (const o of opts) {
-      const key = `${o.value}||${o.label}`;
-      if (!o.label || seen.has(key)) continue;
-      seen.add(key);
-      const opt = document.createElement("option");
-      opt.value = o.value || o.label;
-      opt.textContent = o.label;
-      multiSelect.appendChild(opt);
-    }
-
-    // show/hide panel
-    multiToggle.addEventListener("change", () => {
-      multiPanel.style.display = multiToggle.checked ? "block" : "none";
-      // Keep classSelect valid by defaulting to first selected
-      if (multiToggle.checked) {
-        const first = multiSelect.options[0];
-        if (first && !Array.from(multiSelect.selectedOptions).length) first.selected = true
-      }
-    });
-
-    // pick a sane default selection if none
-    if (multiSelect.options.length) {
-      multiSelect.options[0].selected = true;
-    }
-
-    // keep single class select aligned so native validation doesn’t block Save
-    multiSelect.addEventListener("change", () => {
-      const sel = Array.from(multiSelect.selectedOptions).map((o) => o.value);
-      if (sel.length) classSelect.value = sel[0];
-    });
-  };
-
-  const snapshotLocalStorage = () => {
-    const snap = {};
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i);
-      snap[k] = localStorage.getItem(k);
-    }
-    return snap;
-  };
-
-  const parseJsonArray = (txt) => {
-    try {
-      const v = JSON.parse(txt);
-      return Array.isArray(v) ? v : null;
-    } catch {
-      return null;
-    }
-  };
-
-  const findChangedDraftStore = (beforeSnap, afterSnap) => {
-    const changed = [];
-    for (const [k, v] of Object.entries(afterSnap)) {
-      if (beforeSnap[k] !== v) {
-        const arr = parseJsonArray(v);
-        if (arr && arr.length && typeof arr[0] === "object") changed.push([k, arr]);
-      }
-    }
-    // prefer keys that look like work drafts
-    changed.sort((a, b) => {
-      const ak = a[0].toLowerCase();
-      const bk = b[0].toLowerCase();
-      const as = (ak.includes("draft") ? 2 : 0) + (ak.includes("work") ? 2 : 0) + (ak.includes("tc") ? 1 : 0);
-      const bs = (bk.includes("draft") ? 2 : 0) + (bk.includes("work") ? 2 : 0) + (bk.includes("tc") ? 1 : 0);
-      return bs - as;
-    });
-    return changed[0] || null;
-  };
-
-  const sig = (obj) => {
-    if (!obj || typeof obj !== "object") return "";
-    return obj.id || obj.uuid || obj._id || obj.key || obj.slug || "";
-  };
-
-  const deepClone = (obj) => {
-    try { return structuredClone(obj); } catch { return JSON.parse(JSON.stringify(obj)); }
-  };
-
-  const walkStrings = (obj, out, path = []) => {
-    if (obj == null) return;
-    if (typeof obj === "string") {
-      out.push({ path, value: obj });
-      return;
-    }
-    if (Array.isArray(obj)) {
-      obj.forEach((v, i) => walkStrings(v, out, path.concat(i)));
-      return;
-    }
-    if (typeof obj === "object") {
-      Object.entries(obj).forEach(([k, v]) => walkStrings(v, out, path.concat(k)));
-    }
-  };
-
-  const getByPath = (obj, path) => {
-    let cur = obj;
-    for (const p of path) cur = cur?.[p];
-    return cur;
-  };
-
-  const setByPath = (obj, path, value) => {
-    let cur = obj;
-    for (let i = 0; i < path.length - 1; i++) cur = cur[path[i]];
-    cur[path[path.length - 1]] = value;
-  };
-
-  const replaceLongestString = (draft, newText) => {
-    const strings = [];
-    walkStrings(draft, strings);
-    strings.sort((a, b) => (b.value.length || 0) - (a.value.length || 0));
-    const top = strings.find((x) => (x.value || "").length > 200);
-    if (!top) return false;
-    setByPath(draft, top.path, newText);
-    return true;
-  };
-
-  const guessAndSetClass = (draft, newClass) => {
-    const strings = [];
-    walkStrings(draft, strings);
-    // replace any exact class label occurrences in string fields (small + safe)
-    let changed = false;
-    for (const s of strings) {
-      const v = (s.value || "").trim();
-      if (CLASS_LABELS.includes(v)) {
-        setByPath(draft, s.path, newClass);
-        changed = true;
-      }
-    }
-    // common keys
-    for (const k of ["class", "className", "classLabel", "class_id", "classId"]) {
-      if (typeof draft?.[k] === "string") {
-        draft[k] = newClass;
-        changed = true;
-      }
-    }
-    return changed;
-  };
-
-  const splitByClassHeaders = (text) => {
-    const raw = text || "";
-    const lines = raw.split(/\r?\n/);
-
-    // find header line indexes
-    const headers = [];
-    for (let i = 0; i < lines.length; i++) {
-      const t = lines[i].trim();
-      if (!t) continue;
-      const up = t.toUpperCase();
-      // support LIFE SKILLS variants
-      const normalized =
-        up === "LIFE SKILLS" ? "Life Skills" :
-        up === "LIFE SKILLS LA" ? "Life Skills LA" :
-        CLASS_LABELS.find((c) => c.toUpperCase() === up) || null;
-
-      if (normalized) headers.push({ i, cls: normalized });
-    }
-
-    if (headers.length < 2) return null;
-
-    // slice sections
-    const sections = {};
-    for (let h = 0; h < headers.length; h++) {
-      const start = headers[h].i;
-      const end = (h + 1 < headers.length) ? headers[h + 1].i : lines.length;
-      const cls = headers[h].cls;
-      const chunk = lines.slice(start, end).join("\n").trim();
-      if (chunk) sections[cls] = chunk;
-    }
-    return Object.keys(sections).length ? sections : null;
-  };
-
-  const forceCloseModals = () => {
-    // Capture "Close" clicks even when underlying code forgets to wire handlers.
-    document.addEventListener("click", (e) => {
-      const btn = e.target?.closest?.("button, a");
-      if (!btn) return;
-      const t = norm(btn.textContent);
-      if (t !== "close") return;
-
-      // Try: close nearest dialog/modal-ish container
-      const modal =
-        btn.closest("[role='dialog']") ||
-        btn.closest("dialog") ||
-        btn.closest(".modal") ||
-        btn.closest(".rc-modal") ||
-        btn.closest(".overlay") ||
-        btn.closest("[data-modal]");
-
-      if (modal) {
-        e.preventDefault();
-        e.stopPropagation();
-        modal.remove();
-      }
-    }, true);
-
-    document.addEventListener("keydown", (e) => {
-      if (e.key !== "Escape") return;
-      const dlg = document.querySelector("dialog[open], [role='dialog'], .modal, .rc-modal, .overlay, [data-modal]");
-      if (dlg) dlg.remove?.();
-    }, true);
-  };
-
-  const postProcessSave = (beforeSnap, cfg) => {
-    const afterSnap = snapshotLocalStorage();
-    const changedStore = findChangedDraftStore(beforeSnap, afterSnap);
-    if (!changedStore) return;
-
-    const [storeKey, drafts] = changedStore;
-
-    // Find the newly added draft
-    const beforeArr = parseJsonArray(beforeSnap[storeKey] || "[]") || [];
-    const beforeSigs = new Set(beforeArr.map(sig).filter(Boolean));
-    let newIdx = drafts.findIndex((d) => !beforeSigs.has(sig(d)));
-    if (newIdx < 0) newIdx = 0;
-    const base = drafts[newIdx];
-    if (!base || typeof base !== "object") return;
-
-    // If neither toggle is on, do nothing
-    if (!cfg.multi && !cfg.mega) return;
-
-    const baseClone = deepClone(base);
-
-    // For mega split: use the longest text field inside the saved draft as the source to split
-    let megaSections = null
-    if (cfg.mega) {
-      const strings = [];
-      walkStrings(baseClone, strings);
-      strings.sort((a, b) => (b.value.length || 0) - (a.value.length || 0));
-      const body = (strings.find((x) => (x.value || "").length > 200) || {}).value || "";
-      megaSections = splitByClassHeaders(body);
-      if (!megaSections) {
-        log("Mega-split checked, but no class headers detected. Skipping split.");
-      }
-    }
-
-    // Determine classes to create drafts for
-    const classes =
-      megaSections ? Object.keys(megaSections)
-      : (cfg.classes && cfg.classes.length ? cfg.classes : []);
-
-    if (!classes.length) return;
-
-    // Build clones for each class (keeping base as one of them)
-    const clones = [];
-    for (const cls of classes) {
-      const d = deepClone(baseClone);
-      guessAndSetClass(d, cls);
-      if (megaSections && megaSections[cls]) {
-        replaceLongestString(d, megaSections[cls]);
-      }
-      // ensure unique-ish id if present
-      if (d.id) d.id = `${d.id}__${cls.replace(/\s+/g, "_")}__${Date.now()}`;
-      if (d.uuid) d.uuid = `${d.uuid}__${cls.replace(/\s+/g, "_")}__${Date.now()}`;
-      clones.push(d);
-    }
-
-    // Replace the single base draft with the clones (in-place)
-    drafts.splice(newIdx, 1, ...clones);
-
-    localStorage.setItem(storeKey, JSON.stringify(drafts));
-    log("Saved multi/mega drafts to store:", storeKey, "count:", clones.length);
-
-    // Reload so the page re-renders Drafts list using its normal code
-    setTimeout(() => location.reload(), 50);
-  };
-
-  ready(() => {
-    try {
-      const classSelect = findClassSelect();
-      if (!classSelect) return log("Could not find class dropdown. Skipping QoL.");
-
-      ensureLifeSkillsOption(classSelect);
-      buildQolControls(classSelect);
-      forceCloseModals();
-
-      const saveBtn = findSaveButton();
-      if (!saveBtn) return log("Could not find Save Draft button. QoL loaded (partial).");
-
-      // Capture phase: snapshot storage BEFORE app saves, then post-process AFTER
-      saveBtn.addEventListener("click", () => {
-        const beforeSnap = snapshotLocalStorage();
-
-        const multi = !!document.getElementById("rcMultiClassToggle")?.checked;
-        const mega  = !!document.getElementById("rcMegaSplitToggle")?.checked;
-
-        const sel = Array.from(document.getElementById("rcMultiClassSelect")?.selectedOptions || [])
-          .map((o) => (o.value || o.textContent || "").trim())
-          .filter(Boolean);
-
-        const cfg = { multi, mega, classes: sel };
-
-        // Let the original save happen, then duplicate/split the freshly saved draft(s)
-        setTimeout(() => postProcessSave(beforeSnap, cfg), 350);
-      }, true);
-
-      log("Loaded ✅ (Life Skills + multi-class + mega-split + close-fix)");
-    } catch (err) {
-      console.error(TAG, "Error:", err);
-    }
-  });
-})();
-/* END rc-tc-work-qol v1 */
