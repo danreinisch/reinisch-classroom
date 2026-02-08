@@ -1460,8 +1460,12 @@
       
       // Navigate to new viewer URL
       // Use buildViewerUrl if available (from open-in-viewer.js), otherwise build manually
+      // Preserve the original return URL from current viewer page
+      const currentParams = new URLSearchParams(window.location.search);
+      const returnUrl = currentParams.get('return') || '/';
+      
       if (typeof window.buildViewerUrl === 'function') {
-        const viewerUrl = window.buildViewerUrl(url);
+        const viewerUrl = window.buildViewerUrl(url, { return: returnUrl });
         if (viewerUrl) {
           window.location.href = viewerUrl;
           return;
@@ -1470,7 +1474,7 @@
       // Fallback: build viewer URL manually
       const params = new URLSearchParams();
       params.set('src', url);
-      params.set('return', window.location.pathname + window.location.search);
+      params.set('return', returnUrl);
       window.location.href = '/viewer/?' + params.toString();
       return;
     }
