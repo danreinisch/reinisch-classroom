@@ -1096,13 +1096,14 @@ ${shown}
   // ========================================
 
   function isRemoteEnabled() {
-    // Check for teacher session cookie (rc_session or tc)
+    // Check for teacher session cookie (tc or rc_session)
     const hasCookie = document.cookie.split(';').some(c => {
       const trimmed = c.trim();
       return trimmed.startsWith('rc_session=') || trimmed.startsWith('tc=');
     });
     // Check if Supabase is configured via the settings module
-    // Simple check: does the Supabase URL exist in localStorage?
+    // We check localStorage directly here to avoid circular dependencies.
+    // These keys are set by supabase-settings.js when Supabase is configured.
     const hasUrl = !!(localStorage.getItem('rc_unified_supabase_url') || localStorage.getItem('rc_supabase_url'));
     return hasCookie && hasUrl;
   }
@@ -1135,11 +1136,19 @@ ${shown}
     }
   }
 
+  let syncStatusTimeoutId = null; // Track sync status timeout to prevent overlaps
+  
   async function remoteLoadDrafts() {
     if (!isRemoteEnabled()) return;
     
     const syncEl = $("syncStatus");
     if (syncEl) syncEl.textContent = "Syncing…";
+    
+    // Clear any pending timeout to prevent status message overlap
+    if (syncStatusTimeoutId !== null) {
+      clearTimeout(syncStatusTimeoutId);
+      syncStatusTimeoutId = null;
+    }
     
     try {
       const res = await fetch('/.netlify/functions/teacher-drafts', {
@@ -1213,7 +1222,10 @@ ${shown}
       
       if (syncEl) {
         syncEl.textContent = "✓ Synced";
-        setTimeout(() => { if (syncEl) syncEl.textContent = ""; }, 3000);
+        syncStatusTimeoutId = setTimeout(() => { 
+          if (syncEl) syncEl.textContent = ""; 
+          syncStatusTimeoutId = null;
+        }, 3000);
       }
     } catch (err) {
       console.warn('[tc-work] Remote load error:', err.message);
