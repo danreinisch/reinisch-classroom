@@ -1705,7 +1705,7 @@ function normalizeTaggedAssignmentText(input) {
       const trimmed = line.trim();
       
       // Count questions: "Question 1:", "1.", "Q1)", etc.
-      if (/^\s*(?:Question\s+)?\d+\s*[.):]/i.test(trimmed)) {
+      if (/^(?:Question\s+)?\d+\s*[.):]\s/i.test(trimmed)) {
         questions++;
       }
       
@@ -1715,7 +1715,7 @@ function normalizeTaggedAssignmentText(input) {
       }
       
       // Extract DESE codes from labeled format: "DESE Standard(s): MLS.R.1.A.9-12.a"
-      const deseMatch = trimmed.match(/DESE\s+Standard[s()\s]*:\s*(.+)/i);
+      const deseMatch = trimmed.match(/DESE\s+Standards?\s*:\s*(.+)/i);
       if (deseMatch) {
         deseMatch[1].split(/[,;]/).forEach(c => {
           const code = c.trim();
@@ -1723,12 +1723,12 @@ function normalizeTaggedAssignmentText(input) {
         });
       }
       
-      // Extract DESE codes from bracket format: [MLS.R.1.A.9-12.a]
-      const bracketDese = trimmed.matchAll(/\[MLS[.:][^\]]+\]/gi);
+      // Extract DESE codes from bracket format: [MLS.R.1.A.9-12.a] or [MLSC.R.1.A.9-12.a]
+      const bracketDese = trimmed.matchAll(/\[MLS[^\]]*\]/gi);
       for (const m of bracketDese) deseCodes.add(m[0]);
       
       // Extract IEP codes from labeled format: "IEP Goal Code(s): S015.11.1-2, S016.11.2-2"
-      const iepMatch = trimmed.match(/IEP\s+Goal\s+Code[s()\s]*:\s*(.+)/i);
+      const iepMatch = trimmed.match(/IEP\s+Goal\s+Codes?\s*:\s*(.+)/i);
       if (iepMatch) {
         iepMatch[1].split(/[,;]/).forEach(c => {
           const code = c.trim();
@@ -1736,8 +1736,8 @@ function normalizeTaggedAssignmentText(input) {
         });
       }
       
-      // Extract IEP codes from bracket format: [IG: S015.11.1-2]
-      const bracketIep = trimmed.matchAll(/\[IG[.:][^\]]+\]/gi);
+      // Extract IEP codes from bracket format: [IG: S015.11.1-2] or [IG : S015.11.1-2]
+      const bracketIep = trimmed.matchAll(/\[IG[^\]]*\]/gi);
       for (const m of bracketIep) iepCodes.add(m[0]);
     }
     
