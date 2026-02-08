@@ -1575,41 +1575,42 @@ function normalizeTaggedAssignmentText(input) {
     }
   }
 
-  function ensureMegaCheckbox() {
-    const sel = document.getElementById("draftClass");
-    if (!sel) return;
-
-    if (document.getElementById("rcMegaMode")) return;
-
-    const wrap = document.createElement("label");
-    wrap.style.display = "flex";
-    wrap.style.alignItems = "center";
-    wrap.style.gap = "8px";
-    wrap.style.marginTop = "6px";
-    wrap.style.userSelect = "none";
-
-    wrap.innerHTML = `
-      <input type="checkbox" id="rcMegaMode" />
-      <span>Multi-class mega TXT (auto-split; no single class selection)</span>
-    `;
-
-    sel.insertAdjacentElement("afterend", wrap);
-
-    const cb = document.getElementById("rcMegaMode");
-
-    const sync = () => {
-      if (!cb) return;
-      if (cb.checked) {
-        sel.value = "";
-        sel.disabled = true;
-      } else {
-        sel.disabled = false;
-      }
-    };
-
-    cb.addEventListener("change", sync);
-    sync();
-  }
+  // DISABLED: ensureMegaCheckbox replaced by file preview panel
+  // function ensureMegaCheckbox() {
+  //   const sel = document.getElementById("draftClass");
+  //   if (!sel) return;
+  //
+  //   if (document.getElementById("rcMegaMode")) return;
+  //
+  //   const wrap = document.createElement("label");
+  //   wrap.style.display = "flex";
+  //   wrap.style.alignItems = "center";
+  //   wrap.style.gap = "8px";
+  //   wrap.style.marginTop = "6px";
+  //   wrap.style.userSelect = "none";
+  //
+  //   wrap.innerHTML = `
+  //     <input type="checkbox" id="rcMegaMode" />
+  //     <span>Multi-class mega TXT (auto-split; no single class selection)</span>
+  //   `;
+  //
+  //   sel.insertAdjacentElement("afterend", wrap);
+  //
+  //   const cb = document.getElementById("rcMegaMode");
+  //
+  //   const sync = () => {
+  //     if (!cb) return;
+  //     if (cb.checked) {
+  //       sel.value = "";
+  //       sel.disabled = true;
+  //     } else {
+  //       sel.disabled = false;
+  //     }
+  //   };
+  //
+  //   cb.addEventListener("change", sync);
+  //   sync();
+  // }
 
   function getFormEl(id, fallbackSelector) {
     return (
@@ -1668,9 +1669,10 @@ function normalizeTaggedAssignmentText(input) {
     return sections;
   }
 
-  function looksMega(text) {
-    return parseMegaSections(text).length >= 2;
-  }
+  // DISABLED: looksMega replaced by renderFilePreviewPanel
+  // function looksMega(text) {
+  //   return parseMegaSections(text).length >= 2;
+  // }
 
   function loadDrafts() {
     try {
