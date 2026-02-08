@@ -1449,6 +1449,36 @@
    * Open presentation viewer
    */
   function openPresentationViewer(url, section, unit, presentation) {
+    // If we're on the dedicated viewer page, navigate to a new viewer URL
+    // instead of opening the inline overlay (which conflicts with viewer.js)
+    if (isViewerPage()) {
+      // Close the expanded sidebar and lessons navigator before navigating
+      closeLessonsNavigator();
+      const rail = document.querySelector('.app-shell-rail');
+      if (rail) rail.classList.remove('open');
+      clearSidebarAutoClose();
+      
+      // Navigate to new viewer URL
+      // Use buildViewerUrl if available (from open-in-viewer.js), otherwise build manually
+      // Preserve the original return URL from current viewer page
+      const currentParams = new URLSearchParams(window.location.search);
+      const returnUrl = currentParams.get('return') || '/';
+      
+      if (typeof window.buildViewerUrl === 'function') {
+        const viewerUrl = window.buildViewerUrl(url, { return: returnUrl });
+        if (viewerUrl) {
+          window.location.href = viewerUrl;
+          return;
+        }
+      }
+      // Fallback: build viewer URL manually
+      const params = new URLSearchParams();
+      params.set('src', url);
+      params.set('return', returnUrl);
+      window.location.href = '/viewer/?' + params.toString();
+      return;
+    }
+
     const viewer = document.querySelector('.presentation-viewer');
     if (!viewer) return;
 
