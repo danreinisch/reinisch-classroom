@@ -120,6 +120,7 @@
     document.body.classList.toggle('app-shell-collapsed', shouldCollapse);
     if (!shouldCollapse) {
       rail.classList.remove('open');
+      document.body.classList.remove('app-shell-rail-expanded');
     }
   }
 
@@ -379,6 +380,7 @@
       if (document.body.classList.contains('app-shell-icon-only') && rail.classList.contains('open')) {
         if (!rail.contains(e.target) && (!toggle || !toggle.contains(e.target))) {
           rail.classList.remove('open');
+          document.body.classList.remove('app-shell-rail-expanded');
           // Also close lessons navigator if open
           if (lessonsNav) {
             lessonsNav.classList.remove('open');
@@ -426,6 +428,7 @@
       if (isIconOnly) {
         // In icon-only mode, first click expands the rail
         rail.classList.add('open');
+        document.body.classList.add('app-shell-rail-expanded');
         
         // Start auto-close timer
         startSidebarAutoClose();
@@ -880,6 +883,14 @@
       if (lessonsDataHydrated) {
         renderLessonsContent();
       } else {
+        // On viewer pages, skip normalization entirely to avoid HEAD probes
+        if (isViewerPage()) {
+          lessonsDataHydrated = true;
+          debugLog('[app-shell] Viewer page - skipping normalization in openLessonsNavigator');
+          renderLessonsContent();
+          return;
+        }
+        
         const content = navigator.querySelector('.lessons-navigator-content');
         if (content) content.innerHTML = '<div class="lessons-loading">Loading lessons...</div>';
 
@@ -997,6 +1008,7 @@
       
       setTimeout(() => {
         rail.classList.remove('open');
+        document.body.classList.remove('app-shell-rail-expanded');
         rail.classList.remove('auto-closing');
         closeLessonsNavigator();
         clearSidebarAutoClose();
@@ -1464,7 +1476,10 @@
       // Close the expanded sidebar and lessons navigator before navigating
       closeLessonsNavigator();
       const rail = document.querySelector('.app-shell-rail');
-      if (rail) rail.classList.remove('open');
+      if (rail) {
+        rail.classList.remove('open');
+        document.body.classList.remove('app-shell-rail-expanded');
+      }
       clearSidebarAutoClose();
       
       // Navigate to new viewer URL
@@ -1518,7 +1533,10 @@
     
     // Close expanded rail overlay
     const rail = document.querySelector('.app-shell-rail');
-    if (rail) rail.classList.remove('open');
+    if (rail) {
+      rail.classList.remove('open');
+      document.body.classList.remove('app-shell-rail-expanded');
+    }
 
     // Update URL with query params
     updateViewerUrl();
@@ -1749,7 +1767,9 @@
     }
 
     if (candidates.length === 0) {
-      candidates.push(['Teacher', '/.netlify/functions/teacher-session']);
+      // For unknown/public paths, don't probe any session endpoint
+      // This prevents unnecessary 401 errors on public pages like root '/'
+      return { signedIn: false, label: '' };
     }
 
     for (const [label, url] of candidates) {

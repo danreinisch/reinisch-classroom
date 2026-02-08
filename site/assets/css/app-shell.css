@@ -246,6 +246,7 @@ body.app-shell-icon-only .app-shell-rail.open {
   z-index: 1100;
   box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5);
   overflow-y: auto;
+  overflow-x: visible; /* Allow content to not be clipped horizontally */
 }
 
 /* Show all elements when expanded overlay */
@@ -438,6 +439,11 @@ body.app-shell-icon-only .lessons-navigator {
 /* When lessons navigator is open in icon-only mode (viewer page), ensure it's above the iframe */
 body.app-shell-icon-only .lessons-navigator.open {
   z-index: 1101; /* Above expanded rail (1100) and viewer iframe */
+}
+
+/* When rail is expanded in icon-only mode, position lessons navigator to the right of expanded rail */
+body.app-shell-icon-only.app-shell-rail-expanded .lessons-navigator.open {
+  left: var(--shell-width, 260px);
 }
 
 .lessons-navigator-header {
