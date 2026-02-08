@@ -5,23 +5,23 @@
     try{
       const r = await fetch('/.netlify/functions/teacher-session', { cache:'no-store', credentials:'same-origin' });
       if (!r.ok) {
-        location.replace('/hub/?reason=missing_teacher_session&next=%2Fadmin%2F');
+        location.replace('/hub/?reason=missing_teacher_session&next=%2Fteacher%2Fadmin%2F');
         return;
       }
 
       const data = await r.json().catch(() => null);
       const raw = data && (data.raw_role || data.role);
 
-      // Only allow real admins into /admin/
+      // Only allow real admins into /teacher/admin/
       if (raw !== 'admin') {
-        location.replace('/hub/?reason=not_admin&next=%2Fadmin%2F');
+        location.replace('/hub/?reason=not_admin&next=%2Fteacher%2Fadmin%2F');
         return;
       }
 
       document.getElementById('app').style.display='block';
       document.getElementById('gate').style.display='none';
     }catch{
-      location.replace('/hub/?reason=gate_error&next=%2Fadmin%2F');
+      location.replace('/hub/?reason=gate_error&next=%2Fteacher%2Fadmin%2F');
     }
   }
   gate();
