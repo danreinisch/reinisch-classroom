@@ -152,6 +152,43 @@
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
     document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+
+    // Close sidebar when clicking inside iframe (icon-only mode only)
+    // When user clicks iframe, window loses focus and iframe becomes activeElement
+    window.addEventListener('blur', () => {
+      // Use setTimeout to ensure activeElement is updated
+      setTimeout(() => {
+        // Only close sidebar in icon-only mode (desktop with overlay behavior)
+        if (!document.body.classList.contains('app-shell-icon-only')) {
+          return;
+        }
+
+        // Check if iframe gained focus (user clicked inside it)
+        if (document.activeElement === iframe) {
+          const rail = document.querySelector('.app-shell-rail');
+          const lessonsNav = document.querySelector('.lessons-navigator');
+          
+          // Close sidebar if it's open
+          if (rail && rail.classList.contains('open')) {
+            rail.classList.remove('open');
+            console.log('[viewer] Sidebar closed due to iframe click');
+          }
+          
+          // Close lessons navigator if it's open
+          if (lessonsNav && lessonsNav.classList.contains('open')) {
+            lessonsNav.classList.remove('open');
+            console.log('[viewer] Lessons navigator closed due to iframe click');
+          }
+          
+          // Clear auto-close timer by removing progress bar element
+          const autoCloseBar = document.querySelector('.sidebar-auto-close-bar');
+          if (autoCloseBar) {
+            autoCloseBar.remove();
+            console.log('[viewer] Auto-close timer cleared due to iframe click');
+          }
+        }
+      }, 0);
+    });
   }
 
   /**
