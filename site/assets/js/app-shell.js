@@ -14,6 +14,9 @@
   // Constants
   const DEEP_LINK_CHECK_INTERVAL = 500; // ms
   const DEEP_LINK_TIMEOUT = 5000; // ms
+  const DESKTOP_BREAKPOINT = 768; // px - mobile/desktop threshold
+  const SIDEBAR_AUTO_CLOSE_DURATION = 7000; // ms - time before sidebar auto-closes
+  const SIDEBAR_FADE_DURATION = 300; // ms - opacity fade duration when closing
 
   // State for lessons navigator
   let lessonsData = null;
@@ -206,7 +209,7 @@
     if (isPresentation) {
       document.body.classList.add('rc-presentation-active');
       // Only add icon-only on desktop; mobile keeps existing behavior
-      if (window.innerWidth > 768) {
+      if (window.innerWidth > DESKTOP_BREAKPOINT) {
         document.body.classList.add('app-shell-icon-only');
       }
       debugLog('[app-shell] Detected presentation context');
@@ -929,7 +932,7 @@
     // Set timer
     sidebarAutoCloseTimer = setTimeout(() => {
       closeSidebarFromAutoClose();
-    }, 7000);
+    }, SIDEBAR_AUTO_CLOSE_DURATION);
   }
 
   /**
@@ -973,7 +976,7 @@
         rail.classList.remove('auto-closing');
         closeLessonsNavigator();
         clearSidebarAutoClose();
-      }, 300); // 300ms for the opacity fade
+      }, SIDEBAR_FADE_DURATION); // Fade duration for the opacity fade
     }
   }
 
@@ -1455,7 +1458,7 @@
     document.body.classList.add('rc-presentation-active');
     
     // Add icon-only mode on desktop
-    if (window.innerWidth > 768) {
+    if (window.innerWidth > DESKTOP_BREAKPOINT) {
       document.body.classList.add('app-shell-icon-only');
     }
     
