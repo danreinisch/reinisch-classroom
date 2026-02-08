@@ -212,6 +212,7 @@ body.app-shell-icon-only .app-shell-rail {
   pointer-events: auto;
   transition: width 0.3s ease;
   overflow: hidden;
+  z-index: 1001; /* Higher than viewer controls to remain visible */
 }
 
 /* Hide labels, arrows, submenus, brand text, tagline, status in icon-only mode */

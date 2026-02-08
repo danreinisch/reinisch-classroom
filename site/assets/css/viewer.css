@@ -25,7 +25,7 @@ body {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  width: 100vw;
+  width: 100%;
 }
 
 .viewer-controls {
@@ -37,7 +37,7 @@ body {
   backdrop-filter: blur(14px) saturate(125%);
   -webkit-backdrop-filter: blur(14px) saturate(125%);
   flex-shrink: 0;
-  z-index: 1000;
+  z-index: 900;
 }
 
 .viewer-btn {
@@ -159,7 +159,9 @@ body.viewer-sidebar-collapsed .viewer-container {
   transition: margin-left 0.3s ease;
 }
 
-/* Icon-only rail on viewer page */
+/* Icon-only rail on viewer page - offset from 56px rail */
 body.app-shell-icon-only .viewer-container {
-  margin-left: 0;
+  margin-left: var(--shell-width-collapsed, 56px);
+  width: calc(100% - var(--shell-width-collapsed, 56px));
+  transition: margin-left 0.3s ease;
 }
