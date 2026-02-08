@@ -6,6 +6,8 @@
 
   const $ = (id) => document.getElementById(id);
 
+  let editingId = null; // Track which draft is being edited
+
   function nowISO() {
     return new Date().toISOString();
   }
@@ -46,6 +48,19 @@
   function clearMsg() {
     const el = $("workMsg");
     if (el) el.style.display = "none";
+  }
+
+  function isoToDatetimeLocal(iso) {
+    if (!iso) return "";
+    try {
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return "";
+      // Format as local time for the datetime-local input
+      const pad = (n) => String(n).padStart(2, "0");
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    } catch (_) {
+      return "";
+    }
   }
 
   function download(filename, text) {
@@ -130,9 +145,17 @@
       const tdActions = document.createElement("td");
       tdActions.style.whiteSpace = "nowrap";
 
+      const btnEdit = document.createElement("button");
+      btnEdit.type = "button";
+      btnEdit.className = "work-btn";
+      btnEdit.textContent = "Edit";
+      btnEdit.addEventListener("click", () => startEdit(d.id));
+      tdActions.appendChild(btnEdit);
+
       const btnPreview = document.createElement("button");
       btnPreview.type = "button";
       btnPreview.className = "work-btn";
+      btnPreview.style.marginLeft = "8px";
       btnPreview.textContent = "Preview";
       btnPreview.addEventListener("click", () => openPreview(d.id));
       tdActions.appendChild(btnPreview);
@@ -558,6 +581,92 @@ ${shown}
     setTimeout(clearMsg, 1200);
   }
 
+  function startEdit(id) {
+    const drafts = readDrafts();
+    const d = drafts.find((x) => x.id === id);
+    if (!d) return;
+
+    // Store the editing draft ID
+    editingId = id;
+
+    // Populate form fields
+    $("draftTitle").value = d.title || "";
+    
+    // Set class if it exists in the dropdown
+    const classSelect = $("draftClass");
+    if (classSelect) {
+      classSelect.value = d.className || "";
+    }
+
+    // Convert ISO dates to datetime-local format
+    $("draftRelease").value = isoToDatetimeLocal(d.releaseAt);
+    $("draftDue").value = isoToDatetimeLocal(d.dueAt);
+    $("draftNotes").value = d.notes || "";
+
+    // Update file labels to show current files
+    const aLabel = $("assignmentFileName");
+    if (aLabel) {
+      if (d.assignment && d.assignment.name) {
+        aLabel.textContent = `Currently: ${d.assignment.name}`;
+      } else if (d.assignment && d.assignment.link) {
+        aLabel.textContent = "Currently: Link (see below)";
+      } else {
+        aLabel.textContent = "No file selected";
+      }
+    }
+
+    const mLabel = $("mappingFileName");
+    if (mLabel) {
+      if (d.mapping && d.mapping.name) {
+        mLabel.textContent = `Currently: ${d.mapping.name}`;
+      } else {
+        mLabel.textContent = "No file selected";
+      }
+    }
+
+    // Populate assignment link if it exists
+    const linkInput = $("assignmentLink");
+    if (linkInput && d.assignment && d.assignment.link) {
+      linkInput.value = d.assignment.link;
+    }
+
+    // Change Save button to Update
+    const saveBtn = $("btnSaveDraft");
+    if (saveBtn) saveBtn.textContent = "Update Draft";
+
+    // Show Cancel button
+    const cancelBtn = $("btnCancelEdit");
+    if (cancelBtn) cancelBtn.style.display = "";
+
+    // Scroll form into view
+    const form = $("workDraftForm");
+    if (form) {
+      form.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    setMsg("ok", "Editing draft: " + (d.title || "(untitled)"));
+  }
+
+  function cancelEdit() {
+    editingId = null;
+    $("workDraftForm").reset();
+    
+    const saveBtn = $("btnSaveDraft");
+    if (saveBtn) saveBtn.textContent = "Save Draft";
+    
+    const cancelBtn = $("btnCancelEdit");
+    if (cancelBtn) cancelBtn.style.display = "none";
+    
+    // Reset file labels
+    const aLabel = $("assignmentFileName");
+    if (aLabel) aLabel.textContent = "No file selected";
+    
+    const mLabel = $("mappingFileName");
+    if (mLabel) mLabel.textContent = "No file selected";
+    
+    clearMsg();
+  }
+
   function rcIsTextFile(file) {
     if (!file) return false;
     const name = String(file.name || "").toLowerCase();
@@ -711,6 +820,113 @@ ${shown}
 
     if (!title) return setMsg("err", "Title is required.");
     if (!className) return setMsg("err", "Class is required.");
+
+    // Check if we're editing an existing draft
+    if (editingId) {
+      const drafts = readDrafts();
+      const draftIndex = drafts.findIndex((x) => x.id === editingId);
+      if (draftIndex === -1) {
+        setMsg("err", "Draft not found.");
+        cancelEdit();
+        return;
+      }
+
+      const draft = drafts[draftIndex];
+
+      // Update basic fields
+      draft.title = title;
+      draft.className = className;
+      draft.releaseAt = releaseAt || null;
+      draft.dueAt = dueAt || null;
+      draft.notes = notes || null;
+      draft.updatedAt = nowISO();
+
+      // Handle assignment updates
+      const hasNewAssignmentFile = assignmentFile && assignmentFile.size > 0;
+      const hasAssignmentLink = assignmentLink.length > 0;
+
+      if (hasNewAssignmentFile) {
+        // New file uploaded - replace assignment
+        const assignmentText = normalizeTaggedAssignmentText(await readFileAsText(assignmentFile));
+        draft.assignment = {
+          kind: "file",
+          name: assignmentFile.name,
+          link: null,
+          text: bytesOf(assignmentText) > MAX_TEXT_BYTES
+            ? assignmentText.slice(0, 120000) + "\n…(truncated for MVP)\n"
+            : assignmentText,
+        };
+      } else if (hasAssignmentLink) {
+        // Link provided - replace with link
+        draft.assignment = {
+          kind: "link",
+          name: null,
+          link: assignmentLink,
+          text: null,
+        };
+      } else if (!draft.assignment || (!draft.assignment.text && !draft.assignment.link)) {
+        // No existing assignment and no new one provided
+        return setMsg("err", "Assignment is required (file OR link).");
+      }
+      // Else: keep existing assignment unchanged
+
+      // Handle mapping updates
+      if (mappingFile) {
+        // New mapping file uploaded
+        const mappingText = await readFileAsText(mappingFile);
+        if (bytesOf(mappingText) > MAX_TEXT_BYTES) {
+          return setMsg("err", "Mapping file is too large for MVP local storage. Keep it smaller for now.");
+        }
+        draft.mapping = {
+          kind: "file",
+          name: mappingFile.name,
+          text: mappingText,
+        };
+      } else if (hasNewAssignmentFile) {
+        // New assignment uploaded, regenerate auto-mapping
+        let assignmentTextRaw = "";
+        if (typeof rcIsTextFile === "function" && rcIsTextFile(assignmentFile)) {
+          try {
+            assignmentTextRaw = await assignmentFile.text();
+          } catch (_) {
+            /* noop */
+          }
+        }
+        const autoMapping =
+          typeof autoMapFromTeacherTxt === "function"
+            ? autoMapFromTeacherTxt(
+                __rc_joinTagOnlyLines(normalizeTaggedAssignmentText(assignmentTextRaw || ""))
+              )
+            : null;
+        const mappingText = JSON.stringify(
+          autoMapping || {
+            version: 1,
+            sections: [],
+            warnings: ["Auto-mapping unavailable"],
+            counts: { sections: 0, items: 0, warnings: 1 },
+          },
+          null,
+          2
+        );
+        if (bytesOf(mappingText) > MAX_TEXT_BYTES) {
+          return setMsg("err", "Auto-generated mapping is too large for MVP local storage.");
+        }
+        draft.mapping = {
+          kind: "auto",
+          name: "auto-mapping.json",
+          text: mappingText,
+        };
+      }
+      // Else: keep existing mapping unchanged
+
+      writeDrafts(drafts);
+      renderTable(drafts);
+      setMsg("ok", "Draft updated.");
+      cancelEdit();
+      return;
+    }
+
+    // Not editing - create new draft
     if (!mappingFile) {
       if (assignmentLink) return setMsg("err", "Mapping file is required when using a link.");
       if (assignmentFile && typeof rcIsTextFile === "function" && !rcIsTextFile(assignmentFile)) {
@@ -867,6 +1083,8 @@ ${shown}
     if (_ca) _ca.addEventListener("click", clearAll);
     const _fe = $("btnFillExample");
     if (_fe) _fe.addEventListener("click", fillExample);
+    const _ce = $("btnCancelEdit");
+    if (_ce) _ce.addEventListener("click", cancelEdit);
 
     installStudentPreviewSanitizer();
 
