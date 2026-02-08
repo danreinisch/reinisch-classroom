@@ -83,6 +83,14 @@
     // Detect if we're in a presentation context and add appropriate class
     detectPresentationContext();
 
+    // On viewer pages, ensure rail doesn't have .open class
+    // This prevents CSS override (body.app-shell-icon-only .app-shell-rail.open sets width to 260px)
+    // Even though createShell() doesn't add .open, we remove it as a safeguard against
+    // other initialization paths or future changes
+    if (isViewerPage()) {
+      shell.classList.remove('open');
+    }
+
     restoreShellCollapsed();
     window.addEventListener('resize', applyShellCollapsed);
 
@@ -781,6 +789,13 @@
       if (response.ok) {
         lessonsData = await response.json();
         debugLog('[app-shell] Loaded lessons data');
+        
+        // On viewer pages, skip normalization to avoid network race conditions
+        // The viewer page is already displaying a presentation and doesn't need URL probing
+        if (isViewerPage()) {
+          lessonsDataHydrated = true;
+          debugLog('[app-shell] Viewer page detected - skipping lessons normalization');
+        }
       } else {
         debugWarn('[app-shell] Failed to load lessons data:', response.status);
       }
