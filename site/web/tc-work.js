@@ -864,8 +864,10 @@ ${shown}
           link: assignmentLink,
           text: null,
         };
-      } else if (!draft.assignment || (!draft.assignment.text && !draft.assignment.link)) {
-        // No existing assignment and no new one provided
+      } else if (!draft.assignment || 
+                 (draft.assignment.kind === "file" && !draft.assignment.text) ||
+                 (draft.assignment.kind === "link" && !draft.assignment.link)) {
+        // No existing assignment or existing assignment is incomplete
         return setMsg("err", "Assignment is required (file OR link).");
       }
       // Else: keep existing assignment unchanged
