@@ -227,12 +227,13 @@
     const tagOnlyRe = /^\s*(?:\[(?:MLS|DESE|IG|IEP)\s*[.:][^\]]+\]\s*)+$/i;
     // Updated regex to match Question N: format too
     const qStartRe = /^\s*(?:Question\s+)?(?:Q\s*)?\d+\s*[.):]\s+/i;
+    const MAX_TAG_SCAN_LINES = 20; // Maximum lines to scan upward for question
     
     for (let i = 1; i < lines.length; i++) {
       if (tagOnlyRe.test(lines[i])) {
         // Scan upward to find nearest question line
         let targetIdx = -1;
-        for (let j = i - 1; j >= 0 && j >= i - 20; j--) {
+        for (let j = i - 1; j >= 0 && j >= i - MAX_TAG_SCAN_LINES; j--) {
           const ln = lines[j].trim();
           if (!ln) continue; // Skip blank lines
           if (qStartRe.test(lines[j])) {
@@ -775,6 +776,7 @@ ${shown}
     const isDayLine = (line) => /^\s*DAY\s+(\d+)\b/i.test(line);
     // BUG 4 FIX: Detect writing prompt lines
     const isWritingPromptLine = (line) => /^\s*(?:DAY\s+\d+\s+)?WRITING\s+PROMPT\b/i.test(line);
+    const isWrittenResponseLine = (line) => /^\s*WRITTEN\s+RESPONSE\b/i.test(line);
     const isTagLine = (line) =>
       /\[[^\]]+\]/.test(line) &&
       (/\bMLS\b/i.test(line) ||
@@ -820,7 +822,7 @@ ${shown}
         continue;
       }
 
-      if (/^\s*WRITTEN\s+RESPONSE\b/i.test(line)) {
+      if (isWrittenResponseLine(line)) {
         wrIndex += 1;
         const wrKey = "WR" + wrIndex;
         // Check if tags are on the same line
@@ -841,18 +843,17 @@ ${shown}
         const qKey = currentDay ? `D${currentDay}.Q${qNum}` : `Q${qNum}`;
         let tags = parseTagsFromLine(line);
 
-        // BUG 5 FIX: Remove break to collect ALL tag lines between questions
+        // BUG 5 FIX: Collect ALL tag lines between questions (not just first)
         for (let j = i + 1; j < lines.length; j++) {
           const l2 = lines[j];
           // Stop at next question, section, day, writing prompt, or written response
-          if (isQuestionLine(l2) || isSectionLine(l2) || isDayLine(l2) || isWritingPromptLine(l2) || /^\s*WRITTEN\s+RESPONSE\b/i.test(l2)) break;
+          if (isQuestionLine(l2) || isSectionLine(l2) || isDayLine(l2) || isWritingPromptLine(l2) || isWrittenResponseLine(l2)) break;
           if (isTagLine(l2)) {
             const more = parseTagsFromLine(l2);
             tags = {
               dese: (tags.dese || []).concat(more.dese || []),
               iep: (tags.iep || []).concat(more.iep || []),
             };
-            // continue instead of break to collect all tag lines
           }
         }
 
