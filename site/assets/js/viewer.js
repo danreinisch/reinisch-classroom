@@ -171,20 +171,17 @@
           // Close sidebar if it's open
           if (rail && rail.classList.contains('open')) {
             rail.classList.remove('open');
-            console.log('[viewer] Sidebar closed due to iframe click');
           }
           
           // Close lessons navigator if it's open
           if (lessonsNav && lessonsNav.classList.contains('open')) {
             lessonsNav.classList.remove('open');
-            console.log('[viewer] Lessons navigator closed due to iframe click');
           }
           
           // Clear auto-close timer by removing progress bar element
           const autoCloseBar = document.querySelector('.sidebar-auto-close-bar');
           if (autoCloseBar) {
             autoCloseBar.remove();
-            console.log('[viewer] Auto-close timer cleared due to iframe click');
           }
         }
       }, 0);
