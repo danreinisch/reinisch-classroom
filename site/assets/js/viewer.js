@@ -154,15 +154,18 @@
     document.addEventListener('mozfullscreenchange', handleFullscreenChange);
 
     // Close sidebar when clicking inside iframe (icon-only mode only)
-    // When user clicks iframe, window loses focus and iframe becomes activeElement
+    // When user clicks iframe, window loses focus and iframe becomes activeElement.
+    // We use the blur event because clicks inside an iframe don't bubble up to the parent.
     window.addEventListener('blur', () => {
-      // Use setTimeout to ensure activeElement is updated
+      // Only process if in icon-only mode (desktop with overlay behavior)
+      if (!document.body.classList.contains('app-shell-icon-only')) {
+        return;
+      }
+      
+      // Use setTimeout to ensure document.activeElement is updated after blur.
+      // The browser updates activeElement asynchronously during focus transition,
+      // so checking immediately would give us the old value.
       setTimeout(() => {
-        // Only close sidebar in icon-only mode (desktop with overlay behavior)
-        if (!document.body.classList.contains('app-shell-icon-only')) {
-          return;
-        }
-
         // Check if iframe gained focus (user clicked inside it)
         if (document.activeElement === iframe) {
           const rail = document.querySelector('.app-shell-rail');
