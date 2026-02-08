@@ -435,6 +435,11 @@ body.app-shell-icon-only .lessons-navigator {
   transform: translateX(0);
 }
 
+/* When lessons navigator is open in icon-only mode (viewer page), ensure it's above the iframe */
+body.app-shell-icon-only .lessons-navigator.open {
+  z-index: 1101; /* Above expanded rail (1100) and viewer iframe */
+}
+
 .lessons-navigator-header {
   display: flex;
   align-items: center;

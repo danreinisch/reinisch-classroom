@@ -197,7 +197,7 @@
    */
   function isViewerPage() {
     const pathname = window.location.pathname;
-    return pathname.startsWith('/viewer/') || pathname.startsWith('/viewer');
+    return pathname === '/viewer' || pathname.startsWith('/viewer/');
   }
 
   /**
@@ -868,6 +868,15 @@
 
     // Render content if we have data (hydrate titles + hide stale entries once)
     if (lessonsData) {
+      // On viewer pages, skip normalization entirely to avoid HEAD probes
+      // even if user clicks Lessons before loadLessonsData completes
+      if (isViewerPage() && !lessonsDataHydrated) {
+        lessonsDataHydrated = true;
+        debugLog('[app-shell] Viewer page - skipping normalization on Lessons click');
+        renderLessonsContent();
+        return;
+      }
+      
       if (lessonsDataHydrated) {
         renderLessonsContent();
       } else {
@@ -1716,6 +1725,17 @@
 
   const detectRoleSession = async () => {
     const path = location.pathname || '';
+    
+    // Skip auth check for public content pages (viewer, presentations, etc.)
+    // These pages don't require authentication and shouldn't probe session endpoints
+    if (path === '/viewer' || 
+        path.startsWith('/viewer/') || 
+        path.startsWith('/presentations/') || 
+        path.startsWith('/language-arts/') || 
+        path.startsWith('/life-skills/')) {
+      return { signedIn: false, label: '' };
+    }
+    
     const candidates = [];
 
     if (path.startsWith('/teacher')) candidates.push(['Teacher', '/.netlify/functions/teacher-session']);
