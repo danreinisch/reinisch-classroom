@@ -84,6 +84,20 @@
 
 # Redirects for presentation navigation script
 # Ensures /site/assets/js/presentation-nav.js resolves to canonical location
+
+# Admin redirect - redirect old /admin/ URL to new Teacher Center location
+[[redirects]]
+  from = "/admin/"
+  to = "/teacher/admin/"
+  status = 301
+  force = false
+
+[[redirects]]
+  from = "/admin/*"
+  to = "/teacher/admin/:splat"
+  status = 301
+  force = false
+
 [[redirects]]
   from = "/site/assets/js/presentation-nav.js"
   to = "/assets/js/presentation-nav.js"
@@ -132,6 +146,12 @@
 # Redirects unauthenticated users to Teacher Center (/hub/)
 [[edge_functions]]
   path = "/admin/*"
+  function = "admin-auth-guard"
+
+# Admin access guard for new Teacher Center location
+# Protects /teacher/admin/* from unauthenticated access
+[[edge_functions]]
+  path = "/teacher/admin/*"
   function = "admin-auth-guard"
 
 # Legacy admin-login redirect (PR 335)

@@ -18,7 +18,8 @@ function redirectToHubSSO() {
 }
 
 function isAdminPath(pathname) {
-  return pathname === "/admin" || pathname.startsWith("/admin/");
+  return pathname === "/admin" || pathname.startsWith("/admin/") ||
+         pathname === "/teacher/admin" || pathname.startsWith("/teacher/admin/");
 }
 
 function hasTcCookie(cookieHeader) {

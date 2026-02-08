@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Teacher Center — Admin</title>
+  <link rel="stylesheet" href="/web/teacher-shell.css" />
+  <script src="/assets/js/admin-guard.js"></script>
+  <script src="./gate.js" defer></script>
+
+  <style>
+    .wrap{
+      max-width:1100px;margin:32px auto;padding:20px;
+      background:var(--surface0, #0f1512);border:1px solid var(--border, rgba(255, 255, 255, 0.08));border-radius:14px;
+      box-shadow: var(--shadow-0, 0 12px 30px rgba(0, 0, 0, 0.45));
+    }
+    .bar{
+      display:flex;justify-content:space-between;align-items:center;margin-bottom:12px
+    }
+    .row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+    .row > *{flex:1 1 220px}
+    .tc-main label{display:block;margin-bottom:6px;font-weight:700;color:var(--text1, #a9bbb1)}
+    .tc-main input,.tc-main select,.tc-main button,.tc-main textarea{
+      width:100%;padding:10px;border-radius:var(--r-md, 14px);border:1px solid var(--border, rgba(255, 255, 255, 0.08));
+      background:rgba(10, 14, 12, 0.55);color:var(--text0, #e8f1ec)
+    }
+    .tc-main input:focus,.tc-main select:focus,.tc-main textarea:focus{
+      outline: none;
+      border-color: color-mix(in oklab, var(--accent, #35e08a) 55%, transparent);
+      box-shadow:
+        0 0 0 4px color-mix(in oklab, var(--accent, #35e08a) 18%, transparent),
+        var(--shadow-1, 0 18px 50px rgba(0, 0, 0, 0.6));
+    }
+    .tc-main button.primary{
+      border:0;background:linear-gradient(180deg, color-mix(in oklab, var(--accent, #35e08a) 80%, transparent), color-mix(in oklab, var(--accent2, #14b86a) 80%, transparent));
+      cursor:pointer;color:#032313;font-weight:800;
+      box-shadow: 0 4px 16px var(--glow, rgba(53, 224, 138, 0.2));
+    }
+    .tc-main button.primary:hover{
+      box-shadow: 0 6px 22px var(--glow, rgba(53, 224, 138, 0.3));
+    }
+    .tc-main button.warn{
+      border:1px solid #f59e0b;background:linear-gradient(180deg,#fbbf24,#f59e0b);cursor:pointer;color:#1b2437;font-weight:800;
+    }
+    .admin-btn{
+      display:inline-flex;align-items:center;justify-content:center;gap:0.4rem;
+      padding:0.5rem 0.85rem;border-radius:var(--r-md, 14px);
+      background:var(--glass, rgba(17, 26, 21, 0.58));border:1px solid var(--border, rgba(255, 255, 255, 0.08));
+      color:var(--text0, #e8f1ec);text-decoration:none;font-weight:700;cursor:pointer;
+      transition: all 0.12s ease;
+    }
+    .admin-btn:hover{
+      border-color:var(--border-strong, rgba(255, 255, 255, 0.14));
+      transform:translateY(-1px);
+    }
+    .drop{
+      border:2px dashed var(--border, rgba(255, 255, 255, 0.08));padding:18px;border-radius:12px;text-align:center;color:var(--text1, #a9bbb1)
+    }
+    .drop.drag{border-color:var(--accent, #35e08a);color:var(--text0, #e8f1ec);background:var(--glow, rgba(53, 224, 138, 0.1))}
+    .list{
+      max-height:220px;overflow:auto;background:rgba(10, 14, 12, 0.55);border:1px solid var(--border, rgba(255, 255, 255, 0.08));
+      border-radius:10px;padding:8px;font:12px var(--mono, ui-monospace, Menlo, Consolas, monospace)
+    }
+    .log{
+      margin-top:16px;background:rgba(10, 14, 12, 0.55);border:1px solid var(--border, rgba(255, 255, 255, 0.08));
+      border-radius:10px;padding:10px;height:260px;overflow:auto;font:12px var(--mono, ui-monospace, Menlo, Consolas, monospace);
+      color:var(--text0, #e8f1ec);white-space:pre-wrap;
+      min-height:0; /* Enable proper scrolling */
+    }
+    .sp{flex:1}
+    .hint{font-size:12px;color:var(--text1, #a9bbb1);margin-top:4px}
+    .taken-note{font-size:12px;color:#fde68a;margin-top:4px}
+    .tc-main h1{color:var(--text0, #e8f1ec)}
+  </style>
+</head>
+<body>
+  <div class="tc-app">
+    <header class="tc-topbar">
+      <button class="tc-btn" id="tcSidebarToggle" aria-label="Toggle sidebar" aria-expanded="false">☰</button>
+      <a class="tc-btn" href="/" target="_blank" rel="noopener" aria-label="Home">🏠</a>
+      <div class="tc-title">Teacher Center — Admin</div>
+    </header>
+
+    <div class="tc-shell">
+      <aside class="tc-sidebar" aria-label="Teacher navigation">
+        <nav class="tc-nav">
+          <a data-href="/teacher/" href="/teacher/"><span class="tc-icon">🏁</span><span class="tc-label">Overview</span></a>
+          <a data-href="/teacher/work/" href="/teacher/work/"><span class="tc-icon">🗂️</span><span class="tc-label">Work</span></a>
+          <a data-href="/teacher/library/" href="/teacher/library/"><span class="tc-icon">📚</span><span class="tc-label">Library</span></a>
+          <a data-href="/teacher/review/" href="/teacher/review/"><span class="tc-icon">✍️</span><span class="tc-label">Review</span></a>
+          <a data-href="/teacher/gradebook/" href="/teacher/gradebook/"><span class="tc-icon">📊</span><span class="tc-label">Gradebook</span></a>
+          <a data-href="/teacher/students/" href="/teacher/students/"><span class="tc-icon">🧑‍🎓</span><span class="tc-label">Students</span></a>
+          <a data-href="/teacher/classes/" href="/teacher/classes/"><span class="tc-icon">🏫</span><span class="tc-label">Classes</span></a>
+          <a data-href="/teacher/data/" href="/teacher/data/"><span class="tc-icon">🧾</span><span class="tc-label">Data</span></a>
+          <a data-href="/teacher/admin/" href="/teacher/admin/"><span class="tc-icon">🛡️</span><span class="tc-label">Admin</span></a>
+          <a data-href="/teacher/reporting/" href="/teacher/reporting/"><span class="tc-icon">📑</span><span class="tc-label">Reporting</span></a>
+          <a data-href="/teacher/settings/" href="/teacher/settings/"><span class="tc-icon">⚙️</span><span class="tc-label">Settings</span></a>
+        </nav>
+      </aside>
+
+      <main class="tc-main">
+        <!-- Gate check before showing content -->
+        <div id="gate" style="min-height:100vh;display:grid;place-items:center">Checking session…</div>
+
+        <div id="app" style="display:none">
+          <div class="wrap">
+            <div class="bar">
+              <h1 style="margin:0">Admin Uploader</h1>
+              <div style="display:flex;gap:.5rem;align-items:center">
+                <a class="admin-btn" href="/">Home</a>
+                <a class="admin-btn" href="/.netlify/functions/admin-logout">Sign out</a>
+              </div>
+            </div>
+
+            <div id="preview-hint" style="display:none;padding:12px;margin-bottom:12px;background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.3);border-radius:8px;color:#fbbf24;">
+              ⚠️ <strong>Preview Deploy:</strong> Make sure you sign in on this deploy-preview domain so the Teacher Center session cookie is minted here.
+            </div>
+
+            <div class="row">
+              <div>
+                <label for="cat">Category</label>
+                <select id="cat"></select>
+              </div>
+
+              <div>
+                <label for="slotSel">Slot</label>
+                <select id="slotSel"></select>
+                <div class="hint">Open slots show "Open"; taken slots show the current title.</div>
+                <div id="slotWarn" class="taken-note" style="display:none"></div>
+              </div>
+
+              <div class="sp">
+                <label for="title">Title</label>
+                <input id="title" placeholder="Presentation title" />
+              </div>
+            </div>
+
+            <div class="row">
+              <div style="flex:1 1 320px">
+                <div class="drop" id="drop">Drop files here, or use the pickers below</div>
+              </div>
+            </div>
+
+            <div class="row">
+              <div>
+                <label>Add files</label>
+                <input id="files" type="file" multiple />
+              </div>
+              <div>
+                <label>Add a folder (optional)</label>
+                <input id="folder" type="file" webkitdirectory directory multiple />
+              </div>
+              <div>
+                <label>&nbsp;</label>
+                <button class="primary" id="upload">Upload</button>
+              </div>
+              <div>
+                <label>&nbsp;</label>
+                <button class="warn" id="deleteBtn" disabled>Delete slot</button>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="sp">
+                <label>Selected files</label>
+                <div class="list" id="list">(no files selected)</div>
+              </div>
+            </div>
+
+            <div class="row">
+              <div>
+                <label>Diagnostic Tools</label>
+                <button class="primary" id="auditBtn">Audit Life Skills</button>
+                <div class="hint">Scan Life Skills directories and verify site-state.json entries</div>
+              </div>
+            </div>
+
+            <div class="log" id="log"></div>
+          </div>
+        </div>
+
+        <!-- New Category helper (Language Arts) -->
+        <section class="panel" id="unitScaffolderCard" style="margin-top: 1rem; display:none">
+          <h2 style="margin: 0 0 .5rem 0;">New Category (Language Arts)</h2>
+          <div class="hint" style="margin-bottom:.75rem;">
+            This does not modify the live site directly. It generates the exact commands to run locally to scaffold a new unit folder and regenerate the Lessons index.
+          </div>
+
+          <label for="newUnitTitle" style="display:block; font-weight:600; margin:.5rem 0 .25rem;">Unit title</label>
+          <input id="newUnitTitle" type="text" placeholder="e.g., Long Way Down" style="width:100%; padding:.6rem .7rem; border-radius:.5rem; border:1px solid rgba(255,255,255,.2); background: rgba(255,255,255,.08); color: inherit;" />
+
+          <div style="display:flex; flex-wrap:wrap; gap:.5rem; margin:.75rem 0;">
+            <button class="primary" id="copyNewUnitCmd">Copy: scaffold category + Presentation 1</button>
+            <button class="warn" id="copyNewUnitCmdNoPres">Copy: scaffold category only</button>
+            <button class="primary" id="copyGenerateIndexCmd">Copy: regenerate Lessons index</button>
+            <button class="warn" id="copyFullWorkflowCmd">Copy: full workflow</button>
+          </div>
+
+          <pre id="unitCmdPreview" style="white-space:pre-wrap; padding:.75rem; border-radius:.5rem; border:1px solid rgba(255,255,255,.2); background: rgba(0,0,0,.25); margin:0;"></pre>
+
+          <div class="hint" style="margin-top:.5rem;">
+            Paste into Terminal at repo root. Then commit + push (or open a PR) like normal.
+          </div>
+        </section>
+
+        <div class="card" id="unitManagerCard" style="margin-top:12px; display:none">
+          <div class="card-header">
+            <div>Category Manager</div>
+          </div>
+
+          <div class="hint" style="margin-bottom:10px">
+            Creates/updates a category by writing <code>units.json</code> + initializing <code>site-state.json</code>.
+            Also creates a safe default unit landing page if missing (won't overwrite custom pages).
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div>
+              <label style="display:block;font-weight:700;margin-bottom:6px">Title</label>
+              <input id="unitMgrTitle" class="input" placeholder="Fahrenheit 451" />
+            </div>
+
+            <div>
+              <label style="display:block;font-weight:700;margin-bottom:6px">Unit ID (lowercase)</label>
+              <input id="unitMgrId" class="input" placeholder="f451" />
+              <div class="hint">2–32 chars: a–z, 0–9, <code>-</code>, <code>_</code></div>
+            </div>
+
+            <div>
+              <label style="display:block;font-weight:700;margin-bottom:6px">Section</label>
+              <select id="unitMgrSection" class="input">
+                <option value="language-arts">Language Arts</option>
+                <option value="life-skills">Life Skills</option>
+              </select>
+            </div>
+
+            <div>
+              <label style="display:block;font-weight:700;margin-bottom:6px">Slots</label>
+              <input id="unitMgrSlots" class="input" type="number" min="1" max="64" value="16" />
+            </div>
+
+            <div style="grid-column:1 / -1">
+              <label style="display:block;font-weight:700;margin-bottom:6px">baseOut</label>
+              <input id="unitMgrBaseOut" class="input" placeholder="presentations/fahrenheit-451" />
+              <div class="hint">Where presentations live (relative path). No leading slash.</div>
+            </div>
+
+            <div style="grid-column:1 / -1">
+              <label style="display:block;font-weight:700;margin-bottom:6px">pagePath</label>
+              <input id="unitMgrPagePath" class="input" placeholder="/language-arts/fahrenheit-451/" />
+              <div class="hint">Must start and end with <code>/</code></div>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:10px;align-items:center;margin-top:12px">
+            <button class="admin-btn" id="btnUnitMgrAutofill">Auto-fill from Title</button>
+            <button class="admin-btn primary" id="btnUnitMgrUpsert">Create / Update Category</button>
+            <div class="hint" id="unitMgrStatus" style="margin-left:auto"></div>
+          </div>
+
+          <pre id="unitMgrPreview" class="mono" style="margin-top:10px;white-space:pre-wrap"></pre>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <script src="./app.js"></script>
+  <script defer src="/web/teacher-shell.js"></script>
+
+  <script>
+    // Show preview-only hint on deploy-preview hosts
+    if (window.location.hostname.startsWith('deploy-preview-')) {
+      const hint = document.getElementById('preview-hint');
+      if (hint) hint.style.display = 'block';
+    }
+    // Show unit scaffolder and manager cards once app is ready
+    document.addEventListener('DOMContentLoaded', function() {
+      setTimeout(function() {
+        const app = document.getElementById('app');
+        if (app && app.style.display !== 'none') {
+          const scaffolder = document.getElementById('unitScaffolderCard');
+          const manager = document.getElementById('unitManagerCard');
+          if (scaffolder) scaffolder.style.display = 'block';
+          if (manager) manager.style.display = 'block';
+        }
+      }, 500);
+    });
+  </script>
+</body>
+</html>
