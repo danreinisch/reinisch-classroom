@@ -1749,6 +1749,11 @@ function normalizeTaggedAssignmentText(input) {
     };
   }
 
+  function updateClassDropdownLabel(text) {
+    const label = document.querySelector('label[for="draftClass"]');
+    if (label) label.textContent = text;
+  }
+
   function renderFilePreviewPanel(text) {
     const panel = document.getElementById("rcFilePreviewPanel");
     if (!panel) return;
@@ -1825,10 +1830,7 @@ function normalizeTaggedAssignmentText(input) {
         classSel.value = "";
         classSel.disabled = true;
         classSel.removeAttribute("required");
-        
-        // Update label to indicate class is from file
-        const label = document.querySelector('label[for="draftClass"]');
-        if (label) label.textContent = "Class (from file)";
+        updateClassDropdownLabel("Class (from file)");
       }
     } else if (sections.length === 1) {
       // Single section detected, but still show it
@@ -1851,10 +1853,7 @@ function normalizeTaggedAssignmentText(input) {
       if (classSel) {
         classSel.disabled = false;
         classSel.setAttribute("required", "");
-        
-        // Restore label
-        const label = document.querySelector('label[for="draftClass"]');
-        if (label) label.textContent = "Class (required)";
+        updateClassDropdownLabel("Class (required)");
       }
     } else {
       // No sections detected (normal single-class file)
@@ -1862,10 +1861,7 @@ function normalizeTaggedAssignmentText(input) {
       if (classSel) {
         classSel.disabled = false;
         classSel.setAttribute("required", "");
-        
-        // Restore label
-        const label = document.querySelector('label[for="draftClass"]');
-        if (label) label.textContent = "Class (required)";
+        updateClassDropdownLabel("Class (required)");
       }
     }
   }
@@ -2009,10 +2005,7 @@ function normalizeTaggedAssignmentText(input) {
               if (classSel) {
                 classSel.disabled = false;
                 classSel.setAttribute("required", "");
-                
-                // Restore label
-                const label = document.querySelector('label[for="draftClass"]');
-                if (label) label.textContent = "Class (required)";
+                updateClassDropdownLabel("Class (required)");
               }
               return;
             }

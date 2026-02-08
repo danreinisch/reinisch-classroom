@@ -269,7 +269,7 @@
       (e) => {
         if (e.key !== "Escape") return;
         const dlg = document.querySelector(
-          "dialog[open], [role='dialog']:not([hidden]), .modal, .rc-modal, .overlay, [data-modal]"
+          "dialog[open]:not([hidden]), [role='dialog']:not([hidden]), .modal:not([hidden]), .rc-modal:not([hidden]), .overlay:not([hidden]), [data-modal]:not([hidden])"
         );
         if (dlg) {
           // Don't remove reusable modals - hide them instead
