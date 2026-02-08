@@ -561,6 +561,10 @@ ${shown}
     const next = drafts.filter((x) => x.id !== id);
     writeDrafts(next);
     renderTable(next);
+    
+    // Remote sync
+    remoteDeleteDraft(id);
+    
     setMsg("ok", "Draft deleted.");
     setTimeout(clearMsg, 1200);
   }
@@ -575,8 +579,15 @@ ${shown}
 
   function clearAll() {
     if (!confirm("Clear ALL drafts stored in this browser?")) return;
+    const old = readDrafts(); // get IDs before clearing
     writeDrafts([]);
     renderTable([]);
+    
+    // Delete each from remote
+    for (const d of old) {
+      remoteDeleteDraft(d.id);
+    }
+    
     setMsg("ok", "All drafts cleared.");
     setTimeout(clearMsg, 1200);
   }
@@ -923,6 +934,10 @@ ${shown}
 
       writeDrafts(drafts);
       renderTable(drafts);
+      
+      // Remote sync
+      remoteSaveDraft(draft);
+      
       setMsg("ok", "Draft updated.");
       cancelEdit();
       return;
@@ -1028,6 +1043,9 @@ ${shown}
     writeDrafts(drafts);
     renderTable(drafts);
 
+    // Remote sync
+    remoteSaveDraft(draft);
+
     setMsg("ok", "Draft saved (browser-local).");
     $("workDraftForm").reset();
     setTimeout(clearMsg, 1400);
@@ -1073,6 +1091,140 @@ ${shown}
     }
   }
 
+  // ========================================
+  // Remote Sync Functions (Supabase)
+  // ========================================
+
+  function isRemoteEnabled() {
+    // Check for teacher session cookie (rc_session or tc)
+    const hasCookie = document.cookie.split(';').some(c => {
+      const trimmed = c.trim();
+      return trimmed.startsWith('rc_session=') || trimmed.startsWith('tc=');
+    });
+    // Check if Supabase is configured via the settings module
+    // Simple check: does the Supabase URL exist in localStorage?
+    const hasUrl = !!(localStorage.getItem('rc_unified_supabase_url') || localStorage.getItem('rc_supabase_url'));
+    return hasCookie && hasUrl;
+  }
+
+  async function remoteSaveDraft(draft) {
+    if (!isRemoteEnabled()) return;
+    try {
+      const res = await fetch('/.netlify/functions/teacher-drafts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify(draft)
+      });
+      if (!res.ok) console.warn('[tc-work] Remote save failed:', res.status);
+    } catch (err) {
+      console.warn('[tc-work] Remote save error:', err.message);
+    }
+  }
+
+  async function remoteDeleteDraft(id) {
+    if (!isRemoteEnabled()) return;
+    try {
+      const res = await fetch(`/.netlify/functions/teacher-drafts?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+        credentials: 'same-origin'
+      });
+      if (!res.ok) console.warn('[tc-work] Remote delete failed:', res.status);
+    } catch (err) {
+      console.warn('[tc-work] Remote delete error:', err.message);
+    }
+  }
+
+  async function remoteLoadDrafts() {
+    if (!isRemoteEnabled()) return;
+    
+    const syncEl = $("syncStatus");
+    if (syncEl) syncEl.textContent = "Syncing…";
+    
+    try {
+      const res = await fetch('/.netlify/functions/teacher-drafts', {
+        method: 'GET',
+        credentials: 'same-origin'
+      });
+      
+      if (!res.ok) {
+        if (syncEl) syncEl.textContent = "Local only";
+        return;
+      }
+      
+      const data = await res.json();
+      if (!data.ok || !Array.isArray(data.drafts)) {
+        if (syncEl) syncEl.textContent = "Local only";
+        return;
+      }
+      
+      // Convert DB rows back to client schema
+      const remoteDrafts = data.drafts.map(row => ({
+        id: row.id,
+        title: row.title,
+        className: row.class_name,
+        releaseAt: row.release_at,
+        dueAt: row.due_at,
+        notes: row.notes,
+        assignment: row.assignment || {},
+        mapping: row.mapping || {},
+        createdAt: row.created_at,
+        updatedAt: row.updated_at
+      }));
+      
+      // Merge: remote wins on conflicts (by updatedAt)
+      const local = readDrafts();
+      const localMap = new Map(local.map(d => [d.id, d]));
+      
+      for (const rd of remoteDrafts) {
+        const ld = localMap.get(rd.id);
+        if (!ld) {
+          // Draft exists remotely but not locally — add it
+          localMap.set(rd.id, rd);
+        } else {
+          // Both exist — remote wins if it's newer
+          const remoteTime = new Date(rd.updatedAt || rd.createdAt || 0).getTime();
+          const localTime = new Date(ld.updatedAt || ld.createdAt || 0).getTime();
+          if (remoteTime > localTime) {
+            localMap.set(rd.id, rd);
+          }
+        }
+      }
+      
+      // Also push any local-only drafts to remote
+      for (const ld of local) {
+        const exists = remoteDrafts.find(rd => rd.id === ld.id);
+        if (!exists) {
+          // Local-only draft — push to remote
+          remoteSaveDraft(ld);
+        }
+      }
+      
+      const merged = Array.from(localMap.values());
+      // Sort by updatedAt/createdAt descending
+      merged.sort((a, b) => {
+        const ta = new Date(a.updatedAt || a.createdAt || 0).getTime();
+        const tb = new Date(b.updatedAt || b.createdAt || 0).getTime();
+        return tb - ta;
+      });
+      
+      writeDrafts(merged);
+      renderTable(merged);
+      
+      if (syncEl) {
+        syncEl.textContent = "✓ Synced";
+        setTimeout(() => { if (syncEl) syncEl.textContent = ""; }, 3000);
+      }
+    } catch (err) {
+      console.warn('[tc-work] Remote load error:', err.message);
+      if (syncEl) syncEl.textContent = "Local only";
+    }
+  }
+
+  // Expose for use by mega-split and QoL modules
+  window.__rcRemoteSaveDraft = remoteSaveDraft;
+  window.__rcRemoteDeleteDraft = remoteDeleteDraft;
+
   function init() {
     const drafts = readDrafts();
     renderTable(drafts);
@@ -1092,6 +1244,9 @@ ${shown}
 
     wireModal();
     wireFileLabels();
+    
+    // Background sync with Supabase (non-blocking)
+    remoteLoadDrafts();
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
@@ -1497,6 +1652,14 @@ function normalizeTaggedAssignmentText(input) {
     }
 
     saveDrafts(drafts);
+
+    // Sync mega-split drafts to remote if available
+    if (typeof window.__rcRemoteSaveDraft === 'function') {
+      for (const sec of sections) {
+        const newDraft = drafts.find(d => d.className === sec.cls);
+        if (newDraft) window.__rcRemoteSaveDraft(newDraft);
+      }
+    }
 
     const cb = document.getElementById("rcMegaMode");
     if (cb && classSel) {
