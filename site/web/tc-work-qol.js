@@ -248,6 +248,9 @@
           btn.closest("[data-modal]");
 
         if (modal) {
+          // Skip draftOverlay - it has its own close handler in tc-work.js
+          if (modal.id === 'draftOverlay') return;
+          
           e.preventDefault();
           e.stopPropagation();
           // Don't remove reusable modals - hide them instead
@@ -266,9 +269,16 @@
       (e) => {
         if (e.key !== "Escape") return;
         const dlg = document.querySelector(
-          "dialog[open], [role='dialog'], .modal, .rc-modal, .overlay, [data-modal]"
+          "dialog[open], [role='dialog']:not([hidden]), .modal, .rc-modal, .overlay, [data-modal]"
         );
-        if (dlg) dlg.remove?.();
+        if (dlg) {
+          // Don't remove reusable modals - hide them instead
+          if (dlg.id) {
+            dlg.hidden = true;
+          } else {
+            dlg.remove?.();
+          }
+        }
       },
       true
     );
