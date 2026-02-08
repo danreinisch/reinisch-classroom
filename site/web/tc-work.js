@@ -753,6 +753,26 @@ ${shown}
     });
   }
 
+  function wireFileLabels() {
+    const aInput = $("assignmentFile");
+    const aLabel = $("assignmentFileName");
+    const mInput = $("mappingFile");
+    const mLabel = $("mappingFileName");
+
+    if (aInput && aLabel) {
+      aInput.addEventListener("change", () => {
+        const f = aInput.files && aInput.files[0];
+        aLabel.textContent = f ? f.name : "No file selected";
+      });
+    }
+    if (mInput && mLabel) {
+      mInput.addEventListener("change", () => {
+        const f = mInput.files && mInput.files[0];
+        mLabel.textContent = f ? f.name : "No file selected";
+      });
+    }
+  }
+
   function init() {
     const drafts = readDrafts();
     renderTable(drafts);
@@ -765,6 +785,7 @@ ${shown}
     installStudentPreviewSanitizer();
 
     wireModal();
+    wireFileLabels();
 }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
@@ -927,6 +948,7 @@ ${shown}
 
   const DRAFT_KEY = "rc_tc_work_drafts_v1";
 
+  // NOTE: Keep in sync with CLASS_LABELS in tc-work-qol.js
   const CANON_CLASSES = [
     "LA 1 SC",
     "LA 2 SC",
