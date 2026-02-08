@@ -14,6 +14,9 @@
   // Constants
   const DEEP_LINK_CHECK_INTERVAL = 500; // ms
   const DEEP_LINK_TIMEOUT = 5000; // ms
+  const DESKTOP_BREAKPOINT = 768; // px - mobile/desktop threshold
+  const SIDEBAR_AUTO_CLOSE_DURATION = 7000; // ms - time before sidebar auto-closes
+  const SIDEBAR_FADE_DURATION = 300; // ms - opacity fade duration when closing
 
   // State for lessons navigator
   let lessonsData = null;
@@ -28,6 +31,10 @@
   // Shell collapse persistence
   const SHELL_COLLAPSE_KEY = 'app-shell-collapsed';
   let shellCollapsed = false;
+
+  // Sidebar auto-close state
+  let sidebarAutoCloseTimer = null;
+  let sidebarAutoCloseBar = null;
 
   // Lessons navigator accordion state persistence
   const LESSONS_NAV_STATE_KEY = 'rc_lessons_nav_state';
@@ -202,7 +209,7 @@
     if (isPresentation) {
       document.body.classList.add('rc-presentation-active');
       // Only add icon-only on desktop; mobile keeps existing behavior
-      if (window.innerWidth > 768) {
+      if (window.innerWidth > DESKTOP_BREAKPOINT) {
         document.body.classList.add('app-shell-icon-only');
       }
       debugLog('[app-shell] Detected presentation context');
@@ -368,6 +375,8 @@
           if (lessonsNav) {
             lessonsNav.classList.remove('open');
           }
+          // Clear auto-close timer
+          clearSidebarAutoClose();
         }
       }
     });
@@ -409,6 +418,9 @@
       if (isIconOnly) {
         // In icon-only mode, first click expands the rail
         rail.classList.add('open');
+        
+        // Start auto-close timer
+        startSidebarAutoClose();
         
         // For items with submenus (lessons, toolkits, teacher), just expand
         // For direct nav items (student, substitute), expand then proceed to navigate
@@ -472,6 +484,19 @@
     const signOutBtn = rail.querySelector('[data-shell-action="signout"]');
     if (signOutBtn) {
       signOutBtn.addEventListener('click', handleSignOut);
+    }
+
+    // Add event listeners to reset auto-close timer on user interaction
+    rail.addEventListener('mousemove', resetSidebarAutoClose);
+    rail.addEventListener('click', resetSidebarAutoClose);
+    rail.addEventListener('scroll', resetSidebarAutoClose);
+    
+    // Also reset on lessons navigator interaction
+    const lessonsNav = document.querySelector('.lessons-navigator');
+    if (lessonsNav) {
+      lessonsNav.addEventListener('mousemove', resetSidebarAutoClose);
+      lessonsNav.addEventListener('click', resetSidebarAutoClose);
+      lessonsNav.addEventListener('scroll', resetSidebarAutoClose);
     }
   }
 
@@ -876,6 +901,82 @@
     if (lessonsBtn) {
       lessonsBtn.classList.remove('active');
       lessonsBtn.setAttribute('aria-expanded', 'false');
+    }
+  }
+
+  /**
+   * Start the sidebar auto-close timer (7 seconds)
+   */
+  function startSidebarAutoClose() {
+    clearSidebarAutoClose();
+    
+    // Create/reset progress bar
+    const rail = document.querySelector('.app-shell-rail');
+    if (!rail) return;
+    
+    // Remove existing progress bar if any
+    const existing = rail.querySelector('.sidebar-auto-close-bar');
+    if (existing) existing.remove();
+    
+    // Create progress bar element
+    const bar = document.createElement('div');
+    bar.className = 'sidebar-auto-close-bar';
+    // Insert as first child of rail
+    rail.insertBefore(bar, rail.firstChild);
+    sidebarAutoCloseBar = bar;
+    
+    // Force reflow then start animation
+    bar.offsetWidth;
+    bar.classList.add('running');
+    
+    // Set timer
+    sidebarAutoCloseTimer = setTimeout(() => {
+      closeSidebarFromAutoClose();
+    }, SIDEBAR_AUTO_CLOSE_DURATION);
+  }
+
+  /**
+   * Clear the sidebar auto-close timer and remove progress bar
+   */
+  function clearSidebarAutoClose() {
+    if (sidebarAutoCloseTimer) {
+      clearTimeout(sidebarAutoCloseTimer);
+      sidebarAutoCloseTimer = null;
+    }
+    // Remove progress bar
+    if (sidebarAutoCloseBar) {
+      sidebarAutoCloseBar.remove();
+      sidebarAutoCloseBar = null;
+    }
+  }
+
+  /**
+   * Reset the sidebar auto-close timer (user interacted)
+   */
+  function resetSidebarAutoClose() {
+    // Only reset if in icon-only mode with expanded sidebar
+    const rail = document.querySelector('.app-shell-rail');
+    if (document.body.classList.contains('app-shell-icon-only') && 
+        rail && rail.classList.contains('open')) {
+      startSidebarAutoClose();
+    }
+  }
+
+  /**
+   * Close sidebar from auto-close timer expiring
+   */
+  function closeSidebarFromAutoClose() {
+    const rail = document.querySelector('.app-shell-rail');
+    if (rail) {
+      // Add a brief opacity fade class for the last moment
+      rail.classList.add('auto-closing');
+      
+      setTimeout(() => {
+        rail.classList.remove('open');
+        rail.classList.remove('auto-closing');
+        closeLessonsNavigator();
+        clearSidebarAutoClose();
+      }, SIDEBAR_FADE_DURATION); // Fade duration for the opacity fade
     }
   }
 
@@ -1354,6 +1455,16 @@
     // Show viewer
     viewer.classList.add('open');
     document.body.classList.add('viewer-open');
+    document.body.classList.add('rc-presentation-active');
+    
+    // Add icon-only mode on desktop
+    if (window.innerWidth > DESKTOP_BREAKPOINT) {
+      document.body.classList.add('app-shell-icon-only');
+    }
+    
+    // Close expanded rail overlay
+    const rail = document.querySelector('.app-shell-rail');
+    if (rail) rail.classList.remove('open');
 
     // Update URL with query params
     updateViewerUrl();
@@ -1389,6 +1500,8 @@
     // Hide viewer
     viewer.classList.remove('open');
     document.body.classList.remove('viewer-open');
+    document.body.classList.remove('rc-presentation-active');
+    document.body.classList.remove('app-shell-icon-only');
 
     // Update URL (remove query params)
     const url = new URL(window.location);
