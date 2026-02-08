@@ -212,7 +212,7 @@ body.app-shell-icon-only .app-shell-rail {
   pointer-events: auto;
   transition: width 0.3s ease;
   overflow: hidden;
-  z-index: 1001; /* Higher than viewer controls to remain visible */
+  z-index: 1020; /* Higher than presentation viewer overlay (1010) to remain visible */
 }
 
 /* Hide labels, arrows, submenus, brand text, tagline, status in icon-only mode */
@@ -430,6 +430,7 @@ body.presentation-mode .presentation-mode-toggle {
 /* In icon-only mode, position lessons navigator next to collapsed rail */
 body.app-shell-icon-only .lessons-navigator {
   left: var(--shell-width-collapsed);
+  z-index: 1015; /* Above presentation viewer overlay (1010) even when not open */
 }
 
 .lessons-navigator.open {
@@ -677,6 +678,12 @@ body.app-shell-icon-only.app-shell-rail-expanded .lessons-navigator.open {
 .presentation-viewer.open {
   display: flex;
   z-index: calc(var(--shell-z) + 10);
+}
+
+/* In icon-only mode, offset presentation viewer to not cover the rail */
+body.app-shell-icon-only .presentation-viewer.open {
+  left: var(--shell-width-collapsed, 56px);
+  width: calc(100% - var(--shell-width-collapsed, 56px));
 }
 
 .presentation-viewer-controls {
