@@ -376,7 +376,6 @@
           clearSidebarAutoClose();
         }
       }
-      }
     });
 
     // Handle nav link clicks in viewer/presentation contexts (close + navigate pattern)
