@@ -202,18 +202,30 @@
   }
 
   /**
+   * Check if inline viewer is active (via ?viewer=1 query parameter)
+   */
+  function isInlineViewer() {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('viewer') === '1';
+  }
+
+  /**
    * Detect if current page is a presentation context and add appropriate body class
    */
   function detectPresentationContext() {
     const pathname = window.location.pathname;
+    const params = new URLSearchParams(window.location.search);
+    const hasViewerParam = params.get('viewer') === '1';
     
     // Check if we're on a presentation page or viewer page
     // Match: /presentations/... or /life-skills/presentations/... (but not exactly /presentations/)
     // Also match: /viewer/ paths
+    // Also match: ?viewer=1 query parameter (inline viewer)
     const isPresentation = 
       (pathname.includes('/presentations/') && pathname !== '/presentations/') ||
       pathname.includes('/life-skills/presentations/') ||
-      isViewerPage();
+      isViewerPage() ||
+      hasViewerParam;
     
     if (isPresentation) {
       document.body.classList.add('rc-presentation-active');
@@ -793,11 +805,11 @@
         lessonsData = await response.json();
         debugLog('[app-shell] Loaded lessons data');
         
-        // On viewer pages, skip normalization to avoid network race conditions
+        // On viewer pages or inline viewer, skip normalization to avoid network race conditions
         // The viewer page is already displaying a presentation and doesn't need URL probing
-        if (isViewerPage()) {
+        if (isViewerPage() || isInlineViewer()) {
           lessonsDataHydrated = true;
-          debugLog('[app-shell] Viewer page detected - skipping lessons normalization');
+          debugLog('[app-shell] Viewer/inline viewer detected - skipping lessons normalization');
         }
       } else {
         debugWarn('[app-shell] Failed to load lessons data:', response.status);
@@ -871,11 +883,11 @@
 
     // Render content if we have data (hydrate titles + hide stale entries once)
     if (lessonsData) {
-      // On viewer pages, skip normalization entirely to avoid HEAD probes
+      // On viewer pages or inline viewer, skip normalization entirely to avoid HEAD probes
       // even if user clicks Lessons before loadLessonsData completes
-      if (isViewerPage() && !lessonsDataHydrated) {
+      if ((isViewerPage() || isInlineViewer()) && !lessonsDataHydrated) {
         lessonsDataHydrated = true;
-        debugLog('[app-shell] Viewer page - skipping normalization on Lessons click');
+        debugLog('[app-shell] Viewer/inline viewer - skipping normalization on Lessons click');
         renderLessonsContent();
         return;
       }
@@ -883,10 +895,10 @@
       if (lessonsDataHydrated) {
         renderLessonsContent();
       } else {
-        // On viewer pages, skip normalization entirely to avoid HEAD probes
-        if (isViewerPage()) {
+        // On viewer pages or inline viewer, skip normalization entirely to avoid HEAD probes
+        if (isViewerPage() || isInlineViewer()) {
           lessonsDataHydrated = true;
-          debugLog('[app-shell] Viewer page - skipping normalization in openLessonsNavigator');
+          debugLog('[app-shell] Viewer/inline viewer - skipping normalization in openLessonsNavigator');
           renderLessonsContent();
           return;
         }
@@ -1746,7 +1758,8 @@
     
     // Skip auth check for public content pages (viewer, presentations, etc.)
     // These pages don't require authentication and shouldn't probe session endpoints
-    if (path === '/viewer' || 
+    if (path === '/' ||
+        path === '/viewer' || 
         path.startsWith('/viewer/') || 
         path.startsWith('/presentations/') || 
         path.startsWith('/language-arts/') || 
