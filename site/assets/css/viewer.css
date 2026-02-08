@@ -26,7 +26,7 @@ body {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  width: 100%; /* Full width by default; icon-only mode uses calc() below */
+  width: 100%; /* Full width by default; overridden with calc() when .app-shell-icon-only is applied (line 166) */
 }
 
 .viewer-controls {

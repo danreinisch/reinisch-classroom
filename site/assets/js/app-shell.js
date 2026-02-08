@@ -83,8 +83,10 @@
     // Detect if we're in a presentation context and add appropriate class
     detectPresentationContext();
 
-    // On viewer pages, ensure rail doesn't have .open class to prevent width override
-    // The shell element was just created above, so we can access it directly
+    // On viewer pages, ensure rail doesn't have .open class
+    // This prevents CSS override (body.app-shell-icon-only .app-shell-rail.open sets width to 260px)
+    // Even though createShell() doesn't add .open, we remove it as a safeguard against
+    // other initialization paths or future changes
     if (isViewerPage()) {
       shell.classList.remove('open');
     }
