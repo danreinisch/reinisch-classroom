@@ -221,14 +221,35 @@
       .trim();
   }
   // Join tag-only lines onto the preceding question line so auto-mapping can see them.
+  // BUG 6 FIX: Make __rc_joinTagOnlyLines() more flexible - scan upward past blank lines
   function __rc_joinTagOnlyLines(text) {
     const lines = String(text || "").split(/\r?\n/);
     const tagOnlyRe = /^\s*(?:\[(?:MLS|DESE|IG|IEP)\s*[.:][^\]]+\]\s*)+$/i;
-    const qStartRe = /^\s*\d+[.)]\s+/;
+    // Updated regex to match Question N: format too
+    const qStartRe = /^\s*(?:Question\s+)?(?:Q\s*)?\d+\s*[.):]\s+/i;
+    const MAX_TAG_SCAN_LINES = 20; // Maximum lines to scan upward for question
+    
     for (let i = 1; i < lines.length; i++) {
-      if (tagOnlyRe.test(lines[i]) && qStartRe.test(lines[i - 1])) {
-        lines[i - 1] = lines[i - 1].replace(/\s*$/, " ") + lines[i].trim();
-        lines[i] = "";
+      if (tagOnlyRe.test(lines[i])) {
+        // Scan upward to find nearest question line
+        let targetIdx = -1;
+        for (let j = i - 1; j >= 0 && j >= i - MAX_TAG_SCAN_LINES; j--) {
+          const ln = lines[j].trim();
+          if (!ln) continue; // Skip blank lines
+          if (qStartRe.test(lines[j])) {
+            targetIdx = j;
+            break;
+          }
+          // Stop if we hit a section header or other structural element
+          if (/^\s*(LANGUAGE\s+ARTS|LIFE\s+SKILLS|DAY\s+\d+|WRITTEN\s+RESPONSE|={3,})\b/i.test(lines[j])) {
+            break;
+          }
+        }
+        
+        if (targetIdx >= 0) {
+          lines[targetIdx] = lines[targetIdx].replace(/\s*$/, " ") + lines[i].trim();
+          lines[i] = "";
+        }
       }
     }
     return lines.join("\n");
@@ -712,6 +733,8 @@ ${shown}
     let cur = null;
     let pendingWR = null;
     let wrIndex = 0;
+    // BUG 3 FIX: Track current day for subsectioning
+    let currentDay = null;
 
     const uniq = (arr) =>
       Array.from(new Set((arr || []).map((x) => String(x || "").trim()).filter(Boolean)));
@@ -720,6 +743,8 @@ ${shown}
       const t = String(title || "Assignment").trim() || "Assignment";
       cur = { title: t, items: [] };
       out.sections.push(cur);
+      // Reset day tracking when starting new section
+      currentDay = null;
     };
 
     const addItem = (key, tags) => {
@@ -735,7 +760,7 @@ ${shown}
         const inner = raw.slice(1, -1).trim();
         if (!inner) continue;
 
-        if (/^(MLS\.|DESE:)/i.test(inner)) {
+        if (/^(MLS[.:]|DESE:)/i.test(inner)) {
           tags.dese.push(inner.replace(/^(?:DESE|MLS)\s*[.:]\s*/i, "").trim());
         } else if (/^(IG:|IEP:)/i.test(inner)) {
           tags.iep.push(inner.replace(/^(?:IG|IEP)\s*:\s*/i, "").trim());
@@ -745,7 +770,13 @@ ${shown}
     };
 
     const isSectionLine = (line) => /^\s*(LANGUAGE\s+ARTS|LIFE\s+SKILLS)\b/i.test(line);
-    const isQuestionLine = (line) => /^\s*(?:Q\s*)?\d+\s*[.)]\s*/i.test(line);
+    // BUG 2 FIX: Match "Question N:" format in addition to "Q1." and "1."
+    const isQuestionLine = (line) => /^\s*(?:Question\s+)?(?:Q\s*)?\d+\s*[.):]\s*/i.test(line);
+    // BUG 3 FIX: Detect day headers
+    const isDayLine = (line) => /^\s*DAY\s+(\d+)\b/i.test(line);
+    // BUG 4 FIX: Detect writing prompt lines
+    const isWritingPromptLine = (line) => /^\s*(?:DAY\s+\d+\s+)?WRITING\s+PROMPT\b/i.test(line);
+    const isWrittenResponseLine = (line) => /^\s*WRITTEN\s+RESPONSE\b/i.test(line);
     const isTagLine = (line) =>
       /\[[^\]]+\]/.test(line) &&
       (/\bMLS\b/i.test(line) ||
@@ -762,31 +793,71 @@ ${shown}
         continue;
       }
 
-      if (/^\s*WRITTEN\s+RESPONSE\b/i.test(line)) {
-        wrIndex += 1;
-        pendingWR = "WR" + wrIndex;
+      // BUG 3 FIX: Detect day headers for subsectioning
+      if (isDayLine(line)) {
+        const dm = line.match(/^\s*DAY\s+(\d+)\b/i);
+        currentDay = dm ? dm[1] : null;
+        pendingWR = null;
         continue;
       }
 
-      if (isQuestionLine(line)) {
-        const qm = line.match(/^\s*(?:Q\s*)?(\d+)\s*[.)]/i);
-        const qNum = qm ? qm[1] : "";
-        let tags = parseTagsFromLine(line);
-
+      // BUG 4 FIX: Detect writing prompts as mappable items
+      if (isWritingPromptLine(line)) {
+        const wpKey = currentDay ? `D${currentDay}.WP` : "WP";
+        // Look ahead for tags
+        let tags = { dese: [], iep: [] };
         for (let j = i + 1; j < lines.length; j++) {
           const l2 = lines[j];
-          if (isQuestionLine(l2) || isSectionLine(l2)) break;
+          if (isQuestionLine(l2) || isSectionLine(l2) || isDayLine(l2)) break;
           if (isTagLine(l2)) {
             const more = parseTagsFromLine(l2);
             tags = {
               dese: (tags.dese || []).concat(more.dese || []),
               iep: (tags.iep || []).concat(more.iep || []),
             };
-            break;
+          }
+        }
+        addItem(wpKey, tags);
+        pendingWR = null;
+        continue;
+      }
+
+      if (isWrittenResponseLine(line)) {
+        wrIndex += 1;
+        const wrKey = "WR" + wrIndex;
+        // Check if tags are on the same line
+        if (isTagLine(line)) {
+          addItem(wrKey, parseTagsFromLine(line));
+          pendingWR = null;
+        } else {
+          pendingWR = wrKey;
+        }
+        continue;
+      }
+
+      if (isQuestionLine(line)) {
+        // BUG 2 FIX: Update regex to match "Question N:" format
+        const qm = line.match(/^\s*(?:Question\s+)?(?:Q\s*)?(\d+)\s*[.):]/i);
+        const qNum = qm ? qm[1] : "";
+        // BUG 3 FIX: Prefix question with day number if in a day section
+        const qKey = currentDay ? `D${currentDay}.Q${qNum}` : `Q${qNum}`;
+        let tags = parseTagsFromLine(line);
+
+        // BUG 5 FIX: Collect ALL tag lines between questions (not just first)
+        for (let j = i + 1; j < lines.length; j++) {
+          const l2 = lines[j];
+          // Stop at next question, section, day, writing prompt, or written response
+          if (isQuestionLine(l2) || isSectionLine(l2) || isDayLine(l2) || isWritingPromptLine(l2) || isWrittenResponseLine(l2)) break;
+          if (isTagLine(l2)) {
+            const more = parseTagsFromLine(l2);
+            tags = {
+              dese: (tags.dese || []).concat(more.dese || []),
+              iep: (tags.iep || []).concat(more.iep || []),
+            };
           }
         }
 
-        addItem("Q" + qNum, tags);
+        addItem(qKey, tags);
         pendingWR = null;
         continue;
       }
@@ -1364,6 +1435,41 @@ function installStudentPreviewSanitizer() {
 function normalizeTaggedAssignmentText(input) {
   let text = String(input || "");
 
+  // BUG 1 FIX: Convert labeled-field format to bracket format
+  // Handle "DESE Standard(s): code1, code2" → "[MLS: code1] [MLS: code2]"
+  // Handle "IEP Goal Code(s): code1, code2" → "[IG: code1] [IG: code2]"
+  const lines = text.split(/\r?\n/);
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    
+    // Match DESE Standard(s): followed by codes
+    // Handles: "DESE Standard:", "DESE Standards:", "DESE Standard(s):", "DESE Standards (s):"
+    const deseMatch = line.match(/^\s*DESE\s+Standards?\s*(?:\(s\))?\s*:\s*(.+)$/i);
+    if (deseMatch) {
+      const codesStr = deseMatch[1].trim();
+      const codes = codesStr.split(/\s*,\s*/).map(c => c.trim()).filter(Boolean);
+      const brackets = codes.map(code => {
+        // Strip MLS. prefix if present
+        const cleanCode = code.replace(/^MLS\./i, '');
+        return `[MLS: ${cleanCode}]`;
+      }).join(' ');
+      lines[i] = brackets;
+      continue;
+    }
+    
+    // Match IEP Goal Code(s): followed by codes
+    // Handles: "IEP Goal Code:", "IEP Goal Codes:", "IEP Goal Code(s):", "IEP Goal Codes (s):"
+    const iepMatch = line.match(/^\s*IEP\s+Goal\s+Codes?\s*(?:\(s\))?\s*:\s*(.+)$/i);
+    if (iepMatch) {
+      const codesStr = iepMatch[1].trim();
+      const codes = codesStr.split(/\s*,\s*/).map(c => c.trim()).filter(Boolean);
+      const brackets = codes.map(code => `[IG: ${code}]`).join(' ');
+      lines[i] = brackets;
+      continue;
+    }
+  }
+  text = lines.join('\n');
+
   // Make adjacent tags parseable: "][ " -> "] ["
   text = text.replace(/\]\s*\[/g, "] [");
 
@@ -1380,7 +1486,7 @@ function normalizeTaggedAssignmentText(input) {
     .replace(/\[(IEP)\s*:\s*([^\]]+)\]/gi, "[IEP: $2]");
 
   // Week-11 style: if a line is ONLY tags, attach it to the previous non-empty line.
-  const lines = text.split(/\r?\n/);
+  const lines2 = text.split(/\r?\n/);
   const bracketTag = /\[[^\]]+\]/g;
 
   const isTagOnly = (ln) => {
@@ -1392,19 +1498,19 @@ function normalizeTaggedAssignmentText(input) {
   };
 
   let lastContent = -1;
-  for (let k = 0; k < lines.length; k++) {
-    const ln = String(lines[k] || "");
+  for (let k = 0; k < lines2.length; k++) {
+    const ln = String(lines2[k] || "");
     if (!ln.trim()) continue;
 
     if (isTagOnly(ln) && lastContent >= 0) {
-      lines[lastContent] = (String(lines[lastContent] || "").trimEnd() + " " + ln.trim()).trim();
-      lines[k] = "";
+      lines2[lastContent] = (String(lines2[lastContent] || "").trimEnd() + " " + ln.trim()).trim();
+      lines2[k] = "";
       continue;
     }
     lastContent = k;
   }
 
-  return lines.join("\n");
+  return lines2.join("\n");
 }
 
 // BEGIN rc-work-mega-ux v1
