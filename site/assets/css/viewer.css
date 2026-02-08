@@ -158,3 +158,8 @@ body.viewer-sidebar-collapsed .viewer-container {
   margin-left: 0;
   transition: margin-left 0.3s ease;
 }
+
+/* Icon-only rail on viewer page */
+body.app-shell-icon-only .viewer-container {
+  margin-left: 0;
+}
