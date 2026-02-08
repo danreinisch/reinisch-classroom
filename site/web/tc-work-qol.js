@@ -250,7 +250,12 @@
         if (modal) {
           e.preventDefault();
           e.stopPropagation();
-          modal.remove();
+          // Don't remove reusable modals - hide them instead
+          if (modal.id) {
+            modal.hidden = true;
+          } else {
+            modal.remove();
+          }
         }
       },
       true
