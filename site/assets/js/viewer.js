@@ -156,16 +156,16 @@
     // Close sidebar when clicking inside iframe (icon-only mode only)
     // When user clicks inside iframe, it gains focus triggering focusin event.
     // We use focusin because clicks inside an iframe don't bubble up to the parent.
+    // Note: This also triggers on keyboard navigation (Tab) into iframe, which is
+    // acceptable UX as the user is clearly interacting with the iframe content.
     iframe.addEventListener('focusin', () => {
       // Only process if in icon-only mode (desktop with overlay behavior)
       if (!document.body.classList.contains('app-shell-icon-only')) {
         return;
       }
       
-      // Query DOM elements fresh each time since they may be dynamically added/removed
-      // by app-shell.js during sidebar interactions
+      // Query rail first since we check it before accessing other elements
       const rail = document.querySelector('.app-shell-rail');
-      const lessonsNav = document.querySelector('.lessons-navigator');
       
       // Early return if sidebar is already closed (prevents redundant operations)
       if (!rail || !rail.classList.contains('open')) {
@@ -175,7 +175,8 @@
       // Close sidebar
       rail.classList.remove('open');
       
-      // Close lessons navigator if it's open
+      // Query and close lessons navigator if present and open
+      const lessonsNav = document.querySelector('.lessons-navigator');
       if (lessonsNav && lessonsNav.classList.contains('open')) {
         lessonsNav.classList.remove('open');
       }
