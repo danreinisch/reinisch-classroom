@@ -1550,7 +1550,7 @@ function normalizeTaggedAssignmentText(input) {
     const hasLifeSkills = t.includes("life") && t.includes("skills");
     const hasLA = LA_TOKENS.test(t);
 
-    // Life Skills LA variations
+    // Life Skills LA variations (including "Life Skills ELA")
     if (hasLifeSkills && hasLA) return "Life Skills LA";
     
     // Check for "LSLA", "LS-LA", "LS LA" patterns
@@ -1559,11 +1559,10 @@ function normalizeTaggedAssignmentText(input) {
     // Life Skills without LA
     if (hasLifeSkills) return "Life Skills";
 
-    // Check for "Life Skills ELA"
-    if (t.includes("life") && t.includes("skills") && /\bela\b/.test(t)) return "Life Skills LA";
-
     // Match LA/ELA with number and optional SC suffix
     // Handles: "LA 1 SC", "LA 1", "ELA 1 SC", "ELA 1", "Language Arts 1", etc.
+    // The norm() function converts all non-alphanumeric chars to spaces, so patterns like
+    // "LA1SC" become "la 1 sc" before matching, ensuring word boundaries work correctly
     const m = t.match(/\b(?:la|ela|language\s+arts|english\s+language\s+arts)\s*([1-4])\b/);
     if (m && m[1]) return `LA ${m[1]} SC`;
 
