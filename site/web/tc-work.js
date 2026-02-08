@@ -1104,6 +1104,7 @@ ${shown}
     // Check if Supabase is configured via the settings module
     // We check localStorage directly here to avoid circular dependencies.
     // These keys are set by supabase-settings.js when Supabase is configured.
+    // Note: rc_unified_supabase_url is the current key; rc_supabase_url is legacy/fallback
     const hasUrl = !!(localStorage.getItem('rc_unified_supabase_url') || localStorage.getItem('rc_supabase_url'));
     return hasCookie && hasUrl;
   }

@@ -131,7 +131,7 @@ exports.handler = async (event) => {
           'Content-Type': 'application/json',
           'Prefer': 'resolution=merge-duplicates,return=representation'
         },
-        // Supabase REST API expects an array for bulk operations, even for single upserts
+        // Supabase REST API requires array wrapper when using resolution=merge-duplicates for upsert behavior
         body: JSON.stringify([dbRow])
       });
 
