@@ -1442,7 +1442,8 @@ function normalizeTaggedAssignmentText(input) {
     const line = lines[i];
     
     // Match DESE Standard(s): followed by codes
-    const deseMatch = line.match(/^\s*DESE\s+Standards?\s*\(s\)?\s*:\s*(.+)$/i);
+    // Handles: "DESE Standard:", "DESE Standards:", "DESE Standard(s):", "DESE Standards (s):"
+    const deseMatch = line.match(/^\s*DESE\s+Standards?\s*(?:\(s\))?\s*:\s*(.+)$/i);
     if (deseMatch) {
       const codesStr = deseMatch[1].trim();
       const codes = codesStr.split(/\s*,\s*/).map(c => c.trim()).filter(Boolean);
@@ -1456,7 +1457,8 @@ function normalizeTaggedAssignmentText(input) {
     }
     
     // Match IEP Goal Code(s): followed by codes
-    const iepMatch = line.match(/^\s*IEP\s+Goal\s+Codes?\s*\(s\)?\s*:\s*(.+)$/i);
+    // Handles: "IEP Goal Code:", "IEP Goal Codes:", "IEP Goal Code(s):", "IEP Goal Codes (s):"
+    const iepMatch = line.match(/^\s*IEP\s+Goal\s+Codes?\s*(?:\(s\))?\s*:\s*(.+)$/i);
     if (iepMatch) {
       const codesStr = iepMatch[1].trim();
       const codes = codesStr.split(/\s*,\s*/).map(c => c.trim()).filter(Boolean);
