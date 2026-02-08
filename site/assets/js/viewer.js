@@ -162,13 +162,18 @@
         return;
       }
       
+      // Query DOM elements fresh each time since they may be dynamically added/removed
+      // by app-shell.js during sidebar interactions
       const rail = document.querySelector('.app-shell-rail');
       const lessonsNav = document.querySelector('.lessons-navigator');
       
-      // Close sidebar if it's open
-      if (rail && rail.classList.contains('open')) {
-        rail.classList.remove('open');
+      // Early return if sidebar is already closed (prevents redundant operations)
+      if (!rail || !rail.classList.contains('open')) {
+        return;
       }
+      
+      // Close sidebar
+      rail.classList.remove('open');
       
       // Close lessons navigator if it's open
       if (lessonsNav && lessonsNav.classList.contains('open')) {
