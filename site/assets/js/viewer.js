@@ -154,40 +154,32 @@
     document.addEventListener('mozfullscreenchange', handleFullscreenChange);
 
     // Close sidebar when clicking inside iframe (icon-only mode only)
-    // When user clicks iframe, window loses focus and iframe becomes activeElement.
-    // We use the blur event because clicks inside an iframe don't bubble up to the parent.
-    window.addEventListener('blur', () => {
+    // When user clicks inside iframe, it gains focus triggering focusin event.
+    // We use focusin because clicks inside an iframe don't bubble up to the parent.
+    iframe.addEventListener('focusin', () => {
       // Only process if in icon-only mode (desktop with overlay behavior)
       if (!document.body.classList.contains('app-shell-icon-only')) {
         return;
       }
       
-      // Use setTimeout to ensure document.activeElement is updated after blur.
-      // The browser updates activeElement asynchronously during focus transition,
-      // so checking immediately would give us the old value.
-      setTimeout(() => {
-        // Check if iframe gained focus (user clicked inside it)
-        if (document.activeElement === iframe) {
-          const rail = document.querySelector('.app-shell-rail');
-          const lessonsNav = document.querySelector('.lessons-navigator');
-          
-          // Close sidebar if it's open
-          if (rail && rail.classList.contains('open')) {
-            rail.classList.remove('open');
-          }
-          
-          // Close lessons navigator if it's open
-          if (lessonsNav && lessonsNav.classList.contains('open')) {
-            lessonsNav.classList.remove('open');
-          }
-          
-          // Clear auto-close timer by removing progress bar element
-          const autoCloseBar = document.querySelector('.sidebar-auto-close-bar');
-          if (autoCloseBar) {
-            autoCloseBar.remove();
-          }
-        }
-      }, 0);
+      const rail = document.querySelector('.app-shell-rail');
+      const lessonsNav = document.querySelector('.lessons-navigator');
+      
+      // Close sidebar if it's open
+      if (rail && rail.classList.contains('open')) {
+        rail.classList.remove('open');
+      }
+      
+      // Close lessons navigator if it's open
+      if (lessonsNav && lessonsNav.classList.contains('open')) {
+        lessonsNav.classList.remove('open');
+      }
+      
+      // Clear auto-close timer by removing progress bar element
+      const autoCloseBar = document.querySelector('.sidebar-auto-close-bar');
+      if (autoCloseBar) {
+        autoCloseBar.remove();
+      }
     });
   }
 
