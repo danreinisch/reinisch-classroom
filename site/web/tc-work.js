@@ -1692,6 +1692,166 @@ function normalizeTaggedAssignmentText(input) {
     return norm(title).includes(norm(cls));
   }
 
+  function countSectionItems(sectionBody) {
+    const lines = sectionBody.split(/\r?\n/);
+    let questions = 0;
+    let writingPrompts = 0;
+    const deseCodes = new Set();
+    const iepCodes = new Set();
+    
+    for (const line of lines) {
+      const trimmed = line.trim();
+      
+      // Count questions: "Question 1:", "1.", "Q1)", etc.
+      if (/^\s*(?:Question\s+)?\d+\s*[.):]/i.test(trimmed)) {
+        questions++;
+      }
+      
+      // Count writing prompt sections
+      if (/DAY\s+\d+\s+WRITING\s+PROMPT/i.test(trimmed)) {
+        writingPrompts++;
+      }
+      
+      // Extract DESE codes from labeled format: "DESE Standard(s): MLS.R.1.A.9-12.a"
+      const deseMatch = trimmed.match(/DESE\s+Standard[s()\s]*:\s*(.+)/i);
+      if (deseMatch) {
+        deseMatch[1].split(/[,;]/).forEach(c => {
+          const code = c.trim();
+          if (code) deseCodes.add(code);
+        });
+      }
+      
+      // Extract DESE codes from bracket format: [MLS.R.1.A.9-12.a]
+      const bracketDese = trimmed.matchAll(/\[MLS[.:][^\]]+\]/gi);
+      for (const m of bracketDese) deseCodes.add(m[0]);
+      
+      // Extract IEP codes from labeled format: "IEP Goal Code(s): S015.11.1-2, S016.11.2-2"
+      const iepMatch = trimmed.match(/IEP\s+Goal\s+Code[s()\s]*:\s*(.+)/i);
+      if (iepMatch) {
+        iepMatch[1].split(/[,;]/).forEach(c => {
+          const code = c.trim();
+          if (code) iepCodes.add(code);
+        });
+      }
+      
+      // Extract IEP codes from bracket format: [IG: S015.11.1-2]
+      const bracketIep = trimmed.matchAll(/\[IG[.:][^\]]+\]/gi);
+      for (const m of bracketIep) iepCodes.add(m[0]);
+    }
+    
+    return { 
+      questions, 
+      writingPrompts, 
+      deseCodes: deseCodes.size, 
+      iepCodes: iepCodes.size 
+    };
+  }
+
+  function renderFilePreviewPanel(text) {
+    const panel = document.getElementById("rcFilePreviewPanel");
+    if (!panel) return;
+
+    const sections = parseMegaSections(text);
+    
+    // Clear previous content
+    panel.innerHTML = "";
+    panel.style.display = "none";
+
+    if (sections.length >= 2) {
+      // Multi-class file detected
+      panel.style.display = "block";
+      
+      let html = `
+        <div class="work-card" style="background: rgba(34, 197, 94, 0.08); border-color: rgba(34, 197, 94, 0.25);">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+            <span style="font-size: 20px;">📄</span>
+            <strong>Detected ${sections.length} class sections in this file:</strong>
+          </div>
+          <div class="work-tablewrap">
+            <table class="work-table" style="font-size: 13px;">
+              <thead>
+                <tr>
+                  <th style="width: 50px;">✅</th>
+                  <th>Class</th>
+                  <th>Questions</th>
+                  <th>Writing Prompts</th>
+                  <th>DESE Codes</th>
+                  <th>IEP Codes</th>
+                </tr>
+              </thead>
+              <tbody>
+      `;
+
+      sections.forEach((section, idx) => {
+        const counts = countSectionItems(section.body);
+        html += `
+          <tr>
+            <td style="text-align: center;">
+              <input type="checkbox" 
+                     class="rcPreviewClassCheckbox" 
+                     data-class="${section.cls}" 
+                     data-section-index="${idx}" 
+                     checked 
+                     style="width: 18px; height: 18px; cursor: pointer;" />
+            </td>
+            <td><strong>${section.cls}</strong></td>
+            <td>${counts.questions}</td>
+            <td>${counts.writingPrompts}</td>
+            <td>${counts.deseCodes} unique</td>
+            <td>${counts.iepCodes} unique</td>
+          </tr>
+        `;
+      });
+
+      html += `
+              </tbody>
+            </table>
+          </div>
+          <div class="work-subtle" style="margin-top: 10px; font-size: 12px;">
+            Each checked class will get its own draft with only its section.<br/>
+            Uncheck any class you want to skip.
+          </div>
+        </div>
+      `;
+
+      panel.innerHTML = html;
+
+      // Disable class dropdown for mega files
+      const classSel = document.getElementById("draftClass");
+      if (classSel) {
+        classSel.value = "";
+        classSel.disabled = true;
+      }
+    } else if (sections.length === 1) {
+      // Single section detected, but still show it
+      panel.style.display = "block";
+      
+      panel.innerHTML = `
+        <div class="work-card" style="background: rgba(59, 130, 246, 0.08); border-color: rgba(59, 130, 246, 0.25);">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 20px;">📄</span>
+            <span><strong>Single-class assignment detected.</strong></span>
+          </div>
+          <div class="work-subtle" style="margin-top: 8px; font-size: 12px;">
+            Select the class from the dropdown above.
+          </div>
+        </div>
+      `;
+
+      // Enable class dropdown for single-class files
+      const classSel = document.getElementById("draftClass");
+      if (classSel) {
+        classSel.disabled = false;
+      }
+    } else {
+      // No sections detected (normal single-class file)
+      const classSel = document.getElementById("draftClass");
+      if (classSel) {
+        classSel.disabled = false;
+      }
+    }
+  }
+
   async function splitMegaFromCurrentForm() {
     const form = document.getElementById("workDraftForm");
     if (!form) return;
@@ -1741,7 +1901,21 @@ function normalizeTaggedAssignmentText(input) {
 
     const drafts = loadDrafts();
 
+    // Get checked classes from preview panel
+    const checkboxes = document.querySelectorAll(".rcPreviewClassCheckbox:checked");
+    const checkedClasses = new Set(
+      Array.from(checkboxes).map(cb => cb.getAttribute("data-class"))
+    );
+
+    if (checkedClasses.size === 0) {
+      alert("Please select at least one class to create drafts for.");
+      return;
+    }
+
+    // Only create drafts for checked classes
     for (const sec of sections) {
+      if (!checkedClasses.has(sec.cls)) continue; // Skip unchecked classes
+
       const cls = sec.cls;
       const chunk = `${cls}\n===\n${sec.body}\n`;
 
@@ -1775,6 +1949,7 @@ function normalizeTaggedAssignmentText(input) {
     // Sync mega-split drafts to remote if available
     if (typeof window.__rcRemoteSaveDraft === 'function') {
       for (const sec of sections) {
+        if (!checkedClasses.has(sec.cls)) continue;
         const newDraft = drafts.find(d => d.className === sec.cls);
         if (newDraft) window.__rcRemoteSaveDraft(newDraft);
       }
@@ -1786,7 +1961,7 @@ function normalizeTaggedAssignmentText(input) {
       classSel.disabled = true;
     }
 
-    alert(`Created ${sections.length} drafts (one per class).`);
+    alert(`Created ${checkedClasses.size} drafts (one per selected class).`);
     location.reload();
   }
 
@@ -1795,10 +1970,9 @@ function normalizeTaggedAssignmentText(input) {
     const btn = document.getElementById("btnSplitMega");
 
     ensureClassDropdown();
-    ensureMegaCheckbox();
+    // ensureMegaCheckbox(); // DISABLED: replaced by preview panel
 
     const classSel = document.getElementById("draftClass");
-    const cb = document.getElementById("rcMegaMode");
 
     if (form) {
       const { assignment: aIn } = pickFileInputs(form);
@@ -1806,15 +1980,21 @@ function normalizeTaggedAssignmentText(input) {
         aIn.addEventListener("change", async () => {
           try {
             const f = aIn.files && aIn.files[0] ? aIn.files[0] : null;
-            if (!f || !cb || !classSel) return;
-            const txt = await readFileText(f);
-            if (looksMega(txt)) {
-              cb.checked = true;
-              classSel.value = "";
-              classSel.disabled = true;
+            if (!f) {
+              // Clear preview panel if no file
+              const panel = document.getElementById("rcFilePreviewPanel");
+              if (panel) {
+                panel.innerHTML = "";
+                panel.style.display = "none";
+              }
+              if (classSel) classSel.disabled = false;
+              return;
             }
+            
+            const txt = await readFileText(f);
+            renderFilePreviewPanel(txt);
           } catch (e) {
-            console.warn("Mega auto-detect failed:", e);
+            console.warn("File preview failed:", e);
           }
         });
       }
@@ -1841,8 +2021,11 @@ function normalizeTaggedAssignmentText(input) {
       form.addEventListener(
         "submit",
         (e) => {
-          const isMega = !!(cb && cb.checked);
-          if (!isMega) return;
+          // Check if there are any checked preview panel checkboxes (multi-class mode)
+          const checkedBoxes = document.querySelectorAll(".rcPreviewClassCheckbox:checked");
+          const isMega = checkedBoxes.length > 0;
+          
+          if (!isMega) return; // Normal single-class save
 
           e.preventDefault();
           e.stopImmediatePropagation();

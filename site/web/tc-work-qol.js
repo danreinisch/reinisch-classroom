@@ -70,95 +70,11 @@
   };
 
   const buildQolControls = (classSelect) => {
-    if (document.getElementById("rcQolControls")) return;
-
-    // container near the class select
-    const host =
-      classSelect.closest(".field, .form-field, .input-group, div") || classSelect.parentElement;
-    if (!host) return;
-
-    injectStyle();
+    // DISABLED: The multi-class and mega-split checkboxes have been replaced
+    // by the new file preview panel (rc-work-mega-ux v2 in tc-work.js).
+    // We keep ensureLifeSkillsOption and forceCloseModals active.
     ensureLifeSkillsOption(classSelect);
-
-    const wrap = document.createElement("div");
-    wrap.id = "rcQolControls";
-    wrap.className = "rc-qol-row";
-
-    // DEDUP GUARD: Check if rc-work-mega-ux v1 already created its mega checkbox.
-    // The two mega systems are complementary (bare headers vs === separators),
-    // but we prevent duplicate UI by skipping our mega toggle if theirs exists.
-    const megaBoxHtml = document.getElementById("rcMegaMode")
-      ? ""
-      : `
-      <div class="rc-qol-box">
-        <label>
-          <input type="checkbox" id="rcMegaSplitToggle" />
-          Mega-split draft by class headers in the assignment file
-        </label>
-        <div class="rc-qol-hint">
-          Looks for headers like "LA 1 SC", "LA 2 SC", "Life Skills", etc. Creates one draft per detected section.
-        </div>
-      </div>
-    `;
-
-    wrap.innerHTML = `
-      <div class="rc-qol-box">
-        <label>
-          <input type="checkbox" id="rcMultiClassToggle" />
-          Apply to multiple classes
-        </label>
-        <div style="margin-top:8px; display:none;" id="rcMultiClassPanel">
-          <select id="rcMultiClassSelect" multiple size="6"></select>
-          <div class="rc-qol-hint">Tip: hold ⌘/Ctrl to select multiple.</div>
-        </div>
-      </div>
-
-      ${megaBoxHtml}
-    `;
-
-    // insert after the select's host block
-    host.appendChild(wrap);
-
-    const multiToggle = wrap.querySelector("#rcMultiClassToggle");
-    const multiPanel = wrap.querySelector("#rcMultiClassPanel");
-    const multiSelect = wrap.querySelector("#rcMultiClassSelect");
-
-    // populate multi-select from classSelect options
-    const opts = Array.from(classSelect.options).map((o) => ({
-      value: o.value,
-      label: (o.textContent || "").trim(),
-    }));
-    const seen = new Set();
-    for (const o of opts) {
-      const key = `${o.value}||${o.label}`;
-      if (!o.label || seen.has(key)) continue;
-      seen.add(key);
-      const opt = document.createElement("option");
-      opt.value = o.value || o.label;
-      opt.textContent = o.label;
-      multiSelect.appendChild(opt);
-    }
-
-    // show/hide panel
-    multiToggle.addEventListener("change", () => {
-      multiPanel.style.display = multiToggle.checked ? "block" : "none";
-      // Keep classSelect valid by defaulting to first selected
-      if (multiToggle.checked) {
-        const first = multiSelect.options[0];
-        if (first && !Array.from(multiSelect.selectedOptions).length) first.selected = true;
-      }
-    });
-
-    // pick a sane default selection if none
-    if (multiSelect.options.length) {
-      multiSelect.options[0].selected = true;
-    }
-
-    // keep single class select aligned so native validation doesn't block Save
-    multiSelect.addEventListener("change", () => {
-      const sel = Array.from(multiSelect.selectedOptions).map((o) => o.value);
-      if (sel.length) classSelect.value = sel[0];
-    });
+    log("QoL controls disabled (replaced by file preview panel)");
   };
 
   const snapshotLocalStorage = () => {
@@ -347,69 +263,9 @@
   };
 
   const postProcessSave = (beforeSnap, cfg) => {
-    const afterSnap = snapshotLocalStorage();
-    const changedStore = findChangedDraftStore(beforeSnap, afterSnap);
-    if (!changedStore) return;
-
-    const [storeKey, drafts] = changedStore;
-
-    // Find the newly added draft
-    const beforeArr = parseJsonArray(beforeSnap[storeKey] || "[]") || [];
-    const beforeSigs = new Set(beforeArr.map(sig).filter(Boolean));
-    let newIdx = drafts.findIndex((d) => !beforeSigs.has(sig(d)));
-    if (newIdx < 0) newIdx = 0;
-    const base = drafts[newIdx];
-    if (!base || typeof base !== "object") return;
-
-    // If neither toggle is on, do nothing
-    if (!cfg.multi && !cfg.mega) return;
-
-    const baseClone = deepClone(base);
-
-    // For mega split: use the longest text field inside the saved draft as the source to split
-    let megaSections = null;
-    if (cfg.mega) {
-      const strings = [];
-      walkStrings(baseClone, strings);
-      strings.sort((a, b) => (b.value.length || 0) - (a.value.length || 0));
-      const body = (strings.find((x) => (x.value || "").length > 200) || {}).value || "";
-      megaSections = splitByClassHeaders(body);
-      if (!megaSections) {
-        log("Mega-split checked, but no class headers detected. Skipping split.");
-      }
-    }
-
-    // Determine classes to create drafts for
-    const classes = megaSections
-      ? Object.keys(megaSections)
-      : cfg.classes && cfg.classes.length
-        ? cfg.classes
-        : [];
-
-    if (!classes.length) return;
-
-    // Build clones for each class (keeping base as one of them)
-    const clones = [];
-    for (const cls of classes) {
-      const d = deepClone(baseClone);
-      guessAndSetClass(d, cls);
-      if (megaSections && megaSections[cls]) {
-        replaceLongestString(d, megaSections[cls]);
-      }
-      // ensure unique-ish id if present
-      if (d.id) d.id = `${d.id}__${cls.replace(/\s+/g, "_")}__${Date.now()}`;
-      if (d.uuid) d.uuid = `${d.uuid}__${cls.replace(/\s+/g, "_")}__${Date.now()}`;
-      clones.push(d);
-    }
-
-    // Replace the single base draft with the clones (in-place)
-    drafts.splice(newIdx, 1, ...clones);
-
-    localStorage.setItem(storeKey, JSON.stringify(drafts));
-    log("Saved multi/mega drafts to store:", storeKey, "count:", clones.length);
-
-    // Reload so the page re-renders Drafts list using its normal code
-    setTimeout(() => location.reload(), 50);
+    // DISABLED: This function is no longer needed as the file preview panel
+    // handles multi-class and mega-split directly in tc-work.js.
+    log("postProcessSave disabled (replaced by file preview panel)");
   };
 
   ready(() => {
@@ -418,36 +274,10 @@
       if (!classSelect) return log("Could not find class dropdown. Skipping QoL.");
 
       ensureLifeSkillsOption(classSelect);
-      buildQolControls(classSelect);
+      buildQolControls(classSelect); // Now just ensures Life Skills option
       forceCloseModals();
 
-      const saveBtn = findSaveButton();
-      if (!saveBtn) return log("Could not find Save Draft button. QoL loaded (partial).");
-
-      // Capture phase: snapshot storage BEFORE app saves, then post-process AFTER
-      saveBtn.addEventListener(
-        "click",
-        () => {
-          const beforeSnap = snapshotLocalStorage();
-
-          const multi = !!document.getElementById("rcMultiClassToggle")?.checked;
-          const mega = !!document.getElementById("rcMegaSplitToggle")?.checked;
-
-          const sel = Array.from(
-            document.getElementById("rcMultiClassSelect")?.selectedOptions || []
-          )
-            .map((o) => (o.value || o.textContent || "").trim())
-            .filter(Boolean);
-
-          const cfg = { multi, mega, classes: sel };
-
-          // Let the original save happen, then duplicate/split the freshly saved draft(s)
-          setTimeout(() => postProcessSave(beforeSnap, cfg), 350);
-        },
-        true
-      );
-
-      log("Loaded ✅ (Life Skills + multi-class + mega-split + close-fix)");
+      log("Loaded ✅ (Life Skills + close-fix; multi-class features replaced by file preview panel)");
     } catch (err) {
       console.error(TAG, "Error:", err);
     }
