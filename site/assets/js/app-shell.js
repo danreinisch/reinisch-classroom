@@ -197,7 +197,7 @@
    */
   function isViewerPage() {
     const pathname = window.location.pathname;
-    return pathname.startsWith('/viewer/') || pathname.startsWith('/viewer');
+    return pathname === '/viewer' || pathname.startsWith('/viewer/');
   }
 
   /**
@@ -1728,8 +1728,8 @@
     
     // Skip auth check for public content pages (viewer, presentations, etc.)
     // These pages don't require authentication and shouldn't probe session endpoints
-    if (path.startsWith('/viewer/') || 
-        path.startsWith('/viewer') || 
+    if (path === '/viewer' || 
+        path.startsWith('/viewer/') || 
         path.startsWith('/presentations/') || 
         path.startsWith('/language-arts/') || 
         path.startsWith('/life-skills/')) {
