@@ -823,13 +823,6 @@
     // This function is no longer used but kept for compatibility
     showInlineForm(goalCode, studentCode);
   }
-      
-      alert('Data point added successfully!');
-    } catch (err) {
-      console.error('[data] Error adding data point:', err);
-      alert('Error adding data point: ' + err.message);
-    }
-  }
 
   // Open work samples modal
   async function openSamplesModal(goalCode, studentCode) {
@@ -922,6 +915,54 @@
   }
 
   // Export to DOCX (simplified implementation)
+  // Helper function to escape XML special characters
+  function escapeXml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&apos;');
+  }
+
+  // Helper function to create a DOCX paragraph
+  function createDocxParagraph(text, style = '') {
+    const styleAttr = style ? ` w:val="${style}"` : '';
+    return `
+      <w:p>
+        <w:pPr>
+          ${style ? `<w:pStyle${styleAttr}/>` : ''}
+        </w:pPr>
+        <w:r>
+          <w:t>${escapeXml(text)}</w:t>
+        </w:r>
+      </w:p>`;
+  }
+
+  // Helper function to create a DOCX table row
+  function createDocxTableRow(cells) {
+    const cellsXml = cells.map(cell => `
+      <w:tc>
+        <w:tcPr>
+          <w:tcBorders>
+            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+          </w:tcBorders>
+        </w:tcPr>
+        <w:p>
+          <w:r>
+            <w:t>${escapeXml(cell)}</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>`).join('');
+    
+    return `<w:tr>${cellsXml}</w:tr>`;
+  }
+
+  // Export to DOCX using OOXML format
   async function exportToDocx() {
     const modal = $('dtSamplesModal');
     if (!modal) return;
@@ -937,6 +978,20 @@
     // Get data entries and work samples
     const entries = getGoalProgressEntries(goal.code, studentCode);
     const avg = calculateGoalAverage(goal.code, studentCode);
+    const baseline = goal.baseline || 0;
+    const target = goal.target || 100;
+    const current = entries.length > 0 ? parseFloat(entries[entries.length - 1].value) : null;
+    
+    // Calculate trend
+    let trend = '→';
+    if (entries.length >= 2) {
+      const firstHalf = entries.slice(0, Math.floor(entries.length / 2));
+      const secondHalf = entries.slice(Math.floor(entries.length / 2));
+      const firstAvg = firstHalf.reduce((acc, e) => acc + parseFloat(e.value), 0) / firstHalf.length;
+      const secondAvg = secondHalf.reduce((acc, e) => acc + parseFloat(e.value), 0) / secondHalf.length;
+      if (secondAvg > firstAvg + 5) trend = '↗';
+      else if (secondAvg < firstAvg - 5) trend = '↘';
+    }
     
     // Find relevant work samples
     const mappedAssignmentIds = assignmentGoalMappingsData
@@ -948,52 +1003,173 @@
       mappedAssignmentIds.includes(sub.assignment_id)
     );
     
-    // Build work samples section
-    let workSamplesText = '';
-    if (relevantSubmissions.length === 0) {
-      workSamplesText = '  No work samples found for this goal.\n';
+    // Build document body XML
+    let bodyXml = '';
+    
+    // Header
+    bodyXml += createDocxParagraph('IEP GOAL PROGRESS REPORT', 'Heading1');
+    bodyXml += createDocxParagraph('');
+    bodyXml += createDocxParagraph(`Student: ${student.name} (${student.code})`);
+    bodyXml += createDocxParagraph(`Goal Code: ${goal.code}`);
+    bodyXml += createDocxParagraph(`Goal Description: ${goal.desc || 'No description'}`);
+    bodyXml += createDocxParagraph('');
+    
+    // Summary section
+    bodyXml += createDocxParagraph('Summary', 'Heading2');
+    bodyXml += createDocxParagraph(`Goal Area: ${goal.goal_area || 'Uncategorized'}`);
+    bodyXml += createDocxParagraph(`Baseline: ${baseline}%`);
+    bodyXml += createDocxParagraph(`Target: ${target}%`);
+    bodyXml += createDocxParagraph(`Current Value: ${current != null ? current + '%' : 'N/A'}`);
+    bodyXml += createDocxParagraph(`Rolling Average (${getQuarterLabel(currentQuarterFilter)}): ${avg != null ? avg + '%' : 'N/A'}`);
+    bodyXml += createDocxParagraph(`Trend: ${trend}`);
+    bodyXml += createDocxParagraph('');
+    
+    // Data Points table
+    bodyXml += createDocxParagraph('Data Points', 'Heading2');
+    if (entries.length === 0) {
+      bodyXml += createDocxParagraph('No data points recorded for this quarter.');
     } else {
-      workSamplesText = relevantSubmissions.map(sub => {
+      bodyXml += `<w:tbl>
+        <w:tblPr>
+          <w:tblStyle w:val="TableGrid"/>
+          <w:tblW w:w="5000" w:type="pct"/>
+        </w:tblPr>
+        ${createDocxTableRow(['Date', 'Value', 'Source'])}
+        ${entries.map(e => createDocxTableRow([
+          new Date(e.date).toLocaleDateString(),
+          `${e.value}%`,
+          e.source || 'manual'
+        ])).join('')}
+      </w:tbl>`;
+    }
+    bodyXml += createDocxParagraph('');
+    
+    // Work Samples section
+    bodyXml += createDocxParagraph('Work Samples', 'Heading2');
+    if (relevantSubmissions.length === 0) {
+      bodyXml += createDocxParagraph('No work samples found for this goal.');
+    } else {
+      relevantSubmissions.forEach(sub => {
         const assignment = assignmentsData.find(a => a.id === sub.assignment_id);
         const assignmentTitle = assignment ? assignment.title : `Assignment ${sub.assignment_id}`;
         const submittedDate = new Date(sub.submitted_at).toLocaleDateString();
         const score = sub.score_total != null ? `${sub.score_total}%` : 'Not graded';
-        return `  - ${assignmentTitle}\n    Date: ${submittedDate}\n    Score: ${score}\n    Submission ID: ${sub.submission_id}`;
-      }).join('\n\n');
+        
+        bodyXml += createDocxParagraph(`• ${assignmentTitle}`);
+        bodyXml += createDocxParagraph(`  Date Submitted: ${submittedDate}`);
+        bodyXml += createDocxParagraph(`  Score: ${score}`);
+        bodyXml += createDocxParagraph('');
+      });
     }
     
-    const content = `
-IEP GOAL PROGRESS REPORT
-========================
-
-Student: ${student.name} (${student.code})
-Goal Code: ${goal.code}
-Goal Description: ${goal.desc || 'No description'}
-Goal Area: ${goal.goal_area || 'Uncategorized'}
-Baseline: ${goal.baseline || 0}%
-Target: ${goal.target || 100}%
-
-Quarter: ${getQuarterLabel(currentQuarterFilter)}
-Rolling Average: ${avg != null ? avg + '%' : 'N/A'}
-
-Data Points:
-${entries.map(e => `  ${new Date(e.date).toLocaleDateString()}: ${e.value}% (${e.source || 'manual'})`).join('\n')}
-
-Work Samples:
-${workSamplesText}
-
-Generated: ${new Date().toLocaleString()}
-    `.trim();
+    // Footer
+    bodyXml += createDocxParagraph('');
+    bodyXml += createDocxParagraph(`Generated on ${new Date().toLocaleString()}`);
     
-    const blob = new Blob([content], { type: 'text/plain' });
+    // Create document.xml with proper OOXML structure
+    const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+            xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <w:body>
+    ${bodyXml}
+  </w:body>
+</w:document>`;
+
+    // Create [Content_Types].xml
+    const contentTypesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+</Types>`;
+
+    // Create _rels/.rels
+    const relsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>`;
+
+    // Since we can't easily create ZIP in browser without a library,
+    // we'll use a workaround: create an HTML file that Word can open
+    // Word supports opening HTML files with .docx extension
+    const htmlContent = `
+<!DOCTYPE html>
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">
+<head>
+  <meta charset="utf-8">
+  <title>IEP Goal Progress Report</title>
+  <style>
+    body { font-family: 'Calibri', Arial, sans-serif; margin: 40px; }
+    h1 { font-size: 24pt; font-weight: bold; margin-bottom: 20px; }
+    h2 { font-size: 16pt; font-weight: bold; margin-top: 20px; margin-bottom: 10px; }
+    p { margin: 5px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #000; padding: 8px; text-align: left; }
+    th { background-color: #f0f0f0; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>IEP GOAL PROGRESS REPORT</h1>
+  
+  <p><strong>Student:</strong> ${escapeXml(student.name)} (${escapeXml(student.code)})</p>
+  <p><strong>Goal Code:</strong> ${escapeXml(goal.code)}</p>
+  <p><strong>Goal Description:</strong> ${escapeXml(goal.desc || 'No description')}</p>
+  
+  <h2>Summary</h2>
+  <p><strong>Goal Area:</strong> ${escapeXml(goal.goal_area || 'Uncategorized')}</p>
+  <p><strong>Baseline:</strong> ${baseline}%</p>
+  <p><strong>Target:</strong> ${target}%</p>
+  <p><strong>Current Value:</strong> ${current != null ? current + '%' : 'N/A'}</p>
+  <p><strong>Rolling Average (${escapeXml(getQuarterLabel(currentQuarterFilter))}):</strong> ${avg != null ? avg + '%' : 'N/A'}</p>
+  <p><strong>Trend:</strong> ${escapeXml(trend)}</p>
+  
+  <h2>Data Points</h2>
+  ${entries.length === 0 ? '<p>No data points recorded for this quarter.</p>' : `
+  <table>
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Value</th>
+        <th>Source</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${entries.map(e => `
+      <tr>
+        <td>${escapeXml(new Date(e.date).toLocaleDateString())}</td>
+        <td>${e.value}%</td>
+        <td>${escapeXml(e.source || 'manual')}</td>
+      </tr>`).join('')}
+    </tbody>
+  </table>`}
+  
+  <h2>Work Samples</h2>
+  ${relevantSubmissions.length === 0 ? '<p>No work samples found for this goal.</p>' : 
+    relevantSubmissions.map(sub => {
+      const assignment = assignmentsData.find(a => a.id === sub.assignment_id);
+      const assignmentTitle = assignment ? assignment.title : `Assignment ${sub.assignment_id}`;
+      const submittedDate = new Date(sub.submitted_at).toLocaleDateString();
+      const score = sub.score_total != null ? `${sub.score_total}%` : 'Not graded';
+      return `
+      <p><strong>• ${escapeXml(assignmentTitle)}</strong></p>
+      <p style="margin-left: 20px;"><strong>Date Submitted:</strong> ${escapeXml(submittedDate)}</p>
+      <p style="margin-left: 20px;"><strong>Score:</strong> ${escapeXml(score)}</p>`;
+    }).join('')}
+  
+  <p style="margin-top: 30px;"><em>Generated on ${escapeXml(new Date().toLocaleString())}</em></p>
+</body>
+</html>`;
+
+    // Create blob and download
+    const blob = new Blob([htmlContent], { 
+      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' 
+    });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${studentCode}_${goalCode}_progress_report.txt`;
+    a.download = `${studentCode}_${goalCode}_progress_report.docx`;
     a.click();
     URL.revokeObjectURL(url);
-    
-    alert('Report exported! (Note: Full DOCX export with html-docx-js library coming in future update)');
   }
 
   // Export visible data as CSV
