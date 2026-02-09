@@ -876,6 +876,136 @@
     download(`gradebook-${safeClassName}-${nowISO()}.csv`, csvContent);
   }
 
+  // Export gradebook to PDF
+  async function exportToPDF() {
+    const data = buildGradebookData();
+    if (!data) {
+      alert("No data to export.");
+      return;
+    }
+
+    try {
+      // Lazy-load jsPDF
+      const { jsPDF } = await import('/site/vendor/jspdf.mjs');
+      
+      const { students, drafts, scoreMap } = data;
+      
+      // Create new PDF document (landscape for better table fit)
+      const doc = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: 'a4'
+      });
+      
+      // Title
+      const title = `Gradebook - ${currentClassFilter}`;
+      doc.setFontSize(16);
+      doc.text(title, 15, 15);
+      
+      // Date
+      doc.setFontSize(10);
+      doc.text(`Generated: ${new Date().toLocaleDateString()}`, 15, 22);
+      
+      // Build table data
+      const headers = ["Student"];
+      for (const draft of drafts) {
+        headers.push((draft.title || "(untitled)").substring(0, 20)); // Truncate long titles
+      }
+      headers.push("Avg");
+      
+      const tableData = [];
+      for (const student of students) {
+        const row = [student.name || student.code];
+        const studentScores = scoreMap.get(student.code);
+        
+        for (const draft of drafts) {
+          if (studentScores && studentScores.has(draft.id)) {
+            const score = studentScores.get(draft.id);
+            row.push(typeof score === "number" ? `${score}%` : "—");
+          } else {
+            row.push("—");
+          }
+        }
+        
+        const avg = calculateRowAverage(student.code, scoreMap, drafts);
+        row.push(avg !== null ? `${avg}%` : "—");
+        
+        tableData.push(row);
+      }
+      
+      // Add summary row
+      const summaryRow = ["Class Avg"];
+      for (const draft of drafts) {
+        const avg = calculateColumnAverage(draft.id, scoreMap, students);
+        summaryRow.push(avg !== null ? `${avg}%` : "—");
+      }
+      const allScores = [];
+      for (const student of students) {
+        const avg = calculateRowAverage(student.code, scoreMap, drafts);
+        if (avg !== null) {
+          allScores.push(avg);
+        }
+      }
+      const overallAvg = allScores.length > 0
+        ? Math.round(allScores.reduce((a, b) => a + b, 0) / allScores.length)
+        : null;
+      summaryRow.push(overallAvg !== null ? `${overallAvg}%` : "—");
+      tableData.push(summaryRow);
+      
+      // Add table using autoTable plugin if available, otherwise basic table
+      if (doc.autoTable) {
+        doc.autoTable({
+          head: [headers],
+          body: tableData,
+          startY: 28,
+          theme: 'grid',
+          headStyles: { fillColor: [34, 197, 94] },
+          styles: { fontSize: 8, cellPadding: 2 }
+        });
+      } else {
+        // Fallback: simple text-based table
+        doc.setFontSize(8);
+        let y = 28;
+        const colWidth = 280 / headers.length; // Landscape width divided by columns
+        
+        // Headers
+        let x = 15;
+        doc.setFont(undefined, 'bold');
+        for (const header of headers) {
+          doc.text(header.substring(0, 15), x, y);
+          x += colWidth;
+        }
+        y += 6;
+        
+        // Data rows
+        doc.setFont(undefined, 'normal');
+        for (const row of tableData) {
+          x = 15;
+          for (const cell of row) {
+            doc.text(String(cell).substring(0, 15), x, y);
+            x += colWidth;
+          }
+          y += 5;
+          if (y > 190) break; // Avoid overflow on single page
+        }
+      }
+      
+      // Download with safe filename
+      const safeClassName = currentClassFilter.replace(/[^a-zA-Z0-9]/g, "-").replace(/-+/g, "-");
+      doc.save(`gradebook-${safeClassName}-${nowISO()}.pdf`);
+      
+    } catch (err) {
+      console.error('[gradebook] PDF export error:', err);
+      
+      // Fallback: Use browser print dialog
+      if (confirm('jsPDF library not available. Would you like to use the browser Print dialog instead? (You can save as PDF from there)')) {
+        window.print();
+      } else {
+        alert('PDF export requires the jsPDF library. Please use the Export CSV button or try printing the page.');
+      }
+    }
+  }
+
   // Download helper (from tc-work.js)
   function download(filename, text) {
     const blob = new Blob([text], { type: "text/csv;charset=utf-8" });
@@ -963,6 +1093,12 @@
     const btnExport = $("btnExportCSV");
     if (btnExport) {
       btnExport.addEventListener("click", exportToCSV);
+    }
+    
+    // Wire PDF export button
+    const btnExportPDF = $("btnExportPDF");
+    if (btnExportPDF) {
+      btnExportPDF.addEventListener("click", exportToPDF);
     }
     
     // Wire quarter filter
