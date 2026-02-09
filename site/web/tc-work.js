@@ -1889,16 +1889,14 @@ function normalizeTaggedAssignmentText(input) {
       const classSel = document.getElementById("draftClass");
       if (classSel) {
         classSel.disabled = false;
-        classSel.setAttribute("required", "");
-        updateClassDropdownLabel("Individual Class (required)");
+        updateClassDropdownLabel("Individual Class");
       }
     } else {
       // No sections detected (normal single-class file)
       const classSel = document.getElementById("draftClass");
       if (classSel) {
         classSel.disabled = false;
-        classSel.setAttribute("required", "");
-        updateClassDropdownLabel("Individual Class (required)");
+        updateClassDropdownLabel("Individual Class");
       }
     }
   }
@@ -2038,11 +2036,10 @@ function normalizeTaggedAssignmentText(input) {
                 panel.innerHTML = "";
                 panel.style.display = "none";
               }
-              // Restore required attribute when file is cleared
+              // Restore label when file is cleared
               if (classSel) {
                 classSel.disabled = false;
-                classSel.setAttribute("required", "");
-                updateClassDropdownLabel("Individual Class (required)");
+                updateClassDropdownLabel("Individual Class");
               }
               return;
             }
