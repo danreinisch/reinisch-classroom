@@ -91,10 +91,9 @@
       let score = submission.score;
       if (score === undefined && submission.answers) {
         // Try to calculate score from answers
-        const answers = submission.answers || {};
-        const totalQuestions = Object.keys(answers).length;
+        const totalQuestions = Object.keys(submission.answers).length;
         if (totalQuestions > 0) {
-          const correctAnswers = Object.values(answers).filter(
+          const correctAnswers = Object.values(submission.answers).filter(
             (a) => a.correct === true || a.isCorrect === true
           ).length;
           score = Math.round((correctAnswers / totalQuestions) * 100);
@@ -390,8 +389,9 @@
       )
       .join("\n");
 
-    // Download
-    download(`gradebook-${currentClassFilter.replace(/\s+/g, "-")}-${nowISO()}.csv`, csvContent);
+    // Download with safe filename
+    const safeClassName = currentClassFilter.replace(/[^a-zA-Z0-9]/g, "-").replace(/-+/g, "-");
+    download(`gradebook-${safeClassName}-${nowISO()}.csv`, csvContent);
   }
 
   // Download helper (from tc-work.js)
