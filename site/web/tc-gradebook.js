@@ -75,20 +75,32 @@
     return "gb-score-red";
   }
 
-  // Helper to get quarter from a date using school-year calendar
-  // Q1: July-September (7-9)
-  // Q2: October-December (10-12)
-  // Q3: January-March (1-3)
-  // Q4: April-June (4-6)
+  // Helper to get quarter from a date using actual school calendar
+  // Q1: August 1 - October 18
+  // Q2: October 19 - January 18
+  // Q3: January 19 - March 18
+  // Q4: March 19 - May 31
   function getQuarter(dateStr) {
     if (!dateStr) return null;
     const date = new Date(dateStr);
-    const month = date.getMonth() + 1; // getMonth is 0-indexed
+    const month = date.getMonth() + 1; // getMonth is 0-indexed (1-12)
+    const day = date.getDate();
     
-    if (month >= 7 && month <= 9) return "Q1";
-    if (month >= 10 && month <= 12) return "Q2";
-    if (month >= 1 && month <= 3) return "Q3";
-    if (month >= 4 && month <= 6) return "Q4";
+    // Q1: August 1 - October 18
+    if (month === 8 || month === 9 || (month === 10 && day <= 18)) return "Q1";
+    
+    // Q2: October 19 - January 18 (spans year boundary)
+    if ((month === 10 && day >= 19) || month === 11 || month === 12 || (month === 1 && day <= 18)) return "Q2";
+    
+    // Q3: January 19 - March 18
+    if ((month === 1 && day >= 19) || month === 2 || (month === 3 && day <= 18)) return "Q3";
+    
+    // Q4: March 19 - May 31
+    if ((month === 3 && day >= 19) || month === 4 || month === 5) return "Q4";
+    
+    // Summer months (June, July) - might be Q4 or no quarter
+    if (month === 6 || month === 7) return "Q4"; // Include summer in Q4
+    
     return null;
   }
 
@@ -619,8 +631,15 @@
     // Build data rows
     tableBody.innerHTML = "";
 
+    let isFirstRow = true; // Track first student row for auto-highlight
     for (const student of students) {
       const tr = document.createElement("tr");
+      
+      // Auto-highlight first student row
+      if (isFirstRow) {
+        tr.classList.add("gb-highlighted");
+        isFirstRow = false;
+      }
 
       // Student name cell (sticky)
       const tdStudent = document.createElement("td");
@@ -857,6 +876,140 @@
     download(`gradebook-${safeClassName}-${nowISO()}.csv`, csvContent);
   }
 
+  // Export gradebook to PDF
+  async function exportToPDF() {
+    // PDF layout constants
+    const PDF_LANDSCAPE_USABLE_WIDTH = 280; // mm for A4 landscape
+    const PDF_MAX_PAGE_HEIGHT = 190; // mm before overflow on single page
+    
+    const data = buildGradebookData();
+    if (!data) {
+      alert("No data to export.");
+      return;
+    }
+
+    try {
+      // Lazy-load jsPDF (relative import from same directory structure)
+      const { jsPDF } = await import('../vendor/jspdf.mjs');
+      
+      const { students, drafts, scoreMap } = data;
+      
+      // Create new PDF document (landscape for better table fit)
+      const doc = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: 'a4'
+      });
+      
+      // Title
+      const title = `Gradebook - ${currentClassFilter}`;
+      doc.setFontSize(16);
+      doc.text(title, 15, 15);
+      
+      // Date
+      doc.setFontSize(10);
+      doc.text(`Generated: ${new Date().toLocaleDateString()}`, 15, 22);
+      
+      // Build table data
+      const headers = ["Student"];
+      for (const draft of drafts) {
+        headers.push((draft.title || "(untitled)").substring(0, 20)); // Truncate long titles
+      }
+      headers.push("Avg");
+      
+      const tableData = [];
+      for (const student of students) {
+        const row = [student.name || student.code];
+        const studentScores = scoreMap.get(student.code);
+        
+        for (const draft of drafts) {
+          if (studentScores && studentScores.has(draft.id)) {
+            const score = studentScores.get(draft.id);
+            row.push(typeof score === "number" ? `${score}%` : "—");
+          } else {
+            row.push("—");
+          }
+        }
+        
+        const avg = calculateRowAverage(student.code, scoreMap, drafts);
+        row.push(avg !== null ? `${avg}%` : "—");
+        
+        tableData.push(row);
+      }
+      
+      // Add summary row
+      const summaryRow = ["Class Avg"];
+      for (const draft of drafts) {
+        const avg = calculateColumnAverage(draft.id, scoreMap, students);
+        summaryRow.push(avg !== null ? `${avg}%` : "—");
+      }
+      const allScores = [];
+      for (const student of students) {
+        const avg = calculateRowAverage(student.code, scoreMap, drafts);
+        if (avg !== null) {
+          allScores.push(avg);
+        }
+      }
+      const overallAvg = allScores.length > 0
+        ? Math.round(allScores.reduce((a, b) => a + b, 0) / allScores.length)
+        : null;
+      summaryRow.push(overallAvg !== null ? `${overallAvg}%` : "—");
+      tableData.push(summaryRow);
+      
+      // Add table using autoTable plugin if available, otherwise basic table
+      if (doc.autoTable) {
+        doc.autoTable({
+          head: [headers],
+          body: tableData,
+          startY: 28,
+          theme: 'grid',
+          headStyles: { fillColor: [34, 197, 94] },
+          styles: { fontSize: 8, cellPadding: 2 }
+        });
+      } else {
+        // Fallback: simple text-based table
+        doc.setFontSize(8);
+        let y = 28;
+        const colWidth = PDF_LANDSCAPE_USABLE_WIDTH / headers.length; // Divide by columns
+        
+        // Headers
+        let x = 15;
+        doc.setFont(undefined, 'bold');
+        for (const header of headers) {
+          doc.text(header.substring(0, 15), x, y);
+          x += colWidth;
+        }
+        y += 6;
+        
+        // Data rows
+        doc.setFont(undefined, 'normal');
+        for (const row of tableData) {
+          x = 15;
+          for (const cell of row) {
+            doc.text(String(cell).substring(0, 15), x, y);
+            x += colWidth;
+          }
+          y += 5;
+          if (y > PDF_MAX_PAGE_HEIGHT) break; // Avoid overflow on single page
+        }
+      }
+      
+      // Download with safe filename
+      const safeClassName = currentClassFilter.replace(/[^a-zA-Z0-9]/g, "-").replace(/-+/g, "-");
+      doc.save(`gradebook-${safeClassName}-${nowISO()}.pdf`);
+      
+    } catch (err) {
+      console.error('[gradebook] PDF export error:', err);
+      
+      // Fallback: Use browser print dialog
+      if (confirm('jsPDF library not available. Would you like to use the browser Print dialog instead? (You can save as PDF from there)')) {
+        window.print();
+      } else {
+        alert('PDF export requires the jsPDF library. Please use the Export CSV button or try printing the page.');
+      }
+    }
+  }
+
   // Download helper (from tc-work.js)
   function download(filename, text) {
     const blob = new Blob([text], { type: "text/csv;charset=utf-8" });
@@ -944,6 +1097,12 @@
     const btnExport = $("btnExportCSV");
     if (btnExport) {
       btnExport.addEventListener("click", exportToCSV);
+    }
+    
+    // Wire PDF export button
+    const btnExportPDF = $("btnExportPDF");
+    if (btnExportPDF) {
+      btnExportPDF.addEventListener("click", exportToPDF);
     }
     
     // Wire quarter filter
