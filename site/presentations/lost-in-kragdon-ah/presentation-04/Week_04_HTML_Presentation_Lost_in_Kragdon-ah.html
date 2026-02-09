@@ -35,7 +35,7 @@
             overflow: hidden;
         }
 
-        .bg-image {
+        .bg-layer {
             position: absolute;
             top: 0;
             left: 0;
@@ -43,33 +43,22 @@
             height: 100%;
             background-size: cover;
             background-position: center;
-            opacity: 0;
-            transition: opacity 3s ease-in-out;
+            transition: opacity 2.5s ease-in-out;
+        }
+
+        .bg-layer-back {
             z-index: 0;
-        }
-
-        .bg-image.active {
             opacity: 0.55;
-            z-index: 2;
         }
 
-        .bg-image.fade-out {
-            opacity: 0;
+        .bg-layer-front {
             z-index: 1;
+            opacity: 0;
         }
 
-        .bg-image:nth-child(1) { background-image: url('image1.jpg'); }
-        .bg-image:nth-child(2) { background-image: url('image2.jpg'); }
-        .bg-image:nth-child(3) { background-image: url('image3.jpg'); }
-        .bg-image:nth-child(4) { background-image: url('image4.jpg'); }
-        .bg-image:nth-child(5) { background-image: url('image5.jpg'); }
-        .bg-image:nth-child(6) { background-image: url('image6.jpg'); }
-        .bg-image:nth-child(7) { background-image: url('image7.jpg'); }
-        .bg-image:nth-child(8) { background-image: url('image8.jpg'); }
-        .bg-image:nth-child(9) { background-image: url('image9.jpg'); }
-        .bg-image:nth-child(10) { background-image: url('image10.jpg'); }
-        .bg-image:nth-child(11) { background-image: url('image11.jpg'); }
-        .bg-image:nth-child(12) { background-image: url('image12.jpg'); }
+        .bg-layer-front.visible {
+            opacity: 0.55;
+        }
 
         .container {
             max-width: 1200px;
@@ -630,18 +619,8 @@
 <body>
     <!-- Background Image Container -->
     <div class="bg-container">
-        <div class="bg-image active"></div>
-        <div class="bg-image"></div>
-        <div class="bg-image"></div>
-        <div class="bg-image"></div>
-        <div class="bg-image"></div>
-        <div class="bg-image"></div>
-        <div class="bg-image"></div>
-        <div class="bg-image"></div>
-        <div class="bg-image"></div>
-        <div class="bg-image"></div>
-        <div class="bg-image"></div>
-        <div class="bg-image"></div>
+        <div class="bg-layer bg-layer-back" id="bgBack" style="background-image: url('image1.jpg');"></div>
+        <div class="bg-layer bg-layer-front" id="bgFront"></div>
     </div>
 
     <div class="container">
@@ -1553,40 +1532,55 @@
         let currentSlide = 0;
         const totalSlides = 34;
 
-        // Background image rotation with cross-fade
-        let currentBg = 0;
-        const bgImages = document.querySelectorAll('.bg-image');
+        // Background image rotation - two-layer crossfade (no flicker)
+        const bgImagePaths = [];
         const totalBgImages = 12;
-        
-        // Preload all background images to prevent flicker on first show
-        (function preloadImages() {
-            for (let i = 1; i <= totalBgImages; i++) {
-                const img = new Image();
-                img.src = 'image' + i + '.jpg';
-            }
-        })();
-        
-        // Start with first image active
-        bgImages[0].classList.add('active');
-        
-        function rotateBg() {
-            const oldBg = currentBg;
-            currentBg = (currentBg + 1) % totalBgImages;
-            
-            // New image fades in on top (z-index 2)
-            bgImages[currentBg].classList.add('active');
-            
-            // After new image is fully visible, fade out the old one
-            setTimeout(function() {
-                bgImages[oldBg].classList.remove('active');
-                bgImages[oldBg].classList.add('fade-out');
-                // Clean up fade-out class after transition completes
-                setTimeout(function() {
-                    bgImages[oldBg].classList.remove('fade-out');
-                }, 3000);
-            }, 3000);
+        for (let i = 1; i <= totalBgImages; i++) {
+            bgImagePaths.push('image' + i + '.jpg');
         }
-        
+
+        // Preload all images
+        bgImagePaths.forEach(function(src) {
+            const img = new Image();
+            img.src = src;
+        });
+
+        let currentBgIndex = 0;
+        const bgBack = document.getElementById('bgBack');
+        const bgFront = document.getElementById('bgFront');
+        let transitioning = false;
+
+        function rotateBg() {
+            if (transitioning) return;
+            transitioning = true;
+
+            currentBgIndex = (currentBgIndex + 1) % totalBgImages;
+
+            // Load next image into the front layer, then fade it in
+            bgFront.style.backgroundImage = "url('" + bgImagePaths[currentBgIndex] + "')";
+
+            // Small delay to ensure the image is painted before fading
+            requestAnimationFrame(function() {
+                requestAnimationFrame(function() {
+                    bgFront.classList.add('visible');
+
+                    // After fade completes, swap: move front image to back, reset front
+                    setTimeout(function() {
+                        bgBack.style.backgroundImage = "url('" + bgImagePaths[currentBgIndex] + "')";
+                        bgFront.classList.remove('visible');
+                        // Temporarily disable transition for instant reset
+                        bgFront.style.transition = 'none';
+                        requestAnimationFrame(function() {
+                            requestAnimationFrame(function() {
+                                bgFront.style.transition = '';
+                                transitioning = false;
+                            });
+                        });
+                    }, 2600);
+                });
+            });
+        }
+
         setInterval(rotateBg, 8000);
 
         function updateSlide() {
