@@ -126,12 +126,21 @@ export class ProgressGridV2 {
   getCurrentQuarter() {
     const now = new Date();
     const month = now.getMonth() + 1; // 1-12
+    const day = now.getDate();
     
-    if ([7, 8, 9].includes(month)) return 'Q1';
-    if ([10, 11, 12].includes(month)) return 'Q2';
-    if ([1, 2, 3].includes(month)) return 'Q3';
-    if ([4, 5, 6].includes(month)) return 'Q4';
-    return 'Q1';
+    // Q1: August 1 - October 18
+    if (month === 8 || month === 9 || (month === 10 && day <= 18)) return 'Q1';
+    
+    // Q2: October 19 - January 18
+    if ((month === 10 && day >= 19) || month === 11 || month === 12 || (month === 1 && day <= 18)) return 'Q2';
+    
+    // Q3: January 19 - March 18
+    if ((month === 1 && day >= 19) || month === 2 || (month === 3 && day <= 18)) return 'Q3';
+    
+    // Q4: March 19 - May 31 (including summer)
+    if ((month === 3 && day >= 19) || month === 4 || month === 5 || month === 6 || month === 7) return 'Q4';
+    
+    return 'Q1'; // default
   }
   
   getQuarterDateRange(quarter) {
@@ -139,14 +148,14 @@ export class ProgressGridV2 {
     const year = now.getFullYear();
     const month = now.getMonth() + 1;
     
-    // Determine school year
-    const schoolYear = month >= 7 ? year : year - 1;
+    // Determine school year (August-July)
+    const schoolYear = month >= 8 ? year : year - 1;
     
     const ranges = {
-      'Q1': { start: `${schoolYear}-07-01`, end: `${schoolYear}-09-30` },
-      'Q2': { start: `${schoolYear}-10-01`, end: `${schoolYear}-12-31` },
-      'Q3': { start: `${schoolYear + 1}-01-01`, end: `${schoolYear + 1}-03-31` },
-      'Q4': { start: `${schoolYear + 1}-04-01`, end: `${schoolYear + 1}-06-30` }
+      'Q1': { start: `${schoolYear}-08-01`, end: `${schoolYear}-10-18` },
+      'Q2': { start: `${schoolYear}-10-19`, end: `${schoolYear + 1}-01-18` },
+      'Q3': { start: `${schoolYear + 1}-01-19`, end: `${schoolYear + 1}-03-18` },
+      'Q4': { start: `${schoolYear + 1}-03-19`, end: `${schoolYear + 1}-05-31` }
     };
     
     return ranges[quarter] || { start: null, end: null };
@@ -154,10 +163,10 @@ export class ProgressGridV2 {
   
   getQuarterLabel(quarter) {
     const labels = {
-      'Q1': 'Q1 (Jul-Sep)',
-      'Q2': 'Q2 (Oct-Dec)',
-      'Q3': 'Q3 (Jan-Mar)',
-      'Q4': 'Q4 (Apr-Jun)'
+      'Q1': 'Q1 (Aug 1-Oct 18)',
+      'Q2': 'Q2 (Oct 19-Jan 18)',
+      'Q3': 'Q3 (Jan 19-Mar 18)',
+      'Q4': 'Q4 (Mar 19-May 31)'
     };
     return labels[quarter] || quarter;
   }

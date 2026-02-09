@@ -75,20 +75,32 @@
     return "gb-score-red";
   }
 
-  // Helper to get quarter from a date using school-year calendar
-  // Q1: July-September (7-9)
-  // Q2: October-December (10-12)
-  // Q3: January-March (1-3)
-  // Q4: April-June (4-6)
+  // Helper to get quarter from a date using actual school calendar
+  // Q1: August 1 - October 18
+  // Q2: October 19 - January 18
+  // Q3: January 19 - March 18
+  // Q4: March 19 - May 31
   function getQuarter(dateStr) {
     if (!dateStr) return null;
     const date = new Date(dateStr);
-    const month = date.getMonth() + 1; // getMonth is 0-indexed
+    const month = date.getMonth() + 1; // getMonth is 0-indexed (1-12)
+    const day = date.getDate();
     
-    if (month >= 7 && month <= 9) return "Q1";
-    if (month >= 10 && month <= 12) return "Q2";
-    if (month >= 1 && month <= 3) return "Q3";
-    if (month >= 4 && month <= 6) return "Q4";
+    // Q1: August 1 - October 18
+    if (month === 8 || month === 9 || (month === 10 && day <= 18)) return "Q1";
+    
+    // Q2: October 19 - January 18 (spans year boundary)
+    if ((month === 10 && day >= 19) || month === 11 || month === 12 || (month === 1 && day <= 18)) return "Q2";
+    
+    // Q3: January 19 - March 18
+    if ((month === 1 && day >= 19) || month === 2 || (month === 3 && day <= 18)) return "Q3";
+    
+    // Q4: March 19 - May 31
+    if ((month === 3 && day >= 19) || month === 4 || month === 5) return "Q4";
+    
+    // Summer months (June, July) - might be Q4 or no quarter
+    if (month === 6 || month === 7) return "Q4"; // Include summer in Q4
+    
     return null;
   }
 
