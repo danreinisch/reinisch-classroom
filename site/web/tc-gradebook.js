@@ -5,8 +5,8 @@
   if (!location.pathname.startsWith("/teacher/gradebook")) return;
 
   // Import data adapter for Supabase/localStorage abstraction
-  const { db, isRemote } = await import('/site/web/data-adapter.js');
-  const { getSupabase } = await import('/site/web/supabase-client.js');
+  const { db, isRemote } = await import('/web/data-adapter.js');
+  const { getSupabase } = await import('/web/supabase-client.js');
 
   const STORAGE_KEY_DRAFTS = "rc_tc_work_drafts_v1";
   const NS = "rc_unified_";
