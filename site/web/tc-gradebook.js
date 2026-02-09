@@ -10,6 +10,7 @@
 
   const STORAGE_KEY_DRAFTS = "rc_tc_work_drafts_v1";
   const NS = "rc_unified_";
+  const REALTIME_DEBOUNCE_MS = 1000; // Debounce realtime updates to prevent excessive refreshes
 
   // NOTE: Keep in sync with CANON_CLASSES in tc-work.js and CLASS_LABELS in tc-work-qol.js
   const CANON_CLASSES = [
@@ -242,7 +243,8 @@
       }
 
       // Use score_total from submission (Supabase format) or score (localStorage format)
-      let score = submission.score_total !== undefined ? submission.score_total : submission.score;
+      // Using nullish coalescing to handle both null and undefined
+      let score = submission.score_total ?? submission.score;
       
       if (score === undefined && submission.answers) {
         // Try to calculate score from answers
@@ -332,7 +334,7 @@
         const existingSubmission = submissionsData.find((sub) => sub.instance_id === instance.id);
         
         if (existingSubmission) {
-          // Update existing submission with its id
+          // Update existing submission (addSubmission acts as upsert when id is provided)
           await db.addSubmission({
             id: existingSubmission.id,
             instance_id: instance.id,
@@ -793,7 +795,7 @@
       } catch (err) {
         console.error('[gradebook] Error refreshing after realtime change:', err);
       }
-    }, 1000);
+    }, REALTIME_DEBOUNCE_MS);
   }
   
   // Cleanup realtime subscription on page unload
