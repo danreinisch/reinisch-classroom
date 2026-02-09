@@ -249,7 +249,7 @@
 
         if (modal) {
           // Skip draftOverlay - it has its own close handler in tc-work.js
-          if (modal.id === 'draftOverlay') return;
+          if (modal.id === 'draftOverlay' || modal.closest('#draftOverlay')) return;
           
           e.preventDefault();
           e.stopPropagation();
