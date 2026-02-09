@@ -735,7 +735,6 @@ Work Samples:
 ${workSamplesText}
 
 Generated: ${new Date().toLocaleString()}
-Teacher: [Teacher Name]
     `.trim();
     
     const blob = new Blob([content], { type: 'text/plain' });
