@@ -5,21 +5,43 @@
 // License: MIT
 //
 // INSTALLATION INSTRUCTIONS:
-// This is a placeholder file. To complete the jsPDF integration:
+// ===========================
+// This is a placeholder file. To complete the jsPDF integration, follow these steps:
 //
-// 1. Download the jsPDF ESM build:
-//    wget https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js -O jspdf-temp.js
+// OPTION 1: Using CDN (Recommended)
+// ----------------------------------
+// 1. Download the jsPDF ESM build from a CDN:
+//    wget https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.es.min.js -O jspdf.mjs
+//    
+//    OR use this alternative:
+//    wget https://unpkg.com/jspdf@2.5.1/dist/jspdf.es.min.js -O jspdf.mjs
 //
-// 2. Convert to ESM format (wrap UMD in ESM export):
-//    - Or use: https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.es.min.js
+// 2. Replace this file with the downloaded jspdf.mjs
 //
-// 3. Replace this file with the actual jsPDF bundle
+// OPTION 2: Using npm
+// -------------------
+// 1. Install jsPDF: npm install jspdf@2.5.1
+// 2. Copy from node_modules: cp node_modules/jspdf/dist/jspdf.es.min.js jspdf.mjs
+// 3. Replace this file with jspdf.mjs
+//
+// OPTION 3: Manual Download
+// -------------------------
+// 1. Visit: https://github.com/parallax/jsPDF/releases
+// 2. Download the ESM build (jspdf.es.min.js) from version 2.5.1
+// 3. Replace this file with the downloaded file
+//
+// VERIFICATION:
+// After installation, verify the export works by checking:
+// - The file should export a default jsPDF class
+// - The file size should be ~300-500 KB (minified)
+// - The PDF export button in the gradebook should generate PDF files
 //
 // For now, this exports a minimal stub that throws an error if used.
+// The gradebook will fall back to the browser print dialog.
 
 export class jsPDF {
   constructor() {
-    throw new Error('jsPDF library not yet installed. See site/vendor/jspdf.mjs for installation instructions.');
+    throw new Error('PDF export is not yet configured. Please use the CSV export or browser print instead. Contact your administrator to enable PDF export.');
   }
 }
 

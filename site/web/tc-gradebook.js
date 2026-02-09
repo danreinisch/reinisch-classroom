@@ -878,6 +878,10 @@
 
   // Export gradebook to PDF
   async function exportToPDF() {
+    // PDF layout constants
+    const PDF_LANDSCAPE_USABLE_WIDTH = 280; // mm for A4 landscape
+    const PDF_MAX_PAGE_HEIGHT = 190; // mm before overflow on single page
+    
     const data = buildGradebookData();
     if (!data) {
       alert("No data to export.");
@@ -885,8 +889,8 @@
     }
 
     try {
-      // Lazy-load jsPDF
-      const { jsPDF } = await import('/site/vendor/jspdf.mjs');
+      // Lazy-load jsPDF (relative import from same directory structure)
+      const { jsPDF } = await import('../vendor/jspdf.mjs');
       
       const { students, drafts, scoreMap } = data;
       
@@ -966,7 +970,7 @@
         // Fallback: simple text-based table
         doc.setFontSize(8);
         let y = 28;
-        const colWidth = 280 / headers.length; // Landscape width divided by columns
+        const colWidth = PDF_LANDSCAPE_USABLE_WIDTH / headers.length; // Divide by columns
         
         // Headers
         let x = 15;
@@ -986,7 +990,7 @@
             x += colWidth;
           }
           y += 5;
-          if (y > 190) break; // Avoid overflow on single page
+          if (y > PDF_MAX_PAGE_HEIGHT) break; // Avoid overflow on single page
         }
       }
       

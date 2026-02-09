@@ -148,7 +148,8 @@ export class ProgressGridV2 {
     const year = now.getFullYear();
     const month = now.getMonth() + 1;
     
-    // Determine school year (August-July)
+    // Determine school year (August-July, aligns with Q1-Q4 quarters)
+    // School year starts in August, so Aug-Dec use current year, Jan-July use previous year
     const schoolYear = month >= 8 ? year : year - 1;
     
     const ranges = {
