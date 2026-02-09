@@ -360,7 +360,7 @@
       return `
         <tr>
           <td>${new Date(entry.date).toLocaleDateString()}</td>
-          <td class="dt-data-value ${scoreClass}">${entry.value}%</td>
+          <td class="dt-data-value ${scoreClass} editable" data-entry-id="${entry.id}" data-goal="${goal.code}" data-student="${studentCode}" data-value="${entry.value}">${entry.value}%</td>
           <td>${entry.source || 'manual'}</td>
         </tr>
       `;
@@ -420,10 +420,74 @@
     `;
   }
 
+  // Render sparkline SVG for goal progress
+  function renderSparkline(goal, studentCode) {
+    const entries = getGoalProgressEntries(goal.code, studentCode);
+    
+    // Need at least 2 points to draw a line
+    if (entries.length < 2) {
+      return '';
+    }
+    
+    const width = 200;
+    const height = 40;
+    const padding = 4;
+    
+    // Get values sorted by date
+    const values = entries.map(e => parseFloat(e.value));
+    const max = Math.max(...values, 100);
+    const min = Math.min(...values, 0);
+    const range = max - min || 1;
+    
+    const stepX = (width - 2 * padding) / (values.length - 1);
+    
+    // Build polyline points
+    let points = '';
+    let circles = '';
+    values.forEach((val, i) => {
+      const x = padding + i * stepX;
+      const y = height - padding - ((val - min) / range) * (height - 2 * padding);
+      points += `${x},${y} `;
+      circles += `<circle cx="${x}" cy="${y}" r="2" fill="rgba(34, 197, 94, 0.9)" />`;
+    });
+    
+    // Build polygon points for fill area (add bottom corners)
+    const firstX = padding;
+    const lastX = padding + (values.length - 1) * stepX;
+    const bottomY = height - padding;
+    const polygonPoints = points + `${lastX},${bottomY} ${firstX},${bottomY}`;
+    
+    return `
+      <div class="dt-sparkline">
+        <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+          <defs>
+            <linearGradient id="sparkGradient-${goal.code}" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" style="stop-color:rgba(34, 197, 94, 0.2);stop-opacity:1" />
+              <stop offset="100%" style="stop-color:rgba(34, 197, 94, 0.02);stop-opacity:1" />
+            </linearGradient>
+          </defs>
+          <polygon 
+            points="${polygonPoints.trim()}" 
+            fill="url(#sparkGradient-${goal.code})"
+          />
+          <polyline 
+            points="${points.trim()}" 
+            fill="none" 
+            stroke="rgba(34, 197, 94, 0.8)" 
+            stroke-width="2" 
+            stroke-linecap="round" 
+            stroke-linejoin="round"
+          />
+          ${circles}
+        </svg>
+      </div>
+    `;
+  }
+
   // Render a single goal row
   function renderGoalRow(goal, studentCode) {
     return `
-      <div class="dt-goal-row">
+      <div class="dt-goal-row" data-goal="${goal.code}" data-student="${studentCode}">
         <div class="dt-goal-header">
           <div>
             <strong>${goal.code}</strong> — ${goal.desc || 'No description'}
@@ -434,8 +498,17 @@
           <span>Area: <strong>${goal.goal_area || 'Uncategorized'}</strong></span>
         </div>
         ${renderGoalStats(goal, studentCode)}
+        ${renderSparkline(goal, studentCode)}
         ${renderDataPointsTable(goal, studentCode)}
         <button class="dt-btn primary" data-action="add-data" data-goal="${goal.code}" data-student="${studentCode}">+ Add Data Point</button>
+        <div class="dt-inline-form" style="display: none;" data-goal="${goal.code}" data-student="${studentCode}">
+          <label style="font-size: 13px; opacity: 0.9;">Date:</label>
+          <input type="date" class="dt-date-input" value="${formatDateYYYYMMDD()}" />
+          <label style="font-size: 13px; opacity: 0.9;">Value:</label>
+          <input type="number" class="dt-value-input" min="0" max="100" step="1" placeholder="0-100" />
+          <button class="dt-btn primary dt-save-btn">Save</button>
+          <button class="dt-btn dt-cancel-btn">Cancel</button>
+        </div>
       </div>
     `;
   }
@@ -538,24 +611,86 @@
       }
     });
     
-    // Add "Add Data Point" button handlers
+    // Add "Add Data Point" button handlers - show inline form
     container.querySelectorAll('[data-action="add-data"]').forEach(btn => {
-      btn.addEventListener('click', async (e) => {
+      btn.addEventListener('click', (e) => {
         e.stopPropagation();
         const goalCode = btn.dataset.goal;
         const studentCode = btn.dataset.student;
-        await addDataPoint(goalCode, studentCode);
+        showInlineForm(goalCode, studentCode);
+      });
+    });
+    
+    // Add inline cell editing handlers
+    container.querySelectorAll('.dt-data-value.editable').forEach(cell => {
+      cell.addEventListener('click', (e) => {
+        e.stopPropagation();
+        startCellEdit(cell);
+      });
+    });
+    
+    // Add inline form handlers
+    container.querySelectorAll('.dt-inline-form').forEach(form => {
+      const goalCode = form.dataset.goal;
+      const studentCode = form.dataset.student;
+      
+      const saveBtn = form.querySelector('.dt-save-btn');
+      const cancelBtn = form.querySelector('.dt-cancel-btn');
+      const dateInput = form.querySelector('.dt-date-input');
+      const valueInput = form.querySelector('.dt-value-input');
+      
+      saveBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        await saveInlineDataPoint(goalCode, studentCode, dateInput.value, valueInput.value, form);
+      });
+      
+      cancelBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        hideInlineForm(form);
+      });
+      
+      // Enter key saves
+      valueInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          saveBtn.click();
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          cancelBtn.click();
+        }
       });
     });
   }
-
-  // Add a data point
-  async function addDataPoint(goalCode, studentCode) {
-    const date = prompt('Enter date (YYYY-MM-DD):', formatDateYYYYMMDD());
-    if (!date) return;
+  
+  // Show inline form for adding data point
+  function showInlineForm(goalCode, studentCode) {
+    const goalRow = document.querySelector(`.dt-goal-row[data-goal="${goalCode}"][data-student="${studentCode}"]`);
+    if (!goalRow) return;
     
-    const value = prompt('Enter value (0-100):', '');
-    if (value === null || value === '') return;
+    const form = goalRow.querySelector('.dt-inline-form');
+    if (!form) return;
+    
+    // Reset form
+    form.querySelector('.dt-date-input').value = formatDateYYYYMMDD();
+    form.querySelector('.dt-value-input').value = '';
+    form.style.display = 'flex';
+    
+    // Focus value input
+    setTimeout(() => form.querySelector('.dt-value-input').focus(), 100);
+  }
+  
+  // Hide inline form
+  function hideInlineForm(form) {
+    form.style.display = 'none';
+    form.querySelector('.dt-value-input').value = '';
+  }
+  
+  // Save inline data point
+  async function saveInlineDataPoint(goalCode, studentCode, date, value, form) {
+    if (!date) {
+      alert('Please enter a date');
+      return;
+    }
     
     const numValue = parseFloat(value);
     if (isNaN(numValue) || numValue < 0 || numValue > 100) {
@@ -575,6 +710,119 @@
       // Reload progress data and re-render
       await loadProgressForQuarter(currentQuarterFilter);
       render();
+      
+      hideInlineForm(form);
+    } catch (err) {
+      console.error('[data] Error adding data point:', err);
+      alert('Error adding data point: ' + err.message);
+    }
+  }
+  
+  // Start cell editing
+  function startCellEdit(cell) {
+    // Don't allow multiple edits at once
+    if (document.querySelector('.dt-data-value.editing')) return;
+    
+    const currentValue = parseFloat(cell.dataset.value);
+    const entryId = cell.dataset.entryId;
+    const goalCode = cell.dataset.goal;
+    const studentCode = cell.dataset.student;
+    
+    // Create input
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.min = '0';
+    input.max = '100';
+    input.step = '1';
+    input.value = currentValue;
+    
+    // Store original value for cancel
+    cell.dataset.originalValue = currentValue;
+    
+    // Replace cell content
+    const originalContent = cell.innerHTML;
+    cell.innerHTML = '';
+    cell.appendChild(input);
+    cell.classList.add('editing');
+    
+    input.focus();
+    input.select();
+    
+    // Save on Enter or blur
+    const save = async () => {
+      const newValue = parseFloat(input.value);
+      
+      if (isNaN(newValue) || newValue < 0 || newValue > 100) {
+        alert('Please enter a valid number between 0 and 100');
+        input.focus();
+        return;
+      }
+      
+      // Don't save if value hasn't changed
+      if (newValue === currentValue) {
+        cancel();
+        return;
+      }
+      
+      // Show saving state
+      cell.classList.add('saving');
+      input.disabled = true;
+      
+      try {
+        // Find the entry to get its date
+        const entry = progressData.find(p => p.id === entryId);
+        if (!entry) throw new Error('Entry not found');
+        
+        await db.upsertGoalProgress({
+          goal_code: goalCode,
+          student_code: studentCode,
+          date: entry.date,
+          value: newValue,
+          source: entry.source || 'manual'
+        });
+        
+        // Reload and re-render
+        await loadProgressForQuarter(currentQuarterFilter);
+        render();
+      } catch (err) {
+        console.error('[data] Error updating data point:', err);
+        alert('Error updating data point: ' + err.message);
+        cell.classList.remove('saving');
+        input.disabled = false;
+        input.focus();
+      }
+    };
+    
+    const cancel = () => {
+      cell.classList.remove('editing');
+      cell.innerHTML = originalContent;
+    };
+    
+    input.addEventListener('blur', save);
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        save();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        cancel();
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        const step = e.shiftKey ? 5 : 1;
+        input.value = Math.min(100, parseFloat(input.value || 0) + step);
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        const step = e.shiftKey ? 5 : 1;
+        input.value = Math.max(0, parseFloat(input.value || 0) - step);
+      }
+    });
+  }
+
+  // Add a data point (legacy - now replaced by inline form)
+  async function addDataPoint(goalCode, studentCode) {
+    // This function is no longer used but kept for compatibility
+    showInlineForm(goalCode, studentCode);
+  }
       
       alert('Data point added successfully!');
     } catch (err) {
