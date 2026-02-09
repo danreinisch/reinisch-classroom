@@ -547,7 +547,7 @@ const local = {
       submission_id: submissionId,
       item_id: itemId,
       earned_points: earnedPoints,
-      is_correct: earnedPoints > 0,
+      // Note: is_correct is not set for manual grading as it's ambiguous (partial credit, 0-point items, etc.)
       teacher_note: teacherNote || '',
       created_at: new Date().toISOString()
     };
@@ -1529,7 +1529,7 @@ const remote = {
         submission_id: submissionId,
         item_id: itemId,
         earned_points: earnedPoints,
-        is_correct: earnedPoints > 0,
+        // Note: is_correct is not set for manual grading as it's ambiguous (partial credit, 0-point items, etc.)
         teacher_note: teacherNote || null
       }, {
         onConflict: 'submission_id,item_id'

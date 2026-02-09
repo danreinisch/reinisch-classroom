@@ -385,8 +385,8 @@
     }
     
     // Render each submission as accordion item
-    const itemsHtml = await Promise.all(queue.map((submission, index) => 
-      renderSubmissionRow(submission, index)
+    const itemsHtml = await Promise.all(queue.map(submission => 
+      renderSubmissionRow(submission)
     ));
     
     queueContainer.innerHTML = itemsHtml.join('');
@@ -408,7 +408,7 @@
   }
 
   // Render a single submission row
-  async function renderSubmissionRow(submission, _index) {
+  async function renderSubmissionRow(submission) {
     const student = submission.student;
     const assignment = submission.assignment;
     const isExpanded = expandedSubmissions.has(submission.id);
@@ -549,7 +549,7 @@
     let writtenSection = '';
     if (constructedItems.length > 0) {
       const allScored = manualScored === manualTotal;
-      const statusIcon = allScored ? '✅ Scored' : `⏳ Needs Scoring (${manualScored}/${manualTotal})`;
+      const statusLabel = allScored ? '✅ Scored' : `⏳ Needs Scoring (${manualScored}/${manualTotal})`;
       
       const responseCards = constructedItems.map(item => {
         const answer = answers.find(a => a.item_id === item.id);
@@ -632,7 +632,7 @@
         <div class="rv-section">
           <div class="rv-section-header">
             <span>Written Responses (${constructedItems.length} items)</span>
-            <span class="rv-section-status">${statusIcon}</span>
+            <span class="rv-section-status">${statusLabel}</span>
           </div>
           <div class="rv-responses">
             ${responseCards}
@@ -854,11 +854,10 @@
         }
       }
       
-      // Re-render to update live summary
-      await render();
-      
-      // Re-expand the submission to maintain state
+      // Add to expanded set before re-rendering to maintain expanded state
       expandedSubmissions.add(submissionId);
+      
+      // Re-render to update live summary
       await render();
       
     } catch (err) {
