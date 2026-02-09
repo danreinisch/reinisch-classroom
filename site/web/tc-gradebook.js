@@ -19,6 +19,28 @@
 
   const $ = (id) => document.getElementById(id);
 
+  // Helper to format date as YYYY-MM-DD
+  function formatDateYYYYMMDD() {
+    return new Date().toISOString().split("T")[0];
+  }
+
+  // Helper to generate unique submission ID
+  function generateSubmissionId() {
+    const timestamp = Date.now();
+    const random = Math.random().toString(36).slice(2, 9).toUpperCase();
+    return `SUB${timestamp}_${random}`;
+  }
+
+  // Helper to write to localStorage with namespace
+  function storeSet(key, value) {
+    try {
+      localStorage.setItem(NS + key, JSON.stringify(value));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   // Helper to read from localStorage with namespace
   function storeGet(key, def) {
     try {
@@ -45,12 +67,14 @@
   let studentsData = [];
   let draftsData = [];
   let submissionsData = [];
+  let classEnrollmentsData = [];
 
   // Load data from localStorage
   function loadData() {
     studentsData = storeGet("students", []);
     draftsData = readDrafts();
     submissionsData = storeGet("submissions", []);
+    classEnrollmentsData = storeGet("classEnrollments", []);
   }
 
   // Filter students by selected class
@@ -58,7 +82,16 @@
     if (currentClassFilter === "All Classes") {
       return studentsData;
     }
-    return studentsData.filter((s) => s.class_id === currentClassFilter);
+    return studentsData.filter((s) => {
+      // Check if student has direct class_id match
+      if (s.class_id === currentClassFilter) {
+        return true;
+      }
+      // Check if student is enrolled in the class via classEnrollments
+      return classEnrollmentsData.some(
+        (e) => e.class_id === currentClassFilter && e.student_code === s.code && e.active !== false
+      );
+    });
   }
 
   // Build gradebook data structure
@@ -148,6 +181,111 @@
     return Math.round(sum / scores.length);
   }
 
+  // Save a score for a student and assignment
+  function saveScore(studentCode, draftId, score) {
+    // Find or create assignment instance
+    let instances = storeGet("assignmentInstances", []);
+    let instance = instances.find(
+      (inst) => inst.assignment_id === draftId && inst.student_code === studentCode
+    );
+
+    if (!instance) {
+      // Create new instance
+      instance = {
+        id: draftId + "-" + studentCode,
+        assignment_id: draftId,
+        student_code: studentCode,
+        assigned_at: formatDateYYYYMMDD(),
+        status: "Assigned",
+      };
+      instances.push(instance);
+      storeSet("assignmentInstances", instances);
+    }
+
+    // Find or create submission
+    let submissions = storeGet("submissions", []);
+    let submission = submissions.find((sub) => sub.instance_id === instance.id);
+
+    if (!submission) {
+      // Create new submission
+      submission = {
+        id: generateSubmissionId(),
+        instance_id: instance.id,
+        score: score,
+        submitted_at: new Date().toISOString(),
+      };
+      submissions.push(submission);
+    } else {
+      // Update existing submission
+      submission.score = score;
+    }
+
+    storeSet("submissions", submissions);
+
+    // Reload data and re-render
+    loadData();
+    renderGradebook();
+  }
+
+  // Make a score cell editable
+  function makeScoreEditable(td, studentCode, draftId, currentScore) {
+    // Store original content
+    const originalText = td.textContent;
+    td.classList.add("editing");
+
+    // Create input
+    const input = document.createElement("input");
+    input.type = "number";
+    input.min = "0";
+    input.max = "100";
+    input.value = currentScore !== null ? currentScore : "";
+    input.style.width = "60px";
+
+    // Replace cell content with input
+    td.textContent = "";
+    td.appendChild(input);
+    input.focus();
+    input.select();
+
+    // Save on blur or Enter
+    const save = () => {
+      const newValue = input.value.trim();
+      if (newValue === "") {
+        // Restore original if empty
+        td.classList.remove("editing");
+        td.textContent = originalText;
+        return;
+      }
+
+      const score = parseInt(newValue, 10);
+      if (isNaN(score) || score < 0 || score > 100) {
+        alert("Please enter a score between 0 and 100.");
+        input.focus();
+        return;
+      }
+
+      // Save the score
+      saveScore(studentCode, draftId, score);
+    };
+
+    // Cancel on Escape
+    const cancel = () => {
+      td.classList.remove("editing");
+      td.textContent = originalText;
+    };
+
+    input.addEventListener("blur", save);
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        save();
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        cancel();
+      }
+    });
+  }
+
   // Render the gradebook table
   function renderGradebook() {
     const data = buildGradebookData();
@@ -210,18 +348,25 @@
       const studentScores = scoreMap.get(student.code);
       for (const draft of drafts) {
         const td = document.createElement("td");
-        td.className = "gb-score-cell";
+        td.className = "gb-score-cell editable";
 
+        let currentScore = null;
         if (studentScores && studentScores.has(draft.id)) {
           const score = studentScores.get(draft.id);
           if (typeof score === "number") {
             td.textContent = `${score}%`;
+            currentScore = score;
           } else {
             td.textContent = "—";
           }
         } else {
           td.textContent = "—";
         }
+
+        // Make cell editable on click
+        td.addEventListener("click", () => {
+          makeScoreEditable(td, student.code, draft.id, currentScore);
+        });
 
         tr.appendChild(td);
       }
@@ -257,7 +402,7 @@
     // Overall average
     const tdOverallAvg = document.createElement("td");
     tdOverallAvg.className = "gb-score-cell";
-    
+
     // Calculate overall class average
     const allScores = [];
     for (const student of students) {
@@ -378,14 +523,16 @@
     // Convert to CSV string
     const csvContent = rows
       .map((row) =>
-        row.map((cell) => {
-          // Escape quotes and wrap in quotes if needed
-          const str = String(cell);
-          if (str.includes(",") || str.includes('"') || str.includes("\n")) {
-            return `"${str.replace(/"/g, '""')}"`;
-          }
-          return str;
-        }).join(",")
+        row
+          .map((cell) => {
+            // Escape quotes and wrap in quotes if needed
+            const str = String(cell);
+            if (str.includes(",") || str.includes('"') || str.includes("\n")) {
+              return `"${str.replace(/"/g, '""')}"`;
+            }
+            return str;
+          })
+          .join(",")
       )
       .join("\n");
 
