@@ -61,7 +61,8 @@
   let syncStatus = "local";
   let expandedSubmissions = new Set();
   let hasAutoExpanded = false;
-  let realtimeChannel = null;
+  // realtimeChannel will be set in setupRealtime()
+  let realtimeChannel = null; // eslint-disable-line no-unused-vars
 
   // Load data from Supabase or localStorage
   async function loadData() {
@@ -407,7 +408,7 @@
   }
 
   // Render a single submission row
-  async function renderSubmissionRow(submission, index) {
+  async function renderSubmissionRow(submission, _index) {
     const student = submission.student;
     const assignment = submission.assignment;
     const isExpanded = expandedSubmissions.has(submission.id);
