@@ -67,8 +67,34 @@
     }
   }
 
+  // Helper to determine score color class based on percentage
+  function scoreColorClass(score) {
+    if (score == null || isNaN(score)) return "";
+    if (score >= 80) return "gb-score-green";
+    if (score >= 60) return "gb-score-amber";
+    return "gb-score-red";
+  }
+
+  // Helper to get quarter from a date using school-year calendar
+  // Q1: July-September (7-9)
+  // Q2: October-December (10-12)
+  // Q3: January-March (1-3)
+  // Q4: April-June (4-6)
+  function getQuarter(dateStr) {
+    if (!dateStr) return null;
+    const date = new Date(dateStr);
+    const month = date.getUTCMonth() + 1; // getUTCMonth is 0-indexed
+    
+    if (month >= 7 && month <= 9) return "Q1";
+    if (month >= 10 && month <= 12) return "Q2";
+    if (month >= 1 && month <= 3) return "Q3";
+    if (month >= 4 && month <= 6) return "Q4";
+    return null;
+  }
+
   // State
   let currentClassFilter = "All Classes";
+  let currentQuarterFilter = "";
   let studentsData = [];
   let draftsData = [];
   let submissionsData = [];
@@ -204,22 +230,38 @@
     if (currentClassFilter === "All Classes") {
       return studentsData;
     }
-    return studentsData.filter((s) => {
-      // Check if student has direct class_id match
-      if (s.class_id === currentClassFilter) {
-        return true;
-      }
-      // Check if student is enrolled in the class via classEnrollments
-      return classEnrollmentsData.some(
-        (e) => e.class_id === currentClassFilter && e.student_code === s.code && e.active !== false
-      );
-    });
+    
+    // Get students by class_id (existing behavior)
+    const byClassId = studentsData.filter((s) => s.class_id === currentClassFilter);
+    
+    // Also get students via class enrollments
+    const enrolledCodes = classEnrollmentsData
+      .filter((e) => e.class_id === currentClassFilter && e.active !== false)
+      .map((e) => e.student_code);
+    
+    // Merge: include any student from either source
+    const seen = new Set(byClassId.map((s) => s.code));
+    const fromEnrollments = studentsData.filter((s) =>
+      enrolledCodes.includes(s.code) && !seen.has(s.code)
+    );
+    
+    return [...byClassId, ...fromEnrollments];
   }
 
   // Build gradebook data structure
   function buildGradebookData() {
     const students = getFilteredStudents();
-    const drafts = draftsData;
+    let drafts = draftsData;
+    
+    // Filter drafts by quarter if selected
+    if (currentQuarterFilter) {
+      drafts = drafts.filter((draft) => {
+        // Check both created_at and created fields for compatibility
+        const dateStr = draft.created_at || draft.created || draft.release;
+        if (!dateStr) return false;
+        return getQuarter(dateStr) === currentQuarterFilter;
+      });
+    }
 
     if (!students.length || !drafts.length) {
       return null;
@@ -412,27 +454,44 @@
     const originalText = td.textContent;
     td.classList.add("editing");
 
+    // Create inline editor container
+    const editorDiv = document.createElement("div");
+    editorDiv.className = "gb-inline-editor";
+
     // Create input
     const input = document.createElement("input");
     input.type = "number";
     input.min = "0";
     input.max = "100";
     input.value = currentScore !== null ? currentScore : "";
-    input.style.width = "60px";
 
-    // Replace cell content with input
+    // Create save button (✓)
+    const btnSave = document.createElement("button");
+    btnSave.textContent = "✓";
+    btnSave.title = "Save (Enter)";
+
+    // Create cancel button (✗)
+    const btnCancel = document.createElement("button");
+    btnCancel.textContent = "✗";
+    btnCancel.title = "Cancel (Escape)";
+
+    // Assemble editor
+    editorDiv.appendChild(input);
+    editorDiv.appendChild(btnSave);
+    editorDiv.appendChild(btnCancel);
+
+    // Replace cell content with editor
     td.textContent = "";
-    td.appendChild(input);
+    td.appendChild(editorDiv);
     input.focus();
     input.select();
 
-    // Save on blur or Enter
+    // Save handler
     const save = async () => {
       const newValue = input.value.trim();
       if (newValue === "") {
         // Restore original if empty
-        td.classList.remove("editing");
-        td.textContent = originalText;
+        cancel();
         return;
       }
 
@@ -445,6 +504,8 @@
 
       // Disable input while saving
       input.disabled = true;
+      btnSave.disabled = true;
+      btnCancel.disabled = true;
       
       try {
         // Save the score
@@ -452,18 +513,38 @@
       } catch (err) {
         // Re-enable input on error
         input.disabled = false;
+        btnSave.disabled = false;
+        btnCancel.disabled = false;
         input.focus();
         alert('Failed to save score: ' + err.message);
       }
     };
 
-    // Cancel on Escape
+    // Cancel handler
     const cancel = () => {
       td.classList.remove("editing");
       td.textContent = originalText;
+      // Reapply color class if there was a score
+      if (currentScore !== null) {
+        const colorClass = scoreColorClass(currentScore);
+        if (colorClass) {
+          td.classList.add(colorClass);
+        }
+      }
     };
 
-    input.addEventListener("blur", save);
+    // Wire up events
+    btnSave.addEventListener("click", save);
+    btnCancel.addEventListener("click", cancel);
+    
+    input.addEventListener("blur", (e) => {
+      // Don't blur if clicking on save/cancel buttons
+      if (e.relatedTarget === btnSave || e.relatedTarget === btnCancel) {
+        return;
+      }
+      save();
+    });
+    
     input.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
@@ -471,6 +552,16 @@
       } else if (e.key === "Escape") {
         e.preventDefault();
         cancel();
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        const increment = e.shiftKey ? 5 : 1;
+        const currentVal = parseInt(input.value, 10) || 0;
+        input.value = Math.min(100, currentVal + increment);
+      } else if (e.key === "ArrowDown") {
+        e.preventDefault();
+        const decrement = e.shiftKey ? 5 : 1;
+        const currentVal = parseInt(input.value, 10) || 0;
+        input.value = Math.max(0, currentVal - decrement);
       }
     });
   }
@@ -545,6 +636,11 @@
           if (typeof score === "number") {
             td.textContent = `${score}%`;
             currentScore = score;
+            // Apply color class
+            const colorClass = scoreColorClass(score);
+            if (colorClass) {
+              td.classList.add(colorClass);
+            }
           } else {
             td.textContent = "—";
           }
@@ -564,7 +660,16 @@
       const tdAvg = document.createElement("td");
       tdAvg.className = "gb-score-cell";
       const avg = calculateRowAverage(student.code, scoreMap, drafts);
-      tdAvg.textContent = avg !== null ? `${avg}%` : "—";
+      if (avg !== null) {
+        tdAvg.textContent = `${avg}%`;
+        // Apply color class to average
+        const colorClass = scoreColorClass(avg);
+        if (colorClass) {
+          tdAvg.classList.add(colorClass);
+        }
+      } else {
+        tdAvg.textContent = "—";
+      }
       tr.appendChild(tdAvg);
 
       tableBody.appendChild(tr);
@@ -584,7 +689,16 @@
       const td = document.createElement("td");
       td.className = "gb-score-cell";
       const avg = calculateColumnAverage(draft.id, scoreMap, students);
-      td.textContent = avg !== null ? `${avg}%` : "—";
+      if (avg !== null) {
+        td.textContent = `${avg}%`;
+        // Apply color class to column average
+        const colorClass = scoreColorClass(avg);
+        if (colorClass) {
+          td.classList.add(colorClass);
+        }
+      } else {
+        td.textContent = "—";
+      }
       summaryRow.appendChild(td);
     }
 
@@ -604,7 +718,16 @@
       allScores.length > 0
         ? Math.round(allScores.reduce((a, b) => a + b, 0) / allScores.length)
         : null;
-    tdOverallAvg.textContent = overallAvg !== null ? `${overallAvg}%` : "—";
+    if (overallAvg !== null) {
+      tdOverallAvg.textContent = `${overallAvg}%`;
+      // Apply color class to overall average
+      const colorClass = scoreColorClass(overallAvg);
+      if (colorClass) {
+        tdOverallAvg.classList.add(colorClass);
+      }
+    } else {
+      tdOverallAvg.textContent = "—";
+    }
     summaryRow.appendChild(tdOverallAvg);
 
     tableBody.appendChild(summaryRow);
@@ -817,6 +940,15 @@
     const btnExport = $("btnExportCSV");
     if (btnExport) {
       btnExport.addEventListener("click", exportToCSV);
+    }
+    
+    // Wire quarter filter
+    const quarterFilter = $("gbQuarterFilter");
+    if (quarterFilter) {
+      quarterFilter.addEventListener("change", () => {
+        currentQuarterFilter = quarterFilter.value;
+        renderGradebook();
+      });
     }
     
     // Setup realtime subscription if using Supabase

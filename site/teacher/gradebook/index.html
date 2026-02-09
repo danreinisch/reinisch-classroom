@@ -172,6 +172,42 @@
         border-color: rgba(239, 68, 68, 0.25);
         color: rgba(239, 68, 68, 1);
       }
+      .gb-score-green {
+        background: rgba(34, 197, 94, 0.12);
+      }
+      .gb-score-amber {
+        background: rgba(234, 179, 8, 0.12);
+      }
+      .gb-score-red {
+        background: rgba(239, 68, 68, 0.12);
+      }
+      .gb-inline-editor {
+        display: inline-flex;
+        gap: 4px;
+        align-items: center;
+      }
+      .gb-inline-editor input {
+        width: 60px;
+        padding: 4px 6px;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        background: rgba(0, 0, 0, 0.3);
+        color: inherit;
+        text-align: center;
+        font-size: 14px;
+      }
+      .gb-inline-editor button {
+        padding: 2px 6px;
+        border-radius: 6px;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        background: rgba(255, 255, 255, 0.06);
+        color: inherit;
+        cursor: pointer;
+        font-size: 12px;
+      }
+      td.gb-score-cell.editing {
+        padding: 4px 6px;
+      }
     </style>
   </head>
   <body>
@@ -244,6 +280,13 @@
                 </span>
               </div>
               <div class="gb-actions">
+                <select id="gbQuarterFilter" class="gb-btn">
+                  <option value="">All Quarters</option>
+                  <option value="Q1">Q1 (Jul–Sep)</option>
+                  <option value="Q2">Q2 (Oct–Dec)</option>
+                  <option value="Q3">Q3 (Jan–Mar)</option>
+                  <option value="Q4">Q4 (Apr–Jun)</option>
+                </select>
                 <button class="gb-btn primary" type="button" id="btnExportCSV">Export CSV</button>
               </div>
             </div>
