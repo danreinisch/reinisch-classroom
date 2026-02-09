@@ -5,6 +5,581 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Teacher Center — Review</title>
   <link rel="stylesheet" href="/web/teacher-shell.css" />
+  <style>
+    /* Review Tab Styles */
+    .rv-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    
+    .rv-sync-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .rv-sync-status.synced {
+      background: rgba(34, 197, 94, 0.1);
+      border-color: rgba(34, 197, 94, 0.2);
+    }
+    
+    .rv-sync-status.local {
+      background: rgba(251, 191, 36, 0.1);
+      border-color: rgba(251, 191, 36, 0.2);
+    }
+    
+    .rv-sync-status.error {
+      background: rgba(239, 68, 68, 0.1);
+      border-color: rgba(239, 68, 68, 0.2);
+    }
+    
+    .rv-filters {
+      margin-bottom: 20px;
+    }
+    
+    .rv-filter-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    
+    .rv-filter-label {
+      font-weight: 500;
+      font-size: 13px;
+      opacity: 0.85;
+    }
+    
+    .rv-filter-bar {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    
+    .rv-filter-btn {
+      padding: 8px 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: rgba(255, 255, 255, 0.04);
+      color: inherit;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s;
+    }
+    
+    .rv-filter-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+    
+    .rv-filter-btn.active {
+      background: rgba(34, 197, 94, 0.18);
+      border-color: rgba(34, 197, 94, 0.35);
+      font-weight: 500;
+    }
+    
+    .rv-status-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    
+    .rv-status-tab {
+      padding: 10px 16px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: rgba(255, 255, 255, 0.04);
+      color: inherit;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+    
+    .rv-status-tab:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+    
+    .rv-status-tab.active {
+      background: rgba(34, 197, 94, 0.18);
+      border-color: rgba(34, 197, 94, 0.35);
+      font-weight: 500;
+    }
+    
+    .rv-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.15);
+      font-size: 12px;
+      font-weight: 600;
+      margin-left: 6px;
+    }
+    
+    .rv-search-input {
+      padding: 10px 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: rgba(0, 0, 0, 0.3);
+      color: inherit;
+      font-size: 14px;
+      min-width: 250px;
+    }
+    
+    .rv-search-input::placeholder {
+      opacity: 0.5;
+    }
+    
+    .rv-select {
+      padding: 10px 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: rgba(0, 0, 0, 0.3);
+      color: inherit;
+      font-size: 14px;
+      min-width: 200px;
+    }
+    
+    /* Submission Queue */
+    .rv-queue {
+      margin-top: 16px;
+    }
+    
+    .rv-submission-item {
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      margin-bottom: 12px;
+      background: rgba(255, 255, 255, 0.04);
+      transition: all 0.2s;
+    }
+    
+    .rv-submission-item.expanded {
+      background: rgba(255, 255, 255, 0.06);
+    }
+    
+    .rv-submission-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 18px;
+      cursor: pointer;
+      user-select: none;
+    }
+    
+    .rv-submission-header:hover {
+      background: rgba(255, 255, 255, 0.06);
+    }
+    
+    .rv-submission-info {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    
+    .rv-student {
+      font-weight: 600;
+      font-size: 15px;
+    }
+    
+    .rv-assignment {
+      opacity: 0.85;
+      font-size: 14px;
+    }
+    
+    .rv-date {
+      opacity: 0.7;
+      font-size: 13px;
+    }
+    
+    .rv-status-badge {
+      padding: 4px 10px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    
+    .rv-status-badge.pending {
+      background: rgba(251, 191, 36, 0.15);
+      border: 1px solid rgba(251, 191, 36, 0.3);
+      color: #fbbf24;
+    }
+    
+    .rv-status-badge.in-progress {
+      background: rgba(59, 130, 246, 0.15);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      color: #3b82f6;
+    }
+    
+    .rv-status-badge.reviewed {
+      background: rgba(34, 197, 94, 0.15);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      color: #22c55e;
+    }
+    
+    .rv-expand-icon {
+      font-size: 14px;
+      opacity: 0.7;
+    }
+    
+    .rv-submission-body {
+      padding: 0 18px 18px 18px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    
+    /* Sections */
+    .rv-section {
+      margin-top: 20px;
+    }
+    
+    .rv-section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-weight: 600;
+      font-size: 15px;
+      margin-bottom: 12px;
+    }
+    
+    .rv-section-status {
+      font-size: 13px;
+      opacity: 0.85;
+    }
+    
+    .rv-details {
+      margin-top: 8px;
+    }
+    
+    .rv-details summary {
+      cursor: pointer;
+      padding: 8px 0;
+      font-weight: 500;
+      list-style: none;
+      user-select: none;
+    }
+    
+    .rv-details summary::-webkit-details-marker {
+      display: none;
+    }
+    
+    .rv-details[open] summary {
+      margin-bottom: 12px;
+    }
+    
+    /* Auto-graded table */
+    .rv-auto-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      margin-top: 8px;
+    }
+    
+    .rv-auto-table th {
+      text-align: left;
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.06);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+      font-weight: 600;
+    }
+    
+    .rv-auto-table td {
+      padding: 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    
+    .rv-type-badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: rgba(147, 51, 234, 0.15);
+      border: 1px solid rgba(147, 51, 234, 0.3);
+      color: #a855f7;
+      font-size: 11px;
+      font-weight: 500;
+      text-transform: uppercase;
+    }
+    
+    /* Response cards */
+    .rv-responses {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin-top: 12px;
+    }
+    
+    .rv-response-card {
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      padding: 16px;
+      background: rgba(255, 255, 255, 0.04);
+    }
+    
+    .rv-response-header {
+      font-weight: 600;
+      font-size: 14px;
+      margin-bottom: 12px;
+      color: rgba(255, 255, 255, 0.95);
+    }
+    
+    .rv-student-response {
+      margin-bottom: 12px;
+    }
+    
+    .rv-student-response strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 13px;
+      opacity: 0.85;
+    }
+    
+    .rv-response-text {
+      padding: 12px;
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      font-size: 14px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    
+    .rv-rubric-details {
+      margin: 12px 0;
+    }
+    
+    .rv-rubric-details summary {
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      padding: 8px 0;
+      opacity: 0.85;
+    }
+    
+    .rv-rubric {
+      margin-top: 8px;
+      padding: 12px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    
+    .rv-rubric-tier {
+      padding: 6px 0;
+      font-size: 13px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    
+    .rv-rubric-tier:last-child {
+      border-bottom: none;
+    }
+    
+    .rv-rubric-tier strong {
+      color: rgba(34, 197, 94, 0.9);
+    }
+    
+    /* Scoring controls */
+    .rv-scoring-controls {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    
+    .rv-score-input-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    
+    .rv-score-input-group label {
+      font-weight: 500;
+      font-size: 13px;
+    }
+    
+    .rv-score-input {
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(0, 0, 0, 0.3);
+      color: inherit;
+      font-size: 14px;
+      width: 80px;
+      text-align: center;
+    }
+    
+    .rv-note-input-group {
+      margin-bottom: 12px;
+    }
+    
+    .rv-note-input-group label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 500;
+      font-size: 13px;
+    }
+    
+    .rv-note-input {
+      width: 100%;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: rgba(0, 0, 0, 0.3);
+      color: inherit;
+      font-size: 13px;
+      font-family: inherit;
+      resize: vertical;
+    }
+    
+    .rv-note-input::placeholder {
+      opacity: 0.5;
+    }
+    
+    .rv-btn {
+      padding: 10px 16px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      background: rgba(255, 255, 255, 0.06);
+      color: inherit;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s;
+      font-weight: 500;
+    }
+    
+    .rv-btn:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.1);
+    }
+    
+    .rv-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .rv-btn-save {
+      background: rgba(59, 130, 246, 0.18);
+      border-color: rgba(59, 130, 246, 0.35);
+    }
+    
+    .rv-btn-save:hover:not(:disabled) {
+      background: rgba(59, 130, 246, 0.25);
+    }
+    
+    .rv-save-status {
+      margin-left: 12px;
+      font-size: 13px;
+      font-weight: 500;
+    }
+    
+    .rv-save-status.success {
+      color: #22c55e;
+    }
+    
+    .rv-save-status.error {
+      color: #ef4444;
+    }
+    
+    /* Summary */
+    .rv-summary {
+      margin-top: 20px;
+      padding: 16px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+    
+    .rv-summary-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      font-size: 14px;
+    }
+    
+    .rv-summary-row span:first-child {
+      opacity: 0.85;
+    }
+    
+    .rv-summary-total {
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
+      margin-top: 8px;
+      padding-top: 12px;
+      font-weight: 600;
+      font-size: 15px;
+    }
+    
+    .rv-score-green {
+      color: #22c55e;
+    }
+    
+    .rv-score-amber {
+      color: #fbbf24;
+    }
+    
+    .rv-score-red {
+      color: #ef4444;
+    }
+    
+    /* Actions */
+    .rv-actions {
+      margin-top: 20px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    
+    .rv-btn-primary {
+      background: rgba(34, 197, 94, 0.18);
+      border-color: rgba(34, 197, 94, 0.35);
+    }
+    
+    .rv-btn-primary:hover:not(:disabled) {
+      background: rgba(34, 197, 94, 0.25);
+    }
+    
+    .rv-btn-finalize {
+      font-weight: 600;
+    }
+    
+    .rv-hint {
+      font-size: 12px;
+      opacity: 0.7;
+      font-style: italic;
+    }
+    
+    /* Empty state */
+    .rv-empty {
+      text-align: center;
+      padding: 40px 20px;
+      opacity: 0.7;
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+      .rv-submission-info {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+      }
+      
+      .rv-filter-row {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      
+      .rv-search-input,
+      .rv-select {
+        width: 100%;
+      }
+    }
+  </style>
 </head>
 <body>
   <div class="tc-app">
@@ -32,12 +607,67 @@
       </aside>
 
       <main class="tc-main">
-        <h1>Review</h1>
-        <p>Shell ready. Next PR will wire real Teacher Center modules into these routes.</p>
+        <div class="rv-header">
+          <h1>Review</h1>
+          <div id="rvSyncStatus" class="rv-sync-status local">
+            <span id="rvSyncIcon">🟡</span>
+            <span id="rvSyncText">Local</span>
+          </div>
+        </div>
+
+        <div class="rv-filters">
+          <!-- Class filter -->
+          <div class="rv-filter-row">
+            <span class="rv-filter-label">Class:</span>
+            <div id="rvClassFilters" class="rv-filter-bar">
+              <button class="rv-filter-btn active" data-class="All Classes">All Classes</button>
+              <button class="rv-filter-btn" data-class="LA 1 SC">LA 1</button>
+              <button class="rv-filter-btn" data-class="LA 2 SC">LA 2</button>
+              <button class="rv-filter-btn" data-class="LA 3 SC">LA 3</button>
+              <button class="rv-filter-btn" data-class="LA 4 SC">LA 4</button>
+              <button class="rv-filter-btn" data-class="Life Skills">LS</button>
+              <button class="rv-filter-btn" data-class="Life Skills LA">LSLA</button>
+            </div>
+          </div>
+
+          <!-- Assignment and search filter -->
+          <div class="rv-filter-row">
+            <span class="rv-filter-label">Assignment:</span>
+            <select id="rvAssignmentFilter" class="rv-select">
+              <option value="All Assignments">All Assignments</option>
+            </select>
+            
+            <input 
+              type="search" 
+              id="rvSearch" 
+              class="rv-search-input" 
+              placeholder="Search by student name or code..."
+            />
+          </div>
+        </div>
+
+        <!-- Status tabs -->
+        <div class="rv-status-tabs">
+          <button id="rvStatusNeedsReview" class="rv-status-tab active">
+            Needs Review <span class="rv-badge">0</span>
+          </button>
+          <button id="rvStatusReviewed" class="rv-status-tab">
+            Reviewed <span class="rv-badge">0</span>
+          </button>
+          <button id="rvStatusAll" class="rv-status-tab">
+            All <span class="rv-badge">0</span>
+          </button>
+        </div>
+
+        <!-- Submission queue -->
+        <div id="rvQueue" class="rv-queue">
+          <!-- Submissions will be rendered here -->
+        </div>
       </main>
     </div>
   </div>
 
   <script defer src="/web/teacher-shell.js"></script>
+  <script type="module" src="/web/tc-review.js"></script>
 </body>
 </html>
