@@ -89,13 +89,23 @@
         
         try {
           // Load students, assignments, submissions, and assignment instances
-          const [students, assignments, submissions, instances, enrollments] = await Promise.all([
+          const [students, assignments, submissions, instances] = await Promise.all([
             db.listStudents(),
             db.listAssignments(),
             db.listSubmissions(),
-            db.listAssignmentInstances(),
-            db.listClassEnrollments ? db.listClassEnrollments() : []
+            db.listAssignmentInstances()
           ]);
+          
+          // Load enrollments separately with error handling
+          let enrollments = [];
+          try {
+            if (db.listClassEnrollments) {
+              enrollments = await db.listClassEnrollments();
+            }
+          } catch (err) {
+            console.warn('[gradebook] Error loading class enrollments:', err);
+            enrollments = [];
+          }
           
           studentsData = students || [];
           
@@ -318,12 +328,27 @@
           assignmentInstancesData.push(instance);
         }
         
-        // Create/update submission via data adapter
-        await db.addSubmission({
-          instance_id: instance.id,
-          score_total: score,
-          submitted_at: new Date().toISOString()
-        });
+        // Find existing submission or create new one
+        const existingSubmission = submissionsData.find((sub) => sub.instance_id === instance.id);
+        
+        if (existingSubmission) {
+          // Update existing submission with its id
+          await db.addSubmission({
+            id: existingSubmission.id,
+            instance_id: instance.id,
+            score_total: score,
+            submitted_at: new Date().toISOString()
+          });
+          existingSubmission.score_total = score;
+        } else {
+          // Create new submission
+          const newSubmission = await db.addSubmission({
+            instance_id: instance.id,
+            score_total: score,
+            submitted_at: new Date().toISOString()
+          });
+          submissionsData.push(newSubmission);
+        }
         
         console.log('[gradebook] Score saved to Supabase');
       } else {
@@ -419,8 +444,15 @@
       // Disable input while saving
       input.disabled = true;
       
-      // Save the score
-      await saveScore(studentCode, draftId, score);
+      try {
+        // Save the score
+        await saveScore(studentCode, draftId, score);
+      } catch (err) {
+        // Re-enable input on error
+        input.disabled = false;
+        input.focus();
+        alert('Failed to save score: ' + err.message);
+      }
     };
 
     // Cancel on Escape
@@ -754,9 +786,13 @@
     // Debounce refresh to avoid excessive updates
     clearTimeout(realtimeDebounceTimer);
     realtimeDebounceTimer = setTimeout(async () => {
-      console.log('[gradebook] Refreshing gradebook data after realtime change');
-      await loadData();
-      renderGradebook();
+      try {
+        console.log('[gradebook] Refreshing gradebook data after realtime change');
+        await loadData();
+        renderGradebook();
+      } catch (err) {
+        console.error('[gradebook] Error refreshing after realtime change:', err);
+      }
     }, 1000);
   }
   
