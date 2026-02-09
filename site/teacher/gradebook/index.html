@@ -1,199 +1,248 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Teacher Center — Gradebook</title>
-  <link rel="stylesheet" href="/web/teacher-shell.css" />
-  <style>
-    .gb-subtle {
-      opacity: 0.85;
-    }
-    .gb-card {
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      border-radius: 16px;
-      padding: 16px;
-      background: rgba(255, 255, 255, 0.04);
-    }
-    .gb-row {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .gb-actions {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      align-items: center;
-    }
-    .gb-btn {
-      padding: 10px 12px;
-      border-radius: 12px;
-      border: 1px solid rgba(255, 255, 255, 0.16);
-      background: rgba(255, 255, 255, 0.06);
-      color: inherit;
-      cursor: pointer;
-    }
-    .gb-btn.primary {
-      background: rgba(34, 197, 94, 0.18);
-      border-color: rgba(34, 197, 94, 0.35);
-    }
-    .gb-btn:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
-    .gb-filter-bar {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-top: 12px;
-    }
-    .gb-filter-btn {
-      padding: 8px 14px;
-      border-radius: 12px;
-      border: 1px solid rgba(255, 255, 255, 0.14);
-      background: rgba(255, 255, 255, 0.04);
-      color: inherit;
-      cursor: pointer;
-      font-size: 13px;
-    }
-    .gb-filter-btn.active {
-      background: rgba(34, 197, 94, 0.18);
-      border-color: rgba(34, 197, 94, 0.35);
-    }
-    .gb-tablewrap {
-      overflow: auto;
-      border-radius: 14px;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      margin-top: 16px;
-      max-height: 70vh;
-    }
-    table.gb-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 14px;
-    }
-    table.gb-table th,
-    table.gb-table td {
-      padding: 10px 12px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-      border-right: 1px solid rgba(255, 255, 255, 0.06);
-      vertical-align: middle;
-      text-align: left;
-      white-space: nowrap;
-    }
-    table.gb-table th {
-      font-size: 12px;
-      letter-spacing: 0.02em;
-      text-transform: uppercase;
-      opacity: 0.9;
-      position: sticky;
-      top: 0;
-      background: rgba(20, 20, 20, 0.95);
-      z-index: 10;
-    }
-    table.gb-table th.gb-student-col {
-      position: sticky;
-      left: 0;
-      z-index: 20;
-      background: rgba(20, 20, 20, 0.95);
-    }
-    table.gb-table td.gb-student-cell {
-      position: sticky;
-      left: 0;
-      background: rgba(20, 20, 20, 0.95);
-      font-weight: 500;
-      z-index: 5;
-    }
-    table.gb-table td.gb-score-cell {
-      text-align: center;
-      font-variant-numeric: tabular-nums;
-    }
-    table.gb-table tr.gb-summary-row {
-      background: rgba(255, 255, 255, 0.04);
-      font-weight: 600;
-    }
-    .gb-empty {
-      margin-top: 16px;
-      padding: 20px;
-      text-align: center;
-      opacity: 0.7;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 12px;
-      background: rgba(255, 255, 255, 0.02);
-    }
-  </style>
-</head>
-<body>
-  <div class="tc-app">
-    <header class="tc-topbar">
-      <button class="tc-btn" id="tcSidebarToggle" aria-label="Toggle sidebar" aria-expanded="false">☰</button>
-      <a class="tc-btn" href="/" target="_blank" rel="noopener" aria-label="Home">🏠</a>
-      <div class="tc-title">Teacher Center — Gradebook</div>
-    </header>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Teacher Center — Gradebook</title>
+    <link rel="stylesheet" href="/web/teacher-shell.css" />
+    <style>
+      .gb-subtle {
+        opacity: 0.85;
+      }
+      .gb-card {
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 16px;
+        padding: 16px;
+        background: rgba(255, 255, 255, 0.04);
+      }
+      .gb-row {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .gb-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      .gb-btn {
+        padding: 10px 12px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        background: rgba(255, 255, 255, 0.06);
+        color: inherit;
+        cursor: pointer;
+      }
+      .gb-btn.primary {
+        background: rgba(34, 197, 94, 0.18);
+        border-color: rgba(34, 197, 94, 0.35);
+      }
+      .gb-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+      .gb-filter-bar {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 12px;
+      }
+      .gb-filter-btn {
+        padding: 8px 14px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.04);
+        color: inherit;
+        cursor: pointer;
+        font-size: 13px;
+      }
+      .gb-filter-btn.active {
+        background: rgba(34, 197, 94, 0.18);
+        border-color: rgba(34, 197, 94, 0.35);
+      }
+      .gb-tablewrap {
+        overflow: auto;
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        margin-top: 16px;
+        max-height: 70vh;
+      }
+      table.gb-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+      table.gb-table th,
+      table.gb-table td {
+        padding: 10px 12px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        border-right: 1px solid rgba(255, 255, 255, 0.06);
+        vertical-align: middle;
+        text-align: left;
+        white-space: nowrap;
+      }
+      table.gb-table th {
+        font-size: 12px;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+        opacity: 0.9;
+        position: sticky;
+        top: 0;
+        background: rgba(20, 20, 20, 0.95);
+        z-index: 10;
+      }
+      table.gb-table th.gb-student-col {
+        position: sticky;
+        left: 0;
+        z-index: 20;
+        background: rgba(20, 20, 20, 0.95);
+      }
+      table.gb-table td.gb-student-cell {
+        position: sticky;
+        left: 0;
+        background: rgba(20, 20, 20, 0.95);
+        font-weight: 500;
+        z-index: 5;
+      }
+      table.gb-table td.gb-score-cell {
+        text-align: center;
+        font-variant-numeric: tabular-nums;
+      }
+      table.gb-table td.gb-score-cell.editable:hover {
+        background: rgba(255, 255, 255, 0.06);
+        cursor: pointer;
+      }
+      table.gb-table td.gb-score-cell.editing {
+        padding: 4px;
+      }
+      table.gb-table td.gb-score-cell.editing input {
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba(34, 197, 94, 0.5);
+        color: inherit;
+        text-align: center;
+        width: 60px;
+        border-radius: 6px;
+        padding: 4px;
+        font-size: 14px;
+        font-variant-numeric: tabular-nums;
+      }
+      table.gb-table td.gb-score-cell.editing input:focus {
+        outline: none;
+        border-color: rgba(34, 197, 94, 0.8);
+      }
+      table.gb-table tr.gb-summary-row {
+        background: rgba(255, 255, 255, 0.04);
+        font-weight: 600;
+      }
+      .gb-empty {
+        margin-top: 16px;
+        padding: 20px;
+        text-align: center;
+        opacity: 0.7;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.02);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="tc-app">
+      <header class="tc-topbar">
+        <button
+          class="tc-btn"
+          id="tcSidebarToggle"
+          aria-label="Toggle sidebar"
+          aria-expanded="false"
+        >
+          ☰
+        </button>
+        <a class="tc-btn" href="/" target="_blank" rel="noopener" aria-label="Home">🏠</a>
+        <div class="tc-title">Teacher Center — Gradebook</div>
+      </header>
 
-    <div class="tc-shell">
-      <aside class="tc-sidebar" aria-label="Teacher navigation">
-        <nav class="tc-nav">
-          <a data-href="/teacher/" href="/teacher/"><span class="tc-icon">🏁</span><span class="tc-label">Overview</span></a>
-          <a data-href="/teacher/work/" href="/teacher/work/"><span class="tc-icon">🗂️</span><span class="tc-label">Work</span></a>
-          <a data-href="/teacher/library/" href="/teacher/library/"><span class="tc-icon">📚</span><span class="tc-label">Library</span></a>
-          <a data-href="/teacher/review/" href="/teacher/review/"><span class="tc-icon">✍️</span><span class="tc-label">Review</span></a>
-          <a data-href="/teacher/gradebook/" href="/teacher/gradebook/"><span class="tc-icon">📊</span><span class="tc-label">Gradebook</span></a>
-          <a data-href="/teacher/students/" href="/teacher/students/"><span class="tc-icon">🧑‍🎓</span><span class="tc-label">Students</span></a>
-          <a data-href="/teacher/classes/" href="/teacher/classes/"><span class="tc-icon">🏫</span><span class="tc-label">Classes</span></a>
-          <a data-href="/teacher/data/" href="/teacher/data/"><span class="tc-icon">🧾</span><span class="tc-label">Data</span></a>
-          <a data-href="/teacher/admin/" href="/teacher/admin/"><span class="tc-icon">🛡️</span><span class="tc-label">Admin</span></a>
-          <a data-href="/teacher/reporting/" href="/teacher/reporting/"><span class="tc-icon">📑</span><span class="tc-label">Reporting</span></a>
-          <a data-href="/teacher/settings/" href="/teacher/settings/"><span class="tc-icon">⚙️</span><span class="tc-label">Settings</span></a>
-        </nav>
-      </aside>
+      <div class="tc-shell">
+        <aside class="tc-sidebar" aria-label="Teacher navigation">
+          <nav class="tc-nav">
+            <a data-href="/teacher/" href="/teacher/"
+              ><span class="tc-icon">🏁</span><span class="tc-label">Overview</span></a
+            >
+            <a data-href="/teacher/work/" href="/teacher/work/"
+              ><span class="tc-icon">🗂️</span><span class="tc-label">Work</span></a
+            >
+            <a data-href="/teacher/library/" href="/teacher/library/"
+              ><span class="tc-icon">📚</span><span class="tc-label">Library</span></a
+            >
+            <a data-href="/teacher/review/" href="/teacher/review/"
+              ><span class="tc-icon">✍️</span><span class="tc-label">Review</span></a
+            >
+            <a data-href="/teacher/gradebook/" href="/teacher/gradebook/"
+              ><span class="tc-icon">📊</span><span class="tc-label">Gradebook</span></a
+            >
+            <a data-href="/teacher/students/" href="/teacher/students/"
+              ><span class="tc-icon">🧑‍🎓</span><span class="tc-label">Students</span></a
+            >
+            <a data-href="/teacher/classes/" href="/teacher/classes/"
+              ><span class="tc-icon">🏫</span><span class="tc-label">Classes</span></a
+            >
+            <a data-href="/teacher/data/" href="/teacher/data/"
+              ><span class="tc-icon">🧾</span><span class="tc-label">Data</span></a
+            >
+            <a data-href="/teacher/admin/" href="/teacher/admin/"
+              ><span class="tc-icon">🛡️</span><span class="tc-label">Admin</span></a
+            >
+            <a data-href="/teacher/reporting/" href="/teacher/reporting/"
+              ><span class="tc-icon">📑</span><span class="tc-label">Reporting</span></a
+            >
+            <a data-href="/teacher/settings/" href="/teacher/settings/"
+              ><span class="tc-icon">⚙️</span><span class="tc-label">Settings</span></a
+            >
+          </nav>
+        </aside>
 
-      <main class="tc-main">
-        <h1 style="margin-top: 0">Gradebook</h1>
-        <p class="gb-subtle" style="margin-top: -6px">
-          View student grades across all assignments. Filter by class and export to CSV.
-        </p>
+        <main class="tc-main">
+          <h1 style="margin-top: 0">Gradebook</h1>
+          <p class="gb-subtle" style="margin-top: -6px">
+            View student grades across all assignments. Filter by class and export to CSV.
+          </p>
 
-        <section class="gb-card" aria-label="Gradebook controls">
-          <div class="gb-row">
-            <h2 style="margin: 0">Class Filter</h2>
-            <div class="gb-actions">
-              <button class="gb-btn primary" type="button" id="btnExportCSV">
-                Export CSV
-              </button>
+          <section class="gb-card" aria-label="Gradebook controls">
+            <div class="gb-row">
+              <h2 style="margin: 0">Class Filter</h2>
+              <div class="gb-actions">
+                <button class="gb-btn primary" type="button" id="btnExportCSV">Export CSV</button>
+              </div>
             </div>
-          </div>
 
-          <div class="gb-filter-bar" id="classFilterBar">
-            <!-- Filter buttons populated by JS -->
-          </div>
-        </section>
+            <div class="gb-filter-bar" id="classFilterBar">
+              <!-- Filter buttons populated by JS -->
+            </div>
+          </section>
 
-        <section class="gb-card" aria-label="Gradebook grid" style="margin-top: 16px">
-          <div id="gbEmpty" class="gb-empty" style="display: none">
-            <p><strong>No data to display</strong></p>
-            <p>Import students and create assignments in the Work tab to see grades here.</p>
-          </div>
+          <section class="gb-card" aria-label="Gradebook grid" style="margin-top: 16px">
+            <div id="gbEmpty" class="gb-empty" style="display: none">
+              <p><strong>No data to display</strong></p>
+              <p>Import students and create assignments in the Work tab to see grades here.</p>
+            </div>
 
-          <div class="gb-tablewrap" id="gbTableWrap" style="display: none">
-            <table class="gb-table" id="gbTable">
-              <thead id="gbTableHead">
-                <!-- Table headers populated by JS -->
-              </thead>
-              <tbody id="gbTableBody">
-                <!-- Table rows populated by JS -->
-              </tbody>
-            </table>
-          </div>
-        </section>
-      </main>
+            <div class="gb-tablewrap" id="gbTableWrap" style="display: none">
+              <table class="gb-table" id="gbTable">
+                <thead id="gbTableHead">
+                  <!-- Table headers populated by JS -->
+                </thead>
+                <tbody id="gbTableBody">
+                  <!-- Table rows populated by JS -->
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </main>
+      </div>
     </div>
-  </div>
 
-  <script defer src="/web/teacher-shell.js"></script>
-  <script defer src="/web/tc-gradebook.js"></script>
-</body>
+    <script defer src="/web/teacher-shell.js"></script>
+    <script defer src="/web/tc-gradebook.js"></script>
+  </body>
 </html>
