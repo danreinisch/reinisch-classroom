@@ -631,8 +631,15 @@
     // Build data rows
     tableBody.innerHTML = "";
 
+    let isFirstRow = true; // Track first student row for auto-highlight
     for (const student of students) {
       const tr = document.createElement("tr");
+      
+      // Auto-highlight first student row
+      if (isFirstRow) {
+        tr.classList.add("gb-highlighted");
+        isFirstRow = false;
+      }
 
       // Student name cell (sticky)
       const tdStudent = document.createElement("td");
