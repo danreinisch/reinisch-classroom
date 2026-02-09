@@ -1,8 +1,12 @@
-(() => {
+(async () => {
   "use strict";
 
   // Only run on gradebook page
   if (!location.pathname.startsWith("/teacher/gradebook")) return;
+
+  // Import data adapter for Supabase/localStorage abstraction
+  const { db, isRemote } = await import('/site/web/data-adapter.js');
+  const { getSupabase } = await import('/site/web/supabase-client.js');
 
   const STORAGE_KEY_DRAFTS = "rc_tc_work_drafts_v1";
   const NS = "rc_unified_";
@@ -68,13 +72,120 @@
   let draftsData = [];
   let submissionsData = [];
   let classEnrollmentsData = [];
+  let assignmentInstancesData = [];
+  let usingSupabase = false;
+  let syncStatus = "local"; // "synced", "local", "error"
+  let realtimeChannel = null;
 
-  // Load data from localStorage
-  function loadData() {
+  // Load data from Supabase (if available) or localStorage
+  async function loadData() {
+    try {
+      // Check if Supabase is available
+      usingSupabase = await isRemote();
+      
+      if (usingSupabase) {
+        // Fetch from Supabase using data adapter
+        console.log('[gradebook] Loading data from Supabase');
+        
+        try {
+          // Load students, assignments, submissions, and assignment instances
+          const [students, assignments, submissions, instances, enrollments] = await Promise.all([
+            db.listStudents(),
+            db.listAssignments(),
+            db.listSubmissions(),
+            db.listAssignmentInstances(),
+            db.listClassEnrollments ? db.listClassEnrollments() : []
+          ]);
+          
+          studentsData = students || [];
+          
+          // Map assignments to draft format for compatibility
+          // Assignments from Supabase have: id, title, type, series, page, hero, meta, created_at
+          // Drafts from localStorage have: id, title, class, type, etc.
+          draftsData = (assignments || []).map(a => ({
+            id: a.id,
+            title: a.title,
+            type: a.type || 'assignment',
+            series: a.series,
+            page: a.page,
+            hero: a.hero,
+            meta: a.meta,
+            created_at: a.created_at
+          }));
+          
+          submissionsData = submissions || [];
+          assignmentInstancesData = instances || [];
+          classEnrollmentsData = enrollments || [];
+          
+          syncStatus = "synced";
+          console.log('[gradebook] Data loaded from Supabase:', {
+            students: studentsData.length,
+            assignments: draftsData.length,
+            submissions: submissionsData.length,
+            instances: assignmentInstancesData.length
+          });
+        } catch (err) {
+          console.warn('[gradebook] Error loading from Supabase, falling back to localStorage:', err);
+          syncStatus = "error";
+          // Fall back to localStorage
+          loadDataFromLocalStorage();
+        }
+      } else {
+        // Use localStorage
+        console.log('[gradebook] Loading data from localStorage');
+        loadDataFromLocalStorage();
+        syncStatus = "local";
+      }
+      
+      // Update sync status indicator
+      updateSyncStatus();
+      
+    } catch (err) {
+      console.error('[gradebook] Error in loadData:', err);
+      // Fall back to localStorage on any error
+      loadDataFromLocalStorage();
+      syncStatus = "error";
+      updateSyncStatus();
+    }
+  }
+  
+  // Helper to load data from localStorage
+  function loadDataFromLocalStorage() {
     studentsData = storeGet("students", []);
     draftsData = readDrafts();
     submissionsData = storeGet("submissions", []);
+    assignmentInstancesData = storeGet("assignmentInstances", []);
     classEnrollmentsData = storeGet("classEnrollments", []);
+  }
+  
+  // Update sync status indicator
+  function updateSyncStatus() {
+    const statusEl = $("gbSyncStatus");
+    const iconEl = $("gbSyncIcon");
+    const textEl = $("gbSyncText");
+    
+    if (!statusEl || !iconEl || !textEl) return;
+    
+    // Show the status indicator
+    statusEl.style.display = "inline-flex";
+    
+    // Remove all status classes
+    statusEl.classList.remove("synced", "local", "error");
+    
+    // Add appropriate class and set content
+    if (syncStatus === "synced") {
+      statusEl.classList.add("synced");
+      iconEl.textContent = "🟢";
+      textEl.textContent = "Synced with Supabase";
+    } else if (syncStatus === "error") {
+      statusEl.classList.add("error");
+      iconEl.textContent = "🔴";
+      textEl.textContent = "Sync error (using local data)";
+    } else {
+      statusEl.classList.add("local");
+      iconEl.textContent = "🟡";
+      textEl.textContent = "Local mode";
+    }
   }
 
   // Filter students by selected class
@@ -107,8 +218,8 @@
     const scoreMap = new Map();
 
     for (const submission of submissionsData) {
-      // Find the draft for this submission via instance
-      const instance = storeGet("assignmentInstances", []).find(
+      // Find the assignment instance for this submission
+      const instance = assignmentInstancesData.find(
         (inst) => inst.id === submission.instance_id
       );
       if (!instance) continue;
@@ -120,8 +231,9 @@
         scoreMap.set(studentCode, new Map());
       }
 
-      // Calculate score from answers (if available)
-      let score = submission.score;
+      // Use score_total from submission (Supabase format) or score (localStorage format)
+      let score = submission.score_total !== undefined ? submission.score_total : submission.score;
+      
       if (score === undefined && submission.answers) {
         // Try to calculate score from answers
         const totalQuestions = Object.keys(submission.answers).length;
@@ -182,49 +294,89 @@
   }
 
   // Save a score for a student and assignment
-  function saveScore(studentCode, draftId, score) {
-    // Find or create assignment instance
-    let instances = storeGet("assignmentInstances", []);
-    let instance = instances.find(
-      (inst) => inst.assignment_id === draftId && inst.student_code === studentCode
-    );
+  async function saveScore(studentCode, draftId, score) {
+    try {
+      if (usingSupabase) {
+        // Use Supabase via data adapter
+        console.log('[gradebook] Saving score to Supabase:', { studentCode, draftId, score });
+        
+        // Find or create assignment instance
+        let instance = assignmentInstancesData.find(
+          (inst) => inst.assignment_id === draftId && inst.student_code === studentCode
+        );
+        
+        if (!instance) {
+          // Create new instance via data adapter
+          const newInstance = await db.upsertAssignmentInstance({
+            id: draftId + "-" + studentCode,
+            assignment_id: draftId,
+            student_code: studentCode,
+            assigned_at: formatDateYYYYMMDD(),
+            status: "Assigned"
+          });
+          instance = newInstance;
+          assignmentInstancesData.push(instance);
+        }
+        
+        // Create/update submission via data adapter
+        await db.addSubmission({
+          instance_id: instance.id,
+          score_total: score,
+          submitted_at: new Date().toISOString()
+        });
+        
+        console.log('[gradebook] Score saved to Supabase');
+      } else {
+        // Use localStorage
+        console.log('[gradebook] Saving score to localStorage:', { studentCode, draftId, score });
+        
+        // Find or create assignment instance
+        let instances = storeGet("assignmentInstances", []);
+        let instance = instances.find(
+          (inst) => inst.assignment_id === draftId && inst.student_code === studentCode
+        );
 
-    if (!instance) {
-      // Create new instance
-      instance = {
-        id: draftId + "-" + studentCode,
-        assignment_id: draftId,
-        student_code: studentCode,
-        assigned_at: formatDateYYYYMMDD(),
-        status: "Assigned",
-      };
-      instances.push(instance);
-      storeSet("assignmentInstances", instances);
+        if (!instance) {
+          // Create new instance
+          instance = {
+            id: draftId + "-" + studentCode,
+            assignment_id: draftId,
+            student_code: studentCode,
+            assigned_at: formatDateYYYYMMDD(),
+            status: "Assigned",
+          };
+          instances.push(instance);
+          storeSet("assignmentInstances", instances);
+        }
+
+        // Find or create submission
+        let submissions = storeGet("submissions", []);
+        let submission = submissions.find((sub) => sub.instance_id === instance.id);
+
+        if (!submission) {
+          // Create new submission
+          submission = {
+            id: generateSubmissionId(),
+            instance_id: instance.id,
+            score: score,
+            submitted_at: new Date().toISOString(),
+          };
+          submissions.push(submission);
+        } else {
+          // Update existing submission
+          submission.score = score;
+        }
+
+        storeSet("submissions", submissions);
+      }
+
+      // Reload data and re-render
+      await loadData();
+      renderGradebook();
+    } catch (err) {
+      console.error('[gradebook] Error saving score:', err);
+      alert('Error saving score: ' + err.message);
     }
-
-    // Find or create submission
-    let submissions = storeGet("submissions", []);
-    let submission = submissions.find((sub) => sub.instance_id === instance.id);
-
-    if (!submission) {
-      // Create new submission
-      submission = {
-        id: generateSubmissionId(),
-        instance_id: instance.id,
-        score: score,
-        submitted_at: new Date().toISOString(),
-      };
-      submissions.push(submission);
-    } else {
-      // Update existing submission
-      submission.score = score;
-    }
-
-    storeSet("submissions", submissions);
-
-    // Reload data and re-render
-    loadData();
-    renderGradebook();
   }
 
   // Make a score cell editable
@@ -248,7 +400,7 @@
     input.select();
 
     // Save on blur or Enter
-    const save = () => {
+    const save = async () => {
       const newValue = input.value.trim();
       if (newValue === "") {
         // Restore original if empty
@@ -264,8 +416,11 @@
         return;
       }
 
+      // Disable input while saving
+      input.disabled = true;
+      
       // Save the score
-      saveScore(studentCode, draftId, score);
+      await saveScore(studentCode, draftId, score);
     };
 
     // Cancel on Escape
@@ -558,9 +713,65 @@
     return new Date().toISOString().slice(0, 10);
   }
 
+  // Setup realtime subscription for submissions when using Supabase
+  async function setupRealtimeSubscription() {
+    try {
+      const supabase = await getSupabase();
+      if (!supabase) {
+        console.log('[gradebook] Realtime: Supabase not available, skipping subscription');
+        return;
+      }
+      
+      console.log('[gradebook] Setting up realtime subscription for submissions');
+      
+      // Subscribe to submissions table changes
+      realtimeChannel = supabase
+        .channel('gradebook_submissions_changes')
+        .on('postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'submissions' },
+          handleRealtimeChange
+        )
+        .on('postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'submissions' },
+          handleRealtimeChange
+        )
+        .subscribe((status) => {
+          console.log('[gradebook] Realtime subscription status:', status);
+          if (status === 'SUBSCRIBED') {
+            console.log('[gradebook] Realtime subscription active');
+          }
+        });
+    } catch (err) {
+      console.warn('[gradebook] Error setting up realtime subscription:', err);
+    }
+  }
+  
+  // Handle realtime changes
+  let realtimeDebounceTimer = null;
+  function handleRealtimeChange(payload) {
+    console.log('[gradebook] Realtime change detected:', payload);
+    
+    // Debounce refresh to avoid excessive updates
+    clearTimeout(realtimeDebounceTimer);
+    realtimeDebounceTimer = setTimeout(async () => {
+      console.log('[gradebook] Refreshing gradebook data after realtime change');
+      await loadData();
+      renderGradebook();
+    }, 1000);
+  }
+  
+  // Cleanup realtime subscription on page unload
+  function cleanupRealtime() {
+    if (realtimeChannel) {
+      console.log('[gradebook] Cleaning up realtime subscription');
+      realtimeChannel.unsubscribe();
+      realtimeChannel = null;
+    }
+  }
+
   // Initialize
-  function init() {
-    loadData();
+  async function init() {
+    await loadData();
     renderClassFilter();
     renderGradebook();
 
@@ -569,6 +780,14 @@
     if (btnExport) {
       btnExport.addEventListener("click", exportToCSV);
     }
+    
+    // Setup realtime subscription if using Supabase
+    if (usingSupabase) {
+      await setupRealtimeSubscription();
+    }
+    
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', cleanupRealtime);
   }
 
   // Wait for DOM ready
