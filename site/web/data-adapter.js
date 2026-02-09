@@ -496,6 +496,105 @@ const local = {
     
     return entry;
   },
+
+  // ============================================================================
+  // Review Tab: Submission Answers
+  // ============================================================================
+  
+  /**
+   * List all submission answers for a given submission with enriched data
+   * @param {string} submissionId - Submission ID
+   * @returns {Array} Submission answers with item details and mappings
+   */
+  async listSubmissionAnswers(submissionId) {
+    const answers = store.get('submissionAnswers', []);
+    const items = store.get('assignmentItems', []);
+    const mappings = store.get('assignmentItemMappings', []);
+    
+    // Filter answers for this submission
+    const submissionAnswers = answers.filter(a => a.submission_id === submissionId);
+    
+    // Enrich with item and mapping data
+    return submissionAnswers.map(answer => {
+      const item = items.find(i => i.id === answer.item_id) || {};
+      const mapping = mappings.find(m => m.item_id === answer.item_id) || {};
+      
+      return {
+        ...answer,
+        item_ref: item.item_ref,
+        answer_type: item.answer_type,
+        points: item.points,
+        meta: item.meta,
+        dese_codes: mapping.dese_codes || [],
+        goal_codes: mapping.goal_codes || [],
+        weight: mapping.weight || 1.0
+      };
+    });
+  },
+
+  /**
+   * Update or create a submission answer with teacher scoring
+   * @param {Object} params - { submissionId, itemId, earnedPoints, teacherNote }
+   * @returns {Object} Updated submission answer
+   */
+  async updateSubmissionAnswer({ submissionId, itemId, earnedPoints, teacherNote }) {
+    const answers = store.get('submissionAnswers', []);
+    const existingIndex = answers.findIndex(
+      a => a.submission_id === submissionId && a.item_id === itemId
+    );
+    
+    const updatedAnswer = {
+      submission_id: submissionId,
+      item_id: itemId,
+      earned_points: earnedPoints,
+      is_correct: earnedPoints > 0,
+      teacher_note: teacherNote || '',
+      created_at: new Date().toISOString()
+    };
+    
+    if (existingIndex >= 0) {
+      // Update existing
+      answers[existingIndex] = { ...answers[existingIndex], ...updatedAnswer };
+    } else {
+      // Create new
+      updatedAnswer.id = 'SA' + Date.now() + '_' + Math.random().toString(36).slice(2, 9);
+      answers.push(updatedAnswer);
+    }
+    
+    store.set('submissionAnswers', answers);
+    return updatedAnswer;
+  },
+
+  /**
+   * Finalize a submission with scores and set review status to 'reviewed'
+   * @param {string} submissionId - Submission ID
+   * @param {Object} params - { scoreManual, scoreTotal }
+   * @returns {boolean} Success
+   */
+  async finalizeSubmission(submissionId, { scoreManual, scoreTotal }) {
+    const submissions = store.get('submissions', []);
+    const submission = submissions.find(s => s.id === submissionId);
+    
+    if (!submission) {
+      throw new Error('Submission not found');
+    }
+    
+    submission.score_manual = scoreManual;
+    submission.score_total = scoreTotal;
+    submission.review_status = 'reviewed';
+    
+    store.set('submissions', submissions);
+    
+    // Update instance status to 'Reviewed'
+    const instances = store.get('assignmentInstances', []);
+    const instance = instances.find(i => i.id === submission.instance_id);
+    if (instance) {
+      instance.status = 'Reviewed';
+      store.set('assignmentInstances', instances);
+    }
+    
+    return true;
+  },
 };
 
 const remote = {
@@ -1352,6 +1451,139 @@ const remote = {
     if (error) throw error;
     
     return data;
+  },
+
+  // ============================================================================
+  // Review Tab: Submission Answers
+  // ============================================================================
+  
+  /**
+   * List all submission answers for a given submission with enriched data
+   * @param {string} submissionId - Submission ID
+   * @returns {Array} Submission answers with item details and mappings
+   */
+  async listSubmissionAnswers(submissionId) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+    
+    const { data, error } = await supabase
+      .from('submission_answers')
+      .select(`
+        *,
+        assignment_items!inner(
+          id,
+          item_ref,
+          answer_type,
+          points,
+          meta
+        ),
+        assignment_item_mappings(
+          dese_codes,
+          goal_codes,
+          weight
+        )
+      `)
+      .eq('submission_id', submissionId)
+      .order('item_ref', { foreignTable: 'assignment_items' });
+    
+    if (error) throw error;
+    
+    // Flatten the nested structure
+    return (data || []).map(answer => {
+      const item = answer.assignment_items;
+      const mapping = answer.assignment_item_mappings || {};
+      
+      return {
+        id: answer.id,
+        submission_id: answer.submission_id,
+        item_id: answer.item_id,
+        raw_answer: answer.raw_answer,
+        is_correct: answer.is_correct,
+        earned_points: answer.earned_points,
+        max_points: answer.max_points,
+        teacher_note: answer.teacher_note,
+        created_at: answer.created_at,
+        item_ref: item.item_ref,
+        answer_type: item.answer_type,
+        points: item.points,
+        meta: item.meta,
+        dese_codes: mapping.dese_codes || [],
+        goal_codes: mapping.goal_codes || [],
+        weight: mapping.weight || 1.0
+      };
+    });
+  },
+
+  /**
+   * Update or create a submission answer with teacher scoring
+   * @param {Object} params - { submissionId, itemId, earnedPoints, teacherNote }
+   * @returns {Object} Updated submission answer
+   */
+  async updateSubmissionAnswer({ submissionId, itemId, earnedPoints, teacherNote }) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+    
+    const { data, error } = await supabase
+      .from('submission_answers')
+      .upsert({
+        submission_id: submissionId,
+        item_id: itemId,
+        earned_points: earnedPoints,
+        is_correct: earnedPoints > 0,
+        teacher_note: teacherNote || null
+      }, {
+        onConflict: 'submission_id,item_id'
+      })
+      .select()
+      .single();
+    
+    if (error) throw error;
+    
+    return data;
+  },
+
+  /**
+   * Finalize a submission with scores and set review status to 'reviewed'
+   * @param {string} submissionId - Submission ID
+   * @param {Object} params - { scoreManual, scoreTotal }
+   * @returns {boolean} Success
+   */
+  async finalizeSubmission(submissionId, { scoreManual, scoreTotal }) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+    
+    // Update submission with final scores and review status
+    const { error: updateError } = await supabase
+      .from('submissions')
+      .update({
+        score_manual: scoreManual,
+        score_total: scoreTotal,
+        review_status: 'reviewed'
+      })
+      .eq('id', submissionId);
+    
+    if (updateError) throw updateError;
+    
+    // Get the submission to find the instance_id
+    const { data: submission, error: fetchError } = await supabase
+      .from('submissions')
+      .select('instance_id')
+      .eq('id', submissionId)
+      .single();
+    
+    if (fetchError) throw fetchError;
+    
+    // Update instance status to 'Reviewed'
+    if (submission?.instance_id) {
+      const { error: instanceError } = await supabase
+        .from('assignment_instances')
+        .update({ status: 'Reviewed' })
+        .eq('id', submission.instance_id);
+      
+      if (instanceError) throw instanceError;
+    }
+    
+    return true;
   }
 };
 
