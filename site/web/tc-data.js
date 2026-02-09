@@ -420,7 +420,12 @@
     `;
   }
 
-  // Render sparkline SVG for goal progress
+  /**
+   * Render sparkline SVG for goal progress visualization
+   * @param {Object} goal - Goal object with code, desc, etc.
+   * @param {string} studentCode - Student code
+   * @returns {string} HTML string containing SVG sparkline, or empty string if fewer than 2 data points
+   */
   function renderSparkline(goal, studentCode) {
     const entries = getGoalProgressEntries(goal.code, studentCode);
     
@@ -457,18 +462,21 @@
     const bottomY = height - padding;
     const polygonPoints = points + `${lastX},${bottomY} ${firstX},${bottomY}`;
     
+    // Create unique gradient ID (sanitize goal code to prevent XSS)
+    const safeGradientId = `sparkGradient-${goal.code.replace(/[^a-zA-Z0-9-_]/g, '_')}`;
+    
     return `
       <div class="dt-sparkline">
         <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
           <defs>
-            <linearGradient id="sparkGradient-${goal.code}" x1="0%" y1="0%" x2="0%" y2="100%">
+            <linearGradient id="${safeGradientId}" x1="0%" y1="0%" x2="0%" y2="100%">
               <stop offset="0%" style="stop-color:rgba(34, 197, 94, 0.2);stop-opacity:1" />
               <stop offset="100%" style="stop-color:rgba(34, 197, 94, 0.02);stop-opacity:1" />
             </linearGradient>
           </defs>
           <polygon 
             points="${polygonPoints.trim()}" 
-            fill="url(#sparkGradient-${goal.code})"
+            fill="url(#${safeGradientId})"
           />
           <polyline 
             points="${points.trim()}" 
@@ -662,7 +670,11 @@
     });
   }
   
-  // Show inline form for adding data point
+  /**
+   * Show inline form for adding a new data point to a goal
+   * @param {string} goalCode - Goal code
+   * @param {string} studentCode - Student code
+   */
   function showInlineForm(goalCode, studentCode) {
     const goalRow = document.querySelector(`.dt-goal-row[data-goal="${goalCode}"][data-student="${studentCode}"]`);
     if (!goalRow) return;
@@ -670,7 +682,7 @@
     const form = goalRow.querySelector('.dt-inline-form');
     if (!form) return;
     
-    // Reset form
+    // Reset form to default values
     form.querySelector('.dt-date-input').value = formatDateYYYYMMDD();
     form.querySelector('.dt-value-input').value = '';
     form.style.display = 'flex';
@@ -679,13 +691,24 @@
     setTimeout(() => form.querySelector('.dt-value-input').focus(), 100);
   }
   
-  // Hide inline form
+  /**
+   * Hide inline form and reset its values
+   * @param {HTMLElement} form - The form element to hide
+   */
   function hideInlineForm(form) {
     form.style.display = 'none';
     form.querySelector('.dt-value-input').value = '';
   }
   
-  // Save inline data point
+  /**
+   * Save a new data point from the inline form
+   * @param {string} goalCode - Goal code
+   * @param {string} studentCode - Student code
+   * @param {string} date - Date in YYYY-MM-DD format
+   * @param {string} value - Progress value (0-100)
+   * @param {HTMLElement} form - The form element to hide after save
+   * Validates input, saves via db.upsertGoalProgress, reloads data, and hides form
+   */
   async function saveInlineDataPoint(goalCode, studentCode, date, value, form) {
     if (!date) {
       alert('Please enter a date');
@@ -718,7 +741,14 @@
     }
   }
   
-  // Start cell editing
+  /**
+   * Start inline editing of a data point cell
+   * @param {HTMLElement} cell - The table cell to edit
+   * Replaces cell content with input, handles keyboard shortcuts:
+   * - Enter/blur: save changes
+   * - Escape: cancel editing
+   * - ArrowUp/Down: adjust value by ±1 (±5 with Shift)
+   */
   function startCellEdit(cell) {
     // Don't allow multiple edits at once
     if (document.querySelector('.dt-data-value.editing')) return;
@@ -914,8 +944,12 @@
     if (modal) modal.classList.remove('active');
   }
 
-  // Export to DOCX (simplified implementation)
-  // Helper function to escape XML/HTML special characters
+  /**
+   * Escape XML/HTML special characters to prevent XSS
+   * @param {string} str - String to escape
+   * @returns {string} Escaped string safe for XML/HTML insertion
+   * Escapes: & < > " '
+   */
   function escapeXml(str) {
     if (!str) return '';
     return String(str)
@@ -926,7 +960,13 @@
       .replace(/'/g, '&apos;');
   }
 
-  // Export to DOCX using HTML format (Word-compatible)
+  /**
+   * Export IEP goal progress report as DOCX file
+   * Generates an HTML-based .docx file that Microsoft Word can open
+   * Requires: dtSamplesModal with goalCode and studentCode in dataset
+   * Includes: Header, Summary (stats), Data Points table, Work Samples, Footer
+   * Downloads file as: {student_code}_{goal_code}_progress_report.docx
+   */
   async function exportToDocx() {
     const modal = $('dtSamplesModal');
     if (!modal) return;
