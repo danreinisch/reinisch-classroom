@@ -419,15 +419,28 @@ const local = {
       
       const date = new Date(p.date);
       const month = date.getMonth() + 1; // 1-12
+      const day = date.getDate();
       const pYear = date.getFullYear();
       
-      // Determine school year and quarter
-      const schoolYear = month >= 7 ? pYear : pYear - 1;
-      const quarter = 
-        [7, 8, 9].includes(month) ? 'Q1' :
-        [10, 11, 12].includes(month) ? 'Q2' :
-        [1, 2, 3].includes(month) ? 'Q3' :
-        [4, 5, 6].includes(month) ? 'Q4' : 'Unknown';
+      // TODO: Make quarter dates configurable from /teacher/overview/ settings
+      // Determine school year and quarter based on actual school calendar
+      // School year starts Aug 16, so Aug 16-Dec 31 use current year, Jan 1-Aug 15 use previous year
+      const schoolYear = (month > 8 || (month === 8 && day >= 16)) ? pYear : pYear - 1;
+      
+      // Q1: Aug 16-Oct 17, Q2: Oct 18-Dec 19, Q3: Dec 20-Mar 6, Q4: Mar 7-May 20
+      let quarter = 'Unknown';
+      if ((month === 8 && day >= 16) || month === 9 || (month === 10 && day <= 17)) {
+        quarter = 'Q1';
+      } else if ((month === 10 && day >= 18) || month === 11 || (month === 12 && day <= 19)) {
+        quarter = 'Q2';
+      } else if ((month === 12 && day >= 20) || month === 1 || month === 2 || (month === 3 && day <= 6)) {
+        quarter = 'Q3';
+      } else if ((month === 3 && day >= 7) || month === 4 || (month === 5 && day <= 20)) {
+        quarter = 'Q4';
+      } else {
+        // Summer (May 21-Aug 15) - treat as Q4
+        quarter = 'Q4';
+      }
       
       // Filter by year if specified
       if (year && schoolYear !== year) return;
