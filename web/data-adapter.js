@@ -713,7 +713,7 @@ const local = {
       // TODO: Make quarter dates configurable from /teacher/overview/ settings
       // Determine school year and quarter based on actual school calendar
       // School year starts Aug 16, so Aug 16-Dec 31 use current year, Jan 1-Aug 15 use previous year
-      const schoolYear = (month >= 8 && day >= 16) || (month > 8) ? pYear : pYear - 1;
+      const schoolYear = (month > 8 || (month === 8 && day >= 16)) ? pYear : pYear - 1;
       
       // Q1: Aug 16-Oct 17, Q2: Oct 18-Dec 19, Q3: Dec 20-Mar 6, Q4: Mar 7-May 20
       let quarter = 'Unknown';

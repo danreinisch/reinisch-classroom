@@ -31,6 +31,7 @@
   let usingSupabase = false;
   let syncStatus = "local";
   let expandedStudents = new Set(); // Track which students are expanded
+  let hasAutoExpanded = false; // Track if we've auto-expanded on initial load
 
   // Helper to format date as YYYY-MM-DD
   function formatDateYYYYMMDD(date = new Date()) {
@@ -461,9 +462,10 @@
       return { ...student, quarterAvg };
     });
     
-    // Auto-expand first student on initial load
-    if (expandedStudents.size === 0 && studentsWithAverages.length > 0) {
+    // Auto-expand first student on initial load only
+    if (!hasAutoExpanded && expandedStudents.size === 0 && studentsWithAverages.length > 0) {
       expandedStudents.add(studentsWithAverages[0].code);
+      hasAutoExpanded = true;
     }
     
     const html = studentsWithAverages.map(student => {
