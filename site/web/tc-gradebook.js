@@ -76,30 +76,31 @@
   }
 
   // Helper to get quarter from a date using actual school calendar
-  // Q1: August 1 - October 18
-  // Q2: October 19 - January 18
-  // Q3: January 19 - March 18
-  // Q4: March 19 - May 31
+  // TODO: Make quarter dates configurable from /teacher/overview/ settings
+  // Q1: August 16 - October 17
+  // Q2: October 18 - December 19
+  // Q3: December 20 - March 6
+  // Q4: March 7 - May 20
   function getQuarter(dateStr) {
     if (!dateStr) return null;
     const date = new Date(dateStr);
     const month = date.getMonth() + 1; // getMonth is 0-indexed (1-12)
     const day = date.getDate();
     
-    // Q1: August 1 - October 18
-    if (month === 8 || month === 9 || (month === 10 && day <= 18)) return "Q1";
+    // Q1: August 16 - October 17
+    if ((month === 8 && day >= 16) || month === 9 || (month === 10 && day <= 17)) return "Q1";
     
-    // Q2: October 19 - January 18 (spans year boundary)
-    if ((month === 10 && day >= 19) || month === 11 || month === 12 || (month === 1 && day <= 18)) return "Q2";
+    // Q2: October 18 - December 19 (spans year boundary)
+    if ((month === 10 && day >= 18) || month === 11 || (month === 12 && day <= 19)) return "Q2";
     
-    // Q3: January 19 - March 18
-    if ((month === 1 && day >= 19) || month === 2 || (month === 3 && day <= 18)) return "Q3";
+    // Q3: December 20 - March 6 (spans year boundary)
+    if ((month === 12 && day >= 20) || month === 1 || month === 2 || (month === 3 && day <= 6)) return "Q3";
     
-    // Q4: March 19 - May 31
-    if ((month === 3 && day >= 19) || month === 4 || month === 5) return "Q4";
+    // Q4: March 7 - May 20
+    if ((month === 3 && day >= 7) || month === 4 || (month === 5 && day <= 20)) return "Q4";
     
-    // Summer months (June, July) - might be Q4 or no quarter
-    if (month === 6 || month === 7) return "Q4"; // Include summer in Q4
+    // Summer months (May 21-Aug 15) - might be Q4 or no quarter
+    if ((month === 5 && day > 20) || month === 6 || month === 7 || (month === 8 && day < 16)) return "Q4"; // Include summer in Q4
     
     return null;
   }
