@@ -915,7 +915,7 @@
   }
 
   // Export to DOCX (simplified implementation)
-  // Helper function to escape XML special characters
+  // Helper function to escape XML/HTML special characters
   function escapeXml(str) {
     if (!str) return '';
     return String(str)
@@ -926,43 +926,7 @@
       .replace(/'/g, '&apos;');
   }
 
-  // Helper function to create a DOCX paragraph
-  function createDocxParagraph(text, style = '') {
-    const styleAttr = style ? ` w:val="${style}"` : '';
-    return `
-      <w:p>
-        <w:pPr>
-          ${style ? `<w:pStyle${styleAttr}/>` : ''}
-        </w:pPr>
-        <w:r>
-          <w:t>${escapeXml(text)}</w:t>
-        </w:r>
-      </w:p>`;
-  }
-
-  // Helper function to create a DOCX table row
-  function createDocxTableRow(cells) {
-    const cellsXml = cells.map(cell => `
-      <w:tc>
-        <w:tcPr>
-          <w:tcBorders>
-            <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-            <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-            <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-            <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-          </w:tcBorders>
-        </w:tcPr>
-        <w:p>
-          <w:r>
-            <w:t>${escapeXml(cell)}</w:t>
-          </w:r>
-        </w:p>
-      </w:tc>`).join('');
-    
-    return `<w:tr>${cellsXml}</w:tr>`;
-  }
-
-  // Export to DOCX using OOXML format
+  // Export to DOCX using HTML format (Word-compatible)
   async function exportToDocx() {
     const modal = $('dtSamplesModal');
     if (!modal) return;
@@ -1003,94 +967,7 @@
       mappedAssignmentIds.includes(sub.assignment_id)
     );
     
-    // Build document body XML
-    let bodyXml = '';
-    
-    // Header
-    bodyXml += createDocxParagraph('IEP GOAL PROGRESS REPORT', 'Heading1');
-    bodyXml += createDocxParagraph('');
-    bodyXml += createDocxParagraph(`Student: ${student.name} (${student.code})`);
-    bodyXml += createDocxParagraph(`Goal Code: ${goal.code}`);
-    bodyXml += createDocxParagraph(`Goal Description: ${goal.desc || 'No description'}`);
-    bodyXml += createDocxParagraph('');
-    
-    // Summary section
-    bodyXml += createDocxParagraph('Summary', 'Heading2');
-    bodyXml += createDocxParagraph(`Goal Area: ${goal.goal_area || 'Uncategorized'}`);
-    bodyXml += createDocxParagraph(`Baseline: ${baseline}%`);
-    bodyXml += createDocxParagraph(`Target: ${target}%`);
-    bodyXml += createDocxParagraph(`Current Value: ${current != null ? current + '%' : 'N/A'}`);
-    bodyXml += createDocxParagraph(`Rolling Average (${getQuarterLabel(currentQuarterFilter)}): ${avg != null ? avg + '%' : 'N/A'}`);
-    bodyXml += createDocxParagraph(`Trend: ${trend}`);
-    bodyXml += createDocxParagraph('');
-    
-    // Data Points table
-    bodyXml += createDocxParagraph('Data Points', 'Heading2');
-    if (entries.length === 0) {
-      bodyXml += createDocxParagraph('No data points recorded for this quarter.');
-    } else {
-      bodyXml += `<w:tbl>
-        <w:tblPr>
-          <w:tblStyle w:val="TableGrid"/>
-          <w:tblW w:w="5000" w:type="pct"/>
-        </w:tblPr>
-        ${createDocxTableRow(['Date', 'Value', 'Source'])}
-        ${entries.map(e => createDocxTableRow([
-          new Date(e.date).toLocaleDateString(),
-          `${e.value}%`,
-          e.source || 'manual'
-        ])).join('')}
-      </w:tbl>`;
-    }
-    bodyXml += createDocxParagraph('');
-    
-    // Work Samples section
-    bodyXml += createDocxParagraph('Work Samples', 'Heading2');
-    if (relevantSubmissions.length === 0) {
-      bodyXml += createDocxParagraph('No work samples found for this goal.');
-    } else {
-      relevantSubmissions.forEach(sub => {
-        const assignment = assignmentsData.find(a => a.id === sub.assignment_id);
-        const assignmentTitle = assignment ? assignment.title : `Assignment ${sub.assignment_id}`;
-        const submittedDate = new Date(sub.submitted_at).toLocaleDateString();
-        const score = sub.score_total != null ? `${sub.score_total}%` : 'Not graded';
-        
-        bodyXml += createDocxParagraph(`• ${assignmentTitle}`);
-        bodyXml += createDocxParagraph(`  Date Submitted: ${submittedDate}`);
-        bodyXml += createDocxParagraph(`  Score: ${score}`);
-        bodyXml += createDocxParagraph('');
-      });
-    }
-    
-    // Footer
-    bodyXml += createDocxParagraph('');
-    bodyXml += createDocxParagraph(`Generated on ${new Date().toLocaleString()}`);
-    
-    // Create document.xml with proper OOXML structure
-    const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
-            xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-  <w:body>
-    ${bodyXml}
-  </w:body>
-</w:document>`;
-
-    // Create [Content_Types].xml
-    const contentTypesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-  <Default Extension="xml" ContentType="application/xml"/>
-  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
-</Types>`;
-
-    // Create _rels/.rels
-    const relsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
-</Relationships>`;
-
-    // Since we can't easily create ZIP in browser without a library,
-    // we'll use a workaround: create an HTML file that Word can open
+    // Create HTML-based DOCX that Word can open
     // Word supports opening HTML files with .docx extension
     const htmlContent = `
 <!DOCTYPE html>
