@@ -272,6 +272,10 @@
           "dialog[open]:not([hidden]), [role='dialog']:not([hidden]), .modal:not([hidden]), .rc-modal:not([hidden]), .overlay:not([hidden]), [data-modal]:not([hidden])"
         );
         if (dlg) {
+          // Skip elements inside #draftOverlay - let tc-work.js handle it
+          if (dlg.id === 'draftOverlay' || dlg.closest('#draftOverlay')) {
+            return;
+          }
           // Don't remove reusable modals - hide them instead
           if (dlg.id) {
             dlg.hidden = true;

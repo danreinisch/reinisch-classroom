@@ -1138,8 +1138,11 @@ ${shown}
     });
 
     document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && !overlay.hidden) closePreview();
-    });
+      if (e.key === "Escape" && !overlay.hidden) {
+        e.stopImmediatePropagation();
+        closePreview();
+      }
+    }, true);
   }
 
   function wireFileLabels() {
@@ -1540,14 +1543,26 @@ function normalizeTaggedAssignmentText(input) {
   }
 
   function normalizeHeaderToClass(rawHeader) {
-    const t = norm(rawHeader);
+    // Strip decorative characters (dashes, asterisks, underscores, equals) first
+    const cleanHeader = String(rawHeader || "").replace(/^[-*_=\s]+|[-*_=\s]+$/g, "");
+    const t = norm(cleanHeader);
 
     const hasLifeSkills = t.includes("life") && t.includes("skills");
     const hasLA = LA_TOKENS.test(t);
 
+    // Life Skills LA variations (including "Life Skills ELA")
     if (hasLifeSkills && hasLA) return "Life Skills LA";
+    
+    // Check for "LSLA", "LS-LA", "LS LA" patterns
+    if (/\bls\s*la\b/.test(t)) return "Life Skills LA";
+    
+    // Life Skills without LA
     if (hasLifeSkills) return "Life Skills";
 
+    // Match LA/ELA with number and optional SC suffix
+    // Handles: "LA 1 SC", "LA 1", "ELA 1 SC", "ELA 1", "Language Arts 1", etc.
+    // The norm() function converts all non-alphanumeric chars to spaces, so patterns like
+    // "LA1SC" become "la 1 sc" before matching, ensuring word boundaries work correctly
     const m = t.match(/\b(?:la|ela|language\s+arts|english\s+language\s+arts)\s*([1-4])\b/);
     if (m && m[1]) return `LA ${m[1]} SC`;
 
@@ -1649,7 +1664,7 @@ function normalizeTaggedAssignmentText(input) {
       if (!isSep(lines[i])) continue;
 
       let h = i - 1;
-      while (h >= 0 && lines[h].trim() === "" && i - h <= 3) h--;
+      while (h >= 0 && lines[h].trim() === "" && i - h <= 6) h--;
       const rawHeader = h >= 0 ? lines[h].trim() : "";
       const cls = normalizeHeaderToClass(rawHeader);
       if (!cls) continue;
@@ -1750,8 +1765,30 @@ function normalizeTaggedAssignmentText(input) {
   }
 
   function updateClassDropdownLabel(text) {
-    const label = document.querySelector('label[for="draftClass"]');
-    if (label) label.textContent = text;
+    // Try multiple strategies to find the label, most reliable first
+    let label = document.getElementById('draftClassLabel');
+    
+    if (!label) {
+      // Fallback 1: Try the for attribute selector
+      label = document.querySelector('label[for="draftClass"]');
+    }
+    
+    if (!label) {
+      // Fallback 2: Traverse from the select element
+      const select = document.getElementById('draftClass');
+      if (select) {
+        const parent = select.closest('.work-field');
+        if (parent) {
+          label = parent.querySelector('label');
+        }
+      }
+    }
+    
+    if (label) {
+      label.textContent = text;
+    } else {
+      console.warn('updateClassDropdownLabel: Could not find label for #draftClass');
+    }
   }
 
   function renderFilePreviewPanel(text) {
