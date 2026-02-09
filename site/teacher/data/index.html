@@ -256,6 +256,55 @@
         margin-bottom: 10px;
         background: rgba(255, 255, 255, 0.02);
       }
+      /* Feature 2: Inline Cell Editing Styles */
+      .dt-data-value.editing input {
+        width: 60px;
+        padding: 4px 6px;
+        border: 1px solid rgba(34, 197, 94, 0.5);
+        border-radius: 6px;
+        background: rgba(0, 0, 0, 0.4);
+        color: inherit;
+        font-size: 13px;
+        text-align: center;
+        font-variant-numeric: tabular-nums;
+      }
+      .dt-data-value.saving {
+        opacity: 0.5;
+        pointer-events: none;
+      }
+      .dt-inline-form {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin-top: 8px;
+        padding: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 8px;
+        background: rgba(0, 0, 0, 0.2);
+      }
+      .dt-inline-form input {
+        padding: 6px 10px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 8px;
+        background: rgba(0, 0, 0, 0.3);
+        color: inherit;
+        font-size: 13px;
+      }
+      .dt-inline-form input[type="date"] {
+        min-width: 140px;
+      }
+      .dt-inline-form input[type="number"] {
+        width: 70px;
+        text-align: center;
+      }
+      /* Feature 3: SVG Sparklines Styles */
+      .dt-sparkline {
+        margin: 8px 0;
+        opacity: 0.9;
+      }
+      .dt-sparkline svg {
+        display: block;
+      }
     </style>
   </head>
   <body>

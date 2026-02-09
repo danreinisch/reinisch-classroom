@@ -360,7 +360,7 @@
       return `
         <tr>
           <td>${new Date(entry.date).toLocaleDateString()}</td>
-          <td class="dt-data-value ${scoreClass}">${entry.value}%</td>
+          <td class="dt-data-value ${scoreClass} editable" data-entry-id="${entry.id}" data-goal="${goal.code}" data-student="${studentCode}" data-value="${entry.value}">${entry.value}%</td>
           <td>${entry.source || 'manual'}</td>
         </tr>
       `;
@@ -420,10 +420,82 @@
     `;
   }
 
+  /**
+   * Render sparkline SVG for goal progress visualization
+   * @param {Object} goal - Goal object with code, desc, etc.
+   * @param {string} studentCode - Student code
+   * @returns {string} HTML string containing SVG sparkline, or empty string if fewer than 2 data points
+   */
+  function renderSparkline(goal, studentCode) {
+    const entries = getGoalProgressEntries(goal.code, studentCode);
+    
+    // Need at least 2 points to draw a line
+    if (entries.length < 2) {
+      return '';
+    }
+    
+    const width = 200;
+    const height = 40;
+    const padding = 4;
+    
+    // Get values sorted by date
+    const values = entries.map(e => parseFloat(e.value));
+    const max = Math.max(...values, 100);
+    const min = Math.min(...values, 0);
+    const range = max - min || 1;
+    
+    const stepX = (width - 2 * padding) / (values.length - 1);
+    
+    // Build polyline points
+    let points = '';
+    let circles = '';
+    values.forEach((val, i) => {
+      const x = padding + i * stepX;
+      const y = height - padding - ((val - min) / range) * (height - 2 * padding);
+      points += `${x},${y} `;
+      circles += `<circle cx="${x}" cy="${y}" r="2" fill="rgba(34, 197, 94, 0.9)" />`;
+    });
+    
+    // Build polygon points for fill area (add bottom corners)
+    const firstX = padding;
+    const lastX = padding + (values.length - 1) * stepX;
+    const bottomY = height - padding;
+    const polygonPoints = points + `${lastX},${bottomY} ${firstX},${bottomY}`;
+    
+    // Create unique gradient ID (sanitize goal code to prevent XSS)
+    const safeGradientId = `sparkGradient-${goal.code.replace(/[^a-zA-Z0-9-_]/g, '_')}`;
+    
+    return `
+      <div class="dt-sparkline">
+        <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+          <defs>
+            <linearGradient id="${safeGradientId}" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" style="stop-color:rgba(34, 197, 94, 0.2);stop-opacity:1" />
+              <stop offset="100%" style="stop-color:rgba(34, 197, 94, 0.02);stop-opacity:1" />
+            </linearGradient>
+          </defs>
+          <polygon 
+            points="${polygonPoints.trim()}" 
+            fill="url(#${safeGradientId})"
+          />
+          <polyline 
+            points="${points.trim()}" 
+            fill="none" 
+            stroke="rgba(34, 197, 94, 0.8)" 
+            stroke-width="2" 
+            stroke-linecap="round" 
+            stroke-linejoin="round"
+          />
+          ${circles}
+        </svg>
+      </div>
+    `;
+  }
+
   // Render a single goal row
   function renderGoalRow(goal, studentCode) {
     return `
-      <div class="dt-goal-row">
+      <div class="dt-goal-row" data-goal="${goal.code}" data-student="${studentCode}">
         <div class="dt-goal-header">
           <div>
             <strong>${goal.code}</strong> — ${goal.desc || 'No description'}
@@ -434,8 +506,17 @@
           <span>Area: <strong>${goal.goal_area || 'Uncategorized'}</strong></span>
         </div>
         ${renderGoalStats(goal, studentCode)}
+        ${renderSparkline(goal, studentCode)}
         ${renderDataPointsTable(goal, studentCode)}
         <button class="dt-btn primary" data-action="add-data" data-goal="${goal.code}" data-student="${studentCode}">+ Add Data Point</button>
+        <div class="dt-inline-form" style="display: none;" data-goal="${goal.code}" data-student="${studentCode}">
+          <label style="font-size: 13px; opacity: 0.9;">Date:</label>
+          <input type="date" class="dt-date-input" value="${formatDateYYYYMMDD()}" />
+          <label style="font-size: 13px; opacity: 0.9;">Value:</label>
+          <input type="number" class="dt-value-input" min="0" max="100" step="1" placeholder="0-100" />
+          <button class="dt-btn primary dt-save-btn">Save</button>
+          <button class="dt-btn dt-cancel-btn">Cancel</button>
+        </div>
       </div>
     `;
   }
@@ -538,24 +619,101 @@
       }
     });
     
-    // Add "Add Data Point" button handlers
+    // Add "Add Data Point" button handlers - show inline form
     container.querySelectorAll('[data-action="add-data"]').forEach(btn => {
-      btn.addEventListener('click', async (e) => {
+      btn.addEventListener('click', (e) => {
         e.stopPropagation();
         const goalCode = btn.dataset.goal;
         const studentCode = btn.dataset.student;
-        await addDataPoint(goalCode, studentCode);
+        showInlineForm(goalCode, studentCode);
+      });
+    });
+    
+    // Add inline cell editing handlers
+    container.querySelectorAll('.dt-data-value.editable').forEach(cell => {
+      cell.addEventListener('click', (e) => {
+        e.stopPropagation();
+        startCellEdit(cell);
+      });
+    });
+    
+    // Add inline form handlers
+    container.querySelectorAll('.dt-inline-form').forEach(form => {
+      const goalCode = form.dataset.goal;
+      const studentCode = form.dataset.student;
+      
+      const saveBtn = form.querySelector('.dt-save-btn');
+      const cancelBtn = form.querySelector('.dt-cancel-btn');
+      const dateInput = form.querySelector('.dt-date-input');
+      const valueInput = form.querySelector('.dt-value-input');
+      
+      saveBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        await saveInlineDataPoint(goalCode, studentCode, dateInput.value, valueInput.value, form);
+      });
+      
+      cancelBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        hideInlineForm(form);
+      });
+      
+      // Enter key saves
+      valueInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          saveBtn.click();
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          cancelBtn.click();
+        }
       });
     });
   }
-
-  // Add a data point
-  async function addDataPoint(goalCode, studentCode) {
-    const date = prompt('Enter date (YYYY-MM-DD):', formatDateYYYYMMDD());
-    if (!date) return;
+  
+  /**
+   * Show inline form for adding a new data point to a goal
+   * @param {string} goalCode - Goal code
+   * @param {string} studentCode - Student code
+   */
+  function showInlineForm(goalCode, studentCode) {
+    const goalRow = document.querySelector(`.dt-goal-row[data-goal="${goalCode}"][data-student="${studentCode}"]`);
+    if (!goalRow) return;
     
-    const value = prompt('Enter value (0-100):', '');
-    if (value === null || value === '') return;
+    const form = goalRow.querySelector('.dt-inline-form');
+    if (!form) return;
+    
+    // Reset form to default values
+    form.querySelector('.dt-date-input').value = formatDateYYYYMMDD();
+    form.querySelector('.dt-value-input').value = '';
+    form.style.display = 'flex';
+    
+    // Focus value input
+    setTimeout(() => form.querySelector('.dt-value-input').focus(), 100);
+  }
+  
+  /**
+   * Hide inline form and reset its values
+   * @param {HTMLElement} form - The form element to hide
+   */
+  function hideInlineForm(form) {
+    form.style.display = 'none';
+    form.querySelector('.dt-value-input').value = '';
+  }
+  
+  /**
+   * Save a new data point from the inline form
+   * @param {string} goalCode - Goal code
+   * @param {string} studentCode - Student code
+   * @param {string} date - Date in YYYY-MM-DD format
+   * @param {string} value - Progress value (0-100)
+   * @param {HTMLElement} form - The form element to hide after save
+   * Validates input, saves via db.upsertGoalProgress, reloads data, and hides form
+   */
+  async function saveInlineDataPoint(goalCode, studentCode, date, value, form) {
+    if (!date) {
+      alert('Please enter a date');
+      return;
+    }
     
     const numValue = parseFloat(value);
     if (isNaN(numValue) || numValue < 0 || numValue > 100) {
@@ -576,11 +734,124 @@
       await loadProgressForQuarter(currentQuarterFilter);
       render();
       
-      alert('Data point added successfully!');
+      hideInlineForm(form);
     } catch (err) {
       console.error('[data] Error adding data point:', err);
       alert('Error adding data point: ' + err.message);
     }
+  }
+  
+  /**
+   * Start inline editing of a data point cell
+   * @param {HTMLElement} cell - The table cell to edit
+   * Replaces cell content with input, handles keyboard shortcuts:
+   * - Enter/blur: save changes
+   * - Escape: cancel editing
+   * - ArrowUp/Down: adjust value by ±1 (±5 with Shift)
+   */
+  function startCellEdit(cell) {
+    // Don't allow multiple edits at once
+    if (document.querySelector('.dt-data-value.editing')) return;
+    
+    const currentValue = parseFloat(cell.dataset.value);
+    const entryId = cell.dataset.entryId;
+    const goalCode = cell.dataset.goal;
+    const studentCode = cell.dataset.student;
+    
+    // Create input
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.min = '0';
+    input.max = '100';
+    input.step = '1';
+    input.value = currentValue;
+    
+    // Store original value for cancel
+    cell.dataset.originalValue = currentValue;
+    
+    // Replace cell content
+    const originalContent = cell.innerHTML;
+    cell.innerHTML = '';
+    cell.appendChild(input);
+    cell.classList.add('editing');
+    
+    input.focus();
+    input.select();
+    
+    // Save on Enter or blur
+    const save = async () => {
+      const newValue = parseFloat(input.value);
+      
+      if (isNaN(newValue) || newValue < 0 || newValue > 100) {
+        alert('Please enter a valid number between 0 and 100');
+        input.focus();
+        return;
+      }
+      
+      // Don't save if value hasn't changed
+      if (newValue === currentValue) {
+        cancel();
+        return;
+      }
+      
+      // Show saving state
+      cell.classList.add('saving');
+      input.disabled = true;
+      
+      try {
+        // Find the entry to get its date
+        const entry = progressData.find(p => p.id === entryId);
+        if (!entry) throw new Error('Entry not found');
+        
+        await db.upsertGoalProgress({
+          goal_code: goalCode,
+          student_code: studentCode,
+          date: entry.date,
+          value: newValue,
+          source: entry.source || 'manual'
+        });
+        
+        // Reload and re-render
+        await loadProgressForQuarter(currentQuarterFilter);
+        render();
+      } catch (err) {
+        console.error('[data] Error updating data point:', err);
+        alert('Error updating data point: ' + err.message);
+        cell.classList.remove('saving');
+        input.disabled = false;
+        input.focus();
+      }
+    };
+    
+    const cancel = () => {
+      cell.classList.remove('editing');
+      cell.innerHTML = originalContent;
+    };
+    
+    input.addEventListener('blur', save);
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        save();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        cancel();
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        const step = e.shiftKey ? 5 : 1;
+        input.value = Math.min(100, parseFloat(input.value || 0) + step);
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        const step = e.shiftKey ? 5 : 1;
+        input.value = Math.max(0, parseFloat(input.value || 0) - step);
+      }
+    });
+  }
+
+  // Add a data point (legacy - now replaced by inline form)
+  async function addDataPoint(goalCode, studentCode) {
+    // This function is no longer used but kept for compatibility
+    showInlineForm(goalCode, studentCode);
   }
 
   // Open work samples modal
@@ -673,7 +944,29 @@
     if (modal) modal.classList.remove('active');
   }
 
-  // Export to DOCX (simplified implementation)
+  /**
+   * Escape XML/HTML special characters to prevent XSS
+   * @param {string} str - String to escape
+   * @returns {string} Escaped string safe for XML/HTML insertion
+   * Escapes: & < > " '
+   */
+  function escapeXml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&apos;');
+  }
+
+  /**
+   * Export IEP goal progress report as DOCX file
+   * Generates an HTML-based .docx file that Microsoft Word can open
+   * Requires: dtSamplesModal with goalCode and studentCode in dataset
+   * Includes: Header, Summary (stats), Data Points table, Work Samples, Footer
+   * Downloads file as: {student_code}_{goal_code}_progress_report.docx
+   */
   async function exportToDocx() {
     const modal = $('dtSamplesModal');
     if (!modal) return;
@@ -689,6 +982,20 @@
     // Get data entries and work samples
     const entries = getGoalProgressEntries(goal.code, studentCode);
     const avg = calculateGoalAverage(goal.code, studentCode);
+    const baseline = goal.baseline || 0;
+    const target = goal.target || 100;
+    const current = entries.length > 0 ? parseFloat(entries[entries.length - 1].value) : null;
+    
+    // Calculate trend
+    let trend = '→';
+    if (entries.length >= 2) {
+      const firstHalf = entries.slice(0, Math.floor(entries.length / 2));
+      const secondHalf = entries.slice(Math.floor(entries.length / 2));
+      const firstAvg = firstHalf.reduce((acc, e) => acc + parseFloat(e.value), 0) / firstHalf.length;
+      const secondAvg = secondHalf.reduce((acc, e) => acc + parseFloat(e.value), 0) / secondHalf.length;
+      if (secondAvg > firstAvg + 5) trend = '↗';
+      else if (secondAvg < firstAvg - 5) trend = '↘';
+    }
     
     // Find relevant work samples
     const mappedAssignmentIds = assignmentGoalMappingsData
@@ -700,52 +1007,86 @@
       mappedAssignmentIds.includes(sub.assignment_id)
     );
     
-    // Build work samples section
-    let workSamplesText = '';
-    if (relevantSubmissions.length === 0) {
-      workSamplesText = '  No work samples found for this goal.\n';
-    } else {
-      workSamplesText = relevantSubmissions.map(sub => {
-        const assignment = assignmentsData.find(a => a.id === sub.assignment_id);
-        const assignmentTitle = assignment ? assignment.title : `Assignment ${sub.assignment_id}`;
-        const submittedDate = new Date(sub.submitted_at).toLocaleDateString();
-        const score = sub.score_total != null ? `${sub.score_total}%` : 'Not graded';
-        return `  - ${assignmentTitle}\n    Date: ${submittedDate}\n    Score: ${score}\n    Submission ID: ${sub.submission_id}`;
-      }).join('\n\n');
-    }
-    
-    const content = `
-IEP GOAL PROGRESS REPORT
-========================
+    // Create HTML-based DOCX that Word can open
+    // Word supports opening HTML files with .docx extension
+    const htmlContent = `
+<!DOCTYPE html>
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">
+<head>
+  <meta charset="utf-8">
+  <title>IEP Goal Progress Report</title>
+  <style>
+    body { font-family: 'Calibri', Arial, sans-serif; margin: 40px; }
+    h1 { font-size: 24pt; font-weight: bold; margin-bottom: 20px; }
+    h2 { font-size: 16pt; font-weight: bold; margin-top: 20px; margin-bottom: 10px; }
+    p { margin: 5px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #000; padding: 8px; text-align: left; }
+    th { background-color: #f0f0f0; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>IEP GOAL PROGRESS REPORT</h1>
+  
+  <p><strong>Student:</strong> ${escapeXml(student.name)} (${escapeXml(student.code)})</p>
+  <p><strong>Goal Code:</strong> ${escapeXml(goal.code)}</p>
+  <p><strong>Goal Description:</strong> ${escapeXml(goal.desc || 'No description')}</p>
+  
+  <h2>Summary</h2>
+  <p><strong>Goal Area:</strong> ${escapeXml(goal.goal_area || 'Uncategorized')}</p>
+  <p><strong>Baseline:</strong> ${baseline}%</p>
+  <p><strong>Target:</strong> ${target}%</p>
+  <p><strong>Current Value:</strong> ${current != null ? current + '%' : 'N/A'}</p>
+  <p><strong>Rolling Average (${escapeXml(getQuarterLabel(currentQuarterFilter))}):</strong> ${avg != null ? avg + '%' : 'N/A'}</p>
+  <p><strong>Trend:</strong> ${escapeXml(trend)}</p>
+  
+  <h2>Data Points</h2>
+  ${entries.length === 0 ? '<p>No data points recorded for this quarter.</p>' : `
+  <table>
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Value</th>
+        <th>Source</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${entries.map(e => `
+      <tr>
+        <td>${escapeXml(new Date(e.date).toLocaleDateString())}</td>
+        <td>${e.value}%</td>
+        <td>${escapeXml(e.source || 'manual')}</td>
+      </tr>`).join('')}
+    </tbody>
+  </table>`}
+  
+  <h2>Work Samples</h2>
+  ${relevantSubmissions.length === 0 ? '<p>No work samples found for this goal.</p>' : 
+    relevantSubmissions.map(sub => {
+      const assignment = assignmentsData.find(a => a.id === sub.assignment_id);
+      const assignmentTitle = assignment ? assignment.title : `Assignment ${sub.assignment_id}`;
+      const submittedDate = new Date(sub.submitted_at).toLocaleDateString();
+      const score = sub.score_total != null ? `${sub.score_total}%` : 'Not graded';
+      return `
+      <p><strong>• ${escapeXml(assignmentTitle)}</strong></p>
+      <p style="margin-left: 20px;"><strong>Date Submitted:</strong> ${escapeXml(submittedDate)}</p>
+      <p style="margin-left: 20px;"><strong>Score:</strong> ${escapeXml(score)}</p>`;
+    }).join('')}
+  
+  <p style="margin-top: 30px;"><em>Generated on ${escapeXml(new Date().toLocaleString())}</em></p>
+</body>
+</html>`;
 
-Student: ${student.name} (${student.code})
-Goal Code: ${goal.code}
-Goal Description: ${goal.desc || 'No description'}
-Goal Area: ${goal.goal_area || 'Uncategorized'}
-Baseline: ${goal.baseline || 0}%
-Target: ${goal.target || 100}%
-
-Quarter: ${getQuarterLabel(currentQuarterFilter)}
-Rolling Average: ${avg != null ? avg + '%' : 'N/A'}
-
-Data Points:
-${entries.map(e => `  ${new Date(e.date).toLocaleDateString()}: ${e.value}% (${e.source || 'manual'})`).join('\n')}
-
-Work Samples:
-${workSamplesText}
-
-Generated: ${new Date().toLocaleString()}
-    `.trim();
-    
-    const blob = new Blob([content], { type: 'text/plain' });
+    // Create blob and download
+    const blob = new Blob([htmlContent], { 
+      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' 
+    });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${studentCode}_${goalCode}_progress_report.txt`;
+    a.download = `${studentCode}_${goalCode}_progress_report.docx`;
     a.click();
     URL.revokeObjectURL(url);
-    
-    alert('Report exported! (Note: Full DOCX export with html-docx-js library coming in future update)');
   }
 
   // Export visible data as CSV
