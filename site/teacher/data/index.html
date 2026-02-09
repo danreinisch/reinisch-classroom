@@ -1,43 +1,357 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Teacher Center — Data</title>
-  <link rel="stylesheet" href="/web/teacher-shell.css" />
-</head>
-<body>
-  <div class="tc-app">
-    <header class="tc-topbar">
-      <button class="tc-btn" id="tcSidebarToggle" aria-label="Toggle sidebar" aria-expanded="false">☰</button>
-      <a class="tc-btn" href="/" target="_blank" rel="noopener" aria-label="Home">🏠</a>
-      <div class="tc-title">Teacher Center — Data</div>
-    </header>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Teacher Center — Data</title>
+    <link rel="stylesheet" href="/web/teacher-shell.css" />
+    <style>
+      .dt-subtle {
+        opacity: 0.85;
+      }
+      .dt-card {
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 16px;
+        padding: 16px;
+        background: rgba(255, 255, 255, 0.04);
+      }
+      .dt-row {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .dt-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      .dt-btn {
+        padding: 10px 12px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        background: rgba(255, 255, 255, 0.06);
+        color: inherit;
+        cursor: pointer;
+        font-size: 13px;
+      }
+      .dt-btn.primary {
+        background: rgba(34, 197, 94, 0.18);
+        border-color: rgba(34, 197, 94, 0.35);
+      }
+      .dt-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+      .dt-filter-bar {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 12px;
+      }
+      .dt-filter-btn {
+        padding: 8px 14px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.04);
+        color: inherit;
+        cursor: pointer;
+        font-size: 13px;
+      }
+      .dt-filter-btn.active {
+        background: rgba(34, 197, 94, 0.18);
+        border-color: rgba(34, 197, 94, 0.35);
+      }
+      .dt-search-input {
+        padding: 8px 12px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(0, 0, 0, 0.3);
+        color: inherit;
+        font-size: 13px;
+        min-width: 200px;
+      }
+      .dt-accordion {
+        margin-top: 16px;
+      }
+      .dt-accordion-item {
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 12px;
+        margin-bottom: 8px;
+        background: rgba(255, 255, 255, 0.04);
+      }
+      .dt-accordion-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 16px;
+        cursor: pointer;
+        user-select: none;
+      }
+      .dt-accordion-header:hover {
+        background: rgba(255, 255, 255, 0.06);
+      }
+      .dt-accordion-title {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-weight: 500;
+      }
+      .dt-accordion-icon {
+        transition: transform 0.2s;
+      }
+      .dt-accordion-item.expanded .dt-accordion-icon {
+        transform: rotate(90deg);
+      }
+      .dt-accordion-content {
+        display: none;
+        padding: 0 16px 16px 16px;
+      }
+      .dt-accordion-item.expanded .dt-accordion-content {
+        display: block;
+      }
+      .dt-goal-row {
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 10px;
+        padding: 12px;
+        margin-bottom: 12px;
+        background: rgba(0, 0, 0, 0.2);
+      }
+      .dt-goal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+      .dt-goal-meta {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+        font-size: 13px;
+        opacity: 0.85;
+        margin-bottom: 10px;
+      }
+      .dt-data-grid {
+        overflow-x: auto;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        margin-bottom: 10px;
+      }
+      .dt-data-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+      .dt-data-table th,
+      .dt-data-table td {
+        padding: 8px 10px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        border-right: 1px solid rgba(255, 255, 255, 0.04);
+        text-align: center;
+        white-space: nowrap;
+      }
+      .dt-data-table th {
+        font-weight: 600;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+        opacity: 0.9;
+        background: rgba(0, 0, 0, 0.3);
+      }
+      .dt-data-value {
+        font-variant-numeric: tabular-nums;
+      }
+      .dt-data-value.editable {
+        cursor: pointer;
+      }
+      .dt-data-value.editable:hover {
+        background: rgba(255, 255, 255, 0.06);
+      }
+      .dt-score-green { color: rgba(34, 197, 94, 1); }
+      .dt-score-amber { color: rgba(234, 179, 8, 1); }
+      .dt-score-red { color: rgba(239, 68, 68, 1); }
+      .dt-stats {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+        font-size: 13px;
+        opacity: 0.85;
+        margin-bottom: 10px;
+      }
+      .dt-sync-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border-radius: 8px;
+        font-size: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.04);
+      }
+      .dt-sync-status.synced {
+        border-color: rgba(34, 197, 94, 0.35);
+        background: rgba(34, 197, 94, 0.12);
+      }
+      .dt-sync-status.local {
+        border-color: rgba(234, 179, 8, 0.35);
+        background: rgba(234, 179, 8, 0.12);
+      }
+      .dt-sync-status.error {
+        border-color: rgba(239, 68, 68, 0.35);
+        background: rgba(239, 68, 68, 0.12);
+      }
+      .dt-empty {
+        padding: 40px 20px;
+        text-align: center;
+        opacity: 0.7;
+      }
+      .dt-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.8);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+      }
+      .dt-modal.active {
+        display: flex;
+      }
+      .dt-modal-content {
+        background: rgba(20, 20, 20, 0.98);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 16px;
+        padding: 24px;
+        max-width: 700px;
+        width: 90%;
+        max-height: 80vh;
+        overflow-y: auto;
+      }
+      .dt-modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+      }
+      .dt-modal-close {
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 8px;
+        padding: 6px 12px;
+        cursor: pointer;
+        color: inherit;
+      }
+      .dt-modal-close:hover {
+        background: rgba(255, 255, 255, 0.1);
+      }
+      .dt-sample-item {
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 10px;
+        background: rgba(255, 255, 255, 0.02);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="tc-app">
+      <header class="tc-topbar">
+        <button class="tc-btn" id="tcSidebarToggle" aria-label="Toggle sidebar" aria-expanded="false">☰</button>
+        <a class="tc-btn" href="/" target="_blank" rel="noopener" aria-label="Home">🏠</a>
+        <div class="tc-title">Teacher Center — Data</div>
+      </header>
 
-    <div class="tc-shell">
-      <aside class="tc-sidebar" aria-label="Teacher navigation">
-        <nav class="tc-nav">
-          <a data-href="/teacher/" href="/teacher/"><span class="tc-icon">🏁</span><span class="tc-label">Overview</span></a>
-          <a data-href="/teacher/work/" href="/teacher/work/"><span class="tc-icon">🗂️</span><span class="tc-label">Work</span></a>
-          <a data-href="/teacher/library/" href="/teacher/library/"><span class="tc-icon">📚</span><span class="tc-label">Library</span></a>
-          <a data-href="/teacher/review/" href="/teacher/review/"><span class="tc-icon">✍️</span><span class="tc-label">Review</span></a>
-          <a data-href="/teacher/gradebook/" href="/teacher/gradebook/"><span class="tc-icon">📊</span><span class="tc-label">Gradebook</span></a>
-          <a data-href="/teacher/students/" href="/teacher/students/"><span class="tc-icon">🧑‍🎓</span><span class="tc-label">Students</span></a>
-          <a data-href="/teacher/classes/" href="/teacher/classes/"><span class="tc-icon">🏫</span><span class="tc-label">Classes</span></a>
-          <a data-href="/teacher/data/" href="/teacher/data/"><span class="tc-icon">🧾</span><span class="tc-label">Data</span></a>
-          <a data-href="/teacher/admin/" href="/teacher/admin/"><span class="tc-icon">🛡️</span><span class="tc-label">Admin</span></a>
-          <a data-href="/teacher/reporting/" href="/teacher/reporting/"><span class="tc-icon">📑</span><span class="tc-label">Reporting</span></a>
-          <a data-href="/teacher/settings/" href="/teacher/settings/"><span class="tc-icon">⚙️</span><span class="tc-label">Settings</span></a>
-        </nav>
-      </aside>
+      <div class="tc-shell">
+        <aside class="tc-sidebar" aria-label="Teacher navigation">
+          <nav class="tc-nav">
+            <a data-href="/teacher/" href="/teacher/"><span class="tc-icon">🏁</span><span class="tc-label">Overview</span></a>
+            <a data-href="/teacher/work/" href="/teacher/work/"><span class="tc-icon">🗂️</span><span class="tc-label">Work</span></a>
+            <a data-href="/teacher/library/" href="/teacher/library/"><span class="tc-icon">📚</span><span class="tc-label">Library</span></a>
+            <a data-href="/teacher/review/" href="/teacher/review/"><span class="tc-icon">✍️</span><span class="tc-label">Review</span></a>
+            <a data-href="/teacher/gradebook/" href="/teacher/gradebook/"><span class="tc-icon">📊</span><span class="tc-label">Gradebook</span></a>
+            <a data-href="/teacher/students/" href="/teacher/students/"><span class="tc-icon">🧑‍🎓</span><span class="tc-label">Students</span></a>
+            <a data-href="/teacher/classes/" href="/teacher/classes/"><span class="tc-icon">🏫</span><span class="tc-label">Classes</span></a>
+            <a data-href="/teacher/data/" href="/teacher/data/"><span class="tc-icon">🧾</span><span class="tc-label">Data</span></a>
+            <a data-href="/teacher/admin/" href="/teacher/admin/"><span class="tc-icon">🛡️</span><span class="tc-label">Admin</span></a>
+            <a data-href="/teacher/reporting/" href="/teacher/reporting/"><span class="tc-icon">📑</span><span class="tc-label">Reporting</span></a>
+            <a data-href="/teacher/settings/" href="/teacher/settings/"><span class="tc-icon">⚙️</span><span class="tc-label">Settings</span></a>
+          </nav>
+        </aside>
 
-      <main class="tc-main">
-        <h1>Data</h1>
-        <p>Shell ready. Next PR will wire real Teacher Center modules into these routes.</p>
-      </main>
+        <main class="tc-main">
+          <h1 style="margin-top: 0">Data</h1>
+          <p class="dt-subtle" style="margin-top: -6px">
+            Track IEP goal progress across quarters with rolling averages.
+          </p>
+
+          <section class="dt-card" aria-label="Data filters">
+            <div class="dt-row">
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <h2 style="margin: 0">Filters</h2>
+                <span id="dtSyncStatus" class="dt-sync-status local" style="display: none;">
+                  <span id="dtSyncIcon">🟡</span>
+                  <span id="dtSyncText">Local mode</span>
+                </span>
+              </div>
+              <div class="dt-actions">
+                <input 
+                  type="search" 
+                  id="dtSearch" 
+                  class="dt-search-input" 
+                  placeholder="Search students or goals..."
+                />
+              </div>
+            </div>
+
+            <div class="dt-filter-bar" id="dtClassFilterBar">
+              <!-- Class filter buttons populated by JS -->
+            </div>
+
+            <div class="dt-filter-bar" id="dtQuarterFilterBar">
+              <!-- Quarter filter buttons populated by JS -->
+            </div>
+
+            <div class="dt-filter-bar" id="dtGoalAreaFilterBar">
+              <!-- Goal area filter buttons populated by JS -->
+            </div>
+          </section>
+
+          <section class="dt-card" aria-label="IEP goals data" style="margin-top: 16px">
+            <div id="dtEmpty" class="dt-empty" style="display: none">
+              <p><strong>No IEP goals to display</strong></p>
+              <p>Add students and IEP goals in the Students tab to track progress here.</p>
+            </div>
+
+            <div class="dt-accordion" id="dtAccordion">
+              <!-- Student accordions populated by JS -->
+            </div>
+          </section>
+        </main>
+      </div>
     </div>
-  </div>
 
-  <script defer src="/web/teacher-shell.js"></script>
-</body>
+    <!-- Work Samples Modal -->
+    <div class="dt-modal" id="dtSamplesModal">
+      <div class="dt-modal-content">
+        <div class="dt-modal-header">
+          <h2 style="margin: 0">Work Samples</h2>
+          <button class="dt-modal-close" id="dtModalClose">Close</button>
+        </div>
+        <div id="dtModalBody">
+          <!-- Modal content populated by JS -->
+        </div>
+        <div style="margin-top: 16px; display: flex; gap: 10px;">
+          <button class="dt-btn primary" id="dtExportDocx">Export DOCX</button>
+        </div>
+      </div>
+    </div>
+
+    <script defer src="/web/teacher-shell.js"></script>
+    <script type="module" src="/web/tc-data.js"></script>
+  </body>
 </html>
