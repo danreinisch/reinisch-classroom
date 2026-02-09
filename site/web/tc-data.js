@@ -28,6 +28,9 @@
   let goalsData = [];
   let progressData = [];
   let classEnrollmentsData = [];
+  let assignmentsData = [];
+  let submissionsData = [];
+  let assignmentGoalMappingsData = [];
   let usingSupabase = false;
   let syncStatus = "local";
   let expandedStudents = new Set(); // Track which students are expanded
@@ -114,16 +117,30 @@
         syncStatus = "local";
       }
       
-      // Load students, goals, and enrollments
-      const [students, goals, enrollments] = await Promise.all([
+      // Load students, goals, enrollments, assignments, submissions, and mappings
+      const [students, goals, enrollments, assignments, submissions] = await Promise.all([
         db.listStudents(),
         db.listGoalsAll ? db.listGoalsAll() : [],
-        db.listClassEnrollments ? db.listClassEnrollments() : []
+        db.listClassEnrollments ? db.listClassEnrollments() : [],
+        db.listAssignments ? db.listAssignments() : [],
+        db.listSubmissions ? db.listSubmissions() : []
       ]);
       
       studentsData = students || [];
       goalsData = goals || [];
       classEnrollmentsData = enrollments || [];
+      assignmentsData = assignments || [];
+      submissionsData = submissions || [];
+      
+      // Load assignment goal mappings if available
+      try {
+        if (db.listAssignmentGoalMappings) {
+          assignmentGoalMappingsData = await db.listAssignmentGoalMappings();
+        }
+      } catch (err) {
+        console.warn('[data] Error loading assignment goal mappings:', err);
+        assignmentGoalMappingsData = [];
+      }
       
       // Group goals by student
       const goalsByStudent = {};
@@ -582,8 +599,51 @@
       return;
     }
     
-    // Load work samples (assignments/submissions)
-    // For now, this is a placeholder - full implementation would query assignments
+    // Find relevant work samples
+    // 1. Find assignments mapped to this goal
+    const mappedAssignmentIds = assignmentGoalMappingsData
+      .filter(m => m.goal_code === goalCode && m.student_code === studentCode)
+      .map(m => m.assignment_id);
+    
+    // 2. Find submissions for these assignments by this student
+    const relevantSubmissions = submissionsData.filter(sub => 
+      sub.student_code === studentCode && 
+      mappedAssignmentIds.includes(sub.assignment_id)
+    );
+    
+    // Build work samples HTML
+    let samplesHTML = '';
+    if (relevantSubmissions.length === 0) {
+      samplesHTML = `
+        <div class="dt-sample-item">
+          <p><em>No work samples found for this goal</em></p>
+          <p style="font-size: 13px; opacity: 0.7;">Work samples appear here when assignments are mapped to this IEP goal and the student submits them.</p>
+        </div>
+      `;
+    } else {
+      samplesHTML = relevantSubmissions.map(sub => {
+        const assignment = assignmentsData.find(a => a.id === sub.assignment_id);
+        const assignmentTitle = assignment ? assignment.title : `Assignment ${sub.assignment_id}`;
+        const submittedDate = new Date(sub.submitted_at).toLocaleDateString();
+        const score = sub.score_total != null ? `${sub.score_total}%` : 'Not graded';
+        
+        return `
+          <div class="dt-sample-item">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+              <strong>${assignmentTitle}</strong>
+              <span style="opacity: 0.8;">${submittedDate}</span>
+            </div>
+            <div style="font-size: 13px; opacity: 0.85; margin-bottom: 4px;">
+              <strong>Score:</strong> ${score}
+            </div>
+            <div style="font-size: 13px; opacity: 0.7;">
+              <em>Submission ID: ${sub.submission_id}</em>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+    
     modalBody.innerHTML = `
       <div>
         <h3 style="margin-top: 0">${goal.code} — ${goal.desc}</h3>
@@ -596,10 +656,7 @@
         ${renderDataPointsTable(goal, studentCode)}
         
         <h4 style="margin-top: 20px">Work Samples</h4>
-        <div class="dt-sample-item">
-          <p><em>Work sample integration coming soon...</em></p>
-          <p style="font-size: 13px; opacity: 0.7;">This will show assignment submissions mapped to this IEP goal.</p>
-        </div>
+        ${samplesHTML}
       </div>
     `;
     
@@ -629,11 +686,33 @@
     
     if (!goal || !student) return;
     
-    // Simple text-based export (DOCX generation would require a library)
-    // For now, export as plain text with .txt extension
-    // A real implementation would use docx.js or similar
+    // Get data entries and work samples
     const entries = getGoalProgressEntries(goal.code, studentCode);
     const avg = calculateGoalAverage(goal.code, studentCode);
+    
+    // Find relevant work samples
+    const mappedAssignmentIds = assignmentGoalMappingsData
+      .filter(m => m.goal_code === goalCode && m.student_code === studentCode)
+      .map(m => m.assignment_id);
+    
+    const relevantSubmissions = submissionsData.filter(sub => 
+      sub.student_code === studentCode && 
+      mappedAssignmentIds.includes(sub.assignment_id)
+    );
+    
+    // Build work samples section
+    let workSamplesText = '';
+    if (relevantSubmissions.length === 0) {
+      workSamplesText = '  No work samples found for this goal.\n';
+    } else {
+      workSamplesText = relevantSubmissions.map(sub => {
+        const assignment = assignmentsData.find(a => a.id === sub.assignment_id);
+        const assignmentTitle = assignment ? assignment.title : `Assignment ${sub.assignment_id}`;
+        const submittedDate = new Date(sub.submitted_at).toLocaleDateString();
+        const score = sub.score_total != null ? `${sub.score_total}%` : 'Not graded';
+        return `  - ${assignmentTitle}\n    Date: ${submittedDate}\n    Score: ${score}\n    Submission ID: ${sub.submission_id}`;
+      }).join('\n\n');
+    }
     
     const content = `
 IEP GOAL PROGRESS REPORT
@@ -653,9 +732,10 @@ Data Points:
 ${entries.map(e => `  ${new Date(e.date).toLocaleDateString()}: ${e.value}% (${e.source || 'manual'})`).join('\n')}
 
 Work Samples:
-  (Integration coming soon...)
+${workSamplesText}
 
 Generated: ${new Date().toLocaleString()}
+Teacher: [Teacher Name]
     `.trim();
     
     const blob = new Blob([content], { type: 'text/plain' });
@@ -666,7 +746,71 @@ Generated: ${new Date().toLocaleString()}
     a.click();
     URL.revokeObjectURL(url);
     
-    alert('Report exported! (Note: Full DOCX export coming in future update)');
+    alert('Report exported! (Note: Full DOCX export with html-docx-js library coming in future update)');
+  }
+
+  // Export visible data as CSV
+  function exportToCsv() {
+    const filtered = getFilteredStudents();
+    
+    // Build CSV rows
+    const rows = [['Student', 'Student Code', 'Goal Code', 'Goal Area', 'Date', 'Value', 'Source', 'Quarter']];
+    
+    filtered.forEach(student => {
+      let goals = student.goals;
+      if (currentGoalAreaFilter !== 'All') {
+        goals = goals.filter(goal => (goal.goal_area || 'Uncategorized') === currentGoalAreaFilter);
+      }
+      
+      goals.forEach(goal => {
+        const entries = getGoalProgressEntries(goal.code, student.code);
+        if (entries.length === 0) {
+          // Add a row even if no data points
+          rows.push([
+            student.name,
+            student.code,
+            goal.code,
+            goal.goal_area || 'Uncategorized',
+            '',
+            '',
+            '',
+            currentQuarterFilter
+          ]);
+        } else {
+          entries.forEach(entry => {
+            rows.push([
+              student.name,
+              student.code,
+              goal.code,
+              goal.goal_area || 'Uncategorized',
+              entry.date,
+              entry.value,
+              entry.source || 'manual',
+              currentQuarterFilter
+            ]);
+          });
+        }
+      });
+    });
+    
+    // Convert to CSV string
+    const csvContent = rows.map(row => 
+      row.map(cell => `"${cell}"`).join(',')
+    ).join('\n');
+    
+    // Download
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `iep_goal_progress_${currentQuarterFilter}_${formatDateYYYYMMDD()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // Bulk add progress (placeholder)
+  function bulkAddProgress() {
+    alert('Bulk Add Progress feature coming soon!\n\nThis will allow you to quickly add progress data for multiple students/goals at once.');
   }
 
   // Main render function
@@ -707,6 +851,18 @@ Generated: ${new Date().toLocaleString()}
     const exportBtn = $('dtExportDocx');
     if (exportBtn) {
       exportBtn.addEventListener('click', exportToDocx);
+    }
+    
+    // Set up CSV export button
+    const csvBtn = $('dtExportCsv');
+    if (csvBtn) {
+      csvBtn.addEventListener('click', exportToCsv);
+    }
+    
+    // Set up Bulk Add Progress button
+    const bulkAddBtn = $('dtBulkAdd');
+    if (bulkAddBtn) {
+      bulkAddBtn.addEventListener('click', bulkAddProgress);
     }
   }
 
