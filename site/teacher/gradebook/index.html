@@ -146,6 +146,32 @@
         border-radius: 12px;
         background: rgba(255, 255, 255, 0.02);
       }
+      .gb-sync-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 500;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      .gb-sync-status.synced {
+        background: rgba(34, 197, 94, 0.1);
+        border-color: rgba(34, 197, 94, 0.25);
+        color: rgba(34, 197, 94, 1);
+      }
+      .gb-sync-status.local {
+        background: rgba(234, 179, 8, 0.1);
+        border-color: rgba(234, 179, 8, 0.25);
+        color: rgba(234, 179, 8, 1);
+      }
+      .gb-sync-status.error {
+        background: rgba(239, 68, 68, 0.1);
+        border-color: rgba(239, 68, 68, 0.25);
+        color: rgba(239, 68, 68, 1);
+      }
     </style>
   </head>
   <body>
@@ -210,7 +236,13 @@
 
           <section class="gb-card" aria-label="Gradebook controls">
             <div class="gb-row">
-              <h2 style="margin: 0">Class Filter</h2>
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <h2 style="margin: 0">Class Filter</h2>
+                <span id="gbSyncStatus" class="gb-sync-status local" style="display: none;">
+                  <span id="gbSyncIcon">🟡</span>
+                  <span id="gbSyncText">Local mode</span>
+                </span>
+              </div>
               <div class="gb-actions">
                 <button class="gb-btn primary" type="button" id="btnExportCSV">Export CSV</button>
               </div>
@@ -243,6 +275,6 @@
     </div>
 
     <script defer src="/web/teacher-shell.js"></script>
-    <script defer src="/web/tc-gradebook.js"></script>
+    <script type="module" src="/web/tc-gradebook.js"></script>
   </body>
 </html>
