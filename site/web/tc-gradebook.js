@@ -19,6 +19,18 @@
 
   const $ = (id) => document.getElementById(id);
 
+  // Helper to format date as YYYY-MM-DD
+  function formatDateYYYYMMDD() {
+    return new Date().toISOString().split("T")[0];
+  }
+
+  // Helper to generate unique submission ID
+  function generateSubmissionId() {
+    const timestamp = Date.now();
+    const random = Math.random().toString(36).slice(2, 9).toUpperCase();
+    return `SUB${timestamp}_${random}`;
+  }
+
   // Helper to write to localStorage with namespace
   function storeSet(key, value) {
     try {
@@ -183,7 +195,7 @@
         id: draftId + "-" + studentCode,
         assignment_id: draftId,
         student_code: studentCode,
-        assigned_at: new Date().toISOString().split("T")[0],
+        assigned_at: formatDateYYYYMMDD(),
         status: "Assigned",
       };
       instances.push(instance);
@@ -197,7 +209,7 @@
     if (!submission) {
       // Create new submission
       submission = {
-        id: "SUB" + Math.random().toString(36).slice(2, 9).toUpperCase(),
+        id: generateSubmissionId(),
         instance_id: instance.id,
         score: score,
         submitted_at: new Date().toISOString(),
