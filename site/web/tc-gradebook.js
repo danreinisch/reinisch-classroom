@@ -83,7 +83,7 @@
   function getQuarter(dateStr) {
     if (!dateStr) return null;
     const date = new Date(dateStr);
-    const month = date.getUTCMonth() + 1; // getUTCMonth is 0-indexed
+    const month = date.getMonth() + 1; // getMonth is 0-indexed
     
     if (month >= 7 && month <= 9) return "Q1";
     if (month >= 10 && month <= 12) return "Q2";
@@ -555,13 +555,17 @@
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
         const increment = e.shiftKey ? 5 : 1;
-        const currentVal = parseInt(input.value, 10) || 0;
-        input.value = Math.min(100, currentVal + increment);
+        const currentVal = input.value.trim() === "" ? 0 : parseInt(input.value, 10);
+        if (!isNaN(currentVal)) {
+          input.value = Math.min(100, currentVal + increment);
+        }
       } else if (e.key === "ArrowDown") {
         e.preventDefault();
         const decrement = e.shiftKey ? 5 : 1;
-        const currentVal = parseInt(input.value, 10) || 0;
-        input.value = Math.max(0, currentVal - decrement);
+        const currentVal = input.value.trim() === "" ? 0 : parseInt(input.value, 10);
+        if (!isNaN(currentVal)) {
+          input.value = Math.max(0, currentVal - decrement);
+        }
       }
     });
   }
