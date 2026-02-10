@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>IEP Data Entry — Reinisch Classroom</title>
+  <style>
+    /* Light theme for accessibility and external teacher use */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      color: #1a202c;
+    }
+
+    .de-container {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+      max-width: 600px;
+      width: 100%;
+      padding: 32px;
+    }
+
+    .de-header {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    .de-logo {
+      font-size: 48px;
+      margin-bottom: 8px;
+    }
+
+    .de-title {
+      font-size: 24px;
+      font-weight: 600;
+      color: #2d3748;
+      margin-bottom: 8px;
+    }
+
+    .de-subtitle {
+      font-size: 14px;
+      color: #718096;
+    }
+
+    .de-section {
+      background: #f7fafc;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .de-section-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #2d3748;
+      margin-bottom: 12px;
+    }
+
+    .de-info-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+
+    .de-info-label {
+      font-weight: 600;
+      color: #4a5568;
+    }
+
+    .de-info-value {
+      color: #2d3748;
+    }
+
+    .de-goal-desc {
+      margin-top: 12px;
+      padding: 12px;
+      background: white;
+      border-radius: 8px;
+      font-size: 14px;
+      color: #4a5568;
+      line-height: 1.5;
+      border-left: 3px solid #667eea;
+    }
+
+    .de-form {
+      margin-top: 16px;
+    }
+
+    .de-form-group {
+      margin-bottom: 16px;
+    }
+
+    .de-form-label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      color: #2d3748;
+      margin-bottom: 6px;
+    }
+
+    .de-form-input {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 16px;
+      transition: border-color 0.2s;
+    }
+
+    .de-form-input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .de-form-input-group {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .de-form-input-small {
+      width: 80px;
+    }
+
+    .de-form-input-sep {
+      font-size: 14px;
+      color: #718096;
+    }
+
+    .de-form-textarea {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+      resize: vertical;
+      min-height: 80px;
+      transition: border-color 0.2s;
+    }
+
+    .de-form-textarea:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .de-btn {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .de-btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    .de-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .de-progress-list {
+      list-style: none;
+    }
+
+    .de-progress-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid #e2e8f0;
+      font-size: 14px;
+    }
+
+    .de-progress-item:last-child {
+      border-bottom: none;
+    }
+
+    .de-progress-date {
+      color: #4a5568;
+    }
+
+    .de-progress-value {
+      font-weight: 600;
+      color: #2d3748;
+    }
+
+    .de-progress-by {
+      font-size: 12px;
+      color: #718096;
+      margin-left: 8px;
+    }
+
+    .de-progress-summary {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 2px solid #e2e8f0;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .de-trend {
+      font-size: 20px;
+      margin-left: 8px;
+    }
+
+    .de-alert {
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      display: none;
+    }
+
+    .de-alert.success {
+      background: #c6f6d5;
+      color: #22543d;
+      border: 1px solid #9ae6b4;
+      display: block;
+    }
+
+    .de-alert.error {
+      background: #fed7d7;
+      color: #742a2a;
+      border: 1px solid #fc8181;
+      display: block;
+    }
+
+    .de-alert.info {
+      background: #bee3f8;
+      color: #2c5282;
+      border: 1px solid #90cdf4;
+      display: block;
+    }
+
+    .de-footer {
+      text-align: center;
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 1px solid #e2e8f0;
+      font-size: 13px;
+      color: #718096;
+    }
+
+    .de-contact {
+      margin-top: 8px;
+    }
+
+    .de-contact a {
+      color: #667eea;
+      text-decoration: none;
+    }
+
+    .de-contact a:hover {
+      text-decoration: underline;
+    }
+
+    .de-empty {
+      text-align: center;
+      padding: 20px;
+      color: #718096;
+      font-size: 14px;
+    }
+
+    .de-loading {
+      text-align: center;
+      padding: 40px;
+      font-size: 16px;
+      color: #667eea;
+    }
+
+    /* Mobile responsive */
+    @media (max-width: 640px) {
+      .de-container {
+        padding: 24px;
+      }
+
+      .de-title {
+        font-size: 20px;
+      }
+
+      .de-info-row {
+        flex-direction: column;
+        gap: 4px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="de-container">
+    <div class="de-header">
+      <div class="de-logo">📊</div>
+      <h1 class="de-title">Reinisch Classroom</h1>
+      <p class="de-subtitle">IEP Data Entry</p>
+    </div>
+
+    <!-- Loading state -->
+    <div id="deLoading" class="de-loading">
+      Loading...
+    </div>
+
+    <!-- Error/Success alerts -->
+    <div id="deAlert" class="de-alert"></div>
+
+    <!-- Main content (hidden until loaded) -->
+    <div id="deContent" style="display: none;">
+      <!-- Student & Goal Info -->
+      <div class="de-section">
+        <div class="de-section-title">Student & Goal Information</div>
+        <div class="de-info-row">
+          <span class="de-info-label">Student:</span>
+          <span class="de-info-value" id="deStudentCode">—</span>
+        </div>
+        <div class="de-info-row">
+          <span class="de-info-label">Goal Code:</span>
+          <span class="de-info-value" id="deGoalCode">—</span>
+        </div>
+        <div class="de-info-row">
+          <span class="de-info-label">Goal Area:</span>
+          <span class="de-info-value" id="deGoalArea">—</span>
+        </div>
+        <div class="de-info-row">
+          <span class="de-info-label">Measurement:</span>
+          <span class="de-info-value" id="deMeasurementType">—</span>
+        </div>
+        <div class="de-goal-desc" id="deGoalDesc">—</div>
+      </div>
+
+      <!-- Data Entry Form -->
+      <div class="de-section">
+        <div class="de-section-title">Enter Progress Data</div>
+        <form id="deForm" class="de-form">
+          <div class="de-form-group">
+            <label class="de-form-label" for="deDate">Date</label>
+            <input type="date" id="deDate" class="de-form-input" required />
+          </div>
+
+          <!-- Percent measurement -->
+          <div id="dePercentGroup" class="de-form-group" style="display: none;">
+            <label class="de-form-label" for="dePercent">Score (%)</label>
+            <div class="de-form-input-group">
+              <input type="number" id="dePercent" class="de-form-input" min="0" max="100" step="1" />
+              <span class="de-form-input-sep">%</span>
+            </div>
+          </div>
+
+          <!-- X of Y measurement -->
+          <div id="deXofYGroup" class="de-form-group" style="display: none;">
+            <label class="de-form-label">Score</label>
+            <div class="de-form-input-group">
+              <input type="number" id="deXofYNum" class="de-form-input de-form-input-small" min="0" step="1" placeholder="4" />
+              <span class="de-form-input-sep">out of</span>
+              <input type="number" id="deXofYDenom" class="de-form-input de-form-input-small" min="1" step="1" placeholder="5" />
+            </div>
+          </div>
+
+          <div class="de-form-group">
+            <label class="de-form-label" for="deNotes">Notes (optional)</label>
+            <textarea id="deNotes" class="de-form-textarea" placeholder="Any additional context or observations..."></textarea>
+          </div>
+
+          <button type="submit" id="deSubmitBtn" class="de-btn">
+            ✅ Submit Data Point
+          </button>
+        </form>
+      </div>
+
+      <!-- Previous Entries -->
+      <div class="de-section">
+        <div class="de-section-title">Previous Entries This Quarter</div>
+        <ul id="deProgressList" class="de-progress-list">
+          <li class="de-empty">No entries yet this quarter.</li>
+        </ul>
+        <div id="deProgressSummary" class="de-progress-summary" style="display: none;">
+          <span>Rolling Avg: <span id="deAvgValue">—</span>%</span>
+          <span>Trend: <span id="deTrend" class="de-trend">→</span></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="de-footer">
+      <div>Data collector: <strong id="deDataCollector">—</strong></div>
+      <div class="de-contact">
+        📧 Questions? Contact <a href="mailto:danielreinisch@winfieldriv.us">danielreinisch@winfieldriv.us</a>
+      </div>
+      <div style="margin-top: 12px; font-size: 12px;">
+        Powered by Reinisch Classroom
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/web/data-entry.js"></script>
+</body>
+</html>
