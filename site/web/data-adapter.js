@@ -15,6 +15,28 @@ const isLocalDev = () => {
          window.location.hostname === '127.0.0.1';
 };
 
+/**
+ * Robust detection for schema-related errors from Supabase/PostgREST
+ * Checks for various error conditions that indicate missing columns or tables
+ * @param {Error} error - The error object to check
+ * @returns {boolean} True if error is schema-related
+ */
+function isSchemaError(error) {
+  if (!error) return false;
+  const msg = (error.message || '').toLowerCase();
+  const code = error.code || '';
+  return (
+    msg.includes('column') ||
+    msg.includes('relation') ||
+    msg.includes('does not exist') ||
+    msg.includes('undefined column') ||
+    code === '42703' ||    // undefined_column
+    code === '42P01' ||    // undefined_table
+    code === 'PGRST204' || // PostgREST column not found
+    code === 'PGRST200'    // PostgREST relation not found
+  );
+}
+
 const local = {
   // Students
   async listStudents() { return store.get('students', []); },
@@ -776,8 +798,8 @@ const remote = {
       .select('id, code, name, class_id, iep_due, eval_due, primary_case_manager, archived_at, active')
       .order('code');
     
-    // Graceful fallback: if column doesn't exist, retry with basic columns only
-    if (error && error.message && error.message.includes('column')) {
+    // Graceful fallback: if schema error, retry with basic columns only
+    if (isSchemaError(error)) {
       console.warn('[data-adapter] Supabase schema may be outdated — some columns not available. Please apply pending migrations.');
       const fallback = await supabase
         .from('students')
@@ -958,8 +980,8 @@ const remote = {
       .select()
       .single();
     
-    // Graceful fallback: if column doesn't exist, retry with basic columns only
-    if (error && error.message && error.message.includes('column')) {
+    // Graceful fallback: if schema error, retry with basic columns only
+    if (isSchemaError(error)) {
       console.warn('[data-adapter] Supabase schema may be outdated — some columns not available. Please apply pending migrations.');
       const basicPayload = { student_id: stu.id, code, desc: description, target, status };
       const fallback = await supabase.from('goals')
@@ -986,8 +1008,8 @@ const remote = {
               students!inner(code)`)
       .order('code', { foreignTable: 'students', ascending: true });
     
-    // Graceful fallback: if column doesn't exist, retry with basic columns only
-    if (error && error.message && error.message.includes('column')) {
+    // Graceful fallback: if schema error, retry with basic columns only
+    if (isSchemaError(error)) {
       console.warn('[data-adapter] Supabase schema may be outdated — some columns not available. Please apply pending migrations.');
       const fallback = await supabase
         .from('goals')
@@ -1852,11 +1874,19 @@ const remote = {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
 
-    const { data, error } = await supabase
+    // Try with new columns first
+    let { data, error } = await supabase
       .from('students')
       .select('id, code, name, class_id, iep_due, eval_due, primary_case_manager, archived_at, active')
       .eq('active', false)
       .order('archived_at', { ascending: false });
+
+    // Graceful fallback: if schema error, retry with basic columns only
+    // When columns don't exist, return empty array since we can't filter by active
+    if (isSchemaError(error)) {
+      console.warn('[data-adapter] Supabase schema outdated — archived students feature requires "active" column. Apply migration 20260210_students_tab_schema.sql. Returning empty array.');
+      return [];
+    }
 
     if (error) throw error;
     return data || [];
