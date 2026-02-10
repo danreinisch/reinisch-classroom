@@ -5,8 +5,8 @@
   if (!location.pathname.startsWith("/teacher/students")) return;
 
   // Import data adapter for Supabase/localStorage abstraction
-  const { db } = await import('/web/data-adapter.js');
-  const { getSupabase } = await import('/web/supabase-client.js');
+  const { db } = await import("/web/data-adapter.js");
+  const { getSupabase } = await import("/web/supabase-client.js");
 
   // Constants
   const FULL_CLASS_NAMES = [
@@ -22,7 +22,7 @@
     "Consumer Math",
     "Geometry SC",
     "Speech/Language",
-    "Warrior Academy"
+    "Warrior Academy",
   ];
 
   const GOAL_AREAS = [
@@ -40,7 +40,7 @@
     "Language",
     "Life Skills",
     "Emotional Regulation",
-    "Reading Skills"
+    "Reading Skills",
   ];
 
   const CLASS_ABBREVIATIONS = {
@@ -56,14 +56,14 @@
     "Consumer Math": "CM",
     "Geometry SC": "GeoSC",
     "Speech/Language": "S/L",
-    "Warrior Academy": "WA"
+    "Warrior Academy": "WA",
   };
 
   const GOAL_AREA_ICONS = {
     "Reading Comprehension": "📖",
     "Written Expression": "✍️",
     "Basic Reading": "📚",
-    "Behavior": "🎯",
+    Behavior: "🎯",
     "Life Skills Transition": "🚀",
     "Life Skills Reading Skills": "📖",
     "Life Skills Writing Skills": "✍️",
@@ -71,24 +71,24 @@
     "Math Problem Solving": "🧮",
     "Reading Fluency": "📝",
     "Social Skills": "🤝",
-    "Language": "💬",
+    Language: "💬",
     "Life Skills": "🛠️",
     "Emotional Regulation": "😌",
-    "Reading Skills": "📕"
+    "Reading Skills": "📕",
   };
 
   // Helpers
   function escapeHtml(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
+    if (!text) return "";
+    const div = document.createElement("div");
     div.textContent = text;
     return div.innerHTML;
   }
 
   function formatDate(dateStr) {
-    if (!dateStr) return 'N/A';
+    if (!dateStr) return "N/A";
     const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
   }
 
   function abbreviateClass(fullName) {
@@ -97,21 +97,21 @@
 
   function parseCSVLine(line) {
     const result = [];
-    let current = '';
+    let current = "";
     let inQuotes = false;
-    
+
     for (let i = 0; i < line.length; i++) {
       const char = line[i];
       const nextChar = line[i + 1];
-      
+
       if (char === '"' && inQuotes && nextChar === '"') {
         current += '"';
         i++;
       } else if (char === '"') {
         inQuotes = !inQuotes;
-      } else if (char === ',' && !inQuotes) {
+      } else if (char === "," && !inQuotes) {
         result.push(current.trim());
-        current = '';
+        current = "";
       } else {
         current += char;
       }
@@ -126,15 +126,15 @@
   let allEnrollments = [];
   let filteredStudents = [];
   let selectedStudent = null;
-  let selectedClassFilter = 'All';
-  let selectedGoalAreaFilter = 'All';
-  let searchQuery = '';
+  let selectedClassFilter = "All";
+  let selectedGoalAreaFilter = "All";
+  let searchQuery = "";
   let isSyncing = false;
 
   // Load data
   async function loadData() {
     try {
-      console.log('[tc-students] Loading data...');
+      console.log("[tc-students] Loading data...");
       isSyncing = true;
       updateSyncIndicator();
 
@@ -142,48 +142,54 @@
       const results = await Promise.allSettled([
         db.listStudents(),
         db.listGoalsAll(),
-        db.listClassEnrollments()
+        db.listClassEnrollments(),
       ]);
 
       let schemaDriftDetected = false;
-      
+
       // Extract successful results
-      if (results[0].status === 'fulfilled') {
-        allStudents = results[0].value.filter(s => s.status !== 'archived');
+      if (results[0].status === "fulfilled") {
+        allStudents = results[0].value.filter((s) => s.status !== "archived");
       } else {
-        console.error('[tc-students] Failed to load students:', results[0].reason);
+        console.error("[tc-students] Failed to load students:", results[0].reason);
         allStudents = [];
         schemaDriftDetected = true;
       }
 
-      if (results[1].status === 'fulfilled') {
+      if (results[1].status === "fulfilled") {
         allGoals = results[1].value;
       } else {
-        console.error('[tc-students] Failed to load goals:', results[1].reason);
+        console.error("[tc-students] Failed to load goals:", results[1].reason);
         allGoals = [];
         schemaDriftDetected = true;
       }
 
-      if (results[2].status === 'fulfilled') {
+      if (results[2].status === "fulfilled") {
         allEnrollments = results[2].value;
       } else {
-        console.error('[tc-students] Failed to load enrollments:', results[2].reason);
+        console.error("[tc-students] Failed to load enrollments:", results[2].reason);
         allEnrollments = [];
         schemaDriftDetected = true;
       }
 
-      console.log('[tc-students] Loaded:', allStudents.length, 'students,', allGoals.length, 'goals');
-      
+      console.log(
+        "[tc-students] Loaded:",
+        allStudents.length,
+        "students,",
+        allGoals.length,
+        "goals"
+      );
+
       // Show schema drift banner if any call failed
       if (schemaDriftDetected) {
         showSchemaDriftBanner();
       } else {
         hideSchemaDriftBanner();
       }
-      
+
       filterStudents();
       renderStudentList();
-      
+
       if (filteredStudents.length > 0 && !selectedStudent) {
         selectStudent(filteredStudents[0].code);
       }
@@ -191,10 +197,10 @@
       isSyncing = false;
       updateSyncIndicator();
     } catch (error) {
-      console.error('[tc-students] Error loading data:', error);
+      console.error("[tc-students] Error loading data:", error);
       isSyncing = false;
       updateSyncIndicator();
-      
+
       // Still try to render with whatever data we have
       filterStudents();
       renderStudentList();
@@ -202,14 +208,14 @@
   }
 
   function updateSyncIndicator() {
-    const indicator = document.getElementById('sync-indicator');
+    const indicator = document.getElementById("sync-indicator");
     if (indicator) {
       if (isSyncing) {
-        indicator.textContent = '🔄 Syncing...';
-        indicator.className = 'syncing';
+        indicator.textContent = "🔄 Syncing...";
+        indicator.className = "syncing";
       } else {
-        indicator.textContent = '✓ Synced';
-        indicator.className = 'synced';
+        indicator.textContent = "✓ Synced";
+        indicator.className = "synced";
       }
     }
   }
@@ -217,44 +223,46 @@
   function showSchemaDriftBanner() {
     // Remove existing banner if present
     hideSchemaDriftBanner();
-    
+
     // Find the student detail main container (right pane)
-    const container = document.querySelector('.st-main');
+    const container = document.querySelector(".st-main");
     if (!container) return;
-    
+
     // Create banner element
-    const banner = document.createElement('div');
-    banner.id = 'schema-drift-banner';
-    banner.style.cssText = 'background: #FEF3C7; border: 1px solid #F59E0B; border-radius: 8px; padding: 12px 16px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;';
-    
+    const banner = document.createElement("div");
+    banner.id = "schema-drift-banner";
+    banner.style.cssText =
+      "background: #FEF3C7; border: 1px solid #F59E0B; border-radius: 8px; padding: 12px 16px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;";
+
     // Create warning icon
-    const icon = document.createElement('span');
-    icon.textContent = '⚠️';
-    
+    const icon = document.createElement("span");
+    icon.textContent = "⚠️";
+
     // Create content wrapper
-    const content = document.createElement('div');
-    
+    const content = document.createElement("div");
+
     // Create title
-    const title = document.createElement('strong');
-    title.textContent = 'Database schema is behind migrations';
-    
+    const title = document.createElement("strong");
+    title.textContent = "Database schema is behind migrations";
+
     // Create description
-    const description = document.createElement('div');
-    description.style.cssText = 'font-size: 13px; opacity: 0.8;';
-    description.textContent = 'Some columns are missing. Students loaded with basic fields only. Apply pending migrations to restore full functionality.';
-    
+    const description = document.createElement("div");
+    description.style.cssText = "font-size: 13px; opacity: 0.8;";
+    description.textContent =
+      "Some columns are missing. Students loaded with basic fields only. Apply pending migrations to restore full functionality.";
+
     // Assemble the banner
     content.appendChild(title);
     content.appendChild(description);
     banner.appendChild(icon);
     banner.appendChild(content);
-    
+
     // Insert at the top of the container
     container.insertBefore(banner, container.firstChild);
   }
 
   function hideSchemaDriftBanner() {
-    const banner = document.getElementById('schema-drift-banner');
+    const banner = document.getElementById("schema-drift-banner");
     if (banner) {
       banner.remove();
     }
@@ -265,15 +273,13 @@
 
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(s => 
-        s.code.toLowerCase().includes(query)
-      );
+      filtered = filtered.filter((s) => s.code.toLowerCase().includes(query));
     }
 
-    if (selectedClassFilter !== 'All') {
-      filtered = filtered.filter(s => {
-        const enrollments = allEnrollments.filter(e => e.student_code === s.code);
-        return enrollments.some(e => e.class_name === selectedClassFilter);
+    if (selectedClassFilter !== "All") {
+      filtered = filtered.filter((s) => {
+        const enrollments = allEnrollments.filter((e) => e.student_code === s.code);
+        return enrollments.some((e) => e.class_name === selectedClassFilter);
       });
     }
 
@@ -282,17 +288,18 @@
 
   // Render functions
   function renderStudentList() {
-    const container = document.getElementById('student-list');
+    const container = document.getElementById("student-list");
     if (!container) return;
 
-    const html = filteredStudents.map(student => {
-      const enrollments = allEnrollments.filter(e => e.student_code === student.code);
-      const studentGoals = allGoals.filter(g => g.student_code === student.code);
-      const classes = enrollments.map(e => abbreviateClass(e.class_name)).join(', ');
-      const isSelected = selectedStudent === student.code;
+    const html = filteredStudents
+      .map((student) => {
+        const enrollments = allEnrollments.filter((e) => e.student_code === student.code);
+        const studentGoals = allGoals.filter((g) => g.student_code === student.code);
+        const classes = enrollments.map((e) => abbreviateClass(e.class_name)).join(", ");
+        const isSelected = selectedStudent === student.code;
 
-      return `
-        <div class="student-item ${isSelected ? 'selected' : ''}" data-code="${escapeHtml(student.code)}">
+        return `
+        <div class="student-item ${isSelected ? "selected" : ""}" data-code="${escapeHtml(student.code)}">
           <div class="student-status">🟢</div>
           <div class="student-info">
             <div class="student-code">${escapeHtml(student.code)}</div>
@@ -301,34 +308,37 @@
           </div>
         </div>
       `;
-    }).join('');
+      })
+      .join("");
 
     container.innerHTML = html;
     updateStudentCount();
   }
 
   function updateStudentCount() {
-    const countEl = document.getElementById('student-count');
+    const countEl = document.getElementById("student-count");
     if (countEl) {
-      countEl.textContent = `${filteredStudents.length} ${filteredStudents.length === 1 ? 'student' : 'students'}`;
+      countEl.textContent = `${filteredStudents.length} ${filteredStudents.length === 1 ? "student" : "students"}`;
     }
   }
 
   function renderClassFilters() {
-    const container = document.getElementById('class-filters');
+    const container = document.getElementById("class-filters");
     if (!container) return;
 
     const allButton = `
-      <button class="filter-btn ${selectedClassFilter === 'All' ? 'active' : ''}" data-class="All">
+      <button class="filter-btn ${selectedClassFilter === "All" ? "active" : ""}" data-class="All">
         All
       </button>
     `;
 
-    const classButtons = FULL_CLASS_NAMES.map(className => `
-      <button class="filter-btn ${selectedClassFilter === className ? 'active' : ''}" data-class="${escapeHtml(className)}">
+    const classButtons = FULL_CLASS_NAMES.map(
+      (className) => `
+      <button class="filter-btn ${selectedClassFilter === className ? "active" : ""}" data-class="${escapeHtml(className)}">
         ${escapeHtml(className)}
       </button>
-    `).join('');
+    `
+    ).join("");
 
     container.innerHTML = allButton + classButtons;
   }
@@ -340,12 +350,12 @@
     try {
       const tokens = await db.listDataEntryTokens(studentCode);
       const tokensByGoalCode = {};
-      tokens.forEach(token => {
+      tokens.forEach((token) => {
         tokensByGoalCode[token.goal_code] = token;
       });
       return tokensByGoalCode;
     } catch (err) {
-      console.error('[tc-students] Error checking active tokens:', err);
+      console.error("[tc-students] Error checking active tokens:", err);
       return {};
     }
   }
@@ -354,15 +364,15 @@
    * Handle copy data entry link
    */
   async function handleCopyDataEntryLink(goalId) {
-    const goal = allGoals.find(g => g.id === goalId);
+    const goal = allGoals.find((g) => g.id === goalId);
     if (!goal) {
-      alert('Goal not found');
+      alert("Goal not found");
       return;
     }
 
-    const student = allStudents.find(s => s.code === goal.student_code);
+    const student = allStudents.find((s) => s.code === goal.student_code);
     if (!student) {
-      alert('Student not found');
+      alert("Student not found");
       return;
     }
 
@@ -372,7 +382,7 @@
         studentCode: student.code,
         goalCode: goal.code,
         dataCollector: goal.data_collector,
-        dataCollectorEmail: goal.data_collector_email
+        dataCollectorEmail: goal.data_collector_email,
       });
 
       // Build URL
@@ -386,10 +396,9 @@
 
       // Refresh display to show revoke button
       renderStudentDetail();
-
     } catch (err) {
-      console.error('[tc-students] Error creating token:', err);
-      alert('Error creating data entry link. Please try again.');
+      console.error("[tc-students] Error creating token:", err);
+      alert("Error creating data entry link. Please try again.");
     }
   }
 
@@ -397,37 +406,38 @@
    * Handle revoke data entry link
    */
   async function handleRevokeDataEntryLink(goalId) {
-    const goal = allGoals.find(g => g.id === goalId);
+    const goal = allGoals.find((g) => g.id === goalId);
     if (!goal) {
-      alert('Goal not found');
+      alert("Goal not found");
       return;
     }
 
-    const confirmed = confirm(`Revoke data entry link for ${goal.code}?\n\nThe current link will no longer work.`);
+    const confirmed = confirm(
+      `Revoke data entry link for ${goal.code}?\n\nThe current link will no longer work.`
+    );
     if (!confirmed) return;
 
     try {
       // Get active tokens for this student
-      const student = allStudents.find(s => s.code === goal.student_code);
+      const student = allStudents.find((s) => s.code === goal.student_code);
       const tokens = await db.listDataEntryTokens(student.code);
-      const token = tokens.find(t => t.goal_code === goal.code);
+      const token = tokens.find((t) => t.goal_code === goal.code);
 
       if (!token) {
-        alert('No active token found for this goal');
+        alert("No active token found for this goal");
         return;
       }
 
       // Revoke token
       await db.revokeDataEntryToken(token.id);
 
-      showToast('Link revoked successfully');
+      showToast("Link revoked successfully");
 
       // Refresh display to show copy button
       renderStudentDetail();
-
     } catch (err) {
-      console.error('[tc-students] Error revoking token:', err);
-      alert('Error revoking link. Please try again.');
+      console.error("[tc-students] Error revoking token:", err);
+      alert("Error revoking link. Please try again.");
     }
   }
 
@@ -436,7 +446,7 @@
    */
   function showToast(message) {
     // Create toast element
-    const toast = document.createElement('div');
+    const toast = document.createElement("div");
     toast.style.cssText = `
       position: fixed;
       top: 20px;
@@ -455,8 +465,8 @@
 
     // Remove after 3 seconds
     setTimeout(() => {
-      toast.style.transition = 'opacity 0.3s';
-      toast.style.opacity = '0';
+      toast.style.transition = "opacity 0.3s";
+      toast.style.opacity = "0";
       setTimeout(() => {
         document.body.removeChild(toast);
       }, 300);
@@ -464,7 +474,7 @@
   }
 
   async function renderStudentDetail() {
-    const container = document.getElementById('student-detail');
+    const container = document.getElementById("student-detail");
     if (!container) return;
 
     if (!selectedStudent) {
@@ -472,34 +482,34 @@
       return;
     }
 
-    const student = allStudents.find(s => s.code === selectedStudent);
+    const student = allStudents.find((s) => s.code === selectedStudent);
     if (!student) {
       container.innerHTML = '<div class="empty-state">Student not found</div>';
       return;
     }
 
-    const enrollments = allEnrollments.filter(e => e.student_code === student.code);
-    const studentGoals = allGoals.filter(g => g.student_code === student.code);
+    const enrollments = allEnrollments.filter((e) => e.student_code === student.code);
+    const studentGoals = allGoals.filter((g) => g.student_code === student.code);
 
     // Check for active tokens
     const activeTokens = await checkActiveTokens(student.code);
 
     // Mark goals with active tokens
-    studentGoals.forEach(goal => {
+    studentGoals.forEach((goal) => {
       goal._hasActiveToken = !!activeTokens[goal.code];
     });
 
     let inContextGoals = studentGoals;
     let outsideGoals = [];
 
-    if (selectedClassFilter !== 'All') {
-      inContextGoals = studentGoals.filter(g => g.class_context === selectedClassFilter);
-      outsideGoals = studentGoals.filter(g => g.class_context !== selectedClassFilter);
+    if (selectedClassFilter !== "All") {
+      inContextGoals = studentGoals.filter((g) => g.class_context === selectedClassFilter);
+      outsideGoals = studentGoals.filter((g) => g.class_context !== selectedClassFilter);
     }
 
-    if (selectedGoalAreaFilter !== 'All') {
-      inContextGoals = inContextGoals.filter(g => g.goal_area === selectedGoalAreaFilter);
-      outsideGoals = outsideGoals.filter(g => g.goal_area === selectedGoalAreaFilter);
+    if (selectedGoalAreaFilter !== "All") {
+      inContextGoals = inContextGoals.filter((g) => g.goal_area === selectedGoalAreaFilter);
+      outsideGoals = outsideGoals.filter((g) => g.goal_area === selectedGoalAreaFilter);
     }
 
     const html = `
@@ -528,7 +538,7 @@
         <div class="student-meta">
           <div class="meta-item">
             <span class="meta-label">Primary Case Manager:</span>
-            <span class="meta-value">${escapeHtml(student.primary_case_manager || 'N/A')}</span>
+            <span class="meta-value">${escapeHtml(student.primary_case_manager || "N/A")}</span>
           </div>
           <div class="meta-item">
             <span class="meta-label">IEP Due:</span>
@@ -544,15 +554,15 @@
   }
 
   function renderStudentClasses(student, enrollments) {
-    const classItems = FULL_CLASS_NAMES.map(className => {
-      const isEnrolled = enrollments.some(e => e.class_name === className);
+    const classItems = FULL_CLASS_NAMES.map((className) => {
+      const isEnrolled = enrollments.some((e) => e.class_name === className);
       return `
         <div class="class-item">
-          <span class="class-checkbox">${isEnrolled ? '✓' : ''}</span>
+          <span class="class-checkbox">${isEnrolled ? "✓" : ""}</span>
           <span class="class-name">${escapeHtml(className)}</span>
         </div>
       `;
-    }).join('');
+    }).join("");
 
     return `
       <div class="detail-section">
@@ -571,24 +581,26 @@
     const goalAreaFilter = `
       <select id="goal-area-filter" class="filter-select">
         <option value="All">All Goal Areas</option>
-        ${GOAL_AREAS.map(area => `
-          <option value="${escapeHtml(area)}" ${selectedGoalAreaFilter === area ? 'selected' : ''}>
+        ${GOAL_AREAS.map(
+          (area) => `
+          <option value="${escapeHtml(area)}" ${selectedGoalAreaFilter === area ? "selected" : ""}>
             ${escapeHtml(area)}
           </option>
-        `).join('')}
+        `
+        ).join("")}
       </select>
     `;
 
-    const inContextHtml = inContextGoals.map(goal => renderGoalCard(goal)).join('');
-    
-    let outsideHtml = '';
-    if (selectedClassFilter !== 'All' && outsideGoals.length > 0) {
+    const inContextHtml = inContextGoals.map((goal) => renderGoalCard(goal)).join("");
+
+    let outsideHtml = "";
+    if (selectedClassFilter !== "All" && outsideGoals.length > 0) {
       outsideHtml = `
         <div class="outside-categories">
           <details>
             <summary>Outside Categories (${outsideGoals.length} goals from other classes)</summary>
             <div class="goal-cards">
-              ${outsideGoals.map(goal => renderGoalCard(goal)).join('')}
+              ${outsideGoals.map((goal) => renderGoalCard(goal)).join("")}
             </div>
           </details>
         </div>
@@ -613,12 +625,15 @@
   }
 
   function renderGoalCard(goal) {
-    const icon = GOAL_AREA_ICONS[goal.goal_area] || '📌';
-    const dataCollectorWarning = goal.data_collector && goal.data_collector !== 'Dan Reinisch' ? '⚠️ ' : '';
-    const classContext = goal.class_context ? `<div class="goal-class">📚 ${escapeHtml(goal.class_context)}</div>` : '';
-    
+    const icon = GOAL_AREA_ICONS[goal.goal_area] || "📌";
+    const dataCollectorWarning =
+      goal.data_collector && goal.data_collector !== "Dan Reinisch" ? "⚠️ " : "";
+    const classContext = goal.class_context
+      ? `<div class="goal-class">📚 ${escapeHtml(goal.class_context)}</div>`
+      : "";
+
     // Show token management for external data collectors (not Dan Reinisch)
-    const showTokenBtn = goal.data_collector && goal.data_collector !== 'Dan Reinisch';
+    const showTokenBtn = goal.data_collector && goal.data_collector !== "Dan Reinisch";
     const hasActiveToken = goal._hasActiveToken || false; // Will be set when loading tokens
 
     return `
@@ -626,38 +641,43 @@
         <div class="goal-header">
           <div class="goal-area">
             <span class="goal-icon">${icon}</span>
-            <span class="goal-area-name">${escapeHtml(goal.goal_area || 'N/A')}</span>
-            <span class="goal-code">${escapeHtml(goal.goal_code || '')}</span>
+            <span class="goal-area-name">${escapeHtml(goal.goal_area || "N/A")}</span>
+            <span class="goal-code">${escapeHtml(goal.goal_code || "")}</span>
           </div>
-          <span class="badge badge-measurement">${escapeHtml(goal.measurement_type || 'N/A')}</span>
+          <span class="badge badge-measurement">${escapeHtml(goal.measurement_type || "N/A")}</span>
         </div>
-        <div class="goal-description">${escapeHtml(goal.desc || goal.goal_text || '(No goal description provided)')}</div>
+        <div class="goal-description">${escapeHtml(goal.desc || goal.goal_text || "(No goal description provided)")}</div>
         <div class="goal-metrics">
           <div class="metric">
             <span class="metric-label">Baseline:</span>
-            <span class="metric-value">${escapeHtml(goal.baseline || 'N/A')}</span>
+            <span class="metric-value">${escapeHtml(goal.baseline || "N/A")}</span>
           </div>
           <div class="metric">
             <span class="metric-label">Target:</span>
-            <span class="metric-value">${escapeHtml(goal.target || 'N/A')}</span>
+            <span class="metric-value">${escapeHtml(goal.target || "N/A")}</span>
           </div>
         </div>
         <div class="goal-meta">
-          <div class="goal-manager">👤 ${escapeHtml(goal.case_manager || 'N/A')}</div>
-          <div class="goal-collector">${dataCollectorWarning}📊 ${escapeHtml(goal.data_collector || 'N/A')}</div>
+          <div class="goal-manager">👤 ${escapeHtml(goal.case_manager || "N/A")}</div>
+          <div class="goal-collector">${dataCollectorWarning}📊 ${escapeHtml(goal.data_collector || "N/A")}</div>
           ${classContext}
         </div>
-        ${goal.version ? `<div class="goal-version">v${goal.version}</div>` : ''}
+        ${goal.version ? `<div class="goal-version">v${goal.version}</div>` : ""}
         <div class="goal-actions">
           <button class="btn btn-sm btn-secondary edit-goal-btn" data-goal-id="${goal.id}">Edit</button>
           <button class="btn btn-sm btn-secondary version-goal-btn" data-goal-id="${goal.id}">Version</button>
           <button class="btn btn-sm btn-danger archive-goal-btn" data-goal-id="${goal.id}">Archive</button>
-          ${showTokenBtn ? `
-            ${hasActiveToken 
-              ? `<button class="btn btn-sm btn-warning revoke-token-btn" data-goal-id="${goal.id}" title="Revoke data entry link">🗑️ Revoke Link</button>`
-              : `<button class="btn btn-sm btn-primary copy-token-btn" data-goal-id="${goal.id}" title="Copy data entry link for ${escapeHtml(goal.data_collector)}">🔗 Copy Link</button>`
+          ${
+            showTokenBtn
+              ? `
+            ${
+              hasActiveToken
+                ? `<button class="btn btn-sm btn-warning revoke-token-btn" data-goal-id="${goal.id}" title="Revoke data entry link">🗑️ Revoke Link</button>`
+                : `<button class="btn btn-sm btn-primary copy-token-btn" data-goal-id="${goal.id}" title="Copy data entry link for ${escapeHtml(goal.data_collector)}">🔗 Copy Link</button>`
             }
-          ` : ''}
+          `
+              : ""
+          }
         </div>
       </div>
     `;
@@ -706,19 +726,19 @@
 
   // Event handlers
   function setupEventHandlers() {
-    const searchInput = document.getElementById('student-search');
+    const searchInput = document.getElementById("student-search");
     if (searchInput) {
-      searchInput.addEventListener('input', (e) => {
+      searchInput.addEventListener("input", (e) => {
         searchQuery = e.target.value;
         filterStudents();
         renderStudentList();
       });
     }
 
-    const classFilters = document.getElementById('class-filters');
+    const classFilters = document.getElementById("class-filters");
     if (classFilters) {
-      classFilters.addEventListener('click', (e) => {
-        if (e.target.classList.contains('filter-btn')) {
+      classFilters.addEventListener("click", (e) => {
+        if (e.target.classList.contains("filter-btn")) {
           selectedClassFilter = e.target.dataset.class;
           renderClassFilters();
           filterStudents();
@@ -728,92 +748,92 @@
       });
     }
 
-    const studentList = document.getElementById('student-list');
+    const studentList = document.getElementById("student-list");
     if (studentList) {
-      studentList.addEventListener('click', (e) => {
-        const item = e.target.closest('.student-item');
+      studentList.addEventListener("click", (e) => {
+        const item = e.target.closest(".student-item");
         if (item) {
           selectStudent(item.dataset.code);
         }
       });
     }
 
-    const studentDetail = document.getElementById('student-detail');
+    const studentDetail = document.getElementById("student-detail");
     if (studentDetail) {
-      studentDetail.addEventListener('click', async (e) => {
-        if (e.target.id === 'archive-student-btn') {
+      studentDetail.addEventListener("click", async (e) => {
+        if (e.target.id === "archive-student-btn") {
           await handleArchiveStudent();
-        } else if (e.target.id === 'manage-enrollments-btn') {
+        } else if (e.target.id === "manage-enrollments-btn") {
           showManageEnrollmentsModal();
-        } else if (e.target.id === 'add-goal-btn') {
+        } else if (e.target.id === "add-goal-btn") {
           showAddGoalModal();
-        } else if (e.target.id === 'reset-password-btn') {
+        } else if (e.target.id === "reset-password-btn") {
           showResetPasswordModal();
-        } else if (e.target.classList.contains('edit-goal-btn')) {
+        } else if (e.target.classList.contains("edit-goal-btn")) {
           const goalId = parseInt(e.target.dataset.goalId);
           showEditGoalModal(goalId);
-        } else if (e.target.classList.contains('version-goal-btn')) {
+        } else if (e.target.classList.contains("version-goal-btn")) {
           const goalId = parseInt(e.target.dataset.goalId);
           await handleVersionGoal(goalId);
-        } else if (e.target.classList.contains('archive-goal-btn')) {
+        } else if (e.target.classList.contains("archive-goal-btn")) {
           const goalId = parseInt(e.target.dataset.goalId);
           await handleArchiveGoal(goalId);
-        } else if (e.target.classList.contains('copy-token-btn')) {
+        } else if (e.target.classList.contains("copy-token-btn")) {
           const goalId = parseInt(e.target.dataset.goalId);
           await handleCopyDataEntryLink(goalId);
-        } else if (e.target.classList.contains('revoke-token-btn')) {
+        } else if (e.target.classList.contains("revoke-token-btn")) {
           const goalId = parseInt(e.target.dataset.goalId);
           await handleRevokeDataEntryLink(goalId);
         }
       });
 
-      studentDetail.addEventListener('change', (e) => {
-        if (e.target.id === 'goal-area-filter') {
+      studentDetail.addEventListener("change", (e) => {
+        if (e.target.id === "goal-area-filter") {
           selectedGoalAreaFilter = e.target.value;
           renderStudentDetail();
         }
       });
     }
 
-    const addStudentBtn = document.getElementById('add-student-btn');
+    const addStudentBtn = document.getElementById("add-student-btn");
     if (addStudentBtn) {
-      addStudentBtn.addEventListener('click', showAddStudentWizard);
+      addStudentBtn.addEventListener("click", showAddStudentWizard);
     }
 
-    const importCsvBtn = document.getElementById('import-csv-btn');
+    const importCsvBtn = document.getElementById("import-csv-btn");
     if (importCsvBtn) {
-      importCsvBtn.addEventListener('click', showImportCsvModal);
+      importCsvBtn.addEventListener("click", showImportCsvModal);
     }
   }
 
   function selectStudent(code) {
     selectedStudent = code;
-    selectedGoalAreaFilter = 'All';
+    selectedGoalAreaFilter = "All";
     renderStudentList();
     renderStudentDetail();
   }
 
   async function handleArchiveStudent() {
     if (!selectedStudent) return;
-    
+
     if (!confirm(`Archive student ${selectedStudent}? This will hide them from the active list.`)) {
       return;
     }
 
     try {
-      await db.upsertStudent({ code: selectedStudent, status: 'archived' });
-      console.log('[tc-students] Archived student:', selectedStudent);
+      await db.upsertStudent({ code: selectedStudent, status: "archived" });
+      console.log("[tc-students] Archived student:", selectedStudent);
       await loadData();
       selectedStudent = null;
       renderStudentDetail();
     } catch (error) {
-      console.error('[tc-students] Error archiving student:', error);
-      alert('Failed to archive student');
+      console.error("[tc-students] Error archiving student:", error);
+      alert("Failed to archive student");
     }
   }
 
   async function handleArchiveGoal(goalId) {
-    const goal = allGoals.find(g => g.id === goalId);
+    const goal = allGoals.find((g) => g.id === goalId);
     if (!goal) return;
 
     if (!confirm(`Archive goal "${goal.goal_code}"?`)) {
@@ -821,60 +841,66 @@
     }
 
     try {
-      await db.upsertGoal({ id: goalId, status: 'archived' });
-      console.log('[tc-students] Archived goal:', goalId);
+      await db.upsertGoal({ id: goalId, status: "archived" });
+      console.log("[tc-students] Archived goal:", goalId);
       await loadData();
       renderStudentDetail();
     } catch (error) {
-      console.error('[tc-students] Error archiving goal:', error);
-      alert('Failed to archive goal');
+      console.error("[tc-students] Error archiving goal:", error);
+      alert("Failed to archive goal");
     }
   }
 
   async function handleVersionGoal(goalId) {
-    const goal = allGoals.find(g => g.id === goalId);
+    const goal = allGoals.find((g) => g.id === goalId);
     if (!goal) return;
 
-    if (!confirm(`Create a new version of goal "${goal.goal_code}"? The current goal will be archived.`)) {
+    if (
+      !confirm(
+        `Create a new version of goal "${goal.goal_code}"? The current goal will be archived.`
+      )
+    ) {
       return;
     }
 
     try {
-      await db.upsertGoal({ id: goalId, status: 'archived' });
-      
+      await db.upsertGoal({ id: goalId, status: "archived" });
+
       const newGoal = { ...goal };
       delete newGoal.id;
       newGoal.version = (goal.version || 1) + 1;
-      newGoal.status = 'active';
-      
+      newGoal.status = "active";
+
       await db.upsertGoal(newGoal);
-      console.log('[tc-students] Created new version of goal');
+      console.log("[tc-students] Created new version of goal");
       await loadData();
       renderStudentDetail();
     } catch (error) {
-      console.error('[tc-students] Error versioning goal:', error);
-      alert('Failed to create new version');
+      console.error("[tc-students] Error versioning goal:", error);
+      alert("Failed to create new version");
     }
   }
 
   // Modals
   function showManageEnrollmentsModal() {
-    const student = allStudents.find(s => s.code === selectedStudent);
+    const student = allStudents.find((s) => s.code === selectedStudent);
     if (!student) return;
 
-    const enrollments = allEnrollments.filter(e => e.student_code === student.code);
-    
-    const checkboxes = FULL_CLASS_NAMES.map(className => {
-      const isEnrolled = enrollments.some(e => e.class_name === className);
+    const enrollments = allEnrollments.filter((e) => e.student_code === student.code);
+
+    const checkboxes = FULL_CLASS_NAMES.map((className) => {
+      const isEnrolled = enrollments.some((e) => e.class_name === className);
       return `
         <label class="checkbox-label">
-          <input type="checkbox" name="enrollment" value="${escapeHtml(className)}" ${isEnrolled ? 'checked' : ''}>
+          <input type="checkbox" name="enrollment" value="${escapeHtml(className)}" ${isEnrolled ? "checked" : ""}>
           ${escapeHtml(className)}
         </label>
       `;
-    }).join('');
+    }).join("");
 
-    const modal = createModal('Manage Enrollments', `
+    const modal = createModal(
+      "Manage Enrollments",
+      `
       <form id="enrollments-form">
         <div class="form-group">
           <label>Select Classes:</label>
@@ -887,15 +913,16 @@
           <button type="submit" class="btn btn-primary">Save</button>
         </div>
       </form>
-    `);
+    `
+    );
 
     document.body.appendChild(modal);
 
-    document.getElementById('cancel-enrollments').addEventListener('click', () => {
+    document.getElementById("cancel-enrollments").addEventListener("click", () => {
       modal.remove();
     });
 
-    document.getElementById('enrollments-form').addEventListener('submit', async (e) => {
+    document.getElementById("enrollments-form").addEventListener("submit", async (e) => {
       e.preventDefault();
       await handleSaveEnrollments(student.code);
       modal.remove();
@@ -903,62 +930,64 @@
   }
 
   async function handleSaveEnrollments(studentCode) {
-    const form = document.getElementById('enrollments-form');
+    const form = document.getElementById("enrollments-form");
     const checkboxes = form.querySelectorAll('input[name="enrollment"]');
     const selected = Array.from(checkboxes)
-      .filter(cb => cb.checked)
-      .map(cb => cb.value);
+      .filter((cb) => cb.checked)
+      .map((cb) => cb.value);
 
     try {
-      const currentEnrollments = allEnrollments.filter(e => e.student_code === studentCode);
-      
+      const currentEnrollments = allEnrollments.filter((e) => e.student_code === studentCode);
+
       for (const enrollment of currentEnrollments) {
         if (!selected.includes(enrollment.class_name)) {
           const supabase = await getSupabase();
           if (!supabase) continue;
           const { error } = await supabase
-            .from('enrollments')
+            .from("enrollments")
             .delete()
-            .eq('student_code', studentCode)
-            .eq('class_name', enrollment.class_name);
-          
+            .eq("student_code", studentCode)
+            .eq("class_name", enrollment.class_name);
+
           if (error) throw error;
         }
       }
 
       for (const className of selected) {
-        const exists = currentEnrollments.some(e => e.class_name === className);
+        const exists = currentEnrollments.some((e) => e.class_name === className);
         if (!exists) {
           const supabase = await getSupabase();
           if (!supabase) continue;
           const { error } = await supabase
-            .from('enrollments')
+            .from("enrollments")
             .insert({ student_code: studentCode, class_name: className });
-          
+
           if (error) throw error;
         }
       }
 
-      console.log('[tc-students] Updated enrollments');
+      console.log("[tc-students] Updated enrollments");
       await loadData();
       renderStudentDetail();
     } catch (error) {
-      console.error('[tc-students] Error saving enrollments:', error);
-      alert('Failed to save enrollments');
+      console.error("[tc-students] Error saving enrollments:", error);
+      alert("Failed to save enrollments");
     }
   }
 
   function showAddGoalModal() {
-    const student = allStudents.find(s => s.code === selectedStudent);
+    const student = allStudents.find((s) => s.code === selectedStudent);
     if (!student) return;
 
-    const modal = createModal('Add IEP Goal', `
+    const modal = createModal(
+      "Add IEP Goal",
+      `
       <form id="add-goal-form">
         <div class="form-group">
           <label>Goal Area:</label>
           <select name="goal_area" required>
             <option value="">Select...</option>
-            ${GOAL_AREAS.map(area => `<option value="${escapeHtml(area)}">${escapeHtml(area)}</option>`).join('')}
+            ${GOAL_AREAS.map((area) => `<option value="${escapeHtml(area)}">${escapeHtml(area)}</option>`).join("")}
           </select>
         </div>
         <div class="form-group">
@@ -991,7 +1020,7 @@
         </div>
         <div class="form-group">
           <label>Case Manager:</label>
-          <input type="text" name="case_manager" value="${escapeHtml(student.primary_case_manager || '')}" required>
+          <input type="text" name="case_manager" value="${escapeHtml(student.primary_case_manager || "")}" required>
         </div>
         <div class="form-group">
           <label>Data Collector:</label>
@@ -1001,7 +1030,7 @@
           <label>Class Context:</label>
           <select name="class_context">
             <option value="">Select...</option>
-            ${FULL_CLASS_NAMES.map(cn => `<option value="${escapeHtml(cn)}">${escapeHtml(cn)}</option>`).join('')}
+            ${FULL_CLASS_NAMES.map((cn) => `<option value="${escapeHtml(cn)}">${escapeHtml(cn)}</option>`).join("")}
           </select>
         </div>
         <div class="modal-actions">
@@ -1009,15 +1038,16 @@
           <button type="submit" class="btn btn-primary">Add Goal</button>
         </div>
       </form>
-    `);
+    `
+    );
 
     document.body.appendChild(modal);
 
-    document.getElementById('cancel-goal').addEventListener('click', () => {
+    document.getElementById("cancel-goal").addEventListener("click", () => {
       modal.remove();
     });
 
-    document.getElementById('add-goal-form').addEventListener('submit', async (e) => {
+    document.getElementById("add-goal-form").addEventListener("submit", async (e) => {
       e.preventDefault();
       await handleAddGoal(e.target);
       modal.remove();
@@ -1028,90 +1058,96 @@
     const formData = new FormData(form);
     const goal = {
       student_code: selectedStudent,
-      goal_area: formData.get('goal_area'),
-      goal_code: formData.get('goal_code'),
-      goal_text: formData.get('goal_text'),
-      measurement_type: formData.get('measurement_type'),
-      baseline: formData.get('baseline'),
-      target: formData.get('target'),
-      case_manager: formData.get('case_manager'),
-      data_collector: formData.get('data_collector'),
-      class_context: formData.get('class_context') || null,
-      status: 'active',
-      version: 1
+      goal_area: formData.get("goal_area"),
+      goal_code: formData.get("goal_code"),
+      goal_text: formData.get("goal_text"),
+      measurement_type: formData.get("measurement_type"),
+      baseline: formData.get("baseline"),
+      target: formData.get("target"),
+      case_manager: formData.get("case_manager"),
+      data_collector: formData.get("data_collector"),
+      class_context: formData.get("class_context") || null,
+      status: "active",
+      version: 1,
     };
 
     try {
       await db.upsertGoal(goal);
-      console.log('[tc-students] Added goal');
+      console.log("[tc-students] Added goal");
       await loadData();
       renderStudentDetail();
     } catch (error) {
-      console.error('[tc-students] Error adding goal:', error);
-      alert('Failed to add goal');
+      console.error("[tc-students] Error adding goal:", error);
+      alert("Failed to add goal");
     }
   }
 
   function showEditGoalModal(goalId) {
-    const goal = allGoals.find(g => g.id === goalId);
+    const goal = allGoals.find((g) => g.id === goalId);
     if (!goal) return;
 
-    const modal = createModal('Edit IEP Goal', `
+    const modal = createModal(
+      "Edit IEP Goal",
+      `
       <form id="edit-goal-form">
         <div class="form-group">
           <label>Goal Area:</label>
           <select name="goal_area" required>
-            ${GOAL_AREAS.map(area => `
-              <option value="${escapeHtml(area)}" ${goal.goal_area === area ? 'selected' : ''}>
+            ${GOAL_AREAS.map(
+              (area) => `
+              <option value="${escapeHtml(area)}" ${goal.goal_area === area ? "selected" : ""}>
                 ${escapeHtml(area)}
               </option>
-            `).join('')}
+            `
+            ).join("")}
           </select>
         </div>
         <div class="form-group">
           <label>Goal Code:</label>
-          <input type="text" name="goal_code" value="${escapeHtml(goal.goal_code || '')}" required>
+          <input type="text" name="goal_code" value="${escapeHtml(goal.goal_code || "")}" required>
         </div>
         <div class="form-group">
           <label>Description:</label>
-          <textarea name="goal_text" rows="4" required>${escapeHtml(goal.goal_text || '')}</textarea>
+          <textarea name="goal_text" rows="4" required>${escapeHtml(goal.goal_text || "")}</textarea>
         </div>
         <div class="form-group">
           <label>Measurement Type:</label>
           <select name="measurement_type" required>
-            <option value="Accuracy" ${goal.measurement_type === 'Accuracy' ? 'selected' : ''}>Accuracy</option>
-            <option value="Frequency" ${goal.measurement_type === 'Frequency' ? 'selected' : ''}>Frequency</option>
-            <option value="Duration" ${goal.measurement_type === 'Duration' ? 'selected' : ''}>Duration</option>
-            <option value="Rate" ${goal.measurement_type === 'Rate' ? 'selected' : ''}>Rate</option>
+            <option value="Accuracy" ${goal.measurement_type === "Accuracy" ? "selected" : ""}>Accuracy</option>
+            <option value="Frequency" ${goal.measurement_type === "Frequency" ? "selected" : ""}>Frequency</option>
+            <option value="Duration" ${goal.measurement_type === "Duration" ? "selected" : ""}>Duration</option>
+            <option value="Rate" ${goal.measurement_type === "Rate" ? "selected" : ""}>Rate</option>
           </select>
         </div>
         <div class="form-row">
           <div class="form-group">
             <label>Baseline:</label>
-            <input type="text" name="baseline" value="${escapeHtml(goal.baseline || '')}" required>
+            <input type="text" name="baseline" value="${escapeHtml(goal.baseline || "")}" required>
           </div>
           <div class="form-group">
             <label>Target:</label>
-            <input type="text" name="target" value="${escapeHtml(goal.target || '')}" required>
+            <input type="text" name="target" value="${escapeHtml(goal.target || "")}" required>
           </div>
         </div>
         <div class="form-group">
           <label>Case Manager:</label>
-          <input type="text" name="case_manager" value="${escapeHtml(goal.case_manager || '')}" required>
+          <input type="text" name="case_manager" value="${escapeHtml(goal.case_manager || "")}" required>
         </div>
         <div class="form-group">
           <label>Data Collector:</label>
-          <input type="text" name="data_collector" value="${escapeHtml(goal.data_collector || '')}" required>
+          <input type="text" name="data_collector" value="${escapeHtml(goal.data_collector || "")}" required>
         </div>
         <div class="form-group">
           <label>Class Context:</label>
           <select name="class_context">
             <option value="">None</option>
-            ${FULL_CLASS_NAMES.map(cn => `
-              <option value="${escapeHtml(cn)}" ${goal.class_context === cn ? 'selected' : ''}>
+            ${FULL_CLASS_NAMES.map(
+              (cn) => `
+              <option value="${escapeHtml(cn)}" ${goal.class_context === cn ? "selected" : ""}>
                 ${escapeHtml(cn)}
               </option>
-            `).join('')}
+            `
+            ).join("")}
           </select>
         </div>
         <div class="modal-actions">
@@ -1119,15 +1155,16 @@
           <button type="submit" class="btn btn-primary">Save Changes</button>
         </div>
       </form>
-    `);
+    `
+    );
 
     document.body.appendChild(modal);
 
-    document.getElementById('cancel-edit-goal').addEventListener('click', () => {
+    document.getElementById("cancel-edit-goal").addEventListener("click", () => {
       modal.remove();
     });
 
-    document.getElementById('edit-goal-form').addEventListener('submit', async (e) => {
+    document.getElementById("edit-goal-form").addEventListener("submit", async (e) => {
       e.preventDefault();
       await handleEditGoal(goalId, e.target);
       modal.remove();
@@ -1138,33 +1175,35 @@
     const formData = new FormData(form);
     const updates = {
       id: goalId,
-      goal_area: formData.get('goal_area'),
-      goal_code: formData.get('goal_code'),
-      goal_text: formData.get('goal_text'),
-      measurement_type: formData.get('measurement_type'),
-      baseline: formData.get('baseline'),
-      target: formData.get('target'),
-      case_manager: formData.get('case_manager'),
-      data_collector: formData.get('data_collector'),
-      class_context: formData.get('class_context') || null
+      goal_area: formData.get("goal_area"),
+      goal_code: formData.get("goal_code"),
+      goal_text: formData.get("goal_text"),
+      measurement_type: formData.get("measurement_type"),
+      baseline: formData.get("baseline"),
+      target: formData.get("target"),
+      case_manager: formData.get("case_manager"),
+      data_collector: formData.get("data_collector"),
+      class_context: formData.get("class_context") || null,
     };
 
     try {
       await db.upsertGoal(updates);
-      console.log('[tc-students] Updated goal');
+      console.log("[tc-students] Updated goal");
       await loadData();
       renderStudentDetail();
     } catch (error) {
-      console.error('[tc-students] Error updating goal:', error);
-      alert('Failed to update goal');
+      console.error("[tc-students] Error updating goal:", error);
+      alert("Failed to update goal");
     }
   }
 
   function showResetPasswordModal() {
-    const student = allStudents.find(s => s.code === selectedStudent);
+    const student = allStudents.find((s) => s.code === selectedStudent);
     if (!student) return;
 
-    const modal = createModal('Reset Password', `
+    const modal = createModal(
+      "Reset Password",
+      `
       <form id="reset-password-form">
         <div class="form-group">
           <label>New Password for ${escapeHtml(student.code)}:</label>
@@ -1175,15 +1214,16 @@
           <button type="submit" class="btn btn-primary">Reset Password</button>
         </div>
       </form>
-    `);
+    `
+    );
 
     document.body.appendChild(modal);
 
-    document.getElementById('cancel-password').addEventListener('click', () => {
+    document.getElementById("cancel-password").addEventListener("click", () => {
       modal.remove();
     });
 
-    document.getElementById('reset-password-form').addEventListener('submit', async (e) => {
+    document.getElementById("reset-password-form").addEventListener("submit", async (e) => {
       e.preventDefault();
       await handleResetPassword(e.target);
       modal.remove();
@@ -1192,15 +1232,15 @@
 
   async function handleResetPassword(form) {
     const formData = new FormData(form);
-    const password = formData.get('password');
+    const password = formData.get("password");
 
     try {
       await db.upsertStudent({ code: selectedStudent, password_hash: password });
-      console.log('[tc-students] Reset password');
-      alert('Password reset successfully');
+      console.log("[tc-students] Reset password");
+      alert("Password reset successfully");
     } catch (error) {
-      console.error('[tc-students] Error resetting password:', error);
-      alert('Failed to reset password');
+      console.error("[tc-students] Error resetting password:", error);
+      alert("Failed to reset password");
     }
   }
 
@@ -1209,22 +1249,22 @@
     let studentData = {};
 
     function renderStep() {
-      let content = '';
-      
+      let content = "";
+
       if (step === 1) {
         content = `
           <form id="wizard-step-1">
             <div class="form-group">
               <label>Student Code:</label>
-              <input type="text" name="code" value="${escapeHtml(studentData.code || '')}" required>
+              <input type="text" name="code" value="${escapeHtml(studentData.code || "")}" required>
             </div>
             <div class="form-group">
               <label>Password:</label>
-              <input type="text" name="password" value="${escapeHtml(studentData.password || '')}" required>
+              <input type="text" name="password" value="${escapeHtml(studentData.password || "")}" required>
             </div>
             <div class="form-group">
               <label>Primary Case Manager:</label>
-              <input type="text" name="primary_case_manager" value="${escapeHtml(studentData.primary_case_manager || '')}">
+              <input type="text" name="primary_case_manager" value="${escapeHtml(studentData.primary_case_manager || "")}">
             </div>
             <div class="modal-actions">
               <button type="button" class="btn btn-secondary" id="wizard-cancel">Cancel</button>
@@ -1233,13 +1273,15 @@
           </form>
         `;
       } else if (step === 2) {
-        const checkboxes = FULL_CLASS_NAMES.map(className => `
+        const checkboxes = FULL_CLASS_NAMES.map(
+          (className) => `
           <label class="checkbox-label">
             <input type="checkbox" name="enrollment" value="${escapeHtml(className)}"
-              ${studentData.enrollments && studentData.enrollments.includes(className) ? 'checked' : ''}>
+              ${studentData.enrollments && studentData.enrollments.includes(className) ? "checked" : ""}>
             ${escapeHtml(className)}
           </label>
-        `).join('');
+        `
+        ).join("");
 
         content = `
           <form id="wizard-step-2">
@@ -1268,41 +1310,41 @@
         `;
       }
 
-      modal.querySelector('.modal-content').innerHTML = `
+      modal.querySelector(".modal-content").innerHTML = `
         <h2>Add Student - Step ${step} of 3</h2>
         ${content}
       `;
 
-      const cancelBtn = document.getElementById('wizard-cancel');
+      const cancelBtn = document.getElementById("wizard-cancel");
       if (cancelBtn) {
-        cancelBtn.addEventListener('click', () => modal.remove());
+        cancelBtn.addEventListener("click", () => modal.remove());
       }
 
-      const backBtn = document.getElementById('wizard-back');
+      const backBtn = document.getElementById("wizard-back");
       if (backBtn) {
-        backBtn.addEventListener('click', () => {
+        backBtn.addEventListener("click", () => {
           step--;
           renderStep();
         });
       }
 
-      const form = modal.querySelector('form');
+      const form = modal.querySelector("form");
       if (form) {
-        form.addEventListener('submit', async (e) => {
+        form.addEventListener("submit", async (e) => {
           e.preventDefault();
-          
+
           if (step === 1) {
             const formData = new FormData(form);
-            studentData.code = formData.get('code');
-            studentData.password = formData.get('password');
-            studentData.primary_case_manager = formData.get('primary_case_manager');
+            studentData.code = formData.get("code");
+            studentData.password = formData.get("password");
+            studentData.primary_case_manager = formData.get("primary_case_manager");
             step++;
             renderStep();
           } else if (step === 2) {
             const checkboxes = form.querySelectorAll('input[name="enrollment"]');
             studentData.enrollments = Array.from(checkboxes)
-              .filter(cb => cb.checked)
-              .map(cb => cb.value);
+              .filter((cb) => cb.checked)
+              .map((cb) => cb.value);
             step++;
             renderStep();
           } else if (step === 3) {
@@ -1313,7 +1355,7 @@
       }
     }
 
-    const modal = createModal('Add Student', '');
+    const modal = createModal("Add Student", "");
     document.body.appendChild(modal);
     renderStep();
   }
@@ -1324,28 +1366,30 @@
         code: data.code,
         password_hash: data.password,
         primary_case_manager: data.primary_case_manager,
-        status: 'active'
+        status: "active",
       });
 
       for (const className of data.enrollments || []) {
         const supabase = await getSupabase();
         if (!supabase) continue;
         await supabase
-          .from('enrollments')
+          .from("enrollments")
           .insert({ student_code: data.code, class_name: className });
       }
 
-      console.log('[tc-students] Created student:', data.code);
+      console.log("[tc-students] Created student:", data.code);
       await loadData();
       selectStudent(data.code);
     } catch (error) {
-      console.error('[tc-students] Error creating student:', error);
-      alert('Failed to create student');
+      console.error("[tc-students] Error creating student:", error);
+      alert("Failed to create student");
     }
   }
 
   function showImportCsvModal() {
-    const modal = createModal('Import Students from CSV', `
+    const modal = createModal(
+      "Import Students from CSV",
+      `
       <div id="csv-import-container">
         <div class="form-group">
           <label>Select CSV File:</label>
@@ -1360,53 +1404,55 @@
           </div>
         </div>
       </div>
-    `);
+    `
+    );
 
     document.body.appendChild(modal);
 
-    const fileInput = document.getElementById('csv-file-input');
-    fileInput.addEventListener('change', async (e) => {
+    const fileInput = document.getElementById("csv-file-input");
+    fileInput.addEventListener("change", async (e) => {
       const file = e.target.files[0];
       if (file) {
         await handleCsvFileSelected(file);
       }
     });
 
-    const cancelBtn = document.getElementById('cancel-import');
+    const cancelBtn = document.getElementById("cancel-import");
     if (cancelBtn) {
-      cancelBtn.addEventListener('click', () => modal.remove());
+      cancelBtn.addEventListener("click", () => modal.remove());
     }
   }
 
   async function handleCsvFileSelected(file) {
     const text = await file.text();
-    const lines = text.split('\n').filter(line => line.trim());
-    
+    const lines = text.split("\n").filter((line) => line.trim());
+
     if (lines.length < 2) {
-      alert('CSV file must have at least a header row and one data row');
+      alert("CSV file must have at least a header row and one data row");
       return;
     }
 
     const headers = parseCSVLine(lines[0]);
-    const rows = lines.slice(1).map(line => parseCSVLine(line));
+    const rows = lines.slice(1).map((line) => parseCSVLine(line));
 
     const columnMap = {};
     headers.forEach((header, index) => {
       const normalized = header.trim().toLowerCase();
-      if (normalized.includes('student code name')) columnMap.code = index;
-      else if (normalized.includes('iep goal with student code')) columnMap.goal_text = index;
-      else if (normalized.includes('student code iep goal code')) columnMap.goal_code = index;
-      else if (normalized === 'measurement type') columnMap.measurement_type = index;
-      else if (normalized === 'class') columnMap.class = index;
-      else if (normalized === 'goal area') columnMap.goal_area = index;
-      else if (normalized === 'case manager') columnMap.case_manager = index;
-      else if (normalized.includes('teacher to collect data') && !normalized.includes('email')) columnMap.data_collector = index;
-      else if (normalized.includes('iep due')) columnMap.iep_due = index;
-      else if (normalized.includes('eval due')) columnMap.eval_due = index;
+      if (normalized.includes("student code name")) columnMap.code = index;
+      else if (normalized.includes("iep goal with student code")) columnMap.goal_text = index;
+      else if (normalized.includes("student code iep goal code")) columnMap.goal_code = index;
+      else if (normalized === "measurement type") columnMap.measurement_type = index;
+      else if (normalized === "class") columnMap.class = index;
+      else if (normalized === "goal area") columnMap.goal_area = index;
+      else if (normalized === "case manager") columnMap.case_manager = index;
+      else if (normalized.includes("teacher to collect data") && !normalized.includes("email"))
+        columnMap.data_collector = index;
+      else if (normalized.includes("iep due")) columnMap.iep_due = index;
+      else if (normalized.includes("eval due")) columnMap.eval_due = index;
     });
 
     const studentsMap = new Map();
-    const existingCodes = new Set(allStudents.map(s => s.code));
+    const existingCodes = new Set(allStudents.map((s) => s.code));
     let skippedCount = 0;
 
     for (const row of rows) {
@@ -1425,7 +1471,7 @@
           iep_due: parseDateFromCSV(row[columnMap.iep_due]),
           eval_due: parseDateFromCSV(row[columnMap.eval_due]),
           enrollments: new Set(),
-          goals: []
+          goals: [],
         });
       }
 
@@ -1439,30 +1485,30 @@
       if (row[columnMap.goal_text]?.trim() || row[columnMap.goal_code]?.trim()) {
         const goalText = row[columnMap.goal_text]?.trim();
         const goalCode = row[columnMap.goal_code]?.trim();
-        
+
         // Handle empty description - use goal code as fallback, or empty string if no code
-        const description = goalText || goalCode || '';
-        
+        const description = goalText || goalCode || "";
+
         // Handle malformed goal codes - use as-is or provide fallback
         // Examples: S00911.2 (missing period), S022.12. (trailing period) are kept as-is
         const goalCodeOrFallback = goalCode || `${code}.UNKNOWN`;
-        
+
         student.goals.push({
           goal_text: description,
           goal_code: goalCodeOrFallback,
           goal_area: row[columnMap.goal_area]?.trim(),
-          measurement_type: row[columnMap.measurement_type]?.trim() || 'percent',
+          measurement_type: row[columnMap.measurement_type]?.trim() || "percent",
           case_manager: row[columnMap.case_manager]?.trim(),
           // Store multi-value data_collector as-is (don't split on commas)
           data_collector: row[columnMap.data_collector]?.trim(),
-          class_context: className
+          class_context: className,
         });
       }
     }
 
-    window.csvImportData = Array.from(studentsMap.values()).map(s => ({
+    window.csvImportData = Array.from(studentsMap.values()).map((s) => ({
       ...s,
-      enrollments: Array.from(s.enrollments)
+      enrollments: Array.from(s.enrollments),
     }));
 
     displayCsvPreview(window.csvImportData, skippedCount);
@@ -1473,13 +1519,13 @@
     const match = dateStr.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
     if (!match) return null;
     const [, month, day, year] = match;
-    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
   }
 
   function displayCsvPreview(data, skippedCount) {
-    const preview = document.getElementById('csv-preview');
-    const content = document.getElementById('csv-preview-content');
-    
+    const preview = document.getElementById("csv-preview");
+    const content = document.getElementById("csv-preview-content");
+
     const summary = `
       <p><strong>${data.length}</strong> students will be imported</p>
       <p><strong>${skippedCount}</strong> students skipped (already exist)</p>
@@ -1487,18 +1533,23 @@
       <details>
         <summary>Show Details</summary>
         <ul>
-          ${data.slice(0, 5).map(s => `
+          ${data
+            .slice(0, 5)
+            .map(
+              (s) => `
             <li>${escapeHtml(s.code)}: ${s.enrollments.length} classes, ${s.goals.length} goals</li>
-          `).join('')}
-          ${data.length > 5 ? `<li>...and ${data.length - 5} more</li>` : ''}
+          `
+            )
+            .join("")}
+          ${data.length > 5 ? `<li>...and ${data.length - 5} more</li>` : ""}
         </ul>
       </details>
     `;
 
     content.innerHTML = summary;
-    preview.style.display = 'block';
+    preview.style.display = "block";
 
-    document.getElementById('confirm-import').addEventListener('click', async () => {
+    document.getElementById("confirm-import").addEventListener("click", async () => {
       await handleConfirmCsvImport(data);
     });
   }
@@ -1511,14 +1562,14 @@
           primary_case_manager: studentData.primary_case_manager,
           iep_due: studentData.iep_due,
           eval_due: studentData.eval_due,
-          status: 'active'
+          status: "active",
         });
 
         for (const className of studentData.enrollments) {
           const supabase = await getSupabase();
           if (!supabase) continue;
           await supabase
-            .from('enrollments')
+            .from("enrollments")
             .insert({ student_code: studentData.code, class_name: className });
         }
 
@@ -1526,25 +1577,25 @@
           await db.upsertGoal({
             student_code: studentData.code,
             ...goal,
-            status: 'active',
-            version: 1
+            status: "active",
+            version: 1,
           });
         }
       }
 
-      console.log('[tc-students] Imported', data.length, 'students');
+      console.log("[tc-students] Imported", data.length, "students");
       await loadData();
-      document.querySelector('.modal').remove();
+      document.querySelector(".modal").remove();
       alert(`Successfully imported ${data.length} students`);
     } catch (error) {
-      console.error('[tc-students] Error importing CSV:', error);
-      alert('Failed to import CSV');
+      console.error("[tc-students] Error importing CSV:", error);
+      alert("Failed to import CSV");
     }
   }
 
   function createModal(title, content) {
-    const modal = document.createElement('div');
-    modal.className = 'modal';
+    const modal = document.createElement("div");
+    modal.className = "modal";
     modal.innerHTML = `
       <div class="modal-backdrop"></div>
       <div class="modal-dialog">
@@ -1555,7 +1606,7 @@
       </div>
     `;
 
-    modal.querySelector('.modal-backdrop').addEventListener('click', () => {
+    modal.querySelector(".modal-backdrop").addEventListener("click", () => {
       modal.remove();
     });
 
@@ -1564,21 +1615,21 @@
 
   // Initialize
   function init() {
-    console.log('[tc-students] Initializing...');
-    
+    console.log("[tc-students] Initializing...");
+
     // Listen for schema drift events from data-adapter
-    window.addEventListener('schema-drift-detected', (event) => {
-      console.log('[tc-students] Schema drift detected:', event.detail);
+    window.addEventListener("schema-drift-detected", (event) => {
+      console.log("[tc-students] Schema drift detected:", event.detail);
       showSchemaDriftBanner();
     });
-    
+
     renderClassFilters();
     setupEventHandlers();
     loadData();
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
   } else {
     init();
   }

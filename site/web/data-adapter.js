@@ -1,9 +1,15 @@
 // Adapter selection: use Supabase if available, else localStorage.
-import { getSupabase } from './supabase-client.js';
+import { getSupabase } from "./supabase-client.js";
 
-const NS = 'rc_unified_';
+const NS = "rc_unified_";
 const store = {
-  get: (k, def) => { try { return JSON.parse(localStorage.getItem(NS + k)) ?? def; } catch { return def; } },
+  get: (k, def) => {
+    try {
+      return JSON.parse(localStorage.getItem(NS + k)) ?? def;
+    } catch {
+      return def;
+    }
+  },
   set: (k, v) => localStorage.setItem(NS + k, JSON.stringify(v)),
 };
 
@@ -11,88 +17,106 @@ const store = {
 // Only allows fallback in true dev environments (localhost, 127.0.0.1)
 // Netlify preview deployments are excluded to maintain security
 const isLocalDev = () => {
-  return window.location.hostname === 'localhost' || 
-         window.location.hostname === '127.0.0.1';
+  return window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
 };
 
 /**
  * Robust detection for schema-related errors from Supabase/PostgREST
  * Checks for various error conditions that indicate missing columns or tables
- * 
+ *
  * The Supabase JS client may return PostgreSQL error codes in different fields:
  * - error.code may be HTTP-level (400) or PostgREST codes (PGRST204)
  * - PostgreSQL codes (42703) may appear in error.details, error.hint, or message
  * - Response headers contain PostgREST error codes but aren't directly accessible
- * 
+ *
  * @param {Error} error - The error object to check
  * @returns {boolean} True if error is schema-related
  */
 function isSchemaError(error) {
   if (!error) return false;
-  
+
   // Check primary fields
-  const msg = (error.message || '').toLowerCase();
-  const code = String(error.code || '').toLowerCase();
-  const details = (error.details || '').toLowerCase();
-  const hint = (error.hint || '').toLowerCase();
-  
+  const msg = (error.message || "").toLowerCase();
+  const code = String(error.code || "").toLowerCase();
+  const details = (error.details || "").toLowerCase();
+  const hint = (error.hint || "").toLowerCase();
+
   // PostgreSQL error codes for missing columns/tables
-  const pgErrorCodes = ['42703', '42p01'];
+  const pgErrorCodes = ["42703", "42p01"];
   // PostgREST error codes for missing columns/relations
-  const postgrestErrorCodes = ['pgrst204', 'pgrst200'];
-  
+  const postgrestErrorCodes = ["pgrst204", "pgrst200"];
+
   // Check if any field contains PostgreSQL or PostgREST error codes
-  const hasErrorCode = pgErrorCodes.some(errCode => 
-    code.includes(errCode) || details.includes(errCode) || hint.includes(errCode) || msg.includes(errCode)
-  ) || postgrestErrorCodes.some(errCode =>
-    code.includes(errCode) || details.includes(errCode) || hint.includes(errCode) || msg.includes(errCode)
-  );
-  
+  const hasErrorCode =
+    pgErrorCodes.some(
+      (errCode) =>
+        code.includes(errCode) ||
+        details.includes(errCode) ||
+        hint.includes(errCode) ||
+        msg.includes(errCode)
+    ) ||
+    postgrestErrorCodes.some(
+      (errCode) =>
+        code.includes(errCode) ||
+        details.includes(errCode) ||
+        hint.includes(errCode) ||
+        msg.includes(errCode)
+    );
+
   // Check for HTTP 400 combined with column/relation keywords
-  const isHttp400WithSchemaKeywords = (
-    (code === '400' || error.status === 400) &&
-    (msg.includes('column') || msg.includes('relation') || details.includes('column') || details.includes('relation'))
-  );
-  
+  const isHttp400WithSchemaKeywords =
+    (code === "400" || error.status === 400) &&
+    (msg.includes("column") ||
+      msg.includes("relation") ||
+      details.includes("column") ||
+      details.includes("relation"));
+
   // Check for explicit schema error messages
-  const hasSchemaErrorMessage = (
-    (msg.includes('column') && msg.includes('does not exist')) ||
-    (msg.includes('relation') && msg.includes('does not exist')) ||
-    msg.includes('undefined column') ||
-    details.includes('column') && details.includes('does not exist') ||
-    details.includes('relation') && details.includes('does not exist')
-  );
-  
+  const hasSchemaErrorMessage =
+    (msg.includes("column") && msg.includes("does not exist")) ||
+    (msg.includes("relation") && msg.includes("does not exist")) ||
+    msg.includes("undefined column") ||
+    (details.includes("column") && details.includes("does not exist")) ||
+    (details.includes("relation") && details.includes("does not exist"));
+
   // As a last resort, check the stringified error object
   let hasErrorCodeInStringified = false;
   try {
     const errorStr = JSON.stringify(error).toLowerCase();
-    hasErrorCodeInStringified = pgErrorCodes.some(errCode => errorStr.includes(errCode)) ||
-                                postgrestErrorCodes.some(errCode => errorStr.includes(errCode));
+    hasErrorCodeInStringified =
+      pgErrorCodes.some((errCode) => errorStr.includes(errCode)) ||
+      postgrestErrorCodes.some((errCode) => errorStr.includes(errCode));
   } catch (e) {
     // Ignore JSON.stringify errors
   }
-  
-  return hasErrorCode || isHttp400WithSchemaKeywords || hasSchemaErrorMessage || hasErrorCodeInStringified;
+
+  return (
+    hasErrorCode ||
+    isHttp400WithSchemaKeywords ||
+    hasSchemaErrorMessage ||
+    hasErrorCodeInStringified
+  );
 }
 
 const local = {
   // Students
-  async listStudents() { return store.get('students', []); },
+  async listStudents() {
+    return store.get("students", []);
+  },
   async upsertStudent(s) {
-    const arr = store.get('students', []);
-    const i = arr.findIndex(x => x.code === s.code);
+    const arr = store.get("students", []);
+    const i = arr.findIndex((x) => x.code === s.code);
     if (i >= 0) arr[i] = { ...arr[i], ...s };
     else arr.push({ ...s });
-    store.set('students', arr);
+    store.set("students", arr);
     return s;
   },
   // TC-3: Batch upsert for efficient bulk operations
   async batchUpsertStudents(students) {
-    const arr = store.get('students', []);
+    const arr = store.get("students", []);
     const result = [];
     for (const s of students) {
-      const i = arr.findIndex(x => x.code === s.code);
+      const i = arr.findIndex((x) => x.code === s.code);
       const student = { code: s.code, name: s.name || s.code, class_id: s.class_id || null };
       if (i >= 0) {
         arr[i] = { ...arr[i], ...student };
@@ -102,27 +126,49 @@ const local = {
         result.push(student);
       }
     }
-    store.set('students', arr);
+    store.set("students", arr);
     return result;
   },
 
   // Goals
   async listGoalsByStudentCode(code) {
-    const map = store.get('iepGoals', {});
+    const map = store.get("iepGoals", {});
     return map[code] || [];
   },
-  async upsertGoal({ student_code, code, goal_text, desc, target = null, status = 'Open', 
-                     measurement_type = 'percent', data_collector = null, 
-                     data_collector_email = null, class_context = null, 
-                     goal_area = null, baseline = null, case_manager = null, version = 1 }) {
-    const map = store.get('iepGoals', {});
+  async upsertGoal({
+    student_code,
+    code,
+    goal_text,
+    desc,
+    target = null,
+    status = "Open",
+    measurement_type = "percent",
+    data_collector = null,
+    data_collector_email = null,
+    class_context = null,
+    goal_area = null,
+    baseline = null,
+    case_manager = null,
+    version = 1,
+  }) {
+    const map = store.get("iepGoals", {});
     const goals = map[student_code] || [];
-    const idx = goals.findIndex(g => g.code === code);
+    const idx = goals.findIndex((g) => g.code === code);
     // Map goal_text to desc for consistency with database schema
     const description = goal_text || desc;
-    const goal = { 
-      code, desc: description, target, status, measurement_type, data_collector, 
-      data_collector_email, class_context, goal_area, baseline, case_manager, version 
+    const goal = {
+      code,
+      desc: description,
+      target,
+      status,
+      measurement_type,
+      data_collector,
+      data_collector_email,
+      class_context,
+      goal_area,
+      baseline,
+      case_manager,
+      version,
     };
     if (idx >= 0) {
       goals[idx] = { ...goals[idx], ...goal };
@@ -130,11 +176,11 @@ const local = {
       goals.push(goal);
     }
     map[student_code] = goals;
-    store.set('iepGoals', map);
+    store.set("iepGoals", map);
     return { student_code, ...goal };
   },
   async listGoalsAll() {
-    const map = store.get('iepGoals', {});
+    const map = store.get("iepGoals", {});
     const result = [];
     for (const [student_code, goals] of Object.entries(map)) {
       for (const goal of goals) {
@@ -146,278 +192,300 @@ const local = {
 
   // Progress
   async addProgress(p) {
-    const arr = store.get('progressEntries', []);
+    const arr = store.get("progressEntries", []);
     arr.push({ ...p, created_at: new Date().toISOString() });
-    store.set('progressEntries', arr);
+    store.set("progressEntries", arr);
     return true;
   },
 
   // Events
   async addEvent(e) {
-    const arr = store.get('events', []);
+    const arr = store.get("events", []);
     arr.push({ id: Date.now() + Math.random().toString(36).slice(2), ...e });
-    store.set('events', arr);
+    store.set("events", arr);
     return true;
   },
-  async listEvents() { return store.get('events', []); },
+  async listEvents() {
+    return store.get("events", []);
+  },
 
   // Passwords (plaintext, for local dev)
   async setStudentPassword(code, plain) {
-    const arr = store.get('students', []);
-    const i = arr.findIndex(x => x.code === code);
+    const arr = store.get("students", []);
+    const i = arr.findIndex((x) => x.code === code);
     if (i >= 0) arr[i].password = plain;
-    store.set('students', arr);
+    store.set("students", arr);
     return true;
   },
   async verifyStudentPassword(code, plain) {
-    const s = (store.get('students', []) || []).find(x => x.code === code);
-    const expected = s?.password || (code + '!');
+    const s = (store.get("students", []) || []).find((x) => x.code === code);
+    const expected = s?.password || code + "!";
     return expected === plain;
   },
 
   // Assignments / Instances (local placeholders)
   async createAssignment(a) {
-    const id = 'A' + Math.random().toString(36).slice(2, 9).toUpperCase();
-    const arr = store.get('assignments', []);
+    const id = "A" + Math.random().toString(36).slice(2, 9).toUpperCase();
+    const arr = store.get("assignments", []);
     arr.push({ id, ...a });
-    store.set('assignments', arr);
+    store.set("assignments", arr);
     return { id, ...a };
   },
-  async listAssignments() { return store.get('assignments', []); },
+  async listAssignments() {
+    return store.get("assignments", []);
+  },
   async listAssignmentInstances() {
-    const arr = store.get('assignmentInstances', []);
+    const arr = store.get("assignmentInstances", []);
     // Return with snake_case field names to match remote
-    return arr.map(inst => ({
-      id: inst.id || (inst.assignment_id + '-' + inst.student_code),
+    return arr.map((inst) => ({
+      id: inst.id || inst.assignment_id + "-" + inst.student_code,
       assignment_id: inst.assignment_id,
       student_code: inst.student_code,
       student_name: inst.student_name,
       assigned_at: inst.assigned_at,
       due_at: inst.due_at,
       status: inst.status,
-      settings: inst.settings
+      settings: inst.settings,
     }));
   },
   async upsertAssignmentInstance(x) {
-    const arr = store.get('assignmentInstances', []);
-    const i = arr.findIndex(ai => ai.assignment_id === x.assignment_id && ai.student_code === x.student_code);
+    const arr = store.get("assignmentInstances", []);
+    const i = arr.findIndex(
+      (ai) => ai.assignment_id === x.assignment_id && ai.student_code === x.student_code
+    );
     const instance = {
-      id: x.id || (x.assignment_id + '-' + x.student_code),
+      id: x.id || x.assignment_id + "-" + x.student_code,
       assignment_id: x.assignment_id,
       student_code: x.student_code,
       student_name: x.student_name,
-      assigned_at: x.assigned_at || new Date().toISOString().split('T')[0],
+      assigned_at: x.assigned_at || new Date().toISOString().split("T")[0],
       due_at: x.due_at,
-      status: x.status || 'Assigned',
-      settings: x.settings || {}
+      status: x.status || "Assigned",
+      settings: x.settings || {},
     };
     if (i >= 0) arr[i] = instance;
     else arr.push(instance);
-    store.set('assignmentInstances', arr);
+    store.set("assignmentInstances", arr);
     return true;
   },
   async addSubmission(payload) {
-    const submissions = store.get('submissions', []);
-    const id = 'SUB' + Math.random().toString(36).slice(2, 9).toUpperCase();
+    const submissions = store.get("submissions", []);
+    const id = "SUB" + Math.random().toString(36).slice(2, 9).toUpperCase();
     submissions.push({ id, ...payload, submitted_at: new Date().toISOString() });
-    store.set('submissions', submissions);
-    
+    store.set("submissions", submissions);
+
     // Update instance status to 'Submitted'
-    const arr = store.get('assignmentInstances', []);
-    const inst = arr.find(ai => ai.id === payload.instance_id);
-    if (inst) inst.status = 'Submitted';
-    store.set('assignmentInstances', arr);
-    
+    const arr = store.get("assignmentInstances", []);
+    const inst = arr.find((ai) => ai.id === payload.instance_id);
+    if (inst) inst.status = "Submitted";
+    store.set("assignmentInstances", arr);
+
     return { submission_id: id };
   },
 
   // Portal B: List submissions (filtered by student if provided)
   async listSubmissions(filters = {}) {
-    const submissions = store.get('submissions', []);
+    const submissions = store.get("submissions", []);
     let result = [...submissions];
-    
+
     if (filters.student_code) {
-      const instances = store.get('assignmentInstances', []);
+      const instances = store.get("assignmentInstances", []);
       const studentInstanceIds = new Set(
-        instances.filter(i => i.student_code === filters.student_code).map(i => i.id)
+        instances.filter((i) => i.student_code === filters.student_code).map((i) => i.id)
       );
-      result = result.filter(s => studentInstanceIds.has(s.instance_id));
+      result = result.filter((s) => studentInstanceIds.has(s.instance_id));
     }
-    
+
     if (filters.instance_id) {
-      result = result.filter(s => s.instance_id === filters.instance_id);
+      result = result.filter((s) => s.instance_id === filters.instance_id);
     }
-    
+
     return result;
   },
-  
+
   // Portal B: Get latest submission for an instance
   async getLatestSubmission(instance_id) {
-    const submissions = store.get('submissions', []);
+    const submissions = store.get("submissions", []);
     const instanceSubmissions = submissions
-      .filter(s => s.instance_id === instance_id)
+      .filter((s) => s.instance_id === instance_id)
       .sort((a, b) => new Date(b.submitted_at) - new Date(a.submitted_at));
-    
+
     return instanceSubmissions[0] || null;
   },
-  
+
   // Portal B: Create resubmission
   async createResubmission({ instance_id, original_submission_id, answers = {} }) {
-    const instances = store.get('assignmentInstances', []);
-    const instance = instances.find(i => i.id === instance_id);
-    
+    const instances = store.get("assignmentInstances", []);
+    const instance = instances.find((i) => i.id === instance_id);
+
     if (!instance) {
       throw new Error(`Assignment instance ${instance_id} not found`);
     }
-    
+
     // Check resubmission limit
     const resubmissionCount = instance.resubmission_count || 0;
     if (resubmissionCount >= 1) {
-      throw new Error('Resubmission limit reached for this assignment');
+      throw new Error("Resubmission limit reached for this assignment");
     }
-    
+
     // Create new submission
-    const submissions = store.get('submissions', []);
-    const id = 'SUB' + Math.random().toString(36).slice(2, 9).toUpperCase();
+    const submissions = store.get("submissions", []);
+    const id = "SUB" + Math.random().toString(36).slice(2, 9).toUpperCase();
     const newSubmission = {
       id,
       instance_id,
-      submission_type: 'resubmission',
+      submission_type: "resubmission",
       original_submission_id,
       answers,
-      submitted_at: new Date().toISOString()
+      submitted_at: new Date().toISOString(),
     };
-    
+
     submissions.push(newSubmission);
-    store.set('submissions', submissions);
-    
+    store.set("submissions", submissions);
+
     // Increment resubmission count and update status
     instance.resubmission_count = resubmissionCount + 1;
-    instance.status = 'Submitted';
-    store.set('assignmentInstances', instances);
-    
+    instance.status = "Submitted";
+    store.set("assignmentInstances", instances);
+
     return { submission_id: id };
   },
-  
+
   // Phase B: Classes and Enrollments (local stub)
   async listClasses() {
     // Prefer stored classes; otherwise derive unique set from students[].class_id
-    const storedClasses = store.get('classes', []);
+    const storedClasses = store.get("classes", []);
     if (storedClasses.length > 0) {
       return storedClasses;
     }
-    
+
     // Derive from students with class_id
-    const students = store.get('students', []);
-    const uniqueClassIds = [...new Set(students.map(s => s.class_id).filter(Boolean))];
-    
+    const students = store.get("students", []);
+    const uniqueClassIds = [...new Set(students.map((s) => s.class_id).filter(Boolean))];
+
     // Return each class_id as {id, code, name} all set to the class_id value
-    return uniqueClassIds.map(classId => ({
+    return uniqueClassIds.map((classId) => ({
       id: classId,
       code: classId,
-      name: classId
+      name: classId,
     }));
   },
-  
+
   async listClassEnrollments() {
     // Prefer stored enrollments; otherwise derive from students having class_id
-    const storedEnrollments = store.get('classEnrollments', []);
+    const storedEnrollments = store.get("classEnrollments", []);
     if (storedEnrollments.length > 0) {
       return storedEnrollments;
     }
-    
+
     // Derive from students with class_id
-    const students = store.get('students', []);
+    const students = store.get("students", []);
     return students
-      .filter(s => s.class_id)
-      .map(s => ({
+      .filter((s) => s.class_id)
+      .map((s) => ({
         class_id: s.class_id,
         student_code: s.code,
-        student_name: s.name || s.code
+        student_name: s.name || s.code,
       }));
   },
-  
+
   async upsertClass(classData) {
-    const classes = store.get('classes', []);
-    const existing = classes.find(c => c.id === classData.id || c.name === classData.name);
+    const classes = store.get("classes", []);
+    const existing = classes.find((c) => c.id === classData.id || c.name === classData.name);
     if (existing) {
       Object.assign(existing, classData);
     } else {
-      classes.push({ id: classData.id || 'CLS' + Date.now(), ...classData });
+      classes.push({ id: classData.id || "CLS" + Date.now(), ...classData });
     }
-    store.set('classes', classes);
+    store.set("classes", classes);
     return classData;
   },
-  
+
   async upsertClassEnrollment(enrollment) {
-    const enrollments = store.get('classEnrollments', []);
-    const existing = enrollments.find(e => 
-      e.class_id === enrollment.class_id && e.student_code === enrollment.student_code
+    const enrollments = store.get("classEnrollments", []);
+    const existing = enrollments.find(
+      (e) => e.class_id === enrollment.class_id && e.student_code === enrollment.student_code
     );
     if (!existing) {
       enrollments.push(enrollment);
-      store.set('classEnrollments', enrollments);
+      store.set("classEnrollments", enrollments);
     }
     return enrollment;
   },
-  
+
   // Phase B: HTML Package Upload (local stub - stores manifest but not actual files)
   async uploadAssignmentZip(file, manifest, createdBy = null) {
     // In local mode, we can't actually store files, so just create assignment with manifest data
-    const id = 'A' + Math.random().toString(36).slice(2, 9).toUpperCase();
-    const arr = store.get('assignments', []);
+    const id = "A" + Math.random().toString(36).slice(2, 9).toUpperCase();
+    const arr = store.get("assignments", []);
     const assignment = {
       id,
       title: manifest.title,
-      type: 'html',
+      type: "html",
       series: null,
       page: manifest.page || null,
       hero: null,
       meta: {
         version: manifest.version,
-        questions: manifest.questions || []
+        questions: manifest.questions || [],
       },
       created_by: createdBy,
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
     };
     arr.push(assignment);
-    store.set('assignments', arr);
+    store.set("assignments", arr);
     return assignment;
   },
-  
+
   // Phase B: Google Forms metadata
   async saveFormMeta(assignmentId, meta) {
-    const arr = store.get('assignments', []);
-    const assignment = arr.find(a => a.id === assignmentId);
-    if (!assignment) throw new Error('Assignment not found');
-    
+    const arr = store.get("assignments", []);
+    const assignment = arr.find((a) => a.id === assignmentId);
+    if (!assignment) throw new Error("Assignment not found");
+
     // Merge metadata
     assignment.meta = { ...assignment.meta, ...meta };
-    
+
     // If page is provided, update it at top level
     if (meta.page) {
       assignment.page = meta.page;
     }
-    
-    store.set('assignments', arr);
+
+    store.set("assignments", arr);
     return true;
   },
-  
+
   // Phase B: Import responses from CSV (local stub)
   async importResponsesFromCSV(assignmentId, file, mapping) {
     // Local mode doesn't support full CSV import, return stub
-    throw new Error('CSV import not supported in local mode. Please enable Supabase.');
+    throw new Error("CSV import not supported in local mode. Please enable Supabase.");
   },
 
   // ============================================================================
   // Phase 1: Goal Progress (Local fallback)
   // ============================================================================
-  async listGoalProgress({ studentCodes, goalCodes, classCodes, startDate, endDate, goalAreas, limit } = {}) {
-    console.log('[goal-progress] listGoalProgress (local mode)', { studentCodes, goalCodes, classCodes, startDate, endDate, goalAreas, limit });
-    const progressArr = store.get('goalProgress', []);
-    const students = store.get('students', []);
-    const goalsMap = store.get('iepGoals', {});
-    
+  async listGoalProgress({
+    studentCodes,
+    goalCodes,
+    classCodes,
+    startDate,
+    endDate,
+    goalAreas,
+    limit,
+  } = {}) {
+    console.log("[goal-progress] listGoalProgress (local mode)", {
+      studentCodes,
+      goalCodes,
+      classCodes,
+      startDate,
+      endDate,
+      goalAreas,
+      limit,
+    });
+    const progressArr = store.get("goalProgress", []);
+    const students = store.get("students", []);
+    const goalsMap = store.get("iepGoals", {});
+
     // Build a flat list of goals with metadata
     const allGoals = [];
     for (const [student_code, goals] of Object.entries(goalsMap)) {
@@ -426,94 +494,108 @@ const local = {
           ...goal,
           student_code,
           goal_code: goal.code,
-          goal_area: goal.goal_area || 'Uncategorized'
+          goal_area: goal.goal_area || "Uncategorized",
         });
       }
     }
-    
+
     // Filter progress entries
-    let filtered = progressArr.filter(p => {
+    let filtered = progressArr.filter((p) => {
       // Filter by student codes
-      if (studentCodes && studentCodes.length > 0 && !studentCodes.includes(p.student_code)) return false;
-      
+      if (studentCodes && studentCodes.length > 0 && !studentCodes.includes(p.student_code))
+        return false;
+
       // Filter by goal codes
       if (goalCodes && goalCodes.length > 0 && !goalCodes.includes(p.goal_code)) return false;
-      
+
       // Filter by class codes
       if (classCodes && classCodes.length > 0 && !classCodes.includes(p.class_code)) return false;
-      
+
       // Filter by date range
       if (startDate && p.date < startDate) return false;
       if (endDate && p.date > endDate) return false;
-      
+
       // Filter by goal areas (join with goals to get goal_area)
       if (goalAreas && goalAreas.length > 0) {
-        const goal = allGoals.find(g => g.goal_code === p.goal_code && g.student_code === p.student_code);
+        const goal = allGoals.find(
+          (g) => g.goal_code === p.goal_code && g.student_code === p.student_code
+        );
         if (!goal || !goalAreas.includes(goal.goal_area)) return false;
       }
-      
+
       return true;
     });
-    
+
     // Enrich with metadata
-    filtered = filtered.map(p => {
-      const student = students.find(s => s.code === p.student_code);
-      const goal = allGoals.find(g => g.goal_code === p.goal_code && g.student_code === p.student_code);
+    filtered = filtered.map((p) => {
+      const student = students.find((s) => s.code === p.student_code);
+      const goal = allGoals.find(
+        (g) => g.goal_code === p.goal_code && g.student_code === p.student_code
+      );
       return {
         ...p,
         student_name: student?.name || p.student_code,
-        goal_desc: goal?.desc || '',
-        goal_area: goal?.goal_area || 'Uncategorized',
-        class_code: p.class_code || null
+        goal_desc: goal?.desc || "",
+        goal_area: goal?.goal_area || "Uncategorized",
+        class_code: p.class_code || null,
       };
     });
-    
+
     // Apply limit
     if (limit) {
       filtered = filtered.slice(0, limit);
     }
-    
+
     return filtered;
   },
 
   async listGoalQuarterAverages({ goalIds, studentIds, year } = {}) {
-    console.log('[goal-progress] listGoalQuarterAverages (local mode)', { goalIds, studentIds, year });
-    const progressArr = store.get('goalProgress', []);
-    
+    console.log("[goal-progress] listGoalQuarterAverages (local mode)", {
+      goalIds,
+      studentIds,
+      year,
+    });
+    const progressArr = store.get("goalProgress", []);
+
     // Group by goal_code, student_code, quarter
     const groups = {};
-    
-    progressArr.forEach(p => {
+
+    progressArr.forEach((p) => {
       if (!p.date || p.value == null) return;
-      
+
       const date = new Date(p.date);
       const month = date.getMonth() + 1; // 1-12
       const day = date.getDate();
       const pYear = date.getFullYear();
-      
+
       // TODO: Make quarter dates configurable from /teacher/overview/ settings
       // Determine school year and quarter based on actual school calendar
       // School year starts Aug 16, so Aug 16-Dec 31 use current year, Jan 1-Aug 15 use previous year
-      const schoolYear = (month > 8 || (month === 8 && day >= 16)) ? pYear : pYear - 1;
-      
+      const schoolYear = month > 8 || (month === 8 && day >= 16) ? pYear : pYear - 1;
+
       // Q1: Aug 16-Oct 17, Q2: Oct 18-Dec 19, Q3: Dec 20-Mar 6, Q4: Mar 7-May 20
-      let quarter = 'Unknown';
+      let quarter = "Unknown";
       if ((month === 8 && day >= 16) || month === 9 || (month === 10 && day <= 17)) {
-        quarter = 'Q1';
+        quarter = "Q1";
       } else if ((month === 10 && day >= 18) || month === 11 || (month === 12 && day <= 19)) {
-        quarter = 'Q2';
-      } else if ((month === 12 && day >= 20) || month === 1 || month === 2 || (month === 3 && day <= 6)) {
-        quarter = 'Q3';
+        quarter = "Q2";
+      } else if (
+        (month === 12 && day >= 20) ||
+        month === 1 ||
+        month === 2 ||
+        (month === 3 && day <= 6)
+      ) {
+        quarter = "Q3";
       } else if ((month === 3 && day >= 7) || month === 4 || (month === 5 && day <= 20)) {
-        quarter = 'Q4';
+        quarter = "Q4";
       } else {
         // Summer (May 21-Aug 15) - treat as Q4
-        quarter = 'Q4';
+        quarter = "Q4";
       }
-      
+
       // Filter by year if specified
       if (year && schoolYear !== year) return;
-      
+
       const key = `${p.student_code}|${p.goal_code}|${quarter}|${schoolYear}`;
       if (!groups[key]) {
         groups[key] = {
@@ -522,34 +604,48 @@ const local = {
           quarter,
           school_year: schoolYear,
           sum: 0,
-          count: 0
+          count: 0,
         };
       }
-      
+
       groups[key].sum += parseFloat(p.value);
       groups[key].count += 1;
     });
-    
+
     // Convert to array with averages
-    const result = Object.values(groups).map(g => ({
+    const result = Object.values(groups).map((g) => ({
       student_code: g.student_code,
       goal_code: g.goal_code,
       quarter: g.quarter,
       school_year: g.school_year,
-      avg_value: Math.round(g.sum / g.count * 10) / 10,
-      measurement_count: g.count
+      avg_value: Math.round((g.sum / g.count) * 10) / 10,
+      measurement_count: g.count,
     }));
-    
+
     return result;
   },
 
-  async upsertGoalProgress({ goal_code, student_code, date, value, source = 'manual', class_code = null, collected_by = null }) {
-    console.log('[goal-progress] upsertGoalProgress (local mode)', { goal_code, student_code, date, value, source });
-    const arr = store.get('goalProgress', []);
-    
+  async upsertGoalProgress({
+    goal_code,
+    student_code,
+    date,
+    value,
+    source = "manual",
+    class_code = null,
+    collected_by = null,
+  }) {
+    console.log("[goal-progress] upsertGoalProgress (local mode)", {
+      goal_code,
+      student_code,
+      date,
+      value,
+      source,
+    });
+    const arr = store.get("goalProgress", []);
+
     // Create new entry (local mode doesn't update, just appends)
     const entry = {
-      id: 'gp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9),
+      id: "gp_" + Date.now() + "_" + Math.random().toString(36).slice(2, 9),
       goal_code,
       student_code,
       class_code,
@@ -557,37 +653,37 @@ const local = {
       value: parseFloat(value),
       source,
       collected_by,
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
     };
-    
+
     arr.push(entry);
-    store.set('goalProgress', arr);
-    
+    store.set("goalProgress", arr);
+
     return entry;
   },
 
   // ============================================================================
   // Review Tab: Submission Answers
   // ============================================================================
-  
+
   /**
    * List all submission answers for a given submission with enriched data
    * @param {string} submissionId - Submission ID
    * @returns {Array} Submission answers with item details and mappings
    */
   async listSubmissionAnswers(submissionId) {
-    const answers = store.get('submissionAnswers', []);
-    const items = store.get('assignmentItems', []);
-    const mappings = store.get('assignmentItemMappings', []);
-    
+    const answers = store.get("submissionAnswers", []);
+    const items = store.get("assignmentItems", []);
+    const mappings = store.get("assignmentItemMappings", []);
+
     // Filter answers for this submission
-    const submissionAnswers = answers.filter(a => a.submission_id === submissionId);
-    
+    const submissionAnswers = answers.filter((a) => a.submission_id === submissionId);
+
     // Enrich with item and mapping data
-    return submissionAnswers.map(answer => {
-      const item = items.find(i => i.id === answer.item_id) || {};
-      const mapping = mappings.find(m => m.item_id === answer.item_id) || {};
-      
+    return submissionAnswers.map((answer) => {
+      const item = items.find((i) => i.id === answer.item_id) || {};
+      const mapping = mappings.find((m) => m.item_id === answer.item_id) || {};
+
       return {
         ...answer,
         item_ref: item.item_ref,
@@ -596,7 +692,7 @@ const local = {
         meta: item.meta,
         dese_codes: mapping.dese_codes || [],
         goal_codes: mapping.goal_codes || [],
-        weight: mapping.weight || 1.0
+        weight: mapping.weight || 1.0,
       };
     });
   },
@@ -607,30 +703,30 @@ const local = {
    * @returns {Object} Updated submission answer
    */
   async updateSubmissionAnswer({ submissionId, itemId, earnedPoints, teacherNote }) {
-    const answers = store.get('submissionAnswers', []);
+    const answers = store.get("submissionAnswers", []);
     const existingIndex = answers.findIndex(
-      a => a.submission_id === submissionId && a.item_id === itemId
+      (a) => a.submission_id === submissionId && a.item_id === itemId
     );
-    
+
     const updatedAnswer = {
       submission_id: submissionId,
       item_id: itemId,
       earned_points: earnedPoints,
       // Note: is_correct is not set for manual grading as it's ambiguous (partial credit, 0-point items, etc.)
-      teacher_note: teacherNote || '',
-      created_at: new Date().toISOString()
+      teacher_note: teacherNote || "",
+      created_at: new Date().toISOString(),
     };
-    
+
     if (existingIndex >= 0) {
       // Update existing
       answers[existingIndex] = { ...answers[existingIndex], ...updatedAnswer };
     } else {
       // Create new
-      updatedAnswer.id = 'SA' + Date.now() + '_' + Math.random().toString(36).slice(2, 9);
+      updatedAnswer.id = "SA" + Date.now() + "_" + Math.random().toString(36).slice(2, 9);
       answers.push(updatedAnswer);
     }
-    
-    store.set('submissionAnswers', answers);
+
+    store.set("submissionAnswers", answers);
     return updatedAnswer;
   },
 
@@ -641,27 +737,27 @@ const local = {
    * @returns {boolean} Success
    */
   async finalizeSubmission(submissionId, { scoreManual, scoreTotal }) {
-    const submissions = store.get('submissions', []);
-    const submission = submissions.find(s => s.id === submissionId);
-    
+    const submissions = store.get("submissions", []);
+    const submission = submissions.find((s) => s.id === submissionId);
+
     if (!submission) {
-      throw new Error('Submission not found');
+      throw new Error("Submission not found");
     }
-    
+
     submission.score_manual = scoreManual;
     submission.score_total = scoreTotal;
-    submission.review_status = 'reviewed';
-    
-    store.set('submissions', submissions);
-    
+    submission.review_status = "reviewed";
+
+    store.set("submissions", submissions);
+
     // Update instance status to 'Reviewed'
-    const instances = store.get('assignmentInstances', []);
-    const instance = instances.find(i => i.id === submission.instance_id);
+    const instances = store.get("assignmentInstances", []);
+    const instance = instances.find((i) => i.id === submission.instance_id);
     if (instance) {
-      instance.status = 'Reviewed';
-      store.set('assignmentInstances', instances);
+      instance.status = "Reviewed";
+      store.set("assignmentInstances", instances);
     }
-    
+
     return true;
   },
 
@@ -674,8 +770,8 @@ const local = {
    * @returns {Array} Students where active = false
    */
   async getArchivedStudents() {
-    const students = store.get('students', []);
-    return students.filter(s => s.active === false);
+    const students = store.get("students", []);
+    return students.filter((s) => s.active === false);
   },
 
   /**
@@ -684,32 +780,32 @@ const local = {
    * @returns {Object} {student, goals, submissions, progress, gradebookScores}
    */
   async getStudentArchiveData(studentCode) {
-    const students = store.get('students', []);
-    const student = students.find(s => s.code === studentCode);
+    const students = store.get("students", []);
+    const student = students.find((s) => s.code === studentCode);
     if (!student) return null;
 
     // Get all goals for this student (including archived versions)
-    const iepGoals = store.get('iepGoals', {});
+    const iepGoals = store.get("iepGoals", {});
     const goals = iepGoals[studentCode] || [];
 
     // Get all submissions
-    const allSubmissions = store.get('submissions', []);
-    const submissions = allSubmissions.filter(s => s.student_code === studentCode);
+    const allSubmissions = store.get("submissions", []);
+    const submissions = allSubmissions.filter((s) => s.student_code === studentCode);
 
     // Get all progress entries
-    const allProgress = store.get('goalProgress', []);
-    const progress = allProgress.filter(p => p.student_code === studentCode);
+    const allProgress = store.get("goalProgress", []);
+    const progress = allProgress.filter((p) => p.student_code === studentCode);
 
     // Get gradebook scores (if available)
-    const allScores = store.get('gradebookScores', []);
-    const gradebookScores = allScores.filter(s => s.student_code === studentCode);
+    const allScores = store.get("gradebookScores", []);
+    const gradebookScores = allScores.filter((s) => s.student_code === studentCode);
 
     return {
       student,
       goals,
       submissions,
       progress,
-      gradebookScores
+      gradebookScores,
     };
   },
 
@@ -719,13 +815,13 @@ const local = {
    * @returns {Object} Updated student
    */
   async reactivateStudent(studentCode) {
-    const students = store.get('students', []);
-    const student = students.find(s => s.code === studentCode);
-    if (!student) throw new Error('Student not found');
+    const students = store.get("students", []);
+    const student = students.find((s) => s.code === studentCode);
+    if (!student) throw new Error("Student not found");
 
     student.active = true;
     student.archived_at = null;
-    store.set('students', students);
+    store.set("students", students);
 
     return student;
   },
@@ -740,37 +836,35 @@ const local = {
    * @returns {Object} Token object with token string
    */
   async createDataEntryToken({ studentCode, goalCode, dataCollector, dataCollectorEmail }) {
-    const tokens = store.get('dataEntryTokens', []);
-    
+    const tokens = store.get("dataEntryTokens", []);
+
     // Check if token already exists for this student+goal combo
-    const existing = tokens.find(t => 
-      t.student_code === studentCode && 
-      t.goal_code === goalCode && 
-      !t.revoked
+    const existing = tokens.find(
+      (t) => t.student_code === studentCode && t.goal_code === goalCode && !t.revoked
     );
-    
+
     if (existing) return existing;
 
     // Generate random 32-char hex token
     const tokenArray = new Uint8Array(16);
     crypto.getRandomValues(tokenArray);
-    const token = Array.from(tokenArray, byte => byte.toString(16).padStart(2, '0')).join('');
+    const token = Array.from(tokenArray, (byte) => byte.toString(16).padStart(2, "0")).join("");
 
     const tokenObj = {
-      id: 'tok_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9),
+      id: "tok_" + Date.now() + "_" + Math.random().toString(36).slice(2, 9),
       token,
       student_code: studentCode,
       goal_code: goalCode,
       data_collector: dataCollector,
       data_collector_email: dataCollectorEmail,
-      created_by: 'teacher',
+      created_by: "teacher",
       created_at: new Date().toISOString(),
       expires_at: null,
-      revoked: false
+      revoked: false,
     };
 
     tokens.push(tokenObj);
-    store.set('dataEntryTokens', tokens);
+    store.set("dataEntryTokens", tokens);
 
     return tokenObj;
   },
@@ -781,11 +875,11 @@ const local = {
    * @returns {Object|null} Token object or null if invalid/revoked/expired
    */
   async getDataEntryToken(token) {
-    const tokens = store.get('dataEntryTokens', []);
-    const tokenObj = tokens.find(t => t.token === token);
-    
+    const tokens = store.get("dataEntryTokens", []);
+    const tokenObj = tokens.find((t) => t.token === token);
+
     if (!tokenObj || tokenObj.revoked) return null;
-    
+
     // Check expiration
     if (tokenObj.expires_at) {
       const expiresAt = new Date(tokenObj.expires_at);
@@ -801,11 +895,12 @@ const local = {
    * @returns {Array} Active tokens
    */
   async listDataEntryTokens(studentCode) {
-    const tokens = store.get('dataEntryTokens', []);
-    return tokens.filter(t => 
-      t.student_code === studentCode && 
-      !t.revoked &&
-      (!t.expires_at || new Date(t.expires_at) > new Date())
+    const tokens = store.get("dataEntryTokens", []);
+    return tokens.filter(
+      (t) =>
+        t.student_code === studentCode &&
+        !t.revoked &&
+        (!t.expires_at || new Date(t.expires_at) > new Date())
     );
   },
 
@@ -815,12 +910,12 @@ const local = {
    * @returns {boolean} Success
    */
   async revokeDataEntryToken(tokenId) {
-    const tokens = store.get('dataEntryTokens', []);
-    const token = tokens.find(t => t.id === tokenId);
+    const tokens = store.get("dataEntryTokens", []);
+    const token = tokens.find((t) => t.id === tokenId);
     if (!token) return false;
 
     token.revoked = true;
-    store.set('dataEntryTokens', tokens);
+    store.set("dataEntryTokens", tokens);
 
     return true;
   },
@@ -829,119 +924,165 @@ const local = {
 const remote = {
   async listStudents() {
     const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
-    
+    if (!supabase) throw new Error("supabase-not-configured");
+
     // Try with new columns first
     let { data, error } = await supabase
-      .from('students')
-      .select('id, code, name, class_id, iep_due, eval_due, primary_case_manager, archived_at, active')
-      .order('code');
-    
+      .from("students")
+      .select(
+        "id, code, name, class_id, iep_due, eval_due, primary_case_manager, archived_at, active"
+      )
+      .order("code");
+
     // Graceful fallback: if ANY error occurs, attempt basic columns before throwing
     // This makes the fallback more resilient than just checking for schema errors
     if (error) {
       const isSchema = isSchemaError(error);
-      console.warn('[data-adapter] Supabase query failed, attempting fallback to basic columns.', {
+      console.warn("[data-adapter] Supabase query failed, attempting fallback to basic columns.", {
         isSchemaError: isSchema,
         errorCode: error?.code,
         errorStatus: error?.status,
-        errorMessage: error?.message
+        errorMessage: error?.message,
       });
-      
+
       // Attempt basic columns fallback (guaranteed to exist from 001_init.sql)
       const fallback = await supabase
-        .from('students')
-        .select('id, code, name, class_id')
-        .order('code');
-      
+        .from("students")
+        .select("id, code, name, class_id")
+        .order("code");
+
       // If basic fallback also fails, throw the original error for better debugging
       if (fallback.error) {
-        console.error('[data-adapter] Basic columns fallback also failed:', fallback.error);
+        console.error("[data-adapter] Basic columns fallback also failed:", fallback.error);
         throw error; // Throw original error, not fallback error
       }
-      
+
       // Dispatch custom event for schema drift detection
       // The UI can listen to this and show a banner
-      if (isSchema && typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('schema-drift-detected', {
-          detail: {
-            source: 'listStudents',
-            errorCode: error?.code,
-            errorMessage: error?.message
-          }
-        }));
+      if (isSchema && typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("schema-drift-detected", {
+            detail: {
+              source: "listStudents",
+              errorCode: error?.code,
+              errorMessage: error?.message,
+            },
+          })
+        );
       }
-      
+
       return fallback.data;
     }
-    
+
     return data;
   },
   async upsertStudent(studentData) {
     const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
-    
-    const { code, name, class_id = null, iep_due, eval_due, primary_case_manager, archived_at, active } = studentData;
-    
+    if (!supabase) throw new Error("supabase-not-configured");
+
+    const {
+      code,
+      name,
+      class_id = null,
+      iep_due,
+      eval_due,
+      primary_case_manager,
+      archived_at,
+      active,
+    } = studentData;
+
     // TC-3.1: Use server-backed function to avoid RLS errors
     // Call teacher-students-upsert function with batch of 1 student
     try {
-      const response = await fetch('/.netlify/functions/teacher-students-upsert', {
-        method: 'POST',
-        credentials: 'include', // Include teacher session cookie
+      const response = await fetch("/.netlify/functions/teacher-students-upsert", {
+        method: "POST",
+        credentials: "include", // Include teacher session cookie
         headers: {
-          'Content-Type': 'application/json'
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          students: [{ 
-            code, 
-            name: name || code, 
+          students: [
+            {
+              code,
+              name: name || code,
+              class_id,
+              iep_due,
+              eval_due,
+              primary_case_manager,
+              archived_at,
+              active,
+            },
+          ],
+        }),
+      });
+
+      // TC-3.1: Get request ID from response headers for error tracking
+      const requestId = response.headers.get("X-Request-Id") || "unknown";
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
+
+        // TC-3.1: Only allow fallback to direct Supabase in local dev environments
+        if (isLocalDev() && (response.status === 401 || response.status === 503)) {
+          console.log(
+            "[data-adapter] Local dev: Teacher function unavailable, falling back to direct Supabase"
+          );
+          const payload = {
+            code,
+            name,
             class_id,
             iep_due,
             eval_due,
             primary_case_manager,
             archived_at,
-            active
-          }]
-        })
-      });
-      
-      // TC-3.1: Get request ID from response headers for error tracking
-      const requestId = response.headers.get('X-Request-Id') || 'unknown';
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        
-        // TC-3.1: Only allow fallback to direct Supabase in local dev environments
-        if (isLocalDev() && (response.status === 401 || response.status === 503)) {
-          console.log('[data-adapter] Local dev: Teacher function unavailable, falling back to direct Supabase');
-          const payload = { code, name, class_id, iep_due, eval_due, primary_case_manager, archived_at, active };
-          const { data, error } = await supabase.from('students').upsert(payload, { onConflict: 'code' }).select().single();
+            active,
+          };
+          const { data, error } = await supabase
+            .from("students")
+            .upsert(payload, { onConflict: "code" })
+            .select()
+            .single();
           if (error) throw error;
           return data;
         }
-        
+
         // TC-3.1: In production, throw clear error with request ID (no fallback)
         const errorMsg = errorData.error || `Server error: ${response.status}`;
         throw new Error(`${errorMsg} (Request ID: ${requestId})`);
       }
-      
+
       const result = await response.json();
       if (!result.ok || !result.students || result.students.length === 0) {
         throw new Error(`Failed to upsert student: Empty result (Request ID: ${requestId})`);
       }
-      
+
       return result.students[0];
     } catch (err) {
       // TC-3.1: Only allow fallback in local dev (no production fallback to avoid RLS violations)
-      if (isLocalDev() && err.message !== 'supabase-not-configured') {
-        console.warn('[data-adapter] Local dev: Server upsert failed, attempting direct Supabase:', err.message);
-        const payload = { code, name, class_id, iep_due, eval_due, primary_case_manager, archived_at, active };
-        const { data, error } = await supabase.from('students').upsert(payload, { onConflict: 'code' }).select().single();
+      if (isLocalDev() && err.message !== "supabase-not-configured") {
+        console.warn(
+          "[data-adapter] Local dev: Server upsert failed, attempting direct Supabase:",
+          err.message
+        );
+        const payload = {
+          code,
+          name,
+          class_id,
+          iep_due,
+          eval_due,
+          primary_case_manager,
+          archived_at,
+          active,
+        };
+        const { data, error } = await supabase
+          .from("students")
+          .upsert(payload, { onConflict: "code" })
+          .select()
+          .single();
         if (error) throw error;
         return data;
       }
-      
+
       // In production or if Supabase not configured, throw the original error
       throw err;
     }
@@ -951,149 +1092,203 @@ const remote = {
     if (!Array.isArray(students) || students.length === 0) {
       return [];
     }
-    
+
     const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
-    
+    if (!supabase) throw new Error("supabase-not-configured");
+
     // Use server-backed function for batch operations
     try {
-      const response = await fetch('/.netlify/functions/teacher-students-upsert', {
-        method: 'POST',
-        credentials: 'include',
+      const response = await fetch("/.netlify/functions/teacher-students-upsert", {
+        method: "POST",
+        credentials: "include",
         headers: {
-          'Content-Type': 'application/json'
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({ students })
+        body: JSON.stringify({ students }),
       });
-      
+
       // TC-3.1: Get request ID from response headers for error tracking
-      const requestId = response.headers.get('X-Request-Id') || 'unknown';
-      
+      const requestId = response.headers.get("X-Request-Id") || "unknown";
+
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        
+        const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
+
         // TC-3.1: Only allow fallback to direct Supabase in local dev environments
         if (isLocalDev() && (response.status === 401 || response.status === 503)) {
-          console.log('[data-adapter] Local dev: Teacher function unavailable for batch, falling back to direct Supabase');
-          const studentsToUpsert = students.map(s => ({
+          console.log(
+            "[data-adapter] Local dev: Teacher function unavailable for batch, falling back to direct Supabase"
+          );
+          const studentsToUpsert = students.map((s) => ({
             code: s.code,
             name: s.name || s.code,
-            class_id: s.class_id || null
+            class_id: s.class_id || null,
           }));
-          const { data, error } = await supabase.from('students').upsert(studentsToUpsert, { onConflict: 'code' }).select();
+          const { data, error } = await supabase
+            .from("students")
+            .upsert(studentsToUpsert, { onConflict: "code" })
+            .select();
           if (error) throw error;
           return data;
         }
-        
+
         // TC-3.1: In production, throw clear error with request ID (no fallback)
         const errorMsg = errorData.error || `Server error: ${response.status}`;
         throw new Error(`${errorMsg} (Request ID: ${requestId})`);
       }
-      
+
       const result = await response.json();
       if (!result.ok || !result.students) {
         throw new Error(`Failed to batch upsert students (Request ID: ${requestId})`);
       }
-      
+
       return result.students;
     } catch (err) {
       // TC-3.1: Only allow fallback in local dev (no production fallback to avoid RLS violations)
-      if (isLocalDev() && err.message !== 'supabase-not-configured') {
-        console.warn('[data-adapter] Local dev: Server batch upsert failed, attempting direct Supabase:', err.message);
-        const studentsToUpsert = students.map(s => ({
+      if (isLocalDev() && err.message !== "supabase-not-configured") {
+        console.warn(
+          "[data-adapter] Local dev: Server batch upsert failed, attempting direct Supabase:",
+          err.message
+        );
+        const studentsToUpsert = students.map((s) => ({
           code: s.code,
           name: s.name || s.code,
-          class_id: s.class_id || null
+          class_id: s.class_id || null,
         }));
-        const { data, error } = await supabase.from('students').upsert(studentsToUpsert, { onConflict: 'code' }).select();
+        const { data, error } = await supabase
+          .from("students")
+          .upsert(studentsToUpsert, { onConflict: "code" })
+          .select();
         if (error) throw error;
         return data;
       }
-      
+
       // In production or if Supabase not configured, throw the original error
       throw err;
     }
   },
   async listGoalsByStudentCode(code) {
     const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
-    const { data: stu, error: e1 } = await supabase.from('students').select('id').eq('code', code).single();
+    if (!supabase) throw new Error("supabase-not-configured");
+    const { data: stu, error: e1 } = await supabase
+      .from("students")
+      .select("id")
+      .eq("code", code)
+      .single();
     if (e1) throw e1;
-    const { data, error } = await supabase.from('goals').select('id, code, desc, target, status').eq('student_id', stu.id).order('code');
-    if (error) throw error; return data;
+    const { data, error } = await supabase
+      .from("goals")
+      .select("id, code, desc, target, status")
+      .eq("student_id", stu.id)
+      .order("code");
+    if (error) throw error;
+    return data;
   },
-  async upsertGoal({ student_code, code, goal_text, desc, target = null, status = 'Open',
-                     measurement_type = 'percent', data_collector = null,
-                     data_collector_email = null, class_context = null,
-                     goal_area = null, baseline = null, case_manager = null, version = 1 }) {
+  async upsertGoal({
+    student_code,
+    code,
+    goal_text,
+    desc,
+    target = null,
+    status = "Open",
+    measurement_type = "percent",
+    data_collector = null,
+    data_collector_email = null,
+    class_context = null,
+    goal_area = null,
+    baseline = null,
+    case_manager = null,
+    version = 1,
+  }) {
     const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
+    if (!supabase) throw new Error("supabase-not-configured");
     // Lookup student by code
-    const { data: stu, error: e1 } = await supabase.from('students').select('id').eq('code', student_code).single();
+    const { data: stu, error: e1 } = await supabase
+      .from("students")
+      .select("id")
+      .eq("code", student_code)
+      .single();
     if (e1) throw e1;
     // Map goal_text to desc for consistency with database schema
     const description = goal_text || desc;
-    
+
     // Try with new columns first
-    const fullPayload = { 
-      student_id: stu.id, code, desc: description, target, status,
-      measurement_type, data_collector, data_collector_email, class_context,
-      goal_area, baseline, case_manager, version
+    const fullPayload = {
+      student_id: stu.id,
+      code,
+      desc: description,
+      target,
+      status,
+      measurement_type,
+      data_collector,
+      data_collector_email,
+      class_context,
+      goal_area,
+      baseline,
+      case_manager,
+      version,
     };
-    let { data, error } = await supabase.from('goals')
-      .upsert(fullPayload, { onConflict: 'student_id,code' })
+    let { data, error } = await supabase
+      .from("goals")
+      .upsert(fullPayload, { onConflict: "student_id,code" })
       .select()
       .single();
-    
+
     // Graceful fallback: if schema error, retry with basic columns only
     if (isSchemaError(error)) {
-      console.warn('[data-adapter] Supabase schema may be outdated — some columns not available. Please apply pending migrations.');
+      console.warn(
+        "[data-adapter] Supabase schema may be outdated — some columns not available. Please apply pending migrations."
+      );
       const basicPayload = { student_id: stu.id, code, desc: description, target, status };
-      const fallback = await supabase.from('goals')
-        .upsert(basicPayload, { onConflict: 'student_id,code' })
+      const fallback = await supabase
+        .from("goals")
+        .upsert(basicPayload, { onConflict: "student_id,code" })
         .select()
         .single();
       if (fallback.error) throw fallback.error;
       return { student_code, ...fallback.data };
     }
-    
+
     if (error) throw error;
     return { student_code, ...data };
   },
   async listGoalsAll() {
     const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
-    
+    if (!supabase) throw new Error("supabase-not-configured");
+
     // Try with new columns first
     let { data, error } = await supabase
-      .from('goals')
-      .select(`id, code, desc, target, status, student_id, 
+      .from("goals")
+      .select(
+        `id, code, desc, target, status, student_id, 
               measurement_type, data_collector, data_collector_email, class_context,
               goal_area, baseline, case_manager, version,
-              students!inner(code)`)
-      .order('code', { foreignTable: 'students', ascending: true });
-    
+              students!inner(code)`
+      )
+      .order("code", { foreignTable: "students", ascending: true });
+
     // Graceful fallback: if schema error, retry with basic columns only
     if (isSchemaError(error)) {
-      console.warn('[data-adapter] Supabase schema may be outdated — some columns not available. Please apply pending migrations.');
+      console.warn(
+        "[data-adapter] Supabase schema may be outdated — some columns not available. Please apply pending migrations."
+      );
       const fallback = await supabase
-        .from('goals')
-        .select('id, code, desc, target, status, student_id, students!inner(code)')
-        .order('code', { foreignTable: 'students', ascending: true });
+        .from("goals")
+        .select("id, code, desc, target, status, student_id, students!inner(code)")
+        .order("code", { foreignTable: "students", ascending: true });
       if (fallback.error) throw fallback.error;
-      return (fallback.data || []).map(g => ({
+      return (fallback.data || []).map((g) => ({
         id: g.id,
         student_code: g.students.code,
         code: g.code,
         desc: g.desc,
         target: g.target,
-        status: g.status
+        status: g.status,
       }));
     }
-    
+
     if (error) throw error;
     // Flatten to include student_code at top level
-    return (data || []).map(g => ({
+    return (data || []).map((g) => ({
       id: g.id,
       student_code: g.students.code,
       code: g.code,
@@ -1107,80 +1302,114 @@ const remote = {
       goal_area: g.goal_area,
       baseline: g.baseline,
       case_manager: g.case_manager,
-      version: g.version
+      version: g.version,
     }));
   },
-  async addProgress({ student_code, goal_id, date, points = '', percent = null, method = '', by_name = 'Teacher', via = 'manual', notes = '' }) {
+  async addProgress({
+    student_code,
+    goal_id,
+    date,
+    points = "",
+    percent = null,
+    method = "",
+    by_name = "Teacher",
+    via = "manual",
+    notes = "",
+  }) {
     const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
-    const { data: stu, error: e1 } = await supabase.from('students').select('id').eq('code', student_code).single();
+    if (!supabase) throw new Error("supabase-not-configured");
+    const { data: stu, error: e1 } = await supabase
+      .from("students")
+      .select("id")
+      .eq("code", student_code)
+      .single();
     if (e1) throw e1;
-    const { error } = await supabase.from('progress_entries').insert({ student_id: stu.id, goal_id, date, points, percent, method, by_name, via, notes });
-    if (error) throw error; return true;
+    const { error } = await supabase
+      .from("progress_entries")
+      .insert({ student_id: stu.id, goal_id, date, points, percent, method, by_name, via, notes });
+    if (error) throw error;
+    return true;
   },
   async addEvent({ type, student_code, date, due, notes }) {
     const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
-    const { data: stu, error: e1 } = await supabase.from('students').select('id').eq('code', student_code).single();
+    if (!supabase) throw new Error("supabase-not-configured");
+    const { data: stu, error: e1 } = await supabase
+      .from("students")
+      .select("id")
+      .eq("code", student_code)
+      .single();
     if (e1) throw e1;
-    const { error } = await supabase.from('events').insert({ type, student_id: stu.id, date, due, notes });
-    if (error) throw error; return true;
+    const { error } = await supabase
+      .from("events")
+      .insert({ type, student_id: stu.id, date, due, notes });
+    if (error) throw error;
+    return true;
   },
   async listEvents() {
     const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
-    const { data, error } = await supabase.from('events').select('id, type, student_id, date, due, notes, created_at').order('date', { ascending: true });
-    if (error) throw error; return data;
+    if (!supabase) throw new Error("supabase-not-configured");
+    const { data, error } = await supabase
+      .from("events")
+      .select("id, type, student_id, date, due, notes, created_at")
+      .order("date", { ascending: true });
+    if (error) throw error;
+    return data;
   },
   async setStudentPassword(code, plain) {
     const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
-    const { error } = await supabase.rpc('set_student_password', { p_code: code, p_password: plain });
-    if (error) throw error; return true;
+    if (!supabase) throw new Error("supabase-not-configured");
+    const { error } = await supabase.rpc("set_student_password", {
+      p_code: code,
+      p_password: plain,
+    });
+    if (error) throw error;
+    return true;
   },
   async verifyStudentPassword(code, plain) {
     const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
-    const { data, error } = await supabase.rpc('verify_student_password', { p_code: code, p_password: plain });
-    if (error) throw error; return !!data;
+    if (!supabase) throw new Error("supabase-not-configured");
+    const { data, error } = await supabase.rpc("verify_student_password", {
+      p_code: code,
+      p_password: plain,
+    });
+    if (error) throw error;
+    return !!data;
   },
-  
+
   // Assignments
   async createAssignment(a) {
     const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
+    if (!supabase) throw new Error("supabase-not-configured");
     const payload = {
       title: a.title,
-      type: a.type || 'html',
+      type: a.type || "html",
       series: a.series || null,
       page: a.page || null,
       hero: a.hero || null,
       meta: a.meta || {},
-      created_by: a.created_by || null
+      created_by: a.created_by || null,
     };
-    const { data, error } = await supabase.from('assignments').insert(payload).select().single();
+    const { data, error } = await supabase.from("assignments").insert(payload).select().single();
     if (error) throw error;
     return data;
   },
-  
+
   async listAssignments() {
     const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
+    if (!supabase) throw new Error("supabase-not-configured");
     const { data, error } = await supabase
-      .from('assignments')
-      .select('id, title, type, series, page, hero, meta, created_at')
-      .order('created_at', { ascending: false });
+      .from("assignments")
+      .select("id, title, type, series, page, hero, meta, created_at")
+      .order("created_at", { ascending: false });
     if (error) throw error;
     return data || [];
   },
-  
+
   async listAssignmentInstances() {
     const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
+    if (!supabase) throw new Error("supabase-not-configured");
     // Join assignment_instances with students to get student code/name
-    const { data, error } = await supabase
-      .from('assignment_instances')
-      .select(`
+    const { data, error } = await supabase.from("assignment_instances").select(`
         id,
         assignment_id,
         student_id,
@@ -1191,10 +1420,10 @@ const remote = {
         students!inner(code, name)
       `);
     if (error) throw error;
-    
+
     // Flatten to include student_code and student_name at top level
     // Client-side sort by student code since we can't order on joined columns
-    const flattened = (data || []).map(inst => ({
+    const flattened = (data || []).map((inst) => ({
       id: inst.id,
       assignment_id: inst.assignment_id,
       student_id: inst.student_id,
@@ -1203,47 +1432,47 @@ const remote = {
       assigned_at: inst.assigned_at,
       due_at: inst.due_at,
       status: inst.status,
-      settings: inst.settings
+      settings: inst.settings,
     }));
-    
+
     // Sort by student code
-    flattened.sort((a, b) => (a.student_code || '').localeCompare(b.student_code || ''));
+    flattened.sort((a, b) => (a.student_code || "").localeCompare(b.student_code || ""));
     return flattened;
   },
-  
+
   async upsertAssignmentInstance(x) {
     const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
+    if (!supabase) throw new Error("supabase-not-configured");
     // Lookup student by code to get student_id
     const { data: stu, error: e1 } = await supabase
-      .from('students')
-      .select('id')
-      .eq('code', x.student_code)
+      .from("students")
+      .select("id")
+      .eq("code", x.student_code)
       .single();
     if (e1) throw e1;
-    
+
     const payload = {
       assignment_id: x.assignment_id,
       student_id: stu.id,
       due_at: x.due_at || null,
-      status: x.status || 'Assigned',
-      settings: x.settings || {}
+      status: x.status || "Assigned",
+      settings: x.settings || {},
     };
-    
+
     // Upsert on unique (assignment_id, student_id)
     const { error } = await supabase
-      .from('assignment_instances')
-      .upsert(payload, { onConflict: 'assignment_id,student_id' });
+      .from("assignment_instances")
+      .upsert(payload, { onConflict: "assignment_id,student_id" });
     if (error) throw error;
     return true;
   },
-  
+
   async addSubmission(payload) {
     const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
+    if (!supabase) throw new Error("supabase-not-configured");
     // Insert submission
     const { data: submission, error: e1 } = await supabase
-      .from('submissions')
+      .from("submissions")
       .insert({
         instance_id: payload.instance_id,
         answers: payload.answers || {},
@@ -1251,209 +1480,209 @@ const remote = {
         score_manual: payload.score_manual || null,
         score_total: payload.score_total || null,
         detail: payload.detail || {},
-        notes: payload.notes || null
+        notes: payload.notes || null,
       })
-      .select('id')
+      .select("id")
       .single();
     if (e1) throw e1;
-    
+
     // Call process_submission RPC
-    const { error: e2 } = await supabase.rpc('process_submission', { 
-      submission_id: submission.id 
+    const { error: e2 } = await supabase.rpc("process_submission", {
+      submission_id: submission.id,
     });
     if (e2) throw e2;
-    
+
     // Update assignment_instances status to 'Submitted'
     const { error: e3 } = await supabase
-      .from('assignment_instances')
-      .update({ status: 'Submitted' })
-      .eq('id', payload.instance_id);
+      .from("assignment_instances")
+      .update({ status: "Submitted" })
+      .eq("id", payload.instance_id);
     if (e3) throw e3;
-    
+
     return { submission_id: submission.id };
   },
 
   // Portal B: List submissions (filtered by student if provided)
   async listSubmissions(filters = {}) {
     const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
-    
+    if (!supabase) throw new Error("supabase-not-configured");
+
     // Query submissions with nested joins: submissions -> assignment_instances -> students
     // This allows filtering by student_code even though it's not directly in submissions table
     let query = supabase
-      .from('submissions')
-      .select('*, assignment_instances!inner(student_id, students!inner(code))')
-      .order('submitted_at', { ascending: false });
-    
+      .from("submissions")
+      .select("*, assignment_instances!inner(student_id, students!inner(code))")
+      .order("submitted_at", { ascending: false });
+
     if (filters.student_code) {
-      query = query.eq('assignment_instances.students.code', filters.student_code);
+      query = query.eq("assignment_instances.students.code", filters.student_code);
     }
-    
+
     if (filters.instance_id) {
-      query = query.eq('instance_id', filters.instance_id);
+      query = query.eq("instance_id", filters.instance_id);
     }
-    
+
     const { data, error } = await query;
     if (error) throw error;
-    
+
     return data || [];
   },
-  
+
   // Portal B: Get latest submission for an instance
   async getLatestSubmission(instance_id) {
     const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
-    
-    const { data, error } = await supabase
-      .rpc('get_latest_submission', { p_instance_id: instance_id });
-    
+    if (!supabase) throw new Error("supabase-not-configured");
+
+    const { data, error } = await supabase.rpc("get_latest_submission", {
+      p_instance_id: instance_id,
+    });
+
     if (error) throw error;
-    
+
     return data && data.length > 0 ? data[0] : null;
   },
-  
+
   // Portal B: Create resubmission
   async createResubmission({ instance_id, original_submission_id, answers = {} }) {
     const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
-    
-    const { data, error } = await supabase
-      .rpc('create_resubmission', {
-        p_instance_id: instance_id,
-        p_original_submission_id: original_submission_id,
-        p_answers: answers
-      });
-    
+    if (!supabase) throw new Error("supabase-not-configured");
+
+    const { data, error } = await supabase.rpc("create_resubmission", {
+      p_instance_id: instance_id,
+      p_original_submission_id: original_submission_id,
+      p_answers: answers,
+    });
+
     if (error) throw error;
-    
+
     return { submission_id: data };
   },
-  
+
   // Phase B: Classes and Enrollments
   async listClasses() {
     const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
-    const { data, error } = await supabase
-      .from('classes')
-      .select('id, code, name')
-      .order('code');
+    if (!supabase) throw new Error("supabase-not-configured");
+    const { data, error } = await supabase.from("classes").select("id, code, name").order("code");
     if (error) throw error;
     return data || [];
   },
-  
+
   async listClassEnrollments() {
     const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
+    if (!supabase) throw new Error("supabase-not-configured");
     // Primary: try class_enrollments table with joins
     const { data: enrollments, error: enrollError } = await supabase
-      .from('class_enrollments')
-      .select('class_id, student_id, students!inner(code, name), classes!inner(id, code, name)');
-    
+      .from("class_enrollments")
+      .select("class_id, student_id, students!inner(code, name), classes!inner(id, code, name)");
+
     if (enrollError) {
-      console.warn('class_enrollments query failed, falling back to students.class_id:', enrollError);
+      console.warn(
+        "class_enrollments query failed, falling back to students.class_id:",
+        enrollError
+      );
     }
-    
+
     // If we got data from class_enrollments, return it with defensive handling
     if (enrollments && enrollments.length > 0) {
       return enrollments
-        .filter(e => e && e.students && e.classes) // Defensive null checks
-        .map(e => ({
+        .filter((e) => e && e.students && e.classes) // Defensive null checks
+        .map((e) => ({
           class_id: e.class_id,
-          class_code: e.classes?.code || '',
-          student_code: e.students?.code || '',
-          student_name: e.students?.name || e.students?.code || ''
+          class_code: e.classes?.code || "",
+          student_code: e.students?.code || "",
+          student_name: e.students?.name || e.students?.code || "",
         }));
     }
-    
+
     // Fallback: derive from students.class_id (not recommended, but available)
     const { data: students, error: studentsError } = await supabase
-      .from('students')
-      .select('id, code, name, class_id')
-      .not('class_id', 'is', null);
-    
+      .from("students")
+      .select("id, code, name, class_id")
+      .not("class_id", "is", null);
+
     if (studentsError) {
-      console.warn('students fallback query failed:', studentsError);
+      console.warn("students fallback query failed:", studentsError);
       return []; // Return empty array if both queries fail
     }
-    
+
     // Fallback returns empty class_code since we only have class_id (not the actual code)
     return (students || [])
-      .filter(s => s && s.class_id) // Defensive null checks
-      .map(s => ({
+      .filter((s) => s && s.class_id) // Defensive null checks
+      .map((s) => ({
         class_id: s.class_id,
-        class_code: '', // Empty: no actual class code available in this fallback
-        student_code: s.code || '',
-        student_name: s.name || s.code || ''
+        class_code: "", // Empty: no actual class code available in this fallback
+        student_code: s.code || "",
+        student_name: s.name || s.code || "",
       }));
   },
-  
+
   async upsertClass(classData) {
     const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
+    if (!supabase) throw new Error("supabase-not-configured");
     const { data, error } = await supabase
-      .from('classes')
-      .upsert({ name: classData.name, code: classData.code }, { onConflict: 'name' })
+      .from("classes")
+      .upsert({ name: classData.name, code: classData.code }, { onConflict: "name" })
       .select()
       .single();
     if (error) throw error;
     return data;
   },
-  
+
   async upsertClassEnrollment(enrollment) {
     const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
+    if (!supabase) throw new Error("supabase-not-configured");
     // Resolve student_id from student_code if needed
     let studentId = enrollment.student_id;
     if (!studentId && enrollment.student_code) {
       const { data: student, error: studentError } = await supabase
-        .from('students')
-        .select('id')
-        .eq('code', enrollment.student_code)
+        .from("students")
+        .select("id")
+        .eq("code", enrollment.student_code)
         .single();
       if (studentError) throw studentError;
       studentId = student.id;
     }
-    
+
     const { error } = await supabase
-      .from('class_enrollments')
+      .from("class_enrollments")
       .upsert(
         { class_id: enrollment.class_id, student_id: studentId },
-        { onConflict: 'class_id,student_id' }
+        { onConflict: "class_id,student_id" }
       );
     if (error) throw error;
     return enrollment;
   },
-  
+
   // Phase B: HTML Package Upload with Supabase Storage
   async uploadAssignmentZip(file, manifest, createdBy = null) {
     const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
+    if (!supabase) throw new Error("supabase-not-configured");
     // 1. Create assignment row first
     const payload = {
       title: manifest.title,
-      type: 'html',
+      type: "html",
       series: manifest.series || null,
       page: null, // Will be set after upload
       hero: null,
       meta: {
         version: manifest.version,
-        questions: manifest.questions || []
+        questions: manifest.questions || [],
       },
-      created_by: createdBy
+      created_by: createdBy,
     };
-    
+
     const { data: assignment, error: createErr } = await supabase
-      .from('assignments')
+      .from("assignments")
       .insert(payload)
       .select()
       .single();
-    
+
     if (createErr) throw createErr;
-    
+
     // 2. Upload all files from the zip to storage
     // Files should be uploaded to: assignments/{assignmentId}/{filename}
     const basePath = `assignments/${assignment.id}`;
-    
+
     try {
       // NOTE: In a full implementation, this function should:
       // 1. Extract all files from the ZIP (already done by caller with JSZip)
@@ -1463,70 +1692,67 @@ const remote = {
       //      const content = await file.async('blob');
       //      await supabase.storage.from('assignments').upload(`${basePath}/${path}`, content);
       //    }
-      // 
+      //
       // For now, we construct the expected public URL without actual upload.
       // The caller must handle file uploads separately if using Supabase Storage.
-      
-      const indexUrl = `${supabase.storage.from('assignments').getPublicUrl(`${basePath}/index.html`).data.publicUrl}`;
-      
+
+      const indexUrl = `${supabase.storage.from("assignments").getPublicUrl(`${basePath}/index.html`).data.publicUrl}`;
+
       // 3. Update assignment.page with the public URL
       const { error: updateErr } = await supabase
-        .from('assignments')
+        .from("assignments")
         .update({ page: indexUrl })
-        .eq('id', assignment.id);
-      
+        .eq("id", assignment.id);
+
       if (updateErr) throw updateErr;
-      
+
       // Return the updated assignment
       return { ...assignment, page: indexUrl };
     } catch (uploadErr) {
       // If upload fails, delete the assignment to maintain consistency
-      await supabase.from('assignments').delete().eq('id', assignment.id);
+      await supabase.from("assignments").delete().eq("id", assignment.id);
       throw uploadErr;
     }
   },
-  
+
   // Phase B: Google Forms metadata
   async saveFormMeta(assignmentId, meta) {
     const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
+    if (!supabase) throw new Error("supabase-not-configured");
     // Fetch current meta and merge with new meta
     const { data: current, error: fetchErr } = await supabase
-      .from('assignments')
-      .select('meta')
-      .eq('id', assignmentId)
+      .from("assignments")
+      .select("meta")
+      .eq("id", assignmentId)
       .single();
-    
+
     if (fetchErr) throw fetchErr;
-    
+
     // Merge metadata
     const merged = { ...(current?.meta || {}), ...meta };
-    
+
     // Prepare update object
     const updateData = { meta: merged };
-    
+
     // If page is provided, update it at top level
     if (meta.page) {
       updateData.page = meta.page;
     }
-    
+
     // Update with properly parameterized query
-    const { error } = await supabase
-      .from('assignments')
-      .update(updateData)
-      .eq('id', assignmentId);
-    
+    const { error } = await supabase.from("assignments").update(updateData).eq("id", assignmentId);
+
     if (error) throw error;
     return true;
   },
-  
+
   // Phase B: Import Google Form responses from CSV
   async importResponsesFromCSV(assignmentId, csvData, answerKey) {
     const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
+    if (!supabase) throw new Error("supabase-not-configured");
     // This is a complex operation that should be done in a transaction
     // For now, we'll implement a basic version
-    
+
     // 1. Parse CSV data (caller should provide parsed rows)
     // 2. For each row:
     //    - Match student by code
@@ -1534,111 +1760,128 @@ const remote = {
     //    - Build per_goal detail from iep_goal_codes
     //    - Create submission
     //    - Call process_submission
-    
+
     const results = {
       processed: 0,
       failed: 0,
-      errors: []
+      errors: [],
     };
-    
+
     for (const row of csvData) {
       try {
-        const studentCode = row.student_code || row['Student Code'];
+        const studentCode = row.student_code || row["Student Code"];
         if (!studentCode) {
-          results.errors.push('Missing student code in row');
+          results.errors.push("Missing student code in row");
           results.failed++;
           continue;
         }
-        
+
         // Get student
         const { data: students, error: studentErr } = await supabase
-          .from('students')
-          .select('id')
-          .eq('code', studentCode)
+          .from("students")
+          .select("id")
+          .eq("code", studentCode)
           .single();
-        
+
         if (studentErr || !students) {
           results.errors.push(`Student ${studentCode} not found`);
           results.failed++;
           continue;
         }
-        
+
         // Get or create instance
         const { data: instances, error: instErr } = await supabase
-          .from('assignment_instances')
-          .select('id')
-          .eq('assignment_id', assignmentId)
-          .eq('student_id', students.id)
+          .from("assignment_instances")
+          .select("id")
+          .eq("assignment_id", assignmentId)
+          .eq("student_id", students.id)
           .maybeSingle();
-        
+
         let instanceId = instances?.id;
-        
+
         if (!instanceId) {
           // Create instance
           const { data: newInst, error: newInstErr } = await supabase
-            .from('assignment_instances')
+            .from("assignment_instances")
             .insert({
               assignment_id: assignmentId,
               student_id: students.id,
-              status: 'Assigned'
+              status: "Assigned",
             })
-            .select('id')
+            .select("id")
             .single();
-          
+
           if (newInstErr) throw newInstErr;
           instanceId = newInst.id;
         }
-        
+
         // Build submission (simplified - caller should provide formatted data)
         const { data: submission, error: subErr } = await supabase
-          .from('submissions')
+          .from("submissions")
           .insert({
             instance_id: instanceId,
             answers: row.answers || {},
             score_auto: row.score_auto || null,
             score_total: row.score_total || null,
-            detail: row.detail || {}
+            detail: row.detail || {},
           })
-          .select('id')
+          .select("id")
           .single();
-        
+
         if (subErr) throw subErr;
-        
+
         // Call process_submission
-        const { error: processErr } = await supabase.rpc('process_submission', {
-          submission_id: submission.id
+        const { error: processErr } = await supabase.rpc("process_submission", {
+          submission_id: submission.id,
         });
-        
+
         if (processErr) throw processErr;
-        
+
         // Update instance status
         await supabase
-          .from('assignment_instances')
-          .update({ status: 'Submitted' })
-          .eq('id', instanceId);
-        
+          .from("assignment_instances")
+          .update({ status: "Submitted" })
+          .eq("id", instanceId);
+
         results.processed++;
       } catch (err) {
         results.failed++;
         results.errors.push(err.message);
       }
     }
-    
+
     return results;
   },
 
   // ============================================================================
   // Phase 1: Goal Progress (Remote via Supabase)
   // ============================================================================
-  async listGoalProgress({ studentCodes, goalCodes, classCodes, startDate, endDate, goalAreas, limit } = {}) {
+  async listGoalProgress({
+    studentCodes,
+    goalCodes,
+    classCodes,
+    startDate,
+    endDate,
+    goalAreas,
+    limit,
+  } = {}) {
     const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
-    
-    console.log('[goal-progress] listGoalProgress (remote)', { studentCodes, goalCodes, classCodes, startDate, endDate, goalAreas, limit });
-    
+    if (!supabase) throw new Error("supabase-not-configured");
+
+    console.log("[goal-progress] listGoalProgress (remote)", {
+      studentCodes,
+      goalCodes,
+      classCodes,
+      startDate,
+      endDate,
+      goalAreas,
+      limit,
+    });
+
     let query = supabase
-      .from('goal_progress')
-      .select(`
+      .from("goal_progress")
+      .select(
+        `
         id,
         date,
         value,
@@ -1651,43 +1894,44 @@ const remote = {
         goals!inner(id, code, desc, goal_area, student_id),
         students!inner(id, code, name),
         classes(id, name)
-      `)
-      .order('date', { ascending: true });
-    
+      `
+      )
+      .order("date", { ascending: true });
+
     // Apply filters
     if (studentCodes && studentCodes.length > 0) {
-      query = query.in('students.code', studentCodes);
+      query = query.in("students.code", studentCodes);
     }
-    
+
     if (goalCodes && goalCodes.length > 0) {
-      query = query.in('goals.code', goalCodes);
+      query = query.in("goals.code", goalCodes);
     }
-    
+
     if (classCodes && classCodes.length > 0) {
-      query = query.in('classes.name', classCodes);
+      query = query.in("classes.name", classCodes);
     }
-    
+
     if (startDate) {
-      query = query.gte('date', startDate);
+      query = query.gte("date", startDate);
     }
-    
+
     if (endDate) {
-      query = query.lte('date', endDate);
+      query = query.lte("date", endDate);
     }
-    
+
     if (goalAreas && goalAreas.length > 0) {
-      query = query.in('goals.goal_area', goalAreas);
+      query = query.in("goals.goal_area", goalAreas);
     }
-    
+
     if (limit) {
       query = query.limit(limit);
     }
-    
+
     const { data, error } = await query;
     if (error) throw error;
-    
+
     // Transform to flattened structure with defensive null checks
-    return (data || []).map(row => ({
+    return (data || []).map((row) => ({
       id: row.id,
       date: row.date,
       value: row.value,
@@ -1695,88 +1939,100 @@ const remote = {
       collected_by: row.collected_by,
       created_at: row.created_at,
       goal_id: row.goal_id,
-      goal_code: row.goals?.code || '',
-      goal_desc: row.goals?.desc || '',
-      goal_area: row.goals?.goal_area || 'Uncategorized',
+      goal_code: row.goals?.code || "",
+      goal_desc: row.goals?.desc || "",
+      goal_area: row.goals?.goal_area || "Uncategorized",
       student_id: row.student_id,
-      student_code: row.students?.code || '',
-      student_name: row.students?.name || row.students?.code || '',
+      student_code: row.students?.code || "",
+      student_name: row.students?.name || row.students?.code || "",
       class_id: row.class_id,
-      class_code: row.classes?.name || null
+      class_code: row.classes?.name || null,
     }));
   },
 
   async listGoalQuarterAverages({ goalIds, studentIds, year } = {}) {
     const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
-    
-    console.log('[goal-progress] listGoalQuarterAverages (remote)', { goalIds, studentIds, year });
-    
-    let query = supabase
-      .from('goal_progress_quarter_avg')
-      .select('*');
-    
+    if (!supabase) throw new Error("supabase-not-configured");
+
+    console.log("[goal-progress] listGoalQuarterAverages (remote)", { goalIds, studentIds, year });
+
+    let query = supabase.from("goal_progress_quarter_avg").select("*");
+
     if (goalIds && goalIds.length > 0) {
-      query = query.in('goal_id', goalIds);
+      query = query.in("goal_id", goalIds);
     }
-    
+
     if (studentIds && studentIds.length > 0) {
-      query = query.in('student_id', studentIds);
+      query = query.in("student_id", studentIds);
     }
-    
+
     if (year) {
-      query = query.eq('school_year', year);
+      query = query.eq("school_year", year);
     }
-    
+
     const { data, error } = await query;
     if (error) throw error;
-    
+
     return data || [];
   },
 
-  async upsertGoalProgress({ goal_code, student_code, date, value, source = 'manual', class_code = null, collected_by = null }) {
+  async upsertGoalProgress({
+    goal_code,
+    student_code,
+    date,
+    value,
+    source = "manual",
+    class_code = null,
+    collected_by = null,
+  }) {
     const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
-    
-    console.log('[goal-progress] upsertGoalProgress (remote)', { goal_code, student_code, date, value, source });
-    
+    if (!supabase) throw new Error("supabase-not-configured");
+
+    console.log("[goal-progress] upsertGoalProgress (remote)", {
+      goal_code,
+      student_code,
+      date,
+      value,
+      source,
+    });
+
     // Look up goal_id and student_id from codes
     const { data: goalData, error: goalError } = await supabase
-      .from('goals')
-      .select('id, student_id')
-      .eq('code', goal_code)
+      .from("goals")
+      .select("id, student_id")
+      .eq("code", goal_code)
       .limit(1)
       .single();
-    
+
     if (goalError) throw new Error(`Goal not found with code: ${goal_code}`);
-    
+
     const { data: studentData, error: studentError } = await supabase
-      .from('students')
-      .select('id, class_id')
-      .eq('code', student_code)
+      .from("students")
+      .select("id, class_id")
+      .eq("code", student_code)
       .limit(1)
       .single();
-    
+
     if (studentError) throw new Error(`Student not found with code: ${student_code}`);
-    
+
     // Look up class_id if class_code provided
     let resolvedClassId = studentData.class_id; // default to student's primary class
     if (class_code) {
       const { data: classData } = await supabase
-        .from('classes')
-        .select('id')
-        .eq('name', class_code)
+        .from("classes")
+        .select("id")
+        .eq("name", class_code)
         .limit(1)
         .single();
-      
+
       if (classData) {
         resolvedClassId = classData.id;
       }
     }
-    
+
     // Insert progress entry
     const { data, error } = await supabase
-      .from('goal_progress')
+      .from("goal_progress")
       .insert({
         goal_id: goalData.id,
         student_id: studentData.id,
@@ -1784,20 +2040,20 @@ const remote = {
         date,
         value: parseFloat(value),
         source,
-        collected_by
+        collected_by,
       })
       .select()
       .single();
-    
+
     if (error) throw error;
-    
+
     return data;
   },
 
   // ============================================================================
   // Review Tab: Submission Answers
   // ============================================================================
-  
+
   /**
    * List all submission answers for a given submission with enriched data
    * @param {string} submissionId - Submission ID
@@ -1805,11 +2061,12 @@ const remote = {
    */
   async listSubmissionAnswers(submissionId) {
     const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
-    
+    if (!supabase) throw new Error("supabase-not-configured");
+
     const { data, error } = await supabase
-      .from('submission_answers')
-      .select(`
+      .from("submission_answers")
+      .select(
+        `
         *,
         assignment_items!inner(
           id,
@@ -1823,17 +2080,18 @@ const remote = {
           goal_codes,
           weight
         )
-      `)
-      .eq('submission_id', submissionId)
-      .order('item_ref', { foreignTable: 'assignment_items' });
-    
+      `
+      )
+      .eq("submission_id", submissionId)
+      .order("item_ref", { foreignTable: "assignment_items" });
+
     if (error) throw error;
-    
+
     // Flatten the nested structure
-    return (data || []).map(answer => {
+    return (data || []).map((answer) => {
       const item = answer.assignment_items;
       const mapping = answer.assignment_item_mappings || {};
-      
+
       return {
         id: answer.id,
         submission_id: answer.submission_id,
@@ -1850,7 +2108,7 @@ const remote = {
         meta: item.meta,
         dese_codes: mapping.dese_codes || [],
         goal_codes: mapping.goal_codes || [],
-        weight: mapping.weight || 1.0
+        weight: mapping.weight || 1.0,
       };
     });
   },
@@ -1862,24 +2120,27 @@ const remote = {
    */
   async updateSubmissionAnswer({ submissionId, itemId, earnedPoints, teacherNote }) {
     const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
-    
+    if (!supabase) throw new Error("supabase-not-configured");
+
     const { data, error } = await supabase
-      .from('submission_answers')
-      .upsert({
-        submission_id: submissionId,
-        item_id: itemId,
-        earned_points: earnedPoints,
-        // Note: is_correct is not set for manual grading as it's ambiguous (partial credit, 0-point items, etc.)
-        teacher_note: teacherNote || null
-      }, {
-        onConflict: 'submission_id,item_id'
-      })
+      .from("submission_answers")
+      .upsert(
+        {
+          submission_id: submissionId,
+          item_id: itemId,
+          earned_points: earnedPoints,
+          // Note: is_correct is not set for manual grading as it's ambiguous (partial credit, 0-point items, etc.)
+          teacher_note: teacherNote || null,
+        },
+        {
+          onConflict: "submission_id,item_id",
+        }
+      )
       .select()
       .single();
-    
+
     if (error) throw error;
-    
+
     return data;
   },
 
@@ -1891,39 +2152,39 @@ const remote = {
    */
   async finalizeSubmission(submissionId, { scoreManual, scoreTotal }) {
     const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
-    
+    if (!supabase) throw new Error("supabase-not-configured");
+
     // Update submission with final scores and review status
     const { error: updateError } = await supabase
-      .from('submissions')
+      .from("submissions")
       .update({
         score_manual: scoreManual,
         score_total: scoreTotal,
-        review_status: 'reviewed'
+        review_status: "reviewed",
       })
-      .eq('id', submissionId);
-    
+      .eq("id", submissionId);
+
     if (updateError) throw updateError;
-    
+
     // Get the submission to find the instance_id
     const { data: submission, error: fetchError } = await supabase
-      .from('submissions')
-      .select('instance_id')
-      .eq('id', submissionId)
+      .from("submissions")
+      .select("instance_id")
+      .eq("id", submissionId)
       .single();
-    
+
     if (fetchError) throw fetchError;
-    
+
     // Update instance status to 'Reviewed'
     if (submission?.instance_id) {
       const { error: instanceError } = await supabase
-        .from('assignment_instances')
-        .update({ status: 'Reviewed' })
-        .eq('id', submission.instance_id);
-      
+        .from("assignment_instances")
+        .update({ status: "Reviewed" })
+        .eq("id", submission.instance_id);
+
       if (instanceError) throw instanceError;
     }
-    
+
     return true;
   },
 
@@ -1937,19 +2198,23 @@ const remote = {
    */
   async getArchivedStudents() {
     const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
+    if (!supabase) throw new Error("supabase-not-configured");
 
     // Try with new columns first
     let { data, error } = await supabase
-      .from('students')
-      .select('id, code, name, class_id, iep_due, eval_due, primary_case_manager, archived_at, active')
-      .eq('active', false)
-      .order('archived_at', { ascending: false });
+      .from("students")
+      .select(
+        "id, code, name, class_id, iep_due, eval_due, primary_case_manager, archived_at, active"
+      )
+      .eq("active", false)
+      .order("archived_at", { ascending: false });
 
     // Graceful fallback: if schema error, retry with basic columns only
     // When columns don't exist, return empty array since we can't filter by active
     if (isSchemaError(error)) {
-      console.warn('[data-adapter] Supabase schema outdated — archived students feature requires "active" column. Apply migration 20260210_students_tab_schema.sql. Returning empty array.');
+      console.warn(
+        '[data-adapter] Supabase schema outdated — archived students feature requires "active" column. Apply migration 20260210_students_tab_schema.sql. Returning empty array.'
+      );
       return [];
     }
 
@@ -1964,47 +2229,49 @@ const remote = {
    */
   async getStudentArchiveData(studentCode) {
     const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
+    if (!supabase) throw new Error("supabase-not-configured");
 
     // Get student
     const { data: student, error: studentError } = await supabase
-      .from('students')
-      .select('*')
-      .eq('code', studentCode)
+      .from("students")
+      .select("*")
+      .eq("code", studentCode)
       .single();
 
     if (studentError) throw studentError;
 
     // Get all goals (including all versions)
     const { data: goals, error: goalsError } = await supabase
-      .from('goals')
-      .select('*')
-      .eq('student_id', student.id)
-      .order('version', { ascending: false });
+      .from("goals")
+      .select("*")
+      .eq("student_id", student.id)
+      .order("version", { ascending: false });
 
     if (goalsError) throw goalsError;
 
     // Get all submissions with assignment details
     const { data: submissions, error: submissionsError } = await supabase
-      .from('submissions')
-      .select(`
+      .from("submissions")
+      .select(
+        `
         *,
         assignment_instances!inner(
           assignment_id,
           assignments(id, title)
         )
-      `)
-      .eq('student_id', student.id)
-      .order('submitted_at', { ascending: false });
+      `
+      )
+      .eq("student_id", student.id)
+      .order("submitted_at", { ascending: false });
 
     if (submissionsError) throw submissionsError;
 
     // Get all progress entries
     const { data: progress, error: progressError } = await supabase
-      .from('goal_progress')
-      .select('*')
-      .eq('student_id', student.id)
-      .order('date', { ascending: false });
+      .from("goal_progress")
+      .select("*")
+      .eq("student_id", student.id)
+      .order("date", { ascending: false });
 
     if (progressError) throw progressError;
 
@@ -2017,7 +2284,7 @@ const remote = {
       goals: goals || [],
       submissions: submissions || [],
       progress: progress || [],
-      gradebookScores
+      gradebookScores,
     };
   },
 
@@ -2028,12 +2295,12 @@ const remote = {
    */
   async reactivateStudent(studentCode) {
     const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
+    if (!supabase) throw new Error("supabase-not-configured");
 
     const { data, error } = await supabase
-      .from('students')
+      .from("students")
       .update({ active: true, archived_at: null })
-      .eq('code', studentCode)
+      .eq("code", studentCode)
       .select()
       .single();
 
@@ -2052,33 +2319,33 @@ const remote = {
    */
   async createDataEntryToken({ studentCode, goalCode, dataCollector, dataCollectorEmail }) {
     const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
+    if (!supabase) throw new Error("supabase-not-configured");
 
     // Check if token already exists for this student+goal combo
     const { data: existing, error: checkError } = await supabase
-      .from('data_entry_tokens')
-      .select('*')
-      .eq('student_code', studentCode)
-      .eq('goal_code', goalCode)
-      .eq('revoked', false)
+      .from("data_entry_tokens")
+      .select("*")
+      .eq("student_code", studentCode)
+      .eq("goal_code", goalCode)
+      .eq("revoked", false)
       .maybeSingle();
 
-    if (checkError && checkError.code !== 'PGRST116') throw checkError;
+    if (checkError && checkError.code !== "PGRST116") throw checkError;
     if (existing) return existing;
 
     // Generate random 32-char hex token
     const tokenArray = new Uint8Array(16);
     crypto.getRandomValues(tokenArray);
-    const token = Array.from(tokenArray, byte => byte.toString(16).padStart(2, '0')).join('');
+    const token = Array.from(tokenArray, (byte) => byte.toString(16).padStart(2, "0")).join("");
 
     const { data, error } = await supabase
-      .from('data_entry_tokens')
+      .from("data_entry_tokens")
       .insert({
         token,
         student_code: studentCode,
         goal_code: goalCode,
         data_collector: dataCollector,
-        data_collector_email: dataCollectorEmail
+        data_collector_email: dataCollectorEmail,
       })
       .select()
       .single();
@@ -2094,16 +2361,16 @@ const remote = {
    */
   async getDataEntryToken(token) {
     const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
+    if (!supabase) throw new Error("supabase-not-configured");
 
     const { data, error } = await supabase
-      .from('data_entry_tokens')
-      .select('*')
-      .eq('token', token)
-      .eq('revoked', false)
+      .from("data_entry_tokens")
+      .select("*")
+      .eq("token", token)
+      .eq("revoked", false)
       .maybeSingle();
 
-    if (error && error.code !== 'PGRST116') throw error;
+    if (error && error.code !== "PGRST116") throw error;
     if (!data) return null;
 
     // Check expiration
@@ -2122,19 +2389,19 @@ const remote = {
    */
   async listDataEntryTokens(studentCode) {
     const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
+    if (!supabase) throw new Error("supabase-not-configured");
 
     const { data, error } = await supabase
-      .from('data_entry_tokens')
-      .select('*')
-      .eq('student_code', studentCode)
-      .eq('revoked', false);
+      .from("data_entry_tokens")
+      .select("*")
+      .eq("student_code", studentCode)
+      .eq("revoked", false);
 
     if (error) throw error;
 
     // Filter out expired tokens
     const now = new Date();
-    return (data || []).filter(t => !t.expires_at || new Date(t.expires_at) > now);
+    return (data || []).filter((t) => !t.expires_at || new Date(t.expires_at) > now);
   },
 
   /**
@@ -2144,16 +2411,16 @@ const remote = {
    */
   async revokeDataEntryToken(tokenId) {
     const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
+    if (!supabase) throw new Error("supabase-not-configured");
 
     const { error } = await supabase
-      .from('data_entry_tokens')
+      .from("data_entry_tokens")
       .update({ revoked: true })
-      .eq('id', tokenId);
+      .eq("id", tokenId);
 
     if (error) throw error;
     return true;
-  }
+  },
 };
 
 // Dynamic adapter: tries remote first, falls back to local if not configured
@@ -2163,14 +2430,14 @@ const db = {};
 // Note: We wrap all local methods for consistency, even if remote doesn't implement them.
 // The check `if (supabase && remote[method])` handles methods that only exist in local.
 for (const method of Object.keys(local)) {
-  db[method] = async function(...args) {
+  db[method] = async function (...args) {
     const supabase = await getSupabase();
     if (supabase && remote[method]) {
       try {
         return await remote[method](...args);
       } catch (err) {
         // If error is supabase-not-configured, fall back to local
-        if (err.message === 'supabase-not-configured') {
+        if (err.message === "supabase-not-configured") {
           return await local[method](...args);
         }
         throw err;
