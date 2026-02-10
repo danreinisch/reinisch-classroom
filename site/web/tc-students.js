@@ -252,7 +252,137 @@
     container.innerHTML = allButton + classButtons;
   }
 
-  function renderStudentDetail() {
+  /**
+   * Check for active tokens for goals
+   */
+  async function checkActiveTokens(studentCode) {
+    try {
+      const tokens = await db.listDataEntryTokens(studentCode);
+      const tokensByGoalCode = {};
+      tokens.forEach(token => {
+        tokensByGoalCode[token.goal_code] = token;
+      });
+      return tokensByGoalCode;
+    } catch (err) {
+      console.error('[tc-students] Error checking active tokens:', err);
+      return {};
+    }
+  }
+
+  /**
+   * Handle copy data entry link
+   */
+  async function handleCopyDataEntryLink(goalId) {
+    const goal = allGoals.find(g => g.id === goalId);
+    if (!goal) {
+      alert('Goal not found');
+      return;
+    }
+
+    const student = allStudents.find(s => s.code === goal.student_code);
+    if (!student) {
+      alert('Student not found');
+      return;
+    }
+
+    try {
+      // Create token
+      const tokenData = await db.createDataEntryToken({
+        studentCode: student.code,
+        goalCode: goal.code,
+        dataCollector: goal.data_collector,
+        dataCollectorEmail: goal.data_collector_email
+      });
+
+      // Build URL
+      const url = `${window.location.origin}/data-entry/?token=${tokenData.token}`;
+
+      // Copy to clipboard
+      await navigator.clipboard.writeText(url);
+
+      // Show toast notification
+      showToast(`Link copied! Send it to ${goal.data_collector}.`);
+
+      // Refresh display to show revoke button
+      renderStudentDetail();
+
+    } catch (err) {
+      console.error('[tc-students] Error creating token:', err);
+      alert('Error creating data entry link. Please try again.');
+    }
+  }
+
+  /**
+   * Handle revoke data entry link
+   */
+  async function handleRevokeDataEntryLink(goalId) {
+    const goal = allGoals.find(g => g.id === goalId);
+    if (!goal) {
+      alert('Goal not found');
+      return;
+    }
+
+    const confirmed = confirm(`Revoke data entry link for ${goal.code}?\n\nThe current link will no longer work.`);
+    if (!confirmed) return;
+
+    try {
+      // Get active tokens for this student
+      const student = allStudents.find(s => s.code === goal.student_code);
+      const tokens = await db.listDataEntryTokens(student.code);
+      const token = tokens.find(t => t.goal_code === goal.code);
+
+      if (!token) {
+        alert('No active token found for this goal');
+        return;
+      }
+
+      // Revoke token
+      await db.revokeDataEntryToken(token.id);
+
+      showToast('Link revoked successfully');
+
+      // Refresh display to show copy button
+      renderStudentDetail();
+
+    } catch (err) {
+      console.error('[tc-students] Error revoking token:', err);
+      alert('Error revoking link. Please try again.');
+    }
+  }
+
+  /**
+   * Show toast notification
+   */
+  function showToast(message) {
+    // Create toast element
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: rgba(34, 197, 94, 0.95);
+      color: white;
+      padding: 16px 24px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      z-index: 10000;
+      font-size: 14px;
+      max-width: 300px;
+    `;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+
+    // Remove after 3 seconds
+    setTimeout(() => {
+      toast.style.transition = 'opacity 0.3s';
+      toast.style.opacity = '0';
+      setTimeout(() => {
+        document.body.removeChild(toast);
+      }, 300);
+    }, 3000);
+  }
+
+  async function renderStudentDetail() {
     const container = document.getElementById('student-detail');
     if (!container) return;
 
@@ -269,6 +399,14 @@
 
     const enrollments = allEnrollments.filter(e => e.student_code === student.code);
     const studentGoals = allGoals.filter(g => g.student_code === student.code);
+
+    // Check for active tokens
+    const activeTokens = await checkActiveTokens(student.code);
+
+    // Mark goals with active tokens
+    studentGoals.forEach(goal => {
+      goal._hasActiveToken = !!activeTokens[goal.code];
+    });
 
     let inContextGoals = studentGoals;
     let outsideGoals = [];
@@ -397,6 +535,10 @@
     const icon = GOAL_AREA_ICONS[goal.goal_area] || '📌';
     const dataCollectorWarning = goal.data_collector && goal.data_collector !== 'Dan Reinisch' ? '⚠️ ' : '';
     const classContext = goal.class_context ? `<div class="goal-class">📚 ${escapeHtml(goal.class_context)}</div>` : '';
+    
+    // Show token management for external data collectors (not Dan Reinisch)
+    const showTokenBtn = goal.data_collector && goal.data_collector !== 'Dan Reinisch';
+    const hasActiveToken = goal._hasActiveToken || false; // Will be set when loading tokens
 
     return `
       <div class="goal-card" data-goal-id="${goal.id}">
@@ -429,6 +571,12 @@
           <button class="btn btn-sm btn-secondary edit-goal-btn" data-goal-id="${goal.id}">Edit</button>
           <button class="btn btn-sm btn-secondary version-goal-btn" data-goal-id="${goal.id}">Version</button>
           <button class="btn btn-sm btn-danger archive-goal-btn" data-goal-id="${goal.id}">Archive</button>
+          ${showTokenBtn ? `
+            ${hasActiveToken 
+              ? `<button class="btn btn-sm btn-warning revoke-token-btn" data-goal-id="${goal.id}" title="Revoke data entry link">🗑️ Revoke Link</button>`
+              : `<button class="btn btn-sm btn-primary copy-token-btn" data-goal-id="${goal.id}" title="Copy data entry link for ${escapeHtml(goal.data_collector)}">🔗 Copy Link</button>`
+            }
+          ` : ''}
         </div>
       </div>
     `;
@@ -529,6 +677,12 @@
         } else if (e.target.classList.contains('archive-goal-btn')) {
           const goalId = parseInt(e.target.dataset.goalId);
           await handleArchiveGoal(goalId);
+        } else if (e.target.classList.contains('copy-token-btn')) {
+          const goalId = parseInt(e.target.dataset.goalId);
+          await handleCopyDataEntryLink(goalId);
+        } else if (e.target.classList.contains('revoke-token-btn')) {
+          const goalId = parseInt(e.target.dataset.goalId);
+          await handleRevokeDataEntryLink(goalId);
         }
       });
 
