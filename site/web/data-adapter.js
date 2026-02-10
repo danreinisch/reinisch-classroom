@@ -50,15 +50,17 @@ const local = {
     const map = store.get('iepGoals', {});
     return map[code] || [];
   },
-  async upsertGoal({ student_code, code, desc, target = null, status = 'Open', 
+  async upsertGoal({ student_code, code, goal_text, desc, target = null, status = 'Open', 
                      measurement_type = 'percent', data_collector = null, 
                      data_collector_email = null, class_context = null, 
                      goal_area = null, baseline = null, case_manager = null, version = 1 }) {
     const map = store.get('iepGoals', {});
     const goals = map[student_code] || [];
     const idx = goals.findIndex(g => g.code === code);
+    // Map goal_text to desc for consistency with database schema
+    const description = goal_text || desc;
     const goal = { 
-      code, desc, target, status, measurement_type, data_collector, 
+      code, desc: description, target, status, measurement_type, data_collector, 
       data_collector_email, class_context, goal_area, baseline, case_manager, version 
     };
     if (idx >= 0) {
@@ -758,7 +760,7 @@ const remote = {
     const { data, error } = await supabase.from('goals').select('id, code, desc, target, status').eq('student_id', stu.id).order('code');
     if (error) throw error; return data;
   },
-  async upsertGoal({ student_code, code, desc, target = null, status = 'Open',
+  async upsertGoal({ student_code, code, goal_text, desc, target = null, status = 'Open',
                      measurement_type = 'percent', data_collector = null,
                      data_collector_email = null, class_context = null,
                      goal_area = null, baseline = null, case_manager = null, version = 1 }) {
@@ -767,9 +769,11 @@ const remote = {
     // Lookup student by code
     const { data: stu, error: e1 } = await supabase.from('students').select('id').eq('code', student_code).single();
     if (e1) throw e1;
+    // Map goal_text to desc for consistency with database schema
+    const description = goal_text || desc;
     // Upsert goal: unique on (student_id, code)
     const payload = { 
-      student_id: stu.id, code, desc, target, status,
+      student_id: stu.id, code, desc: description, target, status,
       measurement_type, data_collector, data_collector_email, class_context,
       goal_area, baseline, case_manager, version
     };

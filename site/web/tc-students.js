@@ -124,7 +124,6 @@
   let allStudents = [];
   let allGoals = [];
   let allEnrollments = [];
-  // let allClasses = []; // Loaded but unused for now
   let filteredStudents = [];
   let selectedStudent = null;
   let selectedClassFilter = 'All';
@@ -139,17 +138,15 @@
       isSyncing = true;
       updateSyncIndicator();
 
-      const [students, goals, enrollments, _classes] = await Promise.all([
+      const [students, goals, enrollments] = await Promise.all([
         db.listStudents(),
         db.listGoalsAll(),
-        db.listClassEnrollments(),
-        db.listClasses()
+        db.listClassEnrollments()
       ]);
 
       allStudents = students.filter(s => s.status === 'active');
       allGoals = goals;
       allEnrollments = enrollments;
-      // allClasses = _classes; // Loaded but unused for now
 
       console.log('[tc-students] Loaded:', allStudents.length, 'students,', allGoals.length, 'goals');
       
@@ -411,7 +408,7 @@
           </div>
           <span class="badge badge-measurement">${escapeHtml(goal.measurement_type || 'N/A')}</span>
         </div>
-        <div class="goal-description">${escapeHtml(goal.goal_text || 'No description')}</div>
+        <div class="goal-description">${escapeHtml(goal.desc || goal.goal_text || '(No goal description provided)')}</div>
         <div class="goal-metrics">
           <div class="metric">
             <span class="metric-label">Baseline:</span>
