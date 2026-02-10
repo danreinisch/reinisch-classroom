@@ -8,14 +8,39 @@
   const { db, isRemote } = await import('/web/data-adapter.js');
 
   // NOTE: Keep in sync with CANON_CLASSES in tc-work.js and tc-gradebook.js
+  // Full class names matching CSV data
   const CANON_CLASSES = [
-    "LA 1 SC",
-    "LA 2 SC",
-    "LA 3 SC",
-    "LA 4 SC",
+    "Language Arts 1 SC",
+    "Language Arts 2 SC",
+    "Language Arts 3 SC",
+    "Language Arts 4 SC",
+    "Language Arts 1 S1",
+    "Language Arts 2 S1",
+    "Language Arts 3 S1",
+    "Life Skills Language Arts SC",
     "Life Skills",
-    "Life Skills LA",
+    "Consumer Math",
+    "Geometry SC",
+    "Warrior Academy",
+    "Speech/Language"
   ];
+  
+  // Display abbreviations for space constraints
+  const CLASS_DISPLAY = {
+    "Language Arts 1 SC": "LA 1 SC",
+    "Language Arts 2 SC": "LA 2 SC",
+    "Language Arts 3 SC": "LA 3 SC",
+    "Language Arts 4 SC": "LA 4 SC",
+    "Language Arts 1 S1": "LA 1 S1",
+    "Language Arts 2 S1": "LA 2 S1",
+    "Language Arts 3 S1": "LA 3 S1",
+    "Life Skills Language Arts SC": "Life Skills LA",
+    "Life Skills": "Life Skills",
+    "Consumer Math": "Consumer Math",
+    "Geometry SC": "Geometry SC",
+    "Warrior Academy": "Warrior Academy",
+    "Speech/Language": "Speech/Language"
+  };
 
   const $ = (id) => document.getElementById(id);
 
@@ -23,6 +48,9 @@
   let currentClassFilter = "All Classes";
   let currentQuarterFilter = getCurrentQuarter(); // Default to current quarter
   let currentGoalAreaFilter = "All";
+  let currentDataCollectorFilter = "All"; // "All" or "My Goals Only"
+  // TODO: Get current teacher name from auth context instead of hardcoding
+  let currentTeacherName = "Dan Reinisch"; // Hardcoded for now - should be from getSupabase() auth
   let searchText = "";
   let studentsData = [];
   let goalsData = [];
@@ -284,6 +312,25 @@
     });
   }
 
+  // Render data collector filter buttons (My Goals Only vs All Goals)
+  function renderDataCollectorFilter() {
+    const container = $('dtDataCollectorFilterBar');
+    if (!container) return;
+    
+    const allBtn = `<button class="dt-filter-btn ${currentDataCollectorFilter === 'All' ? 'active' : ''}" data-collector="All">All Goals</button>`;
+    const myBtn = `<button class="dt-filter-btn ${currentDataCollectorFilter === 'My Goals Only' ? 'active' : ''}" data-collector="My Goals Only">My Goals Only</button>`;
+    
+    container.innerHTML = allBtn + myBtn;
+    
+    // Add click handlers
+    container.querySelectorAll('.dt-filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        currentDataCollectorFilter = btn.dataset.collector;
+        render();
+      });
+    });
+  }
+
   // Filter students based on current filters
   function getFilteredStudents() {
     let filtered = studentsData;
@@ -299,6 +346,17 @@
           e.student_code === student.code && e.class_id === currentClassFilter
         );
         return !!enrollment;
+      });
+    }
+    
+    // Filter by data collector (My Goals Only)
+    if (currentDataCollectorFilter === 'My Goals Only') {
+      filtered = filtered.filter(student => {
+        return student.goals.some(goal => {
+          // Match if data_collector is current teacher or if not set (assume current teacher)
+          if (!goal.data_collector) return true;
+          return goal.data_collector.includes(currentTeacherName);
+        });
       });
     }
     
@@ -494,6 +552,23 @@
 
   // Render a single goal row
   function renderGoalRow(goal, studentCode) {
+    // Build metadata badges - show case manager and data collector if available
+    const metaBadges = [];
+    metaBadges.push(`<span>Area: <strong>${goal.goal_area || 'Uncategorized'}</strong></span>`);
+    
+    // Show case manager if available
+    if (goal.case_manager) {
+      metaBadges.push(`<span>Case Mgr: <strong>${goal.case_manager}</strong></span>`);
+    }
+    
+    // Show data collector if different from case manager
+    if (goal.data_collector) {
+      // If data collector is same as case manager, don't show duplicate
+      if (goal.data_collector !== goal.case_manager) {
+        metaBadges.push(`<span>Data: <strong>${goal.data_collector}</strong></span>`);
+      }
+    }
+    
     return `
       <div class="dt-goal-row" data-goal="${goal.code}" data-student="${studentCode}">
         <div class="dt-goal-header">
@@ -503,7 +578,7 @@
           <button class="dt-btn" data-goal="${goal.code}" data-student="${studentCode}">📎 Samples</button>
         </div>
         <div class="dt-goal-meta">
-          <span>Area: <strong>${goal.goal_area || 'Uncategorized'}</strong></span>
+          ${metaBadges.join(' ')}
         </div>
         ${renderGoalStats(goal, studentCode)}
         ${renderSparkline(goal, studentCode)}
@@ -538,12 +613,24 @@
     
     emptyEl.style.display = 'none';
     
-    // Filter student goals by goal area if needed
+    // Filter student goals by goal area and data collector if needed
     const studentsWithFilteredGoals = filtered.map(student => {
       let goals = student.goals;
+      
+      // Filter by goal area
       if (currentGoalAreaFilter !== 'All') {
         goals = goals.filter(goal => (goal.goal_area || 'Uncategorized') === currentGoalAreaFilter);
       }
+      
+      // Filter by data collector (My Goals Only)
+      if (currentDataCollectorFilter === 'My Goals Only') {
+        goals = goals.filter(goal => {
+          // Include if data_collector is current teacher or if not set (assume current teacher)
+          if (!goal.data_collector) return true;
+          return goal.data_collector.includes(currentTeacherName);
+        });
+      }
+      
       return { ...student, goals };
     }).filter(student => student.goals.length > 0); // Remove students with no matching goals
     
@@ -1031,9 +1118,13 @@
   <p><strong>Student:</strong> ${escapeXml(student.name)} (${escapeXml(student.code)})</p>
   <p><strong>Goal Code:</strong> ${escapeXml(goal.code)}</p>
   <p><strong>Goal Description:</strong> ${escapeXml(goal.desc || 'No description')}</p>
+  <p><strong>Goal Area:</strong> ${escapeXml(goal.goal_area || 'Uncategorized')}</p>
+  ${goal.case_manager ? `<p><strong>Case Manager:</strong> ${escapeXml(goal.case_manager)}</p>` : ''}
+  ${goal.data_collector ? `<p><strong>Data Collector:</strong> ${escapeXml(goal.data_collector)}</p>` : ''}
+  <p><strong>Report Date:</strong> ${new Date().toLocaleDateString()}</p>
+  <p><strong>Quarter:</strong> ${getQuarterLabel(currentQuarterFilter)}</p>
   
   <h2>Summary</h2>
-  <p><strong>Goal Area:</strong> ${escapeXml(goal.goal_area || 'Uncategorized')}</p>
   <p><strong>Baseline:</strong> ${baseline}%</p>
   <p><strong>Target:</strong> ${target}%</p>
   <p><strong>Current Value:</strong> ${current != null ? current + '%' : 'N/A'}</p>
@@ -1158,6 +1249,7 @@
     renderClassFilters();
     renderQuarterFilters();
     renderGoalAreaFilters();
+    renderDataCollectorFilter();
     renderAccordion();
   }
 

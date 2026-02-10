@@ -144,7 +144,7 @@
         db.listClassEnrollments()
       ]);
 
-      allStudents = students.filter(s => s.status === 'active');
+      allStudents = students.filter(s => s.status !== 'archived');
       allGoals = goals;
       allEnrollments = enrollments;
 
@@ -1355,13 +1355,24 @@
         student.enrollments.add(className);
       }
 
-      if (row[columnMap.goal_text]?.trim()) {
+      if (row[columnMap.goal_text]?.trim() || row[columnMap.goal_code]?.trim()) {
+        const goalText = row[columnMap.goal_text]?.trim();
+        const goalCode = row[columnMap.goal_code]?.trim();
+        
+        // Handle empty description - use goal code as fallback, or empty string if no code
+        const description = goalText || goalCode || '';
+        
+        // Handle malformed goal codes - use as-is or provide fallback
+        // Examples: S00911.2 (missing period), S022.12. (trailing period) are kept as-is
+        const goalCodeOrFallback = goalCode || `${code}.UNKNOWN`;
+        
         student.goals.push({
-          goal_text: row[columnMap.goal_text]?.trim(),
-          goal_code: row[columnMap.goal_code]?.trim(),
+          goal_text: description,
+          goal_code: goalCodeOrFallback,
           goal_area: row[columnMap.goal_area]?.trim(),
-          measurement_type: row[columnMap.measurement_type]?.trim(),
+          measurement_type: row[columnMap.measurement_type]?.trim() || 'percent',
           case_manager: row[columnMap.case_manager]?.trim(),
+          // Store multi-value data_collector as-is (don't split on commas)
           data_collector: row[columnMap.data_collector]?.trim(),
           class_context: className
         });
