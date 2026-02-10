@@ -138,17 +138,48 @@
       isSyncing = true;
       updateSyncIndicator();
 
-      const [students, goals, enrollments] = await Promise.all([
+      // Use Promise.allSettled to handle partial failures
+      const results = await Promise.allSettled([
         db.listStudents(),
         db.listGoalsAll(),
         db.listClassEnrollments()
       ]);
 
-      allStudents = students.filter(s => s.status !== 'archived');
-      allGoals = goals;
-      allEnrollments = enrollments;
+      let schemaDriftDetected = false;
+      
+      // Extract successful results
+      if (results[0].status === 'fulfilled') {
+        allStudents = results[0].value.filter(s => s.status !== 'archived');
+      } else {
+        console.error('[tc-students] Failed to load students:', results[0].reason);
+        allStudents = [];
+        schemaDriftDetected = true;
+      }
+
+      if (results[1].status === 'fulfilled') {
+        allGoals = results[1].value;
+      } else {
+        console.error('[tc-students] Failed to load goals:', results[1].reason);
+        allGoals = [];
+        schemaDriftDetected = true;
+      }
+
+      if (results[2].status === 'fulfilled') {
+        allEnrollments = results[2].value;
+      } else {
+        console.error('[tc-students] Failed to load enrollments:', results[2].reason);
+        allEnrollments = [];
+        schemaDriftDetected = true;
+      }
 
       console.log('[tc-students] Loaded:', allStudents.length, 'students,', allGoals.length, 'goals');
+      
+      // Show schema drift banner if any call failed
+      if (schemaDriftDetected) {
+        showSchemaDriftBanner();
+      } else {
+        hideSchemaDriftBanner();
+      }
       
       filterStudents();
       renderStudentList();
@@ -163,6 +194,10 @@
       console.error('[tc-students] Error loading data:', error);
       isSyncing = false;
       updateSyncIndicator();
+      
+      // Still try to render with whatever data we have
+      filterStudents();
+      renderStudentList();
     }
   }
 
@@ -176,6 +211,52 @@
         indicator.textContent = '✓ Synced';
         indicator.className = 'synced';
       }
+    }
+  }
+
+  function showSchemaDriftBanner() {
+    // Remove existing banner if present
+    hideSchemaDriftBanner();
+    
+    // Find the student detail main container (right pane)
+    const container = document.querySelector('.st-main');
+    if (!container) return;
+    
+    // Create banner element
+    const banner = document.createElement('div');
+    banner.id = 'schema-drift-banner';
+    banner.style.cssText = 'background: #FEF3C7; border: 1px solid #F59E0B; border-radius: 8px; padding: 12px 16px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;';
+    
+    // Create warning icon
+    const icon = document.createElement('span');
+    icon.textContent = '⚠️';
+    
+    // Create content wrapper
+    const content = document.createElement('div');
+    
+    // Create title
+    const title = document.createElement('strong');
+    title.textContent = 'Database schema is behind migrations';
+    
+    // Create description
+    const description = document.createElement('div');
+    description.style.cssText = 'font-size: 13px; opacity: 0.8;';
+    description.textContent = 'Some columns are missing. Students loaded with basic fields only. Apply pending migrations to restore full functionality.';
+    
+    // Assemble the banner
+    content.appendChild(title);
+    content.appendChild(description);
+    banner.appendChild(icon);
+    banner.appendChild(content);
+    
+    // Insert at the top of the container
+    container.insertBefore(banner, container.firstChild);
+  }
+
+  function hideSchemaDriftBanner() {
+    const banner = document.getElementById('schema-drift-banner');
+    if (banner) {
+      banner.remove();
     }
   }
 
