@@ -218,8 +218,8 @@
     // Remove existing banner if present
     hideSchemaDriftBanner();
     
-    // Find the students page container
-    const container = document.querySelector('.students-page');
+    // Find the student detail main container (right pane)
+    const container = document.querySelector('.st-main');
     if (!container) return;
     
     // Create banner element
