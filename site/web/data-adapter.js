@@ -50,11 +50,17 @@ const local = {
     const map = store.get('iepGoals', {});
     return map[code] || [];
   },
-  async upsertGoal({ student_code, code, desc, target = null, status = 'Open' }) {
+  async upsertGoal({ student_code, code, desc, target = null, status = 'Open', 
+                     measurement_type = 'percent', data_collector = null, 
+                     data_collector_email = null, class_context = null, 
+                     goal_area = null, baseline = null, case_manager = null, version = 1 }) {
     const map = store.get('iepGoals', {});
     const goals = map[student_code] || [];
     const idx = goals.findIndex(g => g.code === code);
-    const goal = { code, desc, target, status };
+    const goal = { 
+      code, desc, target, status, measurement_type, data_collector, 
+      data_collector_email, class_context, goal_area, baseline, case_manager, version 
+    };
     if (idx >= 0) {
       goals[idx] = { ...goals[idx], ...goal };
     } else {
@@ -601,12 +607,17 @@ const remote = {
   async listStudents() {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
-    const { data, error } = await supabase.from('students').select('id, code, name, class_id').order('code');
+    const { data, error } = await supabase
+      .from('students')
+      .select('id, code, name, class_id, iep_due, eval_due, primary_case_manager, archived_at, active')
+      .order('code');
     if (error) throw error; return data;
   },
-  async upsertStudent({ code, name, class_id = null }) {
+  async upsertStudent(studentData) {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
+    
+    const { code, name, class_id = null, iep_due, eval_due, primary_case_manager, archived_at, active } = studentData;
     
     // TC-3.1: Use server-backed function to avoid RLS errors
     // Call teacher-students-upsert function with batch of 1 student
@@ -618,7 +629,16 @@ const remote = {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          students: [{ code, name: name || code, class_id }]
+          students: [{ 
+            code, 
+            name: name || code, 
+            class_id,
+            iep_due,
+            eval_due,
+            primary_case_manager,
+            archived_at,
+            active
+          }]
         })
       });
       
@@ -631,7 +651,8 @@ const remote = {
         // TC-3.1: Only allow fallback to direct Supabase in local dev environments
         if (isLocalDev() && (response.status === 401 || response.status === 503)) {
           console.log('[data-adapter] Local dev: Teacher function unavailable, falling back to direct Supabase');
-          const { data, error } = await supabase.from('students').upsert({ code, name, class_id }, { onConflict: 'code' }).select().single();
+          const payload = { code, name, class_id, iep_due, eval_due, primary_case_manager, archived_at, active };
+          const { data, error } = await supabase.from('students').upsert(payload, { onConflict: 'code' }).select().single();
           if (error) throw error;
           return data;
         }
@@ -651,7 +672,8 @@ const remote = {
       // TC-3.1: Only allow fallback in local dev (no production fallback to avoid RLS violations)
       if (isLocalDev() && err.message !== 'supabase-not-configured') {
         console.warn('[data-adapter] Local dev: Server upsert failed, attempting direct Supabase:', err.message);
-        const { data, error } = await supabase.from('students').upsert({ code, name, class_id }, { onConflict: 'code' }).select().single();
+        const payload = { code, name, class_id, iep_due, eval_due, primary_case_manager, archived_at, active };
+        const { data, error } = await supabase.from('students').upsert(payload, { onConflict: 'code' }).select().single();
         if (error) throw error;
         return data;
       }
@@ -736,15 +758,23 @@ const remote = {
     const { data, error } = await supabase.from('goals').select('id, code, desc, target, status').eq('student_id', stu.id).order('code');
     if (error) throw error; return data;
   },
-  async upsertGoal({ student_code, code, desc, target = null, status = 'Open' }) {
+  async upsertGoal({ student_code, code, desc, target = null, status = 'Open',
+                     measurement_type = 'percent', data_collector = null,
+                     data_collector_email = null, class_context = null,
+                     goal_area = null, baseline = null, case_manager = null, version = 1 }) {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
     // Lookup student by code
     const { data: stu, error: e1 } = await supabase.from('students').select('id').eq('code', student_code).single();
     if (e1) throw e1;
     // Upsert goal: unique on (student_id, code)
+    const payload = { 
+      student_id: stu.id, code, desc, target, status,
+      measurement_type, data_collector, data_collector_email, class_context,
+      goal_area, baseline, case_manager, version
+    };
     const { data, error } = await supabase.from('goals')
-      .upsert({ student_id: stu.id, code, desc, target, status }, { onConflict: 'student_id,code' })
+      .upsert(payload, { onConflict: 'student_id,code' })
       .select()
       .single();
     if (error) throw error;
@@ -756,7 +786,10 @@ const remote = {
     // Join students and goals
     const { data, error } = await supabase
       .from('goals')
-      .select('id, code, desc, target, status, student_id, students!inner(code)')
+      .select(`id, code, desc, target, status, student_id, 
+              measurement_type, data_collector, data_collector_email, class_context,
+              goal_area, baseline, case_manager, version,
+              students!inner(code)`)
       .order('code', { foreignTable: 'students', ascending: true });
     if (error) throw error;
     // Flatten to include student_code at top level
@@ -766,7 +799,15 @@ const remote = {
       code: g.code,
       desc: g.desc,
       target: g.target,
-      status: g.status
+      status: g.status,
+      measurement_type: g.measurement_type,
+      data_collector: g.data_collector,
+      data_collector_email: g.data_collector_email,
+      class_context: g.class_context,
+      goal_area: g.goal_area,
+      baseline: g.baseline,
+      case_manager: g.case_manager,
+      version: g.version
     }));
   },
   async addProgress({ student_code, goal_id, date, points = '', percent = null, method = '', by_name = 'Teacher', via = 'manual', notes = '' }) {
