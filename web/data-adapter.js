@@ -17,23 +17,62 @@ const DATA_ADAPTER_DEBUG = localStorage.getItem('rc_debug_data_adapter') === 'tr
 /**
  * Robust detection for schema-related errors from Supabase/PostgREST
  * Checks for various error conditions that indicate missing columns or tables
+ * 
+ * The Supabase JS client may return PostgreSQL error codes in different fields:
+ * - error.code may be HTTP-level (400) or PostgREST codes (PGRST204)
+ * - PostgreSQL codes (42703) may appear in error.details, error.hint, or message
+ * - Response headers contain PostgREST error codes but aren't directly accessible
+ * 
  * @param {Error} error - The error object to check
  * @returns {boolean} True if error is schema-related
  */
 function isSchemaError(error) {
   if (!error) return false;
+  
+  // Check primary fields
   const msg = (error.message || '').toLowerCase();
-  const code = error.code || '';
-  return (
-    msg.includes('column') ||
-    msg.includes('relation') ||
-    msg.includes('does not exist') ||
-    msg.includes('undefined column') ||
-    code === '42703' ||    // undefined_column
-    code === '42P01' ||    // undefined_table
-    code === 'PGRST204' || // PostgREST column not found
-    code === 'PGRST200'    // PostgREST relation not found
+  const code = String(error.code || '').toLowerCase();
+  const details = (error.details || '').toLowerCase();
+  const hint = (error.hint || '').toLowerCase();
+  
+  // PostgreSQL error codes for missing columns/tables
+  const pgErrorCodes = ['42703', '42p01'];
+  // PostgREST error codes for missing columns/relations
+  const postgrestErrorCodes = ['pgrst204', 'pgrst200'];
+  
+  // Check if any field contains PostgreSQL or PostgREST error codes
+  const hasErrorCode = pgErrorCodes.some(errCode => 
+    code.includes(errCode) || details.includes(errCode) || hint.includes(errCode) || msg.includes(errCode)
+  ) || postgrestErrorCodes.some(errCode =>
+    code.includes(errCode) || details.includes(errCode) || hint.includes(errCode) || msg.includes(errCode)
   );
+  
+  // Check for HTTP 400 combined with column/relation keywords
+  const isHttp400WithSchemaKeywords = (
+    (code === '400' || error.status === 400) &&
+    (msg.includes('column') || msg.includes('relation') || details.includes('column') || details.includes('relation'))
+  );
+  
+  // Check for explicit schema error messages
+  const hasSchemaErrorMessage = (
+    (msg.includes('column') && msg.includes('does not exist')) ||
+    (msg.includes('relation') && msg.includes('does not exist')) ||
+    msg.includes('undefined column') ||
+    details.includes('column') && details.includes('does not exist') ||
+    details.includes('relation') && details.includes('does not exist')
+  );
+  
+  // As a last resort, check the stringified error object
+  let hasErrorCodeInStringified = false;
+  try {
+    const errorStr = JSON.stringify(error).toLowerCase();
+    hasErrorCodeInStringified = pgErrorCodes.some(errCode => errorStr.includes(errCode)) ||
+                                postgrestErrorCodes.some(errCode => errorStr.includes(errCode));
+  } catch (e) {
+    // Ignore JSON.stringify errors
+  }
+  
+  return hasErrorCode || isHttp400WithSchemaKeywords || hasSchemaErrorMessage || hasErrorCodeInStringified;
 }
 
 const local = {
@@ -1053,22 +1092,41 @@ const remote = {
       // Try with new columns first  
       let { data, error } = await supabase.from('students').select('id, code, name, class_id, iep_due, eval_due, primary_case_manager, archived_at, active').order('code');
       
-      // Graceful fallback: if schema error, retry with basic columns only
-      if (isSchemaError(error)) {
-        console.warn('[data-adapter] Supabase schema may be outdated — some columns not available. Please apply pending migrations.');
+      // Graceful fallback: if ANY error occurs, attempt basic columns before throwing
+      // This makes the fallback more resilient than just checking for schema errors
+      if (error) {
+        const isSchema = isSchemaError(error);
+        console.warn('[data-adapter] Supabase query failed, attempting fallback to basic columns.', {
+          isSchemaError: isSchema,
+          errorCode: error?.code,
+          errorStatus: error?.status,
+          errorMessage: error?.message
+        });
+        
         if (DATA_ADAPTER_DEBUG) {
           console.log('[data-adapter:debug] listStudents fallback triggered', { 
             strategy: 'basic-columns', 
-            errorCode: error?.code, 
-            errorMessage: error?.message 
+            errorCode: error?.code,
+            errorStatus: error?.status,
+            errorDetails: error?.details,
+            errorHint: error?.hint,
+            errorMessage: error?.message,
+            isSchemaError: isSchema
           });
         }
+        
+        // Attempt basic columns fallback (guaranteed to exist from 001_init.sql)
         const fallback = await supabase.from('students').select('id, code, name, class_id').order('code');
-        if (fallback.error) throw fallback.error;
+        
+        // If basic fallback also fails, throw the original error for better debugging
+        if (fallback.error) {
+          console.error('[data-adapter] Basic columns fallback also failed:', fallback.error);
+          throw error; // Throw original error, not fallback error
+        }
+        
         return fallback.data;
       }
       
-      if (error) throw error;
       return data;
     });
   },

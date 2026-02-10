@@ -1566,6 +1566,12 @@
   function init() {
     console.log('[tc-students] Initializing...');
     
+    // Listen for schema drift events from data-adapter
+    window.addEventListener('schema-drift-detected', (event) => {
+      console.log('[tc-students] Schema drift detected:', event.detail);
+      showSchemaDriftBanner();
+    });
+    
     renderClassFilters();
     setupEventHandlers();
     loadData();
