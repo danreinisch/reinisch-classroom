@@ -1884,7 +1884,7 @@ const remote = {
     // Graceful fallback: if schema error, retry with basic columns only
     // When columns don't exist, return empty array since we can't filter by active
     if (isSchemaError(error)) {
-      console.warn('[data-adapter] Supabase schema may be outdated — archived students require schema migration. Returning empty array.');
+      console.warn('[data-adapter] Supabase schema outdated — archived students feature requires "active" column. Apply migration 20260210_students_tab_schema.sql. Returning empty array.');
       return [];
     }
 
