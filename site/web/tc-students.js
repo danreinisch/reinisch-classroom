@@ -5,7 +5,8 @@
   if (!location.pathname.startsWith("/teacher/students")) return;
 
   // Import data adapter for Supabase/localStorage abstraction
-  const { db, isRemote } = await import('/web/data-adapter.js');
+  const { db } = await import('/web/data-adapter.js');
+  const { getSupabase } = await import('/web/supabase-client.js');
 
   // Constants
   const FULL_CLASS_NAMES = [
@@ -123,7 +124,7 @@
   let allStudents = [];
   let allGoals = [];
   let allEnrollments = [];
-  let allClasses = [];
+  // let allClasses = []; // Loaded but unused for now
   let filteredStudents = [];
   let selectedStudent = null;
   let selectedClassFilter = 'All';
@@ -138,7 +139,7 @@
       isSyncing = true;
       updateSyncIndicator();
 
-      const [students, goals, enrollments, classes] = await Promise.all([
+      const [students, goals, enrollments, _classes] = await Promise.all([
         db.listStudents(),
         db.listGoalsAll(),
         db.listClassEnrollments(),
@@ -148,7 +149,7 @@
       allStudents = students.filter(s => s.status === 'active');
       allGoals = goals;
       allEnrollments = enrollments;
-      allClasses = classes;
+      // allClasses = _classes; // Loaded but unused for now
 
       console.log('[tc-students] Loaded:', allStudents.length, 'students,', allGoals.length, 'goals');
       
@@ -681,6 +682,8 @@
       
       for (const enrollment of currentEnrollments) {
         if (!selected.includes(enrollment.class_name)) {
+          const supabase = await getSupabase();
+          if (!supabase) continue;
           const { error } = await supabase
             .from('enrollments')
             .delete()
@@ -694,6 +697,8 @@
       for (const className of selected) {
         const exists = currentEnrollments.some(e => e.class_name === className);
         if (!exists) {
+          const supabase = await getSupabase();
+          if (!supabase) continue;
           const { error } = await supabase
             .from('enrollments')
             .insert({ student_code: studentCode, class_name: className });
@@ -1091,6 +1096,8 @@
       });
 
       for (const className of data.enrollments || []) {
+        const supabase = await getSupabase();
+        if (!supabase) continue;
         await supabase
           .from('enrollments')
           .insert({ student_code: data.code, class_name: className });
@@ -1265,6 +1272,8 @@
         });
 
         for (const className of studentData.enrollments) {
+          const supabase = await getSupabase();
+          if (!supabase) continue;
           await supabase
             .from('enrollments')
             .insert({ student_code: studentData.code, class_name: className });

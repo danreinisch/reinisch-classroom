@@ -1,46 +1,528 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Teacher Center — Students</title>
-  <link rel="stylesheet" href="/web/teacher-shell.css" />
-</head>
-<body>
-  <div class="tc-app">
-    <header class="tc-topbar">
-      <button class="tc-btn" id="tcSidebarToggle" aria-label="Toggle sidebar" aria-expanded="false">☰</button>
-      <a class="tc-btn" href="/" target="_blank" rel="noopener" aria-label="Home">🏠</a>
-      <div class="tc-title">Teacher Center — Students</div>
-    </header>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Teacher Center — Students</title>
+    <link rel="stylesheet" href="/web/teacher-shell.css" />
+    <style>
+      /* Two-pane layout */
+      .st-layout {
+        display: flex;
+        gap: 0;
+        height: calc(100vh - 120px);
+        overflow: hidden;
+      }
+      .st-sidebar {
+        width: 280px;
+        flex-shrink: 0;
+        border-right: 1px solid rgba(255, 255, 255, 0.12);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        background: rgba(255, 255, 255, 0.02);
+      }
+      .st-main {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px;
+      }
 
-    <div class="tc-shell">
-      <aside class="tc-sidebar" aria-label="Teacher navigation">
-        <nav class="tc-nav">
-          <a data-href="/teacher/" href="/teacher/"><span class="tc-icon">🏁</span><span class="tc-label">Overview</span></a>
-          <a data-href="/teacher/work/" href="/teacher/work/"><span class="tc-icon">🗂️</span><span class="tc-label">Work</span></a>
-          <a data-href="/teacher/library/" href="/teacher/library/"><span class="tc-icon">📚</span><span class="tc-label">Library</span></a>
-          <a data-href="/teacher/review/" href="/teacher/review/"><span class="tc-icon">✍️</span><span class="tc-label">Review</span></a>
-          <a data-href="/teacher/gradebook/" href="/teacher/gradebook/"><span class="tc-icon">📊</span><span class="tc-label">Gradebook</span></a>
-          <a data-href="/teacher/students/" href="/teacher/students/"><span class="tc-icon">🧑‍🎓</span><span class="tc-label">Students</span></a>
-          <a data-href="/teacher/classes/" href="/teacher/classes/"><span class="tc-icon">🏫</span><span class="tc-label">Classes</span></a>
-          <a data-href="/teacher/data/" href="/teacher/data/"><span class="tc-icon">🧾</span><span class="tc-label">Data</span></a>
-          <a data-href="/teacher/archive/" href="/teacher/archive/"><span class="tc-icon">📦</span><span class="tc-label">Archive</span></a>
-          <a data-href="/teacher/admin/" href="/teacher/admin/"><span class="tc-icon">🛡️</span><span class="tc-label">Admin</span></a>
-          <a data-href="/teacher/reporting/" href="/teacher/reporting/"><span class="tc-icon">📑</span><span class="tc-label">Reporting</span></a>
-          <a data-href="/teacher/settings/" href="/teacher/settings/"><span class="tc-icon">⚙️</span><span class="tc-label">Settings</span></a>
-        </nav>
-      </aside>
+      /* Toolbar */
+      .st-toolbar {
+        padding: 16px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
 
-      <main class="tc-main">
-      <div id="students-app"></div>
-        <h1>Students</h1>
-        <p>Shell ready. Next PR will wire real Teacher Center modules into these routes.</p>
-      </main>
+      /* Search */
+      .st-search {
+        padding: 16px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+      }
+      .st-search-input {
+        width: 100%;
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(0, 0, 0, 0.3);
+        color: inherit;
+        font-size: 14px;
+      }
+      .st-search-input::placeholder {
+        opacity: 0.6;
+      }
+
+      /* Filter bar */
+      .st-filter-bar {
+        padding: 12px 16px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .st-filter-btn {
+        padding: 6px 12px;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.04);
+        color: inherit;
+        cursor: pointer;
+        font-size: 12px;
+        white-space: nowrap;
+      }
+      .st-filter-btn:hover {
+        background: rgba(255, 255, 255, 0.08);
+      }
+      .st-filter-btn.active {
+        background: rgba(34, 197, 94, 0.18);
+        border-color: rgba(34, 197, 94, 0.35);
+      }
+
+      /* Count */
+      .st-count {
+        padding: 12px 16px;
+        font-size: 13px;
+        opacity: 0.8;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+      }
+
+      /* Student list */
+      .st-student-list {
+        flex: 1;
+        overflow-y: auto;
+      }
+      .st-student-item {
+        padding: 14px 16px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        cursor: pointer;
+        transition: background 0.15s;
+      }
+      .st-student-item:hover {
+        background: rgba(255, 255, 255, 0.06);
+      }
+      .st-student-item.selected {
+        background: rgba(34, 197, 94, 0.15);
+        border-left: 3px solid rgba(34, 197, 94, 0.8);
+      }
+      .st-student-name {
+        font-weight: 500;
+        margin-bottom: 4px;
+      }
+      .st-student-meta {
+        font-size: 12px;
+        opacity: 0.75;
+        display: flex;
+        gap: 10px;
+      }
+
+      /* Sync bar */
+      .st-sync-bar {
+        padding: 12px 0;
+        margin-bottom: 20px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+      }
+      .st-sync-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border-radius: 8px;
+        font-size: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.04);
+      }
+      .st-sync-status.synced {
+        border-color: rgba(34, 197, 94, 0.35);
+        background: rgba(34, 197, 94, 0.12);
+        color: rgba(34, 197, 94, 1);
+      }
+      .st-sync-status.local {
+        border-color: rgba(234, 179, 8, 0.35);
+        background: rgba(234, 179, 8, 0.12);
+        color: rgba(234, 179, 8, 1);
+      }
+      .st-sync-status.error {
+        border-color: rgba(239, 68, 68, 0.35);
+        background: rgba(239, 68, 68, 0.12);
+        color: rgba(239, 68, 68, 1);
+      }
+
+      /* Student detail */
+      .st-detail-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 24px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+      }
+      .st-detail-title {
+        margin: 0 0 8px 0;
+        font-size: 28px;
+      }
+      .st-detail-meta {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+        font-size: 14px;
+        opacity: 0.85;
+      }
+      .st-detail-actions {
+        display: flex;
+        gap: 8px;
+      }
+      .st-detail-section {
+        margin-bottom: 32px;
+      }
+      .st-detail-section h2 {
+        margin: 0 0 16px 0;
+        font-size: 20px;
+      }
+      .st-detail-section h3 {
+        margin: 0 0 12px 0;
+        font-size: 16px;
+      }
+
+      /* Goal cards */
+      .st-goal-card {
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 16px;
+        background: rgba(255, 255, 255, 0.04);
+      }
+      .st-goal-card[data-area="Reading"] {
+        border-left: 4px solid rgba(59, 130, 246, 0.8);
+      }
+      .st-goal-card[data-area="Writing"] {
+        border-left: 4px solid rgba(168, 85, 247, 0.8);
+      }
+      .st-goal-card[data-area="Math"] {
+        border-left: 4px solid rgba(34, 197, 94, 0.8);
+      }
+      .st-goal-card[data-area="Behavior"] {
+        border-left: 4px solid rgba(249, 115, 22, 0.8);
+      }
+      .st-goal-card[data-area="Life Skills"] {
+        border-left: 4px solid rgba(20, 184, 166, 0.8);
+      }
+      .st-goal-card[data-area="Social"] {
+        border-left: 4px solid rgba(236, 72, 153, 0.8);
+      }
+      .st-goal-card[data-area="Language"] {
+        border-left: 4px solid rgba(99, 102, 241, 0.8);
+      }
+      .st-goal-card[data-area="Emotional"] {
+        border-left: 4px solid rgba(239, 68, 68, 0.8);
+      }
+      .st-goal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 12px;
+      }
+      .st-goal-title {
+        font-weight: 500;
+        margin-bottom: 6px;
+      }
+      .st-goal-meta {
+        font-size: 12px;
+        opacity: 0.75;
+        display: flex;
+        gap: 12px;
+      }
+      .st-goal-body {
+        margin-bottom: 12px;
+        line-height: 1.5;
+      }
+      .st-goal-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      /* Outside section */
+      .st-outside-section {
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 16px;
+        background: rgba(255, 255, 255, 0.04);
+      }
+      .st-outside-toggle {
+        cursor: pointer;
+        user-select: none;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .st-outside-toggle:hover {
+        opacity: 0.9;
+      }
+      .st-outside-content {
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1px solid rgba(255, 255, 255, 0.12);
+      }
+
+      /* Badges */
+      .st-badge {
+        display: inline-flex;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 500;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+      }
+      .st-badge-active {
+        background: rgba(34, 197, 94, 0.15);
+        border-color: rgba(34, 197, 94, 0.35);
+        color: rgba(34, 197, 94, 1);
+      }
+      .st-badge-measurement {
+        background: rgba(59, 130, 246, 0.15);
+        border-color: rgba(59, 130, 246, 0.35);
+        color: rgba(59, 130, 246, 1);
+      }
+      .st-badge-version {
+        background: rgba(168, 85, 247, 0.15);
+        border-color: rgba(168, 85, 247, 0.35);
+        color: rgba(168, 85, 247, 1);
+      }
+
+      /* Warning indicator */
+      .st-warning {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        border-radius: 6px;
+        font-size: 12px;
+        background: rgba(234, 179, 8, 0.15);
+        border: 1px solid rgba(234, 179, 8, 0.35);
+        color: rgba(234, 179, 8, 1);
+      }
+
+      /* Buttons */
+      .st-btn {
+        padding: 10px 14px;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        background: rgba(255, 255, 255, 0.06);
+        color: inherit;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        transition: background 0.15s;
+      }
+      .st-btn:hover {
+        background: rgba(255, 255, 255, 0.1);
+      }
+      .st-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .st-btn-primary {
+        background: rgba(34, 197, 94, 0.18);
+        border-color: rgba(34, 197, 94, 0.35);
+      }
+      .st-btn-primary:hover {
+        background: rgba(34, 197, 94, 0.25);
+      }
+      .st-btn-small {
+        padding: 6px 10px;
+        font-size: 12px;
+      }
+      .st-btn-danger {
+        background: rgba(239, 68, 68, 0.18);
+        border-color: rgba(239, 68, 68, 0.35);
+        color: rgba(239, 68, 68, 1);
+      }
+      .st-btn-danger:hover {
+        background: rgba(239, 68, 68, 0.25);
+      }
+
+      /* Modal */
+      .st-modal-backdrop {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.8);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+      }
+      .st-modal-backdrop.active {
+        display: flex;
+      }
+      .st-modal {
+        background: rgba(20, 20, 20, 0.98);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 16px;
+        padding: 24px;
+        max-width: 600px;
+        width: 90%;
+        max-height: 80vh;
+        overflow-y: auto;
+      }
+      .st-modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+      }
+      .st-modal-header h2 {
+        margin: 0;
+        font-size: 22px;
+      }
+      .st-modal-body {
+        margin-bottom: 20px;
+      }
+      .st-modal-footer {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        padding-top: 16px;
+        border-top: 1px solid rgba(255, 255, 255, 0.12);
+      }
+
+      /* Form elements */
+      .st-form-group {
+        margin-bottom: 16px;
+      }
+      .st-form-label {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 13px;
+        font-weight: 500;
+      }
+      .st-form-input,
+      .st-form-textarea,
+      .st-form-select {
+        width: 100%;
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(0, 0, 0, 0.3);
+        color: inherit;
+        font-size: 14px;
+        font-family: inherit;
+      }
+      .st-form-textarea {
+        min-height: 100px;
+        resize: vertical;
+      }
+
+      /* Empty state */
+      .st-empty {
+        padding: 60px 20px;
+        text-align: center;
+        opacity: 0.7;
+      }
+      .st-empty h3 {
+        margin: 0 0 12px 0;
+        font-size: 18px;
+      }
+      .st-empty p {
+        margin: 0;
+        font-size: 14px;
+      }
+
+      /* Responsive */
+      @media (max-width: 768px) {
+        .st-layout {
+          flex-direction: column;
+          height: auto;
+        }
+        .st-sidebar {
+          width: 100%;
+          border-right: none;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+          max-height: 50vh;
+        }
+        .st-main {
+          padding: 16px;
+        }
+        .st-detail-header {
+          flex-direction: column;
+          gap: 16px;
+        }
+        .st-detail-actions {
+          width: 100%;
+        }
+        .st-btn {
+          flex: 1;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="tc-app">
+      <header class="tc-topbar">
+        <button class="tc-btn" id="tcSidebarToggle" aria-label="Toggle sidebar" aria-expanded="false">☰</button>
+        <a class="tc-btn" href="/" target="_blank" rel="noopener" aria-label="Home">🏠</a>
+        <div class="tc-title">Teacher Center — Students</div>
+      </header>
+
+      <div class="tc-shell">
+        <aside class="tc-sidebar" aria-label="Teacher navigation">
+          <nav class="tc-nav">
+            <a data-href="/teacher/" href="/teacher/"><span class="tc-icon">🏁</span><span class="tc-label">Overview</span></a>
+            <a data-href="/teacher/work/" href="/teacher/work/"><span class="tc-icon">🗂️</span><span class="tc-label">Work</span></a>
+            <a data-href="/teacher/library/" href="/teacher/library/"><span class="tc-icon">📚</span><span class="tc-label">Library</span></a>
+            <a data-href="/teacher/review/" href="/teacher/review/"><span class="tc-icon">✍️</span><span class="tc-label">Review</span></a>
+            <a data-href="/teacher/gradebook/" href="/teacher/gradebook/"><span class="tc-icon">📊</span><span class="tc-label">Gradebook</span></a>
+            <a data-href="/teacher/students/" href="/teacher/students/"><span class="tc-icon">🧑‍🎓</span><span class="tc-label">Students</span></a>
+            <a data-href="/teacher/classes/" href="/teacher/classes/"><span class="tc-icon">🏫</span><span class="tc-label">Classes</span></a>
+            <a data-href="/teacher/data/" href="/teacher/data/"><span class="tc-icon">🧾</span><span class="tc-label">Data</span></a>
+            <a data-href="/teacher/archive/" href="/teacher/archive/"><span class="tc-icon">📦</span><span class="tc-label">Archive</span></a>
+            <a data-href="/teacher/admin/" href="/teacher/admin/"><span class="tc-icon">🛡️</span><span class="tc-label">Admin</span></a>
+            <a data-href="/teacher/reporting/" href="/teacher/reporting/"><span class="tc-icon">📑</span><span class="tc-label">Reporting</span></a>
+            <a data-href="/teacher/settings/" href="/teacher/settings/"><span class="tc-icon">⚙️</span><span class="tc-label">Settings</span></a>
+          </nav>
+        </aside>
+
+        <main class="tc-main">
+          <div class="st-layout">
+            <aside class="st-sidebar">
+              <div class="st-toolbar">
+                <button id="stAddStudent" class="st-btn st-btn-primary">+ Add Student</button>
+                <button id="stImportCSV" class="st-btn">📥 Import CSV</button>
+              </div>
+              <div class="st-search">
+                <input type="text" id="stSearchInput" class="st-search-input" placeholder="Search students...">
+              </div>
+              <div class="st-filter-bar" id="stClassFilters">
+                <!-- Class filter buttons rendered by JS -->
+              </div>
+              <div id="stStudentCount" class="st-count"></div>
+              <div id="stStudentList" class="st-student-list">
+                <!-- Student list rendered by JS -->
+              </div>
+            </aside>
+            <div class="st-main">
+              <div class="st-sync-bar">
+                <span id="stSyncStatus" class="st-sync-status">🟡 Local mode</span>
+              </div>
+              <div id="stStudentDetail">
+                <!-- Student detail rendered by JS -->
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
     </div>
-  </div>
 
-  <script defer src="/web/teacher-shell.js"></script>
-  <script defer src="/web/teacher-students.js"></script>
-</body>
+    <script defer src="/web/teacher-shell.js"></script>
+    <script type="module" src="/web/tc-students.js"></script>
+  </body>
 </html>
