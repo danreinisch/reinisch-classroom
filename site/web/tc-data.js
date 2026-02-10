@@ -8,14 +8,39 @@
   const { db, isRemote } = await import('/web/data-adapter.js');
 
   // NOTE: Keep in sync with CANON_CLASSES in tc-work.js and tc-gradebook.js
+  // Full class names matching CSV data
   const CANON_CLASSES = [
-    "LA 1 SC",
-    "LA 2 SC",
-    "LA 3 SC",
-    "LA 4 SC",
+    "Language Arts 1 SC",
+    "Language Arts 2 SC",
+    "Language Arts 3 SC",
+    "Language Arts 4 SC",
+    "Language Arts 1 S1",
+    "Language Arts 2 S1",
+    "Language Arts 3 S1",
+    "Life Skills Language Arts SC",
     "Life Skills",
-    "Life Skills LA",
+    "Consumer Math",
+    "Geometry SC",
+    "Warrior Academy",
+    "Speech/Language"
   ];
+  
+  // Display abbreviations for space constraints
+  const CLASS_DISPLAY = {
+    "Language Arts 1 SC": "LA 1 SC",
+    "Language Arts 2 SC": "LA 2 SC",
+    "Language Arts 3 SC": "LA 3 SC",
+    "Language Arts 4 SC": "LA 4 SC",
+    "Language Arts 1 S1": "LA 1 S1",
+    "Language Arts 2 S1": "LA 2 S1",
+    "Language Arts 3 S1": "LA 3 S1",
+    "Life Skills Language Arts SC": "Life Skills LA",
+    "Life Skills": "Life Skills",
+    "Consumer Math": "Consumer Math",
+    "Geometry SC": "Geometry SC",
+    "Warrior Academy": "Warrior Academy",
+    "Speech/Language": "Speech/Language"
+  };
 
   const $ = (id) => document.getElementById(id);
 

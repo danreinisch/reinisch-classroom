@@ -144,7 +144,7 @@
         db.listClassEnrollments()
       ]);
 
-      allStudents = students.filter(s => s.status === 'active');
+      allStudents = students.filter(s => s.status !== 'archived');
       allGoals = goals;
       allEnrollments = enrollments;
 

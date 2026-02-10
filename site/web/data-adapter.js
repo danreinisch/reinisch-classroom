@@ -769,11 +769,26 @@ const remote = {
   async listStudents() {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
-    const { data, error } = await supabase
+    
+    // Try with new columns first
+    let { data, error } = await supabase
       .from('students')
       .select('id, code, name, class_id, iep_due, eval_due, primary_case_manager, archived_at, active')
       .order('code');
-    if (error) throw error; return data;
+    
+    // Graceful fallback: if column doesn't exist, retry with basic columns only
+    if (error && error.message && error.message.includes('column')) {
+      console.warn('[data-adapter] Supabase schema may be outdated — some columns not available. Please apply pending migrations.');
+      const fallback = await supabase
+        .from('students')
+        .select('id, code, name, class_id')
+        .order('code');
+      if (fallback.error) throw fallback.error;
+      return fallback.data;
+    }
+    
+    if (error) throw error;
+    return data;
   },
   async upsertStudent(studentData) {
     const supabase = await getSupabase();
@@ -931,30 +946,64 @@ const remote = {
     if (e1) throw e1;
     // Map goal_text to desc for consistency with database schema
     const description = goal_text || desc;
-    // Upsert goal: unique on (student_id, code)
-    const payload = { 
+    
+    // Try with new columns first
+    const fullPayload = { 
       student_id: stu.id, code, desc: description, target, status,
       measurement_type, data_collector, data_collector_email, class_context,
       goal_area, baseline, case_manager, version
     };
-    const { data, error } = await supabase.from('goals')
-      .upsert(payload, { onConflict: 'student_id,code' })
+    let { data, error } = await supabase.from('goals')
+      .upsert(fullPayload, { onConflict: 'student_id,code' })
       .select()
       .single();
+    
+    // Graceful fallback: if column doesn't exist, retry with basic columns only
+    if (error && error.message && error.message.includes('column')) {
+      console.warn('[data-adapter] Supabase schema may be outdated — some columns not available. Please apply pending migrations.');
+      const basicPayload = { student_id: stu.id, code, desc: description, target, status };
+      const fallback = await supabase.from('goals')
+        .upsert(basicPayload, { onConflict: 'student_id,code' })
+        .select()
+        .single();
+      if (fallback.error) throw fallback.error;
+      return { student_code, ...fallback.data };
+    }
+    
     if (error) throw error;
     return { student_code, ...data };
   },
   async listGoalsAll() {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
-    // Join students and goals
-    const { data, error } = await supabase
+    
+    // Try with new columns first
+    let { data, error } = await supabase
       .from('goals')
       .select(`id, code, desc, target, status, student_id, 
               measurement_type, data_collector, data_collector_email, class_context,
               goal_area, baseline, case_manager, version,
               students!inner(code)`)
       .order('code', { foreignTable: 'students', ascending: true });
+    
+    // Graceful fallback: if column doesn't exist, retry with basic columns only
+    if (error && error.message && error.message.includes('column')) {
+      console.warn('[data-adapter] Supabase schema may be outdated — some columns not available. Please apply pending migrations.');
+      const fallback = await supabase
+        .from('goals')
+        .select('id, code, desc, target, status, student_id, students!inner(code)')
+        .order('code', { foreignTable: 'students', ascending: true });
+      if (fallback.error) throw fallback.error;
+      return (fallback.data || []).map(g => ({
+        id: g.id,
+        student_code: g.students.code,
+        code: g.code,
+        desc: g.desc,
+        target: g.target,
+        status: g.status
+      }));
+    }
+    
     if (error) throw error;
     // Flatten to include student_code at top level
     return (data || []).map(g => ({

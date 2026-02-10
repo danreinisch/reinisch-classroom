@@ -1025,7 +1025,17 @@ const remote = {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
     return await withRetry(async () => {
-      const { data, error } = await supabase.from('students').select('id, code, name, class_id').order('code');
+      // Try with new columns first  
+      let { data, error } = await supabase.from('students').select('id, code, name, class_id, iep_due, eval_due, primary_case_manager, archived_at').order('code');
+      
+      // Graceful fallback: if column doesn't exist, retry with basic columns only
+      if (error && error.message && error.message.includes('column')) {
+        console.warn('[data-adapter] Supabase schema may be outdated — some columns not available. Please apply pending migrations.');
+        const fallback = await supabase.from('students').select('id, code, name, class_id').order('code');
+        if (fallback.error) throw fallback.error;
+        return fallback.data;
+      }
+      
       if (error) throw error;
       return data;
     });
@@ -1050,18 +1060,40 @@ const remote = {
       return data;
     });
   },
-  async upsertGoal({ student_code, code, desc, target = null, status = 'Open' }) {
+  async upsertGoal({ student_code, code, desc, target = null, status = 'Open', 
+                     measurement_type = 'percent', data_collector = null,
+                     data_collector_email = null, class_context = null,
+                     goal_area = null, baseline = null, case_manager = null, version = 1 }) {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
     return await withRetry(async () => {
       // Lookup student by code
       const { data: stu, error: e1 } = await supabase.from('students').select('id').eq('code', student_code).single();
       if (e1) throw e1;
-      // Upsert goal: unique on (student_id, code)
-      const { data, error } = await supabase.from('goals')
-        .upsert({ student_id: stu.id, code, desc, target, status }, { onConflict: 'student_id,code' })
+      
+      // Try with new columns first
+      const fullPayload = { 
+        student_id: stu.id, code, desc, target, status,
+        measurement_type, data_collector, data_collector_email, class_context,
+        goal_area, baseline, case_manager, version
+      };
+      let { data, error } = await supabase.from('goals')
+        .upsert(fullPayload, { onConflict: 'student_id,code' })
         .select()
         .single();
+      
+      // Graceful fallback: if column doesn't exist, retry with basic columns only
+      if (error && error.message && error.message.includes('column')) {
+        console.warn('[data-adapter] Supabase schema may be outdated — some columns not available. Please apply pending migrations.');
+        const basicPayload = { student_id: stu.id, code, desc, target, status };
+        const fallback = await supabase.from('goals')
+          .upsert(basicPayload, { onConflict: 'student_id,code' })
+          .select()
+          .single();
+        if (fallback.error) throw fallback.error;
+        return { student_code, ...fallback.data };
+      }
+      
       if (error) throw error;
       return { student_code, ...data };
     });
@@ -1070,11 +1102,33 @@ const remote = {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
     return await withRetry(async () => {
-      // Join students and goals
-      const { data, error } = await supabase
+      // Try with new columns first
+      let { data, error } = await supabase
         .from('goals')
-        .select('id, code, desc, target, status, student_id, students!inner(code)')
+        .select(`id, code, desc, target, status, student_id,
+                measurement_type, data_collector, data_collector_email, class_context,
+                goal_area, baseline, case_manager, version,
+                students!inner(code)`)
         .order('code', { foreignTable: 'students', ascending: true });
+      
+      // Graceful fallback: if column doesn't exist, retry with basic columns only
+      if (error && error.message && error.message.includes('column')) {
+        console.warn('[data-adapter] Supabase schema may be outdated — some columns not available. Please apply pending migrations.');
+        const fallback = await supabase
+          .from('goals')
+          .select('id, code, desc, target, status, student_id, students!inner(code)')
+          .order('code', { foreignTable: 'students', ascending: true });
+        if (fallback.error) throw fallback.error;
+        return (fallback.data || []).map(g => ({
+          id: g.id,
+          student_code: g.students.code,
+          code: g.code,
+          desc: g.desc,
+          target: g.target,
+          status: g.status
+        }));
+      }
+      
       if (error) throw error;
       // Flatten to include student_code at top level
       return (data || []).map(g => ({
@@ -1083,7 +1137,15 @@ const remote = {
         code: g.code,
         desc: g.desc,
         target: g.target,
-        status: g.status
+        status: g.status,
+        measurement_type: g.measurement_type,
+        data_collector: g.data_collector,
+        data_collector_email: g.data_collector_email,
+        class_context: g.class_context,
+        goal_area: g.goal_area,
+        baseline: g.baseline,
+        case_manager: g.case_manager,
+        version: g.version
       }));
     });
   },
