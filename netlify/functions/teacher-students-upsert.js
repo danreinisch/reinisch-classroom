@@ -33,7 +33,7 @@ function isSchemaError(errorText) {
     text.includes('relation') && text.includes('does not exist') ||
     text.includes('undefined column') ||
     text.includes('42703') || // PostgreSQL undefined_column error code
-    text.includes('42p01')    // PostgreSQL undefined_table error code
+    text.includes('42p01')    // PostgreSQL undefined_table error code (lowercased for comparison)
   );
 }
 
