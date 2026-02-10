@@ -11,6 +11,28 @@ const store = {
   set: (k, v) => localStorage.setItem(NS + k, JSON.stringify(v)),
 };
 
+/**
+ * Robust detection for schema-related errors from Supabase/PostgREST
+ * Checks for various error conditions that indicate missing columns or tables
+ * @param {Error} error - The error object to check
+ * @returns {boolean} True if error is schema-related
+ */
+function isSchemaError(error) {
+  if (!error) return false;
+  const msg = (error.message || '').toLowerCase();
+  const code = error.code || '';
+  return (
+    msg.includes('column') ||
+    msg.includes('relation') ||
+    msg.includes('does not exist') ||
+    msg.includes('undefined column') ||
+    code === '42703' ||    // undefined_column
+    code === '42P01' ||    // undefined_table
+    code === 'PGRST204' || // PostgREST column not found
+    code === 'PGRST200'    // PostgREST relation not found
+  );
+}
+
 const local = {
   // Students
   async listStudents() { return store.get('students', []); },
@@ -1026,10 +1048,10 @@ const remote = {
     if (!supabase) throw new Error('supabase-not-configured');
     return await withRetry(async () => {
       // Try with new columns first  
-      let { data, error } = await supabase.from('students').select('id, code, name, class_id, iep_due, eval_due, primary_case_manager, archived_at').order('code');
+      let { data, error } = await supabase.from('students').select('id, code, name, class_id, iep_due, eval_due, primary_case_manager, archived_at, active').order('code');
       
-      // Graceful fallback: if column doesn't exist, retry with basic columns only
-      if (error && error.message && error.message.includes('column')) {
+      // Graceful fallback: if schema error, retry with basic columns only
+      if (isSchemaError(error)) {
         console.warn('[data-adapter] Supabase schema may be outdated — some columns not available. Please apply pending migrations.');
         const fallback = await supabase.from('students').select('id, code, name, class_id').order('code');
         if (fallback.error) throw fallback.error;
@@ -1040,11 +1062,32 @@ const remote = {
       return data;
     });
   },
-  async upsertStudent({ code, name, class_id = null }) {
+  async upsertStudent(studentData) {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
     return await withRetry(async () => {
-      const { data, error } = await supabase.from('students').upsert({ code, name, class_id }, { onConflict: 'code' }).select().single();
+      const { code, name, class_id = null, iep_due, eval_due, primary_case_manager, archived_at, active } = studentData;
+      
+      // Try with new columns first
+      const fullPayload = { code, name, class_id };
+      // Include new fields only if provided
+      if (iep_due !== undefined) fullPayload.iep_due = iep_due;
+      if (eval_due !== undefined) fullPayload.eval_due = eval_due;
+      if (primary_case_manager !== undefined) fullPayload.primary_case_manager = primary_case_manager;
+      if (archived_at !== undefined) fullPayload.archived_at = archived_at;
+      if (active !== undefined) fullPayload.active = active;
+      
+      let { data, error } = await supabase.from('students').upsert(fullPayload, { onConflict: 'code' }).select().single();
+      
+      // Graceful fallback: if schema error, retry with basic columns only
+      if (isSchemaError(error)) {
+        console.warn('[data-adapter] Supabase schema may be outdated — some columns not available. Please apply pending migrations.');
+        const basicPayload = { code, name, class_id };
+        const fallback = await supabase.from('students').upsert(basicPayload, { onConflict: 'code' }).select().single();
+        if (fallback.error) throw fallback.error;
+        return fallback.data;
+      }
+      
       if (error) throw error;
       return data;
     });
