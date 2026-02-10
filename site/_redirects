@@ -35,4 +35,10 @@
 /viewer            /viewer/index.html        200
 /viewer/           /viewer/index.html        200
 /viewer/*          /viewer/index.html        200
+
+# Data Entry redirects - standalone external data entry (token-based access, no auth)
+/data-entry        /data-entry/index.html    200
+/data-entry/       /data-entry/index.html    200
+/data-entry/*      /data-entry/index.html    200
+
 /language-arts/toolkit/presentations/presentation-08/*  /presentations/language-arts-toolkit/presentation-08/:splat  301

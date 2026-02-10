@@ -603,6 +603,166 @@ const local = {
     
     return true;
   },
+
+  // ============================================================================
+  // Archive Tab: Student Archive Management
+  // ============================================================================
+
+  /**
+   * Get all archived students
+   * @returns {Array} Students where active = false
+   */
+  async getArchivedStudents() {
+    const students = store.get('students', []);
+    return students.filter(s => s.active === false);
+  },
+
+  /**
+   * Get comprehensive archive data for a student
+   * @param {string} studentCode - Student code
+   * @returns {Object} {student, goals, submissions, progress, gradebookScores}
+   */
+  async getStudentArchiveData(studentCode) {
+    const students = store.get('students', []);
+    const student = students.find(s => s.code === studentCode);
+    if (!student) return null;
+
+    // Get all goals for this student (including archived versions)
+    const iepGoals = store.get('iepGoals', {});
+    const goals = iepGoals[studentCode] || [];
+
+    // Get all submissions
+    const allSubmissions = store.get('submissions', []);
+    const submissions = allSubmissions.filter(s => s.student_code === studentCode);
+
+    // Get all progress entries
+    const allProgress = store.get('goalProgress', []);
+    const progress = allProgress.filter(p => p.student_code === studentCode);
+
+    // Get gradebook scores (if available)
+    const allScores = store.get('gradebookScores', []);
+    const gradebookScores = allScores.filter(s => s.student_code === studentCode);
+
+    return {
+      student,
+      goals,
+      submissions,
+      progress,
+      gradebookScores
+    };
+  },
+
+  /**
+   * Reactivate an archived student
+   * @param {string} studentCode - Student code
+   * @returns {Object} Updated student
+   */
+  async reactivateStudent(studentCode) {
+    const students = store.get('students', []);
+    const student = students.find(s => s.code === studentCode);
+    if (!student) throw new Error('Student not found');
+
+    student.active = true;
+    student.archived_at = null;
+    store.set('students', students);
+
+    return student;
+  },
+
+  // ============================================================================
+  // Data Entry Tokens: Token Management (Local Mode)
+  // ============================================================================
+
+  /**
+   * Create a data entry token
+   * @param {Object} params - {studentCode, goalCode, dataCollector, dataCollectorEmail}
+   * @returns {Object} Token object with token string
+   */
+  async createDataEntryToken({ studentCode, goalCode, dataCollector, dataCollectorEmail }) {
+    const tokens = store.get('dataEntryTokens', []);
+    
+    // Check if token already exists for this student+goal combo
+    const existing = tokens.find(t => 
+      t.student_code === studentCode && 
+      t.goal_code === goalCode && 
+      !t.revoked
+    );
+    
+    if (existing) return existing;
+
+    // Generate random 32-char hex token
+    const tokenArray = new Uint8Array(16);
+    crypto.getRandomValues(tokenArray);
+    const token = Array.from(tokenArray, byte => byte.toString(16).padStart(2, '0')).join('');
+
+    const tokenObj = {
+      id: 'tok_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9),
+      token,
+      student_code: studentCode,
+      goal_code: goalCode,
+      data_collector: dataCollector,
+      data_collector_email: dataCollectorEmail,
+      created_by: 'teacher',
+      created_at: new Date().toISOString(),
+      expires_at: null,
+      revoked: false
+    };
+
+    tokens.push(tokenObj);
+    store.set('dataEntryTokens', tokens);
+
+    return tokenObj;
+  },
+
+  /**
+   * Get token details by token string
+   * @param {string} token - Token string
+   * @returns {Object|null} Token object or null if invalid/revoked/expired
+   */
+  async getDataEntryToken(token) {
+    const tokens = store.get('dataEntryTokens', []);
+    const tokenObj = tokens.find(t => t.token === token);
+    
+    if (!tokenObj || tokenObj.revoked) return null;
+    
+    // Check expiration
+    if (tokenObj.expires_at) {
+      const expiresAt = new Date(tokenObj.expires_at);
+      if (expiresAt < new Date()) return null;
+    }
+
+    return tokenObj;
+  },
+
+  /**
+   * List all active tokens for a student
+   * @param {string} studentCode - Student code
+   * @returns {Array} Active tokens
+   */
+  async listDataEntryTokens(studentCode) {
+    const tokens = store.get('dataEntryTokens', []);
+    return tokens.filter(t => 
+      t.student_code === studentCode && 
+      !t.revoked &&
+      (!t.expires_at || new Date(t.expires_at) > new Date())
+    );
+  },
+
+  /**
+   * Revoke a data entry token
+   * @param {string} tokenId - Token ID
+   * @returns {boolean} Success
+   */
+  async revokeDataEntryToken(tokenId) {
+    const tokens = store.get('dataEntryTokens', []);
+    const token = tokens.find(t => t.id === tokenId);
+    if (!token) return false;
+
+    token.revoked = true;
+    store.set('dataEntryTokens', tokens);
+
+    return true;
+  },
 };
 
 const remote = {
@@ -1628,6 +1788,226 @@ const remote = {
       if (instanceError) throw instanceError;
     }
     
+    return true;
+  },
+
+  // ============================================================================
+  // Archive Tab: Student Archive Management (Remote)
+  // ============================================================================
+
+  /**
+   * Get all archived students
+   * @returns {Array} Students where active = false
+   */
+  async getArchivedStudents() {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+
+    const { data, error } = await supabase
+      .from('students')
+      .select('id, code, name, class_id, iep_due, eval_due, primary_case_manager, archived_at, active')
+      .eq('active', false)
+      .order('archived_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  },
+
+  /**
+   * Get comprehensive archive data for a student
+   * @param {string} studentCode - Student code
+   * @returns {Object} {student, goals, submissions, progress, gradebookScores}
+   */
+  async getStudentArchiveData(studentCode) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+
+    // Get student
+    const { data: student, error: studentError } = await supabase
+      .from('students')
+      .select('*')
+      .eq('code', studentCode)
+      .single();
+
+    if (studentError) throw studentError;
+
+    // Get all goals (including all versions)
+    const { data: goals, error: goalsError } = await supabase
+      .from('goals')
+      .select('*')
+      .eq('student_id', student.id)
+      .order('version', { ascending: false });
+
+    if (goalsError) throw goalsError;
+
+    // Get all submissions with assignment details
+    const { data: submissions, error: submissionsError } = await supabase
+      .from('submissions')
+      .select(`
+        *,
+        assignment_instances!inner(
+          assignment_id,
+          assignments(id, title)
+        )
+      `)
+      .eq('student_id', student.id)
+      .order('submitted_at', { ascending: false });
+
+    if (submissionsError) throw submissionsError;
+
+    // Get all progress entries
+    const { data: progress, error: progressError } = await supabase
+      .from('goal_progress')
+      .select('*')
+      .eq('student_id', student.id)
+      .order('date', { ascending: false });
+
+    if (progressError) throw progressError;
+
+    // Note: Gradebook scores would need a separate query if stored in a scores table
+    // For now, we'll return empty array
+    const gradebookScores = [];
+
+    return {
+      student,
+      goals: goals || [],
+      submissions: submissions || [],
+      progress: progress || [],
+      gradebookScores
+    };
+  },
+
+  /**
+   * Reactivate an archived student
+   * @param {string} studentCode - Student code
+   * @returns {Object} Updated student
+   */
+  async reactivateStudent(studentCode) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+
+    const { data, error } = await supabase
+      .from('students')
+      .update({ active: true, archived_at: null })
+      .eq('code', studentCode)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  // ============================================================================
+  // Data Entry Tokens: Token Management (Remote)
+  // ============================================================================
+
+  /**
+   * Create a data entry token
+   * @param {Object} params - {studentCode, goalCode, dataCollector, dataCollectorEmail}
+   * @returns {Object} Token object with token string
+   */
+  async createDataEntryToken({ studentCode, goalCode, dataCollector, dataCollectorEmail }) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+
+    // Check if token already exists for this student+goal combo
+    const { data: existing, error: checkError } = await supabase
+      .from('data_entry_tokens')
+      .select('*')
+      .eq('student_code', studentCode)
+      .eq('goal_code', goalCode)
+      .eq('revoked', false)
+      .maybeSingle();
+
+    if (checkError && checkError.code !== 'PGRST116') throw checkError;
+    if (existing) return existing;
+
+    // Generate random 32-char hex token
+    const tokenArray = new Uint8Array(16);
+    crypto.getRandomValues(tokenArray);
+    const token = Array.from(tokenArray, byte => byte.toString(16).padStart(2, '0')).join('');
+
+    const { data, error } = await supabase
+      .from('data_entry_tokens')
+      .insert({
+        token,
+        student_code: studentCode,
+        goal_code: goalCode,
+        data_collector: dataCollector,
+        data_collector_email: dataCollectorEmail
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  /**
+   * Get token details by token string
+   * @param {string} token - Token string
+   * @returns {Object|null} Token object or null if invalid/revoked/expired
+   */
+  async getDataEntryToken(token) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+
+    const { data, error } = await supabase
+      .from('data_entry_tokens')
+      .select('*')
+      .eq('token', token)
+      .eq('revoked', false)
+      .maybeSingle();
+
+    if (error && error.code !== 'PGRST116') throw error;
+    if (!data) return null;
+
+    // Check expiration
+    if (data.expires_at) {
+      const expiresAt = new Date(data.expires_at);
+      if (expiresAt < new Date()) return null;
+    }
+
+    return data;
+  },
+
+  /**
+   * List all active tokens for a student
+   * @param {string} studentCode - Student code
+   * @returns {Array} Active tokens
+   */
+  async listDataEntryTokens(studentCode) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+
+    const { data, error } = await supabase
+      .from('data_entry_tokens')
+      .select('*')
+      .eq('student_code', studentCode)
+      .eq('revoked', false);
+
+    if (error) throw error;
+
+    // Filter out expired tokens
+    const now = new Date();
+    return (data || []).filter(t => !t.expires_at || new Date(t.expires_at) > now);
+  },
+
+  /**
+   * Revoke a data entry token
+   * @param {string} tokenId - Token ID (UUID)
+   * @returns {boolean} Success
+   */
+  async revokeDataEntryToken(tokenId) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+
+    const { error } = await supabase
+      .from('data_entry_tokens')
+      .update({ revoked: true })
+      .eq('id', tokenId);
+
+    if (error) throw error;
     return true;
   }
 };
