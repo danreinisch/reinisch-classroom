@@ -128,6 +128,16 @@
   }
 
   /**
+   * Format date as YYYY-MM-DD in local timezone
+   */
+  function formatDateYYYYMMDD(date = new Date()) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  /**
    * Get token from URL query parameter
    */
   function getTokenFromURL() {
@@ -283,8 +293,8 @@
       deXofYDenom.removeAttribute('required');
     }
 
-    // Set default date to today
-    deDate.value = new Date().toISOString().split('T')[0];
+    // Set default date to today (local timezone)
+    deDate.value = formatDateYYYYMMDD();
 
     // Render progress entries
     renderProgressEntries();
@@ -408,7 +418,7 @@
 
       // Reset form
       deForm.reset();
-      deDate.value = new Date().toISOString().split('T')[0];
+      deDate.value = formatDateYYYYMMDD();
 
       // Reload progress entries
       await loadProgressEntries();
