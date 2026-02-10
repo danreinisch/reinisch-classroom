@@ -939,7 +939,9 @@ const remote = {
     if (error) {
       const isSchema = isSchemaError(error);
       const is400Level =
-        error?.status === 400 || error?.code === "400" || String(error?.code).startsWith("4");
+        error?.status === 400 ||
+        error?.code === "400" ||
+        (String(error?.code).startsWith("40") && String(error?.code).length >= 3);
 
       // Only attempt fallback if it's a schema error OR a 400-level error that might be schema-related
       // This avoids masking genuine network/permission errors while still being resilient

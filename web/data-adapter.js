@@ -1211,7 +1211,9 @@ const remote = {
       if (error) {
         const isSchema = isSchemaError(error);
         const is400Level =
-          error?.status === 400 || error?.code === "400" || String(error?.code).startsWith("4");
+          error?.status === 400 ||
+          error?.code === "400" ||
+          (String(error?.code).startsWith("40") && String(error?.code).length >= 3);
 
         // Only attempt fallback if it's a schema error OR a 400-level error that might be schema-related
         // This avoids masking genuine network/permission errors while still being resilient
@@ -1253,6 +1255,20 @@ const remote = {
               fallback.error
             );
             throw error; // Throw original error for better debugging context
+          }
+
+          // Dispatch custom event for schema drift detection
+          // The UI can listen to this and show a banner
+          if (isSchema && typeof window !== "undefined") {
+            window.dispatchEvent(
+              new CustomEvent("schema-drift-detected", {
+                detail: {
+                  source: "listStudents",
+                  errorCode: error?.code,
+                  errorMessage: error?.message,
+                },
+              })
+            );
           }
 
           return fallback.data;
