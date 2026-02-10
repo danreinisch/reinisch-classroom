@@ -2,7 +2,7 @@
 
 ## The Problem
 
-The remote Supabase project (`yrcvsotxnelnlcagblbe`, URL: `https://yrcvsotxnelnlcagblbe.supabase.co`) is missing four columns on the `students` table that the frontend code depends on:
+The remote Supabase project (`yrcvsotxnelnlcagblbe`, URL: `https://yrcvsotxnelnlcagblbe.supabase.co`) is missing five columns on the `students` table that the frontend code depends on:
 
 - `iep_due` (date) — IEP due date tracking
 - `eval_due` (date) — Evaluation due date tracking
@@ -114,9 +114,10 @@ supabase link --project-ref yrcvsotxnelnlcagblbe
 supabase db push
 ```
 
-Expected output:
+Expected output (will vary based on CLI version):
 ```
 Applying migration 20260210_students_tab_schema.sql...
+✓ Applied migration 20260210_students_tab_schema.sql
 Finished supabase db push.
 ```
 
