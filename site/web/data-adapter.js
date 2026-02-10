@@ -934,44 +934,62 @@ const remote = {
       )
       .order("code");
 
-    // Graceful fallback: if ANY error occurs, attempt basic columns before throwing
-    // This makes the fallback more resilient than just checking for schema errors
+    // Graceful fallback: if error looks like it might be schema-related, attempt basic columns
+    // This includes schema errors plus 400-level errors that might indicate column issues
     if (error) {
       const isSchema = isSchemaError(error);
-      console.warn("[data-adapter] Supabase query failed, attempting fallback to basic columns.", {
-        isSchemaError: isSchema,
-        errorCode: error?.code,
-        errorStatus: error?.status,
-        errorMessage: error?.message,
-      });
+      const is400Level =
+        error?.status === 400 || error?.code === "400" || String(error?.code).startsWith("4");
 
-      // Attempt basic columns fallback (guaranteed to exist from 001_init.sql)
-      const fallback = await supabase
-        .from("students")
-        .select("id, code, name, class_id")
-        .order("code");
-
-      // If basic fallback also fails, throw the original error for better debugging
-      if (fallback.error) {
-        console.error("[data-adapter] Basic columns fallback also failed:", fallback.error);
-        throw error; // Throw original error, not fallback error
-      }
-
-      // Dispatch custom event for schema drift detection
-      // The UI can listen to this and show a banner
-      if (isSchema && typeof window !== "undefined") {
-        window.dispatchEvent(
-          new CustomEvent("schema-drift-detected", {
-            detail: {
-              source: "listStudents",
-              errorCode: error?.code,
-              errorMessage: error?.message,
-            },
-          })
+      // Only attempt fallback if it's a schema error OR a 400-level error that might be schema-related
+      // This avoids masking genuine network/permission errors while still being resilient
+      if (isSchema || is400Level) {
+        console.warn(
+          "[data-adapter] Supabase query failed with possible schema error, attempting fallback to basic columns.",
+          {
+            isSchemaError: isSchema,
+            errorCode: error?.code,
+            errorStatus: error?.status,
+            errorMessage: error?.message,
+          }
         );
+
+        // Attempt basic columns fallback (guaranteed to exist from 001_init.sql)
+        const fallback = await supabase
+          .from("students")
+          .select("id, code, name, class_id")
+          .order("code");
+
+        // If basic fallback also fails, log both errors and throw the original
+        if (fallback.error) {
+          console.error(
+            "[data-adapter] Basic columns fallback also failed. Original error:",
+            error,
+            "Fallback error:",
+            fallback.error
+          );
+          throw error; // Throw original error for better debugging context
+        }
+
+        // Dispatch custom event for schema drift detection
+        // The UI can listen to this and show a banner
+        if (isSchema && typeof window !== "undefined") {
+          window.dispatchEvent(
+            new CustomEvent("schema-drift-detected", {
+              detail: {
+                source: "listStudents",
+                errorCode: error?.code,
+                errorMessage: error?.message,
+              },
+            })
+          );
+        }
+
+        return fallback.data;
       }
 
-      return fallback.data;
+      // For non-schema errors (network, auth, etc.), throw immediately without fallback attempt
+      throw error;
     }
 
     return data;

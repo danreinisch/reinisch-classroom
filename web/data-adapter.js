@@ -1206,45 +1206,60 @@ const remote = {
         )
         .order("code");
 
-      // Graceful fallback: if ANY error occurs, attempt basic columns before throwing
-      // This makes the fallback more resilient than just checking for schema errors
+      // Graceful fallback: if error looks like it might be schema-related, attempt basic columns
+      // This includes schema errors plus 400-level errors that might indicate column issues
       if (error) {
         const isSchema = isSchemaError(error);
-        console.warn(
-          "[data-adapter] Supabase query failed, attempting fallback to basic columns.",
-          {
-            isSchemaError: isSchema,
-            errorCode: error?.code,
-            errorStatus: error?.status,
-            errorMessage: error?.message,
+        const is400Level =
+          error?.status === 400 || error?.code === "400" || String(error?.code).startsWith("4");
+
+        // Only attempt fallback if it's a schema error OR a 400-level error that might be schema-related
+        // This avoids masking genuine network/permission errors while still being resilient
+        if (isSchema || is400Level) {
+          console.warn(
+            "[data-adapter] Supabase query failed with possible schema error, attempting fallback to basic columns.",
+            {
+              isSchemaError: isSchema,
+              errorCode: error?.code,
+              errorStatus: error?.status,
+              errorMessage: error?.message,
+            }
+          );
+
+          if (DATA_ADAPTER_DEBUG) {
+            console.log("[data-adapter:debug] listStudents fallback triggered", {
+              strategy: "basic-columns",
+              errorCode: error?.code,
+              errorStatus: error?.status,
+              errorDetails: error?.details,
+              errorHint: error?.hint,
+              errorMessage: error?.message,
+              isSchemaError: isSchema,
+            });
           }
-        );
 
-        if (DATA_ADAPTER_DEBUG) {
-          console.log("[data-adapter:debug] listStudents fallback triggered", {
-            strategy: "basic-columns",
-            errorCode: error?.code,
-            errorStatus: error?.status,
-            errorDetails: error?.details,
-            errorHint: error?.hint,
-            errorMessage: error?.message,
-            isSchemaError: isSchema,
-          });
+          // Attempt basic columns fallback (guaranteed to exist from 001_init.sql)
+          const fallback = await supabase
+            .from("students")
+            .select("id, code, name, class_id")
+            .order("code");
+
+          // If basic fallback also fails, log both errors and throw the original
+          if (fallback.error) {
+            console.error(
+              "[data-adapter] Basic columns fallback also failed. Original error:",
+              error,
+              "Fallback error:",
+              fallback.error
+            );
+            throw error; // Throw original error for better debugging context
+          }
+
+          return fallback.data;
         }
 
-        // Attempt basic columns fallback (guaranteed to exist from 001_init.sql)
-        const fallback = await supabase
-          .from("students")
-          .select("id, code, name, class_id")
-          .order("code");
-
-        // If basic fallback also fails, throw the original error for better debugging
-        if (fallback.error) {
-          console.error("[data-adapter] Basic columns fallback also failed:", fallback.error);
-          throw error; // Throw original error, not fallback error
-        }
-
-        return fallback.data;
+        // For non-schema errors (network, auth, etc.), throw immediately without fallback attempt
+        throw error;
       }
 
       return data;
@@ -1468,19 +1483,17 @@ const remote = {
         .eq("code", student_code)
         .single();
       if (e1) throw e1;
-      const { error } = await supabase
-        .from("progress_entries")
-        .insert({
-          student_id: stu.id,
-          goal_id,
-          date,
-          points,
-          percent,
-          method,
-          by_name,
-          via,
-          notes,
-        });
+      const { error } = await supabase.from("progress_entries").insert({
+        student_id: stu.id,
+        goal_id,
+        date,
+        points,
+        percent,
+        method,
+        by_name,
+        via,
+        notes,
+      });
       if (error) throw error;
       return true;
     });
