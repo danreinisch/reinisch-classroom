@@ -11,6 +11,9 @@ const store = {
   set: (k, v) => localStorage.setItem(NS + k, JSON.stringify(v)),
 };
 
+// Debug flag for data adapter logging
+const DATA_ADAPTER_DEBUG = localStorage.getItem('rc_debug_data_adapter') === 'true';
+
 /**
  * Robust detection for schema-related errors from Supabase/PostgREST
  * Checks for various error conditions that indicate missing columns or tables
@@ -1053,6 +1056,13 @@ const remote = {
       // Graceful fallback: if schema error, retry with basic columns only
       if (isSchemaError(error)) {
         console.warn('[data-adapter] Supabase schema may be outdated — some columns not available. Please apply pending migrations.');
+        if (DATA_ADAPTER_DEBUG) {
+          console.log('[data-adapter:debug] listStudents fallback triggered', { 
+            strategy: 'basic-columns', 
+            errorCode: error?.code, 
+            errorMessage: error?.message 
+          });
+        }
         const fallback = await supabase.from('students').select('id, code, name, class_id').order('code');
         if (fallback.error) throw fallback.error;
         return fallback.data;
@@ -1154,9 +1164,16 @@ const remote = {
                 students!inner(code)`)
         .order('code', { foreignTable: 'students', ascending: true });
       
-      // Graceful fallback: if column doesn't exist, retry with basic columns only
-      if (error && error.message && error.message.includes('column')) {
+      // Graceful fallback: if schema error, retry with basic columns only
+      if (isSchemaError(error)) {
         console.warn('[data-adapter] Supabase schema may be outdated — some columns not available. Please apply pending migrations.');
+        if (DATA_ADAPTER_DEBUG) {
+          console.log('[data-adapter:debug] listGoalsAll fallback triggered', { 
+            strategy: 'basic-columns', 
+            errorCode: error?.code, 
+            errorMessage: error?.message 
+          });
+        }
         const fallback = await supabase
           .from('goals')
           .select('id, code, desc, target, status, student_id, students!inner(code)')
