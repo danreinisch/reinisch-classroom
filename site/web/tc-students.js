@@ -1359,16 +1359,16 @@
         const goalText = row[columnMap.goal_text]?.trim();
         const goalCode = row[columnMap.goal_code]?.trim();
         
-        // Handle empty description - use goal code as fallback
-        const description = goalText || goalCode || 'No description';
+        // Handle empty description - use goal code as fallback, or empty string if no code
+        const description = goalText || goalCode || '';
         
-        // Handle malformed goal codes - allow them as-is without crashing
-        // Examples: S00911.2 (missing period), S022.12. (trailing period)
-        const sanitizedGoalCode = goalCode || `${code}.UNKNOWN`;
+        // Handle malformed goal codes - use as-is or provide fallback
+        // Examples: S00911.2 (missing period), S022.12. (trailing period) are kept as-is
+        const goalCodeOrFallback = goalCode || `${code}.UNKNOWN`;
         
         student.goals.push({
           goal_text: description,
-          goal_code: sanitizedGoalCode,
+          goal_code: goalCodeOrFallback,
           goal_area: row[columnMap.goal_area]?.trim(),
           measurement_type: row[columnMap.measurement_type]?.trim() || 'percent',
           case_manager: row[columnMap.case_manager]?.trim(),

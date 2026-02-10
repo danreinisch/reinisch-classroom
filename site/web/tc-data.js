@@ -49,7 +49,8 @@
   let currentQuarterFilter = getCurrentQuarter(); // Default to current quarter
   let currentGoalAreaFilter = "All";
   let currentDataCollectorFilter = "All"; // "All" or "My Goals Only"
-  let currentTeacherName = "Dan Reinisch"; // TODO: Get from auth context
+  // TODO: Get current teacher name from auth context instead of hardcoding
+  let currentTeacherName = "Dan Reinisch"; // Hardcoded for now - should be from getSupabase() auth
   let searchText = "";
   let studentsData = [];
   let goalsData = [];
