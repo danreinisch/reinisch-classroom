@@ -164,12 +164,21 @@ exports.handler = async (event) => {
 
   try {
     // Prepare student records for upsert
-    // Ensure all required fields are present
-    const studentsToUpsert = students.map(s => ({
-      code: s.code,
-      name: s.name || s.code, // Default name to code if not provided
-      class_id: s.class_id || null
-    }));
+    // Include new fields if provided (avoids schema errors on old DBs)
+    const studentsToUpsert = students.map(s => {
+      const record = {
+        code: s.code,
+        name: s.name || s.code, // Default name to code if not provided
+        class_id: s.class_id || null
+      };
+      // Include new fields only if provided
+      if (s.iep_due !== undefined) record.iep_due = s.iep_due;
+      if (s.eval_due !== undefined) record.eval_due = s.eval_due;
+      if (s.primary_case_manager !== undefined) record.primary_case_manager = s.primary_case_manager;
+      if (s.archived_at !== undefined) record.archived_at = s.archived_at;
+      if (s.active !== undefined) record.active = s.active;
+      return record;
+    });
 
     // Use upsert with resolution=merge-duplicates for idempotency
     // This will update existing records or insert new ones based on the 'code' unique constraint
@@ -178,7 +187,7 @@ exports.handler = async (event) => {
     
     console.log(`[teacher-students-upsert] [${requestId}] Upserting students to Supabase with on_conflict=code`);
     
-    const upsertResponse = await fetch(studentsUrl, {
+    let upsertResponse = await fetch(studentsUrl, {
       method: 'POST',
       headers: {
         'apikey': SUPABASE_SERVICE_ROLE_KEY,
@@ -188,6 +197,32 @@ exports.handler = async (event) => {
       },
       body: JSON.stringify(studentsToUpsert)
     });
+
+    // If 400 error (likely missing columns), retry with basic fields only
+    if (upsertResponse.status === 400) {
+      const errorText = await upsertResponse.text();
+      console.warn(`[teacher-students-upsert] [${requestId}] Schema error detected (status 400), retrying with basic fields only: ${errorText}`);
+      
+      // Retry with basic fields only
+      const basicStudents = students.map(s => ({
+        code: s.code,
+        name: s.name || s.code,
+        class_id: s.class_id || null
+      }));
+      
+      upsertResponse = await fetch(studentsUrl, {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_SERVICE_ROLE_KEY,
+          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'resolution=merge-duplicates,return=representation'
+        },
+        body: JSON.stringify(basicStudents)
+      });
+      
+      console.log(`[teacher-students-upsert] [${requestId}] Retry with basic fields resulted in status ${upsertResponse.status}`);
+    }
 
     if (!upsertResponse.ok) {
       const errorText = await upsertResponse.text();

@@ -12,3 +12,4 @@ ALTER TABLE public.students ADD COLUMN IF NOT EXISTS iep_due date;
 ALTER TABLE public.students ADD COLUMN IF NOT EXISTS eval_due date;
 ALTER TABLE public.students ADD COLUMN IF NOT EXISTS primary_case_manager text;
 ALTER TABLE public.students ADD COLUMN IF NOT EXISTS archived_at timestamptz;
+ALTER TABLE public.students ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT true;
