@@ -1355,13 +1355,24 @@
         student.enrollments.add(className);
       }
 
-      if (row[columnMap.goal_text]?.trim()) {
+      if (row[columnMap.goal_text]?.trim() || row[columnMap.goal_code]?.trim()) {
+        const goalText = row[columnMap.goal_text]?.trim();
+        const goalCode = row[columnMap.goal_code]?.trim();
+        
+        // Handle empty description - use goal code as fallback
+        const description = goalText || goalCode || 'No description';
+        
+        // Handle malformed goal codes - allow them as-is without crashing
+        // Examples: S00911.2 (missing period), S022.12. (trailing period)
+        const sanitizedGoalCode = goalCode || `${code}.UNKNOWN`;
+        
         student.goals.push({
-          goal_text: row[columnMap.goal_text]?.trim(),
-          goal_code: row[columnMap.goal_code]?.trim(),
+          goal_text: description,
+          goal_code: sanitizedGoalCode,
           goal_area: row[columnMap.goal_area]?.trim(),
-          measurement_type: row[columnMap.measurement_type]?.trim(),
+          measurement_type: row[columnMap.measurement_type]?.trim() || 'percent',
           case_manager: row[columnMap.case_manager]?.trim(),
+          // Store multi-value data_collector as-is (don't split on commas)
           data_collector: row[columnMap.data_collector]?.trim(),
           class_context: className
         });
