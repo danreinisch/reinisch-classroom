@@ -284,7 +284,7 @@
     }
 
     // Set default date to today
-    deDate.valueAsDate = new Date();
+    deDate.value = new Date().toISOString().split('T')[0];
 
     // Render progress entries
     renderProgressEntries();
@@ -408,7 +408,7 @@
 
       // Reset form
       deForm.reset();
-      deDate.valueAsDate = new Date();
+      deDate.value = new Date().toISOString().split('T')[0];
 
       // Reload progress entries
       await loadProgressEntries();

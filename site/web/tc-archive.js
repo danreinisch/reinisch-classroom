@@ -323,7 +323,7 @@
             <span>→</span>
             <span>Target: ${latest.target || 100}%</span>
             <span>→</span>
-            <span>Final Avg: ${finalAvg}${typeof finalAvg === 'number' || finalAvg !== 'N/A' ? '%' : ''}</span>
+            <span>Final Avg: ${finalAvg}${finalAvg !== 'N/A' ? '%' : ''}</span>
           </div>
           ${hasVersions ? `
             <div style="margin-top: 8px; font-size: 12px; opacity: 0.7;">
