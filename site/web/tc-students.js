@@ -226,13 +226,28 @@
     const banner = document.createElement('div');
     banner.id = 'schema-drift-banner';
     banner.style.cssText = 'background: #FEF3C7; border: 1px solid #F59E0B; border-radius: 8px; padding: 12px 16px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;';
-    banner.innerHTML = `
-      <span>⚠️</span>
-      <div>
-        <strong>Database schema is behind migrations</strong>
-        <div style="font-size: 13px; opacity: 0.8;">Some columns are missing. Students loaded with basic fields only. Apply pending migrations to restore full functionality.</div>
-      </div>
-    `;
+    
+    // Create warning icon
+    const icon = document.createElement('span');
+    icon.textContent = '⚠️';
+    
+    // Create content wrapper
+    const content = document.createElement('div');
+    
+    // Create title
+    const title = document.createElement('strong');
+    title.textContent = 'Database schema is behind migrations';
+    
+    // Create description
+    const description = document.createElement('div');
+    description.style.cssText = 'font-size: 13px; opacity: 0.8;';
+    description.textContent = 'Some columns are missing. Students loaded with basic fields only. Apply pending migrations to restore full functionality.';
+    
+    // Assemble the banner
+    content.appendChild(title);
+    content.appendChild(description);
+    banner.appendChild(icon);
+    banner.appendChild(content);
     
     // Insert at the top of the container
     container.insertBefore(banner, container.firstChild);
