@@ -269,21 +269,15 @@
       return studentsData;
     }
     
-    // Get students by class_id (existing behavior)
-    const byClassId = studentsData.filter((s) => s.class_id === currentClassFilter);
-    
-    // Also get students via class enrollments
+    // Filter by class using enrollments with class_name
     const enrolledCodes = classEnrollmentsData
-      .filter((e) => e.class_id === currentClassFilter && e.active !== false)
+      .filter((e) => e.class_name === currentClassFilter && e.active !== false)
       .map((e) => e.student_code);
     
-    // Merge: include any student from either source
-    const seen = new Set(byClassId.map((s) => s.code));
-    const fromEnrollments = studentsData.filter((s) =>
-      enrolledCodes.includes(s.code) && !seen.has(s.code)
-    );
+    // Get students who are enrolled in the selected class
+    const byEnrollment = studentsData.filter((s) => enrolledCodes.includes(s.code));
     
-    return [...byClassId, ...fromEnrollments];
+    return byEnrollment;
   }
 
   // Build gradebook data structure

@@ -338,12 +338,9 @@
     // Filter by class
     if (currentClassFilter !== 'All Classes') {
       filtered = filtered.filter(student => {
-        // Check student.class_id
-        if (student.class_id === currentClassFilter) return true;
-        
-        // Check enrollments
+        // Check enrollments using class_name
         const enrollment = classEnrollmentsData.find(e => 
-          e.student_code === student.code && e.class_id === currentClassFilter
+          e.student_code === student.code && e.class_name === currentClassFilter
         );
         return !!enrollment;
       });
