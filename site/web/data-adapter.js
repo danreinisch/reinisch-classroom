@@ -37,6 +37,43 @@ function isSchemaError(error) {
   );
 }
 
+/**
+ * Mapping from DB class codes to UI canonical class names
+ * Some classes have multiple sections (SC/S1) which are represented as separate UI tabs
+ */
+const CLASS_CODE_TO_CANONICAL_NAMES = {
+  'LA1': ['Language Arts 1 SC', 'Language Arts 1 S1'],
+  'LA2': ['Language Arts 2 SC', 'Language Arts 2 S1'],
+  'LA3': ['Language Arts 3 SC', 'Language Arts 3 S1'],
+  'LA4': ['Language Arts 4 SC'],
+  'LS-LA': ['Life Skills Language Arts SC'],
+  'LS': ['Life Skills'],
+  'CM': ['Consumer Math'],
+  'GEO-SC': ['Geometry SC'],
+  'SL': ['Speech/Language'],
+  'WA': ['Warrior Academy'],
+  'LA1-S1': ['Language Arts 1 S1'],
+  'LA2-S1': ['Language Arts 2 S1'],
+  'LA3-S1': ['Language Arts 3 S1']
+};
+
+/**
+ * Maps a DB class code/name to UI canonical names
+ * @param {string} code - DB class code (e.g., "LA3")
+ * @param {string} name - DB class name (e.g., "Language Arts 3")
+ * @returns {string[]} Array of canonical UI names
+ */
+function mapToCanonicalNames(code, name) {
+  // Return mapped names if code exists in mapping
+  if (code && CLASS_CODE_TO_CANONICAL_NAMES[code]) {
+    return CLASS_CODE_TO_CANONICAL_NAMES[code];
+  }
+  // Fall back to name if available, then code, then Unknown
+  if (name) return [name];
+  if (code) return [code];
+  return ['Unknown'];
+}
+
 const local = {
   // Students
   async listStudents() { return store.get('students', []); },
@@ -284,18 +321,47 @@ const local = {
     // Prefer stored enrollments; otherwise derive from students having class_id
     const storedEnrollments = store.get('classEnrollments', []);
     if (storedEnrollments.length > 0) {
-      return storedEnrollments;
+      // Add class_name if not present
+      const results = [];
+      for (const e of storedEnrollments) {
+        const classCode = e.class_code || e.class_id || '';
+        const className = e.class_name || classCode || '';
+        const canonicalNames = mapToCanonicalNames(classCode, className);
+        
+        for (const canonName of canonicalNames) {
+          results.push({
+            ...e,
+            class_name: canonName
+          });
+        }
+      }
+      return results;
     }
     
     // Derive from students with class_id
     const students = store.get('students', []);
-    return students
-      .filter(s => s.class_id)
-      .map(s => ({
-        class_id: s.class_id,
-        student_code: s.code,
-        student_name: s.name || s.code
-      }));
+    const classes = store.get('classes', []);
+    const classMap = new Map(classes.map(c => [c.id, c]));
+    
+    const results = [];
+    for (const s of students) {
+      if (!s.class_id) continue;
+      
+      const classInfo = classMap.get(s.class_id) || { code: s.class_id, name: s.class_id };
+      const canonicalNames = mapToCanonicalNames(classInfo.code, classInfo.name);
+      
+      for (const canonName of canonicalNames) {
+        results.push({
+          class_id: s.class_id,
+          class_code: classInfo.code,
+          class_name: canonName,
+          student_code: s.code,
+          student_name: s.name || s.code
+        });
+      }
+    }
+    
+    return results;
   },
   
   async upsertClass(classData) {
@@ -1279,6 +1345,7 @@ const remote = {
   async listClassEnrollments() {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
+    
     // Primary: try class_enrollments table with joins
     const { data: enrollments, error: enrollError } = await supabase
       .from('class_enrollments')
@@ -1290,14 +1357,27 @@ const remote = {
     
     // If we got data from class_enrollments, return it with defensive handling
     if (enrollments && enrollments.length > 0) {
-      return enrollments
-        .filter(e => e && e.students && e.classes) // Defensive null checks
-        .map(e => ({
-          class_id: e.class_id,
-          class_code: e.classes?.code || '',
-          student_code: e.students?.code || '',
-          student_name: e.students?.name || e.students?.code || ''
-        }));
+      const results = [];
+      for (const e of enrollments) {
+        if (!e || !e.students || !e.classes) continue;
+        
+        const classCode = e.classes.code || '';
+        const className = e.classes.name || '';
+        const canonicalNames = mapToCanonicalNames(classCode, className);
+        
+        // Create an enrollment entry for each canonical name
+        // This allows students to show up under multiple class tabs (SC and S1)
+        for (const canonName of canonicalNames) {
+          results.push({
+            class_id: e.class_id,
+            class_code: classCode,
+            class_name: canonName,
+            student_code: e.students.code || '',
+            student_name: e.students.name || e.students.code || ''
+          });
+        }
+      }
+      return results;
     }
     
     // Fallback: derive from students.class_id (not recommended, but available)
@@ -1311,15 +1391,36 @@ const remote = {
       return []; // Return empty array if both queries fail
     }
     
-    // Fallback returns empty class_code since we only have class_id (not the actual code)
-    return (students || [])
-      .filter(s => s && s.class_id) // Defensive null checks
-      .map(s => ({
-        class_id: s.class_id,
-        class_code: '', // Empty: no actual class code available in this fallback
-        student_code: s.code || '',
-        student_name: s.name || s.code || ''
-      }));
+    // In fallback, we need to look up the class info from class_id
+    const classIds = [...new Set(students.map(s => s.class_id).filter(Boolean))];
+    const { data: classes } = await supabase
+      .from('classes')
+      .select('id, code, name')
+      .in('id', classIds);
+    
+    const classMap = new Map((classes || []).map(c => [c.id, c]));
+    
+    const results = [];
+    for (const s of students) {
+      if (!s || !s.class_id) continue;
+      
+      const classInfo = classMap.get(s.class_id);
+      if (!classInfo) continue;
+      
+      const canonicalNames = mapToCanonicalNames(classInfo.code, classInfo.name);
+      
+      for (const canonName of canonicalNames) {
+        results.push({
+          class_id: s.class_id,
+          class_code: classInfo.code,
+          class_name: canonName,
+          student_code: s.code || '',
+          student_name: s.name || s.code || ''
+        });
+      }
+    }
+    
+    return results;
   },
   
   async upsertClass(classData) {

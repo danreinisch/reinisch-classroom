@@ -202,13 +202,13 @@
   }
 
   function updateSyncIndicator() {
-    const indicator = document.getElementById('sync-indicator');
+    const indicator = document.getElementById('stSyncStatus');
     if (indicator) {
       if (isSyncing) {
         indicator.textContent = '🔄 Syncing...';
         indicator.className = 'syncing';
       } else {
-        indicator.textContent = '✓ Synced';
+        indicator.textContent = '🟢 Synced with Supabase';
         indicator.className = 'synced';
       }
     }
@@ -282,7 +282,7 @@
 
   // Render functions
   function renderStudentList() {
-    const container = document.getElementById('student-list');
+    const container = document.getElementById('stStudentList');
     if (!container) return;
 
     const html = filteredStudents.map(student => {
@@ -308,14 +308,14 @@
   }
 
   function updateStudentCount() {
-    const countEl = document.getElementById('student-count');
+    const countEl = document.getElementById('stStudentCount');
     if (countEl) {
       countEl.textContent = `${filteredStudents.length} ${filteredStudents.length === 1 ? 'student' : 'students'}`;
     }
   }
 
   function renderClassFilters() {
-    const container = document.getElementById('class-filters');
+    const container = document.getElementById('stClassFilters');
     if (!container) return;
 
     const allButton = `
@@ -464,7 +464,7 @@
   }
 
   async function renderStudentDetail() {
-    const container = document.getElementById('student-detail');
+    const container = document.getElementById('stStudentDetail');
     if (!container) return;
 
     if (!selectedStudent) {
@@ -706,7 +706,7 @@
 
   // Event handlers
   function setupEventHandlers() {
-    const searchInput = document.getElementById('student-search');
+    const searchInput = document.getElementById('stSearchInput');
     if (searchInput) {
       searchInput.addEventListener('input', (e) => {
         searchQuery = e.target.value;
@@ -715,7 +715,7 @@
       });
     }
 
-    const classFilters = document.getElementById('class-filters');
+    const classFilters = document.getElementById('stClassFilters');
     if (classFilters) {
       classFilters.addEventListener('click', (e) => {
         if (e.target.classList.contains('filter-btn')) {
@@ -728,7 +728,7 @@
       });
     }
 
-    const studentList = document.getElementById('student-list');
+    const studentList = document.getElementById('stStudentList');
     if (studentList) {
       studentList.addEventListener('click', (e) => {
         const item = e.target.closest('.student-item');
@@ -738,7 +738,7 @@
       });
     }
 
-    const studentDetail = document.getElementById('student-detail');
+    const studentDetail = document.getElementById('stStudentDetail');
     if (studentDetail) {
       studentDetail.addEventListener('click', async (e) => {
         if (e.target.id === 'archive-student-btn') {
@@ -775,12 +775,12 @@
       });
     }
 
-    const addStudentBtn = document.getElementById('add-student-btn');
+    const addStudentBtn = document.getElementById('stAddStudent');
     if (addStudentBtn) {
       addStudentBtn.addEventListener('click', showAddStudentWizard);
     }
 
-    const importCsvBtn = document.getElementById('import-csv-btn');
+    const importCsvBtn = document.getElementById('stImportCSV');
     if (importCsvBtn) {
       importCsvBtn.addEventListener('click', showImportCsvModal);
     }
