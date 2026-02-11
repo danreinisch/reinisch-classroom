@@ -64,7 +64,14 @@ const CLASS_CODE_TO_CANONICAL_NAMES = {
  * @returns {string[]} Array of canonical UI names
  */
 function mapToCanonicalNames(code, name) {
-  return CLASS_CODE_TO_CANONICAL_NAMES[code] || (name ? [name] : [code || 'Unknown']);
+  // Return mapped names if code exists in mapping
+  if (code && CLASS_CODE_TO_CANONICAL_NAMES[code]) {
+    return CLASS_CODE_TO_CANONICAL_NAMES[code];
+  }
+  // Fall back to name if available, then code, then Unknown
+  if (name) return [name];
+  if (code) return [code];
+  return ['Unknown'];
 }
 
 const local = {
@@ -318,7 +325,7 @@ const local = {
       const results = [];
       for (const e of storedEnrollments) {
         const classCode = e.class_code || e.class_id || '';
-        const className = e.class_name || classCode;
+        const className = e.class_name || classCode || '';
         const canonicalNames = mapToCanonicalNames(classCode, className);
         
         for (const canonName of canonicalNames) {
