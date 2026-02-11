@@ -77,6 +77,24 @@
     "Reading Skills": "📕"
   };
 
+  // Mapping from DB class codes to UI canonical class names
+  // Used to normalize enrollment data that may come with class_code instead of class_name
+  const CLASS_CODE_TO_CANONICAL_NAMES = {
+    'LA1': ['Language Arts 1 SC', 'Language Arts 1 S1'],
+    'LA2': ['Language Arts 2 SC', 'Language Arts 2 S1'],
+    'LA3': ['Language Arts 3 SC', 'Language Arts 3 S1'],
+    'LA4': ['Language Arts 4 SC'],
+    'LS-LA': ['Life Skills Language Arts SC'],
+    'LS': ['Life Skills'],
+    'CM': ['Consumer Math'],
+    'GEO-SC': ['Geometry SC'],
+    'SL': ['Speech/Language'],
+    'WA': ['Warrior Academy'],
+    'LA1-S1': ['Language Arts 1 S1'],
+    'LA2-S1': ['Language Arts 2 S1'],
+    'LA3-S1': ['Language Arts 3 S1']
+  };
+
   // Helpers
   function escapeHtml(text) {
     if (!text) return '';
@@ -93,6 +111,33 @@
 
   function abbreviateClass(fullName) {
     return CLASS_ABBREVIATIONS[fullName] || fullName;
+  }
+
+  /**
+   * Normalize enrollment data to ensure class_name is present
+   * If class_name is missing but class_code is present, derives class_name from class_code mapping
+   */
+  function normalizeEnrollments(enrollments) {
+    return enrollments.map(enrollment => {
+      // If class_name already exists, return as is
+      if (enrollment.class_name) {
+        return enrollment;
+      }
+      
+      // If class_code exists, try to map it to canonical name(s)
+      if (enrollment.class_code) {
+        const mappedNames = CLASS_CODE_TO_CANONICAL_NAMES[enrollment.class_code];
+        if (mappedNames && mappedNames.length > 0) {
+          // Use first mapped name as the class_name
+          return { ...enrollment, class_name: mappedNames[0] };
+        }
+        // If no mapping found, use class_code as fallback
+        return { ...enrollment, class_name: enrollment.class_code };
+      }
+      
+      // If neither exists, return with Unknown
+      return { ...enrollment, class_name: 'Unknown' };
+    });
   }
 
   function parseCSVLine(line) {
@@ -165,7 +210,7 @@
       }
 
       if (results[2].status === 'fulfilled') {
-        allEnrollments = results[2].value;
+        allEnrollments = normalizeEnrollments(results[2].value);
       } else {
         console.error('[tc-students] Failed to load enrollments:', results[2].reason);
         allEnrollments = [];
@@ -206,10 +251,10 @@
     if (indicator) {
       if (isSyncing) {
         indicator.textContent = '🔄 Syncing...';
-        indicator.className = 'syncing';
+        indicator.className = 'st-sync-status';
       } else {
-        indicator.textContent = '🟢 Synced with Supabase';
-        indicator.className = 'synced';
+        indicator.textContent = '🟢 Connected';
+        indicator.className = 'st-sync-status synced';
       }
     }
   }
@@ -292,12 +337,12 @@
       const isSelected = selectedStudent === student.code;
 
       return `
-        <div class="student-item ${isSelected ? 'selected' : ''}" data-code="${escapeHtml(student.code)}">
-          <div class="student-status">🟢</div>
-          <div class="student-info">
-            <div class="student-code">${escapeHtml(student.code)}</div>
-            <div class="student-classes">${escapeHtml(classes)}</div>
-            <div class="student-goals">${studentGoals.length} goals</div>
+        <div class="st-student-item ${isSelected ? 'selected' : ''}" data-code="${escapeHtml(student.code)}">
+          <div class="st-student-status">🟢</div>
+          <div class="st-student-info">
+            <div class="st-student-name">${escapeHtml(student.code)}</div>
+            <div class="st-student-meta">${escapeHtml(classes)}</div>
+            <div class="st-student-meta">${studentGoals.length} goals</div>
           </div>
         </div>
       `;
@@ -319,13 +364,13 @@
     if (!container) return;
 
     const allButton = `
-      <button class="filter-btn ${selectedClassFilter === 'All' ? 'active' : ''}" data-class="All">
+      <button class="st-filter-btn ${selectedClassFilter === 'All' ? 'active' : ''}" data-class="All">
         All
       </button>
     `;
 
     const classButtons = FULL_CLASS_NAMES.map(className => `
-      <button class="filter-btn ${selectedClassFilter === className ? 'active' : ''}" data-class="${escapeHtml(className)}">
+      <button class="st-filter-btn ${selectedClassFilter === className ? 'active' : ''}" data-class="${escapeHtml(className)}">
         ${escapeHtml(className)}
       </button>
     `).join('');
@@ -517,26 +562,26 @@
 
   function renderStudentHeader(student) {
     return `
-      <div class="detail-section">
-        <div class="student-header">
-          <div class="student-header-left">
+      <div class="st-detail-section">
+        <div class="st-detail-header">
+          <div class="st-detail-title">
             <h2>${escapeHtml(student.code)}</h2>
-            <span class="badge badge-success">🟢 Active</span>
+            <span class="st-badge st-badge-active">🟢 Active</span>
           </div>
-          <button class="btn btn-danger" id="archive-student-btn">Archive</button>
+          <button class="st-btn st-btn-danger" id="archive-student-btn">Archive</button>
         </div>
-        <div class="student-meta">
-          <div class="meta-item">
-            <span class="meta-label">Primary Case Manager:</span>
-            <span class="meta-value">${escapeHtml(student.primary_case_manager || 'N/A')}</span>
+        <div class="st-detail-meta">
+          <div class="st-meta-item">
+            <span class="st-meta-label">Primary Case Manager:</span>
+            <span class="st-meta-value">${escapeHtml(student.primary_case_manager || 'N/A')}</span>
           </div>
-          <div class="meta-item">
-            <span class="meta-label">IEP Due:</span>
-            <span class="meta-value">${formatDate(student.iep_due)}</span>
+          <div class="st-meta-item">
+            <span class="st-meta-label">IEP Due:</span>
+            <span class="st-meta-value">${formatDate(student.iep_due)}</span>
           </div>
-          <div class="meta-item">
-            <span class="meta-label">Eval Due:</span>
-            <span class="meta-value">${formatDate(student.eval_due)}</span>
+          <div class="st-meta-item">
+            <span class="st-meta-label">Eval Due:</span>
+            <span class="st-meta-value">${formatDate(student.eval_due)}</span>
           </div>
         </div>
       </div>
@@ -547,20 +592,20 @@
     const classItems = FULL_CLASS_NAMES.map(className => {
       const isEnrolled = enrollments.some(e => e.class_name === className);
       return `
-        <div class="class-item">
-          <span class="class-checkbox">${isEnrolled ? '✓' : ''}</span>
-          <span class="class-name">${escapeHtml(className)}</span>
+        <div class="st-class-item">
+          <span class="st-class-checkbox">${isEnrolled ? '✓' : ''}</span>
+          <span class="st-class-name">${escapeHtml(className)}</span>
         </div>
       `;
     }).join('');
 
     return `
-      <div class="detail-section">
-        <div class="section-header">
+      <div class="st-detail-section">
+        <div class="st-section-header">
           <h3>Classes</h3>
-          <button class="btn btn-secondary" id="manage-enrollments-btn">Manage Enrollments</button>
+          <button class="st-btn st-btn-secondary" id="manage-enrollments-btn">Manage Enrollments</button>
         </div>
-        <div class="class-list">
+        <div class="st-class-list">
           ${classItems}
         </div>
       </div>
@@ -569,7 +614,7 @@
 
   function renderStudentGoals(inContextGoals, outsideGoals) {
     const goalAreaFilter = `
-      <select id="goal-area-filter" class="filter-select">
+      <select id="goal-area-filter" class="st-form-select">
         <option value="All">All Goal Areas</option>
         ${GOAL_AREAS.map(area => `
           <option value="${escapeHtml(area)}" ${selectedGoalAreaFilter === area ? 'selected' : ''}>
@@ -584,10 +629,10 @@
     let outsideHtml = '';
     if (selectedClassFilter !== 'All' && outsideGoals.length > 0) {
       outsideHtml = `
-        <div class="outside-categories">
+        <div class="st-outside-categories">
           <details>
             <summary>Outside Categories (${outsideGoals.length} goals from other classes)</summary>
-            <div class="goal-cards">
+            <div class="st-goal-cards">
               ${outsideGoals.map(goal => renderGoalCard(goal)).join('')}
             </div>
           </details>
@@ -596,16 +641,16 @@
     }
 
     return `
-      <div class="detail-section">
-        <div class="section-header">
+      <div class="st-detail-section">
+        <div class="st-section-header">
           <h3>IEP Goals</h3>
-          <div class="section-actions">
+          <div class="st-section-actions">
             ${goalAreaFilter}
-            <button class="btn btn-primary" id="add-goal-btn">+ Add Goal</button>
+            <button class="st-btn st-btn-primary" id="add-goal-btn">+ Add Goal</button>
           </div>
         </div>
-        <div class="goal-cards">
-          ${inContextHtml || '<div class="empty-state">No goals in this category</div>'}
+        <div class="st-goal-cards">
+          ${inContextHtml || '<div class="st-empty">No goals in this category</div>'}
         </div>
         ${outsideHtml}
       </div>
@@ -615,47 +660,49 @@
   function renderGoalCard(goal) {
     const icon = GOAL_AREA_ICONS[goal.goal_area] || '📌';
     const dataCollectorWarning = goal.data_collector && goal.data_collector !== 'Dan Reinisch' ? '⚠️ ' : '';
-    const classContext = goal.class_context ? `<div class="goal-class">📚 ${escapeHtml(goal.class_context)}</div>` : '';
+    const classContext = goal.class_context ? `<div class="st-goal-class">📚 ${escapeHtml(goal.class_context)}</div>` : '';
     
     // Show token management for external data collectors (not Dan Reinisch)
     const showTokenBtn = goal.data_collector && goal.data_collector !== 'Dan Reinisch';
     const hasActiveToken = goal._hasActiveToken || false; // Will be set when loading tokens
 
     return `
-      <div class="goal-card" data-goal-id="${goal.id}">
-        <div class="goal-header">
-          <div class="goal-area">
-            <span class="goal-icon">${icon}</span>
-            <span class="goal-area-name">${escapeHtml(goal.goal_area || 'N/A')}</span>
-            <span class="goal-code">${escapeHtml(goal.goal_code || '')}</span>
+      <div class="st-goal-card" data-goal-id="${goal.id}">
+        <div class="st-goal-header">
+          <div class="st-goal-title">
+            <span class="st-goal-icon">${icon}</span>
+            <span class="st-goal-area-name">${escapeHtml(goal.goal_area || 'N/A')}</span>
+            <span class="st-goal-code">${escapeHtml(goal.goal_code || '')}</span>
           </div>
-          <span class="badge badge-measurement">${escapeHtml(goal.measurement_type || 'N/A')}</span>
+          <span class="st-badge st-badge-measurement">${escapeHtml(goal.measurement_type || 'N/A')}</span>
         </div>
-        <div class="goal-description">${escapeHtml(goal.desc || goal.goal_text || '(No goal description provided)')}</div>
-        <div class="goal-metrics">
-          <div class="metric">
-            <span class="metric-label">Baseline:</span>
-            <span class="metric-value">${escapeHtml(goal.baseline || 'N/A')}</span>
-          </div>
-          <div class="metric">
-            <span class="metric-label">Target:</span>
-            <span class="metric-value">${escapeHtml(goal.target || 'N/A')}</span>
+        <div class="st-goal-body">
+          <div class="st-goal-description">${escapeHtml(goal.desc || goal.goal_text || '(No goal description provided)')}</div>
+          <div class="st-goal-metrics">
+            <div class="st-metric">
+              <span class="st-metric-label">Baseline:</span>
+              <span class="st-metric-value">${escapeHtml(goal.baseline || 'N/A')}</span>
+            </div>
+            <div class="st-metric">
+              <span class="st-metric-label">Target:</span>
+              <span class="st-metric-value">${escapeHtml(goal.target || 'N/A')}</span>
+            </div>
           </div>
         </div>
-        <div class="goal-meta">
-          <div class="goal-manager">👤 ${escapeHtml(goal.case_manager || 'N/A')}</div>
-          <div class="goal-collector">${dataCollectorWarning}📊 ${escapeHtml(goal.data_collector || 'N/A')}</div>
+        <div class="st-goal-meta">
+          <div class="st-goal-manager">👤 ${escapeHtml(goal.case_manager || 'N/A')}</div>
+          <div class="st-goal-collector">${dataCollectorWarning}📊 ${escapeHtml(goal.data_collector || 'N/A')}</div>
           ${classContext}
         </div>
-        ${goal.version ? `<div class="goal-version">v${goal.version}</div>` : ''}
-        <div class="goal-actions">
-          <button class="btn btn-sm btn-secondary edit-goal-btn" data-goal-id="${goal.id}">Edit</button>
-          <button class="btn btn-sm btn-secondary version-goal-btn" data-goal-id="${goal.id}">Version</button>
-          <button class="btn btn-sm btn-danger archive-goal-btn" data-goal-id="${goal.id}">Archive</button>
+        ${goal.version ? `<div class="st-goal-version">v${goal.version}</div>` : ''}
+        <div class="st-goal-actions">
+          <button class="st-btn st-btn-small st-btn-secondary edit-goal-btn" data-goal-id="${goal.id}">Edit</button>
+          <button class="st-btn st-btn-small st-btn-secondary version-goal-btn" data-goal-id="${goal.id}">Version</button>
+          <button class="st-btn st-btn-small st-btn-danger archive-goal-btn" data-goal-id="${goal.id}">Archive</button>
           ${showTokenBtn ? `
             ${hasActiveToken 
-              ? `<button class="btn btn-sm btn-warning revoke-token-btn" data-goal-id="${goal.id}" title="Revoke data entry link">🗑️ Revoke Link</button>`
-              : `<button class="btn btn-sm btn-primary copy-token-btn" data-goal-id="${goal.id}" title="Copy data entry link for ${escapeHtml(goal.data_collector)}">🔗 Copy Link</button>`
+              ? `<button class="st-btn st-btn-small st-btn-warning revoke-token-btn" data-goal-id="${goal.id}" title="Revoke data entry link">🗑️ Revoke Link</button>`
+              : `<button class="st-btn st-btn-small st-btn-primary copy-token-btn" data-goal-id="${goal.id}" title="Copy data entry link for ${escapeHtml(goal.data_collector)}">🔗 Copy Link</button>`
             }
           ` : ''}
         </div>
@@ -665,10 +712,10 @@
 
   function renderStudentPassword(student) {
     return `
-      <div class="detail-section">
-        <div class="section-header">
+      <div class="st-detail-section">
+        <div class="st-section-header">
           <h3>Password</h3>
-          <button class="btn btn-secondary" id="reset-password-btn">🔑 Reset Password</button>
+          <button class="st-btn st-btn-secondary" id="reset-password-btn">🔑 Reset Password</button>
         </div>
       </div>
     `;
@@ -676,28 +723,28 @@
 
   function renderStudentStats(student, goals) {
     return `
-      <div class="detail-section">
+      <div class="st-detail-section">
         <h3>Quick Stats</h3>
-        <div class="stats-grid">
-          <div class="stat-card">
-            <div class="stat-label">Total Submissions</div>
-            <div class="stat-value">-</div>
+        <div class="st-stats-grid">
+          <div class="st-stat-card">
+            <div class="st-stat-label">Total Submissions</div>
+            <div class="st-stat-value">-</div>
           </div>
-          <div class="stat-card">
-            <div class="stat-label">Average Score</div>
-            <div class="stat-value">-</div>
+          <div class="st-stat-card">
+            <div class="st-stat-label">Average Score</div>
+            <div class="st-stat-value">-</div>
           </div>
-          <div class="stat-card">
-            <div class="stat-label">Last Active</div>
-            <div class="stat-value">-</div>
+          <div class="st-stat-card">
+            <div class="st-stat-label">Last Active</div>
+            <div class="st-stat-value">-</div>
           </div>
-          <div class="stat-card">
-            <div class="stat-label">Goals On Track</div>
-            <div class="stat-value">-</div>
+          <div class="st-stat-card">
+            <div class="st-stat-label">Goals On Track</div>
+            <div class="st-stat-value">-</div>
           </div>
-          <div class="stat-card">
-            <div class="stat-label">Days Since Last</div>
-            <div class="stat-value">-</div>
+          <div class="st-stat-card">
+            <div class="st-stat-label">Days Since Last</div>
+            <div class="st-stat-value">-</div>
           </div>
         </div>
       </div>
@@ -718,7 +765,7 @@
     const classFilters = document.getElementById('stClassFilters');
     if (classFilters) {
       classFilters.addEventListener('click', (e) => {
-        if (e.target.classList.contains('filter-btn')) {
+        if (e.target.classList.contains('st-filter-btn')) {
           selectedClassFilter = e.target.dataset.class;
           renderClassFilters();
           filterStudents();
@@ -731,7 +778,7 @@
     const studentList = document.getElementById('stStudentList');
     if (studentList) {
       studentList.addEventListener('click', (e) => {
-        const item = e.target.closest('.student-item');
+        const item = e.target.closest('.st-student-item');
         if (item) {
           selectStudent(item.dataset.code);
         }
@@ -867,7 +914,7 @@
     const checkboxes = FULL_CLASS_NAMES.map(className => {
       const isEnrolled = enrollments.some(e => e.class_name === className);
       return `
-        <label class="checkbox-label">
+        <label class="st-checkbox-label">
           <input type="checkbox" name="enrollment" value="${escapeHtml(className)}" ${isEnrolled ? 'checked' : ''}>
           ${escapeHtml(className)}
         </label>
@@ -876,15 +923,15 @@
 
     const modal = createModal('Manage Enrollments', `
       <form id="enrollments-form">
-        <div class="form-group">
-          <label>Select Classes:</label>
-          <div class="checkbox-group">
+        <div class="st-form-group">
+          <label class="st-form-label">Select Classes:</label>
+          <div class="st-checkbox-group">
             ${checkboxes}
           </div>
         </div>
-        <div class="modal-actions">
-          <button type="button" class="btn btn-secondary" id="cancel-enrollments">Cancel</button>
-          <button type="submit" class="btn btn-primary">Save</button>
+        <div class="st-modal-footer">
+          <button type="button" class="st-btn st-btn-secondary" id="cancel-enrollments">Cancel</button>
+          <button type="submit" class="st-btn st-btn-primary">Save</button>
         </div>
       </form>
     `);
@@ -954,24 +1001,24 @@
 
     const modal = createModal('Add IEP Goal', `
       <form id="add-goal-form">
-        <div class="form-group">
-          <label>Goal Area:</label>
-          <select name="goal_area" required>
+        <div class="st-form-group">
+          <label class="st-form-label">Goal Area:</label>
+          <select name="goal_area" class="st-form-select" required>
             <option value="">Select...</option>
             ${GOAL_AREAS.map(area => `<option value="${escapeHtml(area)}">${escapeHtml(area)}</option>`).join('')}
           </select>
         </div>
-        <div class="form-group">
-          <label>Goal Code:</label>
-          <input type="text" name="goal_code" required>
+        <div class="st-form-group">
+          <label class="st-form-label">Goal Code:</label>
+          <input type="text" name="goal_code" class="st-form-input" required>
         </div>
-        <div class="form-group">
-          <label>Description:</label>
-          <textarea name="goal_text" rows="4" required></textarea>
+        <div class="st-form-group">
+          <label class="st-form-label">Description:</label>
+          <textarea name="goal_text" class="st-form-textarea" rows="4" required></textarea>
         </div>
-        <div class="form-group">
-          <label>Measurement Type:</label>
-          <select name="measurement_type" required>
+        <div class="st-form-group">
+          <label class="st-form-label">Measurement Type:</label>
+          <select name="measurement_type" class="st-form-select" required>
             <option value="">Select...</option>
             <option value="Accuracy">Accuracy</option>
             <option value="Frequency">Frequency</option>
@@ -979,34 +1026,34 @@
             <option value="Rate">Rate</option>
           </select>
         </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Baseline:</label>
-            <input type="text" name="baseline" required>
+        <div class="st-form-row">
+          <div class="st-form-group">
+            <label class="st-form-label">Baseline:</label>
+            <input type="text" name="baseline" class="st-form-input" required>
           </div>
-          <div class="form-group">
-            <label>Target:</label>
-            <input type="text" name="target" required>
+          <div class="st-form-group">
+            <label class="st-form-label">Target:</label>
+            <input type="text" name="target" class="st-form-input" required>
           </div>
         </div>
-        <div class="form-group">
-          <label>Case Manager:</label>
-          <input type="text" name="case_manager" value="${escapeHtml(student.primary_case_manager || '')}" required>
+        <div class="st-form-group">
+          <label class="st-form-label">Case Manager:</label>
+          <input type="text" name="case_manager" class="st-form-input" value="${escapeHtml(student.primary_case_manager || '')}" required>
         </div>
-        <div class="form-group">
-          <label>Data Collector:</label>
-          <input type="text" name="data_collector" value="Dan Reinisch" required>
+        <div class="st-form-group">
+          <label class="st-form-label">Data Collector:</label>
+          <input type="text" name="data_collector" class="st-form-input" value="Dan Reinisch" required>
         </div>
-        <div class="form-group">
-          <label>Class Context:</label>
-          <select name="class_context">
+        <div class="st-form-group">
+          <label class="st-form-label">Class Context:</label>
+          <select name="class_context" class="st-form-select">
             <option value="">Select...</option>
             ${FULL_CLASS_NAMES.map(cn => `<option value="${escapeHtml(cn)}">${escapeHtml(cn)}</option>`).join('')}
           </select>
         </div>
-        <div class="modal-actions">
-          <button type="button" class="btn btn-secondary" id="cancel-goal">Cancel</button>
-          <button type="submit" class="btn btn-primary">Add Goal</button>
+        <div class="st-modal-footer">
+          <button type="button" class="st-btn st-btn-secondary" id="cancel-goal">Cancel</button>
+          <button type="submit" class="st-btn st-btn-primary">Add Goal</button>
         </div>
       </form>
     `);
@@ -1058,9 +1105,9 @@
 
     const modal = createModal('Edit IEP Goal', `
       <form id="edit-goal-form">
-        <div class="form-group">
-          <label>Goal Area:</label>
-          <select name="goal_area" required>
+        <div class="st-form-group">
+          <label class="st-form-label">Goal Area:</label>
+          <select name="goal_area" class="st-form-select" required>
             ${GOAL_AREAS.map(area => `
               <option value="${escapeHtml(area)}" ${goal.goal_area === area ? 'selected' : ''}>
                 ${escapeHtml(area)}
@@ -1068,44 +1115,44 @@
             `).join('')}
           </select>
         </div>
-        <div class="form-group">
-          <label>Goal Code:</label>
-          <input type="text" name="goal_code" value="${escapeHtml(goal.goal_code || '')}" required>
+        <div class="st-form-group">
+          <label class="st-form-label">Goal Code:</label>
+          <input type="text" name="goal_code" class="st-form-input" value="${escapeHtml(goal.goal_code || '')}" required>
         </div>
-        <div class="form-group">
-          <label>Description:</label>
-          <textarea name="goal_text" rows="4" required>${escapeHtml(goal.goal_text || '')}</textarea>
+        <div class="st-form-group">
+          <label class="st-form-label">Description:</label>
+          <textarea name="goal_text" class="st-form-textarea" rows="4" required>${escapeHtml(goal.goal_text || '')}</textarea>
         </div>
-        <div class="form-group">
-          <label>Measurement Type:</label>
-          <select name="measurement_type" required>
+        <div class="st-form-group">
+          <label class="st-form-label">Measurement Type:</label>
+          <select name="measurement_type" class="st-form-select" required>
             <option value="Accuracy" ${goal.measurement_type === 'Accuracy' ? 'selected' : ''}>Accuracy</option>
             <option value="Frequency" ${goal.measurement_type === 'Frequency' ? 'selected' : ''}>Frequency</option>
             <option value="Duration" ${goal.measurement_type === 'Duration' ? 'selected' : ''}>Duration</option>
             <option value="Rate" ${goal.measurement_type === 'Rate' ? 'selected' : ''}>Rate</option>
           </select>
         </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Baseline:</label>
-            <input type="text" name="baseline" value="${escapeHtml(goal.baseline || '')}" required>
+        <div class="st-form-row">
+          <div class="st-form-group">
+            <label class="st-form-label">Baseline:</label>
+            <input type="text" name="baseline" class="st-form-input" value="${escapeHtml(goal.baseline || '')}" required>
           </div>
-          <div class="form-group">
-            <label>Target:</label>
-            <input type="text" name="target" value="${escapeHtml(goal.target || '')}" required>
+          <div class="st-form-group">
+            <label class="st-form-label">Target:</label>
+            <input type="text" name="target" class="st-form-input" value="${escapeHtml(goal.target || '')}" required>
           </div>
         </div>
-        <div class="form-group">
-          <label>Case Manager:</label>
-          <input type="text" name="case_manager" value="${escapeHtml(goal.case_manager || '')}" required>
+        <div class="st-form-group">
+          <label class="st-form-label">Case Manager:</label>
+          <input type="text" name="case_manager" class="st-form-input" value="${escapeHtml(goal.case_manager || '')}" required>
         </div>
-        <div class="form-group">
-          <label>Data Collector:</label>
-          <input type="text" name="data_collector" value="${escapeHtml(goal.data_collector || '')}" required>
+        <div class="st-form-group">
+          <label class="st-form-label">Data Collector:</label>
+          <input type="text" name="data_collector" class="st-form-input" value="${escapeHtml(goal.data_collector || '')}" required>
         </div>
-        <div class="form-group">
-          <label>Class Context:</label>
-          <select name="class_context">
+        <div class="st-form-group">
+          <label class="st-form-label">Class Context:</label>
+          <select name="class_context" class="st-form-select">
             <option value="">None</option>
             ${FULL_CLASS_NAMES.map(cn => `
               <option value="${escapeHtml(cn)}" ${goal.class_context === cn ? 'selected' : ''}>
@@ -1114,9 +1161,9 @@
             `).join('')}
           </select>
         </div>
-        <div class="modal-actions">
-          <button type="button" class="btn btn-secondary" id="cancel-edit-goal">Cancel</button>
-          <button type="submit" class="btn btn-primary">Save Changes</button>
+        <div class="st-modal-footer">
+          <button type="button" class="st-btn st-btn-secondary" id="cancel-edit-goal">Cancel</button>
+          <button type="submit" class="st-btn st-btn-primary">Save Changes</button>
         </div>
       </form>
     `);
@@ -1166,13 +1213,13 @@
 
     const modal = createModal('Reset Password', `
       <form id="reset-password-form">
-        <div class="form-group">
-          <label>New Password for ${escapeHtml(student.code)}:</label>
-          <input type="text" name="password" required>
+        <div class="st-form-group">
+          <label class="st-form-label">New Password for ${escapeHtml(student.code)}:</label>
+          <input type="text" name="password" class="st-form-input" required>
         </div>
-        <div class="modal-actions">
-          <button type="button" class="btn btn-secondary" id="cancel-password">Cancel</button>
-          <button type="submit" class="btn btn-primary">Reset Password</button>
+        <div class="st-modal-footer">
+          <button type="button" class="st-btn st-btn-secondary" id="cancel-password">Cancel</button>
+          <button type="submit" class="st-btn st-btn-primary">Reset Password</button>
         </div>
       </form>
     `);
@@ -1544,19 +1591,22 @@
 
   function createModal(title, content) {
     const modal = document.createElement('div');
-    modal.className = 'modal';
+    modal.className = 'st-modal-backdrop active';
     modal.innerHTML = `
-      <div class="modal-backdrop"></div>
-      <div class="modal-dialog">
-        <div class="modal-content">
+      <div class="st-modal">
+        <div class="st-modal-header">
           <h2>${escapeHtml(title)}</h2>
+        </div>
+        <div class="st-modal-body">
           ${content}
         </div>
       </div>
     `;
 
-    modal.querySelector('.modal-backdrop').addEventListener('click', () => {
-      modal.remove();
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        modal.remove();
+      }
     });
 
     return modal;
