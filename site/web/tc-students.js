@@ -1181,19 +1181,6 @@
     });
   }
 
-    document.body.appendChild(modal);
-
-    document.getElementById('cancel-edit-goal').addEventListener('click', () => {
-      modal.remove();
-    });
-
-    document.getElementById('edit-goal-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      await handleEditGoal(goalId, e.target);
-      modal.remove();
-    });
-  }
-
   async function handleEditGoal(goalId, form) {
     const formData = new FormData(form);
     const updates = {
