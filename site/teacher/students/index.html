@@ -437,6 +437,191 @@
         font-size: 14px;
       }
 
+      /* Section headers and actions */
+      .st-section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+      }
+      .st-section-header h3 {
+        margin: 0;
+        font-size: 18px;
+      }
+      .st-section-actions {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+
+      /* Class list */
+      .st-class-list {
+        display: grid;
+        gap: 8px;
+      }
+      .st-class-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      .st-class-checkbox {
+        font-size: 16px;
+        color: #22c55e;
+        min-width: 20px;
+      }
+      .st-class-name {
+        font-size: 14px;
+      }
+
+      /* Stats grid */
+      .st-stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 12px;
+        margin-top: 16px;
+      }
+      .st-stat-card {
+        padding: 16px;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      .st-stat-label {
+        font-size: 12px;
+        opacity: 0.7;
+        margin-bottom: 8px;
+      }
+      .st-stat-value {
+        font-size: 24px;
+        font-weight: 700;
+      }
+
+      /* Form row (side by side fields) */
+      .st-form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+
+      /* Checkbox group */
+      .st-checkbox-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .st-checkbox-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px;
+        cursor: pointer;
+      }
+      .st-checkbox-label:hover {
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 6px;
+      }
+      .st-checkbox-label input[type="checkbox"] {
+        cursor: pointer;
+      }
+
+      /* Goal cards container */
+      .st-goal-cards {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      /* Goal card body and metrics */
+      .st-goal-body {
+        margin: 12px 0;
+      }
+      .st-goal-description {
+        font-size: 14px;
+        line-height: 1.5;
+        margin-bottom: 12px;
+      }
+      .st-goal-metrics {
+        display: flex;
+        gap: 16px;
+      }
+      .st-metric {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .st-metric-label {
+        font-size: 12px;
+        opacity: 0.7;
+      }
+      .st-metric-value {
+        font-size: 16px;
+        font-weight: 600;
+      }
+
+      /* Goal meta items */
+      .st-goal-manager,
+      .st-goal-collector,
+      .st-goal-class {
+        font-size: 13px;
+        opacity: 0.8;
+      }
+      .st-goal-version {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.08);
+        font-size: 11px;
+        font-weight: 600;
+        margin-top: 8px;
+      }
+
+      /* Outside categories section */
+      .st-outside-categories {
+        margin-top: 24px;
+        padding-top: 24px;
+        border-top: 1px solid rgba(255, 255, 255, 0.12);
+      }
+      .st-outside-categories details {
+        cursor: pointer;
+      }
+      .st-outside-categories summary {
+        font-weight: 600;
+        padding: 8px;
+        border-radius: 8px;
+      }
+      .st-outside-categories summary:hover {
+        background: rgba(255, 255, 255, 0.05);
+      }
+      .st-outside-categories .st-goal-cards {
+        margin-top: 12px;
+      }
+
+      /* Meta items for detail section */
+      .st-meta-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      }
+      .st-meta-label {
+        font-size: 13px;
+        opacity: 0.7;
+      }
+      .st-meta-value {
+        font-size: 13px;
+        font-weight: 500;
+      }
+
+      /* Button size variants */
+      .st-btn-small {
+        padding: 6px 10px;
+        font-size: 13px;
+      }
+
       /* Responsive */
       @media (max-width: 768px) {
         .st-layout {
