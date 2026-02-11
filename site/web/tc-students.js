@@ -1073,7 +1073,7 @@
     const goal = {
       student_code: selectedStudent,
       goal_area: formData.get('goal_area'),
-      code: formData.get('goal_code'),
+      code: formData.get('goal_code'), // Form field is 'goal_code' but DB field is 'code'
       goal_text: formData.get('goal_text'),
       measurement_type: formData.get('measurement_type'),
       baseline: formData.get('baseline'),
@@ -1186,11 +1186,17 @@
   async function handleEditGoal(goalId, form) {
     const formData = new FormData(form);
     const goal = allGoals.find(g => g.id === goalId);
+    if (!goal) {
+      console.error('[tc-students] Goal not found:', goalId);
+      alert('Goal not found');
+      return;
+    }
+    
     const updates = {
       id: goalId,
       student_code: goal.student_code,
       goal_area: formData.get('goal_area'),
-      code: formData.get('goal_code'),
+      code: formData.get('goal_code'), // Form field is 'goal_code' but DB field is 'code'
       goal_text: formData.get('goal_text'),
       measurement_type: formData.get('measurement_type'),
       baseline: formData.get('baseline'),
@@ -1495,18 +1501,18 @@
 
       if (row[columnMap.goal_text]?.trim() || row[columnMap.goal_code]?.trim()) {
         const goalText = row[columnMap.goal_text]?.trim();
-        const goalCode = row[columnMap.goal_code]?.trim();
+        const goalCodeFromCSV = row[columnMap.goal_code]?.trim();
         
         // Handle empty description - use goal code as fallback, or empty string if no code
-        const description = goalText || goalCode || '';
+        const description = goalText || goalCodeFromCSV || '';
         
         // Handle malformed goal codes - use as-is or provide fallback
         // Examples: S00911.2 (missing period), S022.12. (trailing period) are kept as-is
-        const goalCodeOrFallback = goalCode || `${code}.UNKNOWN`;
+        const finalGoalCode = goalCodeFromCSV || `${code}.UNKNOWN`;
         
         student.goals.push({
           goal_text: description,
-          code: goalCodeOrFallback,
+          code: finalGoalCode, // CSV column is 'goal_code' but DB field is 'code'
           goal_area: row[columnMap.goal_area]?.trim(),
           measurement_type: row[columnMap.measurement_type]?.trim() || 'percent',
           case_manager: row[columnMap.case_manager]?.trim(),
