@@ -11,14 +11,12 @@
   // Constants
   const FULL_CLASS_NAMES = [
     "Language Arts 1 SC",
-    "Language Arts 1 S1",
     "Language Arts 2 SC",
-    "Language Arts 2 S1",
     "Language Arts 3 SC",
-    "Language Arts 3 S1",
     "Language Arts 4 SC",
     "Life Skills Language Arts SC",
     "Life Skills",
+    "Life Skills SC",
     "Consumer Math",
     "Geometry SC",
     "Speech/Language",
@@ -45,14 +43,12 @@
 
   const CLASS_ABBREVIATIONS = {
     "Language Arts 1 SC": "LA1SC",
-    "Language Arts 1 S1": "LA1S1",
     "Language Arts 2 SC": "LA2SC",
-    "Language Arts 2 S1": "LA2S1",
     "Language Arts 3 SC": "LA3SC",
-    "Language Arts 3 S1": "LA3S1",
     "Language Arts 4 SC": "LA4SC",
     "Life Skills Language Arts SC": "LSLASC",
     "Life Skills": "LS",
+    "Life Skills SC": "LSSC",
     "Consumer Math": "CM",
     "Geometry SC": "GeoSC",
     "Speech/Language": "S/L",
@@ -80,19 +76,16 @@
   // Mapping from DB class codes to UI canonical class names
   // Used to normalize enrollment data that may come with class_code instead of class_name
   const CLASS_CODE_TO_CANONICAL_NAMES = {
-    'LA1': ['Language Arts 1 SC', 'Language Arts 1 S1'],
-    'LA2': ['Language Arts 2 SC', 'Language Arts 2 S1'],
-    'LA3': ['Language Arts 3 SC', 'Language Arts 3 S1'],
+    'LA1': ['Language Arts 1 SC'],
+    'LA2': ['Language Arts 2 SC'],
+    'LA3': ['Language Arts 3 SC'],
     'LA4': ['Language Arts 4 SC'],
     'LS-LA': ['Life Skills Language Arts SC'],
     'LS': ['Life Skills'],
     'CM': ['Consumer Math'],
     'GEO-SC': ['Geometry SC'],
     'SL': ['Speech/Language'],
-    'WA': ['Warrior Academy'],
-    'LA1-S1': ['Language Arts 1 S1'],
-    'LA2-S1': ['Language Arts 2 S1'],
-    'LA3-S1': ['Language Arts 3 S1']
+    'WA': ['Warrior Academy']
   };
 
   // Helpers
@@ -194,7 +187,7 @@
       
       // Extract successful results
       if (results[0].status === 'fulfilled') {
-        allStudents = results[0].value.filter(s => s.status !== 'archived');
+        allStudents = results[0].value.filter(s => s.status !== 'archived' && !s.code.startsWith('TEACHER'));
       } else {
         console.error('[tc-students] Failed to load students:', results[0].reason);
         allStudents = [];
@@ -1045,6 +1038,10 @@
           <input type="text" name="data_collector" class="st-form-input" value="Dan Reinisch" required>
         </div>
         <div class="st-form-group">
+          <label class="st-form-label">Data Collector Email:</label>
+          <input type="email" name="data_collector_email" class="st-form-input">
+        </div>
+        <div class="st-form-group">
           <label class="st-form-label">Class Context:</label>
           <select name="class_context" class="st-form-select">
             <option value="">Select...</option>
@@ -1076,13 +1073,14 @@
     const goal = {
       student_code: selectedStudent,
       goal_area: formData.get('goal_area'),
-      goal_code: formData.get('goal_code'),
+      code: formData.get('goal_code'),
       goal_text: formData.get('goal_text'),
       measurement_type: formData.get('measurement_type'),
       baseline: formData.get('baseline'),
       target: formData.get('target'),
       case_manager: formData.get('case_manager'),
       data_collector: formData.get('data_collector'),
+      data_collector_email: formData.get('data_collector_email') || null,
       class_context: formData.get('class_context') || null,
       status: 'active',
       version: 1
@@ -1151,6 +1149,10 @@
           <input type="text" name="data_collector" class="st-form-input" value="${escapeHtml(goal.data_collector || '')}" required>
         </div>
         <div class="st-form-group">
+          <label class="st-form-label">Data Collector Email:</label>
+          <input type="email" name="data_collector_email" class="st-form-input" value="${escapeHtml(goal.data_collector_email || '')}">
+        </div>
+        <div class="st-form-group">
           <label class="st-form-label">Class Context:</label>
           <select name="class_context" class="st-form-select">
             <option value="">None</option>
@@ -1183,16 +1185,19 @@
 
   async function handleEditGoal(goalId, form) {
     const formData = new FormData(form);
+    const goal = allGoals.find(g => g.id === goalId);
     const updates = {
       id: goalId,
+      student_code: goal.student_code,
       goal_area: formData.get('goal_area'),
-      goal_code: formData.get('goal_code'),
+      code: formData.get('goal_code'),
       goal_text: formData.get('goal_text'),
       measurement_type: formData.get('measurement_type'),
       baseline: formData.get('baseline'),
       target: formData.get('target'),
       case_manager: formData.get('case_manager'),
       data_collector: formData.get('data_collector'),
+      data_collector_email: formData.get('data_collector_email') || null,
       class_context: formData.get('class_context') || null
     };
 
@@ -1448,21 +1453,25 @@
       else if (normalized === 'goal area') columnMap.goal_area = index;
       else if (normalized === 'case manager') columnMap.case_manager = index;
       else if (normalized.includes('teacher to collect data') && !normalized.includes('email')) columnMap.data_collector = index;
+      else if (normalized.includes('teacher to collect data email')) columnMap.data_collector_email = index;
       else if (normalized.includes('iep due')) columnMap.iep_due = index;
       else if (normalized.includes('eval due')) columnMap.eval_due = index;
     });
 
     const studentsMap = new Map();
     const existingCodes = new Set(allStudents.map(s => s.code));
-    let skippedCount = 0;
+    let newStudentCount = 0;
+    let existingStudentCount = 0;
 
     for (const row of rows) {
       const code = row[columnMap.code]?.trim();
       if (!code) continue;
 
+      // Track if this is a new or existing student
       if (existingCodes.has(code)) {
-        skippedCount++;
-        continue;
+        existingStudentCount++;
+      } else {
+        newStudentCount++;
       }
 
       if (!studentsMap.has(code)) {
@@ -1472,7 +1481,8 @@
           iep_due: parseDateFromCSV(row[columnMap.iep_due]),
           eval_due: parseDateFromCSV(row[columnMap.eval_due]),
           enrollments: new Set(),
-          goals: []
+          goals: [],
+          isExisting: existingCodes.has(code)
         });
       }
 
@@ -1496,12 +1506,13 @@
         
         student.goals.push({
           goal_text: description,
-          goal_code: goalCodeOrFallback,
+          code: goalCodeOrFallback,
           goal_area: row[columnMap.goal_area]?.trim(),
           measurement_type: row[columnMap.measurement_type]?.trim() || 'percent',
           case_manager: row[columnMap.case_manager]?.trim(),
           // Store multi-value data_collector as-is (don't split on commas)
           data_collector: row[columnMap.data_collector]?.trim(),
+          data_collector_email: row[columnMap.data_collector_email]?.trim() || null,
           class_context: className
         });
       }
@@ -1512,7 +1523,7 @@
       enrollments: Array.from(s.enrollments)
     }));
 
-    displayCsvPreview(window.csvImportData, skippedCount);
+    displayCsvPreview(window.csvImportData, newStudentCount, existingStudentCount);
   }
 
   function parseDateFromCSV(dateStr) {
@@ -1523,19 +1534,19 @@
     return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
   }
 
-  function displayCsvPreview(data, skippedCount) {
+  function displayCsvPreview(data, newStudentCount, existingStudentCount) {
     const preview = document.getElementById('csv-preview');
     const content = document.getElementById('csv-preview-content');
     
     const summary = `
-      <p><strong>${data.length}</strong> students will be imported</p>
-      <p><strong>${skippedCount}</strong> students skipped (already exist)</p>
+      <p><strong>${newStudentCount}</strong> new students will be imported</p>
+      <p><strong>${existingStudentCount}</strong> existing students will be updated</p>
       <p><strong>${data.reduce((sum, s) => sum + s.goals.length, 0)}</strong> total goals</p>
       <details>
         <summary>Show Details</summary>
         <ul>
           ${data.slice(0, 5).map(s => `
-            <li>${escapeHtml(s.code)}: ${s.enrollments.length} classes, ${s.goals.length} goals</li>
+            <li>${escapeHtml(s.code)}${s.isExisting ? ' (existing)' : ' (new)'}: ${s.enrollments.length} classes, ${s.goals.length} goals</li>
           `).join('')}
           ${data.length > 5 ? `<li>...and ${data.length - 5} more</li>` : ''}
         </ul>
@@ -1572,7 +1583,14 @@
         for (const goal of studentData.goals) {
           await db.upsertGoal({
             student_code: studentData.code,
-            ...goal,
+            code: goal.code,
+            goal_text: goal.goal_text,
+            goal_area: goal.goal_area,
+            measurement_type: goal.measurement_type,
+            case_manager: goal.case_manager,
+            data_collector: goal.data_collector,
+            data_collector_email: goal.data_collector_email,
+            class_context: goal.class_context,
             status: 'active',
             version: 1
           });
@@ -1582,7 +1600,7 @@
       console.log('[tc-students] Imported', data.length, 'students');
       await loadData();
       document.querySelector('.modal').remove();
-      alert(`Successfully imported ${data.length} students`);
+      alert(`Successfully imported/updated ${data.length} students`);
     } catch (error) {
       console.error('[tc-students] Error importing CSV:', error);
       alert('Failed to import CSV');

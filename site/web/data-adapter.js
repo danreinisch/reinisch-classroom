@@ -42,19 +42,16 @@ function isSchemaError(error) {
  * Some classes have multiple sections (SC/S1) which are represented as separate UI tabs
  */
 const CLASS_CODE_TO_CANONICAL_NAMES = {
-  'LA1': ['Language Arts 1 SC', 'Language Arts 1 S1'],
-  'LA2': ['Language Arts 2 SC', 'Language Arts 2 S1'],
-  'LA3': ['Language Arts 3 SC', 'Language Arts 3 S1'],
+  'LA1': ['Language Arts 1 SC'],
+  'LA2': ['Language Arts 2 SC'],
+  'LA3': ['Language Arts 3 SC'],
   'LA4': ['Language Arts 4 SC'],
   'LS-LA': ['Life Skills Language Arts SC'],
   'LS': ['Life Skills'],
   'CM': ['Consumer Math'],
   'GEO-SC': ['Geometry SC'],
   'SL': ['Speech/Language'],
-  'WA': ['Warrior Academy'],
-  'LA1-S1': ['Language Arts 1 S1'],
-  'LA2-S1': ['Language Arts 2 S1'],
-  'LA3-S1': ['Language Arts 3 S1']
+  'WA': ['Warrior Academy']
 };
 
 /**
