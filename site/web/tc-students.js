@@ -657,7 +657,7 @@
     `;
   }
 
-  function renderStudentPassword(student) {
+  function renderStudentPassword(_student) {
     return `
       <div class="st-detail-section">
         <div class="st-section-header">
@@ -668,7 +668,7 @@
     `;
   }
 
-  function renderStudentStats(student, goals) {
+  function renderStudentStats(_student, _goals) {
     return `
       <div class="st-detail-section">
         <h3>Quick Stats</h3>
