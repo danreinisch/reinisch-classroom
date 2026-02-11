@@ -365,7 +365,7 @@ const local = {
   },
   
   // Phase B: Import responses from CSV (local stub)
-  async importResponsesFromCSV(assignmentId, file, mapping) {
+  async importResponsesFromCSV(_assignmentId, _file, _mapping) {
     // Local mode doesn't support full CSV import, return stub
     throw new Error('CSV import not supported in local mode. Please enable Supabase.');
   },
@@ -1456,7 +1456,7 @@ const remote = {
   },
   
   // Phase B: Import Google Form responses from CSV
-  async importResponsesFromCSV(assignmentId, csvData, answerKey) {
+  async importResponsesFromCSV(assignmentId, csvData, _answerKey) {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
     // This is a complex operation that should be done in a transaction
@@ -1499,7 +1499,7 @@ const remote = {
         }
         
         // Get or create instance
-        const { data: instances, error: instErr } = await supabase
+        const { data: instances, error: _instErr } = await supabase
           .from('assignment_instances')
           .select('id')
           .eq('assignment_id', assignmentId)
