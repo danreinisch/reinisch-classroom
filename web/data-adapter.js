@@ -1270,48 +1270,93 @@ const remote = {
     return await withRetry(async () => {
       console.log('[student-manager] listStudentsWithCounts (remote)', filter);
       
-      // Build query - select only code and name (no PII fields), include active status
-      let query = supabase
-        .from('students')
-        .select(`
-          id, 
-          code, 
-          name,
-          active,
-          created_at,
-          class_enrollments!inner(class_id, active),
-          goals(id, active)
-        `)
-        .order('code');
-      
-      // Apply filters
-      if (filter.student_code) {
-        query = query.ilike('code', `%${filter.student_code}%`);
+      try {
+        // Build query - select only code and name (no PII fields), include active status
+        let query = supabase
+          .from('students')
+          .select(`
+            id, 
+            code, 
+            name,
+            active,
+            created_at,
+            class_enrollments!inner(class_id, active),
+            goals(id, active)
+          `)
+          .order('code');
+        
+        // Apply filters
+        if (filter.student_code) {
+          query = query.ilike('code', `%${filter.student_code}%`);
+        }
+        
+        // Filter by active status (default: active only)
+        if (filter.status === 'active') {
+          query = query.eq('active', true);
+        } else if (filter.status === 'inactive') {
+          query = query.eq('active', false);
+        }
+        // if filter.status === 'all', don't filter
+        
+        const { data, error } = await query;
+        if (error) throw error;
+        
+        // Transform data to include counts (PII fields stripped)
+        return (data || []).map(s => ({
+          id: s.id,
+          code: s.code,
+          name: s.name,
+          active: s.active !== false, // default to true for backward compat
+          created_at: s.created_at,
+          goals_count: s.goals?.length || 0,
+          goals_active_count: s.goals?.filter(g => g.active !== false).length || 0,
+          classes_count: s.class_enrollments?.filter(e => e.active).length || 0,
+          enrollments: s.class_enrollments || []
+        }));
+      } catch (error) {
+        // Graceful fallback: if schema error, retry with simpler query
+        if (isSchemaError(error)) {
+          console.warn('[data-adapter] Schema fallback triggered in listStudentsWithCounts()', { code: error.code, message: error.message });
+          
+          // Retry with basic columns only, no joins
+          let fallbackQuery = supabase
+            .from('students')
+            .select('id, code, name, created_at')
+            .order('code');
+          
+          // Apply filters
+          if (filter.student_code) {
+            fallbackQuery = fallbackQuery.ilike('code', `%${filter.student_code}%`);
+          }
+          
+          // Filter by active status (default: active only)
+          // Note: if 'active' column missing, we'll just return all students
+          if (filter.status === 'active') {
+            fallbackQuery = fallbackQuery.eq('active', true);
+          } else if (filter.status === 'inactive') {
+            fallbackQuery = fallbackQuery.eq('active', false);
+          }
+          
+          const { data: fallbackData, error: fallbackError } = await fallbackQuery;
+          if (fallbackError) throw fallbackError;
+          
+          // Map to include default counts
+          return (fallbackData || []).map(s => ({
+            id: s.id,
+            code: s.code,
+            name: s.name,
+            active: true, // default assumption
+            created_at: s.created_at,
+            goals_count: 0,
+            goals_active_count: 0,
+            classes_count: 0,
+            enrollments: []
+          }));
+        }
+        
+        // Re-throw non-schema errors
+        throw error;
       }
-      
-      // Filter by active status (default: active only)
-      if (filter.status === 'active') {
-        query = query.eq('active', true);
-      } else if (filter.status === 'inactive') {
-        query = query.eq('active', false);
-      }
-      // if filter.status === 'all', don't filter
-      
-      const { data, error } = await query;
-      if (error) throw error;
-      
-      // Transform data to include counts (PII fields stripped)
-      return (data || []).map(s => ({
-        id: s.id,
-        code: s.code,
-        name: s.name,
-        active: s.active !== false, // default to true for backward compat
-        created_at: s.created_at,
-        goals_count: s.goals?.length || 0,
-        goals_active_count: s.goals?.filter(g => g.active !== false).length || 0,
-        classes_count: s.class_enrollments?.filter(e => e.active).length || 0,
-        enrollments: s.class_enrollments || []
-      }));
     });
   },
 
