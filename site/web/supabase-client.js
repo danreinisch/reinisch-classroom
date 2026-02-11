@@ -54,7 +54,10 @@ function readCurrentConfig() {
   const url = window.SUPABASE_URL || storedUrl;
   const key = window.SUPABASE_ANON_KEY || storedKey;
   
-  return { url, key, useRemote, optOut };
+  // Auto-enable remote when window globals are present (unless explicitly opted out)
+  const autoEnableRemote = !!(window.SUPABASE_URL && window.SUPABASE_ANON_KEY);
+  
+  return { url, key, useRemote: useRemote || autoEnableRemote, optOut };
 }
 
 function configChanged(newConfig) {

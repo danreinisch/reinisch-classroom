@@ -77,6 +77,24 @@
     "Reading Skills": "📕"
   };
 
+  // Mapping from DB class codes to UI canonical class names
+  // Used to normalize enrollment data that may come with class_code instead of class_name
+  const CLASS_CODE_TO_CANONICAL_NAMES = {
+    'LA1': ['Language Arts 1 SC', 'Language Arts 1 S1'],
+    'LA2': ['Language Arts 2 SC', 'Language Arts 2 S1'],
+    'LA3': ['Language Arts 3 SC', 'Language Arts 3 S1'],
+    'LA4': ['Language Arts 4 SC'],
+    'LS-LA': ['Life Skills Language Arts SC'],
+    'LS': ['Life Skills'],
+    'CM': ['Consumer Math'],
+    'GEO-SC': ['Geometry SC'],
+    'SL': ['Speech/Language'],
+    'WA': ['Warrior Academy'],
+    'LA1-S1': ['Language Arts 1 S1'],
+    'LA2-S1': ['Language Arts 2 S1'],
+    'LA3-S1': ['Language Arts 3 S1']
+  };
+
   // Helpers
   function escapeHtml(text) {
     if (!text) return '';
@@ -93,6 +111,33 @@
 
   function abbreviateClass(fullName) {
     return CLASS_ABBREVIATIONS[fullName] || fullName;
+  }
+
+  /**
+   * Normalize enrollment data to ensure class_name is present
+   * If class_name is missing but class_code is present, derives class_name from class_code mapping
+   */
+  function normalizeEnrollments(enrollments) {
+    return enrollments.map(enrollment => {
+      // If class_name already exists, return as is
+      if (enrollment.class_name) {
+        return enrollment;
+      }
+      
+      // If class_code exists, try to map it to canonical name(s)
+      if (enrollment.class_code) {
+        const mappedNames = CLASS_CODE_TO_CANONICAL_NAMES[enrollment.class_code];
+        if (mappedNames && mappedNames.length > 0) {
+          // Use first mapped name as the class_name
+          return { ...enrollment, class_name: mappedNames[0] };
+        }
+        // If no mapping found, use class_code as fallback
+        return { ...enrollment, class_name: enrollment.class_code };
+      }
+      
+      // If neither exists, return with Unknown
+      return { ...enrollment, class_name: 'Unknown' };
+    });
   }
 
   function parseCSVLine(line) {
@@ -165,7 +210,7 @@
       }
 
       if (results[2].status === 'fulfilled') {
-        allEnrollments = results[2].value;
+        allEnrollments = normalizeEnrollments(results[2].value);
       } else {
         console.error('[tc-students] Failed to load enrollments:', results[2].reason);
         allEnrollments = [];
@@ -206,10 +251,10 @@
     if (indicator) {
       if (isSyncing) {
         indicator.textContent = '🔄 Syncing...';
-        indicator.className = 'syncing';
+        indicator.className = 'st-sync-status';
       } else {
-        indicator.textContent = '🟢 Synced with Supabase';
-        indicator.className = 'synced';
+        indicator.textContent = '🟢 Connected';
+        indicator.className = 'st-sync-status synced';
       }
     }
   }
