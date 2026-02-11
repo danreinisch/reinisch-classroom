@@ -1135,9 +1135,9 @@ const remote = {
         .select()
         .single();
       
-      // Graceful fallback: if column doesn't exist, retry with basic columns only
-      if (error && error.message && error.message.includes('column')) {
-        console.warn('[data-adapter] Supabase schema may be outdated — some columns not available. Please apply pending migrations.');
+      // Graceful fallback: if schema error, retry with basic columns only
+      if (isSchemaError(error)) {
+        console.warn('[data-adapter] Schema fallback triggered in upsertGoal()', { code: error.code, message: error.message });
         const basicPayload = { student_id: stu.id, code, desc, target, status };
         const fallback = await supabase.from('goals')
           .upsert(basicPayload, { onConflict: 'student_id,code' })
@@ -1166,14 +1166,7 @@ const remote = {
       
       // Graceful fallback: if schema error, retry with basic columns only
       if (isSchemaError(error)) {
-        console.warn('[data-adapter] Supabase schema may be outdated — some columns not available. Please apply pending migrations.');
-        if (DATA_ADAPTER_DEBUG) {
-          console.log('[data-adapter:debug] listGoalsAll fallback triggered', { 
-            strategy: 'basic-columns', 
-            errorCode: error?.code, 
-            errorMessage: error?.message 
-          });
-        }
+        console.warn('[data-adapter] Schema fallback triggered in listGoalsAll()', { code: error.code, message: error.message });
         const fallback = await supabase
           .from('goals')
           .select('id, code, desc, target, status, student_id, students!inner(code)')
