@@ -437,6 +437,160 @@
         font-size: 14px;
       }
 
+      /* Section headers */
+      .st-section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+      }
+      .st-section-header h3 {
+        margin: 0;
+        font-size: 18px;
+      }
+      .st-section-actions {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+
+      /* Class list */
+      .st-class-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 8px;
+      }
+      .st-class-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      .st-class-checkbox {
+        width: 20px;
+        text-align: center;
+      }
+      .st-class-name {
+        font-size: 13px;
+      }
+
+      /* Goal cards container */
+      .st-goal-cards {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .st-goal-icon {
+        font-size: 18px;
+        margin-right: 6px;
+      }
+      .st-goal-code {
+        margin-left: 8px;
+        font-size: 11px;
+        opacity: 0.7;
+        font-family: monospace;
+      }
+      .st-goal-class {
+        font-size: 12px;
+        opacity: 0.8;
+      }
+      .st-goal-metrics {
+        display: flex;
+        gap: 20px;
+        font-size: 13px;
+        padding: 8px 0;
+      }
+      .st-metric-label {
+        opacity: 0.7;
+        margin-right: 6px;
+      }
+      .st-metric-value {
+        font-weight: 500;
+      }
+
+      /* Stats grid */
+      .st-stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 12px;
+      }
+      .st-stat-card {
+        padding: 16px;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      .st-stat-label {
+        font-size: 12px;
+        opacity: 0.7;
+        margin-bottom: 8px;
+      }
+      .st-stat-value {
+        font-size: 24px;
+        font-weight: 600;
+      }
+
+      /* Form rows */
+      .st-form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+
+      /* Checkbox group */
+      .st-checkbox-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .st-checkbox-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background 0.15s;
+      }
+      .st-checkbox-label:hover {
+        background: rgba(255, 255, 255, 0.04);
+      }
+      .st-checkbox-label input[type="checkbox"] {
+        margin: 0;
+      }
+
+      /* Modal container */
+      .st-modal-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 1000;
+      }
+      .st-modal-backdrop.active {
+        display: block;
+      }
+      .st-modal-actions {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        margin-top: 20px;
+      }
+
+      /* Button variants */
+      .st-btn-warning {
+        background: rgba(234, 179, 8, 0.18);
+        border-color: rgba(234, 179, 8, 0.35);
+        color: rgba(234, 179, 8, 1);
+      }
+      .st-btn-warning:hover {
+        background: rgba(234, 179, 8, 0.25);
+      }
+
       /* Responsive */
       @media (max-width: 768px) {
         .st-layout {
@@ -522,6 +676,7 @@
       </div>
     </div>
 
+    <script defer src="/web/supabase-config.js"></script>
     <script defer src="/web/teacher-shell.js"></script>
     <script type="module" src="/web/tc-students.js"></script>
   </body>
