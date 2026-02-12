@@ -929,7 +929,6 @@ export function renderAssignmentDetail(instance, assignment, latestSubmission, f
   }
   
   // Goal linkage removed - students should not see IEP goal codes
-  let goalHtml = '';
   
   const body = `
     <div class="assignment-detail-section">
@@ -937,7 +936,6 @@ export function renderAssignmentDetail(instance, assignment, latestSubmission, f
       <div class="assignment-detail-description">${description}</div>
     </div>
     ${submissionHtml}
-    ${goalHtml}
   `;
   
   // Actions (resubmit button if applicable)
