@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test Students UI Functions</title>
+  <script type="module">
+    // Test helper functions
+    function goalAreaToColorCategory(goalArea) {
+      const area = (goalArea || '').toLowerCase();
+      if (area.includes('reading')) return 'Reading';
+      if (area.includes('writ')) return 'Writing';
+      if (area.includes('math')) return 'Math';
+      if (area.includes('behavior')) return 'Behavior';
+      if (area.includes('life skill')) return 'Life Skills';
+      if (area.includes('social')) return 'Social';
+      if (area.includes('language')) return 'Language';
+      return 'Other';
+    }
+
+    function isIepUrgent(iepDue) {
+      if (!iepDue) return false;
+      const due = new Date(iepDue);
+      if (isNaN(due.getTime())) return false;
+      const now = new Date();
+      const daysUntil = (due - now) / (1000 * 60 * 60 * 24);
+      return daysUntil <= 30;
+    }
+
+    // Test cases
+    const testGoalAreas = [
+      'Basic Reading',
+      'Reading Comprehension',
+      'Written Expression',
+      'Math Calculation',
+      'Behavior',
+      'Life Skills Transition',
+      'Social Skills',
+      'Language',
+      'Unknown Area'
+    ];
+
+    const testIepDates = [
+      { date: '2026-02-15', desc: '3 days from now' },
+      { date: '2026-03-10', desc: '26 days from now' },
+      { date: '2026-04-15', desc: '62 days from now' },
+      { date: '2025-12-01', desc: 'overdue' },
+      { date: null, desc: 'null' }
+    ];
+
+    console.log('Testing goalAreaToColorCategory:');
+    testGoalAreas.forEach(area => {
+      const category = goalAreaToColorCategory(area);
+      console.log(`  "${area}" → "${category}"`);
+    });
+
+    console.log('\nTesting isIepUrgent:');
+    testIepDates.forEach(test => {
+      const urgent = isIepUrgent(test.date);
+      console.log(`  ${test.date} (${test.desc}) → ${urgent ? 'URGENT' : 'not urgent'}`);
+    });
+
+    // Expected results
+    const expectedGoalColors = {
+      'Basic Reading': 'Reading',
+      'Reading Comprehension': 'Reading',
+      'Written Expression': 'Writing',
+      'Math Calculation': 'Math',
+      'Behavior': 'Behavior',
+      'Life Skills Transition': 'Life Skills',
+      'Social Skills': 'Social',
+      'Language': 'Language',
+      'Unknown Area': 'Other'
+    };
+
+    const expectedUrgency = {
+      '2026-02-15': true,  // 3 days
+      '2026-03-10': true,  // 26 days
+      '2026-04-15': false, // 62 days
+      '2025-12-01': true,  // overdue
+      'null': false
+    };
+
+    // Verify results
+    let allPassed = true;
+    testGoalAreas.forEach(area => {
+      const result = goalAreaToColorCategory(area);
+      const expected = expectedGoalColors[area];
+      if (result !== expected) {
+        console.error(`FAIL: "${area}" expected "${expected}" but got "${result}"`);
+        allPassed = false;
+      }
+    });
+
+    testIepDates.forEach(test => {
+      const result = isIepUrgent(test.date);
+      const key = test.date || 'null';
+      const expected = expectedUrgency[key];
+      if (result !== expected) {
+        console.error(`FAIL: ${test.date} expected ${expected} but got ${result}`);
+        allPassed = false;
+      }
+    });
+
+    if (allPassed) {
+      console.log('\n✅ All tests passed!');
+      document.body.innerHTML = '<h1 style="color: green;">✅ All tests passed!</h1>';
+    } else {
+      console.log('\n❌ Some tests failed!');
+      document.body.innerHTML = '<h1 style="color: red;">❌ Some tests failed! Check console.</h1>';
+    }
+  </script>
+</head>
+<body>
+  <p>Loading tests...</p>
+</body>
+</html>
