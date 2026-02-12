@@ -203,9 +203,18 @@
   function stripTeacherTags(text) {
     const raw = String(text || "");
     const lines = raw.split(/\r?\n/);
-    const tagRe = /\[\s*(?:(?:DESE:\s*)?MLS\.[^\]]+|(?:IG:|IEP:)\s*[^\]]+)\s*\]/gi;
+    // Enhanced regex to catch ALL tag formats:
+    // - [MLS: code], [MLS.code]
+    // - [DESE: code], [DESE: MLS.code]
+    // - [IG: code], [IEP: code]
+    const tagRe = /\[\s*(?:(?:DESE|MLS)\s*[.:]\s*[^\]]+|(?:IG|IEP)\s*:\s*[^\]]+)\s*\]/gi;
     const out = [];
     for (const line of lines) {
+      // Skip entire line if it's a labeled format (DESE Standard(s): or IEP Goal Code(s):)
+      if (/^\s*(?:DESE\s+Standards?|IEP\s+Goal\s+Codes?)\s*(?:\(s\))?\s*:/i.test(line)) {
+        continue; // Skip this line entirely
+      }
+      
       let cleaned = line
         .replace(tagRe, "")
         .replace(/[ \t]{2,}/g, " ")
