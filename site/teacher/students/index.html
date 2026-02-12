@@ -59,26 +59,6 @@
       .st-filter-bar {
         padding: 12px 16px;
         border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-      }
-      .st-filter-btn {
-        padding: 6px 12px;
-        border-radius: 8px;
-        border: 1px solid rgba(255, 255, 255, 0.14);
-        background: rgba(255, 255, 255, 0.04);
-        color: inherit;
-        cursor: pointer;
-        font-size: 12px;
-        white-space: nowrap;
-      }
-      .st-filter-btn:hover {
-        background: rgba(255, 255, 255, 0.08);
-      }
-      .st-filter-btn.active {
-        background: rgba(34, 197, 94, 0.18);
-        border-color: rgba(34, 197, 94, 0.35);
       }
 
       /* Count */
@@ -117,37 +97,17 @@
         display: flex;
         gap: 10px;
       }
-
-      /* Sync bar */
-      .st-sync-bar {
-        padding: 12px 0;
-        margin-bottom: 20px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-      }
-      .st-sync-status {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 6px 12px;
-        border-radius: 8px;
-        font-size: 12px;
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        background: rgba(255, 255, 255, 0.04);
-      }
-      .st-sync-status.synced {
-        border-color: rgba(34, 197, 94, 0.35);
-        background: rgba(34, 197, 94, 0.12);
-        color: rgba(34, 197, 94, 1);
-      }
-      .st-sync-status.local {
-        border-color: rgba(234, 179, 8, 0.35);
-        background: rgba(234, 179, 8, 0.12);
-        color: rgba(234, 179, 8, 1);
-      }
-      .st-sync-status.error {
-        border-color: rgba(239, 68, 68, 0.35);
-        background: rgba(239, 68, 68, 0.12);
+      .st-iep-urgent {
         color: rgba(239, 68, 68, 1);
+        font-weight: 600;
+        opacity: 1;
+      }
+
+      /* Sync badge in topbar */
+      .st-sync-badge {
+        margin-left: auto;
+        font-size: 16px;
+        padding: 4px 8px;
       }
 
       /* Student detail */
@@ -186,6 +146,35 @@
         font-size: 16px;
       }
 
+      /* Tabs */
+      .st-tabs {
+        display: flex;
+        gap: 4px;
+        margin-bottom: 20px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+        padding-bottom: 0;
+      }
+      .st-tab {
+        padding: 10px 16px;
+        border: none;
+        background: none;
+        color: inherit;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        opacity: 0.6;
+        border-bottom: 2px solid transparent;
+        margin-bottom: -1px;
+        transition: opacity 0.15s;
+      }
+      .st-tab:hover {
+        opacity: 0.85;
+      }
+      .st-tab.active {
+        opacity: 1;
+        border-bottom-color: rgba(34, 197, 94, 0.8);
+      }
+
       /* Goal cards */
       .st-goal-card {
         border: 1px solid rgba(255, 255, 255, 0.12);
@@ -217,6 +206,29 @@
       }
       .st-goal-card[data-area="Emotional"] {
         border-left: 4px solid rgba(239, 68, 68, 0.8);
+      }
+      .st-goal-card[data-area="Other"] {
+        border-left: 4px solid rgba(156, 163, 175, 0.8);
+      }
+      
+      /* Collapsible goal cards */
+      .st-goal-card.collapsed .st-goal-body,
+      .st-goal-card.collapsed .st-goal-meta,
+      .st-goal-card.collapsed .st-goal-actions,
+      .st-goal-card.collapsed .st-goal-version {
+        display: none;
+      }
+      .st-goal-chevron {
+        transition: transform 0.2s;
+        font-size: 14px;
+        opacity: 0.6;
+        cursor: pointer;
+      }
+      .st-goal-card.collapsed .st-goal-chevron {
+        transform: rotate(-90deg);
+      }
+      .st-goal-header {
+        cursor: pointer;
       }
       .st-goal-header {
         display: flex;
@@ -477,29 +489,6 @@
         font-size: 14px;
       }
 
-      /* Stats grid */
-      .st-stats-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-        gap: 12px;
-        margin-top: 16px;
-      }
-      .st-stat-card {
-        padding: 16px;
-        border-radius: 10px;
-        background: rgba(255, 255, 255, 0.03);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-      }
-      .st-stat-label {
-        font-size: 12px;
-        opacity: 0.7;
-        margin-bottom: 8px;
-      }
-      .st-stat-value {
-        font-size: 24px;
-        font-weight: 700;
-      }
-
       /* Form row (side by side fields) */
       .st-form-row {
         display: grid;
@@ -656,6 +645,7 @@
         <button class="tc-btn" id="tcSidebarToggle" aria-label="Toggle sidebar" aria-expanded="false">☰</button>
         <a class="tc-btn" href="/" target="_blank" rel="noopener" aria-label="Home">🏠</a>
         <div class="tc-title">Teacher Center — Students</div>
+        <span id="stSyncStatus" class="st-sync-badge">🟢</span>
       </header>
 
       <div class="tc-shell">
@@ -685,9 +675,14 @@
               </div>
               <div class="st-search">
                 <input type="text" id="stSearchInput" class="st-search-input" placeholder="Search students...">
+                <select id="stSortSelect" class="st-search-input" style="margin-top:8px">
+                  <option value="code">Sort: Code (A-Z)</option>
+                  <option value="goals">Sort: Goal Count</option>
+                  <option value="iep_due">Sort: IEP Due Date</option>
+                </select>
               </div>
               <div class="st-filter-bar" id="stClassFilters">
-                <!-- Class filter buttons rendered by JS -->
+                <!-- Class filter dropdown rendered by JS -->
               </div>
               <div id="stStudentCount" class="st-count"></div>
               <div id="stStudentList" class="st-student-list">
@@ -695,9 +690,6 @@
               </div>
             </aside>
             <div class="st-main">
-              <div class="st-sync-bar">
-                <span id="stSyncStatus" class="st-sync-status">🟡 Local mode</span>
-              </div>
               <div id="stStudentDetail">
                 <!-- Student detail rendered by JS -->
               </div>

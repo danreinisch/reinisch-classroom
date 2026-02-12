@@ -105,6 +105,33 @@
   }
 
   /**
+   * Map a goal area to a color category for the left border
+   */
+  function goalAreaToColorCategory(goalArea) {
+    const area = (goalArea || '').toLowerCase();
+    if (area.includes('reading')) return 'Reading';
+    if (area.includes('writ')) return 'Writing';
+    if (area.includes('math')) return 'Math';
+    if (area.includes('behavior')) return 'Behavior';
+    if (area.includes('life skill')) return 'Life Skills';
+    if (area.includes('social')) return 'Social';
+    if (area.includes('language')) return 'Language';
+    return 'Other';
+  }
+
+  /**
+   * Check if IEP due date is urgent (within 30 days or overdue)
+   */
+  function isIepUrgent(iepDue) {
+    if (!iepDue) return false;
+    const due = new Date(iepDue);
+    if (isNaN(due.getTime())) return false;
+    const now = new Date();
+    const daysUntil = (due - now) / (1000 * 60 * 60 * 24);
+    return daysUntil <= 30;
+  }
+
+  /**
    * Normalize enrollment data to ensure class_name is present
    * If class_name is missing but class_code is present, derives class_name from class_code mapping
    */
@@ -166,6 +193,9 @@
   let selectedGoalAreaFilter = 'All';
   let searchQuery = '';
   let isSyncing = false;
+  let sortBy = 'code'; // 'code', 'goals', 'iep_due'
+  let selectedDetailTab = 'goals'; // 'goals', 'classes', 'settings'
+  let editingGoalId = null;
 
   // Load data
   async function loadData() {
@@ -241,11 +271,11 @@
     const indicator = document.getElementById('stSyncStatus');
     if (indicator) {
       if (isSyncing) {
-        indicator.textContent = '🔄 Syncing...';
-        indicator.className = 'st-sync-status';
+        indicator.textContent = '🔄';
+        indicator.title = 'Syncing...';
       } else {
-        indicator.textContent = '🟢 Connected';
-        indicator.className = 'st-sync-status synced';
+        indicator.textContent = '🟢';
+        indicator.title = 'Connected';
       }
     }
   }
@@ -313,6 +343,23 @@
       });
     }
 
+    // Sort the filtered students
+    if (sortBy === 'code') {
+      filtered.sort((a, b) => a.code.localeCompare(b.code));
+    } else if (sortBy === 'goals') {
+      filtered.sort((a, b) => {
+        const aGoals = allGoals.filter(g => g.student_code === a.code).length;
+        const bGoals = allGoals.filter(g => g.student_code === b.code).length;
+        return bGoals - aGoals; // descending
+      });
+    } else if (sortBy === 'iep_due') {
+      filtered.sort((a, b) => {
+        const aDate = a.iep_due ? new Date(a.iep_due) : new Date('9999-12-31');
+        const bDate = b.iep_due ? new Date(b.iep_due) : new Date('9999-12-31');
+        return aDate - bDate; // ascending (soonest first, nulls last)
+      });
+    }
+
     filteredStudents = filtered;
   }
 
@@ -326,6 +373,9 @@
       const studentGoals = allGoals.filter(g => g.student_code === student.code);
       const classes = enrollments.map(e => abbreviateClass(e.class_name)).join(', ');
       const isSelected = selectedStudent === student.code;
+      
+      const iepDue = student.iep_due ? formatDate(student.iep_due) : '';
+      const iepUrgent = isIepUrgent(student.iep_due);
 
       return `
         <div class="st-student-item ${isSelected ? 'selected' : ''}" data-code="${escapeHtml(student.code)}">
@@ -334,6 +384,9 @@
             <div class="st-student-name">${escapeHtml(student.code)}</div>
             <div class="st-student-meta">${escapeHtml(classes)}</div>
             <div class="st-student-meta">${studentGoals.length} goals</div>
+            <div class="st-student-meta ${iepUrgent ? 'st-iep-urgent' : ''}">
+              📋 IEP: ${iepDue || 'N/A'}
+            </div>
           </div>
         </div>
       `;
@@ -354,19 +407,17 @@
     const container = document.getElementById('stClassFilters');
     if (!container) return;
 
-    const allButton = `
-      <button class="st-filter-btn ${selectedClassFilter === 'All' ? 'active' : ''}" data-class="All">
-        All
-      </button>
-    `;
-
-    const classButtons = FULL_CLASS_NAMES.map(className => `
-      <button class="st-filter-btn ${selectedClassFilter === className ? 'active' : ''}" data-class="${escapeHtml(className)}">
-        ${escapeHtml(className)}
-      </button>
+    const options = ['All', ...FULL_CLASS_NAMES].map(className => `
+      <option value="${escapeHtml(className)}" ${selectedClassFilter === className ? 'selected' : ''}>
+        ${className === 'All' ? 'All Classes' : escapeHtml(className)}
+      </option>
     `).join('');
 
-    container.innerHTML = allButton + classButtons;
+    container.innerHTML = `
+      <select id="stClassFilterSelect" class="st-search-input">
+        ${options}
+      </select>
+    `;
   }
 
   /**
@@ -538,13 +589,33 @@
       outsideGoals = outsideGoals.filter(g => g.goal_area === selectedGoalAreaFilter);
     }
 
+    // Render header with tabs
+    let tabContent = '';
+    if (selectedDetailTab === 'goals') {
+      tabContent = renderStudentGoals(inContextGoals, outsideGoals);
+    } else if (selectedDetailTab === 'classes') {
+      tabContent = renderStudentClasses(student, enrollments);
+    } else if (selectedDetailTab === 'settings') {
+      tabContent = `
+        ${renderStudentPassword(student)}
+        <div class="st-detail-section">
+          <div class="st-section-header">
+            <h3>Student Management</h3>
+            <button class="st-btn st-btn-danger" id="archive-student-btn">Archive Student</button>
+          </div>
+        </div>
+      `;
+    }
+
     const html = `
       <div class="student-detail-content">
         ${renderStudentHeader(student)}
-        ${renderStudentClasses(student, enrollments)}
-        ${renderStudentGoals(inContextGoals, outsideGoals)}
-        ${renderStudentPassword(student)}
-        ${renderStudentStats(student, studentGoals)}
+        <div class="st-tabs">
+          <button class="st-tab ${selectedDetailTab === 'goals' ? 'active' : ''}" data-tab="goals">Goals</button>
+          <button class="st-tab ${selectedDetailTab === 'classes' ? 'active' : ''}" data-tab="classes">Classes</button>
+          <button class="st-tab ${selectedDetailTab === 'settings' ? 'active' : ''}" data-tab="settings">Settings</button>
+        </div>
+        ${tabContent}
       </div>
     `;
 
@@ -649,26 +720,48 @@
   }
 
   function renderGoalCard(goal) {
+    // Check if we're in inline edit mode for this goal
+    if (editingGoalId === goal.id) {
+      return renderGoalEditForm(goal);
+    }
+
     const icon = GOAL_AREA_ICONS[goal.goal_area] || '📌';
     const dataCollectorWarning = goal.data_collector && goal.data_collector !== 'Dan Reinisch' ? '⚠️ ' : '';
     const classContext = goal.class_context ? `<div class="st-goal-class">📚 ${escapeHtml(goal.class_context)}</div>` : '';
     
     // Show token management for external data collectors (not Dan Reinisch)
     const showTokenBtn = goal.data_collector && goal.data_collector !== 'Dan Reinisch';
-    const hasActiveToken = goal._hasActiveToken || false; // Will be set when loading tokens
+    const hasActiveToken = goal._hasActiveToken || false;
+    
+    // Get color category for the goal area
+    const colorCategory = goalAreaToColorCategory(goal.goal_area);
+    
+    // Handle description truncation
+    const fullDesc = goal.desc || goal.goal_text || '(No goal description provided)';
+    const needsTruncation = fullDesc.length > 120;
+    const descPreview = needsTruncation ? fullDesc.substring(0, 120) : fullDesc;
+    
+    const descHtml = needsTruncation
+      ? `<div class="st-goal-description">
+           <span class="st-desc-preview">${escapeHtml(descPreview)}…</span>
+           <span class="st-desc-full" style="display:none">${escapeHtml(fullDesc)}</span>
+           <button class="st-desc-toggle" style="background:none;border:none;color:rgba(59,130,246,1);cursor:pointer;font-size:13px;padding:0;margin-left:4px;">Show more</button>
+         </div>`
+      : `<div class="st-goal-description">${escapeHtml(fullDesc)}</div>`;
 
     return `
-      <div class="st-goal-card" data-goal-id="${goal.id}">
+      <div class="st-goal-card collapsed" data-goal-id="${goal.id}" data-area="${colorCategory}">
         <div class="st-goal-header">
           <div class="st-goal-title">
             <span class="st-goal-icon">${icon}</span>
             <span class="st-goal-area-name">${escapeHtml(goal.goal_area || 'N/A')}</span>
             <span class="st-goal-code">${escapeHtml(goal.goal_code || '')}</span>
+            <span class="st-badge st-badge-measurement">${escapeHtml(goal.measurement_type || 'N/A')}</span>
           </div>
-          <span class="st-badge st-badge-measurement">${escapeHtml(goal.measurement_type || 'N/A')}</span>
+          <span class="st-goal-chevron">▼</span>
         </div>
         <div class="st-goal-body">
-          <div class="st-goal-description">${escapeHtml(goal.desc || goal.goal_text || '(No goal description provided)')}</div>
+          ${descHtml}
           <div class="st-goal-metrics">
             <div class="st-metric">
               <span class="st-metric-label">Baseline:</span>
@@ -701,42 +794,76 @@
     `;
   }
 
+  function renderGoalEditForm(goal) {
+    const colorCategory = goalAreaToColorCategory(goal.goal_area);
+    
+    return `
+      <div class="st-goal-card st-goal-edit-form" data-goal-id="${goal.id}" data-area="${colorCategory}">
+        <div class="st-form-group">
+          <label class="st-form-label">Goal Area</label>
+          <select class="st-form-select" name="goal_area">
+            ${GOAL_AREAS.map(area => `
+              <option value="${escapeHtml(area)}" ${goal.goal_area === area ? 'selected' : ''}>
+                ${escapeHtml(area)}
+              </option>
+            `).join('')}
+          </select>
+        </div>
+        <div class="st-form-group">
+          <label class="st-form-label">Goal Code</label>
+          <input type="text" class="st-form-input" name="goal_code" value="${escapeHtml(goal.goal_code || '')}" />
+        </div>
+        <div class="st-form-group">
+          <label class="st-form-label">Description</label>
+          <textarea class="st-form-textarea" name="goal_desc">${escapeHtml(goal.desc || goal.goal_text || '')}</textarea>
+        </div>
+        <div class="st-form-group">
+          <label class="st-form-label">Measurement Type</label>
+          <select class="st-form-select" name="measurement_type">
+            <option value="Accuracy" ${goal.measurement_type === 'Accuracy' ? 'selected' : ''}>Accuracy</option>
+            <option value="Frequency" ${goal.measurement_type === 'Frequency' ? 'selected' : ''}>Frequency</option>
+            <option value="Duration" ${goal.measurement_type === 'Duration' ? 'selected' : ''}>Duration</option>
+            <option value="Rate" ${goal.measurement_type === 'Rate' ? 'selected' : ''}>Rate</option>
+            <option value="Other" ${goal.measurement_type === 'Other' ? 'selected' : ''}>Other</option>
+          </select>
+        </div>
+        <div class="st-form-row">
+          <div class="st-form-group">
+            <label class="st-form-label">Baseline</label>
+            <input type="text" class="st-form-input" name="baseline" value="${escapeHtml(goal.baseline || '')}" />
+          </div>
+          <div class="st-form-group">
+            <label class="st-form-label">Target</label>
+            <input type="text" class="st-form-input" name="target" value="${escapeHtml(goal.target || '')}" />
+          </div>
+        </div>
+        <div class="st-form-row">
+          <div class="st-form-group">
+            <label class="st-form-label">Case Manager</label>
+            <input type="text" class="st-form-input" name="case_manager" value="${escapeHtml(goal.case_manager || '')}" />
+          </div>
+          <div class="st-form-group">
+            <label class="st-form-label">Data Collector</label>
+            <input type="text" class="st-form-input" name="data_collector" value="${escapeHtml(goal.data_collector || '')}" />
+          </div>
+        </div>
+        <div class="st-goal-actions">
+          <button class="st-btn st-btn-primary save-goal-btn" data-goal-id="${goal.id}">Save</button>
+          <button class="st-btn st-btn-secondary cancel-edit-btn">Cancel</button>
+        </div>
+      </div>
+    `;
+  }
+      </div>
+    `;
+  }
+
   function renderStudentPassword(student) {
     return `
       <div class="st-detail-section">
         <div class="st-section-header">
           <h3>Password</h3>
           <button class="st-btn st-btn-secondary" id="reset-password-btn">🔑 Reset Password</button>
-        </div>
-      </div>
-    `;
-  }
-
-  function renderStudentStats(student, goals) {
-    return `
-      <div class="st-detail-section">
-        <h3>Quick Stats</h3>
-        <div class="st-stats-grid">
-          <div class="st-stat-card">
-            <div class="st-stat-label">Total Submissions</div>
-            <div class="st-stat-value">-</div>
-          </div>
-          <div class="st-stat-card">
-            <div class="st-stat-label">Average Score</div>
-            <div class="st-stat-value">-</div>
-          </div>
-          <div class="st-stat-card">
-            <div class="st-stat-label">Last Active</div>
-            <div class="st-stat-value">-</div>
-          </div>
-          <div class="st-stat-card">
-            <div class="st-stat-label">Goals On Track</div>
-            <div class="st-stat-value">-</div>
-          </div>
-          <div class="st-stat-card">
-            <div class="st-stat-label">Days Since Last</div>
-            <div class="st-stat-value">-</div>
-          </div>
         </div>
       </div>
     `;
@@ -755,10 +882,9 @@
 
     const classFilters = document.getElementById('stClassFilters');
     if (classFilters) {
-      classFilters.addEventListener('click', (e) => {
-        if (e.target.classList.contains('st-filter-btn')) {
-          selectedClassFilter = e.target.dataset.class;
-          renderClassFilters();
+      classFilters.addEventListener('change', (e) => {
+        if (e.target.id === 'stClassFilterSelect') {
+          selectedClassFilter = e.target.value;
           filterStudents();
           renderStudentList();
           renderStudentDetail();
@@ -779,29 +905,93 @@
     const studentDetail = document.getElementById('stStudentDetail');
     if (studentDetail) {
       studentDetail.addEventListener('click', async (e) => {
+        // Tab switching
+        if (e.target.classList.contains('st-tab')) {
+          selectedDetailTab = e.target.dataset.tab;
+          renderStudentDetail();
+          return;
+        }
+
+        // Goal card collapsing - check if clicking on header but NOT on a button
+        if (e.target.closest('.st-goal-header') && !e.target.closest('button')) {
+          const card = e.target.closest('.st-goal-card');
+          if (card && !card.classList.contains('st-goal-edit-form')) {
+            card.classList.toggle('collapsed');
+          }
+          return;
+        }
+
+        // Description toggle
+        if (e.target.classList.contains('st-desc-toggle')) {
+          const desc = e.target.closest('.st-goal-description');
+          const preview = desc.querySelector('.st-desc-preview');
+          const full = desc.querySelector('.st-desc-full');
+          const isShowing = full.style.display !== 'none';
+          preview.style.display = isShowing ? '' : 'none';
+          full.style.display = isShowing ? 'none' : '';
+          e.target.textContent = isShowing ? 'Show more' : 'Show less';
+          e.stopPropagation();
+          return;
+        }
+
+        // Archive student
         if (e.target.id === 'archive-student-btn') {
           await handleArchiveStudent();
-        } else if (e.target.id === 'manage-enrollments-btn') {
+        } 
+        // Manage enrollments
+        else if (e.target.id === 'manage-enrollments-btn') {
           showManageEnrollmentsModal();
-        } else if (e.target.id === 'add-goal-btn') {
+        } 
+        // Add goal
+        else if (e.target.id === 'add-goal-btn') {
           showAddGoalModal();
-        } else if (e.target.id === 'reset-password-btn') {
+        } 
+        // Reset password
+        else if (e.target.id === 'reset-password-btn') {
           showResetPasswordModal();
-        } else if (e.target.classList.contains('edit-goal-btn')) {
+        } 
+        // Edit goal - inline editing
+        else if (e.target.classList.contains('edit-goal-btn')) {
           const goalId = parseInt(e.target.dataset.goalId);
-          showEditGoalModal(goalId);
-        } else if (e.target.classList.contains('version-goal-btn')) {
+          editingGoalId = goalId;
+          renderStudentDetail();
+          e.stopPropagation();
+        } 
+        // Cancel inline edit
+        else if (e.target.classList.contains('cancel-edit-btn')) {
+          editingGoalId = null;
+          renderStudentDetail();
+          e.stopPropagation();
+        } 
+        // Save inline edit
+        else if (e.target.classList.contains('save-goal-btn')) {
+          const goalId = parseInt(e.target.dataset.goalId);
+          await handleSaveInlineEdit(goalId, e);
+          e.stopPropagation();
+        } 
+        // Version goal
+        else if (e.target.classList.contains('version-goal-btn')) {
           const goalId = parseInt(e.target.dataset.goalId);
           await handleVersionGoal(goalId);
-        } else if (e.target.classList.contains('archive-goal-btn')) {
+          e.stopPropagation();
+        } 
+        // Archive goal
+        else if (e.target.classList.contains('archive-goal-btn')) {
           const goalId = parseInt(e.target.dataset.goalId);
           await handleArchiveGoal(goalId);
-        } else if (e.target.classList.contains('copy-token-btn')) {
+          e.stopPropagation();
+        } 
+        // Copy token
+        else if (e.target.classList.contains('copy-token-btn')) {
           const goalId = parseInt(e.target.dataset.goalId);
           await handleCopyDataEntryLink(goalId);
-        } else if (e.target.classList.contains('revoke-token-btn')) {
+          e.stopPropagation();
+        } 
+        // Revoke token
+        else if (e.target.classList.contains('revoke-token-btn')) {
           const goalId = parseInt(e.target.dataset.goalId);
           await handleRevokeDataEntryLink(goalId);
+          e.stopPropagation();
         }
       });
 
@@ -809,6 +999,10 @@
         if (e.target.id === 'goal-area-filter') {
           selectedGoalAreaFilter = e.target.value;
           renderStudentDetail();
+        } else if (e.target.id === 'stSortSelect') {
+          sortBy = e.target.value;
+          filterStudents();
+          renderStudentList();
         }
       });
     }
@@ -824,9 +1018,46 @@
     }
   }
 
+  async function handleSaveInlineEdit(goalId, e) {
+    const form = e.target.closest('.st-goal-edit-form');
+    if (!form) return;
+
+    const goal = allGoals.find(g => g.id === goalId);
+    if (!goal) return;
+
+    const formData = {
+      id: goalId,
+      student_code: goal.student_code,
+      goal_area: form.querySelector('[name="goal_area"]').value,
+      code: form.querySelector('[name="goal_code"]').value,
+      desc: form.querySelector('[name="goal_desc"]').value,
+      measurement_type: form.querySelector('[name="measurement_type"]').value,
+      baseline: form.querySelector('[name="baseline"]').value,
+      target: form.querySelector('[name="target"]').value,
+      case_manager: form.querySelector('[name="case_manager"]').value,
+      data_collector: form.querySelector('[name="data_collector"]').value,
+      class_context: goal.class_context,
+      version: goal.version,
+      status: goal.status
+    };
+
+    try {
+      await db.upsertGoal(formData);
+      console.log('[tc-students] Updated goal:', goalId);
+      editingGoalId = null;
+      await loadData();
+      renderStudentDetail();
+    } catch (error) {
+      console.error('[tc-students] Error updating goal:', error);
+      alert('Failed to update goal');
+    }
+  }
+
   function selectStudent(code) {
     selectedStudent = code;
     selectedGoalAreaFilter = 'All';
+    selectedDetailTab = 'goals';
+    editingGoalId = null;
     renderStudentList();
     renderStudentDetail();
   }
