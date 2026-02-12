@@ -854,9 +854,6 @@
       </div>
     `;
   }
-      </div>
-    `;
-  }
 
   function renderStudentPassword(student) {
     return `
