@@ -1531,6 +1531,10 @@ function normalizeTaggedAssignmentText(input) {
     "LA 4 SC",
     "Life Skills",
     "Life Skills LA",
+    "Consumer Math",
+    "Geometry SC",
+    "Speech/Language",
+    "Warrior Academy"
   ];
 
   const LA_TOKENS = /\b(la|ela)\b|english\s+language\s+arts|language\s+arts/i;
