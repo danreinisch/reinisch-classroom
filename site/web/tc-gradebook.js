@@ -21,11 +21,10 @@
     "Language Arts 4 SC",
     "Life Skills Language Arts SC",
     "Life Skills",
-    "Life Skills SC",
     "Consumer Math",
     "Geometry SC",
-    "Warrior Academy",
-    "Speech/Language"
+    "Speech/Language",
+    "Warrior Academy"
   ];
   
   // Display abbreviations for space constraints
@@ -36,11 +35,10 @@
     "Language Arts 4 SC": "LA 4 SC",
     "Life Skills Language Arts SC": "Life Skills LA",
     "Life Skills": "Life Skills",
-    "Life Skills SC": "Life Skills SC",
     "Consumer Math": "Consumer Math",
     "Geometry SC": "Geometry SC",
-    "Warrior Academy": "Warrior Academy",
-    "Speech/Language": "Speech/Language"
+    "Speech/Language": "Speech/Language",
+    "Warrior Academy": "Warrior Academy"
   };
 
   const $ = (id) => document.getElementById(id);
