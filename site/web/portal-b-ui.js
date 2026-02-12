@@ -928,19 +928,7 @@ export function renderAssignmentDetail(instance, assignment, latestSubmission, f
     `;
   }
   
-  // Goal linkage (if assignment has mapped goals)
-  let goalHtml = '';
-  if (assignment?.meta?.iep_goals && assignment.meta.iep_goals.length > 0) {
-    const goalsList = assignment.meta.iep_goals.map(g => `<li>${g}</li>`).join('');
-    goalHtml = `
-      <div class="assignment-detail-section">
-        <div class="assignment-detail-section-title">Linked IEP Goals</div>
-        <ul style="margin:0; padding-left:20px; color:var(--ink-dim);">
-          ${goalsList}
-        </ul>
-      </div>
-    `;
-  }
+  // Goal linkage removed - students should not see IEP goal codes
   
   const body = `
     <div class="assignment-detail-section">
@@ -948,7 +936,6 @@ export function renderAssignmentDetail(instance, assignment, latestSubmission, f
       <div class="assignment-detail-description">${description}</div>
     </div>
     ${submissionHtml}
-    ${goalHtml}
   `;
   
   // Actions (resubmit button if applicable)

@@ -1158,15 +1158,15 @@ async function loadStudentGoals() {
         goal.status === "Open" ? "info" : goal.status === "Met" ? "success" : "warning";
 
       // Portal B: Truncate goal text
-      const goalDesc = truncateText(goal.desc || goal.code, 140);
-      const hasTooltip = (goal.desc || goal.code || "").length > 140;
+      const goalDesc = truncateText(goal.desc || "IEP Goal", 140);
+      const hasTooltip = (goal.desc || "IEP Goal").length > 140;
 
       // Calculate average progress from real data
       const avgProgress = avgFor(goal.code);
       const showProgressBar = progressAvailable && typeof avgProgress === "number";
 
       const tooltipHtml = hasTooltip
-        ? `<span class="tooltip">${goalDesc}<span class="tooltip-text">${goal.desc || goal.code}</span></span>`
+        ? `<span class="tooltip">${goalDesc}<span class="tooltip-text">${goal.desc || "IEP Goal"}</span></span>`
         : goalDesc;
 
       html += `
