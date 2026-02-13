@@ -1,0 +1,1418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unit 4: Your Rights & Responsibilities</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #333;
+        }
+        .nav-bar {
+            width: 100%;
+            background: rgba(0,0,0,0.3);
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: fixed;
+            top: 0;
+            z-index: 100;
+        }
+        .back-btn {
+            background: linear-gradient(145deg, #e74c3c, #c0392b);
+            color: white;
+            padding: 8px 18px;
+            border: none;
+            border-radius: 20px;
+            font-size: 0.9em;
+            cursor: pointer;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .back-btn:hover { opacity: 0.9; }
+        .page-indicator {
+            color: white;
+            font-size: 0.85em;
+            background: rgba(255,255,255,0.15);
+            padding: 6px 16px;
+            border-radius: 15px;
+            text-align: center;
+            max-width: 350px;
+        }
+        .nav-buttons { display: flex; gap: 10px; }
+        .nav-btn {
+            background: linear-gradient(145deg, #3498db, #2980b9);
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: bold;
+        }
+        .nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .nav-btn:hover:not(:disabled) { opacity: 0.9; }
+        .day-menu {
+            width: 100%;
+            background: rgba(0,0,0,0.2);
+            padding: 8px 20px;
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            position: fixed;
+            top: 48px;
+            z-index: 99;
+            flex-wrap: wrap;
+        }
+        .day-jump {
+            background: rgba(255,255,255,0.15);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            padding: 5px 12px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 0.8em;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        .day-jump:hover { background: rgba(255,255,255,0.3); }
+        .day-jump.active-day { background: #3498db; border-color: #3498db; }
+        .slide-container {
+            margin-top: 100px;
+            width: 95%;
+            max-width: 950px;
+            padding: 20px;
+        }
+        .page { display: none; }
+        .page.active { display: block; }
+        .slide {
+            background: rgba(255,255,255,0.95);
+            border-radius: 20px;
+            padding: 40px;
+            min-height: 500px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        .slide-title {
+            font-size: 2em;
+            color: #0f3460;
+            text-align: center;
+            margin-bottom: 25px;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 15px;
+        }
+        .slide p, .slide li { font-size: 1.2em; line-height: 1.8; color: #2c3e50; margin-bottom: 12px; }
+        .slide ul { padding-left: 25px; }
+        .slide li { margin-bottom: 10px; }
+        .highlight-box { background: #e8f4fd; border-left: 5px solid #3498db; padding: 20px; border-radius: 0 12px 12px 0; margin: 20px 0; }
+        .warning-box { background: #fdf2e9; border-left: 5px solid #e67e22; padding: 20px; border-radius: 0 12px 12px 0; margin: 20px 0; }
+        .success-box { background: #eafaf1; border-left: 5px solid #27ae60; padding: 20px; border-radius: 0 12px 12px 0; margin: 20px 0; }
+        .example-box { background: #f4ecf7; border-left: 5px solid #8e44ad; padding: 20px; border-radius: 0 12px 12px 0; margin: 20px 0; }
+        .danger-box { background: #fdedec; border-left: 5px solid #e74c3c; padding: 20px; border-radius: 0 12px 12px 0; margin: 20px 0; }
+        .do-dont { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0; }
+        .do-column { background: #eafaf1; border: 2px solid #27ae60; border-radius: 12px; padding: 20px; }
+        .dont-column { background: #fdedec; border: 2px solid #e74c3c; border-radius: 12px; padding: 20px; }
+        .do-column h3 { color: #27ae60; margin-bottom: 10px; }
+        .dont-column h3 { color: #e74c3c; margin-bottom: 10px; }
+        .emoji-big { font-size: 1.5em; }
+        .scenario { background: #fff3cd; border: 2px solid #ffc107; border-radius: 12px; padding: 20px; margin: 15px 0; }
+        .scenario-label { font-weight: bold; color: #856404; font-size: 1.1em; margin-bottom: 8px; }
+        .title-slide { display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; min-height: 500px; }
+        .title-slide h1 { font-size: 2.5em; color: #0f3460; margin-bottom: 15px; }
+        .title-slide p { font-size: 1.3em; color: #555; }
+        .title-slide .emoji-hero { font-size: 4em; margin-bottom: 20px; }
+        .title-slide .day-label {
+            background: #3498db;
+            color: white;
+            padding: 8px 25px;
+            border-radius: 25px;
+            font-size: 1em;
+            margin-bottom: 15px;
+            display: inline-block;
+        }
+        .step-card {
+            background: white;
+            border: 2px solid #3498db;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 12px 0;
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+        }
+        .step-number {
+            background: #3498db;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2em;
+            flex-shrink: 0;
+        }
+        .comparison-table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 1.1em; }
+        .comparison-table th, .comparison-table td { padding: 15px; text-align: left; border: 2px solid #ddd; }
+        .comparison-table th { background: #0f3460; color: white; font-size: 1.05em; }
+        .comparison-table tr:nth-child(even) { background: #f2f2f2; }
+
+        .pay-stub-mock {
+            background: #fff;
+            border: 3px solid #333;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.95em;
+        }
+        .pay-stub-mock h4 {
+            text-align: center;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 10px;
+        }
+        .stub-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px dotted #999;
+        }
+        .stub-row.total { font-weight: bold; border-top: 2px solid #333; border-bottom: none; margin-top: 10px; padding-top: 10px; }
+        .stub-section { margin: 15px 0; }
+        .stub-section-title { font-weight: bold; background: #eee; padding: 5px; margin-bottom: 5px; }
+
+        .rights-card {
+            background: white;
+            border: 2px solid #27ae60;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 12px 0;
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+        }
+        .rights-icon {
+            font-size: 2em;
+            flex-shrink: 0;
+        }
+
+        .info-card {
+            background: #fff;
+            border: 2px solid #3498db;
+            border-radius: 12px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .info-card h4 { color: #2980b9; margin-bottom: 8px; }
+
+        @media print {
+            body { background: white; }
+            .nav-bar, .day-menu { display: none; }
+            .slide-container { margin-top: 0; }
+            .page { display: block !important; page-break-after: always; }
+            .slide { box-shadow: none; border: 1px solid #ccc; }
+        }
+    </style>
+</head>
+<body>
+    <div class="nav-bar">
+        <a href="https://reinischclassroom.com/life-skills/" class="back-btn">← Back to Life Skills</a>
+        <div class="page-indicator" id="pageIndicator">Page 1 of 49</div>
+        <div class="nav-buttons">
+            <button class="nav-btn" id="prevBtn" onclick="prevPage()">◀ Back</button>
+            <button class="nav-btn" id="nextBtn" onclick="nextPage()">Next ▶</button>
+        </div>
+    </div>
+
+    <div class="day-menu">
+        <button class="day-jump active-day" onclick="jumpTo(1)">Unit Title</button>
+        <button class="day-jump" onclick="jumpTo(2)">Day 1: Rights</button>
+        <button class="day-jump" onclick="jumpTo(10)">Day 2: Responsibilities</button>
+        <button class="day-jump" onclick="jumpTo(18)">Day 3: Paychecks</button>
+        <button class="day-jump" onclick="jumpTo(26)">Day 4: Discrimination</button>
+        <button class="day-jump" onclick="jumpTo(34)">Day 5: Protections</button>
+        <button class="day-jump" onclick="jumpTo(42)">Day 6: Personal Info</button>
+    </div>
+
+    <div class="slide-container">
+
+        <!-- ============================================================ -->
+        <!-- PAGE 1: UNIT TITLE SLIDE -->
+        <!-- ============================================================ -->
+        <div class="page active" id="page1">
+            <div class="slide title-slide">
+                <div class="emoji-hero">⚖️📋💰🛡️</div>
+                <h1>Your Rights & Responsibilities</h1>
+                <p style="font-size:1.1em; color:#7f8c8d; margin-bottom: 25px;">Unit 4 &bull; 6 Days</p>
+                <div style="text-align:left; max-width:550px;">
+                    <p><strong>Day 1:</strong> Employee Rights</p>
+                    <p><strong>Day 2:</strong> Employee Responsibilities</p>
+                    <p><strong>Day 3:</strong> Paychecks & Taxes</p>
+                    <p><strong>Day 4:</strong> Discrimination & Harassment</p>
+                    <p><strong>Day 5:</strong> Unions & Worker Protections</p>
+                    <p><strong>Day 6:</strong> Your Personal Information at Work</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- DAY 1: EMPLOYEE RIGHTS (Pages 2–9) -->
+        <!-- ============================================================ -->
+        <div class="page" id="page2">
+            <div class="slide title-slide">
+                <div class="day-label">Day 1</div>
+                <div class="emoji-hero">⚖️✊</div>
+                <h1>Employee Rights</h1>
+                <p>What the law says your employer MUST give you</p>
+            </div>
+        </div>
+
+        <div class="page" id="page3">
+            <div class="slide">
+                <h2 class="slide-title">What Are Employee Rights?</h2>
+                <p><strong>Employee rights</strong> are things the law says you're entitled to at work. Your employer MUST follow these rules — they're not optional.</p>
+                <div class="highlight-box">
+                    <p><span class="emoji-big">⚖️</span> <strong>The law protects you.</strong> There are federal laws (for the whole country) and state laws (for your state) that protect workers.</p>
+                </div>
+                <div class="success-box">
+                    <p><strong>Your basic rights as an employee include:</strong></p>
+                    <ul>
+                        <li>Getting paid at least minimum wage</li>
+                        <li>Getting breaks during your shift</li>
+                        <li>Working in a safe environment</li>
+                        <li>Not being discriminated against</li>
+                        <li>Not being harassed</li>
+                        <li>Getting paid for all hours you work</li>
+                    </ul>
+                </div>
+                <p>Knowing your rights helps you recognize when something isn't right — and know what to do about it.</p>
+            </div>
+        </div>
+
+        <div class="page" id="page4">
+            <div class="slide">
+                <h2 class="slide-title">Right #1: Minimum Wage</h2>
+                <p>The law says employers must pay you at least a <strong>minimum wage</strong> — the lowest amount they're legally allowed to pay per hour.</p>
+                <div class="highlight-box">
+                    <p><strong>As of 2024:</strong></p>
+                    <ul>
+                        <li><strong>Federal minimum wage:</strong> $7.25/hour</li>
+                        <li><strong>Missouri minimum wage:</strong> $12.30/hour</li>
+                        <li>Your employer must pay whichever is HIGHER</li>
+                    </ul>
+                </div>
+                <div class="warning-box">
+                    <p><strong>Important notes:</strong></p>
+                    <ul>
+                        <li>Some jobs (like servers) can pay less IF you earn tips — but your total must still equal minimum wage</li>
+                        <li>Some states have higher minimum wages than others</li>
+                        <li>Your employer can NEVER pay you less than minimum wage</li>
+                    </ul>
+                </div>
+                <div class="danger-box">
+                    <p><span class="emoji-big">🚨</span> <strong>If you're being paid less than minimum wage, that's illegal.</strong> You can report it to the Department of Labor.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page5">
+            <div class="slide">
+                <h2 class="slide-title">Right #2: Breaks</h2>
+                <p>Most states require employers to give workers breaks during their shifts.</p>
+                <div class="highlight-box">
+                    <p><strong>In Missouri:</strong></p>
+                    <ul>
+                        <li>Workers under 16 must get a 30-minute break if working 5+ hours</li>
+                        <li>For adults, Missouri doesn't require breaks by law — but most employers give them anyway</li>
+                        <li>If your employer SAYS you get a break, they must let you take it</li>
+                    </ul>
+                </div>
+                <div class="success-box">
+                    <p><strong>What most employers provide:</strong></p>
+                    <ul>
+                        <li>One 10-15 minute paid break for shifts 4-6 hours</li>
+                        <li>One 30-minute unpaid meal break for shifts 6+ hours</li>
+                        <li>Two short breaks plus one meal break for 8-hour shifts</li>
+                    </ul>
+                </div>
+                <div class="warning-box">
+                    <p><span class="emoji-big">⚠️</span> <strong>If your employer promises breaks in their handbook or when they hire you, they must honor that promise.</strong></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page6">
+            <div class="slide">
+                <h2 class="slide-title">Right #3: A Safe Workplace</h2>
+                <p>Your employer is <strong>required by law</strong> to provide a safe place to work. This is enforced by a government agency called <strong>OSHA</strong> (Occupational Safety and Health Administration).</p>
+                <div class="rights-card">
+                    <span class="rights-icon">🛡️</span>
+                    <div>
+                        <strong>Your employer MUST:</strong>
+                        <ul>
+                            <li>Keep the workplace free of serious hazards</li>
+                            <li>Provide safety training</li>
+                            <li>Provide safety equipment (gloves, goggles, etc.) if needed</li>
+                            <li>Post safety information where you can see it</li>
+                            <li>Keep records of work-related injuries</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="rights-card">
+                    <span class="rights-icon">✋</span>
+                    <div>
+                        <strong>You have the right to:</strong>
+                        <ul>
+                            <li>Report unsafe conditions without being punished</li>
+                            <li>Refuse work that puts you in immediate danger</li>
+                            <li>Request an OSHA inspection if your workplace is unsafe</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page7">
+            <div class="slide">
+                <h2 class="slide-title">Right #4: No Discrimination</h2>
+                <p><strong>Discrimination</strong> means treating someone unfairly because of who they are — not because of how they do their job.</p>
+                <div class="danger-box">
+                    <p><strong>It's ILLEGAL to discriminate based on:</strong></p>
+                    <ul>
+                        <li>Race or skin color</li>
+                        <li>Religion</li>
+                        <li>Sex or gender</li>
+                        <li>National origin (where you or your family are from)</li>
+                        <li>Age (40 and older)</li>
+                        <li>Disability</li>
+                        <li>Pregnancy</li>
+                        <li>Genetic information</li>
+                    </ul>
+                </div>
+                <div class="example-box">
+                    <p><strong>🔹 Examples of discrimination:</strong></p>
+                    <ul>
+                        <li>Not hiring someone because of their religion</li>
+                        <li>Paying women less than men for the same job</li>
+                        <li>Firing someone because they got pregnant</li>
+                        <li>Not promoting someone because of their race</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page8">
+            <div class="slide">
+                <h2 class="slide-title">Right #5: Get Paid for All Hours Worked</h2>
+                <p>If you work, you must be paid. It's that simple.</p>
+                <div class="highlight-box">
+                    <p><strong>Your employer MUST pay you for:</strong></p>
+                    <ul>
+                        <li>All hours you're clocked in and working</li>
+                        <li>Time spent in required training</li>
+                        <li>Time spent in required meetings</li>
+                        <li>Overtime (time over 40 hours/week) at 1.5x your regular rate</li>
+                    </ul>
+                </div>
+                <div class="danger-box">
+                    <p><strong>These things are ILLEGAL:</strong></p>
+                    <ul>
+                        <li>Asking you to work "off the clock"</li>
+                        <li>Not paying you for all your hours</li>
+                        <li>Changing your time card to show fewer hours</li>
+                        <li>Not paying overtime when you've earned it</li>
+                    </ul>
+                </div>
+                <div class="success-box">
+                    <p><span class="emoji-big">💡</span> <strong>Keep your own records.</strong> Write down when you start and end each day. If there's ever a dispute, you'll have proof.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page9">
+            <div class="slide">
+                <h2 class="slide-title">Day 1 Review: Employee Rights</h2>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #1:</div>
+                    <p>Your friend says their boss pays them $6.00 per hour. Is this legal?</p>
+                    <p><strong>Answer:</strong> No! That's below both federal ($7.25) and Missouri ($12.30) minimum wage. This is illegal.</p>
+                </div>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #2:</div>
+                    <p>Your boss asks you to stay 15 minutes after your shift to finish cleaning, but says "don't clock those minutes." Is this okay?</p>
+                    <p><strong>Answer:</strong> No. If you work, you must be paid. This is called "off the clock" work and it's illegal.</p>
+                </div>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #3:</div>
+                    <p>You notice the emergency exit at your job is blocked by boxes. What's your right?</p>
+                    <p><strong>Answer:</strong> You have the right to a safe workplace. You can report this to your manager, and if nothing changes, you can report it to OSHA.</p>
+                </div>
+                <div class="success-box">
+                    <p style="text-align: center; font-size: 1.2em;"><strong>✅ End of Day 1! Next up: Employee Responsibilities</strong></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- DAY 2: EMPLOYEE RESPONSIBILITIES (Pages 10–17) -->
+        <!-- ============================================================ -->
+        <div class="page" id="page10">
+            <div class="slide title-slide">
+                <div class="day-label">Day 2</div>
+                <div class="emoji-hero">📋✅</div>
+                <h1>Employee Responsibilities</h1>
+                <p>What YOUR job requires of YOU</p>
+            </div>
+        </div>
+
+        <div class="page" id="page11">
+            <div class="slide">
+                <h2 class="slide-title">Rights Come With Responsibilities</h2>
+                <p>Just like you have rights at work, you also have <strong>responsibilities</strong> — things you're expected to do as an employee.</p>
+                <div class="highlight-box">
+                    <p><strong>When you accept a job, you're agreeing to:</strong></p>
+                    <ul>
+                        <li>Show up when scheduled</li>
+                        <li>Do the work you were hired to do</li>
+                        <li>Follow the rules and policies</li>
+                        <li>Be honest</li>
+                        <li>Treat others with respect</li>
+                        <li>Represent the company appropriately</li>
+                    </ul>
+                </div>
+                <div class="success-box">
+                    <p><span class="emoji-big">🤝</span> <strong>Think of it as a deal:</strong> Your employer gives you rights (pay, safety, fair treatment). In return, you give them your best work and follow the rules.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page12">
+            <div class="slide">
+                <h2 class="slide-title">Responsibility #1: Show Up & Be On Time</h2>
+                <p>We've talked about this before, but it's so important it's worth repeating.</p>
+                <div class="highlight-box">
+                    <p><strong>Your responsibilities:</strong></p>
+                    <ul>
+                        <li>Know your schedule</li>
+                        <li>Arrive on time (or early) for every shift</li>
+                        <li>Call in properly if you're sick</li>
+                        <li>Request time off in advance</li>
+                        <li>Don't leave early without permission</li>
+                    </ul>
+                </div>
+                <div class="warning-box">
+                    <p><strong>Why this matters:</strong></p>
+                    <p>When you don't show up, other people have to do your work. It affects your coworkers, your boss, and the customers. Being reliable is one of the most basic — and most important — responsibilities you have.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page13">
+            <div class="slide">
+                <h2 class="slide-title">Responsibility #2: Do Your Job</h2>
+                <p>This sounds obvious, but it means more than just showing up.</p>
+                <div class="success-box">
+                    <p><strong>"Doing your job" means:</strong></p>
+                    <ul>
+                        <li>Completing the tasks you're assigned</li>
+                        <li>Doing work the way you're trained to do it</li>
+                        <li>Working at a reasonable pace — not too slow</li>
+                        <li>Asking questions if you don't understand something</li>
+                        <li>Paying attention to quality, not just finishing fast</li>
+                        <li>Staying focused — not on your phone or chatting all day</li>
+                    </ul>
+                </div>
+                <div class="warning-box">
+                    <p><span class="emoji-big">⚠️</span> <strong>If you consistently don't do your job well, your employer has the right to let you go.</strong> Just like they have to follow the law, you have to do what you were hired to do.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page14">
+            <div class="slide">
+                <h2 class="slide-title">Responsibility #3: Follow Rules & Policies</h2>
+                <p>Every workplace has rules. Following them is part of your job.</p>
+                <div class="highlight-box">
+                    <p><strong>Common rules you must follow:</strong></p>
+                    <ul>
+                        <li>Dress code</li>
+                        <li>Phone/social media policy</li>
+                        <li>Break policies</li>
+                        <li>Safety rules</li>
+                        <li>Clocking in/out procedures</li>
+                        <li>How to handle money, food, or products</li>
+                    </ul>
+                </div>
+                <div class="danger-box">
+                    <p><strong>Breaking rules can lead to:</strong></p>
+                    <ul>
+                        <li>Verbal warning</li>
+                        <li>Written warning</li>
+                        <li>Suspension</li>
+                        <li>Termination (getting fired)</li>
+                    </ul>
+                </div>
+                <div class="example-box">
+                    <p><span class="emoji-big">💡</span> <strong>If you think a rule is unfair,</strong> you can talk to your manager about it respectfully. But until it changes, you still need to follow it.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page15">
+            <div class="slide">
+                <h2 class="slide-title">Responsibility #4: Be Honest</h2>
+                <p><strong>Honesty</strong> is one of the most important things employers look for. Once you lose their trust, it's very hard to get it back.</p>
+                <div class="do-dont">
+                    <div class="do-column">
+                        <h3>✅ Being Honest:</h3>
+                        <ul>
+                            <li>Admitting when you make a mistake</li>
+                            <li>Clocking your actual hours</li>
+                            <li>Telling the truth about why you called in</li>
+                            <li>Reporting problems you notice</li>
+                            <li>Not taking things that aren't yours</li>
+                        </ul>
+                    </div>
+                    <div class="dont-column">
+                        <h3>❌ Dishonesty:</h3>
+                        <ul>
+                            <li>Lying about being sick</li>
+                            <li>Having someone clock in for you</li>
+                            <li>Stealing products, food, or money</li>
+                            <li>Blaming others for your mistakes</li>
+                            <li>Lying on your time card</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="danger-box">
+                    <p><span class="emoji-big">🚨</span> <strong>Dishonesty often leads to immediate termination</strong> — no warnings, just fired. It's not worth the risk.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page16">
+            <div class="slide">
+                <h2 class="slide-title">Responsibility #5: Treat Others With Respect</h2>
+                <p>You're responsible for how you treat your coworkers, your boss, and customers.</p>
+                <div class="highlight-box">
+                    <p><strong>Respectful behavior includes:</strong></p>
+                    <ul>
+                        <li>Speaking politely to everyone</li>
+                        <li>Not gossiping or spreading rumors</li>
+                        <li>Not bullying, threatening, or harassing anyone</li>
+                        <li>Listening when others are talking</li>
+                        <li>Accepting feedback without arguing</li>
+                        <li>Helping coworkers when you can</li>
+                    </ul>
+                </div>
+                <div class="warning-box">
+                    <p><strong>Disrespectful behavior can get you fired:</strong></p>
+                    <ul>
+                        <li>Yelling at coworkers or customers</li>
+                        <li>Making rude or offensive comments</li>
+                        <li>Creating a hostile environment</li>
+                        <li>Threatening anyone</li>
+                    </ul>
+                </div>
+                <div class="success-box">
+                    <p><span class="emoji-big">💡</span> <strong>The Golden Rule applies at work:</strong> Treat others the way you want to be treated.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page17">
+            <div class="slide">
+                <h2 class="slide-title">Day 2 Review: Employee Responsibilities</h2>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #1:</div>
+                    <p>Your coworker is always on their phone and not doing their work. You end up having to do extra. Is this fair?</p>
+                    <p><strong>Answer:</strong> No — your coworker isn't meeting their responsibility to do their job. Focus on your own work, and if it keeps affecting you, you can talk to your manager.</p>
+                </div>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #2:</div>
+                    <p>You accidentally break a piece of equipment. What should you do?</p>
+                    <p><strong>Answer:</strong> Tell your manager honestly. Accidents happen. Lying about it or hiding it is worse than the accident itself.</p>
+                </div>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #3:</div>
+                    <p>Name 3 responsibilities every employee has.</p>
+                    <p><strong>Answer:</strong> Show up on time, do your job, follow the rules, be honest, treat others with respect. (Any 3 of these!)</p>
+                </div>
+                <div class="success-box">
+                    <p style="text-align: center; font-size: 1.2em;"><strong>✅ End of Day 2! Next up: Paychecks & Taxes</strong></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- DAY 3: PAYCHECKS & TAXES (Pages 18–25) -->
+        <!-- ============================================================ -->
+        <div class="page" id="page18">
+            <div class="slide title-slide">
+                <div class="day-label">Day 3</div>
+                <div class="emoji-hero">💰📄</div>
+                <h1>Paychecks & Taxes</h1>
+                <p>Understanding your pay stub and why money comes out</p>
+            </div>
+        </div>
+
+        <div class="page" id="page19">
+            <div class="slide">
+                <h2 class="slide-title">What Is a Pay Stub?</h2>
+                <p>A <strong>pay stub</strong> (also called a paycheck stub or earnings statement) is a document that shows how much you earned and what was taken out.</p>
+                <div class="highlight-box">
+                    <p><strong>You get a pay stub every time you're paid.</strong> It might be:</p>
+                    <ul>
+                        <li>A paper attached to your check</li>
+                        <li>Available online through a payroll website</li>
+                        <li>Emailed to you</li>
+                    </ul>
+                </div>
+                <div class="success-box">
+                    <p><strong>Important terms to know:</strong></p>
+                    <ul>
+                        <li><strong>Gross Pay:</strong> The total amount you earned BEFORE anything is taken out</li>
+                        <li><strong>Deductions:</strong> Money taken out of your paycheck</li>
+                        <li><strong>Net Pay:</strong> The amount you actually take home (gross pay minus deductions)</li>
+                    </ul>
+                </div>
+                <div class="warning-box">
+                    <p><span class="emoji-big">⚠️</span> <strong>Your net pay will ALWAYS be less than your gross pay</strong> because of taxes and other deductions. This is normal!</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page20">
+            <div class="slide">
+                <h2 class="slide-title">Reading a Pay Stub</h2>
+                <div class="pay-stub-mock">
+                    <h4>PAY STUB — BURGER PALACE</h4>
+                    <div class="stub-row">
+                        <span>Employee: Jake Smith</span>
+                        <span>Pay Period: Jan 1–14</span>
+                    </div>
+                    <div class="stub-section">
+                        <div class="stub-section-title">EARNINGS</div>
+                        <div class="stub-row"><span>Regular Hours: 35 hrs × $13.00</span><span>$455.00</span></div>
+                        <div class="stub-row"><span>Overtime Hours: 0</span><span>$0.00</span></div>
+                        <div class="stub-row total"><span>GROSS PAY</span><span>$455.00</span></div>
+                    </div>
+                    <div class="stub-section">
+                        <div class="stub-section-title">DEDUCTIONS</div>
+                        <div class="stub-row"><span>Federal Income Tax</span><span>−$34.13</span></div>
+                        <div class="stub-row"><span>State Income Tax (MO)</span><span>−$18.20</span></div>
+                        <div class="stub-row"><span>Social Security (FICA)</span><span>−$28.21</span></div>
+                        <div class="stub-row"><span>Medicare</span><span>−$6.60</span></div>
+                        <div class="stub-row total"><span>TOTAL DEDUCTIONS</span><span>−$87.14</span></div>
+                    </div>
+                    <div class="stub-row total" style="font-size: 1.2em; background: #e8f4fd; padding: 10px;">
+                        <span>NET PAY (Take Home)</span><span>$367.86</span>
+                    </div>
+                </div>
+                <p><strong>Jake earned $455 but takes home $367.86.</strong> The difference ($87.14) went to taxes.</p>
+            </div>
+        </div>
+
+        <div class="page" id="page21">
+            <div class="slide">
+                <h2 class="slide-title">Why Do They Take Money Out?</h2>
+                <p>The money that comes out of your paycheck is called <strong>deductions</strong>. Most deductions are for <strong>taxes</strong>.</p>
+                <div class="highlight-box">
+                    <p><strong>Common deductions:</strong></p>
+                    <table class="comparison-table">
+                        <tr><th>Deduction</th><th>What It's For</th></tr>
+                        <tr><td>Federal Income Tax</td><td>Pays for the federal government (military, roads, etc.)</td></tr>
+                        <tr><td>State Income Tax</td><td>Pays for your state government (schools, police, etc.)</td></tr>
+                        <tr><td>Social Security (FICA)</td><td>Retirement benefits for when you're older</td></tr>
+                        <tr><td>Medicare</td><td>Health insurance for people 65 and older</td></tr>
+                    </table>
+                </div>
+                <div class="success-box">
+                    <p><span class="emoji-big">💡</span> <strong>Everyone pays these taxes</strong> — it's the law. The amount depends on how much you earn.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page22">
+            <div class="slide">
+                <h2 class="slide-title">What Is a W-2?</h2>
+                <p>At the end of each year, your employer gives you a form called a <strong>W-2</strong>. You need this to file your taxes.</p>
+                <div class="highlight-box">
+                    <p><strong>The W-2 shows:</strong></p>
+                    <ul>
+                        <li>How much money you earned that year (total wages)</li>
+                        <li>How much was taken out for federal taxes</li>
+                        <li>How much was taken out for state taxes</li>
+                        <li>How much was taken out for Social Security and Medicare</li>
+                    </ul>
+                </div>
+                <div class="warning-box">
+                    <p><strong>Important W-2 facts:</strong></p>
+                    <ul>
+                        <li>Employers must send W-2s by <strong>January 31</strong> each year</li>
+                        <li>You need it to file your tax return</li>
+                        <li>Keep it in a safe place!</li>
+                        <li>If you worked multiple jobs, you'll get a W-2 from EACH employer</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page23">
+            <div class="slide">
+                <h2 class="slide-title">Filing Your Taxes</h2>
+                <p>Every year, you have to <strong>file a tax return</strong>. This is how you report your income to the government.</p>
+                <div class="highlight-box">
+                    <p><strong>Tax filing basics:</strong></p>
+                    <ul>
+                        <li><strong>Deadline:</strong> Usually April 15 each year</li>
+                        <li><strong>What you need:</strong> Your W-2(s) and personal information</li>
+                        <li><strong>How to file:</strong> Online (free options available), tax software, or a tax preparer</li>
+                    </ul>
+                </div>
+                <div class="success-box">
+                    <p><strong>You might get money BACK!</strong></p>
+                    <p>If too much tax was taken out of your paychecks during the year, you get a <strong>tax refund</strong>. Many people get money back when they file!</p>
+                </div>
+                <div class="example-box">
+                    <p><strong>🔹 Free tax filing options:</strong></p>
+                    <ul>
+                        <li>IRS Free File (irs.gov) — if you earn under ~$79,000</li>
+                        <li>VITA (Volunteer Income Tax Assistance) — free help in your community</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page24">
+            <div class="slide">
+                <h2 class="slide-title">Check Your Pay Stub!</h2>
+                <p>It's your responsibility to make sure your pay stub is correct.</p>
+                <div class="highlight-box">
+                    <p><strong>Every pay period, check:</strong></p>
+                    <ul>
+                        <li><strong>Hours worked:</strong> Does it match what you actually worked?</li>
+                        <li><strong>Pay rate:</strong> Is it the correct hourly rate?</li>
+                        <li><strong>Overtime:</strong> Did you get 1.5x for hours over 40?</li>
+                        <li><strong>Deductions:</strong> Do the amounts look similar to last time?</li>
+                    </ul>
+                </div>
+                <div class="danger-box">
+                    <p><strong>If something looks wrong:</strong></p>
+                    <ul>
+                        <li>Talk to your manager or HR department right away</li>
+                        <li>Show them your own records of hours worked</li>
+                        <li>Mistakes happen — but they need to be fixed</li>
+                    </ul>
+                </div>
+                <div class="success-box">
+                    <p><span class="emoji-big">💡</span> <strong>Keep your pay stubs!</strong> Save them (paper or digital) for at least a year. You might need them for taxes, loans, or if there's a dispute.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page25">
+            <div class="slide">
+                <h2 class="slide-title">Day 3 Review: Paychecks & Taxes</h2>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #1:</div>
+                    <p>Your gross pay is $400. Your net pay is $340. What happened to the other $60?</p>
+                    <p><strong>Answer:</strong> It was taken out for deductions — mostly taxes (federal, state, Social Security, Medicare).</p>
+                </div>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #2:</div>
+                    <p>What document do you need to file your taxes each year?</p>
+                    <p><strong>Answer:</strong> Your W-2 form, which your employer must give you by January 31.</p>
+                </div>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #3:</div>
+                    <p>You worked 38 hours last week but your pay stub says 35 hours. What should you do?</p>
+                    <p><strong>Answer:</strong> Talk to your manager or HR right away. Show them your own records if you have them. This needs to be fixed.</p>
+                </div>
+                <div class="success-box">
+                    <p style="text-align: center; font-size: 1.2em;"><strong>✅ End of Day 3! Next up: Discrimination & Harassment</strong></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- DAY 4: DISCRIMINATION & HARASSMENT (Pages 26–33) -->
+        <!-- ============================================================ -->
+        <div class="page" id="page26">
+            <div class="slide title-slide">
+                <div class="day-label">Day 4</div>
+                <div class="emoji-hero">🚫🛡️</div>
+                <h1>Workplace Discrimination & Harassment</h1>
+                <p>What it is, what to do, and who can help</p>
+            </div>
+        </div>
+
+        <div class="page" id="page27">
+            <div class="slide">
+                <h2 class="slide-title">What Is Discrimination?</h2>
+                <p><strong>Discrimination</strong> at work means treating someone unfairly because of who they are — not because of their job performance.</p>
+                <div class="danger-box">
+                    <p><strong>It's illegal to discriminate based on:</strong></p>
+                    <ul>
+                        <li>Race, color, or ethnicity</li>
+                        <li>Religion</li>
+                        <li>Sex, gender, or pregnancy</li>
+                        <li>National origin (where you're from)</li>
+                        <li>Age (if you're 40 or older)</li>
+                        <li>Disability</li>
+                    </ul>
+                </div>
+                <div class="example-box">
+                    <p><strong>🔹 Examples of discrimination:</strong></p>
+                    <ul>
+                        <li>Not getting hired because of your race</li>
+                        <li>Being paid less because of your gender</li>
+                        <li>Being fired because you're pregnant</li>
+                        <li>Not getting promoted because of your religion</li>
+                        <li>Being harassed because of where you're from</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page28">
+            <div class="slide">
+                <h2 class="slide-title">What Is Harassment?</h2>
+                <p><strong>Harassment</strong> is unwanted behavior that makes the workplace hostile, scary, or uncomfortable.</p>
+                <div class="highlight-box">
+                    <p><strong>Harassment can include:</strong></p>
+                    <ul>
+                        <li>Offensive jokes about someone's race, religion, gender, etc.</li>
+                        <li>Slurs or name-calling</li>
+                        <li>Threats or intimidation</li>
+                        <li>Unwanted physical contact</li>
+                        <li>Displaying offensive images or objects</li>
+                        <li>Repeated unwelcome comments about someone's body or appearance</li>
+                    </ul>
+                </div>
+                <div class="warning-box">
+                    <p><strong>Harassment becomes illegal when:</strong></p>
+                    <ul>
+                        <li>It's severe or happens repeatedly</li>
+                        <li>It creates a hostile work environment</li>
+                        <li>It affects someone's ability to do their job</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page29">
+            <div class="slide">
+                <h2 class="slide-title">Sexual Harassment</h2>
+                <p><strong>Sexual harassment</strong> is a specific type of harassment. It's unwanted sexual attention or behavior at work.</p>
+                <div class="danger-box">
+                    <p><strong>Sexual harassment includes:</strong></p>
+                    <ul>
+                        <li>Unwanted touching, hugging, or physical contact</li>
+                        <li>Sexual jokes, comments, or gestures</li>
+                        <li>Asking someone out repeatedly after they've said no</li>
+                        <li>Sending sexual messages, emails, or pictures</li>
+                        <li>Staring at someone's body in a way that makes them uncomfortable</li>
+                        <li>Offering job benefits in exchange for sexual favors</li>
+                    </ul>
+                </div>
+                <div class="success-box">
+                    <p><span class="emoji-big">💡</span> <strong>Both men and women can be victims of sexual harassment.</strong> And it can happen between people of any gender.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page30">
+            <div class="slide">
+                <h2 class="slide-title">What to Do If It Happens to You</h2>
+                <p>If you experience discrimination or harassment, you have options.</p>
+                <div class="step-card"><div class="step-number">1</div><div><strong>Say something (if you feel safe).</strong> Tell the person their behavior is unwelcome. <em>"Please don't say things like that to me."</em></div></div>
+                <div class="step-card"><div class="step-number">2</div><div><strong>Document everything.</strong> Write down what happened, when, where, and who saw it. Save any texts or emails.</div></div>
+                <div class="step-card"><div class="step-number">3</div><div><strong>Report it to your manager or HR.</strong> Most companies have a process for reporting. You can also report to a different manager if your manager is the problem.</div></div>
+                <div class="step-card"><div class="step-number">4</div><div><strong>If nothing changes, report outside the company.</strong> You can file a complaint with the EEOC (Equal Employment Opportunity Commission) or your state's human rights agency.</div></div>
+                <div class="warning-box">
+                    <p><span class="emoji-big">⚠️</span> <strong>Retaliation is illegal.</strong> Your employer cannot punish you, fire you, or treat you badly for reporting discrimination or harassment.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page31">
+            <div class="slide">
+                <h2 class="slide-title">What If You See It Happening to Someone Else?</h2>
+                <p>You might witness discrimination or harassment happening to a coworker. You can help.</p>
+                <div class="highlight-box">
+                    <p><strong>Ways to help as a bystander:</strong></p>
+                    <ul>
+                        <li><strong>Interrupt the situation</strong> if it's safe — change the subject, ask the victim to help you with something</li>
+                        <li><strong>Check on the person later</strong> — "Hey, I saw what happened. Are you okay?"</li>
+                        <li><strong>Offer to be a witness</strong> — "I saw that too. I'll back you up if you report it."</li>
+                        <li><strong>Report it yourself</strong> — You can report what you witnessed to HR</li>
+                    </ul>
+                </div>
+                <div class="success-box">
+                    <p><span class="emoji-big">🤝</span> <strong>Speaking up makes a difference.</strong> When people stay silent, harassers think their behavior is acceptable. When people speak up, it helps create a better workplace for everyone.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page32">
+            <div class="slide">
+                <h2 class="slide-title">Where to Get Help</h2>
+                <div class="info-card">
+                    <h4>📞 Equal Employment Opportunity Commission (EEOC)</h4>
+                    <p>Federal agency that handles discrimination complaints</p>
+                    <p>Website: eeoc.gov • Phone: 1-800-669-4000</p>
+                </div>
+                <div class="info-card">
+                    <h4>📞 Missouri Commission on Human Rights</h4>
+                    <p>State agency for Missouri discrimination complaints</p>
+                    <p>Website: labor.mo.gov/mohumanrights</p>
+                </div>
+                <div class="info-card">
+                    <h4>📞 Your Company's HR Department</h4>
+                    <p>Usually your first step for reporting workplace issues</p>
+                </div>
+                <div class="warning-box">
+                    <p><strong>Time limits:</strong> You usually have 180–300 days to file a complaint with the EEOC after the incident. Don't wait too long.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page33">
+            <div class="slide">
+                <h2 class="slide-title">Day 4 Review: Discrimination & Harassment</h2>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #1:</div>
+                    <p>A coworker keeps making jokes about your religion even after you asked them to stop. Is this harassment?</p>
+                    <p><strong>Answer:</strong> Yes. Repeated offensive jokes about someone's religion that continue after you've asked them to stop is harassment.</p>
+                </div>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #2:</div>
+                    <p>You report harassment to HR, and the next week your hours get cut. Is this legal?</p>
+                    <p><strong>Answer:</strong> No. This sounds like retaliation, which is illegal. You can report this to the EEOC.</p>
+                </div>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #3:</div>
+                    <p>What should you do if you experience harassment at work?</p>
+                    <p><strong>Answer:</strong> Tell the person to stop (if safe), document everything, report to your manager or HR. If nothing changes, report to the EEOC.</p>
+                </div>
+                <div class="success-box">
+                    <p style="text-align: center; font-size: 1.2em;"><strong>✅ End of Day 4! Next up: Unions & Worker Protections</strong></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- DAY 5: UNIONS & WORKER PROTECTIONS (Pages 34–41) -->
+        <!-- ============================================================ -->
+        <div class="page" id="page34">
+            <div class="slide title-slide">
+                <div class="day-label">Day 5</div>
+                <div class="emoji-hero">🏛️👷</div>
+                <h1>Unions & Worker Protections</h1>
+                <p>Organizations and laws that protect workers</p>
+            </div>
+        </div>
+
+        <div class="page" id="page35">
+            <div class="slide">
+                <h2 class="slide-title">What Is a Union?</h2>
+                <p>A <strong>union</strong> (or labor union) is an organization of workers who join together to have a stronger voice at work.</p>
+                <div class="highlight-box">
+                    <p><strong>What unions do:</strong></p>
+                    <ul>
+                        <li><strong>Negotiate with employers</strong> for better pay, benefits, and working conditions</li>
+                        <li><strong>Protect workers</strong> from unfair treatment</li>
+                        <li><strong>Represent workers</strong> if there's a dispute with the employer</li>
+                        <li><strong>Advocate</strong> for workplace safety and fair policies</li>
+                    </ul>
+                </div>
+                <div class="success-box">
+                    <p><span class="emoji-big">💡</span> <strong>Think of it this way:</strong> One worker asking for a raise might be ignored. But if ALL the workers ask together through a union, the employer has to listen.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page36">
+            <div class="slide">
+                <h2 class="slide-title">How Unions Work</h2>
+                <div class="highlight-box">
+                    <p><strong>If your workplace has a union:</strong></p>
+                    <ul>
+                        <li>You may be asked to join (or pay fees even if you don't join)</li>
+                        <li>The union negotiates a <strong>contract</strong> with your employer</li>
+                        <li>The contract spells out pay, benefits, hours, and rules</li>
+                        <li>If there's a problem, you can ask the union to help</li>
+                    </ul>
+                </div>
+                <div class="warning-box">
+                    <p><strong>Union dues:</strong></p>
+                    <p>Union members usually pay <strong>dues</strong> — a small amount from each paycheck that funds the union. This pays for negotiators, lawyers, and union staff.</p>
+                </div>
+                <div class="example-box">
+                    <p><strong>🔹 Jobs that often have unions:</strong></p>
+                    <ul>
+                        <li>Teachers and school employees</li>
+                        <li>Nurses and healthcare workers</li>
+                        <li>Construction workers</li>
+                        <li>Factory workers</li>
+                        <li>Government employees</li>
+                        <li>Grocery store workers</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page37">
+            <div class="slide">
+                <h2 class="slide-title">What Is OSHA?</h2>
+                <p><strong>OSHA</strong> stands for the Occupational Safety and Health Administration. It's a government agency that makes sure workplaces are safe.</p>
+                <div class="rights-card">
+                    <span class="rights-icon">🛡️</span>
+                    <div>
+                        <strong>OSHA requires employers to:</strong>
+                        <ul>
+                            <li>Provide a workplace free from serious hazards</li>
+                            <li>Follow all OSHA safety standards</li>
+                            <li>Provide safety training in a language workers understand</li>
+                            <li>Provide required safety equipment</li>
+                            <li>Post OSHA information where workers can see it</li>
+                            <li>Report serious injuries and deaths to OSHA</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="success-box">
+                    <p><span class="emoji-big">💡</span> <strong>If your workplace is unsafe, you can file a complaint with OSHA.</strong> You can do this anonymously, and your employer cannot punish you for it.</p>
+                    <p>Website: osha.gov • Phone: 1-800-321-OSHA (6742)</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page38">
+            <div class="slide">
+                <h2 class="slide-title">Labor Laws That Protect You</h2>
+                <p>There are many laws that protect workers. Here are some of the most important ones:</p>
+                <table class="comparison-table">
+                    <tr><th>Law</th><th>What It Does</th></tr>
+                    <tr><td>Fair Labor Standards Act (FLSA)</td><td>Sets minimum wage, overtime pay, and child labor rules</td></tr>
+                    <tr><td>Title VII of the Civil Rights Act</td><td>Prohibits discrimination based on race, color, religion, sex, national origin</td></tr>
+                    <tr><td>Americans with Disabilities Act (ADA)</td><td>Protects people with disabilities from discrimination</td></tr>
+                    <tr><td>Age Discrimination in Employment Act</td><td>Protects workers 40 and older from age discrimination</td></tr>
+                    <tr><td>Family and Medical Leave Act (FMLA)</td><td>Allows unpaid leave for family/medical reasons at larger employers</td></tr>
+                </table>
+                <div class="success-box">
+                    <p><span class="emoji-big">💡</span> <strong>You don't need to memorize these.</strong> Just know that the law is on your side if you're being treated unfairly.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page39">
+            <div class="slide">
+                <h2 class="slide-title">Workers' Compensation</h2>
+                <p><strong>Workers' compensation</strong> (or "workers' comp") is insurance that pays for your medical bills and lost wages if you get hurt at work.</p>
+                <div class="highlight-box">
+                    <p><strong>If you're injured at work, workers' comp can cover:</strong></p>
+                    <ul>
+                        <li>Doctor visits and hospital bills</li>
+                        <li>Medicine and medical equipment</li>
+                        <li>Physical therapy</li>
+                        <li>Part of your wages while you can't work</li>
+                        <li>Disability payments if you can't fully recover</li>
+                    </ul>
+                </div>
+                <div class="warning-box">
+                    <p><strong>Important:</strong></p>
+                    <ul>
+                        <li>Report your injury to your employer RIGHT AWAY</li>
+                        <li>Fill out an incident report</li>
+                        <li>Your employer must tell you how to file a workers' comp claim</li>
+                        <li>You're covered even if the injury was your fault (in most cases)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page40">
+            <div class="slide">
+                <h2 class="slide-title">Your Right to Organize</h2>
+                <p>The law protects your right to join (or not join) a union and to advocate for better working conditions.</p>
+                <div class="success-box">
+                    <p><strong>You have the right to:</strong></p>
+                    <ul>
+                        <li>Join a union</li>
+                        <li>Talk to coworkers about working conditions, pay, or problems</li>
+                        <li>Wear union buttons or t-shirts (in most cases)</li>
+                        <li>Choose NOT to join a union</li>
+                    </ul>
+                </div>
+                <div class="danger-box">
+                    <p><strong>Your employer CANNOT:</strong></p>
+                    <ul>
+                        <li>Fire you for joining or supporting a union</li>
+                        <li>Threaten you for talking about working conditions</li>
+                        <li>Spy on union activities</li>
+                        <li>Promise benefits to discourage union activity</li>
+                    </ul>
+                </div>
+                <div class="warning-box">
+                    <p><span class="emoji-big">⚠️</span> <strong>If you think your rights have been violated,</strong> you can file a complaint with the National Labor Relations Board (NLRB) at nlrb.gov.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page41">
+            <div class="slide">
+                <h2 class="slide-title">Day 5 Review: Unions & Worker Protections</h2>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #1:</div>
+                    <p>What does OSHA do?</p>
+                    <p><strong>Answer:</strong> OSHA makes sure workplaces are safe. They set safety rules and can inspect workplaces. You can report unsafe conditions to them.</p>
+                </div>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #2:</div>
+                    <p>You sprain your ankle at work. Who pays for your doctor visit?</p>
+                    <p><strong>Answer:</strong> Workers' compensation insurance should cover it — as long as you report the injury and file a claim.</p>
+                </div>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #3:</div>
+                    <p>Your coworkers are talking about starting a union. Your boss says anyone who supports it will be fired. Is this legal?</p>
+                    <p><strong>Answer:</strong> No. It's illegal for employers to threaten workers for union activity. You could report this to the NLRB.</p>
+                </div>
+                <div class="success-box">
+                    <p style="text-align: center; font-size: 1.2em;"><strong>✅ End of Day 5! Next up: Your Personal Information at Work</strong></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- DAY 6: YOUR PERSONAL INFORMATION AT WORK (Pages 42–49) -->
+        <!-- ============================================================ -->
+        <div class="page" id="page42">
+            <div class="slide title-slide">
+                <div class="day-label">Day 6</div>
+                <div class="emoji-hero">🔐📝</div>
+                <h1>Your Personal Information at Work</h1>
+                <p>What employers need, what to protect, and how to stay safe</p>
+            </div>
+        </div>
+
+        <div class="page" id="page43">
+            <div class="slide">
+                <h2 class="slide-title">Information Your Employer Needs</h2>
+                <p>When you start a job, you'll need to provide some personal information. This is normal and required by law.</p>
+                <div class="highlight-box">
+                    <p><strong>Information you'll typically provide:</strong></p>
+                    <ul>
+                        <li><strong>Full legal name</strong></li>
+                        <li><strong>Address</strong></li>
+                        <li><strong>Date of birth</strong></li>
+                        <li><strong>Social Security Number (SSN)</strong></li>
+                        <li><strong>Bank account info</strong> (for direct deposit)</li>
+                        <li><strong>Emergency contact</strong></li>
+                        <li><strong>Proof of identity</strong> (ID, driver's license, passport)</li>
+                        <li><strong>Proof you can work in the U.S.</strong> (Form I-9)</li>
+                    </ul>
+                </div>
+                <div class="success-box">
+                    <p><span class="emoji-big">💡</span> <strong>This information is needed to:</strong> Put you on the payroll, withhold the right amount of taxes, verify your identity, and pay you correctly.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page44">
+            <div class="slide">
+                <h2 class="slide-title">Your Social Security Number (SSN)</h2>
+                <p>Your <strong>Social Security Number</strong> is a 9-digit number that's unique to you. It's very important and very sensitive.</p>
+                <div class="highlight-box">
+                    <p><strong>Your SSN is used for:</strong></p>
+                    <ul>
+                        <li>Taxes — employers report your wages to the IRS using your SSN</li>
+                        <li>Social Security benefits — tracking your future retirement benefits</li>
+                        <li>Background checks</li>
+                        <li>Opening bank accounts</li>
+                        <li>Getting credit cards or loans</li>
+                    </ul>
+                </div>
+                <div class="danger-box">
+                    <p><span class="emoji-big">🚨</span> <strong>PROTECT YOUR SSN!</strong></p>
+                    <ul>
+                        <li>Don't carry your Social Security card in your wallet</li>
+                        <li>Don't give it out unless absolutely necessary</li>
+                        <li>If someone steals your SSN, they can steal your identity</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page45">
+            <div class="slide">
+                <h2 class="slide-title">Direct Deposit</h2>
+                <p><strong>Direct deposit</strong> is when your paycheck goes straight into your bank account. Most employers offer (or require) this.</p>
+                <div class="success-box">
+                    <p><strong>Benefits of direct deposit:</strong></p>
+                    <ul>
+                        <li>You don't have to go to the bank to deposit a check</li>
+                        <li>Money is available on payday — no waiting for a check to clear</li>
+                        <li>No risk of losing a paper check</li>
+                        <li>More secure than carrying a paper check</li>
+                    </ul>
+                </div>
+                <div class="highlight-box">
+                    <p><strong>To set up direct deposit, you need:</strong></p>
+                    <ul>
+                        <li>Your bank's <strong>routing number</strong> (identifies the bank)</li>
+                        <li>Your <strong>account number</strong> (identifies your specific account)</li>
+                        <li>These are on your checks or in your banking app</li>
+                    </ul>
+                </div>
+                <div class="warning-box">
+                    <p><span class="emoji-big">⚠️</span> <strong>Double-check your account numbers!</strong> If you enter the wrong number, your pay could go to the wrong account.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page46">
+            <div class="slide">
+                <h2 class="slide-title">Tax Forms You'll Fill Out</h2>
+                <p>When you start a job, you'll fill out forms that tell your employer how much tax to withhold from your paycheck.</p>
+                <div class="info-card">
+                    <h4>📄 W-4 Form (Federal)</h4>
+                    <p>Tells your employer how much <strong>federal income tax</strong> to withhold.</p>
+                    <p>You fill this out when you're hired. You can update it anytime.</p>
+                </div>
+                <div class="info-card">
+                    <h4>📄 MO W-4 Form (Missouri)</h4>
+                    <p>Tells your employer how much <strong>state income tax</strong> to withhold.</p>
+                </div>
+                <div class="info-card">
+                    <h4>📄 I-9 Form (Employment Eligibility)</h4>
+                    <p>Proves you're legally allowed to work in the United States.</p>
+                    <p>You'll need to show ID documents (like a driver's license AND Social Security card, OR a passport).</p>
+                </div>
+                <div class="success-box">
+                    <p><span class="emoji-big">💡</span> <strong>Ask for help if you need it.</strong> These forms can be confusing. Your employer or HR can answer questions.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page47">
+            <div class="slide">
+                <h2 class="slide-title">Keeping Your Information Safe</h2>
+                <p>Your personal information is valuable. Criminals try to steal it for <strong>identity theft</strong> — using your info to open accounts, steal money, or commit fraud.</p>
+                <div class="do-dont">
+                    <div class="do-column">
+                        <h3>✅ DO:</h3>
+                        <ul>
+                            <li>Only give SSN when required</li>
+                            <li>Keep documents in a safe place</li>
+                            <li>Shred papers with personal info before throwing away</li>
+                            <li>Use strong passwords</li>
+                            <li>Check your pay stubs for accuracy</li>
+                            <li>Check your bank accounts regularly</li>
+                        </ul>
+                    </div>
+                    <div class="dont-column">
+                        <h3>❌ DON'T:</h3>
+                        <ul>
+                            <li>Carry your SSN card in your wallet</li>
+                            <li>Give SSN over the phone unless YOU called</li>
+                            <li>Click links in suspicious emails</li>
+                            <li>Leave documents lying around</li>
+                            <li>Share passwords with anyone</li>
+                            <li>Give info to people who randomly call or email</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page48">
+            <div class="slide">
+                <h2 class="slide-title">What If Your Info Is Stolen?</h2>
+                <p>If you think someone has stolen your personal information, act quickly.</p>
+                <div class="step-card"><div class="step-number">1</div><div><strong>Contact your bank</strong> if money or accounts are involved. They can freeze accounts and watch for fraud.</div></div>
+                <div class="step-card"><div class="step-number">2</div><div><strong>Place a fraud alert</strong> on your credit reports. Contact one of the three credit bureaus: Equifax, Experian, or TransUnion.</div></div>
+                <div class="step-card"><div class="step-number">3</div><div><strong>Report it to the FTC</strong> (Federal Trade Commission) at IdentityTheft.gov. They'll help you make a recovery plan.</div></div>
+                <div class="step-card"><div class="step-number">4</div><div><strong>File a police report</strong> if there's significant theft or fraud.</div></div>
+                <div class="warning-box">
+                    <p><strong>Signs your info may have been stolen:</strong></p>
+                    <ul>
+                        <li>Bills or statements for accounts you didn't open</li>
+                        <li>Charges on your bank account you don't recognize</li>
+                        <li>Calls from debt collectors about debts that aren't yours</li>
+                        <li>Your tax return is rejected because one was already filed with your SSN</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page49">
+            <div class="slide">
+                <h2 class="slide-title">Day 6 Review: Your Personal Information</h2>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #1:</div>
+                    <p>Your new employer asks for your Social Security Number. Is this normal?</p>
+                    <p><strong>Answer:</strong> Yes. Employers need your SSN for taxes and to verify your identity. Just make sure you're giving it directly to HR or on official forms — not in a random email.</p>
+                </div>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #2:</div>
+                    <p>Someone calls claiming to be from "the IRS" and asks for your Social Security Number. What should you do?</p>
+                    <p><strong>Answer:</strong> Don't give it! The real IRS doesn't call and ask for your SSN over the phone. This is a scam.</p>
+                </div>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #3:</div>
+                    <p>What two numbers do you need to set up direct deposit?</p>
+                    <p><strong>Answer:</strong> Your bank's routing number and your account number.</p>
+                </div>
+                <div class="success-box">
+                    <p style="text-align: center; font-size: 1.3em;"><strong>🎉 Great job finishing Unit 4: Your Rights & Responsibilities!</strong></p>
+                    <p style="text-align: center;">You now understand your workplace rights, your responsibilities, and how to protect yourself!</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        let currentPage = 1;
+        const totalPages = 49;
+        const dayStarts = [1, 2, 10, 18, 26, 34, 42];
+
+        function updateDayMenu(pageNum) {
+            document.querySelectorAll('.day-jump').forEach((btn, idx) => {
+                btn.classList.remove('active-day');
+                let inThisDay = false;
+                if (idx === dayStarts.length - 1) {
+                    inThisDay = pageNum >= dayStarts[idx];
+                } else {
+                    inThisDay = pageNum >= dayStarts[idx] && pageNum < dayStarts[idx + 1];
+                }
+                if (inThisDay) btn.classList.add('active-day');
+            });
+        }
+
+        function showPage(num) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById('page' + num).classList.add('active');
+            document.getElementById('pageIndicator').textContent = 'Page ' + num + ' of ' + totalPages;
+            document.getElementById('prevBtn').disabled = (num === 1);
+            document.getElementById('nextBtn').disabled = (num === totalPages);
+            updateDayMenu(num);
+            window.scrollTo(0, 0);
+        }
+
+        function nextPage() { if (currentPage < totalPages) { currentPage++; showPage(currentPage); } }
+        function prevPage() { if (currentPage > 1) { currentPage--; showPage(currentPage); } }
+        function jumpTo(pageNum) { currentPage = pageNum; showPage(currentPage); }
+    </script>
+</body>
+</html>
