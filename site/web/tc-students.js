@@ -220,6 +220,7 @@
   let truncatedGoals = new Set(); // Track which goals have truncated descriptions
   let iepWizardData = null; // { step: 1, studentCode: '', goalsToArchive: Set, newGoals: [], iepDue: '', evalDue: '' }
   let expandMode = 'none'; // 'none', 'students', 'all' - Track bulk expand state
+  let progressLookupMap = new Map(); // Map<"studentCode:goalCode", progressEntry[]> - Performance optimization
 
   // Quarter dates management
   const DEFAULT_QUARTER_DATES = {
@@ -362,10 +363,20 @@
     }
   }
 
+  function buildProgressLookupMap() {
+    progressLookupMap.clear();
+    for (const entry of allProgressEntries) {
+      const key = `${entry.student_code}:${entry.goal_code}`;
+      if (!progressLookupMap.has(key)) {
+        progressLookupMap.set(key, []);
+      }
+      progressLookupMap.get(key).push(entry);
+    }
+  }
+
   function getProgressForGoal(studentCode, goalCode) {
-    return allProgressEntries.filter(p => 
-      p.student_code === studentCode && p.goal_code === goalCode
-    );
+    const key = `${studentCode}:${goalCode}`;
+    return progressLookupMap.get(key) || [];
   }
 
   function getProgressThisQuarter(studentCode, goalCode) {
@@ -483,9 +494,12 @@
 
       if (results[3].status === 'fulfilled') {
         allProgressEntries = results[3].value;
+        // Build progress lookup map for O(1) access
+        buildProgressLookupMap();
       } else {
         console.error('[tc-students] Failed to load progress entries:', results[3].reason);
         allProgressEntries = [];
+        progressLookupMap.clear();
       }
 
       console.log('[tc-students] Loaded:', allStudents.length, 'students,', allGoals.length, 'goals,', allProgressEntries.length, 'progress entries');
@@ -3116,10 +3130,22 @@
 
   function parseDateFromCSV(dateStr) {
     if (!dateStr) return null;
-    const match = dateStr.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-    if (!match) return null;
-    const [, month, day, year] = match;
-    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    
+    // Try M/D/YYYY format first
+    const slashMatch = dateStr.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (slashMatch) {
+      const [, month, day, year] = slashMatch;
+      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+    
+    // Try ISO date format (YYYY-MM-DD) as fallback
+    const isoMatch = dateStr.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (isoMatch) {
+      const [, year, month, day] = isoMatch;
+      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+    
+    return null;
   }
 
   function displayCsvPreview(data, newStudentCount, existingStudentCount) {
