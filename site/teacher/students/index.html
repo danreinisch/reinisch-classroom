@@ -32,6 +32,14 @@
         border: 1px solid rgba(34, 197, 94, 0.35);
         font-weight: 600;
       }
+      .st-quarter-item.selected {
+        background: rgba(59, 130, 246, 0.2);
+        border: 1px solid rgba(59, 130, 246, 0.5);
+        font-weight: 600;
+      }
+      .st-quarter-item:hover {
+        background: rgba(255, 255, 255, 0.08);
+      }
       .st-quarter-edit-form {
         display: none;
         flex-direction: column;
@@ -123,12 +131,16 @@
         border-bottom: 1px solid rgba(255, 255, 255, 0.08);
         background: rgba(255, 255, 255, 0.02);
         transition: background 0.15s;
+        cursor: pointer;
       }
       .st-table tbody tr:hover {
         background: rgba(255, 255, 255, 0.06);
       }
       .st-table tbody tr.expanded {
         background: rgba(34, 197, 94, 0.15);
+      }
+      .st-table tbody tr.st-expanded-row {
+        cursor: default;
       }
       .st-table tbody tr.st-row-archived {
         opacity: 0.5;
@@ -903,6 +915,7 @@
             <label class="st-toggle-label">
               <input type="checkbox" id="stShowArchived" /> Show Archived
             </label>
+            <button id="stExpandAllBtn" class="st-btn st-btn-small">▶ Expand All</button>
             <button id="stExportBtn" class="st-btn st-btn-small">📤 Export</button>
             <button id="stImportCSV" class="st-btn st-btn-small">📥 Import</button>
             <button id="stAddStudent" class="st-btn st-btn-primary">+ Add Student</button>

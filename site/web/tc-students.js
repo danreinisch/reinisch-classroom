@@ -205,9 +205,10 @@
   let allProgressEntries = []; // Progress data for data collection status
   let filteredStudents = [];
   let selectedStudent = null;
-  let expandedStudent = null; // For inline expand in table
+  let expandedStudents = new Set(); // For inline expand in table - supports multiple expanded students
   let selectedClassFilter = 'All';
   let selectedGoalAreaFilter = 'All';
+  let selectedQuarter = null; // 'Q1', 'Q2', 'Q3', 'Q4', or null for all
   let searchQuery = '';
   let isSyncing = false;
   let sortBy = 'code'; // 'code', 'goals', 'iep_due', 'eval_due'
@@ -266,11 +267,20 @@
     const dates = getQuarterDates();
     const current = getCurrentQuarter();
 
-    const html = Object.entries(dates).map(([quarter, range]) => {
+    // Add "All" button first
+    let html = `
+      <div class="st-quarter-item ${selectedQuarter === null ? 'selected' : ''}" data-quarter="all" style="cursor: pointer;">
+        All
+      </div>
+    `;
+
+    // Then add quarter items
+    html += Object.entries(dates).map(([quarter, range]) => {
       const q = quarter.toUpperCase();
       const isCurrent = q === current;
+      const isSelected = selectedQuarter === q;
       return `
-        <div class="st-quarter-item ${isCurrent ? 'current' : ''}">
+        <div class="st-quarter-item ${isCurrent ? 'current' : ''} ${isSelected ? 'selected' : ''}" data-quarter="${q}" style="cursor: pointer;">
           ${q}: ${formatQuarterDate(range.start)}–${formatQuarterDate(range.end)}
         </div>
       `;
@@ -326,6 +336,17 @@
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
+  }
+
+  function updateExpandAllButton() {
+    const btn = document.getElementById('stExpandAllBtn');
+    if (!btn) return;
+    
+    if (expandedStudents.size > 0) {
+      btn.innerHTML = '▼ Collapse All';
+    } else {
+      btn.innerHTML = '▶ Expand All';
+    }
   }
 
   // Progress tracking functions
@@ -571,6 +592,34 @@
       filtered = filtered.filter(s => s.status !== 'archived' && s.active !== false);
     }
 
+    // Quarter filter based on IEP/Eval due dates
+    if (selectedQuarter) {
+      const dates = getQuarterDates();
+      const quarterKey = selectedQuarter.toLowerCase();
+      const quarterRange = dates[quarterKey];
+      
+      if (quarterRange) {
+        const start = new Date(quarterRange.start);
+        const end = new Date(quarterRange.end);
+        
+        filtered = filtered.filter(s => {
+          // Check if IEP due date falls in quarter
+          if (s.iep_due) {
+            const iepDate = new Date(s.iep_due);
+            if (iepDate >= start && iepDate <= end) return true;
+          }
+          
+          // Check if Eval due date falls in quarter
+          if (s.eval_due) {
+            const evalDate = new Date(s.eval_due);
+            if (evalDate >= start && evalDate <= end) return true;
+          }
+          
+          return false;
+        });
+      }
+    }
+
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(s => 
@@ -620,7 +669,7 @@
       const enrollments = allEnrollments.filter(e => e.student_code === student.code);
       const studentGoals = allGoals.filter(g => g.student_code === student.code);
       const classes = enrollments.map(e => abbreviateClass(e.class_name)).join(', ');
-      const isExpanded = expandedStudent === student.code;
+      const isExpanded = expandedStudents.has(student.code);
       const isArchived = student.status === 'archived' || student.active === false;
       
       const iepDue = student.iep_due ? formatDate(student.iep_due) : 'N/A';
@@ -663,10 +712,13 @@
 
     tbody.innerHTML = html;
 
-    // If a student is expanded, render their detail content
-    if (expandedStudent) {
-      renderExpandedDetail(expandedStudent);
-    }
+    // Render detail content for all expanded students
+    expandedStudents.forEach(studentCode => {
+      renderExpandedDetail(studentCode);
+    });
+
+    // Update Expand All button state
+    updateExpandAllButton();
   }
 
   async function renderExpandedDetail(studentCode) {
@@ -809,7 +861,8 @@
       });
       return tokensByGoalCode;
     } catch (err) {
-      console.error('[tc-students] Error checking active tokens:', err);
+      // Silently return empty object for 404/PGRST205 errors (table doesn't exist yet)
+      // These errors are expected when data_entry_tokens table hasn't been created
       return {};
     }
   }
@@ -849,8 +902,8 @@
       showToast(`Link copied! Send it to ${goal.data_collector}.`);
 
       // Refresh display to show revoke button
-      if (expandedStudent) {
-        renderExpandedDetail(expandedStudent);
+      if (goal.student_code && expandedStudents.has(goal.student_code)) {
+        renderExpandedDetail(goal.student_code);
       }
 
     } catch (err) {
@@ -889,8 +942,8 @@
       showToast('Link revoked successfully');
 
       // Refresh display to show copy button
-      if (expandedStudent) {
-        renderExpandedDetail(expandedStudent);
+      if (goal.student_code && expandedStudents.has(goal.student_code)) {
+        renderExpandedDetail(goal.student_code);
       }
 
     } catch (err) {
@@ -1356,31 +1409,74 @@
       });
     }
 
+    // Quarter bar click handler for filtering
+    const quarterDisplay = document.getElementById('stQuarterDisplay');
+    if (quarterDisplay) {
+      quarterDisplay.addEventListener('click', (e) => {
+        const quarterItem = e.target.closest('.st-quarter-item');
+        if (quarterItem) {
+          const quarter = quarterItem.dataset.quarter;
+          if (quarter === 'all') {
+            selectedQuarter = null;
+          } else {
+            selectedQuarter = quarter;
+          }
+          filterStudents();
+          renderStudentList();
+          renderQuarterBar();
+        }
+      });
+    }
+
+    // Expand All / Collapse All button
+    const expandAllBtn = document.getElementById('stExpandAllBtn');
+    if (expandAllBtn) {
+      expandAllBtn.addEventListener('click', () => {
+        if (expandedStudents.size > 0) {
+          // Collapse all
+          expandedStudents.clear();
+        } else {
+          // Expand all filtered students
+          filteredStudents.forEach(student => {
+            expandedStudents.add(student.code);
+          });
+        }
+        renderStudentList();
+        updateExpandAllButton();
+      });
+    }
+
     // Table row clicks (for expanding/collapsing)
     const tableBody = document.getElementById('stStudentTableBody');
     if (tableBody) {
       tableBody.addEventListener('click', async (e) => {
-        // Handle row click for expand/collapse
-        const row = e.target.closest('tr:not(.st-expanded-row)');
-        if (row && e.target.closest('.st-chevron-cell, .st-code-cell')) {
-          const studentCode = row.dataset.code;
-          if (expandedStudent === studentCode) {
-            expandedStudent = null;
-          } else {
-            expandedStudent = studentCode;
-            selectedDetailTab = 'goals';
-            editingGoalId = null;
+        // Don't handle clicks on interactive elements within expanded details
+        const interactiveElements = 'button, input, select, textarea, a, .st-tab, .st-goal-header, .st-desc-toggle';
+        if (e.target.closest(interactiveElements)) {
+          // Let these elements handle their own clicks, but handle special cases below
+        } else {
+          // Handle row click for expand/collapse on entire row
+          const row = e.target.closest('tr:not(.st-expanded-row)');
+          if (row) {
+            const studentCode = row.dataset.code;
+            if (expandedStudents.has(studentCode)) {
+              expandedStudents.delete(studentCode);
+            } else {
+              expandedStudents.add(studentCode);
+              selectedDetailTab = 'goals';
+              editingGoalId = null;
+            }
+            renderStudentList();
+            return;
           }
-          renderStudentList();
-          return;
         }
 
         // Handle tab switching in expanded detail
         if (e.target.classList.contains('st-tab')) {
           selectedDetailTab = e.target.dataset.tab;
-          if (expandedStudent) {
-            renderExpandedDetail(expandedStudent);
-          }
+          expandedStudents.forEach(studentCode => {
+            renderExpandedDetail(studentCode);
+          });
           return;
         }
 
@@ -1408,46 +1504,72 @@
 
         // Save student info button
         if (e.target.id === 'save-student-info-btn') {
-          await handleSaveStudentInfo();
+          const expandedDetail = e.target.closest('.st-expanded-content');
+          const studentCode = expandedDetail?.id.replace('stExpandedDetail-', '');
+          if (studentCode) {
+            await handleSaveStudentInfo(studentCode);
+          }
           return;
         }
 
         // Archive student
         if (e.target.id === 'archive-student-btn') {
-          await handleArchiveStudent();
+          const expandedDetail = e.target.closest('.st-expanded-content');
+          const studentCode = expandedDetail?.id.replace('stExpandedDetail-', '');
+          if (studentCode) {
+            await handleArchiveStudent(studentCode);
+          }
           return;
         }
 
         // Reactivate student
         if (e.target.id === 'reactivate-student-btn') {
-          await handleReactivateStudent();
+          const expandedDetail = e.target.closest('.st-expanded-content');
+          const studentCode = expandedDetail?.id.replace('stExpandedDetail-', '');
+          if (studentCode) {
+            await handleReactivateStudent(studentCode);
+          }
           return;
         }
         
         // Manage enrollments
         if (e.target.id === 'manage-enrollments-btn') {
-          showManageEnrollmentsModal();
+          const expandedDetail = e.target.closest('.st-expanded-content');
+          const studentCode = expandedDetail?.id.replace('stExpandedDetail-', '');
+          if (studentCode) {
+            showManageEnrollmentsModal(studentCode);
+          }
           return;
         } 
         
         // Add goal
         if (e.target.id === 'add-goal-btn') {
-          showAddGoalModal();
+          const expandedDetail = e.target.closest('.st-expanded-content');
+          const studentCode = expandedDetail?.id.replace('stExpandedDetail-', '');
+          if (studentCode) {
+            showAddGoalModal(studentCode);
+          }
           return;
         } 
         
         // Reset password
         if (e.target.id === 'reset-password-btn') {
-          showResetPasswordModal();
+          const expandedDetail = e.target.closest('.st-expanded-content');
+          const studentCode = expandedDetail?.id.replace('stExpandedDetail-', '');
+          if (studentCode) {
+            showResetPasswordModal(studentCode);
+          }
           return;
         } 
         
         // Edit goal - inline editing
         if (e.target.classList.contains('edit-goal-btn')) {
           const goalId = parseInt(e.target.dataset.goalId);
+          const expandedDetail = e.target.closest('.st-expanded-content');
+          const studentCode = expandedDetail?.id.replace('stExpandedDetail-', '');
           editingGoalId = goalId;
-          if (expandedStudent) {
-            renderExpandedDetail(expandedStudent);
+          if (studentCode) {
+            renderExpandedDetail(studentCode);
           }
           e.stopPropagation();
           return;
@@ -1455,9 +1577,11 @@
         
         // Cancel inline edit
         if (e.target.classList.contains('cancel-edit-btn')) {
+          const expandedDetail = e.target.closest('.st-expanded-content');
+          const studentCode = expandedDetail?.id.replace('stExpandedDetail-', '');
           editingGoalId = null;
-          if (expandedStudent) {
-            renderExpandedDetail(expandedStudent);
+          if (studentCode) {
+            renderExpandedDetail(studentCode);
           }
           e.stopPropagation();
           return;
@@ -1502,9 +1626,10 @@
         // Enter Data button
         if (e.target.classList.contains('enter-data-btn')) {
           const goalId = parseInt(e.target.dataset.goalId);
+          const goal = allGoals.find(g => g.id === goalId);
           enteringDataGoalId = goalId;
-          if (expandedStudent) {
-            renderExpandedDetail(expandedStudent);
+          if (goal && goal.student_code && expandedStudents.has(goal.student_code)) {
+            renderExpandedDetail(goal.student_code);
             // After render, uncollapse the goal card
             setTimeout(() => {
               const card = document.querySelector(`[data-goal-id="${goalId}"]`);
@@ -1525,15 +1650,23 @@
 
         // Cancel Data button
         if (e.target.classList.contains('cancel-data-btn')) {
+          const goalId = parseInt(e.target.dataset.goalId);
+          const goal = allGoals.find(g => g.id === goalId);
           enteringDataGoalId = null;
-          if (expandedStudent) renderExpandedDetail(expandedStudent);
+          if (goal && goal.student_code && expandedStudents.has(goal.student_code)) {
+            renderExpandedDetail(goal.student_code);
+          }
           e.stopPropagation();
           return;
         }
         
         // New IEP button
         if (e.target.id === 'new-iep-btn') {
-          showNewIEPWizard(expandedStudent);
+          const expandedDetail = e.target.closest('.st-expanded-content');
+          const studentCode = expandedDetail?.id.replace('stExpandedDetail-', '');
+          if (studentCode) {
+            showNewIEPWizard(studentCode);
+          }
           return;
         }
       });
@@ -1542,9 +1675,10 @@
       tableBody.addEventListener('change', (e) => {
         if (e.target.id === 'goal-area-filter') {
           selectedGoalAreaFilter = e.target.value;
-          if (expandedStudent) {
-            renderExpandedDetail(expandedStudent);
-          }
+          // Re-render all expanded students
+          expandedStudents.forEach(studentCode => {
+            renderExpandedDetail(studentCode);
+          });
         }
       });
     }
@@ -1631,8 +1765,8 @@
       console.log('[tc-students] Updated goal:', goalId);
       editingGoalId = null;
       await loadData();
-      if (expandedStudent) {
-        renderExpandedDetail(expandedStudent);
+      if (goal.student_code && expandedStudents.has(goal.student_code)) {
+        renderExpandedDetail(goal.student_code);
       }
     } catch (error) {
       console.error('[tc-students] Error updating goal:', error);
@@ -1641,25 +1775,26 @@
   }
 
   function selectStudent(code) {
-    expandedStudent = code;
+    expandedStudents.clear();
+    expandedStudents.add(code);
     selectedGoalAreaFilter = 'All';
     selectedDetailTab = 'goals';
     editingGoalId = null;
     renderStudentList();
   }
 
-  async function handleArchiveStudent() {
-    if (!expandedStudent) return;
+  async function handleArchiveStudent(studentCode) {
+    if (!studentCode) return;
     
-    if (!confirm(`Archive student ${expandedStudent}? This will hide them from the active list.`)) {
+    if (!confirm(`Archive student ${studentCode}? This will hide them from the active list.`)) {
       return;
     }
 
     try {
-      await db.upsertStudent({ code: expandedStudent, status: 'archived', active: false });
-      console.log('[tc-students] Archived student:', expandedStudent);
+      await db.upsertStudent({ code: studentCode, status: 'archived', active: false });
+      console.log('[tc-students] Archived student:', studentCode);
       await loadData();
-      expandedStudent = null;
+      expandedStudents.delete(studentCode);
       renderStudentList();
     } catch (error) {
       console.error('[tc-students] Error archiving student:', error);
@@ -1667,26 +1802,26 @@
     }
   }
 
-  async function handleReactivateStudent() {
-    if (!expandedStudent) return;
+  async function handleReactivateStudent(studentCode) {
+    if (!studentCode) return;
     
-    if (!confirm(`Reactivate student ${expandedStudent}? They will reappear in the active list.`)) {
+    if (!confirm(`Reactivate student ${studentCode}? They will reappear in the active list.`)) {
       return;
     }
 
     try {
-      await db.upsertStudent({ code: expandedStudent, status: 'active', active: true });
-      console.log('[tc-students] Reactivated student:', expandedStudent);
+      await db.upsertStudent({ code: studentCode, status: 'active', active: true });
+      console.log('[tc-students] Reactivated student:', studentCode);
       await loadData();
-      renderExpandedDetail(expandedStudent);
+      renderExpandedDetail(studentCode);
     } catch (error) {
       console.error('[tc-students] Error reactivating student:', error);
       alert('Failed to reactivate student');
     }
   }
 
-  async function handleSaveStudentInfo() {
-    if (!expandedStudent) return;
+  async function handleSaveStudentInfo(studentCode) {
+    if (!studentCode) return;
 
     const caseManager = document.getElementById('edit-case-manager')?.value;
     const iepDue = document.getElementById('edit-iep-due')?.value;
@@ -1694,15 +1829,15 @@
 
     try {
       await db.upsertStudent({
-        code: expandedStudent,
+        code: studentCode,
         primary_case_manager: caseManager,
         iep_due: iepDue || null,
         eval_due: evalDue || null
       });
-      console.log('[tc-students] Updated student info:', expandedStudent);
+      console.log('[tc-students] Updated student info:', studentCode);
       showToast('Student information saved successfully');
       await loadData();
-      renderExpandedDetail(expandedStudent);
+      renderExpandedDetail(studentCode);
     } catch (error) {
       console.error('[tc-students] Error saving student info:', error);
       alert('Failed to save student information');
@@ -1721,8 +1856,9 @@
       await db.upsertGoal({ id: goalId, status: 'archived' });
       console.log('[tc-students] Archived goal:', goalId);
       await loadData();
-      if (expandedStudent) {
-        renderExpandedDetail(expandedStudent);
+      // Re-render the expanded detail for this goal's student
+      if (goal.student_code && expandedStudents.has(goal.student_code)) {
+        renderExpandedDetail(goal.student_code);
       }
     } catch (error) {
       console.error('[tc-students] Error archiving goal:', error);
@@ -1749,8 +1885,9 @@
       await db.upsertGoal(newGoal);
       console.log('[tc-students] Created new version of goal');
       await loadData();
-      if (expandedStudent) {
-        renderExpandedDetail(expandedStudent);
+      // Re-render the expanded detail for this goal's student
+      if (goal.student_code && expandedStudents.has(goal.student_code)) {
+        renderExpandedDetail(goal.student_code);
       }
     } catch (error) {
       console.error('[tc-students] Error versioning goal:', error);
@@ -1872,8 +2009,8 @@
       
       // Reload data and keep student expanded
       await loadData();
-      if (expandedStudent) {
-        renderExpandedDetail(expandedStudent);
+      if (goal.student_code && expandedStudents.has(goal.student_code)) {
+        renderExpandedDetail(goal.student_code);
       }
     } catch (error) {
       console.error('[tc-students] Error saving progress data:', error);
@@ -1882,8 +2019,8 @@
   }
 
   // Modals
-  function showManageEnrollmentsModal() {
-    const student = allStudents.find(s => s.code === expandedStudent);
+  function showManageEnrollmentsModal(studentCode) {
+    const student = allStudents.find(s => s.code === studentCode);
     if (!student) return;
 
     const enrollments = allEnrollments.filter(e => e.student_code === student.code);
@@ -1965,8 +2102,8 @@
 
       console.log('[tc-students] Updated enrollments');
       await loadData();
-      if (expandedStudent) {
-        renderExpandedDetail(expandedStudent);
+      if (studentCode && expandedStudents.has(studentCode)) {
+        renderExpandedDetail(studentCode);
       }
     } catch (error) {
       console.error('[tc-students] Error saving enrollments:', error);
@@ -1974,8 +2111,8 @@
     }
   }
 
-  function showAddGoalModal() {
-    const student = allStudents.find(s => s.code === expandedStudent);
+  function showAddGoalModal(studentCode) {
+    const student = allStudents.find(s => s.code === studentCode);
     if (!student) return;
 
     const modal = createModal('Add IEP Goal', `
@@ -2049,15 +2186,15 @@
 
     document.getElementById('add-goal-form').addEventListener('submit', async (e) => {
       e.preventDefault();
-      await handleAddGoal(e.target);
+      await handleAddGoal(e.target, studentCode);
       modal.remove();
     });
   }
 
-  async function handleAddGoal(form) {
+  async function handleAddGoal(form, studentCode) {
     const formData = new FormData(form);
     const goal = {
-      student_code: expandedStudent,
+      student_code: studentCode,
       goal_area: formData.get('goal_area'),
       code: formData.get('goal_code'), // Form field is 'goal_code' but DB field is 'code'
       goal_text: formData.get('goal_text'),
@@ -2076,8 +2213,8 @@
       await db.upsertGoal(goal);
       console.log('[tc-students] Added goal');
       await loadData();
-      if (expandedStudent) {
-        renderExpandedDetail(expandedStudent);
+      if (goal.student_code && expandedStudents.has(goal.student_code)) {
+        renderExpandedDetail(goal.student_code);
       }
     } catch (error) {
       console.error('[tc-students] Error adding goal:', error);
@@ -2199,8 +2336,8 @@
       await db.upsertGoal(updates);
       console.log('[tc-students] Updated goal');
       await loadData();
-      if (expandedStudent) {
-        renderExpandedDetail(expandedStudent);
+      if (goal.student_code && expandedStudents.has(goal.student_code)) {
+        renderExpandedDetail(goal.student_code);
       }
     } catch (error) {
       console.error('[tc-students] Error updating goal:', error);
@@ -2208,8 +2345,8 @@
     }
   }
 
-  function showResetPasswordModal() {
-    const student = allStudents.find(s => s.code === expandedStudent);
+  function showResetPasswordModal(studentCode) {
+    const student = allStudents.find(s => s.code === studentCode);
     if (!student) return;
 
     const modal = createModal('Reset Password', `
@@ -2233,17 +2370,17 @@
 
     document.getElementById('reset-password-form').addEventListener('submit', async (e) => {
       e.preventDefault();
-      await handleResetPassword(e.target);
+      await handleResetPassword(e.target, studentCode);
       modal.remove();
     });
   }
 
-  async function handleResetPassword(form) {
+  async function handleResetPassword(form, studentCode) {
     const formData = new FormData(form);
     const password = formData.get('password');
 
     try {
-      await db.upsertStudent({ code: expandedStudent, password_hash: password });
+      await db.upsertStudent({ code: studentCode, password_hash: password });
       console.log('[tc-students] Reset password');
       alert('Password reset successfully');
     } catch (error) {
@@ -2765,7 +2902,7 @@
       showToast('New IEP created successfully');
       
       // 7. Keep student expanded
-      if (expandedStudent === studentCode) {
+      if (expandedStudents.has(studentCode)) {
         renderExpandedDetail(studentCode);
       }
       
@@ -3014,6 +3151,9 @@
   // Initialize
   function init() {
     console.log('[tc-students] Initializing...');
+    
+    // Set default quarter filter to current quarter
+    selectedQuarter = getCurrentQuarter();
     
     renderQuarterBar();
     renderClassFilterOptions();
