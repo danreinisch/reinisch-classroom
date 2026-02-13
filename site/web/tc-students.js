@@ -212,7 +212,7 @@
   let searchQuery = '';
   let isSyncing = false;
   let sortBy = 'code'; // 'code', 'goals', 'iep_due', 'eval_due'
-  let selectedDetailTab = 'goals'; // 'goals', 'classes', 'settings'
+  let selectedDetailTabMap = new Map(); // Map<studentCode, tabName> - Per-student tab state
   let editingGoalId = null;
   let enteringDataGoalId = null; // Track which goal has the data entry form open
   let showArchived = false;
@@ -220,6 +220,7 @@
   let truncatedGoals = new Set(); // Track which goals have truncated descriptions
   let iepWizardData = null; // { step: 1, studentCode: '', goalsToArchive: Set, newGoals: [], iepDue: '', evalDue: '' }
   let expandMode = 'none'; // 'none', 'students', 'all' - Track bulk expand state
+  let progressLookupMap = new Map(); // Map<"studentCode:goalCode", progressEntry[]> - Performance optimization
 
   // Quarter dates management
   const DEFAULT_QUARTER_DATES = {
@@ -362,10 +363,20 @@
     }
   }
 
+  function buildProgressLookupMap() {
+    progressLookupMap.clear();
+    for (const entry of allProgressEntries) {
+      const key = `${entry.student_code}:${entry.goal_code}`;
+      if (!progressLookupMap.has(key)) {
+        progressLookupMap.set(key, []);
+      }
+      progressLookupMap.get(key).push(entry);
+    }
+  }
+
   function getProgressForGoal(studentCode, goalCode) {
-    return allProgressEntries.filter(p => 
-      p.student_code === studentCode && p.goal_code === goalCode
-    );
+    const key = `${studentCode}:${goalCode}`;
+    return progressLookupMap.get(key) || [];
   }
 
   function getProgressThisQuarter(studentCode, goalCode) {
@@ -483,9 +494,12 @@
 
       if (results[3].status === 'fulfilled') {
         allProgressEntries = results[3].value;
+        // Build progress lookup map for O(1) access
+        buildProgressLookupMap();
       } else {
         console.error('[tc-students] Failed to load progress entries:', results[3].reason);
         allProgressEntries = [];
+        progressLookupMap.clear();
       }
 
       console.log('[tc-students] Loaded:', allStudents.length, 'students,', allGoals.length, 'goals,', allProgressEntries.length, 'progress entries');
@@ -651,7 +665,7 @@
   }
 
   // Render functions
-  function renderStudentList() {
+  async function renderStudentList() {
     const tbody = document.getElementById('stStudentTableBody');
     if (!tbody) return;
 
@@ -703,9 +717,13 @@
     tbody.innerHTML = html;
 
     // Render detail content for all expanded students
-    expandedStudents.forEach(studentCode => {
-      renderExpandedDetail(studentCode);
-    });
+    // Use Promise.allSettled to handle async rendering safely
+    const renderPromises = Array.from(expandedStudents).map(studentCode => 
+      renderExpandedDetail(studentCode).catch(err => {
+        console.error(`[tc-students] Error rendering expanded detail for ${studentCode}:`, err);
+      })
+    );
+    await Promise.allSettled(renderPromises);
   }
 
   async function renderExpandedDetail(studentCode) {
@@ -721,6 +739,9 @@
     const enrollments = allEnrollments.filter(e => e.student_code === student.code);
     const studentGoals = allGoals.filter(g => g.student_code === student.code);
 
+    // Get per-student tab state, default to 'goals'
+    const selectedDetailTab = selectedDetailTabMap.get(studentCode) || 'goals';
+    
     // Render header with tabs
     let tabContent = '';
     if (selectedDetailTab === 'goals') {
@@ -799,25 +820,25 @@
         <h3>Student Information</h3>
         <div class="st-form-group">
           <label class="st-form-label">Primary Case Manager</label>
-          <input type="text" id="edit-case-manager" class="st-form-input" value="${escapeHtml(student.primary_case_manager || '')}" />
+          <input type="text" id="edit-case-manager-${escapeHtml(student.code)}" class="st-form-input" value="${escapeHtml(student.primary_case_manager || '')}" />
         </div>
         <div class="st-form-group">
           <label class="st-form-label">IEP Due Date</label>
-          <input type="date" id="edit-iep-due" class="st-form-input" value="${student.iep_due || ''}" />
+          <input type="date" id="edit-iep-due-${escapeHtml(student.code)}" class="st-form-input" value="${student.iep_due || ''}" />
         </div>
         <div class="st-form-group">
           <label class="st-form-label">Eval Due Date</label>
-          <input type="date" id="edit-eval-due" class="st-form-input" value="${student.eval_due || ''}" />
+          <input type="date" id="edit-eval-due-${escapeHtml(student.code)}" class="st-form-input" value="${student.eval_due || ''}" />
         </div>
-        <button class="st-btn st-btn-primary" id="save-student-info-btn">Save Changes</button>
+        <button class="st-btn st-btn-primary" id="save-student-info-btn-${escapeHtml(student.code)}">Save Changes</button>
       </div>
 
       <div class="st-detail-section">
         <h3>Actions</h3>
         ${renderStudentPassword(student)}
         ${isActive 
-          ? '<button class="st-btn st-btn-danger" id="archive-student-btn">🗃️ Archive Student</button>'
-          : '<button class="st-btn st-btn-primary" id="reactivate-student-btn">♻️ Reactivate Student</button>'
+          ? `<button class="st-btn st-btn-danger" id="archive-student-btn-${escapeHtml(student.code)}">🗃️ Archive Student</button>`
+          : `<button class="st-btn st-btn-primary" id="reactivate-student-btn-${escapeHtml(student.code)}">♻️ Reactivate Student</button>`
         }
       </div>
     `;
@@ -984,6 +1005,35 @@
     }, 3000);
   }
 
+  // UI Constants for active state styling
+  const ACTIVE_STATE_STYLES = {
+    background: 'rgba(59, 130, 246, 0.2)',
+    color: 'rgba(59, 130, 246, 1)',
+    fontWeight: '600'
+  };
+
+  function updateExpandModeButtons() {
+    const collapseAllBtn = document.getElementById('stExpandAllBtn');
+    const expandStudentsBtn = document.getElementById('stExpandStudentsBtn');
+    const expandAllFullBtn = document.getElementById('stExpandAllFullBtn');
+    
+    // Remove active state from all
+    [collapseAllBtn, expandStudentsBtn, expandAllFullBtn].forEach(btn => {
+      if (btn) {
+        btn.style.background = '';
+        btn.style.color = '';
+        btn.style.fontWeight = '';
+      }
+    });
+    
+    // Add active state to current mode
+    if (expandMode === 'students' && expandStudentsBtn) {
+      Object.assign(expandStudentsBtn.style, ACTIVE_STATE_STYLES);
+    } else if (expandMode === 'all' && expandAllFullBtn) {
+      Object.assign(expandAllFullBtn.style, ACTIVE_STATE_STYLES);
+    }
+  }
+
   function renderStudentClasses(student, enrollments) {
     const classItems = FULL_CLASS_NAMES.map(className => {
       const isEnrolled = enrollments.some(e => e.class_name === className);
@@ -1029,6 +1079,7 @@
       <div class="st-detail-section">
         <div class="st-section-header">
           <h3>IEP Goals</h3>
+          ${selectedGoalAreaFilter !== 'All' ? `<span class="st-badge" style="background: ${ACTIVE_STATE_STYLES.background}; color: ${ACTIVE_STATE_STYLES.color}; margin-left: 8px;">Filtered: ${escapeHtml(selectedGoalAreaFilter)}</span>` : ''}
           <div class="st-section-actions">
             <button class="st-btn st-btn-primary" id="add-goal-btn">+ Add Goal</button>
           </div>
@@ -1085,8 +1136,11 @@
     const statusText = `${quarterProgress.length} of ${dataStatus.expected} this quarter`;
     const lastText = lastDate ? `Last: ${formatDate(lastDate)}` : 'No data yet';
 
+    // Only add collapsed class if not in 'all' expand mode
+    const collapsedClass = expandMode === 'all' ? '' : 'collapsed';
+    
     return `
-      <div class="st-goal-card ${expandMode === 'all' ? '' : 'collapsed'}" data-goal-id="${goal.id}" data-area="${colorCategory}">
+      <div class="st-goal-card ${collapsedClass}" data-goal-id="${goal.id}" data-area="${colorCategory}">
         <div class="st-goal-header">
           <div class="st-goal-title-line">
             <span class="st-goal-icon">${icon}</span>
@@ -1434,7 +1488,9 @@
       collapseAllBtn.addEventListener('click', () => {
         expandMode = 'none';
         expandedStudents.clear();
+        selectedDetailTabMap.clear();
         renderStudentList();
+        updateExpandModeButtons();
       });
     }
 
@@ -1444,10 +1500,13 @@
       expandStudentsBtn.addEventListener('click', () => {
         expandMode = 'students';
         expandedStudents.clear();
+        selectedDetailTabMap.clear();
         filteredStudents.forEach(student => {
           expandedStudents.add(student.code);
+          selectedDetailTabMap.set(student.code, 'goals');
         });
         renderStudentList();
+        updateExpandModeButtons();
       });
     }
 
@@ -1457,10 +1516,13 @@
       expandAllFullBtn.addEventListener('click', () => {
         expandMode = 'all';
         expandedStudents.clear();
+        selectedDetailTabMap.clear();
         filteredStudents.forEach(student => {
           expandedStudents.add(student.code);
+          selectedDetailTabMap.set(student.code, 'goals');
         });
         renderStudentList();
+        updateExpandModeButtons();
       });
     }
 
@@ -1479,24 +1541,32 @@
             const studentCode = row.dataset.code;
             if (expandedStudents.has(studentCode)) {
               expandedStudents.delete(studentCode);
+              // Clean up tab state for closed student
+              selectedDetailTabMap.delete(studentCode);
             } else {
               expandedStudents.add(studentCode);
-              selectedDetailTab = 'goals';
+              // Set default tab for newly expanded student
+              selectedDetailTabMap.set(studentCode, 'goals');
               editingGoalId = null;
             }
             // Reset expandMode when manually toggling individual students
             expandMode = 'none';
             renderStudentList();
+            updateExpandModeButtons();
             return;
           }
         }
 
         // Handle tab switching in expanded detail
         if (e.target.classList.contains('st-tab')) {
-          selectedDetailTab = e.target.dataset.tab;
-          expandedStudents.forEach(studentCode => {
+          const expandedDetail = e.target.closest('.st-expanded-content');
+          const studentCode = expandedDetail?.id.replace('stExpandedDetail-', '');
+          const tabName = e.target.dataset.tab;
+          if (studentCode) {
+            // Set tab for this specific student only
+            selectedDetailTabMap.set(studentCode, tabName);
             renderExpandedDetail(studentCode);
-          });
+          }
           return;
         }
 
@@ -1523,9 +1593,8 @@
         }
 
         // Save student info button
-        if (e.target.id === 'save-student-info-btn') {
-          const expandedDetail = e.target.closest('.st-expanded-content');
-          const studentCode = expandedDetail?.id.replace('stExpandedDetail-', '');
+        if (e.target.id && e.target.id.startsWith('save-student-info-btn-')) {
+          const studentCode = e.target.id.replace('save-student-info-btn-', '');
           if (studentCode) {
             await handleSaveStudentInfo(studentCode);
           }
@@ -1533,9 +1602,8 @@
         }
 
         // Archive student
-        if (e.target.id === 'archive-student-btn') {
-          const expandedDetail = e.target.closest('.st-expanded-content');
-          const studentCode = expandedDetail?.id.replace('stExpandedDetail-', '');
+        if (e.target.id && e.target.id.startsWith('archive-student-btn-')) {
+          const studentCode = e.target.id.replace('archive-student-btn-', '');
           if (studentCode) {
             await handleArchiveStudent(studentCode);
           }
@@ -1543,9 +1611,8 @@
         }
 
         // Reactivate student
-        if (e.target.id === 'reactivate-student-btn') {
-          const expandedDetail = e.target.closest('.st-expanded-content');
-          const studentCode = expandedDetail?.id.replace('stExpandedDetail-', '');
+        if (e.target.id && e.target.id.startsWith('reactivate-student-btn-')) {
+          const studentCode = e.target.id.replace('reactivate-student-btn-', '');
           if (studentCode) {
             await handleReactivateStudent(studentCode);
           }
@@ -1785,9 +1852,10 @@
 
   function selectStudent(code) {
     expandedStudents.clear();
+    selectedDetailTabMap.clear();
     expandedStudents.add(code);
+    selectedDetailTabMap.set(code, 'goals');
     selectedGoalAreaFilter = 'All';
-    selectedDetailTab = 'goals';
     editingGoalId = null;
     renderStudentList();
   }
@@ -1832,9 +1900,9 @@
   async function handleSaveStudentInfo(studentCode) {
     if (!studentCode) return;
 
-    const caseManager = document.getElementById('edit-case-manager')?.value;
-    const iepDue = document.getElementById('edit-iep-due')?.value;
-    const evalDue = document.getElementById('edit-eval-due')?.value;
+    const caseManager = document.getElementById(`edit-case-manager-${studentCode}`)?.value;
+    const iepDue = document.getElementById(`edit-iep-due-${studentCode}`)?.value;
+    const evalDue = document.getElementById(`edit-eval-due-${studentCode}`)?.value;
 
     try {
       await db.upsertStudent({
@@ -3065,10 +3133,22 @@
 
   function parseDateFromCSV(dateStr) {
     if (!dateStr) return null;
-    const match = dateStr.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-    if (!match) return null;
-    const [, month, day, year] = match;
-    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    
+    // Try M/D/YYYY format first
+    const slashMatch = dateStr.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (slashMatch) {
+      const [, month, day, year] = slashMatch;
+      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+    
+    // Try ISO date format (YYYY-MM-DD) as fallback
+    const isoMatch = dateStr.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (isoMatch) {
+      const [, year, month, day] = isoMatch;
+      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+    
+    return null;
   }
 
   function displayCsvPreview(data, newStudentCount, existingStudentCount) {
@@ -3112,9 +3192,13 @@
         for (const className of studentData.enrollments) {
           const supabase = await getSupabase();
           if (!supabase) continue;
+          // Use upsert to prevent duplicate enrollments on re-import
           await supabase
             .from('enrollments')
-            .insert({ student_code: studentData.code, class_name: className });
+            .upsert(
+              { student_code: studentData.code, class_name: className },
+              { onConflict: 'student_code,class_name' }
+            );
         }
 
         for (const goal of studentData.goals) {
