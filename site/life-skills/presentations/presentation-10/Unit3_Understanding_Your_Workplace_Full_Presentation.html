@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unit 3: Understanding Your Workplace</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #333;
+        }
+        .nav-bar {
+            width: 100%;
+            background: rgba(0,0,0,0.3);
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: fixed;
+            top: 0;
+            z-index: 100;
+        }
+        .back-btn {
+            background: linear-gradient(145deg, #e74c3c, #c0392b);
+            color: white;
+            padding: 8px 18px;
+            border: none;
+            border-radius: 20px;
+            font-size: 0.9em;
+            cursor: pointer;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .back-btn:hover { opacity: 0.9; }
+        .page-indicator {
+            color: white;
+            font-size: 0.85em;
+            background: rgba(255,255,255,0.15);
+            padding: 6px 16px;
+            border-radius: 15px;
+            text-align: center;
+            max-width: 350px;
+        }
+        .nav-buttons { display: flex; gap: 10px; }
+        .nav-btn {
+            background: linear-gradient(145deg, #3498db, #2980b9);
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: bold;
+        }
+        .nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .nav-btn:hover:not(:disabled) { opacity: 0.9; }
+        .day-menu {
+            width: 100%;
+            background: rgba(0,0,0,0.2);
+            padding: 8px 20px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            position: fixed;
+            top: 48px;
+            z-index: 99;
+            flex-wrap: wrap;
+        }
+        .day-jump {
+            background: rgba(255,255,255,0.15);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            padding: 5px 14px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        .day-jump:hover { background: rgba(255,255,255,0.3); }
+        .day-jump.active-day { background: #3498db; border-color: #3498db; }
+        .slide-container {
+            margin-top: 100px;
+            width: 95%;
+            max-width: 950px;
+            padding: 20px;
+        }
+        .page { display: none; }
+        .page.active { display: block; }
+        .slide {
+            background: rgba(255,255,255,0.95);
+            border-radius: 20px;
+            padding: 40px;
+            min-height: 500px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        .slide-title {
+            font-size: 2em;
+            color: #0f3460;
+            text-align: center;
+            margin-bottom: 25px;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 15px;
+        }
+        .slide p, .slide li { font-size: 1.2em; line-height: 1.8; color: #2c3e50; margin-bottom: 12px; }
+        .slide ul { padding-left: 25px; }
+        .slide li { margin-bottom: 10px; }
+        .highlight-box { background: #e8f4fd; border-left: 5px solid #3498db; padding: 20px; border-radius: 0 12px 12px 0; margin: 20px 0; }
+        .warning-box { background: #fdf2e9; border-left: 5px solid #e67e22; padding: 20px; border-radius: 0 12px 12px 0; margin: 20px 0; }
+        .success-box { background: #eafaf1; border-left: 5px solid #27ae60; padding: 20px; border-radius: 0 12px 12px 0; margin: 20px 0; }
+        .example-box { background: #f4ecf7; border-left: 5px solid #8e44ad; padding: 20px; border-radius: 0 12px 12px 0; margin: 20px 0; }
+        .danger-box { background: #fdedec; border-left: 5px solid #e74c3c; padding: 20px; border-radius: 0 12px 12px 0; margin: 20px 0; }
+        .do-dont { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0; }
+        .do-column { background: #eafaf1; border: 2px solid #27ae60; border-radius: 12px; padding: 20px; }
+        .dont-column { background: #fdedec; border: 2px solid #e74c3c; border-radius: 12px; padding: 20px; }
+        .do-column h3 { color: #27ae60; margin-bottom: 10px; }
+        .dont-column h3 { color: #e74c3c; margin-bottom: 10px; }
+        .emoji-big { font-size: 1.5em; }
+        .scenario { background: #fff3cd; border: 2px solid #ffc107; border-radius: 12px; padding: 20px; margin: 15px 0; }
+        .scenario-label { font-weight: bold; color: #856404; font-size: 1.1em; margin-bottom: 8px; }
+        .title-slide { display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; min-height: 500px; }
+        .title-slide h1 { font-size: 2.5em; color: #0f3460; margin-bottom: 15px; }
+        .title-slide p { font-size: 1.3em; color: #555; }
+        .title-slide .emoji-hero { font-size: 4em; margin-bottom: 20px; }
+        .title-slide .day-label {
+            background: #3498db;
+            color: white;
+            padding: 8px 25px;
+            border-radius: 25px;
+            font-size: 1em;
+            margin-bottom: 15px;
+            display: inline-block;
+        }
+        .step-card {
+            background: white;
+            border: 2px solid #3498db;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 12px 0;
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+        }
+        .step-number {
+            background: #3498db;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2em;
+            flex-shrink: 0;
+        }
+        .comparison-table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 1.1em; }
+        .comparison-table th, .comparison-table td { padding: 15px; text-align: left; border: 2px solid #ddd; }
+        .comparison-table th { background: #0f3460; color: white; font-size: 1.15em; }
+        .comparison-table tr:nth-child(even) { background: #f2f2f2; }
+
+        .schedule-mock {
+            background: white;
+            border: 3px solid #333;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+        }
+        .schedule-mock h4 {
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+            border-bottom: 2px solid #333;
+            padding-bottom: 10px;
+        }
+        .schedule-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #ddd;
+        }
+        .schedule-row.header { font-weight: bold; border-bottom: 2px solid #333; }
+        .schedule-highlight { background: #fff3cd; padding: 2px 8px; border-radius: 4px; }
+
+        .safety-sign {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 15px;
+            margin: 10px;
+            border-radius: 8px;
+            font-weight: bold;
+            text-align: center;
+            min-width: 120px;
+        }
+        .sign-danger { background: #e74c3c; color: white; border: 3px solid #c0392b; }
+        .sign-warning { background: #f39c12; color: black; border: 3px solid #d68910; }
+        .sign-caution { background: #f1c40f; color: black; border: 3px solid #d4ac0d; }
+        .sign-safety { background: #27ae60; color: white; border: 3px solid #1e8449; }
+        .sign-info { background: #3498db; color: white; border: 3px solid #2980b9; }
+        .sign-icon { font-size: 2em; margin-bottom: 5px; }
+
+        .time-clock-mock {
+            background: #2c3e50;
+            color: #2ecc71;
+            font-family: 'Courier New', monospace;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            max-width: 350px;
+            margin: 20px auto;
+            border: 4px solid #1a252f;
+        }
+        .time-clock-mock .time-display {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .time-clock-mock .clock-label { font-size: 0.9em; color: #bdc3c7; }
+
+        @media print {
+            body { background: white; }
+            .nav-bar, .day-menu { display: none; }
+            .slide-container { margin-top: 0; }
+            .page { display: block !important; page-break-after: always; }
+            .slide { box-shadow: none; border: 1px solid #ccc; }
+            .time-clock-mock { background: #eee; color: #333; border-color: #333; }
+        }
+    </style>
+</head>
+<body>
+    <div class="nav-bar">
+        <a href="https://reinischclassroom.com/life-skills/" class="back-btn">← Back to Life Skills</a>
+        <div class="page-indicator" id="pageIndicator">Page 1 of 33</div>
+        <div class="nav-buttons">
+            <button class="nav-btn" id="prevBtn" onclick="prevPage()">◀ Back</button>
+            <button class="nav-btn" id="nextBtn" onclick="nextPage()">Next ▶</button>
+        </div>
+    </div>
+
+    <div class="day-menu">
+        <button class="day-jump active-day" onclick="jumpTo(1)">Unit Title</button>
+        <button class="day-jump" onclick="jumpTo(2)">Day 1: Schedules</button>
+        <button class="day-jump" onclick="jumpTo(10)">Day 2: Policies</button>
+        <button class="day-jump" onclick="jumpTo(18)">Day 3: Safety</button>
+        <button class="day-jump" onclick="jumpTo(26)">Day 4: Clocking In/Out</button>
+    </div>
+
+    <div class="slide-container">
+
+        <!-- ============================================================ -->
+        <!-- PAGE 1: UNIT TITLE SLIDE -->
+        <!-- ============================================================ -->
+        <div class="page active" id="page1">
+            <div class="slide title-slide">
+                <div class="emoji-hero">📅📋⚠️⏰</div>
+                <h1>Understanding Your Workplace</h1>
+                <p style="font-size:1.1em; color:#7f8c8d; margin-bottom: 25px;">Unit 3 &bull; 4 Days</p>
+                <div style="text-align:left; max-width:550px;">
+                    <p><strong>Day 1:</strong> Reading Work Schedules</p>
+                    <p><strong>Day 2:</strong> Workplace Policies</p>
+                    <p><strong>Day 3:</strong> Workplace Safety</p>
+                    <p><strong>Day 4:</strong> Clocking In & Out</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- DAY 1: READING WORK SCHEDULES (Pages 2–9) -->
+        <!-- ============================================================ -->
+        <div class="page" id="page2">
+            <div class="slide title-slide">
+                <div class="day-label">Day 1</div>
+                <div class="emoji-hero">📅📆</div>
+                <h1>Reading Work Schedules</h1>
+                <p>Understanding when you work and how to manage your schedule</p>
+            </div>
+        </div>
+
+        <div class="page" id="page3">
+            <div class="slide">
+                <h2 class="slide-title">What Is a Work Schedule?</h2>
+                <p>A <strong>work schedule</strong> is a chart or list that tells you when you're supposed to work. It shows your days, times, and sometimes your job assignments.</p>
+                <div class="highlight-box">
+                    <p><strong>A schedule usually shows:</strong></p>
+                    <ul>
+                        <li>Which days you work</li>
+                        <li>What time you start</li>
+                        <li>What time you end</li>
+                        <li>Sometimes: your position or station that day</li>
+                    </ul>
+                </div>
+                <div class="success-box">
+                    <p><span class="emoji-big">💡</span> <strong>Your schedule is YOUR responsibility.</strong> Your boss won't call you every day to remind you. You need to know when you work and show up on time.</p>
+                </div>
+                <p><strong>Where to find your schedule:</strong></p>
+                <ul>
+                    <li>Posted on a wall or bulletin board at work</li>
+                    <li>Sent by text, email, or an app (like When I Work, HotSchedules)</li>
+                    <li>Given to you on paper</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="page" id="page4">
+            <div class="slide">
+                <h2 class="slide-title">How to Read a Work Schedule</h2>
+                <p>Here's an example of a typical weekly schedule:</p>
+                <div class="schedule-mock">
+                    <h4>BURGER PALACE — Week of Feb 3–9</h4>
+                    <div class="schedule-row header">
+                        <span>Employee</span>
+                        <span>Mon</span>
+                        <span>Tue</span>
+                        <span>Wed</span>
+                        <span>Thu</span>
+                        <span>Fri</span>
+                        <span>Sat</span>
+                        <span>Sun</span>
+                    </div>
+                    <div class="schedule-row">
+                        <span>Jake B.</span>
+                        <span>OFF</span>
+                        <span class="schedule-highlight">4-9</span>
+                        <span class="schedule-highlight">4-9</span>
+                        <span>OFF</span>
+                        <span class="schedule-highlight">5-10</span>
+                        <span class="schedule-highlight">11-5</span>
+                        <span>OFF</span>
+                    </div>
+                    <div class="schedule-row">
+                        <span>Maria S.</span>
+                        <span>9-3</span>
+                        <span>9-3</span>
+                        <span>OFF</span>
+                        <span>9-3</span>
+                        <span>OFF</span>
+                        <span>10-4</span>
+                        <span>10-4</span>
+                    </div>
+                    <div class="schedule-row">
+                        <span>Tyler R.</span>
+                        <span>5-10</span>
+                        <span>OFF</span>
+                        <span>5-10</span>
+                        <span>5-10</span>
+                        <span>5-10</span>
+                        <span>OFF</span>
+                        <span>OFF</span>
+                    </div>
+                </div>
+                <div class="example-box">
+                    <p><strong>🔹 Reading Jake's schedule:</strong></p>
+                    <ul>
+                        <li>Jake works <strong>4 days</strong> this week</li>
+                        <li>Tuesday: 4:00 PM to 9:00 PM</li>
+                        <li>Wednesday: 4:00 PM to 9:00 PM</li>
+                        <li>Friday: 5:00 PM to 10:00 PM</li>
+                        <li>Saturday: 11:00 AM to 5:00 PM</li>
+                        <li>He's OFF Monday, Thursday, and Sunday</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page5">
+            <div class="slide">
+                <h2 class="slide-title">Understanding Your Hours</h2>
+                <p>Knowing how to count your hours helps you understand how much you'll get paid.</p>
+                <div class="highlight-box">
+                    <p><strong>How to count hours:</strong></p>
+                    <p>If you work <strong>4:00 PM to 9:00 PM</strong>, that's <strong>5 hours</strong>.</p>
+                    <p>If you work <strong>11:00 AM to 5:00 PM</strong>, that's <strong>6 hours</strong>.</p>
+                </div>
+                <div class="example-box">
+                    <p><strong>🔹 Let's count Jake's hours this week:</strong></p>
+                    <ul>
+                        <li>Tuesday: 4-9 PM = 5 hours</li>
+                        <li>Wednesday: 4-9 PM = 5 hours</li>
+                        <li>Friday: 5-10 PM = 5 hours</li>
+                        <li>Saturday: 11 AM-5 PM = 6 hours</li>
+                        <li><strong>Total: 21 hours this week</strong></li>
+                    </ul>
+                </div>
+                <div class="warning-box">
+                    <p><span class="emoji-big">⚠️</span> <strong>Important:</strong> If you take a break, that time might be unpaid. For example, if you work 11-5 but take a 30-minute lunch, you might only get paid for 5.5 hours.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page6">
+            <div class="slide">
+                <h2 class="slide-title">Checking Your Schedule Regularly</h2>
+                <p>Schedules can change! You should check your schedule every week to know when you work.</p>
+                <div class="success-box">
+                    <p><strong>Good habits for checking your schedule:</strong></p>
+                    <ul>
+                        <li><strong>Check as soon as it's posted</strong> — usually by Thursday or Friday for the next week</li>
+                        <li><strong>Take a photo</strong> of the schedule with your phone</li>
+                        <li><strong>Write it down</strong> in a calendar or planner</li>
+                        <li><strong>Set alarms</strong> on your phone for each shift</li>
+                        <li><strong>Double-check</strong> before each shift in case it changed</li>
+                    </ul>
+                </div>
+                <div class="danger-box">
+                    <p><span class="emoji-big">🚨</span> <strong>"I didn't know I was scheduled" is NOT a good excuse.</strong> It's your job to know your schedule. If you miss a shift because you didn't check, that's on you.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page7">
+            <div class="slide">
+                <h2 class="slide-title">Requesting Time Off</h2>
+                <p>Need a day off for an appointment, family event, or vacation? You need to <strong>request it in advance</strong>.</p>
+                <div class="step-card"><div class="step-number">1</div><div><strong>Ask EARLY</strong> — at least 1-2 weeks ahead (more for vacations).</div></div>
+                <div class="step-card"><div class="step-number">2</div><div><strong>Fill out a request form</strong> if your job has one, OR talk to your manager directly.</div></div>
+                <div class="step-card"><div class="step-number">3</div><div><strong>Be polite and specific.</strong> <em>"I need to request off Saturday, February 15th for a family event."</em></div></div>
+                <div class="step-card"><div class="step-number">4</div><div><strong>Wait for approval.</strong> Your request might be denied if too many people are off.</div></div>
+                <div class="step-card"><div class="step-number">5</div><div><strong>Check the schedule</strong> to confirm you got the day off. Don't assume!</div></div>
+                <div class="warning-box">
+                    <p><span class="emoji-big">⚠️</span> <strong>Requesting time off is NOT the same as telling them you won't be there.</strong> You're ASKING — they can say no. If it's denied, you still have to work.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page8">
+            <div class="slide">
+                <h2 class="slide-title">Shift Trades & Shift Coverage</h2>
+                <p>Sometimes you can't work a scheduled shift. One option is to <strong>find someone to cover</strong> for you.</p>
+                <div class="highlight-box">
+                    <p><strong>How shift trades work:</strong></p>
+                    <ul>
+                        <li>You ask a coworker if they can work your shift</li>
+                        <li>If they agree, you BOTH tell your manager</li>
+                        <li>The manager must approve it</li>
+                        <li>Only then is the trade official</li>
+                    </ul>
+                </div>
+                <div class="do-dont">
+                    <div class="do-column">
+                        <h3>✅ DO:</h3>
+                        <ul>
+                            <li>Ask your manager's permission first</li>
+                            <li>Get the trade approved in writing or text</li>
+                            <li>Return the favor when your coworker needs coverage</li>
+                        </ul>
+                    </div>
+                    <div class="dont-column">
+                        <h3>❌ DON'T:</h3>
+                        <ul>
+                            <li>Just not show up because someone "said" they'd cover</li>
+                            <li>Trade shifts without telling your manager</li>
+                            <li>Make up excuses to get out of shifts constantly</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="danger-box">
+                    <p><strong>Until your manager approves it, the shift is still YOUR responsibility.</strong> If nobody covers it, YOU have to work it.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page9">
+            <div class="slide">
+                <h2 class="slide-title">Day 1 Review: Work Schedules</h2>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #1:</div>
+                    <p>The new schedule gets posted every Friday. When should you check it?</p>
+                    <p><strong>Answer:</strong> As soon as it's posted! Take a photo or write down your shifts.</p>
+                </div>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #2:</div>
+                    <p>You work 10:00 AM to 4:00 PM. How many hours is that?</p>
+                    <p><strong>Answer:</strong> 6 hours.</p>
+                </div>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #3:</div>
+                    <p>You need next Saturday off for your sister's graduation. What should you do?</p>
+                    <p><strong>Answer:</strong> Request time off as soon as possible. Ask your manager, fill out a form if needed, and confirm it was approved before assuming you're off.</p>
+                </div>
+                <div class="success-box">
+                    <p style="text-align: center; font-size: 1.2em;"><strong>✅ End of Day 1! Next up: Workplace Policies</strong></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- DAY 2: WORKPLACE POLICIES (Pages 10–17) -->
+        <!-- ============================================================ -->
+        <div class="page" id="page10">
+            <div class="slide title-slide">
+                <div class="day-label">Day 2</div>
+                <div class="emoji-hero">📋👔</div>
+                <h1>Workplace Policies</h1>
+                <p>The rules every job has — and why they matter</p>
+            </div>
+        </div>
+
+        <div class="page" id="page11">
+            <div class="slide">
+                <h2 class="slide-title">What Are Workplace Policies?</h2>
+                <p><strong>Policies</strong> are the rules at your job. Every workplace has them. They tell you what you can and can't do.</p>
+                <div class="highlight-box">
+                    <p><strong>Common workplace policies include:</strong></p>
+                    <ul>
+                        <li><strong>Dress code</strong> — what to wear</li>
+                        <li><strong>Break policy</strong> — when and how long your breaks are</li>
+                        <li><strong>Phone/social media policy</strong> — rules about your phone at work</li>
+                        <li><strong>Attendance policy</strong> — rules about showing up</li>
+                    </ul>
+                </div>
+                <div class="success-box">
+                    <p><span class="emoji-big">💡</span> <strong>Where to find workplace policies:</strong></p>
+                    <ul>
+                        <li>Employee handbook (booklet they give you when hired)</li>
+                        <li>Signs posted at work</li>
+                        <li>Training during orientation</li>
+                        <li>Ask your manager if you're not sure</li>
+                    </ul>
+                </div>
+                <p><strong>Following the rules is part of your job.</strong> Breaking policies can lead to warnings or getting fired.</p>
+            </div>
+        </div>
+
+        <div class="page" id="page12">
+            <div class="slide">
+                <h2 class="slide-title">Dress Code</h2>
+                <p>A <strong>dress code</strong> tells you what to wear to work. Different jobs have different dress codes.</p>
+                <table class="comparison-table">
+                    <tr><th>Type of Job</th><th>Typical Dress Code</th></tr>
+                    <tr><td>Fast food restaurant</td><td>Uniform shirt, black pants, non-slip shoes</td></tr>
+                    <tr><td>Grocery store</td><td>Company shirt or polo, khaki pants</td></tr>
+                    <tr><td>Office job</td><td>Business casual — nice pants, collared shirt</td></tr>
+                    <tr><td>Warehouse</td><td>T-shirt, jeans, steel-toe boots</td></tr>
+                </table>
+                <div class="warning-box">
+                    <p><strong>Common dress code rules:</strong></p>
+                    <ul>
+                        <li>No ripped jeans or shorts (unless allowed)</li>
+                        <li>No flip-flops — closed-toe shoes required</li>
+                        <li>Keep clothes clean and wrinkle-free</li>
+                        <li>Name tag must be visible</li>
+                        <li>Hair may need to be tied back (food service)</li>
+                    </ul>
+                </div>
+                <div class="danger-box">
+                    <p><span class="emoji-big">🚨</span> <strong>Showing up in the wrong clothes can mean being sent home.</strong> That means no pay for the day AND a mark against you.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page13">
+            <div class="slide">
+                <h2 class="slide-title">Break Policies</h2>
+                <p>Most jobs give you breaks during your shift. But there are rules about when, how long, and what you can do.</p>
+                <div class="highlight-box">
+                    <p><strong>Typical break rules:</strong></p>
+                    <ul>
+                        <li><strong>Short break (10-15 min):</strong> Usually paid. Stay on the property.</li>
+                        <li><strong>Meal break (30 min):</strong> Usually unpaid. You might be able to leave.</li>
+                        <li><strong>When you take breaks:</strong> Your boss decides, not you. Ask before going.</li>
+                    </ul>
+                </div>
+                <div class="example-box">
+                    <p><strong>🔹 Example policy:</strong></p>
+                    <ul>
+                        <li>4-hour shift = one 10-minute break</li>
+                        <li>6-hour shift = one 10-minute break + one 30-minute meal break</li>
+                        <li>8-hour shift = two 10-minute breaks + one 30-minute meal break</li>
+                    </ul>
+                </div>
+                <div class="do-dont">
+                    <div class="do-column">
+                        <h3>✅ DO:</h3>
+                        <ul>
+                            <li>Ask when you can take your break</li>
+                            <li>Come back on time</li>
+                            <li>Clock out for unpaid breaks</li>
+                        </ul>
+                    </div>
+                    <div class="dont-column">
+                        <h3>❌ DON'T:</h3>
+                        <ul>
+                            <li>Take longer breaks than allowed</li>
+                            <li>Just disappear without telling anyone</li>
+                            <li>Take "unofficial" breaks</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page14">
+            <div class="slide">
+                <h2 class="slide-title">Phone & Social Media Policies</h2>
+                <p>Almost every job has rules about phone use. This is one of the most common things people get in trouble for.</p>
+                <div class="danger-box">
+                    <p><strong>Typical phone policies:</strong></p>
+                    <ul>
+                        <li><strong>No personal phone use during your shift</strong></li>
+                        <li>Phones must be stored in locker, pocket, or break room</li>
+                        <li>Only check your phone during breaks</li>
+                        <li>No texting, scrolling, or watching videos while working</li>
+                    </ul>
+                </div>
+                <div class="warning-box">
+                    <p><strong>Social media rules:</strong></p>
+                    <ul>
+                        <li>Don't post negative things about your job or boss</li>
+                        <li>Don't share customer information</li>
+                        <li>Don't take photos or videos at work (especially of customers)</li>
+                        <li>Don't post that you're "so bored at work" — your boss might see it</li>
+                    </ul>
+                </div>
+                <div class="example-box">
+                    <p><strong>🔹 If you need your phone for an emergency:</strong></p>
+                    <p>Tell your boss ahead of time: <em>"I'm expecting an important call from my doctor. If my phone rings, can I step away to answer it?"</em></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page15">
+            <div class="slide">
+                <h2 class="slide-title">Attendance Policies</h2>
+                <p>We talked about attendance in Unit 2, but every job has specific policies written down.</p>
+                <div class="highlight-box">
+                    <p><strong>Common attendance policies:</strong></p>
+                    <ul>
+                        <li><strong>Call-in policy:</strong> How far in advance to call if you're sick (often 2 hours before your shift)</li>
+                        <li><strong>No-call no-show:</strong> Not showing up without calling — usually an automatic write-up or termination</li>
+                        <li><strong>Tardy policy:</strong> How many times you can be late before action is taken</li>
+                        <li><strong>Point system:</strong> Some jobs give you "points" for absences. Too many points = fired</li>
+                    </ul>
+                </div>
+                <div class="example-box">
+                    <p><strong>🔹 Example point system:</strong></p>
+                    <ul>
+                        <li>Late (1-15 min): 0.5 points</li>
+                        <li>Late (15+ min): 1 point</li>
+                        <li>Absent with call: 1 point</li>
+                        <li>No-call no-show: 3 points</li>
+                        <li><strong>8 points = terminated</strong></li>
+                    </ul>
+                </div>
+                <div class="danger-box">
+                    <p><span class="emoji-big">🚨</span> <strong>A "no-call no-show" is one of the worst things you can do.</strong> Some jobs will fire you for just ONE.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page16">
+            <div class="slide">
+                <h2 class="slide-title">Other Common Policies</h2>
+                <p>Here are some other rules you might encounter at work:</p>
+                <div class="highlight-box">
+                    <p><strong>Smoking/Vaping:</strong></p>
+                    <ul>
+                        <li>Only in designated areas</li>
+                        <li>Only during your break</li>
+                        <li>Never in front of customers</li>
+                    </ul>
+                </div>
+                <div class="highlight-box">
+                    <p><strong>Food & Drinks:</strong></p>
+                    <ul>
+                        <li>Usually only allowed in the break room</li>
+                        <li>No eating while working</li>
+                        <li>Water bottles might be allowed — ask</li>
+                    </ul>
+                </div>
+                <div class="highlight-box">
+                    <p><strong>Dating Coworkers:</strong></p>
+                    <ul>
+                        <li>Some jobs have rules about this</li>
+                        <li>Usually you can't date someone you supervise or who supervises you</li>
+                        <li>Keep personal relationships out of work time</li>
+                    </ul>
+                </div>
+                <div class="success-box">
+                    <p><span class="emoji-big">💡</span> <strong>When in doubt, ask your manager.</strong> It's better to ask than to assume and get in trouble.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page17">
+            <div class="slide">
+                <h2 class="slide-title">Day 2 Review: Workplace Policies</h2>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #1:</div>
+                    <p>You show up to work in shorts and flip-flops. The dress code requires pants and closed-toe shoes. What will probably happen?</p>
+                    <p><strong>Answer:</strong> You might be sent home to change — and you won't get paid for that time. You could also get a warning.</p>
+                </div>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #2:</div>
+                    <p>You're scheduled for a 6-hour shift. How many breaks do you probably get?</p>
+                    <p><strong>Answer:</strong> Usually one short break (10-15 min) and one meal break (30 min). But check your workplace's specific policy!</p>
+                </div>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #3:</div>
+                    <p>What is a "no-call no-show" and why is it so bad?</p>
+                    <p><strong>Answer:</strong> Not showing up to work AND not calling. It's one of the worst things you can do — some jobs fire you for just one.</p>
+                </div>
+                <div class="success-box">
+                    <p style="text-align: center; font-size: 1.2em;"><strong>✅ End of Day 2! Next up: Workplace Safety</strong></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- DAY 3: WORKPLACE SAFETY (Pages 18–25) -->
+        <!-- ============================================================ -->
+        <div class="page" id="page18">
+            <div class="slide title-slide">
+                <div class="day-label">Day 3</div>
+                <div class="emoji-hero">⚠️🚨</div>
+                <h1>Workplace Safety</h1>
+                <p>Staying safe on the job and knowing what to do in emergencies</p>
+            </div>
+        </div>
+
+        <div class="page" id="page19">
+            <div class="slide">
+                <h2 class="slide-title">Why Workplace Safety Matters</h2>
+                <p>Every year, millions of people get hurt at work. Many of these injuries could have been prevented.</p>
+                <div class="highlight-box">
+                    <p><strong>Common workplace injuries:</strong></p>
+                    <ul>
+                        <li>Slips, trips, and falls (wet floors, cluttered walkways)</li>
+                        <li>Cuts (from knives, box cutters, broken glass)</li>
+                        <li>Burns (from hot equipment, grease, chemicals)</li>
+                        <li>Lifting injuries (back injuries from lifting wrong)</li>
+                        <li>Repetitive strain (doing the same motion over and over)</li>
+                    </ul>
+                </div>
+                <div class="success-box">
+                    <p><span class="emoji-big">💡</span> <strong>Your employer is required to keep you safe.</strong> But you also have to follow the safety rules and watch out for yourself.</p>
+                </div>
+                <div class="danger-box">
+                    <p><strong>Breaking safety rules can:</strong></p>
+                    <ul>
+                        <li>Get you hurt</li>
+                        <li>Get a coworker hurt</li>
+                        <li>Get you fired</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page20">
+            <div class="slide">
+                <h2 class="slide-title">Reading Safety Signs</h2>
+                <p>Workplaces use color-coded signs to warn you about dangers. Learn what they mean!</p>
+                <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; margin: 20px 0;">
+                    <div class="safety-sign sign-danger">
+                        <span class="sign-icon">☠️</span>
+                        <span>DANGER</span>
+                        <span style="font-weight:normal; font-size:0.8em;">Serious harm or death</span>
+                    </div>
+                    <div class="safety-sign sign-warning">
+                        <span class="sign-icon">⚠️</span>
+                        <span>WARNING</span>
+                        <span style="font-weight:normal; font-size:0.8em;">Could cause injury</span>
+                    </div>
+                    <div class="safety-sign sign-caution">
+                        <span class="sign-icon">⚡</span>
+                        <span>CAUTION</span>
+                        <span style="font-weight:normal; font-size:0.8em;">Minor injury possible</span>
+                    </div>
+                    <div class="safety-sign sign-safety">
+                        <span class="sign-icon">🚪</span>
+                        <span>SAFETY</span>
+                        <span style="font-weight:normal; font-size:0.8em;">Emergency exits, first aid</span>
+                    </div>
+                    <div class="safety-sign sign-info">
+                        <span class="sign-icon">ℹ️</span>
+                        <span>NOTICE</span>
+                        <span style="font-weight:normal; font-size:0.8em;">General information</span>
+                    </div>
+                </div>
+                <div class="example-box">
+                    <p><strong>🔹 Common signs you'll see:</strong></p>
+                    <ul>
+                        <li>"Wet Floor" — Caution, slippery</li>
+                        <li>"Employees Only" — Restricted area</li>
+                        <li>"Emergency Exit" — Way out in an emergency</li>
+                        <li>"Fire Extinguisher" — Location of fire equipment</li>
+                        <li>"No Smoking" — Smoking not allowed here</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page21">
+            <div class="slide">
+                <h2 class="slide-title">Reporting Hazards</h2>
+                <p>A <strong>hazard</strong> is anything that could hurt someone. If you see a hazard, you need to do something about it.</p>
+                <div class="highlight-box">
+                    <p><strong>Examples of hazards:</strong></p>
+                    <ul>
+                        <li>A spill on the floor</li>
+                        <li>A broken piece of equipment</li>
+                        <li>Boxes blocking an exit</li>
+                        <li>A frayed electrical cord</li>
+                        <li>Something stacked too high that could fall</li>
+                    </ul>
+                </div>
+                <div class="step-card"><div class="step-number">1</div><div><strong>If you can fix it safely, do it.</strong> Mop up a small spill. Move boxes out of the way.</div></div>
+                <div class="step-card"><div class="step-number">2</div><div><strong>If you can't fix it, warn people.</strong> Put up a sign, block the area, tell coworkers to stay away.</div></div>
+                <div class="step-card"><div class="step-number">3</div><div><strong>Tell your manager right away.</strong> <em>"There's a big spill in aisle 3. I put up the wet floor sign but it needs to be mopped."</em></div></div>
+                <div class="success-box">
+                    <p><span class="emoji-big">⭐</span> <strong>Reporting hazards shows you're responsible and looking out for others.</strong> Your boss will appreciate it.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page22">
+            <div class="slide">
+                <h2 class="slide-title">Emergency Exits & Fire Safety</h2>
+                <p>Every workplace must have emergency exits. You need to know where they are BEFORE an emergency happens.</p>
+                <div class="danger-box">
+                    <p><strong>On your first day at any job, find out:</strong></p>
+                    <ul>
+                        <li>Where are the emergency exits? (There's usually more than one)</li>
+                        <li>Where is the fire extinguisher?</li>
+                        <li>Where do employees meet outside if there's a fire?</li>
+                        <li>What does the fire alarm sound like?</li>
+                    </ul>
+                </div>
+                <div class="highlight-box">
+                    <p><strong>If you hear a fire alarm:</strong></p>
+                    <ul>
+                        <li><strong>Stop what you're doing</strong></li>
+                        <li><strong>Leave immediately</strong> — don't grab your stuff</li>
+                        <li><strong>Use the nearest exit</strong> — don't use elevators</li>
+                        <li><strong>Go to the meeting spot</strong> so they can count everyone</li>
+                        <li><strong>Don't go back inside</strong> until you're told it's safe</li>
+                    </ul>
+                </div>
+                <div class="warning-box">
+                    <p><span class="emoji-big">⚠️</span> <strong>Never block an emergency exit.</strong> Don't put boxes, equipment, or anything else in front of exit doors.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page23">
+            <div class="slide">
+                <h2 class="slide-title">What to Do If You Get Hurt at Work</h2>
+                <p>If you get injured at work — even a small injury — you need to report it.</p>
+                <div class="step-card"><div class="step-number">1</div><div><strong>Tell your manager right away.</strong> Even if it seems minor. <em>"I cut my finger on a box. It's not bad, but I wanted to let you know."</em></div></div>
+                <div class="step-card"><div class="step-number">2</div><div><strong>Get first aid.</strong> Most workplaces have a first aid kit. Your manager can help you find it.</div></div>
+                <div class="step-card"><div class="step-number">3</div><div><strong>Fill out an incident report.</strong> This is a form that documents what happened. It protects you AND the company.</div></div>
+                <div class="step-card"><div class="step-number">4</div><div><strong>If it's serious, get medical help.</strong> Your employer might send you to a specific clinic. Ask what to do.</div></div>
+                <div class="warning-box">
+                    <p><strong>Why you MUST report injuries:</strong></p>
+                    <ul>
+                        <li>If the injury gets worse later, there's a record of what happened</li>
+                        <li>You might be covered by workers' compensation (money for medical bills)</li>
+                        <li>It helps the company fix the hazard so nobody else gets hurt</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page24">
+            <div class="slide">
+                <h2 class="slide-title">Basic Safety Tips</h2>
+                <div class="do-dont">
+                    <div class="do-column">
+                        <h3>✅ Safe Habits:</h3>
+                        <ul>
+                            <li>Wear the right shoes (closed-toe, non-slip)</li>
+                            <li>Lift with your legs, not your back</li>
+                            <li>Clean up spills immediately</li>
+                            <li>Keep walkways clear</li>
+                            <li>Use equipment the right way</li>
+                            <li>Ask for help with heavy items</li>
+                            <li>Report broken equipment</li>
+                            <li>Know where the first aid kit is</li>
+                        </ul>
+                    </div>
+                    <div class="dont-column">
+                        <h3>❌ Unsafe Habits:</h3>
+                        <ul>
+                            <li>Running at work</li>
+                            <li>Ignoring wet floor signs</li>
+                            <li>Using broken equipment</li>
+                            <li>Lifting too much by yourself</li>
+                            <li>Blocking exits with boxes</li>
+                            <li>Wearing headphones so you can't hear warnings</li>
+                            <li>Horsing around</li>
+                            <li>Not reporting injuries</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page25">
+            <div class="slide">
+                <h2 class="slide-title">Day 3 Review: Workplace Safety</h2>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #1:</div>
+                    <p>You see a spill in the break room. What should you do?</p>
+                    <p><strong>Answer:</strong> If you can clean it safely, do it. If not, put up a warning sign and tell your manager.</p>
+                </div>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #2:</div>
+                    <p>The fire alarm goes off. What do you do?</p>
+                    <p><strong>Answer:</strong> Stop working, leave immediately using the nearest exit (not elevator), go to the meeting spot, and don't go back until you're told it's safe.</p>
+                </div>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #3:</div>
+                    <p>You cut your hand at work. It's not serious, but it is bleeding. What should you do?</p>
+                    <p><strong>Answer:</strong> Tell your manager, get first aid, and fill out an incident report — even if it seems minor.</p>
+                </div>
+                <div class="success-box">
+                    <p style="text-align: center; font-size: 1.2em;"><strong>✅ End of Day 3! Next up: Clocking In & Out</strong></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- DAY 4: CLOCKING IN/OUT (Pages 26–33) -->
+        <!-- ============================================================ -->
+        <div class="page" id="page26">
+            <div class="slide title-slide">
+                <div class="day-label">Day 4</div>
+                <div class="emoji-hero">⏰✅</div>
+                <h1>Clocking In & Out</h1>
+                <p>How time clocks work and why accurate time matters</p>
+            </div>
+        </div>
+
+        <div class="page" id="page27">
+            <div class="slide">
+                <h2 class="slide-title">What Is Clocking In?</h2>
+                <p><strong>Clocking in</strong> is how you record when you start and end your work shift. This is how your employer knows how many hours to pay you.</p>
+                <div class="time-clock-mock">
+                    <div class="clock-label">EMPLOYEE TIME CLOCK</div>
+                    <div class="time-display">9:58 AM</div>
+                    <div class="clock-label">ENTER ID OR SWIPE CARD</div>
+                </div>
+                <div class="highlight-box">
+                    <p><strong>Types of time clocks:</strong></p>
+                    <ul>
+                        <li><strong>Punch clock:</strong> You insert a paper time card</li>
+                        <li><strong>Digital keypad:</strong> You enter your employee number</li>
+                        <li><strong>Badge/card reader:</strong> You swipe or tap an ID card</li>
+                        <li><strong>Fingerprint scanner:</strong> You scan your finger</li>
+                        <li><strong>Computer/App:</strong> You log in on a computer or phone app</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page28">
+            <div class="slide">
+                <h2 class="slide-title">When to Clock In and Out</h2>
+                <p>You should clock in when you're <strong>ready to start working</strong> — not when you walk in the door.</p>
+                <div class="highlight-box">
+                    <p><strong>The right order:</strong></p>
+                    <div class="step-card"><div class="step-number">1</div><div>Arrive at work (10-15 min early)</div></div>
+                    <div class="step-card"><div class="step-number">2</div><div>Put your stuff away, use the bathroom, get your uniform on</div></div>
+                    <div class="step-card"><div class="step-number">3</div><div>Clock in when you're ready to work (at or just before your start time)</div></div>
+                    <div class="step-card"><div class="step-number">4</div><div>START WORKING</div></div>
+                </div>
+                <div class="warning-box">
+                    <p><strong>At the end of your shift:</strong></p>
+                    <div class="step-card"><div class="step-number">1</div><div>Finish your work / get approval to leave</div></div>
+                    <div class="step-card"><div class="step-number">2</div><div>Clock out</div></div>
+                    <div class="step-card"><div class="step-number">3</div><div>THEN get your stuff and leave</div></div>
+                </div>
+                <div class="danger-box">
+                    <p><span class="emoji-big">🚨</span> <strong>Don't clock in and THEN go put your stuff away, get coffee, or chat.</strong> Once you're clocked in, you should be working.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page29">
+            <div class="slide">
+                <h2 class="slide-title">Don't Clock In Too Early or Too Late</h2>
+                <p>Most jobs have rules about when you can clock in. Usually you can clock in a few minutes early, but not too much.</p>
+                <div class="example-box">
+                    <p><strong>🔹 Example policy:</strong></p>
+                    <p>Your shift starts at 10:00 AM.</p>
+                    <ul>
+                        <li><strong>Okay:</strong> Clock in between 9:55 and 10:00</li>
+                        <li><strong>Not okay:</strong> Clock in at 9:45 (too early)</li>
+                        <li><strong>Not okay:</strong> Clock in at 10:10 (late)</li>
+                    </ul>
+                </div>
+                <div class="warning-box">
+                    <p><strong>Why can't you clock in too early?</strong></p>
+                    <ul>
+                        <li>The company has to pay you for that time</li>
+                        <li>You might hit overtime (over 40 hours), which costs them more</li>
+                        <li>It's considered dishonest if you do it on purpose</li>
+                    </ul>
+                </div>
+                <div class="success-box">
+                    <p><span class="emoji-big">💡</span> <strong>If your manager asks you to come in early or stay late,</strong> that's different — they're approving the extra time. Always ask before working extra hours.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page30">
+            <div class="slide">
+                <h2 class="slide-title">Clocking Out for Breaks</h2>
+                <p>If you take an <strong>unpaid break</strong> (like a 30-minute meal break), you usually need to clock out.</p>
+                <div class="highlight-box">
+                    <p><strong>How meal breaks work:</strong></p>
+                    <div class="step-card"><div class="step-number">1</div><div>Ask your manager when to take your break</div></div>
+                    <div class="step-card"><div class="step-number">2</div><div>Clock OUT when your break starts</div></div>
+                    <div class="step-card"><div class="step-number">3</div><div>Take your break (30 minutes — time it!)</div></div>
+                    <div class="step-card"><div class="step-number">4</div><div>Clock back IN when your break ends</div></div>
+                    <div class="step-card"><div class="step-number">5</div><div>Get back to work</div></div>
+                </div>
+                <div class="warning-box">
+                    <p><strong>Short breaks (10-15 min) are usually paid.</strong> You typically do NOT clock out for these. But check your workplace's policy.</p>
+                </div>
+                <div class="danger-box">
+                    <p><span class="emoji-big">⚠️</span> <strong>If you forget to clock back in after break,</strong> tell your manager right away. They can fix it. Don't just ignore it — you might not get paid for those hours.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page31">
+            <div class="slide">
+                <h2 class="slide-title">What Is "Time Theft"?</h2>
+                <p><strong>Time theft</strong> is stealing time from your employer — being paid for time you didn't actually work.</p>
+                <div class="danger-box">
+                    <p><strong>Examples of time theft:</strong></p>
+                    <ul>
+                        <li><strong>Buddy punching:</strong> Having a coworker clock you in when you're not there</li>
+                        <li><strong>Clocking in early</strong> and then sitting around, not working</li>
+                        <li><strong>Taking longer breaks</strong> than allowed without clocking out</li>
+                        <li><strong>Not clocking out</strong> when you leave early</li>
+                        <li><strong>Personal tasks on the clock:</strong> Texting, shopping online, scrolling social media</li>
+                        <li><strong>Rounding up:</strong> Writing down that you worked 4:00-9:00 when you really worked 4:15-8:45</li>
+                    </ul>
+                </div>
+                <div class="danger-box">
+                    <p><span class="emoji-big">🚨</span> <strong>Time theft is taken very seriously.</strong> It's a form of stealing. You can be fired immediately for it — and in some cases, you could face legal trouble.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page32">
+            <div class="slide">
+                <h2 class="slide-title">Common Clock-In Mistakes (And How to Avoid Them)</h2>
+                <table class="comparison-table">
+                    <tr><th>Mistake</th><th>Why It's a Problem</th><th>What to Do Instead</th></tr>
+                    <tr>
+                        <td>Forgetting to clock in</td>
+                        <td>You might not get paid</td>
+                        <td>Make it a habit — clock in first thing</td>
+                    </tr>
+                    <tr>
+                        <td>Forgetting to clock out</td>
+                        <td>Shows extra hours you didn't work</td>
+                        <td>Tell your manager immediately so they can fix it</td>
+                    </tr>
+                    <tr>
+                        <td>Clocking in too early</td>
+                        <td>Costs the company money / looks dishonest</td>
+                        <td>Wait until your start time (or 5 min before)</td>
+                    </tr>
+                    <tr>
+                        <td>Having someone else clock you in</td>
+                        <td>It's time theft — you could be fired</td>
+                        <td>Always clock yourself in and out</td>
+                    </tr>
+                    <tr>
+                        <td>Not clocking out for unpaid breaks</td>
+                        <td>You get paid for time you weren't working</td>
+                        <td>Clock out, set a timer, clock back in</td>
+                    </tr>
+                </table>
+                <div class="success-box">
+                    <p><span class="emoji-big">💡</span> <strong>If you make an honest mistake,</strong> tell your manager right away. They can usually fix it. The problem is when people do it on purpose or hide it.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page33">
+            <div class="slide">
+                <h2 class="slide-title">Day 4 Review: Clocking In & Out</h2>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #1:</div>
+                    <p>Your shift starts at 2:00 PM. You arrive at 1:50 PM. When should you clock in?</p>
+                    <p><strong>Answer:</strong> Around 1:55-2:00 PM — after you've put your stuff away and you're ready to work. Not at 1:50 while you're still getting settled.</p>
+                </div>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #2:</div>
+                    <p>Your friend is running late and asks you to clock them in. Should you do it?</p>
+                    <p><strong>Answer:</strong> NO. This is "buddy punching" and it's time theft. You could both get fired.</p>
+                </div>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #3:</div>
+                    <p>You forgot to clock out for your 30-minute lunch break. What should you do?</p>
+                    <p><strong>Answer:</strong> Tell your manager right away so they can fix your time. Don't ignore it.</p>
+                </div>
+                <div class="success-box">
+                    <p style="text-align: center; font-size: 1.3em;"><strong>🎉 Great job finishing Unit 3: Understanding Your Workplace!</strong></p>
+                    <p style="text-align: center; font-size: 1.1em;">You now know how to read schedules, follow policies, stay safe, and track your time!</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        let currentPage = 1;
+        const totalPages = 33;
+        const dayStarts = [1, 2, 10, 18, 26];
+
+        function updateDayMenu(pageNum) {
+            document.querySelectorAll('.day-jump').forEach((btn, idx) => {
+                btn.classList.remove('active-day');
+                let inThisDay = false;
+                if (idx === dayStarts.length - 1) {
+                    inThisDay = pageNum >= dayStarts[idx];
+                } else {
+                    inThisDay = pageNum >= dayStarts[idx] && pageNum < dayStarts[idx + 1];
+                }
+                if (inThisDay) btn.classList.add('active-day');
+            });
+        }
+
+        function showPage(num) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById('page' + num).classList.add('active');
+            document.getElementById('pageIndicator').textContent = 'Page ' + num + ' of ' + totalPages;
+            document.getElementById('prevBtn').disabled = (num === 1);
+            document.getElementById('nextBtn').disabled = (num === totalPages);
+            updateDayMenu(num);
+            window.scrollTo(0, 0);
+        }
+
+        function nextPage() { if (currentPage < totalPages) { currentPage++; showPage(currentPage); } }
+        function prevPage() { if (currentPage > 1) { currentPage--; showPage(currentPage); } }
+        function jumpTo(pageNum) { currentPage = pageNum; showPage(currentPage); }
+    </script>
+</body>
+</html>
