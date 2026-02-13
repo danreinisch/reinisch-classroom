@@ -3345,15 +3345,74 @@
     content.innerHTML = summary;
     preview.style.display = 'block';
 
-    document.getElementById('confirm-import').addEventListener('click', async () => {
-      // Show confirmation dialog
-      const confirmMessage = importMode === 'replace'
-        ? `⚠️ WARNING: Replace All mode will DELETE all ${allStudents.length} existing students and their data.\n\nAre you absolutely sure you want to continue?`
-        : `Ready to import:\n• ${newStudentCount} new students\n• ${existingStudentCount} existing students to update\n• ${totalGoals} total goals\n\nProceed with import?`;
-      
-      if (confirm(confirmMessage)) {
-        await handleConfirmCsvImport(data, importMode);
+    document.getElementById('confirm-import').addEventListener('click', () => {
+      // Show styled confirmation modal instead of browser confirm()
+      if (importMode === 'replace') {
+        showReplaceAllConfirmation(data, newStudentCount, totalGoals);
+      } else {
+        showMergeConfirmation(data, newStudentCount, existingStudentCount, totalGoals);
       }
+    });
+  }
+
+  function showMergeConfirmation(data, newStudentCount, existingStudentCount, totalGoals) {
+    const modal = createModal('Confirm Import', `
+      <div style="padding: 10px 0;">
+        <p style="margin-bottom: 15px;">This will add and update students with the following data:</p>
+        <ul style="margin-left: 20px; margin-bottom: 20px;">
+          <li><strong>${newStudentCount}</strong> new student${newStudentCount !== 1 ? 's' : ''} will be added</li>
+          <li><strong>${existingStudentCount}</strong> existing student${existingStudentCount !== 1 ? 's' : ''} will be updated</li>
+          <li><strong>${totalGoals}</strong> total goal${totalGoals !== 1 ? 's' : ''}</li>
+        </ul>
+        <p style="margin-bottom: 20px;">Continue?</p>
+        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+          <button class="st-btn st-btn-secondary" id="cancel-import-btn">Cancel</button>
+          <button class="st-btn st-btn-primary" id="proceed-import-btn">Confirm Import</button>
+        </div>
+      </div>
+    `);
+    
+    document.body.appendChild(modal);
+    
+    document.getElementById('cancel-import-btn').addEventListener('click', () => {
+      modal.remove();
+    });
+    
+    document.getElementById('proceed-import-btn').addEventListener('click', async () => {
+      modal.remove();
+      await handleConfirmCsvImport(data, 'merge');
+    });
+  }
+
+  function showReplaceAllConfirmation(data, newStudentCount, totalGoals) {
+    const modal = createModal('⚠️ Confirm Replace All', `
+      <div style="padding: 10px 0;">
+        <div style="padding: 15px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; margin-bottom: 20px;">
+          <strong style="color: #856404;">⚠️ WARNING: Destructive Action</strong>
+          <p style="margin: 10px 0 0 0; color: #856404;">This will DELETE all <strong>${allStudents.length}</strong> existing students and their associated data (goals, enrollments, progress).</p>
+        </div>
+        <p style="margin-bottom: 15px;">The database will be replaced with:</p>
+        <ul style="margin-left: 20px; margin-bottom: 20px;">
+          <li><strong>${newStudentCount}</strong> student${newStudentCount !== 1 ? 's' : ''} from the CSV</li>
+          <li><strong>${totalGoals}</strong> total goal${totalGoals !== 1 ? 's' : ''}</li>
+        </ul>
+        <p style="margin-bottom: 20px; font-weight: bold; color: #d32f2f;">This action cannot be undone.</p>
+        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+          <button class="st-btn st-btn-secondary" id="cancel-replace-btn">Cancel</button>
+          <button class="st-btn" id="proceed-replace-btn" style="background: #d32f2f; color: white;">Delete All & Import</button>
+        </div>
+      </div>
+    `);
+    
+    document.body.appendChild(modal);
+    
+    document.getElementById('cancel-replace-btn').addEventListener('click', () => {
+      modal.remove();
+    });
+    
+    document.getElementById('proceed-replace-btn').addEventListener('click', async () => {
+      modal.remove();
+      await handleConfirmCsvImport(data, 'replace');
     });
   }
 
