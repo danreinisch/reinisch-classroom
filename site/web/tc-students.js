@@ -907,7 +907,12 @@
       return;
     }
 
-    const confirmed = confirm(`Revoke data entry link for ${goal.code}?\n\nThe current link will no longer work.`);
+    const confirmed = await showConfirmModal(
+      'Revoke Data Entry Link',
+      `Revoke data entry link for ${goal.code}?\n\nThe current link will no longer work.`,
+      'Revoke',
+      { danger: true }
+    );
     if (!confirmed) return;
 
     try {
@@ -1844,9 +1849,13 @@
   async function handleArchiveStudent(studentCode) {
     if (!studentCode) return;
     
-    if (!confirm(`Archive student ${studentCode}? This will hide them from the active list.`)) {
-      return;
-    }
+    const confirmed = await showConfirmModal(
+      'Archive Student',
+      `Archive student ${studentCode}? This will hide them from the active list.`,
+      'Archive',
+      { danger: true }
+    );
+    if (!confirmed) return;
 
     try {
       await db.upsertStudent({ code: studentCode, status: 'archived', active: false });
@@ -1863,9 +1872,12 @@
   async function handleReactivateStudent(studentCode) {
     if (!studentCode) return;
     
-    if (!confirm(`Reactivate student ${studentCode}? They will reappear in the active list.`)) {
-      return;
-    }
+    const confirmed = await showConfirmModal(
+      'Reactivate Student',
+      `Reactivate student ${studentCode}? They will reappear in the active list.`,
+      'Reactivate'
+    );
+    if (!confirmed) return;
 
     try {
       await db.upsertStudent({ code: studentCode, status: 'active', active: true });
@@ -1906,9 +1918,13 @@
     const goal = allGoals.find(g => g.id === goalId);
     if (!goal) return;
 
-    if (!confirm(`Archive goal "${goal.code || goal.goal_code}"?`)) {
-      return;
-    }
+    const confirmed = await showConfirmModal(
+      'Archive Goal',
+      `Archive goal "${goal.code || goal.goal_code}"?`,
+      'Archive',
+      { danger: true }
+    );
+    if (!confirmed) return;
 
     try {
       await db.upsertGoal({ id: goalId, status: 'archived' });
@@ -1928,9 +1944,12 @@
     const goal = allGoals.find(g => g.id === goalId);
     if (!goal) return;
 
-    if (!confirm(`Create a new version of goal "${goal.code || goal.goal_code}"? The current goal will be archived.`)) {
-      return;
-    }
+    const confirmed = await showConfirmModal(
+      'Create New Version',
+      `Create a new version of goal "${goal.code || goal.goal_code}"? The current goal will be archived.`,
+      'Create Version'
+    );
+    if (!confirmed) return;
 
     try {
       await db.upsertGoal({ id: goalId, status: 'archived' });
@@ -2277,43 +2296,6 @@
     } catch (error) {
       console.error('[tc-students] Error adding goal:', error);
       alert('Failed to add goal');
-    }
-  }
-
-  async function handleEditGoal(goalId, form) {
-    const formData = new FormData(form);
-    const goal = allGoals.find(g => g.id === goalId);
-    if (!goal) {
-      console.error('[tc-students] Goal not found:', goalId);
-      alert('Goal not found');
-      return;
-    }
-    
-    const updates = {
-      id: goalId,
-      student_code: goal.student_code,
-      goal_area: formData.get('goal_area'),
-      code: formData.get('goal_code'), // Form field is 'goal_code' but DB field is 'code'
-      goal_text: formData.get('goal_text'),
-      measurement_type: formData.get('measurement_type'),
-      baseline: formData.get('baseline'),
-      target: formData.get('target'),
-      case_manager: formData.get('case_manager'),
-      data_collector: formData.get('data_collector'),
-      data_collector_email: formData.get('data_collector_email') || null,
-      class_context: formData.get('class_context') || null
-    };
-
-    try {
-      await db.upsertGoal(updates);
-      console.log('[tc-students] Updated goal');
-      await loadData();
-      if (goal.student_code && expandedStudents.has(goal.student_code)) {
-        await renderExpandedDetail(goal.student_code);
-      }
-    } catch (error) {
-      console.error('[tc-students] Error updating goal:', error);
-      alert('Failed to update goal');
     }
   }
 
@@ -3412,6 +3394,56 @@
     });
 
     return modal;
+  }
+
+  /**
+   * Show a styled confirmation modal and return a Promise<boolean>
+   * @param {string} title - Modal title
+   * @param {string} message - Confirmation message
+   * @param {string} confirmLabel - Label for confirm button (default: 'Confirm')
+   * @param {object} options - Optional configuration
+   * @param {boolean} options.danger - Use red styling for destructive actions
+   * @returns {Promise<boolean>} true if confirmed, false if cancelled
+   */
+  function showConfirmModal(title, message, confirmLabel = 'Confirm', options = {}) {
+    return new Promise((resolve) => {
+      const isDanger = options.danger || false;
+      const confirmButtonStyle = isDanger 
+        ? 'background: #d32f2f; color: white;'
+        : '';
+      
+      const modal = createModal(title, `
+        <div style="padding: 10px 0;">
+          <p style="margin-bottom: 20px; white-space: pre-wrap;">${escapeHtml(message)}</p>
+          <div style="display: flex; gap: 10px; justify-content: flex-end;">
+            <button class="st-btn st-btn-secondary" id="modal-cancel-btn">Cancel</button>
+            <button class="st-btn st-btn-primary" id="modal-confirm-btn" style="${confirmButtonStyle}">${escapeHtml(confirmLabel)}</button>
+          </div>
+        </div>
+      `);
+      
+      document.body.appendChild(modal);
+      
+      const cleanup = () => modal.remove();
+      
+      document.getElementById('modal-cancel-btn').addEventListener('click', () => {
+        cleanup();
+        resolve(false);
+      });
+      
+      document.getElementById('modal-confirm-btn').addEventListener('click', () => {
+        cleanup();
+        resolve(true);
+      });
+      
+      // Allow clicking backdrop to cancel
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          cleanup();
+          resolve(false);
+        }
+      });
+    });
   }
 
   // Initialize
