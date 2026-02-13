@@ -113,10 +113,25 @@
     if (area.includes('writ')) return 'Writing';
     if (area.includes('math')) return 'Math';
     if (area.includes('behavior')) return 'Behavior';
-    if (area.includes('life skill')) return 'Life Skills';
+    if (area.includes('life skill')) return 'LifeSkills';
     if (area.includes('social')) return 'Social';
     if (area.includes('language')) return 'Language';
+    if (area.includes('emotional')) return 'Emotional';
     return 'Other';
+  }
+
+  /**
+   * Get date urgency class based on days until due
+   */
+  function getDateUrgency(dateStr) {
+    if (!dateStr) return 'none';
+    const due = new Date(dateStr);
+    if (isNaN(due.getTime())) return 'none';
+    const now = new Date();
+    const daysUntil = (due - now) / (1000 * 60 * 60 * 24);
+    if (daysUntil <= 30) return 'urgent';
+    if (daysUntil <= 60) return 'warning';
+    return 'ok';
   }
 
   /**
@@ -189,13 +204,126 @@
   let allEnrollments = [];
   let filteredStudents = [];
   let selectedStudent = null;
+  let expandedStudent = null; // For inline expand in table
   let selectedClassFilter = 'All';
   let selectedGoalAreaFilter = 'All';
   let searchQuery = '';
   let isSyncing = false;
-  let sortBy = 'code'; // 'code', 'goals', 'iep_due'
+  let sortBy = 'code'; // 'code', 'goals', 'iep_due', 'eval_due'
   let selectedDetailTab = 'goals'; // 'goals', 'classes', 'settings'
   let editingGoalId = null;
+  let showArchived = false;
+  let collapsedGoals = new Set(); // Track which goals are collapsed
+  let truncatedGoals = new Set(); // Track which goals have truncated descriptions
+
+  // Quarter dates management
+  const DEFAULT_QUARTER_DATES = {
+    q1: { start: "2025-08-18", end: "2025-10-17" },
+    q2: { start: "2025-10-20", end: "2026-01-23" },
+    q3: { start: "2026-01-27", end: "2026-03-28" },
+    q4: { start: "2026-03-30", end: "2026-05-22" }
+  };
+
+  function getQuarterDates() {
+    try {
+      const saved = localStorage.getItem('rc_quarter_dates');
+      return saved ? JSON.parse(saved) : DEFAULT_QUARTER_DATES;
+    } catch (e) {
+      return DEFAULT_QUARTER_DATES;
+    }
+  }
+
+  function saveQuarterDates(dates) {
+    localStorage.setItem('rc_quarter_dates', JSON.stringify(dates));
+  }
+
+  function getCurrentQuarter() {
+    const dates = getQuarterDates();
+    const today = new Date();
+    
+    for (const [quarter, range] of Object.entries(dates)) {
+      const start = new Date(range.start);
+      const end = new Date(range.end);
+      if (today >= start && today <= end) {
+        return quarter.toUpperCase();
+      }
+    }
+    return 'Q1'; // Default
+  }
+
+  function formatQuarterDate(dateStr) {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+
+  function renderQuarterBar() {
+    const displayEl = document.getElementById('stQuarterDisplay');
+    if (!displayEl) return;
+
+    const dates = getQuarterDates();
+    const current = getCurrentQuarter();
+
+    const html = Object.entries(dates).map(([quarter, range]) => {
+      const q = quarter.toUpperCase();
+      const isCurrent = q === current;
+      return `
+        <div class="st-quarter-item ${isCurrent ? 'current' : ''}">
+          ${q}: ${formatQuarterDate(range.start)}–${formatQuarterDate(range.end)}
+        </div>
+      `;
+    }).join('');
+
+    displayEl.innerHTML = html;
+  }
+
+  function renderQuarterEditForm() {
+    const formEl = document.getElementById('stQuarterEditForm');
+    if (!formEl) return;
+
+    const dates = getQuarterDates();
+
+    const html = Object.entries(dates).map(([quarter, range]) => `
+      <div class="st-quarter-edit-row">
+        <label>${quarter.toUpperCase()}:</label>
+        <input type="date" name="${quarter}-start" value="${range.start}" />
+        <span>to</span>
+        <input type="date" name="${quarter}-end" value="${range.end}" />
+      </div>
+    `).join('') + `
+      <div class="st-quarter-edit-row">
+        <button type="button" class="st-btn st-btn-small" id="stCancelQuarterEdit">Cancel</button>
+        <button type="button" class="st-btn st-btn-primary st-btn-small" id="stSaveQuarters">Save</button>
+      </div>
+    `;
+
+    formEl.innerHTML = html;
+  }
+
+  function exportCaseload() {
+    const rows = [['Code', 'Classes', 'Goals', 'IEP Due', 'Eval Due']];
+    for (const student of filteredStudents) {
+      const enrollments = allEnrollments.filter(e => e.student_code === student.code);
+      const goals = allGoals.filter(g => g.student_code === student.code);
+      const classes = enrollments.map(e => e.class_name).join('; ');
+      rows.push([
+        student.code,
+        classes,
+        goals.length,
+        student.iep_due || '',
+        student.eval_due || ''
+      ]);
+    }
+    const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `caseload_export_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
 
   // Load data
   async function loadData() {
@@ -215,7 +343,7 @@
       
       // Extract successful results
       if (results[0].status === 'fulfilled') {
-        allStudents = results[0].value.filter(s => s.status !== 'archived' && !s.code.startsWith('TEACHER'));
+        allStudents = results[0].value.filter(s => !s.code.startsWith('TEACHER'));
       } else {
         console.error('[tc-students] Failed to load students:', results[0].reason);
         allStudents = [];
@@ -250,9 +378,7 @@
       filterStudents();
       renderStudentList();
       
-      if (filteredStudents.length > 0 && !selectedStudent) {
-        selectStudent(filteredStudents[0].code);
-      }
+      // Don't auto-expand first student - let user choose
 
       isSyncing = false;
       updateSyncIndicator();
@@ -329,6 +455,11 @@
   function filterStudents() {
     let filtered = allStudents;
 
+    // Filter out archived students unless showArchived is enabled
+    if (!showArchived) {
+      filtered = filtered.filter(s => s.status !== 'archived' && s.active !== false);
+    }
+
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(s => 
@@ -358,6 +489,12 @@
         const bDate = b.iep_due ? new Date(b.iep_due) : new Date('9999-12-31');
         return aDate - bDate; // ascending (soonest first, nulls last)
       });
+    } else if (sortBy === 'eval_due') {
+      filtered.sort((a, b) => {
+        const aDate = a.eval_due ? new Date(a.eval_due) : new Date('9999-12-31');
+        const bDate = b.eval_due ? new Date(b.eval_due) : new Date('9999-12-31');
+        return aDate - bDate; // ascending (soonest first, nulls last)
+      });
     }
 
     filteredStudents = filtered;
@@ -365,47 +502,179 @@
 
   // Render functions
   function renderStudentList() {
-    const container = document.getElementById('stStudentList');
-    if (!container) return;
+    const tbody = document.getElementById('stStudentTableBody');
+    if (!tbody) return;
 
     const html = filteredStudents.map(student => {
       const enrollments = allEnrollments.filter(e => e.student_code === student.code);
       const studentGoals = allGoals.filter(g => g.student_code === student.code);
       const classes = enrollments.map(e => abbreviateClass(e.class_name)).join(', ');
-      const isSelected = selectedStudent === student.code;
+      const isExpanded = expandedStudent === student.code;
+      const isArchived = student.status === 'archived' || student.active === false;
       
-      const iepDue = student.iep_due ? formatDate(student.iep_due) : '';
-      const iepUrgent = isIepUrgent(student.iep_due);
+      const iepDue = student.iep_due ? formatDate(student.iep_due) : 'N/A';
+      const iepUrgency = getDateUrgency(student.iep_due);
+      
+      const evalDue = student.eval_due ? formatDate(student.eval_due) : 'N/A';
+      const evalUrgency = getDateUrgency(student.eval_due);
 
-      return `
-        <div class="st-student-item ${isSelected ? 'selected' : ''}" data-code="${escapeHtml(student.code)}">
-          <div class="st-student-status">🟢</div>
-          <div class="st-student-info">
-            <div class="st-student-name">${escapeHtml(student.code)}</div>
-            <div class="st-student-meta">${escapeHtml(classes)}</div>
-            <div class="st-student-meta">${studentGoals.length} goals</div>
-            <div class="st-student-meta ${iepUrgent ? 'st-iep-urgent' : ''}">
-              📋 IEP: ${iepDue || 'N/A'}
-            </div>
-          </div>
-        </div>
+      let rows = `
+        <tr class="${isExpanded ? 'expanded' : ''} ${isArchived ? 'st-row-archived' : ''}" data-code="${escapeHtml(student.code)}">
+          <td class="st-chevron-cell">
+            <span class="st-chevron ${isExpanded ? 'expanded' : ''}">▶</span>
+          </td>
+          <td class="st-code-cell">${escapeHtml(student.code)}</td>
+          <td class="st-classes-cell">${escapeHtml(classes) || 'None'}</td>
+          <td class="st-goals-cell">
+            <span class="st-goals-badge">${studentGoals.length}</span>
+          </td>
+          <td class="st-date-${iepUrgency}">${escapeHtml(iepDue)}</td>
+          <td class="st-date-${evalUrgency}">${escapeHtml(evalDue)}</td>
+          <td>✅</td>
+        </tr>
       `;
+
+      // Add expanded detail row if this student is expanded
+      if (isExpanded) {
+        rows += `
+          <tr class="st-expanded-row">
+            <td colspan="7">
+              <div class="st-expanded-content" id="stExpandedDetail-${escapeHtml(student.code)}">
+                <!-- Detail content rendered separately -->
+              </div>
+            </td>
+          </tr>
+        `;
+      }
+
+      return rows;
     }).join('');
 
-    container.innerHTML = html;
-    updateStudentCount();
-  }
+    tbody.innerHTML = html;
 
-  function updateStudentCount() {
-    const countEl = document.getElementById('stStudentCount');
-    if (countEl) {
-      countEl.textContent = `${filteredStudents.length} ${filteredStudents.length === 1 ? 'student' : 'students'}`;
+    // If a student is expanded, render their detail content
+    if (expandedStudent) {
+      renderExpandedDetail(expandedStudent);
     }
   }
 
-  function renderClassFilters() {
-    const container = document.getElementById('stClassFilters');
+  function renderExpandedDetail(studentCode) {
+    const container = document.getElementById(`stExpandedDetail-${studentCode}`);
     if (!container) return;
+
+    const student = allStudents.find(s => s.code === studentCode);
+    if (!student) {
+      container.innerHTML = '<div class="empty-state">Student not found</div>';
+      return;
+    }
+
+    const enrollments = allEnrollments.filter(e => e.student_code === student.code);
+    const studentGoals = allGoals.filter(g => g.student_code === student.code);
+
+    // Render header with tabs
+    let tabContent = '';
+    if (selectedDetailTab === 'goals') {
+      tabContent = renderStudentGoalsTab(student, studentGoals);
+    } else if (selectedDetailTab === 'classes') {
+      tabContent = renderStudentClassesTab(student, enrollments);
+    } else if (selectedDetailTab === 'settings') {
+      tabContent = renderStudentSettingsTab(student);
+    }
+
+    const isActive = student.status !== 'archived' && student.active !== false;
+    const statusBadge = isActive 
+      ? '<span class="st-badge st-badge-active">Active</span>' 
+      : '<span class="st-badge">Archived</span>';
+
+    container.innerHTML = `
+      <div class="st-detail-header">
+        <div>
+          <h1 class="st-detail-title">${escapeHtml(student.code)}</h1>
+          <div class="st-detail-meta">
+            <span>👤 ${escapeHtml(student.primary_case_manager || 'N/A')}</span>
+            <span class="st-date-${getDateUrgency(student.iep_due)}">📋 IEP: ${student.iep_due ? formatDate(student.iep_due) : 'N/A'}</span>
+            <span class="st-date-${getDateUrgency(student.eval_due)}">📝 Eval: ${student.eval_due ? formatDate(student.eval_due) : 'N/A'}</span>
+            ${statusBadge}
+          </div>
+        </div>
+      </div>
+
+      <div class="st-tabs">
+        <button class="st-tab ${selectedDetailTab === 'goals' ? 'active' : ''}" data-tab="goals">Goals</button>
+        <button class="st-tab ${selectedDetailTab === 'classes' ? 'active' : ''}" data-tab="classes">Classes</button>
+        <button class="st-tab ${selectedDetailTab === 'settings' ? 'active' : ''}" data-tab="settings">Settings</button>
+      </div>
+
+      <div class="st-tab-content">
+        ${tabContent}
+      </div>
+    `;
+  }
+
+  async function renderStudentGoalsTab(student, studentGoals) {
+    // Check for active tokens
+    const activeTokens = await checkActiveTokens(student.code);
+
+    // Mark goals with active tokens
+    studentGoals.forEach(goal => {
+      goal._hasActiveToken = !!activeTokens[goal.code];
+    });
+
+    let inContextGoals = studentGoals;
+    let outsideGoals = [];
+
+    if (selectedClassFilter !== 'All') {
+      inContextGoals = studentGoals.filter(g => g.class_context === selectedClassFilter);
+      outsideGoals = studentGoals.filter(g => g.class_context !== selectedClassFilter);
+    }
+
+    if (selectedGoalAreaFilter !== 'All') {
+      inContextGoals = inContextGoals.filter(g => g.goal_area === selectedGoalAreaFilter);
+      outsideGoals = outsideGoals.filter(g => g.goal_area === selectedGoalAreaFilter);
+    }
+
+    return renderStudentGoals(inContextGoals, outsideGoals);
+  }
+
+  function renderStudentClassesTab(student, enrollments) {
+    return renderStudentClasses(student, enrollments);
+  }
+
+  function renderStudentSettingsTab(student) {
+    const isActive = student.status !== 'archived' && student.active !== false;
+    
+    return `
+      <div class="st-detail-section">
+        <h3>Student Information</h3>
+        <div class="st-form-group">
+          <label class="st-form-label">Primary Case Manager</label>
+          <input type="text" id="edit-case-manager" class="st-form-input" value="${escapeHtml(student.primary_case_manager || '')}" />
+        </div>
+        <div class="st-form-group">
+          <label class="st-form-label">IEP Due Date</label>
+          <input type="date" id="edit-iep-due" class="st-form-input" value="${student.iep_due || ''}" />
+        </div>
+        <div class="st-form-group">
+          <label class="st-form-label">Eval Due Date</label>
+          <input type="date" id="edit-eval-due" class="st-form-input" value="${student.eval_due || ''}" />
+        </div>
+        <button class="st-btn st-btn-primary" id="save-student-info-btn">Save Changes</button>
+      </div>
+
+      <div class="st-detail-section">
+        <h3>Actions</h3>
+        ${renderStudentPassword(student)}
+        ${isActive 
+          ? '<button class="st-btn st-btn-danger" id="archive-student-btn">🗃️ Archive Student</button>'
+          : '<button class="st-btn st-btn-primary" id="reactivate-student-btn">♻️ Reactivate Student</button>'
+        }
+      </div>
+    `;
+  }
+
+  function renderClassFilterOptions() {
+    const selectEl = document.getElementById('stClassFilter');
+    if (!selectEl) return;
 
     const options = ['All', ...FULL_CLASS_NAMES].map(className => `
       <option value="${escapeHtml(className)}" ${selectedClassFilter === className ? 'selected' : ''}>
@@ -413,11 +682,7 @@
       </option>
     `).join('');
 
-    container.innerHTML = `
-      <select id="stClassFilterSelect" class="st-search-input">
-        ${options}
-      </select>
-    `;
+    selectEl.innerHTML = options;
   }
 
   /**
@@ -472,7 +737,9 @@
       showToast(`Link copied! Send it to ${goal.data_collector}.`);
 
       // Refresh display to show revoke button
-      renderStudentDetail();
+      if (expandedStudent) {
+        renderExpandedDetail(expandedStudent);
+      }
 
     } catch (err) {
       console.error('[tc-students] Error creating token:', err);
@@ -510,7 +777,9 @@
       showToast('Link revoked successfully');
 
       // Refresh display to show copy button
-      renderStudentDetail();
+      if (expandedStudent) {
+        renderExpandedDetail(expandedStudent);
+      }
 
     } catch (err) {
       console.error('[tc-students] Error revoking token:', err);
@@ -548,106 +817,6 @@
         document.body.removeChild(toast);
       }, 300);
     }, 3000);
-  }
-
-  async function renderStudentDetail() {
-    const container = document.getElementById('stStudentDetail');
-    if (!container) return;
-
-    if (!selectedStudent) {
-      container.innerHTML = '<div class="empty-state">Select a student to view details</div>';
-      return;
-    }
-
-    const student = allStudents.find(s => s.code === selectedStudent);
-    if (!student) {
-      container.innerHTML = '<div class="empty-state">Student not found</div>';
-      return;
-    }
-
-    const enrollments = allEnrollments.filter(e => e.student_code === student.code);
-    const studentGoals = allGoals.filter(g => g.student_code === student.code);
-
-    // Check for active tokens
-    const activeTokens = await checkActiveTokens(student.code);
-
-    // Mark goals with active tokens
-    studentGoals.forEach(goal => {
-      goal._hasActiveToken = !!activeTokens[goal.code];
-    });
-
-    let inContextGoals = studentGoals;
-    let outsideGoals = [];
-
-    if (selectedClassFilter !== 'All') {
-      inContextGoals = studentGoals.filter(g => g.class_context === selectedClassFilter);
-      outsideGoals = studentGoals.filter(g => g.class_context !== selectedClassFilter);
-    }
-
-    if (selectedGoalAreaFilter !== 'All') {
-      inContextGoals = inContextGoals.filter(g => g.goal_area === selectedGoalAreaFilter);
-      outsideGoals = outsideGoals.filter(g => g.goal_area === selectedGoalAreaFilter);
-    }
-
-    // Render header with tabs
-    let tabContent = '';
-    if (selectedDetailTab === 'goals') {
-      tabContent = renderStudentGoals(inContextGoals, outsideGoals);
-    } else if (selectedDetailTab === 'classes') {
-      tabContent = renderStudentClasses(student, enrollments);
-    } else if (selectedDetailTab === 'settings') {
-      tabContent = `
-        ${renderStudentPassword(student)}
-        <div class="st-detail-section">
-          <div class="st-section-header">
-            <h3>Student Management</h3>
-            <button class="st-btn st-btn-danger" id="archive-student-btn">Archive Student</button>
-          </div>
-        </div>
-      `;
-    }
-
-    const html = `
-      <div class="student-detail-content">
-        ${renderStudentHeader(student)}
-        <div class="st-tabs">
-          <button class="st-tab ${selectedDetailTab === 'goals' ? 'active' : ''}" data-tab="goals">Goals</button>
-          <button class="st-tab ${selectedDetailTab === 'classes' ? 'active' : ''}" data-tab="classes">Classes</button>
-          <button class="st-tab ${selectedDetailTab === 'settings' ? 'active' : ''}" data-tab="settings">Settings</button>
-        </div>
-        ${tabContent}
-      </div>
-    `;
-
-    container.innerHTML = html;
-  }
-
-  function renderStudentHeader(student) {
-    return `
-      <div class="st-detail-section">
-        <div class="st-detail-header">
-          <div class="st-detail-title">
-            <h2>${escapeHtml(student.code)}</h2>
-            <span class="st-badge st-badge-active">🟢 Active</span>
-          </div>
-          <button class="st-btn st-btn-danger" id="archive-student-btn">Archive</button>
-        </div>
-        <div class="st-detail-meta">
-          <div class="st-meta-item">
-            <span class="st-meta-label">Primary Case Manager:</span>
-            <span class="st-meta-value">${escapeHtml(student.primary_case_manager || 'N/A')}</span>
-          </div>
-          <div class="st-meta-item">
-            <span class="st-meta-label">IEP Due:</span>
-            <span class="st-meta-value">${formatDate(student.iep_due)}</span>
-          </div>
-          <div class="st-meta-item">
-            <span class="st-meta-label">Eval Due:</span>
-            <span class="st-meta-value">${formatDate(student.eval_due)}</span>
-          </div>
-        </div>
-      </div>
-    `;
   }
 
   function renderStudentClasses(student, enrollments) {
@@ -752,13 +921,13 @@
     return `
       <div class="st-goal-card collapsed" data-goal-id="${goal.id}" data-area="${colorCategory}">
         <div class="st-goal-header">
-          <div class="st-goal-title">
+          <div class="st-goal-title-line">
             <span class="st-goal-icon">${icon}</span>
             <span class="st-goal-area-name">${escapeHtml(goal.goal_area || 'N/A')}</span>
-            <span class="st-goal-code">${escapeHtml(goal.goal_code || '')}</span>
+            <span class="st-goal-code">${escapeHtml(goal.code || '')}</span>
             <span class="st-badge st-badge-measurement">${escapeHtml(goal.measurement_type || 'N/A')}</span>
           </div>
-          <span class="st-goal-chevron">▼</span>
+          <span class="st-goal-chevron">▶</span>
         </div>
         <div class="st-goal-body">
           ${descHtml}
@@ -868,6 +1037,7 @@
 
   // Event handlers
   function setupEventHandlers() {
+    // Search input
     const searchInput = document.getElementById('stSearchInput');
     if (searchInput) {
       searchInput.addEventListener('input', (e) => {
@@ -877,35 +1047,81 @@
       });
     }
 
-    const classFilters = document.getElementById('stClassFilters');
-    if (classFilters) {
-      classFilters.addEventListener('change', (e) => {
-        if (e.target.id === 'stClassFilterSelect') {
-          selectedClassFilter = e.target.value;
-          filterStudents();
+    // Class filter dropdown
+    const classFilter = document.getElementById('stClassFilter');
+    if (classFilter) {
+      classFilter.addEventListener('change', (e) => {
+        selectedClassFilter = e.target.value;
+        filterStudents();
+        renderStudentList();
+      });
+    }
+
+    // Sort dropdown
+    const sortSelect = document.getElementById('stSortSelect');
+    if (sortSelect) {
+      sortSelect.addEventListener('change', (e) => {
+        sortBy = e.target.value;
+        filterStudents();
+        renderStudentList();
+      });
+    }
+
+    // Show Archived checkbox
+    const showArchivedCheckbox = document.getElementById('stShowArchived');
+    if (showArchivedCheckbox) {
+      showArchivedCheckbox.addEventListener('change', (e) => {
+        showArchived = e.target.checked;
+        filterStudents();
+        renderStudentList();
+      });
+    }
+
+    // Export button
+    const exportBtn = document.getElementById('stExportBtn');
+    if (exportBtn) {
+      exportBtn.addEventListener('click', exportCaseload);
+    }
+
+    // Quarter date bar buttons
+    const editQuartersBtn = document.getElementById('stEditQuarters');
+    if (editQuartersBtn) {
+      editQuartersBtn.addEventListener('click', () => {
+        const displayEl = document.getElementById('stQuarterDisplay');
+        const formEl = document.getElementById('stQuarterEditForm');
+        if (displayEl && formEl) {
+          displayEl.style.display = 'none';
+          formEl.classList.add('active');
+          renderQuarterEditForm();
+        }
+      });
+    }
+
+    // Table row clicks (for expanding/collapsing)
+    const tableBody = document.getElementById('stStudentTableBody');
+    if (tableBody) {
+      tableBody.addEventListener('click', async (e) => {
+        // Handle row click for expand/collapse
+        const row = e.target.closest('tr:not(.st-expanded-row)');
+        if (row && e.target.closest('.st-chevron-cell, .st-code-cell')) {
+          const studentCode = row.dataset.code;
+          if (expandedStudent === studentCode) {
+            expandedStudent = null;
+          } else {
+            expandedStudent = studentCode;
+            selectedDetailTab = 'goals';
+            editingGoalId = null;
+          }
           renderStudentList();
-          renderStudentDetail();
+          return;
         }
-      });
-    }
 
-    const studentList = document.getElementById('stStudentList');
-    if (studentList) {
-      studentList.addEventListener('click', (e) => {
-        const item = e.target.closest('.st-student-item');
-        if (item) {
-          selectStudent(item.dataset.code);
-        }
-      });
-    }
-
-    const studentDetail = document.getElementById('stStudentDetail');
-    if (studentDetail) {
-      studentDetail.addEventListener('click', async (e) => {
-        // Tab switching
+        // Handle tab switching in expanded detail
         if (e.target.classList.contains('st-tab')) {
           selectedDetailTab = e.target.dataset.tab;
-          renderStudentDetail();
+          if (expandedStudent) {
+            renderExpandedDetail(expandedStudent);
+          }
           return;
         }
 
@@ -931,78 +1147,152 @@
           return;
         }
 
+        // Save student info button
+        if (e.target.id === 'save-student-info-btn') {
+          await handleSaveStudentInfo();
+          return;
+        }
+
         // Archive student
         if (e.target.id === 'archive-student-btn') {
           await handleArchiveStudent();
-        } 
+          return;
+        }
+
+        // Reactivate student
+        if (e.target.id === 'reactivate-student-btn') {
+          await handleReactivateStudent();
+          return;
+        }
+        
         // Manage enrollments
-        else if (e.target.id === 'manage-enrollments-btn') {
+        if (e.target.id === 'manage-enrollments-btn') {
           showManageEnrollmentsModal();
+          return;
         } 
+        
         // Add goal
-        else if (e.target.id === 'add-goal-btn') {
+        if (e.target.id === 'add-goal-btn') {
           showAddGoalModal();
+          return;
         } 
+        
         // Reset password
-        else if (e.target.id === 'reset-password-btn') {
+        if (e.target.id === 'reset-password-btn') {
           showResetPasswordModal();
+          return;
         } 
+        
         // Edit goal - inline editing
-        else if (e.target.classList.contains('edit-goal-btn')) {
+        if (e.target.classList.contains('edit-goal-btn')) {
           const goalId = parseInt(e.target.dataset.goalId);
           editingGoalId = goalId;
-          renderStudentDetail();
+          if (expandedStudent) {
+            renderExpandedDetail(expandedStudent);
+          }
           e.stopPropagation();
+          return;
         } 
+        
         // Cancel inline edit
-        else if (e.target.classList.contains('cancel-edit-btn')) {
+        if (e.target.classList.contains('cancel-edit-btn')) {
           editingGoalId = null;
-          renderStudentDetail();
+          if (expandedStudent) {
+            renderExpandedDetail(expandedStudent);
+          }
           e.stopPropagation();
+          return;
         } 
+        
         // Save inline edit
-        else if (e.target.classList.contains('save-goal-btn')) {
+        if (e.target.classList.contains('save-goal-btn')) {
           const goalId = parseInt(e.target.dataset.goalId);
           await handleSaveInlineEdit(goalId, e);
           e.stopPropagation();
+          return;
         } 
         // Version goal
-        else if (e.target.classList.contains('version-goal-btn')) {
+        if (e.target.classList.contains('version-goal-btn')) {
           const goalId = parseInt(e.target.dataset.goalId);
           await handleVersionGoal(goalId);
           e.stopPropagation();
+          return;
         } 
         // Archive goal
-        else if (e.target.classList.contains('archive-goal-btn')) {
+        if (e.target.classList.contains('archive-goal-btn')) {
           const goalId = parseInt(e.target.dataset.goalId);
           await handleArchiveGoal(goalId);
           e.stopPropagation();
+          return;
         } 
         // Copy token
-        else if (e.target.classList.contains('copy-token-btn')) {
+        if (e.target.classList.contains('copy-token-btn')) {
           const goalId = parseInt(e.target.dataset.goalId);
           await handleCopyDataEntryLink(goalId);
           e.stopPropagation();
+          return;
         } 
         // Revoke token
-        else if (e.target.classList.contains('revoke-token-btn')) {
+        if (e.target.classList.contains('revoke-token-btn')) {
           const goalId = parseInt(e.target.dataset.goalId);
           await handleRevokeDataEntryLink(goalId);
           e.stopPropagation();
+          return;
         }
       });
 
-      studentDetail.addEventListener('change', (e) => {
+      // Change events in table (goal area filter)
+      tableBody.addEventListener('change', (e) => {
         if (e.target.id === 'goal-area-filter') {
           selectedGoalAreaFilter = e.target.value;
-          renderStudentDetail();
-        } else if (e.target.id === 'stSortSelect') {
-          sortBy = e.target.value;
-          filterStudents();
-          renderStudentList();
+          if (expandedStudent) {
+            renderExpandedDetail(expandedStudent);
+          }
         }
       });
     }
+
+    // Quarter date form handling
+    document.addEventListener('click', (e) => {
+      if (e.target.id === 'stCancelQuarterEdit') {
+        const displayEl = document.getElementById('stQuarterDisplay');
+        const formEl = document.getElementById('stQuarterEditForm');
+        if (displayEl && formEl) {
+          displayEl.style.display = '';
+          formEl.classList.remove('active');
+        }
+      } else if (e.target.id === 'stSaveQuarters') {
+        const formEl = document.getElementById('stQuarterEditForm');
+        if (formEl) {
+          const dates = {
+            q1: {
+              start: formEl.querySelector('[name="q1-start"]').value,
+              end: formEl.querySelector('[name="q1-end"]').value
+            },
+            q2: {
+              start: formEl.querySelector('[name="q2-start"]').value,
+              end: formEl.querySelector('[name="q2-end"]').value
+            },
+            q3: {
+              start: formEl.querySelector('[name="q3-start"]').value,
+              end: formEl.querySelector('[name="q3-end"]').value
+            },
+            q4: {
+              start: formEl.querySelector('[name="q4-start"]').value,
+              end: formEl.querySelector('[name="q4-end"]').value
+            }
+          };
+          saveQuarterDates(dates);
+          renderQuarterBar();
+          const displayEl = document.getElementById('stQuarterDisplay');
+          if (displayEl) {
+            displayEl.style.display = '';
+          }
+          formEl.classList.remove('active');
+          showToast('Quarter dates saved successfully');
+        }
+      }
+    });
 
     const addStudentBtn = document.getElementById('stAddStudent');
     if (addStudentBtn) {
@@ -1043,7 +1333,9 @@
       console.log('[tc-students] Updated goal:', goalId);
       editingGoalId = null;
       await loadData();
-      renderStudentDetail();
+      if (expandedStudent) {
+        renderExpandedDetail(expandedStudent);
+      }
     } catch (error) {
       console.error('[tc-students] Error updating goal:', error);
       alert('Failed to update goal');
@@ -1051,30 +1343,71 @@
   }
 
   function selectStudent(code) {
-    selectedStudent = code;
+    expandedStudent = code;
     selectedGoalAreaFilter = 'All';
     selectedDetailTab = 'goals';
     editingGoalId = null;
     renderStudentList();
-    renderStudentDetail();
   }
 
   async function handleArchiveStudent() {
-    if (!selectedStudent) return;
+    if (!expandedStudent) return;
     
-    if (!confirm(`Archive student ${selectedStudent}? This will hide them from the active list.`)) {
+    if (!confirm(`Archive student ${expandedStudent}? This will hide them from the active list.`)) {
       return;
     }
 
     try {
-      await db.upsertStudent({ code: selectedStudent, status: 'archived' });
-      console.log('[tc-students] Archived student:', selectedStudent);
+      await db.upsertStudent({ code: expandedStudent, status: 'archived', active: false });
+      console.log('[tc-students] Archived student:', expandedStudent);
       await loadData();
-      selectedStudent = null;
-      renderStudentDetail();
+      expandedStudent = null;
+      renderStudentList();
     } catch (error) {
       console.error('[tc-students] Error archiving student:', error);
       alert('Failed to archive student');
+    }
+  }
+
+  async function handleReactivateStudent() {
+    if (!expandedStudent) return;
+    
+    if (!confirm(`Reactivate student ${expandedStudent}? They will reappear in the active list.`)) {
+      return;
+    }
+
+    try {
+      await db.upsertStudent({ code: expandedStudent, status: 'active', active: true });
+      console.log('[tc-students] Reactivated student:', expandedStudent);
+      await loadData();
+      renderExpandedDetail(expandedStudent);
+    } catch (error) {
+      console.error('[tc-students] Error reactivating student:', error);
+      alert('Failed to reactivate student');
+    }
+  }
+
+  async function handleSaveStudentInfo() {
+    if (!expandedStudent) return;
+
+    const caseManager = document.getElementById('edit-case-manager')?.value;
+    const iepDue = document.getElementById('edit-iep-due')?.value;
+    const evalDue = document.getElementById('edit-eval-due')?.value;
+
+    try {
+      await db.upsertStudent({
+        code: expandedStudent,
+        primary_case_manager: caseManager,
+        iep_due: iepDue || null,
+        eval_due: evalDue || null
+      });
+      console.log('[tc-students] Updated student info:', expandedStudent);
+      showToast('Student information saved successfully');
+      await loadData();
+      renderExpandedDetail(expandedStudent);
+    } catch (error) {
+      console.error('[tc-students] Error saving student info:', error);
+      alert('Failed to save student information');
     }
   }
 
@@ -1082,7 +1415,7 @@
     const goal = allGoals.find(g => g.id === goalId);
     if (!goal) return;
 
-    if (!confirm(`Archive goal "${goal.goal_code}"?`)) {
+    if (!confirm(`Archive goal "${goal.code || goal.goal_code}"?`)) {
       return;
     }
 
@@ -1090,7 +1423,9 @@
       await db.upsertGoal({ id: goalId, status: 'archived' });
       console.log('[tc-students] Archived goal:', goalId);
       await loadData();
-      renderStudentDetail();
+      if (expandedStudent) {
+        renderExpandedDetail(expandedStudent);
+      }
     } catch (error) {
       console.error('[tc-students] Error archiving goal:', error);
       alert('Failed to archive goal');
@@ -1101,7 +1436,7 @@
     const goal = allGoals.find(g => g.id === goalId);
     if (!goal) return;
 
-    if (!confirm(`Create a new version of goal "${goal.goal_code}"? The current goal will be archived.`)) {
+    if (!confirm(`Create a new version of goal "${goal.code || goal.goal_code}"? The current goal will be archived.`)) {
       return;
     }
 
@@ -1116,7 +1451,9 @@
       await db.upsertGoal(newGoal);
       console.log('[tc-students] Created new version of goal');
       await loadData();
-      renderStudentDetail();
+      if (expandedStudent) {
+        renderExpandedDetail(expandedStudent);
+      }
     } catch (error) {
       console.error('[tc-students] Error versioning goal:', error);
       alert('Failed to create new version');
@@ -1125,7 +1462,7 @@
 
   // Modals
   function showManageEnrollmentsModal() {
-    const student = allStudents.find(s => s.code === selectedStudent);
+    const student = allStudents.find(s => s.code === expandedStudent);
     if (!student) return;
 
     const enrollments = allEnrollments.filter(e => e.student_code === student.code);
@@ -1207,7 +1544,9 @@
 
       console.log('[tc-students] Updated enrollments');
       await loadData();
-      renderStudentDetail();
+      if (expandedStudent) {
+        renderExpandedDetail(expandedStudent);
+      }
     } catch (error) {
       console.error('[tc-students] Error saving enrollments:', error);
       alert('Failed to save enrollments');
@@ -1215,7 +1554,7 @@
   }
 
   function showAddGoalModal() {
-    const student = allStudents.find(s => s.code === selectedStudent);
+    const student = allStudents.find(s => s.code === expandedStudent);
     if (!student) return;
 
     const modal = createModal('Add IEP Goal', `
@@ -1297,7 +1636,7 @@
   async function handleAddGoal(form) {
     const formData = new FormData(form);
     const goal = {
-      student_code: selectedStudent,
+      student_code: expandedStudent,
       goal_area: formData.get('goal_area'),
       code: formData.get('goal_code'), // Form field is 'goal_code' but DB field is 'code'
       goal_text: formData.get('goal_text'),
@@ -1316,7 +1655,9 @@
       await db.upsertGoal(goal);
       console.log('[tc-students] Added goal');
       await loadData();
-      renderStudentDetail();
+      if (expandedStudent) {
+        renderExpandedDetail(expandedStudent);
+      }
     } catch (error) {
       console.error('[tc-students] Error adding goal:', error);
       alert('Failed to add goal');
@@ -1437,7 +1778,9 @@
       await db.upsertGoal(updates);
       console.log('[tc-students] Updated goal');
       await loadData();
-      renderStudentDetail();
+      if (expandedStudent) {
+        renderExpandedDetail(expandedStudent);
+      }
     } catch (error) {
       console.error('[tc-students] Error updating goal:', error);
       alert('Failed to update goal');
@@ -1445,7 +1788,7 @@
   }
 
   function showResetPasswordModal() {
-    const student = allStudents.find(s => s.code === selectedStudent);
+    const student = allStudents.find(s => s.code === expandedStudent);
     if (!student) return;
 
     const modal = createModal('Reset Password', `
@@ -1479,7 +1822,7 @@
     const password = formData.get('password');
 
     try {
-      await db.upsertStudent({ code: selectedStudent, password_hash: password });
+      await db.upsertStudent({ code: expandedStudent, password_hash: password });
       console.log('[tc-students] Reset password');
       alert('Password reset successfully');
     } catch (error) {
@@ -1866,7 +2209,8 @@
   function init() {
     console.log('[tc-students] Initializing...');
     
-    renderClassFilters();
+    renderQuarterBar();
+    renderClassFilterOptions();
     setupEventHandlers();
     loadData();
   }
