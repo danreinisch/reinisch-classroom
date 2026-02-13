@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unit 2: Keeping the Job (Job Retention)</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #333;
+        }
+        .nav-bar {
+            width: 100%;
+            background: rgba(0,0,0,0.3);
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: fixed;
+            top: 0;
+            z-index: 100;
+        }
+        .back-btn {
+            background: linear-gradient(145deg, #e74c3c, #c0392b);
+            color: white;
+            padding: 8px 18px;
+            border: none;
+            border-radius: 20px;
+            font-size: 0.9em;
+            cursor: pointer;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .back-btn:hover { opacity: 0.9; }
+        .page-indicator {
+            color: white;
+            font-size: 0.85em;
+            background: rgba(255,255,255,0.15);
+            padding: 6px 16px;
+            border-radius: 15px;
+            text-align: center;
+            max-width: 350px;
+        }
+        .nav-buttons { display: flex; gap: 10px; }
+        .nav-btn {
+            background: linear-gradient(145deg, #3498db, #2980b9);
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: bold;
+        }
+        .nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .nav-btn:hover:not(:disabled) { opacity: 0.9; }
+        .day-menu {
+            width: 100%;
+            background: rgba(0,0,0,0.2);
+            padding: 8px 20px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            position: fixed;
+            top: 48px;
+            z-index: 99;
+            flex-wrap: wrap;
+        }
+        .day-jump {
+            background: rgba(255,255,255,0.15);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            padding: 5px 14px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        .day-jump:hover { background: rgba(255,255,255,0.3); }
+        .day-jump.active-day { background: #3498db; border-color: #3498db; }
+        .slide-container {
+            margin-top: 100px;
+            width: 95%;
+            max-width: 950px;
+            padding: 20px;
+        }
+        .page { display: none; }
+        .page.active { display: block; }
+        .slide {
+            background: rgba(255,255,255,0.95);
+            border-radius: 20px;
+            padding: 40px;
+            min-height: 500px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        .slide-title {
+            font-size: 2em;
+            color: #0f3460;
+            text-align: center;
+            margin-bottom: 25px;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 15px;
+        }
+        .slide p, .slide li { font-size: 1.2em; line-height: 1.8; color: #2c3e50; margin-bottom: 12px; }
+        .slide ul { padding-left: 25px; }
+        .slide li { margin-bottom: 10px; }
+        .highlight-box { background: #e8f4fd; border-left: 5px solid #3498db; padding: 20px; border-radius: 0 12px 12px 0; margin: 20px 0; }
+        .warning-box { background: #fdf2e9; border-left: 5px solid #e67e22; padding: 20px; border-radius: 0 12px 12px 0; margin: 20px 0; }
+        .success-box { background: #eafaf1; border-left: 5px solid #27ae60; padding: 20px; border-radius: 0 12px 12px 0; margin: 20px 0; }
+        .example-box { background: #f4ecf7; border-left: 5px solid #8e44ad; padding: 20px; border-radius: 0 12px 12px 0; margin: 20px 0; }
+        .danger-box { background: #fdedec; border-left: 5px solid #e74c3c; padding: 20px; border-radius: 0 12px 12px 0; margin: 20px 0; }
+        .do-dont { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0; }
+        .do-column { background: #eafaf1; border: 2px solid #27ae60; border-radius: 12px; padding: 20px; }
+        .dont-column { background: #fdedec; border: 2px solid #e74c3c; border-radius: 12px; padding: 20px; }
+        .do-column h3 { color: #27ae60; margin-bottom: 10px; }
+        .dont-column h3 { color: #e74c3c; margin-bottom: 10px; }
+        .emoji-big { font-size: 1.5em; }
+        .scenario { background: #fff3cd; border: 2px solid #ffc107; border-radius: 12px; padding: 20px; margin: 15px 0; }
+        .scenario-label { font-weight: bold; color: #856404; font-size: 1.1em; margin-bottom: 8px; }
+        .title-slide { display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; min-height: 500px; }
+        .title-slide h1 { font-size: 2.5em; color: #0f3460; margin-bottom: 15px; }
+        .title-slide p { font-size: 1.3em; color: #555; }
+        .title-slide .emoji-hero { font-size: 4em; margin-bottom: 20px; }
+        .title-slide .day-label {
+            background: #3498db;
+            color: white;
+            padding: 8px 25px;
+            border-radius: 25px;
+            font-size: 1em;
+            margin-bottom: 15px;
+            display: inline-block;
+        }
+        .step-card {
+            background: white;
+            border: 2px solid #3498db;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 12px 0;
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+        }
+        .step-number {
+            background: #3498db;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2em;
+            flex-shrink: 0;
+        }
+        .comparison-table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 1.1em; }
+        .comparison-table th, .comparison-table td { padding: 15px; text-align: left; border: 2px solid #ddd; }
+        .comparison-table th { background: #0f3460; color: white; font-size: 1.15em; }
+        .comparison-table tr:nth-child(even) { background: #f2f2f2; }
+
+        .reason-card {
+            background: white;
+            border: 2px solid #e74c3c;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 12px 0;
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+        }
+        .reason-number {
+            background: #e74c3c;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2em;
+            flex-shrink: 0;
+        }
+        .fix-tag {
+            display: inline-block;
+            background: #27ae60;
+            color: white;
+            padding: 3px 10px;
+            border-radius: 10px;
+            font-size: 0.85em;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+        @media print {
+            body { background: white; }
+            .nav-bar, .day-menu { display: none; }
+            .slide-container { margin-top: 0; }
+            .page { display: block !important; page-break-after: always; }
+            .slide { box-shadow: none; border: 1px solid #ccc; }
+        }
+    </style>
+</head>
+<body>
+    <div class="nav-bar">
+        <a href="https://reinischclassroom.com/life-skills/" class="back-btn">← Back to Life Skills</a>
+        <div class="page-indicator" id="pageIndicator">Page 1 of 33</div>
+        <div class="nav-buttons">
+            <button class="nav-btn" id="prevBtn" onclick="prevPage()">◀ Back</button>
+            <button class="nav-btn" id="nextBtn" onclick="nextPage()">Next ▶</button>
+        </div>
+    </div>
+
+    <div class="day-menu">
+        <button class="day-jump active-day" onclick="jumpTo(1)">Unit Title</button>
+        <button class="day-jump" onclick="jumpTo(2)">Day 1: Attendance</button>
+        <button class="day-jump" onclick="jumpTo(10)">Day 2: Feedback</button>
+        <button class="day-jump" onclick="jumpTo(18)">Day 3: Attitude</button>
+        <button class="day-jump" onclick="jumpTo(26)">Day 4: Getting Fired</button>
+    </div>
+
+    <div class="slide-container">
+
+        <!-- ============================================================ -->
+        <!-- PAGE 1: UNIT TITLE SLIDE -->
+        <!-- ============================================================ -->
+        <div class="page active" id="page1">
+            <div class="slide title-slide">
+                <div class="emoji-hero">💼✅📋🔑</div>
+                <h1>Keeping the Job</h1>
+                <p style="font-size:1.1em; color:#7f8c8d; margin-bottom: 25px;">Unit 2 &bull; Job Retention &bull; 4 Days</p>
+                <div style="text-align:left; max-width:550px;">
+                    <p><strong>Day 1:</strong> Attendance & Punctuality</p>
+                    <p><strong>Day 2:</strong> Accepting Feedback & Correction</p>
+                    <p><strong>Day 3:</strong> Workplace Attitude & Initiative</p>
+                    <p><strong>Day 4:</strong> Common Reasons People Get Fired</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- DAY 1: ATTENDANCE & PUNCTUALITY (Pages 2–9) -->
+        <!-- ============================================================ -->
+        <div class="page" id="page2">
+            <div class="slide title-slide">
+                <div class="day-label">Day 1</div>
+                <div class="emoji-hero">⏰📅</div>
+                <h1>Attendance & Punctuality</h1>
+                <p>Showing up — on time, every time</p>
+            </div>
+        </div>
+
+        <div class="page" id="page3">
+            <div class="slide">
+                <h2 class="slide-title">What Do These Words Mean?</h2>
+                <div class="highlight-box">
+                    <p><span class="emoji-big">📅</span> <strong>Attendance</strong> = Showing up to work when you're scheduled.</p>
+                </div>
+                <div class="highlight-box">
+                    <p><span class="emoji-big">⏰</span> <strong>Punctuality</strong> = Being on time. Not early, not late — ON TIME (or a few minutes early).</p>
+                </div>
+                <div class="highlight-box">
+                    <p><span class="emoji-big">🤝</span> <strong>Reliable</strong> = Your boss can count on you. When you say you'll be there, you're there.</p>
+                </div>
+                <p>These are three of the <strong>most important things</strong> any employer looks for. You could be the best worker in the world, but if you don't show up, it doesn't matter.</p>
+                <div class="success-box">
+                    <p><span class="emoji-big">💡</span> <strong>Think of it this way:</strong> If your friend said "I'll pick you up at 5:00" and they never showed up, would you trust them next time? That's how your boss feels when you don't come to work.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page4">
+            <div class="slide">
+                <h2 class="slide-title">Why Attendance Matters So Much</h2>
+                <p>When you don't come to work, it affects a lot of people — not just you.</p>
+                <div class="warning-box">
+                    <p><strong>When you miss work:</strong></p>
+                    <ul>
+                        <li>Someone else has to do YOUR job on top of theirs</li>
+                        <li>Your boss has to scramble to find a replacement</li>
+                        <li>Customers might not get helped</li>
+                        <li>Your coworkers get frustrated</li>
+                        <li>You lose money (no work = no pay)</li>
+                    </ul>
+                </div>
+                <div class="danger-box">
+                    <p><span class="emoji-big">🚨</span> <strong>Missing work too much is the #1 reason people get fired.</strong> Even if you're good at your job, too many absences will cost you.</p>
+                </div>
+                <div class="success-box">
+                    <p><span class="emoji-big">⭐</span> <strong>Good attendance shows your boss three things:</strong></p>
+                    <ul>
+                        <li>You care about your job</li>
+                        <li>You can be trusted</li>
+                        <li>You respect other people's time</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page5">
+            <div class="slide">
+                <h2 class="slide-title">Being On Time (Punctuality)</h2>
+                <p>"On time" at work does NOT mean walking in the door at your start time. It means being <strong>ready to work</strong> at your start time.</p>
+                <div class="highlight-box">
+                    <p><strong>What "on time" really looks like:</strong></p>
+                    <ul>
+                        <li>Your shift starts at 9:00 AM</li>
+                        <li>You arrive at 8:50 AM</li>
+                        <li>You put your stuff away, clock in, and are ready to go at 9:00</li>
+                    </ul>
+                </div>
+                <div class="warning-box">
+                    <p><strong>What "late" looks like:</strong></p>
+                    <ul>
+                        <li>Your shift starts at 9:00 AM</li>
+                        <li>You walk in at 9:00 AM</li>
+                        <li>You still need to put your stuff away, get your apron, clock in...</li>
+                        <li>You don't actually start working until 9:10 or 9:15</li>
+                    </ul>
+                </div>
+                <div class="example-box">
+                    <p><span class="emoji-big">💡</span> <strong>A good rule:</strong> Plan to arrive 10–15 minutes before your shift. That gives you time to get settled and be truly ready at your start time.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page6">
+            <div class="slide">
+                <h2 class="slide-title">What Happens When You're Late Too Much</h2>
+                <p>Being late once because of traffic or an emergency? That happens to everyone. But being late over and over is a big problem.</p>
+                <div class="danger-box">
+                    <p><strong>What usually happens:</strong></p>
+                    <div class="step-card"><div class="step-number">1</div><div><strong>Verbal warning</strong> — Your boss talks to you about it. "Hey, you've been late three times this week. What's going on?"</div></div>
+                    <div class="step-card"><div class="step-number">2</div><div><strong>Written warning</strong> — It goes on your record. This is serious.</div></div>
+                    <div class="step-card"><div class="step-number">3</div><div><strong>Final warning or suspension</strong> — One more time and you could lose your job.</div></div>
+                    <div class="step-card"><div class="step-number">4</div><div><strong>Termination (fired)</strong> — You lose your job.</div></div>
+                </div>
+                <div class="success-box">
+                    <p><span class="emoji-big">💡</span> <strong>Some things that help you be on time:</strong></p>
+                    <ul>
+                        <li>Set an alarm (or two!) on your phone</li>
+                        <li>Pick out your clothes the night before</li>
+                        <li>Know how long it takes to get to work — and add extra time</li>
+                        <li>Have a backup ride plan (bus, another person, ride-share)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page7">
+            <div class="slide">
+                <h2 class="slide-title">How to Call In Sick the Right Way</h2>
+                <p>Everyone gets sick. That's life. But HOW you handle it matters a lot.</p>
+                <div class="highlight-box">
+                    <p><strong>The Right Way to Call In:</strong></p>
+                    <div class="step-card"><div class="step-number">1</div><div><strong>Call or text as early as possible</strong> — don't wait until your shift already started.</div></div>
+                    <div class="step-card"><div class="step-number">2</div><div><strong>Say who you are.</strong> Don't assume they know your number.</div></div>
+                    <div class="step-card"><div class="step-number">3</div><div><strong>Be short and clear.</strong> You don't need to give a long story.</div></div>
+                    <div class="step-card"><div class="step-number">4</div><div><strong>Apologize for the inconvenience.</strong></div></div>
+                </div>
+                <div class="example-box">
+                    <p><strong>🔹 Good Example:</strong></p>
+                    <p><em>"Hi Mr. Thompson, this is Jake. I woke up feeling really sick today and I'm not going to be able to come in. I'm sorry for the short notice."</em></p>
+                </div>
+                <div class="warning-box">
+                    <p><strong>🔹 Bad Examples:</strong></p>
+                    <ul>
+                        <li>"I can't come in." (no name, no reason, no apology)</li>
+                        <li>Just not showing up and never calling</li>
+                        <li>Texting "sick lol" with no other info</li>
+                        <li>Calling in sick and then posting on social media that you went to the lake</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page8">
+            <div class="slide">
+                <h2 class="slide-title">Being Reliable</h2>
+                <p><strong>Reliable</strong> means people can count on you. When you say you'll be there, you're there. When you say you'll do something, you do it.</p>
+                <div class="do-dont">
+                    <div class="do-column">
+                        <h3>✅ A Reliable Worker:</h3>
+                        <ul>
+                            <li>Shows up every day they're scheduled</li>
+                            <li>Arrives on time or early</li>
+                            <li>Calls in ahead of time if they truly can't make it</li>
+                            <li>Doesn't make up excuses</li>
+                            <li>Finishes tasks they start</li>
+                            <li>Doesn't leave early without permission</li>
+                        </ul>
+                    </div>
+                    <div class="dont-column">
+                        <h3>❌ An Unreliable Worker:</h3>
+                        <ul>
+                            <li>Calls in "sick" often (but isn't really sick)</li>
+                            <li>Is always 5–10 minutes late</li>
+                            <li>No-shows without calling</li>
+                            <li>Leaves early all the time</li>
+                            <li>Always has an excuse</li>
+                            <li>Tries to get out of shifts constantly</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="success-box">
+                    <p><span class="emoji-big">⭐</span> <strong>Being reliable is one of the easiest ways to stand out at work.</strong> A lot of people aren't reliable. If YOU are, your boss will notice — and remember it when it's time for raises or promotions.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page9">
+            <div class="slide">
+                <h2 class="slide-title">Day 1 Review: Attendance & Punctuality</h2>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #1:</div>
+                    <p>Your shift starts at 10:00 AM. What time should you plan to arrive?</p>
+                    <p><strong>Answer:</strong> 9:45–9:50 AM. Give yourself time to put your stuff away and be READY to work at 10:00.</p>
+                </div>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #2:</div>
+                    <p>You wake up with a fever and can't go to work. Your shift starts in 2 hours. What do you do?</p>
+                    <p><strong>Answer:</strong> Call or text your boss right away. Say who you are, that you're sick, and apologize.</p>
+                </div>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #3:</div>
+                    <p>Your coworker asks you to switch shifts, but you already told your boss you'd work that day. What should you do?</p>
+                    <p><strong>Answer:</strong> Check with your boss first before agreeing. Don't just switch without permission.</p>
+                </div>
+                <div class="success-box">
+                    <p style="text-align: center; font-size: 1.2em;"><strong>✅ End of Day 1! Next up: Accepting Feedback & Correction</strong></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- DAY 2: ACCEPTING FEEDBACK & CORRECTION (Pages 10–17) -->
+        <!-- ============================================================ -->
+        <div class="page" id="page10">
+            <div class="slide title-slide">
+                <div class="day-label">Day 2</div>
+                <div class="emoji-hero">📝👂</div>
+                <h1>Accepting Feedback & Correction</h1>
+                <p>How to handle it when your boss tells you to do something differently</p>
+            </div>
+        </div>
+
+        <div class="page" id="page11">
+            <div class="slide">
+                <h2 class="slide-title">What Is Feedback?</h2>
+                <p><strong>Feedback</strong> is when someone — usually your boss — tells you how you're doing at your job. It can be good or it can be about things you need to fix.</p>
+                <div class="highlight-box">
+                    <p><span class="emoji-big">👍</span> <strong>Positive feedback</strong> = telling you what you're doing well.</p>
+                    <p><em>"Great job on those shelves today. They look really organized."</em></p>
+                </div>
+                <div class="highlight-box">
+                    <p><span class="emoji-big">📝</span> <strong>Constructive feedback</strong> = telling you what needs to change or improve.</p>
+                    <p><em>"You need to make sure you're sweeping under the tables, not just around them."</em></p>
+                </div>
+                <div class="success-box">
+                    <p><span class="emoji-big">💡</span> <strong>Key point:</strong> Constructive feedback is NOT the same as getting yelled at. It's NOT the same as being in trouble. It's your boss trying to help you do better.</p>
+                </div>
+                <p><strong>Everyone</strong> gets feedback — even your boss gets feedback from THEIR boss. It's a normal part of every job.</p>
+            </div>
+        </div>
+
+        <div class="page" id="page12">
+            <div class="slide">
+                <h2 class="slide-title">Why Feedback Feels Hard Sometimes</h2>
+                <p>Let's be honest — hearing that you did something wrong doesn't feel great. That's normal. But how you REACT to it is what matters.</p>
+                <div class="warning-box">
+                    <p><strong>Why feedback can feel bad:</strong></p>
+                    <ul>
+                        <li>It can feel like a personal attack (but it's not)</li>
+                        <li>It can feel embarrassing, especially in front of others</li>
+                        <li>You might think it means you're bad at your job (it doesn't)</li>
+                        <li>You might feel defensive — "But I was trying!"</li>
+                    </ul>
+                </div>
+                <div class="success-box">
+                    <p><span class="emoji-big">🔑</span> <strong>The truth is:</strong> Your boss gives you feedback because they want you to KEEP your job and do well. If they didn't care, they wouldn't bother telling you — they'd just fire you.</p>
+                </div>
+                <div class="highlight-box">
+                    <p><strong>Think of it like a coach:</strong> A basketball coach doesn't yell "move your feet!" because they hate you. They say it because they want you to play better. Your boss is the same way.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page13">
+            <div class="slide">
+                <h2 class="slide-title">How to Accept Feedback the Right Way</h2>
+                <div class="step-card"><div class="step-number">1</div><div><strong>Stop and listen.</strong> Don't interrupt. Let your boss finish talking.</div></div>
+                <div class="step-card"><div class="step-number">2</div><div><strong>Stay calm.</strong> Take a breath. Don't cross your arms or roll your eyes.</div></div>
+                <div class="step-card"><div class="step-number">3</div><div><strong>Don't make excuses.</strong> Even if you have a reason, just listen first.</div></div>
+                <div class="step-card"><div class="step-number">4</div><div><strong>Say something positive.</strong> <em>"Okay, I understand. I'll work on that."</em> or <em>"Thanks for letting me know."</em></div></div>
+                <div class="step-card"><div class="step-number">5</div><div><strong>Ask questions if you're confused.</strong> <em>"Can you show me how you'd like me to do it?"</em></div></div>
+                <div class="step-card"><div class="step-number">6</div><div><strong>Actually make the change.</strong> Show your boss you listened by doing it differently next time.</div></div>
+                <div class="success-box">
+                    <p><span class="emoji-big">⭐</span> <strong>The magic phrase:</strong> <em>"Okay, I'll work on that. Thanks for telling me."</em> — This works in almost every feedback situation.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page14">
+            <div class="slide">
+                <h2 class="slide-title">Good Reactions vs. Bad Reactions</h2>
+                <p>Your boss says: <em>"You need to stop being on your phone during your shift."</em></p>
+                <div class="do-dont">
+                    <div class="do-column">
+                        <h3>✅ Good Reactions:</h3>
+                        <ul>
+                            <li>"You're right. I'll put it in my locker. Sorry about that."</li>
+                            <li>"Okay, I didn't realize it was a problem. I'll stop."</li>
+                            <li>"My bad. I'll keep it put away from now on."</li>
+                        </ul>
+                    </div>
+                    <div class="dont-column">
+                        <h3>❌ Bad Reactions:</h3>
+                        <ul>
+                            <li>"Everyone else is on their phone too!"</li>
+                            <li>"I was only checking the time!"</li>
+                            <li>Rolling your eyes and walking away</li>
+                            <li>"Whatever." or "Fine."</li>
+                            <li>Getting angry or arguing</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="warning-box">
+                    <p><span class="emoji-big">⚠️</span> <strong>Even if you think the feedback is unfair,</strong> arguing about it in the moment makes things worse. Accept it calmly, and if you really think it's wrong, talk to your boss privately later when you've both cooled down.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page15">
+            <div class="slide">
+                <h2 class="slide-title">Don't Take It Personally</h2>
+                <p>This is one of the hardest parts of working — but one of the most important skills you can learn.</p>
+                <div class="highlight-box">
+                    <p><strong>"Taking it personally" means</strong> you think the feedback is about YOU as a person, instead of about what you DID.</p>
+                </div>
+                <table class="comparison-table">
+                    <tr><th>What Your Boss Says</th><th>What It Does NOT Mean</th><th>What It DOES Mean</th></tr>
+                    <tr><td>"You need to be faster."</td><td>"You're stupid and slow."</td><td>"I need you to pick up the pace a little."</td></tr>
+                    <tr><td>"This wasn't done right."</td><td>"You're terrible at your job."</td><td>"Let me show you the correct way."</td></tr>
+                    <tr><td>"Don't do it that way."</td><td>"I don't like you."</td><td>"There's a better way, let me explain."</td></tr>
+                    <tr><td>"You've been late a lot."</td><td>"You're a bad person."</td><td>"I need you to fix your schedule."</td></tr>
+                </table>
+                <div class="success-box">
+                    <p><span class="emoji-big">💡</span> <strong>Feedback is about what you DID, not who you ARE.</strong> You can always change what you do. That's the whole point.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page16">
+            <div class="slide">
+                <h2 class="slide-title">What If You Disagree with the Feedback?</h2>
+                <p>Sometimes you might think the feedback isn't fair. Maybe you were doing it the way someone else showed you. Maybe there's a misunderstanding.</p>
+                <div class="highlight-box">
+                    <p><strong>How to handle it:</strong></p>
+                    <div class="step-card"><div class="step-number">1</div><div><strong>Accept it in the moment.</strong> Don't argue or get defensive right away.</div></div>
+                    <div class="step-card"><div class="step-number">2</div><div><strong>Wait until you've calmed down.</strong> Give it at least a few minutes (or hours).</div></div>
+                    <div class="step-card"><div class="step-number">3</div><div><strong>Ask to talk privately.</strong> <em>"Hey, can I talk to you about what you mentioned earlier?"</em></div></div>
+                    <div class="step-card"><div class="step-number">4</div><div><strong>Explain your side calmly.</strong> <em>"I just wanted you to know that Marcus showed me to do it that way. I want to make sure I'm doing it the way you prefer."</em></div></div>
+                </div>
+                <div class="warning-box">
+                    <p><span class="emoji-big">⚠️</span> Even if you explain your side, your boss has the final say. If they want it done a certain way, do it their way.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page17">
+            <div class="slide">
+                <h2 class="slide-title">Day 2 Review: Accepting Feedback</h2>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #1:</div>
+                    <p>Your boss says "You missed a spot when you were mopping." What's a good response?</p>
+                    <p><strong>Answer:</strong> <em>"Oh, okay! I'll go back and get it. Thanks for pointing it out."</em></p>
+                </div>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #2:</div>
+                    <p>Your boss corrects you in front of a coworker and you feel embarrassed. What should you do?</p>
+                    <p><strong>Answer:</strong> Stay calm, say "Okay, I'll fix that." Don't make a scene. If it really bothers you, talk to your boss privately later.</p>
+                </div>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #3:</div>
+                    <p>Your boss says you've been moving too slowly. You think you're working hard. How do you handle it?</p>
+                    <p><strong>Answer:</strong> Accept it and try to work faster. Later, if needed, you could say: <em>"I'm really trying to do a good job. Can you show me what 'faster' looks like so I know what to aim for?"</em></p>
+                </div>
+                <div class="success-box">
+                    <p style="text-align: center; font-size: 1.2em;"><strong>✅ End of Day 2! Next up: Workplace Attitude & Initiative</strong></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- DAY 3: WORKPLACE ATTITUDE & INITIATIVE (Pages 18–25) -->
+        <!-- ============================================================ -->
+        <div class="page" id="page18">
+            <div class="slide title-slide">
+                <div class="day-label">Day 3</div>
+                <div class="emoji-hero">💪😀</div>
+                <h1>Workplace Attitude & Initiative</h1>
+                <p>How your attitude affects your job — and what "initiative" means</p>
+            </div>
+        </div>
+
+        <div class="page" id="page19">
+            <div class="slide">
+                <h2 class="slide-title">What Is "Attitude" at Work?</h2>
+                <p>Your <strong>attitude</strong> is how you act, how you talk, and how you come across to other people. At work, your attitude matters just as much as your skills.</p>
+                <div class="do-dont">
+                    <div class="do-column">
+                        <h3>😀 Positive Attitude:</h3>
+                        <ul>
+                            <li>Saying "yes" when asked to do something</li>
+                            <li>Being friendly to coworkers and customers</li>
+                            <li>Doing your work without complaining</li>
+                            <li>Looking for ways to help</li>
+                            <li>Staying calm when things get stressful</li>
+                        </ul>
+                    </div>
+                    <div class="dont-column">
+                        <h3>😤 Negative Attitude:</h3>
+                        <ul>
+                            <li>Complaining about tasks</li>
+                            <li>Rolling your eyes or sighing</li>
+                            <li>Saying "that's not my job"</li>
+                            <li>Being rude or short with people</li>
+                            <li>Doing the bare minimum and nothing else</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="danger-box">
+                    <p><span class="emoji-big">🚨</span> <strong>A bad attitude can get you fired — even if you do your job correctly.</strong> Nobody wants to work with someone who complains all the time or makes everyone feel uncomfortable.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page20">
+            <div class="slide">
+                <h2 class="slide-title">What Is "Initiative"?</h2>
+                <p><strong>Initiative</strong> means doing things without being told. It means you see something that needs to be done, and you just do it.</p>
+                <div class="example-box">
+                    <p><strong>🔹 Examples of initiative:</strong></p>
+                    <ul>
+                        <li>The trash is full — you take it out without being asked</li>
+                        <li>You finished your task — you ask your boss "What else can I do?"</li>
+                        <li>You see a spill — you grab the mop and clean it up</li>
+                        <li>A customer looks confused — you walk up and offer to help</li>
+                        <li>The shelves look messy — you straighten them up</li>
+                    </ul>
+                </div>
+                <div class="success-box">
+                    <p><span class="emoji-big">⭐</span> <strong>Workers who show initiative get noticed.</strong> Your boss will think: "This person doesn't just do what I tell them — they actually look for ways to help." That leads to better hours, raises, and promotions.</p>
+                </div>
+                <div class="warning-box">
+                    <p><span class="emoji-big">⚠️</span> <strong>The opposite of initiative:</strong> Standing around waiting to be told what to do. If you run out of work, DON'T just stand there — ask: <em>"What else can I help with?"</em></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page21">
+            <div class="slide">
+                <h2 class="slide-title">Stay Off Your Phone</h2>
+                <p>This is a big one. Using your personal phone during your shift is one of the fastest ways to get in trouble at work.</p>
+                <div class="danger-box">
+                    <p><strong>Why phones are a problem at work:</strong></p>
+                    <ul>
+                        <li>You look like you're not working (even if you "were just checking the time")</li>
+                        <li>Customers see you on your phone and think you don't care</li>
+                        <li>You miss things that need to be done</li>
+                        <li>Your boss will lose trust in you</li>
+                    </ul>
+                </div>
+                <div class="highlight-box">
+                    <p><strong>Good phone habits at work:</strong></p>
+                    <ul>
+                        <li>Put your phone in your locker, pocket, or bag — on silent</li>
+                        <li>Only check it during your break</li>
+                        <li>If you're expecting an important call (doctor, family emergency), tell your boss ahead of time</li>
+                        <li>Never take selfies, scroll TikTok, or text while you're on the clock</li>
+                    </ul>
+                </div>
+                <div class="example-box">
+                    <p><strong>🔹 If you need your phone for an emergency:</strong></p>
+                    <p><em>"Hey Mrs. Davis, I'm waiting for a call from my doctor today. If my phone rings, can I step away for a minute to answer it?"</em></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page22">
+            <div class="slide">
+                <h2 class="slide-title">Looking for Things to Do</h2>
+                <p>One of the biggest differences between a GOOD worker and an AVERAGE worker is what they do when their main task is done.</p>
+                <div class="comparison-table">
+                    <table class="comparison-table">
+                        <tr><th>Average Worker</th><th>Great Worker</th></tr>
+                        <tr><td>Finishes their task and stands around</td><td>Finishes their task and asks "What else can I do?"</td></tr>
+                        <tr><td>Waits to be told what to do</td><td>Looks around and finds something to do</td></tr>
+                        <tr><td>Does only what's assigned</td><td>Does what's assigned PLUS anything else they notice</td></tr>
+                        <tr><td>Checks their phone when it's slow</td><td>Cleans, organizes, or restocks when it's slow</td></tr>
+                    </table>
+                </div>
+                <div class="success-box">
+                    <p><strong>Things you can ALWAYS do when you have nothing to do:</strong></p>
+                    <ul>
+                        <li>Clean something</li>
+                        <li>Organize or restock</li>
+                        <li>Ask your boss or coworkers if they need help</li>
+                        <li>Wipe down counters, sweep, take out trash</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page23">
+            <div class="slide">
+                <h2 class="slide-title">Body Language Matters Too</h2>
+                <p>Your <strong>body language</strong> is what you "say" without using words. People can tell your attitude by how you stand, look, and move.</p>
+                <div class="do-dont">
+                    <div class="do-column">
+                        <h3>✅ Positive Body Language:</h3>
+                        <ul>
+                            <li>Making eye contact</li>
+                            <li>Standing up straight</li>
+                            <li>Smiling or having a neutral expression</li>
+                            <li>Nodding when someone talks to you</li>
+                            <li>Moving with purpose (looking busy)</li>
+                        </ul>
+                    </div>
+                    <div class="dont-column">
+                        <h3>❌ Negative Body Language:</h3>
+                        <ul>
+                            <li>Rolling your eyes</li>
+                            <li>Crossing your arms</li>
+                            <li>Sighing loudly</li>
+                            <li>Slouching or leaning against the wall</li>
+                            <li>Looking at your phone while someone talks</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="warning-box">
+                    <p><span class="emoji-big">⚠️</span> <strong>You might not even realize you're doing these things.</strong> But your boss and coworkers notice. Try to be aware of how you look and stand at work.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page24">
+            <div class="slide">
+                <h2 class="slide-title">Handling Bad Days</h2>
+                <p>Everyone has bad days. You might be tired, stressed, or dealing with something at home. But you still have to show up and act professional.</p>
+                <div class="highlight-box">
+                    <p><strong>Tips for getting through a bad day at work:</strong></p>
+                    <ul>
+                        <li><strong>Leave your personal problems at the door.</strong> When you walk in, focus on work.</li>
+                        <li><strong>Don't take it out on coworkers or customers.</strong> They didn't cause your bad day.</li>
+                        <li><strong>Take a deep breath.</strong> If you feel frustrated, step away for a second (like going to the bathroom to cool down).</li>
+                        <li><strong>Remember it's temporary.</strong> Your shift will end. Get through it.</li>
+                        <li><strong>If something serious is going on,</strong> it's okay to tell your boss: <em>"I'm having a rough day, but I'm doing my best."</em></li>
+                    </ul>
+                </div>
+                <div class="success-box">
+                    <p><span class="emoji-big">💡</span> <strong>Your boss will respect honesty.</strong> Saying "I'm having a tough day but I'm pushing through" sounds a lot better than just being grumpy to everyone.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page25">
+            <div class="slide">
+                <h2 class="slide-title">Day 3 Review: Attitude & Initiative</h2>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #1:</div>
+                    <p>You finished cleaning your area but there's still an hour left in your shift. What should you do?</p>
+                    <p><strong>Answer:</strong> Look for other things to clean or do. If you can't find anything, ask your boss: <em>"I'm done with my area. What else can I help with?"</em></p>
+                </div>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #2:</div>
+                    <p>Your boss asks you to do a task you don't like (like cleaning the bathroom). What's the right attitude?</p>
+                    <p><strong>Answer:</strong> Say "Okay, I'll get on it" and do it. Don't complain or say "that's not my job." Every job has parts you won't love.</p>
+                </div>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #3:</div>
+                    <p>You see a coworker on their phone while it's busy. Should you tell your boss?</p>
+                    <p><strong>Answer:</strong> Focus on your own work. It's not your job to police coworkers. Your boss will notice on their own.</p>
+                </div>
+                <div class="success-box">
+                    <p style="text-align: center; font-size: 1.2em;"><strong>✅ End of Day 3! Next up: Common Reasons People Get Fired</strong></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- DAY 4: COMMON REASONS PEOPLE GET FIRED (Pages 26–33) -->
+        <!-- ============================================================ -->
+        <div class="page" id="page26">
+            <div class="slide title-slide">
+                <div class="day-label">Day 4</div>
+                <div class="emoji-hero">🚫💼</div>
+                <h1>Common Reasons People Get Fired</h1>
+                <p>What to avoid — and how to protect your job</p>
+            </div>
+        </div>
+
+        <div class="page" id="page27">
+            <div class="slide">
+                <h2 class="slide-title">What Does "Getting Fired" Mean?</h2>
+                <p><strong>Getting fired</strong> (also called <strong>termination</strong>) means your employer ends your job. You don't work there anymore. It's different from quitting, because YOU didn't choose to leave — they told you to go.</p>
+                <div class="danger-box">
+                    <p><strong>What happens when you get fired:</strong></p>
+                    <ul>
+                        <li>You lose your income (paycheck)</li>
+                        <li>You have to find a new job</li>
+                        <li>Future employers might ask why you left your last job</li>
+                        <li>It can be embarrassing and stressful</li>
+                    </ul>
+                </div>
+                <div class="success-box">
+                    <p><span class="emoji-big">💡</span> <strong>The good news:</strong> Most of the reasons people get fired are 100% preventable. If you know what to avoid, you can keep your job for a long time.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page28">
+            <div class="slide">
+                <h2 class="slide-title">Top Reasons People Get Fired (Part 1)</h2>
+                <div class="reason-card">
+                    <div class="reason-number">1</div>
+                    <div>
+                        <strong>Too Many Absences / Being Late Too Much</strong>
+                        <p>This is the #1 reason. If you don't show up, your boss will find someone who does.</p>
+                        <div class="fix-tag">✅ FIX: Be reliable. Show up on time. Call in early if you're truly sick.</div>
+                    </div>
+                </div>
+                <div class="reason-card">
+                    <div class="reason-number">2</div>
+                    <div>
+                        <strong>Bad Attitude</strong>
+                        <p>Complaining, arguing, being rude, or acting like you don't want to be there.</p>
+                        <div class="fix-tag">✅ FIX: Stay positive. Say "okay" instead of arguing. Keep complaints to yourself.</div>
+                    </div>
+                </div>
+                <div class="reason-card">
+                    <div class="reason-number">3</div>
+                    <div>
+                        <strong>Not Doing Your Work</strong>
+                        <p>Standing around, being on your phone, doing the bare minimum, or not finishing tasks.</p>
+                        <div class="fix-tag">✅ FIX: Stay busy. Show initiative. Do your work and then look for more.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page29">
+            <div class="slide">
+                <h2 class="slide-title">Top Reasons People Get Fired (Part 2)</h2>
+                <div class="reason-card">
+                    <div class="reason-number">4</div>
+                    <div>
+                        <strong>Not Following Rules or Instructions</strong>
+                        <p>Every job has rules. If your boss tells you to do something a certain way, do it that way.</p>
+                        <div class="fix-tag">✅ FIX: Listen to instructions. Follow rules even when nobody is watching.</div>
+                    </div>
+                </div>
+                <div class="reason-card">
+                    <div class="reason-number">5</div>
+                    <div>
+                        <strong>Dishonesty (Lying or Stealing)</strong>
+                        <p>This includes lying about being sick, stealing money or products, or lying to a customer.</p>
+                        <div class="fix-tag">✅ FIX: Always be honest. Even small lies can get you fired on the spot.</div>
+                    </div>
+                </div>
+                <div class="reason-card">
+                    <div class="reason-number">6</div>
+                    <div>
+                        <strong>Causing Drama or Fighting</strong>
+                        <p>Gossiping, arguing loudly, threatening people, or creating a hostile environment.</p>
+                        <div class="fix-tag">✅ FIX: Stay out of drama. If there's a problem, talk calmly or go to your boss.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page30">
+            <div class="slide">
+                <h2 class="slide-title">Top Reasons People Get Fired (Part 3)</h2>
+                <div class="reason-card">
+                    <div class="reason-number">7</div>
+                    <div>
+                        <strong>Being on Your Phone Too Much</strong>
+                        <p>Texting, scrolling, watching videos during your shift.</p>
+                        <div class="fix-tag">✅ FIX: Put your phone away. Only use it on break.</div>
+                    </div>
+                </div>
+                <div class="reason-card">
+                    <div class="reason-number">8</div>
+                    <div>
+                        <strong>Being Rude to Customers</strong>
+                        <p>Ignoring customers, being short with them, or arguing back.</p>
+                        <div class="fix-tag">✅ FIX: Treat every customer with respect, even the difficult ones.</div>
+                    </div>
+                </div>
+                <div class="reason-card">
+                    <div class="reason-number">9</div>
+                    <div>
+                        <strong>Refusing to Do Tasks</strong>
+                        <p>Saying "that's not my job" or refusing when your boss asks you to do something.</p>
+                        <div class="fix-tag">✅ FIX: Be flexible. Do what's asked. You can discuss it later if needed.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page31">
+            <div class="slide">
+                <h2 class="slide-title">The Warning System</h2>
+                <p>Most jobs don't fire you for one small mistake. They use a <strong>warning system</strong> to give you chances to fix things.</p>
+                <div class="highlight-box">
+                    <p><strong>How it usually works:</strong></p>
+                    <div class="step-card"><div class="step-number">1</div><div><strong>Verbal Warning</strong> — Your boss talks to you about the problem. Nothing is written down yet, but they're watching.</div></div>
+                    <div class="step-card"><div class="step-number">2</div><div><strong>Written Warning</strong> — You sign a paper that says what happened. This goes in your file. It's official.</div></div>
+                    <div class="step-card"><div class="step-number">3</div><div><strong>Final Warning / Suspension</strong> — You might be sent home without pay for a few days. One more mistake and you're done.</div></div>
+                    <div class="step-card"><div class="step-number">4</div><div><strong>Termination</strong> — You're fired.</div></div>
+                </div>
+                <div class="danger-box">
+                    <p><span class="emoji-big">🚨</span> <strong>Some things get you fired IMMEDIATELY — no warnings:</strong></p>
+                    <ul>
+                        <li>Stealing</li>
+                        <li>Fighting or threatening someone</li>
+                        <li>Coming to work drunk or high</li>
+                        <li>Major dishonesty</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page32">
+            <div class="slide">
+                <h2 class="slide-title">How to Keep Your Job — The Checklist</h2>
+                <p>If you do these things consistently, you will almost certainly keep your job and do well.</p>
+                <div class="success-box">
+                    <p><strong>✅ The Job-Keeping Checklist:</strong></p>
+                    <ul>
+                        <li><strong>Show up every day you're scheduled</strong></li>
+                        <li><strong>Be on time</strong> (arrive 10–15 minutes early)</li>
+                        <li><strong>Keep your phone put away</strong></li>
+                        <li><strong>Have a positive attitude</strong> — say "okay" not "ugh"</li>
+                        <li><strong>Accept feedback without arguing</strong></li>
+                        <li><strong>Show initiative</strong> — look for things to do</li>
+                        <li><strong>Be honest</strong> — always</li>
+                        <li><strong>Treat everyone with respect</strong> — boss, coworkers, and customers</li>
+                        <li><strong>Follow the rules</strong> — even small ones</li>
+                        <li><strong>Stay out of drama</strong></li>
+                    </ul>
+                </div>
+                <div class="highlight-box">
+                    <p style="text-align:center; font-size: 1.2em;"><span class="emoji-big">🔑</span> <strong>None of these require special skills or talent. They just require YOU choosing to show up, try hard, and be respectful.</strong></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page33">
+            <div class="slide">
+                <h2 class="slide-title">Day 4 Review: Common Reasons People Get Fired</h2>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #1:</div>
+                    <p>What is the #1 reason people get fired?</p>
+                    <p><strong>Answer:</strong> Too many absences and being late too much.</p>
+                </div>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #2:</div>
+                    <p>Your boss gives you a written warning for being on your phone. What should you do?</p>
+                    <p><strong>Answer:</strong> Take it seriously. Put your phone away during every shift from now on. Don't argue — just fix it.</p>
+                </div>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #3:</div>
+                    <p>Name 3 things you can do every day to make sure you keep your job.</p>
+                    <p><strong>Answer:</strong> Show up on time, have a good attitude, and stay off your phone. (Other answers from the checklist are also correct!)</p>
+                </div>
+                <div class="success-box">
+                    <p style="text-align: center; font-size: 1.3em;"><strong>🎉 Great job finishing Unit 2: Keeping the Job!</strong></p>
+                    <p style="text-align: center; font-size: 1.1em;">You've learned what it takes to not just GET a job — but to KEEP it.</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        let currentPage = 1;
+        const totalPages = 33;
+        const dayStarts = [1, 2, 10, 18, 26];
+
+        function updateDayMenu(pageNum) {
+            document.querySelectorAll('.day-jump').forEach((btn, idx) => {
+                btn.classList.remove('active-day');
+                let inThisDay = false;
+                if (idx === dayStarts.length - 1) {
+                    inThisDay = pageNum >= dayStarts[idx];
+                } else {
+                    inThisDay = pageNum >= dayStarts[idx] && pageNum < dayStarts[idx + 1];
+                }
+                if (inThisDay) btn.classList.add('active-day');
+            });
+        }
+
+        function showPage(num) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById('page' + num).classList.add('active');
+            document.getElementById('pageIndicator').textContent = 'Page ' + num + ' of ' + totalPages;
+            document.getElementById('prevBtn').disabled = (num === 1);
+            document.getElementById('nextBtn').disabled = (num === totalPages);
+            updateDayMenu(num);
+            window.scrollTo(0, 0);
+        }
+
+        function nextPage() { if (currentPage < totalPages) { currentPage++; showPage(currentPage); } }
+        function prevPage() { if (currentPage > 1) { currentPage--; showPage(currentPage); } }
+        function jumpTo(pageNum) { currentPage = pageNum; showPage(currentPage); }
+    </script>
+</body>
+</html>
