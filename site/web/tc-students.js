@@ -216,9 +216,9 @@
   let editingGoalId = null;
   let enteringDataGoalId = null; // Track which goal has the data entry form open
   let showArchived = false;
-  let collapsedGoals = new Set(); // Track which goals are collapsed
+  let _collapsedGoals = new Set(); // Track which goals are collapsed (unused, kept for potential future use)
   let expandedGoalCards = new Set(); // Track which goal cards are expanded (not collapsed)
-  let truncatedGoals = new Set(); // Track which goals have truncated descriptions
+  let _truncatedGoals = new Set(); // Track which goals have truncated descriptions (unused, kept for potential future use)
   let iepWizardData = null; // { step: 1, studentCode: '', goalsToArchive: Set, newGoals: [], iepDue: '', evalDue: '' }
   let expandMode = 'none'; // 'none', 'students', 'all' - Track bulk expand state
   let progressLookupMap = new Map(); // Map<"studentCode:goalCode", progressEntry[]> - Performance optimization
@@ -1355,7 +1355,7 @@
     `;
   }
 
-  function renderStudentPassword(student) {
+  function renderStudentPassword(_student) {
     return `
       <div class="st-detail-section">
         <div class="st-section-header">
@@ -2173,7 +2173,7 @@
       console.log('[tc-students] Updated enrollments');
       await loadData();
       if (studentCode && expandedStudents.has(studentCode)) {
-        renderExpandedDetail(studentCode);
+        await renderExpandedDetail(studentCode);
       }
     } catch (error) {
       console.error('[tc-students] Error saving enrollments:', error);
@@ -2292,7 +2292,7 @@
     }
   }
 
-  function showEditGoalModal(goalId) {
+  function _showEditGoalModal(goalId) {
     const goal = allGoals.find(g => g.id === goalId);
     if (!goal) return;
 
@@ -2471,7 +2471,13 @@
         return;
       }
 
-      function renderStep() {
+      const renderStep = () => {
+        const modalBody = modal?.querySelector('.st-modal-body');
+        if (!modalBody) {
+          console.error('[tc-students] Modal body not found in renderStep');
+          return;
+        }
+
         let content = '';
         
         if (step === 1) {
@@ -2529,12 +2535,6 @@
               </div>
             </form>
           `;
-        }
-
-        const modalBody = modal.querySelector('.st-modal-body');
-        if (!modalBody) {
-          console.error('[tc-students] Modal body not found');
-          return;
         }
 
         modalBody.innerHTML = `
