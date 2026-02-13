@@ -217,6 +217,7 @@
   let enteringDataGoalId = null; // Track which goal has the data entry form open
   let showArchived = false;
   let collapsedGoals = new Set(); // Track which goals are collapsed
+  let expandedGoalCards = new Set(); // Track which goal cards are expanded (not collapsed)
   let truncatedGoals = new Set(); // Track which goals have truncated descriptions
   let iepWizardData = null; // { step: 1, studentCode: '', goalsToArchive: Set, newGoals: [], iepDue: '', evalDue: '' }
   let expandMode = 'none'; // 'none', 'students', 'all' - Track bulk expand state
@@ -596,33 +597,8 @@
       filtered = filtered.filter(s => s.status !== 'archived' && s.active !== false);
     }
 
-    // Quarter filter based on IEP/Eval due dates
-    if (selectedQuarter) {
-      const dates = getQuarterDates();
-      const quarterKey = selectedQuarter.toLowerCase();
-      const quarterRange = dates[quarterKey];
-      
-      if (quarterRange) {
-        const start = new Date(quarterRange.start);
-        const end = new Date(quarterRange.end);
-        
-        filtered = filtered.filter(s => {
-          // Check if IEP due date falls in quarter
-          if (s.iep_due) {
-            const iepDate = new Date(s.iep_due);
-            if (iepDate >= start && iepDate <= end) return true;
-          }
-          
-          // Check if Eval due date falls in quarter
-          if (s.eval_due) {
-            const evalDate = new Date(s.eval_due);
-            if (evalDate >= start && evalDate <= end) return true;
-          }
-          
-          return false;
-        });
-      }
-    }
+    // Quarter selection should NOT filter which students appear - ALL students should always be visible.
+    // The quarter selection only affects which quarter's progress data is displayed (if applicable).
 
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
@@ -1136,8 +1112,9 @@
     const statusText = `${quarterProgress.length} of ${dataStatus.expected} this quarter`;
     const lastText = lastDate ? `Last: ${formatDate(lastDate)}` : 'No data yet';
 
-    // Only add collapsed class if not in 'all' expand mode
-    const collapsedClass = expandMode === 'all' ? '' : 'collapsed';
+    // Determine if this card should be collapsed
+    const isExpanded = expandMode === 'all' || expandedGoalCards.has(goal.id);
+    const collapsedClass = isExpanded ? '' : 'collapsed';
     
     return `
       <div class="st-goal-card ${collapsedClass}" data-goal-id="${goal.id}" data-area="${colorCategory}">
@@ -1574,7 +1551,13 @@
         if (e.target.closest('.st-goal-header') && !e.target.closest('button')) {
           const card = e.target.closest('.st-goal-card');
           if (card && !card.classList.contains('st-goal-edit-form')) {
+            const goalId = parseInt(card.dataset.goalId);
             card.classList.toggle('collapsed');
+            if (card.classList.contains('collapsed')) {
+              expandedGoalCards.delete(goalId);
+            } else {
+              expandedGoalCards.add(goalId);
+            }
           }
           return;
         }
@@ -1650,9 +1633,10 @@
         } 
         
         // Edit goal - inline editing
-        if (e.target.classList.contains('edit-goal-btn')) {
-          const goalId = parseInt(e.target.dataset.goalId);
-          const expandedDetail = e.target.closest('.st-expanded-content');
+        const editGoalBtn = e.target.closest('.edit-goal-btn');
+        if (editGoalBtn) {
+          const goalId = parseInt(editGoalBtn.dataset.goalId);
+          const expandedDetail = editGoalBtn.closest('.st-expanded-content');
           const studentCode = expandedDetail?.id.replace('stExpandedDetail-', '');
           editingGoalId = goalId;
           if (studentCode) {
@@ -1663,8 +1647,9 @@
         } 
         
         // Cancel inline edit
-        if (e.target.classList.contains('cancel-edit-btn')) {
-          const expandedDetail = e.target.closest('.st-expanded-content');
+        const cancelEditBtn = e.target.closest('.cancel-edit-btn');
+        if (cancelEditBtn) {
+          const expandedDetail = cancelEditBtn.closest('.st-expanded-content');
           const studentCode = expandedDetail?.id.replace('stExpandedDetail-', '');
           editingGoalId = null;
           if (studentCode) {
@@ -1675,44 +1660,50 @@
         } 
         
         // Save inline edit
-        if (e.target.classList.contains('save-goal-btn')) {
-          const goalId = parseInt(e.target.dataset.goalId);
+        const saveGoalBtn = e.target.closest('.save-goal-btn');
+        if (saveGoalBtn) {
+          const goalId = parseInt(saveGoalBtn.dataset.goalId);
           await handleSaveInlineEdit(goalId, e);
           e.stopPropagation();
           return;
         } 
         // Version goal
-        if (e.target.classList.contains('version-goal-btn')) {
-          const goalId = parseInt(e.target.dataset.goalId);
+        const versionGoalBtn = e.target.closest('.version-goal-btn');
+        if (versionGoalBtn) {
+          const goalId = parseInt(versionGoalBtn.dataset.goalId);
           await handleVersionGoal(goalId);
           e.stopPropagation();
           return;
         } 
         // Archive goal
-        if (e.target.classList.contains('archive-goal-btn')) {
-          const goalId = parseInt(e.target.dataset.goalId);
+        const archiveGoalBtn = e.target.closest('.archive-goal-btn');
+        if (archiveGoalBtn) {
+          const goalId = parseInt(archiveGoalBtn.dataset.goalId);
           await handleArchiveGoal(goalId);
           e.stopPropagation();
           return;
         } 
         // Copy token
-        if (e.target.classList.contains('copy-token-btn')) {
-          const goalId = parseInt(e.target.dataset.goalId);
+        const copyTokenBtn = e.target.closest('.copy-token-btn');
+        if (copyTokenBtn) {
+          const goalId = parseInt(copyTokenBtn.dataset.goalId);
           await handleCopyDataEntryLink(goalId);
           e.stopPropagation();
           return;
         } 
         // Revoke token
-        if (e.target.classList.contains('revoke-token-btn')) {
-          const goalId = parseInt(e.target.dataset.goalId);
+        const revokeTokenBtn = e.target.closest('.revoke-token-btn');
+        if (revokeTokenBtn) {
+          const goalId = parseInt(revokeTokenBtn.dataset.goalId);
           await handleRevokeDataEntryLink(goalId);
           e.stopPropagation();
           return;
         }
         
         // Enter Data button
-        if (e.target.classList.contains('enter-data-btn')) {
-          const goalId = parseInt(e.target.dataset.goalId);
+        const enterDataBtn = e.target.closest('.enter-data-btn');
+        if (enterDataBtn) {
+          const goalId = parseInt(enterDataBtn.dataset.goalId);
           const goal = allGoals.find(g => g.id === goalId);
           enteringDataGoalId = goalId;
           if (goal && goal.student_code && expandedStudents.has(goal.student_code)) {
@@ -1728,16 +1719,18 @@
         }
 
         // Save Data button
-        if (e.target.classList.contains('save-data-btn')) {
-          const goalId = parseInt(e.target.dataset.goalId);
+        const saveDataBtn = e.target.closest('.save-data-btn');
+        if (saveDataBtn) {
+          const goalId = parseInt(saveDataBtn.dataset.goalId);
           await handleSaveProgressData(goalId, e);
           e.stopPropagation();
           return;
         }
 
         // Cancel Data button
-        if (e.target.classList.contains('cancel-data-btn')) {
-          const goalId = parseInt(e.target.dataset.goalId);
+        const cancelDataBtn = e.target.closest('.cancel-data-btn');
+        if (cancelDataBtn) {
+          const goalId = parseInt(cancelDataBtn.dataset.goalId);
           const goal = allGoals.find(g => g.id === goalId);
           enteringDataGoalId = null;
           if (goal && goal.student_code && expandedStudents.has(goal.student_code)) {
@@ -3063,6 +3056,31 @@
                normalized.includes('reevaluation')) columnMap.eval_due = index;
     });
 
+    // Fallback: if iep_due or eval_due columns were not matched by header name,
+    // try to auto-detect date columns by checking if the last 2 unmatched columns
+    // contain date-like values (M/D/YYYY pattern)
+    if (columnMap.iep_due === undefined || columnMap.eval_due === undefined) {
+      // Check each unmapped column for date-like content in the first data row
+      const firstDataRow = rows[0];
+      if (firstDataRow) {
+        const datePattern = /^\d{1,2}\/\d{1,2}\/\d{4}$/;
+        const unmappedDateCols = [];
+        for (let i = 0; i < headers.length; i++) {
+          const alreadyMapped = Object.values(columnMap).includes(i);
+          if (!alreadyMapped && firstDataRow[i] && datePattern.test(firstDataRow[i].trim())) {
+            unmappedDateCols.push(i);
+          }
+        }
+        // If we found exactly 2 unmapped date columns, assume they are iep_due and eval_due
+        if (unmappedDateCols.length >= 2) {
+          if (columnMap.iep_due === undefined) columnMap.iep_due = unmappedDateCols[0];
+          if (columnMap.eval_due === undefined) columnMap.eval_due = unmappedDateCols[1];
+        } else if (unmappedDateCols.length === 1) {
+          if (columnMap.iep_due === undefined) columnMap.iep_due = unmappedDateCols[0];
+        }
+      }
+    }
+
     const studentsMap = new Map();
     const existingCodes = new Set(allStudents.map(s => s.code));
     let newStudentCount = 0;
@@ -3089,6 +3107,17 @@
           goals: [],
           isExisting: existingCodes.has(code)
         });
+      } else {
+        // Update dates if they were null on first row but present on subsequent rows
+        const student = studentsMap.get(code);
+        if (!student.iep_due) {
+          const parsed = parseDateFromCSV(row[columnMap.iep_due]);
+          if (parsed) student.iep_due = parsed;
+        }
+        if (!student.eval_due) {
+          const parsed = parseDateFromCSV(row[columnMap.eval_due]);
+          if (parsed) student.eval_due = parsed;
+        }
       }
 
       const student = studentsMap.get(code);
