@@ -1235,7 +1235,7 @@
         </div>
         <div class="st-form-group">
           <label class="st-form-label">Goal Code</label>
-          <input type="text" class="st-form-input" name="goal_code" value="${escapeHtml(goal.goal_code || '')}" />
+          <input type="text" class="st-form-input" name="goal_code" value="${escapeHtml(goal.code || '')}" />
         </div>
         <div class="st-form-group">
           <label class="st-form-label">Description</label>
@@ -2103,7 +2103,7 @@
         </div>
         <div class="st-form-group">
           <label class="st-form-label">Goal Code:</label>
-          <input type="text" name="goal_code" class="st-form-input" value="${escapeHtml(goal.goal_code || '')}" required>
+          <input type="text" name="goal_code" class="st-form-input" value="${escapeHtml(goal.code || '')}" required>
         </div>
         <div class="st-form-group">
           <label class="st-form-label">Description:</label>
