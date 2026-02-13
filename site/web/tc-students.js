@@ -3276,6 +3276,23 @@
     const totalGoals = data.reduce((sum, s) => sum + s.goals.length, 0);
     const importMode = document.querySelector('input[name="import-mode"]:checked')?.value || 'merge';
     
+    // Count existing students that will have their dates updated
+    let studentsWithDateUpdates = 0;
+    if (importMode === 'merge') {
+      for (const csvStudent of data) {
+        if (csvStudent.isExisting) {
+          const existingStudent = allStudents.find(s => s.code === csvStudent.code);
+          if (existingStudent) {
+            const willUpdateIep = !existingStudent.iep_due && csvStudent.iep_due;
+            const willUpdateEval = !existingStudent.eval_due && csvStudent.eval_due;
+            if (willUpdateIep || willUpdateEval) {
+              studentsWithDateUpdates++;
+            }
+          }
+        }
+      }
+    }
+    
     let modeWarning = '';
     if (importMode === 'replace') {
       modeWarning = `
@@ -3286,12 +3303,18 @@
       `;
     }
     
+    let dateUpdateInfo = '';
+    if (studentsWithDateUpdates > 0) {
+      dateUpdateInfo = `<p style="margin: 5px 0; color: #2e7d32;">📅 <strong>${studentsWithDateUpdates}</strong> existing student${studentsWithDateUpdates !== 1 ? 's' : ''} will have missing IEP/Eval dates filled in</p>`;
+    }
+    
     const summary = `
       ${modeWarning}
       <div style="padding: 15px; background: #f5f5f5; border-radius: 4px; margin-bottom: 15px;">
         <h4 style="margin-top: 0;">Import Summary</h4>
         <p style="margin: 5px 0;"><strong>${newStudentCount}</strong> new student${newStudentCount !== 1 ? 's' : ''} will be ${importMode === 'replace' ? 'imported' : 'added'}</p>
         <p style="margin: 5px 0;"><strong>${existingStudentCount}</strong> existing student${existingStudentCount !== 1 ? 's' : ''} will be updated</p>
+        ${dateUpdateInfo}
         <p style="margin: 5px 0;"><strong>${totalGoals}</strong> total goal${totalGoals !== 1 ? 's' : ''}</p>
       </div>
       <details>
