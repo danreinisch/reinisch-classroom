@@ -205,7 +205,7 @@
   let allProgressEntries = []; // Progress data for data collection status
   let filteredStudents = [];
   let selectedStudent = null;
-  let expandedStudents = new Set(); // For inline expand in table - supports multiple expanded students
+  let expandedStudents = new Set(); // For inline expand in table - Support multiple expanded students
   let selectedClassFilter = 'All';
   let selectedGoalAreaFilter = 'All';
   let selectedQuarter = null; // 'Q1', 'Q2', 'Q3', 'Q4', or null for all
@@ -861,8 +861,8 @@
       });
       return tokensByGoalCode;
     } catch (err) {
-      // Silently return empty object for 404/PGRST205 errors (table doesn't exist yet)
-      // These errors are expected when data_entry_tokens table hasn't been created
+      // Silently return empty object for all errors
+      // The data_entry_tokens table may not exist yet, which is expected
       return {};
     }
   }
