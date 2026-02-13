@@ -3408,16 +3408,16 @@
   function showConfirmModal(title, message, confirmLabel = 'Confirm', options = {}) {
     return new Promise((resolve) => {
       const isDanger = options.danger || false;
-      const confirmButtonStyle = isDanger 
-        ? 'background: #d32f2f; color: white;'
-        : '';
+      const confirmButtonClass = isDanger 
+        ? 'st-btn st-btn-danger'
+        : 'st-btn st-btn-primary';
       
       const modal = createModal(title, `
         <div style="padding: 10px 0;">
           <p style="margin-bottom: 20px; white-space: pre-wrap;">${escapeHtml(message)}</p>
           <div style="display: flex; gap: 10px; justify-content: flex-end;">
             <button class="st-btn st-btn-secondary" id="modal-cancel-btn">Cancel</button>
-            <button class="st-btn st-btn-primary" id="modal-confirm-btn" style="${confirmButtonStyle}">${escapeHtml(confirmLabel)}</button>
+            <button class="${confirmButtonClass}" id="modal-confirm-btn">${escapeHtml(confirmLabel)}</button>
           </div>
         </div>
       `);
