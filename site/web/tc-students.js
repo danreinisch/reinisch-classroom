@@ -1434,7 +1434,6 @@
       collapseAllBtn.addEventListener('click', () => {
         expandMode = 'none';
         expandedStudents.clear();
-        collapsedGoals.clear();
         renderStudentList();
       });
     }
@@ -1448,8 +1447,6 @@
         filteredStudents.forEach(student => {
           expandedStudents.add(student.code);
         });
-        // Keep all goal cards collapsed
-        collapsedGoals.clear();
         renderStudentList();
       });
     }
@@ -1463,8 +1460,6 @@
         filteredStudents.forEach(student => {
           expandedStudents.add(student.code);
         });
-        // Expand all goal cards by clearing the collapsed set
-        collapsedGoals.clear();
         renderStudentList();
       });
     }
