@@ -137,15 +137,6 @@
   /**
    * Check if IEP due date is urgent (within 30 days or overdue)
    */
-  function isIepUrgent(iepDue) {
-    if (!iepDue) return false;
-    const due = new Date(iepDue);
-    if (isNaN(due.getTime())) return false;
-    const now = new Date();
-    const daysUntil = (due - now) / (1000 * 60 * 60 * 24);
-    return daysUntil <= 30;
-  }
-
   /**
    * Normalize enrollment data to ensure class_name is present
    * If class_name is missing but class_code is present, derives class_name from class_code mapping
@@ -204,7 +195,6 @@
   let allEnrollments = [];
   let allProgressEntries = []; // Progress data for data collection status
   let filteredStudents = [];
-  let selectedStudent = null;
   let expandedStudents = new Set(); // For inline expand in table - Support multiple expanded students
   let selectedClassFilter = 'All';
   let selectedGoalAreaFilter = 'All';
@@ -216,9 +206,7 @@
   let editingGoalId = null;
   let enteringDataGoalId = null; // Track which goal has the data entry form open
   let showArchived = false;
-  let collapsedGoals = new Set(); // Track which goals are collapsed
   let expandedGoalCards = new Set(); // Track which goal cards are expanded (not collapsed)
-  let truncatedGoals = new Set(); // Track which goals have truncated descriptions
   let iepWizardData = null; // { step: 1, studentCode: '', goalsToArchive: Set, newGoals: [], iepDue: '', evalDue: '' }
   let expandMode = 'none'; // 'none', 'students', 'all' - Track bulk expand state
   let progressLookupMap = new Map(); // Map<"studentCode:goalCode", progressEntry[]> - Performance optimization
@@ -811,7 +799,7 @@
 
       <div class="st-detail-section">
         <h3>Actions</h3>
-        ${renderStudentPassword(student)}
+        ${renderStudentPassword()}
         ${isActive 
           ? `<button class="st-btn st-btn-danger" id="archive-student-btn-${escapeHtml(student.code)}">🗃️ Archive Student</button>`
           : `<button class="st-btn st-btn-primary" id="reactivate-student-btn-${escapeHtml(student.code)}">♻️ Reactivate Student</button>`
@@ -1355,7 +1343,7 @@
     `;
   }
 
-  function renderStudentPassword(student) {
+  function renderStudentPassword() {
     return `
       <div class="st-detail-section">
         <div class="st-section-header">
@@ -2292,92 +2280,6 @@
     }
   }
 
-  function showEditGoalModal(goalId) {
-    const goal = allGoals.find(g => g.id === goalId);
-    if (!goal) return;
-
-    const modal = createModal('Edit IEP Goal', `
-      <form id="edit-goal-form">
-        <div class="st-form-group">
-          <label class="st-form-label">Goal Area:</label>
-          <select name="goal_area" class="st-form-select" required>
-            ${GOAL_AREAS.map(area => `
-              <option value="${escapeHtml(area)}" ${goal.goal_area === area ? 'selected' : ''}>
-                ${escapeHtml(area)}
-              </option>
-            `).join('')}
-          </select>
-        </div>
-        <div class="st-form-group">
-          <label class="st-form-label">Goal Code:</label>
-          <input type="text" name="goal_code" class="st-form-input" value="${escapeHtml(goal.code || '')}" required>
-        </div>
-        <div class="st-form-group">
-          <label class="st-form-label">Description:</label>
-          <textarea name="goal_text" class="st-form-textarea" rows="4" required>${escapeHtml(goal.goal_text || '')}</textarea>
-        </div>
-        <div class="st-form-group">
-          <label class="st-form-label">Measurement Type:</label>
-          <select name="measurement_type" class="st-form-select" required>
-            <option value="Accuracy" ${goal.measurement_type === 'Accuracy' ? 'selected' : ''}>Accuracy</option>
-            <option value="Frequency" ${goal.measurement_type === 'Frequency' ? 'selected' : ''}>Frequency</option>
-            <option value="Duration" ${goal.measurement_type === 'Duration' ? 'selected' : ''}>Duration</option>
-            <option value="Rate" ${goal.measurement_type === 'Rate' ? 'selected' : ''}>Rate</option>
-          </select>
-        </div>
-        <div class="st-form-row">
-          <div class="st-form-group">
-            <label class="st-form-label">Baseline:</label>
-            <input type="text" name="baseline" class="st-form-input" value="${escapeHtml(goal.baseline || '')}" required>
-          </div>
-          <div class="st-form-group">
-            <label class="st-form-label">Target:</label>
-            <input type="text" name="target" class="st-form-input" value="${escapeHtml(goal.target || '')}" required>
-          </div>
-        </div>
-        <div class="st-form-group">
-          <label class="st-form-label">Case Manager:</label>
-          <input type="text" name="case_manager" class="st-form-input" value="${escapeHtml(goal.case_manager || '')}" required>
-        </div>
-        <div class="st-form-group">
-          <label class="st-form-label">Data Collector:</label>
-          <input type="text" name="data_collector" class="st-form-input" value="${escapeHtml(goal.data_collector || '')}" required>
-        </div>
-        <div class="st-form-group">
-          <label class="st-form-label">Data Collector Email:</label>
-          <input type="email" name="data_collector_email" class="st-form-input" value="${escapeHtml(goal.data_collector_email || '')}">
-        </div>
-        <div class="st-form-group">
-          <label class="st-form-label">Class Context:</label>
-          <select name="class_context" class="st-form-select">
-            <option value="">None</option>
-            ${FULL_CLASS_NAMES.map(cn => `
-              <option value="${escapeHtml(cn)}" ${goal.class_context === cn ? 'selected' : ''}>
-                ${escapeHtml(cn)}
-              </option>
-            `).join('')}
-          </select>
-        </div>
-        <div class="st-modal-footer">
-          <button type="button" class="st-btn st-btn-secondary" id="cancel-edit-goal">Cancel</button>
-          <button type="submit" class="st-btn st-btn-primary">Save Changes</button>
-        </div>
-      </form>
-    `);
-
-    document.body.appendChild(modal);
-
-    document.getElementById('cancel-edit-goal').addEventListener('click', () => {
-      modal.remove();
-    });
-
-    document.getElementById('edit-goal-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      await handleEditGoal(goalId, e.target);
-      modal.remove();
-    });
-  }
-
   async function handleEditGoal(goalId, form) {
     const formData = new FormData(form);
     const goal = allGoals.find(g => g.id === goalId);
@@ -2452,7 +2354,7 @@
     try {
       await db.upsertStudent({ code: studentCode, password_hash: password });
       console.log('[tc-students] Reset password');
-      alert('Password reset successfully');
+      showToast('Password reset successfully');
     } catch (error) {
       console.error('[tc-students] Error resetting password:', error);
       alert('Failed to reset password');
@@ -3176,14 +3078,14 @@
       const code = row[columnMap.code]?.trim();
       if (!code) continue;
 
-      // Track if this is a new or existing student
-      if (existingCodes.has(code)) {
-        existingStudentCount++;
-      } else {
-        newStudentCount++;
-      }
-
       if (!studentsMap.has(code)) {
+        // Count unique students only
+        if (existingCodes.has(code)) {
+          existingStudentCount++;
+        } else {
+          newStudentCount++;
+        }
+        
         studentsMap.set(code, {
           code,
           primary_case_manager: row[columnMap.case_manager]?.trim() || null,
@@ -3482,7 +3384,7 @@
       console.log(`[tc-students] ${modeText}`, data.length, 'students');
       await loadData();
       document.querySelector('.st-modal-backdrop')?.remove();
-      alert(`Successfully ${modeText} ${data.length} students`);
+      showToast(`Successfully ${modeText} ${data.length} students`);
     } catch (error) {
       console.error('[tc-students] Error importing CSV:', error);
       alert('Failed to import CSV: ' + error.message);
