@@ -669,7 +669,7 @@
     }
   }
 
-  function renderExpandedDetail(studentCode) {
+  async function renderExpandedDetail(studentCode) {
     const container = document.getElementById(`stExpandedDetail-${studentCode}`);
     if (!container) return;
 
@@ -685,7 +685,7 @@
     // Render header with tabs
     let tabContent = '';
     if (selectedDetailTab === 'goals') {
-      tabContent = renderStudentGoalsTab(student, studentGoals);
+      tabContent = await renderStudentGoalsTab(student, studentGoals);
     } else if (selectedDetailTab === 'classes') {
       tabContent = renderStudentClassesTab(student, enrollments);
     } else if (selectedDetailTab === 'settings') {
