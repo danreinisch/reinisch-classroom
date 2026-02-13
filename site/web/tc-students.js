@@ -2619,7 +2619,7 @@
       if (!goalCode) return null;
       
       const existing = allGoals.filter(g => g.student_code === studentCode && g.code === goalCode);
-      const activeMatch = existing.find(g => g.status === 'active' || g.status !== 'archived');
+      const activeMatch = existing.find(g => g.status !== 'archived');
       const archivedMatch = existing.find(g => g.status === 'archived');
       
       if (activeMatch) return { status: 'replace', message: '⚠️ This code is active. It will be archived and replaced.' };
