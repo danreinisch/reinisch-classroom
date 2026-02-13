@@ -202,6 +202,7 @@
   let allStudents = [];
   let allGoals = [];
   let allEnrollments = [];
+  let allProgressEntries = []; // Progress data for data collection status
   let filteredStudents = [];
   let selectedStudent = null;
   let expandedStudent = null; // For inline expand in table
@@ -212,9 +213,11 @@
   let sortBy = 'code'; // 'code', 'goals', 'iep_due', 'eval_due'
   let selectedDetailTab = 'goals'; // 'goals', 'classes', 'settings'
   let editingGoalId = null;
+  let enteringDataGoalId = null; // Track which goal has the data entry form open
   let showArchived = false;
   let collapsedGoals = new Set(); // Track which goals are collapsed
   let truncatedGoals = new Set(); // Track which goals have truncated descriptions
+  let iepWizardData = null; // { step: 1, studentCode: '', goalsToArchive: Set, newGoals: [], iepDue: '', evalDue: '' }
 
   // Quarter dates management
   const DEFAULT_QUARTER_DATES = {
@@ -325,6 +328,106 @@
     URL.revokeObjectURL(url);
   }
 
+  // Progress tracking functions
+  async function loadProgressEntries() {
+    try {
+      const supabase = await getSupabase();
+      if (supabase) {
+        const { data, error } = await supabase.from('goal_progress').select('*');
+        if (error) throw error;
+        return data || [];
+      }
+    } catch (e) {
+      console.warn('[tc-students] Could not load from goal_progress table, falling back to localStorage:', e);
+    }
+    
+    // Fall back to localStorage
+    try {
+      const stored = localStorage.getItem('rc_goal_progress_v1');
+      return stored ? JSON.parse(stored) : [];
+    } catch (e) {
+      console.error('[tc-students] Error loading progress from localStorage:', e);
+      return [];
+    }
+  }
+
+  function getProgressForGoal(studentCode, goalCode) {
+    return allProgressEntries.filter(p => 
+      p.student_code === studentCode && p.goal_code === goalCode
+    );
+  }
+
+  function getProgressThisQuarter(studentCode, goalCode) {
+    const dates = getQuarterDates();
+    const current = getCurrentQuarter().toLowerCase();
+    const range = dates[current];
+    if (!range) return [];
+    
+    const start = new Date(range.start);
+    const end = new Date(range.end);
+    
+    return getProgressForGoal(studentCode, goalCode).filter(p => {
+      const d = new Date(p.date);
+      return d >= start && d <= end;
+    });
+  }
+
+  function getLastProgressDate(studentCode, goalCode) {
+    const entries = getProgressForGoal(studentCode, goalCode);
+    if (entries.length === 0) return null;
+    entries.sort((a, b) => new Date(b.date) - new Date(a.date));
+    return entries[0].date;
+  }
+
+  function getGoalDataStatus(studentCode, goalCode, expectedMin) {
+    // If expectedMin not provided, look it up from the goal
+    if (expectedMin === undefined) {
+      const goal = allGoals.find(g => g.student_code === studentCode && g.code === goalCode);
+      expectedMin = (goal && goal.expected_data_points) || 3;
+    }
+    
+    const thisQuarter = getProgressThisQuarter(studentCode, goalCode);
+    const count = thisQuarter.length;
+    
+    // Calculate how far through the quarter we are
+    const dates = getQuarterDates();
+    const current = getCurrentQuarter().toLowerCase();
+    const range = dates[current];
+    if (!range) return { status: 'ok', count, expected: expectedMin };
+    
+    const start = new Date(range.start);
+    const end = new Date(range.end);
+    const now = new Date();
+    const totalDays = (end - start) / (1000 * 60 * 60 * 24);
+    const daysPassed = (now - start) / (1000 * 60 * 60 * 24);
+    const progress = Math.min(daysPassed / totalDays, 1);
+    
+    // Expected data points so far based on quarter progress
+    const expectedSoFar = Math.ceil(expectedMin * progress);
+    
+    if (count >= expectedSoFar) return { status: 'ok', count, expected: expectedMin };
+    if (count > 0) return { status: 'warning', count, expected: expectedMin };
+    return { status: 'behind', count, expected: expectedMin };
+  }
+
+  function getStudentDataStatus(studentCode) {
+    const studentGoals = allGoals.filter(g => g.student_code === studentCode && g.status !== 'archived');
+    if (studentGoals.length === 0) return '—';
+    
+    let allOk = true;
+    let anyBehind = false;
+    
+    for (const goal of studentGoals) {
+      const status = getGoalDataStatus(studentCode, goal.code);
+      if (status.status === 'behind') anyBehind = true;
+      if (status.status !== 'ok') allOk = false;
+    }
+    
+    if (allOk) return '✅';
+    if (anyBehind) return '🔴';
+    return '⚠️';
+  }
+
   // Load data
   async function loadData() {
     try {
@@ -336,7 +439,8 @@
       const results = await Promise.allSettled([
         db.listStudents(),
         db.listGoalsAll(),
-        db.listClassEnrollments()
+        db.listClassEnrollments(),
+        loadProgressEntries() // Load progress data
       ]);
 
       let schemaDriftDetected = false;
@@ -366,7 +470,14 @@
         schemaDriftDetected = true;
       }
 
-      console.log('[tc-students] Loaded:', allStudents.length, 'students,', allGoals.length, 'goals');
+      if (results[3].status === 'fulfilled') {
+        allProgressEntries = results[3].value;
+      } else {
+        console.error('[tc-students] Failed to load progress entries:', results[3].reason);
+        allProgressEntries = [];
+      }
+
+      console.log('[tc-students] Loaded:', allStudents.length, 'students,', allGoals.length, 'goals,', allProgressEntries.length, 'progress entries');
       
       // Show schema drift banner if any call failed
       if (schemaDriftDetected) {
@@ -530,7 +641,7 @@
           </td>
           <td class="st-date-${iepUrgency}">${escapeHtml(iepDue)}</td>
           <td class="st-date-${evalUrgency}">${escapeHtml(evalDue)}</td>
-          <td>✅</td>
+          <td>${getStudentDataStatus(student.code)}</td>
         </tr>
       `;
 
@@ -597,6 +708,7 @@
             ${statusBadge}
           </div>
         </div>
+        <button class="st-btn st-btn-secondary" id="new-iep-btn">📋 New IEP</button>
       </div>
 
       <div class="st-tabs">
@@ -894,6 +1006,11 @@
       return renderGoalEditForm(goal);
     }
 
+    // Check if we're in data entry mode for this goal
+    if (enteringDataGoalId === goal.id) {
+      return renderGoalCardWithDataEntry(goal);
+    }
+
     const icon = GOAL_AREA_ICONS[goal.goal_area] || '📌';
     const dataCollectorWarning = goal.data_collector && goal.data_collector !== 'Dan Reinisch' ? '⚠️ ' : '';
     const classContext = goal.class_context ? `<div class="st-goal-class">📚 ${escapeHtml(goal.class_context)}</div>` : '';
@@ -918,6 +1035,15 @@
          </div>`
       : `<div class="st-goal-description">${escapeHtml(fullDesc)}</div>`;
 
+    // Get data collection status
+    const lastDate = getLastProgressDate(goal.student_code, goal.code);
+    const quarterProgress = getProgressThisQuarter(goal.student_code, goal.code);
+    const dataStatus = getGoalDataStatus(goal.student_code, goal.code);
+
+    const statusEmoji = dataStatus.status === 'ok' ? '✅' : dataStatus.status === 'warning' ? '⚠️' : '🔴';
+    const statusText = `${quarterProgress.length} of ${dataStatus.expected} this quarter`;
+    const lastText = lastDate ? `Last: ${formatDate(lastDate)}` : 'No data yet';
+
     return `
       <div class="st-goal-card collapsed" data-goal-id="${goal.id}" data-area="${colorCategory}">
         <div class="st-goal-header">
@@ -941,6 +1067,16 @@
               <span class="st-metric-value">${escapeHtml(goal.target || 'N/A')}</span>
             </div>
           </div>
+          <div class="st-goal-data-status">
+            <div class="st-data-status-item">
+              <span>${statusEmoji}</span>
+              <span>${statusText}</span>
+            </div>
+            <div class="st-data-status-item">
+              <span>📅</span>
+              <span>${lastText}</span>
+            </div>
+          </div>
         </div>
         <div class="st-goal-meta">
           <div class="st-goal-manager">👤 ${escapeHtml(goal.case_manager || 'N/A')}</div>
@@ -949,6 +1085,7 @@
         </div>
         ${goal.version ? `<div class="st-goal-version">v${goal.version}</div>` : ''}
         <div class="st-goal-actions">
+          <button class="st-btn st-btn-small st-btn-primary enter-data-btn" data-goal-id="${goal.id}">📊 Enter Data</button>
           <button class="st-btn st-btn-small st-btn-secondary edit-goal-btn" data-goal-id="${goal.id}">Edit</button>
           <button class="st-btn st-btn-small st-btn-secondary version-goal-btn" data-goal-id="${goal.id}">Version</button>
           <button class="st-btn st-btn-small st-btn-danger archive-goal-btn" data-goal-id="${goal.id}">Archive</button>
@@ -958,6 +1095,124 @@
               : `<button class="st-btn st-btn-small st-btn-primary copy-token-btn" data-goal-id="${goal.id}" title="Copy data entry link for ${escapeHtml(goal.data_collector)}">🔗 Copy Link</button>`
             }
           ` : ''}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderGoalCardWithDataEntry(goal) {
+    const icon = GOAL_AREA_ICONS[goal.goal_area] || '📌';
+    const colorCategory = goalAreaToColorCategory(goal.goal_area);
+    const fullDesc = goal.desc || goal.goal_text || '(No goal description provided)';
+    
+    // Get today's date in ISO format
+    const today = new Date();
+    const todayISO = today.toISOString().split('T')[0];
+    
+    // Render measurement-specific fields
+    let measurementFields = '';
+    if (goal.measurement_type === 'Accuracy') {
+      measurementFields = `
+        <div class="st-form-group">
+          <label class="st-form-label">Measurement</label>
+          <div class="st-accuracy-group">
+            <input type="number" class="st-form-input" name="correct" placeholder="Correct" min="0" required />
+            <span>out of</span>
+            <input type="number" class="st-form-input" name="total" placeholder="Total" min="1" required />
+            <span class="st-accuracy-result"></span>
+          </div>
+        </div>
+      `;
+    } else if (goal.measurement_type === 'Frequency') {
+      measurementFields = `
+        <div class="st-form-group">
+          <label class="st-form-label">Count</label>
+          <input type="number" class="st-form-input" name="count" placeholder="Number of occurrences" min="0" required />
+        </div>
+        <div class="st-form-group">
+          <label class="st-form-label">Time Period</label>
+          <select class="st-form-select" name="time_period">
+            <option value="per session">Per Session</option>
+            <option value="per day">Per Day</option>
+            <option value="per week">Per Week</option>
+          </select>
+        </div>
+      `;
+    } else if (goal.measurement_type === 'Duration') {
+      measurementFields = `
+        <div class="st-form-row">
+          <div class="st-form-group">
+            <label class="st-form-label">Minutes</label>
+            <input type="number" class="st-form-input" name="minutes" placeholder="0" min="0" required />
+          </div>
+          <div class="st-form-group">
+            <label class="st-form-label">Seconds</label>
+            <input type="number" class="st-form-input" name="seconds" placeholder="0" min="0" max="59" />
+          </div>
+        </div>
+      `;
+    } else if (goal.measurement_type === 'Rate') {
+      measurementFields = `
+        <div class="st-form-group">
+          <label class="st-form-label">Rate</label>
+          <div class="st-accuracy-group">
+            <input type="number" class="st-form-input" name="count" placeholder="Count" min="0" required />
+            <span>per</span>
+            <input type="number" class="st-form-input" name="minutes" placeholder="Minutes" min="1" required />
+            <span>minutes</span>
+          </div>
+        </div>
+      `;
+    } else {
+      measurementFields = `
+        <div class="st-form-group">
+          <label class="st-form-label">Value</label>
+          <input type="number" class="st-form-input" name="value" placeholder="Enter value" required />
+        </div>
+      `;
+    }
+    
+    return `
+      <div class="st-goal-card" data-goal-id="${goal.id}" data-area="${colorCategory}">
+        <div class="st-goal-header">
+          <div class="st-goal-title-line">
+            <span class="st-goal-icon">${icon}</span>
+            <span class="st-goal-area-name">${escapeHtml(goal.goal_area || 'N/A')}</span>
+            <span class="st-goal-code">${escapeHtml(goal.code || '')}</span>
+            <span class="st-badge st-badge-measurement">${escapeHtml(goal.measurement_type || 'N/A')}</span>
+          </div>
+        </div>
+        <div class="st-goal-body">
+          <div class="st-goal-description">${escapeHtml(fullDesc)}</div>
+          <div class="st-goal-metrics">
+            <div class="st-metric">
+              <span class="st-metric-label">Baseline:</span>
+              <span class="st-metric-value">${escapeHtml(goal.baseline || 'N/A')}</span>
+            </div>
+            <div class="st-metric">
+              <span class="st-metric-label">Target:</span>
+              <span class="st-metric-value">${escapeHtml(goal.target || 'N/A')}</span>
+            </div>
+          </div>
+          
+          <div class="st-data-entry-form">
+            <h4 style="margin:0 0 12px 0; font-size:14px;">📊 Enter Progress Data</h4>
+            
+            ${measurementFields}
+            
+            <div class="st-form-group">
+              <label class="st-form-label">Date</label>
+              <input type="date" class="st-form-input" name="data_date" value="${todayISO}" required />
+            </div>
+            <div class="st-form-group">
+              <label class="st-form-label">Notes (optional)</label>
+              <textarea class="st-form-textarea" name="data_notes" rows="2" placeholder="Any observations..."></textarea>
+            </div>
+            <div class="st-form-row" style="margin-top:12px;">
+              <button class="st-btn st-btn-primary st-btn-small save-data-btn" data-goal-id="${goal.id}">Save Data</button>
+              <button class="st-btn st-btn-secondary st-btn-small cancel-data-btn">Cancel</button>
+            </div>
+          </div>
         </div>
       </div>
     `;
@@ -980,7 +1235,7 @@
         </div>
         <div class="st-form-group">
           <label class="st-form-label">Goal Code</label>
-          <input type="text" class="st-form-input" name="goal_code" value="${escapeHtml(goal.goal_code || '')}" />
+          <input type="text" class="st-form-input" name="goal_code" value="${escapeHtml(goal.code || '')}" />
         </div>
         <div class="st-form-group">
           <label class="st-form-label">Description</label>
@@ -1015,6 +1270,10 @@
             <label class="st-form-label">Data Collector</label>
             <input type="text" class="st-form-input" name="data_collector" value="${escapeHtml(goal.data_collector || '')}" />
           </div>
+        </div>
+        <div class="st-form-group">
+          <label class="st-form-label">Expected Data Points/Quarter</label>
+          <input type="number" class="st-form-input" name="expected_data_points" min="1" max="20" value="${goal.expected_data_points || 3}" />
         </div>
         <div class="st-goal-actions">
           <button class="st-btn st-btn-primary save-goal-btn" data-goal-id="${goal.id}">Save</button>
@@ -1239,6 +1498,44 @@
           e.stopPropagation();
           return;
         }
+        
+        // Enter Data button
+        if (e.target.classList.contains('enter-data-btn')) {
+          const goalId = parseInt(e.target.dataset.goalId);
+          enteringDataGoalId = goalId;
+          if (expandedStudent) {
+            renderExpandedDetail(expandedStudent);
+            // After render, uncollapse the goal card
+            setTimeout(() => {
+              const card = document.querySelector(`[data-goal-id="${goalId}"]`);
+              if (card) card.classList.remove('collapsed');
+            }, 0);
+          }
+          e.stopPropagation();
+          return;
+        }
+
+        // Save Data button
+        if (e.target.classList.contains('save-data-btn')) {
+          const goalId = parseInt(e.target.dataset.goalId);
+          await handleSaveProgressData(goalId, e);
+          e.stopPropagation();
+          return;
+        }
+
+        // Cancel Data button
+        if (e.target.classList.contains('cancel-data-btn')) {
+          enteringDataGoalId = null;
+          if (expandedStudent) renderExpandedDetail(expandedStudent);
+          e.stopPropagation();
+          return;
+        }
+        
+        // New IEP button
+        if (e.target.id === 'new-iep-btn') {
+          showNewIEPWizard(expandedStudent);
+          return;
+        }
       });
 
       // Change events in table (goal area filter)
@@ -1323,6 +1620,7 @@
       target: form.querySelector('[name="target"]').value,
       case_manager: form.querySelector('[name="case_manager"]').value,
       data_collector: form.querySelector('[name="data_collector"]').value,
+      expected_data_points: parseInt(form.querySelector('[name="expected_data_points"]').value) || 3,
       class_context: goal.class_context,
       version: goal.version,
       status: goal.status
@@ -1457,6 +1755,129 @@
     } catch (error) {
       console.error('[tc-students] Error versioning goal:', error);
       alert('Failed to create new version');
+    }
+  }
+
+  async function handleSaveProgressData(goalId, e) {
+    const card = e.target.closest('[data-goal-id]');
+    if (!card) return;
+
+    const goal = allGoals.find(g => g.id === goalId);
+    if (!goal) return;
+
+    // Collect form values
+    const dataDate = card.querySelector('[name="data_date"]').value;
+    const dataNotes = card.querySelector('[name="data_notes"]').value;
+    
+    // Calculate value based on measurement type
+    let calculatedValue = 0;
+    let notes = dataNotes;
+    
+    try {
+      if (goal.measurement_type === 'Accuracy') {
+        const correct = parseFloat(card.querySelector('[name="correct"]').value);
+        const total = parseFloat(card.querySelector('[name="total"]').value);
+        if (isNaN(correct) || isNaN(total) || total === 0) {
+          alert('Please enter valid correct and total values');
+          return;
+        }
+        calculatedValue = (correct / total) * 100;
+        notes = `${correct}/${total} = ${calculatedValue.toFixed(1)}%${notes ? '. ' + notes : ''}`;
+      } else if (goal.measurement_type === 'Frequency') {
+        const count = parseFloat(card.querySelector('[name="count"]').value);
+        const timePeriod = card.querySelector('[name="time_period"]').value;
+        if (isNaN(count)) {
+          alert('Please enter a valid count');
+          return;
+        }
+        calculatedValue = count;
+        notes = `${count} (${timePeriod})${notes ? '. ' + notes : ''}`;
+      } else if (goal.measurement_type === 'Duration') {
+        const minutes = parseFloat(card.querySelector('[name="minutes"]').value) || 0;
+        const seconds = parseFloat(card.querySelector('[name="seconds"]').value) || 0;
+        calculatedValue = minutes + (seconds / 60);
+        notes = `${minutes}m ${seconds}s${notes ? '. ' + notes : ''}`;
+      } else if (goal.measurement_type === 'Rate') {
+        const count = parseFloat(card.querySelector('[name="count"]').value);
+        const minutes = parseFloat(card.querySelector('[name="minutes"]').value);
+        if (isNaN(count) || isNaN(minutes) || minutes === 0) {
+          alert('Please enter valid count and minutes values');
+          return;
+        }
+        calculatedValue = count / minutes;
+        notes = `${count} per ${minutes} minutes${notes ? '. ' + notes : ''}`;
+      } else {
+        const value = parseFloat(card.querySelector('[name="value"]').value);
+        if (isNaN(value)) {
+          alert('Please enter a valid value');
+          return;
+        }
+        calculatedValue = value;
+      }
+
+      // Save to goal_progress table or localStorage
+      const supabase = await getSupabase();
+      if (supabase) {
+        // Try to save to Supabase
+        try {
+          const { error } = await supabase.from('goal_progress').insert({
+            student_code: goal.student_code,
+            goal_code: goal.code,
+            value: calculatedValue,
+            date: dataDate,
+            notes: notes,
+            measurement_type: goal.measurement_type,
+            collected_by: 'teacher'
+          });
+          if (error) throw error;
+        } catch (err) {
+          console.warn('[tc-students] Could not save to goal_progress, falling back to localStorage:', err);
+          // Fall back to localStorage
+          const KEY = 'rc_goal_progress_v1';
+          const existing = JSON.parse(localStorage.getItem(KEY) || '[]');
+          existing.push({
+            student_code: goal.student_code,
+            goal_code: goal.code,
+            value: calculatedValue,
+            date: dataDate,
+            notes: notes,
+            measurement_type: goal.measurement_type,
+            collected_by: 'teacher',
+            created_at: new Date().toISOString()
+          });
+          localStorage.setItem(KEY, JSON.stringify(existing));
+        }
+      } else {
+        // No Supabase, use localStorage
+        const KEY = 'rc_goal_progress_v1';
+        const existing = JSON.parse(localStorage.getItem(KEY) || '[]');
+        existing.push({
+          student_code: goal.student_code,
+          goal_code: goal.code,
+          value: calculatedValue,
+          date: dataDate,
+          notes: notes,
+          measurement_type: goal.measurement_type,
+          collected_by: 'teacher',
+          created_at: new Date().toISOString()
+        });
+        localStorage.setItem(KEY, JSON.stringify(existing));
+      }
+
+      // Show success message
+      showToast(`Data saved for ${goal.code}`);
+      
+      // Reset state
+      enteringDataGoalId = null;
+      
+      // Reload data and keep student expanded
+      await loadData();
+      if (expandedStudent) {
+        renderExpandedDetail(expandedStudent);
+      }
+    } catch (error) {
+      console.error('[tc-students] Error saving progress data:', error);
+      alert('Failed to save progress data');
     }
   }
 
@@ -1682,7 +2103,7 @@
         </div>
         <div class="st-form-group">
           <label class="st-form-label">Goal Code:</label>
-          <input type="text" name="goal_code" class="st-form-input" value="${escapeHtml(goal.goal_code || '')}" required>
+          <input type="text" name="goal_code" class="st-form-input" value="${escapeHtml(goal.code || '')}" required>
         </div>
         <div class="st-form-group">
           <label class="st-form-label">Description:</label>
@@ -1968,6 +2389,391 @@
     } catch (error) {
       console.error('[tc-students] Error creating student:', error);
       alert('Failed to create student');
+    }
+  }
+
+  function showNewIEPWizard(studentCode) {
+    const student = allStudents.find(s => s.code === studentCode);
+    if (!student) return;
+
+    // Initialize wizard data
+    if (!iepWizardData || iepWizardData.studentCode !== studentCode) {
+      iepWizardData = {
+        step: 1,
+        studentCode: studentCode,
+        goalsToArchive: new Set(),
+        newGoals: [],
+        iepDue: student.iep_due || '',
+        evalDue: student.eval_due || ''
+      };
+    }
+
+    function renderWizard() {
+      let content = '';
+      let title = `New IEP for ${studentCode}`;
+
+      if (iepWizardData.step === 1) {
+        // Step 1: Review Current Goals + Update Dates
+        const studentGoals = allGoals.filter(g => g.student_code === studentCode && g.status !== 'archived');
+        
+        const goalCheckboxes = studentGoals.map(goal => {
+          const progressCount = getProgressForGoal(studentCode, goal.code).length;
+          const isChecked = iepWizardData.goalsToArchive.has(goal.id);
+          return `
+            <label class="st-checkbox-label">
+              <input type="checkbox" class="archive-goal-cb" data-goal-id="${goal.id}" ${isChecked ? 'checked' : ''}>
+              ${escapeHtml(goal.code)} — ${escapeHtml(goal.goal_area)} (${escapeHtml(goal.measurement_type)}) — ${progressCount} data points
+            </label>
+          `;
+        }).join('');
+
+        content = `
+          <div class="st-wizard-step-indicator">
+            <span class="active">Step 1/3</span>
+          </div>
+          <form id="wizard-step-1-form">
+            <div class="st-form-group">
+              <label class="st-form-label">IEP Due Date:</label>
+              <input type="date" class="st-form-input" name="iep_due" value="${iepWizardData.iepDue}" required>
+            </div>
+            <div class="st-form-group">
+              <label class="st-form-label">Eval Due Date:</label>
+              <input type="date" class="st-form-input" name="eval_due" value="${iepWizardData.evalDue}">
+            </div>
+            
+            <div class="st-form-group">
+              <label class="st-form-label">Select which current goals to ARCHIVE:</label>
+              <div class="st-checkbox-group">
+                ${goalCheckboxes || '<p>No active goals found.</p>'}
+              </div>
+            </div>
+            
+            ${iepWizardData.goalsToArchive.size > 0 ? `
+              <p style="font-size:13px;opacity:0.8;margin-top:8px;">
+                ${iepWizardData.goalsToArchive.size} goal(s) will be archived with their progress data
+              </p>
+            ` : ''}
+            
+            <div class="st-modal-footer">
+              <button type="button" class="st-btn st-btn-secondary" id="wizard-cancel">Cancel</button>
+              <button type="submit" class="st-btn st-btn-primary">Next →</button>
+            </div>
+          </form>
+        `;
+      } else if (iepWizardData.step === 2) {
+        // Step 2: Add New Goals
+        content = `
+          <div class="st-wizard-step-indicator">
+            <span>Step 1/3</span>
+            <span class="active">Step 2/3</span>
+          </div>
+          
+          <div class="st-form-group">
+            <button type="button" class="st-btn st-btn-primary" id="add-wizard-goal-btn">+ Add Goal</button>
+          </div>
+          
+          <div id="wizard-goals-container">
+            ${renderWizardGoals()}
+          </div>
+          
+          <div class="st-modal-footer">
+            <button type="button" class="st-btn st-btn-secondary" id="wizard-back">← Back</button>
+            <button type="button" class="st-btn st-btn-secondary" id="wizard-cancel">Cancel</button>
+            <button type="button" class="st-btn st-btn-primary" id="wizard-next">Next →</button>
+          </div>
+        `;
+      } else if (iepWizardData.step === 3) {
+        // Step 3: Review & Confirm
+        const studentGoals = allGoals.filter(g => g.student_code === studentCode && g.status !== 'archived');
+        const goalsToArchive = studentGoals.filter(g => iepWizardData.goalsToArchive.has(g.id));
+        const goalsToKeep = studentGoals.filter(g => !iepWizardData.goalsToArchive.has(g.id));
+        const newGoalCodes = iepWizardData.newGoals.map(g => g.code);
+        const goalsToReplace = goalsToKeep.filter(g => newGoalCodes.includes(g.code));
+        
+        content = `
+          <div class="st-wizard-step-indicator">
+            <span>Step 1/3</span>
+            <span>Step 2/3</span>
+            <span class="active">Step 3/3</span>
+          </div>
+          
+          <h3 style="font-size:16px;margin:16px 0 8px 0;">DATE CHANGES:</h3>
+          <div style="font-size:14px;margin-bottom:16px;">
+            <div>IEP Due: ${student.iep_due ? formatDate(student.iep_due) : 'Not set'} → ${formatDate(iepWizardData.iepDue)}</div>
+            <div>Eval Due: ${student.eval_due ? formatDate(student.eval_due) : 'Not set'} → ${iepWizardData.evalDue ? formatDate(iepWizardData.evalDue) : 'Not set'}</div>
+          </div>
+          
+          ${goalsToArchive.length > 0 ? `
+            <h3 style="font-size:16px;margin:16px 0 8px 0;">ARCHIVING (${goalsToArchive.length} goals):</h3>
+            <ul style="font-size:14px;margin-bottom:16px;">
+              ${goalsToArchive.map(g => `<li>${escapeHtml(g.code)} — ${escapeHtml(g.goal_area)} (${getProgressForGoal(studentCode, g.code).length} data points preserved)</li>`).join('')}
+            </ul>
+          ` : ''}
+          
+          ${goalsToKeep.length > 0 && goalsToReplace.length === 0 ? `
+            <h3 style="font-size:16px;margin:16px 0 8px 0;">KEEPING (${goalsToKeep.length} goals):</h3>
+            <ul style="font-size:14px;margin-bottom:16px;">
+              ${goalsToKeep.map(g => `<li>${escapeHtml(g.code)} — ${escapeHtml(g.goal_area)}</li>`).join('')}
+            </ul>
+          ` : ''}
+          
+          ${iepWizardData.newGoals.length > 0 ? `
+            <h3 style="font-size:16px;margin:16px 0 8px 0;">ADDING (${iepWizardData.newGoals.length} new goals):</h3>
+            <ul style="font-size:14px;margin-bottom:16px;">
+              ${iepWizardData.newGoals.map(g => `<li>${escapeHtml(g.code)} — ${escapeHtml(g.goal_area)} (${escapeHtml(g.measurement_type)})</li>`).join('')}
+            </ul>
+          ` : ''}
+          
+          ${goalsToReplace.length > 0 ? `
+            <h3 style="font-size:16px;margin:16px 0 8px 0;">REPLACING (auto-archived):</h3>
+            <ul style="font-size:14px;margin-bottom:16px;">
+              ${goalsToReplace.map(g => `<li>${escapeHtml(g.code)} will be archived (replaced by new goal with same code)</li>`).join('')}
+            </ul>
+          ` : ''}
+          
+          <div class="st-modal-footer">
+            <button type="button" class="st-btn st-btn-secondary" id="wizard-back">← Back</button>
+            <button type="button" class="st-btn st-btn-secondary" id="wizard-cancel">Cancel</button>
+            <button type="button" class="st-btn st-btn-primary" id="wizard-confirm">Confirm ✓</button>
+          </div>
+        `;
+      }
+
+      return { title, content };
+    }
+
+    function renderWizardGoals() {
+      if (iepWizardData.newGoals.length === 0) {
+        return '<p style="font-size:14px;opacity:0.7;">No goals added yet. Click "+ Add Goal" to add a new goal.</p>';
+      }
+      
+      return iepWizardData.newGoals.map((goal, index) => {
+        const validation = validateGoalCode(studentCode, goal.code);
+        return `
+          <div class="st-wizard-goal-form" data-goal-index="${index}">
+            <h4 style="font-size:14px;margin:0 0 12px 0;">Goal ${index + 1}</h4>
+            <div class="st-form-group">
+              <label class="st-form-label">Goal Code</label>
+              <input type="text" class="st-form-input wizard-goal-code" data-index="${index}" value="${escapeHtml(goal.code)}" placeholder="e.g., S004.12.1" required>
+              ${validation ? `<div class="st-goal-code-validation ${validation.status}">${validation.message}</div>` : ''}
+            </div>
+            <div class="st-form-group">
+              <label class="st-form-label">Goal Area</label>
+              <select class="st-form-select wizard-field" data-index="${index}" data-field="goal_area">
+                ${GOAL_AREAS.map(area => `<option value="${escapeHtml(area)}" ${goal.goal_area === area ? 'selected' : ''}>${escapeHtml(area)}</option>`).join('')}
+              </select>
+            </div>
+            <div class="st-form-group">
+              <label class="st-form-label">Description</label>
+              <textarea class="st-form-textarea wizard-field" data-index="${index}" data-field="desc" rows="2" required>${escapeHtml(goal.desc || '')}</textarea>
+            </div>
+            <div class="st-form-group">
+              <label class="st-form-label">Measurement</label>
+              <select class="st-form-select wizard-field" data-index="${index}" data-field="measurement_type">
+                <option value="Accuracy" ${goal.measurement_type === 'Accuracy' ? 'selected' : ''}>Accuracy</option>
+                <option value="Frequency" ${goal.measurement_type === 'Frequency' ? 'selected' : ''}>Frequency</option>
+                <option value="Duration" ${goal.measurement_type === 'Duration' ? 'selected' : ''}>Duration</option>
+                <option value="Rate" ${goal.measurement_type === 'Rate' ? 'selected' : ''}>Rate</option>
+              </select>
+            </div>
+            <div class="st-form-row">
+              <div class="st-form-group">
+                <label class="st-form-label">Baseline</label>
+                <input type="text" class="st-form-input wizard-field" data-index="${index}" data-field="baseline" value="${escapeHtml(goal.baseline || '')}" required>
+              </div>
+              <div class="st-form-group">
+                <label class="st-form-label">Target</label>
+                <input type="text" class="st-form-input wizard-field" data-index="${index}" data-field="target" value="${escapeHtml(goal.target || '')}" required>
+              </div>
+            </div>
+            <div class="st-form-group">
+              <label class="st-form-label">Case Manager</label>
+              <input type="text" class="st-form-input wizard-field" data-index="${index}" data-field="case_manager" value="${escapeHtml(goal.case_manager || '')}" required>
+            </div>
+            <div class="st-form-group">
+              <label class="st-form-label">Data Collector</label>
+              <input type="text" class="st-form-input wizard-field" data-index="${index}" data-field="data_collector" value="${escapeHtml(goal.data_collector || '')}" required>
+            </div>
+            <div class="st-form-group">
+              <label class="st-form-label">Collector Email (if outside provider)</label>
+              <input type="email" class="st-form-input wizard-field" data-index="${index}" data-field="data_collector_email" value="${escapeHtml(goal.data_collector_email || '')}">
+            </div>
+            <div class="st-form-group">
+              <label class="st-form-label">Class Context</label>
+              <select class="st-form-select wizard-field" data-index="${index}" data-field="class_context">
+                <option value="">None</option>
+                ${FULL_CLASS_NAMES.map(cn => `<option value="${escapeHtml(cn)}" ${goal.class_context === cn ? 'selected' : ''}>${escapeHtml(cn)}</option>`).join('')}
+              </select>
+            </div>
+            <div class="st-form-group">
+              <label class="st-form-label">Expected Data Points/Quarter</label>
+              <input type="number" class="st-form-input wizard-field" data-index="${index}" data-field="expected_data_points" min="1" max="20" value="${goal.expected_data_points || 3}">
+            </div>
+            <button type="button" class="st-btn st-btn-danger st-btn-small remove-wizard-goal-btn" data-index="${index}">Remove Goal</button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function validateGoalCode(studentCode, goalCode) {
+      if (!goalCode) return null;
+      
+      const existing = allGoals.filter(g => g.student_code === studentCode && g.code === goalCode);
+      const activeMatch = existing.find(g => g.status !== 'archived');
+      const archivedMatch = existing.find(g => g.status === 'archived');
+      
+      if (activeMatch) return { status: 'replace', message: '⚠️ This code is active. It will be archived and replaced.' };
+      if (archivedMatch) return { status: 'reuse', message: 'ℹ️ This code was previously used (archived). OK to reuse.' };
+      return { status: 'new', message: '✅ New goal code' };
+    }
+
+    const { title, content } = renderWizard();
+    const modal = createModal(title, content);
+    document.body.appendChild(modal);
+
+    // Event handlers
+    modal.addEventListener('click', (e) => {
+      if (e.target.id === 'wizard-cancel') {
+        iepWizardData = null;
+        modal.remove();
+      } else if (e.target.id === 'wizard-back') {
+        iepWizardData.step--;
+        modal.remove();
+        showNewIEPWizard(studentCode);
+      } else if (e.target.id === 'wizard-next') {
+        if (iepWizardData.step === 2) {
+          iepWizardData.step++;
+          modal.remove();
+          showNewIEPWizard(studentCode);
+        }
+      } else if (e.target.id === 'wizard-confirm') {
+        handleConfirmIEPWizard();
+        modal.remove();
+      } else if (e.target.id === 'add-wizard-goal-btn') {
+        iepWizardData.newGoals.push({
+          code: '',
+          goal_area: 'Reading Comprehension',
+          desc: '',
+          measurement_type: 'Accuracy',
+          baseline: '',
+          target: '',
+          case_manager: student.primary_case_manager || '',
+          data_collector: 'Dan Reinisch',
+          data_collector_email: '',
+          class_context: '',
+          expected_data_points: 3
+        });
+        modal.remove();
+        showNewIEPWizard(studentCode);
+      } else if (e.target.classList.contains('remove-wizard-goal-btn')) {
+        const index = parseInt(e.target.dataset.index);
+        iepWizardData.newGoals.splice(index, 1);
+        modal.remove();
+        showNewIEPWizard(studentCode);
+      }
+    });
+
+    // Handle form submission for step 1
+    const step1Form = modal.querySelector('#wizard-step-1-form');
+    if (step1Form) {
+      step1Form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const formData = new FormData(step1Form);
+        iepWizardData.iepDue = formData.get('iep_due');
+        iepWizardData.evalDue = formData.get('eval_due');
+        iepWizardData.step = 2;
+        modal.remove();
+        showNewIEPWizard(studentCode);
+      });
+    }
+
+    // Handle checkbox changes for goals to archive
+    modal.addEventListener('change', (e) => {
+      if (e.target.classList.contains('archive-goal-cb')) {
+        const goalId = parseInt(e.target.dataset.goalId);
+        if (e.target.checked) {
+          iepWizardData.goalsToArchive.add(goalId);
+        } else {
+          iepWizardData.goalsToArchive.delete(goalId);
+        }
+      }
+    });
+
+    // Handle wizard field changes
+    modal.addEventListener('input', (e) => {
+      if (e.target.classList.contains('wizard-field')) {
+        const index = parseInt(e.target.dataset.index);
+        const field = e.target.dataset.field;
+        iepWizardData.newGoals[index][field] = e.target.value;
+      } else if (e.target.classList.contains('wizard-goal-code')) {
+        const index = parseInt(e.target.dataset.index);
+        iepWizardData.newGoals[index].code = e.target.value;
+      }
+    });
+
+    // Handle goal code validation on blur
+    modal.addEventListener('blur', (e) => {
+      if (e.target.classList.contains('wizard-goal-code')) {
+        // Re-render to show validation
+        modal.remove();
+        showNewIEPWizard(studentCode);
+      }
+    }, true);
+  }
+
+  async function handleConfirmIEPWizard() {
+    if (!iepWizardData) return;
+
+    const { studentCode, goalsToArchive, newGoals, iepDue, evalDue } = iepWizardData;
+    
+    try {
+      // 1. Update student's IEP and eval dates
+      await db.upsertStudent({
+        code: studentCode,
+        iep_due: iepDue,
+        eval_due: evalDue || null
+      });
+
+      // 2. Archive selected goals
+      for (const goalId of goalsToArchive) {
+        await db.upsertGoal({ id: goalId, status: 'archived' });
+      }
+
+      // 3. For new goals whose code matches an existing active goal: archive the existing one first
+      const studentGoals = allGoals.filter(g => g.student_code === studentCode && g.status === 'active');
+      for (const newGoal of newGoals) {
+        const existingGoal = studentGoals.find(g => g.code === newGoal.code);
+        if (existingGoal) {
+          await db.upsertGoal({ id: existingGoal.id, status: 'archived' });
+        }
+      }
+
+      // 4. Create all new goals
+      for (const newGoal of newGoals) {
+        await db.upsertGoal({
+          student_code: studentCode,
+          ...newGoal,
+          status: 'active',
+          version: 1
+        });
+      }
+
+      // 5. Reload data
+      await loadData();
+      
+      // 6. Show success message
+      showToast('New IEP created successfully');
+      
+      // 7. Keep student expanded
+      if (expandedStudent === studentCode) {
+        renderExpandedDetail(studentCode);
+      }
+      
+      // Reset wizard data
+      iepWizardData = null;
+    } catch (error) {
+      console.error('[tc-students] Error creating new IEP:', error);
+      alert('Failed to create new IEP');
     }
   }
 
