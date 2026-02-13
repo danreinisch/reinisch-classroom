@@ -723,6 +723,103 @@
         font-size: 13px;
       }
 
+      /* Data entry form */
+      .st-data-entry-form {
+        background: rgba(59, 130, 246, 0.08);
+        border: 1px solid rgba(59, 130, 246, 0.2);
+        border-radius: 8px;
+        padding: 16px;
+        margin: 12px 0;
+      }
+
+      .st-data-entry-form h4 {
+        color: rgba(59, 130, 246, 0.9);
+      }
+
+      /* Data collection status on goal cards */
+      .st-goal-data-status {
+        display: flex;
+        gap: 16px;
+        padding: 8px 0;
+        font-size: 13px;
+        opacity: 0.85;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        margin-top: 8px;
+      }
+
+      .st-data-status-item {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      /* Wizard step indicator */
+      .st-wizard-step-indicator {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 20px;
+        font-size: 13px;
+        opacity: 0.7;
+      }
+
+      .st-wizard-step-indicator .active {
+        opacity: 1;
+        font-weight: 700;
+      }
+
+      /* Goal code validation messages */
+      .st-goal-code-validation {
+        font-size: 12px;
+        margin-top: 4px;
+        padding: 4px 8px;
+        border-radius: 4px;
+      }
+
+      .st-goal-code-validation.replace {
+        background: rgba(249, 115, 22, 0.15);
+        color: rgba(249, 115, 22, 1);
+      }
+
+      .st-goal-code-validation.reuse {
+        background: rgba(59, 130, 246, 0.15);
+        color: rgba(59, 130, 246, 1);
+      }
+
+      .st-goal-code-validation.new {
+        background: rgba(34, 197, 94, 0.15);
+        color: rgba(34, 197, 94, 1);
+      }
+
+      /* New goal form in wizard */
+      .st-wizard-goal-form {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 12px;
+      }
+
+      .st-wizard-goal-form .st-form-label {
+        font-size: 13px;
+      }
+
+      /* Accuracy input group */
+      .st-accuracy-group {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .st-accuracy-group input {
+        width: 80px;
+      }
+
+      .st-accuracy-result {
+        font-weight: 700;
+        color: rgba(34, 197, 94, 1);
+        min-width: 60px;
+      }
+
       /* Responsive */
       @media (max-width: 768px) {
         .st-toolbar-row {
