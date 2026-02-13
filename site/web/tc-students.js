@@ -2523,7 +2523,7 @@
         `;
       }
 
-      modal.querySelector('.modal-content').innerHTML = `
+      modal.querySelector('.st-modal-body').innerHTML = `
         <h2>Add Student - Step ${step} of 3</h2>
         ${content}
       `;
@@ -2987,10 +2987,52 @@
   function showImportCsvModal() {
     const modal = createModal('Import Students from CSV', `
       <div id="csv-import-container">
+        <div class="csv-instructions" style="margin-bottom: 20px; padding: 15px; background: #f5f5f5; border-radius: 4px;">
+          <h3 style="margin-top: 0;">CSV Format Instructions</h3>
+          <p>Your CSV file should include the following columns:</p>
+          <ul style="margin-bottom: 10px;">
+            <li><strong>Student Code Name</strong> - Student identifier (required)</li>
+            <li><strong>Case Manager</strong> - Primary case manager name</li>
+            <li><strong>IEP Due</strong> (or "Annual Review", "Next IEP") - IEP due date in M/D/YYYY format</li>
+            <li><strong>Eval Due</strong> (or "Evaluation", "Next Eval", "Re-eval") - Evaluation due date in M/D/YYYY format</li>
+            <li><strong>Class</strong> - Class name</li>
+            <li><strong>IEP Goal with Student Code</strong> - Goal description</li>
+            <li><strong>Student Code IEP Goal Code</strong> - Goal code (e.g., S001.1)</li>
+            <li><strong>Goal Area</strong> - Goal category</li>
+            <li><strong>Measurement Type</strong> - How progress is measured (percent, trials, etc.)</li>
+            <li><strong>Teacher to Collect Data</strong> - Data collector name</li>
+            <li><strong>Teacher to Collect Data Email</strong> - Data collector email</li>
+          </ul>
+          <button type="button" class="btn btn-secondary" id="download-template" style="margin-top: 10px;">
+            📥 Download CSV Template
+          </button>
+        </div>
+        
+        <div class="form-group" style="margin-bottom: 20px;">
+          <label><strong>Import Mode:</strong></label>
+          <div style="margin-top: 8px;">
+            <label style="display: block; margin-bottom: 8px;">
+              <input type="radio" name="import-mode" value="merge" checked style="margin-right: 8px;">
+              <strong>Add & Update</strong> - Merge with existing data (recommended)
+              <div style="margin-left: 24px; color: #666; font-size: 0.9em;">
+                New students will be added, existing students will be updated
+              </div>
+            </label>
+            <label style="display: block;">
+              <input type="radio" name="import-mode" value="replace" style="margin-right: 8px;">
+              <strong>Replace All</strong> - Clear all data and re-import
+              <div style="margin-left: 24px; color: #d32f2f; font-size: 0.9em;">
+                ⚠️ Warning: This will delete ALL existing students, goals, and enrollments
+              </div>
+            </label>
+          </div>
+        </div>
+        
         <div class="form-group">
           <label>Select CSV File:</label>
           <input type="file" id="csv-file-input" accept=".csv">
         </div>
+        
         <div id="csv-preview" style="display: none;">
           <h3>Preview</h3>
           <div id="csv-preview-content"></div>
@@ -3004,6 +3046,14 @@
 
     document.body.appendChild(modal);
 
+    // Download template button handler
+    const downloadBtn = document.getElementById('download-template');
+    if (downloadBtn) {
+      downloadBtn.addEventListener('click', () => {
+        downloadCsvTemplate();
+      });
+    }
+
     const fileInput = document.getElementById('csv-file-input');
     fileInput.addEventListener('change', async (e) => {
       const file = e.target.files[0];
@@ -3016,6 +3066,34 @@
     if (cancelBtn) {
       cancelBtn.addEventListener('click', () => modal.remove());
     }
+  }
+  
+  function downloadCsvTemplate() {
+    const headers = [
+      'Student Code Name',
+      'Case Manager',
+      'IEP Due',
+      'Eval Due',
+      'Class',
+      'IEP Goal with Student Code',
+      'Student Code IEP Goal Code',
+      'Goal Area',
+      'Measurement Type',
+      'Teacher to Collect Data',
+      'Teacher to Collect Data Email'
+    ];
+    
+    const csvContent = headers.join(',') + '\n';
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'student_import_template.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   }
 
   async function handleCsvFileSelected(file) {
@@ -3163,10 +3241,21 @@
   function parseDateFromCSV(dateStr) {
     if (!dateStr) return null;
     
-    // Try M/D/YYYY format first
+    // Trim whitespace
+    dateStr = dateStr.trim();
+    if (!dateStr) return null;
+    
+    // Try M/D/YYYY format first (most common)
     const slashMatch = dateStr.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
     if (slashMatch) {
       const [, month, day, year] = slashMatch;
+      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+    
+    // Try M-D-YYYY format (dash separator)
+    const dashMatch = dateStr.match(/(\d{1,2})-(\d{1,2})-(\d{4})/);
+    if (dashMatch) {
+      const [, month, day, year] = dashMatch;
       return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
     }
     
@@ -3184,17 +3273,40 @@
     const preview = document.getElementById('csv-preview');
     const content = document.getElementById('csv-preview-content');
     
+    const totalGoals = data.reduce((sum, s) => sum + s.goals.length, 0);
+    const importMode = document.querySelector('input[name="import-mode"]:checked')?.value || 'merge';
+    
+    let modeWarning = '';
+    if (importMode === 'replace') {
+      modeWarning = `
+        <div style="padding: 12px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; margin-bottom: 15px;">
+          <strong>⚠️ Replace All Mode Selected</strong>
+          <p style="margin: 8px 0 0 0;">All existing students, goals, and enrollments will be deleted before importing.</p>
+        </div>
+      `;
+    }
+    
     const summary = `
-      <p><strong>${newStudentCount}</strong> new students will be imported</p>
-      <p><strong>${existingStudentCount}</strong> existing students will be updated</p>
-      <p><strong>${data.reduce((sum, s) => sum + s.goals.length, 0)}</strong> total goals</p>
+      ${modeWarning}
+      <div style="padding: 15px; background: #f5f5f5; border-radius: 4px; margin-bottom: 15px;">
+        <h4 style="margin-top: 0;">Import Summary</h4>
+        <p style="margin: 5px 0;"><strong>${newStudentCount}</strong> new student${newStudentCount !== 1 ? 's' : ''} will be ${importMode === 'replace' ? 'imported' : 'added'}</p>
+        <p style="margin: 5px 0;"><strong>${existingStudentCount}</strong> existing student${existingStudentCount !== 1 ? 's' : ''} will be updated</p>
+        <p style="margin: 5px 0;"><strong>${totalGoals}</strong> total goal${totalGoals !== 1 ? 's' : ''}</p>
+      </div>
       <details>
-        <summary>Show Details</summary>
-        <ul>
+        <summary style="cursor: pointer; padding: 8px; background: #e8e8e8; border-radius: 4px;">Show Student Details</summary>
+        <ul style="margin-top: 10px;">
           ${data.slice(0, 5).map(s => `
-            <li>${escapeHtml(s.code)}${s.isExisting ? ' (existing)' : ' (new)'}: ${s.enrollments.length} classes, ${s.goals.length} goals</li>
+            <li style="margin-bottom: 5px;">
+              <strong>${escapeHtml(s.code)}</strong>${s.isExisting ? ' <span style="color: #1976d2;">(existing)</span>' : ' <span style="color: #388e3c;">(new)</span>'}: 
+              ${s.enrollments.length} class${s.enrollments.length !== 1 ? 'es' : ''}, 
+              ${s.goals.length} goal${s.goals.length !== 1 ? 's' : ''}
+              ${s.iep_due ? `<br><span style="margin-left: 20px; font-size: 0.9em;">📋 IEP: ${formatDate(s.iep_due)}</span>` : ''}
+              ${s.eval_due ? `<br><span style="margin-left: 20px; font-size: 0.9em;">📝 Eval: ${formatDate(s.eval_due)}</span>` : ''}
+            </li>
           `).join('')}
-          ${data.length > 5 ? `<li>...and ${data.length - 5} more</li>` : ''}
+          ${data.length > 5 ? `<li style="color: #666;">...and ${data.length - 5} more</li>` : ''}
         </ul>
       </details>
     `;
@@ -3203,12 +3315,42 @@
     preview.style.display = 'block';
 
     document.getElementById('confirm-import').addEventListener('click', async () => {
-      await handleConfirmCsvImport(data);
+      // Show confirmation dialog
+      const confirmMessage = importMode === 'replace'
+        ? `⚠️ WARNING: Replace All mode will DELETE all ${allStudents.length} existing students and their data.\n\nAre you absolutely sure you want to continue?`
+        : `Ready to import:\n• ${newStudentCount} new students\n• ${existingStudentCount} existing students to update\n• ${totalGoals} total goals\n\nProceed with import?`;
+      
+      if (confirm(confirmMessage)) {
+        await handleConfirmCsvImport(data, importMode);
+      }
     });
   }
 
-  async function handleConfirmCsvImport(data) {
+  async function handleConfirmCsvImport(data, importMode = 'merge') {
     try {
+      const supabase = await getSupabase();
+      
+      // If Replace All mode, delete all existing data first
+      if (importMode === 'replace' && supabase) {
+        console.log('[tc-students] Replace mode: Deleting all existing data...');
+        
+        // Delete in correct order to respect foreign key constraints
+        // 1. Delete goal progress first (references goals)
+        await supabase.from('goal_progress').delete().neq('id', 0);
+        
+        // 2. Delete goals (references students)
+        await supabase.from('goals').delete().neq('id', 0);
+        
+        // 3. Delete enrollments (references students)
+        await supabase.from('enrollments').delete().neq('id', 0);
+        
+        // 4. Delete students
+        await supabase.from('students').delete().neq('id', 0);
+        
+        console.log('[tc-students] All existing data deleted');
+      }
+      
+      // Import the new data
       for (const studentData of data) {
         await db.upsertStudent({
           code: studentData.code,
@@ -3219,7 +3361,6 @@
         });
 
         for (const className of studentData.enrollments) {
-          const supabase = await getSupabase();
           if (!supabase) continue;
           // Use upsert to prevent duplicate enrollments on re-import
           await supabase
@@ -3247,13 +3388,14 @@
         }
       }
 
-      console.log('[tc-students] Imported', data.length, 'students');
+      const modeText = importMode === 'replace' ? 'replaced all data with' : 'imported/updated';
+      console.log(`[tc-students] ${modeText}`, data.length, 'students');
       await loadData();
-      document.querySelector('.modal').remove();
-      alert(`Successfully imported/updated ${data.length} students`);
+      document.querySelector('.st-modal-backdrop')?.remove();
+      alert(`Successfully ${modeText} ${data.length} students`);
     } catch (error) {
       console.error('[tc-students] Error importing CSV:', error);
-      alert('Failed to import CSV');
+      alert('Failed to import CSV: ' + error.message);
     }
   }
 
