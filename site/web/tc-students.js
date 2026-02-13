@@ -900,7 +900,7 @@
 
       // Refresh display to show revoke button
       if (goal.student_code && expandedStudents.has(goal.student_code)) {
-        renderExpandedDetail(goal.student_code);
+        await renderExpandedDetail(goal.student_code);
       }
 
     } catch (err) {
@@ -940,7 +940,7 @@
 
       // Refresh display to show copy button
       if (goal.student_code && expandedStudents.has(goal.student_code)) {
-        renderExpandedDetail(goal.student_code);
+        await renderExpandedDetail(goal.student_code);
       }
 
     } catch (err) {
@@ -1391,12 +1391,12 @@
     // Goal Area filter dropdown (in toolbar)
     const goalAreaFilter = document.getElementById('stGoalAreaFilter');
     if (goalAreaFilter) {
-      goalAreaFilter.addEventListener('change', (e) => {
+      goalAreaFilter.addEventListener('change', async (e) => {
         selectedGoalAreaFilter = e.target.value;
         // Re-render all expanded students to apply the filter
-        expandedStudents.forEach(studentCode => {
-          renderExpandedDetail(studentCode);
-        });
+        for (const studentCode of expandedStudents) {
+          await renderExpandedDetail(studentCode);
+        }
       });
     }
 
@@ -1542,7 +1542,7 @@
           if (studentCode) {
             // Set tab for this specific student only
             selectedDetailTabMap.set(studentCode, tabName);
-            renderExpandedDetail(studentCode);
+            await renderExpandedDetail(studentCode);
           }
           return;
         }
@@ -1640,7 +1640,7 @@
           const studentCode = expandedDetail?.id.replace('stExpandedDetail-', '');
           editingGoalId = goalId;
           if (studentCode) {
-            renderExpandedDetail(studentCode);
+            await renderExpandedDetail(studentCode);
           }
           e.stopPropagation();
           return;
@@ -1653,7 +1653,7 @@
           const studentCode = expandedDetail?.id.replace('stExpandedDetail-', '');
           editingGoalId = null;
           if (studentCode) {
-            renderExpandedDetail(studentCode);
+            await renderExpandedDetail(studentCode);
           }
           e.stopPropagation();
           return;
@@ -1707,7 +1707,7 @@
           const goal = allGoals.find(g => g.id === goalId);
           enteringDataGoalId = goalId;
           if (goal && goal.student_code && expandedStudents.has(goal.student_code)) {
-            renderExpandedDetail(goal.student_code);
+            await renderExpandedDetail(goal.student_code);
             // After render, uncollapse the goal card
             setTimeout(() => {
               const card = document.querySelector(`[data-goal-id="${goalId}"]`);
@@ -1734,7 +1734,7 @@
           const goal = allGoals.find(g => g.id === goalId);
           enteringDataGoalId = null;
           if (goal && goal.student_code && expandedStudents.has(goal.student_code)) {
-            renderExpandedDetail(goal.student_code);
+            await renderExpandedDetail(goal.student_code);
           }
           e.stopPropagation();
           return;
@@ -1835,7 +1835,7 @@
       editingGoalId = null;
       await loadData();
       if (goal.student_code && expandedStudents.has(goal.student_code)) {
-        renderExpandedDetail(goal.student_code);
+        await renderExpandedDetail(goal.student_code);
       }
     } catch (error) {
       console.error('[tc-students] Error updating goal:', error);
@@ -1883,7 +1883,7 @@
       await db.upsertStudent({ code: studentCode, status: 'active', active: true });
       console.log('[tc-students] Reactivated student:', studentCode);
       await loadData();
-      renderExpandedDetail(studentCode);
+      await renderExpandedDetail(studentCode);
     } catch (error) {
       console.error('[tc-students] Error reactivating student:', error);
       alert('Failed to reactivate student');
@@ -1907,7 +1907,7 @@
       console.log('[tc-students] Updated student info:', studentCode);
       showToast('Student information saved successfully');
       await loadData();
-      renderExpandedDetail(studentCode);
+      await renderExpandedDetail(studentCode);
     } catch (error) {
       console.error('[tc-students] Error saving student info:', error);
       alert('Failed to save student information');
@@ -1928,7 +1928,7 @@
       await loadData();
       // Re-render the expanded detail for this goal's student
       if (goal.student_code && expandedStudents.has(goal.student_code)) {
-        renderExpandedDetail(goal.student_code);
+        await renderExpandedDetail(goal.student_code);
       }
     } catch (error) {
       console.error('[tc-students] Error archiving goal:', error);
@@ -1957,7 +1957,7 @@
       await loadData();
       // Re-render the expanded detail for this goal's student
       if (goal.student_code && expandedStudents.has(goal.student_code)) {
-        renderExpandedDetail(goal.student_code);
+        await renderExpandedDetail(goal.student_code);
       }
     } catch (error) {
       console.error('[tc-students] Error versioning goal:', error);
@@ -2080,7 +2080,7 @@
       // Reload data and keep student expanded
       await loadData();
       if (goal.student_code && expandedStudents.has(goal.student_code)) {
-        renderExpandedDetail(goal.student_code);
+        await renderExpandedDetail(goal.student_code);
       }
     } catch (error) {
       console.error('[tc-students] Error saving progress data:', error);
@@ -2173,7 +2173,7 @@
       console.log('[tc-students] Updated enrollments');
       await loadData();
       if (studentCode && expandedStudents.has(studentCode)) {
-        renderExpandedDetail(studentCode);
+        await renderExpandedDetail(studentCode);
       }
     } catch (error) {
       console.error('[tc-students] Error saving enrollments:', error);
@@ -2284,7 +2284,7 @@
       console.log('[tc-students] Added goal');
       await loadData();
       if (goal.student_code && expandedStudents.has(goal.student_code)) {
-        renderExpandedDetail(goal.student_code);
+        await renderExpandedDetail(goal.student_code);
       }
     } catch (error) {
       console.error('[tc-students] Error adding goal:', error);
@@ -2407,7 +2407,7 @@
       console.log('[tc-students] Updated goal');
       await loadData();
       if (goal.student_code && expandedStudents.has(goal.student_code)) {
-        renderExpandedDetail(goal.student_code);
+        await renderExpandedDetail(goal.student_code);
       }
     } catch (error) {
       console.error('[tc-students] Error updating goal:', error);
@@ -2973,7 +2973,7 @@
       
       // 7. Keep student expanded
       if (expandedStudents.has(studentCode)) {
-        renderExpandedDetail(studentCode);
+        await renderExpandedDetail(studentCode);
       }
       
       // Reset wizard data
