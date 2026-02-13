@@ -900,7 +900,7 @@
 
       // Refresh display to show revoke button
       if (goal.student_code && expandedStudents.has(goal.student_code)) {
-        renderExpandedDetail(goal.student_code);
+        await renderExpandedDetail(goal.student_code);
       }
 
     } catch (err) {
@@ -940,7 +940,7 @@
 
       // Refresh display to show copy button
       if (goal.student_code && expandedStudents.has(goal.student_code)) {
-        renderExpandedDetail(goal.student_code);
+        await renderExpandedDetail(goal.student_code);
       }
 
     } catch (err) {
@@ -1391,12 +1391,12 @@
     // Goal Area filter dropdown (in toolbar)
     const goalAreaFilter = document.getElementById('stGoalAreaFilter');
     if (goalAreaFilter) {
-      goalAreaFilter.addEventListener('change', (e) => {
+      goalAreaFilter.addEventListener('change', async (e) => {
         selectedGoalAreaFilter = e.target.value;
         // Re-render all expanded students to apply the filter
-        expandedStudents.forEach(studentCode => {
-          renderExpandedDetail(studentCode);
-        });
+        for (const studentCode of expandedStudents) {
+          await renderExpandedDetail(studentCode);
+        }
       });
     }
 
@@ -1542,7 +1542,7 @@
           if (studentCode) {
             // Set tab for this specific student only
             selectedDetailTabMap.set(studentCode, tabName);
-            renderExpandedDetail(studentCode);
+            await renderExpandedDetail(studentCode);
           }
           return;
         }
@@ -1640,7 +1640,7 @@
           const studentCode = expandedDetail?.id.replace('stExpandedDetail-', '');
           editingGoalId = goalId;
           if (studentCode) {
-            renderExpandedDetail(studentCode);
+            await renderExpandedDetail(studentCode);
           }
           e.stopPropagation();
           return;
@@ -1653,7 +1653,7 @@
           const studentCode = expandedDetail?.id.replace('stExpandedDetail-', '');
           editingGoalId = null;
           if (studentCode) {
-            renderExpandedDetail(studentCode);
+            await renderExpandedDetail(studentCode);
           }
           e.stopPropagation();
           return;
@@ -1707,7 +1707,7 @@
           const goal = allGoals.find(g => g.id === goalId);
           enteringDataGoalId = goalId;
           if (goal && goal.student_code && expandedStudents.has(goal.student_code)) {
-            renderExpandedDetail(goal.student_code);
+            await renderExpandedDetail(goal.student_code);
             // After render, uncollapse the goal card
             setTimeout(() => {
               const card = document.querySelector(`[data-goal-id="${goalId}"]`);
@@ -1734,7 +1734,7 @@
           const goal = allGoals.find(g => g.id === goalId);
           enteringDataGoalId = null;
           if (goal && goal.student_code && expandedStudents.has(goal.student_code)) {
-            renderExpandedDetail(goal.student_code);
+            await renderExpandedDetail(goal.student_code);
           }
           e.stopPropagation();
           return;
@@ -1835,7 +1835,7 @@
       editingGoalId = null;
       await loadData();
       if (goal.student_code && expandedStudents.has(goal.student_code)) {
-        renderExpandedDetail(goal.student_code);
+        await renderExpandedDetail(goal.student_code);
       }
     } catch (error) {
       console.error('[tc-students] Error updating goal:', error);
@@ -1883,7 +1883,7 @@
       await db.upsertStudent({ code: studentCode, status: 'active', active: true });
       console.log('[tc-students] Reactivated student:', studentCode);
       await loadData();
-      renderExpandedDetail(studentCode);
+      await renderExpandedDetail(studentCode);
     } catch (error) {
       console.error('[tc-students] Error reactivating student:', error);
       alert('Failed to reactivate student');
@@ -1907,7 +1907,7 @@
       console.log('[tc-students] Updated student info:', studentCode);
       showToast('Student information saved successfully');
       await loadData();
-      renderExpandedDetail(studentCode);
+      await renderExpandedDetail(studentCode);
     } catch (error) {
       console.error('[tc-students] Error saving student info:', error);
       alert('Failed to save student information');
@@ -1928,7 +1928,7 @@
       await loadData();
       // Re-render the expanded detail for this goal's student
       if (goal.student_code && expandedStudents.has(goal.student_code)) {
-        renderExpandedDetail(goal.student_code);
+        await renderExpandedDetail(goal.student_code);
       }
     } catch (error) {
       console.error('[tc-students] Error archiving goal:', error);
@@ -1957,7 +1957,7 @@
       await loadData();
       // Re-render the expanded detail for this goal's student
       if (goal.student_code && expandedStudents.has(goal.student_code)) {
-        renderExpandedDetail(goal.student_code);
+        await renderExpandedDetail(goal.student_code);
       }
     } catch (error) {
       console.error('[tc-students] Error versioning goal:', error);
@@ -2080,7 +2080,7 @@
       // Reload data and keep student expanded
       await loadData();
       if (goal.student_code && expandedStudents.has(goal.student_code)) {
-        renderExpandedDetail(goal.student_code);
+        await renderExpandedDetail(goal.student_code);
       }
     } catch (error) {
       console.error('[tc-students] Error saving progress data:', error);
@@ -2173,7 +2173,7 @@
       console.log('[tc-students] Updated enrollments');
       await loadData();
       if (studentCode && expandedStudents.has(studentCode)) {
-        renderExpandedDetail(studentCode);
+        await renderExpandedDetail(studentCode);
       }
     } catch (error) {
       console.error('[tc-students] Error saving enrollments:', error);
@@ -2284,7 +2284,7 @@
       console.log('[tc-students] Added goal');
       await loadData();
       if (goal.student_code && expandedStudents.has(goal.student_code)) {
-        renderExpandedDetail(goal.student_code);
+        await renderExpandedDetail(goal.student_code);
       }
     } catch (error) {
       console.error('[tc-students] Error adding goal:', error);
@@ -2407,7 +2407,7 @@
       console.log('[tc-students] Updated goal');
       await loadData();
       if (goal.student_code && expandedStudents.has(goal.student_code)) {
-        renderExpandedDetail(goal.student_code);
+        await renderExpandedDetail(goal.student_code);
       }
     } catch (error) {
       console.error('[tc-students] Error updating goal:', error);
@@ -2460,117 +2460,125 @@
   }
 
   function showAddStudentWizard() {
-    let step = 1;
-    let studentData = {};
+    try {
+      let step = 1;
+      let studentData = {};
 
-    function renderStep() {
-      let content = '';
-      
-      if (step === 1) {
-        content = `
-          <form id="wizard-step-1">
-            <div class="form-group">
-              <label>Student Code:</label>
-              <input type="text" name="code" value="${escapeHtml(studentData.code || '')}" required>
-            </div>
-            <div class="form-group">
-              <label>Password:</label>
-              <input type="text" name="password" value="${escapeHtml(studentData.password || '')}" required>
-            </div>
-            <div class="form-group">
-              <label>Primary Case Manager:</label>
-              <input type="text" name="primary_case_manager" value="${escapeHtml(studentData.primary_case_manager || '')}">
-            </div>
-            <div class="modal-actions">
-              <button type="button" class="btn btn-secondary" id="wizard-cancel">Cancel</button>
-              <button type="submit" class="btn btn-primary">Next</button>
-            </div>
-          </form>
-        `;
-      } else if (step === 2) {
-        const checkboxes = FULL_CLASS_NAMES.map(className => `
-          <label class="checkbox-label">
-            <input type="checkbox" name="enrollment" value="${escapeHtml(className)}"
-              ${studentData.enrollments && studentData.enrollments.includes(className) ? 'checked' : ''}>
-            ${escapeHtml(className)}
-          </label>
-        `).join('');
+      // Create modal first, before defining renderStep
+      const modal = createModal('Add Student', '');
+      document.body.appendChild(modal);
 
-        content = `
-          <form id="wizard-step-2">
-            <div class="form-group">
-              <label>Select Classes:</label>
-              <div class="checkbox-group">
-                ${checkboxes}
+      // Use arrow function instead of function declaration to avoid no-inner-declarations ESLint error
+      const renderStep = () => {
+        let content = '';
+        
+        if (step === 1) {
+          content = `
+            <form id="wizard-step-1">
+              <div class="form-group">
+                <label>Student Code:</label>
+                <input type="text" name="code" value="${escapeHtml(studentData.code || '')}" required>
               </div>
-            </div>
-            <div class="modal-actions">
-              <button type="button" class="btn btn-secondary" id="wizard-back">Back</button>
-              <button type="submit" class="btn btn-primary">Next</button>
-            </div>
-          </form>
+              <div class="form-group">
+                <label>Password:</label>
+                <input type="text" name="password" value="${escapeHtml(studentData.password || '')}" required>
+              </div>
+              <div class="form-group">
+                <label>Primary Case Manager:</label>
+                <input type="text" name="primary_case_manager" value="${escapeHtml(studentData.primary_case_manager || '')}">
+              </div>
+              <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" id="wizard-cancel">Cancel</button>
+                <button type="submit" class="btn btn-primary">Next</button>
+              </div>
+            </form>
+          `;
+        } else if (step === 2) {
+          const checkboxes = FULL_CLASS_NAMES.map(className => `
+            <label class="checkbox-label">
+              <input type="checkbox" name="enrollment" value="${escapeHtml(className)}"
+                ${studentData.enrollments && studentData.enrollments.includes(className) ? 'checked' : ''}>
+              ${escapeHtml(className)}
+            </label>
+          `).join('');
+
+          content = `
+            <form id="wizard-step-2">
+              <div class="form-group">
+                <label>Select Classes:</label>
+                <div class="checkbox-group">
+                  ${checkboxes}
+                </div>
+              </div>
+              <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" id="wizard-back">Back</button>
+                <button type="submit" class="btn btn-primary">Next</button>
+              </div>
+            </form>
+          `;
+        } else if (step === 3) {
+          content = `
+            <form id="wizard-step-3">
+              <p>Student will be created with ${studentData.enrollments ? studentData.enrollments.length : 0} class enrollments.</p>
+              <p>You can add goals after creating the student.</p>
+              <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" id="wizard-back">Back</button>
+                <button type="submit" class="btn btn-primary">Create Student</button>
+              </div>
+            </form>
+          `;
+        }
+
+        modal.querySelector('.st-modal-body').innerHTML = `
+          <h2>Add Student - Step ${step} of 3</h2>
+          ${content}
         `;
-      } else if (step === 3) {
-        content = `
-          <form id="wizard-step-3">
-            <p>Student will be created with ${studentData.enrollments ? studentData.enrollments.length : 0} class enrollments.</p>
-            <p>You can add goals after creating the student.</p>
-            <div class="modal-actions">
-              <button type="button" class="btn btn-secondary" id="wizard-back">Back</button>
-              <button type="submit" class="btn btn-primary">Create Student</button>
-            </div>
-          </form>
-        `;
-      }
 
-      modal.querySelector('.st-modal-body').innerHTML = `
-        <h2>Add Student - Step ${step} of 3</h2>
-        ${content}
-      `;
+        const cancelBtn = document.getElementById('wizard-cancel');
+        if (cancelBtn) {
+          cancelBtn.addEventListener('click', () => modal.remove());
+        }
 
-      const cancelBtn = document.getElementById('wizard-cancel');
-      if (cancelBtn) {
-        cancelBtn.addEventListener('click', () => modal.remove());
-      }
-
-      const backBtn = document.getElementById('wizard-back');
-      if (backBtn) {
-        backBtn.addEventListener('click', () => {
-          step--;
-          renderStep();
-        });
-      }
-
-      const form = modal.querySelector('form');
-      if (form) {
-        form.addEventListener('submit', async (e) => {
-          e.preventDefault();
-          
-          if (step === 1) {
-            const formData = new FormData(form);
-            studentData.code = formData.get('code');
-            studentData.password = formData.get('password');
-            studentData.primary_case_manager = formData.get('primary_case_manager');
-            step++;
+        const backBtn = document.getElementById('wizard-back');
+        if (backBtn) {
+          backBtn.addEventListener('click', () => {
+            step--;
             renderStep();
-          } else if (step === 2) {
-            const checkboxes = form.querySelectorAll('input[name="enrollment"]');
-            studentData.enrollments = Array.from(checkboxes)
-              .filter(cb => cb.checked)
-              .map(cb => cb.value);
-            step++;
-            renderStep();
-          } else if (step === 3) {
-            await handleCreateStudent(studentData);
-            modal.remove();
-          }
-        });
-      }
+          });
+        }
+
+        const form = modal.querySelector('form');
+        if (form) {
+          form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (step === 1) {
+              const formData = new FormData(form);
+              studentData.code = formData.get('code');
+              studentData.password = formData.get('password');
+              studentData.primary_case_manager = formData.get('primary_case_manager');
+              step++;
+              renderStep();
+            } else if (step === 2) {
+              const checkboxes = form.querySelectorAll('input[name="enrollment"]');
+              studentData.enrollments = Array.from(checkboxes)
+                .filter(cb => cb.checked)
+                .map(cb => cb.value);
+              step++;
+              renderStep();
+            } else if (step === 3) {
+              await handleCreateStudent(studentData);
+              modal.remove();
+            }
+          });
+        }
+      };
+
+      renderStep();
+    } catch (error) {
+      console.error('[tc-students] Error in showAddStudentWizard:', error);
+      alert('Failed to open Add Student wizard. Please check the console for details.');
     }
-
-    const modal = createModal('Add Student', '');
-    document.body.appendChild(modal);
-    renderStep();
   }
 
   async function handleCreateStudent(data) {
@@ -2973,7 +2981,7 @@
       
       // 7. Keep student expanded
       if (expandedStudents.has(studentCode)) {
-        renderExpandedDetail(studentCode);
+        await renderExpandedDetail(studentCode);
       }
       
       // Reset wizard data
@@ -3276,6 +3284,23 @@
     const totalGoals = data.reduce((sum, s) => sum + s.goals.length, 0);
     const importMode = document.querySelector('input[name="import-mode"]:checked')?.value || 'merge';
     
+    // Count existing students that will have their dates updated
+    let studentsWithDateUpdates = 0;
+    if (importMode === 'merge') {
+      for (const csvStudent of data) {
+        if (csvStudent.isExisting) {
+          const existingStudent = allStudents.find(s => s.code === csvStudent.code);
+          if (existingStudent) {
+            const willUpdateIep = !existingStudent.iep_due && csvStudent.iep_due;
+            const willUpdateEval = !existingStudent.eval_due && csvStudent.eval_due;
+            if (willUpdateIep || willUpdateEval) {
+              studentsWithDateUpdates++;
+            }
+          }
+        }
+      }
+    }
+    
     let modeWarning = '';
     if (importMode === 'replace') {
       modeWarning = `
@@ -3286,12 +3311,18 @@
       `;
     }
     
+    let dateUpdateInfo = '';
+    if (studentsWithDateUpdates > 0) {
+      dateUpdateInfo = `<p style="margin: 5px 0; color: #2e7d32;">📅 <strong>${studentsWithDateUpdates}</strong> existing student${studentsWithDateUpdates !== 1 ? 's' : ''} will have missing IEP/Eval dates filled in</p>`;
+    }
+    
     const summary = `
       ${modeWarning}
       <div style="padding: 15px; background: #f5f5f5; border-radius: 4px; margin-bottom: 15px;">
         <h4 style="margin-top: 0;">Import Summary</h4>
         <p style="margin: 5px 0;"><strong>${newStudentCount}</strong> new student${newStudentCount !== 1 ? 's' : ''} will be ${importMode === 'replace' ? 'imported' : 'added'}</p>
         <p style="margin: 5px 0;"><strong>${existingStudentCount}</strong> existing student${existingStudentCount !== 1 ? 's' : ''} will be updated</p>
+        ${dateUpdateInfo}
         <p style="margin: 5px 0;"><strong>${totalGoals}</strong> total goal${totalGoals !== 1 ? 's' : ''}</p>
       </div>
       <details>
@@ -3314,15 +3345,74 @@
     content.innerHTML = summary;
     preview.style.display = 'block';
 
-    document.getElementById('confirm-import').addEventListener('click', async () => {
-      // Show confirmation dialog
-      const confirmMessage = importMode === 'replace'
-        ? `⚠️ WARNING: Replace All mode will DELETE all ${allStudents.length} existing students and their data.\n\nAre you absolutely sure you want to continue?`
-        : `Ready to import:\n• ${newStudentCount} new students\n• ${existingStudentCount} existing students to update\n• ${totalGoals} total goals\n\nProceed with import?`;
-      
-      if (confirm(confirmMessage)) {
-        await handleConfirmCsvImport(data, importMode);
+    document.getElementById('confirm-import').addEventListener('click', () => {
+      // Show styled confirmation modal instead of browser confirm()
+      if (importMode === 'replace') {
+        showReplaceAllConfirmation(data, newStudentCount, totalGoals);
+      } else {
+        showMergeConfirmation(data, newStudentCount, existingStudentCount, totalGoals);
       }
+    });
+  }
+
+  function showMergeConfirmation(data, newStudentCount, existingStudentCount, totalGoals) {
+    const modal = createModal('Confirm Import', `
+      <div style="padding: 10px 0;">
+        <p style="margin-bottom: 15px;">This will add and update students with the following data:</p>
+        <ul style="margin-left: 20px; margin-bottom: 20px;">
+          <li><strong>${newStudentCount}</strong> new student${newStudentCount !== 1 ? 's' : ''} will be added</li>
+          <li><strong>${existingStudentCount}</strong> existing student${existingStudentCount !== 1 ? 's' : ''} will be updated</li>
+          <li><strong>${totalGoals}</strong> total goal${totalGoals !== 1 ? 's' : ''}</li>
+        </ul>
+        <p style="margin-bottom: 20px;">Continue?</p>
+        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+          <button class="st-btn st-btn-secondary" id="cancel-import-btn">Cancel</button>
+          <button class="st-btn st-btn-primary" id="proceed-import-btn">Confirm Import</button>
+        </div>
+      </div>
+    `);
+    
+    document.body.appendChild(modal);
+    
+    document.getElementById('cancel-import-btn').addEventListener('click', () => {
+      modal.remove();
+    });
+    
+    document.getElementById('proceed-import-btn').addEventListener('click', async () => {
+      modal.remove();
+      await handleConfirmCsvImport(data, 'merge');
+    });
+  }
+
+  function showReplaceAllConfirmation(data, newStudentCount, totalGoals) {
+    const modal = createModal('⚠️ Confirm Replace All', `
+      <div style="padding: 10px 0;">
+        <div style="padding: 15px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; margin-bottom: 20px;">
+          <strong style="color: #856404;">⚠️ WARNING: Destructive Action</strong>
+          <p style="margin: 10px 0 0 0; color: #856404;">This will DELETE all <strong>${allStudents.length}</strong> existing students and their associated data (goals, enrollments, progress).</p>
+        </div>
+        <p style="margin-bottom: 15px;">The database will be replaced with:</p>
+        <ul style="margin-left: 20px; margin-bottom: 20px;">
+          <li><strong>${newStudentCount}</strong> student${newStudentCount !== 1 ? 's' : ''} from the CSV</li>
+          <li><strong>${totalGoals}</strong> total goal${totalGoals !== 1 ? 's' : ''}</li>
+        </ul>
+        <p style="margin-bottom: 20px; font-weight: bold; color: #d32f2f;">This action cannot be undone.</p>
+        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+          <button class="st-btn st-btn-secondary" id="cancel-replace-btn">Cancel</button>
+          <button class="st-btn" id="proceed-replace-btn" style="background: #d32f2f; color: white;">Delete All & Import</button>
+        </div>
+      </div>
+    `);
+    
+    document.body.appendChild(modal);
+    
+    document.getElementById('cancel-replace-btn').addEventListener('click', () => {
+      modal.remove();
+    });
+    
+    document.getElementById('proceed-replace-btn').addEventListener('click', async () => {
+      modal.remove();
+      await handleConfirmCsvImport(data, 'replace');
     });
   }
 
