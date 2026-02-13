@@ -1,0 +1,1652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unit 5: Types of Employment & Career Planning</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #333;
+        }
+        .nav-bar {
+            width: 100%;
+            background: rgba(0,0,0,0.3);
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: fixed;
+            top: 0;
+            z-index: 100;
+        }
+        .back-btn {
+            background: linear-gradient(145deg, #e74c3c, #c0392b);
+            color: white;
+            padding: 8px 18px;
+            border: none;
+            border-radius: 20px;
+            font-size: 0.9em;
+            cursor: pointer;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .back-btn:hover { opacity: 0.9; }
+        .page-indicator {
+            color: white;
+            font-size: 0.85em;
+            background: rgba(255,255,255,0.15);
+            padding: 6px 16px;
+            border-radius: 15px;
+            text-align: center;
+            max-width: 350px;
+        }
+        .nav-buttons { display: flex; gap: 10px; }
+        .nav-btn {
+            background: linear-gradient(145deg, #3498db, #2980b9);
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: bold;
+        }
+        .nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .nav-btn:hover:not(:disabled) { opacity: 0.9; }
+        .day-menu {
+            width: 100%;
+            background: rgba(0,0,0,0.2);
+            padding: 8px 20px;
+            display: flex;
+            justify-content: center;
+            gap: 6px;
+            position: fixed;
+            top: 48px;
+            z-index: 99;
+            flex-wrap: wrap;
+        }
+        .day-jump {
+            background: rgba(255,255,255,0.15);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            padding: 5px 10px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 0.75em;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        .day-jump:hover { background: rgba(255,255,255,0.3); }
+        .day-jump.active-day { background: #3498db; border-color: #3498db; }
+        .slide-container {
+            margin-top: 100px;
+            width: 95%;
+            max-width: 950px;
+            padding: 20px;
+        }
+        .page { display: none; }
+        .page.active { display: block; }
+        .slide {
+            background: rgba(255,255,255,0.95);
+            border-radius: 20px;
+            padding: 40px;
+            min-height: 500px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        .slide-title {
+            font-size: 2em;
+            color: #0f3460;
+            text-align: center;
+            margin-bottom: 25px;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 15px;
+        }
+        .slide p, .slide li { font-size: 1.2em; line-height: 1.8; color: #2c3e50; margin-bottom: 12px; }
+        .slide ul { padding-left: 25px; }
+        .slide li { margin-bottom: 10px; }
+        .highlight-box { background: #e8f4fd; border-left: 5px solid #3498db; padding: 20px; border-radius: 0 12px 12px 0; margin: 20px 0; }
+        .warning-box { background: #fdf2e9; border-left: 5px solid #e67e22; padding: 20px; border-radius: 0 12px 12px 0; margin: 20px 0; }
+        .success-box { background: #eafaf1; border-left: 5px solid #27ae60; padding: 20px; border-radius: 0 12px 12px 0; margin: 20px 0; }
+        .example-box { background: #f4ecf7; border-left: 5px solid #8e44ad; padding: 20px; border-radius: 0 12px 12px 0; margin: 20px 0; }
+        .danger-box { background: #fdedec; border-left: 5px solid #e74c3c; padding: 20px; border-radius: 0 12px 12px 0; margin: 20px 0; }
+        .do-dont { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0; }
+        .do-column { background: #eafaf1; border: 2px solid #27ae60; border-radius: 12px; padding: 20px; }
+        .dont-column { background: #fdedec; border: 2px solid #e74c3c; border-radius: 12px; padding: 20px; }
+        .do-column h3 { color: #27ae60; margin-bottom: 10px; }
+        .dont-column h3 { color: #e74c3c; margin-bottom: 10px; }
+        .emoji-big { font-size: 1.5em; }
+        .scenario { background: #fff3cd; border: 2px solid #ffc107; border-radius: 12px; padding: 20px; margin: 15px 0; }
+        .scenario-label { font-weight: bold; color: #856404; font-size: 1.1em; margin-bottom: 8px; }
+        .title-slide { display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; min-height: 500px; }
+        .title-slide h1 { font-size: 2.5em; color: #0f3460; margin-bottom: 15px; }
+        .title-slide p { font-size: 1.3em; color: #555; }
+        .title-slide .emoji-hero { font-size: 4em; margin-bottom: 20px; }
+        .title-slide .day-label {
+            background: #3498db;
+            color: white;
+            padding: 8px 25px;
+            border-radius: 25px;
+            font-size: 1em;
+            margin-bottom: 15px;
+            display: inline-block;
+        }
+        .step-card {
+            background: white;
+            border: 2px solid #3498db;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 12px 0;
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+        }
+        .step-number {
+            background: #3498db;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2em;
+            flex-shrink: 0;
+        }
+        .comparison-table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 1.05em; }
+        .comparison-table th, .comparison-table td { padding: 12px; text-align: left; border: 2px solid #ddd; }
+        .comparison-table th { background: #0f3460; color: white; font-size: 1em; }
+        .comparison-table tr:nth-child(even) { background: #f2f2f2; }
+
+        .job-type-card {
+            background: white;
+            border: 2px solid #3498db;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 15px 0;
+        }
+        .job-type-card h4 { color: #2980b9; margin-bottom: 10px; font-size: 1.2em; }
+        .job-type-card p { margin-bottom: 8px; }
+
+        .benefit-card {
+            background: #eafaf1;
+            border: 2px solid #27ae60;
+            border-radius: 12px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .benefit-card h4 { color: #27ae60; margin-bottom: 8px; }
+
+        .goal-card {
+            background: white;
+            border: 2px solid #9b59b6;
+            border-radius: 12px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .goal-card h4 { color: #8e44ad; margin-bottom: 8px; }
+
+        .smart-letter {
+            display: inline-block;
+            background: #3498db;
+            color: white;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 35px;
+            font-weight: bold;
+            font-size: 1.2em;
+            margin-right: 10px;
+        }
+
+        .career-path {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 10px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        .career-path .arrow { color: #3498db; font-size: 1.5em; }
+
+        @media print {
+            body { background: white; }
+            .nav-bar, .day-menu { display: none; }
+            .slide-container { margin-top: 0; }
+            .page { display: block !important; page-break-after: always; }
+            .slide { box-shadow: none; border: 1px solid #ccc; }
+        }
+    </style>
+</head>
+<body>
+    <div class="nav-bar">
+        <a href="https://reinischclassroom.com/life-skills/" class="back-btn">← Back to Life Skills</a>
+        <div class="page-indicator" id="pageIndicator">Page 1 of 57</div>
+        <div class="nav-buttons">
+            <button class="nav-btn" id="prevBtn" onclick="prevPage()">◀ Back</button>
+            <button class="nav-btn" id="nextBtn" onclick="nextPage()">Next ▶</button>
+        </div>
+    </div>
+
+    <div class="day-menu">
+        <button class="day-jump active-day" onclick="jumpTo(1)">Unit Title</button>
+        <button class="day-jump" onclick="jumpTo(2)">Day 1: Job Types</button>
+        <button class="day-jump" onclick="jumpTo(10)">Day 2: Employee vs Contractor</button>
+        <button class="day-jump" onclick="jumpTo(18)">Day 3: Benefits</button>
+        <button class="day-jump" onclick="jumpTo(26)">Day 4: Advancement</button>
+        <button class="day-jump" onclick="jumpTo(34)">Day 5: Career Exploration</button>
+        <button class="day-jump" onclick="jumpTo(42)">Day 6: Work Goals</button>
+        <button class="day-jump" onclick="jumpTo(50)">Day 7: Education & Training</button>
+    </div>
+
+    <div class="slide-container">
+
+        <!-- ============================================================ -->
+        <!-- PAGE 1: UNIT TITLE SLIDE -->
+        <!-- ============================================================ -->
+        <div class="page active" id="page1">
+            <div class="slide title-slide">
+                <div class="emoji-hero">💼📈🎯🎓</div>
+                <h1>Types of Employment & Career Planning</h1>
+                <p style="font-size:1.1em; color:#7f8c8d; margin-bottom: 25px;">Unit 5 &bull; 7 Days</p>
+                <div style="text-align:left; max-width:550px;">
+                    <p><strong>Day 1:</strong> Types of Jobs</p>
+                    <p><strong>Day 2:</strong> Employee vs. Independent Contractor</p>
+                    <p><strong>Day 3:</strong> Benefits</p>
+                    <p><strong>Day 4:</strong> Job Advancement</p>
+                    <p><strong>Day 5:</strong> Career Exploration</p>
+                    <p><strong>Day 6:</strong> Setting Work Goals</p>
+                    <p><strong>Day 7:</strong> Continuing Education & Training</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- DAY 1: TYPES OF JOBS (Pages 2–9) -->
+        <!-- ============================================================ -->
+        <div class="page" id="page2">
+            <div class="slide title-slide">
+                <div class="day-label">Day 1</div>
+                <div class="emoji-hero">👔⏰</div>
+                <h1>Types of Jobs</h1>
+                <p>Full-time, part-time, seasonal, temporary, and gig work</p>
+            </div>
+        </div>
+
+        <div class="page" id="page3">
+            <div class="slide">
+                <h2 class="slide-title">Not All Jobs Are the Same</h2>
+                <p>When you're looking for work, you'll see different types of jobs. Each type has different hours, pay, and benefits.</p>
+                <div class="highlight-box">
+                    <p><strong>The main types of employment are:</strong></p>
+                    <ul>
+                        <li><strong>Full-time</strong> — Usually 35-40+ hours per week</li>
+                        <li><strong>Part-time</strong> — Usually less than 35 hours per week</li>
+                        <li><strong>Seasonal</strong> — Only during certain times of year</li>
+                        <li><strong>Temporary (Temp)</strong> — For a limited time only</li>
+                        <li><strong>Gig work</strong> — Individual tasks or jobs, not a regular schedule</li>
+                    </ul>
+                </div>
+                <div class="success-box">
+                    <p><span class="emoji-big">💡</span> <strong>Understanding these types helps you:</strong> Know what to expect, ask the right questions in interviews, and find the job that fits your life.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page4">
+            <div class="slide">
+                <h2 class="slide-title">Full-Time Jobs</h2>
+                <div class="job-type-card">
+                    <h4>📅 Full-Time Employment</h4>
+                    <p><strong>Hours:</strong> Usually 35-40+ hours per week</p>
+                    <p><strong>Schedule:</strong> Regular, consistent schedule (like Mon-Fri, 9-5)</p>
+                    <p><strong>Benefits:</strong> Usually includes health insurance, paid time off, retirement plans</p>
+                    <p><strong>Stability:</strong> Ongoing — no set end date</p>
+                </div>
+                <div class="success-box">
+                    <p><strong>✅ Pros of full-time work:</strong></p>
+                    <ul>
+                        <li>Steady paycheck</li>
+                        <li>Benefits (health insurance, vacation, etc.)</li>
+                        <li>More job security</li>
+                        <li>Opportunities to advance</li>
+                    </ul>
+                </div>
+                <div class="warning-box">
+                    <p><strong>⚠️ Things to consider:</strong></p>
+                    <ul>
+                        <li>Less flexibility in your schedule</li>
+                        <li>Harder to balance with school</li>
+                        <li>More commitment required</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page5">
+            <div class="slide">
+                <h2 class="slide-title">Part-Time Jobs</h2>
+                <div class="job-type-card">
+                    <h4>⏰ Part-Time Employment</h4>
+                    <p><strong>Hours:</strong> Usually less than 35 hours per week (often 15-25)</p>
+                    <p><strong>Schedule:</strong> Can vary — might change week to week</p>
+                    <p><strong>Benefits:</strong> Usually NO benefits (but some companies offer them)</p>
+                    <p><strong>Stability:</strong> Ongoing, but hours can be cut</p>
+                </div>
+                <div class="success-box">
+                    <p><strong>✅ Pros of part-time work:</strong></p>
+                    <ul>
+                        <li>More flexibility</li>
+                        <li>Good for students or people with other commitments</li>
+                        <li>Can work multiple part-time jobs</li>
+                        <li>Good way to get experience</li>
+                    </ul>
+                </div>
+                <div class="warning-box">
+                    <p><strong>⚠️ Things to consider:</strong></p>
+                    <ul>
+                        <li>Less money (fewer hours)</li>
+                        <li>Usually no health insurance or benefits</li>
+                        <li>Hours might vary — paycheck isn't always the same</li>
+                        <li>Fewer advancement opportunities</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page6">
+            <div class="slide">
+                <h2 class="slide-title">Seasonal Jobs</h2>
+                <div class="job-type-card">
+                    <h4>🎄☀️ Seasonal Employment</h4>
+                    <p><strong>What it is:</strong> Jobs that only exist during certain times of the year</p>
+                    <p><strong>Length:</strong> A few weeks to a few months</p>
+                    <p><strong>Benefits:</strong> Usually none</p>
+                </div>
+                <div class="example-box">
+                    <p><strong>🔹 Examples of seasonal jobs:</strong></p>
+                    <ul>
+                        <li><strong>Holiday season (Nov-Dec):</strong> Retail stores, package delivery, gift wrapping</li>
+                        <li><strong>Summer:</strong> Lifeguard, camp counselor, amusement parks, lawn care</li>
+                        <li><strong>Tax season (Jan-Apr):</strong> Tax preparation offices</li>
+                        <li><strong>Harvest season:</strong> Farm work, orchards, pumpkin patches</li>
+                    </ul>
+                </div>
+                <div class="success-box">
+                    <p><span class="emoji-big">💡</span> <strong>Good to know:</strong> Seasonal jobs are great for earning extra money. Some seasonal workers get invited back year after year, or even offered permanent jobs!</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page7">
+            <div class="slide">
+                <h2 class="slide-title">Temporary (Temp) Jobs</h2>
+                <div class="job-type-card">
+                    <h4>📋 Temporary Employment</h4>
+                    <p><strong>What it is:</strong> A job with a set end date, or until a project is done</p>
+                    <p><strong>Length:</strong> Days, weeks, or months</p>
+                    <p><strong>How you find them:</strong> Often through a temp agency (staffing agency)</p>
+                    <p><strong>Benefits:</strong> Usually none (though some agencies offer them)</p>
+                </div>
+                <div class="highlight-box">
+                    <p><strong>Why companies hire temp workers:</strong></p>
+                    <ul>
+                        <li>To cover for someone on leave (vacation, maternity leave)</li>
+                        <li>To help with a busy period</li>
+                        <li>To complete a specific project</li>
+                        <li>To "try out" workers before offering permanent jobs</li>
+                    </ul>
+                </div>
+                <div class="success-box">
+                    <p><span class="emoji-big">⭐</span> <strong>"Temp-to-hire"</strong> means the company might offer you a permanent job if you do well. Many people get full-time jobs this way!</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page8">
+            <div class="slide">
+                <h2 class="slide-title">Gig Work</h2>
+                <div class="job-type-card">
+                    <h4>📱 Gig Work / Gig Economy</h4>
+                    <p><strong>What it is:</strong> Individual tasks or jobs — you're not an employee, you're a contractor</p>
+                    <p><strong>Schedule:</strong> You choose when and how much you work</p>
+                    <p><strong>Pay:</strong> Per task or per delivery — no hourly wage</p>
+                    <p><strong>Benefits:</strong> None — you're on your own</p>
+                </div>
+                <div class="example-box">
+                    <p><strong>🔹 Examples of gig work:</strong></p>
+                    <ul>
+                        <li>Uber, Lyft (rideshare driving)</li>
+                        <li>DoorDash, Uber Eats, Grubhub (food delivery)</li>
+                        <li>Instacart (grocery shopping)</li>
+                        <li>TaskRabbit (odd jobs)</li>
+                        <li>Freelance work (writing, design, photography)</li>
+                    </ul>
+                </div>
+                <div class="warning-box">
+                    <p><strong>⚠️ With gig work, remember:</strong></p>
+                    <ul>
+                        <li>No guaranteed income — it depends on how much you work</li>
+                        <li>You pay your own taxes (they're not taken out)</li>
+                        <li>No benefits (health insurance, paid time off)</li>
+                        <li>You may need your own car, phone, or equipment</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page9">
+            <div class="slide">
+                <h2 class="slide-title">Day 1 Review: Types of Jobs</h2>
+                <table class="comparison-table">
+                    <tr><th>Type</th><th>Hours</th><th>Benefits?</th><th>Stability</th></tr>
+                    <tr><td>Full-time</td><td>35-40+/week</td><td>Usually yes</td><td>High</td></tr>
+                    <tr><td>Part-time</td><td>Under 35/week</td><td>Usually no</td><td>Medium</td></tr>
+                    <tr><td>Seasonal</td><td>Varies</td><td>No</td><td>Low (ends)</td></tr>
+                    <tr><td>Temporary</td><td>Varies</td><td>Usually no</td><td>Low (ends)</td></tr>
+                    <tr><td>Gig</td><td>You choose</td><td>No</td><td>You control it</td></tr>
+                </table>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It:</div>
+                    <p>You're a student who can only work 20 hours per week. Which type of job would be best for you?</p>
+                    <p><strong>Answer:</strong> Part-time would be best — it gives you flexibility and fits around your school schedule.</p>
+                </div>
+                <div class="success-box">
+                    <p style="text-align: center; font-size: 1.2em;"><strong>✅ End of Day 1! Next up: Employee vs. Independent Contractor</strong></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- DAY 2: EMPLOYEE VS. INDEPENDENT CONTRACTOR (Pages 10–17) -->
+        <!-- ============================================================ -->
+        <div class="page" id="page10">
+            <div class="slide title-slide">
+                <div class="day-label">Day 2</div>
+                <div class="emoji-hero">👤📄</div>
+                <h1>Employee vs. Independent Contractor</h1>
+                <p>Two different ways to work — and why it matters</p>
+            </div>
+        </div>
+
+        <div class="page" id="page11">
+            <div class="slide">
+                <h2 class="slide-title">Two Types of Workers</h2>
+                <p>When you work for someone, you're either an <strong>employee</strong> or an <strong>independent contractor</strong>. These are very different!</p>
+                <div class="do-dont">
+                    <div class="do-column" style="background: #e8f4fd; border-color: #3498db;">
+                        <h3 style="color: #2980b9;">👤 Employee</h3>
+                        <ul>
+                            <li>Works FOR a company</li>
+                            <li>Boss controls when, where, and how you work</li>
+                            <li>Company takes taxes out of your paycheck</li>
+                            <li>May get benefits</li>
+                            <li>Gets a W-2 at tax time</li>
+                        </ul>
+                    </div>
+                    <div class="dont-column" style="background: #f4ecf7; border-color: #8e44ad;">
+                        <h3 style="color: #8e44ad;">📄 Independent Contractor</h3>
+                        <ul>
+                            <li>Works for YOURSELF</li>
+                            <li>You control when, where, and how you work</li>
+                            <li>YOU pay your own taxes</li>
+                            <li>No benefits</li>
+                            <li>Gets a 1099 at tax time</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="warning-box">
+                    <p><span class="emoji-big">⚠️</span> <strong>This matters a lot for taxes!</strong> If you're an independent contractor, nobody takes taxes out of your pay. You have to save money and pay taxes yourself.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page12">
+            <div class="slide">
+                <h2 class="slide-title">Employee: The Details</h2>
+                <p>As an <strong>employee</strong>, you work for a company. They're your employer.</p>
+                <div class="highlight-box">
+                    <p><strong>As an employee:</strong></p>
+                    <ul>
+                        <li>Your boss tells you when to work and how to do your job</li>
+                        <li>The company provides equipment (computer, tools, uniform)</li>
+                        <li>Taxes are taken out of your paycheck automatically</li>
+                        <li>You may get benefits (health insurance, paid time off)</li>
+                        <li>The company pays part of your Social Security and Medicare taxes</li>
+                        <li>You're protected by labor laws (minimum wage, overtime, etc.)</li>
+                    </ul>
+                </div>
+                <div class="example-box">
+                    <p><strong>🔹 Examples of employee jobs:</strong></p>
+                    <ul>
+                        <li>Cashier at McDonald's</li>
+                        <li>Warehouse worker at Amazon</li>
+                        <li>Teacher at a school</li>
+                        <li>Nurse at a hospital</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page13">
+            <div class="slide">
+                <h2 class="slide-title">Independent Contractor: The Details</h2>
+                <p>As an <strong>independent contractor</strong>, you're basically running your own small business. You work for yourself.</p>
+                <div class="highlight-box">
+                    <p><strong>As an independent contractor:</strong></p>
+                    <ul>
+                        <li>You decide when, where, and how to do the work</li>
+                        <li>You provide your own equipment (car, tools, computer)</li>
+                        <li>NO taxes are taken out — you get the full amount</li>
+                        <li>No benefits — you buy your own health insurance</li>
+                        <li>You pay BOTH halves of Social Security and Medicare (self-employment tax)</li>
+                        <li>Fewer labor law protections</li>
+                    </ul>
+                </div>
+                <div class="example-box">
+                    <p><strong>🔹 Examples of independent contractor work:</strong></p>
+                    <ul>
+                        <li>Uber/Lyft driver</li>
+                        <li>DoorDash delivery person</li>
+                        <li>Freelance graphic designer</li>
+                        <li>House cleaner with your own clients</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page14">
+            <div class="slide">
+                <h2 class="slide-title">Taxes: The Big Difference</h2>
+                <p>This is one of the most important differences between employees and contractors.</p>
+                <div class="do-dont">
+                    <div class="do-column" style="background: #e8f4fd; border-color: #3498db;">
+                        <h3 style="color: #2980b9;">Employee Taxes</h3>
+                        <ul>
+                            <li>Employer takes taxes out of each paycheck</li>
+                            <li>You get a W-2 form at year end</li>
+                            <li>Employer pays half of Social Security/Medicare</li>
+                            <li>Usually just file taxes once a year</li>
+                        </ul>
+                    </div>
+                    <div class="dont-column" style="background: #f4ecf7; border-color: #8e44ad;">
+                        <h3 style="color: #8e44ad;">Contractor Taxes</h3>
+                        <ul>
+                            <li>Nobody takes taxes out — you get the full amount</li>
+                            <li>You get a 1099 form at year end</li>
+                            <li>YOU pay all of Social Security/Medicare (15.3%!)</li>
+                            <li>Should pay estimated taxes 4x per year</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="danger-box">
+                    <p><span class="emoji-big">🚨</span> <strong>Big warning for contractors:</strong> If you earn $1,000 doing gig work, that's NOT $1,000 in your pocket. You'll owe taxes on that money! Save 25-30% for taxes, or you'll have a nasty surprise at tax time.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page15">
+            <div class="slide">
+                <h2 class="slide-title">W-2 vs. 1099</h2>
+                <p>These forms tell the IRS how much you earned.</p>
+                <div class="highlight-box">
+                    <p><strong>W-2 Form (for employees)</strong></p>
+                    <ul>
+                        <li>Shows your total wages</li>
+                        <li>Shows how much tax was already taken out</li>
+                        <li>You get one from each employer</li>
+                        <li>Due to you by January 31</li>
+                    </ul>
+                </div>
+                <div class="example-box">
+                    <p><strong>1099 Form (for contractors)</strong></p>
+                    <ul>
+                        <li>Shows how much you were paid</li>
+                        <li>Shows NO taxes taken out (because none were)</li>
+                        <li>You get one from each client who paid you $600+</li>
+                        <li>Due to you by January 31</li>
+                    </ul>
+                </div>
+                <div class="warning-box">
+                    <p><span class="emoji-big">💡</span> <strong>You can have both!</strong> If you work a regular job AND do gig work on the side, you'll get a W-2 from your employer AND a 1099 from the gig company.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page16">
+            <div class="slide">
+                <h2 class="slide-title">Pros and Cons</h2>
+                <table class="comparison-table">
+                    <tr><th></th><th>Employee</th><th>Independent Contractor</th></tr>
+                    <tr><td><strong>Taxes</strong></td><td>✅ Taken out for you</td><td>⚠️ You handle it yourself</td></tr>
+                    <tr><td><strong>Benefits</strong></td><td>✅ Often provided</td><td>❌ None — buy your own</td></tr>
+                    <tr><td><strong>Schedule</strong></td><td>⚠️ Set by employer</td><td>✅ You choose</td></tr>
+                    <tr><td><strong>Job Security</strong></td><td>✅ More stable</td><td>⚠️ Can change anytime</td></tr>
+                    <tr><td><strong>Control</strong></td><td>⚠️ Boss controls your work</td><td>✅ You're your own boss</td></tr>
+                    <tr><td><strong>Equipment</strong></td><td>✅ Provided</td><td>❌ You buy it</td></tr>
+                </table>
+                <div class="success-box">
+                    <p><span class="emoji-big">💡</span> <strong>Neither is "better" — it depends on what you need.</strong> If you want stability and benefits, look for employee jobs. If you want flexibility and independence, contractor work might be for you.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page17">
+            <div class="slide">
+                <h2 class="slide-title">Day 2 Review: Employee vs. Contractor</h2>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #1:</div>
+                    <p>You drive for DoorDash. Are you an employee or independent contractor?</p>
+                    <p><strong>Answer:</strong> Independent contractor. You choose your own hours, use your own car, and no taxes are taken out.</p>
+                </div>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #2:</div>
+                    <p>You made $2,000 doing gig work. About how much should you save for taxes?</p>
+                    <p><strong>Answer:</strong> About $500-600 (25-30%). Nobody took taxes out, so you'll owe it later!</p>
+                </div>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #3:</div>
+                    <p>What form do employees get? What form do contractors get?</p>
+                    <p><strong>Answer:</strong> Employees get a W-2. Contractors get a 1099.</p>
+                </div>
+                <div class="success-box">
+                    <p style="text-align: center; font-size: 1.2em;"><strong>✅ End of Day 2! Next up: Benefits</strong></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- DAY 3: BENEFITS (Pages 18–25) -->
+        <!-- ============================================================ -->
+        <div class="page" id="page18">
+            <div class="slide title-slide">
+                <div class="day-label">Day 3</div>
+                <div class="emoji-hero">🏥💰🏖️</div>
+                <h1>Benefits</h1>
+                <p>Extra things employers give you besides your paycheck</p>
+            </div>
+        </div>
+
+        <div class="page" id="page19">
+            <div class="slide">
+                <h2 class="slide-title">What Are Benefits?</h2>
+                <p><strong>Benefits</strong> are extras your employer gives you on top of your pay. They're a big part of your total compensation.</p>
+                <div class="highlight-box">
+                    <p><strong>Common workplace benefits include:</strong></p>
+                    <ul>
+                        <li>Health insurance</li>
+                        <li>Paid time off (vacation, sick days)</li>
+                        <li>Retirement plans (401k)</li>
+                        <li>Dental and vision insurance</li>
+                        <li>Life insurance</li>
+                        <li>Employee discounts</li>
+                    </ul>
+                </div>
+                <div class="success-box">
+                    <p><span class="emoji-big">💡</span> <strong>Benefits can be worth thousands of dollars!</strong> A job paying $15/hour WITH benefits might actually be worth more than a job paying $17/hour with NO benefits.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page20">
+            <div class="slide">
+                <h2 class="slide-title">Health Insurance</h2>
+                <p>Health insurance helps pay for doctor visits, hospital stays, medicine, and other medical care.</p>
+                <div class="benefit-card">
+                    <h4>🏥 How Employer Health Insurance Works</h4>
+                    <ul>
+                        <li>Your employer pays part of the cost (often 50-80%)</li>
+                        <li>You pay the rest through a deduction from your paycheck</li>
+                        <li>You can often add family members (costs more)</li>
+                        <li>Usually only offered to full-time employees</li>
+                    </ul>
+                </div>
+                <div class="warning-box">
+                    <p><strong>Important health insurance terms:</strong></p>
+                    <ul>
+                        <li><strong>Premium:</strong> The monthly cost of your insurance</li>
+                        <li><strong>Deductible:</strong> How much you pay before insurance kicks in</li>
+                        <li><strong>Copay:</strong> What you pay for each doctor visit or prescription</li>
+                    </ul>
+                </div>
+                <div class="danger-box">
+                    <p><span class="emoji-big">🚨</span> <strong>Without health insurance, medical bills can be HUGE.</strong> A single ER visit can cost thousands. That's why employer health insurance is so valuable.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page21">
+            <div class="slide">
+                <h2 class="slide-title">Paid Time Off (PTO)</h2>
+                <p><strong>Paid time off</strong> means you get paid even when you're not working. This is a big deal!</p>
+                <div class="benefit-card">
+                    <h4>🏖️ Types of Paid Time Off</h4>
+                    <ul>
+                        <li><strong>Vacation days:</strong> Days off for rest, travel, or whatever you want</li>
+                        <li><strong>Sick days:</strong> Days off when you're too sick to work</li>
+                        <li><strong>Personal days:</strong> Days off for appointments or personal needs</li>
+                        <li><strong>Holidays:</strong> Paid days off on holidays (Thanksgiving, Christmas, etc.)</li>
+                    </ul>
+                </div>
+                <div class="example-box">
+                    <p><strong>🔹 Example:</strong></p>
+                    <p>You earn $15/hour and get 10 vacation days per year.</p>
+                    <p>That's 10 days × 8 hours × $15 = <strong>$1,200 in paid time off!</strong></p>
+                </div>
+                <div class="warning-box">
+                    <p><span class="emoji-big">⚠️</span> <strong>Part-time and gig workers usually don't get PTO.</strong> If you don't work, you don't get paid.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page22">
+            <div class="slide">
+                <h2 class="slide-title">Retirement Plans (401k)</h2>
+                <p>A <strong>401(k)</strong> is a retirement savings plan offered by employers. It helps you save money for when you're older.</p>
+                <div class="benefit-card">
+                    <h4>💰 How a 401(k) Works</h4>
+                    <ul>
+                        <li>Money comes out of your paycheck BEFORE taxes</li>
+                        <li>It goes into an investment account</li>
+                        <li>The money grows over time</li>
+                        <li>You can't take it out until retirement (usually age 59½) without penalties</li>
+                    </ul>
+                </div>
+                <div class="success-box">
+                    <p><strong>⭐ Employer Match — FREE MONEY!</strong></p>
+                    <p>Many employers will <strong>match</strong> some of what you put in. For example:</p>
+                    <ul>
+                        <li>You put in 3% of your paycheck</li>
+                        <li>Your employer adds another 3%</li>
+                        <li>That's FREE money for your retirement!</li>
+                    </ul>
+                </div>
+                <div class="warning-box">
+                    <p><span class="emoji-big">💡</span> <strong>If your employer offers a match, try to contribute at least enough to get the full match.</strong> Otherwise you're leaving free money on the table!</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page23">
+            <div class="slide">
+                <h2 class="slide-title">Other Common Benefits</h2>
+                <div class="benefit-card">
+                    <h4>🦷 Dental & Vision Insurance</h4>
+                    <p>Helps pay for dentist visits, glasses, contacts, eye exams. Usually a small monthly cost.</p>
+                </div>
+                <div class="benefit-card">
+                    <h4>💀 Life Insurance</h4>
+                    <p>Pays money to your family if you die. Many employers offer basic coverage for free.</p>
+                </div>
+                <div class="benefit-card">
+                    <h4>🛒 Employee Discounts</h4>
+                    <p>Discounts on the company's products or services. Example: 20% off at the store where you work.</p>
+                </div>
+                <div class="benefit-card">
+                    <h4>📚 Tuition Assistance</h4>
+                    <p>Some employers help pay for college or training programs. This can be worth thousands!</p>
+                </div>
+                <div class="benefit-card">
+                    <h4>🍔 Free/Discounted Meals</h4>
+                    <p>Common at restaurants. You might get a free meal each shift.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page24">
+            <div class="slide">
+                <h2 class="slide-title">Questions to Ask About Benefits</h2>
+                <p>When you're offered a job, ask about benefits! Here's what to ask:</p>
+                <div class="highlight-box">
+                    <p><strong>Questions to ask:</strong></p>
+                    <ul>
+                        <li>"Do you offer health insurance? When am I eligible?"</li>
+                        <li>"How much PTO do employees get?"</li>
+                        <li>"Do you have a 401(k)? Is there an employer match?"</li>
+                        <li>"What other benefits do you offer?"</li>
+                        <li>"When do benefits start?" (Some start day 1, others after 30-90 days)</li>
+                    </ul>
+                </div>
+                <div class="warning-box">
+                    <p><strong>Watch out for:</strong></p>
+                    <ul>
+                        <li><strong>Waiting periods</strong> — You might not get benefits until you've worked there 30, 60, or 90 days</li>
+                        <li><strong>Hours requirements</strong> — Often only full-time workers get benefits</li>
+                        <li><strong>Costs</strong> — Some benefits aren't free. Ask what you'll pay.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page25">
+            <div class="slide">
+                <h2 class="slide-title">Day 3 Review: Benefits</h2>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #1:</div>
+                    <p>Job A pays $16/hour with no benefits. Job B pays $14/hour with health insurance worth $400/month. Which is actually worth more?</p>
+                    <p><strong>Answer:</strong> Job B! The health insurance alone is worth about $2.50/hour extra. $14 + $2.50 = $16.50/hour total value.</p>
+                </div>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #2:</div>
+                    <p>Your employer offers a 401(k) match up to 4%. You're not contributing anything. What are you missing out on?</p>
+                    <p><strong>Answer:</strong> Free money! If you contributed 4%, your employer would add another 4% — that's like getting a 4% raise.</p>
+                </div>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #3:</div>
+                    <p>Name 3 types of benefits employers might offer.</p>
+                    <p><strong>Answer:</strong> Health insurance, paid time off, 401(k), dental/vision, life insurance, employee discounts, tuition assistance, free meals (any 3).</p>
+                </div>
+                <div class="success-box">
+                    <p style="text-align: center; font-size: 1.2em;"><strong>✅ End of Day 3! Next up: Job Advancement</strong></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- DAY 4: JOB ADVANCEMENT (Pages 26–33) -->
+        <!-- ============================================================ -->
+        <div class="page" id="page26">
+            <div class="slide title-slide">
+                <div class="day-label">Day 4</div>
+                <div class="emoji-hero">📈⬆️</div>
+                <h1>Job Advancement</h1>
+                <p>How to move up, get raises, and build your career</p>
+            </div>
+        </div>
+
+        <div class="page" id="page27">
+            <div class="slide">
+                <h2 class="slide-title">What Is Job Advancement?</h2>
+                <p><strong>Job advancement</strong> means moving up in your career — getting better jobs, more responsibility, and higher pay.</p>
+                <div class="highlight-box">
+                    <p><strong>Advancement can look like:</strong></p>
+                    <ul>
+                        <li><strong>Promotion:</strong> Moving to a higher position (cashier → shift lead → manager)</li>
+                        <li><strong>Raise:</strong> Getting paid more for the same job</li>
+                        <li><strong>New responsibilities:</strong> Learning to do more things</li>
+                        <li><strong>New job:</strong> Moving to a better job at a different company</li>
+                    </ul>
+                </div>
+                <div class="success-box">
+                    <p><span class="emoji-big">💡</span> <strong>Your first job doesn't have to be your forever job.</strong> Most people start at entry-level positions and work their way up over time.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page28">
+            <div class="slide">
+                <h2 class="slide-title">How to Get Promoted</h2>
+                <p>Promotions don't just happen — you have to earn them. Here's how:</p>
+                <div class="step-card"><div class="step-number">1</div><div><strong>Do your current job WELL.</strong> Be reliable, show up on time, complete your tasks, have a good attitude.</div></div>
+                <div class="step-card"><div class="step-number">2</div><div><strong>Go above and beyond.</strong> Show initiative. Look for ways to help without being asked.</div></div>
+                <div class="step-card"><div class="step-number">3</div><div><strong>Learn new skills.</strong> Ask to be trained on new tasks. Show you want to grow.</div></div>
+                <div class="step-card"><div class="step-number">4</div><div><strong>Be professional.</strong> Get along with coworkers, stay out of drama, accept feedback well.</div></div>
+                <div class="step-card"><div class="step-number">5</div><div><strong>Express your interest.</strong> Tell your boss you're interested in moving up. Ask what you need to do.</div></div>
+                <div class="warning-box">
+                    <p><span class="emoji-big">⚠️</span> <strong>Promotions take time.</strong> Don't expect to become a manager after 2 weeks. Build a track record of doing great work.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page29">
+            <div class="slide">
+                <h2 class="slide-title">How to Get a Raise</h2>
+                <p>A <strong>raise</strong> is when your employer increases your hourly rate or salary.</p>
+                <div class="highlight-box">
+                    <p><strong>When raises might happen:</strong></p>
+                    <ul>
+                        <li>After a set time (6 months, 1 year)</li>
+                        <li>During annual reviews</li>
+                        <li>When minimum wage goes up</li>
+                        <li>When you get promoted</li>
+                        <li>When you ask (and make a good case)</li>
+                    </ul>
+                </div>
+                <div class="success-box">
+                    <p><strong>How to ask for a raise:</strong></p>
+                    <ul>
+                        <li>Pick a good time (after a success, during your review)</li>
+                        <li>Be prepared — list your accomplishments and contributions</li>
+                        <li>Be professional and confident, not demanding</li>
+                        <li>Know what you're asking for (a specific amount)</li>
+                    </ul>
+                </div>
+                <div class="example-box">
+                    <p><strong>🔹 Example:</strong> "I've been here a year and I've taken on extra responsibilities like training new employees. I'd like to discuss a raise. I was hoping for $1 more per hour."</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page30">
+            <div class="slide">
+                <h2 class="slide-title">Building Your Skills</h2>
+                <p>The more skills you have, the more valuable you are — and the more opportunities you'll have.</p>
+                <div class="highlight-box">
+                    <p><strong>Ways to build skills at work:</strong></p>
+                    <ul>
+                        <li><strong>Cross-train:</strong> Learn to do other jobs in your workplace</li>
+                        <li><strong>Ask questions:</strong> Learn from experienced coworkers</li>
+                        <li><strong>Take on new tasks:</strong> Volunteer for projects or responsibilities</li>
+                        <li><strong>Get certifications:</strong> Some industries have certifications you can earn</li>
+                        <li><strong>Take company training:</strong> If your employer offers training, do it!</li>
+                    </ul>
+                </div>
+                <div class="success-box">
+                    <p><span class="emoji-big">⭐</span> <strong>Skills that help in almost any job:</strong></p>
+                    <ul>
+                        <li>Customer service</li>
+                        <li>Communication</li>
+                        <li>Basic computer skills</li>
+                        <li>Teamwork</li>
+                        <li>Problem-solving</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page31">
+            <div class="slide">
+                <h2 class="slide-title">Career Paths: Moving Up</h2>
+                <p>Many jobs have a clear path from entry-level to higher positions.</p>
+                <div class="example-box">
+                    <p><strong>🔹 Example: Fast Food Career Path</strong></p>
+                    <div class="career-path">
+                        <span>Crew Member</span>
+                        <span class="arrow">→</span>
+                        <span>Shift Lead</span>
+                        <span class="arrow">→</span>
+                        <span>Assistant Manager</span>
+                        <span class="arrow">→</span>
+                        <span>General Manager</span>
+                    </div>
+                </div>
+                <div class="example-box">
+                    <p><strong>🔹 Example: Retail Career Path</strong></p>
+                    <div class="career-path">
+                        <span>Sales Associate</span>
+                        <span class="arrow">→</span>
+                        <span>Department Lead</span>
+                        <span class="arrow">→</span>
+                        <span>Assistant Manager</span>
+                        <span class="arrow">→</span>
+                        <span>Store Manager</span>
+                    </div>
+                </div>
+                <div class="example-box">
+                    <p><strong>🔹 Example: Warehouse Career Path</strong></p>
+                    <div class="career-path">
+                        <span>Picker/Packer</span>
+                        <span class="arrow">→</span>
+                        <span>Team Lead</span>
+                        <span class="arrow">→</span>
+                        <span>Supervisor</span>
+                        <span class="arrow">→</span>
+                        <span>Operations Manager</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page32">
+            <div class="slide">
+                <h2 class="slide-title">When to Look for a New Job</h2>
+                <p>Sometimes the best way to advance is to find a better job somewhere else.</p>
+                <div class="highlight-box">
+                    <p><strong>Signs it might be time to look elsewhere:</strong></p>
+                    <ul>
+                        <li>There's no room to move up at your current job</li>
+                        <li>You've asked for a raise and been denied repeatedly</li>
+                        <li>You've learned all you can in your current position</li>
+                        <li>You found a job that's a better fit for your goals</li>
+                        <li>The work environment is unhealthy or toxic</li>
+                    </ul>
+                </div>
+                <div class="warning-box">
+                    <p><strong>Important tips:</strong></p>
+                    <ul>
+                        <li><strong>Don't quit until you have another job lined up</strong></li>
+                        <li><strong>Give proper notice</strong> (usually 2 weeks)</li>
+                        <li><strong>Leave on good terms</strong> — you might need a reference</li>
+                        <li><strong>Don't badmouth your old employer</strong> in interviews</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page33">
+            <div class="slide">
+                <h2 class="slide-title">Day 4 Review: Job Advancement</h2>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #1:</div>
+                    <p>You want to become a shift lead. What are 3 things you can do to work toward that goal?</p>
+                    <p><strong>Answer:</strong> Do your current job well, show initiative/go above and beyond, learn new skills, be professional, tell your boss you're interested (any 3).</p>
+                </div>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #2:</div>
+                    <p>You've been at your job for a year and want to ask for a raise. What should you do to prepare?</p>
+                    <p><strong>Answer:</strong> List your accomplishments, pick a good time to ask, know what amount you want, be professional and confident.</p>
+                </div>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #3:</div>
+                    <p>You found a better job and want to leave. How much notice should you give?</p>
+                    <p><strong>Answer:</strong> Two weeks notice is standard. Leave on good terms so you can get a good reference.</p>
+                </div>
+                <div class="success-box">
+                    <p style="text-align: center; font-size: 1.2em;"><strong>✅ End of Day 4! Next up: Career Exploration</strong></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- DAY 5: CAREER EXPLORATION (Pages 34–41) -->
+        <!-- ============================================================ -->
+        <div class="page" id="page34">
+            <div class="slide title-slide">
+                <div class="day-label">Day 5</div>
+                <div class="emoji-hero">🔍💭</div>
+                <h1>Career Exploration</h1>
+                <p>Finding a career that fits YOU</p>
+            </div>
+        </div>
+
+        <div class="page" id="page35">
+            <div class="slide">
+                <h2 class="slide-title">Job vs. Career</h2>
+                <p>What's the difference between a job and a career?</p>
+                <div class="do-dont">
+                    <div class="do-column" style="background: #e8f4fd; border-color: #3498db;">
+                        <h3 style="color: #2980b9;">💼 A Job</h3>
+                        <ul>
+                            <li>Work you do to earn money</li>
+                            <li>Might be temporary</li>
+                            <li>Doesn't have to connect to your long-term goals</li>
+                            <li>Example: Working at a grocery store in high school</li>
+                        </ul>
+                    </div>
+                    <div class="dont-column" style="background: #eafaf1; border-color: #27ae60;">
+                        <h3 style="color: #27ae60;">📈 A Career</h3>
+                        <ul>
+                            <li>Long-term path in a field</li>
+                            <li>Builds over time</li>
+                            <li>Usually involves growth and advancement</li>
+                            <li>Example: Becoming an electrician and advancing to master electrician</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="success-box">
+                    <p><span class="emoji-big">💡</span> <strong>It's okay to have jobs that aren't your "career"!</strong> Many people work different jobs while figuring out what they want to do long-term.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page36">
+            <div class="slide">
+                <h2 class="slide-title">Know Your Interests</h2>
+                <p>A good career fits what you're interested in. Think about what you enjoy!</p>
+                <div class="highlight-box">
+                    <p><strong>Ask yourself:</strong></p>
+                    <ul>
+                        <li>What subjects do I like? (Art? Math? Science? Working with people?)</li>
+                        <li>What do I do for fun?</li>
+                        <li>What kind of work sounds interesting to me?</li>
+                        <li>Do I like working with my hands? With computers? With people?</li>
+                        <li>Do I prefer being inside or outside?</li>
+                    </ul>
+                </div>
+                <div class="example-box">
+                    <p><strong>🔹 Examples of matching interests to careers:</strong></p>
+                    <ul>
+                        <li><strong>Like cars?</strong> → Auto mechanic, auto body technician</li>
+                        <li><strong>Like helping people?</strong> → Healthcare, social work, teaching</li>
+                        <li><strong>Like building things?</strong> → Construction, carpentry, welding</li>
+                        <li><strong>Like computers?</strong> → IT support, web design, data entry</li>
+                        <li><strong>Like food?</strong> → Culinary arts, restaurant management</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page37">
+            <div class="slide">
+                <h2 class="slide-title">Know Your Strengths</h2>
+                <p>Your <strong>strengths</strong> are things you're good at. A good career uses your strengths.</p>
+                <div class="highlight-box">
+                    <p><strong>Think about your strengths:</strong></p>
+                    <ul>
+                        <li>Am I good at talking to people?</li>
+                        <li>Am I good at solving problems?</li>
+                        <li>Am I detail-oriented and careful?</li>
+                        <li>Am I good with my hands?</li>
+                        <li>Am I organized?</li>
+                        <li>Am I patient?</li>
+                        <li>Am I creative?</li>
+                    </ul>
+                </div>
+                <div class="success-box">
+                    <p><strong>Matching strengths to careers:</strong></p>
+                    <table class="comparison-table">
+                        <tr><th>If You're Good At...</th><th>Consider...</th></tr>
+                        <tr><td>Talking to people</td><td>Sales, customer service, healthcare</td></tr>
+                        <tr><td>Working with your hands</td><td>Trades (plumbing, electrical, HVAC)</td></tr>
+                        <tr><td>Being organized</td><td>Office work, logistics, accounting</td></tr>
+                        <tr><td>Being patient and caring</td><td>Childcare, teaching, nursing</td></tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page38">
+            <div class="slide">
+                <h2 class="slide-title">Career Clusters</h2>
+                <p>Careers are often grouped into <strong>clusters</strong> — areas with similar jobs.</p>
+                <div class="highlight-box" style="columns: 2; column-gap: 30px;">
+                    <p>🏥 <strong>Health Science</strong><br>Nurse, CNA, medical assistant, pharmacy tech</p>
+                    <p>🔧 <strong>Manufacturing & Skilled Trades</strong><br>Welder, machinist, HVAC tech, electrician</p>
+                    <p>🍳 <strong>Hospitality & Food Service</strong><br>Chef, restaurant manager, hotel staff</p>
+                    <p>🚗 <strong>Transportation</strong><br>Truck driver, mechanic, logistics</p>
+                    <p>💼 <strong>Business & Office</strong><br>Administrative assistant, accounting, HR</p>
+                    <p>🏗️ <strong>Construction</strong><br>Carpenter, plumber, roofer, project manager</p>
+                    <p>💻 <strong>Information Technology</strong><br>IT support, web developer, network admin</p>
+                    <p>👶 <strong>Education & Childcare</strong><br>Teacher, teacher's aide, daycare worker</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page39">
+            <div class="slide">
+                <h2 class="slide-title">Vocational Programs</h2>
+                <p><strong>Vocational programs</strong> (also called trade schools or career/technical programs) teach specific job skills.</p>
+                <div class="success-box">
+                    <p><strong>Benefits of vocational training:</strong></p>
+                    <ul>
+                        <li>Learn real, hands-on job skills</li>
+                        <li>Often shorter than a 4-year college degree</li>
+                        <li>Can lead to well-paying careers</li>
+                        <li>Many programs offer certifications</li>
+                        <li>Some are available while still in high school!</li>
+                    </ul>
+                </div>
+                <div class="example-box">
+                    <p><strong>🔹 Examples of vocational programs:</strong></p>
+                    <ul>
+                        <li>Certified Nursing Assistant (CNA)</li>
+                        <li>Welding certification</li>
+                        <li>Automotive technology</li>
+                        <li>Cosmetology (hair/beauty)</li>
+                        <li>HVAC (heating & cooling)</li>
+                        <li>Culinary arts</li>
+                        <li>Computer networking</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page40">
+            <div class="slide">
+                <h2 class="slide-title">How to Explore Careers</h2>
+                <p>Not sure what career is right for you? Here's how to explore:</p>
+                <div class="step-card"><div class="step-number">1</div><div><strong>Take a career assessment.</strong> Online quizzes can suggest careers based on your interests. Try O*NET Interest Profiler (free).</div></div>
+                <div class="step-card"><div class="step-number">2</div><div><strong>Talk to people.</strong> Ask people about their jobs. What do they do? What do they like about it?</div></div>
+                <div class="step-card"><div class="step-number">3</div><div><strong>Job shadow.</strong> Spend time watching someone do their job.</div></div>
+                <div class="step-card"><div class="step-number">4</div><div><strong>Try different jobs.</strong> Part-time and summer jobs help you figure out what you like.</div></div>
+                <div class="step-card"><div class="step-number">5</div><div><strong>Research online.</strong> Look up career information, salaries, and requirements on sites like BLS.gov.</div></div>
+                <div class="success-box">
+                    <p><span class="emoji-big">💡</span> <strong>It's okay not to know yet!</strong> Most people try several jobs before finding their career path. The important thing is to keep exploring and learning.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page41">
+            <div class="slide">
+                <h2 class="slide-title">Day 5 Review: Career Exploration</h2>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #1:</div>
+                    <p>What's the difference between a job and a career?</p>
+                    <p><strong>Answer:</strong> A job is work you do to earn money (can be temporary). A career is a long-term path in a field that builds over time.</p>
+                </div>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #2:</div>
+                    <p>You like working with your hands and building things. What career clusters might fit you?</p>
+                    <p><strong>Answer:</strong> Construction, Manufacturing/Skilled Trades, or Transportation might be good fits.</p>
+                </div>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #3:</div>
+                    <p>Name 2 ways you can explore careers to find out what's right for you.</p>
+                    <p><strong>Answer:</strong> Take a career assessment, talk to people with jobs you're interested in, job shadow, try different jobs, research online (any 2).</p>
+                </div>
+                <div class="success-box">
+                    <p style="text-align: center; font-size: 1.2em;"><strong>✅ End of Day 5! Next up: Setting Work Goals</strong></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- DAY 6: SETTING WORK GOALS (Pages 42–49) -->
+        <!-- ============================================================ -->
+        <div class="page" id="page42">
+            <div class="slide title-slide">
+                <div class="day-label">Day 6</div>
+                <div class="emoji-hero">🎯📝</div>
+                <h1>Setting Work Goals</h1>
+                <p>How to plan for your future with SMART goals</p>
+            </div>
+        </div>
+
+        <div class="page" id="page43">
+            <div class="slide">
+                <h2 class="slide-title">Why Set Goals?</h2>
+                <p>A <strong>goal</strong> is something you want to achieve. Goals help you know what you're working toward.</p>
+                <div class="highlight-box">
+                    <p><strong>Benefits of setting goals:</strong></p>
+                    <ul>
+                        <li>Give you direction — you know where you're going</li>
+                        <li>Keep you motivated — something to work toward</li>
+                        <li>Help you make decisions — does this help me reach my goal?</li>
+                        <li>Let you measure progress — you can see how far you've come</li>
+                        <li>Help you succeed — people with goals accomplish more</li>
+                    </ul>
+                </div>
+                <div class="success-box">
+                    <p><span class="emoji-big">💡</span> <strong>Without goals, you're just going through the motions.</strong> With goals, you're building something.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page44">
+            <div class="slide">
+                <h2 class="slide-title">Short-Term vs. Long-Term Goals</h2>
+                <div class="do-dont">
+                    <div class="do-column" style="background: #e8f4fd; border-color: #3498db;">
+                        <h3 style="color: #2980b9;">📅 Short-Term Goals</h3>
+                        <p>Goals you want to achieve soon (days, weeks, or months)</p>
+                        <ul>
+                            <li>Get a job this month</li>
+                            <li>Learn to use the cash register</li>
+                            <li>Be on time every day this week</li>
+                            <li>Save $500 by summer</li>
+                        </ul>
+                    </div>
+                    <div class="dont-column" style="background: #eafaf1; border-color: #27ae60;">
+                        <h3 style="color: #27ae60;">📆 Long-Term Goals</h3>
+                        <p>Goals that take longer (1+ years)</p>
+                        <ul>
+                            <li>Become a shift manager</li>
+                            <li>Get my CNA certification</li>
+                            <li>Save $5,000 for a car</li>
+                            <li>Have a career in healthcare</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="success-box">
+                    <p><span class="emoji-big">💡</span> <strong>Short-term goals help you reach long-term goals.</strong> Break big goals into smaller steps you can achieve along the way.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page45">
+            <div class="slide">
+                <h2 class="slide-title">SMART Goals</h2>
+                <p><strong>SMART</strong> is a way to write goals that actually work. Each letter stands for something:</p>
+                <div class="goal-card">
+                    <h4><span class="smart-letter">S</span> Specific</h4>
+                    <p>Be clear about exactly what you want. Not "get better at work" but "learn to close the register."</p>
+                </div>
+                <div class="goal-card">
+                    <h4><span class="smart-letter">M</span> Measurable</h4>
+                    <p>How will you know when you've achieved it? Include numbers or clear outcomes.</p>
+                </div>
+                <div class="goal-card">
+                    <h4><span class="smart-letter">A</span> Achievable</h4>
+                    <p>Is it realistic? Challenge yourself, but make sure it's actually possible.</p>
+                </div>
+                <div class="goal-card">
+                    <h4><span class="smart-letter">R</span> Relevant</h4>
+                    <p>Does this goal matter to you? Does it fit with your other goals?</p>
+                </div>
+                <div class="goal-card">
+                    <h4><span class="smart-letter">T</span> Time-bound</h4>
+                    <p>Set a deadline. When will you achieve this by?</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page46">
+            <div class="slide">
+                <h2 class="slide-title">SMART Goal Examples</h2>
+                <div class="warning-box">
+                    <p><strong>❌ NOT a SMART goal:</strong> "I want to make more money."</p>
+                    <p>Too vague! No specifics, no deadline, can't measure it.</p>
+                </div>
+                <div class="success-box">
+                    <p><strong>✅ SMART version:</strong> "I will ask for a $1/hour raise at my next review in March. To prepare, I will document 3 accomplishments this month."</p>
+                    <ul>
+                        <li><strong>Specific:</strong> Ask for $1 raise</li>
+                        <li><strong>Measurable:</strong> $1 raise, 3 accomplishments</li>
+                        <li><strong>Achievable:</strong> Yes, with preparation</li>
+                        <li><strong>Relevant:</strong> Yes, earning more money</li>
+                        <li><strong>Time-bound:</strong> By March review</li>
+                    </ul>
+                </div>
+                <div class="example-box">
+                    <p><strong>🔹 More SMART goal examples:</strong></p>
+                    <ul>
+                        <li>"I will get a part-time job by the end of this month."</li>
+                        <li>"I will save $100 per paycheck for the next 6 months to buy a car."</li>
+                        <li>"I will complete my CNA certification by December."</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page47">
+            <div class="slide">
+                <h2 class="slide-title">Breaking Goals Into Steps</h2>
+                <p>Big goals can feel overwhelming. Break them into smaller steps!</p>
+                <div class="example-box">
+                    <p><strong>🔹 Big Goal: Get a part-time job by the end of the month</strong></p>
+                    <p><strong>Steps:</strong></p>
+                    <div class="step-card"><div class="step-number">1</div><div>Update my resume (this week)</div></div>
+                    <div class="step-card"><div class="step-number">2</div><div>Make a list of 10 places I want to apply (this week)</div></div>
+                    <div class="step-card"><div class="step-number">3</div><div>Apply to 3 places per week</div></div>
+                    <div class="step-card"><div class="step-number">4</div><div>Practice interview questions</div></div>
+                    <div class="step-card"><div class="step-number">5</div><div>Follow up on applications after 1 week</div></div>
+                </div>
+                <div class="success-box">
+                    <p><span class="emoji-big">💡</span> <strong>Completing small steps builds momentum.</strong> Each step you finish gets you closer to your goal!</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page48">
+            <div class="slide">
+                <h2 class="slide-title">Tracking Your Goals</h2>
+                <p>Write down your goals and check on them regularly.</p>
+                <div class="highlight-box">
+                    <p><strong>Ways to track your goals:</strong></p>
+                    <ul>
+                        <li>Write them in a notebook or planner</li>
+                        <li>Put them on your phone (notes app, reminders)</li>
+                        <li>Tell someone who will check in with you</li>
+                        <li>Post them somewhere you'll see them</li>
+                        <li>Review them weekly — are you on track?</li>
+                    </ul>
+                </div>
+                <div class="warning-box">
+                    <p><strong>If you're not making progress:</strong></p>
+                    <ul>
+                        <li>Is the goal still important to you?</li>
+                        <li>Is it too big? Break it into smaller steps</li>
+                        <li>Is the deadline realistic?</li>
+                        <li>Do you need help or resources?</li>
+                        <li>It's okay to adjust goals — but don't give up!</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page49">
+            <div class="slide">
+                <h2 class="slide-title">Day 6 Review: Setting Work Goals</h2>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #1:</div>
+                    <p>What does SMART stand for?</p>
+                    <p><strong>Answer:</strong> Specific, Measurable, Achievable, Relevant, Time-bound</p>
+                </div>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #2:</div>
+                    <p>Turn this into a SMART goal: "I want to save money."</p>
+                    <p><strong>Answer:</strong> Something like: "I will save $50 from each paycheck for the next 3 months to have $300 for emergencies."</p>
+                </div>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #3:</div>
+                    <p>Why is it helpful to break big goals into smaller steps?</p>
+                    <p><strong>Answer:</strong> Big goals can feel overwhelming. Smaller steps are easier to start and complete, and each step gets you closer to the big goal.</p>
+                </div>
+                <div class="success-box">
+                    <p style="text-align: center; font-size: 1.2em;"><strong>✅ End of Day 6! Next up: Continuing Education & Training</strong></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- DAY 7: CONTINUING EDUCATION & TRAINING (Pages 50–57) -->
+        <!-- ============================================================ -->
+        <div class="page" id="page50">
+            <div class="slide title-slide">
+                <div class="day-label">Day 7</div>
+                <div class="emoji-hero">🎓📚</div>
+                <h1>Continuing Education & Training</h1>
+                <p>Ways to keep learning and improve your career</p>
+            </div>
+        </div>
+
+        <div class="page" id="page51">
+            <div class="slide">
+                <h2 class="slide-title">Learning Doesn't Stop at School</h2>
+                <p>Your education doesn't have to end when you leave high school. There are many ways to keep learning and building skills for your career.</p>
+                <div class="highlight-box">
+                    <p><strong>Why continue learning?</strong></p>
+                    <ul>
+                        <li>Get better jobs with higher pay</li>
+                        <li>Learn skills that make you more valuable</li>
+                        <li>Keep up with changes in your field</li>
+                        <li>Open doors to new opportunities</li>
+                        <li>Feel more confident in your abilities</li>
+                    </ul>
+                </div>
+                <div class="success-box">
+                    <p><span class="emoji-big">💡</span> <strong>Many great careers don't require a 4-year college degree.</strong> There are many other paths to success!</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page52">
+            <div class="slide">
+                <h2 class="slide-title">On-the-Job Training</h2>
+                <p><strong>On-the-job training (OJT)</strong> is learning while you work. Your employer teaches you what you need to know.</p>
+                <div class="benefit-card">
+                    <h4>✅ Benefits of On-the-Job Training</h4>
+                    <ul>
+                        <li>You get paid while you learn</li>
+                        <li>Learn exactly what you need for THAT job</li>
+                        <li>Hands-on experience</li>
+                        <li>No extra school required</li>
+                    </ul>
+                </div>
+                <div class="example-box">
+                    <p><strong>🔹 Examples:</strong></p>
+                    <ul>
+                        <li>Learning the cash register at a new job</li>
+                        <li>Training on how to use equipment</li>
+                        <li>Shadowing an experienced worker</li>
+                        <li>Company training programs</li>
+                    </ul>
+                </div>
+                <div class="success-box">
+                    <p><span class="emoji-big">⭐</span> <strong>Ask about training opportunities!</strong> Many employers will train you on new skills if you show interest.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page53">
+            <div class="slide">
+                <h2 class="slide-title">Certifications</h2>
+                <p>A <strong>certification</strong> is official proof that you have certain skills. It's like a credential you can put on your resume.</p>
+                <div class="highlight-box">
+                    <p><strong>How certifications work:</strong></p>
+                    <ul>
+                        <li>Take a training course or study</li>
+                        <li>Pass a test</li>
+                        <li>Get a certificate or credential</li>
+                        <li>Some need to be renewed periodically</li>
+                    </ul>
+                </div>
+                <div class="example-box">
+                    <p><strong>🔹 Examples of certifications:</strong></p>
+                    <ul>
+                        <li><strong>CNA</strong> — Certified Nursing Assistant</li>
+                        <li><strong>ServSafe</strong> — Food safety certification</li>
+                        <li><strong>Forklift certification</strong> — Operate a forklift</li>
+                        <li><strong>CPR/First Aid</strong> — Emergency response</li>
+                        <li><strong>OSHA 10</strong> — Workplace safety</li>
+                        <li><strong>CompTIA A+</strong> — Computer technician</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page54">
+            <div class="slide">
+                <h2 class="slide-title">Trade Schools</h2>
+                <p><strong>Trade schools</strong> (also called vocational schools or technical colleges) teach specific job skills.</p>
+                <div class="benefit-card">
+                    <h4>✅ Benefits of Trade Schools</h4>
+                    <ul>
+                        <li>Shorter than 4-year college (often 6 months to 2 years)</li>
+                        <li>Less expensive than traditional college</li>
+                        <li>Learn hands-on, practical skills</li>
+                        <li>High demand for many trade jobs</li>
+                        <li>Can lead to good-paying careers</li>
+                    </ul>
+                </div>
+                <div class="example-box">
+                    <p><strong>🔹 Trade school programs:</strong></p>
+                    <ul>
+                        <li>Electrician</li>
+                        <li>Plumber</li>
+                        <li>HVAC technician</li>
+                        <li>Welder</li>
+                        <li>Cosmetologist</li>
+                        <li>Automotive technician</li>
+                        <li>Medical assistant</li>
+                        <li>Dental hygienist</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page55">
+            <div class="slide">
+                <h2 class="slide-title">Apprenticeships</h2>
+                <p>An <strong>apprenticeship</strong> is a program where you learn a trade by working alongside an experienced professional.</p>
+                <div class="highlight-box">
+                    <p><strong>How apprenticeships work:</strong></p>
+                    <ul>
+                        <li>You work and get paid (starting at a lower wage)</li>
+                        <li>You learn from a skilled "journeyman" or master</li>
+                        <li>Usually lasts 2-5 years</li>
+                        <li>You might also take classes</li>
+                        <li>At the end, you become a "journeyman" yourself</li>
+                    </ul>
+                </div>
+                <div class="example-box">
+                    <p><strong>🔹 Apprenticeship fields:</strong></p>
+                    <ul>
+                        <li>Electrician</li>
+                        <li>Plumber</li>
+                        <li>Carpenter</li>
+                        <li>HVAC technician</li>
+                        <li>Ironworker</li>
+                    </ul>
+                </div>
+                <div class="success-box">
+                    <p><span class="emoji-big">⭐</span> <strong>Apprenticeships are "earn while you learn."</strong> You get paid AND get trained — no student debt!</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page56">
+            <div class="slide">
+                <h2 class="slide-title">Other Learning Options</h2>
+                <div class="benefit-card">
+                    <h4>🏫 Community College</h4>
+                    <p>2-year degrees (Associate's) or certificates. Affordable, flexible schedules, many career programs.</p>
+                </div>
+                <div class="benefit-card">
+                    <h4>💻 Online Courses</h4>
+                    <p>Learn from home on your own schedule. Many free or low-cost options. Great for specific skills.</p>
+                </div>
+                <div class="benefit-card">
+                    <h4>🏢 Employer Tuition Assistance</h4>
+                    <p>Some employers pay for school! Ask if your company offers tuition reimbursement.</p>
+                </div>
+                <div class="benefit-card">
+                    <h4>🎖️ Military Training</h4>
+                    <p>The military teaches many valuable skills. Plus education benefits (GI Bill) after service.</p>
+                </div>
+                <div class="success-box">
+                    <p><span class="emoji-big">💡</span> <strong>There's no one "right" path.</strong> The best path is the one that fits your goals, your situation, and your learning style.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page" id="page57">
+            <div class="slide">
+                <h2 class="slide-title">Day 7 Review: Education & Training</h2>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #1:</div>
+                    <p>What is a certification? Give an example.</p>
+                    <p><strong>Answer:</strong> A certification is official proof you have certain skills. You take training and pass a test. Examples: CNA, ServSafe, forklift, CPR.</p>
+                </div>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #2:</div>
+                    <p>What's the benefit of an apprenticeship compared to going to school?</p>
+                    <p><strong>Answer:</strong> You get paid while you learn. No student debt. You learn by doing real work with an experienced professional.</p>
+                </div>
+                <div class="scenario">
+                    <div class="scenario-label">🤔 Think About It #3:</div>
+                    <p>Name 3 ways to continue learning after high school.</p>
+                    <p><strong>Answer:</strong> On-the-job training, certifications, trade school, apprenticeships, community college, online courses, military, employer tuition assistance (any 3).</p>
+                </div>
+                <div class="success-box">
+                    <p style="text-align: center; font-size: 1.3em;"><strong>🎉 Great job finishing Unit 5: Types of Employment & Career Planning!</strong></p>
+                    <p style="text-align: center;">You now understand different job types, benefits, career paths, and how to plan for your future!</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        let currentPage = 1;
+        const totalPages = 57;
+        const dayStarts = [1, 2, 10, 18, 26, 34, 42, 50];
+
+        function updateDayMenu(pageNum) {
+            document.querySelectorAll('.day-jump').forEach((btn, idx) => {
+                btn.classList.remove('active-day');
+                let inThisDay = false;
+                if (idx === dayStarts.length - 1) {
+                    inThisDay = pageNum >= dayStarts[idx];
+                } else {
+                    inThisDay = pageNum >= dayStarts[idx] && pageNum < dayStarts[idx + 1];
+                }
+                if (inThisDay) btn.classList.add('active-day');
+            });
+        }
+
+        function showPage(num) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById('page' + num).classList.add('active');
+            document.getElementById('pageIndicator').textContent = 'Page ' + num + ' of ' + totalPages;
+            document.getElementById('prevBtn').disabled = (num === 1);
+            document.getElementById('nextBtn').disabled = (num === totalPages);
+            updateDayMenu(num);
+            window.scrollTo(0, 0);
+        }
+
+        function nextPage() { if (currentPage < totalPages) { currentPage++; showPage(currentPage); } }
+        function prevPage() { if (currentPage > 1) { currentPage--; showPage(currentPage); } }
+        function jumpTo(pageNum) { currentPage = pageNum; showPage(currentPage); }
+    </script>
+</body>
+</html>
