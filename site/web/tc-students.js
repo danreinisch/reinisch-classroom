@@ -219,6 +219,7 @@
   let collapsedGoals = new Set(); // Track which goals are collapsed
   let truncatedGoals = new Set(); // Track which goals have truncated descriptions
   let iepWizardData = null; // { step: 1, studentCode: '', goalsToArchive: Set, newGoals: [], iepDue: '', evalDue: '' }
+  let expandMode = 'none'; // 'none', 'students', 'all' - Track bulk expand state
 
   // Quarter dates management
   const DEFAULT_QUARTER_DATES = {
@@ -336,17 +337,6 @@
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
-  }
-
-  function updateExpandAllButton() {
-    const btn = document.getElementById('stExpandAllBtn');
-    if (!btn) return;
-    
-    if (expandedStudents.size > 0) {
-      btn.innerHTML = '▼ Collapse All';
-    } else {
-      btn.innerHTML = '▶ Expand All';
-    }
   }
 
   // Progress tracking functions
@@ -716,9 +706,6 @@
     expandedStudents.forEach(studentCode => {
       renderExpandedDetail(studentCode);
     });
-
-    // Update Expand All button state
-    updateExpandAllButton();
   }
 
   async function renderExpandedDetail(studentCode) {
@@ -843,6 +830,19 @@
     const options = ['All', ...FULL_CLASS_NAMES].map(className => `
       <option value="${escapeHtml(className)}" ${selectedClassFilter === className ? 'selected' : ''}>
         ${className === 'All' ? 'All Classes' : escapeHtml(className)}
+      </option>
+    `).join('');
+
+    selectEl.innerHTML = options;
+  }
+
+  function renderGoalAreaFilterOptions() {
+    const selectEl = document.getElementById('stGoalAreaFilter');
+    if (!selectEl) return;
+
+    const options = ['All', ...GOAL_AREAS].map(area => `
+      <option value="${escapeHtml(area)}" ${selectedGoalAreaFilter === area ? 'selected' : ''}>
+        ${area === 'All' ? 'All Goal Areas' : escapeHtml(area)}
       </option>
     `).join('');
 
@@ -1009,17 +1009,6 @@
   }
 
   function renderStudentGoals(inContextGoals, outsideGoals) {
-    const goalAreaFilter = `
-      <select id="goal-area-filter" class="st-form-select">
-        <option value="All">All Goal Areas</option>
-        ${GOAL_AREAS.map(area => `
-          <option value="${escapeHtml(area)}" ${selectedGoalAreaFilter === area ? 'selected' : ''}>
-            ${escapeHtml(area)}
-          </option>
-        `).join('')}
-      </select>
-    `;
-
     const inContextHtml = inContextGoals.map(goal => renderGoalCard(goal)).join('');
     
     let outsideHtml = '';
@@ -1041,7 +1030,6 @@
         <div class="st-section-header">
           <h3>IEP Goals</h3>
           <div class="st-section-actions">
-            ${goalAreaFilter}
             <button class="st-btn st-btn-primary" id="add-goal-btn">+ Add Goal</button>
           </div>
         </div>
@@ -1098,7 +1086,7 @@
     const lastText = lastDate ? `Last: ${formatDate(lastDate)}` : 'No data yet';
 
     return `
-      <div class="st-goal-card collapsed" data-goal-id="${goal.id}" data-area="${colorCategory}">
+      <div class="st-goal-card ${expandMode === 'all' ? '' : 'collapsed'}" data-goal-id="${goal.id}" data-area="${colorCategory}">
         <div class="st-goal-header">
           <div class="st-goal-title-line">
             <span class="st-goal-icon">${icon}</span>
@@ -1369,6 +1357,18 @@
       });
     }
 
+    // Goal Area filter dropdown (in toolbar)
+    const goalAreaFilter = document.getElementById('stGoalAreaFilter');
+    if (goalAreaFilter) {
+      goalAreaFilter.addEventListener('change', (e) => {
+        selectedGoalAreaFilter = e.target.value;
+        // Re-render all expanded students to apply the filter
+        expandedStudents.forEach(studentCode => {
+          renderExpandedDetail(studentCode);
+        });
+      });
+    }
+
     // Sort dropdown
     const sortSelect = document.getElementById('stSortSelect');
     if (sortSelect) {
@@ -1428,21 +1428,39 @@
       });
     }
 
-    // Expand All / Collapse All button
-    const expandAllBtn = document.getElementById('stExpandAllBtn');
-    if (expandAllBtn) {
-      expandAllBtn.addEventListener('click', () => {
-        if (expandedStudents.size > 0) {
-          // Collapse all
-          expandedStudents.clear();
-        } else {
-          // Expand all filtered students
-          filteredStudents.forEach(student => {
-            expandedStudents.add(student.code);
-          });
-        }
+    // Collapse All button
+    const collapseAllBtn = document.getElementById('stExpandAllBtn');
+    if (collapseAllBtn) {
+      collapseAllBtn.addEventListener('click', () => {
+        expandMode = 'none';
+        expandedStudents.clear();
         renderStudentList();
-        updateExpandAllButton();
+      });
+    }
+
+    // Expand Students button (expand students but keep goal cards collapsed)
+    const expandStudentsBtn = document.getElementById('stExpandStudentsBtn');
+    if (expandStudentsBtn) {
+      expandStudentsBtn.addEventListener('click', () => {
+        expandMode = 'students';
+        expandedStudents.clear();
+        filteredStudents.forEach(student => {
+          expandedStudents.add(student.code);
+        });
+        renderStudentList();
+      });
+    }
+
+    // Expand All button (expand students and expand all goal cards)
+    const expandAllFullBtn = document.getElementById('stExpandAllFullBtn');
+    if (expandAllFullBtn) {
+      expandAllFullBtn.addEventListener('click', () => {
+        expandMode = 'all';
+        expandedStudents.clear();
+        filteredStudents.forEach(student => {
+          expandedStudents.add(student.code);
+        });
+        renderStudentList();
       });
     }
 
@@ -1466,6 +1484,8 @@
               selectedDetailTab = 'goals';
               editingGoalId = null;
             }
+            // Reset expandMode when manually toggling individual students
+            expandMode = 'none';
             renderStudentList();
             return;
           }
@@ -1668,17 +1688,6 @@
             showNewIEPWizard(studentCode);
           }
           return;
-        }
-      });
-
-      // Change events in table (goal area filter)
-      tableBody.addEventListener('change', (e) => {
-        if (e.target.id === 'goal-area-filter') {
-          selectedGoalAreaFilter = e.target.value;
-          // Re-render all expanded students
-          expandedStudents.forEach(studentCode => {
-            renderExpandedDetail(studentCode);
-          });
         }
       });
     }
@@ -2972,8 +2981,18 @@
       else if (normalized === 'case manager') columnMap.case_manager = index;
       else if (normalized.includes('teacher to collect data') && !normalized.includes('email')) columnMap.data_collector = index;
       else if (normalized.includes('teacher to collect data email')) columnMap.data_collector_email = index;
-      else if (normalized.includes('iep due')) columnMap.iep_due = index;
-      else if (normalized.includes('eval due')) columnMap.eval_due = index;
+      // More flexible matching for IEP due date
+      else if (normalized.includes('annual review') || 
+               normalized.includes('iep date') || 
+               normalized.includes('next iep') || 
+               normalized.includes('iep due')) columnMap.iep_due = index;
+      // More flexible matching for Eval due date
+      else if (normalized.includes('evaluation') || 
+               normalized.includes('eval date') || 
+               normalized.includes('next eval') || 
+               normalized.includes('eval due') || 
+               normalized.includes('re-eval') ||
+               normalized.includes('reevaluation')) columnMap.eval_due = index;
     });
 
     const studentsMap = new Map();
@@ -3157,6 +3176,7 @@
     
     renderQuarterBar();
     renderClassFilterOptions();
+    renderGoalAreaFilterOptions();
     setupEventHandlers();
     loadData();
   }
