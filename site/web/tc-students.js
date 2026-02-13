@@ -1005,6 +1005,13 @@
     }, 3000);
   }
 
+  // UI Constants for active state styling
+  const ACTIVE_STATE_STYLES = {
+    background: 'rgba(59, 130, 246, 0.2)',
+    color: 'rgba(59, 130, 246, 1)',
+    fontWeight: '600'
+  };
+
   function updateExpandModeButtons() {
     const collapseAllBtn = document.getElementById('stExpandAllBtn');
     const expandStudentsBtn = document.getElementById('stExpandStudentsBtn');
@@ -1021,13 +1028,9 @@
     
     // Add active state to current mode
     if (expandMode === 'students' && expandStudentsBtn) {
-      expandStudentsBtn.style.background = 'rgba(59, 130, 246, 0.2)';
-      expandStudentsBtn.style.color = 'rgba(59, 130, 246, 1)';
-      expandStudentsBtn.style.fontWeight = '600';
+      Object.assign(expandStudentsBtn.style, ACTIVE_STATE_STYLES);
     } else if (expandMode === 'all' && expandAllFullBtn) {
-      expandAllFullBtn.style.background = 'rgba(59, 130, 246, 0.2)';
-      expandAllFullBtn.style.color = 'rgba(59, 130, 246, 1)';
-      expandAllFullBtn.style.fontWeight = '600';
+      Object.assign(expandAllFullBtn.style, ACTIVE_STATE_STYLES);
     }
   }
 
@@ -1076,7 +1079,7 @@
       <div class="st-detail-section">
         <div class="st-section-header">
           <h3>IEP Goals</h3>
-          ${selectedGoalAreaFilter !== 'All' ? `<span class="st-badge" style="background: rgba(59, 130, 246, 0.2); color: rgba(59, 130, 246, 1); margin-left: 8px;">Filtered: ${escapeHtml(selectedGoalAreaFilter)}</span>` : ''}
+          ${selectedGoalAreaFilter !== 'All' ? `<span class="st-badge" style="background: ${ACTIVE_STATE_STYLES.background}; color: ${ACTIVE_STATE_STYLES.color}; margin-left: 8px;">Filtered: ${escapeHtml(selectedGoalAreaFilter)}</span>` : ''}
           <div class="st-section-actions">
             <button class="st-btn st-btn-primary" id="add-goal-btn">+ Add Goal</button>
           </div>
