@@ -212,7 +212,7 @@
   let searchQuery = '';
   let isSyncing = false;
   let sortBy = 'code'; // 'code', 'goals', 'iep_due', 'eval_due'
-  let selectedDetailTab = 'goals'; // 'goals', 'classes', 'settings'
+  let selectedDetailTabMap = new Map(); // Map<studentCode, tabName> - Per-student tab state
   let editingGoalId = null;
   let enteringDataGoalId = null; // Track which goal has the data entry form open
   let showArchived = false;
@@ -651,7 +651,7 @@
   }
 
   // Render functions
-  function renderStudentList() {
+  async function renderStudentList() {
     const tbody = document.getElementById('stStudentTableBody');
     if (!tbody) return;
 
@@ -703,9 +703,13 @@
     tbody.innerHTML = html;
 
     // Render detail content for all expanded students
-    expandedStudents.forEach(studentCode => {
-      renderExpandedDetail(studentCode);
-    });
+    // Use Promise.allSettled to handle async rendering safely
+    const renderPromises = Array.from(expandedStudents).map(studentCode => 
+      renderExpandedDetail(studentCode).catch(err => {
+        console.error(`[tc-students] Error rendering expanded detail for ${studentCode}:`, err);
+      })
+    );
+    await Promise.allSettled(renderPromises);
   }
 
   async function renderExpandedDetail(studentCode) {
@@ -721,6 +725,9 @@
     const enrollments = allEnrollments.filter(e => e.student_code === student.code);
     const studentGoals = allGoals.filter(g => g.student_code === student.code);
 
+    // Get per-student tab state, default to 'goals'
+    const selectedDetailTab = selectedDetailTabMap.get(studentCode) || 'goals';
+    
     // Render header with tabs
     let tabContent = '';
     if (selectedDetailTab === 'goals') {
@@ -1085,8 +1092,11 @@
     const statusText = `${quarterProgress.length} of ${dataStatus.expected} this quarter`;
     const lastText = lastDate ? `Last: ${formatDate(lastDate)}` : 'No data yet';
 
+    // Only add collapsed class if not in 'all' expand mode
+    const collapsedClass = expandMode === 'all' ? '' : 'collapsed';
+    
     return `
-      <div class="st-goal-card ${expandMode === 'all' ? '' : 'collapsed'}" data-goal-id="${goal.id}" data-area="${colorCategory}">
+      <div class="st-goal-card ${collapsedClass}" data-goal-id="${goal.id}" data-area="${colorCategory}">
         <div class="st-goal-header">
           <div class="st-goal-title-line">
             <span class="st-goal-icon">${icon}</span>
@@ -1434,6 +1444,7 @@
       collapseAllBtn.addEventListener('click', () => {
         expandMode = 'none';
         expandedStudents.clear();
+        selectedDetailTabMap.clear();
         renderStudentList();
       });
     }
@@ -1444,8 +1455,10 @@
       expandStudentsBtn.addEventListener('click', () => {
         expandMode = 'students';
         expandedStudents.clear();
+        selectedDetailTabMap.clear();
         filteredStudents.forEach(student => {
           expandedStudents.add(student.code);
+          selectedDetailTabMap.set(student.code, 'goals');
         });
         renderStudentList();
       });
@@ -1457,8 +1470,10 @@
       expandAllFullBtn.addEventListener('click', () => {
         expandMode = 'all';
         expandedStudents.clear();
+        selectedDetailTabMap.clear();
         filteredStudents.forEach(student => {
           expandedStudents.add(student.code);
+          selectedDetailTabMap.set(student.code, 'goals');
         });
         renderStudentList();
       });
@@ -1479,9 +1494,12 @@
             const studentCode = row.dataset.code;
             if (expandedStudents.has(studentCode)) {
               expandedStudents.delete(studentCode);
+              // Clean up tab state for closed student
+              selectedDetailTabMap.delete(studentCode);
             } else {
               expandedStudents.add(studentCode);
-              selectedDetailTab = 'goals';
+              // Set default tab for newly expanded student
+              selectedDetailTabMap.set(studentCode, 'goals');
               editingGoalId = null;
             }
             // Reset expandMode when manually toggling individual students
@@ -1493,10 +1511,14 @@
 
         // Handle tab switching in expanded detail
         if (e.target.classList.contains('st-tab')) {
-          selectedDetailTab = e.target.dataset.tab;
-          expandedStudents.forEach(studentCode => {
+          const expandedDetail = e.target.closest('.st-expanded-content');
+          const studentCode = expandedDetail?.id.replace('stExpandedDetail-', '');
+          const tabName = e.target.dataset.tab;
+          if (studentCode) {
+            // Set tab for this specific student only
+            selectedDetailTabMap.set(studentCode, tabName);
             renderExpandedDetail(studentCode);
-          });
+          }
           return;
         }
 
@@ -1785,9 +1807,10 @@
 
   function selectStudent(code) {
     expandedStudents.clear();
+    selectedDetailTabMap.clear();
     expandedStudents.add(code);
+    selectedDetailTabMap.set(code, 'goals');
     selectedGoalAreaFilter = 'All';
-    selectedDetailTab = 'goals';
     editingGoalId = null;
     renderStudentList();
   }
@@ -3112,9 +3135,13 @@
         for (const className of studentData.enrollments) {
           const supabase = await getSupabase();
           if (!supabase) continue;
+          // Use upsert to prevent duplicate enrollments on re-import
           await supabase
             .from('enrollments')
-            .insert({ student_code: studentData.code, class_name: className });
+            .upsert(
+              { student_code: studentData.code, class_name: className },
+              { onConflict: 'student_code,class_name' }
+            );
         }
 
         for (const goal of studentData.goals) {
