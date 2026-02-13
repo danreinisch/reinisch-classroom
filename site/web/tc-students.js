@@ -806,25 +806,25 @@
         <h3>Student Information</h3>
         <div class="st-form-group">
           <label class="st-form-label">Primary Case Manager</label>
-          <input type="text" id="edit-case-manager" class="st-form-input" value="${escapeHtml(student.primary_case_manager || '')}" />
+          <input type="text" id="edit-case-manager-${escapeHtml(student.code)}" class="st-form-input" value="${escapeHtml(student.primary_case_manager || '')}" />
         </div>
         <div class="st-form-group">
           <label class="st-form-label">IEP Due Date</label>
-          <input type="date" id="edit-iep-due" class="st-form-input" value="${student.iep_due || ''}" />
+          <input type="date" id="edit-iep-due-${escapeHtml(student.code)}" class="st-form-input" value="${student.iep_due || ''}" />
         </div>
         <div class="st-form-group">
           <label class="st-form-label">Eval Due Date</label>
-          <input type="date" id="edit-eval-due" class="st-form-input" value="${student.eval_due || ''}" />
+          <input type="date" id="edit-eval-due-${escapeHtml(student.code)}" class="st-form-input" value="${student.eval_due || ''}" />
         </div>
-        <button class="st-btn st-btn-primary" id="save-student-info-btn">Save Changes</button>
+        <button class="st-btn st-btn-primary" id="save-student-info-btn-${escapeHtml(student.code)}">Save Changes</button>
       </div>
 
       <div class="st-detail-section">
         <h3>Actions</h3>
         ${renderStudentPassword(student)}
         ${isActive 
-          ? '<button class="st-btn st-btn-danger" id="archive-student-btn">🗃️ Archive Student</button>'
-          : '<button class="st-btn st-btn-primary" id="reactivate-student-btn">♻️ Reactivate Student</button>'
+          ? `<button class="st-btn st-btn-danger" id="archive-student-btn-${escapeHtml(student.code)}">🗃️ Archive Student</button>`
+          : `<button class="st-btn st-btn-primary" id="reactivate-student-btn-${escapeHtml(student.code)}">♻️ Reactivate Student</button>`
         }
       </div>
     `;
@@ -991,6 +991,32 @@
     }, 3000);
   }
 
+  function updateExpandModeButtons() {
+    const collapseAllBtn = document.getElementById('stExpandAllBtn');
+    const expandStudentsBtn = document.getElementById('stExpandStudentsBtn');
+    const expandAllFullBtn = document.getElementById('stExpandAllFullBtn');
+    
+    // Remove active state from all
+    [collapseAllBtn, expandStudentsBtn, expandAllFullBtn].forEach(btn => {
+      if (btn) {
+        btn.style.background = '';
+        btn.style.color = '';
+        btn.style.fontWeight = '';
+      }
+    });
+    
+    // Add active state to current mode
+    if (expandMode === 'students' && expandStudentsBtn) {
+      expandStudentsBtn.style.background = 'rgba(59, 130, 246, 0.2)';
+      expandStudentsBtn.style.color = 'rgba(59, 130, 246, 1)';
+      expandStudentsBtn.style.fontWeight = '600';
+    } else if (expandMode === 'all' && expandAllFullBtn) {
+      expandAllFullBtn.style.background = 'rgba(59, 130, 246, 0.2)';
+      expandAllFullBtn.style.color = 'rgba(59, 130, 246, 1)';
+      expandAllFullBtn.style.fontWeight = '600';
+    }
+  }
+
   function renderStudentClasses(student, enrollments) {
     const classItems = FULL_CLASS_NAMES.map(className => {
       const isEnrolled = enrollments.some(e => e.class_name === className);
@@ -1036,6 +1062,7 @@
       <div class="st-detail-section">
         <div class="st-section-header">
           <h3>IEP Goals</h3>
+          ${selectedGoalAreaFilter !== 'All' ? `<span class="st-badge" style="background: rgba(59, 130, 246, 0.2); color: rgba(59, 130, 246, 1); margin-left: 8px;">Filtered: ${escapeHtml(selectedGoalAreaFilter)}</span>` : ''}
           <div class="st-section-actions">
             <button class="st-btn st-btn-primary" id="add-goal-btn">+ Add Goal</button>
           </div>
@@ -1446,6 +1473,7 @@
         expandedStudents.clear();
         selectedDetailTabMap.clear();
         renderStudentList();
+        updateExpandModeButtons();
       });
     }
 
@@ -1461,6 +1489,7 @@
           selectedDetailTabMap.set(student.code, 'goals');
         });
         renderStudentList();
+        updateExpandModeButtons();
       });
     }
 
@@ -1476,6 +1505,7 @@
           selectedDetailTabMap.set(student.code, 'goals');
         });
         renderStudentList();
+        updateExpandModeButtons();
       });
     }
 
@@ -1505,6 +1535,7 @@
             // Reset expandMode when manually toggling individual students
             expandMode = 'none';
             renderStudentList();
+            updateExpandModeButtons();
             return;
           }
         }
@@ -1545,9 +1576,8 @@
         }
 
         // Save student info button
-        if (e.target.id === 'save-student-info-btn') {
-          const expandedDetail = e.target.closest('.st-expanded-content');
-          const studentCode = expandedDetail?.id.replace('stExpandedDetail-', '');
+        if (e.target.id && e.target.id.startsWith('save-student-info-btn-')) {
+          const studentCode = e.target.id.replace('save-student-info-btn-', '');
           if (studentCode) {
             await handleSaveStudentInfo(studentCode);
           }
@@ -1555,9 +1585,8 @@
         }
 
         // Archive student
-        if (e.target.id === 'archive-student-btn') {
-          const expandedDetail = e.target.closest('.st-expanded-content');
-          const studentCode = expandedDetail?.id.replace('stExpandedDetail-', '');
+        if (e.target.id && e.target.id.startsWith('archive-student-btn-')) {
+          const studentCode = e.target.id.replace('archive-student-btn-', '');
           if (studentCode) {
             await handleArchiveStudent(studentCode);
           }
@@ -1565,9 +1594,8 @@
         }
 
         // Reactivate student
-        if (e.target.id === 'reactivate-student-btn') {
-          const expandedDetail = e.target.closest('.st-expanded-content');
-          const studentCode = expandedDetail?.id.replace('stExpandedDetail-', '');
+        if (e.target.id && e.target.id.startsWith('reactivate-student-btn-')) {
+          const studentCode = e.target.id.replace('reactivate-student-btn-', '');
           if (studentCode) {
             await handleReactivateStudent(studentCode);
           }
@@ -1855,9 +1883,9 @@
   async function handleSaveStudentInfo(studentCode) {
     if (!studentCode) return;
 
-    const caseManager = document.getElementById('edit-case-manager')?.value;
-    const iepDue = document.getElementById('edit-iep-due')?.value;
-    const evalDue = document.getElementById('edit-eval-due')?.value;
+    const caseManager = document.getElementById(`edit-case-manager-${studentCode}`)?.value;
+    const iepDue = document.getElementById(`edit-iep-due-${studentCode}`)?.value;
+    const evalDue = document.getElementById(`edit-eval-due-${studentCode}`)?.value;
 
     try {
       await db.upsertStudent({
