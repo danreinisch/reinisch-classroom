@@ -907,6 +907,10 @@
               <option value="All">All Classes</option>
               <!-- class options rendered by JS -->
             </select>
+            <select id="stGoalAreaFilter">
+              <option value="All">All Goal Areas</option>
+              <!-- goal area options rendered by JS -->
+            </select>
             <select id="stSortSelect">
               <option value="code">Sort: Code (A-Z)</option>
               <option value="goals">Sort: Goal Count</option>
@@ -915,7 +919,9 @@
             <label class="st-toggle-label">
               <input type="checkbox" id="stShowArchived" /> Show Archived
             </label>
-            <button id="stExpandAllBtn" class="st-btn st-btn-small">▶ Expand All</button>
+            <button id="stExpandAllBtn" class="st-btn st-btn-small">▼ Collapse All</button>
+            <button id="stExpandStudentsBtn" class="st-btn st-btn-small">▶ Expand Students</button>
+            <button id="stExpandAllFullBtn" class="st-btn st-btn-small">▶▶ Expand All</button>
             <button id="stExportBtn" class="st-btn st-btn-small">📤 Export</button>
             <button id="stImportCSV" class="st-btn st-btn-small">📥 Import</button>
             <button id="stAddStudent" class="st-btn st-btn-primary">+ Add Student</button>
