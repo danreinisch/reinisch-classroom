@@ -2460,117 +2460,125 @@
   }
 
   function showAddStudentWizard() {
-    let step = 1;
-    let studentData = {};
+    try {
+      let step = 1;
+      let studentData = {};
 
-    function renderStep() {
-      let content = '';
-      
-      if (step === 1) {
-        content = `
-          <form id="wizard-step-1">
-            <div class="form-group">
-              <label>Student Code:</label>
-              <input type="text" name="code" value="${escapeHtml(studentData.code || '')}" required>
-            </div>
-            <div class="form-group">
-              <label>Password:</label>
-              <input type="text" name="password" value="${escapeHtml(studentData.password || '')}" required>
-            </div>
-            <div class="form-group">
-              <label>Primary Case Manager:</label>
-              <input type="text" name="primary_case_manager" value="${escapeHtml(studentData.primary_case_manager || '')}">
-            </div>
-            <div class="modal-actions">
-              <button type="button" class="btn btn-secondary" id="wizard-cancel">Cancel</button>
-              <button type="submit" class="btn btn-primary">Next</button>
-            </div>
-          </form>
-        `;
-      } else if (step === 2) {
-        const checkboxes = FULL_CLASS_NAMES.map(className => `
-          <label class="checkbox-label">
-            <input type="checkbox" name="enrollment" value="${escapeHtml(className)}"
-              ${studentData.enrollments && studentData.enrollments.includes(className) ? 'checked' : ''}>
-            ${escapeHtml(className)}
-          </label>
-        `).join('');
+      // Create modal first, before defining renderStep
+      const modal = createModal('Add Student', '');
+      document.body.appendChild(modal);
 
-        content = `
-          <form id="wizard-step-2">
-            <div class="form-group">
-              <label>Select Classes:</label>
-              <div class="checkbox-group">
-                ${checkboxes}
+      // Use arrow function instead of function declaration to avoid no-inner-declarations ESLint error
+      const renderStep = () => {
+        let content = '';
+        
+        if (step === 1) {
+          content = `
+            <form id="wizard-step-1">
+              <div class="form-group">
+                <label>Student Code:</label>
+                <input type="text" name="code" value="${escapeHtml(studentData.code || '')}" required>
               </div>
-            </div>
-            <div class="modal-actions">
-              <button type="button" class="btn btn-secondary" id="wizard-back">Back</button>
-              <button type="submit" class="btn btn-primary">Next</button>
-            </div>
-          </form>
+              <div class="form-group">
+                <label>Password:</label>
+                <input type="text" name="password" value="${escapeHtml(studentData.password || '')}" required>
+              </div>
+              <div class="form-group">
+                <label>Primary Case Manager:</label>
+                <input type="text" name="primary_case_manager" value="${escapeHtml(studentData.primary_case_manager || '')}">
+              </div>
+              <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" id="wizard-cancel">Cancel</button>
+                <button type="submit" class="btn btn-primary">Next</button>
+              </div>
+            </form>
+          `;
+        } else if (step === 2) {
+          const checkboxes = FULL_CLASS_NAMES.map(className => `
+            <label class="checkbox-label">
+              <input type="checkbox" name="enrollment" value="${escapeHtml(className)}"
+                ${studentData.enrollments && studentData.enrollments.includes(className) ? 'checked' : ''}>
+              ${escapeHtml(className)}
+            </label>
+          `).join('');
+
+          content = `
+            <form id="wizard-step-2">
+              <div class="form-group">
+                <label>Select Classes:</label>
+                <div class="checkbox-group">
+                  ${checkboxes}
+                </div>
+              </div>
+              <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" id="wizard-back">Back</button>
+                <button type="submit" class="btn btn-primary">Next</button>
+              </div>
+            </form>
+          `;
+        } else if (step === 3) {
+          content = `
+            <form id="wizard-step-3">
+              <p>Student will be created with ${studentData.enrollments ? studentData.enrollments.length : 0} class enrollments.</p>
+              <p>You can add goals after creating the student.</p>
+              <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" id="wizard-back">Back</button>
+                <button type="submit" class="btn btn-primary">Create Student</button>
+              </div>
+            </form>
+          `;
+        }
+
+        modal.querySelector('.st-modal-body').innerHTML = `
+          <h2>Add Student - Step ${step} of 3</h2>
+          ${content}
         `;
-      } else if (step === 3) {
-        content = `
-          <form id="wizard-step-3">
-            <p>Student will be created with ${studentData.enrollments ? studentData.enrollments.length : 0} class enrollments.</p>
-            <p>You can add goals after creating the student.</p>
-            <div class="modal-actions">
-              <button type="button" class="btn btn-secondary" id="wizard-back">Back</button>
-              <button type="submit" class="btn btn-primary">Create Student</button>
-            </div>
-          </form>
-        `;
-      }
 
-      modal.querySelector('.st-modal-body').innerHTML = `
-        <h2>Add Student - Step ${step} of 3</h2>
-        ${content}
-      `;
+        const cancelBtn = document.getElementById('wizard-cancel');
+        if (cancelBtn) {
+          cancelBtn.addEventListener('click', () => modal.remove());
+        }
 
-      const cancelBtn = document.getElementById('wizard-cancel');
-      if (cancelBtn) {
-        cancelBtn.addEventListener('click', () => modal.remove());
-      }
-
-      const backBtn = document.getElementById('wizard-back');
-      if (backBtn) {
-        backBtn.addEventListener('click', () => {
-          step--;
-          renderStep();
-        });
-      }
-
-      const form = modal.querySelector('form');
-      if (form) {
-        form.addEventListener('submit', async (e) => {
-          e.preventDefault();
-          
-          if (step === 1) {
-            const formData = new FormData(form);
-            studentData.code = formData.get('code');
-            studentData.password = formData.get('password');
-            studentData.primary_case_manager = formData.get('primary_case_manager');
-            step++;
+        const backBtn = document.getElementById('wizard-back');
+        if (backBtn) {
+          backBtn.addEventListener('click', () => {
+            step--;
             renderStep();
-          } else if (step === 2) {
-            const checkboxes = form.querySelectorAll('input[name="enrollment"]');
-            studentData.enrollments = Array.from(checkboxes)
-              .filter(cb => cb.checked)
-              .map(cb => cb.value);
-            step++;
-            renderStep();
-          } else if (step === 3) {
-            await handleCreateStudent(studentData);
-            modal.remove();
-          }
-        });
-      }
+          });
+        }
+
+        const form = modal.querySelector('form');
+        if (form) {
+          form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (step === 1) {
+              const formData = new FormData(form);
+              studentData.code = formData.get('code');
+              studentData.password = formData.get('password');
+              studentData.primary_case_manager = formData.get('primary_case_manager');
+              step++;
+              renderStep();
+            } else if (step === 2) {
+              const checkboxes = form.querySelectorAll('input[name="enrollment"]');
+              studentData.enrollments = Array.from(checkboxes)
+                .filter(cb => cb.checked)
+                .map(cb => cb.value);
+              step++;
+              renderStep();
+            } else if (step === 3) {
+              await handleCreateStudent(studentData);
+              modal.remove();
+            }
+          });
+        }
+      };
+
+      renderStep();
+    } catch (error) {
+      console.error('[tc-students] Error in showAddStudentWizard:', error);
+      alert('Failed to open Add Student wizard. Please check the console for details.');
     }
-
-    const modal = createModal('Add Student', '');
-    document.body.appendChild(modal);
-    renderStep();
   }
 
   async function handleCreateStudent(data) {
