@@ -1393,10 +1393,10 @@
     if (goalAreaFilter) {
       goalAreaFilter.addEventListener('change', async (e) => {
         selectedGoalAreaFilter = e.target.value;
-        // Re-render all expanded students to apply the filter
-        for (const studentCode of expandedStudents) {
-          await renderExpandedDetail(studentCode);
-        }
+        // Re-render all expanded students to apply the filter concurrently
+        await Promise.all(
+          Array.from(expandedStudents).map(studentCode => renderExpandedDetail(studentCode))
+        );
       });
     }
 
@@ -3374,7 +3374,7 @@
             <p style="margin-top: 20px;">Are you absolutely sure you want to continue?</p>
             <div class="modal-actions" style="margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end;">
               <button type="button" class="btn btn-secondary" id="cancel-confirm">Cancel</button>
-              <button type="button" class="btn btn-danger" id="proceed-confirm" style="background-color: #d32f2f;">Yes, Delete All and Import</button>
+              <button type="button" class="st-btn st-btn-danger" id="proceed-confirm">Yes, Delete All and Import</button>
             </div>
           </div>
         `
