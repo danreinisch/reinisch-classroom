@@ -137,15 +137,6 @@
   /**
    * Check if IEP due date is urgent (within 30 days or overdue)
    */
-  function isIepUrgent(iepDue) {
-    if (!iepDue) return false;
-    const due = new Date(iepDue);
-    if (isNaN(due.getTime())) return false;
-    const now = new Date();
-    const daysUntil = (due - now) / (1000 * 60 * 60 * 24);
-    return daysUntil <= 30;
-  }
-
   /**
    * Normalize enrollment data to ensure class_name is present
    * If class_name is missing but class_code is present, derives class_name from class_code mapping
@@ -204,7 +195,6 @@
   let allEnrollments = [];
   let allProgressEntries = []; // Progress data for data collection status
   let filteredStudents = [];
-  let selectedStudent = null;
   let expandedStudents = new Set(); // For inline expand in table - Support multiple expanded students
   let selectedClassFilter = 'All';
   let selectedGoalAreaFilter = 'All';
@@ -216,9 +206,7 @@
   let editingGoalId = null;
   let enteringDataGoalId = null; // Track which goal has the data entry form open
   let showArchived = false;
-  let collapsedGoals = new Set(); // Track which goals are collapsed
   let expandedGoalCards = new Set(); // Track which goal cards are expanded (not collapsed)
-  let truncatedGoals = new Set(); // Track which goals have truncated descriptions
   let iepWizardData = null; // { step: 1, studentCode: '', goalsToArchive: Set, newGoals: [], iepDue: '', evalDue: '' }
   let expandMode = 'none'; // 'none', 'students', 'all' - Track bulk expand state
   let progressLookupMap = new Map(); // Map<"studentCode:goalCode", progressEntry[]> - Performance optimization
@@ -811,7 +799,7 @@
 
       <div class="st-detail-section">
         <h3>Actions</h3>
-        ${renderStudentPassword(student)}
+        ${renderStudentPassword()}
         ${isActive 
           ? `<button class="st-btn st-btn-danger" id="archive-student-btn-${escapeHtml(student.code)}">🗃️ Archive Student</button>`
           : `<button class="st-btn st-btn-primary" id="reactivate-student-btn-${escapeHtml(student.code)}">♻️ Reactivate Student</button>`
@@ -919,7 +907,12 @@
       return;
     }
 
-    const confirmed = confirm(`Revoke data entry link for ${goal.code}?\n\nThe current link will no longer work.`);
+    const confirmed = await showConfirmModal(
+      'Revoke Data Entry Link',
+      `Revoke data entry link for ${goal.code}?\n\nThe current link will no longer work.`,
+      'Revoke',
+      { danger: true }
+    );
     if (!confirmed) return;
 
     try {
@@ -1355,7 +1348,7 @@
     `;
   }
 
-  function renderStudentPassword(student) {
+  function renderStudentPassword() {
     return `
       <div class="st-detail-section">
         <div class="st-section-header">
@@ -1856,9 +1849,13 @@
   async function handleArchiveStudent(studentCode) {
     if (!studentCode) return;
     
-    if (!confirm(`Archive student ${studentCode}? This will hide them from the active list.`)) {
-      return;
-    }
+    const confirmed = await showConfirmModal(
+      'Archive Student',
+      `Archive student ${studentCode}? This will hide them from the active list.`,
+      'Archive',
+      { danger: true }
+    );
+    if (!confirmed) return;
 
     try {
       await db.upsertStudent({ code: studentCode, status: 'archived', active: false });
@@ -1875,9 +1872,12 @@
   async function handleReactivateStudent(studentCode) {
     if (!studentCode) return;
     
-    if (!confirm(`Reactivate student ${studentCode}? They will reappear in the active list.`)) {
-      return;
-    }
+    const confirmed = await showConfirmModal(
+      'Reactivate Student',
+      `Reactivate student ${studentCode}? They will reappear in the active list.`,
+      'Reactivate'
+    );
+    if (!confirmed) return;
 
     try {
       await db.upsertStudent({ code: studentCode, status: 'active', active: true });
@@ -1918,9 +1918,13 @@
     const goal = allGoals.find(g => g.id === goalId);
     if (!goal) return;
 
-    if (!confirm(`Archive goal "${goal.code || goal.goal_code}"?`)) {
-      return;
-    }
+    const confirmed = await showConfirmModal(
+      'Archive Goal',
+      `Archive goal "${goal.code || goal.goal_code}"?`,
+      'Archive',
+      { danger: true }
+    );
+    if (!confirmed) return;
 
     try {
       await db.upsertGoal({ id: goalId, status: 'archived' });
@@ -1940,9 +1944,12 @@
     const goal = allGoals.find(g => g.id === goalId);
     if (!goal) return;
 
-    if (!confirm(`Create a new version of goal "${goal.code || goal.goal_code}"? The current goal will be archived.`)) {
-      return;
-    }
+    const confirmed = await showConfirmModal(
+      'Create New Version',
+      `Create a new version of goal "${goal.code || goal.goal_code}"? The current goal will be archived.`,
+      'Create Version'
+    );
+    if (!confirmed) return;
 
     try {
       await db.upsertGoal({ id: goalId, status: 'archived' });
@@ -2292,129 +2299,6 @@
     }
   }
 
-  function showEditGoalModal(goalId) {
-    const goal = allGoals.find(g => g.id === goalId);
-    if (!goal) return;
-
-    const modal = createModal('Edit IEP Goal', `
-      <form id="edit-goal-form">
-        <div class="st-form-group">
-          <label class="st-form-label">Goal Area:</label>
-          <select name="goal_area" class="st-form-select" required>
-            ${GOAL_AREAS.map(area => `
-              <option value="${escapeHtml(area)}" ${goal.goal_area === area ? 'selected' : ''}>
-                ${escapeHtml(area)}
-              </option>
-            `).join('')}
-          </select>
-        </div>
-        <div class="st-form-group">
-          <label class="st-form-label">Goal Code:</label>
-          <input type="text" name="goal_code" class="st-form-input" value="${escapeHtml(goal.code || '')}" required>
-        </div>
-        <div class="st-form-group">
-          <label class="st-form-label">Description:</label>
-          <textarea name="goal_text" class="st-form-textarea" rows="4" required>${escapeHtml(goal.goal_text || '')}</textarea>
-        </div>
-        <div class="st-form-group">
-          <label class="st-form-label">Measurement Type:</label>
-          <select name="measurement_type" class="st-form-select" required>
-            <option value="Accuracy" ${goal.measurement_type === 'Accuracy' ? 'selected' : ''}>Accuracy</option>
-            <option value="Frequency" ${goal.measurement_type === 'Frequency' ? 'selected' : ''}>Frequency</option>
-            <option value="Duration" ${goal.measurement_type === 'Duration' ? 'selected' : ''}>Duration</option>
-            <option value="Rate" ${goal.measurement_type === 'Rate' ? 'selected' : ''}>Rate</option>
-          </select>
-        </div>
-        <div class="st-form-row">
-          <div class="st-form-group">
-            <label class="st-form-label">Baseline:</label>
-            <input type="text" name="baseline" class="st-form-input" value="${escapeHtml(goal.baseline || '')}" required>
-          </div>
-          <div class="st-form-group">
-            <label class="st-form-label">Target:</label>
-            <input type="text" name="target" class="st-form-input" value="${escapeHtml(goal.target || '')}" required>
-          </div>
-        </div>
-        <div class="st-form-group">
-          <label class="st-form-label">Case Manager:</label>
-          <input type="text" name="case_manager" class="st-form-input" value="${escapeHtml(goal.case_manager || '')}" required>
-        </div>
-        <div class="st-form-group">
-          <label class="st-form-label">Data Collector:</label>
-          <input type="text" name="data_collector" class="st-form-input" value="${escapeHtml(goal.data_collector || '')}" required>
-        </div>
-        <div class="st-form-group">
-          <label class="st-form-label">Data Collector Email:</label>
-          <input type="email" name="data_collector_email" class="st-form-input" value="${escapeHtml(goal.data_collector_email || '')}">
-        </div>
-        <div class="st-form-group">
-          <label class="st-form-label">Class Context:</label>
-          <select name="class_context" class="st-form-select">
-            <option value="">None</option>
-            ${FULL_CLASS_NAMES.map(cn => `
-              <option value="${escapeHtml(cn)}" ${goal.class_context === cn ? 'selected' : ''}>
-                ${escapeHtml(cn)}
-              </option>
-            `).join('')}
-          </select>
-        </div>
-        <div class="st-modal-footer">
-          <button type="button" class="st-btn st-btn-secondary" id="cancel-edit-goal">Cancel</button>
-          <button type="submit" class="st-btn st-btn-primary">Save Changes</button>
-        </div>
-      </form>
-    `);
-
-    document.body.appendChild(modal);
-
-    document.getElementById('cancel-edit-goal').addEventListener('click', () => {
-      modal.remove();
-    });
-
-    document.getElementById('edit-goal-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      await handleEditGoal(goalId, e.target);
-      modal.remove();
-    });
-  }
-
-  async function handleEditGoal(goalId, form) {
-    const formData = new FormData(form);
-    const goal = allGoals.find(g => g.id === goalId);
-    if (!goal) {
-      console.error('[tc-students] Goal not found:', goalId);
-      alert('Goal not found');
-      return;
-    }
-    
-    const updates = {
-      id: goalId,
-      student_code: goal.student_code,
-      goal_area: formData.get('goal_area'),
-      code: formData.get('goal_code'), // Form field is 'goal_code' but DB field is 'code'
-      goal_text: formData.get('goal_text'),
-      measurement_type: formData.get('measurement_type'),
-      baseline: formData.get('baseline'),
-      target: formData.get('target'),
-      case_manager: formData.get('case_manager'),
-      data_collector: formData.get('data_collector'),
-      data_collector_email: formData.get('data_collector_email') || null,
-      class_context: formData.get('class_context') || null
-    };
-
-    try {
-      await db.upsertGoal(updates);
-      console.log('[tc-students] Updated goal');
-      await loadData();
-      if (goal.student_code && expandedStudents.has(goal.student_code)) {
-        await renderExpandedDetail(goal.student_code);
-      }
-    } catch (error) {
-      console.error('[tc-students] Error updating goal:', error);
-      alert('Failed to update goal');
-    }
-  }
-
   function showResetPasswordModal(studentCode) {
     const student = allStudents.find(s => s.code === studentCode);
     if (!student) return;
@@ -2452,7 +2336,7 @@
     try {
       await db.upsertStudent({ code: studentCode, password_hash: password });
       console.log('[tc-students] Reset password');
-      alert('Password reset successfully');
+      showToast('Password reset successfully');
     } catch (error) {
       console.error('[tc-students] Error resetting password:', error);
       alert('Failed to reset password');
@@ -3176,14 +3060,14 @@
       const code = row[columnMap.code]?.trim();
       if (!code) continue;
 
-      // Track if this is a new or existing student
-      if (existingCodes.has(code)) {
-        existingStudentCount++;
-      } else {
-        newStudentCount++;
-      }
-
       if (!studentsMap.has(code)) {
+        // Count unique students only
+        if (existingCodes.has(code)) {
+          existingStudentCount++;
+        } else {
+          newStudentCount++;
+        }
+        
         studentsMap.set(code, {
           code,
           primary_case_manager: row[columnMap.case_manager]?.trim() || null,
@@ -3482,7 +3366,7 @@
       console.log(`[tc-students] ${modeText}`, data.length, 'students');
       await loadData();
       document.querySelector('.st-modal-backdrop')?.remove();
-      alert(`Successfully ${modeText} ${data.length} students`);
+      showToast(`Successfully ${modeText} ${data.length} students`);
     } catch (error) {
       console.error('[tc-students] Error importing CSV:', error);
       alert('Failed to import CSV: ' + error.message);
@@ -3510,6 +3394,56 @@
     });
 
     return modal;
+  }
+
+  /**
+   * Show a styled confirmation modal and return a Promise<boolean>
+   * @param {string} title - Modal title
+   * @param {string} message - Confirmation message
+   * @param {string} confirmLabel - Label for confirm button (default: 'Confirm')
+   * @param {object} options - Optional configuration
+   * @param {boolean} options.danger - Use red styling for destructive actions
+   * @returns {Promise<boolean>} true if confirmed, false if cancelled
+   */
+  function showConfirmModal(title, message, confirmLabel = 'Confirm', options = {}) {
+    return new Promise((resolve) => {
+      const isDanger = options.danger || false;
+      const confirmButtonClass = isDanger 
+        ? 'st-btn st-btn-danger'
+        : 'st-btn st-btn-primary';
+      
+      const modal = createModal(title, `
+        <div style="padding: 10px 0;">
+          <p style="margin-bottom: 20px; white-space: pre-wrap;">${escapeHtml(message)}</p>
+          <div style="display: flex; gap: 10px; justify-content: flex-end;">
+            <button class="st-btn st-btn-secondary" id="modal-cancel-btn">Cancel</button>
+            <button class="${confirmButtonClass}" id="modal-confirm-btn">${escapeHtml(confirmLabel)}</button>
+          </div>
+        </div>
+      `);
+      
+      document.body.appendChild(modal);
+      
+      const cleanup = () => modal.remove();
+      
+      document.getElementById('modal-cancel-btn').addEventListener('click', () => {
+        cleanup();
+        resolve(false);
+      });
+      
+      document.getElementById('modal-confirm-btn').addEventListener('click', () => {
+        cleanup();
+        resolve(true);
+      });
+      
+      // Allow clicking backdrop to cancel
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          cleanup();
+          resolve(false);
+        }
+      });
+    });
   }
 
   // Initialize
