@@ -2862,26 +2862,6 @@
           </button>
         </div>
         
-        <div class="form-group" style="margin-bottom: 20px;">
-          <label><strong>Import Mode:</strong></label>
-          <div style="margin-top: 8px;">
-            <label style="display: block; margin-bottom: 8px;">
-              <input type="radio" name="import-mode" value="merge" checked style="margin-right: 8px;">
-              <strong>Add & Update</strong> - Merge with existing data (recommended)
-              <div style="margin-left: 24px; color: #666; font-size: 0.9em;">
-                New students will be added, existing students will be updated
-              </div>
-            </label>
-            <label style="display: block;">
-              <input type="radio" name="import-mode" value="replace" style="margin-right: 8px;">
-              <strong>Replace All</strong> - Clear all data and re-import
-              <div style="margin-left: 24px; color: #d32f2f; font-size: 0.9em;">
-                ⚠️ Warning: This will delete ALL existing students, goals, and enrollments
-              </div>
-            </label>
-          </div>
-        </div>
-        
         <div class="form-group">
           <label>Select CSV File:</label>
           <input type="file" id="csv-file-input" accept=".csv">
@@ -3112,7 +3092,7 @@
       enrollments: Array.from(s.enrollments)
     }));
 
-    displayCsvPreview(window.csvImportData, newStudentCount, existingStudentCount);
+    displayCsvPreview(window.csvImportData);
   }
 
   function parseDateFromCSV(dateStr) {
@@ -3146,175 +3126,236 @@
     return null;
   }
 
-  function displayCsvPreview(data, newStudentCount, existingStudentCount) {
+  function displayCsvPreview(data) {
     const preview = document.getElementById('csv-preview');
     const content = document.getElementById('csv-preview-content');
     
-    const totalGoals = data.reduce((sum, s) => sum + s.goals.length, 0);
-    const importMode = document.querySelector('input[name="import-mode"]:checked')?.value || 'merge';
-    
-    // Count existing students that will have their dates updated
-    let studentsWithDateUpdates = 0;
-    if (importMode === 'merge') {
-      for (const csvStudent of data) {
-        if (csvStudent.isExisting) {
-          const existingStudent = allStudents.find(s => s.code === csvStudent.code);
-          if (existingStudent) {
-            const willUpdateIep = !existingStudent.iep_due && csvStudent.iep_due;
-            const willUpdateEval = !existingStudent.eval_due && csvStudent.eval_due;
-            if (willUpdateIep || willUpdateEval) {
-              studentsWithDateUpdates++;
-            }
+    // Categorize each student with detailed change tracking
+    const categorizedStudents = data.map(csvStudent => {
+      const existingStudent = allStudents.find(s => s.code === csvStudent.code);
+      
+      if (!existingStudent) {
+        // New student
+        return {
+          ...csvStudent,
+          category: 'new',
+          changes: []
+        };
+      }
+      
+      // Existing student - detect changes
+      const changes = [];
+      
+      // Check IEP date change
+      if (!existingStudent.iep_due && csvStudent.iep_due) {
+        changes.push({ type: 'iep_date', from: null, to: csvStudent.iep_due });
+      }
+      
+      // Check Eval date change
+      if (!existingStudent.eval_due && csvStudent.eval_due) {
+        changes.push({ type: 'eval_date', from: null, to: csvStudent.eval_due });
+      }
+      
+      // Check case manager change
+      if (csvStudent.primary_case_manager && 
+          csvStudent.primary_case_manager !== existingStudent.primary_case_manager) {
+        changes.push({ 
+          type: 'case_manager', 
+          from: existingStudent.primary_case_manager, 
+          to: csvStudent.primary_case_manager 
+        });
+      }
+      
+      // Check goals for changes
+      const existingGoals = allGoals.filter(g => g.student_code === csvStudent.code);
+      const newGoals = [];
+      const updatedGoals = [];
+      
+      for (const csvGoal of csvStudent.goals) {
+        const existingGoal = existingGoals.find(g => g.code === csvGoal.code);
+        if (!existingGoal) {
+          newGoals.push(csvGoal);
+        } else {
+          // Check if goal text or other fields changed
+          const goalChanges = [];
+          if (csvGoal.goal_text && 
+              csvGoal.goal_text !== existingGoal.goal_text && 
+              csvGoal.goal_text !== existingGoal.desc) {
+            goalChanges.push('goal text');
+          }
+          if (csvGoal.goal_area && csvGoal.goal_area !== existingGoal.goal_area) {
+            goalChanges.push('goal area');
+          }
+          if (csvGoal.case_manager && csvGoal.case_manager !== existingGoal.case_manager) {
+            goalChanges.push('case manager');
+          }
+          if (csvGoal.data_collector && csvGoal.data_collector !== existingGoal.data_collector) {
+            goalChanges.push('data collector');
+          }
+          if (csvGoal.data_collector_email && csvGoal.data_collector_email !== existingGoal.data_collector_email) {
+            goalChanges.push('data collector email');
+          }
+          if (csvGoal.class_context && csvGoal.class_context !== existingGoal.class_context) {
+            goalChanges.push('class context');
+          }
+          
+          if (goalChanges.length > 0) {
+            updatedGoals.push({ code: csvGoal.code, changes: goalChanges });
           }
         }
       }
+      
+      if (newGoals.length > 0) {
+        changes.push({ type: 'new_goals', goals: newGoals });
+      }
+      if (updatedGoals.length > 0) {
+        changes.push({ type: 'updated_goals', goals: updatedGoals });
+      }
+      
+      return {
+        ...csvStudent,
+        category: changes.length > 0 ? 'updated' : 'unchanged',
+        changes
+      };
+    });
+    
+    // Separate by category
+    const newStudents = categorizedStudents.filter(s => s.category === 'new');
+    const updatedStudents = categorizedStudents.filter(s => s.category === 'updated');
+    const unchangedStudents = categorizedStudents.filter(s => s.category === 'unchanged');
+    
+    // Count date updates
+    const dateUpdateCount = updatedStudents.filter(s => 
+      s.changes.some(c => c.type === 'iep_date' || c.type === 'eval_date')
+    ).length;
+    
+    // Build summary bar
+    const summaryParts = [];
+    if (newStudents.length > 0) {
+      summaryParts.push(`<strong>${newStudents.length}</strong> new student${newStudents.length !== 1 ? 's' : ''}`);
+    }
+    if (updatedStudents.length > 0) {
+      summaryParts.push(`<strong>${updatedStudents.length}</strong> updated`);
+    }
+    if (dateUpdateCount > 0) {
+      summaryParts.push(`<strong>${dateUpdateCount}</strong> dates filled in`);
+    }
+    if (unchangedStudents.length > 0) {
+      summaryParts.push(`<strong>${unchangedStudents.length}</strong> unchanged (hidden)`);
     }
     
-    let modeWarning = '';
-    if (importMode === 'replace') {
-      modeWarning = `
-        <div style="padding: 12px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; margin-bottom: 15px;">
-          <strong>⚠️ Replace All Mode Selected</strong>
-          <p style="margin: 8px 0 0 0;">All existing students, goals, and enrollments will be deleted before importing.</p>
+    const summaryBar = `
+      <div style="padding: 15px; background: #e3f2fd; border: 1px solid #1976d2; border-radius: 4px; margin-bottom: 20px;">
+        <div style="font-size: 1.1em;">📊 ${summaryParts.join(' · ')}</div>
+      </div>
+    `;
+    
+    // Build changed students cards
+    const changedStudentsHtml = [...newStudents, ...updatedStudents].map(student => {
+      const isNew = student.category === 'new';
+      const icon = isNew ? '🆕' : '✏️';
+      const label = isNew ? 'New' : 'Updated';
+      
+      const changeParts = [];
+      
+      // For new students, show summary
+      if (isNew) {
+        if (student.goals.length > 0) {
+          const goalCodes = student.goals.map(g => g.code).join(', ');
+          changeParts.push(`   + ${student.goals.length} goal${student.goals.length !== 1 ? 's' : ''}: ${escapeHtml(goalCodes)}`);
+        }
+        const dateParts = [];
+        if (student.iep_due) {
+          dateParts.push(`IEP: ${formatDate(student.iep_due)}`);
+        }
+        if (student.eval_due) {
+          dateParts.push(`Eval: ${formatDate(student.eval_due)}`);
+        }
+        if (dateParts.length > 0) {
+          changeParts.push(`   📅 ${dateParts.join(' · ')}`);
+        }
+        if (student.primary_case_manager) {
+          changeParts.push(`   👤 Case Manager: ${escapeHtml(student.primary_case_manager)}`);
+        }
+      } else {
+        // For updated students, show detailed changes
+        const hasGoalChanges = student.changes.some(c => c.type === 'new_goals' || c.type === 'updated_goals');
+        
+        for (const change of student.changes) {
+          if (change.type === 'iep_date') {
+            changeParts.push(`   📅 IEP date: N/A → ${formatDate(change.to)}`);
+          } else if (change.type === 'eval_date') {
+            changeParts.push(`   📅 Eval date: N/A → ${formatDate(change.to)}`);
+          } else if (change.type === 'case_manager') {
+            changeParts.push(`   👤 Case manager: ${escapeHtml(change.from || 'N/A')} → ${escapeHtml(change.to)}`);
+          } else if (change.type === 'new_goals') {
+            const codes = change.goals.map(g => g.code).join(', ');
+            changeParts.push(`   + ${change.goals.length} new goal${change.goals.length !== 1 ? 's' : ''}: ${escapeHtml(codes)}`);
+          } else if (change.type === 'updated_goals') {
+            for (const g of change.goals) {
+              changeParts.push(`   ~ 1 goal updated: ${escapeHtml(g.code)} (${g.changes.join(', ')} changed)`);
+            }
+          }
+        }
+        
+        if (!hasGoalChanges) {
+          changeParts.push('   (goals unchanged)');
+        }
+      }
+      
+      return `
+        <div style="padding: 12px; background: #f9f9f9; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 10px; font-family: monospace; font-size: 0.9em;">
+          <div style="font-weight: bold; margin-bottom: 8px;">${icon} ${escapeHtml(student.code)} (${label})</div>
+${changeParts.join('\n')}
         </div>
       `;
-    }
+    }).join('');
     
-    let dateUpdateInfo = '';
-    if (studentsWithDateUpdates > 0) {
-      dateUpdateInfo = `<p style="margin: 5px 0; color: #2e7d32;">📅 <strong>${studentsWithDateUpdates}</strong> existing student${studentsWithDateUpdates !== 1 ? 's' : ''} will have missing IEP/Eval dates filled in</p>`;
-    }
-    
-    const summary = `
-      ${modeWarning}
-      <div style="padding: 15px; background: #f5f5f5; border-radius: 4px; margin-bottom: 15px;">
-        <h4 style="margin-top: 0;">Import Summary</h4>
-        <p style="margin: 5px 0;"><strong>${newStudentCount}</strong> new student${newStudentCount !== 1 ? 's' : ''} will be ${importMode === 'replace' ? 'imported' : 'added'}</p>
-        <p style="margin: 5px 0;"><strong>${existingStudentCount}</strong> existing student${existingStudentCount !== 1 ? 's' : ''} will be updated</p>
-        ${dateUpdateInfo}
-        <p style="margin: 5px 0;"><strong>${totalGoals}</strong> total goal${totalGoals !== 1 ? 's' : ''}</p>
-      </div>
-      <details>
-        <summary style="cursor: pointer; padding: 8px; background: #e8e8e8; border-radius: 4px;">Show Student Details</summary>
-        <ul style="margin-top: 10px;">
-          ${data.slice(0, 5).map(s => `
-            <li style="margin-bottom: 5px;">
-              <strong>${escapeHtml(s.code)}</strong>${s.isExisting ? ' <span style="color: #1976d2;">(existing)</span>' : ' <span style="color: #388e3c;">(new)</span>'}: 
-              ${s.enrollments.length} class${s.enrollments.length !== 1 ? 'es' : ''}, 
-              ${s.goals.length} goal${s.goals.length !== 1 ? 's' : ''}
-              ${s.iep_due ? `<br><span style="margin-left: 20px; font-size: 0.9em;">📋 IEP: ${formatDate(s.iep_due)}</span>` : ''}
-              ${s.eval_due ? `<br><span style="margin-left: 20px; font-size: 0.9em;">📝 Eval: ${formatDate(s.eval_due)}</span>` : ''}
-            </li>
-          `).join('')}
-          ${data.length > 5 ? `<li style="color: #666;">...and ${data.length - 5} more</li>` : ''}
-        </ul>
+    // Build unchanged students toggle
+    const unchangedToggleHtml = unchangedStudents.length > 0 ? `
+      <details style="margin-top: 20px;">
+        <summary style="cursor: pointer; padding: 8px; background: #e8e8e8; border-radius: 4px;">
+          Show ${unchangedStudents.length} unchanged student${unchangedStudents.length !== 1 ? 's' : ''} ▶
+        </summary>
+        <div style="margin-top: 10px; padding: 10px; background: #fafafa; border: 1px solid #ddd; border-radius: 4px;">
+          ${unchangedStudents.map(s => escapeHtml(s.code)).join(', ')}
+        </div>
       </details>
+    ` : '';
+    
+    const summaryHtml = `
+      ${summaryBar}
+      ${changedStudentsHtml}
+      ${unchangedToggleHtml}
     `;
 
-    content.innerHTML = summary;
+    content.innerHTML = summaryHtml;
     preview.style.display = 'block';
 
-    document.getElementById('confirm-import').addEventListener('click', () => {
-      // Show styled confirmation modal instead of browser confirm()
-      if (importMode === 'replace') {
-        showReplaceAllConfirmation(data, newStudentCount, totalGoals);
-      } else {
-        showMergeConfirmation(data, newStudentCount, existingStudentCount, totalGoals);
-      }
-    });
+    // Store categorized data for import handler
+    window.csvImportCategorized = categorizedStudents;
+    
+    // Update button text and add click handler
+    const importBtn = document.getElementById('confirm-import');
+    const changedCount = newStudents.length + updatedStudents.length;
+    importBtn.textContent = `Import ${changedCount} Student${changedCount !== 1 ? 's' : ''} (${newStudents.length} new, ${updatedStudents.length} updated)`;
+    
+    // Use once option to auto-remove listener after first click
+    importBtn.addEventListener('click', async () => {
+      await handleConfirmCsvImport(data);
+      
+      // Show success message with counts
+      showToast(`Successfully imported ${newStudents.length} new student${newStudents.length !== 1 ? 's' : ''} and updated ${updatedStudents.length} existing student${updatedStudents.length !== 1 ? 's' : ''}`);
+    }, { once: true });
   }
 
-  function showMergeConfirmation(data, newStudentCount, existingStudentCount, totalGoals) {
-    const modal = createModal('Confirm Import', `
-      <div style="padding: 10px 0;">
-        <p style="margin-bottom: 15px;">This will add and update students with the following data:</p>
-        <ul style="margin-left: 20px; margin-bottom: 20px;">
-          <li><strong>${newStudentCount}</strong> new student${newStudentCount !== 1 ? 's' : ''} will be added</li>
-          <li><strong>${existingStudentCount}</strong> existing student${existingStudentCount !== 1 ? 's' : ''} will be updated</li>
-          <li><strong>${totalGoals}</strong> total goal${totalGoals !== 1 ? 's' : ''}</li>
-        </ul>
-        <p style="margin-bottom: 20px;">Continue?</p>
-        <div style="display: flex; gap: 10px; justify-content: flex-end;">
-          <button class="st-btn st-btn-secondary" id="cancel-import-btn">Cancel</button>
-          <button class="st-btn st-btn-primary" id="proceed-import-btn">Confirm Import</button>
-        </div>
-      </div>
-    `);
-    
-    document.body.appendChild(modal);
-    
-    document.getElementById('cancel-import-btn').addEventListener('click', () => {
-      modal.remove();
-    });
-    
-    document.getElementById('proceed-import-btn').addEventListener('click', async () => {
-      modal.remove();
-      await handleConfirmCsvImport(data, 'merge');
-    });
-  }
-
-  function showReplaceAllConfirmation(data, newStudentCount, totalGoals) {
-    const modal = createModal('⚠️ Confirm Replace All', `
-      <div style="padding: 10px 0;">
-        <div style="padding: 15px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; margin-bottom: 20px;">
-          <strong style="color: #856404;">⚠️ WARNING: Destructive Action</strong>
-          <p style="margin: 10px 0 0 0; color: #856404;">This will DELETE all <strong>${allStudents.length}</strong> existing students and their associated data (goals, enrollments, progress).</p>
-        </div>
-        <p style="margin-bottom: 15px;">The database will be replaced with:</p>
-        <ul style="margin-left: 20px; margin-bottom: 20px;">
-          <li><strong>${newStudentCount}</strong> student${newStudentCount !== 1 ? 's' : ''} from the CSV</li>
-          <li><strong>${totalGoals}</strong> total goal${totalGoals !== 1 ? 's' : ''}</li>
-        </ul>
-        <p style="margin-bottom: 20px; font-weight: bold; color: #d32f2f;">This action cannot be undone.</p>
-        <div style="display: flex; gap: 10px; justify-content: flex-end;">
-          <button class="st-btn st-btn-secondary" id="cancel-replace-btn">Cancel</button>
-          <button class="st-btn" id="proceed-replace-btn" style="background: #d32f2f; color: white;">Delete All & Import</button>
-        </div>
-      </div>
-    `);
-    
-    document.body.appendChild(modal);
-    
-    document.getElementById('cancel-replace-btn').addEventListener('click', () => {
-      modal.remove();
-    });
-    
-    document.getElementById('proceed-replace-btn').addEventListener('click', async () => {
-      modal.remove();
-      await handleConfirmCsvImport(data, 'replace');
-    });
-  }
-
-  async function handleConfirmCsvImport(data, importMode = 'merge') {
+  async function handleConfirmCsvImport(data) {
     try {
       const supabase = await getSupabase();
       
-      // If Replace All mode, delete all existing data first
-      if (importMode === 'replace' && supabase) {
-        console.log('[tc-students] Replace mode: Deleting all existing data...');
-        
-        // Delete in correct order to respect foreign key constraints
-        // 1. Delete goal progress first (references goals)
-        await supabase.from('goal_progress').delete().neq('id', 0);
-        
-        // 2. Delete goals (references students)
-        await supabase.from('goals').delete().neq('id', 0);
-        
-        // 3. Delete enrollments (references students)
-        await supabase.from('enrollments').delete().neq('id', 0);
-        
-        // 4. Delete students
-        await supabase.from('students').delete().neq('id', 0);
-        
-        console.log('[tc-students] All existing data deleted');
-      }
-      
-      // Import the new data
+      // Import the new data (always merge/upsert mode)
       for (const studentData of data) {
-        // Log student data being imported to help debug date issues
-        if (importMode === 'merge') {
-          console.log(`[tc-students] Merging student ${studentData.code}: IEP Due=${studentData.iep_due}, Eval Due=${studentData.eval_due}, isExisting=${studentData.isExisting}`);
-        }
+        console.log(`[tc-students] Merging student ${studentData.code}: IEP Due=${studentData.iep_due}, Eval Due=${studentData.eval_due}, isExisting=${studentData.isExisting}`);
         
         await db.upsertStudent({
           code: studentData.code,
@@ -3352,11 +3393,9 @@
         }
       }
 
-      const modeText = importMode === 'replace' ? 'replaced all data with' : 'imported/updated';
-      console.log(`[tc-students] ${modeText}`, data.length, 'students');
+      console.log('[tc-students] imported/updated', data.length, 'students');
       await loadData();
       document.querySelector('.st-modal-backdrop')?.remove();
-      showToast(`Successfully ${modeText} ${data.length} students`);
     } catch (error) {
       console.error('[tc-students] Error importing CSV:', error);
       alert('Failed to import CSV: ' + error.message);
