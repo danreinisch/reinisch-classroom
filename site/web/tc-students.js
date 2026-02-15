@@ -205,7 +205,7 @@
     
     for (let i = 0; i < text.length; i++) {
       const char = text[i];
-      const nextChar = text[i + 1];
+      const nextChar = i + 1 < text.length ? text[i + 1] : undefined;
       
       // Handle escaped quotes (two consecutive quotes)
       if (char === '"' && inQuotes && nextChar === '"') {
