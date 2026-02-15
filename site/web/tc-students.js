@@ -205,10 +205,9 @@
     
     for (let i = 0; i < text.length; i++) {
       const char = text[i];
-      const nextChar = i + 1 < text.length ? text[i + 1] : undefined;
       
       // Handle escaped quotes (two consecutive quotes)
-      if (char === '"' && inQuotes && nextChar === '"') {
+      if (char === '"' && inQuotes && i + 1 < text.length && text[i + 1] === '"') {
         currentRow += '""';
         i++; // Skip the next quote
       } 
@@ -220,7 +219,7 @@
       // Handle newlines - only split if NOT inside quotes
       else if ((char === '\n' || char === '\r') && !inQuotes) {
         // Handle \r\n or \n line endings
-        if (char === '\r' && nextChar === '\n') {
+        if (char === '\r' && i + 1 < text.length && text[i + 1] === '\n') {
           i++; // Skip the \n
         }
         // Only add non-empty rows
@@ -3134,9 +3133,7 @@
     }
 
     // Log diagnostic information about CSV parsing
-    const uniqueStudentCount = studentsMap.size;
-    const totalRowCount = rows.length;
-    console.log(`[tc-students] CSV parsed: ${totalRowCount} rows → ${uniqueStudentCount} unique students`);
+    console.log(`[tc-students] CSV parsed: ${rows.length} rows → ${studentsMap.size} unique students`);
 
     window.csvImportData = Array.from(studentsMap.values()).map(s => ({
       ...s,
