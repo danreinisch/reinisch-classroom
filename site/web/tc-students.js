@@ -71,6 +71,9 @@
     "Reading Skills": "📕"
   };
 
+  // UI indicator for missing dates
+  const MISSING_DATE_WARNING = ' ⚠️';
+
   // Mapping from DB class codes to UI canonical class names
   // Used to normalize enrollment data that may come with class_code instead of class_name
   const CLASS_CODE_TO_CANONICAL_NAMES = {
@@ -642,9 +645,11 @@
       
       const iepDue = student.iep_due ? formatDate(student.iep_due) : 'N/A';
       const iepUrgency = getDateUrgency(student.iep_due);
+      const iepWarning = !student.iep_due ? MISSING_DATE_WARNING : '';
       
       const evalDue = student.eval_due ? formatDate(student.eval_due) : 'N/A';
       const evalUrgency = getDateUrgency(student.eval_due);
+      const evalWarning = !student.eval_due ? MISSING_DATE_WARNING : '';
 
       let rows = `
         <tr class="${isExpanded ? 'expanded' : ''} ${isArchived ? 'st-row-archived' : ''}" data-code="${escapeHtml(student.code)}">
@@ -656,8 +661,8 @@
           <td class="st-goals-cell">
             <span class="st-goals-badge">${studentGoals.length}</span>
           </td>
-          <td class="st-date-${iepUrgency}">${escapeHtml(iepDue)}</td>
-          <td class="st-date-${evalUrgency}">${escapeHtml(evalDue)}</td>
+          <td class="st-date-${iepUrgency}">${escapeHtml(iepDue)}${iepWarning}</td>
+          <td class="st-date-${evalUrgency}">${escapeHtml(evalDue)}${evalWarning}</td>
           <td>${getStudentDataStatus(student.code)}</td>
         </tr>
       `;
@@ -1502,12 +1507,26 @@
       tableBody.addEventListener('click', async (e) => {
         // PRIORITY 1: Handle all button-specific clicks first (highest priority)
         
+        // Description toggle - handle BEFORE interactive element check
+        if (e.target.classList.contains('st-desc-toggle')) {
+          const desc = e.target.closest('.st-goal-description');
+          const preview = desc.querySelector('.st-desc-preview');
+          const full = desc.querySelector('.st-desc-full');
+          const isShowing = full.style.display !== 'none';
+          preview.style.display = isShowing ? '' : 'none';
+          full.style.display = isShowing ? 'none' : '';
+          e.target.textContent = isShowing ? 'Show more' : 'Show less';
+          e.stopPropagation();
+          return;
+        }
+        
         // Edit goal - inline editing
         const editGoalBtn = e.target.closest('.edit-goal-btn');
         if (editGoalBtn) {
           const goalId = parseInt(editGoalBtn.dataset.goalId);
           const expandedDetail = editGoalBtn.closest('.st-expanded-content');
           const studentCode = expandedDetail?.id.replace('stExpandedDetail-', '');
+          expandedGoalCards.add(goalId);
           editingGoalId = goalId;
           if (studentCode) {
             await renderExpandedDetail(studentCode);
@@ -1539,14 +1558,10 @@
         if (enterDataBtn) {
           const goalId = parseInt(enterDataBtn.dataset.goalId);
           const goal = allGoals.find(g => g.id === goalId);
+          expandedGoalCards.add(goalId);
           enteringDataGoalId = goalId;
           if (goal && goal.student_code && expandedStudents.has(goal.student_code)) {
             await renderExpandedDetail(goal.student_code);
-            // After render, uncollapse the goal card
-            setTimeout(() => {
-              const card = document.querySelector(`[data-goal-id="${goalId}"]`);
-              if (card) card.classList.remove('collapsed');
-            }, 0);
           }
           e.stopPropagation();
           return;
@@ -1706,19 +1721,6 @@
               expandedGoalCards.add(goalId);
             }
           }
-          return;
-        }
-        
-        // Description toggle
-        if (e.target.classList.contains('st-desc-toggle')) {
-          const desc = e.target.closest('.st-goal-description');
-          const preview = desc.querySelector('.st-desc-preview');
-          const full = desc.querySelector('.st-desc-full');
-          const isShowing = full.style.display !== 'none';
-          preview.style.display = isShowing ? '' : 'none';
-          full.style.display = isShowing ? 'none' : '';
-          e.target.textContent = isShowing ? 'Show more' : 'Show less';
-          e.stopPropagation();
           return;
         }
         
@@ -3349,6 +3351,11 @@
       
       // Import the new data
       for (const studentData of data) {
+        // Log student data being imported to help debug date issues
+        if (importMode === 'merge') {
+          console.log(`[tc-students] Merging student ${studentData.code}: IEP Due=${studentData.iep_due}, Eval Due=${studentData.eval_due}, isExisting=${studentData.isExisting}`);
+        }
+        
         await db.upsertStudent({
           code: studentData.code,
           primary_case_manager: studentData.primary_case_manager,
