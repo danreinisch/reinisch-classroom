@@ -1278,7 +1278,7 @@
             </div>
             <div class="st-form-row" style="margin-top:12px;">
               <button class="st-btn st-btn-primary st-btn-small save-data-btn" data-goal-id="${goal.id}">Save Data</button>
-              <button class="st-btn st-btn-secondary st-btn-small cancel-data-btn">Cancel</button>
+              <button class="st-btn st-btn-secondary st-btn-small cancel-data-btn" data-goal-id="${goal.id}">Cancel</button>
             </div>
           </div>
         </div>
@@ -1345,7 +1345,7 @@
         </div>
         <div class="st-goal-actions">
           <button class="st-btn st-btn-primary save-goal-btn" data-goal-id="${goal.id}">Save</button>
-          <button class="st-btn st-btn-secondary cancel-edit-btn">Cancel</button>
+          <button class="st-btn st-btn-secondary cancel-edit-btn" data-goal-id="${goal.id}">Cancel</button>
         </div>
       </div>
     `;
@@ -1611,8 +1611,11 @@
           const goalId = cancelDataBtn.dataset.goalId;
           const goal = allGoals.find(g => g.id === goalId);
           enteringDataGoalId = null;
-          if (goal && goal.student_code && expandedStudents.has(goal.student_code)) {
-            await renderExpandedDetail(goal.student_code);
+          // Primary: use goal.student_code. Fallback: get studentCode from DOM
+          const studentCode = goal?.student_code 
+            || cancelDataBtn.closest('.st-expanded-content')?.id.replace('stExpandedDetail-', '');
+          if (studentCode && expandedStudents.has(studentCode)) {
+            await renderExpandedDetail(studentCode);
           }
           e.stopPropagation();
           return;
