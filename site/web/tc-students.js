@@ -2841,26 +2841,30 @@
   function showImportCsvModal() {
     const modal = createModal('Import Students from CSV', `
       <div id="csv-import-container">
-        <div class="csv-instructions" style="margin-bottom: 20px; padding: 15px; background: #f5f5f5; border-radius: 4px;">
-          <h3 style="margin-top: 0;">CSV Format Instructions</h3>
-          <p>Your CSV file should include the following columns:</p>
-          <ul style="margin-bottom: 10px;">
-            <li><strong>Student Code Name</strong> - Student identifier (required)</li>
-            <li><strong>Case Manager</strong> - Primary case manager name</li>
-            <li><strong>IEP Due</strong> (or "Annual Review", "Next IEP") - IEP due date in M/D/YYYY format</li>
-            <li><strong>Eval Due</strong> (or "Evaluation", "Next Eval", "Re-eval") - Evaluation due date in M/D/YYYY format</li>
-            <li><strong>Class</strong> - Class name</li>
-            <li><strong>IEP Goal with Student Code</strong> - Goal description</li>
-            <li><strong>Student Code IEP Goal Code</strong> - Goal code (e.g., S001.1)</li>
-            <li><strong>Goal Area</strong> - Goal category</li>
-            <li><strong>Measurement Type</strong> - How progress is measured (percent, trials, etc.)</li>
-            <li><strong>Teacher to Collect Data</strong> - Data collector name</li>
-            <li><strong>Teacher to Collect Data Email</strong> - Data collector email</li>
-          </ul>
-          <button type="button" class="btn btn-secondary" id="download-template" style="margin-top: 10px;">
-            📥 Download CSV Template
-          </button>
-        </div>
+        <details style="margin-bottom: 20px; padding: 12px; background: #f5f5f5; border-radius: 4px; border: 1px solid #ddd;">
+          <summary style="cursor: pointer; font-weight: 600; margin-bottom: 0;">
+            ℹ️ CSV Format Help
+          </summary>
+          <div style="margin-top: 12px;">
+            <p style="margin-top: 0;">Your CSV file should include the following columns:</p>
+            <ul style="margin-bottom: 10px; font-size: 0.9em;">
+              <li><strong>Student Code Name</strong> - Student identifier (required)</li>
+              <li><strong>Case Manager</strong> - Primary case manager name</li>
+              <li><strong>IEP Due</strong> (or "Annual Review", "Next IEP") - IEP due date (M/D/YYYY, M/D/YY, or YYYY-MM-DD)</li>
+              <li><strong>Eval Due</strong> (or "Evaluation", "Next Eval", "Re-eval") - Evaluation due date (M/D/YYYY, M/D/YY, or YYYY-MM-DD)</li>
+              <li><strong>Class</strong> - Class name</li>
+              <li><strong>IEP Goal with Student Code</strong> - Goal description</li>
+              <li><strong>Student Code IEP Goal Code</strong> - Goal code (e.g., S001.1)</li>
+              <li><strong>Goal Area</strong> - Goal category</li>
+              <li><strong>Measurement Type</strong> - How progress is measured (percent, trials, etc.)</li>
+              <li><strong>Teacher to Collect Data</strong> - Data collector name</li>
+              <li><strong>Teacher to Collect Data Email</strong> - Data collector email</li>
+            </ul>
+            <button type="button" class="btn btn-secondary" id="download-template" style="margin-top: 10px;">
+              📥 Download CSV Template
+            </button>
+          </div>
+        </details>
         
         <div class="form-group">
           <label>Select CSV File:</label>
@@ -2868,9 +2872,8 @@
         </div>
         
         <div id="csv-preview" style="display: none;">
-          <h3>Preview</h3>
           <div id="csv-preview-content"></div>
-          <div class="modal-actions">
+          <div class="modal-actions" style="margin-top: 20px;">
             <button type="button" class="btn btn-secondary" id="cancel-import">Cancel</button>
             <button type="button" class="btn btn-primary" id="confirm-import">Import</button>
           </div>
@@ -2995,20 +2998,12 @@
 
     const studentsMap = new Map();
     const existingCodes = new Set(allStudents.map(s => s.code));
-    let newStudentCount = 0;
-    let existingStudentCount = 0;
 
     for (const row of rows) {
       const code = row[columnMap.code]?.trim();
       if (!code) continue;
 
       if (!studentsMap.has(code)) {
-        // Count unique students only
-        if (existingCodes.has(code)) {
-          existingStudentCount++;
-        } else {
-          newStudentCount++;
-        }
         
         const iepDueRaw = row[columnMap.iep_due];
         const evalDueRaw = row[columnMap.eval_due];
@@ -3102,24 +3097,30 @@
     dateStr = dateStr.trim();
     if (!dateStr) return null;
     
-    // Try M/D/YYYY format first (most common)
-    const slashMatch = dateStr.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    // Try ISO date format (YYYY-MM-DD) first
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      return dateStr;
+    }
+    
+    // Try M/D/YYYY or M/D/YY format (slash separator)
+    const slashMatch = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
     if (slashMatch) {
-      const [, month, day, year] = slashMatch;
+      let [, month, day, year] = slashMatch;
+      // Handle two-digit year
+      if (year.length === 2) {
+        year = '20' + year;
+      }
       return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
     }
     
-    // Try M-D-YYYY format (dash separator)
-    const dashMatch = dateStr.match(/(\d{1,2})-(\d{1,2})-(\d{4})/);
+    // Try M-D-YYYY or M-D-YY format (dash separator)
+    const dashMatch = dateStr.match(/^(\d{1,2})-(\d{1,2})-(\d{2,4})$/);
     if (dashMatch) {
-      const [, month, day, year] = dashMatch;
-      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-    }
-    
-    // Try ISO date format (YYYY-MM-DD) as fallback
-    const isoMatch = dateStr.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
-    if (isoMatch) {
-      const [, year, month, day] = isoMatch;
+      let [, month, day, year] = dashMatch;
+      // Handle two-digit year
+      if (year.length === 2) {
+        year = '20' + year;
+      }
       return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
     }
     
@@ -3131,193 +3132,121 @@
     const content = document.getElementById('csv-preview-content');
     
     // Categorize each student with detailed change tracking
-    const categorizedStudents = data.map(csvStudent => {
+    const newStudents = [];
+    const updatedStudents = [];
+    const unchangedStudents = [];
+    
+    for (const csvStudent of data) {
       const existingStudent = allStudents.find(s => s.code === csvStudent.code);
       
       if (!existingStudent) {
         // New student
-        return {
-          ...csvStudent,
-          category: 'new',
-          changes: []
-        };
+        newStudents.push(csvStudent);
+        continue;
       }
       
       // Existing student - detect changes
       const changes = [];
+      const existingGoals = allGoals.filter(g => g.student_code === csvStudent.code);
       
       // Check IEP date change
-      if (!existingStudent.iep_due && csvStudent.iep_due) {
-        changes.push({ type: 'iep_date', from: null, to: csvStudent.iep_due });
+      if (csvStudent.iep_due && csvStudent.iep_due !== existingStudent.iep_due) {
+        changes.push(`📅 IEP: ${existingStudent.iep_due ? formatDate(existingStudent.iep_due) : 'N/A'} → ${formatDate(csvStudent.iep_due)}`);
       }
       
       // Check Eval date change
-      if (!existingStudent.eval_due && csvStudent.eval_due) {
-        changes.push({ type: 'eval_date', from: null, to: csvStudent.eval_due });
+      if (csvStudent.eval_due && csvStudent.eval_due !== existingStudent.eval_due) {
+        changes.push(`📅 Eval: ${existingStudent.eval_due ? formatDate(existingStudent.eval_due) : 'N/A'} → ${formatDate(csvStudent.eval_due)}`);
       }
       
-      // Check case manager change
-      if (csvStudent.primary_case_manager && 
-          csvStudent.primary_case_manager !== existingStudent.primary_case_manager) {
-        changes.push({ 
-          type: 'case_manager', 
-          from: existingStudent.primary_case_manager, 
-          to: csvStudent.primary_case_manager 
-        });
-      }
-      
-      // Check goals for changes
-      const existingGoals = allGoals.filter(g => g.student_code === csvStudent.code);
-      const newGoals = [];
-      const updatedGoals = [];
-      
-      for (const csvGoal of csvStudent.goals) {
-        const existingGoal = existingGoals.find(g => g.code === csvGoal.code);
-        if (!existingGoal) {
-          newGoals.push(csvGoal);
-        } else {
-          // Check if goal text or other fields changed
-          const goalChanges = [];
-          if (csvGoal.goal_text && 
-              csvGoal.goal_text !== existingGoal.goal_text && 
-              csvGoal.goal_text !== existingGoal.desc) {
-            goalChanges.push('goal text');
-          }
-          if (csvGoal.goal_area && csvGoal.goal_area !== existingGoal.goal_area) {
-            goalChanges.push('goal area');
-          }
-          if (csvGoal.case_manager && csvGoal.case_manager !== existingGoal.case_manager) {
-            goalChanges.push('case manager');
-          }
-          if (csvGoal.data_collector && csvGoal.data_collector !== existingGoal.data_collector) {
-            goalChanges.push('data collector');
-          }
-          if (csvGoal.data_collector_email && csvGoal.data_collector_email !== existingGoal.data_collector_email) {
-            goalChanges.push('data collector email');
-          }
-          if (csvGoal.class_context && csvGoal.class_context !== existingGoal.class_context) {
-            goalChanges.push('class context');
-          }
-          
-          if (goalChanges.length > 0) {
-            updatedGoals.push({ code: csvGoal.code, changes: goalChanges });
-          }
-        }
-      }
-      
+      // Check for new goals
+      const newGoals = csvStudent.goals.filter(g => !existingGoals.some(eg => eg.code === g.code));
       if (newGoals.length > 0) {
-        changes.push({ type: 'new_goals', goals: newGoals });
-      }
-      if (updatedGoals.length > 0) {
-        changes.push({ type: 'updated_goals', goals: updatedGoals });
+        changes.push(`+ ${newGoals.length} new goal${newGoals.length !== 1 ? 's' : ''}: ${newGoals.map(g => escapeHtml(g.code)).join(', ')}`);
       }
       
-      return {
-        ...csvStudent,
-        category: changes.length > 0 ? 'updated' : 'unchanged',
-        changes
-      };
-    });
-    
-    // Separate by category
-    const newStudents = categorizedStudents.filter(s => s.category === 'new');
-    const updatedStudents = categorizedStudents.filter(s => s.category === 'updated');
-    const unchangedStudents = categorizedStudents.filter(s => s.category === 'unchanged');
-    
-    // Count date updates
-    const dateUpdateCount = updatedStudents.filter(s => 
-      s.changes.some(c => c.type === 'iep_date' || c.type === 'eval_date')
-    ).length;
+      // Check for updated goals (text changed)
+      const updatedGoals = csvStudent.goals.filter(g => {
+        const eg = existingGoals.find(eg => eg.code === g.code);
+        return eg && g.goal_text && eg.desc !== g.goal_text;
+      });
+      if (updatedGoals.length > 0) {
+        changes.push(`~ ${updatedGoals.length} updated: ${updatedGoals.map(g => escapeHtml(g.code)).join(', ')} (text changed)`);
+      }
+      
+      if (changes.length > 0) {
+        updatedStudents.push({ ...csvStudent, changes, existingStudent });
+      } else {
+        unchangedStudents.push(csvStudent);
+      }
+    }
     
     // Build summary bar
     const summaryParts = [];
     if (newStudents.length > 0) {
-      summaryParts.push(`<strong>${newStudents.length}</strong> new student${newStudents.length !== 1 ? 's' : ''}`);
+      summaryParts.push(`<strong>${newStudents.length}</strong> new`);
     }
     if (updatedStudents.length > 0) {
       summaryParts.push(`<strong>${updatedStudents.length}</strong> updated`);
-    }
-    if (dateUpdateCount > 0) {
-      summaryParts.push(`<strong>${dateUpdateCount}</strong> dates filled in`);
     }
     if (unchangedStudents.length > 0) {
       summaryParts.push(`<strong>${unchangedStudents.length}</strong> unchanged (hidden)`);
     }
     
     const summaryBar = `
-      <div style="padding: 15px; background: #e3f2fd; border: 1px solid #1976d2; border-radius: 4px; margin-bottom: 20px;">
-        <div style="font-size: 1.1em;">📊 ${summaryParts.join(' · ')}</div>
+      <div style="padding: 12px 15px; background: #e3f2fd; border: 1px solid #1976d2; border-radius: 6px; margin-bottom: 16px; font-size: 15px;">
+        📊 ${summaryParts.join(' · ')}
       </div>
     `;
     
-    // Build changed students cards
-    const changedStudentsHtml = [...newStudents, ...updatedStudents].map(student => {
-      const isNew = student.category === 'new';
-      const icon = isNew ? '🆕' : '✏️';
-      const label = isNew ? 'New' : 'Updated';
-      
-      const changeParts = [];
-      
-      // For new students, show summary
-      if (isNew) {
-        if (student.goals.length > 0) {
-          const goalCodes = student.goals.map(g => g.code).join(', ');
-          changeParts.push(`   + ${student.goals.length} goal${student.goals.length !== 1 ? 's' : ''}: ${escapeHtml(goalCodes)}`);
-        }
-        const dateParts = [];
-        if (student.iep_due) {
-          dateParts.push(`IEP: ${formatDate(student.iep_due)}`);
-        }
-        if (student.eval_due) {
-          dateParts.push(`Eval: ${formatDate(student.eval_due)}`);
-        }
-        if (dateParts.length > 0) {
-          changeParts.push(`   📅 ${dateParts.join(' · ')}`);
-        }
-        if (student.primary_case_manager) {
-          changeParts.push(`   👤 Case Manager: ${escapeHtml(student.primary_case_manager)}`);
-        }
-      } else {
-        // For updated students, show detailed changes
-        const hasGoalChanges = student.changes.some(c => c.type === 'new_goals' || c.type === 'updated_goals');
-        
-        for (const change of student.changes) {
-          if (change.type === 'iep_date') {
-            changeParts.push(`   📅 IEP date: N/A → ${formatDate(change.to)}`);
-          } else if (change.type === 'eval_date') {
-            changeParts.push(`   📅 Eval date: N/A → ${formatDate(change.to)}`);
-          } else if (change.type === 'case_manager') {
-            changeParts.push(`   👤 Case manager: ${escapeHtml(change.from || 'N/A')} → ${escapeHtml(change.to)}`);
-          } else if (change.type === 'new_goals') {
-            const codes = change.goals.map(g => g.code).join(', ');
-            changeParts.push(`   + ${change.goals.length} new goal${change.goals.length !== 1 ? 's' : ''}: ${escapeHtml(codes)}`);
-          } else if (change.type === 'updated_goals') {
-            for (const g of change.goals) {
-              changeParts.push(`   ~ 1 goal updated: ${escapeHtml(g.code)} (${g.changes.join(', ')} changed)`);
-            }
-          }
-        }
-        
-        if (!hasGoalChanges) {
-          changeParts.push('   (goals unchanged)');
-        }
+    // Build new student cards
+    const newStudentsHtml = newStudents.map(student => {
+      const dateParts = [];
+      if (student.iep_due) {
+        dateParts.push(`IEP: ${formatDate(student.iep_due)}`);
       }
+      if (student.eval_due) {
+        dateParts.push(`Eval: ${formatDate(student.eval_due)}`);
+      }
+      const dateText = dateParts.length > 0 ? `📅 ${dateParts.join(' · ')}` : '';
+      
+      const caseManagerText = student.primary_case_manager ? `👤 Case Manager: ${escapeHtml(student.primary_case_manager)}` : '';
+      
+      const goalText = student.goals.length > 0 
+        ? `+ ${student.goals.length} goal${student.goals.length !== 1 ? 's' : ''}: ${student.goals.map(g => escapeHtml(g.code)).join(', ')}`
+        : '';
       
       return `
-        <div style="padding: 12px; background: #f9f9f9; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 10px; font-family: monospace; font-size: 0.9em;">
-          <div style="font-weight: bold; margin-bottom: 8px;">${icon} ${escapeHtml(student.code)} (${label})</div>
-${changeParts.join('\n')}
+        <div style="border:1px solid #333; border-radius:8px; padding:12px; margin-bottom:8px; background:#1a1a2e;">
+          <div style="font-weight:600; margin-bottom:4px; color:#fff;">🆕 ${escapeHtml(student.code)} (New Student)</div>
+          <div style="font-size:13px; color:#aaa; line-height:1.6;">
+            ${dateText ? dateText + '<br>' : ''}${caseManagerText ? caseManagerText + '<br>' : ''}${goalText ? goalText : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+    
+    // Build updated student cards
+    const updatedStudentsHtml = updatedStudents.map(student => {
+      const changeLines = student.changes.join('<br>');
+      
+      return `
+        <div style="border:1px solid #444; border-left:3px solid #f59e0b; border-radius:8px; padding:12px; margin-bottom:8px; background:#1a1a2e;">
+          <div style="font-weight:600; margin-bottom:4px; color:#fff;">✏️ ${escapeHtml(student.code)} (Updated)</div>
+          <div style="font-size:13px; color:#aaa; line-height:1.6;">
+            ${changeLines}
+          </div>
         </div>
       `;
     }).join('');
     
     // Build unchanged students toggle
     const unchangedToggleHtml = unchangedStudents.length > 0 ? `
-      <details style="margin-top: 20px;">
-        <summary style="cursor: pointer; padding: 8px; background: #e8e8e8; border-radius: 4px;">
-          Show ${unchangedStudents.length} unchanged student${unchangedStudents.length !== 1 ? 's' : ''} ▶
+      <details style="margin-top: 16px; padding: 10px; background: #f5f5f5; border-radius: 6px; border: 1px solid #ddd;">
+        <summary style="cursor: pointer; font-weight: 500;">
+          ▶ Show ${unchangedStudents.length} unchanged student${unchangedStudents.length !== 1 ? 's' : ''}
         </summary>
-        <div style="margin-top: 10px; padding: 10px; background: #fafafa; border: 1px solid #ddd; border-radius: 4px;">
+        <div style="margin-top: 10px; padding: 10px; background: #fff; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;">
           ${unchangedStudents.map(s => escapeHtml(s.code)).join(', ')}
         </div>
       </details>
@@ -3325,7 +3254,8 @@ ${changeParts.join('\n')}
     
     const summaryHtml = `
       ${summaryBar}
-      ${changedStudentsHtml}
+      ${newStudentsHtml}
+      ${updatedStudentsHtml}
       ${unchangedToggleHtml}
     `;
 
@@ -3333,20 +3263,28 @@ ${changeParts.join('\n')}
     preview.style.display = 'block';
 
     // Store categorized data for import handler
-    window.csvImportCategorized = categorizedStudents;
+    window.csvImportCategorized = { newStudents, updatedStudents, unchangedStudents };
     
     // Update button text and add click handler
     const importBtn = document.getElementById('confirm-import');
     const changedCount = newStudents.length + updatedStudents.length;
-    importBtn.textContent = `Import ${changedCount} Student${changedCount !== 1 ? 's' : ''} (${newStudents.length} new, ${updatedStudents.length} updated)`;
-    
-    // Use once option to auto-remove listener after first click
-    importBtn.addEventListener('click', async () => {
-      await handleConfirmCsvImport(data);
+    if (changedCount === 0) {
+      importBtn.textContent = 'No Changes to Import';
+      importBtn.disabled = true;
+    } else {
+      importBtn.textContent = `Import ${changedCount} Student${changedCount !== 1 ? 's' : ''} (${newStudents.length} new, ${updatedStudents.length} updated)`;
+      importBtn.disabled = false;
       
-      // Show success message with counts
-      showToast(`Successfully imported ${newStudents.length} new student${newStudents.length !== 1 ? 's' : ''} and updated ${updatedStudents.length} existing student${updatedStudents.length !== 1 ? 's' : ''}`);
-    }, { once: true });
+      // Use once option to auto-remove listener after first click
+      importBtn.addEventListener('click', async () => {
+        // Only import new and updated students (skip unchanged)
+        const studentsToImport = [...newStudents, ...updatedStudents];
+        await handleConfirmCsvImport(studentsToImport);
+        
+        // Show success message with counts
+        showToast(`Successfully imported ${newStudents.length} new student${newStudents.length !== 1 ? 's' : ''} and updated ${updatedStudents.length} existing student${updatedStudents.length !== 1 ? 's' : ''}`);
+      }, { once: true });
+    }
   }
 
   async function handleConfirmCsvImport(data) {
