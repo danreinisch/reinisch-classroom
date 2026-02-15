@@ -1694,8 +1694,8 @@
           return;
         }
         
-        // PRIORITY 3: Goal card collapsing (check if clicking on header but NOT on a button or inside actions area)
-        if (e.target.closest('.st-goal-header') && !e.target.closest('button') && !e.target.closest('.st-goal-actions')) {
+        // PRIORITY 3: Goal card collapsing (check if clicking on header but NOT inside actions area)
+        if (e.target.closest('.st-goal-header') && !e.target.closest('.st-goal-actions')) {
           const card = e.target.closest('.st-goal-card');
           if (card && !card.classList.contains('st-goal-edit-form')) {
             const goalId = parseInt(card.dataset.goalId);
