@@ -3192,7 +3192,9 @@
         seenCodes.add(student.code);
         deduplicatedData.push(student);
       } else {
-        console.warn(`[tc-students] Duplicate student code detected in CSV preview: ${student.code}. Using first occurrence.`);
+        // Sanitize student code for logging to prevent log injection
+        const sanitizedCode = (student.code || 'UNKNOWN').replace(/[^\w.-]/g, '_').substring(0, 20);
+        console.warn(`[tc-students] Duplicate student code detected in CSV preview: ${sanitizedCode}. Using first occurrence.`);
       }
     }
     
