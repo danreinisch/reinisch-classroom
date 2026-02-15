@@ -1153,11 +1153,9 @@
           <div class="st-goal-collector">${dataCollectorWarning}📊 ${escapeHtml(goal.data_collector || 'N/A')}</div>
           ${classContext}
         </div>
-        ${goal.version ? `<div class="st-goal-version">v${goal.version}</div>` : ''}
         <div class="st-goal-actions">
           <button class="st-btn st-btn-small st-btn-primary enter-data-btn" data-goal-id="${goal.id}">📊 Enter Data</button>
           <button class="st-btn st-btn-small st-btn-secondary edit-goal-btn" data-goal-id="${goal.id}">Edit</button>
-          <button class="st-btn st-btn-small st-btn-secondary version-goal-btn" data-goal-id="${goal.id}">Version</button>
           <button class="st-btn st-btn-small st-btn-danger archive-goal-btn" data-goal-id="${goal.id}">Archive</button>
           ${showTokenBtn ? `
             ${hasActiveToken 
@@ -1523,7 +1521,7 @@
         // Edit goal - inline editing
         const editGoalBtn = e.target.closest('.edit-goal-btn');
         if (editGoalBtn) {
-          const goalId = parseInt(editGoalBtn.dataset.goalId);
+          const goalId = editGoalBtn.dataset.goalId;
           const expandedDetail = editGoalBtn.closest('.st-expanded-content');
           const studentCode = expandedDetail?.id.replace('stExpandedDetail-', '');
           expandedGoalCards.add(goalId);
@@ -1535,19 +1533,10 @@
           return;
         }
         
-        // Version goal
-        const versionGoalBtn = e.target.closest('.version-goal-btn');
-        if (versionGoalBtn) {
-          const goalId = parseInt(versionGoalBtn.dataset.goalId);
-          await handleVersionGoal(goalId);
-          e.stopPropagation();
-          return;
-        }
-        
         // Archive goal
         const archiveGoalBtn = e.target.closest('.archive-goal-btn');
         if (archiveGoalBtn) {
-          const goalId = parseInt(archiveGoalBtn.dataset.goalId);
+          const goalId = archiveGoalBtn.dataset.goalId;
           await handleArchiveGoal(goalId);
           e.stopPropagation();
           return;
@@ -1556,7 +1545,7 @@
         // Enter Data button
         const enterDataBtn = e.target.closest('.enter-data-btn');
         if (enterDataBtn) {
-          const goalId = parseInt(enterDataBtn.dataset.goalId);
+          const goalId = enterDataBtn.dataset.goalId;
           const goal = allGoals.find(g => g.id === goalId);
           expandedGoalCards.add(goalId);
           enteringDataGoalId = goalId;
@@ -1583,7 +1572,7 @@
         // Save inline edit
         const saveGoalBtn = e.target.closest('.save-goal-btn');
         if (saveGoalBtn) {
-          const goalId = parseInt(saveGoalBtn.dataset.goalId);
+          const goalId = saveGoalBtn.dataset.goalId;
           await handleSaveInlineEdit(goalId, e);
           e.stopPropagation();
           return;
@@ -1592,7 +1581,7 @@
         // Copy token
         const copyTokenBtn = e.target.closest('.copy-token-btn');
         if (copyTokenBtn) {
-          const goalId = parseInt(copyTokenBtn.dataset.goalId);
+          const goalId = copyTokenBtn.dataset.goalId;
           await handleCopyDataEntryLink(goalId);
           e.stopPropagation();
           return;
@@ -1601,7 +1590,7 @@
         // Revoke token
         const revokeTokenBtn = e.target.closest('.revoke-token-btn');
         if (revokeTokenBtn) {
-          const goalId = parseInt(revokeTokenBtn.dataset.goalId);
+          const goalId = revokeTokenBtn.dataset.goalId;
           await handleRevokeDataEntryLink(goalId);
           e.stopPropagation();
           return;
@@ -1610,7 +1599,7 @@
         // Save Data button
         const saveDataBtn = e.target.closest('.save-data-btn');
         if (saveDataBtn) {
-          const goalId = parseInt(saveDataBtn.dataset.goalId);
+          const goalId = saveDataBtn.dataset.goalId;
           await handleSaveProgressData(goalId, e);
           e.stopPropagation();
           return;
@@ -1619,7 +1608,7 @@
         // Cancel Data button
         const cancelDataBtn = e.target.closest('.cancel-data-btn');
         if (cancelDataBtn) {
-          const goalId = parseInt(cancelDataBtn.dataset.goalId);
+          const goalId = cancelDataBtn.dataset.goalId;
           const goal = allGoals.find(g => g.id === goalId);
           enteringDataGoalId = null;
           if (goal && goal.student_code && expandedStudents.has(goal.student_code)) {
@@ -1713,7 +1702,7 @@
         if (e.target.closest('.st-goal-header') && !e.target.closest('.st-goal-actions')) {
           const card = e.target.closest('.st-goal-card');
           if (card && !card.classList.contains('st-goal-edit-form')) {
-            const goalId = parseInt(card.dataset.goalId);
+            const goalId = card.dataset.goalId;
             card.classList.toggle('collapsed');
             if (card.classList.contains('collapsed')) {
               expandedGoalCards.delete(goalId);
@@ -1939,38 +1928,6 @@
     } catch (error) {
       console.error('[tc-students] Error archiving goal:', error);
       alert('Failed to archive goal');
-    }
-  }
-
-  async function handleVersionGoal(goalId) {
-    const goal = allGoals.find(g => g.id === goalId);
-    if (!goal) return;
-
-    const confirmed = await showConfirmModal(
-      'Create New Version',
-      `Create a new version of goal "${goal.code || goal.goal_code}"? The current goal will be archived.`,
-      'Create Version'
-    );
-    if (!confirmed) return;
-
-    try {
-      await db.upsertGoal({ id: goalId, status: 'archived' });
-      
-      const newGoal = { ...goal };
-      delete newGoal.id;
-      newGoal.version = (goal.version || 1) + 1;
-      newGoal.status = 'active';
-      
-      await db.upsertGoal(newGoal);
-      console.log('[tc-students] Created new version of goal');
-      await loadData();
-      // Re-render the expanded detail for this goal's student
-      if (goal.student_code && expandedStudents.has(goal.student_code)) {
-        await renderExpandedDetail(goal.student_code);
-      }
-    } catch (error) {
-      console.error('[tc-students] Error versioning goal:', error);
-      alert('Failed to create new version');
     }
   }
 
@@ -2791,7 +2748,7 @@
     // Handle checkbox changes for goals to archive
     modal.addEventListener('change', (e) => {
       if (e.target.classList.contains('archive-goal-cb')) {
-        const goalId = parseInt(e.target.dataset.goalId);
+        const goalId = e.target.dataset.goalId;
         if (e.target.checked) {
           iepWizardData.goalsToArchive.add(goalId);
         } else {
