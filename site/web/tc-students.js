@@ -206,10 +206,12 @@
     for (let i = 0; i < text.length; i++) {
       const char = text[i];
       
-      // Handle escaped quotes (two consecutive quotes)
+      // Handle escaped quotes (two consecutive quotes: "")
+      // When we see "" inside quotes, we consume both characters by incrementing i
+      // The loop's i++ will then move to the character AFTER the pair
       if (char === '"' && inQuotes && i + 1 < text.length && text[i + 1] === '"') {
         currentRow += '""';
-        i++; // Skip the next quote
+        i++; // Consume the second quote; loop's i++ will skip past it
       } 
       // Toggle quote state
       else if (char === '"') {
@@ -218,9 +220,11 @@
       }
       // Handle newlines - only split if NOT inside quotes
       else if ((char === '\n' || char === '\r') && !inQuotes) {
-        // Handle \r\n or \n line endings
+        // Handle \r\n (CRLF) by consuming both characters
+        // When we see \r\n, we consume both by incrementing i
+        // The loop's i++ will then move to the character AFTER the pair
         if (char === '\r' && i + 1 < text.length && text[i + 1] === '\n') {
-          i++; // Skip the \n
+          i++; // Consume the \n; loop's i++ will skip past it
         }
         // Only add non-empty rows
         if (currentRow.trim()) {
