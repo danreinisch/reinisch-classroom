@@ -3075,10 +3075,10 @@
         
         // Log warnings for date parsing failures
         if (iepDueRaw && !iepDueParsed) {
-          console.warn(`CSV Import: Failed to parse IEP due date for student ${code}: "${iepDueRaw}"`);
+          console.warn(`CSV Import: Failed to parse IEP due date for student ${code}: "${iepDueRaw}". Expected format: M/D/YYYY, M-D-YYYY, or YYYY-MM-DD`);
         }
         if (evalDueRaw && !evalDueParsed) {
-          console.warn(`CSV Import: Failed to parse Eval due date for student ${code}: "${evalDueRaw}"`);
+          console.warn(`CSV Import: Failed to parse Eval due date for student ${code}: "${evalDueRaw}". Expected format: M/D/YYYY, M-D-YYYY, or YYYY-MM-DD`);
         }
         
         studentsMap.set(code, {
@@ -3099,7 +3099,7 @@
           if (parsed) {
             student.iep_due = parsed;
           } else if (iepDueRaw) {
-            console.warn(`CSV Import: Failed to parse IEP due date for student ${code} (subsequent row): "${iepDueRaw}"`);
+            console.warn(`CSV Import: Failed to parse IEP due date for student ${code} (subsequent row): "${iepDueRaw}". Expected format: M/D/YYYY, M-D-YYYY, or YYYY-MM-DD`);
           }
         }
         if (!student.eval_due) {
@@ -3108,7 +3108,7 @@
           if (parsed) {
             student.eval_due = parsed;
           } else if (evalDueRaw) {
-            console.warn(`CSV Import: Failed to parse Eval due date for student ${code} (subsequent row): "${evalDueRaw}"`);
+            console.warn(`CSV Import: Failed to parse Eval due date for student ${code} (subsequent row): "${evalDueRaw}". Expected format: M/D/YYYY, M-D-YYYY, or YYYY-MM-DD`);
           }
         }
       }
