@@ -192,6 +192,57 @@
     return result;
   }
 
+  /**
+   * Split CSV text into rows, respecting quoted fields that may contain newlines.
+   * RFC 4180 compliant: handles multi-line quoted fields properly.
+   * @param {string} text - The raw CSV text
+   * @returns {string[]} Array of CSV row strings (not parsed into fields yet)
+   */
+  function splitCsvIntoRows(text) {
+    const rows = [];
+    let currentRow = '';
+    let inQuotes = false;
+    
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i];
+      const nextChar = text[i + 1];
+      
+      // Handle escaped quotes (two consecutive quotes)
+      if (char === '"' && inQuotes && nextChar === '"') {
+        currentRow += '""';
+        i++; // Skip the next quote
+      } 
+      // Toggle quote state
+      else if (char === '"') {
+        inQuotes = !inQuotes;
+        currentRow += char;
+      }
+      // Handle newlines - only split if NOT inside quotes
+      else if ((char === '\n' || char === '\r') && !inQuotes) {
+        // Handle \r\n or \n line endings
+        if (char === '\r' && nextChar === '\n') {
+          i++; // Skip the \n
+        }
+        // Only add non-empty rows
+        if (currentRow.trim()) {
+          rows.push(currentRow);
+        }
+        currentRow = '';
+      }
+      // Regular character
+      else {
+        currentRow += char;
+      }
+    }
+    
+    // Don't forget the last row if it doesn't end with a newline
+    if (currentRow.trim()) {
+      rows.push(currentRow);
+    }
+    
+    return rows;
+  }
+
   // State
   let allStudents = [];
   let allGoals = [];
@@ -2935,7 +2986,7 @@
 
   async function handleCsvFileSelected(file) {
     const text = await file.text();
-    const lines = text.split('\n').filter(line => line.trim());
+    const lines = splitCsvIntoRows(text);
     
     if (lines.length < 2) {
       alert('CSV file must have at least a header row and one data row');
@@ -3082,6 +3133,11 @@
       }
     }
 
+    // Log diagnostic information about CSV parsing
+    const uniqueStudentCount = studentsMap.size;
+    const totalRowCount = rows.length;
+    console.log(`[tc-students] CSV parsed: ${totalRowCount} rows → ${uniqueStudentCount} unique students`);
+
     window.csvImportData = Array.from(studentsMap.values()).map(s => ({
       ...s,
       enrollments: Array.from(s.enrollments)
@@ -3131,12 +3187,24 @@
     const preview = document.getElementById('csv-preview');
     const content = document.getElementById('csv-preview-content');
     
+    // Safety guard: Deduplicate by code in case parsing somehow produced duplicates
+    const seenCodes = new Set();
+    const deduplicatedData = [];
+    for (const student of data) {
+      if (!seenCodes.has(student.code)) {
+        seenCodes.add(student.code);
+        deduplicatedData.push(student);
+      } else {
+        console.warn(`[tc-students] Duplicate student code detected in CSV preview: ${student.code}. Using first occurrence.`);
+      }
+    }
+    
     // Categorize each student with detailed change tracking
     const newStudents = [];
     const updatedStudents = [];
     const unchangedStudents = [];
     
-    for (const csvStudent of data) {
+    for (const csvStudent of deduplicatedData) {
       const existingStudent = allStudents.find(s => s.code === csvStudent.code);
       
       if (!existingStudent) {
@@ -3242,11 +3310,11 @@
     
     // Build unchanged students toggle
     const unchangedToggleHtml = unchangedStudents.length > 0 ? `
-      <details style="margin-top: 16px; padding: 10px; background: #f5f5f5; border-radius: 6px; border: 1px solid #ddd;">
-        <summary style="cursor: pointer; font-weight: 500;">
+      <details style="margin-top: 16px; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 6px; border: 1px solid rgba(255,255,255,0.15);">
+        <summary style="cursor: pointer; font-weight: 500; color: inherit;">
           ▶ Show ${unchangedStudents.length} unchanged student${unchangedStudents.length !== 1 ? 's' : ''}
         </summary>
-        <div style="margin-top: 10px; padding: 10px; background: #fff; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;">
+        <div style="margin-top: 10px; padding: 10px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 4px; font-size: 13px; color: inherit;">
           ${unchangedStudents.map(s => escapeHtml(s.code)).join(', ')}
         </div>
       </details>
