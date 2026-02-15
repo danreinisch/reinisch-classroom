@@ -3092,7 +3092,7 @@
       enrollments: Array.from(s.enrollments)
     }));
 
-    displayCsvPreview(window.csvImportData, newStudentCount, existingStudentCount);
+    displayCsvPreview(window.csvImportData);
   }
 
   function parseDateFromCSV(dateStr) {
@@ -3126,7 +3126,7 @@
     return null;
   }
 
-  function displayCsvPreview(data, newStudentCount, existingStudentCount) {
+  function displayCsvPreview(data) {
     const preview = document.getElementById('csv-preview');
     const content = document.getElementById('csv-preview-content');
     
@@ -3178,7 +3178,9 @@
         } else {
           // Check if goal text or other fields changed
           const goalChanges = [];
-          if (csvGoal.goal_text !== existingGoal.goal_text && csvGoal.goal_text !== existingGoal.desc) {
+          if (csvGoal.goal_text && 
+              csvGoal.goal_text !== existingGoal.goal_text && 
+              csvGoal.goal_text !== existingGoal.desc) {
             goalChanges.push('goal text');
           }
           if (csvGoal.goal_area && csvGoal.goal_area !== existingGoal.goal_area) {
@@ -3333,21 +3335,18 @@ ${changeParts.join('\n')}
     // Store categorized data for import handler
     window.csvImportCategorized = categorizedStudents;
     
-    // Remove old event listener and add new one
+    // Update button text and add click handler
     const importBtn = document.getElementById('confirm-import');
-    const newImportBtn = importBtn.cloneNode(true);
-    importBtn.parentNode.replaceChild(newImportBtn, importBtn);
-    
-    // Update button text
     const changedCount = newStudents.length + updatedStudents.length;
-    newImportBtn.textContent = `Import ${changedCount} Student${changedCount !== 1 ? 's' : ''} (${newStudents.length} new, ${updatedStudents.length} updated)`;
+    importBtn.textContent = `Import ${changedCount} Student${changedCount !== 1 ? 's' : ''} (${newStudents.length} new, ${updatedStudents.length} updated)`;
     
-    newImportBtn.addEventListener('click', async () => {
+    // Use once option to auto-remove listener after first click
+    importBtn.addEventListener('click', async () => {
       await handleConfirmCsvImport(data);
       
       // Show success message with counts
-      showToast(`Successfully imported ${newStudents.length} new and updated ${updatedStudents.length} existing students`);
-    });
+      showToast(`Successfully imported ${newStudents.length} new student${newStudents.length !== 1 ? 's' : ''} and updated ${updatedStudents.length} existing student${updatedStudents.length !== 1 ? 's' : ''}`);
+    }, { once: true });
   }
 
   async function handleConfirmCsvImport(data) {
