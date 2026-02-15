@@ -71,6 +71,9 @@
     "Reading Skills": "📕"
   };
 
+  // UI indicator for missing dates
+  const MISSING_DATE_WARNING = ' ⚠️';
+
   // Mapping from DB class codes to UI canonical class names
   // Used to normalize enrollment data that may come with class_code instead of class_name
   const CLASS_CODE_TO_CANONICAL_NAMES = {
@@ -642,11 +645,11 @@
       
       const iepDue = student.iep_due ? formatDate(student.iep_due) : 'N/A';
       const iepUrgency = getDateUrgency(student.iep_due);
-      const iepWarning = !student.iep_due ? ' ⚠️' : '';
+      const iepWarning = !student.iep_due ? MISSING_DATE_WARNING : '';
       
       const evalDue = student.eval_due ? formatDate(student.eval_due) : 'N/A';
       const evalUrgency = getDateUrgency(student.eval_due);
-      const evalWarning = !student.eval_due ? ' ⚠️' : '';
+      const evalWarning = !student.eval_due ? MISSING_DATE_WARNING : '';
 
       let rows = `
         <tr class="${isExpanded ? 'expanded' : ''} ${isArchived ? 'st-row-archived' : ''}" data-code="${escapeHtml(student.code)}">
