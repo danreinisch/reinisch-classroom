@@ -2998,20 +2998,12 @@
 
     const studentsMap = new Map();
     const existingCodes = new Set(allStudents.map(s => s.code));
-    let _newStudentCount = 0;
-    let _existingStudentCount = 0;
 
     for (const row of rows) {
       const code = row[columnMap.code]?.trim();
       if (!code) continue;
 
       if (!studentsMap.has(code)) {
-        // Count unique students only
-        if (existingCodes.has(code)) {
-          _existingStudentCount++;
-        } else {
-          _newStudentCount++;
-        }
         
         const iepDueRaw = row[columnMap.iep_due];
         const evalDueRaw = row[columnMap.eval_due];
@@ -3170,7 +3162,7 @@
       // Check for new goals
       const newGoals = csvStudent.goals.filter(g => !existingGoals.some(eg => eg.code === g.code));
       if (newGoals.length > 0) {
-        changes.push(`+ ${newGoals.length} new goal${newGoals.length > 1 ? 's' : ''}: ${newGoals.map(g => escapeHtml(g.code)).join(', ')}`);
+        changes.push(`+ ${newGoals.length} new goal${newGoals.length !== 1 ? 's' : ''}: ${newGoals.map(g => escapeHtml(g.code)).join(', ')}`);
       }
       
       // Check for updated goals (text changed)
@@ -3190,9 +3182,20 @@
     }
     
     // Build summary bar
+    const summaryParts = [];
+    if (newStudents.length > 0) {
+      summaryParts.push(`<strong>${newStudents.length}</strong> new`);
+    }
+    if (updatedStudents.length > 0) {
+      summaryParts.push(`<strong>${updatedStudents.length}</strong> updated`);
+    }
+    if (unchangedStudents.length > 0) {
+      summaryParts.push(`<strong>${unchangedStudents.length}</strong> unchanged (hidden)`);
+    }
+    
     const summaryBar = `
       <div style="padding: 12px 15px; background: #e3f2fd; border: 1px solid #1976d2; border-radius: 6px; margin-bottom: 16px; font-size: 15px;">
-        📊 ${newStudents.length > 0 ? `<strong>${newStudents.length}</strong> new` : ''}${newStudents.length > 0 && updatedStudents.length > 0 ? ' · ' : ''}${updatedStudents.length > 0 ? `<strong>${updatedStudents.length}</strong> updated` : ''}${(newStudents.length > 0 || updatedStudents.length > 0) && unchangedStudents.length > 0 ? ' · ' : ''}${unchangedStudents.length > 0 ? `<strong>${unchangedStudents.length}</strong> unchanged (hidden)` : ''}
+        📊 ${summaryParts.join(' · ')}
       </div>
     `;
     
@@ -3210,7 +3213,7 @@
       const caseManagerText = student.primary_case_manager ? `👤 Case Manager: ${escapeHtml(student.primary_case_manager)}` : '';
       
       const goalText = student.goals.length > 0 
-        ? `+ ${student.goals.length} goal${student.goals.length > 1 ? 's' : ''}: ${student.goals.map(g => escapeHtml(g.code)).join(', ')}`
+        ? `+ ${student.goals.length} goal${student.goals.length !== 1 ? 's' : ''}: ${student.goals.map(g => escapeHtml(g.code)).join(', ')}`
         : '';
       
       return `
@@ -3225,13 +3228,13 @@
     
     // Build updated student cards
     const updatedStudentsHtml = updatedStudents.map(student => {
-      const changeLines = student.changes.map(c => escapeHtml(c)).join('<br>');
+      const changeLines = student.changes.join('<br>');
       
       return `
         <div style="border:1px solid #444; border-left:3px solid #f59e0b; border-radius:8px; padding:12px; margin-bottom:8px; background:#1a1a2e;">
           <div style="font-weight:600; margin-bottom:4px; color:#fff;">✏️ ${escapeHtml(student.code)} (Updated)</div>
           <div style="font-size:13px; color:#aaa; line-height:1.6;">
-            ${changeLines}${student.changes.length === 0 ? '(no changes detected)' : ''}
+            ${changeLines}
           </div>
         </div>
       `;
