@@ -6,9 +6,10 @@ import { test, expect } from "@playwright/test";
  * Validates that:
  * 1. Unauthenticated users are redirected to /hub/ when accessing /teacher/* pages
  * 2. Redirect loop prevention works correctly (no redirect if already on /hub/)
- * 3. sessionStorage flag prevents repeated redirect attempts
- * 4. Network errors don't trigger redirects
- * 5. Query parameter ?reason=session_expired is added to redirect URL
+ * 3. sessionStorage timestamp prevents repeated redirect attempts within 10 seconds
+ * 4. Redirects are allowed again after the 10-second cooldown expires
+ * 5. Network errors don't trigger redirects
+ * 6. Query parameters entry=teacher, next, and reason=session_expired are added to redirect URL
  */
 
 test.describe("Teacher Center Authentication Redirect", () => {
@@ -221,6 +222,37 @@ test.describe("Teacher Center Authentication Redirect", () => {
 
     // Verify only one navigation happened (initial page load, no redirect)
     expect(redirectCount).toBe(1);
+  });
+
+  test("should allow redirect after cooldown period expires (>10 seconds)", async ({ page }) => {
+    // Mock teacher-session endpoint to return 401
+    await page.route("**/.netlify/functions/teacher-session", async (route) => {
+      await route.fulfill({
+        status: 401,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: false,
+          error: "Unauthorized",
+        }),
+      });
+    });
+
+    // Pre-set the sessionStorage timestamp to simulate an old redirect attempt (11 seconds ago)
+    await page.addInitScript(() => {
+      const elevenSecondsAgo = Date.now() - 11000;
+      sessionStorage.setItem("tc_auth_redirect_timestamp", String(elevenSecondsAgo));
+    });
+
+    // Navigate to teacher center
+    await page.goto("/teacher/");
+
+    // Wait for redirect to happen (should redirect because cooldown expired)
+    await page.waitForURL("**/hub/**", { timeout: 5000 });
+
+    // Verify redirect occurred
+    expect(page.url()).toContain("/hub/");
+    expect(page.url()).toContain("reason=session_expired");
+    expect(page.url()).toContain("entry=teacher");
   });
 
   test("should clear sessionStorage timestamp on successful authentication", async ({ page }) => {
