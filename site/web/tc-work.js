@@ -1321,6 +1321,169 @@ ${shown}
   window.__rcRemoteSaveDraft = remoteSaveDraft;
   window.__rcRemoteDeleteDraft = remoteDeleteDraft;
 
+  // Issue Assignment functionality
+  async function populateAssignmentSelect() {
+    const select = $("issueAssignmentSelect");
+    if (!select) return;
+    
+    try {
+      const response = await fetch("/.netlify/functions/teacher-assignments-list", {
+        credentials: "same-origin"
+      });
+      
+      if (!response.ok) {
+        console.warn("[tc-work] Failed to fetch assignments:", response.status);
+        select.innerHTML = '<option value="">-- No assignments available --</option>';
+        return;
+      }
+      
+      const data = await response.json();
+      const assignments = data.assignments || [];
+      
+      if (assignments.length === 0) {
+        select.innerHTML = '<option value="">-- No assignments available --</option>';
+        return;
+      }
+      
+      select.innerHTML = '<option value="">-- Select an assignment --</option>' +
+        assignments.map(a => {
+          const title = a.title || "Untitled";
+          const type = a.type || "";
+          return `<option value="${a.id}">${title}${type ? ` (${type})` : ""}</option>`;
+        }).join("");
+    } catch (err) {
+      console.warn("[tc-work] Error loading assignments:", err);
+      select.innerHTML = '<option value="">-- Error loading assignments --</option>';
+    }
+  }
+
+  async function populateStudentsSelect() {
+    const select = $("issueStudentsSelect");
+    if (!select) return;
+    
+    try {
+      const response = await fetch("/.netlify/functions/student-roster", {
+        credentials: "same-origin"
+      });
+      
+      if (!response.ok) {
+        console.warn("[tc-work] Failed to fetch students:", response.status);
+        select.innerHTML = '<option value="">-- No students available --</option>';
+        return;
+      }
+      
+      const students = await response.json();
+      
+      if (!Array.isArray(students) || students.length === 0) {
+        select.innerHTML = '<option value="">-- No students available --</option>';
+        return;
+      }
+      
+      select.innerHTML = students.map(s => {
+        const name = s.name || s.code;
+        const code = s.code;
+        const id = s.id;
+        return `<option value="${id}">${name} (${code})</option>`;
+      }).join("");
+    } catch (err) {
+      console.warn("[tc-work] Error loading students:", err);
+      select.innerHTML = '<option value="">-- Error loading students --</option>';
+    }
+  }
+
+  async function handleIssueAssignment() {
+    const assignmentId = $("issueAssignmentSelect")?.value;
+    const dueDateInput = $("issueDueDate")?.value || null;
+    const selectedOptions = Array.from($("issueStudentsSelect")?.selectedOptions || []);
+    const studentIds = selectedOptions.map(opt => opt.value);
+    const progressDiv = $("issueProgress");
+    const progressText = $("issueProgressText");
+    
+    if (!assignmentId) {
+      setMsg("err", "Please select an assignment");
+      setTimeout(clearMsg, 3000);
+      return;
+    }
+    
+    if (studentIds.length === 0) {
+      setMsg("err", "Please select at least one student");
+      setTimeout(clearMsg, 3000);
+      return;
+    }
+    
+    // Convert date to ISO 8601 if provided
+    let dueAt = null;
+    if (dueDateInput) {
+      try {
+        const parts = dueDateInput.split("-");
+        const year = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10) - 1;
+        const day = parseInt(parts[2], 10);
+        dueAt = new Date(Date.UTC(year, month, day, 23, 59, 59)).toISOString();
+      } catch (err) {
+        console.warn("[tc-work] Invalid due date format:", err);
+      }
+    }
+    
+    // Show progress
+    if (progressDiv) progressDiv.style.display = "block";
+    if (progressText) progressText.textContent = `Issuing to ${studentIds.length} student(s)...`;
+    
+    try {
+      const response = await fetch("/.netlify/functions/teacher-issue-assignment", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          assignment_id: parseInt(assignmentId, 10),
+          student_ids: studentIds,
+          due_at: dueAt,
+          settings: {}
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Server returned ${response.status}`);
+      }
+      
+      const result = await response.json();
+      
+      if (result.ok) {
+        const issued = result.inserted_count || 0;
+        const skipped = result.skipped_count || 0;
+        
+        if (progressText) {
+          progressText.textContent = `Complete: ${issued} issued${skipped > 0 ? `, ${skipped} skipped` : ""}`;
+        }
+        
+        setMsg("ok", `Successfully issued assignment to ${issued} student(s)`);
+        setTimeout(clearMsg, 3000);
+        
+        // Clear selections after success
+        if ($("issueAssignmentSelect")) $("issueAssignmentSelect").value = "";
+        const studentsSelect = $("issueStudentsSelect");
+        if (studentsSelect) {
+          Array.from(studentsSelect.options).forEach(opt => opt.selected = false);
+        }
+        if ($("issueDueDate")) $("issueDueDate").value = "";
+      } else {
+        throw new Error(result.error || "Failed to issue assignment");
+      }
+    } catch (err) {
+      console.error("[tc-work] Issue assignment error:", err);
+      if (progressText) progressText.textContent = "Error: " + err.message;
+      setMsg("err", "Failed to issue assignment: " + err.message);
+      setTimeout(clearMsg, 5000);
+    }
+    
+    // Hide progress after 3 seconds
+    setTimeout(() => {
+      if (progressDiv) progressDiv.style.display = "none";
+    }, 3000);
+  }
+
   function init() {
     const drafts = readDrafts();
     renderTable(drafts);
@@ -1335,6 +1498,10 @@ ${shown}
     if (_fe) _fe.addEventListener("click", fillExample);
     const _ce = $("btnCancelEdit");
     if (_ce) _ce.addEventListener("click", cancelEdit);
+    
+    // Wire up Issue Assignment button
+    const _ia = $("btnIssueAssignment");
+    if (_ia) _ia.addEventListener("click", handleIssueAssignment);
 
     installStudentPreviewSanitizer();
 
@@ -1343,6 +1510,10 @@ ${shown}
     
     // Background sync with Supabase (non-blocking)
     remoteLoadDrafts();
+    
+    // Populate Issue Assignment dropdowns (non-blocking)
+    populateAssignmentSelect().catch(err => console.warn("[tc-work] Failed to populate assignments:", err));
+    populateStudentsSelect().catch(err => console.warn("[tc-work] Failed to populate students:", err));
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
