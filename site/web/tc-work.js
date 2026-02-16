@@ -2103,5 +2103,403 @@ function normalizeTaggedAssignmentText(input) {
   }
 
   window.addEventListener("DOMContentLoaded", wire);
+
+  // ==================== Issue Assignment Section ====================
+  
+  // Global variables for issue assignment section
+  let ASSIGNMENTS_CACHE = [];
+  window.STUDENTS = []; // Make it global for tests
+  let CLASSES_CACHE = [];
+  
+  /**
+   * Fetch assignments from the server
+   */
+  async function populateAssignmentSelect() {
+    const select = $("issueAssignmentSelect");
+    if (!select) return;
+    
+    try {
+      const response = await fetch("/.netlify/functions/teacher-assignments-list");
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error("Failed to fetch assignments:", response.status, errorData);
+        select.innerHTML = '<option value="">Error loading assignments</option>';
+        return;
+      }
+      
+      const data = await response.json();
+      
+      if (!data.ok || !data.assignments) {
+        console.error("Invalid response from assignments API:", data);
+        select.innerHTML = '<option value="">Error loading assignments</option>';
+        return;
+      }
+      
+      ASSIGNMENTS_CACHE = data.assignments || [];
+      
+      if (ASSIGNMENTS_CACHE.length === 0) {
+        select.innerHTML = '<option value="">-- No assignments available --</option>';
+        return;
+      }
+      
+      select.innerHTML = '<option value="">-- Select an assignment --</option>' +
+        ASSIGNMENTS_CACHE.map(a => 
+          `<option value="${a.id}">${escapeHtml(a.title || 'Untitled')} (${escapeHtml(a.type || 'unknown')})</option>`
+        ).join('');
+        
+    } catch (error) {
+      console.error("Error fetching assignments:", error);
+      select.innerHTML = '<option value="">Error loading assignments</option>';
+    }
+  }
+  
+  /**
+   * Fetch students from Supabase via student-roster endpoint
+   */
+  async function populateStudentsSelect() {
+    const select = $("issueStudentsSelect");
+    if (!select) return;
+    
+    try {
+      const response = await fetch("/.netlify/functions/student-roster");
+      
+      if (!response.ok) {
+        console.error("Failed to fetch students:", response.status);
+        select.innerHTML = '<option value="">Error loading students</option>';
+        return;
+      }
+      
+      const data = await response.json();
+      
+      if (!data.ok || !data.students) {
+        console.error("Invalid response from student roster API:", data);
+        select.innerHTML = '<option value="">Error loading students</option>';
+        return;
+      }
+      
+      // Filter for active students
+      const activeStudents = (data.students || []).filter(s => s.active !== false);
+      
+      if (activeStudents.length === 0) {
+        select.innerHTML = '<option value="">-- No students available --</option>';
+        window.STUDENTS = [];
+        updateSelectedStudentsDisplay();
+        return;
+      }
+      
+      // Map students to format expected by tests (with id, code, name)
+      window.STUDENTS = activeStudents.map(s => ({
+        id: s.id,
+        code: s.code,
+        name: s.name || s.code
+      }));
+      
+      select.innerHTML = window.STUDENTS.map(s => 
+        `<option value="${escapeHtml(s.code)}">${escapeHtml(s.name || s.code)} (${escapeHtml(s.code)})</option>`
+      ).join('');
+      
+      updateSelectedStudentsDisplay();
+      
+    } catch (error) {
+      console.error("Error fetching students:", error);
+      select.innerHTML = '<option value="">Error loading students</option>';
+    }
+  }
+  
+  /**
+   * Populate classes select (placeholder for now - can be enhanced later)
+   */
+  function populateClassesSelect() {
+    const select = $("issueClassesSelect");
+    if (!select) return;
+    
+    // Placeholder: Use hardcoded classes from the draft form
+    const classes = ["LA 1 SC", "LA 2 SC", "LA 3 SC", "LA 4 SC", "Life Skills", "Life Skills LA"];
+    CLASSES_CACHE = classes;
+    
+    select.innerHTML = classes.map(c => 
+      `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`
+    ).join('');
+  }
+  
+  /**
+   * Update the selected students display
+   */
+  function updateSelectedStudentsDisplay() {
+    const select = $("issueStudentsSelect");
+    const countEl = $("selectedStudentsCount");
+    const contentEl = $("selectedStudentsContent");
+    
+    if (!select || !countEl || !contentEl) return;
+    
+    const selectedOptions = Array.from(select.selectedOptions);
+    const count = selectedOptions.length;
+    
+    countEl.textContent = String(count);
+    
+    if (count === 0) {
+      contentEl.textContent = "No students selected";
+      contentEl.className = "work-subtle";
+      return;
+    }
+    
+    const names = selectedOptions.map(opt => opt.textContent.trim()).join(", ");
+    contentEl.textContent = names;
+    contentEl.className = "";
+  }
+  
+  /**
+   * Handle "Select All Students" button
+   */
+  function selectAllStudents() {
+    const select = $("issueStudentsSelect");
+    if (!select) return;
+    
+    for (let i = 0; i < select.options.length; i++) {
+      select.options[i].selected = true;
+    }
+    
+    updateSelectedStudentsDisplay();
+  }
+  
+  /**
+   * Handle "Clear Students" button
+   */
+  function clearStudentsSelection() {
+    const select = $("issueStudentsSelect");
+    if (!select) return;
+    
+    for (let i = 0; i < select.options.length; i++) {
+      select.options[i].selected = false;
+    }
+    
+    updateSelectedStudentsDisplay();
+  }
+  
+  /**
+   * Handle "Add Students from Selected Classes" button
+   */
+  function addClassStudents() {
+    const classesSelect = $("issueClassesSelect");
+    const studentsSelect = $("issueStudentsSelect");
+    
+    if (!classesSelect || !studentsSelect) return;
+    
+    const selectedClasses = Array.from(classesSelect.selectedOptions).map(opt => opt.value);
+    
+    if (selectedClasses.length === 0) {
+      alert("Please select at least one class first.");
+      return;
+    }
+    
+    // For now, since we don't have class membership data, just alert
+    // This can be enhanced when class roster data is available
+    alert(`Class filtering not yet implemented. Selected classes: ${selectedClasses.join(", ")}\n\nPlease select students manually for now.`);
+  }
+  
+  /**
+   * Issue assignment to selected students
+   */
+  async function handleIssueAssignment() {
+    const assignmentSelect = $("issueAssignmentSelect");
+    const studentsSelect = $("issueStudentsSelect");
+    const dueDateInput = $("issueDueDate");
+    const progressDiv = $("issueProgress");
+    const progressText = $("issueProgressText");
+    
+    if (!assignmentSelect || !studentsSelect || !progressDiv || !progressText) {
+      console.error("Required elements not found");
+      return;
+    }
+    
+    const assignmentId = assignmentSelect.value;
+    const dueDate = dueDateInput ? dueDateInput.value : null;
+    const selectedOptions = Array.from(studentsSelect.selectedOptions);
+    const studentCodes = selectedOptions.map(opt => opt.value);
+    
+    // Validation
+    if (!assignmentId) {
+      progressDiv.style.display = "block";
+      progressText.textContent = "Please select an assignment";
+      progressText.style.color = "#ef4444";
+      setTimeout(() => {
+        progressDiv.style.display = "none";
+        progressText.style.color = "";
+      }, 3000);
+      return;
+    }
+    
+    if (studentCodes.length === 0) {
+      progressDiv.style.display = "block";
+      progressText.textContent = "Please select at least one student";
+      progressText.style.color = "#ef4444";
+      setTimeout(() => {
+        progressDiv.style.display = "none";
+        progressText.style.color = "";
+      }, 3000);
+      return;
+    }
+    
+    // Find student IDs from codes
+    const studentIds = [];
+    for (const code of studentCodes) {
+      const student = window.STUDENTS.find(s => s.code === code);
+      if (student && student.id) {
+        studentIds.push(student.id);
+      } else {
+        console.warn(`Student ID not found for code: ${code}`);
+      }
+    }
+    
+    if (studentIds.length === 0) {
+      progressDiv.style.display = "block";
+      progressText.textContent = "Error: Could not find student IDs";
+      progressText.style.color = "#ef4444";
+      setTimeout(() => {
+        progressDiv.style.display = "none";
+        progressText.style.color = "";
+      }, 3000);
+      return;
+    }
+    
+    // Show progress
+    progressDiv.style.display = "block";
+    progressText.textContent = `Issuing to ${studentCodes.length} student(s)...`;
+    progressText.style.color = "";
+    
+    try {
+      // Convert due date to ISO format if provided
+      let dueAtISO = null;
+      if (dueDate) {
+        // dueDate is in YYYY-MM-DD format, convert to ISO 8601
+        dueAtISO = new Date(dueDate + "T23:59:59").toISOString();
+      }
+      
+      const response = await fetch("/.netlify/functions/teacher-issue-assignment", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          assignment_id: parseInt(assignmentId, 10),
+          student_ids: studentIds,
+          due_at: dueAtISO,
+          settings: {}
+        })
+      });
+      
+      const data = await response.json();
+      const requestId = response.headers.get("X-Request-Id");
+      
+      if (!response.ok || !data.ok) {
+        const errorMsg = data.error || "Failed to issue assignment";
+        progressText.textContent = `Error: ${errorMsg}${requestId ? ` (Request ID: ${requestId})` : ""}`;
+        progressText.style.color = "#ef4444";
+        setTimeout(() => {
+          progressDiv.style.display = "none";
+          progressText.style.color = "";
+        }, 5000);
+        return;
+      }
+      
+      // Success
+      const inserted = data.inserted_count || 0;
+      const skipped = data.skipped_count || 0;
+      
+      let message = `Success! ${inserted} issued`;
+      if (skipped > 0) {
+        message += `, ${skipped} already assigned`;
+      }
+      
+      progressText.textContent = message;
+      progressText.style.color = "#22c55e";
+      
+      // Refresh instances table
+      await loadIssuedInstances();
+      
+      // Hide progress after 3 seconds
+      setTimeout(() => {
+        progressDiv.style.display = "none";
+        progressText.style.color = "";
+      }, 3000);
+      
+    } catch (error) {
+      console.error("Error issuing assignment:", error);
+      progressText.textContent = `Error: ${error.message}`;
+      progressText.style.color = "#ef4444";
+      setTimeout(() => {
+        progressDiv.style.display = "none";
+        progressText.style.color = "";
+      }, 5000);
+    }
+  }
+  
+  /**
+   * Load and display issued instances
+   */
+  async function loadIssuedInstances() {
+    const emptyEl = $("instancesEmpty");
+    const table = $("instancesTable");
+    const tbody = $("instancesTbody");
+    
+    if (!emptyEl || !table || !tbody) return;
+    
+    // For now, just show empty state since we don't have a list instances endpoint yet
+    // This can be enhanced when the endpoint is available
+    emptyEl.style.display = "block";
+    table.style.display = "none";
+    tbody.innerHTML = "";
+  }
+  
+  /**
+   * Wire up issue assignment section
+   */
+  function wireIssueAssignment() {
+    const btnIssue = $("btnIssueAssignment");
+    const btnSelectAll = $("btnSelectAllStudents");
+    const btnClear = $("btnClearStudents");
+    const btnAddClass = $("btnAddClassStudents");
+    const btnRefresh = $("btnRefreshInstances");
+    const studentsSelect = $("issueStudentsSelect");
+    
+    if (btnIssue) {
+      btnIssue.addEventListener("click", handleIssueAssignment);
+    }
+    
+    if (btnSelectAll) {
+      btnSelectAll.addEventListener("click", selectAllStudents);
+    }
+    
+    if (btnClear) {
+      btnClear.addEventListener("click", clearStudentsSelection);
+    }
+    
+    if (btnAddClass) {
+      btnAddClass.addEventListener("click", addClassStudents);
+    }
+    
+    if (btnRefresh) {
+      btnRefresh.addEventListener("click", loadIssuedInstances);
+    }
+    
+    if (studentsSelect) {
+      studentsSelect.addEventListener("change", updateSelectedStudentsDisplay);
+    }
+    
+    // Initial load
+    populateAssignmentSelect();
+    populateStudentsSelect();
+    populateClassesSelect();
+    loadIssuedInstances();
+  }
+  
+  // Initialize issue assignment on load
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", wireIssueAssignment);
+  } else {
+    wireIssueAssignment();
+  }
+
 })();
 // END rc-work-mega-ux v1

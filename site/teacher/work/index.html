@@ -379,6 +379,109 @@ JSON:
             </div>
           </section>
 
+          <!-- Issue Assignment Section -->
+          <section class="work-card" aria-label="Issue assignment" style="margin-top: 16px">
+            <h2 style="margin: 0">Issue Assignment</h2>
+            <p class="work-subtle" style="margin-top: 8px; margin-bottom: 14px">
+              Assign a draft or existing assignment to students. Students will receive the assignment
+              immediately and can begin work.
+            </p>
+
+            <div class="work-field">
+              <label for="issueAssignmentSelect">Select Assignment</label>
+              <select id="issueAssignmentSelect">
+                <option value="">Loading assignments...</option>
+              </select>
+            </div>
+
+            <div class="work-grid" style="margin-top: 12px">
+              <div class="work-field">
+                <label for="issueClassesSelect">Filter by Classes (optional)</label>
+                <select id="issueClassesSelect" multiple size="5">
+                  <option value="">Loading classes...</option>
+                </select>
+                <div class="work-subtle" style="margin-top: 4px; font-size: 12px">
+                  Hold Ctrl/Cmd to select multiple. Selecting classes will filter students below.
+                </div>
+                <button class="work-btn" type="button" id="btnAddClassStudents" style="margin-top: 8px; width: 100%">
+                  Add Students from Selected Classes
+                </button>
+              </div>
+
+              <div class="work-field">
+                <label for="issueStudentsSelect">Target Students</label>
+                <select id="issueStudentsSelect" multiple size="5">
+                  <option value="">Loading students...</option>
+                </select>
+                <div class="work-subtle" style="margin-top: 4px; font-size: 12px">
+                  Hold Ctrl/Cmd to select multiple students
+                </div>
+                <div style="display: flex; gap: 8px; margin-top: 8px">
+                  <button class="work-btn" type="button" id="btnSelectAllStudents" style="flex: 1">
+                    Select All
+                  </button>
+                  <button class="work-btn" type="button" id="btnClearStudents" style="flex: 1">
+                    Clear
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div style="margin-top: 12px; padding: 12px; background: rgba(255,255,255,0.04); border-radius: 12px; border: 1px solid rgba(255,255,255,0.1)">
+              <div style="font-weight: 600; margin-bottom: 6px">
+                Selected Students: <span id="selectedStudentsCount">0</span>
+              </div>
+              <div id="selectedStudentsContent" class="work-subtle" style="font-size: 12px">
+                No students selected
+              </div>
+            </div>
+
+            <div class="work-field" style="margin-top: 12px">
+              <label for="issueDueDate">Due Date (optional)</label>
+              <input id="issueDueDate" type="date" />
+            </div>
+
+            <div style="margin-top: 12px">
+              <button class="work-btn primary" type="button" id="btnIssueAssignment">
+                Issue to Selected Students
+              </button>
+            </div>
+
+            <div id="issueProgress" style="margin-top: 12px; display: none; padding: 10px 12px; background: rgba(255,255,255,0.04); border-radius: 12px; border: 1px solid rgba(255,255,255,0.1)">
+              <div id="issueProgressText" class="work-subtle">Processing...</div>
+            </div>
+          </section>
+
+          <!-- Issued Instances Section -->
+          <section class="work-card" aria-label="Issued instances" style="margin-top: 16px">
+            <div class="work-row">
+              <h2 style="margin: 0">Issued Instances</h2>
+              <button class="work-btn" type="button" id="btnRefreshInstances">Refresh</button>
+            </div>
+            <p class="work-subtle" style="margin-top: 8px; margin-bottom: 14px">
+              View all assignment instances that have been issued to students.
+            </p>
+
+            <div id="instancesEmpty" class="work-subtle" style="margin-top: 10px">
+              No instances yet.
+            </div>
+
+            <div class="work-tablewrap" style="margin-top: 10px">
+              <table class="work-table" id="instancesTable" style="display: none">
+                <thead>
+                  <tr>
+                    <th>Assignment</th>
+                    <th>Student</th>
+                    <th>Assigned</th>
+                    <th>Due</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="instancesTbody"></tbody>
+              </table>
+            </div>
+          </section>
+
           <div class="work-overlay" id="draftOverlay" hidden>
             <div class="work-dialog" role="dialog" aria-modal="true" aria-label="Draft preview">
               <div class="work-row" style="margin-bottom: 10px">
