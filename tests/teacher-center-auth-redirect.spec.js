@@ -6,9 +6,10 @@ import { test, expect } from "@playwright/test";
  * Validates that:
  * 1. Unauthenticated users are redirected to /hub/ when accessing /teacher/* pages
  * 2. Redirect loop prevention works correctly (no redirect if already on /hub/)
- * 3. sessionStorage flag prevents repeated redirect attempts
- * 4. Network errors don't trigger redirects
- * 5. Query parameter ?reason=session_expired is added to redirect URL
+ * 3. sessionStorage timestamp prevents repeated redirect attempts within 10 seconds
+ * 4. Redirects are allowed again after the 10-second cooldown expires
+ * 5. Network errors don't trigger redirects
+ * 6. Query parameters entry=teacher, next, and reason=session_expired are added to redirect URL
  */
 
 test.describe("Teacher Center Authentication Redirect", () => {
@@ -43,9 +44,10 @@ test.describe("Teacher Center Authentication Redirect", () => {
     // Wait for redirect to happen
     await page.waitForURL("**/hub/**", { timeout: 5000 });
 
-    // Verify redirect occurred with correct query parameter
+    // Verify redirect occurred with correct query parameters
     expect(page.url()).toContain("/hub/");
     expect(page.url()).toContain("reason=session_expired");
+    expect(page.url()).toContain("entry=teacher");
     expect(redirectHappened).toBe(true);
   });
 
@@ -68,9 +70,11 @@ test.describe("Teacher Center Authentication Redirect", () => {
     // Wait for redirect to happen
     await page.waitForURL("**/hub/**", { timeout: 5000 });
 
-    // Verify redirect occurred
+    // Verify redirect occurred with correct query parameters
     expect(page.url()).toContain("/hub/");
     expect(page.url()).toContain("reason=session_expired");
+    expect(page.url()).toContain("entry=teacher");
+    expect(page.url()).toContain("next=%2Fteacher%2Fwork%2F"); // URL encoded /teacher/work/
   });
 
   test("should NOT redirect if teacher-shell.js is on /hub/ page (loop prevention)", async ({ page }) => {
@@ -170,7 +174,7 @@ test.describe("Teacher Center Authentication Redirect", () => {
     expect(warnings.length).toBeGreaterThan(0);
   });
 
-  test("should prevent redirect loop using sessionStorage flag", async ({ page }) => {
+  test("should prevent redirect loop using sessionStorage timestamp", async ({ page }) => {
     const consoleLogs = [];
     let redirectCount = 0;
 
@@ -196,16 +200,16 @@ test.describe("Teacher Center Authentication Redirect", () => {
       redirectCount++;
     });
 
-    // Pre-set the sessionStorage flag to simulate a previous redirect attempt
+    // Pre-set the sessionStorage timestamp to simulate a recent redirect attempt (within 10 seconds)
     await page.addInitScript(() => {
-      sessionStorage.setItem("tc_auth_redirect_attempted", "true");
+      sessionStorage.setItem("tc_auth_redirect_timestamp", String(Date.now()));
     });
 
     // Navigate to teacher center
     await page.goto("/teacher/");
     await page.waitForLoadState("networkidle");
 
-    // Verify we're still on /teacher/ (no redirect due to sessionStorage flag)
+    // Verify we're still on /teacher/ (no redirect due to recent timestamp)
     expect(page.url()).toContain("/teacher/");
 
     // Verify warning was logged about redirect already attempted
@@ -220,7 +224,38 @@ test.describe("Teacher Center Authentication Redirect", () => {
     expect(redirectCount).toBe(1);
   });
 
-  test("should clear sessionStorage flag on successful authentication", async ({ page }) => {
+  test("should allow redirect after cooldown period expires (>10 seconds)", async ({ page }) => {
+    // Mock teacher-session endpoint to return 401
+    await page.route("**/.netlify/functions/teacher-session", async (route) => {
+      await route.fulfill({
+        status: 401,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: false,
+          error: "Unauthorized",
+        }),
+      });
+    });
+
+    // Pre-set the sessionStorage timestamp to simulate an old redirect attempt (11 seconds ago)
+    await page.addInitScript(() => {
+      const elevenSecondsAgo = Date.now() - 11000;
+      sessionStorage.setItem("tc_auth_redirect_timestamp", String(elevenSecondsAgo));
+    });
+
+    // Navigate to teacher center
+    await page.goto("/teacher/");
+
+    // Wait for redirect to happen (should redirect because cooldown expired)
+    await page.waitForURL("**/hub/**", { timeout: 5000 });
+
+    // Verify redirect occurred
+    expect(page.url()).toContain("/hub/");
+    expect(page.url()).toContain("reason=session_expired");
+    expect(page.url()).toContain("entry=teacher");
+  });
+
+  test("should clear sessionStorage timestamp on successful authentication", async ({ page }) => {
     // Mock teacher-session endpoint to return 200 (valid session)
     await page.route("**/.netlify/functions/teacher-session", async (route) => {
       await route.fulfill({
@@ -234,9 +269,9 @@ test.describe("Teacher Center Authentication Redirect", () => {
       });
     });
 
-    // Pre-set the sessionStorage flag
+    // Pre-set the sessionStorage timestamp
     await page.addInitScript(() => {
-      sessionStorage.setItem("tc_auth_redirect_attempted", "true");
+      sessionStorage.setItem("tc_auth_redirect_timestamp", String(Date.now()));
     });
 
     // Navigate to teacher center
@@ -246,11 +281,11 @@ test.describe("Teacher Center Authentication Redirect", () => {
     // Wait for page to load
     await page.waitForTimeout(500);
 
-    // Verify sessionStorage flag was cleared
-    const flagCleared = await page.evaluate(() => {
-      return sessionStorage.getItem("tc_auth_redirect_attempted") === null;
+    // Verify sessionStorage timestamp was cleared
+    const timestampCleared = await page.evaluate(() => {
+      return sessionStorage.getItem("tc_auth_redirect_timestamp") === null;
     });
-    expect(flagCleared).toBe(true);
+    expect(timestampCleared).toBe(true);
   });
 
   test("should allow authenticated users to access teacher pages", async ({ page }) => {
