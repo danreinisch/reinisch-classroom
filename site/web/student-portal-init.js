@@ -699,8 +699,8 @@
     `;
     
     // Attach handlers
-    document.getElementById('viewerBackBtn').addEventListener('click', closeAssignmentViewer);
-    document.getElementById('markCompleteBtn').addEventListener('click', () => {
+    overlay.querySelector('#viewerBackBtn').addEventListener('click', closeAssignmentViewer);
+    overlay.querySelector('#markCompleteBtn').addEventListener('click', () => {
       // TODO: Mark as complete
       alert('This feature will be implemented when submission tracking is added.');
     });
@@ -733,7 +733,7 @@
       </div>
     `;
     
-    document.getElementById('viewerBackBtn').addEventListener('click', closeAssignmentViewer);
+    overlay.querySelector('#viewerBackBtn').addEventListener('click', closeAssignmentViewer);
   }
   
   /**
@@ -757,7 +757,7 @@
       </div>
     `;
     
-    document.getElementById('viewerBackBtn').addEventListener('click', closeAssignmentViewer);
+    overlay.querySelector('#viewerBackBtn').addEventListener('click', closeAssignmentViewer);
     
     // Render current question
     renderCurrentQuestion();
