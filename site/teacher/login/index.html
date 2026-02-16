@@ -175,7 +175,8 @@
             
             // Only allow paths that start with /teacher after normalization
             if (normalizedPath.startsWith('/teacher')) {
-              return next;
+              // Return the full normalized URL (pathname + search + hash)
+              return normalizedPath + url.search + url.hash;
             }
           } catch (e) {
             // Invalid URL, fall through to default
