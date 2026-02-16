@@ -39,11 +39,18 @@
             background-size: cover;
             background-position: center;
             opacity: 0;
-            transition: opacity 3s ease-in-out;
+            transition: opacity 2s ease-in-out;
+            will-change: opacity;
         }
 
         .bg-image.active {
             opacity: 0.55;
+            z-index: 2;
+        }
+        
+        .bg-image.fading {
+            opacity: 0.55;
+            z-index: 1;
         }
 
         .bg-image:nth-child(1) { background-image: url('image1.jpg'); }
@@ -1355,10 +1362,23 @@
         const bgImages = document.querySelectorAll('.bg-image');
         const totalBgImages = 12;
         
+        // Initialize first background
+        bgImages[0].classList.add('active');
+        
         function rotateBg() {
-            bgImages[currentBg].classList.remove('active');
+            const prevBg = currentBg;
             currentBg = (currentBg + 1) % totalBgImages;
+            
+            // Add active to new image (starts fading in)
             bgImages[currentBg].classList.add('active');
+            
+            // Keep previous image visible during transition
+            bgImages[prevBg].classList.add('fading');
+            
+            // After transition completes, remove old image classes
+            setTimeout(() => {
+                bgImages[prevBg].classList.remove('active', 'fading');
+            }, 2000); // Match the transition duration
         }
         
         setInterval(rotateBg, 8000);
