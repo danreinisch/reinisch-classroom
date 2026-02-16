@@ -227,21 +227,12 @@ exports.handler = async (event) => {
       const enrollments = await enrollmentsResponse.json();
       const studentCodes = enrollments.map(e => e.student_code).filter(Boolean);
 
-      if (studentCodes.length === 0) {
-        console.log(`[teacher-issue-draft] [${requestId}] No students enrolled in class (checked both class_enrollments and enrollments tables)`);
-        return jsonResponse(event, 400, { ok: false, error: `No students enrolled in ${resolvedClassName}` }, {}, requestId);
-      }
-
       console.log(`[teacher-issue-draft] [${requestId}] Found ${studentCodes.length} student codes from enrollments table, looking up student IDs`);
 
       // Look up students by their codes to get UUIDs
-      // Properly escape student codes for PostgREST 'in' operator (requires double quotes and proper escaping)
-      const escapedCodes = studentCodes.map(c => {
-        // Escape double quotes and backslashes in the code
-        const escaped = c.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-        return `"${escaped}"`;
-      });
-      const studentsLookupUrl = `${SUPABASE_URL}/rest/v1/students?select=id,code&code=in.(${escapedCodes.join(',')})`;
+      // Use encodeURIComponent for proper URL encoding in PostgREST 'in' operator
+      const encodedCodes = studentCodes.map(c => `"${encodeURIComponent(c)}"`);
+      const studentsLookupUrl = `${SUPABASE_URL}/rest/v1/students?select=id,code&code=in.(${encodedCodes.join(',')})`;
       
       const studentsLookupResponse = await fetch(studentsLookupUrl, {
         method: 'GET',
@@ -261,8 +252,8 @@ exports.handler = async (event) => {
       studentIds = studentsFromCodes.map(s => s.id).filter(Boolean);
 
       if (studentIds.length === 0) {
-        console.log(`[teacher-issue-draft] [${requestId}] No matching student records found for enrolled student codes`);
-        return jsonResponse(event, 400, { ok: false, error: `No matching students found for ${resolvedClassName}` }, {}, requestId);
+        console.log(`[teacher-issue-draft] [${requestId}] No matching student records found for enrolled student codes (checked both class_enrollments and enrollments tables)`);
+        return jsonResponse(event, 400, { ok: false, error: `No students enrolled in ${resolvedClassName}` }, {}, requestId);
       }
 
       enrollmentSource = 'enrollments';
