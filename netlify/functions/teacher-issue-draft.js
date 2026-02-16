@@ -229,15 +229,23 @@ exports.handler = async (event) => {
 
       console.log(`[teacher-issue-draft] [${requestId}] Found ${studentCodes.length} student codes from enrollments table, looking up student IDs`);
 
+      // Validate student codes match expected pattern (alphanumeric, hyphen, underscore)
+      const validCodePattern = /^[a-zA-Z0-9_-]+$/;
+      const invalidCodes = studentCodes.filter(c => !validCodePattern.test(c));
+      if (invalidCodes.length > 0) {
+        console.warn(`[teacher-issue-draft] [${requestId}] Found invalid student codes:`, invalidCodes);
+        // Filter out invalid codes to prevent injection issues
+      }
+      const validCodes = studentCodes.filter(c => validCodePattern.test(c));
+
+      if (validCodes.length === 0) {
+        console.log(`[teacher-issue-draft] [${requestId}] No valid student codes found (checked both class_enrollments and enrollments tables)`);
+        return jsonResponse(event, 400, { ok: false, error: `No students enrolled in ${resolvedClassName} (checked both enrollment sources)` }, {}, requestId);
+      }
+
       // Look up students by their codes to get UUIDs
       // For PostgREST 'in' operator with text fields, wrap each value in quotes
-      // Since student codes are alphanumeric and controlled, they should not contain special chars
-      // but we validate and escape just to be safe
-      const quotedCodes = studentCodes.map(c => {
-        // Student codes should be alphanumeric, but escape any quotes if present
-        const safeCode = c.replace(/"/g, '\\"');
-        return `"${safeCode}"`;
-      });
+      const quotedCodes = validCodes.map(c => `"${c}"`);
       const studentsLookupUrl = `${SUPABASE_URL}/rest/v1/students?select=id,code&code=in.(${quotedCodes.join(',')})`;
       
       const studentsLookupResponse = await fetch(studentsLookupUrl, {
@@ -259,7 +267,7 @@ exports.handler = async (event) => {
 
       if (studentIds.length === 0) {
         console.log(`[teacher-issue-draft] [${requestId}] No matching student records found for enrolled student codes (checked both class_enrollments and enrollments tables)`);
-        return jsonResponse(event, 400, { ok: false, error: `No students enrolled in ${resolvedClassName}` }, {}, requestId);
+        return jsonResponse(event, 400, { ok: false, error: `No students enrolled in ${resolvedClassName} (checked both enrollment sources)` }, {}, requestId);
       }
 
       enrollmentSource = 'enrollments';
