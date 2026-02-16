@@ -230,9 +230,15 @@ exports.handler = async (event) => {
       console.log(`[teacher-issue-draft] [${requestId}] Found ${studentCodes.length} student codes from enrollments table, looking up student IDs`);
 
       // Look up students by their codes to get UUIDs
-      // Use encodeURIComponent for proper URL encoding in PostgREST 'in' operator
-      const encodedCodes = studentCodes.map(c => `"${encodeURIComponent(c)}"`);
-      const studentsLookupUrl = `${SUPABASE_URL}/rest/v1/students?select=id,code&code=in.(${encodedCodes.join(',')})`;
+      // For PostgREST 'in' operator with text fields, wrap each value in quotes
+      // Since student codes are alphanumeric and controlled, they should not contain special chars
+      // but we validate and escape just to be safe
+      const quotedCodes = studentCodes.map(c => {
+        // Student codes should be alphanumeric, but escape any quotes if present
+        const safeCode = c.replace(/"/g, '\\"');
+        return `"${safeCode}"`;
+      });
+      const studentsLookupUrl = `${SUPABASE_URL}/rest/v1/students?select=id,code&code=in.(${quotedCodes.join(',')})`;
       
       const studentsLookupResponse = await fetch(studentsLookupUrl, {
         method: 'GET',
