@@ -3051,7 +3051,12 @@
     }
 
     const studentsMap = new Map();
-    const existingCodes = new Set(allStudents.map(s => s.code));
+    const existingCodes = new Set((allStudents || []).map(s => s.code));
+    
+    // Warn if allStudents is empty (might indicate data not loaded)
+    if (!allStudents || allStudents.length === 0) {
+      console.warn('[tc-students] allStudents is empty. All CSV students will be marked as new. If you expect existing students, ensure data is loaded before importing.');
+    }
 
     for (const row of rows) {
       const code = row[columnMap.code]?.trim();
@@ -3221,10 +3226,15 @@
     const unchangedStudents = [];
     
     // Log categorization start
-    console.log(`[tc-students] Categorizing ${deduplicatedData.length} students against ${allStudents.length} existing students`);
+    console.log(`[tc-students] Categorizing ${deduplicatedData.length} students against ${allStudents ? allStudents.length : 0} existing students`);
+    
+    // Warn if allStudents is not loaded
+    if (!allStudents || allStudents.length === 0) {
+      console.warn('[tc-students] allStudents is empty during preview. All students will appear as new. If you expect existing students, ensure data is loaded before importing.');
+    }
     
     for (const csvStudent of deduplicatedData) {
-      const existingStudent = allStudents.find(s => s.code === csvStudent.code);
+      const existingStudent = allStudents ? allStudents.find(s => s.code === csvStudent.code) : null;
       
       if (!existingStudent) {
         // New student
