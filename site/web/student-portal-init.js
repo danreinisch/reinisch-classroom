@@ -233,6 +233,269 @@
   }
 
   // ============================================================================
+  // PR fix-student-dashboard: Goals & Progress Loading
+  // ============================================================================
+  
+  // Constants for goal rendering
+  const MAX_DESC_LENGTH = 120; // Max characters before truncating description
+  const MONTHS_PER_QUARTER = 3; // Number of months in a quarter
+  
+  // Goal area icons (matching teacher center)
+  const GOAL_AREA_ICONS = {
+    "Reading Comprehension": "📖",
+    "Written Expression": "✍️",
+    "Basic Reading": "📚",
+    "Behavior": "🎯",
+    "Life Skills Transition": "🚀",
+    "Life Skills Reading Skills": "📖",
+    "Life Skills Writing Skills": "✍️",
+    "Math Calculation": "🔢",
+    "Math Problem Solving": "🧮",
+    "Reading Fluency": "📝",
+    "Social Skills": "🤝",
+    "Language": "💬",
+    "Life Skills": "🛠️",
+    "Emotional Regulation": "😌",
+    "Reading Skills": "📕"
+  };
+  
+  /**
+   * Map a goal area to a color category for the left border
+   */
+  function goalAreaToColorCategory(goalArea) {
+    const area = (goalArea || '').toLowerCase();
+    if (area.includes('reading')) return 'Reading';
+    if (area.includes('writ')) return 'Writing';
+    if (area.includes('math')) return 'Math';
+    if (area.includes('behavior')) return 'Behavior';
+    if (area.includes('life')) return 'LifeSkills';  // Matches all "Life Skills" variations
+    if (area.includes('social')) return 'Social';
+    if (area.includes('language')) return 'Language';
+    if (area.includes('emotional')) return 'Emotional';
+    return 'Other';
+  }
+  
+  /**
+   * Escape HTML to prevent XSS
+   */
+  function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+  
+  /**
+   * Format date for display
+   */
+  function formatDate(dateStr) {
+    if (!dateStr) return 'N/A';
+    try {
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return 'N/A';
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    } catch (err) {
+      return 'N/A';
+    }
+  }
+  
+  /**
+   * Load and render student goals
+   */
+  async function loadStudentGoals(studentCode) {
+    console.log(LOG_PREFIX, 'Loading goals for:', studentCode);
+    
+    const goalsContainer = document.getElementById('goalsContent');
+    const goalsCount = document.getElementById('goalsCount');
+    
+    if (!goalsContainer) {
+      console.warn(LOG_PREFIX, 'Goals container not found');
+      return;
+    }
+    
+    // Show loading state
+    goalsContainer.innerHTML = `
+      <div style="text-align: center; padding: 40px; color: var(--muted);">
+        <div style="font-size: 48px; margin-bottom: 16px;">⏳</div>
+        <div>Loading your goals...</div>
+      </div>
+    `;
+    
+    try {
+      // Fetch goals
+      const goalsUrl = `/.netlify/functions/student-goals?code=${encodeURIComponent(studentCode)}`;
+      const goalsResponse = await fetch(goalsUrl);
+      
+      if (!goalsResponse.ok) {
+        throw new Error(`Failed to fetch goals: ${goalsResponse.status}`);
+      }
+      
+      const goalsData = await goalsResponse.json();
+      
+      if (!goalsData.ok) {
+        throw new Error(goalsData.error || 'Failed to load goals');
+      }
+      
+      const goals = goalsData.goals || [];
+      
+      // Fetch progress data
+      let progressMap = new Map();
+      try {
+        const progressUrl = `/.netlify/functions/student-goal-progress?code=${encodeURIComponent(studentCode)}`;
+        const progressResponse = await fetch(progressUrl);
+        
+        if (progressResponse.ok) {
+          const progressData = await progressResponse.json();
+          if (progressData.ok && progressData.progress) {
+            // Build map of goal_id -> progress entries
+            progressData.progress.forEach(entry => {
+              if (!progressMap.has(entry.goal_id)) {
+                progressMap.set(entry.goal_id, []);
+              }
+              progressMap.get(entry.goal_id).push(entry);
+            });
+          }
+        }
+      } catch (err) {
+        console.warn(LOG_PREFIX, 'Failed to load progress data:', err);
+        // Continue without progress data
+      }
+      
+      // Render goals
+      if (goals.length === 0) {
+        goalsContainer.innerHTML = `
+          <div style="text-align: center; padding: 40px; color: var(--muted);">
+            <div style="font-size: 48px; margin-bottom: 16px;">📋</div>
+            <div>No goals found for your account.</div>
+          </div>
+        `;
+        if (goalsCount) {
+          goalsCount.textContent = '0 goals';
+        }
+      } else {
+        goalsContainer.innerHTML = goals.map(goal => renderGoalCard(goal, progressMap)).join('');
+        if (goalsCount) {
+          goalsCount.textContent = goals.length === 1 ? '1 goal' : `${goals.length} goals`;
+        }
+        
+        // Attach event listeners to "Show more" buttons
+        attachShowMoreListeners();
+      }
+      
+    } catch (err) {
+      console.error(LOG_PREFIX, 'Error loading goals:', err);
+      goalsContainer.innerHTML = `
+        <div style="text-align: center; padding: 40px; color: var(--muted);">
+          <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
+          <div style="color: var(--ink);">Goals temporarily unavailable</div>
+          <div style="margin-top: 8px; font-size: 14px;">Please try refreshing the page or contact your teacher if this persists.</div>
+        </div>
+      `;
+      if (goalsCount) {
+        goalsCount.textContent = 'Unavailable';
+      }
+    }
+  }
+  
+  /**
+   * Render a single goal card
+   */
+  function renderGoalCard(goal, progressMap) {
+    const icon = GOAL_AREA_ICONS[goal.goal_area] || '📌';
+    const colorCategory = goalAreaToColorCategory(goal.goal_area);
+    const fullDesc = goal.desc || goal.goal_text || '(No goal description provided)';
+    
+    // Truncate description to MAX_DESC_LENGTH chars
+    let descHtml = '';
+    if (fullDesc.length > MAX_DESC_LENGTH) {
+      const truncated = fullDesc.substring(0, MAX_DESC_LENGTH);
+      descHtml = `
+        <div class="st-goal-desc">
+          <span class="st-goal-desc-short">${escapeHtml(truncated)}...</span>
+          <button class="st-goal-show-more" data-goal-id="${goal.id}">Show more</button>
+          <span class="st-goal-desc-full" style="display: none;">${escapeHtml(fullDesc)}</span>
+        </div>
+      `;
+    } else {
+      descHtml = `<div class="st-goal-desc">${escapeHtml(fullDesc)}</div>`;
+    }
+    
+    // Get progress data for this goal
+    const progressEntries = progressMap.get(goal.id) || [];
+    
+    // Calculate this quarter's data points
+    // Quarters: Q1=Jan-Mar (0-2), Q2=Apr-Jun (3-5), Q3=Jul-Sep (6-8), Q4=Oct-Dec (9-11)
+    const now = new Date();
+    const quarterStart = new Date(now.getFullYear(), Math.floor(now.getMonth() / MONTHS_PER_QUARTER) * MONTHS_PER_QUARTER, 1);
+    const thisQuarterEntries = progressEntries.filter(entry => {
+      const entryDate = new Date(entry.date);
+      return entryDate >= quarterStart;
+    });
+    
+    // Get last data collection date
+    let lastDate = 'Never';
+    if (progressEntries.length > 0) {
+      const sortedEntries = [...progressEntries].sort((a, b) => 
+        new Date(b.date) - new Date(a.date)
+      );
+      lastDate = formatDate(sortedEntries[0].date);
+    }
+    
+    const statusEmoji = thisQuarterEntries.length > 0 ? '✅' : '⏸️';
+    const statusText = thisQuarterEntries.length > 0 
+      ? `${thisQuarterEntries.length} data ${thisQuarterEntries.length === 1 ? 'point' : 'points'} this quarter`
+      : 'No data this quarter';
+    
+    return `
+      <div class="st-goal-card" data-goal-id="${goal.id}" data-area="${colorCategory}">
+        <div class="st-goal-header">
+          <div class="st-goal-title-line">
+            <span class="st-goal-icon">${icon}</span>
+            <span class="st-goal-area-name">${escapeHtml(goal.goal_area || 'N/A')}</span>
+            <span class="st-goal-code">${escapeHtml(goal.code || '')}</span>
+            <span class="st-badge st-badge-measurement">${escapeHtml(goal.measurement_type || 'N/A')}</span>
+          </div>
+        </div>
+        ${descHtml}
+        <div class="st-goal-metrics">
+          <div class="st-metric">
+            <span class="st-metric-label">Baseline:</span>
+            <span class="st-metric-value">${escapeHtml(goal.baseline || 'N/A')}</span>
+          </div>
+          <div class="st-metric">
+            <span class="st-metric-label">Target:</span>
+            <span class="st-metric-value">${escapeHtml(goal.target || 'N/A')}</span>
+          </div>
+        </div>
+        <div class="st-goal-data-status">
+          <div class="st-data-status-item">
+            <span>${statusEmoji}</span>
+            <span>${statusText}</span>
+          </div>
+          <div class="st-data-status-item">
+            <span>📅</span>
+            <span>Last: ${lastDate}</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+  
+  /**
+   * Attach event listeners to "Show more" buttons
+   */
+  function attachShowMoreListeners() {
+    const showMoreButtons = document.querySelectorAll('.st-goal-show-more');
+    showMoreButtons.forEach(button => {
+      button.addEventListener('click', function() {
+        const descContainer = this.parentElement;
+        descContainer.classList.toggle('expanded');
+        this.textContent = descContainer.classList.contains('expanded') ? 'Show less' : 'Show more';
+      });
+    });
+  }
+
+  // ============================================================================
   // PR student-portal-reliability: Network guardrails
   // ============================================================================
   // Block or warn about calls to teacher/admin/substitute endpoints from student pages
@@ -339,17 +602,16 @@
         return;
       }
       
-      // Initialize boot watchdog (will check auth state and only start if authenticated)
-      initBootWatchdog();
-
       // Check if already authenticated (from auto-login or existing session)
       if (isAuthenticated()) {
         console.log(LOG_PREFIX, 'Already authenticated, showing dashboard');
+        // Initialize boot watchdog ONLY for authenticated users
+        initBootWatchdog();
         showDashboard();
         return;
       }
 
-      // Not authenticated - show login form
+      // Not authenticated - show login form (no watchdog needed)
       console.log(LOG_PREFIX, 'Not authenticated, showing login');
       showLogin();
       
@@ -487,6 +749,7 @@
   /**
    * Show dashboard view (PR 315)
    * PR student-portal-reliability: Added null checks and proper cleanup
+   * PR fix-student-dashboard: Load real IEP goals data
    */
   function showDashboard() {
     // Clear watchdog now that dashboard is successfully showing
@@ -494,6 +757,13 @@
       clearTimeout(state.bootWatchdogTimer);
       state.bootWatchdogTimer = null;
       console.log(LOG_PREFIX, 'Boot watchdog cleared - dashboard visible');
+    }
+    
+    // Clear the portal_resume_failed_at flag on successful dashboard show
+    try {
+      sessionStorage.removeItem('portal_resume_failed_at');
+    } catch (err) {
+      console.error(LOG_PREFIX, 'Failed to clear resume failure flag:', err);
     }
     
     const loginView = document.getElementById('loginView');
@@ -539,6 +809,13 @@
     }
     
     console.log(LOG_PREFIX, 'Dashboard view shown for:', studentCode);
+    
+    // Load student goals and progress data
+    if (studentCode) {
+      loadStudentGoals(studentCode).catch(err => {
+        console.error(LOG_PREFIX, 'Failed to load student goals:', err);
+      });
+    }
   }
 
   /**
