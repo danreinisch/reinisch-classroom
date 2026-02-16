@@ -103,9 +103,6 @@ test.describe("Teacher Center Authentication Redirect", () => {
     await page.goto("/hub/");
     await page.waitForLoadState("networkidle");
 
-    // Wait a bit to ensure no redirect occurs
-    await page.waitForTimeout(1000);
-
     // Verify we're still on /hub/ (no redirect loop)
     expect(page.url()).toContain("/hub/");
   });
@@ -133,9 +130,6 @@ test.describe("Teacher Center Authentication Redirect", () => {
     await page.goto("/teacher/");
     await page.waitForLoadState("networkidle");
 
-    // Wait a bit to ensure no redirect occurs
-    await page.waitForTimeout(1000);
-
     // Verify we're still on /teacher/ (no redirect on non-401 errors)
     expect(page.url()).toContain("/teacher/");
 
@@ -162,9 +156,6 @@ test.describe("Teacher Center Authentication Redirect", () => {
     // Navigate to teacher center
     await page.goto("/teacher/");
     await page.waitForLoadState("networkidle");
-
-    // Wait a bit to ensure no redirect occurs
-    await page.waitForTimeout(1000);
 
     // Verify we're still on /teacher/ (no redirect on network errors)
     expect(page.url()).toContain("/teacher/");
@@ -213,9 +204,6 @@ test.describe("Teacher Center Authentication Redirect", () => {
     // Navigate to teacher center
     await page.goto("/teacher/");
     await page.waitForLoadState("networkidle");
-
-    // Wait a bit to ensure no redirect occurs
-    await page.waitForTimeout(1000);
 
     // Verify we're still on /teacher/ (no redirect due to sessionStorage flag)
     expect(page.url()).toContain("/teacher/");

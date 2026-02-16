@@ -34,8 +34,8 @@
         
         // Redirect to login page with safeguards to prevent loops
         if(r.status === 401){
-          // Don't redirect if already on /hub/ (the login page)
-          if(currentPath === '/hub/' || currentPath === '/hub'){
+          // Don't redirect if already on /hub or any /hub/* page (the login area)
+          if(currentPath.startsWith('/hub')){
             console.warn('[teacher-shell] Already on login page, not redirecting');
             return true;
           }
