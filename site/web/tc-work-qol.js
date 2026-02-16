@@ -8,11 +8,11 @@
 
   // NOTE: Keep in sync with CANON_CLASSES in tc-work.js
   const CLASS_LABELS = [
-    "LA 1 SC",
-    "LA 2 SC",
-    "LA 3 SC",
-    "LA 4 SC",
-    "Life Skills LA",
+    "Language Arts 1 SC",
+    "Language Arts 2 SC",
+    "Language Arts 3 SC",
+    "Language Arts 4 SC",
+    "Life Skills Language Arts SC",
     "Life Skills",
   ];
 

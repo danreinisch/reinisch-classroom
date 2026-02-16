@@ -14,6 +14,15 @@ const {
 const { requireTeacher } = require('./_lib/auth');
 const { getSupabaseConfig } = require('./_lib/supa');
 
+// Class name aliases for backward compatibility with old drafts
+const CLASS_ALIASES = {
+  "LA 1 SC": "Language Arts 1 SC",
+  "LA 2 SC": "Language Arts 2 SC",
+  "LA 3 SC": "Language Arts 3 SC",
+  "LA 4 SC": "Language Arts 4 SC",
+  "Life Skills LA": "Life Skills Language Arts SC",
+};
+
 // Get Supabase configuration
 const { url: SUPABASE_URL, key: SUPABASE_SERVICE_ROLE_KEY } = getSupabaseConfig();
 const { SESSION_SECRET } = process.env;
@@ -102,8 +111,14 @@ exports.handler = async (event) => {
   console.log(`[teacher-issue-draft] [${requestId}] Issuing draft "${draft.title}" to class "${draft.className}"`);
 
   try {
+    // Resolve class name alias (for backward compatibility with old drafts)
+    const resolvedClassName = CLASS_ALIASES[draft.className] || draft.className;
+    if (CLASS_ALIASES[draft.className]) {
+      console.log(`[teacher-issue-draft] [${requestId}] Resolved alias "${draft.className}" → "${resolvedClassName}"`);
+    }
+
     // Step 1: Fetch class by name to get class ID
-    const classesUrl = `${SUPABASE_URL}/rest/v1/classes?select=id,name&name=eq.${encodeURIComponent(draft.className)}`;
+    const classesUrl = `${SUPABASE_URL}/rest/v1/classes?select=id,name&name=eq.${encodeURIComponent(resolvedClassName)}`;
     
     console.log(`[teacher-issue-draft] [${requestId}] Fetching class by name`);
     
@@ -126,7 +141,7 @@ exports.handler = async (event) => {
 
     if (!targetClass) {
       // Auto-create the class if it doesn't exist
-      console.log(`[teacher-issue-draft] [${requestId}] Class "${draft.className}" not found, auto-creating...`);
+      console.log(`[teacher-issue-draft] [${requestId}] Class "${resolvedClassName}" not found, auto-creating...`);
       
       const createClassUrl = `${SUPABASE_URL}/rest/v1/classes`;
       const createClassResponse = await fetch(createClassUrl, {
@@ -137,13 +152,13 @@ exports.handler = async (event) => {
           'Content-Type': 'application/json',
           'Prefer': 'return=representation'
         },
-        body: JSON.stringify({ name: draft.className })
+        body: JSON.stringify({ name: resolvedClassName })
       });
 
       if (!createClassResponse.ok) {
         const errorText = await createClassResponse.text();
         console.error(`[teacher-issue-draft] [${requestId}] Failed to auto-create class: ${createClassResponse.status} - ${errorText}`);
-        throw new Error(`Failed to auto-create class "${draft.className}": ${createClassResponse.status}`);
+        throw new Error(`Failed to auto-create class "${resolvedClassName}": ${createClassResponse.status}`);
       }
 
       const createdClasses = await createClassResponse.json();
@@ -183,7 +198,7 @@ exports.handler = async (event) => {
 
     if (studentIds.length === 0) {
       console.log(`[teacher-issue-draft] [${requestId}] No students enrolled in class`);
-      return jsonResponse(event, 400, { ok: false, error: `No students enrolled in ${draft.className}` }, {}, requestId);
+      return jsonResponse(event, 400, { ok: false, error: `No students enrolled in ${resolvedClassName}` }, {}, requestId);
     }
 
     console.log(`[teacher-issue-draft] [${requestId}] Found ${studentIds.length} enrolled students`);
