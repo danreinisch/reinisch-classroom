@@ -21,10 +21,12 @@
     // Session check with redirect to /hub/ on auth failure.
     // Loop prevention safeguards:
     // 1. Don't redirect if already on /hub/ (the login page)
-    // 2. Use sessionStorage flag to prevent repeated redirect attempts
+    // 2. Use timestamp-based approach to prevent rapid redirect loops
+    //    (only suppress re-redirects if last redirect was < 10 seconds ago)
     // 3. Network errors don't trigger redirect (may be temporary)
     
-    const REDIRECT_FLAG_KEY = 'tc_auth_redirect_attempted';
+    const REDIRECT_TIMESTAMP_KEY = 'tc_auth_redirect_timestamp';
+    const REDIRECT_COOLDOWN_MS = 10000; // 10 seconds
     const currentPath = location.pathname;
     
     try{
@@ -40,23 +42,33 @@
             return true;
           }
           
-          // Check if we've already tried redirecting in this session
+          // Check if we've recently redirected (within cooldown period)
           try{
-            const alreadyRedirected = sessionStorage.getItem(REDIRECT_FLAG_KEY);
-            if(alreadyRedirected){
-              console.warn('[teacher-shell] Redirect already attempted in this session, not redirecting again to prevent loop');
-              return true;
+            const lastRedirectStr = sessionStorage.getItem(REDIRECT_TIMESTAMP_KEY);
+            if(lastRedirectStr){
+              const lastRedirect = parseInt(lastRedirectStr, 10);
+              const now = Date.now();
+              const timeSinceRedirect = now - lastRedirect;
+              
+              if(timeSinceRedirect < REDIRECT_COOLDOWN_MS){
+                console.warn('[teacher-shell] Redirect already attempted in this session, not redirecting again to prevent loop');
+                return true;
+              }
             }
             
-            // Set flag to prevent redirect loop
-            sessionStorage.setItem(REDIRECT_FLAG_KEY, 'true');
+            // Set timestamp to prevent rapid redirect loops
+            sessionStorage.setItem(REDIRECT_TIMESTAMP_KEY, String(Date.now()));
           }catch(_){
             // sessionStorage may not be available, continue with redirect
           }
           
-          // Redirect to login page with reason parameter
+          // Hide page content to prevent flash of unauthorized content
+          document.body.style.display = 'none';
+          
+          // Redirect to login page with entry=teacher, next path, and reason
+          const nextPath = encodeURIComponent(currentPath);
           console.log('[teacher-shell] Redirecting to /hub/ for authentication');
-          location.href = '/hub/?reason=session_expired';
+          location.href = `/hub/?entry=teacher&next=${nextPath}&reason=session_expired`;
           return false;
         }
         
@@ -65,9 +77,9 @@
         return true;
       }
       
-      // Session is valid - clear redirect flag if it exists
+      // Session is valid - clear redirect timestamp if it exists
       try{
-        sessionStorage.removeItem(REDIRECT_FLAG_KEY);
+        sessionStorage.removeItem(REDIRECT_TIMESTAMP_KEY);
       }catch(_){
         // sessionStorage may not be available, ignore
       }
