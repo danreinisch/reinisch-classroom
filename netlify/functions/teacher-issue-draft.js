@@ -230,13 +230,22 @@ exports.handler = async (event) => {
       console.log(`[teacher-issue-draft] [${requestId}] Found ${studentCodes.length} student codes from enrollments table, looking up student IDs`);
 
       // Validate student codes match expected pattern (alphanumeric, hyphen, underscore)
+      // This prevents injection by ensuring codes can be safely quoted in the query
       const validCodePattern = /^[a-zA-Z0-9_-]+$/;
-      const invalidCodes = studentCodes.filter(c => !validCodePattern.test(c));
-      if (invalidCodes.length > 0) {
-        console.warn(`[teacher-issue-draft] [${requestId}] Found invalid student codes:`, invalidCodes);
-        // Filter out invalid codes to prevent injection issues
+      const validCodes = [];
+      const invalidCodes = [];
+      
+      for (const code of studentCodes) {
+        if (validCodePattern.test(code)) {
+          validCodes.push(code);
+        } else {
+          invalidCodes.push(code);
+        }
       }
-      const validCodes = studentCodes.filter(c => validCodePattern.test(c));
+      
+      if (invalidCodes.length > 0) {
+        console.warn(`[teacher-issue-draft] [${requestId}] Found invalid student codes (skipping):`, invalidCodes);
+      }
 
       if (validCodes.length === 0) {
         console.log(`[teacher-issue-draft] [${requestId}] No valid student codes found (checked both class_enrollments and enrollments tables)`);
@@ -245,6 +254,7 @@ exports.handler = async (event) => {
 
       // Look up students by their codes to get UUIDs
       // For PostgREST 'in' operator with text fields, wrap each value in quotes
+      // Since we've validated that codes only contain [a-zA-Z0-9_-], quoting is safe
       const quotedCodes = validCodes.map(c => `"${c}"`);
       const studentsLookupUrl = `${SUPABASE_URL}/rest/v1/students?select=id,code&code=in.(${quotedCodes.join(',')})`;
       
