@@ -3152,7 +3152,7 @@
 
     // Verify correct data structure before preview
     console.log(`[tc-students] csvImportData contains ${window.csvImportData.length} student records`);
-    console.log(`[tc-students] allStudents contains ${allStudents.length} existing student records`);
+    console.log(`[tc-students] allStudents contains ${allStudents ? allStudents.length : 0} existing student records`);
 
     displayCsvPreview(window.csvImportData);
   }
