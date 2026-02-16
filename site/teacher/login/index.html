@@ -171,6 +171,12 @@
           try {
             // Create a URL object to normalize the path
             const url = new URL(next, window.location.origin);
+            
+            // Ensure the URL points to the same origin (prevent external redirects)
+            if (url.origin !== window.location.origin) {
+              return '/teacher/';
+            }
+            
             const normalizedPath = url.pathname;
             
             // Only allow paths that start with /teacher/ after normalization

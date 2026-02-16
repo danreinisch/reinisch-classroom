@@ -21,8 +21,7 @@
     
     // Don't gate the login page itself (it doesn't include this script,
     // but guard anyway for safety)
-    // Use trailing slash to avoid matching paths like /teacher/login-admin
-    if(currentPath === '/teacher/login/' || currentPath.startsWith('/teacher/login/')){
+    if(currentPath.startsWith('/teacher/login/')){
       return true;
     }
     
