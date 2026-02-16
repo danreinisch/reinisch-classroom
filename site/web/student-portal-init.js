@@ -62,7 +62,7 @@
     }
     
     state.bootWatchdogTimer = setTimeout(() => {
-      // Skip if dashboard is visible and healthy
+      // Check if dashboard is visible and healthy
       const dashboardView = document.getElementById('studentDashboardView');
       const isDashboardVisible = 
         dashboardView && 
@@ -92,7 +92,13 @@
         dashboardView.classList.add('hidden');
       }
       
-      // Show helpful message to user
+      // Show helpful message to user about the timeout
+      try {
+        showMessage('Dashboard took too long to load. Please sign in to try again.', 'info');
+      } catch (err) {
+        console.error(LOG_PREFIX, 'Failed to show timeout message:', err);
+      }
+      
       console.log(LOG_PREFIX, 'Login form displayed - session preserved, user can retry');
     }, WATCHDOG_MS);
   }
