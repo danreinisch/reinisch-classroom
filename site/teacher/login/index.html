@@ -166,8 +166,20 @@
         const next = params.get('next');
         
         // Validate that next path starts with /teacher to prevent open redirect
-        if (next && next.startsWith('/teacher')) {
-          return next;
+        // Use URL constructor to normalize path and prevent traversal attacks
+        if (next) {
+          try {
+            // Create a URL object to normalize the path
+            const url = new URL(next, window.location.origin);
+            const normalizedPath = url.pathname;
+            
+            // Only allow paths that start with /teacher after normalization
+            if (normalizedPath.startsWith('/teacher')) {
+              return next;
+            }
+          } catch (e) {
+            // Invalid URL, fall through to default
+          }
         }
         
         return '/teacher/';

@@ -31,10 +31,10 @@
       
       if(r.status === 401){
         // Hide page content immediately to prevent flash of teacher data
-        document.documentElement.style.display = 'none';
+        document.body.style.display = 'none';
         
-        // Build login URL with return path
-        const returnPath = location.pathname + location.search;
+        // Build login URL with return path (including query params and hash)
+        const returnPath = location.pathname + location.search + location.hash;
         const loginUrl = '/teacher/login/?next=' + encodeURIComponent(returnPath);
         
         console.log('[teacher-shell] Not authenticated, redirecting to', loginUrl);
