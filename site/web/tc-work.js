@@ -160,6 +160,14 @@
       btnPreview.addEventListener("click", () => openPreview(d.id));
       tdActions.appendChild(btnPreview);
 
+      const btnIssue = document.createElement("button");
+      btnIssue.type = "button";
+      btnIssue.className = "work-btn primary";
+      btnIssue.style.marginLeft = "8px";
+      btnIssue.textContent = "Issue";
+      btnIssue.addEventListener("click", () => handleIssueDraft(d.id));
+      tdActions.appendChild(btnIssue);
+
       const btnExport = document.createElement("button");
       btnExport.type = "button";
       btnExport.className = "work-btn";
@@ -1321,169 +1329,172 @@ ${shown}
   window.__rcRemoteSaveDraft = remoteSaveDraft;
   window.__rcRemoteDeleteDraft = remoteDeleteDraft;
 
-  // Issue Assignment functionality
-  async function populateAssignmentSelect() {
-    const select = $("issueAssignmentSelect");
-    if (!select) return;
-    
-    try {
-      const response = await fetch("/.netlify/functions/teacher-assignments-list", {
-        credentials: "same-origin"
-      });
-      
-      if (!response.ok) {
-        console.warn("[tc-work] Failed to fetch assignments:", response.status);
-        select.innerHTML = '<option value="">-- No assignments available --</option>';
-        return;
-      }
-      
-      const data = await response.json();
-      const assignments = data.assignments || [];
-      
-      if (assignments.length === 0) {
-        select.innerHTML = '<option value="">-- No assignments available --</option>';
-        return;
-      }
-      
-      select.innerHTML = '<option value="">-- Select an assignment --</option>' +
-        assignments.map(a => {
-          const title = a.title || "Untitled";
-          const type = a.type || "";
-          return `<option value="${a.id}">${title}${type ? ` (${type})` : ""}</option>`;
-        }).join("");
-    } catch (err) {
-      console.warn("[tc-work] Error loading assignments:", err);
-      select.innerHTML = '<option value="">-- Error loading assignments --</option>';
-    }
-  }
+  // ========================================
+  // Issue Assignment from Draft
+  // ========================================
 
-  async function populateStudentsSelect() {
-    const select = $("issueStudentsSelect");
-    if (!select) return;
+  /**
+   * Handle issuing an assignment from a draft to all enrolled students in the draft's class
+   * @param {string} draftId - The ID of the draft to issue
+   */
+  async function handleIssueDraft(draftId) {
+    const drafts = readDrafts();
+    const draft = drafts.find(d => d.id === draftId);
     
-    try {
-      const response = await fetch("/.netlify/functions/student-roster", {
-        credentials: "same-origin"
-      });
-      
-      if (!response.ok) {
-        console.warn("[tc-work] Failed to fetch students:", response.status);
-        select.innerHTML = '<option value="">-- No students available --</option>';
-        return;
-      }
-      
-      const students = await response.json();
-      
-      if (!Array.isArray(students) || students.length === 0) {
-        select.innerHTML = '<option value="">-- No students available --</option>';
-        return;
-      }
-      
-      select.innerHTML = students.map(s => {
-        const name = s.name || s.code;
-        const code = s.code;
-        const id = s.id;
-        return `<option value="${id}">${name} (${code})</option>`;
-      }).join("");
-    } catch (err) {
-      console.warn("[tc-work] Error loading students:", err);
-      select.innerHTML = '<option value="">-- Error loading students --</option>';
-    }
-  }
-
-  async function handleIssueAssignment() {
-    const assignmentId = $("issueAssignmentSelect")?.value;
-    const dueDateInput = $("issueDueDate")?.value || null;
-    const selectedOptions = Array.from($("issueStudentsSelect")?.selectedOptions || []);
-    const studentIds = selectedOptions.map(opt => opt.value);
-    const progressDiv = $("issueProgress");
-    const progressText = $("issueProgressText");
-    
-    if (!assignmentId) {
-      setMsg("err", "Please select an assignment");
+    if (!draft) {
+      setMsg("err", "Draft not found");
       setTimeout(clearMsg, 3000);
       return;
     }
-    
-    if (studentIds.length === 0) {
-      setMsg("err", "Please select at least one student");
-      setTimeout(clearMsg, 3000);
+
+    const className = draft.className;
+    if (!className) {
+      setMsg("err", "This draft has no class assigned. Please edit and select a class first.");
+      setTimeout(clearMsg, 4000);
       return;
     }
-    
-    // Convert date to ISO 8601 if provided
-    let dueAt = null;
-    if (dueDateInput) {
-      try {
-        const parts = dueDateInput.split("-");
-        const year = parseInt(parts[0], 10);
-        const month = parseInt(parts[1], 10) - 1;
-        const day = parseInt(parts[2], 10);
-        dueAt = new Date(Date.UTC(year, month, day, 23, 59, 59)).toISOString();
-      } catch (err) {
-        console.warn("[tc-work] Invalid due date format:", err);
-      }
-    }
-    
-    // Show progress
-    if (progressDiv) progressDiv.style.display = "block";
-    if (progressText) progressText.textContent = `Issuing to ${studentIds.length} student(s)...`;
-    
+
+    // Show progress message
+    setMsg("ok", `Preparing to issue "${draft.title}" to ${className}...`);
+
     try {
-      const response = await fetch("/.netlify/functions/teacher-issue-assignment", {
+      // Step 1: Get Supabase configuration
+      const SUPABASE_URL = localStorage.getItem('rc_unified_supabase_url') || localStorage.getItem('rc_supabase_url');
+      const SUPABASE_KEY = localStorage.getItem('rc_unified_supabase_anon_key') || localStorage.getItem('rc_supabase_anon_key');
+
+      if (!SUPABASE_URL || !SUPABASE_KEY) {
+        throw new Error("Supabase not configured");
+      }
+
+      // Step 2: Fetch classes to map class name to class ID
+      const classesUrl = `${SUPABASE_URL}/rest/v1/classes?select=id,name`;
+      const classesResponse = await fetch(classesUrl, {
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`
+        }
+      });
+
+      if (!classesResponse.ok) {
+        throw new Error(`Failed to fetch classes: ${classesResponse.status}`);
+      }
+
+      const classes = await classesResponse.json();
+      const targetClass = classes.find(c => c.name === className);
+
+      if (!targetClass) {
+        setMsg("err", `Class "${className}" not found in database`);
+        setTimeout(clearMsg, 4000);
+        return;
+      }
+
+      // Step 3: Fetch enrollments for this class
+      const enrollmentsUrl = `${SUPABASE_URL}/rest/v1/class_enrollments?select=student_id,students!inner(id,code,name)&class_id=eq.${targetClass.id}&active=eq.true`;
+      const enrollmentsResponse = await fetch(enrollmentsUrl, {
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`
+        }
+      });
+
+      if (!enrollmentsResponse.ok) {
+        throw new Error(`Failed to fetch enrollments: ${enrollmentsResponse.status}`);
+      }
+
+      const enrollments = await enrollmentsResponse.json();
+      const studentIds = enrollments.map(e => e.student_id);
+
+      if (studentIds.length === 0) {
+        setMsg("warn", `No students enrolled in ${className}`);
+        setTimeout(clearMsg, 4000);
+        return;
+      }
+
+      // Step 4: Create/upsert assignment in Supabase
+      // Use draft title and metadata to create assignment
+      const assignmentData = {
+        title: draft.title,
+        type: draft.assignment?.kind === "link" ? "link" : "html",
+        series: draft.assignment?.link || null,
+        description: draft.notes || null,
+        class_id: targetClass.id,
+        active: true
+      };
+
+      const assignmentsUrl = `${SUPABASE_URL}/rest/v1/assignments`;
+      const createAssignmentResponse = await fetch(assignmentsUrl, {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation'
+        },
+        body: JSON.stringify(assignmentData)
+      });
+
+      if (!createAssignmentResponse.ok) {
+        const errorText = await createAssignmentResponse.text();
+        throw new Error(`Failed to create assignment: ${createAssignmentResponse.status} - ${errorText}`);
+      }
+
+      const createdAssignments = await createAssignmentResponse.json();
+      const assignmentId = createdAssignments[0]?.id;
+
+      if (!assignmentId) {
+        throw new Error("Assignment created but no ID returned");
+      }
+
+      // Step 5: Convert due date to ISO 8601 if provided
+      let dueAt = null;
+      if (draft.dueAt) {
+        try {
+          const dueDate = new Date(draft.dueAt);
+          if (!isNaN(dueDate.getTime())) {
+            dueAt = dueDate.toISOString();
+          }
+        } catch (err) {
+          console.warn("[tc-work] Invalid due date:", err);
+        }
+      }
+
+      // Step 6: Call issue-assignment endpoint
+      const issueResponse = await fetch("/.netlify/functions/teacher-issue-assignment", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
         credentials: "same-origin",
         body: JSON.stringify({
-          assignment_id: parseInt(assignmentId, 10),
+          assignment_id: assignmentId,
           student_ids: studentIds,
           due_at: dueAt,
           settings: {}
         })
       });
-      
-      if (!response.ok) {
-        throw new Error(`Server returned ${response.status}`);
+
+      if (!issueResponse.ok) {
+        throw new Error(`Issue failed: ${issueResponse.status}`);
       }
-      
-      const result = await response.json();
-      
-      if (result.ok) {
-        const issued = result.inserted_count || 0;
-        const skipped = result.skipped_count || 0;
-        
-        if (progressText) {
-          progressText.textContent = `Complete: ${issued} issued${skipped > 0 ? `, ${skipped} skipped` : ""}`;
-        }
-        
-        setMsg("ok", `Successfully issued assignment to ${issued} student(s)`);
-        setTimeout(clearMsg, 3000);
-        
-        // Clear selections after success
-        if ($("issueAssignmentSelect")) $("issueAssignmentSelect").value = "";
-        const studentsSelect = $("issueStudentsSelect");
-        if (studentsSelect) {
-          Array.from(studentsSelect.options).forEach(opt => opt.selected = false);
-        }
-        if ($("issueDueDate")) $("issueDueDate").value = "";
+
+      const issueResult = await issueResponse.json();
+
+      if (issueResult.ok) {
+        const issued = issueResult.inserted_count || 0;
+        const skipped = issueResult.skipped_count || 0;
+        setMsg("ok", `✓ Issued to ${issued} student(s) in ${className}${skipped > 0 ? ` (${skipped} skipped)` : ""}`);
+        setTimeout(clearMsg, 5000);
       } else {
-        throw new Error(result.error || "Failed to issue assignment");
+        throw new Error(issueResult.error || "Issue failed");
       }
     } catch (err) {
-      console.error("[tc-work] Issue assignment error:", err);
-      if (progressText) progressText.textContent = "Error: " + err.message;
-      setMsg("err", "Failed to issue assignment: " + err.message);
+      console.error("[tc-work] Issue draft error:", err);
+      setMsg("err", `Failed to issue: ${err.message}`);
       setTimeout(clearMsg, 5000);
     }
-    
-    // Hide progress after 3 seconds
-    setTimeout(() => {
-      if (progressDiv) progressDiv.style.display = "none";
-    }, 3000);
   }
 
+  // Issue Assignment functionality
   function init() {
     const drafts = readDrafts();
     renderTable(drafts);
@@ -1498,10 +1509,6 @@ ${shown}
     if (_fe) _fe.addEventListener("click", fillExample);
     const _ce = $("btnCancelEdit");
     if (_ce) _ce.addEventListener("click", cancelEdit);
-    
-    // Wire up Issue Assignment button
-    const _ia = $("btnIssueAssignment");
-    if (_ia) _ia.addEventListener("click", handleIssueAssignment);
 
     installStudentPreviewSanitizer();
 
@@ -1510,10 +1517,6 @@ ${shown}
     
     // Background sync with Supabase (non-blocking)
     remoteLoadDrafts();
-    
-    // Populate Issue Assignment dropdowns (non-blocking)
-    populateAssignmentSelect().catch(err => console.warn("[tc-work] Failed to populate assignments:", err));
-    populateStudentsSelect().catch(err => console.warn("[tc-work] Failed to populate students:", err));
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
