@@ -235,7 +235,13 @@ exports.handler = async (event) => {
       console.log(`[teacher-issue-draft] [${requestId}] Found ${studentCodes.length} student codes from enrollments table, looking up student IDs`);
 
       // Look up students by their codes to get UUIDs
-      const studentsLookupUrl = `${SUPABASE_URL}/rest/v1/students?select=id,code&code=in.(${studentCodes.map(c => `"${c}"`).join(',')})`;
+      // Properly escape student codes for PostgREST 'in' operator (requires double quotes and proper escaping)
+      const escapedCodes = studentCodes.map(c => {
+        // Escape double quotes and backslashes in the code
+        const escaped = c.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+        return `"${escaped}"`;
+      });
+      const studentsLookupUrl = `${SUPABASE_URL}/rest/v1/students?select=id,code&code=in.(${escapedCodes.join(',')})`;
       
       const studentsLookupResponse = await fetch(studentsLookupUrl, {
         method: 'GET',
