@@ -429,44 +429,322 @@
         font-weight: 600;
       }
       
-      .placeholder-card {
-        background: var(--panel-2);
-        border: 1px solid var(--line);
+      /* Assignment Cards */
+      .st-assignment-card {
+        border: 1px solid rgba(255, 255, 255, 0.12);
         border-radius: 12px;
-        padding: 20px;
-        text-align: center;
+        padding: 16px;
+        margin-bottom: 16px;
+        background: rgba(255, 255, 255, 0.04);
+        transition: all 0.2s ease;
+        cursor: pointer;
       }
       
-      .placeholder-icon {
-        font-size: 32px;
+      .st-assignment-card:hover {
+        background: rgba(255, 255, 255, 0.06);
+        border-color: rgba(255, 255, 255, 0.18);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      }
+      
+      .st-assignment-title {
+        font-weight: 700;
+        color: var(--ink);
+        font-size: 16px;
+        margin: 0 0 8px 0;
+      }
+      
+      .st-assignment-meta {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        align-items: center;
+        color: var(--muted);
+        font-size: 13px;
         margin-bottom: 8px;
       }
       
-      .placeholder-title {
-        margin: 0 0 8px 0;
-        font-size: 1rem;
-        color: var(--ink);
-        font-weight: 700;
+      .st-assignment-status {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: capitalize;
       }
       
-      .placeholder-desc {
+      .st-assignment-status.assigned {
+        background: rgba(59, 130, 246, 0.15);
+        color: rgba(59, 130, 246, 1);
+        border: 1px solid rgba(59, 130, 246, 0.3);
+      }
+      
+      .st-assignment-status.in-progress {
+        background: rgba(251, 191, 36, 0.15);
+        color: rgba(251, 191, 36, 1);
+        border: 1px solid rgba(251, 191, 36, 0.3);
+      }
+      
+      .st-assignment-status.submitted {
+        background: rgba(34, 197, 94, 0.15);
+        color: rgba(34, 197, 94, 1);
+        border: 1px solid rgba(34, 197, 94, 0.3);
+      }
+      
+      .st-assignment-status.graded {
+        background: rgba(16, 185, 129, 0.15);
+        color: rgba(16, 185, 129, 1);
+        border: 1px solid rgba(16, 185, 129, 0.3);
+      }
+      
+      .st-assignment-score {
+        font-weight: 700;
+        font-size: 14px;
+      }
+      
+      .st-assignment-score.good {
+        color: rgba(34, 197, 94, 1);
+      }
+      
+      .st-assignment-score.poor {
+        color: rgba(239, 68, 68, 1);
+      }
+      
+      /* Assignment Viewer Overlay */
+      .assignment-viewer-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 1000;
+        background: var(--base);
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+      }
+      
+      .assignment-viewer-header {
+        background: var(--panel);
+        border-bottom: 1px solid var(--line);
+        padding: 16px 24px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+      }
+      
+      .assignment-viewer-back {
+        background: none;
+        border: none;
+        color: var(--brand-2);
+        cursor: pointer;
+        font-size: 15px;
+        font-weight: 600;
+        padding: 8px 12px;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+        font-family: inherit;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      
+      .assignment-viewer-back:hover {
+        background: rgba(6, 182, 212, 0.1);
+        color: var(--brand);
+      }
+      
+      .assignment-viewer-title {
+        flex: 1;
+        font-size: 18px;
+        font-weight: 800;
+        color: var(--ink);
         margin: 0;
+      }
+      
+      .assignment-viewer-due {
         color: var(--muted);
         font-size: 14px;
       }
       
-      .placeholder-status {
-        margin: 8px 0 0 0;
-        color: var(--brand-2);
-        font-size: 13px;
-        font-weight: 600;
+      .assignment-viewer-content {
+        flex: 1;
+        max-width: 900px;
+        width: 100%;
+        margin: 0 auto;
+        padding: 32px 24px;
       }
       
-      .placeholder-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 16px;
+      .assignment-viewer-progress {
+        text-align: center;
         margin-bottom: 24px;
+      }
+      
+      .assignment-viewer-progress-text {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--muted);
+        margin-bottom: 8px;
+      }
+      
+      .assignment-viewer-progress-bar {
+        height: 6px;
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 3px;
+        overflow: hidden;
+      }
+      
+      .assignment-viewer-progress-fill {
+        height: 100%;
+        background: var(--brand);
+        transition: width 0.3s ease;
+      }
+      
+      .assignment-question-container {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 32px;
+      }
+      
+      .assignment-question-text {
+        font-size: 1.1rem;
+        line-height: 1.7;
+        color: var(--ink);
+        margin: 0 0 24px 0;
+        white-space: pre-wrap;
+      }
+      
+      .assignment-answer-choice {
+        background: var(--panel-2);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 16px 20px;
+        margin-bottom: 12px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-height: 48px;
+      }
+      
+      .assignment-answer-choice:hover {
+        background: rgba(255, 255, 255, 0.06);
+        border-color: rgba(255, 255, 255, 0.18);
+      }
+      
+      .assignment-answer-choice.selected {
+        border-color: rgba(34, 197, 94, 0.45);
+        background: rgba(34, 197, 94, 0.08);
+        box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.18);
+      }
+      
+      .assignment-answer-choice input[type="radio"],
+      .assignment-answer-choice input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+        margin: 0;
+      }
+      
+      .assignment-answer-choice label {
+        cursor: pointer;
+        flex: 1;
+        margin: 0;
+        font-size: 15px;
+        color: var(--ink);
+        font-weight: 500;
+      }
+      
+      .assignment-textarea {
+        width: 100%;
+        background: var(--panel-2);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 10px;
+        color: var(--ink);
+        padding: 12px 14px;
+        font-size: 15px;
+        font-family: inherit;
+        transition: all 0.2s ease;
+        min-height: 120px;
+        resize: vertical;
+      }
+      
+      .assignment-textarea:focus {
+        outline: 2px solid rgba(34, 197, 94, 0.35);
+        border-color: rgba(34, 197, 94, 0.45);
+        box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.18);
+      }
+      
+      .assignment-viewer-nav {
+        display: flex;
+        gap: 12px;
+        justify-content: center;
+      }
+      
+      .assignment-viewer-nav .btn {
+        min-width: 120px;
+      }
+      
+      .assignment-success-screen {
+        text-align: center;
+        padding: 60px 24px;
+      }
+      
+      .assignment-success-icon {
+        font-size: 72px;
+        margin-bottom: 24px;
+      }
+      
+      .assignment-success-title {
+        font-size: 2rem;
+        font-weight: 800;
+        color: var(--ink);
+        margin: 0 0 16px 0;
+      }
+      
+      .assignment-success-message {
+        font-size: 1.1rem;
+        color: var(--ink-dim);
+        margin: 0 0 32px 0;
+      }
+      
+      .assignment-success-score {
+        background: rgba(34, 197, 94, 0.15);
+        border: 1px solid rgba(34, 197, 94, 0.3);
+        border-radius: 12px;
+        padding: 20px;
+        margin: 0 auto 32px auto;
+        max-width: 300px;
+      }
+      
+      .assignment-success-score-value {
+        font-size: 2.5rem;
+        font-weight: 900;
+        color: rgba(34, 197, 94, 1);
+        margin: 0;
+      }
+      
+      .assignment-url-link {
+        background: linear-gradient(180deg, rgba(34, 197, 94, 1), rgba(22, 163, 74, 1));
+        color: #032313;
+        border: none;
+        border-radius: 10px;
+        font-weight: 800;
+        font-size: 16px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 4px 16px rgba(34, 197, 94, 0.35);
+        font-family: inherit;
+        padding: 14px 24px;
+        text-decoration: none;
+        display: inline-block;
+      }
+      
+      .assignment-url-link:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(34, 197, 94, 0.45);
       }
       
       @media (max-width: 768px) {
@@ -487,9 +765,32 @@
           gap: 8px;
         }
         
-        /* Stack placeholder cards on mobile */
-        .placeholder-grid {
-          grid-template-columns: 1fr;
+        .assignment-viewer-header {
+          padding: 12px 16px;
+        }
+        
+        .assignment-viewer-title {
+          font-size: 16px;
+        }
+        
+        .assignment-viewer-content {
+          padding: 24px 16px;
+        }
+        
+        .assignment-question-container {
+          padding: 20px 16px;
+        }
+        
+        .assignment-question-text {
+          font-size: 1rem;
+        }
+        
+        .assignment-viewer-nav {
+          flex-direction: column;
+        }
+        
+        .assignment-viewer-nav .btn {
+          width: 100%;
         }
       }
     </style>
@@ -606,29 +907,20 @@
             </div>
           </div>
           
-          <!-- Placeholder Cards Grid -->
-          <div class="placeholder-grid">
-            <div class="placeholder-card">
-              <div class="placeholder-icon">📚</div>
-              <h3 class="placeholder-title">Assignments</h3>
-              <p class="placeholder-desc">View and submit your assignments</p>
-              <p class="placeholder-status">Coming soon</p>
+          <!-- Assignments Section -->
+          <div class="dashboard-section" id="assignmentsSection">
+            <div class="dashboard-section-header">
+              <h2 class="dashboard-section-title">📚 My Assignments</h2>
+              <span class="dashboard-section-count" id="assignmentsCount">Loading...</span>
             </div>
-            
-            <div class="placeholder-card">
-              <div class="placeholder-icon">📊</div>
-              <h3 class="placeholder-title">Grades</h3>
-              <p class="placeholder-desc">View your grades and performance</p>
-              <p class="placeholder-status">Coming soon</p>
+            <div id="assignmentsContent">
+              <!-- Assignments will be loaded here by JavaScript -->
             </div>
           </div>
           
           <!-- Action Buttons -->
           <div style="display: flex; gap: 12px; justify-content: center;">
-            <button class="btn" id="btnReturnHub" style="flex: 1; max-width: 200px;">
-              Return to Hub
-            </button>
-            <button class="btn primary" id="btnLogout" style="flex: 1; max-width: 200px;">
+            <button class="btn primary" id="btnLogout" style="max-width: 200px;">
               Sign Out
             </button>
           </div>

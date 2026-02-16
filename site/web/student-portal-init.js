@@ -496,6 +496,645 @@
   }
 
   // ============================================================================
+  // Student Assignments Loading and Viewer
+  // ============================================================================
+  
+  // Assignment viewer state
+  const assignmentViewerState = {
+    currentAssignment: null,
+    currentQuestionIndex: 0,
+    answers: new Map(),
+  };
+  
+  /**
+   * Load and render student assignments
+   */
+  async function loadStudentAssignments(studentCode) {
+    console.log(LOG_PREFIX, 'Loading assignments for:', studentCode);
+    
+    const assignmentsContainer = document.getElementById('assignmentsContent');
+    const assignmentsCount = document.getElementById('assignmentsCount');
+    
+    if (!assignmentsContainer) {
+      console.warn(LOG_PREFIX, 'Assignments container not found');
+      return;
+    }
+    
+    // Show loading state
+    assignmentsContainer.innerHTML = `
+      <div style="text-align: center; padding: 40px; color: var(--muted);">
+        <div style="font-size: 48px; margin-bottom: 16px;">⏳</div>
+        <div>Loading your assignments...</div>
+      </div>
+    `;
+    
+    try {
+      const assignmentsUrl = `/.netlify/functions/student-assignments?code=${encodeURIComponent(studentCode)}`;
+      const response = await fetch(assignmentsUrl);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch assignments: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (!data.ok) {
+        throw new Error(data.error || 'Failed to load assignments');
+      }
+      
+      const instances = data.instances || [];
+      
+      // Render assignments
+      if (instances.length === 0) {
+        assignmentsContainer.innerHTML = `
+          <div style="text-align: center; padding: 40px; color: var(--muted);">
+            <div style="font-size: 48px; margin-bottom: 16px;">📚</div>
+            <div>No assignments yet</div>
+          </div>
+        `;
+        if (assignmentsCount) {
+          assignmentsCount.textContent = '0 assignments';
+        }
+      } else {
+        assignmentsContainer.innerHTML = instances.map(inst => renderAssignmentCard(inst)).join('');
+        if (assignmentsCount) {
+          assignmentsCount.textContent = instances.length === 1 ? '1 assignment' : `${instances.length} assignments`;
+        }
+        
+        // Attach click handlers
+        attachAssignmentCardHandlers(instances);
+      }
+      
+    } catch (err) {
+      console.error(LOG_PREFIX, 'Error loading assignments:', err);
+      assignmentsContainer.innerHTML = `
+        <div style="text-align: center; padding: 40px; color: var(--muted);">
+          <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
+          <div style="color: var(--ink);">Assignments temporarily unavailable</div>
+          <div style="margin-top: 8px; font-size: 14px;">Please try refreshing the page or contact your teacher if this persists.</div>
+        </div>
+      `;
+      if (assignmentsCount) {
+        assignmentsCount.textContent = 'Unavailable';
+      }
+    }
+  }
+  
+  /**
+   * Render an assignment card
+   */
+  function renderAssignmentCard(instance) {
+    const assignment = instance.assignment || {};
+    const title = escapeHtml(assignment.title || 'Untitled Assignment');
+    const series = escapeHtml(assignment.series || 'General');
+    const dueDate = instance.due_at ? formatDate(instance.due_at) : 'No due date';
+    const status = (instance.status || 'Assigned').toLowerCase().replace(/\s+/g, '-');
+    const statusText = escapeHtml(instance.status || 'Assigned');
+    
+    // TODO: Get score from submissions when available
+    const score = null;
+    const scoreHtml = score !== null ? `
+      <span class="st-assignment-score ${score >= 70 ? 'good' : 'poor'}">
+        ${Math.round(score)}%
+      </span>
+    ` : '';
+    
+    return `
+      <div class="st-assignment-card" data-instance-id="${escapeHtml(instance.id)}">
+        <h3 class="st-assignment-title">${title}</h3>
+        <div class="st-assignment-meta">
+          <span>${series}</span>
+          <span>•</span>
+          <span>Due: ${dueDate}</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <span class="st-assignment-status ${status}">${statusText}</span>
+          ${scoreHtml}
+        </div>
+      </div>
+    `;
+  }
+  
+  /**
+   * Attach click handlers to assignment cards
+   */
+  function attachAssignmentCardHandlers(instances) {
+    const cards = document.querySelectorAll('.st-assignment-card');
+    cards.forEach(card => {
+      card.addEventListener('click', function() {
+        const instanceId = this.getAttribute('data-instance-id');
+        const instance = instances.find(i => i.id === instanceId);
+        if (instance) {
+          openAssignmentViewer(instance);
+        }
+      });
+    });
+  }
+  
+  /**
+   * Open the assignment viewer overlay
+   */
+  function openAssignmentViewer(instance) {
+    console.log(LOG_PREFIX, 'Opening assignment viewer for:', instance.id);
+    
+    assignmentViewerState.currentAssignment = instance;
+    assignmentViewerState.currentQuestionIndex = 0;
+    assignmentViewerState.answers = new Map();
+    
+    const assignment = instance.assignment || {};
+    const questions = (assignment.meta && assignment.meta.questions) || [];
+    
+    // Create overlay element
+    const overlay = document.createElement('div');
+    overlay.className = 'assignment-viewer-overlay';
+    overlay.id = 'assignmentViewerOverlay';
+    
+    // Build the viewer UI
+    if (questions.length === 0 && assignment.page) {
+      // URL-based assignment
+      renderUrlAssignment(overlay, instance);
+    } else if (questions.length === 0) {
+      // No content
+      renderNoContent(overlay, instance);
+    } else {
+      // Question-based assignment
+      renderQuestionViewer(overlay, instance);
+    }
+    
+    document.body.appendChild(overlay);
+  }
+  
+  /**
+   * Render URL-based assignment
+   */
+  function renderUrlAssignment(overlay, instance) {
+    const assignment = instance.assignment || {};
+    const title = escapeHtml(assignment.title || 'Assignment');
+    const url = assignment.page || '';
+    
+    overlay.innerHTML = `
+      <div class="assignment-viewer-header">
+        <button class="assignment-viewer-back" id="viewerBackBtn">
+          ← Back to Dashboard
+        </button>
+        <h1 class="assignment-viewer-title">${title}</h1>
+      </div>
+      <div class="assignment-viewer-content">
+        <div style="text-align: center; padding: 60px 24px;">
+          <div style="font-size: 72px; margin-bottom: 24px;">🔗</div>
+          <h2 style="font-size: 1.5rem; font-weight: 800; color: var(--ink); margin: 0 0 16px 0;">
+            External Assignment
+          </h2>
+          <p style="font-size: 1rem; color: var(--ink-dim); margin: 0 0 32px 0;">
+            This assignment is hosted on an external website. Click the button below to open it.
+          </p>
+          <a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="assignment-url-link">
+            Open Assignment
+          </a>
+          <div style="margin-top: 32px;">
+            <button class="btn" id="markCompleteBtn">Mark as Complete</button>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    // Attach handlers
+    document.getElementById('viewerBackBtn').addEventListener('click', closeAssignmentViewer);
+    document.getElementById('markCompleteBtn').addEventListener('click', () => {
+      // TODO: Mark as complete
+      alert('This feature will be implemented when submission tracking is added.');
+    });
+  }
+  
+  /**
+   * Render no content message
+   */
+  function renderNoContent(overlay, instance) {
+    const assignment = instance.assignment || {};
+    const title = escapeHtml(assignment.title || 'Assignment');
+    
+    overlay.innerHTML = `
+      <div class="assignment-viewer-header">
+        <button class="assignment-viewer-back" id="viewerBackBtn">
+          ← Back to Dashboard
+        </button>
+        <h1 class="assignment-viewer-title">${title}</h1>
+      </div>
+      <div class="assignment-viewer-content">
+        <div style="text-align: center; padding: 60px 24px;">
+          <div style="font-size: 72px; margin-bottom: 24px;">📭</div>
+          <h2 style="font-size: 1.5rem; font-weight: 800; color: var(--ink); margin: 0 0 16px 0;">
+            No Content Available
+          </h2>
+          <p style="font-size: 1rem; color: var(--ink-dim); margin: 0;">
+            This assignment has no content yet. Please check back later or contact your teacher.
+          </p>
+        </div>
+      </div>
+    `;
+    
+    document.getElementById('viewerBackBtn').addEventListener('click', closeAssignmentViewer);
+  }
+  
+  /**
+   * Render question-based viewer
+   */
+  function renderQuestionViewer(overlay, instance) {
+    const assignment = instance.assignment || {};
+    const title = escapeHtml(assignment.title || 'Assignment');
+    const dueDate = instance.due_at ? formatDate(instance.due_at) : '';
+    
+    overlay.innerHTML = `
+      <div class="assignment-viewer-header">
+        <button class="assignment-viewer-back" id="viewerBackBtn">
+          ← Back to Dashboard
+        </button>
+        <h1 class="assignment-viewer-title">${title}</h1>
+        ${dueDate ? `<span class="assignment-viewer-due">Due: ${dueDate}</span>` : ''}
+      </div>
+      <div class="assignment-viewer-content" id="viewerContent">
+        <!-- Content will be rendered here -->
+      </div>
+    `;
+    
+    document.getElementById('viewerBackBtn').addEventListener('click', closeAssignmentViewer);
+    
+    // Render current question
+    renderCurrentQuestion();
+  }
+  
+  /**
+   * Render the current question
+   */
+  function renderCurrentQuestion() {
+    const instance = assignmentViewerState.currentAssignment;
+    const assignment = instance.assignment || {};
+    const questions = (assignment.meta && assignment.meta.questions) || [];
+    const currentIndex = assignmentViewerState.currentQuestionIndex;
+    const question = questions[currentIndex];
+    
+    if (!question) return;
+    
+    const viewerContent = document.getElementById('viewerContent');
+    if (!viewerContent) return;
+    
+    const totalQuestions = questions.length;
+    const progressPercent = ((currentIndex + 1) / totalQuestions) * 100;
+    
+    viewerContent.innerHTML = `
+      <div class="assignment-viewer-progress">
+        <div class="assignment-viewer-progress-text">Question ${currentIndex + 1} of ${totalQuestions}</div>
+        <div class="assignment-viewer-progress-bar">
+          <div class="assignment-viewer-progress-fill" style="width: ${progressPercent}%"></div>
+        </div>
+      </div>
+      
+      <div class="assignment-question-container">
+        <div class="assignment-question-text">${escapeHtml(question.text || '')}</div>
+        <div id="answerArea">
+          <!-- Answer inputs will be rendered here -->
+        </div>
+      </div>
+      
+      <div class="assignment-viewer-nav">
+        <button class="btn" id="prevBtn" ${currentIndex === 0 ? 'disabled' : ''}>
+          Previous
+        </button>
+        <button class="btn" id="nextBtn">
+          ${currentIndex === totalQuestions - 1 ? 'Submit' : 'Next'}
+        </button>
+      </div>
+    `;
+    
+    // Render answer inputs based on question type
+    renderAnswerInput(question);
+    
+    // Attach navigation handlers
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    
+    if (prevBtn) {
+      prevBtn.addEventListener('click', handlePreviousQuestion);
+    }
+    
+    if (nextBtn) {
+      nextBtn.addEventListener('click', () => {
+        const questions = (instance.assignment.meta && instance.assignment.meta.questions) || [];
+        if (currentIndex === questions.length - 1) {
+          handleSubmitAssignment();
+        } else {
+          handleNextQuestion();
+        }
+      });
+    }
+  }
+  
+  /**
+   * Render answer input based on question type
+   */
+  function renderAnswerInput(question) {
+    const answerArea = document.getElementById('answerArea');
+    if (!answerArea) return;
+    
+    const questionId = question.question_id || `q${assignmentViewerState.currentQuestionIndex}`;
+    const answerType = (question.answer_type || 'mcq').toLowerCase();
+    const choices = question.choices || [];
+    const savedAnswer = assignmentViewerState.answers.get(questionId);
+    
+    if (answerType === 'mcq') {
+      // Multiple choice
+      answerArea.innerHTML = choices.map((choice, idx) => {
+        const choiceId = `choice_${idx}`;
+        const isChecked = savedAnswer === choice;
+        return `
+          <div class="assignment-answer-choice ${isChecked ? 'selected' : ''}" data-choice="${escapeHtml(choice)}">
+            <input 
+              type="radio" 
+              name="answer" 
+              id="${choiceId}" 
+              value="${escapeHtml(choice)}"
+              ${isChecked ? 'checked' : ''}
+            />
+            <label for="${choiceId}">${escapeHtml(choice)}</label>
+          </div>
+        `;
+      }).join('');
+      
+      // Add click handlers
+      answerArea.querySelectorAll('.assignment-answer-choice').forEach(choiceEl => {
+        choiceEl.addEventListener('click', function() {
+          const radio = this.querySelector('input[type="radio"]');
+          if (radio) {
+            radio.checked = true;
+            // Update visual state
+            answerArea.querySelectorAll('.assignment-answer-choice').forEach(el => {
+              el.classList.remove('selected');
+            });
+            this.classList.add('selected');
+            // Save answer
+            const choice = this.getAttribute('data-choice');
+            assignmentViewerState.answers.set(questionId, choice);
+          }
+        });
+      });
+      
+    } else if (answerType === 'boolean' || answerType === 'true-false') {
+      // True/False
+      const trueChecked = savedAnswer === 'True';
+      const falseChecked = savedAnswer === 'False';
+      
+      answerArea.innerHTML = `
+        <div class="assignment-answer-choice ${trueChecked ? 'selected' : ''}" data-choice="True">
+          <input 
+            type="radio" 
+            name="answer" 
+            id="choice_true" 
+            value="True"
+            ${trueChecked ? 'checked' : ''}
+          />
+          <label for="choice_true">True</label>
+        </div>
+        <div class="assignment-answer-choice ${falseChecked ? 'selected' : ''}" data-choice="False">
+          <input 
+            type="radio" 
+            name="answer" 
+            id="choice_false" 
+            value="False"
+            ${falseChecked ? 'checked' : ''}
+          />
+          <label for="choice_false">False</label>
+        </div>
+      `;
+      
+      answerArea.querySelectorAll('.assignment-answer-choice').forEach(choiceEl => {
+        choiceEl.addEventListener('click', function() {
+          const radio = this.querySelector('input[type="radio"]');
+          if (radio) {
+            radio.checked = true;
+            answerArea.querySelectorAll('.assignment-answer-choice').forEach(el => {
+              el.classList.remove('selected');
+            });
+            this.classList.add('selected');
+            const choice = this.getAttribute('data-choice');
+            assignmentViewerState.answers.set(questionId, choice);
+          }
+        });
+      });
+      
+    } else if (answerType === 'multiselect' || answerType === 'multi-select') {
+      // Multiple select
+      const savedAnswers = savedAnswer ? (Array.isArray(savedAnswer) ? savedAnswer : [savedAnswer]) : [];
+      
+      answerArea.innerHTML = choices.map((choice, idx) => {
+        const choiceId = `choice_${idx}`;
+        const isChecked = savedAnswers.includes(choice);
+        return `
+          <div class="assignment-answer-choice ${isChecked ? 'selected' : ''}" data-choice="${escapeHtml(choice)}">
+            <input 
+              type="checkbox" 
+              name="answer[]" 
+              id="${choiceId}" 
+              value="${escapeHtml(choice)}"
+              ${isChecked ? 'checked' : ''}
+            />
+            <label for="${choiceId}">${escapeHtml(choice)}</label>
+          </div>
+        `;
+      }).join('');
+      
+      answerArea.querySelectorAll('.assignment-answer-choice').forEach(choiceEl => {
+        choiceEl.addEventListener('click', function(e) {
+          if (e.target.tagName !== 'INPUT') {
+            const checkbox = this.querySelector('input[type="checkbox"]');
+            if (checkbox) {
+              checkbox.checked = !checkbox.checked;
+            }
+          }
+          const checkbox = this.querySelector('input[type="checkbox"]');
+          if (checkbox.checked) {
+            this.classList.add('selected');
+          } else {
+            this.classList.remove('selected');
+          }
+          
+          // Save all checked answers
+          const checked = Array.from(answerArea.querySelectorAll('input[type="checkbox"]:checked'))
+            .map(cb => cb.value);
+          assignmentViewerState.answers.set(questionId, checked);
+        });
+      });
+      
+    } else {
+      // Constructed response (text area)
+      const savedText = savedAnswer || '';
+      answerArea.innerHTML = `
+        <textarea 
+          class="assignment-textarea" 
+          id="answerTextarea" 
+          placeholder="Type your answer..."
+        >${escapeHtml(savedText)}</textarea>
+      `;
+      
+      const textarea = document.getElementById('answerTextarea');
+      if (textarea) {
+        textarea.addEventListener('input', function() {
+          assignmentViewerState.answers.set(questionId, this.value);
+        });
+      }
+    }
+  }
+  
+  /**
+   * Handle previous question
+   */
+  function handlePreviousQuestion() {
+    if (assignmentViewerState.currentQuestionIndex > 0) {
+      assignmentViewerState.currentQuestionIndex--;
+      renderCurrentQuestion();
+    }
+  }
+  
+  /**
+   * Handle next question
+   */
+  function handleNextQuestion() {
+    const instance = assignmentViewerState.currentAssignment;
+    const questions = (instance.assignment.meta && instance.assignment.meta.questions) || [];
+    
+    if (assignmentViewerState.currentQuestionIndex < questions.length - 1) {
+      assignmentViewerState.currentQuestionIndex++;
+      renderCurrentQuestion();
+    }
+  }
+  
+  /**
+   * Handle assignment submission
+   */
+  async function handleSubmitAssignment() {
+    const instance = assignmentViewerState.currentAssignment;
+    const studentCode = sessionStorage.getItem('rc_user_code');
+    
+    if (!instance || !studentCode) {
+      console.error(LOG_PREFIX, 'Missing instance or student code');
+      return;
+    }
+    
+    // Convert answers Map to object
+    const answersObj = {};
+    assignmentViewerState.answers.forEach((value, key) => {
+      answersObj[key] = value;
+    });
+    
+    try {
+      // Show loading state
+      const viewerContent = document.getElementById('viewerContent');
+      if (viewerContent) {
+        viewerContent.innerHTML = `
+          <div style="text-align: center; padding: 60px 24px;">
+            <div style="font-size: 72px; margin-bottom: 24px;">⏳</div>
+            <div style="font-size: 1.2rem; color: var(--ink);">Submitting your work...</div>
+          </div>
+        `;
+      }
+      
+      // Submit to server
+      const response = await fetch('/.netlify/functions/submissions-create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          assignment_id: instance.assignment_id,
+          student_name: studentCode,
+          content: JSON.stringify(answersObj),
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Submission failed: ${response.status}`);
+      }
+      
+      // Show success screen
+      renderSuccessScreen(instance);
+      
+    } catch (err) {
+      console.error(LOG_PREFIX, 'Error submitting assignment:', err);
+      alert('Failed to submit assignment. Please try again or contact your teacher.');
+    }
+  }
+  
+  /**
+   * Render success screen after submission
+   */
+  function renderSuccessScreen(instance) {
+    const viewerContent = document.getElementById('viewerContent');
+    if (!viewerContent) return;
+    
+    const assignment = instance.assignment || {};
+    const questions = (assignment.meta && assignment.meta.questions) || [];
+    
+    // Simple client-side scoring for MCQ/boolean
+    let score = null;
+    let correctCount = 0;
+    let totalCount = 0;
+    
+    questions.forEach((q, idx) => {
+      const questionId = q.question_id || `q${idx}`;
+      const userAnswer = assignmentViewerState.answers.get(questionId);
+      const correctAnswer = q.correct;
+      
+      if (correctAnswer && (q.answer_type === 'mcq' || q.answer_type === 'boolean' || q.answer_type === 'true-false')) {
+        totalCount++;
+        if (userAnswer === correctAnswer) {
+          correctCount++;
+        }
+      }
+    });
+    
+    if (totalCount > 0) {
+      score = (correctCount / totalCount) * 100;
+    }
+    
+    viewerContent.innerHTML = `
+      <div class="assignment-success-screen">
+        <div class="assignment-success-icon">✅</div>
+        <h2 class="assignment-success-title">Assignment Submitted!</h2>
+        ${score !== null ? `
+          <div class="assignment-success-score">
+            <p class="assignment-success-score-value">${Math.round(score)}%</p>
+          </div>
+        ` : ''}
+        <p class="assignment-success-message">
+          ${score !== null ? 
+            `You got ${correctCount} out of ${totalCount} questions correct.` : 
+            'Your teacher will review your work.'}
+        </p>
+        <button class="btn" id="backToDashboardBtn">Back to Dashboard</button>
+      </div>
+    `;
+    
+    document.getElementById('backToDashboardBtn').addEventListener('click', closeAssignmentViewer);
+  }
+  
+  /**
+   * Close the assignment viewer
+   */
+  function closeAssignmentViewer() {
+    const overlay = document.getElementById('assignmentViewerOverlay');
+    if (overlay) {
+      overlay.remove();
+    }
+    
+    // Reload assignments to reflect updated status
+    const studentCode = sessionStorage.getItem('rc_user_code');
+    if (studentCode) {
+      loadStudentAssignments(studentCode).catch(err => {
+        console.error(LOG_PREFIX, 'Failed to reload assignments:', err);
+      });
+    }
+  }
+
+  // ============================================================================
   // PR student-portal-reliability: Network guardrails
   // ============================================================================
   // Block or warn about calls to teacher/admin/substitute endpoints from student pages
@@ -770,7 +1409,6 @@
     const dashboardView = document.getElementById('studentDashboardView');
     const studentCodeDisplay = document.getElementById('studentCodeDisplay');
     const btnLogout = document.getElementById('btnLogout');
-    const btnReturnHub = document.getElementById('btnReturnHub');
     
     // Hide login, show dashboard
     if (loginView) {
@@ -799,12 +1437,6 @@
         btnLogout.addEventListener('click', handleLogout);
       }
       
-      if (btnReturnHub) {
-        btnReturnHub.addEventListener('click', () => {
-          window.location.href = '/hub/';
-        });
-      }
-      
       state.dashboardHandlersAttached = true;
     }
     
@@ -814,6 +1446,11 @@
     if (studentCode) {
       loadStudentGoals(studentCode).catch(err => {
         console.error(LOG_PREFIX, 'Failed to load student goals:', err);
+      });
+      
+      // Load student assignments
+      loadStudentAssignments(studentCode).catch(err => {
+        console.error(LOG_PREFIX, 'Failed to load student assignments:', err);
       });
     }
   }
