@@ -236,6 +236,10 @@
   // PR fix-student-dashboard: Goals & Progress Loading
   // ============================================================================
   
+  // Constants for goal rendering
+  const MAX_DESC_LENGTH = 120; // Max characters before truncating description
+  const MONTHS_PER_QUARTER = 3; // Number of months in a quarter
+  
   // Goal area icons (matching teacher center)
   const GOAL_AREA_ICONS = {
     "Reading Comprehension": "📖",
@@ -373,6 +377,9 @@
         if (goalsCount) {
           goalsCount.textContent = goals.length === 1 ? '1 goal' : `${goals.length} goals`;
         }
+        
+        // Attach event listeners to "Show more" buttons
+        attachShowMoreListeners();
       }
       
     } catch (err) {
@@ -398,14 +405,14 @@
     const colorCategory = goalAreaToColorCategory(goal.goal_area);
     const fullDesc = goal.desc || goal.goal_text || '(No goal description provided)';
     
-    // Truncate description to 120 chars
+    // Truncate description to MAX_DESC_LENGTH chars
     let descHtml = '';
-    if (fullDesc.length > 120) {
-      const truncated = fullDesc.substring(0, 120);
+    if (fullDesc.length > MAX_DESC_LENGTH) {
+      const truncated = fullDesc.substring(0, MAX_DESC_LENGTH);
       descHtml = `
         <div class="st-goal-desc">
           <span class="st-goal-desc-short">${escapeHtml(truncated)}...</span>
-          <button class="st-goal-show-more" onclick="this.parentElement.classList.toggle('expanded')">Show more</button>
+          <button class="st-goal-show-more" data-goal-id="${goal.id}">Show more</button>
           <span class="st-goal-desc-full" style="display: none;">${escapeHtml(fullDesc)}</span>
         </div>
       `;
@@ -418,7 +425,7 @@
     
     // Calculate this quarter's data points
     const now = new Date();
-    const quarterStart = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
+    const quarterStart = new Date(now.getFullYear(), Math.floor(now.getMonth() / MONTHS_PER_QUARTER) * MONTHS_PER_QUARTER, 1);
     const thisQuarterEntries = progressEntries.filter(entry => {
       const entryDate = new Date(entry.date);
       return entryDate >= quarterStart;
@@ -471,6 +478,20 @@
         </div>
       </div>
     `;
+  }
+  
+  /**
+   * Attach event listeners to "Show more" buttons
+   */
+  function attachShowMoreListeners() {
+    const showMoreButtons = document.querySelectorAll('.st-goal-show-more');
+    showMoreButtons.forEach(button => {
+      button.addEventListener('click', function() {
+        const descContainer = this.parentElement;
+        descContainer.classList.toggle('expanded');
+        this.textContent = descContainer.classList.contains('expanded') ? 'Show less' : 'Show more';
+      });
+    });
   }
 
   // ============================================================================
