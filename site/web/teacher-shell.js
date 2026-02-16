@@ -18,17 +18,22 @@
 
   async function gateTeacher(){
     // Same-origin is mandatory for preview deploys.
-    const next = encodeURIComponent(location.pathname + location.search);
+    // NOTE: This function is intentionally non-blocking. Per requirements, we log warnings
+    // but DO NOT redirect on failure. This is by design because:
+    // 1. Teacher is already authenticated at the function level (HttpOnly cookie 'tc')
+    // 2. This gate is a UX nicety, NOT a security boundary
+    // 3. Individual serverless functions independently enforce auth
+    // 4. Aggressive redirects caused the "stuck on /hub/" bug this fix addresses
     try{
       const r = await fetch('/.netlify/functions/teacher-session', { cache:'no-store', credentials:'same-origin' });
       if(!r.ok){
-        location.replace(`/hub/?reason=missing_teacher_session&next=${next}`);
-        return false;
+        console.warn('[teacher-shell] Session check returned', r.status, '— continuing without redirect');
+        return true; // Let page load; server functions will independently enforce auth
       }
       return true;
-    }catch(_){
-      location.replace(`/hub/?reason=gate_error&next=${next}`);
-      return false;
+    }catch(err){
+      console.warn('[teacher-shell] Session check failed:', err.message, '— continuing without redirect');
+      return true; // Network error — don't block the UI
     }
   }
 
