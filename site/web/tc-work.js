@@ -2106,10 +2106,13 @@ function normalizeTaggedAssignmentText(input) {
 
   // ==================== Issue Assignment Section ====================
   
+  // Configuration constants
+  const DEFAULT_CLASSES = ["LA 1 SC", "LA 2 SC", "LA 3 SC", "LA 4 SC", "Life Skills", "Life Skills LA"];
+  
   // Global variables for issue assignment section
-  let ASSIGNMENTS_CACHE = [];
+  let assignmentsCache = [];
   window.STUDENTS = []; // Make it global for tests
-  let CLASSES_CACHE = [];
+  let classesCache = [];
   
   /**
    * Fetch assignments from the server
@@ -2136,15 +2139,15 @@ function normalizeTaggedAssignmentText(input) {
         return;
       }
       
-      ASSIGNMENTS_CACHE = data.assignments || [];
+      assignmentsCache = data.assignments || [];
       
-      if (ASSIGNMENTS_CACHE.length === 0) {
+      if (assignmentsCache.length === 0) {
         select.innerHTML = '<option value="">-- No assignments available --</option>';
         return;
       }
       
       select.innerHTML = '<option value="">-- Select an assignment --</option>' +
-        ASSIGNMENTS_CACHE.map(a => 
+        assignmentsCache.map(a => 
           `<option value="${a.id}">${escapeHtml(a.title || 'Untitled')} (${escapeHtml(a.type || 'unknown')})</option>`
         ).join('');
         
@@ -2208,17 +2211,15 @@ function normalizeTaggedAssignmentText(input) {
   }
   
   /**
-   * Populate classes select (placeholder for now - can be enhanced later)
+   * Populate classes select (using configuration - can be enhanced to fetch from API later)
    */
   function populateClassesSelect() {
     const select = $("issueClassesSelect");
     if (!select) return;
     
-    // Placeholder: Use hardcoded classes from the draft form
-    const classes = ["LA 1 SC", "LA 2 SC", "LA 3 SC", "LA 4 SC", "Life Skills", "Life Skills LA"];
-    CLASSES_CACHE = classes;
+    classesCache = DEFAULT_CLASSES;
     
-    select.innerHTML = classes.map(c => 
+    select.innerHTML = DEFAULT_CLASSES.map(c => 
       `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`
     ).join('');
   }
@@ -2283,19 +2284,33 @@ function normalizeTaggedAssignmentText(input) {
   function addClassStudents() {
     const classesSelect = $("issueClassesSelect");
     const studentsSelect = $("issueStudentsSelect");
+    const progressDiv = $("issueProgress");
+    const progressText = $("issueProgressText");
     
-    if (!classesSelect || !studentsSelect) return;
+    if (!classesSelect || !studentsSelect || !progressDiv || !progressText) return;
     
     const selectedClasses = Array.from(classesSelect.selectedOptions).map(opt => opt.value);
     
     if (selectedClasses.length === 0) {
-      alert("Please select at least one class first.");
+      progressDiv.style.display = "block";
+      progressText.textContent = "Please select at least one class first";
+      progressText.style.color = "#ef4444";
+      setTimeout(() => {
+        progressDiv.style.display = "none";
+        progressText.style.color = "";
+      }, 3000);
       return;
     }
     
-    // For now, since we don't have class membership data, just alert
+    // For now, since we don't have class membership data, show message
     // This can be enhanced when class roster data is available
-    alert(`Class filtering not yet implemented. Selected classes: ${selectedClasses.join(", ")}\n\nPlease select students manually for now.`);
+    progressDiv.style.display = "block";
+    progressText.textContent = `Class filtering not yet implemented. Selected: ${selectedClasses.join(", ")}. Please select students manually.`;
+    progressText.style.color = "#f59e0b";
+    setTimeout(() => {
+      progressDiv.style.display = "none";
+      progressText.style.color = "";
+    }, 5000);
   }
   
   /**
@@ -2372,8 +2387,8 @@ function normalizeTaggedAssignmentText(input) {
       // Convert due date to ISO format if provided
       let dueAtISO = null;
       if (dueDate) {
-        // dueDate is in YYYY-MM-DD format, convert to ISO 8601
-        dueAtISO = new Date(dueDate + "T23:59:59").toISOString();
+        // dueDate is in YYYY-MM-DD format, convert to ISO 8601 using UTC to avoid timezone issues
+        dueAtISO = new Date(dueDate + "T23:59:59Z").toISOString();
       }
       
       const response = await fetch("/.netlify/functions/teacher-issue-assignment", {
