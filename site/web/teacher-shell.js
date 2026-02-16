@@ -18,18 +18,60 @@
 
   async function gateTeacher(){
     // Same-origin is mandatory for preview deploys.
-    // NOTE: This function is intentionally non-blocking. Per requirements, we log warnings
-    // but DO NOT redirect on failure. This is by design because:
-    // 1. Teacher is already authenticated at the function level (HttpOnly cookie 'tc')
-    // 2. This gate is a UX nicety, NOT a security boundary
-    // 3. Individual serverless functions independently enforce auth
-    // 4. Aggressive redirects caused the "stuck on /hub/" bug this fix addresses
+    // Session check with redirect to /hub/ on auth failure.
+    // Loop prevention safeguards:
+    // 1. Don't redirect if already on /hub/ (the login page)
+    // 2. Use sessionStorage flag to prevent repeated redirect attempts
+    // 3. Network errors don't trigger redirect (may be temporary)
+    
+    const REDIRECT_FLAG_KEY = 'tc_auth_redirect_attempted';
+    const currentPath = location.pathname;
+    
     try{
       const r = await fetch('/.netlify/functions/teacher-session', { cache:'no-store', credentials:'same-origin' });
       if(!r.ok){
-        console.warn('[teacher-shell] Session check returned', r.status, '— continuing without redirect');
-        return true; // Let page load; server functions will independently enforce auth
+        console.warn('[teacher-shell] Session check returned', r.status);
+        
+        // Redirect to login page with safeguards to prevent loops
+        if(r.status === 401){
+          // Don't redirect if already on /hub/ (the login page)
+          if(currentPath === '/hub/' || currentPath === '/hub'){
+            console.warn('[teacher-shell] Already on login page, not redirecting');
+            return true;
+          }
+          
+          // Check if we've already tried redirecting in this session
+          try{
+            const alreadyRedirected = sessionStorage.getItem(REDIRECT_FLAG_KEY);
+            if(alreadyRedirected){
+              console.warn('[teacher-shell] Redirect already attempted in this session, not redirecting again to prevent loop');
+              return true;
+            }
+            
+            // Set flag to prevent redirect loop
+            sessionStorage.setItem(REDIRECT_FLAG_KEY, 'true');
+          }catch(_){
+            // sessionStorage may not be available, continue with redirect
+          }
+          
+          // Redirect to login page with reason parameter
+          console.log('[teacher-shell] Redirecting to /hub/ for authentication');
+          location.href = '/hub/?reason=session_expired';
+          return false;
+        }
+        
+        // Non-401 errors: let page load, server functions will enforce auth
+        console.warn('[teacher-shell] Non-401 status, continuing without redirect');
+        return true;
       }
+      
+      // Session is valid - clear redirect flag if it exists
+      try{
+        sessionStorage.removeItem(REDIRECT_FLAG_KEY);
+      }catch(_){
+        // sessionStorage may not be available, ignore
+      }
+      
       return true;
     }catch(err){
       console.warn('[teacher-shell] Session check failed:', err.message, '— continuing without redirect');
