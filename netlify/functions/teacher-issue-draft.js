@@ -175,12 +175,16 @@ exports.handler = async (event) => {
     }
 
     // Step 2: Fetch enrollments for this class
-    // NOTE: No active filter — production class_enrollments table does not have an active column
-    const enrollmentsUrl = `${SUPABASE_URL}/rest/v1/class_enrollments?select=student_id,students!inner(id,code,name)&class_id=eq.${encodeURIComponent(targetClass.id)}`;
+    // Try class_enrollments first (for forward compatibility), then fall back to enrollments table
+    let studentIds = [];
+    let enrollmentSource = '';
     
-    console.log(`[teacher-issue-draft] [${requestId}] Fetching class enrollments`);
+    // Primary: try class_enrollments table (UUID-based junction table)
+    const classEnrollmentsUrl = `${SUPABASE_URL}/rest/v1/class_enrollments?select=student_id,students!inner(id,code,name)&class_id=eq.${encodeURIComponent(targetClass.id)}`;
     
-    const enrollmentsResponse = await fetch(enrollmentsUrl, {
+    console.log(`[teacher-issue-draft] [${requestId}] Fetching class enrollments from class_enrollments table`);
+    
+    const classEnrollmentsResponse = await fetch(classEnrollmentsUrl, {
       method: 'GET',
       headers: {
         'apikey': SUPABASE_SERVICE_ROLE_KEY,
@@ -189,20 +193,77 @@ exports.handler = async (event) => {
       }
     });
 
-    if (!enrollmentsResponse.ok) {
-      console.error(`[teacher-issue-draft] [${requestId}] Enrollments query failed with status: ${enrollmentsResponse.status}`);
-      throw new Error(`Enrollments query failed: ${enrollmentsResponse.status}`);
+    if (!classEnrollmentsResponse.ok) {
+      console.error(`[teacher-issue-draft] [${requestId}] class_enrollments query failed with status: ${classEnrollmentsResponse.status}`);
+      throw new Error(`Enrollments query failed: ${classEnrollmentsResponse.status}`);
     }
 
-    const enrollments = await enrollmentsResponse.json();
-    const studentIds = enrollments.map(e => e.student_id);
+    const classEnrollments = await classEnrollmentsResponse.json();
+    studentIds = classEnrollments.map(e => e.student_id).filter(Boolean);
 
-    if (studentIds.length === 0) {
-      console.log(`[teacher-issue-draft] [${requestId}] No students enrolled in class`);
-      return jsonResponse(event, 400, { ok: false, error: `No students enrolled in ${resolvedClassName}` }, {}, requestId);
+    if (studentIds.length > 0) {
+      enrollmentSource = 'class_enrollments';
+      console.log(`[teacher-issue-draft] [${requestId}] Found ${studentIds.length} enrolled students from class_enrollments table`);
+    } else {
+      // Fallback: query enrollments table (text-based student_code + class_id)
+      console.log(`[teacher-issue-draft] [${requestId}] No enrollments in class_enrollments, trying enrollments table`);
+      
+      const enrollmentsUrl = `${SUPABASE_URL}/rest/v1/enrollments?select=student_code&class_id=eq.${encodeURIComponent(targetClass.id)}`;
+      
+      const enrollmentsResponse = await fetch(enrollmentsUrl, {
+        method: 'GET',
+        headers: {
+          'apikey': SUPABASE_SERVICE_ROLE_KEY,
+          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!enrollmentsResponse.ok) {
+        console.error(`[teacher-issue-draft] [${requestId}] enrollments table query failed with status: ${enrollmentsResponse.status}`);
+        throw new Error(`Enrollments query failed: ${enrollmentsResponse.status}`);
+      }
+
+      const enrollments = await enrollmentsResponse.json();
+      const studentCodes = enrollments.map(e => e.student_code).filter(Boolean);
+
+      if (studentCodes.length === 0) {
+        console.log(`[teacher-issue-draft] [${requestId}] No students enrolled in class (checked both class_enrollments and enrollments tables)`);
+        return jsonResponse(event, 400, { ok: false, error: `No students enrolled in ${resolvedClassName}` }, {}, requestId);
+      }
+
+      console.log(`[teacher-issue-draft] [${requestId}] Found ${studentCodes.length} student codes from enrollments table, looking up student IDs`);
+
+      // Look up students by their codes to get UUIDs
+      const studentsLookupUrl = `${SUPABASE_URL}/rest/v1/students?select=id,code&code=in.(${studentCodes.map(c => `"${c}"`).join(',')})`;
+      
+      const studentsLookupResponse = await fetch(studentsLookupUrl, {
+        method: 'GET',
+        headers: {
+          'apikey': SUPABASE_SERVICE_ROLE_KEY,
+          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!studentsLookupResponse.ok) {
+        console.error(`[teacher-issue-draft] [${requestId}] Students lookup failed with status: ${studentsLookupResponse.status}`);
+        throw new Error(`Students lookup failed: ${studentsLookupResponse.status}`);
+      }
+
+      const studentsFromCodes = await studentsLookupResponse.json();
+      studentIds = studentsFromCodes.map(s => s.id).filter(Boolean);
+
+      if (studentIds.length === 0) {
+        console.log(`[teacher-issue-draft] [${requestId}] No matching student records found for enrolled student codes`);
+        return jsonResponse(event, 400, { ok: false, error: `No matching students found for ${resolvedClassName}` }, {}, requestId);
+      }
+
+      enrollmentSource = 'enrollments';
+      console.log(`[teacher-issue-draft] [${requestId}] Found ${studentIds.length} student IDs from enrollments table`);
     }
 
-    console.log(`[teacher-issue-draft] [${requestId}] Found ${studentIds.length} enrolled students`);
+    console.log(`[teacher-issue-draft] [${requestId}] Using enrollment source: ${enrollmentSource}`);
 
     // Step 3: Create assignment in Supabase
     // Determine assignment type based on draft's assignment kind
