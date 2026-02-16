@@ -25,7 +25,6 @@
   const state = {
     bootWatchdogTimer: null,
     dashboardHandlersAttached: false,
-    redirectingToHub: false,
   };
 
   // ============================================================================
@@ -49,37 +48,6 @@
     const urlParams = new URLSearchParams(window.location.search);
     const DEBUG_MODE = urlParams.get('debug') === '1';
     
-    // PR fix-student-watchdog-login: Check if we recently failed resume (loop prevention)
-    // This is the PRIMARY guard against infinite loops
-    try {
-      const resumeFailedAt = sessionStorage.getItem('portal_resume_failed_at');
-      if (resumeFailedAt) {
-        const failedTime = parseInt(resumeFailedAt, 10);
-        const elapsed = Date.now() - failedTime;
-        if (elapsed < 60000) { // Within last 60 seconds
-          if (DEBUG_MODE) {
-            console.log(LOG_PREFIX, `Boot watchdog disabled: resume failed ${Math.round(elapsed/1000)}s ago (loop prevention)`);
-          }
-          return;
-        } else {
-          // Expired, clear the flag
-          sessionStorage.removeItem('portal_resume_failed_at');
-        }
-      }
-    } catch (err) {
-      console.error(LOG_PREFIX, 'Failed to check resume failure flag:', err);
-    }
-    
-    // PR fix-student-watchdog-login: Check URL for reason parameter (came from watchdog redirect)
-    // Skip if already on resume failed page to avoid re-triggering
-    const reason = urlParams.get('reason');
-    if (reason === 'portal_resume_failed') {
-      if (DEBUG_MODE) {
-        console.log(LOG_PREFIX, 'Boot watchdog disabled: already on resume failed page');
-      }
-      return;
-    }
-    
     // Watchdog timeout: 8 seconds default, can be overridden with ?watchdog_ms=N
     const WATCHDOG_MS = parseInt(urlParams.get('watchdog_ms'), 10) || 8000;
     
@@ -94,14 +62,6 @@
     }
     
     state.bootWatchdogTimer = setTimeout(() => {
-      // Skip if already redirecting
-      if (state.redirectingToHub) {
-        if (DEBUG_MODE) {
-          console.log(LOG_PREFIX, 'Boot watchdog: redirect already in progress');
-        }
-        return;
-      }
-      
       // Skip if dashboard is visible and healthy
       const dashboardView = document.getElementById('studentDashboardView');
       const isDashboardVisible = 
@@ -116,37 +76,24 @@
         return;
       }
       
-      // Dashboard is not visible - unhealthy state detected
-      // PR fix-student-watchdog-login: Single warning (watchdog fires once then redirects)
+      // Dashboard is not visible - show login form in-place as fallback
+      // This preserves the session and avoids redirect loops
       console.warn(
         LOG_PREFIX,
-        `Boot watchdog: dashboard not visible after ${WATCHDOG_MS}ms, clearing auth and redirecting to login`
+        `Boot watchdog: dashboard not visible after ${WATCHDOG_MS}ms, showing login form as fallback`
       );
       
-      // Clear auth and session
-      try {
-        sessionStorage.removeItem('rc_user_code');
-        sessionStorage.removeItem('rc_user_role');
-        localStorage.removeItem('rc_auth');
-        if (DEBUG_MODE) {
-          console.log(LOG_PREFIX, 'Boot watchdog: auth cleared');
-        }
-      } catch (err) {
-        console.error(LOG_PREFIX, 'Boot watchdog: failed to clear auth:', err);
+      // Show login view in-place (non-destructive fallback)
+      const loginView = document.getElementById('loginView');
+      if (loginView) {
+        loginView.classList.remove('hidden');
+      }
+      if (dashboardView) {
+        dashboardView.classList.add('hidden');
       }
       
-      // PR fix-student-watchdog-login: Set timestamp flag to prevent loop
-      try {
-        sessionStorage.setItem('portal_resume_failed_at', Date.now().toString());
-      } catch (err) {
-        console.error(LOG_PREFIX, 'Failed to set resume failure flag:', err);
-      }
-      
-      // Set redirect flag to prevent loops
-      state.redirectingToHub = true;
-      
-      // Redirect to student portal root with reason parameter
-      window.location.replace(STUDENT_PORTAL_PATH + '?reason=portal_resume_failed');
+      // Show helpful message to user
+      console.log(LOG_PREFIX, 'Login form displayed - session preserved, user can retry');
     }, WATCHDOG_MS);
   }
 
@@ -1212,38 +1159,6 @@
       // Initialize guardrails
       initNetworkGuardrails();
       
-      // PR fix-student-watchdog-login: Check for resume failure reason
-      const urlParams = new URLSearchParams(window.location.search);
-      const reason = urlParams.get('reason');
-      
-      if (reason === 'portal_resume_failed') {
-        // Resume failed - show login without starting watchdog
-        // Show one-time warning message
-        console.warn(LOG_PREFIX, 'Portal resume failed, please sign in again');
-        
-        // Clear the reason parameter from URL (don't propagate it)
-        const newUrl = window.location.pathname + window.location.hash;
-        window.history.replaceState({}, '', newUrl);
-        
-        // Show login form (watchdog won't start due to reason param check)
-        showLogin();
-        
-        // Show friendly message to user
-        showMessage('Your session could not be restored. Please sign in again.', 'info');
-        
-        // Load student roster with error handling
-        try {
-          await loadStudentRoster();
-        } catch (err) {
-          console.error(LOG_PREFIX, 'Failed to load student roster:', err);
-          // Continue - manual entry will be available
-        }
-
-        // Setup event handlers
-        setupEventHandlers();
-        return;
-      }
-      
       // Check if already authenticated (from auto-login or existing session)
       if (isAuthenticated()) {
         console.log(LOG_PREFIX, 'Already authenticated, showing dashboard');
@@ -1399,13 +1314,6 @@
       clearTimeout(state.bootWatchdogTimer);
       state.bootWatchdogTimer = null;
       console.log(LOG_PREFIX, 'Boot watchdog cleared - dashboard visible');
-    }
-    
-    // Clear the portal_resume_failed_at flag on successful dashboard show
-    try {
-      sessionStorage.removeItem('portal_resume_failed_at');
-    } catch (err) {
-      console.error(LOG_PREFIX, 'Failed to clear resume failure flag:', err);
     }
     
     const loginView = document.getElementById('loginView');
@@ -1752,9 +1660,6 @@
         
         // PR fix-student-watchdog-login: Clear saved form inputs on success
         clearSavedFormInputs();
-        
-        // PR fix-student-watchdog-login: Clear resume failure flag on successful login
-        sessionStorage.removeItem('portal_resume_failed_at');
         
         // PR 335: Clear auto-login attempted flag so redirect with ?auto=1 works
         sessionStorage.removeItem('studentAutoLoginAttempted');
