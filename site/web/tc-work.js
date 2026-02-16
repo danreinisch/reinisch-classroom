@@ -1366,8 +1366,8 @@ ${shown}
         throw new Error("Supabase not configured");
       }
 
-      // Step 2: Fetch classes to map class name to class ID
-      const classesUrl = `${SUPABASE_URL}/rest/v1/classes?select=id,name`;
+      // Step 2: Fetch class by name to get class ID
+      const classesUrl = `${SUPABASE_URL}/rest/v1/classes?select=id,name&name=eq.${encodeURIComponent(className)}`;
       const classesResponse = await fetch(classesUrl, {
         headers: {
           'apikey': SUPABASE_KEY,
@@ -1380,7 +1380,7 @@ ${shown}
       }
 
       const classes = await classesResponse.json();
-      const targetClass = classes.find(c => c.name === className);
+      const targetClass = classes[0]; // Should be exactly one match
 
       if (!targetClass) {
         setMsg("err", `Class "${className}" not found in database`);
@@ -1389,7 +1389,7 @@ ${shown}
       }
 
       // Step 3: Fetch enrollments for this class
-      const enrollmentsUrl = `${SUPABASE_URL}/rest/v1/class_enrollments?select=student_id,students!inner(id,code,name)&class_id=eq.${targetClass.id}&active=eq.true`;
+      const enrollmentsUrl = `${SUPABASE_URL}/rest/v1/class_enrollments?select=student_id,students!inner(id,code,name)&class_id=eq.${encodeURIComponent(targetClass.id)}&active=eq.true`;
       const enrollmentsResponse = await fetch(enrollmentsUrl, {
         headers: {
           'apikey': SUPABASE_KEY,
@@ -1410,12 +1410,20 @@ ${shown}
         return;
       }
 
-      // Step 4: Create/upsert assignment in Supabase
+      // Step 4: Create assignment in Supabase
       // Use draft title and metadata to create assignment
+      // Determine assignment type based on draft's assignment kind
+      let assignmentType = "html"; // default
+      if (draft.assignment?.kind === "link") {
+        assignmentType = "link";
+      } else if (draft.assignment?.kind === "file") {
+        assignmentType = "html";
+      }
+
       const assignmentData = {
         title: draft.title,
-        type: draft.assignment?.kind === "link" ? "link" : "html",
-        series: draft.assignment?.link || null,
+        type: assignmentType,
+        series: draft.assignment?.link || null, // For link type, series stores the external URL
         description: draft.notes || null,
         class_id: targetClass.id,
         active: true
