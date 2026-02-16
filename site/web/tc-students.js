@@ -3051,7 +3051,12 @@
     }
 
     const studentsMap = new Map();
-    const existingCodes = new Set(allStudents.map(s => s.code));
+    const existingCodes = new Set((allStudents || []).map(s => s.code));
+    
+    // Warn if allStudents is empty (might indicate data not loaded)
+    if (!allStudents || allStudents.length === 0) {
+      console.warn('[tc-students] allStudents is empty. All CSV students will be marked as new. If you expect existing students, ensure data is loaded before importing.');
+    }
 
     for (const row of rows) {
       const code = row[columnMap.code]?.trim();
@@ -3139,10 +3144,15 @@
     // Log diagnostic information about CSV parsing
     console.log(`[tc-students] CSV parsed: ${rows.length} rows → ${studentsMap.size} unique students`);
 
+    // Convert students Map to Array, ensuring one entry per unique student code
     window.csvImportData = Array.from(studentsMap.values()).map(s => ({
       ...s,
       enrollments: Array.from(s.enrollments)
     }));
+
+    // Verify correct data structure before preview
+    console.log(`[tc-students] csvImportData contains ${window.csvImportData.length} student records`);
+    console.log(`[tc-students] allStudents contains ${allStudents ? allStudents.length : 0} existing student records`);
 
     displayCsvPreview(window.csvImportData);
   }
@@ -3188,6 +3198,9 @@
     const preview = document.getElementById('csv-preview');
     const content = document.getElementById('csv-preview-content');
     
+    // Log preview data for debugging
+    console.log(`[tc-students] displayCsvPreview received ${data.length} student records`);
+    
     // Safety guard: Deduplicate by code in case parsing somehow produced duplicates
     const seenCodes = new Set();
     const deduplicatedData = [];
@@ -3202,13 +3215,26 @@
       }
     }
     
+    // Log deduplication result
+    if (deduplicatedData.length !== data.length) {
+      console.warn(`[tc-students] Deduplicated ${data.length} records to ${deduplicatedData.length} unique students`);
+    }
+    
     // Categorize each student with detailed change tracking
     const newStudents = [];
     const updatedStudents = [];
     const unchangedStudents = [];
     
+    // Log categorization start
+    console.log(`[tc-students] Categorizing ${deduplicatedData.length} students against ${allStudents ? allStudents.length : 0} existing students`);
+    
+    // Warn if allStudents is not loaded
+    if (!allStudents || allStudents.length === 0) {
+      console.warn('[tc-students] allStudents is empty during preview. All students will appear as new. If you expect existing students, ensure data is loaded before importing.');
+    }
+    
     for (const csvStudent of deduplicatedData) {
-      const existingStudent = allStudents.find(s => s.code === csvStudent.code);
+      const existingStudent = allStudents ? allStudents.find(s => s.code === csvStudent.code) : null;
       
       if (!existingStudent) {
         // New student
@@ -3251,6 +3277,9 @@
         unchangedStudents.push(csvStudent);
       }
     }
+    
+    // Log categorization results
+    console.log(`[tc-students] Categorized: ${newStudents.length} new, ${updatedStudents.length} updated, ${unchangedStudents.length} unchanged`);
     
     // Build summary bar
     const summaryParts = [];
