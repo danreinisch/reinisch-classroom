@@ -1601,12 +1601,12 @@ function normalizeTaggedAssignmentText(input) {
 
   // NOTE: Keep in sync with CLASS_LABELS in tc-work-qol.js
   const CANON_CLASSES = [
-    "LA 1 SC",
-    "LA 2 SC",
-    "LA 3 SC",
-    "LA 4 SC",
+    "Language Arts 1 SC",
+    "Language Arts 2 SC",
+    "Language Arts 3 SC",
+    "Language Arts 4 SC",
     "Life Skills",
-    "Life Skills LA",
+    "Life Skills Language Arts SC",
     "Consumer Math",
     "Geometry SC",
     "Speech/Language",
