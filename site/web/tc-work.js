@@ -1463,7 +1463,10 @@ ${shown}
         
         // Clear selections after success
         if ($("issueAssignmentSelect")) $("issueAssignmentSelect").value = "";
-        if ($("issueStudentsSelect")) $("issueStudentsSelect").selectedIndex = -1;
+        const studentsSelect = $("issueStudentsSelect");
+        if (studentsSelect) {
+          Array.from(studentsSelect.options).forEach(opt => opt.selected = false);
+        }
         if ($("issueDueDate")) $("issueDueDate").value = "";
       } else {
         throw new Error(result.error || "Failed to issue assignment");
