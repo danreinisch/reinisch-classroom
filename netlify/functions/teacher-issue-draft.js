@@ -122,14 +122,42 @@ exports.handler = async (event) => {
     }
 
     const classes = await classesResponse.json();
-    const targetClass = classes[0];
+    let targetClass = classes[0];
 
     if (!targetClass) {
-      console.log(`[teacher-issue-draft] [${requestId}] Class not found: ${draft.className}`);
-      return jsonResponse(event, 404, { ok: false, error: `Class "${draft.className}" not found` }, {}, requestId);
-    }
+      // Auto-create the class if it doesn't exist
+      console.log(`[teacher-issue-draft] [${requestId}] Class "${draft.className}" not found, auto-creating...`);
+      
+      const createClassUrl = `${SUPABASE_URL}/rest/v1/classes`;
+      const createClassResponse = await fetch(createClassUrl, {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_SERVICE_ROLE_KEY,
+          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation'
+        },
+        body: JSON.stringify({ name: draft.className })
+      });
 
-    console.log(`[teacher-issue-draft] [${requestId}] Found class: ${targetClass.name} (ID: ${targetClass.id})`);
+      if (!createClassResponse.ok) {
+        const errorText = await createClassResponse.text();
+        console.error(`[teacher-issue-draft] [${requestId}] Failed to auto-create class: ${createClassResponse.status} - ${errorText}`);
+        throw new Error(`Failed to auto-create class "${draft.className}": ${createClassResponse.status}`);
+      }
+
+      const createdClasses = await createClassResponse.json();
+      targetClass = createdClasses[0];
+      
+      if (!targetClass) {
+        console.error(`[teacher-issue-draft] [${requestId}] Class auto-created but no record returned`);
+        throw new Error('Class auto-created but no record returned');
+      }
+
+      console.log(`[teacher-issue-draft] [${requestId}] Auto-created class: ${targetClass.name} (ID: ${targetClass.id})`);
+    } else {
+      console.log(`[teacher-issue-draft] [${requestId}] Found class: ${targetClass.name} (ID: ${targetClass.id})`);
+    }
 
     // Step 2: Fetch enrollments for this class
     const enrollmentsUrl = `${SUPABASE_URL}/rest/v1/class_enrollments?select=student_id,students!inner(id,code,name)&class_id=eq.${encodeURIComponent(targetClass.id)}&active=eq.true`;
