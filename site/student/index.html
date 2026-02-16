@@ -1,937 +1,541 @@
 <!doctype html>
-<html lang="en" data-theme="emerald">
+<html lang="en">
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Reinisch Classroom - Student Portal</title>
-    
-    <!-- Auto-login handler (PR 315) - Loads early with defer -->
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Student Portal</title>
+    <link rel="stylesheet" href="/web/teacher-shell.css" />
     <script defer src="/assets/js/student-auto-login.js"></script>
-    
-    <!-- Emerald Dashboard Theme -->
-    <link rel="stylesheet" href="/assets/css/rc-emerald-dashboard-theme.css" />
-    <link rel="stylesheet" href="/assets/css/app-shell.css" />
-    <link rel="stylesheet" href="/assets/css/app-shell-layout.css" />
-    
     <style>
-      :root {
-        --base: #0b1220;
-        --panel: #0f172a;
-        --panel-2: #111827;
-        --edge: #0b1220;
-        --ink: #e6edf3;
-        --ink-dim: #cbd5e1;
-        --muted: #94a3b8;
-        --line: rgba(255, 255, 255, 0.08);
-        --line-strong: rgba(255, 255, 255, 0.14);
-        --brand: #22c55e;
-        --brand-2: #06b6d4;
-        --shadow-1: 0 6px 28px rgba(0, 0, 0, 0.35);
-        --shadow-2: 0 14px 48px rgba(0, 0, 0, 0.45);
-        --inset-top: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+      .hidden {
+        display: none !important;
       }
-      
-      * {
-        box-sizing: border-box;
-      }
-      
-      html,
-      body {
-        height: 100%;
-        margin: 0;
-        font-family: ui-sans-serif, -apple-system, Segoe UI, Roboto, Inter, Helvetica, Arial, sans-serif;
-        color: var(--ink);
-        overflow-x: hidden;
-      }
-      
-      body {
-        background:
-          url("/assets/bg/bg5e_soft_grid.svg") center/cover no-repeat fixed,
-          radial-gradient(1200px 800px at 20% -10%, rgba(34, 197, 94, 0.08), transparent 50%),
-          radial-gradient(1200px 800px at 120% 20%, rgba(6, 182, 212, 0.06), transparent 50%),
-          linear-gradient(180deg, #0b1220, #0c1322 60%, #0b0f14);
-      }
-      
-      .portal-container {
-        min-height: 100vh;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        padding: 2rem;
-      }
-      
-      .portal-card {
-        background: var(--panel);
-        border: 1px solid var(--line);
+
+      /* Login form styling */
+      .st-login-container {
+        max-width: 420px;
+        margin: 40px auto;
+        padding: 32px;
         border-radius: 16px;
-        padding: 40px;
-        max-width: 480px;
-        width: 100%;
-        box-shadow: var(--shadow-1);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.04);
       }
-      
-      .portal-header {
-        text-align: center;
-        margin-bottom: 32px;
-      }
-      
-      .portal-title {
-        font-size: 2rem;
-        font-weight: 900;
-        margin: 0 0 8px 0;
-        letter-spacing: -0.5px;
-        color: var(--ink);
-      }
-      
-      .portal-subtitle {
-        font-size: 1rem;
-        color: var(--ink-dim);
-        margin: 0;
-      }
-      
-      .form-group {
+
+      .st-form-group {
         margin-bottom: 20px;
       }
-      
-      label {
+
+      .st-form-group label {
         display: block;
-        margin-bottom: 8px;
-        font-weight: 700;
-        color: var(--ink);
         font-size: 14px;
+        margin-bottom: 8px;
+        opacity: 0.9;
       }
-      
-      input,
-      select {
+
+      .st-form-group select,
+      .st-form-group input {
         width: 100%;
-        background: #1f2937;
-        border: 1px solid rgba(255, 255, 255, 0.14);
-        border-radius: 10px;
-        color: var(--ink);
         padding: 12px 14px;
-        font-size: 15px;
-        font-family: inherit;
-        transition: all 0.2s ease;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(0, 0, 0, 0.18);
+        color: inherit;
+        font-size: 14px;
+        outline: none;
       }
-      
-      input:focus,
-      select:focus {
-        outline: 2px solid rgba(34, 197, 94, 0.35);
-        border-color: rgba(34, 197, 94, 0.45);
-        box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.18);
+
+      .st-form-group select:focus,
+      .st-form-group input:focus {
+        border-color: rgba(59, 130, 246, 0.5);
       }
-      
-      select {
-        cursor: pointer;
-        appearance: none;
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23cbd5e1' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
-        background-repeat: no-repeat;
-        background-position: right 12px center;
-        padding-right: 36px;
-      }
-      
-      .btn {
+
+      .st-btn {
         width: 100%;
-        padding: 14px 20px;
-        background: linear-gradient(180deg, rgba(34, 197, 94, 1), rgba(22, 163, 74, 1));
-        color: #032313;
-        border: none;
-        border-radius: 10px;
-        font-weight: 800;
-        font-size: 16px;
+        padding: 12px 16px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        background: rgba(59, 130, 246, 0.18);
+        border-color: rgba(59, 130, 246, 0.35);
+        color: inherit;
+        font-size: 14px;
         cursor: pointer;
-        transition: all 0.2s ease;
-        box-shadow: 0 4px 16px rgba(34, 197, 94, 0.35);
-        font-family: inherit;
+        font-weight: 500;
       }
-      
-      .btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(34, 197, 94, 0.45);
+
+      .st-btn:hover {
+        background: rgba(59, 130, 246, 0.25);
       }
-      
-      .btn:active {
-        transform: translateY(0);
-      }
-      
-      .btn:disabled {
+
+      .st-btn:disabled {
         opacity: 0.5;
         cursor: not-allowed;
-        transform: none;
       }
-      
+
+      .st-btn.secondary {
+        background: rgba(255, 255, 255, 0.06);
+        border-color: rgba(255, 255, 255, 0.16);
+      }
+
+      .st-btn.secondary:hover {
+        background: rgba(255, 255, 255, 0.1);
+      }
+
+      .st-message,
       .message {
-        padding: 12px 16px;
-        border-radius: 10px;
+        padding: 12px 14px;
+        border-radius: 12px;
         margin-bottom: 20px;
         font-size: 14px;
-        font-weight: 600;
       }
-      
+
+      .st-message.error,
       .message.error {
-        background: rgba(239, 68, 68, 0.15);
-        border: 1px solid rgba(239, 68, 68, 0.3);
+        background: rgba(239, 68, 68, 0.08);
+        border: 1px solid rgba(239, 68, 68, 0.35);
         color: #fca5a5;
       }
-      
+
+      .st-message.success,
       .message.success {
-        background: rgba(34, 197, 94, 0.15);
-        border: 1px solid rgba(34, 197, 94, 0.3);
-        color: #4ade80;
+        background: rgba(34, 197, 94, 0.1);
+        border: 1px solid rgba(34, 197, 94, 0.35);
+        color: #86efac;
       }
-      
+
+      .st-message.info,
       .message.info {
-        background: rgba(6, 182, 212, 0.15);
-        border: 1px solid rgba(6, 182, 212, 0.3);
-        color: #22d3ee;
+        background: rgba(59, 130, 246, 0.08);
+        border: 1px solid rgba(59, 130, 246, 0.35);
+        color: #93c5fd;
       }
-      
-      .divider {
-        text-align: center;
+
+      .st-divider {
         margin: 24px 0;
+        text-align: center;
         position: relative;
       }
-      
-      .divider::before {
+
+      .st-divider::before {
         content: '';
         position: absolute;
-        top: 50%;
         left: 0;
         right: 0;
+        top: 50%;
         height: 1px;
-        background: var(--line);
+        background: rgba(255, 255, 255, 0.12);
       }
-      
-      .divider-text {
+
+      .st-divider span {
         position: relative;
-        display: inline-block;
-        background: var(--panel);
-        padding: 0 16px;
-        color: var(--muted);
+        padding: 0 12px;
+        background: rgba(20, 20, 20, 0.95);
         font-size: 13px;
-        font-weight: 600;
+        opacity: 0.7;
       }
-      
-      .manual-entry {
+
+      .st-manual-entry {
+        margin-top: 16px;
         display: none;
       }
-      
-      .manual-entry.show {
+
+      .st-manual-entry.show {
         display: block;
       }
-      
-      .link {
-        color: var(--brand-2);
+
+      .st-link {
+        color: #60a5fa;
         text-decoration: none;
-        font-size: 14px;
-        font-weight: 600;
-        transition: color 0.15s ease;
-      }
-      
-      .link:hover {
-        color: var(--brand);
-      }
-      
-      .portal-footer {
-        margin-top: 24px;
-        padding-top: 20px;
-        border-top: 1px solid var(--line);
-        text-align: center;
-      }
-      
-      .hidden {
-        display: none;
-      }
-      
-      /* Goal Cards (matching teacher center style) */
-      .st-goal-card {
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        border-radius: 12px;
-        padding: 16px;
-        margin-bottom: 16px;
-        background: rgba(255, 255, 255, 0.04);
-        transition: all 0.2s ease;
-      }
-      
-      .st-goal-card:hover {
-        background: rgba(255, 255, 255, 0.06);
-        border-color: rgba(255, 255, 255, 0.18);
-      }
-      
-      /* Color-coded left borders by goal area */
-      .st-goal-card[data-area="Reading"] {
-        border-left: 4px solid rgba(59, 130, 246, 0.8);
-      }
-      .st-goal-card[data-area="Writing"] {
-        border-left: 4px solid rgba(168, 85, 247, 0.8);
-      }
-      .st-goal-card[data-area="Math"] {
-        border-left: 4px solid rgba(34, 197, 94, 0.8);
-      }
-      .st-goal-card[data-area="Behavior"] {
-        border-left: 4px solid rgba(249, 115, 22, 0.8);
-      }
-      .st-goal-card[data-area="LifeSkills"] {
-        border-left: 4px solid rgba(20, 184, 166, 0.8);
-      }
-      .st-goal-card[data-area="Social"] {
-        border-left: 4px solid rgba(236, 72, 153, 0.8);
-      }
-      .st-goal-card[data-area="Language"] {
-        border-left: 4px solid rgba(99, 102, 241, 0.8);
-      }
-      .st-goal-card[data-area="Emotional"] {
-        border-left: 4px solid rgba(239, 68, 68, 0.8);
-      }
-      .st-goal-card[data-area="Other"] {
-        border-left: 4px solid rgba(148, 163, 184, 0.8);
-      }
-      
-      .st-goal-header {
-        margin-bottom: 12px;
-      }
-      
-      .st-goal-title-line {
-        display: flex;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 8px;
-      }
-      
-      .st-goal-icon {
-        font-size: 20px;
-      }
-      
-      .st-goal-area-name {
-        font-weight: 700;
-        color: var(--ink);
-        font-size: 14px;
-      }
-      
-      .st-goal-code {
-        color: var(--muted);
-        font-size: 13px;
-        font-family: 'Courier New', monospace;
-      }
-      
-      .st-badge {
-        display: inline-block;
-        padding: 3px 8px;
-        border-radius: 6px;
-        font-size: 11px;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.3px;
-      }
-      
-      .st-badge-measurement {
-        background: rgba(34, 197, 94, 0.15);
-        color: rgba(34, 197, 94, 1);
-        border: 1px solid rgba(34, 197, 94, 0.3);
-      }
-      
-      .st-goal-desc {
-        color: var(--ink-dim);
-        line-height: 1.5;
-        margin-bottom: 12px;
-        font-size: 14px;
-      }
-      
-      .st-goal-desc.expanded .st-goal-desc-short {
-        display: none;
-      }
-      
-      .st-goal-desc.expanded .st-goal-desc-full {
-        display: inline !important;
-      }
-      
-      .st-goal-show-more {
-        background: none;
-        border: none;
-        color: var(--brand-2);
         cursor: pointer;
-        font-size: 13px;
-        font-weight: 600;
-        padding: 0;
-        margin-left: 4px;
-        text-decoration: underline;
-        font-family: inherit;
-      }
-      
-      .st-goal-show-more:hover {
-        color: var(--brand);
-      }
-      
-      .st-goal-metrics {
-        display: flex;
-        gap: 20px;
-        margin-bottom: 12px;
-        flex-wrap: wrap;
-      }
-      
-      .st-metric {
-        display: flex;
-        gap: 6px;
-        align-items: baseline;
-      }
-      
-      .st-metric-label {
-        color: var(--muted);
-        font-size: 13px;
-      }
-      
-      .st-metric-value {
-        color: var(--ink);
-        font-weight: 700;
         font-size: 14px;
       }
-      
-      .st-goal-data-status {
-        display: flex;
-        gap: 16px;
-        flex-wrap: wrap;
-        padding-top: 12px;
-        border-top: 1px solid rgba(255, 255, 255, 0.08);
+
+      .st-link:hover {
+        text-decoration: underline;
       }
-      
-      .st-data-status-item {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        font-size: 13px;
-        color: var(--ink-dim);
+
+      /* Dashboard styling */
+      .st-dashboard-content {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
       }
-      
-      .dashboard-section {
+
+      .st-welcome-header {
         margin-bottom: 32px;
       }
-      
-      .dashboard-section-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 16px;
-      }
-      
-      .dashboard-section-title {
-        font-size: 1.25rem;
-        font-weight: 800;
-        color: var(--ink);
-        margin: 0;
-      }
-      
-      .dashboard-section-count {
-        color: var(--muted);
-        font-size: 14px;
-        font-weight: 600;
-      }
-      
-      /* Assignment Cards */
-      .st-assignment-card {
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        border-radius: 12px;
-        padding: 16px;
-        margin-bottom: 16px;
-        background: rgba(255, 255, 255, 0.04);
-        transition: all 0.2s ease;
-        cursor: pointer;
-      }
-      
-      .st-assignment-card:hover {
-        background: rgba(255, 255, 255, 0.06);
-        border-color: rgba(255, 255, 255, 0.18);
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-      }
-      
-      .st-assignment-title {
-        font-weight: 700;
-        color: var(--ink);
-        font-size: 16px;
+
+      .st-welcome-header h1 {
         margin: 0 0 8px 0;
+        font-size: 32px;
       }
-      
-      .st-assignment-meta {
+
+      .st-welcome-header p {
+        margin: 0;
+        opacity: 0.8;
+        font-size: 16px;
+      }
+
+      .st-banner {
+        padding: 20px 24px;
+        border-radius: 14px;
+        background: rgba(59, 130, 246, 0.08);
+        border: 1px solid rgba(59, 130, 246, 0.25);
+        margin-bottom: 32px;
+      }
+
+      .st-banner h2 {
+        margin: 0 0 8px 0;
+        font-size: 20px;
+        color: #93c5fd;
+      }
+
+      .st-banner p {
+        margin: 0;
+        opacity: 0.9;
+      }
+
+      .st-section {
+        margin-bottom: 32px;
+      }
+
+      .st-section h2 {
+        margin: 0 0 16px 0;
+        font-size: 24px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .st-section h2 .count {
+        font-size: 14px;
+        padding: 4px 10px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.08);
+        font-weight: normal;
+      }
+
+      .st-actions {
         display: flex;
         gap: 12px;
-        flex-wrap: wrap;
-        align-items: center;
-        color: var(--muted);
+        margin-top: 16px;
+      }
+
+      /* Goal cards */
+      .st-goal-card {
+        padding: 20px;
+        border-radius: 14px;
+        border-left: 4px solid rgba(255, 255, 255, 0.3);
+        background: rgba(255, 255, 255, 0.04);
+        margin-bottom: 16px;
+      }
+
+      .st-goal-card[data-area="reading"] {
+        border-left-color: #3b82f6;
+      }
+
+      .st-goal-card[data-area="writing"] {
+        border-left-color: #10b981;
+      }
+
+      .st-goal-card[data-area="communication"] {
+        border-left-color: #f59e0b;
+      }
+
+      .st-goal-card[data-area="social-emotional"] {
+        border-left-color: #8b5cf6;
+      }
+
+      .st-goal-card h3 {
+        margin: 0 0 8px 0;
+        font-size: 18px;
+      }
+
+      .st-goal-card .goal-description {
+        margin: 8px 0;
+        opacity: 0.9;
+        line-height: 1.5;
+      }
+
+      .st-goal-card .goal-meta {
+        margin-top: 12px;
+        display: flex;
+        gap: 16px;
         font-size: 13px;
+        opacity: 0.8;
+      }
+
+      .st-goal-card .goal-progress {
+        margin-top: 12px;
+      }
+
+      .st-goal-card .progress-bar {
+        height: 8px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 4px;
+        overflow: hidden;
+      }
+
+      .st-goal-card .progress-fill {
+        height: 100%;
+        background: currentColor;
+        transition: width 0.3s ease;
+      }
+
+      /* Assignment cards */
+      .st-assignment-card {
+        padding: 18px 20px;
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.04);
+        margin-bottom: 12px;
+      }
+
+      .st-assignment-card h3 {
+        margin: 0 0 8px 0;
+        font-size: 16px;
+      }
+
+      .st-assignment-card .assignment-meta {
+        display: flex;
+        gap: 16px;
+        font-size: 13px;
+        opacity: 0.8;
         margin-bottom: 8px;
       }
-      
+
       .st-assignment-status {
         display: inline-block;
         padding: 4px 10px;
-        border-radius: 6px;
-        font-size: 12px;
-        font-weight: 600;
-        text-transform: capitalize;
-      }
-      
-      .st-assignment-status.assigned {
-        background: rgba(59, 130, 246, 0.15);
-        color: rgba(59, 130, 246, 1);
-        border: 1px solid rgba(59, 130, 246, 0.3);
-      }
-      
-      .st-assignment-status.in-progress {
-        background: rgba(251, 191, 36, 0.15);
-        color: rgba(251, 191, 36, 1);
-        border: 1px solid rgba(251, 191, 36, 0.3);
-      }
-      
-      .st-assignment-status.submitted {
-        background: rgba(34, 197, 94, 0.15);
-        color: rgba(34, 197, 94, 1);
-        border: 1px solid rgba(34, 197, 94, 0.3);
-      }
-      
-      .st-assignment-status.graded {
-        background: rgba(16, 185, 129, 0.15);
-        color: rgba(16, 185, 129, 1);
-        border: 1px solid rgba(16, 185, 129, 0.3);
-      }
-      
-      .st-assignment-score {
-        font-weight: 700;
-        font-size: 14px;
-      }
-      
-      .st-assignment-score.good {
-        color: rgba(34, 197, 94, 1);
-      }
-      
-      .st-assignment-score.poor {
-        color: rgba(239, 68, 68, 1);
-      }
-      
-      /* Assignment Viewer Overlay */
-      .assignment-viewer-overlay {
-        position: fixed;
-        inset: 0;
-        z-index: 1000;
-        background: var(--base);
-        overflow-y: auto;
-        display: flex;
-        flex-direction: column;
-      }
-      
-      .assignment-viewer-header {
-        background: var(--panel);
-        border-bottom: 1px solid var(--line);
-        padding: 16px 24px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 16px;
-        flex-wrap: wrap;
-      }
-      
-      .assignment-viewer-back {
-        background: none;
-        border: none;
-        color: var(--brand-2);
-        cursor: pointer;
-        font-size: 15px;
-        font-weight: 600;
-        padding: 8px 12px;
-        border-radius: 8px;
-        transition: all 0.2s ease;
-        font-family: inherit;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-      }
-      
-      .assignment-viewer-back:hover {
-        background: rgba(6, 182, 212, 0.1);
-        color: var(--brand);
-      }
-      
-      .assignment-viewer-title {
-        flex: 1;
-        font-size: 18px;
-        font-weight: 800;
-        color: var(--ink);
-        margin: 0;
-      }
-      
-      .assignment-viewer-due {
-        color: var(--muted);
-        font-size: 14px;
-      }
-      
-      .assignment-viewer-content {
-        flex: 1;
-        max-width: 900px;
-        width: 100%;
-        margin: 0 auto;
-        padding: 32px 24px;
-      }
-      
-      .assignment-viewer-progress {
-        text-align: center;
-        margin-bottom: 24px;
-      }
-      
-      .assignment-viewer-progress-text {
-        font-size: 14px;
-        font-weight: 600;
-        color: var(--muted);
-        margin-bottom: 8px;
-      }
-      
-      .assignment-viewer-progress-bar {
-        height: 6px;
-        background: rgba(255, 255, 255, 0.08);
-        border-radius: 3px;
-        overflow: hidden;
-      }
-      
-      .assignment-viewer-progress-fill {
-        height: 100%;
-        background: var(--brand);
-        transition: width 0.3s ease;
-      }
-      
-      .assignment-question-container {
-        background: var(--panel);
-        border: 1px solid var(--line);
         border-radius: 12px;
-        padding: 24px;
-        margin-bottom: 32px;
-      }
-      
-      .assignment-question-text {
-        font-size: 1.1rem;
-        line-height: 1.7;
-        color: var(--ink);
-        margin: 0 0 24px 0;
-        white-space: pre-wrap;
-      }
-      
-      .assignment-answer-choice {
-        background: var(--panel-2);
-        border: 1px solid var(--line);
-        border-radius: 10px;
-        padding: 16px 20px;
-        margin-bottom: 12px;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        min-height: 48px;
-      }
-      
-      .assignment-answer-choice:hover {
-        background: rgba(255, 255, 255, 0.06);
-        border-color: rgba(255, 255, 255, 0.18);
-      }
-      
-      .assignment-answer-choice.selected {
-        border-color: rgba(34, 197, 94, 0.45);
-        background: rgba(34, 197, 94, 0.08);
-        box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.18);
-      }
-      
-      .assignment-answer-choice input[type="radio"],
-      .assignment-answer-choice input[type="checkbox"] {
-        width: 20px;
-        height: 20px;
-        cursor: pointer;
-        margin: 0;
-      }
-      
-      .assignment-answer-choice label {
-        cursor: pointer;
-        flex: 1;
-        margin: 0;
-        font-size: 15px;
-        color: var(--ink);
+        font-size: 12px;
         font-weight: 500;
       }
-      
-      .assignment-textarea {
-        width: 100%;
-        background: var(--panel-2);
+
+      .st-assignment-status.pending {
+        background: rgba(234, 179, 8, 0.12);
+        border: 1px solid rgba(234, 179, 8, 0.35);
+        color: #fde047;
+      }
+
+      .st-assignment-status.completed {
+        background: rgba(34, 197, 94, 0.12);
+        border: 1px solid rgba(34, 197, 94, 0.35);
+        color: #86efac;
+      }
+
+      .st-assignment-status.graded {
+        background: rgba(59, 130, 246, 0.12);
+        border: 1px solid rgba(59, 130, 246, 0.35);
+        color: #93c5fd;
+      }
+
+      .st-assignment-status.late {
+        background: rgba(239, 68, 68, 0.12);
+        border: 1px solid rgba(239, 68, 68, 0.35);
+        color: #fca5a5;
+      }
+
+      /* Assignment viewer overlay */
+      .st-assignment-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        padding: 20px;
+      }
+
+      .st-assignment-viewer {
+        width: min(900px, 100%);
+        max-height: 90vh;
+        background: rgba(20, 20, 20, 0.98);
+        border-radius: 16px;
         border: 1px solid rgba(255, 255, 255, 0.14);
-        border-radius: 10px;
-        color: var(--ink);
-        padding: 12px 14px;
-        font-size: 15px;
-        font-family: inherit;
-        transition: all 0.2s ease;
-        min-height: 120px;
-        resize: vertical;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
       }
-      
-      .assignment-textarea:focus {
-        outline: 2px solid rgba(34, 197, 94, 0.35);
-        border-color: rgba(34, 197, 94, 0.45);
-        box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.18);
+
+      .st-assignment-viewer-header {
+        padding: 20px 24px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
       }
-      
-      .assignment-viewer-nav {
+
+      .st-assignment-viewer-header h2 {
+        margin: 0;
+        font-size: 20px;
+      }
+
+      .st-assignment-viewer-body {
+        flex: 1;
+        overflow: auto;
+        padding: 24px;
+      }
+
+      .st-assignment-viewer-footer {
+        padding: 16px 24px;
+        border-top: 1px solid rgba(255, 255, 255, 0.12);
         display: flex;
         gap: 12px;
-        justify-content: center;
-      }
-      
-      .assignment-viewer-nav .btn {
-        min-width: 120px;
-      }
-      
-      .assignment-success-screen {
-        text-align: center;
-        padding: 60px 24px;
-      }
-      
-      .assignment-success-icon {
-        font-size: 72px;
-        margin-bottom: 24px;
-      }
-      
-      .assignment-success-title {
-        font-size: 2rem;
-        font-weight: 800;
-        color: var(--ink);
-        margin: 0 0 16px 0;
-      }
-      
-      .assignment-success-message {
-        font-size: 1.1rem;
-        color: var(--ink-dim);
-        margin: 0 0 32px 0;
-      }
-      
-      .assignment-success-score {
-        background: rgba(34, 197, 94, 0.15);
-        border: 1px solid rgba(34, 197, 94, 0.3);
-        border-radius: 12px;
-        padding: 20px;
-        margin: 0 auto 32px auto;
-        max-width: 300px;
-      }
-      
-      .assignment-success-score-value {
-        font-size: 2.5rem;
-        font-weight: 900;
-        color: rgba(34, 197, 94, 1);
-        margin: 0;
-      }
-      
-      .assignment-url-link {
-        background: linear-gradient(180deg, rgba(34, 197, 94, 1), rgba(22, 163, 74, 1));
-        color: #032313;
-        border: none;
-        border-radius: 10px;
-        font-weight: 800;
-        font-size: 16px;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        box-shadow: 0 4px 16px rgba(34, 197, 94, 0.35);
-        font-family: inherit;
-        padding: 14px 24px;
-        text-decoration: none;
-        display: inline-block;
-      }
-      
-      .assignment-url-link:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(34, 197, 94, 0.45);
-      }
-      
-      @media (max-width: 768px) {
-        .portal-card {
-          padding: 28px 24px;
-        }
-        
-        .portal-title {
-          font-size: 1.5rem;
-        }
-        
-        .st-goal-title-line {
-          font-size: 13px;
-        }
-        
-        .st-goal-metrics {
-          flex-direction: column;
-          gap: 8px;
-        }
-        
-        .assignment-viewer-header {
-          padding: 12px 16px;
-        }
-        
-        .assignment-viewer-title {
-          font-size: 16px;
-        }
-        
-        .assignment-viewer-content {
-          padding: 24px 16px;
-        }
-        
-        .assignment-question-container {
-          padding: 20px 16px;
-        }
-        
-        .assignment-question-text {
-          font-size: 1rem;
-        }
-        
-        .assignment-viewer-nav {
-          flex-direction: column;
-        }
-        
-        .assignment-viewer-nav .btn {
-          width: 100%;
-        }
+        justify-content: flex-end;
       }
     </style>
-    
   </head>
   <body>
-    <!-- Login View -->
-    <div id="loginView" class="portal-container">
-      <div class="portal-card">
-        <header class="portal-header">
-          <h1 class="portal-title">Student Portal</h1>
-          <p class="portal-subtitle">Sign in to access your assignments and progress</p>
-        </header>
-        
-        <div id="messageContainer"></div>
-        
-        <form id="studentLoginForm">
-          <div class="form-group">
-            <label for="studentCodeSelect">Student Code</label>
-            <select id="studentCodeSelect" name="studentCode" required>
-              <option value="">Loading student codes...</option>
-            </select>
-          </div>
-          
-          <div class="form-group">
-            <label for="studentPassword">Password</label>
-            <input 
-              type="password" 
-              id="studentPassword" 
-              name="password" 
-              placeholder="Enter your password"
-              autocomplete="current-password"
-              required
-            />
-          </div>
-          
-          <button type="submit" class="btn" id="btnLogin">
-            Sign In
-          </button>
-        </form>
-        
-        <div class="divider">
-          <span class="divider-text">Can't find your code?</span>
-        </div>
-        
-        <button type="button" class="link" id="btnToggleManualEntry" style="width: 100%; text-align: center; background: none; border: none; cursor: pointer; padding: 8px;">
-          Enter code manually
+    <div class="tc-app">
+      <header class="tc-topbar">
+        <button
+          class="tc-btn"
+          id="tcSidebarToggle"
+          aria-label="Toggle sidebar"
+          aria-expanded="false"
+        >
+          ☰
         </button>
-        
-        <div class="manual-entry" id="manualEntrySection">
-          <form id="manualLoginForm">
-            <div class="form-group">
-              <label for="manualStudentCode">Student Code</label>
-              <input 
-                type="text" 
-                id="manualStudentCode" 
-                name="studentCode" 
-                placeholder="Enter your student code"
-                autocomplete="username"
-              />
+        <a class="tc-btn" href="/" target="_blank" rel="noopener" aria-label="Home">🏠</a>
+        <div class="tc-title">Student Portal</div>
+      </header>
+
+      <div class="tc-shell">
+        <aside class="tc-sidebar" aria-label="Student navigation">
+          <nav class="tc-nav">
+            <a data-href="/student/" href="/student/"
+              ><span class="tc-icon">🏠</span><span class="tc-label">Dashboard</span></a
+            >
+            <a data-href="/student/" href="/student/"
+              ><span class="tc-icon">🎯</span><span class="tc-label">Goals</span></a
+            >
+            <a data-href="/student/" href="/student/"
+              ><span class="tc-icon">📚</span><span class="tc-label">Assignments</span></a
+            >
+            <a data-href="/student/" href="/student/"
+              ><span class="tc-icon">📊</span><span class="tc-label">Grades</span></a
+            >
+          </nav>
+        </aside>
+
+        <main class="tc-main">
+          <!-- Login View -->
+          <div id="loginView">
+            <div class="st-login-container">
+              <h1 style="text-align: center; margin-top: 0;">Welcome, Student!</h1>
+              <p style="text-align: center; opacity: 0.8; margin-bottom: 32px;">
+                Log in to access your portal
+              </p>
+
+              <div id="messageContainer"></div>
+
+              <!-- Quick Login Form -->
+              <form id="studentLoginForm">
+                <div class="st-form-group">
+                  <label for="studentCodeSelect">Select Your Code</label>
+                  <select id="studentCodeSelect" required>
+                    <option value="">Choose your student code...</option>
+                  </select>
+                </div>
+
+                <div class="st-form-group">
+                  <label for="studentPassword">Password</label>
+                  <input
+                    type="password"
+                    id="studentPassword"
+                    placeholder="Enter your password"
+                    required
+                  />
+                </div>
+
+                <button type="submit" class="st-btn">Log In</button>
+              </form>
+
+              <div class="st-divider">
+                <span>OR</span>
+              </div>
+
+              <button type="button" class="st-btn secondary" id="btnToggleManualEntry">
+                Enter Code Manually
+              </button>
+
+              <!-- Manual Entry Section -->
+              <div id="manualEntrySection" class="st-manual-entry">
+                <form id="manualLoginForm">
+                  <div class="st-form-group">
+                    <label for="manualStudentCode">Student Code</label>
+                    <input
+                      type="text"
+                      id="manualStudentCode"
+                      placeholder="Enter your student code"
+                      required
+                    />
+                  </div>
+
+                  <div class="st-form-group">
+                    <label for="manualPassword">Password</label>
+                    <input
+                      type="password"
+                      id="manualPassword"
+                      placeholder="Enter your password"
+                      required
+                    />
+                  </div>
+
+                  <button type="submit" class="st-btn">Log In</button>
+                </form>
+              </div>
             </div>
-            
-            <div class="form-group">
-              <label for="manualPassword">Password</label>
-              <input 
-                type="password" 
-                id="manualPassword" 
-                name="password" 
-                placeholder="Enter your password"
-                autocomplete="current-password"
-              />
+          </div>
+
+          <!-- Dashboard View -->
+          <div id="studentDashboardView" class="hidden">
+            <div class="st-dashboard-content">
+              <div class="st-welcome-header">
+                <h1>Welcome back, <span id="studentCodeDisplay">Student</span>!</h1>
+                <p>Here's what's happening in your learning journey</p>
+              </div>
+
+              <div class="st-banner">
+                <h2>📖 Keep Learning</h2>
+                <p>You're making great progress! Check your goals and assignments below.</p>
+              </div>
+
+              <!-- Goals Section -->
+              <section class="st-section" id="goalsSection">
+                <h2>
+                  🎯 Your Goals
+                  <span class="count" id="goalsCount">0</span>
+                </h2>
+                <div id="goalsContent">
+                  <p style="opacity: 0.7;">Loading your goals...</p>
+                </div>
+              </section>
+
+              <!-- Assignments Section -->
+              <section class="st-section" id="assignmentsSection">
+                <h2>
+                  📚 Assignments
+                  <span class="count" id="assignmentsCount">0</span>
+                </h2>
+                <div id="assignmentsContent">
+                  <p style="opacity: 0.7;">Loading your assignments...</p>
+                </div>
+              </section>
+
+              <div class="st-actions">
+                <button type="button" class="st-btn secondary" id="btnLogout">
+                  Log Out
+                </button>
+              </div>
             </div>
-            
-            <button type="submit" class="btn" id="btnManualLogin">
-              Sign In
-            </button>
-          </form>
-        </div>
-        
-        <footer class="portal-footer">
-          <p style="color: var(--muted); font-size: 13px; margin-bottom: 8px">Teacher or Admin?</p>
-          <a href="/hub/?entry=teacher" class="link">
-            Go to Classroom Hub →
-          </a>
-        </footer>
+          </div>
+        </main>
       </div>
     </div>
-    
-    <!-- Dashboard View (PR 315) -->
-    <div id="studentDashboardView" class="portal-container hidden">
-      <div class="portal-card" style="max-width: 900px;">
-        <header class="portal-header">
-          <h1 class="portal-title">✅ Welcome!</h1>
-          <p class="portal-subtitle">You are signed in as <span id="studentCodeDisplay" style="color: var(--brand); font-weight: 800;"></span></p>
-        </header>
-        
-        <div style="margin-top: 32px;">
-          <!-- Success Banner -->
-          <div style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 12px; padding: 24px; margin-bottom: 24px;">
-            <h2 style="margin: 0 0 12px 0; font-size: 1.25rem; color: var(--ink);">🎓 Student Portal Active</h2>
-            <p style="margin: 0; color: var(--ink-dim); line-height: 1.6;">
-              Your student portal session is active. You can view your IEP goals and track your progress below.
-            </p>
-          </div>
-          
-          <!-- Goals & Progress Section -->
-          <div class="dashboard-section">
-            <div class="dashboard-section-header">
-              <h2 class="dashboard-section-title">🎯 Goals & Progress</h2>
-              <span class="dashboard-section-count" id="goalsCount">Loading...</span>
-            </div>
-            <div id="goalsContent">
-              <!-- Goals will be loaded here by JavaScript -->
-            </div>
-          </div>
-          
-          <!-- Assignments Section -->
-          <div class="dashboard-section" id="assignmentsSection">
-            <div class="dashboard-section-header">
-              <h2 class="dashboard-section-title">📚 My Assignments</h2>
-              <span class="dashboard-section-count" id="assignmentsCount">Loading...</span>
-            </div>
-            <div id="assignmentsContent">
-              <!-- Assignments will be loaded here by JavaScript -->
-            </div>
-          </div>
-          
-          <!-- Action Buttons -->
-          <div style="display: flex; gap: 12px; justify-content: center;">
-            <button class="btn primary" id="btnLogout" style="max-width: 200px;">
-              Sign Out
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-    
-    <!-- Student Portal Initialization -->
+
+    <script defer src="/web/student-shell.js"></script>
     <script defer src="/web/student-portal-init.js"></script>
-    
-    <!-- Global App Shell JS -->
-    <script defer src="/assets/js/app-shell.js"></script>
   </body>
 </html>
