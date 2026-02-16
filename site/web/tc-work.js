@@ -2257,9 +2257,7 @@ function normalizeTaggedAssignmentText(input) {
     const select = $("issueStudentsSelect");
     if (!select) return;
     
-    for (let i = 0; i < select.options.length; i++) {
-      select.options[i].selected = true;
-    }
+    Array.from(select.options).forEach(opt => opt.selected = true);
     
     updateSelectedStudentsDisplay();
   }
@@ -2271,15 +2269,15 @@ function normalizeTaggedAssignmentText(input) {
     const select = $("issueStudentsSelect");
     if (!select) return;
     
-    for (let i = 0; i < select.options.length; i++) {
-      select.options[i].selected = false;
-    }
+    Array.from(select.options).forEach(opt => opt.selected = false);
     
     updateSelectedStudentsDisplay();
   }
   
   /**
    * Handle "Add Students from Selected Classes" button
+   * TODO: Implement class-based student filtering when class membership data is available
+   * Related: Need endpoint to fetch students by class_id or class roster data
    */
   function addClassStudents() {
     const classesSelect = $("issueClassesSelect");
@@ -2302,8 +2300,8 @@ function normalizeTaggedAssignmentText(input) {
       return;
     }
     
-    // For now, since we don't have class membership data, show message
-    // This can be enhanced when class roster data is available
+    // TODO: When class membership data is available, filter and select students
+    // Example: window.STUDENTS.filter(s => selectedClasses.includes(s.class_id))
     progressDiv.style.display = "block";
     progressText.textContent = `Class filtering not yet implemented. Selected: ${selectedClasses.join(", ")}. Please select students manually.`;
     progressText.style.color = "#f59e0b";
@@ -2387,8 +2385,31 @@ function normalizeTaggedAssignmentText(input) {
       // Convert due date to ISO format if provided
       let dueAtISO = null;
       if (dueDate) {
-        // dueDate is in YYYY-MM-DD format, convert to ISO 8601 using UTC to avoid timezone issues
-        dueAtISO = new Date(dueDate + "T23:59:59Z").toISOString();
+        // Parse date components and use Date.UTC for proper validation
+        const parts = dueDate.split("-");
+        if (parts.length === 3) {
+          const year = parseInt(parts[0], 10);
+          const month = parseInt(parts[1], 10) - 1; // Month is 0-indexed
+          const day = parseInt(parts[2], 10);
+          
+          // Validate date components
+          if (!isNaN(year) && !isNaN(month) && !isNaN(day)) {
+            const timestamp = Date.UTC(year, month, day, 23, 59, 59);
+            dueAtISO = new Date(timestamp).toISOString();
+          }
+        }
+      }
+      
+      // Validate and parse assignment ID
+      const parsedAssignmentId = parseInt(assignmentId, 10);
+      if (isNaN(parsedAssignmentId)) {
+        progressText.textContent = "Invalid assignment ID";
+        progressText.style.color = "#ef4444";
+        setTimeout(() => {
+          progressDiv.style.display = "none";
+          progressText.style.color = "";
+        }, 3000);
+        return;
       }
       
       const response = await fetch("/.netlify/functions/teacher-issue-assignment", {
@@ -2397,7 +2418,7 @@ function normalizeTaggedAssignmentText(input) {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          assignment_id: parseInt(assignmentId, 10),
+          assignment_id: parsedAssignmentId,
           student_ids: studentIds,
           due_at: dueAtISO,
           settings: {}
@@ -2452,6 +2473,8 @@ function normalizeTaggedAssignmentText(input) {
   
   /**
    * Load and display issued instances
+   * TODO: Implement when list instances endpoint is available
+   * Related: Need endpoint like /.netlify/functions/teacher-assignment-instances
    */
   async function loadIssuedInstances() {
     const emptyEl = $("instancesEmpty");
@@ -2460,8 +2483,7 @@ function normalizeTaggedAssignmentText(input) {
     
     if (!emptyEl || !table || !tbody) return;
     
-    // For now, just show empty state since we don't have a list instances endpoint yet
-    // This can be enhanced when the endpoint is available
+    // Placeholder: Show empty state until endpoint is available
     emptyEl.style.display = "block";
     table.style.display = "none";
     tbody.innerHTML = "";
