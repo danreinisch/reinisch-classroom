@@ -255,7 +255,7 @@ exports.handler = async (event) => {
       // Look up students by their codes to get UUIDs
       // For PostgREST 'in' operator with text fields, wrap each value in quotes
       // Since we've validated that codes only contain [a-zA-Z0-9_-], quoting is safe
-      const quotedCodes = validCodes.map(c => `"${c}"`);
+      const quotedCodes = validCodes.map(code => `"${code}"`);
       const studentsLookupUrl = `${SUPABASE_URL}/rest/v1/students?select=id,code&code=in.(${quotedCodes.join(',')})`;
       
       const studentsLookupResponse = await fetch(studentsLookupUrl, {
