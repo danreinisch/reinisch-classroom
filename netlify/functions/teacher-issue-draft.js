@@ -1,0 +1,312 @@
+// Teacher issue draft endpoint
+// POST /.netlify/functions/teacher-issue-draft
+// Auth: Requires teacher session cookie
+// Body: { draft } - Draft object containing title, className, assignmentText, mappingText, etc.
+// Returns: { ok, assignment_id, issued_count }
+const {
+  generateRequestId,
+  jsonResponse,
+  handleCorsPreFlight,
+  validateBodySize,
+  safeJsonParse,
+} = require('./_lib/http');
+
+const { requireTeacher } = require('./_lib/auth');
+const { getSupabaseConfig } = require('./_lib/supa');
+
+// Get Supabase configuration
+const { url: SUPABASE_URL, key: SUPABASE_SERVICE_ROLE_KEY } = getSupabaseConfig();
+const { SESSION_SECRET } = process.env;
+
+exports.handler = async (event) => {
+  const requestId = generateRequestId();
+  console.log(`[teacher-issue-draft] [${requestId}] Request received`);
+
+  // Handle CORS preflight
+  if (event.httpMethod === 'OPTIONS') {
+    return handleCorsPreFlight(event, ['POST', 'OPTIONS'], ['Content-Type']);
+  }
+  
+  if (event.httpMethod !== 'POST') {
+    console.log(`[teacher-issue-draft] [${requestId}] Method not allowed: ${event.httpMethod}`);
+    return jsonResponse(event, 405, { error: 'Method Not Allowed' }, {}, requestId);
+  }
+
+  // Validate Content-Type
+  const contentType = event.headers['content-type'] || event.headers['Content-Type'] || '';
+  if (!contentType.includes('application/json')) {
+    console.log(`[teacher-issue-draft] [${requestId}] Invalid Content-Type: ${contentType}`);
+    return jsonResponse(event, 400, { ok: false, error: 'Content-Type must be application/json' }, {}, requestId);
+  }
+
+  // Validate body size (allow up to 100KB for draft content)
+  const bodySizeCheck = validateBodySize(event.body, 100);
+  if (!bodySizeCheck.valid) {
+    console.log(`[teacher-issue-draft] [${requestId}] Body too large: ${bodySizeCheck.error}`);
+    return jsonResponse(event, 400, { ok: false, error: 'Request body too large' }, {}, requestId);
+  }
+
+  // Check if Supabase is configured
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    console.log(`[teacher-issue-draft] [${requestId}] Supabase not configured`);
+    return jsonResponse(
+      event, 
+      503, 
+      { ok: false, error: 'Service unavailable' },
+      { 'Cache-Control': 'no-store' },
+      requestId
+    );
+  }
+
+  // Check if SESSION_SECRET is configured
+  if (!SESSION_SECRET) {
+    console.error(`[teacher-issue-draft] [${requestId}] Server not configured: Missing SESSION_SECRET`);
+    return jsonResponse(event, 500, { ok: false, error: 'Server not configured' }, {}, requestId);
+  }
+
+  // Verify teacher session
+  const authResult = requireTeacher(event, SESSION_SECRET);
+  if (!authResult.ok) {
+    console.log(`[teacher-issue-draft] [${requestId}] Unauthorized access attempt`);
+    return jsonResponse(event, 401, { ok: false, error: 'Unauthorized' }, {}, requestId);
+  }
+
+  console.log(`[teacher-issue-draft] [${requestId}] Authorized user: ${authResult.user.username}`);
+
+  // Parse JSON safely
+  const parseResult = safeJsonParse(event.body);
+  if (!parseResult.ok) {
+    console.log(`[teacher-issue-draft] [${requestId}] Invalid JSON: ${parseResult.error}`);
+    return jsonResponse(event, 400, { ok: false, error: 'Invalid JSON in request body' }, {}, requestId);
+  }
+
+  const { draft } = parseResult.data;
+
+  // Validate draft object
+  if (!draft || typeof draft !== 'object') {
+    console.log(`[teacher-issue-draft] [${requestId}] Missing or invalid draft object`);
+    return jsonResponse(event, 400, { ok: false, error: 'draft is required and must be an object' }, {}, requestId);
+  }
+
+  // Validate draft has required fields
+  if (!draft.title || typeof draft.title !== 'string') {
+    console.log(`[teacher-issue-draft] [${requestId}] Missing or invalid draft.title`);
+    return jsonResponse(event, 400, { ok: false, error: 'draft.title is required and must be a string' }, {}, requestId);
+  }
+
+  if (!draft.className || typeof draft.className !== 'string') {
+    console.log(`[teacher-issue-draft] [${requestId}] Missing or invalid draft.className`);
+    return jsonResponse(event, 400, { ok: false, error: 'draft.className is required and must be a string' }, {}, requestId);
+  }
+
+  console.log(`[teacher-issue-draft] [${requestId}] Issuing draft "${draft.title}" to class "${draft.className}"`);
+
+  try {
+    // Step 1: Fetch class by name to get class ID
+    const classesUrl = `${SUPABASE_URL}/rest/v1/classes?select=id,name&name=eq.${encodeURIComponent(draft.className)}`;
+    
+    console.log(`[teacher-issue-draft] [${requestId}] Fetching class by name`);
+    
+    const classesResponse = await fetch(classesUrl, {
+      method: 'GET',
+      headers: {
+        'apikey': SUPABASE_SERVICE_ROLE_KEY,
+        'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!classesResponse.ok) {
+      console.error(`[teacher-issue-draft] [${requestId}] Class query failed with status: ${classesResponse.status}`);
+      throw new Error(`Class query failed: ${classesResponse.status}`);
+    }
+
+    const classes = await classesResponse.json();
+    const targetClass = classes[0];
+
+    if (!targetClass) {
+      console.log(`[teacher-issue-draft] [${requestId}] Class not found: ${draft.className}`);
+      return jsonResponse(event, 404, { ok: false, error: `Class "${draft.className}" not found` }, {}, requestId);
+    }
+
+    console.log(`[teacher-issue-draft] [${requestId}] Found class: ${targetClass.name} (ID: ${targetClass.id})`);
+
+    // Step 2: Fetch enrollments for this class
+    const enrollmentsUrl = `${SUPABASE_URL}/rest/v1/class_enrollments?select=student_id,students!inner(id,code,name)&class_id=eq.${encodeURIComponent(targetClass.id)}&active=eq.true`;
+    
+    console.log(`[teacher-issue-draft] [${requestId}] Fetching class enrollments`);
+    
+    const enrollmentsResponse = await fetch(enrollmentsUrl, {
+      method: 'GET',
+      headers: {
+        'apikey': SUPABASE_SERVICE_ROLE_KEY,
+        'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!enrollmentsResponse.ok) {
+      console.error(`[teacher-issue-draft] [${requestId}] Enrollments query failed with status: ${enrollmentsResponse.status}`);
+      throw new Error(`Enrollments query failed: ${enrollmentsResponse.status}`);
+    }
+
+    const enrollments = await enrollmentsResponse.json();
+    const studentIds = enrollments.map(e => e.student_id);
+
+    if (studentIds.length === 0) {
+      console.log(`[teacher-issue-draft] [${requestId}] No students enrolled in class`);
+      return jsonResponse(event, 400, { ok: false, error: `No students enrolled in ${draft.className}` }, {}, requestId);
+    }
+
+    console.log(`[teacher-issue-draft] [${requestId}] Found ${studentIds.length} enrolled students`);
+
+    // Step 3: Create assignment in Supabase
+    // Determine assignment type based on draft's assignment kind
+    let assignmentType = "html"; // default
+    if (draft.assignment && draft.assignment.kind === "link") {
+      assignmentType = "link";
+    } else if (draft.assignment && draft.assignment.kind === "file") {
+      assignmentType = "html";
+    }
+
+    const assignmentData = {
+      title: draft.title,
+      type: assignmentType,
+      series: (draft.assignment && draft.assignment.link) ? draft.assignment.link : null, // For link type, series stores the external URL
+      description: draft.notes || null,
+      class_id: targetClass.id,
+      active: true
+    };
+
+    console.log(`[teacher-issue-draft] [${requestId}] Creating assignment record`);
+
+    const assignmentsUrl = `${SUPABASE_URL}/rest/v1/assignments`;
+    const createAssignmentResponse = await fetch(assignmentsUrl, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_SERVICE_ROLE_KEY,
+        'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation'
+      },
+      body: JSON.stringify(assignmentData)
+    });
+
+    if (!createAssignmentResponse.ok) {
+      const errorText = await createAssignmentResponse.text();
+      console.error(`[teacher-issue-draft] [${requestId}] Assignment creation failed: ${createAssignmentResponse.status} - ${errorText}`);
+      throw new Error(`Failed to create assignment: ${createAssignmentResponse.status}`);
+    }
+
+    const createdAssignments = await createAssignmentResponse.json();
+    const assignmentId = createdAssignments[0]?.id;
+
+    if (!assignmentId) {
+      console.error(`[teacher-issue-draft] [${requestId}] Assignment created but no ID returned`);
+      throw new Error('Assignment created but no ID returned');
+    }
+
+    console.log(`[teacher-issue-draft] [${requestId}] Created assignment with ID: ${assignmentId}`);
+
+    // Step 4: Convert due date to ISO 8601 if provided
+    let dueAt = null;
+    if (draft.dueAt) {
+      try {
+        const dueDate = new Date(draft.dueAt);
+        if (!isNaN(dueDate.getTime())) {
+          dueAt = dueDate.toISOString();
+        }
+      } catch (err) {
+        console.warn(`[teacher-issue-draft] [${requestId}] Invalid due date:`, err);
+      }
+    }
+
+    // Step 5: Fetch student details to prepare assignment instances
+    const studentsUrl = `${SUPABASE_URL}/rest/v1/students?select=id,code,name&id=in.(${studentIds.map(id => `"${id}"`).join(',')})`;
+    
+    console.log(`[teacher-issue-draft] [${requestId}] Fetching student details`);
+    
+    const studentsResponse = await fetch(studentsUrl, {
+      method: 'GET',
+      headers: {
+        'apikey': SUPABASE_SERVICE_ROLE_KEY,
+        'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!studentsResponse.ok) {
+      console.error(`[teacher-issue-draft] [${requestId}] Students query failed with status: ${studentsResponse.status}`);
+      throw new Error(`Students query failed: ${studentsResponse.status}`);
+    }
+
+    const students = await studentsResponse.json();
+    
+    if (!students || students.length === 0) {
+      console.log(`[teacher-issue-draft] [${requestId}] No students found for provided IDs`);
+      return jsonResponse(event, 404, { ok: false, error: 'No students found for provided IDs' }, {}, requestId);
+    }
+
+    console.log(`[teacher-issue-draft] [${requestId}] Found ${students.length} students`);
+
+    // Step 6: Build instances to upsert
+    const instances = students.map(student => ({
+      assignment_id: assignmentId,
+      student_id: student.id,
+      student_code: student.code,
+      student_name: student.name || student.code,
+      assigned_at: new Date().toISOString(),
+      due_at: dueAt || null,
+      status: 'Assigned',
+      settings: {},
+    }));
+
+    // Use upsert with resolution=merge-duplicates for idempotency
+    const instancesUrl = `${SUPABASE_URL}/rest/v1/assignment_instances`;
+    
+    console.log(`[teacher-issue-draft] [${requestId}] Upserting ${instances.length} assignment instances`);
+    
+    const upsertResponse = await fetch(instancesUrl, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_SERVICE_ROLE_KEY,
+        'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates,return=representation'
+      },
+      body: JSON.stringify(instances)
+    });
+
+    if (!upsertResponse.ok) {
+      const errorText = await upsertResponse.text();
+      console.error(`[teacher-issue-draft] [${requestId}] Upsert failed with status ${upsertResponse.status}: ${errorText}`);
+      throw new Error(`Failed to issue assignments: ${upsertResponse.status}`);
+    }
+
+    const upsertedInstances = await upsertResponse.json();
+    const issued_count = upsertedInstances.length;
+
+    console.log(`[teacher-issue-draft] [${requestId}] Successfully issued: ${issued_count} instances created/updated`);
+    
+    return jsonResponse(
+      event,
+      200,
+      { 
+        ok: true, 
+        assignment_id: assignmentId,
+        issued_count: issued_count
+      },
+      { 'Cache-Control': 'no-store' },
+      requestId
+    );
+  } catch (err) {
+    console.error(`[teacher-issue-draft] [${requestId}] Error:`, err);
+    return jsonResponse(
+      event,
+      500,
+      { ok: false, error: err.message || 'Failed to issue draft' },
+      { 'Cache-Control': 'no-store' },
+      requestId
+    );
+  }
+};

@@ -1358,142 +1358,27 @@ ${shown}
     setMsg("ok", `Preparing to issue "${draft.title}" to ${className}...`);
 
     try {
-      // Step 1: Get Supabase configuration
-      const SUPABASE_URL = localStorage.getItem('rc_unified_supabase_url') || localStorage.getItem('rc_supabase_url');
-      const SUPABASE_KEY = localStorage.getItem('rc_unified_supabase_anon_key') || localStorage.getItem('rc_supabase_anon_key');
-
-      if (!SUPABASE_URL || !SUPABASE_KEY) {
-        throw new Error("Supabase not configured");
-      }
-
-      // Step 2: Fetch class by name to get class ID
-      const classesUrl = `${SUPABASE_URL}/rest/v1/classes?select=id,name&name=eq.${encodeURIComponent(className)}`;
-      const classesResponse = await fetch(classesUrl, {
-        headers: {
-          'apikey': SUPABASE_KEY,
-          'Authorization': `Bearer ${SUPABASE_KEY}`
-        }
-      });
-
-      if (!classesResponse.ok) {
-        throw new Error(`Failed to fetch classes: ${classesResponse.status}`);
-      }
-
-      const classes = await classesResponse.json();
-      const targetClass = classes[0]; // Should be exactly one match
-
-      if (!targetClass) {
-        setMsg("err", `Class "${className}" not found in database`);
-        setTimeout(clearMsg, 4000);
-        return;
-      }
-
-      // Step 3: Fetch enrollments for this class
-      const enrollmentsUrl = `${SUPABASE_URL}/rest/v1/class_enrollments?select=student_id,students!inner(id,code,name)&class_id=eq.${encodeURIComponent(targetClass.id)}&active=eq.true`;
-      const enrollmentsResponse = await fetch(enrollmentsUrl, {
-        headers: {
-          'apikey': SUPABASE_KEY,
-          'Authorization': `Bearer ${SUPABASE_KEY}`
-        }
-      });
-
-      if (!enrollmentsResponse.ok) {
-        throw new Error(`Failed to fetch enrollments: ${enrollmentsResponse.status}`);
-      }
-
-      const enrollments = await enrollmentsResponse.json();
-      const studentIds = enrollments.map(e => e.student_id);
-
-      if (studentIds.length === 0) {
-        setMsg("warn", `No students enrolled in ${className}`);
-        setTimeout(clearMsg, 4000);
-        return;
-      }
-
-      // Step 4: Create assignment in Supabase
-      // Use draft title and metadata to create assignment
-      // Determine assignment type based on draft's assignment kind
-      let assignmentType = "html"; // default
-      if (draft.assignment?.kind === "link") {
-        assignmentType = "link";
-      } else if (draft.assignment?.kind === "file") {
-        assignmentType = "html";
-      }
-
-      const assignmentData = {
-        title: draft.title,
-        type: assignmentType,
-        series: draft.assignment?.link || null, // For link type, series stores the external URL
-        description: draft.notes || null,
-        class_id: targetClass.id,
-        active: true
-      };
-
-      const assignmentsUrl = `${SUPABASE_URL}/rest/v1/assignments`;
-      const createAssignmentResponse = await fetch(assignmentsUrl, {
+      // Call server-side endpoint to handle all Supabase operations
+      const response = await fetch('/.netlify/functions/teacher-issue-draft', {
         method: 'POST',
-        headers: {
-          'apikey': SUPABASE_KEY,
-          'Authorization': `Bearer ${SUPABASE_KEY}`,
-          'Content-Type': 'application/json',
-          'Prefer': 'return=representation'
-        },
-        body: JSON.stringify(assignmentData)
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ draft })
       });
 
-      if (!createAssignmentResponse.ok) {
-        const errorText = await createAssignmentResponse.text();
-        throw new Error(`Failed to create assignment: ${createAssignmentResponse.status} - ${errorText}`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
+        throw new Error(errorData.error || `Issue failed: ${response.status}`);
       }
 
-      const createdAssignments = await createAssignmentResponse.json();
-      const assignmentId = createdAssignments[0]?.id;
+      const result = await response.json();
 
-      if (!assignmentId) {
-        throw new Error("Assignment created but no ID returned");
-      }
-
-      // Step 5: Convert due date to ISO 8601 if provided
-      let dueAt = null;
-      if (draft.dueAt) {
-        try {
-          const dueDate = new Date(draft.dueAt);
-          if (!isNaN(dueDate.getTime())) {
-            dueAt = dueDate.toISOString();
-          }
-        } catch (err) {
-          console.warn("[tc-work] Invalid due date:", err);
-        }
-      }
-
-      // Step 6: Call issue-assignment endpoint
-      const issueResponse = await fetch("/.netlify/functions/teacher-issue-assignment", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        credentials: "same-origin",
-        body: JSON.stringify({
-          assignment_id: assignmentId,
-          student_ids: studentIds,
-          due_at: dueAt,
-          settings: {}
-        })
-      });
-
-      if (!issueResponse.ok) {
-        throw new Error(`Issue failed: ${issueResponse.status}`);
-      }
-
-      const issueResult = await issueResponse.json();
-
-      if (issueResult.ok) {
-        const issued = issueResult.inserted_count || 0;
-        const skipped = issueResult.skipped_count || 0;
-        setMsg("ok", `✓ Issued to ${issued} student(s) in ${className}${skipped > 0 ? ` (${skipped} skipped)` : ""}`);
+      if (result.ok) {
+        const issued = result.issued_count || 0;
+        setMsg("ok", `✓ Issued to ${issued} student(s) in ${className}`);
         setTimeout(clearMsg, 5000);
       } else {
-        throw new Error(issueResult.error || "Issue failed");
+        throw new Error(result.error || "Issue failed");
       }
     } catch (err) {
       console.error("[tc-work] Issue draft error:", err);

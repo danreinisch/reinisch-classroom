@@ -18,17 +18,16 @@
 
   async function gateTeacher(){
     // Same-origin is mandatory for preview deploys.
-    const next = encodeURIComponent(location.pathname + location.search);
     try{
       const r = await fetch('/.netlify/functions/teacher-session', { cache:'no-store', credentials:'same-origin' });
       if(!r.ok){
-        location.replace(`/hub/?reason=missing_teacher_session&next=${next}`);
-        return false;
+        console.warn('[teacher-shell] Session check returned', r.status, '— continuing without redirect');
+        return true; // Let page load; server functions will independently enforce auth
       }
       return true;
-    }catch(_){
-      location.replace(`/hub/?reason=gate_error&next=${next}`);
-      return false;
+    }catch(err){
+      console.warn('[teacher-shell] Session check failed:', err.message, '— continuing without redirect');
+      return true; // Network error — don't block the UI
     }
   }
 
