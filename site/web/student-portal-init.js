@@ -268,7 +268,7 @@
     if (area.includes('writ')) return 'Writing';
     if (area.includes('math')) return 'Math';
     if (area.includes('behavior')) return 'Behavior';
-    if (area.includes('life skill')) return 'LifeSkills';
+    if (area.includes('life')) return 'LifeSkills';  // Matches all "Life Skills" variations
     if (area.includes('social')) return 'Social';
     if (area.includes('language')) return 'Language';
     if (area.includes('emotional')) return 'Emotional';
@@ -424,6 +424,7 @@
     const progressEntries = progressMap.get(goal.id) || [];
     
     // Calculate this quarter's data points
+    // Quarters: Q1=Jan-Mar (0-2), Q2=Apr-Jun (3-5), Q3=Jul-Sep (6-8), Q4=Oct-Dec (9-11)
     const now = new Date();
     const quarterStart = new Date(now.getFullYear(), Math.floor(now.getMonth() / MONTHS_PER_QUARTER) * MONTHS_PER_QUARTER, 1);
     const thisQuarterEntries = progressEntries.filter(entry => {
