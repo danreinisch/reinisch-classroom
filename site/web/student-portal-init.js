@@ -944,13 +944,13 @@
       
       answerArea.querySelectorAll('.assignment-answer-choice').forEach(choiceEl => {
         choiceEl.addEventListener('click', function(e) {
-          if (e.target.tagName !== 'INPUT') {
-            const checkbox = this.querySelector('input[type="checkbox"]');
-            if (checkbox) {
-              checkbox.checked = !checkbox.checked;
-            }
-          }
           const checkbox = this.querySelector('input[type="checkbox"]');
+          if (!checkbox) return;
+          
+          if (e.target.tagName !== 'INPUT') {
+            checkbox.checked = !checkbox.checked;
+          }
+          
           if (checkbox.checked) {
             this.classList.add('selected');
           } else {
@@ -972,11 +972,13 @@
           class="assignment-textarea" 
           id="answerTextarea" 
           placeholder="Type your answer..."
-        >${escapeHtml(savedText)}</textarea>
+        ></textarea>
       `;
       
       const textarea = document.getElementById('answerTextarea');
       if (textarea) {
+        // Set value via DOM property to preserve special characters
+        textarea.value = savedText;
         textarea.addEventListener('input', function() {
           assignmentViewerState.answers.set(questionId, this.value);
         });
@@ -1038,6 +1040,7 @@
       }
       
       // Submit to server
+      // Note: API field is called 'student_name' but accepts student code
       const response = await fetch('/.netlify/functions/submissions-create', {
         method: 'POST',
         headers: {
@@ -1045,7 +1048,7 @@
         },
         body: JSON.stringify({
           assignment_id: instance.assignment_id,
-          student_name: studentCode,
+          student_name: studentCode, // API accepts code in student_name field
           content: JSON.stringify(answersObj),
         }),
       });
