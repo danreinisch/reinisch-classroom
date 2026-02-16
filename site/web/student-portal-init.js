@@ -1392,7 +1392,6 @@
     
     // Reset state flags for next login
     state.dashboardHandlersAttached = false;
-    state.redirectingToHub = false;
     
     // Redirect to home page as specified in requirements
     window.location.href = '/';
