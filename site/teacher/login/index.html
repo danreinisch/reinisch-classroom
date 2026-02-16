@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Teacher Center — Login</title>
+  <link rel="stylesheet" href="/web/teacher-shell.css" />
+  <style>
+    .login-container {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .login-card {
+      width: 100%;
+      max-width: 420px;
+      padding: 32px;
+      border-radius: 18px;
+      background: var(--tc-glass);
+      border: 1px solid var(--tc-border);
+      box-shadow: 0 18px 60px rgba(0,0,0,.35);
+    }
+
+    .login-title {
+      margin: 0 0 24px;
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: var(--tc-text);
+      text-align: center;
+    }
+
+    .login-form {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .login-field {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .login-label {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--tc-muted);
+    }
+
+    .login-input {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.22);
+      color: var(--tc-text);
+      font-size: 16px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .login-input:focus {
+      border-color: rgba(56,255,166,.4);
+    }
+
+    .login-button {
+      margin-top: 8px;
+      padding: 14px 20px;
+      border: none;
+      border-radius: 12px;
+      background: rgba(56,255,166,.16);
+      color: rgba(56,255,166,.98);
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .login-button:hover:not(:disabled) {
+      background: rgba(56,255,166,.22);
+    }
+
+    .login-button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .login-error {
+      display: none;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: rgba(255,80,80,.12);
+      border: 1px solid rgba(255,80,80,.2);
+      color: rgba(255,180,180,.98);
+      font-size: 14px;
+    }
+
+    .login-error.visible {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <div class="login-card">
+      <h1 class="login-title">Teacher Center</h1>
+      
+      <form id="loginForm" class="login-form">
+        <div class="login-field">
+          <label for="username" class="login-label">Username</label>
+          <input 
+            type="text" 
+            id="username" 
+            name="username" 
+            class="login-input" 
+            autocomplete="username"
+            required 
+            autofocus
+          />
+        </div>
+
+        <div class="login-field">
+          <label for="password" class="login-label">Password</label>
+          <input 
+            type="password" 
+            id="password" 
+            name="password" 
+            class="login-input" 
+            autocomplete="current-password"
+            required
+          />
+        </div>
+
+        <div id="errorMessage" class="login-error"></div>
+
+        <button type="submit" id="submitButton" class="login-button">
+          Sign In
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      const form = document.getElementById('loginForm');
+      const submitButton = document.getElementById('submitButton');
+      const errorMessage = document.getElementById('errorMessage');
+      const usernameInput = document.getElementById('username');
+      const passwordInput = document.getElementById('password');
+
+      function showError(message) {
+        errorMessage.textContent = message;
+        errorMessage.classList.add('visible');
+      }
+
+      function hideError() {
+        errorMessage.classList.remove('visible');
+      }
+
+      function getNextPath() {
+        const params = new URLSearchParams(window.location.search);
+        const next = params.get('next');
+        
+        // Validate that next path starts with /teacher/ to prevent open redirect
+        // Use URL constructor to normalize path and prevent traversal attacks
+        if (next) {
+          try {
+            // Create a URL object to normalize the path
+            const url = new URL(next, window.location.origin);
+            
+            // Ensure the URL points to the same origin (prevent external redirects)
+            if (url.origin !== window.location.origin) {
+              return '/teacher/';
+            }
+            
+            const normalizedPath = url.pathname;
+            
+            // Only allow paths that start with /teacher/ after normalization
+            // Using trailing slash to prevent matches like /teacher-admin
+            if (normalizedPath === '/teacher/' || normalizedPath.startsWith('/teacher/')) {
+              // Return the full normalized URL (pathname + search + hash)
+              return normalizedPath + url.search + url.hash;
+            }
+          } catch (e) {
+            // Invalid URL, fall through to default
+          }
+        }
+        
+        return '/teacher/';
+      }
+
+      form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        hideError();
+
+        const username = usernameInput.value.trim();
+        const password = passwordInput.value;
+
+        if (!username || !password) {
+          showError('Please enter both username and password');
+          return;
+        }
+
+        // Disable button to prevent double-submit
+        submitButton.disabled = true;
+        submitButton.textContent = 'Signing In...';
+
+        try {
+          const response = await fetch('/.netlify/functions/teacher-login', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({ username, password }),
+          });
+
+          const result = await response.json();
+
+          if (response.ok && result.ok === true) {
+            // Success - redirect to next path
+            const nextPath = getNextPath();
+            window.location.replace(nextPath);
+          } else {
+            // Show error message from server
+            const errorMsg = result.error || 'Login failed. Please try again.';
+            showError(errorMsg);
+            submitButton.disabled = false;
+            submitButton.textContent = 'Sign In';
+            passwordInput.value = '';
+            passwordInput.focus();
+          }
+        } catch (err) {
+          console.error('[teacher-login] Network error:', err);
+          showError('Network error. Please check your connection and try again.');
+          submitButton.disabled = false;
+          submitButton.textContent = 'Sign In';
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

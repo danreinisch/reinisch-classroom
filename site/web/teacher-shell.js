@@ -17,77 +17,37 @@
   }
 
   async function gateTeacher(){
-    // Same-origin is mandatory for preview deploys.
-    // Session check with redirect to /hub/ on auth failure.
-    // Loop prevention safeguards:
-    // 1. Don't redirect if already on /hub/ (the login page)
-    // 2. Use timestamp-based approach to prevent rapid redirect loops
-    //    (only suppress re-redirects if last redirect was < 10 seconds ago)
-    // 3. Network errors don't trigger redirect (may be temporary)
-    
-    const REDIRECT_TIMESTAMP_KEY = 'tc_auth_redirect_timestamp';
-    const REDIRECT_COOLDOWN_MS = 10000; // 10 seconds
     const currentPath = location.pathname;
+    
+    // Don't gate the login page itself (it doesn't include this script,
+    // but guard anyway for safety)
+    if(currentPath.startsWith('/teacher/login/')){
+      return true;
+    }
     
     try{
       const r = await fetch('/.netlify/functions/teacher-session', { cache:'no-store', credentials:'same-origin' });
-      if(!r.ok){
-        console.warn('[teacher-shell] Session check returned', r.status);
+      if(r.ok) return true; // Authenticated
+      
+      if(r.status === 401){
+        // Hide page content immediately to prevent flash of teacher data
+        document.body.style.display = 'none';
         
-        // Redirect to login page with safeguards to prevent loops
-        if(r.status === 401){
-          // Don't redirect if already on /hub or any /hub/* page (the login area)
-          if(currentPath.startsWith('/hub')){
-            console.warn('[teacher-shell] Already on login page, not redirecting');
-            return true;
-          }
-          
-          // Check if we've recently redirected (within cooldown period)
-          try{
-            const lastRedirectStr = sessionStorage.getItem(REDIRECT_TIMESTAMP_KEY);
-            if(lastRedirectStr){
-              const lastRedirect = parseInt(lastRedirectStr, 10);
-              const now = Date.now();
-              const timeSinceRedirect = now - lastRedirect;
-              
-              if(timeSinceRedirect < REDIRECT_COOLDOWN_MS){
-                console.warn('[teacher-shell] Redirect already attempted in this session, not redirecting again to prevent loop');
-                return true;
-              }
-            }
-            
-            // Set timestamp to prevent rapid redirect loops
-            sessionStorage.setItem(REDIRECT_TIMESTAMP_KEY, String(Date.now()));
-          }catch(_){
-            // sessionStorage may not be available, continue with redirect
-          }
-          
-          // Hide page content to prevent flash of unauthorized content
-          document.body.style.display = 'none';
-          
-          // Redirect to login page with entry=teacher, next path, and reason
-          const nextPath = encodeURIComponent(currentPath);
-          console.log('[teacher-shell] Redirecting to /hub/ for authentication');
-          location.href = `/hub/?entry=teacher&next=${nextPath}&reason=session_expired`;
-          return false;
-        }
+        // Build login URL with return path (including query params and hash)
+        const returnPath = location.pathname + location.search + location.hash;
+        const loginUrl = '/teacher/login/?next=' + encodeURIComponent(returnPath);
         
-        // Non-401 errors: let page load, server functions will enforce auth
-        console.warn('[teacher-shell] Non-401 status, continuing without redirect');
-        return true;
+        console.log('[teacher-shell] Not authenticated, redirecting to', loginUrl);
+        location.replace(loginUrl);
+        return false;
       }
       
-      // Session is valid - clear redirect timestamp if it exists
-      try{
-        sessionStorage.removeItem(REDIRECT_TIMESTAMP_KEY);
-      }catch(_){
-        // sessionStorage may not be available, ignore
-      }
-      
+      // Non-401 errors: log and continue (server functions enforce auth independently)
+      console.warn('[teacher-shell] Session check returned', r.status, '— continuing');
       return true;
     }catch(err){
-      console.warn('[teacher-shell] Session check failed:', err.message, '— continuing without redirect');
-      return true; // Network error — don't block the UI
+      console.warn('[teacher-shell] Session check failed:', err.message, '— continuing');
+      return true;
     }
   }
 

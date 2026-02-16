@@ -75,6 +75,12 @@
     Cache-Control = "public, max-age=31536000, immutable"
     Content-Type = "video/webm"
 
+# Route-specific CSP for /teacher/login/* - allows inline scripts for standalone login page
+[[headers]]
+  for = "/teacher/login/*"
+  [headers.values]
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://*.supabase.co; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.supabase.io https://*.netlify.app; media-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; report-uri /.netlify/functions/csp-report"
+
 # Route-specific CSP for /hub/* - temporary 'unsafe-inline' for Teacher Center inline scripts
 # This allows the Hub login to work while planning inline-to-external refactor
 [[headers]]
