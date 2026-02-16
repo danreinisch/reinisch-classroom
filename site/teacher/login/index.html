@@ -165,7 +165,7 @@
         const params = new URLSearchParams(window.location.search);
         const next = params.get('next');
         
-        // Validate that next path starts with /teacher to prevent open redirect
+        // Validate that next path starts with /teacher/ to prevent open redirect
         // Use URL constructor to normalize path and prevent traversal attacks
         if (next) {
           try {
@@ -173,8 +173,9 @@
             const url = new URL(next, window.location.origin);
             const normalizedPath = url.pathname;
             
-            // Only allow paths that start with /teacher after normalization
-            if (normalizedPath.startsWith('/teacher')) {
+            // Only allow paths that start with /teacher/ after normalization
+            // Using trailing slash to prevent matches like /teacher-admin
+            if (normalizedPath === '/teacher/' || normalizedPath.startsWith('/teacher/')) {
               // Return the full normalized URL (pathname + search + hash)
               return normalizedPath + url.search + url.hash;
             }
