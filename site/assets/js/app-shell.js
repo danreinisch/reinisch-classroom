@@ -293,19 +293,24 @@
         </div>
 
         <!-- Teacher -->
-        <button class="app-shell-item" data-shell-nav="teacher" data-requires-auth="teacher" aria-expanded="false">
+        <a href="/teacher/" class="app-shell-item" data-shell-nav="teacher" data-requires-auth="teacher">
           <span class="app-shell-item-icon">
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M12 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0"/>
             </svg>
           </span>
           <span class="app-shell-item-label">Teacher</span>
-          <span class="app-shell-item-arrow">▶</span>
-        </button>
-        <div class="app-shell-submenu" data-shell-submenu="teacher">
-          <a href="/teacher/work/" class="app-shell-submenu-item">Teacher Center</a>
-          <a href="/teacher/admin/" class="app-shell-submenu-item app-shell-hidden" data-admin-only>Admin</a>
-        </div>
+        </a>
+
+        <!-- Admin -->
+        <a href="/teacher/admin/" class="app-shell-item app-shell-hidden" data-shell-nav="admin" data-admin-only data-requires-auth="teacher">
+          <span class="app-shell-item-icon">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+          </span>
+          <span class="app-shell-item-label">Admin</span>
+        </a>
 
         <!-- Student -->
         <button class="app-shell-item" data-shell-nav="student" data-requires-auth="student">
