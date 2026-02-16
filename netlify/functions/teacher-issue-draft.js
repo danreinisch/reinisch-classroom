@@ -222,6 +222,8 @@ exports.handler = async (event) => {
     }
 
     // Step 5: Fetch student details to prepare assignment instances
+    // Note: studentIds come from database enrollment query above, already validated as UUIDs by Supabase
+    // PostgREST syntax requires wrapping UUIDs in double quotes for `in` operator
     const studentsUrl = `${SUPABASE_URL}/rest/v1/students?select=id,code,name&id=in.(${studentIds.map(id => `"${id}"`).join(',')})`;
     
     console.log(`[teacher-issue-draft] [${requestId}] Fetching student details`);

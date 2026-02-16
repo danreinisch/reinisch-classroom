@@ -18,6 +18,12 @@
 
   async function gateTeacher(){
     // Same-origin is mandatory for preview deploys.
+    // NOTE: This function is intentionally non-blocking. Per requirements, we log warnings
+    // but DO NOT redirect on failure. This is by design because:
+    // 1. Teacher is already authenticated at the function level (HttpOnly cookie 'tc')
+    // 2. This gate is a UX nicety, NOT a security boundary
+    // 3. Individual serverless functions independently enforce auth
+    // 4. Aggressive redirects caused the "stuck on /hub/" bug this fix addresses
     try{
       const r = await fetch('/.netlify/functions/teacher-session', { cache:'no-store', credentials:'same-origin' });
       if(!r.ok){
