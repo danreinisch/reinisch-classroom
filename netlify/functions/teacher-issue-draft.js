@@ -175,7 +175,8 @@ exports.handler = async (event) => {
     }
 
     // Step 2: Fetch enrollments for this class
-    const enrollmentsUrl = `${SUPABASE_URL}/rest/v1/class_enrollments?select=student_id,students!inner(id,code,name)&class_id=eq.${encodeURIComponent(targetClass.id)}&active=eq.true`;
+    // NOTE: No active filter — production class_enrollments table does not have an active column
+    const enrollmentsUrl = `${SUPABASE_URL}/rest/v1/class_enrollments?select=student_id,students!inner(id,code,name)&class_id=eq.${encodeURIComponent(targetClass.id)}`;
     
     console.log(`[teacher-issue-draft] [${requestId}] Fetching class enrollments`);
     
