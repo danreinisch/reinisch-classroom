@@ -139,10 +139,10 @@
         </div>
 
         <div class="hub-gate-actions">
-          <button class="hub-gate-btn hub-gate-btn-teacher" id="gateTeacherBtn">
+          <a href="/teacher/" class="hub-gate-btn hub-gate-btn-teacher" id="gateTeacherBtn">
             <span class="hub-gate-btn-label">Teacher Center</span>
             <span class="hub-gate-btn-desc">Manage students, goals, and assignments</span>
-          </button>
+          </a>
 
           <a href="/student/" class="hub-gate-btn hub-gate-btn-student">
             <span class="hub-gate-btn-label">Student Portal</span>
@@ -163,14 +163,6 @@
 
     // Add styles
     injectGateStyles();
-
-    // Add event handler for teacher button
-    setTimeout(() => {
-      const teacherBtn = document.getElementById('gateTeacherBtn');
-      if (teacherBtn) {
-        teacherBtn.addEventListener('click', handleTeacherGateClick);
-      }
-    }, 0);
 
     return panel;
   }
@@ -314,34 +306,11 @@
 
   /**
    * Handle teacher gate button click
-   * Phase 302C: Added defensive null-checks for modal elements
-   * Phase 2: Added guard to prevent multiple active modals
+   * Navigate to Teacher Center — teacher-shell.js handles auth
    */
-  function handleTeacherGateClick() {
-    debugLog(LOG_PREFIX, 'Teacher gate clicked - triggering login');
-
-    // Phase 2: Guard - check if any modal is already active
-    const activeModal = document.querySelector('.modal-backdrop.show');
-    if (activeModal) {
-      debugLog(LOG_PREFIX, 'Modal already active, not opening another');
-      return;
-    }
-
-    // Phase 302C: Defensive - Find and show the teacher modal if it exists
-    const teachModal = document.querySelector(SELECTORS.TEACH_MODAL);
-    
-    if (teachModal) {
-      teachModal.classList.add('show');
-      
-      // Phase 302C: Defensive - Focus password input if present
-      const passInput = document.querySelector(SELECTORS.TEACH_PASSWORD_INPUT);
-      if (passInput) {
-        passInput.focus();
-      }
-    } else {
-      // Phase 302C: Defensive - Log warning but don't throw error
-      debugWarn(LOG_PREFIX, 'Teacher modal not found - hub may not be fully initialized');
-    }
+  function handleTeacherGateClick(e) {
+    // Navigate to Teacher Center — teacher-shell.js handles auth
+    window.location.href = '/teacher/';
   }
 
   /**
@@ -394,33 +363,25 @@
     const entry = urlParams.get('entry');
 
     if (entry === 'teacher') {
-      // Auto-open teacher login modal
-      debugLog(LOG_PREFIX, 'Entry parameter detected - auto-opening teacher login');
-      // Wait a bit for DOM to be ready
-      setTimeout(() => {
-        const teachModal = document.querySelector(SELECTORS.TEACH_MODAL);
-        const passInput = document.querySelector(SELECTORS.TEACH_PASSWORD_INPUT);
-        
-        if (teachModal) {
-          teachModal.classList.add('show');
-          if (passInput) {
-            passInput.focus();
-          }
-        }
-      }, 100);
-      return; // Don't show gate
+      // Redirect directly to Teacher Center
+      debugLog(LOG_PREFIX, 'Entry parameter detected - redirecting to Teacher Center');
+      const nextParam = urlParams.get('next');
+      if (nextParam && nextParam.startsWith('/teacher/')) {
+        window.location.replace(nextParam);
+      } else {
+        window.location.replace('/teacher/');
+      }
+      return;
     }
 
     // Check if user has pending server session
     const hasPendingSession = await hasPendingTeacherSession();
 
     if (hasPendingSession) {
-      // User has server session but no local auth
-      // Show resume banner instead of gate
-      debugLog(LOG_PREFIX, 'Pending server session found - showing resume banner');
-      showResumeBanner();
-      // Still show gate as primary view
-      showGate();
+      // User has valid server session — send them to Teacher Center
+      debugLog(LOG_PREFIX, 'Valid teacher session found - redirecting to Teacher Center');
+      window.location.replace('/teacher/');
+      return;
     } else {
       // No auth at all - show gate
       debugLog(LOG_PREFIX, 'No auth found - showing gate');
