@@ -305,15 +305,6 @@
   }
 
   /**
-   * Handle teacher gate button click
-   * Navigate to Teacher Center — teacher-shell.js handles auth
-   */
-  function handleTeacherGateClick(e) {
-    // Navigate to Teacher Center — teacher-shell.js handles auth
-    window.location.href = '/teacher/';
-  }
-
-  /**
    * Hide the gate panel
    * Phase 302C: Added defensive null-check
    */
