@@ -3,13 +3,13 @@ import { test, expect } from "@playwright/test";
 /**
  * Teacher Entry Redirect Test
  *
- * Validates that visiting /hub/?entry=teacher redirects to /teacher/ after successful login.
+ * Validates that visiting /hub/?entry=teacher immediately redirects to /teacher/.
  * Also validates that next=/teacher/... parameter works correctly.
  */
 
 test.describe("Teacher Entry Redirect", () => {
-  test("should redirect to /teacher/ after successful login with entry=teacher", async ({ page }) => {
-    // Mock teacher-session endpoint (no session)
+  test("should redirect directly to /teacher/ with entry=teacher parameter", async ({ page }) => {
+    // Mock teacher-session endpoint (no session) - will redirect to login
     await page.route("**/.netlify/functions/teacher-session", async (route) => {
       await route.fulfill({
         status: 401,
@@ -17,59 +17,23 @@ test.describe("Teacher Entry Redirect", () => {
         body: JSON.stringify({
           ok: false,
           error: "No active session",
-        }),
-      });
-    });
-
-    // Mock teacher-login endpoint (successful login)
-    await page.route("**/.netlify/functions/teacher-login", async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          ok: true,
-          username: "test-teacher",
-        }),
-      });
-    });
-
-    // Mock student-roster to prevent network errors
-    await page.route("**/.netlify/functions/student-roster", async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          ok: true,
-          students: [],
-          source: "mock",
         }),
       });
     });
 
     // Navigate to hub with entry=teacher parameter
     await page.goto("/hub/?entry=teacher");
-    await page.waitForLoadState("networkidle");
 
-    // Wait for teacher modal to be visible
-    const teachModal = page.locator("#teachModal");
-    await expect(teachModal).toBeVisible({ timeout: 5000 });
+    // Should immediately redirect to /teacher/ then to /teacher/login/
+    await page.waitForURL(/\/teacher\/login\//, { timeout: 5000 });
 
-    // Fill in credentials
-    await page.fill("#teachUser", "test-teacher");
-    await page.fill("#teachPass", "test-password");
-
-    // Click login button
-    await page.click("#teachGo");
-
-    // Wait for redirect to /teacher/
-    await page.waitForURL("/teacher/", { timeout: 5000 });
-
-    // Verify we're on the teacher page
-    expect(page.url()).toContain("/teacher/");
+    // Verify we're on the login page with next parameter
+    expect(page.url()).toContain("/teacher/login/");
+    expect(page.url()).toContain("next=%2Fteacher%2F");
   });
 
   test("should redirect to next path when next=/teacher/... is provided", async ({ page }) => {
-    // Mock teacher-session endpoint (no session)
+    // Mock teacher-session endpoint (no session) - will redirect to login
     await page.route("**/.netlify/functions/teacher-session", async (route) => {
       await route.fulfill({
         status: 401,
@@ -81,55 +45,19 @@ test.describe("Teacher Entry Redirect", () => {
       });
     });
 
-    // Mock teacher-login endpoint (successful login)
-    await page.route("**/.netlify/functions/teacher-login", async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          ok: true,
-          username: "test-teacher",
-        }),
-      });
-    });
+    // Navigate to hub with next parameter pointing to /teacher/students
+    await page.goto("/hub/?entry=teacher&next=/teacher/students");
 
-    // Mock student-roster to prevent network errors
-    await page.route("**/.netlify/functions/student-roster", async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          ok: true,
-          students: [],
-          source: "mock",
-        }),
-      });
-    });
+    // Should immediately redirect to /teacher/students then to /teacher/login/
+    await page.waitForURL(/\/teacher\/login\//, { timeout: 5000 });
 
-    // Navigate to hub with next parameter
-    await page.goto("/hub/?next=/teacher/students");
-    await page.waitForLoadState("networkidle");
-
-    // Wait for teacher modal to be visible
-    const teachModal = page.locator("#teachModal");
-    await expect(teachModal).toBeVisible({ timeout: 5000 });
-
-    // Fill in credentials
-    await page.fill("#teachUser", "test-teacher");
-    await page.fill("#teachPass", "test-password");
-
-    // Click login button
-    await page.click("#teachGo");
-
-    // Wait for redirect to /teacher/students
-    await page.waitForURL("/teacher/students", { timeout: 5000 });
-
-    // Verify we're on the correct teacher sub-page
-    expect(page.url()).toContain("/teacher/students");
+    // Verify we're on the login page with next parameter for students page
+    expect(page.url()).toContain("/teacher/login/");
+    expect(page.url()).toContain("next=%2Fteacher%2Fstudents");
   });
 
-  test("should not redirect when entry=teacher is not present", async ({ page }) => {
-    // Mock teacher-session endpoint (no session)
+  test("should navigate to /teacher/ when clicking gate button", async ({ page }) => {
+    // Mock teacher-session endpoint (no session) - will redirect to login
     await page.route("**/.netlify/functions/teacher-session", async (route) => {
       await route.fulfill({
         status: 401,
@@ -137,31 +65,6 @@ test.describe("Teacher Entry Redirect", () => {
         body: JSON.stringify({
           ok: false,
           error: "No active session",
-        }),
-      });
-    });
-
-    // Mock teacher-login endpoint (successful login)
-    await page.route("**/.netlify/functions/teacher-login", async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          ok: true,
-          username: "test-teacher",
-        }),
-      });
-    });
-
-    // Mock student-roster to prevent network errors
-    await page.route("**/.netlify/functions/student-roster", async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          ok: true,
-          students: [],
-          source: "mock",
         }),
       });
     });
@@ -170,31 +73,15 @@ test.describe("Teacher Entry Redirect", () => {
     await page.goto("/hub/");
     await page.waitForLoadState("networkidle");
 
-    // Click the teacher gate button
+    // Click the teacher gate button (now a link)
     const gateTeacherBtn = page.locator("#gateTeacherBtn");
     await gateTeacherBtn.click({ timeout: 5000 });
 
-    // Wait for teacher modal to be visible
-    const teachModal = page.locator("#teachModal");
-    await expect(teachModal).toBeVisible({ timeout: 5000 });
+    // Should navigate to /teacher/ then redirect to /teacher/login/
+    await page.waitForURL(/\/teacher\/login\//, { timeout: 5000 });
 
-    // Fill in credentials
-    await page.fill("#teachUser", "test-teacher");
-    await page.fill("#teachPass", "test-password");
-
-    // Click login button
-    await page.click("#teachGo");
-
-    // Wait for page to settle
-    await page.waitForTimeout(1000);
-
-    // Verify we're still on /hub/ (no redirect)
-    expect(page.url()).toContain("/hub/");
-    expect(page.url()).not.toContain("/teacher/");
-
-    // Verify teacher view is shown
-    const teacherView = page.locator("#view-teacher");
-    await expect(teacherView).toBeVisible({ timeout: 5000 });
+    // Verify we're on the login page
+    expect(page.url()).toContain("/teacher/login/");
   });
 
   test("should not create redirect loop if already on /teacher/ path", async ({ page }) => {
