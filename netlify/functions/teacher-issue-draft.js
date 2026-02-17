@@ -193,12 +193,20 @@ exports.handler = async (event) => {
       }
     });
 
+    let classEnrollments = [];
+    
     if (!classEnrollmentsResponse.ok) {
-      console.error(`[teacher-issue-draft] [${requestId}] class_enrollments query failed with status: ${classEnrollmentsResponse.status}`);
-      throw new Error(`Enrollments query failed: ${classEnrollmentsResponse.status}`);
+      if (classEnrollmentsResponse.status === 404) {
+        // Table doesn't exist yet — this is expected, fall through to enrollments table
+        console.log(`[teacher-issue-draft] [${requestId}] class_enrollments table not found (404), falling back to enrollments table`);
+      } else {
+        console.error(`[teacher-issue-draft] [${requestId}] class_enrollments query failed with status: ${classEnrollmentsResponse.status}`);
+        throw new Error(`Enrollments query failed: ${classEnrollmentsResponse.status}`);
+      }
+    } else {
+      classEnrollments = await classEnrollmentsResponse.json();
     }
-
-    const classEnrollments = await classEnrollmentsResponse.json();
+    
     studentIds = classEnrollments.map(e => e.student_id).filter(Boolean);
 
     if (studentIds.length > 0) {
