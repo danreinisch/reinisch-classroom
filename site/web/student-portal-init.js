@@ -464,6 +464,24 @@
   const PANEL_TRANSITION_MS = 300; // Must match CSS transition duration
   
   /**
+   * Text-to-speech utility function for accessibility
+   * Reads text aloud using browser's built-in speech synthesis
+   */
+  function speakText(text) {
+    // Cancel any ongoing speech
+    window.speechSynthesis.cancel();
+    
+    // Create new utterance
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 0.9; // Slightly slower for clarity
+    utterance.pitch = 1.0;
+    utterance.volume = 1.0;
+    
+    // Speak
+    window.speechSynthesis.speak(utterance);
+  }
+  
+  /**
    * Load and render student assignments
    */
   async function loadStudentAssignments(studentCode) {
@@ -603,11 +621,23 @@
     assignmentViewerState.answers = new Map();
     assignmentViewerState.currentDay = 0;
     
+    // Check if assignment is submitted or graded (read-only mode)
+    const isReadOnly = instance.status === 'Submitted' || instance.status === 'Graded';
+    assignmentViewerState.isReadOnly = isReadOnly;
+    
+    // Load saved answers from instance settings if in read-only mode
+    if (isReadOnly && instance.settings && instance.settings.answers) {
+      Object.entries(instance.settings.answers).forEach(([key, value]) => {
+        assignmentViewerState.answers.set(key, value);
+      });
+    }
+    
     const assignment = instance.assignment || {};
     const meta = assignment.meta || {};
     
     // Debug logging for meta content
     console.log(LOG_PREFIX, 'Assignment meta:', JSON.stringify(meta).substring(0, 200));
+    console.log(LOG_PREFIX, 'Assignment status:', instance.status, 'Read-only:', isReadOnly);
     if (!meta.days || meta.days.length === 0) {
       console.warn(LOG_PREFIX, 'Assignment has no structured content (meta.days is empty)');
     }
@@ -750,17 +780,22 @@
    */
   function renderQuestionsDay(container, dayData, instance) {
     const questions = dayData.questions || [];
+    const isReadOnly = assignmentViewerState.isReadOnly;
     
     const questionsHtml = questions.map((q, idx) => {
       const questionId = `${dayData.day_number}_${q.number}`;
       const choices = q.choices || [];
+      const savedAnswer = assignmentViewerState.answers.get(questionId);
       
       const choicesHtml = choices.map(choice => {
+        const isChecked = savedAnswer === choice.letter ? 'checked' : '';
+        const disabledAttr = isReadOnly ? 'disabled' : '';
         return `
           <div class="st-choice" data-question-id="${questionId}" data-letter="${choice.letter}">
-            <input type="radio" name="q_${questionId}" id="q_${questionId}_${choice.letter}" value="${choice.letter}">
+            <input type="radio" name="q_${questionId}" id="q_${questionId}_${choice.letter}" value="${choice.letter}" ${isChecked} ${disabledAttr}>
             <label class="st-choice-label" for="q_${questionId}_${choice.letter}">
               <strong>${choice.letter})</strong> ${escapeHtml(choice.text)}
+              <button class="st-tts-btn" data-text="${escapeHtml(choice.text)}" title="Read this answer aloud">🔊</button>
             </label>
           </div>
         `;
@@ -778,8 +813,11 @@
       return `
         <div class="st-question-container">
           <div class="st-question-number">Question ${q.number}</div>
-          <div class="st-question-text">${escapeHtml(q.text)}</div>
-          <div class="st-choices" data-correct="${q.correct}">
+          <div class="st-question-text">
+            ${escapeHtml(q.text)}
+            <button class="st-tts-btn" data-text="${escapeHtml(q.text)}" title="Read this question aloud">🔊</button>
+          </div>
+          <div class="st-choices">
             ${choicesHtml}
           </div>
           ${hintHtml}
@@ -787,51 +825,49 @@
       `;
     }).join('');
     
+    const readOnlyBanner = isReadOnly ? `
+      <div class="st-submitted-banner">
+        ✓ Submitted — Waiting for teacher review
+      </div>
+    ` : '';
+    
     container.innerHTML = `
       <h3 style="margin-top: 0; margin-bottom: 20px; font-size: 18px;">
         ${escapeHtml(dayData.label)}
       </h3>
+      ${readOnlyBanner}
       ${questionsHtml}
     `;
     
-    // Attach choice handlers
-    container.querySelectorAll('.st-choice').forEach(choiceEl => {
-      const input = choiceEl.querySelector('input[type="radio"]');
-      
-      choiceEl.addEventListener('click', function(e) {
-        if (e.target.tagName === 'INPUT') return; // Let radio handle its own click
+    // Attach choice handlers (only if not read-only)
+    if (!isReadOnly) {
+      container.querySelectorAll('.st-choice').forEach(choiceEl => {
+        const input = choiceEl.querySelector('input[type="radio"]');
         
-        const questionId = this.getAttribute('data-question-id');
-        const letter = this.getAttribute('data-letter');
-        const choicesContainer = this.closest('.st-choices');
-        const correctAnswer = choicesContainer.getAttribute('data-correct');
-        
-        // Mark the selected answer
-        input.checked = true;
-        
-        // Remove previous selections
-        choicesContainer.querySelectorAll('.st-choice').forEach(c => {
-          c.classList.remove('selected', 'correct', 'incorrect');
-        });
-        
-        // Check if correct
-        if (letter === correctAnswer) {
-          this.classList.add('correct');
-        } else {
-          this.classList.add('incorrect');
-          // Highlight the correct answer
+        choiceEl.addEventListener('click', function(e) {
+          if (e.target.tagName === 'INPUT') return; // Let radio handle its own click
+          
+          const questionId = this.getAttribute('data-question-id');
+          const letter = this.getAttribute('data-letter');
+          const choicesContainer = this.closest('.st-choices');
+          
+          // Mark the selected answer
+          input.checked = true;
+          
+          // Remove previous selection styling
           choicesContainer.querySelectorAll('.st-choice').forEach(c => {
-            if (c.getAttribute('data-letter') === correctAnswer) {
-              c.classList.add('correct');
-            }
+            c.classList.remove('selected');
           });
-        }
-        
-        // Save answer
-        assignmentViewerState.answers.set(questionId, letter);
-        saveAnswersToServer(instance);
+          
+          // Mark this choice as selected (neutral styling)
+          this.classList.add('selected');
+          
+          // Save answer
+          assignmentViewerState.answers.set(questionId, letter);
+          saveAnswersToServer(instance);
+        });
       });
-    });
+    }
     
     // Attach hint handlers
     container.querySelectorAll('.st-hint-btn').forEach(btn => {
@@ -844,12 +880,26 @@
         }
       });
     });
+    
+    // Attach TTS handlers
+    container.querySelectorAll('.st-tts-btn').forEach(btn => {
+      btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation(); // Don't trigger parent click handlers
+        const text = this.getAttribute('data-text');
+        if (text) {
+          speakText(text);
+        }
+      });
+    });
   }
   
   /**
    * Render writing prompt day
    */
   function renderWritingPromptDay(container, dayData, instance) {
+    const isReadOnly = assignmentViewerState.isReadOnly;
+    
     const structureHtml = dayData.structure && dayData.structure.length > 0 ? `
       <div class="st-writing-structure">
         <h4>Writing Structure:</h4>
@@ -873,22 +923,37 @@
     // Get saved writing response from instance settings
     const savedResponse = (instance.settings && instance.settings.writing_response) || '';
     
+    const readOnlyBanner = isReadOnly ? `
+      <div class="st-submitted-banner">
+        ✓ Submitted — Waiting for teacher review
+      </div>
+    ` : '';
+    
+    const submitButtonHtml = isReadOnly ? `
+      <div class="st-submitted-message">✓ Submitted — Waiting for teacher review</div>
+    ` : `
+      <button class="st-submit-btn" id="submitWritingBtn">Submit Response</button>
+    `;
+    
     container.innerHTML = `
       <h3 style="margin-top: 0; margin-bottom: 20px; font-size: 18px;">
         ${escapeHtml(dayData.label)}
       </h3>
+      ${readOnlyBanner}
       <div class="st-writing-section">
         <div class="st-writing-prompt">
           ${escapeHtml(dayData.prompt)}
+          <button class="st-tts-btn" data-text="${escapeHtml(dayData.prompt)}" title="Read this writing prompt aloud">🔊</button>
         </div>
         ${structureHtml}
         <textarea 
           class="st-writing-textarea" 
           id="writingResponse" 
           placeholder="Type your response here..."
+          ${isReadOnly ? 'disabled' : ''}
         >${escapeHtml(savedResponse)}</textarea>
         ${hintsHtml}
-        <button class="st-submit-btn" id="submitWritingBtn">Submit Response</button>
+        ${submitButtonHtml}
       </div>
     `;
     
@@ -955,6 +1020,18 @@
         }
       });
     }
+    
+    // Attach TTS handlers for writing prompt
+    container.querySelectorAll('.st-tts-btn').forEach(btn => {
+      btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const text = this.getAttribute('data-text');
+        if (text) {
+          speakText(text);
+        }
+      });
+    });
   }
   
   /**

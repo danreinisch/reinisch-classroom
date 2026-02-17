@@ -624,6 +624,44 @@
         display: block;
       }
 
+      /* TTS (Text-to-Speech) buttons */
+      .st-tts-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 16px;
+        padding: 4px;
+        margin-left: 8px;
+        opacity: 0.5;
+        transition: opacity 0.2s, transform 0.1s;
+        vertical-align: middle;
+        line-height: 1;
+        display: inline-block;
+      }
+
+      .st-tts-btn:hover {
+        opacity: 1;
+        transform: scale(1.1);
+      }
+
+      .st-tts-btn:active {
+        transform: scale(0.95);
+      }
+
+      .st-question-text .st-tts-btn {
+        margin-left: 12px;
+      }
+
+      .st-choice-label .st-tts-btn {
+        margin-left: auto;
+        margin-right: 8px;
+        float: right;
+      }
+
+      .st-writing-prompt .st-tts-btn {
+        margin-left: 12px;
+      }
+
       /* Writing prompt */
       .st-writing-section {
         background: rgba(255, 255, 255, 0.04);
@@ -702,6 +740,36 @@
 
       .st-submit-btn:hover {
         background: rgba(34, 197, 94, 0.25);
+      }
+
+      /* Submitted banner and message */
+      .st-submitted-banner {
+        background: rgba(34, 197, 94, 0.15);
+        border: 1px solid rgba(34, 197, 94, 0.35);
+        border-radius: 10px;
+        color: #86efac;
+        padding: 12px 20px;
+        margin-bottom: 20px;
+        text-align: center;
+        font-weight: 600;
+        font-size: 15px;
+      }
+
+      .st-submitted-message {
+        background: rgba(34, 197, 94, 0.15);
+        border: 1px solid rgba(34, 197, 94, 0.35);
+        border-radius: 10px;
+        color: #86efac;
+        padding: 12px 20px;
+        margin-top: 16px;
+        text-align: center;
+        font-weight: 600;
+        font-size: 15px;
+      }
+
+      .st-writing-textarea:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
       }
 
       @media (max-width: 768px) {

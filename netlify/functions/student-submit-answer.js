@@ -182,6 +182,38 @@ exports.handler = async (event) => {
 
     console.log(`[student-submit-answer] [${requestId}] Successfully saved answers for instance ${instance_id}`);
     
+    // Step 6: Insert into submissions table if status is "Submitted"
+    if (newStatus === 'Submitted') {
+      console.log(`[student-submit-answer] [${requestId}] Creating submission record`);
+      
+      const submissionUrl = `${SUPABASE_URL}/rest/v1/submissions`;
+      
+      const submissionResponse = await fetch(submissionUrl, {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_SERVICE_ROLE_KEY,
+          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation'
+        },
+        body: JSON.stringify({
+          instance_id: instance_id,
+          answers: answers || {},
+          submitted_at: new Date().toISOString()
+        })
+      });
+      
+      if (!submissionResponse.ok) {
+        const errorText = await submissionResponse.text();
+        console.error(`[student-submit-answer] [${requestId}] Submission insert failed: ${submissionResponse.status} - ${errorText}`);
+        // Don't fail the whole request - the answers are already saved in the instance
+      } else {
+        const submissionData = await submissionResponse.json();
+        const submissionId = submissionData && submissionData[0] ? submissionData[0].id : 'unknown';
+        console.log(`[student-submit-answer] [${requestId}] Submission created with ID: ${submissionId}`);
+      }
+    }
+    
     return jsonResponse(
       event,
       200,
