@@ -30,7 +30,7 @@ exports.handler = async (event) => {
     console.log(`[teacher-logout] [${requestId}] Clearing teacher session`);
 
     // Create cookie with immediate expiry
-    const clearCookie = 'tc=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0';
+    const clearCookie = 'tc=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0';
 
     const securityHeaders = getSecurityHeaders(requestId);
     const corsHeaders = getCorsHeaders(event, ['POST', 'OPTIONS'], ['Content-Type']);

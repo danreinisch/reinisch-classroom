@@ -78,6 +78,29 @@
       });
     }
 
+    // Add sign-out button to topbar
+    const topbar = document.querySelector('.tc-topbar');
+    if(topbar){
+      const signOutBtn = document.createElement('button');
+      signOutBtn.className = 'tc-btn';
+      signOutBtn.textContent = 'Sign Out';
+      signOutBtn.style.marginLeft = 'auto';
+      signOutBtn.setAttribute('aria-label', 'Sign out');
+      signOutBtn.addEventListener('click', async ()=>{
+        try{
+          await fetch('/.netlify/functions/teacher-logout', {
+            method: 'POST',
+            credentials: 'same-origin'
+          });
+        }catch(err){
+          console.warn('[teacher-shell] Logout request failed:', err.message);
+        }
+        // Always redirect to login, even if logout call fails
+        location.replace('/teacher/login/');
+      });
+      topbar.appendChild(signOutBtn);
+    }
+
     wireNavActive();
   }
 
