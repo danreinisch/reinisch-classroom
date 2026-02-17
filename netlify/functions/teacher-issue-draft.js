@@ -350,7 +350,7 @@ exports.handler = async (event) => {
         }
       }
     } catch (err) {
-      console.warn('[teacher-issue-draft] Enrollment query error:', err.message, '— returning empty student list');
+      console.warn(`[teacher-issue-draft] [${requestId}] Enrollment query error:`, err.message, '— returning empty student list');
       studentIds = [];
     }
 
