@@ -25,8 +25,9 @@
       return true;
     }
     
+    // credentials:'include' ensures the HttpOnly tc cookie is sent on deploy previews.
     try{
-      const r = await fetch('/.netlify/functions/teacher-session', { cache:'no-store', credentials:'same-origin' });
+      const r = await fetch('/.netlify/functions/teacher-session', { cache:'no-store', credentials:'include' });
       if(r.ok) return true; // Authenticated
       
       if(r.status === 401){
