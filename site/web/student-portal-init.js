@@ -460,6 +460,9 @@
     answers: new Map(),
   };
   
+  // Constants
+  const PANEL_TRANSITION_MS = 300; // Must match CSS transition duration
+  
   /**
    * Load and render student assignments
    */
@@ -740,7 +743,7 @@
     const questions = dayData.questions || [];
     
     const questionsHtml = questions.map((q, idx) => {
-      const questionId = `${dayData.day_number}.${q.number}`;
+      const questionId = `${dayData.day_number}_${q.number}`;
       const choices = q.choices || [];
       
       const choicesHtml = choices.map(choice => {
@@ -900,9 +903,22 @@
         const response = textarea ? textarea.value : '';
         
         if (!response.trim()) {
-          alert('Please write a response before submitting.');
+          // Show inline error instead of alert
+          let errorMsg = container.querySelector('.st-writing-error');
+          if (!errorMsg) {
+            errorMsg = document.createElement('div');
+            errorMsg.className = 'st-writing-error';
+            errorMsg.style.cssText = 'color: #fca5a5; margin-top: 8px; font-size: 14px;';
+            errorMsg.textContent = 'Please write a response before submitting.';
+            textarea.parentElement.insertBefore(errorMsg, submitBtn);
+          }
+          textarea.focus();
           return;
         }
+        
+        // Remove any previous error message
+        const errorMsg = container.querySelector('.st-writing-error');
+        if (errorMsg) errorMsg.remove();
         
         this.disabled = true;
         this.textContent = 'Submitting...';
@@ -916,7 +932,15 @@
           }, 2000);
         } catch (err) {
           console.error(LOG_PREFIX, 'Failed to submit writing response:', err);
-          alert('Failed to submit response. Please try again.');
+          // Show inline error instead of alert
+          let errorMsg = container.querySelector('.st-writing-error');
+          if (!errorMsg) {
+            errorMsg = document.createElement('div');
+            errorMsg.className = 'st-writing-error';
+            errorMsg.style.cssText = 'color: #fca5a5; margin-top: 8px; font-size: 14px;';
+            this.parentElement.insertBefore(errorMsg, this.nextSibling);
+          }
+          errorMsg.textContent = 'Failed to submit response. Please try again.';
           this.textContent = 'Submit Response';
           this.disabled = false;
         }
@@ -1000,12 +1024,12 @@
     
     if (panel) {
       panel.classList.remove('open');
-      setTimeout(() => panel.remove(), 300);
+      setTimeout(() => panel.remove(), PANEL_TRANSITION_MS);
     }
     
     if (backdrop) {
       backdrop.classList.remove('open');
-      setTimeout(() => backdrop.remove(), 300);
+      setTimeout(() => backdrop.remove(), PANEL_TRANSITION_MS);
     }
     
     // Reload assignments to reflect updated status
