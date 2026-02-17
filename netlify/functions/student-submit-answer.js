@@ -206,7 +206,10 @@ exports.handler = async (event) => {
       if (!submissionResponse.ok) {
         const errorText = await submissionResponse.text();
         console.error(`[student-submit-answer] [${requestId}] Submission insert failed: ${submissionResponse.status} - ${errorText}`);
+        console.error(`[student-submit-answer] [${requestId}] WARNING: Assignment status is 'Submitted' but no submission record created for instance ${instance_id}`);
         // Don't fail the whole request - the answers are already saved in the instance
+        // The student will see the assignment as submitted, but teachers won't see it in review queue
+        // This should be monitored and alerted on in production
       } else {
         const submissionData = await submissionResponse.json();
         const submissionId = submissionData && submissionData[0] ? submissionData[0].id : 'unknown';

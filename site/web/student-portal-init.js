@@ -468,6 +468,12 @@
    * Reads text aloud using browser's built-in speech synthesis
    */
   function speakText(text) {
+    // Check if speech synthesis is supported
+    if (!('speechSynthesis' in window)) {
+      console.warn(LOG_PREFIX, 'Speech synthesis not supported in this browser');
+      return;
+    }
+    
     // Cancel any ongoing speech
     window.speechSynthesis.cancel();
     
@@ -795,7 +801,7 @@
             <input type="radio" name="q_${questionId}" id="q_${questionId}_${choice.letter}" value="${choice.letter}" ${isChecked} ${disabledAttr}>
             <label class="st-choice-label" for="q_${questionId}_${choice.letter}">
               <strong>${choice.letter})</strong> ${escapeHtml(choice.text)}
-              <button class="st-tts-btn" data-text="${escapeHtml(choice.text)}" title="Read this answer aloud">🔊</button>
+              <button class="st-tts-btn" data-text="${escapeHtml(choice.text)}" title="Read this answer aloud" aria-label="Read answer ${choice.letter} aloud">🔊</button>
             </label>
           </div>
         `;
@@ -815,7 +821,7 @@
           <div class="st-question-number">Question ${q.number}</div>
           <div class="st-question-text">
             ${escapeHtml(q.text)}
-            <button class="st-tts-btn" data-text="${escapeHtml(q.text)}" title="Read this question aloud">🔊</button>
+            <button class="st-tts-btn" data-text="${escapeHtml(q.text)}" title="Read this question aloud" aria-label="Read question ${q.number} aloud">🔊</button>
           </div>
           <div class="st-choices">
             ${choicesHtml}
@@ -943,7 +949,7 @@
       <div class="st-writing-section">
         <div class="st-writing-prompt">
           ${escapeHtml(dayData.prompt)}
-          <button class="st-tts-btn" data-text="${escapeHtml(dayData.prompt)}" title="Read this writing prompt aloud">🔊</button>
+          <button class="st-tts-btn" data-text="${escapeHtml(dayData.prompt)}" title="Read this writing prompt aloud" aria-label="Read writing prompt aloud">🔊</button>
         </div>
         ${structureHtml}
         <textarea 
