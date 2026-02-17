@@ -23,6 +23,12 @@ const CLASS_ALIASES = {
   "Life Skills LA": "Life Skills Language Arts SC",
 };
 
+// Build reverse map for looking up short aliases from resolved names
+const REVERSE_ALIASES = {};
+for (const [short, long] of Object.entries(CLASS_ALIASES)) {
+  REVERSE_ALIASES[long] = short;
+}
+
 // Get Supabase configuration
 const { url: SUPABASE_URL, key: SUPABASE_SERVICE_ROLE_KEY } = getSupabaseConfig();
 const { SESSION_SECRET } = process.env;
@@ -56,23 +62,30 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
   let classStartIndex = -1;
   let classEndIndex = lines.length;
   
-  // Strategy 1: Find class name that appears between ==== separators
+  // Strategy 1: Find class name that appears between === separators
+  // Check for both resolved name and short alias (e.g., "Language Arts 4 SC" and "LA 4 SC")
+  const shortAlias = REVERSE_ALIASES[resolvedClassName] || '';
+  
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
-    if (line.toUpperCase().includes(resolvedClassName.toUpperCase())) {
-      // Check if this is a section header (has ==== before OR after it)
-      const prevLineIsSeparator = i > 0 && lines[i - 1].trim().match(/^={4,}$/);
-      const nextLineIsSeparator = i + 1 < lines.length && lines[i + 1].trim().match(/^={4,}$/);
+    const lineUpper = line.toUpperCase();
+    const matchesResolvedName = lineUpper.includes(resolvedClassName.toUpperCase());
+    const matchesShortAlias = shortAlias && lineUpper.includes(shortAlias.toUpperCase());
+    
+    if (matchesResolvedName || matchesShortAlias) {
+      // Check if this is a section header (has === before OR after it)
+      const prevLineIsSeparator = i > 0 && lines[i - 1].trim().match(/^={3,}$/);
+      const nextLineIsSeparator = i + 1 < lines.length && lines[i + 1].trim().match(/^={3,}$/);
       
       if (prevLineIsSeparator || nextLineIsSeparator) {
         // Found the class header
-        // Content starts after the NEXT ==== line (the one after the class name)
+        // Content starts after the NEXT === line (the one after the class name)
         let contentStartIdx = i + 1;
-        while (contentStartIdx < lines.length && !lines[contentStartIdx].trim().match(/^={4,}$/)) {
+        while (contentStartIdx < lines.length && !lines[contentStartIdx].trim().match(/^={3,}$/)) {
           contentStartIdx++;
         }
         if (contentStartIdx < lines.length) {
-          contentStartIdx++; // Skip the ==== line itself
+          contentStartIdx++; // Skip the === line itself
         }
         classStartIndex = contentStartIdx;
         break;
@@ -82,18 +95,18 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
   
   // Fallback Strategy 2: If no class-specific section found, check for fallback scenarios
   if (classStartIndex === -1) {
-    const separatorCount = lines.filter(l => l.trim().match(/^={4,}$/)).length;
+    const separatorCount = lines.filter(l => l.trim().match(/^={3,}$/)).length;
     
     if (separatorCount === 0) {
       // No separators at all - treat entire file as content for this class
-      console.log('[parseTxtToMeta] No ==== separators found, using entire file as content');
+      console.log('[parseTxtToMeta] No === separators found, using entire file as content');
       classStartIndex = 0;
       classEndIndex = lines.length;
     } else if (separatorCount === 1 || separatorCount === 2) {
       // Single section file - use everything after the first separator
       console.log('[parseTxtToMeta] Single section file detected, using it for:', resolvedClassName);
       for (let i = 0; i < lines.length; i++) {
-        if (lines[i].trim().match(/^={4,}$/)) {
+        if (lines[i].trim().match(/^={3,}$/)) {
           classStartIndex = i + 1;
           break;
         }
@@ -105,10 +118,10 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
     }
   }
   
-  // Find where this class section ends (next ==== line or end of file)
+  // Find where this class section ends (next === line or end of file)
   if (classStartIndex !== -1) {
     for (let i = classStartIndex; i < lines.length; i++) {
-      if (lines[i].trim().match(/^={4,}$/)) {
+      if (lines[i].trim().match(/^={3,}$/)) {
         classEndIndex = i;
         break;
       }
@@ -675,15 +688,8 @@ exports.handler = async (event) => {
       const existingAssignments = await duplicateCheckResponse.json();
       if (existingAssignments && existingAssignments.length > 0) {
         assignmentId = existingAssignments[0].id;
-        const existingMeta = existingAssignments[0].meta;
         isDuplicate = true;
         console.log(`[teacher-issue-draft] [${requestId}] Found duplicate assignment with ID: ${assignmentId}, reusing it`);
-        
-        // Check if existing meta is empty or incomplete
-        const hasEmptyMeta = !existingMeta || !existingMeta.days || existingMeta.days.length === 0;
-        if (hasEmptyMeta && parsedMeta) {
-          console.log(`[teacher-issue-draft] [${requestId}] Duplicate has empty meta and we have parsed meta - will force update`);
-        }
       }
     }
 
@@ -738,9 +744,9 @@ exports.handler = async (event) => {
       console.log(`[teacher-issue-draft] [${requestId}] Created assignment with ID: ${assignmentId}`);
     } else {
       // Update existing assignment with new meta if we have parsed meta
-      // This includes cases where the duplicate had empty meta (needsMetaUpdate flag)
+      // Always update to ensure assignment content is current
       if (parsedMeta) {
-        console.log(`[teacher-issue-draft] [${requestId}] Updating existing assignment meta`);
+        console.log(`[teacher-issue-draft] [${requestId}] Updating duplicate assignment meta with ${parsedMeta.days.length} day(s)`);
         
         const updateUrl = `${SUPABASE_URL}/rest/v1/assignments?id=eq.${assignmentId}`;
         const updateResponse = await fetch(updateUrl, {
