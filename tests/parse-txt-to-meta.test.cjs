@@ -7,6 +7,21 @@ const assert = require('assert');
 // For now, we'll copy the function here for testing purposes
 // NOTE: The regex pattern for detecting special lines must be kept in sync with production code
 
+// Class name aliases for backward compatibility with old drafts
+const CLASS_ALIASES = {
+  "LA 1 SC": "Language Arts 1 SC",
+  "LA 2 SC": "Language Arts 2 SC",
+  "LA 3 SC": "Language Arts 3 SC",
+  "LA 4 SC": "Language Arts 4 SC",
+  "Life Skills LA": "Life Skills Language Arts SC",
+};
+
+// Build reverse map for looking up short aliases from resolved names
+const REVERSE_ALIASES = {};
+for (const [short, long] of Object.entries(CLASS_ALIASES)) {
+  REVERSE_ALIASES[long] = short;
+}
+
 /**
  * Parse TXT assignment content into structured JSON metadata
  * (Copied from teacher-issue-draft.js for testing)
@@ -21,23 +36,30 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
   let classStartIndex = -1;
   let classEndIndex = lines.length;
   
-  // Strategy 1: Find class name that appears between ==== separators
+  // Strategy 1: Find class name that appears between === separators
+  // Check for both resolved name and short alias (e.g., "Language Arts 4 SC" and "LA 4 SC")
+  const shortAlias = REVERSE_ALIASES[resolvedClassName] || '';
+  
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
-    if (line.toUpperCase().includes(resolvedClassName.toUpperCase())) {
-      // Check if this is a section header (has ==== before OR after it)
-      const prevLineIsSeparator = i > 0 && lines[i - 1].trim().match(/^={4,}$/);
-      const nextLineIsSeparator = i + 1 < lines.length && lines[i + 1].trim().match(/^={4,}$/);
+    const lineUpper = line.toUpperCase();
+    const matchesResolvedName = lineUpper.includes(resolvedClassName.toUpperCase());
+    const matchesShortAlias = shortAlias && lineUpper.includes(shortAlias.toUpperCase());
+    
+    if (matchesResolvedName || matchesShortAlias) {
+      // Check if this is a section header (has === before OR after it)
+      const prevLineIsSeparator = i > 0 && lines[i - 1].trim().match(/^={3,}$/);
+      const nextLineIsSeparator = i + 1 < lines.length && lines[i + 1].trim().match(/^={3,}$/);
       
       if (prevLineIsSeparator || nextLineIsSeparator) {
         // Found the class header
-        // Content starts after the NEXT ==== line (the one after the class name)
+        // Content starts after the NEXT === line (the one after the class name)
         let contentStartIdx = i + 1;
-        while (contentStartIdx < lines.length && !lines[contentStartIdx].trim().match(/^={4,}$/)) {
+        while (contentStartIdx < lines.length && !lines[contentStartIdx].trim().match(/^={3,}$/)) {
           contentStartIdx++;
         }
         if (contentStartIdx < lines.length) {
-          contentStartIdx++; // Skip the ==== line itself
+          contentStartIdx++; // Skip the === line itself
         }
         classStartIndex = contentStartIdx;
         break;
@@ -47,18 +69,18 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
   
   // Fallback Strategy 2: If no class-specific section found, check for fallback scenarios
   if (classStartIndex === -1) {
-    const separatorCount = lines.filter(l => l.trim().match(/^={4,}$/)).length;
+    const separatorCount = lines.filter(l => l.trim().match(/^={3,}$/)).length;
     
     if (separatorCount === 0) {
       // No separators at all - treat entire file as content for this class
-      console.log('[parseTxtToMeta] No ==== separators found, using entire file as content');
+      console.log('[parseTxtToMeta] No === separators found, using entire file as content');
       classStartIndex = 0;
       classEndIndex = lines.length;
     } else if (separatorCount === 1 || separatorCount === 2) {
       // Single section file - use everything after the first separator
       console.log('[parseTxtToMeta] Single section file detected, using it for:', resolvedClassName);
       for (let i = 0; i < lines.length; i++) {
-        if (lines[i].trim().match(/^={4,}$/)) {
+        if (lines[i].trim().match(/^={3,}$/)) {
           classStartIndex = i + 1;
           break;
         }
@@ -70,10 +92,10 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
     }
   }
   
-  // Find where this class section ends (next ==== line or end of file)
+  // Find where this class section ends (next === line or end of file)
   if (classStartIndex !== -1) {
     for (let i = classStartIndex; i < lines.length; i++) {
-      if (lines[i].trim().match(/^={4,}$/)) {
+      if (lines[i].trim().match(/^={3,}$/)) {
         classEndIndex = i;
         break;
       }
@@ -409,6 +431,52 @@ Correct Answer: A`;
   
   assert(result !== null, 'Should parse while skipping DESE/IEP lines');
   assert.strictEqual(result.days[0].questions.length, 1, 'Should have 1 question (not DESE/IEP)');
+});
+
+// Test 9: Mega-split format with 3-equals separator and short alias
+test('Parse mega-split format with === separator and short alias', () => {
+  const txtContent = `LA 4 SC
+===
+DAY 1 QUESTIONS - Chapter 29: Arrival
+
+Question 1: How many days did it take to reach the new planet?
+A) 5 days
+B) 10 days
+C) 15 days
+Correct Answer: B
+
+Question 2: What was the name of the ship?
+A) Explorer
+B) Discovery
+C) Voyager
+Correct Answer: A`;
+
+  const result = parseTxtToMeta(txtContent, 'Language Arts 4 SC', 'test.txt');
+  
+  assert(result !== null, 'Should parse mega-split format with short alias');
+  assert.strictEqual(result.days.length, 1, 'Should have 1 day');
+  assert.strictEqual(result.days[0].label, 'DAY 1 QUESTIONS - Chapter 29: Arrival', 'Should include subtitle');
+  assert.strictEqual(result.days[0].questions.length, 2, 'Should have 2 questions');
+  assert.strictEqual(result.days[0].questions[0].text, 'How many days did it take to reach the new planet?', 'Should parse first question');
+  assert.strictEqual(result.days[0].questions[1].text, 'What was the name of the ship?', 'Should parse second question');
+});
+
+// Test 10: Mega-split format with Life Skills LA short alias
+test('Parse mega-split format with Life Skills LA short alias', () => {
+  const txtContent = `Life Skills LA
+===
+DAY 1 QUESTIONS
+
+Question 1: What is a good habit?
+A) Brushing teeth
+B) Skipping meals
+Correct Answer: A`;
+
+  const result = parseTxtToMeta(txtContent, 'Life Skills Language Arts SC', 'test.txt');
+  
+  assert(result !== null, 'Should parse Life Skills LA short alias');
+  assert.strictEqual(result.days.length, 1, 'Should have 1 day');
+  assert.strictEqual(result.days[0].questions.length, 1, 'Should have 1 question');
 });
 
 console.log('\n✅ All tests passed!');
