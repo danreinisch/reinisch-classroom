@@ -73,6 +73,16 @@ test.describe("Teacher Entry Redirect", () => {
     await page.goto("/hub/");
     await page.waitForLoadState("networkidle");
 
+    // Wait for gate panel to be visible and any auto-opening modals to appear
+    await page.waitForSelector("#hubGatePanel", { timeout: 5000 });
+    
+    // Close any modal that might be blocking (e.g., sign-in modal)
+    const signInModal = page.locator("#signInModal");
+    if (await signInModal.isVisible()) {
+      await page.keyboard.press("Escape");
+      await page.waitForTimeout(500);
+    }
+
     // Click the teacher gate button (now a link)
     const gateTeacherBtn = page.locator("#gateTeacherBtn");
     await gateTeacherBtn.click({ timeout: 5000 });
