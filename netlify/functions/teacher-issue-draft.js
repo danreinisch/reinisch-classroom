@@ -27,6 +27,225 @@ const CLASS_ALIASES = {
 const { url: SUPABASE_URL, key: SUPABASE_SERVICE_ROLE_KEY } = getSupabaseConfig();
 const { SESSION_SECRET } = process.env;
 
+/**
+ * Parse TXT assignment content into structured JSON metadata
+ * Extracts class-specific content, day groups, questions, and writing prompts
+ * Strips DESE Standard(s) and IEP Goal Code(s) lines (teacher-only data)
+ * 
+ * @param {string} txtContent - Full raw TXT content from assignment file
+ * @param {string} resolvedClassName - Class name to extract (e.g., "Language Arts 3 SC")
+ * @param {string} sourceFileName - Original filename for reference
+ * @returns {object|null} Parsed meta object or null if no content found
+ */
+function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
+  if (!txtContent || typeof txtContent !== 'string') {
+    return null;
+  }
+
+  // Find the section for the target class by looking for class name followed by ====
+  // Split into lines to find the class header
+  const lines = txtContent.split('\n');
+  let classStartIndex = -1;
+  let classEndIndex = lines.length;
+  
+  // Find where our target class starts (line with class name followed by ====)
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (line.toUpperCase().includes(resolvedClassName.toUpperCase())) {
+      // Check if next line is ====
+      if (i + 1 < lines.length && lines[i + 1].trim().match(/^={4,}$/)) {
+        classStartIndex = i + 2; // Start after the ==== line
+        break;
+      }
+    }
+  }
+  
+  if (classStartIndex === -1) {
+    console.log('[parseTxtToMeta] No matching class section found for:', resolvedClassName);
+    return null;
+  }
+  
+  // Find where this class section ends (next ==== line or end of file)
+  for (let i = classStartIndex; i < lines.length; i++) {
+    if (lines[i].trim().match(/^={4,}$/)) {
+      classEndIndex = i;
+      break;
+    }
+  }
+  
+  // Extract just this class's content
+  const classLines = lines.slice(classStartIndex, classEndIndex);
+  const targetSection = classLines.join('\n');
+
+  const meta = {
+    source_file: sourceFileName || 'assignment.txt',
+    class_name: resolvedClassName,
+    days: []
+  };
+
+  let currentDay = null;
+  let currentQuestion = null;
+  let currentSection = 'header'; // 'header', 'question', 'writing_prompt', 'structure', 'hints'
+  
+  for (let i = 0; i < classLines.length; i++) {
+    const line = classLines[i];
+    const trimmed = line.trim();
+
+    // Skip empty lines
+    if (!trimmed) continue;
+
+    // Check for DAY header
+    const dayMatch = trimmed.match(/^DAY\s+(\d+)\s+(.*?)$/i);
+    if (dayMatch) {
+      // Save previous question to previous day if exists
+      if (currentQuestion && currentDay && currentDay.type === 'questions') {
+        currentDay.questions.push(currentQuestion);
+      }
+      
+      // Save previous day if exists
+      if (currentDay) {
+        meta.days.push(currentDay);
+      }
+
+      const dayNumber = parseInt(dayMatch[1], 10);
+      const dayLabel = trimmed;
+      const dayType = trimmed.toUpperCase().includes('WRITING PROMPT') ? 'writing_prompt' : 'questions';
+
+      currentDay = {
+        label: dayLabel,
+        day_number: dayNumber,
+        type: dayType
+      };
+
+      if (dayType === 'questions') {
+        currentDay.questions = [];
+      } else {
+        currentDay.prompt = '';
+        currentDay.structure = [];
+        currentDay.hints = [];
+      }
+
+      currentSection = 'header';
+      currentQuestion = null;
+      continue;
+    }
+
+    if (!currentDay) continue;
+
+    // Skip DESE Standard(s) and IEP Goal Code(s) lines
+    if (trimmed.startsWith('DESE Standard') || trimmed.startsWith('IEP Goal Code')) {
+      continue;
+    }
+
+    if (currentDay.type === 'questions') {
+      // Check for Question N:
+      const questionMatch = trimmed.match(/^Question\s+(\d+):/i);
+      if (questionMatch) {
+        // Save previous question if exists
+        if (currentQuestion) {
+          currentDay.questions.push(currentQuestion);
+        }
+
+        currentQuestion = {
+          number: parseInt(questionMatch[1], 10),
+          text: '',
+          type: 'multiple_choice',
+          choices: [],
+          correct: '',
+          hint: ''
+        };
+        currentSection = 'question';
+        
+        // Get question text (rest of the line after "Question N:")
+        const questionText = trimmed.substring(questionMatch[0].length).trim();
+        if (questionText) {
+          currentQuestion.text = questionText;
+        }
+        continue;
+      }
+
+      if (currentQuestion) {
+        // Check for choices (A), B), C), etc.)
+        const choiceMatch = trimmed.match(/^([A-Z])\)\s*(.*)$/);
+        if (choiceMatch) {
+          currentQuestion.choices.push({
+            letter: choiceMatch[1],
+            text: choiceMatch[2].trim()
+          });
+          continue;
+        }
+
+        // Check for Correct Answer:
+        const correctMatch = trimmed.match(/^Correct\s+Answer:\s*([A-Z])/i);
+        if (correctMatch) {
+          currentQuestion.correct = correctMatch[1];
+          continue;
+        }
+
+        // Check for Hint:
+        const hintMatch = trimmed.match(/^Hint:\s*(.*)$/i);
+        if (hintMatch) {
+          currentQuestion.hint = hintMatch[1].trim();
+          continue;
+        }
+
+        // If we're in question section and it's not a special line, append to question text
+        if (currentSection === 'question' && !choiceMatch && !correctMatch && !hintMatch) {
+          if (currentQuestion.text) {
+            currentQuestion.text += ' ' + trimmed;
+          } else {
+            currentQuestion.text = trimmed;
+          }
+        }
+      }
+    } else if (currentDay.type === 'writing_prompt') {
+      // Check for Writing Prompt:
+      if (trimmed.match(/^Writing\s+Prompt:/i)) {
+        currentSection = 'prompt';
+        const promptText = trimmed.substring(trimmed.indexOf(':') + 1).trim();
+        if (promptText) {
+          currentDay.prompt = promptText;
+        }
+        continue;
+      }
+
+      // Check for Writing Structure:
+      if (trimmed.match(/^Writing\s+Structure:/i)) {
+        currentSection = 'structure';
+        continue;
+      }
+
+      // Check for Hints:
+      if (trimmed.match(/^Hints?:/i)) {
+        currentSection = 'hints';
+        continue;
+      }
+
+      // Append content based on current section
+      if (currentSection === 'prompt' && currentDay.prompt) {
+        currentDay.prompt += ' ' + trimmed;
+      } else if (currentSection === 'prompt') {
+        currentDay.prompt = trimmed;
+      } else if (currentSection === 'structure' && trimmed.startsWith('-')) {
+        currentDay.structure.push(trimmed.substring(1).trim());
+      } else if (currentSection === 'hints' && trimmed.startsWith('-')) {
+        currentDay.hints.push(trimmed.substring(1).trim());
+      }
+    }
+  }
+
+  // Save last day
+  if (currentDay) {
+    // Save last question if exists
+    if (currentQuestion && currentDay.type === 'questions') {
+      currentDay.questions.push(currentQuestion);
+    }
+    meta.days.push(currentDay);
+  }
+
+  return meta.days.length > 0 ? meta : null;
+}
+
 exports.handler = async (event) => {
   const requestId = generateRequestId();
   console.log(`[teacher-issue-draft] [${requestId}] Request received`);
@@ -356,55 +575,122 @@ exports.handler = async (event) => {
 
     console.log(`[teacher-issue-draft] [${requestId}] Using enrollment source: ${enrollmentSource}`);
 
-    // Step 3: Create assignment in Supabase
-    // Determine assignment type based on draft's assignment kind
-    let assignmentType = "html"; // default
-    if (draft.assignment && draft.assignment.kind === "link") {
-      assignmentType = "link";
-    } else if (draft.assignment && draft.assignment.kind === "file") {
-      assignmentType = "html";
+    // Step 3: Parse assignment content if it's a file type
+    let parsedMeta = null;
+    if (draft.assignment && draft.assignment.kind === "file" && draft.assignment.text) {
+      console.log(`[teacher-issue-draft] [${requestId}] Parsing assignment content`);
+      parsedMeta = parseTxtToMeta(
+        draft.assignment.text,
+        resolvedClassName,
+        draft.assignment.name || 'assignment.txt'
+      );
+      
+      if (parsedMeta) {
+        console.log(`[teacher-issue-draft] [${requestId}] Parsed ${parsedMeta.days.length} day(s) from assignment content`);
+      } else {
+        console.log(`[teacher-issue-draft] [${requestId}] No structured content found in assignment file`);
+      }
     }
 
-    const assignmentData = {
-      title: draft.title,
-      type: assignmentType,
-      series: (draft.assignment && draft.assignment.link) ? draft.assignment.link : null, // For link type, series stores the external URL
-      description: draft.notes || null,
-      class_id: targetClass.id,
-      active: true
-    };
+    // Step 4: Check for duplicate assignment (same title + class_id)
+    // If found, reuse that assignment ID instead of creating a new one
+    let assignmentId = null;
+    let isDuplicate = false;
 
-    console.log(`[teacher-issue-draft] [${requestId}] Creating assignment record`);
-
-    const assignmentsUrl = `${SUPABASE_URL}/rest/v1/assignments`;
-    const createAssignmentResponse = await fetch(assignmentsUrl, {
-      method: 'POST',
+    const duplicateCheckUrl = `${SUPABASE_URL}/rest/v1/assignments?select=id&title=eq.${encodeURIComponent(draft.title)}&class_id=eq.${encodeURIComponent(targetClass.id)}`;
+    
+    console.log(`[teacher-issue-draft] [${requestId}] Checking for duplicate assignment`);
+    
+    const duplicateCheckResponse = await fetch(duplicateCheckUrl, {
+      method: 'GET',
       headers: {
         'apikey': SUPABASE_SERVICE_ROLE_KEY,
         'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=representation'
-      },
-      body: JSON.stringify(assignmentData)
+        'Content-Type': 'application/json'
+      }
     });
 
-    if (!createAssignmentResponse.ok) {
-      const errorText = await createAssignmentResponse.text();
-      console.error(`[teacher-issue-draft] [${requestId}] Assignment creation failed: ${createAssignmentResponse.status} - ${errorText}`);
-      throw new Error(`Failed to create assignment: ${createAssignmentResponse.status}`);
+    if (duplicateCheckResponse.ok) {
+      const existingAssignments = await duplicateCheckResponse.json();
+      if (existingAssignments && existingAssignments.length > 0) {
+        assignmentId = existingAssignments[0].id;
+        isDuplicate = true;
+        console.log(`[teacher-issue-draft] [${requestId}] Found duplicate assignment with ID: ${assignmentId}, reusing it`);
+      }
     }
 
-    const createdAssignments = await createAssignmentResponse.json();
-    const assignmentId = createdAssignments[0]?.id;
-
+    // Step 5: Create or update assignment in Supabase
     if (!assignmentId) {
-      console.error(`[teacher-issue-draft] [${requestId}] Assignment created but no ID returned`);
-      throw new Error('Assignment created but no ID returned');
+      // Determine assignment type based on draft's assignment kind
+      let assignmentType = "html"; // default
+      if (draft.assignment && draft.assignment.kind === "link") {
+        assignmentType = "link";
+      } else if (draft.assignment && draft.assignment.kind === "file") {
+        assignmentType = "html";
+      }
+
+      const assignmentData = {
+        title: draft.title,
+        type: assignmentType,
+        series: (draft.assignment && draft.assignment.link) ? draft.assignment.link : null, // For link type, series stores the external URL
+        description: draft.notes || null,
+        class_id: targetClass.id,
+        active: true,
+        meta: parsedMeta || {}
+      };
+
+      console.log(`[teacher-issue-draft] [${requestId}] Creating new assignment record`);
+
+      const assignmentsUrl = `${SUPABASE_URL}/rest/v1/assignments`;
+      const createAssignmentResponse = await fetch(assignmentsUrl, {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_SERVICE_ROLE_KEY,
+          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation'
+        },
+        body: JSON.stringify(assignmentData)
+      });
+
+      if (!createAssignmentResponse.ok) {
+        const errorText = await createAssignmentResponse.text();
+        console.error(`[teacher-issue-draft] [${requestId}] Assignment creation failed: ${createAssignmentResponse.status} - ${errorText}`);
+        throw new Error(`Failed to create assignment: ${createAssignmentResponse.status}`);
+      }
+
+      const createdAssignments = await createAssignmentResponse.json();
+      assignmentId = createdAssignments[0]?.id;
+
+      if (!assignmentId) {
+        console.error(`[teacher-issue-draft] [${requestId}] Assignment created but no ID returned`);
+        throw new Error('Assignment created but no ID returned');
+      }
+
+      console.log(`[teacher-issue-draft] [${requestId}] Created assignment with ID: ${assignmentId}`);
+    } else {
+      // Update existing assignment with new meta if we have it
+      if (parsedMeta) {
+        console.log(`[teacher-issue-draft] [${requestId}] Updating existing assignment meta`);
+        
+        const updateUrl = `${SUPABASE_URL}/rest/v1/assignments?id=eq.${assignmentId}`;
+        const updateResponse = await fetch(updateUrl, {
+          method: 'PATCH',
+          headers: {
+            'apikey': SUPABASE_SERVICE_ROLE_KEY,
+            'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ meta: parsedMeta })
+        });
+
+        if (!updateResponse.ok) {
+          console.warn(`[teacher-issue-draft] [${requestId}] Failed to update assignment meta: ${updateResponse.status}`);
+        }
+      }
     }
 
-    console.log(`[teacher-issue-draft] [${requestId}] Created assignment with ID: ${assignmentId}`);
-
-    // Step 4: Convert due date to ISO 8601 if provided
+    // Step 6: Convert due date to ISO 8601 if provided
     let dueAt = null;
     if (draft.dueAt) {
       try {
@@ -417,7 +703,7 @@ exports.handler = async (event) => {
       }
     }
 
-    // Step 5: Fetch student details to prepare assignment instances
+    // Step 7: Fetch student details to prepare assignment instances
     // If no students enrolled, skip instance creation
     let issued_count = 0;
     
@@ -451,7 +737,7 @@ exports.handler = async (event) => {
       } else {
         console.log(`[teacher-issue-draft] [${requestId}] Found ${students.length} students`);
 
-        // Step 6: Build instances to upsert
+        // Step 8: Build instances to upsert
         const instances = students.map(student => ({
           assignment_id: assignmentId,
           student_id: student.id,
