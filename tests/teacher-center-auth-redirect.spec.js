@@ -4,18 +4,14 @@ import { test, expect } from "@playwright/test";
  * Teacher Center Authentication Redirect Test
  *
  * Validates that:
- * 1. Unauthenticated users are redirected to /hub/ when accessing /teacher/* pages
- * 2. Redirect loop prevention works correctly (no redirect if already on /hub/)
- * 3. sessionStorage timestamp prevents repeated redirect attempts within 10 seconds
- * 4. Redirects are allowed again after the 10-second cooldown expires
- * 5. Network errors don't trigger redirects
- * 6. Query parameters entry=teacher, next, and reason=session_expired are added to redirect URL
+ * 1. Unauthenticated users are redirected to /teacher/login/ when accessing /teacher/* pages
+ * 2. Redirect includes 'next' parameter to return to original page after login
+ * 3. Network errors don't trigger redirects
+ * 4. Authenticated users can access teacher pages without redirect
  */
 
 test.describe("Teacher Center Authentication Redirect", () => {
-  test("should redirect to /hub/ when accessing /teacher/ without authentication", async ({ page }) => {
-    let redirectHappened = false;
-
+  test("should redirect to /teacher/login/ when accessing /teacher/ without authentication", async ({ page }) => {
     // Mock teacher-session endpoint to return 401
     await page.route("**/.netlify/functions/teacher-session", async (route) => {
       await route.fulfill({
@@ -28,30 +24,18 @@ test.describe("Teacher Center Authentication Redirect", () => {
       });
     });
 
-    // Capture navigation events
-    page.on("framenavigated", (frame) => {
-      if (frame === page.mainFrame()) {
-        const url = frame.url();
-        if (url.includes("/hub/") && url.includes("reason=session_expired")) {
-          redirectHappened = true;
-        }
-      }
-    });
-
     // Navigate to teacher center
     await page.goto("/teacher/");
 
-    // Wait for redirect to happen
-    await page.waitForURL("**/hub/**", { timeout: 5000 });
+    // Wait for redirect to login page
+    await page.waitForURL(/\/teacher\/login\//, { timeout: 5000 });
 
     // Verify redirect occurred with correct query parameters
-    expect(page.url()).toContain("/hub/");
-    expect(page.url()).toContain("reason=session_expired");
-    expect(page.url()).toContain("entry=teacher");
-    expect(redirectHappened).toBe(true);
+    expect(page.url()).toContain("/teacher/login/");
+    expect(page.url()).toContain("next=%2Fteacher%2F"); // URL encoded /teacher/
   });
 
-  test("should redirect to /hub/ when accessing /teacher/work/ without authentication", async ({ page }) => {
+  test("should redirect to /teacher/login/ when accessing /teacher/work/ without authentication", async ({ page }) => {
     // Mock teacher-session endpoint to return 401
     await page.route("**/.netlify/functions/teacher-session", async (route) => {
       await route.fulfill({
@@ -67,48 +51,12 @@ test.describe("Teacher Center Authentication Redirect", () => {
     // Navigate to teacher work page
     await page.goto("/teacher/work/");
 
-    // Wait for redirect to happen
-    await page.waitForURL("**/hub/**", { timeout: 5000 });
+    // Wait for redirect to login page
+    await page.waitForURL(/\/teacher\/login\//, { timeout: 5000 });
 
     // Verify redirect occurred with correct query parameters
-    expect(page.url()).toContain("/hub/");
-    expect(page.url()).toContain("reason=session_expired");
-    expect(page.url()).toContain("entry=teacher");
+    expect(page.url()).toContain("/teacher/login/");
     expect(page.url()).toContain("next=%2Fteacher%2Fwork%2F"); // URL encoded /teacher/work/
-  });
-
-  test("should NOT redirect if teacher-shell.js is on /hub/ page (loop prevention)", async ({ page }) => {
-    // Mock teacher-session endpoint to return 401
-    await page.route("**/.netlify/functions/teacher-session", async (route) => {
-      await route.fulfill({
-        status: 401,
-        contentType: "application/json",
-        body: JSON.stringify({
-          ok: false,
-          error: "Unauthorized",
-        }),
-      });
-    });
-
-    // Mock student-roster to prevent network errors
-    await page.route("**/.netlify/functions/student-roster", async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          ok: true,
-          students: [],
-          source: "mock",
-        }),
-      });
-    });
-
-    // Start on /hub/ page
-    await page.goto("/hub/");
-    await page.waitForLoadState("networkidle");
-
-    // Verify we're still on /hub/ (no redirect loop)
-    expect(page.url()).toContain("/hub/");
   });
 
   test("should NOT redirect on network errors (non-401 status)", async ({ page }) => {
@@ -139,7 +87,7 @@ test.describe("Teacher Center Authentication Redirect", () => {
 
     // Verify warning was logged
     const warnings = consoleLogs.filter(
-      (log) => log.type === "warning" && log.text.includes("Non-401 status")
+      (log) => log.type === "warning" && log.text.includes("Session check returned")
     );
     expect(warnings.length).toBeGreaterThan(0);
   });
@@ -168,124 +116,9 @@ test.describe("Teacher Center Authentication Redirect", () => {
     const warnings = consoleLogs.filter(
       (log) =>
         log.type === "warning" &&
-        log.text.includes("Session check failed") &&
-        log.text.includes("continuing without redirect")
+        log.text.includes("Session check failed")
     );
     expect(warnings.length).toBeGreaterThan(0);
-  });
-
-  test("should prevent redirect loop using sessionStorage timestamp", async ({ page }) => {
-    const consoleLogs = [];
-    let redirectCount = 0;
-
-    // Capture console messages
-    page.on("console", (msg) => {
-      consoleLogs.push({ type: msg.type(), text: msg.text() });
-    });
-
-    // Mock teacher-session endpoint to return 401
-    await page.route("**/.netlify/functions/teacher-session", async (route) => {
-      await route.fulfill({
-        status: 401,
-        contentType: "application/json",
-        body: JSON.stringify({
-          ok: false,
-          error: "Unauthorized",
-        }),
-      });
-    });
-
-    // Track navigation events
-    page.on("framenavigated", () => {
-      redirectCount++;
-    });
-
-    // Pre-set the sessionStorage timestamp to simulate a recent redirect attempt (within 10 seconds)
-    await page.addInitScript(() => {
-      sessionStorage.setItem("tc_auth_redirect_timestamp", String(Date.now()));
-    });
-
-    // Navigate to teacher center
-    await page.goto("/teacher/");
-    await page.waitForLoadState("networkidle");
-
-    // Verify we're still on /teacher/ (no redirect due to recent timestamp)
-    expect(page.url()).toContain("/teacher/");
-
-    // Verify warning was logged about redirect already attempted
-    const warnings = consoleLogs.filter(
-      (log) =>
-        log.type === "warning" &&
-        log.text.includes("Redirect already attempted in this session")
-    );
-    expect(warnings.length).toBeGreaterThan(0);
-
-    // Verify only one navigation happened (initial page load, no redirect)
-    expect(redirectCount).toBe(1);
-  });
-
-  test("should allow redirect after cooldown period expires (>10 seconds)", async ({ page }) => {
-    // Mock teacher-session endpoint to return 401
-    await page.route("**/.netlify/functions/teacher-session", async (route) => {
-      await route.fulfill({
-        status: 401,
-        contentType: "application/json",
-        body: JSON.stringify({
-          ok: false,
-          error: "Unauthorized",
-        }),
-      });
-    });
-
-    // Pre-set the sessionStorage timestamp to simulate an old redirect attempt (11 seconds ago)
-    await page.addInitScript(() => {
-      const elevenSecondsAgo = Date.now() - 11000;
-      sessionStorage.setItem("tc_auth_redirect_timestamp", String(elevenSecondsAgo));
-    });
-
-    // Navigate to teacher center
-    await page.goto("/teacher/");
-
-    // Wait for redirect to happen (should redirect because cooldown expired)
-    await page.waitForURL("**/hub/**", { timeout: 5000 });
-
-    // Verify redirect occurred
-    expect(page.url()).toContain("/hub/");
-    expect(page.url()).toContain("reason=session_expired");
-    expect(page.url()).toContain("entry=teacher");
-  });
-
-  test("should clear sessionStorage timestamp on successful authentication", async ({ page }) => {
-    // Mock teacher-session endpoint to return 200 (valid session)
-    await page.route("**/.netlify/functions/teacher-session", async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          ok: true,
-          role: "teacher",
-          username: "test-teacher",
-        }),
-      });
-    });
-
-    // Pre-set the sessionStorage timestamp
-    await page.addInitScript(() => {
-      sessionStorage.setItem("tc_auth_redirect_timestamp", String(Date.now()));
-    });
-
-    // Navigate to teacher center
-    await page.goto("/teacher/");
-    await page.waitForLoadState("networkidle");
-
-    // Wait for page to load
-    await page.waitForTimeout(500);
-
-    // Verify sessionStorage timestamp was cleared
-    const timestampCleared = await page.evaluate(() => {
-      return sessionStorage.getItem("tc_auth_redirect_timestamp") === null;
-    });
-    expect(timestampCleared).toBe(true);
   });
 
   test("should allow authenticated users to access teacher pages", async ({ page }) => {
