@@ -565,7 +565,9 @@
     debugLog('[app-shell] Auth required for role:', role);
     
     if (role === 'teacher') {
-      // Navigate directly to teacher center - auth handled by teacher-shell.js
+      // Navigate directly to teacher center.
+      // Auth is handled server-side by teacher-shell.js (included on all /teacher/* pages),
+      // which checks the HttpOnly 'tc' cookie and redirects to /teacher/login/ if invalid.
       window.location.href = '/teacher/';
     } else if (role === 'student') {
       window.location.href = '/student/';
