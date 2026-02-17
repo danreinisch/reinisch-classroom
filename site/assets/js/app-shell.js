@@ -293,7 +293,7 @@
         </div>
 
         <!-- Teacher -->
-        <a href="/teacher/" class="app-shell-item" data-shell-nav="teacher" data-requires-auth="teacher">
+        <a href="/teacher/" class="app-shell-item" data-shell-nav="teacher">
           <span class="app-shell-item-icon">
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M12 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0"/>
@@ -303,7 +303,7 @@
         </a>
 
         <!-- Admin -->
-        <a href="/teacher/admin/" class="app-shell-item app-shell-hidden" data-shell-nav="admin" data-admin-only data-requires-auth="teacher">
+        <a href="/teacher/admin/" class="app-shell-item app-shell-hidden" data-shell-nav="admin" data-admin-only>
           <span class="app-shell-item-icon">
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
@@ -565,8 +565,10 @@
     debugLog('[app-shell] Auth required for role:', role);
     
     if (role === 'teacher') {
-      // Navigate to hub with entry parameter to auto-open teacher login
-      window.location.href = '/hub/?entry=teacher';
+      // Navigate directly to teacher center.
+      // Auth is handled server-side by teacher-shell.js (included on all /teacher/* pages),
+      // which checks the HttpOnly 'tc' cookie and redirects to /teacher/login/ if invalid.
+      window.location.href = '/teacher/';
     } else if (role === 'student') {
       window.location.href = '/student/';
     } else if (role === 'substitute') {
