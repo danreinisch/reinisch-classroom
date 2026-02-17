@@ -42,24 +42,40 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
     return null;
   }
 
-  // Split content by ==== separators to get class sections
-  const sections = txtContent.split(/={4,}/);
+  // Find the section for the target class by looking for class name followed by ====
+  // Split into lines to find the class header
+  const lines = txtContent.split('\n');
+  let classStartIndex = -1;
+  let classEndIndex = lines.length;
   
-  // Find the section that starts with the target class name
-  let targetSection = null;
-  for (const section of sections) {
-    const trimmed = section.trim();
-    const firstLine = trimmed.split('\n')[0];
-    if (firstLine && firstLine.toUpperCase().includes(resolvedClassName.toUpperCase())) {
-      targetSection = trimmed;
-      break;
+  // Find where our target class starts (line with class name followed by ====)
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (line.toUpperCase().includes(resolvedClassName.toUpperCase())) {
+      // Check if next line is ====
+      if (i + 1 < lines.length && lines[i + 1].trim().match(/^={4,}$/)) {
+        classStartIndex = i + 2; // Start after the ==== line
+        break;
+      }
     }
   }
-
-  if (!targetSection) {
+  
+  if (classStartIndex === -1) {
     console.log('[parseTxtToMeta] No matching class section found for:', resolvedClassName);
     return null;
   }
+  
+  // Find where this class section ends (next ==== line or end of file)
+  for (let i = classStartIndex; i < lines.length; i++) {
+    if (lines[i].trim().match(/^={4,}$/)) {
+      classEndIndex = i;
+      break;
+    }
+  }
+  
+  // Extract just this class's content
+  const classLines = lines.slice(classStartIndex, classEndIndex);
+  const targetSection = classLines.join('\n');
 
   const meta = {
     source_file: sourceFileName || 'assignment.txt',
@@ -67,16 +83,12 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
     days: []
   };
 
-  // Split by DAY headers (e.g., "DAY 1 QUESTIONS", "DAY 2 QUESTIONS", "DAY 4 WRITING PROMPT")
-  const dayPattern = /^DAY\s+(\d+)\s+(.*?)$/gm;
-  const lines = targetSection.split('\n');
-  
   let currentDay = null;
   let currentQuestion = null;
   let currentSection = 'header'; // 'header', 'question', 'writing_prompt', 'structure', 'hints'
   
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
+  for (let i = 0; i < classLines.length; i++) {
+    const line = classLines[i];
     const trimmed = line.trim();
 
     // Skip empty lines
@@ -85,6 +97,11 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
     // Check for DAY header
     const dayMatch = trimmed.match(/^DAY\s+(\d+)\s+(.*?)$/i);
     if (dayMatch) {
+      // Save previous question to previous day if exists
+      if (currentQuestion && currentDay && currentDay.type === 'questions') {
+        currentDay.questions.push(currentQuestion);
+      }
+      
       // Save previous day if exists
       if (currentDay) {
         meta.days.push(currentDay);
