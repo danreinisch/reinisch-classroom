@@ -455,9 +455,7 @@ exports.handler = async (event) => {
         const instances = students.map(student => ({
           assignment_id: assignmentId,
           student_id: student.id,
-          student_code: student.code,
-          student_name: student.name || student.code,
-          assigned_at: new Date().toISOString(),
+          assigned_at: new Date().toISOString().split('T')[0],
           due_at: dueAt || null,
           status: 'Assigned',
           settings: {},
