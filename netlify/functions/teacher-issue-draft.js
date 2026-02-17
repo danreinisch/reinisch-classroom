@@ -42,34 +42,76 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
     return null;
   }
 
-  // Find the section for the target class by looking for class name followed by ====
-  // Split into lines to find the class header
+  // Find the section for the target class
+  // The TXT format has class names BETWEEN ==== separators:
+  // ================================================================================
+  // LANGUAGE ARTS 3 SC
+  // ================================================================================
+  // <content>
+  // ================================================================================
+  // LIFE SKILLS LANGUAGE ARTS SC
+  // ================================================================================
+  
   const lines = txtContent.split('\n');
   let classStartIndex = -1;
   let classEndIndex = lines.length;
   
-  // Find where our target class starts (line with class name followed by ====)
+  // Strategy 1: Find class name that appears between ==== separators
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
     if (line.toUpperCase().includes(resolvedClassName.toUpperCase())) {
-      // Check if next line is ====
-      if (i + 1 < lines.length && lines[i + 1].trim().match(/^={4,}$/)) {
-        classStartIndex = i + 2; // Start after the ==== line
+      // Check if this is a section header (has ==== before OR after it)
+      const prevLineIsSeparator = i > 0 && lines[i - 1].trim().match(/^={4,}$/);
+      const nextLineIsSeparator = i + 1 < lines.length && lines[i + 1].trim().match(/^={4,}$/);
+      
+      if (prevLineIsSeparator || nextLineIsSeparator) {
+        // Found the class header
+        // Content starts after the NEXT ==== line (the one after the class name)
+        let contentStartIdx = i + 1;
+        while (contentStartIdx < lines.length && !lines[contentStartIdx].trim().match(/^={4,}$/)) {
+          contentStartIdx++;
+        }
+        if (contentStartIdx < lines.length) {
+          contentStartIdx++; // Skip the ==== line itself
+        }
+        classStartIndex = contentStartIdx;
         break;
       }
     }
   }
   
+  // Fallback Strategy 2: If no class-specific section found, check for fallback scenarios
   if (classStartIndex === -1) {
-    console.log('[parseTxtToMeta] No matching class section found for:', resolvedClassName);
-    return null;
+    const separatorCount = lines.filter(l => l.trim().match(/^={4,}$/)).length;
+    
+    if (separatorCount === 0) {
+      // No separators at all - treat entire file as content for this class
+      console.log('[parseTxtToMeta] No ==== separators found, using entire file as content');
+      classStartIndex = 0;
+      classEndIndex = lines.length;
+    } else if (separatorCount === 1 || separatorCount === 2) {
+      // Single section file - use everything after the first separator
+      console.log('[parseTxtToMeta] Single section file detected, using it for:', resolvedClassName);
+      for (let i = 0; i < lines.length; i++) {
+        if (lines[i].trim().match(/^={4,}$/)) {
+          classStartIndex = i + 1;
+          break;
+        }
+      }
+    } else {
+      // Multiple sections but no match - return null
+      console.log('[parseTxtToMeta] No matching class section found for:', resolvedClassName);
+      return null;
+    }
   }
   
   // Find where this class section ends (next ==== line or end of file)
-  for (let i = classStartIndex; i < lines.length; i++) {
-    if (lines[i].trim().match(/^={4,}$/)) {
-      classEndIndex = i;
-      break;
+  if (classStartIndex !== -1) {
+    for (let i = classStartIndex; i < lines.length; i++) {
+      if (lines[i].trim().match(/^={4,}$/)) {
+        classEndIndex = i;
+        break;
+      }
     }
   }
   
@@ -94,8 +136,8 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
     // Skip empty lines
     if (!trimmed) continue;
 
-    // Check for DAY header
-    const dayMatch = trimmed.match(/^DAY\s+(\d+)\s+(.*?)$/i);
+    // Check for DAY header (trailing content is optional)
+    const dayMatch = trimmed.match(/^DAY\s+(\d+)\b(.*)$/i);
     if (dayMatch) {
       // Save previous question to previous day if exists
       if (currentQuestion && currentDay && currentDay.type === 'questions') {
@@ -108,8 +150,26 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
       }
 
       const dayNumber = parseInt(dayMatch[1], 10);
-      const dayLabel = trimmed;
+      let dayLabel = trimmed;
       const dayType = trimmed.toUpperCase().includes('WRITING PROMPT') ? 'writing_prompt' : 'questions';
+
+      // Check if the next non-empty line is a subtitle (not a Question/DESE/IEP/choice/answer line)
+      let nextLineIndex = i + 1;
+      while (nextLineIndex < classLines.length && !classLines[nextLineIndex].trim()) {
+        nextLineIndex++;
+      }
+      
+      if (nextLineIndex < classLines.length) {
+        const nextLine = classLines[nextLineIndex].trim();
+        // If the next line is not a special marker, it might be a subtitle
+        const isSpecialLine = nextLine.match(/^(Question\s+\d+:|DESE\s+Standard|IEP\s+Goal\s+Code|[A-Z]\)|Correct\s+Answer:|Hint:|Writing\s+Prompt:|Writing\s+Structure:|Hints?:)/i);
+        if (!isSpecialLine && nextLine.length > 0) {
+          // This is likely a subtitle, append it to the label
+          dayLabel += ' - ' + nextLine;
+          // Skip this line in the next iteration
+          i = nextLineIndex;
+        }
+      }
 
       currentDay = {
         label: dayLabel,
@@ -596,8 +656,9 @@ exports.handler = async (event) => {
     // If found, reuse that assignment ID instead of creating a new one
     let assignmentId = null;
     let isDuplicate = false;
+    let needsMetaUpdate = false;
 
-    const duplicateCheckUrl = `${SUPABASE_URL}/rest/v1/assignments?select=id&title=eq.${encodeURIComponent(draft.title)}&class_id=eq.${encodeURIComponent(targetClass.id)}`;
+    const duplicateCheckUrl = `${SUPABASE_URL}/rest/v1/assignments?select=id,meta&title=eq.${encodeURIComponent(draft.title)}&class_id=eq.${encodeURIComponent(targetClass.id)}`;
     
     console.log(`[teacher-issue-draft] [${requestId}] Checking for duplicate assignment`);
     
@@ -614,8 +675,16 @@ exports.handler = async (event) => {
       const existingAssignments = await duplicateCheckResponse.json();
       if (existingAssignments && existingAssignments.length > 0) {
         assignmentId = existingAssignments[0].id;
+        const existingMeta = existingAssignments[0].meta;
         isDuplicate = true;
         console.log(`[teacher-issue-draft] [${requestId}] Found duplicate assignment with ID: ${assignmentId}, reusing it`);
+        
+        // Check if existing meta is empty or incomplete
+        const hasEmptyMeta = !existingMeta || !existingMeta.days || existingMeta.days.length === 0;
+        if (hasEmptyMeta && parsedMeta) {
+          console.log(`[teacher-issue-draft] [${requestId}] Duplicate has empty meta and we have parsed meta - will force update`);
+          needsMetaUpdate = true;
+        }
       }
     }
 
@@ -669,8 +738,8 @@ exports.handler = async (event) => {
 
       console.log(`[teacher-issue-draft] [${requestId}] Created assignment with ID: ${assignmentId}`);
     } else {
-      // Update existing assignment with new meta if we have it
-      if (parsedMeta) {
+      // Update existing assignment with new meta if we have it OR if it needs meta update
+      if (parsedMeta || needsMetaUpdate) {
         console.log(`[teacher-issue-draft] [${requestId}] Updating existing assignment meta`);
         
         const updateUrl = `${SUPABASE_URL}/rest/v1/assignments?id=eq.${assignmentId}`;
@@ -681,11 +750,13 @@ exports.handler = async (event) => {
             'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ meta: parsedMeta })
+          body: JSON.stringify({ meta: parsedMeta || {} })
         });
 
         if (!updateResponse.ok) {
           console.warn(`[teacher-issue-draft] [${requestId}] Failed to update assignment meta: ${updateResponse.status}`);
+        } else {
+          console.log(`[teacher-issue-draft] [${requestId}] Successfully updated assignment meta`);
         }
       }
     }

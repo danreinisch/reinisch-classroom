@@ -606,6 +606,12 @@
     const assignment = instance.assignment || {};
     const meta = assignment.meta || {};
     
+    // Debug logging for meta content
+    console.log(LOG_PREFIX, 'Assignment meta:', JSON.stringify(meta).substring(0, 200));
+    if (!meta.days || meta.days.length === 0) {
+      console.warn(LOG_PREFIX, 'Assignment has no structured content (meta.days is empty)');
+    }
+    
     // Create backdrop
     const backdrop = document.createElement('div');
     backdrop.className = 'st-panel-backdrop';
@@ -656,8 +662,11 @@
         <h3 style="font-size: 1.5rem; font-weight: 700; margin: 0 0 16px 0;">
           No Content Available
         </h3>
-        <p style="font-size: 1rem; opacity: 0.8; margin: 0;">
+        <p style="font-size: 1rem; opacity: 0.8; margin: 0 0 12px 0;">
           This assignment has no content yet. Please check back later or contact your teacher.
+        </p>
+        <p style="font-size: 0.875rem; opacity: 0.6; margin: 0;">
+          Note: If this assignment was recently created, your teacher may need to re-issue it to load the content.
         </p>
       </div>
     `;
