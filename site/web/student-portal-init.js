@@ -574,7 +574,11 @@
   function attachAssignmentCardHandlers(instances) {
     const cards = document.querySelectorAll('.st-assignment-card');
     cards.forEach(card => {
-      card.addEventListener('click', function() {
+      card.addEventListener('click', function(e) {
+        // Prevent event from bubbling to portal-b-ui.js delegation handler
+        // which would navigate away and destroy the overlay
+        e.stopPropagation();
+        e.preventDefault();
         const instanceId = this.getAttribute('data-instance-id');
         const instance = instances.find(i => i.id === instanceId);
         if (instance) {

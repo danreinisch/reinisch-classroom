@@ -6,12 +6,17 @@
   <title>Teacher Center — Login</title>
   <link rel="stylesheet" href="/web/teacher-shell.css" />
   <style>
-    .login-container {
-      min-height: 100vh;
+    .tc-main {
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 20px;
+    }
+
+    .login-container {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .login-card {
@@ -105,8 +110,25 @@
   </style>
 </head>
 <body>
-  <div class="login-container">
-    <div class="login-card">
+  <div class="tc-app">
+    <header class="tc-topbar">
+      <button class="tc-btn" id="tcSidebarToggle" aria-label="Toggle sidebar" aria-expanded="false">☰</button>
+      <a class="tc-btn" href="/" target="_blank" rel="noopener" aria-label="Home">🏠</a>
+      <div class="tc-title">Teacher Center — Login</div>
+    </header>
+
+    <div class="tc-shell">
+      <aside class="tc-sidebar" aria-label="Navigation">
+        <nav class="tc-nav">
+          <a href="/"><span class="tc-icon">🏠</span><span class="tc-label">Home</span></a>
+          <a href="/student/"><span class="tc-icon">🎓</span><span class="tc-label">Student Portal</span></a>
+          <a href="/teacher/"><span class="tc-icon">📋</span><span class="tc-label">Teacher Center</span></a>
+        </nav>
+      </aside>
+
+      <main class="tc-main">
+        <div class="login-container">
+          <div class="login-card">
       <h1 class="login-title">Teacher Center</h1>
       
       <form id="loginForm" class="login-form">
@@ -141,6 +163,9 @@
           Sign In
         </button>
       </form>
+    </div>
+        </div>
+      </main>
     </div>
   </div>
 
@@ -241,6 +266,16 @@
           submitButton.textContent = 'Sign In';
         }
       });
+    })();
+
+    // Sidebar toggle functionality (inline to avoid loading teacher-shell.js)
+    (function() {
+      const toggle = document.getElementById('tcSidebarToggle');
+      if (toggle) {
+        toggle.addEventListener('click', () => {
+          document.documentElement.classList.toggle('tc-collapsed');
+        });
+      }
     })();
   </script>
 </body>
