@@ -179,46 +179,13 @@ exports.handler = async (event) => {
     let studentIds = [];
     let enrollmentSource = '';
     
-    // Primary: try class_enrollments table (UUID-based junction table)
-    const classEnrollmentsUrl = `${SUPABASE_URL}/rest/v1/class_enrollments?select=student_id,students!inner(id,code,name)&class_id=eq.${encodeURIComponent(targetClass.id)}`;
-    
-    console.log(`[teacher-issue-draft] [${requestId}] Fetching class enrollments from class_enrollments table`);
-    
-    const classEnrollmentsResponse = await fetch(classEnrollmentsUrl, {
-      method: 'GET',
-      headers: {
-        'apikey': SUPABASE_SERVICE_ROLE_KEY,
-        'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    let classEnrollments = [];
-    
-    if (!classEnrollmentsResponse.ok) {
-      if (classEnrollmentsResponse.status === 404) {
-        // Table doesn't exist yet — this is expected, fall through to enrollments table
-        console.log(`[teacher-issue-draft] [${requestId}] class_enrollments table not found (404), falling back to enrollments table`);
-      } else {
-        console.error(`[teacher-issue-draft] [${requestId}] class_enrollments query failed with status: ${classEnrollmentsResponse.status}`);
-        throw new Error(`Enrollments query failed: ${classEnrollmentsResponse.status}`);
-      }
-    } else {
-      classEnrollments = await classEnrollmentsResponse.json();
-    }
-    
-    studentIds = classEnrollments.map(e => e.student_id).filter(Boolean);
-
-    if (studentIds.length > 0) {
-      enrollmentSource = 'class_enrollments';
-      console.log(`[teacher-issue-draft] [${requestId}] Found ${studentIds.length} enrolled students from class_enrollments table`);
-    } else {
-      // Fallback: query enrollments table (text-based student_code + class_id)
-      console.log(`[teacher-issue-draft] [${requestId}] No enrollments in class_enrollments, trying enrollments table`);
+    try {
+      // Primary: try class_enrollments table (UUID-based junction table)
+      const classEnrollmentsUrl = `${SUPABASE_URL}/rest/v1/class_enrollments?select=student_id,students!inner(id,code,name)&class_id=eq.${encodeURIComponent(targetClass.id)}`;
       
-      const enrollmentsUrl = `${SUPABASE_URL}/rest/v1/enrollments?select=student_code&class_id=eq.${encodeURIComponent(targetClass.id)}`;
+      console.log(`[teacher-issue-draft] [${requestId}] Fetching class enrollments from class_enrollments table`);
       
-      const enrollmentsResponse = await fetch(enrollmentsUrl, {
+      const classEnrollmentsResponse = await fetch(classEnrollmentsUrl, {
         method: 'GET',
         headers: {
           'apikey': SUPABASE_SERVICE_ROLE_KEY,
@@ -227,69 +194,164 @@ exports.handler = async (event) => {
         }
       });
 
-      if (!enrollmentsResponse.ok) {
-        console.error(`[teacher-issue-draft] [${requestId}] enrollments table query failed with status: ${enrollmentsResponse.status}`);
-        throw new Error(`Enrollments query failed: ${enrollmentsResponse.status}`);
-      }
-
-      const enrollments = await enrollmentsResponse.json();
-      const studentCodes = enrollments.map(e => e.student_code).filter(Boolean);
-
-      console.log(`[teacher-issue-draft] [${requestId}] Found ${studentCodes.length} student codes from enrollments table, looking up student IDs`);
-
-      // Validate student codes match expected pattern (alphanumeric, hyphen, underscore)
-      // This prevents injection by ensuring codes can be safely quoted in the query
-      const validCodePattern = /^[a-zA-Z0-9_-]+$/;
-      const validCodes = [];
-      const invalidCodes = [];
+      let classEnrollments = [];
       
-      for (const code of studentCodes) {
-        if (validCodePattern.test(code)) {
-          validCodes.push(code);
+      if (!classEnrollmentsResponse.ok) {
+        console.warn(`[teacher-issue-draft] [${requestId}] class_enrollments query returned ${classEnrollmentsResponse.status}, trying enrollments fallback`);
+        
+        // Fallback: query enrollments table (text-based student_code + class_id)
+        const enrollmentsUrl = `${SUPABASE_URL}/rest/v1/enrollments?select=student_code&class_id=eq.${encodeURIComponent(targetClass.id)}`;
+        
+        const enrollmentsResponse = await fetch(enrollmentsUrl, {
+          method: 'GET',
+          headers: {
+            'apikey': SUPABASE_SERVICE_ROLE_KEY,
+            'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!enrollmentsResponse.ok) {
+          console.warn(`[teacher-issue-draft] [${requestId}] enrollments fallback also returned ${enrollmentsResponse.status}, returning empty student list`);
+          studentIds = [];
         } else {
-          invalidCodes.push(code);
+          const enrollments = await enrollmentsResponse.json();
+          const studentCodes = enrollments.map(e => e.student_code).filter(Boolean);
+
+          console.log(`[teacher-issue-draft] [${requestId}] Found ${studentCodes.length} student codes from enrollments table, looking up student IDs`);
+
+          // Validate student codes match expected pattern (alphanumeric, hyphen, underscore)
+          // This prevents injection by ensuring codes can be safely quoted in the query
+          const validCodePattern = /^[a-zA-Z0-9_-]+$/;
+          const validCodes = [];
+          const invalidCodes = [];
+          
+          for (const code of studentCodes) {
+            if (validCodePattern.test(code)) {
+              validCodes.push(code);
+            } else {
+              invalidCodes.push(code);
+            }
+          }
+          
+          if (invalidCodes.length > 0) {
+            console.warn(`[teacher-issue-draft] [${requestId}] Found invalid student codes (skipping):`, invalidCodes);
+          }
+
+          if (validCodes.length > 0) {
+            // Look up students by their codes to get UUIDs
+            // For PostgREST 'in' operator with text fields, wrap each value in quotes
+            // Since we've validated that codes only contain [a-zA-Z0-9_-], quoting is safe
+            const quotedCodes = validCodes.map(code => `"${code}"`);
+            const studentsLookupUrl = `${SUPABASE_URL}/rest/v1/students?select=id,code&code=in.(${quotedCodes.join(',')})`;
+            
+            const studentsLookupResponse = await fetch(studentsLookupUrl, {
+              method: 'GET',
+              headers: {
+                'apikey': SUPABASE_SERVICE_ROLE_KEY,
+                'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+                'Content-Type': 'application/json'
+              }
+            });
+
+            if (!studentsLookupResponse.ok) {
+              console.warn(`[teacher-issue-draft] [${requestId}] Students lookup failed with status: ${studentsLookupResponse.status}, returning empty student list`);
+              studentIds = [];
+            } else {
+              const studentsFromCodes = await studentsLookupResponse.json();
+              studentIds = studentsFromCodes.map(s => s.id).filter(Boolean);
+
+              if (studentIds.length > 0) {
+                enrollmentSource = 'enrollments';
+                console.log(`[teacher-issue-draft] [${requestId}] Found ${studentIds.length} student IDs from enrollments table`);
+              }
+            }
+          }
+        }
+      } else {
+        classEnrollments = await classEnrollmentsResponse.json();
+        studentIds = classEnrollments.map(e => e.student_id).filter(Boolean);
+
+        if (studentIds.length > 0) {
+          enrollmentSource = 'class_enrollments';
+          console.log(`[teacher-issue-draft] [${requestId}] Found ${studentIds.length} enrolled students from class_enrollments table`);
+        } else {
+          // Empty results from class_enrollments, try enrollments fallback
+          console.log(`[teacher-issue-draft] [${requestId}] No enrollments in class_enrollments, trying enrollments table`);
+          
+          const enrollmentsUrl = `${SUPABASE_URL}/rest/v1/enrollments?select=student_code&class_id=eq.${encodeURIComponent(targetClass.id)}`;
+          
+          const enrollmentsResponse = await fetch(enrollmentsUrl, {
+            method: 'GET',
+            headers: {
+              'apikey': SUPABASE_SERVICE_ROLE_KEY,
+              'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+              'Content-Type': 'application/json'
+            }
+          });
+
+          if (!enrollmentsResponse.ok) {
+            console.warn(`[teacher-issue-draft] [${requestId}] enrollments fallback also returned ${enrollmentsResponse.status}, returning empty student list`);
+            studentIds = [];
+          } else {
+            const enrollments = await enrollmentsResponse.json();
+            const studentCodes = enrollments.map(e => e.student_code).filter(Boolean);
+
+            console.log(`[teacher-issue-draft] [${requestId}] Found ${studentCodes.length} student codes from enrollments table, looking up student IDs`);
+
+            // Validate student codes match expected pattern (alphanumeric, hyphen, underscore)
+            // This prevents injection by ensuring codes can be safely quoted in the query
+            const validCodePattern = /^[a-zA-Z0-9_-]+$/;
+            const validCodes = [];
+            const invalidCodes = [];
+            
+            for (const code of studentCodes) {
+              if (validCodePattern.test(code)) {
+                validCodes.push(code);
+              } else {
+                invalidCodes.push(code);
+              }
+            }
+            
+            if (invalidCodes.length > 0) {
+              console.warn(`[teacher-issue-draft] [${requestId}] Found invalid student codes (skipping):`, invalidCodes);
+            }
+
+            if (validCodes.length > 0) {
+              // Look up students by their codes to get UUIDs
+              // For PostgREST 'in' operator with text fields, wrap each value in quotes
+              // Since we've validated that codes only contain [a-zA-Z0-9_-], quoting is safe
+              const quotedCodes = validCodes.map(code => `"${code}"`);
+              const studentsLookupUrl = `${SUPABASE_URL}/rest/v1/students?select=id,code&code=in.(${quotedCodes.join(',')})`;
+              
+              const studentsLookupResponse = await fetch(studentsLookupUrl, {
+                method: 'GET',
+                headers: {
+                  'apikey': SUPABASE_SERVICE_ROLE_KEY,
+                  'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+                  'Content-Type': 'application/json'
+                }
+              });
+
+              if (!studentsLookupResponse.ok) {
+                console.warn(`[teacher-issue-draft] [${requestId}] Students lookup failed with status: ${studentsLookupResponse.status}, returning empty student list`);
+                studentIds = [];
+              } else {
+                const studentsFromCodes = await studentsLookupResponse.json();
+                studentIds = studentsFromCodes.map(s => s.id).filter(Boolean);
+
+                if (studentIds.length > 0) {
+                  enrollmentSource = 'enrollments';
+                  console.log(`[teacher-issue-draft] [${requestId}] Found ${studentIds.length} student IDs from enrollments table`);
+                }
+              }
+            }
+          }
         }
       }
-      
-      if (invalidCodes.length > 0) {
-        console.warn(`[teacher-issue-draft] [${requestId}] Found invalid student codes (skipping):`, invalidCodes);
-      }
-
-      if (validCodes.length === 0) {
-        console.log(`[teacher-issue-draft] [${requestId}] No valid student codes found (checked both class_enrollments and enrollments tables)`);
-        return jsonResponse(event, 400, { ok: false, error: `No students enrolled in ${resolvedClassName} (checked both enrollment sources)` }, {}, requestId);
-      }
-
-      // Look up students by their codes to get UUIDs
-      // For PostgREST 'in' operator with text fields, wrap each value in quotes
-      // Since we've validated that codes only contain [a-zA-Z0-9_-], quoting is safe
-      const quotedCodes = validCodes.map(code => `"${code}"`);
-      const studentsLookupUrl = `${SUPABASE_URL}/rest/v1/students?select=id,code&code=in.(${quotedCodes.join(',')})`;
-      
-      const studentsLookupResponse = await fetch(studentsLookupUrl, {
-        method: 'GET',
-        headers: {
-          'apikey': SUPABASE_SERVICE_ROLE_KEY,
-          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!studentsLookupResponse.ok) {
-        console.error(`[teacher-issue-draft] [${requestId}] Students lookup failed with status: ${studentsLookupResponse.status}`);
-        throw new Error(`Students lookup failed: ${studentsLookupResponse.status}`);
-      }
-
-      const studentsFromCodes = await studentsLookupResponse.json();
-      studentIds = studentsFromCodes.map(s => s.id).filter(Boolean);
-
-      if (studentIds.length === 0) {
-        console.log(`[teacher-issue-draft] [${requestId}] No matching student records found for enrolled student codes (checked both class_enrollments and enrollments tables)`);
-        return jsonResponse(event, 400, { ok: false, error: `No students enrolled in ${resolvedClassName} (checked both enrollment sources)` }, {}, requestId);
-      }
-
-      enrollmentSource = 'enrollments';
-      console.log(`[teacher-issue-draft] [${requestId}] Found ${studentIds.length} student IDs from enrollments table`);
+    } catch (err) {
+      console.warn(`[teacher-issue-draft] [${requestId}] Enrollment query error:`, err.message, '— returning empty student list');
+      studentIds = [];
     }
 
     console.log(`[teacher-issue-draft] [${requestId}] Using enrollment source: ${enrollmentSource}`);
@@ -356,71 +418,77 @@ exports.handler = async (event) => {
     }
 
     // Step 5: Fetch student details to prepare assignment instances
-    // Note: studentIds come from database enrollment query above, already validated as UUIDs by Supabase
-    // PostgREST syntax requires wrapping UUIDs in double quotes for `in` operator
-    const studentsUrl = `${SUPABASE_URL}/rest/v1/students?select=id,code,name&id=in.(${studentIds.map(id => `"${id}"`).join(',')})`;
+    // If no students enrolled, skip instance creation
+    let issued_count = 0;
     
-    console.log(`[teacher-issue-draft] [${requestId}] Fetching student details`);
-    
-    const studentsResponse = await fetch(studentsUrl, {
-      method: 'GET',
-      headers: {
-        'apikey': SUPABASE_SERVICE_ROLE_KEY,
-        'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-        'Content-Type': 'application/json'
+    if (studentIds.length === 0) {
+      console.log(`[teacher-issue-draft] [${requestId}] No students enrolled, assignment created but no instances issued`);
+    } else {
+      // Note: studentIds come from database enrollment query above, already validated as UUIDs by Supabase
+      // PostgREST syntax requires wrapping UUIDs in double quotes for `in` operator
+      const studentsUrl = `${SUPABASE_URL}/rest/v1/students?select=id,code,name&id=in.(${studentIds.map(id => `"${id}"`).join(',')})`;
+      
+      console.log(`[teacher-issue-draft] [${requestId}] Fetching student details`);
+      
+      const studentsResponse = await fetch(studentsUrl, {
+        method: 'GET',
+        headers: {
+          'apikey': SUPABASE_SERVICE_ROLE_KEY,
+          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!studentsResponse.ok) {
+        console.error(`[teacher-issue-draft] [${requestId}] Students query failed with status: ${studentsResponse.status}`);
+        throw new Error(`Students query failed: ${studentsResponse.status}`);
       }
-    });
 
-    if (!studentsResponse.ok) {
-      console.error(`[teacher-issue-draft] [${requestId}] Students query failed with status: ${studentsResponse.status}`);
-      throw new Error(`Students query failed: ${studentsResponse.status}`);
+      const students = await studentsResponse.json();
+      
+      if (!students || students.length === 0) {
+        console.log(`[teacher-issue-draft] [${requestId}] No students found for provided IDs`);
+      } else {
+        console.log(`[teacher-issue-draft] [${requestId}] Found ${students.length} students`);
+
+        // Step 6: Build instances to upsert
+        const instances = students.map(student => ({
+          assignment_id: assignmentId,
+          student_id: student.id,
+          student_code: student.code,
+          student_name: student.name || student.code,
+          assigned_at: new Date().toISOString(),
+          due_at: dueAt || null,
+          status: 'Assigned',
+          settings: {},
+        }));
+
+        // Use upsert with resolution=merge-duplicates for idempotency
+        const instancesUrl = `${SUPABASE_URL}/rest/v1/assignment_instances`;
+        
+        console.log(`[teacher-issue-draft] [${requestId}] Upserting ${instances.length} assignment instances`);
+        
+        const upsertResponse = await fetch(instancesUrl, {
+          method: 'POST',
+          headers: {
+            'apikey': SUPABASE_SERVICE_ROLE_KEY,
+            'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'resolution=merge-duplicates,return=representation'
+          },
+          body: JSON.stringify(instances)
+        });
+
+        if (!upsertResponse.ok) {
+          const errorText = await upsertResponse.text();
+          console.error(`[teacher-issue-draft] [${requestId}] Upsert failed with status ${upsertResponse.status}: ${errorText}`);
+          throw new Error(`Failed to issue assignments: ${upsertResponse.status}`);
+        }
+
+        const upsertedInstances = await upsertResponse.json();
+        issued_count = upsertedInstances.length;
+      }
     }
-
-    const students = await studentsResponse.json();
-    
-    if (!students || students.length === 0) {
-      console.log(`[teacher-issue-draft] [${requestId}] No students found for provided IDs`);
-      return jsonResponse(event, 404, { ok: false, error: 'No students found for provided IDs' }, {}, requestId);
-    }
-
-    console.log(`[teacher-issue-draft] [${requestId}] Found ${students.length} students`);
-
-    // Step 6: Build instances to upsert
-    const instances = students.map(student => ({
-      assignment_id: assignmentId,
-      student_id: student.id,
-      student_code: student.code,
-      student_name: student.name || student.code,
-      assigned_at: new Date().toISOString(),
-      due_at: dueAt || null,
-      status: 'Assigned',
-      settings: {},
-    }));
-
-    // Use upsert with resolution=merge-duplicates for idempotency
-    const instancesUrl = `${SUPABASE_URL}/rest/v1/assignment_instances`;
-    
-    console.log(`[teacher-issue-draft] [${requestId}] Upserting ${instances.length} assignment instances`);
-    
-    const upsertResponse = await fetch(instancesUrl, {
-      method: 'POST',
-      headers: {
-        'apikey': SUPABASE_SERVICE_ROLE_KEY,
-        'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'resolution=merge-duplicates,return=representation'
-      },
-      body: JSON.stringify(instances)
-    });
-
-    if (!upsertResponse.ok) {
-      const errorText = await upsertResponse.text();
-      console.error(`[teacher-issue-draft] [${requestId}] Upsert failed with status ${upsertResponse.status}: ${errorText}`);
-      throw new Error(`Failed to issue assignments: ${upsertResponse.status}`);
-    }
-
-    const upsertedInstances = await upsertResponse.json();
-    const issued_count = upsertedInstances.length;
 
     console.log(`[teacher-issue-draft] [${requestId}] Successfully issued: ${issued_count} instances created/updated`);
     
