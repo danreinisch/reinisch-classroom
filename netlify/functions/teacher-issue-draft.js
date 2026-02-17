@@ -738,8 +738,9 @@ exports.handler = async (event) => {
 
       console.log(`[teacher-issue-draft] [${requestId}] Created assignment with ID: ${assignmentId}`);
     } else {
-      // Update existing assignment with new meta if we have it OR if it needs meta update
-      if (parsedMeta || needsMetaUpdate) {
+      // Update existing assignment with new meta if we have parsed meta
+      // This includes cases where the duplicate had empty meta (needsMetaUpdate flag)
+      if (parsedMeta) {
         console.log(`[teacher-issue-draft] [${requestId}] Updating existing assignment meta`);
         
         const updateUrl = `${SUPABASE_URL}/rest/v1/assignments?id=eq.${assignmentId}`;
@@ -750,7 +751,7 @@ exports.handler = async (event) => {
             'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ meta: parsedMeta || {} })
+          body: JSON.stringify({ meta: parsedMeta })
         });
 
         if (!updateResponse.ok) {
