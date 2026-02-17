@@ -162,6 +162,7 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
       if (nextLineIndex < classLines.length) {
         const nextLine = classLines[nextLineIndex].trim();
         // If the next line is not a special marker, it might be a subtitle
+        // NOTE: This regex pattern is also used in tests/parse-txt-to-meta.test.cjs - keep in sync
         const isSpecialLine = nextLine.match(/^(Question\s+\d+:|DESE\s+Standard|IEP\s+Goal\s+Code|[A-Z]\)|Correct\s+Answer:|Hint:|Writing\s+Prompt:|Writing\s+Structure:|Hints?:)/i);
         if (!isSpecialLine && nextLine.length > 0) {
           // This is likely a subtitle, append it to the label
@@ -656,7 +657,6 @@ exports.handler = async (event) => {
     // If found, reuse that assignment ID instead of creating a new one
     let assignmentId = null;
     let isDuplicate = false;
-    let needsMetaUpdate = false;
 
     const duplicateCheckUrl = `${SUPABASE_URL}/rest/v1/assignments?select=id,meta&title=eq.${encodeURIComponent(draft.title)}&class_id=eq.${encodeURIComponent(targetClass.id)}`;
     
@@ -683,7 +683,6 @@ exports.handler = async (event) => {
         const hasEmptyMeta = !existingMeta || !existingMeta.days || existingMeta.days.length === 0;
         if (hasEmptyMeta && parsedMeta) {
           console.log(`[teacher-issue-draft] [${requestId}] Duplicate has empty meta and we have parsed meta - will force update`);
-          needsMetaUpdate = true;
         }
       }
     }

@@ -5,16 +5,7 @@ const assert = require('assert');
 
 // Since parseTxtToMeta is not exported, we need to extract and test it
 // For now, we'll copy the function here for testing purposes
-// In production, you might want to export it from the function file
-
-// Class name aliases for backward compatibility with old drafts
-const CLASS_ALIASES = {
-  "LA 1 SC": "Language Arts 1 SC",
-  "LA 2 SC": "Language Arts 2 SC",
-  "LA 3 SC": "Language Arts 3 SC",
-  "LA 4 SC": "Language Arts 4 SC",
-  "Life Skills LA": "Life Skills Language Arts SC",
-};
+// NOTE: The regex pattern for detecting special lines must be kept in sync with production code
 
 /**
  * Parse TXT assignment content into structured JSON metadata
