@@ -1696,7 +1696,7 @@
       
       return `
         <div class="dt-accordion-item">
-          <div class="dt-accordion-header" onclick="window.tcData.toggleValidationIssue(${idx})">
+          <div class="dt-accordion-header" data-toggle-issue="${idx}">
             <div class="dt-accordion-title">
               <span>${icon}</span>
               <span><strong>${student ? student.name : issue.student_code}</strong> - Goal ${escapeHtml(issue.goal_code)}</span>
@@ -1707,12 +1707,30 @@
             <p style="margin: 0 0 12px 0;">${escapeHtml(issue.message)}</p>
             ${issue.date ? `<p style="margin: 0 0 12px 0; opacity: 0.7;"><small>Date: ${issue.date}</small></p>` : ''}
             <div style="display: flex; gap: 8px;">
-              <button class="dt-btn" onclick="window.tcData.dismissValidationIssue('${issue.id}')">Dismiss</button>
+              <button class="dt-btn" data-dismiss-issue="${issue.id}">Dismiss</button>
             </div>
           </div>
         </div>
       `;
     }).join('');
+    
+    // Add event listeners for issue toggles
+    accordion.querySelectorAll('[data-toggle-issue]').forEach(el => {
+      el.addEventListener('click', () => {
+        el.closest('.dt-accordion-item').classList.toggle('expanded');
+      });
+    });
+    
+    // Add event listeners for dismiss buttons
+    accordion.querySelectorAll('[data-dismiss-issue]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const issueId = btn.dataset.dismissIssue;
+        const dismissed = JSON.parse(localStorage.getItem(DISMISSED_VALIDATIONS_KEY) || '[]');
+        dismissed.push(issueId);
+        localStorage.setItem(DISMISSED_VALIDATIONS_KEY, JSON.stringify(dismissed));
+        renderValidationDashboard();
+      });
+    });
   }
   
   function setupValidationHandlers() {
@@ -1722,22 +1740,6 @@
         renderValidationDashboard();
       });
     }
-    
-    // Global functions for validation
-    window.tcData = window.tcData || {};
-    window.tcData.toggleValidationIssue = (idx) => {
-      const items = document.querySelectorAll('#dtValidationAccordion .dt-accordion-item');
-      if (items[idx]) {
-        items[idx].classList.toggle('expanded');
-      }
-    };
-    
-    window.tcData.dismissValidationIssue = (id) => {
-      const dismissed = JSON.parse(localStorage.getItem(DISMISSED_VALIDATIONS_KEY) || '[]');
-      dismissed.push(id);
-      localStorage.setItem(DISMISSED_VALIDATIONS_KEY, JSON.stringify(dismissed));
-      renderValidationDashboard();
-    };
     
     renderValidationDashboard();
   }
@@ -1859,7 +1861,7 @@
           </div>
           <div style="display: flex; align-items: center; gap: 8px;">
             <span>${item.icon}</span>
-            <button class="dt-btn" onclick="window.location.href='/teacher/students/?student=${item.student.code}'">
+            <button class="dt-btn" data-collect-student="${item.student.code}">
               Collect Now
             </button>
           </div>
@@ -1876,7 +1878,8 @@
           <select 
             class="dt-search-input" 
             style="padding: 6px 8px; font-size: 13px; width: auto;"
-            onchange="window.tcData.updateFrequency('${item.student.code}', '${item.goal.code}', this.value)"
+            data-schedule-student="${item.student.code}"
+            data-schedule-goal="${item.goal.code}"
           >
             <option value="weekly" ${item.frequency === 'weekly' ? 'selected' : ''}>Weekly</option>
             <option value="biweekly" ${item.frequency === 'biweekly' ? 'selected' : ''}>Biweekly</option>
@@ -1888,12 +1891,31 @@
         <td>${item.nextDue.toLocaleDateString()}</td>
         <td>${item.icon} ${item.label}</td>
         <td>
-          <button class="dt-btn" onclick="window.location.href='/teacher/students/?student=${item.student.code}'">
+          <button class="dt-btn" data-collect-student="${item.student.code}">
             Collect
           </button>
         </td>
       </tr>
     `).join('');
+    
+    // Add event listeners for collect buttons
+    document.querySelectorAll('[data-collect-student]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const studentCode = btn.dataset.collectStudent;
+        window.location.href = `/teacher/students/?student=${studentCode}`;
+      });
+    });
+    
+    // Add event listeners for frequency dropdowns
+    scheduleBody.querySelectorAll('[data-schedule-student]').forEach(select => {
+      select.addEventListener('change', () => {
+        const studentCode = select.dataset.scheduleStudent;
+        const goalCode = select.dataset.scheduleGoal;
+        const frequency = select.value;
+        setScheduleFrequency(studentCode, goalCode, frequency);
+        renderCollectionSchedule();
+      });
+    });
   }
   
   function setupScheduleHandlers() {
@@ -1903,13 +1925,6 @@
         alert('Schedule Settings\n\nYou can set collection frequency for each goal in the table below.');
       });
     }
-    
-    // Global functions for schedule
-    window.tcData = window.tcData || {};
-    window.tcData.updateFrequency = (studentCode, goalCode, frequency) => {
-      setScheduleFrequency(studentCode, goalCode, frequency);
-      renderCollectionSchedule();
-    };
     
     renderCollectionSchedule();
   }

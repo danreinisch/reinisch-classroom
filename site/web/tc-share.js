@@ -274,7 +274,7 @@
         auditRow.innerHTML = `
           <td colspan="7">
             <div class="share-audit-trail">
-              <div class="share-expandable" onclick="window.tcShare.toggleAudit(this)">
+              <div class="share-expandable" data-toggle-audit="true">
                 <strong>▶ View ${token.entries.length} Entry Log(s)</strong>
               </div>
               <div class="share-expanded-content">
@@ -326,18 +326,18 @@
         }
       });
     });
+    
+    // Add audit trail toggle listeners
+    tbody.querySelectorAll('[data-toggle-audit]').forEach(el => {
+      el.addEventListener('click', () => {
+        const content = el.nextElementSibling;
+        content.classList.toggle('show');
+        el.innerHTML = content.classList.contains('show') 
+          ? el.innerHTML.replace('▶', '▼')
+          : el.innerHTML.replace('▼', '▶');
+      });
+    });
   }
-
-  // Global functions for onclick handlers (kept for audit trail toggle)
-  window.tcShare = {
-    toggleAudit: (el) => {
-      const content = el.nextElementSibling;
-      content.classList.toggle('show');
-      el.innerHTML = content.classList.contains('show') 
-        ? el.innerHTML.replace('▶', '▼')
-        : el.innerHTML.replace('▼', '▶');
-    }
-  };
 
   // Initialize
   init();
