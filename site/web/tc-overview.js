@@ -313,9 +313,13 @@
       const month = monthMap[monthStr];
       const day = parseInt(dayStr, 10);
       
-      // Handle year boundary for Q3 (Dec-Mar)
+      // Handle year boundary: if end month is before start month, it crosses year boundary
+      const startMonth = monthMap[range.start.split(' ')[0]];
+      const endMonth = monthMap[range.end.split(' ')[0]];
+      
       let adjustedYear = year;
-      if (quarter === 'Q3' && month <= 2) {
+      if (endMonth < startMonth && month <= endMonth) {
+        // Quarter crosses year boundary and this date is in the next year
         adjustedYear = year + 1;
       }
       
@@ -730,16 +734,6 @@
       const contentEl = $("ovFeedContent");
       if (contentEl) contentEl.innerHTML = '<div style="opacity: 0.7; font-size: 13px;">Error loading data</div>';
     }
-  }
-
-  /**
-   * Format date as YYYY-MM-DD
-   */
-  function formatDateYMD(date) {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
   }
 
   // Initialize

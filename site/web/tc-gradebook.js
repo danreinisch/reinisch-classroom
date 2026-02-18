@@ -1250,6 +1250,11 @@
    * Calculate trend for a student (up/down/flat)
    */
   function calculateTrend(studentCode, scoreMap, drafts) {
+    const MIN_SCORES_FOR_TREND = 3;
+    const RECENT_SCORES_COUNT = 3;
+    const COMPARISON_WINDOW_SIZE = 6;
+    const TREND_THRESHOLD_PERCENT = 3;
+
     const studentScores = scoreMap.get(studentCode);
     if (!studentScores) return 'flat';
 
@@ -1263,10 +1268,10 @@
       }
     }
 
-    if (scores.length < 3) return 'flat';
+    if (scores.length < MIN_SCORES_FOR_TREND) return 'flat';
 
-    const recent = scores.slice(-3);
-    const earlier = scores.slice(-6, -3);
+    const recent = scores.slice(-RECENT_SCORES_COUNT);
+    const earlier = scores.slice(-COMPARISON_WINDOW_SIZE, -RECENT_SCORES_COUNT);
     
     if (earlier.length === 0) return 'flat';
 
@@ -1274,8 +1279,8 @@
     const earlierAvg = earlier.reduce((a, b) => a + b, 0) / earlier.length;
     const diff = recentAvg - earlierAvg;
 
-    if (diff > 3) return 'up';
-    if (diff < -3) return 'down';
+    if (diff > TREND_THRESHOLD_PERCENT) return 'up';
+    if (diff < -TREND_THRESHOLD_PERCENT) return 'down';
     return 'flat';
   }
 
