@@ -4,28 +4,25 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Substitute Center — Reinisch Classroom</title>
+<link rel="stylesheet" href="/assets/css/rc-theme.css" />
 <style>
+  /* Page-specific aliases */
   :root {
-    --base:#0b1220;
-    --panel:#0f172a;
-    --ink:#e6edf3;
-    --ink-dim:#cbd5e1;
-    --muted:#94a3b8;
-    --line:rgba(255,255,255,.08);
-    --brand:#22c55e;
-    --brand-2:#06b6d4;
+    --base: var(--rc-base);
+    --panel: var(--rc-panel);
+    --ink: var(--rc-ink);
+    --ink-dim: var(--rc-ink-dim);
+    --muted: var(--rc-muted);
+    --line: var(--rc-border);
+    --brand: var(--rc-brand);
+    --brand-2: var(--rc-brand-2);
   }
-  
-  * { box-sizing:border-box }
-  html, body { height:100%; margin:0; }
   
   body {
     background: url('/assets/bg/bg5e_soft_grid.svg') center/cover no-repeat fixed,
                 radial-gradient(1200px 800px at 20% -10%, rgba(34,197,94,.08), transparent 50%),
                 radial-gradient(1200px 800px at 120% 20%, rgba(6,182,212,.06), transparent 50%),
-                linear-gradient(180deg, #0b1220, #0c1322 60%, #0b0f14);
-    color: var(--ink);
-    font-family: ui-sans-serif, -apple-system, Segoe UI, Roboto, Inter, Helvetica, Arial;
+                linear-gradient(180deg, var(--rc-base), #0c1322 60%, #0b0f14);
   }
   
   .header {

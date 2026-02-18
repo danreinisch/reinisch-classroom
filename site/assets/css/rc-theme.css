@@ -1,0 +1,353 @@
+/* 
+ * RC Theme — Universal Design System for Reinisch Classroom
+ * Single source of truth for colors, typography, spacing, and components
+ * Used across all student-facing pages and Teacher Center
+ */
+
+/* ============================================================
+   DESIGN TOKENS — CSS Custom Properties
+   ============================================================ */
+
+:root {
+  /* Surfaces */
+  --rc-base: #0b1220;
+  --rc-panel: #0f172a;
+  --rc-panel-2: #111827;
+  --rc-glass: rgba(0, 0, 0, 0.34);
+  --rc-glass-border: rgba(255, 255, 255, 0.08);
+  --rc-glass-hover: rgba(255, 255, 255, 0.07);
+  --rc-glass-active: rgba(255, 255, 255, 0.10);
+  
+  /* Text */
+  --rc-ink: rgba(240, 255, 250, 0.92);
+  --rc-ink-dim: rgba(240, 255, 250, 0.78);
+  --rc-muted: #94a3b8;
+  
+  /* Borders */
+  --rc-border: rgba(255, 255, 255, 0.08);
+  --rc-border-strong: rgba(255, 255, 255, 0.14);
+  
+  /* Brand / Accent */
+  --rc-brand: #22c55e;
+  --rc-brand-2: #06b6d4;
+  
+  /* Semantic */
+  --rc-success: #22c55e;
+  --rc-warning: #f59e0b;
+  --rc-danger: #ef4444;
+  --rc-info: #3b82f6;
+  
+  /* Typography */
+  --rc-font: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  --rc-font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  
+  /* Spacing */
+  --rc-radius-sm: 8px;
+  --rc-radius: 12px;
+  --rc-radius-lg: 18px;
+  --rc-radius-pill: 999px;
+  
+  /* Shadows */
+  --rc-shadow: 0 18px 60px rgba(0, 0, 0, 0.35);
+  --rc-shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* ============================================================
+   BASE RESET & BODY
+   ============================================================ */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--rc-font);
+  font-size: 16px;
+  color: var(--rc-ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  letter-spacing: 0.1px;
+  
+  background:
+    radial-gradient(1100px 700px at 16% 25%, rgba(0, 150, 90, 0.30), transparent 60%),
+    radial-gradient(1000px 650px at 70% 55%, rgba(0, 120, 170, 0.22), transparent 60%),
+    var(--rc-base);
+}
+
+/* ============================================================
+   SHARED COMPONENT CLASSES
+   ============================================================ */
+
+/* Cards */
+.rc-card {
+  background: var(--rc-glass);
+  border: 1px solid var(--rc-glass-border);
+  border-radius: var(--rc-radius-lg);
+  padding: 24px;
+  box-shadow: var(--rc-shadow);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.rc-card:hover {
+  background: var(--rc-glass-hover);
+}
+
+/* Buttons */
+.rc-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: var(--rc-radius);
+  border: 1px solid var(--rc-border);
+  background: var(--rc-glass);
+  color: var(--rc-ink);
+  font-family: var(--rc-font);
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.rc-btn:hover {
+  background: var(--rc-glass-hover);
+  transform: translateY(-1px);
+}
+
+.rc-btn:active {
+  transform: translateY(0);
+}
+
+.rc-btn.primary {
+  background: var(--rc-brand);
+  border-color: var(--rc-brand);
+  color: #0b1220;
+  font-weight: 600;
+}
+
+.rc-btn.primary:hover {
+  background: #1ea34e;
+  border-color: #1ea34e;
+}
+
+.rc-btn.danger {
+  background: var(--rc-danger);
+  border-color: var(--rc-danger);
+  color: white;
+  font-weight: 600;
+}
+
+.rc-btn.danger:hover {
+  background: #dc2626;
+  border-color: #dc2626;
+}
+
+/* Form Inputs */
+.rc-input,
+.rc-select,
+.rc-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: var(--rc-radius);
+  border: 1px solid var(--rc-border);
+  background: rgba(0, 0, 0, 0.22);
+  color: var(--rc-ink);
+  font-family: var(--rc-font);
+  font-size: 16px;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.rc-input:focus,
+.rc-select:focus,
+.rc-textarea:focus {
+  border-color: var(--rc-brand);
+}
+
+.rc-textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+/* Tables */
+.rc-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.rc-table th,
+.rc-table td {
+  padding: 11px 14px;
+  text-align: left;
+}
+
+.rc-table thead th {
+  position: sticky;
+  top: 0;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--rc-border-strong);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--rc-ink-dim);
+  font-weight: 600;
+}
+
+.rc-table tbody tr {
+  border-bottom: 1px solid var(--rc-border);
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.rc-table tbody tr:hover {
+  background: var(--rc-glass-hover);
+}
+
+/* Badges */
+.rc-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: var(--rc-radius-pill);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.rc-badge.success {
+  background: rgba(34, 197, 94, 0.15);
+  color: var(--rc-success);
+}
+
+.rc-badge.warning {
+  background: rgba(245, 158, 11, 0.15);
+  color: var(--rc-warning);
+}
+
+.rc-badge.danger {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--rc-danger);
+}
+
+.rc-badge.info {
+  background: rgba(59, 130, 246, 0.15);
+  color: var(--rc-info);
+}
+
+/* Pills / Tags */
+.rc-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: var(--rc-radius-pill);
+  background: var(--rc-glass);
+  border: 1px solid var(--rc-border);
+  font-size: 14px;
+  color: var(--rc-ink);
+}
+
+/* Dividers */
+.rc-divider {
+  height: 1px;
+  background: var(--rc-border);
+  margin: 14px 0;
+  border: none;
+}
+
+/* Typography */
+.rc-heading {
+  margin: 0 0 10px;
+  font-size: 38px;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  font-weight: 850;
+  color: var(--rc-ink);
+}
+
+.rc-heading-2 {
+  margin: 6px 0 10px;
+  font-size: 22px;
+  letter-spacing: -0.01em;
+  font-weight: 700;
+  color: var(--rc-ink);
+}
+
+.rc-muted {
+  color: var(--rc-muted);
+}
+
+/* Grid Utility */
+.rc-grid {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.rc-grid-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.rc-grid-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.rc-grid-auto {
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+/* Container */
+.rc-container {
+  width: 100%;
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 0 1rem;
+}
+
+/* ============================================================
+   RESPONSIVE BREAKPOINTS
+   ============================================================ */
+
+@media (max-width: 1100px) {
+  .rc-grid-2,
+  .rc-grid-3 {
+    grid-template-columns: 1fr;
+  }
+  
+  .rc-heading {
+    font-size: 32px;
+  }
+}
+
+@media (max-width: 640px) {
+  body {
+    font-size: 15px;
+  }
+  
+  .rc-card {
+    padding: 18px;
+  }
+  
+  .rc-btn {
+    padding: 9px 16px;
+    font-size: 15px;
+  }
+  
+  .rc-heading {
+    font-size: 28px;
+  }
+  
+  .rc-heading-2 {
+    font-size: 20px;
+  }
+}

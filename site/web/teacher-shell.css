@@ -1,31 +1,14 @@
+/* Teacher Shell uses rc-theme.css as base — aliases for backward compat */
 :root{
   --tc-topbar-h:56px;
   --tc-rail-w:64px;
   --tc-side-w:260px;
 
-  --tc-text: rgba(240,255,250,.92);
-  --tc-muted: rgba(240,255,250,.78);
-  --tc-border: rgba(255,255,255,.08);
-  --tc-glass: rgba(0,0,0,.34);
-}
-
-html, body { height: 100%; }
-
-body{
-  margin:0;
-  color: var(--tc-text);
-  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans";
-  font-size: 16px;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
-  letter-spacing: 0.1px;
-
-  /* Calm the background so the UI doesn't scream over the content */
-  background:
-    radial-gradient(1100px 700px at 16% 25%, rgba(0, 150, 90, .30), transparent 60%),
-    radial-gradient(1000px 650px at 70% 55%, rgba(0, 120, 170, .22), transparent 60%),
-    #06100f !important;
+  /* Aliases to rc-theme tokens */
+  --tc-text: var(--rc-ink);
+  --tc-muted: var(--rc-ink-dim);
+  --tc-border: var(--rc-border);
+  --tc-glass: var(--rc-glass);
 }
 
 .tc-app{min-height:100vh;display:flex;flex-direction:column}

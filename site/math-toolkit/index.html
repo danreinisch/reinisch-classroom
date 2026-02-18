@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Math Toolkit | Reinisch Classroom</title>
 
+  <link rel="stylesheet" href="/assets/css/rc-theme.css" />
   <!-- Global App Shell CSS -->
   <link rel="stylesheet" href="/assets/css/app-shell.css" />
   <!-- Context Navigation CSS -->
@@ -12,19 +13,10 @@
   <style>
     :root {
       --gap: 1rem;
-      --ink: #e8edf5;
-      --glass: rgba(255,255,255,.14);
-      --glass-brd: rgba(255,255,255,.28);
-      --card-brd: rgba(255,255,255,.22);
-    }
-    * { box-sizing: border-box; }
-    html, body { height: 100%; }
-    body {
-      margin: 0;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      line-height: 1.5;
-      color: var(--ink);
-      background: transparent;
+      --ink: var(--rc-ink);
+      --glass: var(--rc-glass);
+      --glass-brd: var(--rc-border-strong);
+      --card-brd: var(--rc-border-strong);
     }
     /* Layout */
     .container { max-width: 1100px; margin: 0 auto; padding: 1rem; }
