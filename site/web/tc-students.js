@@ -308,6 +308,25 @@
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   }
 
+  /**
+   * Get quarter date range in YYYY-MM-DD format
+   */
+  function getQuarterDateRange(quarter) {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+    const schoolYear = month >= 8 ? year : year - 1;
+
+    const ranges = {
+      Q1: { start: `${schoolYear}-08-16`, end: `${schoolYear}-10-17` },
+      Q2: { start: `${schoolYear}-10-18`, end: `${schoolYear}-12-19` },
+      Q3: { start: `${schoolYear}-12-20`, end: `${schoolYear + 1}-03-06` },
+      Q4: { start: `${schoolYear + 1}-03-07`, end: `${schoolYear + 1}-05-20` },
+    };
+
+    return ranges[quarter] || { start: null, end: null };
+  }
+
   function renderQuarterBar() {
     const displayEl = document.getElementById('stQuarterDisplay');
     if (!displayEl) return;
@@ -3553,6 +3572,8 @@
 
   /**
    * Linear regression helper for goal mastery predictions
+   * @param {Array<{x: number, y: number}>} points - Array of data points with x and y coordinates
+   * @returns {{slope: number, intercept: number} | null} Regression parameters or null if fewer than 2 points
    */
   function linearRegression(points) {
     const n = points.length;
@@ -3666,17 +3687,24 @@
     // Get data range
     const minDate = new Date(sorted[0].date);
     const maxDate = new Date(sorted[sorted.length - 1].date);
-    const dateRange = maxDate - minDate || 1; // Avoid division by zero
+    // Handle single data point by adding 1 day range (86400000ms = 1 day)
+    const MS_PER_DAY = 86400000;
+    const dateRange = sorted.length === 1 ? MS_PER_DAY : (maxDate - minDate);
     
     const baseline = goal.baseline || 0;
     const mastery = goal.mastery || 100;
     const maxY = Math.max(100, mastery, ...sorted.map(p => p.percent));
     const minY = Math.min(0, baseline);
-    const yRange = maxY - minY || 1;
+    // Handle all points having same value by adding small range
+    const yRange = (maxY - minY) || 10;
     
     // Scale functions
     const scaleX = (date) => {
       const d = new Date(date);
+      if (sorted.length === 1) {
+        // Center single point
+        return padding.left + chartWidth / 2;
+      }
       return padding.left + ((d - minDate) / dateRange) * chartWidth;
     };
     const scaleY = (value) => {
@@ -3723,7 +3751,7 @@
           </text>
           
           <!-- Progress line (teal/green) -->
-          <path d="${pathData}" fill="none" stroke="#22c55e" stroke-width="3" />
+          ${sorted.length > 1 ? `<path d="${pathData}" fill="none" stroke="#22c55e" stroke-width="3" />` : ''}
           
           <!-- Data points -->
           ${circles}

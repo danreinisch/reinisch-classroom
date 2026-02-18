@@ -58,7 +58,11 @@
   let currentTab = "iep-quarterly";
 
   // Tab state
-  let tab1State = { studentCode: null, quarter: getCurrentQuarter(), template: 'iep-progress' };
+  let tab1State = { 
+    studentCode: null, 
+    quarter: getCurrentQuarter(), 
+    template: localStorage.getItem('rc_report_template') || 'iep-progress' 
+  };
   let tab2State = { studentCode: null };
   let tab3State = { classFilter: "All Classes", compareQuarters: false };
   let tab4State = { classFilter: "All Classes", quarter: getCurrentQuarter() };
@@ -406,19 +410,35 @@
         let statusColor = "#9ca3af";
         
         if (goalProgressData.average != null) {
-          const progress = ((goalProgressData.average - (goal.baseline || 0)) / ((goal.target || 100) - (goal.baseline || 0))) * 100;
-          if (progress >= 80) {
-            statusText = "Excellent progress";
-            statusColor = "#22c55e";
-          } else if (progress >= 50) {
-            statusText = "Good progress";
-            statusColor = "#22c55e";
-          } else if (progress >= 0) {
-            statusText = "Making progress";
-            statusColor = "#fbbf24";
+          const baseline = goal.baseline || 0;
+          const target = goal.target || 100;
+          const progressRange = target - baseline;
+          
+          // Avoid division by zero when target equals baseline
+          if (progressRange !== 0) {
+            const progress = ((goalProgressData.average - baseline) / progressRange) * 100;
+            if (progress >= 80) {
+              statusText = "Excellent progress";
+              statusColor = "#22c55e";
+            } else if (progress >= 50) {
+              statusText = "Good progress";
+              statusColor = "#22c55e";
+            } else if (progress >= 0) {
+              statusText = "Making progress";
+              statusColor = "#fbbf24";
+            } else {
+              statusText = "Needs support";
+              statusColor = "#ef4444";
+            }
           } else {
-            statusText = "Needs support";
-            statusColor = "#ef4444";
+            // When target equals baseline, check if at or above target
+            if (goalProgressData.average >= target) {
+              statusText = "At target";
+              statusColor = "#22c55e";
+            } else {
+              statusText = "Below target";
+              statusColor = "#fbbf24";
+            }
           }
         }
 
@@ -603,7 +623,11 @@
 
     // Format data points
     const dataPointsStr = dataPoints.length > 0
-      ? dataPoints.map(dp => `${formatDate(dp.date)} (${parseFloat(dp.value).toFixed(1)}%)`).join(', ')
+      ? dataPoints.map(dp => {
+          const value = parseFloat(dp.value);
+          const formattedValue = !isNaN(value) ? value.toFixed(1) : 'N/A';
+          return `${formatDate(dp.date)} (${formattedValue}%)`;
+        }).join(', ')
       : "No data collected";
 
     // Determine status
@@ -654,7 +678,10 @@ Status: ${status}`;
       toast.style.transition = 'opacity 0.3s';
       toast.style.opacity = '0';
       setTimeout(() => {
-        document.body.removeChild(toast);
+        // Check if toast is still in DOM before removing
+        if (toast.parentNode) {
+          document.body.removeChild(toast);
+        }
       }, 300);
     }, 3000);
   }
