@@ -239,6 +239,20 @@
   }
   
   /**
+   * Escape text for use in HTML attributes (specifically for data-text attributes)
+   * This escapes quotes and other characters that could break attribute boundaries
+   */
+  function escapeAttr(text) {
+    if (!text) return '';
+    return String(text)
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+  
+  /**
    * Format date for display
    */
   function formatDate(dateStr) {
@@ -650,7 +664,7 @@
           <button class="st-hint-btn" data-hint-id="hint_${questionId}">💡 Show Hint</button>
           <div class="st-hint-content" id="hint_${questionId}">
             ${escapeHtml(q.hint)}
-            <button class="st-tts-btn" data-text="${q.hint}" title="Read this hint aloud" aria-label="Read hint aloud">🔊</button>
+            <button class="st-tts-btn" data-text="${escapeAttr(q.hint)}" title="Read this hint aloud" aria-label="Read hint aloud">🔊</button>
           </div>
         </div>
       ` : '';
@@ -762,7 +776,7 @@
             ${dayData.hints.map(hint => `
               <li>
                 ${escapeHtml(hint)}
-                <button class="st-tts-btn" data-text="${hint}" title="Read this hint aloud" aria-label="Read hint aloud">🔊</button>
+                <button class="st-tts-btn" data-text="${escapeAttr(hint)}" title="Read this hint aloud" aria-label="Read hint aloud">🔊</button>
               </li>
             `).join('')}
           </ul>
@@ -1894,7 +1908,7 @@
       assignmentsContainer.innerHTML = `
         <div style="text-align: center; padding: 40px; color: var(--muted);">
           <div style="font-size: 48px; margin-bottom: 16px;">📚</div>
-          <div>No ${statusFilter !== 'all' ? statusFilter.replace('-', ' ') : ''} assignments</div>
+          <div>No ${statusFilter !== 'all' ? statusFilter.replaceAll('-', ' ') : ''} assignments</div>
         </div>
       `;
     } else {
