@@ -1458,9 +1458,9 @@
       } else if (sharedWords.length > 0) {
         const similarity = sharedWords.length / topicWords.length;
         if (similarity > 0.7 && topicSentence.value.trim().length > 30) {
-          const compareLength = Math.min(40, topicLower.length, conclusionLower.length);
-          const topicStart = topicLower.substring(0, compareLength);
-          const conclusionStart = conclusionLower.substring(0, compareLength);
+          const maxCompareLength = Math.min(40, topicLower.length, conclusionLower.length);
+          const topicStart = topicLower.substring(0, maxCompareLength);
+          const conclusionStart = conclusionLower.substring(0, maxCompareLength);
           if (topicStart === conclusionStart) {
             messages.push('<p class="warn">Your conclusion is too similar to your topic sentence. Restate your thesis using different words.</p>');
           } else {
