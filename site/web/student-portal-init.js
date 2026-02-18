@@ -21,6 +21,15 @@
   const LOG_PREFIX = '[student-portal]';
   const STUDENT_PORTAL_PATH = '/student/';
   
+  // Feature constants
+  const MIN_WRITING_ANSWER_LENGTH = 10;
+  const AUTO_SAVE_DEBOUNCE_MS = 1000;
+  const WRITER_BADGE_WORD_THRESHOLD = 50;
+  const SPEECH_PAUSE_MS = 300;
+  const TOAST_DISPLAY_DURATION_MS = 5000;
+  const TOAST_FADE_OUT_DURATION_MS = 300;
+  const TIMER_INIT_DELAY_MS = 100;
+  
   // State management
   const state = {
     bootWatchdogTimer: null,
@@ -265,6 +274,186 @@
       return 'N/A';
     }
   }
+
+  // ============================================================================
+  // Feature 1 & 3: Auto-Save and Progress Tracking Helpers
+  // ============================================================================
+  
+  /**
+   * Get total question count for an assignment
+   */
+  function getTotalQuestionCount(instance) {
+    const assignment = instance.assignment || {};
+    const meta = assignment.meta || {};
+    const days = meta.days || [];
+    
+    let total = 0;
+    days.forEach(day => {
+      if (day.type === 'questions' && day.questions) {
+        total += day.questions.length;
+      } else if (day.type === 'writing_prompt') {
+        total += 1; // Count writing prompt as 1 question
+      }
+    });
+    
+    return total;
+  }
+
+  /**
+   * Get answered question count from localStorage
+   */
+  function getAnsweredCount(instanceId) {
+    try {
+      const savedAnswers = getSavedAnswers(instanceId);
+      if (!savedAnswers) return 0;
+      
+      // Count non-empty answers
+      return Object.values(savedAnswers).filter(ans => {
+        if (typeof ans === 'string') {
+          return ans.trim().length > MIN_WRITING_ANSWER_LENGTH;
+        }
+        return ans !== null && ans !== undefined;
+      }).length;
+    } catch (err) {
+      console.error(LOG_PREFIX, 'Error getting answered count:', err);
+      return 0;
+    }
+  }
+
+  /**
+   * Get saved answers for an instance from localStorage
+   */
+  function getSavedAnswers(instanceId) {
+    try {
+      const key = `rc_student_answers_${instanceId}`;
+      const data = localStorage.getItem(key);
+      return data ? JSON.parse(data) : null;
+    } catch (err) {
+      console.error(LOG_PREFIX, 'Error getting saved answers:', err);
+      return null;
+    }
+  }
+
+  /**
+   * Save answer to localStorage (debounced for textareas)
+   */
+  function saveAnswer(instanceId, questionId, answer) {
+    try {
+      const key = `rc_student_answers_${instanceId}`;
+      const existing = getSavedAnswers(instanceId) || {};
+      existing[questionId] = answer;
+      localStorage.setItem(key, JSON.stringify(existing));
+      
+      // Show save indicator
+      showToast('✓ Progress saved', 'success');
+    } catch (err) {
+      console.error(LOG_PREFIX, 'Error saving answer:', err);
+    }
+  }
+
+  /**
+   * Clear saved answers for an instance
+   */
+  function clearSavedAnswers(instanceId) {
+    try {
+      const key = `rc_student_answers_${instanceId}`;
+      localStorage.removeItem(key);
+    } catch (err) {
+      console.error(LOG_PREFIX, 'Error clearing saved answers:', err);
+    }
+  }
+
+  // ============================================================================
+  // Feature 11: Vocabulary Word Bank
+  // ============================================================================
+  function extractVocabulary(content) {
+    const vocab = new Set();
+    
+    // Extract words in ALL CAPS (at least 3 chars)
+    const capsMatches = content.match(/\b[A-Z]{3,}\b/g);
+    if (capsMatches) {
+      capsMatches.forEach(word => vocab.add(word));
+    }
+    
+    // Extract words in quotes
+    const quoteMatches = content.match(/"([^"]+)"/g);
+    if (quoteMatches) {
+      quoteMatches.forEach(match => {
+        const word = match.replace(/"/g, '').trim();
+        if (word.length >= 3) vocab.add(word);
+      });
+    }
+    
+    // Look for "Vocabulary:" or "Key Terms:" sections
+    const vocabSection = content.match(/(?:Vocabulary|Key Terms):\s*(.+?)(?:\n\n|\n[A-Z]|$)/s);
+    if (vocabSection && vocabSection[1]) {
+      const terms = vocabSection[1].split(/[,;\n]/).map(t => t.trim()).filter(t => t.length >= 3);
+      terms.forEach(term => vocab.add(term));
+    }
+    
+    return Array.from(vocab);
+  }
+
+  function renderVocabularySection(dayData) {
+    // Collect all text from day
+    let allText = dayData.label || '';
+    
+    if (dayData.type === 'questions' && dayData.questions) {
+      dayData.questions.forEach(q => {
+        allText += ' ' + (q.text || '');
+        if (q.choices) {
+          q.choices.forEach(c => allText += ' ' + (c.text || ''));
+        }
+      });
+    } else if (dayData.type === 'writing_prompt') {
+      allText += ' ' + (dayData.prompt || '');
+      if (dayData.structure) {
+        allText += ' ' + dayData.structure.join(' ');
+      }
+    }
+    
+    const vocab = extractVocabulary(allText);
+    
+    if (vocab.length === 0) return '';
+    
+    const vocabWordsHtml = vocab.map(word => `
+      <div class="st-vocab-word">
+        ${escapeHtml(word)}
+        <button class="st-tts-btn" data-text="${escapeHtml(word)}" title="Hear pronunciation" aria-label="Hear pronunciation of ${escapeHtml(word)}" style="font-size: 12px; padding: 2px 4px;">🔊</button>
+      </div>
+    `).join('');
+    
+    return `
+      <details class="st-vocab-section">
+        <summary>📖 Vocabulary (${vocab.length} terms)</summary>
+        <div class="st-vocab-list">
+          ${vocabWordsHtml}
+        </div>
+      </details>
+    `;
+  }
+
+  /**
+   * Update progress display in viewer
+   */
+  function updateViewerProgress(instance) {
+    const progressEl = document.getElementById('viewerProgress');
+    if (!progressEl) return;
+    
+    const totalQuestions = getTotalQuestionCount(instance);
+    const answeredCount = getAnsweredCount(instance.id);
+    const progressPercent = totalQuestions > 0 ? (answeredCount / totalQuestions) * 100 : 0;
+    
+    const textEl = progressEl.querySelector('.st-viewer-progress-text');
+    const fillEl = progressEl.querySelector('.fill');
+    
+    if (textEl) {
+      textEl.textContent = `Progress: ${answeredCount} of ${totalQuestions} questions answered`;
+    }
+    if (fillEl) {
+      fillEl.style.width = `${progressPercent}%`;
+    }
+  }
   
   /**
    * Render a single goal card
@@ -425,6 +614,19 @@
       </span>
     ` : '';
     
+    // Feature 3: Progress tracking
+    const totalQuestions = getTotalQuestionCount(instance);
+    const answeredCount = getAnsweredCount(instance.id);
+    const progressPercent = totalQuestions > 0 ? (answeredCount / totalQuestions) * 100 : 0;
+    const progressHtml = totalQuestions > 0 && status !== 'submitted' && status !== 'graded' ? `
+      <div class="st-progress-mini">
+        ${answeredCount} of ${totalQuestions} answered
+      </div>
+      <div class="st-progress-bar-mini">
+        <div class="fill" style="width: ${progressPercent}%"></div>
+      </div>
+    ` : '';
+    
     return `
       <div class="st-assignment-card" data-instance-id="${escapeHtml(instance.id)}">
         <h3 class="st-assignment-title">${title}</h3>
@@ -437,6 +639,7 @@
           <span class="st-assignment-status ${status}">${statusText}</span>
           ${scoreHtml}
         </div>
+        ${progressHtml}
       </div>
     `;
   }
@@ -476,11 +679,22 @@
     const isReadOnly = instance.status === 'Submitted' || instance.status === 'Graded';
     assignmentViewerState.isReadOnly = isReadOnly;
     
-    // Load saved answers from instance settings if in read-only mode
+    // Feature 1: Load saved answers from instance settings if in read-only mode
     if (isReadOnly && instance.settings && instance.settings.answers) {
       Object.entries(instance.settings.answers).forEach(([key, value]) => {
         assignmentViewerState.answers.set(key, value);
       });
+    } else if (!isReadOnly) {
+      // Feature 1: Load saved answers from localStorage for in-progress assignments
+      const savedAnswers = getSavedAnswers(instance.id);
+      if (savedAnswers) {
+        console.log(LOG_PREFIX, 'Resuming progress from localStorage');
+        Object.entries(savedAnswers).forEach(([key, value]) => {
+          assignmentViewerState.answers.set(key, value);
+        });
+        // Show "resuming" toast
+        showToast('📌 Resuming your progress...');
+      }
     }
     
     const assignment = instance.assignment || {};
@@ -588,7 +802,13 @@
       </button>
       <div class="st-panel-header">
         <h2>${title}</h2>
-        <button class="st-panel-close-btn" id="panelCloseBtn">✕</button>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span class="st-timer hidden" id="assignmentTimer">⏱️ <span id="timerDisplay">00:00</span></span>
+          <button class="st-btn secondary" id="btnToggleTimer" title="Show/hide timer" style="padding: 6px 12px;">⏱️</button>
+          <button class="st-btn secondary st-read-aloud-btn" id="btnReadAloud" style="padding: 6px 12px;">🔊 Read Aloud</button>
+          <button class="st-btn secondary" id="btnPrint" title="Print assignment" style="padding: 6px 12px;">🖨️</button>
+          <button class="st-panel-close-btn" id="panelCloseBtn">✕</button>
+        </div>
       </div>
       ${days.length > 1 ? `<div class="st-day-tabs" id="dayTabs">${dayTabsHtml}</div>` : ''}
       <div id="dayContent"></div>
@@ -596,6 +816,27 @@
     
     panel.querySelector('#panelBackBtn').addEventListener('click', closeAssignmentViewer);
     panel.querySelector('#panelCloseBtn').addEventListener('click', closeAssignmentViewer);
+    
+    // Feature 8: Print button
+    const btnPrint = panel.querySelector('#btnPrint');
+    if (btnPrint) {
+      btnPrint.addEventListener('click', () => window.print());
+    }
+    
+    // Feature 12: Read Aloud button
+    const btnReadAloud = panel.querySelector('#btnReadAloud');
+    if (btnReadAloud) {
+      btnReadAloud.addEventListener('click', () => toggleReadAloud(panel));
+    }
+    
+    // Feature 13: Timer toggle
+    const btnToggleTimer = panel.querySelector('#btnToggleTimer');
+    if (btnToggleTimer) {
+      btnToggleTimer.addEventListener('click', () => toggleTimer(instance));
+    }
+    
+    // Initialize timer if previously enabled
+    initTimer(instance);
     
     // Attach day tab handlers
     const dayTabs = panel.querySelectorAll('.st-day-tab');
@@ -690,11 +931,29 @@
       </div>
     ` : '';
     
+    // Feature 3: Progress tracker in viewer
+    const totalQuestions = getTotalQuestionCount(instance);
+    const answeredCount = getAnsweredCount(instance.id);
+    const progressPercent = totalQuestions > 0 ? (answeredCount / totalQuestions) * 100 : 0;
+    const progressHtml = totalQuestions > 0 && !isReadOnly ? `
+      <div class="st-viewer-progress" id="viewerProgress">
+        <div class="st-viewer-progress-text">Progress: ${answeredCount} of ${totalQuestions} questions answered</div>
+        <div class="st-viewer-progress-bar">
+          <div class="fill" style="width: ${progressPercent}%"></div>
+        </div>
+      </div>
+    ` : '';
+    
+    // Feature 11: Vocabulary section
+    const vocabHtml = renderVocabularySection(dayData);
+    
     container.innerHTML = `
       <h3 style="margin-top: 0; margin-bottom: 20px; font-size: 18px;">
         ${escapeHtml(dayData.label)}
       </h3>
       ${readOnlyBanner}
+      ${progressHtml}
+      ${vocabHtml}
       ${questionsHtml}
     `;
     
@@ -723,6 +982,16 @@
           
           // Save answer
           assignmentViewerState.answers.set(questionId, letter);
+          
+          // Feature 1: Auto-save to localStorage (if not read-only)
+          if (!assignmentViewerState.isReadOnly) {
+            saveAnswer(instance.id, questionId, letter);
+          }
+          
+          // Feature 3: Update progress display in real-time
+          updateViewerProgress(instance);
+          
+          // Save to server
           saveAnswersToServer(instance);
         });
       });
@@ -784,14 +1053,39 @@
       </div>
     ` : '';
     
-    // Get saved writing response from instance settings
-    const savedResponse = (instance.settings && instance.settings.writing_response) || '';
+    // Get saved writing response from instance settings or localStorage
+    let savedResponse = (instance.settings && instance.settings.writing_response) || '';
+    
+    // Feature 1: If not read-only and no saved response from server, check localStorage
+    if (!isReadOnly && !savedResponse) {
+      const questionId = `writing_${dayData.day_number}`;
+      const savedAnswers = getSavedAnswers(instance.id);
+      if (savedAnswers && savedAnswers[questionId]) {
+        savedResponse = savedAnswers[questionId];
+      }
+    }
     
     const readOnlyBanner = isReadOnly ? `
       <div class="st-submitted-banner">
         ✓ Submitted — Waiting for teacher review
       </div>
     ` : '';
+    
+    // Feature 3: Progress tracker in viewer
+    const totalQuestions = getTotalQuestionCount(instance);
+    const answeredCount = getAnsweredCount(instance.id);
+    const progressPercent = totalQuestions > 0 ? (answeredCount / totalQuestions) * 100 : 0;
+    const progressHtml = totalQuestions > 0 && !isReadOnly ? `
+      <div class="st-viewer-progress" id="viewerProgress">
+        <div class="st-viewer-progress-text">Progress: ${answeredCount} of ${totalQuestions} questions answered</div>
+        <div class="st-viewer-progress-bar">
+          <div class="fill" style="width: ${progressPercent}%"></div>
+        </div>
+      </div>
+    ` : '';
+    
+    // Feature 11: Vocabulary section
+    const vocabHtml = renderVocabularySection(dayData);
     
     const submitButtonHtml = isReadOnly ? `
       <div class="st-submitted-message">✓ Submitted — Waiting for teacher review</div>
@@ -926,6 +1220,8 @@
         ${escapeHtml(dayData.label)}
       </h3>
       ${readOnlyBanner}
+      ${progressHtml}
+      ${vocabHtml}
       <div class="st-writing-section">
         <div class="st-writing-prompt">
           ${escapeHtml(dayData.prompt)}
@@ -1082,6 +1378,10 @@
         
         try {
           await saveWritingResponseToServer(instance, response);
+          
+          // Feature 1: Clear saved answers after successful submit
+          clearSavedAnswers(instance.id);
+          
           this.textContent = '✓ Submitted!';
           setTimeout(() => {
             this.textContent = 'Submit Response';
@@ -1101,6 +1401,20 @@
           this.textContent = 'Submit Response';
           this.disabled = false;
         }
+      });
+    }
+    
+    // Feature 1: Auto-save writing textarea with debounce
+    const writingTextarea = container.querySelector('#writingResponse');
+    if (writingTextarea && !isReadOnly) {
+      let saveTimeout;
+      writingTextarea.addEventListener('input', function() {
+        clearTimeout(saveTimeout);
+        saveTimeout = setTimeout(() => {
+          const questionId = `writing_${dayData.day_number}`;
+          saveAnswer(instance.id, questionId, this.value);
+          updateViewerProgress(instance);
+        }, AUTO_SAVE_DEBOUNCE_MS);
       });
     }
     
@@ -1540,6 +1854,10 @@
       // Initialize guardrails
       initNetworkGuardrails();
       
+      // Initialize quality-of-life features
+      initThemeToggle();
+      initFontSizeControls();
+      
       // Check if already authenticated (from auto-login or existing session)
       if (isAuthenticated()) {
         console.log(LOG_PREFIX, 'Already authenticated, showing dashboard');
@@ -1723,6 +2041,9 @@
       studentCodeDisplay.textContent = studentCode;
     }
     
+    // Update profile card
+    updateProfileCard(studentCode);
+    
     // Setup event handlers only once to prevent duplicates
     if (!state.dashboardHandlersAttached) {
       if (btnLogout) {
@@ -1877,6 +2198,15 @@
       
       const instances = data.instances || [];
       tabState.assignmentsData = instances;
+      
+      // Feature 2: Check for due soon assignments and show banner
+      checkDueSoonBanner(instances);
+      
+      // Feature 6: Check for new assignments and show toasts
+      checkNewAssignments(instances);
+      
+      // Feature 10: Calculate and render badges
+      renderBadges(instances);
       
       // Render assignments tab (with all status)
       renderAssignmentsTab(instances);
@@ -2623,6 +2953,367 @@
     }
   }
 
+  // ============================================================================
+  // Feature 2: Due Soon Banner
+  // ============================================================================
+  function checkDueSoonBanner(instances) {
+    const bannerContainer = document.getElementById('dueSoonBanner');
+    if (!bannerContainer) return;
+
+    const now = new Date();
+    const dueSoon = instances.filter(inst => {
+      if (!inst.due_at) return false;
+      const dueDate = new Date(inst.due_at);
+      const hoursUntilDue = (dueDate - now) / (1000 * 60 * 60);
+      const status = (inst.status || 'Assigned').toLowerCase();
+      const isNotSubmitted = status !== 'submitted' && status !== 'graded';
+      return hoursUntilDue > 0 && hoursUntilDue <= 48 && isNotSubmitted;
+    });
+
+    if (dueSoon.length === 0) {
+      bannerContainer.innerHTML = '';
+      return;
+    }
+
+    // Check if any are urgent (within 24 hours)
+    const urgent = dueSoon.some(inst => {
+      const dueDate = new Date(inst.due_at);
+      const hoursUntilDue = (dueDate - now) / (1000 * 60 * 60);
+      return hoursUntilDue <= 24;
+    });
+
+    const bannerClass = urgent ? 'urgent' : 'warning';
+    const icon = urgent ? '🔴' : '⚠️';
+    const title = urgent ? 'Urgent: Assignments Due Soon!' : 'Heads Up: Assignments Due Soon';
+    const message = `You have ${dueSoon.length} assignment${dueSoon.length > 1 ? 's' : ''} due within ${urgent ? '24 hours' : '48 hours'}.`;
+
+    bannerContainer.innerHTML = `
+      <div class="st-due-soon-banner ${bannerClass}" id="dueSoonBannerEl">
+        <div class="st-due-soon-icon">${icon}</div>
+        <div class="st-due-soon-text">
+          <strong>${escapeHtml(title)}</strong>
+          <div>${escapeHtml(message)}</div>
+        </div>
+      </div>
+    `;
+
+    // Make banner clickable to switch to Assignments tab
+    const bannerEl = document.getElementById('dueSoonBannerEl');
+    if (bannerEl) {
+      bannerEl.addEventListener('click', () => {
+        switchToTab('assignments');
+      });
+    }
+  }
+
+  // ============================================================================
+  // Feature 6: New Assignment Notifications
+  // ============================================================================
+  function checkNewAssignments(instances) {
+    try {
+      const seenKey = 'rc_student_seen_assignments';
+      const seenStr = localStorage.getItem(seenKey);
+      const seenSet = seenStr ? new Set(JSON.parse(seenStr)) : new Set();
+      
+      const newAssignments = instances.filter(inst => !seenSet.has(inst.id));
+      
+      // Add all current IDs to seen set
+      instances.forEach(inst => seenSet.add(inst.id));
+      localStorage.setItem(seenKey, JSON.stringify([...seenSet]));
+      
+      // Show toasts for new assignments
+      newAssignments.forEach(inst => {
+        const title = (inst.assignment && inst.assignment.title) || 'Untitled Assignment';
+        showToast(`📬 New assignment: ${title}`);
+      });
+    } catch (err) {
+      console.error(LOG_PREFIX, 'Error checking new assignments:', err);
+    }
+  }
+
+  // ============================================================================
+  // Feature 10: Achievement Badges
+  // ============================================================================
+  function renderBadges(instances) {
+    const badgesContainer = document.getElementById('badgesContainer');
+    if (!badgesContainer) return;
+
+    const badges = [];
+    const now = new Date();
+
+    // On Time badge: assignments submitted before due date
+    const onTimeCount = instances.filter(inst => {
+      if (!inst.due_at || !inst.submitted_at) return false;
+      const status = (inst.status || '').toLowerCase();
+      if (status !== 'submitted' && status !== 'graded') return false;
+      return new Date(inst.submitted_at) <= new Date(inst.due_at);
+    }).length;
+
+    if (onTimeCount > 0) {
+      badges.push({
+        icon: '⏰',
+        label: `On Time: ${onTimeCount}`,
+        color: 'green'
+      });
+    }
+
+    // Perfect score badge
+    const perfectCount = instances.filter(inst => {
+      return inst.grade === 100;
+    }).length;
+
+    if (perfectCount > 0) {
+      badges.push({
+        icon: '💯',
+        label: `Perfect: ${perfectCount}`,
+        color: 'gold'
+      });
+    }
+
+    // Streak badge: consecutive on-time submissions
+    const sortedSubmitted = instances
+      .filter(inst => {
+        const status = (inst.status || '').toLowerCase();
+        return (status === 'submitted' || status === 'graded') && inst.submitted_at && inst.due_at;
+      })
+      .sort((a, b) => new Date(b.submitted_at) - new Date(a.submitted_at));
+
+    let streak = 0;
+    for (const inst of sortedSubmitted) {
+      if (new Date(inst.submitted_at) <= new Date(inst.due_at)) {
+        streak++;
+      } else {
+        break;
+      }
+    }
+
+    if (streak >= 3) {
+      badges.push({
+        icon: '🔥',
+        label: `Streak: ${streak}`,
+        color: 'blue'
+      });
+    }
+
+    // Writer badge: writing prompts completed with >50 words
+    const writerCount = instances.filter(inst => {
+      if (!inst.settings || !inst.settings.answers) return false;
+      const answers = inst.settings.answers;
+      return Object.values(answers).some(ans => {
+        if (typeof ans === 'string') {
+          const wordCount = ans.trim().split(/\s+/).length;
+          return wordCount > WRITER_BADGE_WORD_THRESHOLD;
+        }
+        return false;
+      });
+    }).length;
+
+    if (writerCount > 0) {
+      badges.push({
+        icon: '✍️',
+        label: `Writer: ${writerCount}`,
+        color: 'purple'
+      });
+    }
+
+    // Render badges
+    if (badges.length === 0) {
+      badgesContainer.innerHTML = '';
+      return;
+    }
+
+    const badgesHtml = badges.map(badge => `
+      <div class="st-badge ${badge.color}">
+        <span class="badge-icon">${badge.icon}</span>
+        <span>${escapeHtml(badge.label)}</span>
+      </div>
+    `).join('');
+
+    badgesContainer.innerHTML = `<div class="st-badges">${badgesHtml}</div>`;
+  }
+
+  // ============================================================================
+  // Feature 12: Read Aloud Mode
+  // ============================================================================
+  let readAloudState = {
+    speaking: false,
+    utterances: [],
+    currentIndex: 0
+  };
+
+  function toggleReadAloud(panel) {
+    const btn = document.getElementById('btnReadAloud');
+    if (!btn) return;
+
+    if (readAloudState.speaking) {
+      // Stop reading
+      window.speechSynthesis.cancel();
+      readAloudState.speaking = false;
+      readAloudState.utterances = [];
+      readAloudState.currentIndex = 0;
+      btn.textContent = '🔊 Read Aloud';
+      
+      // Remove reading highlights
+      panel.querySelectorAll('.reading').forEach(el => el.classList.remove('reading'));
+    } else {
+      // Start reading
+      const dayContent = panel.querySelector('#dayContent');
+      if (!dayContent) return;
+
+      // Collect all text to read
+      const textElements = [];
+      
+      // Day label
+      const dayLabel = dayContent.querySelector('h3');
+      if (dayLabel) {
+        textElements.push({ element: dayLabel, text: dayLabel.textContent });
+      }
+      
+      // Questions and choices
+      dayContent.querySelectorAll('.st-question-container').forEach(container => {
+        const questionText = container.querySelector('.st-question-text');
+        if (questionText) {
+          const text = questionText.textContent.replace(/🔊/g, '').trim();
+          textElements.push({ element: container, text });
+        }
+        
+        container.querySelectorAll('.st-choice-label').forEach(choice => {
+          const text = choice.textContent.replace(/🔊/g, '').trim();
+          textElements.push({ element: choice.closest('.st-choice'), text });
+        });
+      });
+      
+      // Writing prompts
+      const writingPrompt = dayContent.querySelector('.st-writing-prompt');
+      if (writingPrompt) {
+        const text = writingPrompt.textContent.replace(/🔊/g, '').trim();
+        textElements.push({ element: writingPrompt, text });
+      }
+
+      if (textElements.length === 0) return;
+
+      readAloudState.speaking = true;
+      readAloudState.utterances = textElements;
+      readAloudState.currentIndex = 0;
+      btn.textContent = '⏹ Stop Reading';
+
+      speakNext(panel);
+    }
+  }
+
+  function speakNext(panel) {
+    if (!readAloudState.speaking || readAloudState.currentIndex >= readAloudState.utterances.length) {
+      readAloudState.speaking = false;
+      const btn = document.getElementById('btnReadAloud');
+      if (btn) btn.textContent = '🔊 Read Aloud';
+      panel.querySelectorAll('.reading').forEach(el => el.classList.remove('reading'));
+      return;
+    }
+
+    const item = readAloudState.utterances[readAloudState.currentIndex];
+    
+    // Remove previous highlight
+    panel.querySelectorAll('.reading').forEach(el => el.classList.remove('reading'));
+    
+    // Highlight current element
+    if (item.element) {
+      item.element.classList.add('reading');
+    }
+
+    const utterance = new SpeechSynthesisUtterance(item.text);
+    utterance.onend = () => {
+      readAloudState.currentIndex++;
+      setTimeout(() => speakNext(panel), SPEECH_PAUSE_MS);
+    };
+    utterance.onerror = () => {
+      readAloudState.speaking = false;
+      const btn = document.getElementById('btnReadAloud');
+      if (btn) btn.textContent = '🔊 Read Aloud';
+      panel.querySelectorAll('.reading').forEach(el => el.classList.remove('reading'));
+    };
+    
+    window.speechSynthesis.speak(utterance);
+  }
+
+  // ============================================================================
+  // Feature 13: Visual Timer
+  // ============================================================================
+  let timerState = {
+    startTime: null,
+    elapsed: 0,
+    interval: null,
+    instanceId: null
+  };
+
+  function toggleTimer(instance) {
+    const timerEl = document.getElementById('assignmentTimer');
+    if (!timerEl) return;
+
+    const isVisible = !timerEl.classList.contains('hidden');
+    
+    if (isVisible) {
+      // Hide timer
+      timerEl.classList.add('hidden');
+      if (timerState.interval) {
+        clearInterval(timerState.interval);
+        timerState.interval = null;
+      }
+      // Save preference
+      localStorage.setItem('rc_student_timer_enabled', 'false');
+    } else {
+      // Show timer
+      timerEl.classList.remove('hidden');
+      timerState.instanceId = instance.id;
+      
+      // Load elapsed time from localStorage
+      const savedTime = localStorage.getItem(`rc_student_timer_${instance.id}`);
+      if (savedTime) {
+        timerState.elapsed = parseInt(savedTime, 10) || 0;
+      } else {
+        timerState.elapsed = 0;
+      }
+      
+      timerState.startTime = Date.now() - timerState.elapsed;
+      
+      // Start interval
+      updateTimerDisplay();
+      timerState.interval = setInterval(updateTimerDisplay, 1000);
+      
+      // Save preference
+      localStorage.setItem('rc_student_timer_enabled', 'true');
+    }
+  }
+
+  function updateTimerDisplay() {
+    const displayEl = document.getElementById('timerDisplay');
+    if (!displayEl) return;
+
+    timerState.elapsed = Date.now() - timerState.startTime;
+    
+    const totalSeconds = Math.floor(timerState.elapsed / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    
+    displayEl.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    
+    // Save to localStorage
+    if (timerState.instanceId) {
+      localStorage.setItem(`rc_student_timer_${timerState.instanceId}`, String(timerState.elapsed));
+    }
+  }
+
+  function initTimer(instance) {
+    // Check if timer was previously enabled
+    const timerEnabled = localStorage.getItem('rc_student_timer_enabled') === 'true';
+    if (timerEnabled) {
+      // Auto-enable timer
+      setTimeout(() => {
+        const btn = document.getElementById('btnToggleTimer');
+        if (btn) btn.click();
+      }, TIMER_INIT_DELAY_MS);
+    }
+  }
+
   /**
    * Show message
    * PR student-portal-reliability: Added null check
@@ -2653,6 +3344,117 @@
           container.innerHTML = '';
         }
       }, 5000);
+    }
+  }
+
+  // ============================================================================
+  // Feature 4: Light/Dark Mode Toggle
+  // ============================================================================
+  function initThemeToggle() {
+    const themeToggle = document.getElementById('themeToggle');
+    if (!themeToggle) return;
+
+    // Restore saved theme
+    const savedTheme = localStorage.getItem('rc_student_theme');
+    if (savedTheme === 'light') {
+      document.documentElement.setAttribute('data-theme', 'light');
+      themeToggle.textContent = '☀️';
+    }
+
+    themeToggle.addEventListener('click', function() {
+      const currentTheme = document.documentElement.getAttribute('data-theme');
+      const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+      
+      if (newTheme === 'light') {
+        document.documentElement.setAttribute('data-theme', 'light');
+        themeToggle.textContent = '☀️';
+        localStorage.setItem('rc_student_theme', 'light');
+      } else {
+        document.documentElement.removeAttribute('data-theme');
+        themeToggle.textContent = '🌙';
+        localStorage.setItem('rc_student_theme', 'dark');
+      }
+    });
+  }
+
+  // ============================================================================
+  // Feature 5: Font Size Controls
+  // ============================================================================
+  function initFontSizeControls() {
+    const fontDecrease = document.getElementById('fontDecrease');
+    const fontIncrease = document.getElementById('fontIncrease');
+    if (!fontDecrease || !fontIncrease) return;
+
+    const sizes = ['small', 'normal', 'large', 'xlarge', 'xxlarge'];
+    
+    // Restore saved font size
+    const savedSize = localStorage.getItem('rc_student_font_size') || 'normal';
+    document.documentElement.setAttribute('data-font-size', savedSize);
+
+    fontDecrease.addEventListener('click', function() {
+      const current = document.documentElement.getAttribute('data-font-size') || 'normal';
+      const currentIndex = sizes.indexOf(current);
+      if (currentIndex > 0) {
+        const newSize = sizes[currentIndex - 1];
+        document.documentElement.setAttribute('data-font-size', newSize);
+        localStorage.setItem('rc_student_font_size', newSize);
+      }
+    });
+
+    fontIncrease.addEventListener('click', function() {
+      const current = document.documentElement.getAttribute('data-font-size') || 'normal';
+      const currentIndex = sizes.indexOf(current);
+      if (currentIndex < sizes.length - 1) {
+        const newSize = sizes[currentIndex + 1];
+        document.documentElement.setAttribute('data-font-size', newSize);
+        localStorage.setItem('rc_student_font_size', newSize);
+      }
+    });
+  }
+
+  // ============================================================================
+  // Feature 6: Toast Notifications
+  // ============================================================================
+  function showToast(message, type = 'info') {
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = `st-toast ${type}`;
+    toast.textContent = message;
+    container.appendChild(toast);
+
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      setTimeout(() => {
+        if (toast.parentNode === container) {
+          container.removeChild(toast);
+        }
+      }, TOAST_FADE_OUT_DURATION_MS);
+    }, TOAST_DISPLAY_DURATION_MS);
+  }
+
+  // ============================================================================
+  // Feature 9: Student Profile Card
+  // ============================================================================
+  function updateProfileCard(studentCode) {
+    const profileCard = document.getElementById('profileCard');
+    const profileName = document.getElementById('profileName');
+    const profileCodeEl = document.getElementById('profileCode');
+    const profileClass = document.getElementById('profileClass');
+
+    if (!profileCard) return;
+
+    profileCard.style.display = 'block';
+    if (profileCodeEl) {
+      profileCodeEl.textContent = studentCode || '—';
+    }
+    if (profileName) {
+      profileName.textContent = 'Student'; // Could be enhanced with actual name from DB
+    }
+    if (profileClass) {
+      profileClass.textContent = '—'; // Could be enhanced with class info
     }
   }
 

@@ -1,0 +1,13 @@
+{
+  "name": "Reinisch Classroom - Student Portal",
+  "short_name": "Student Portal",
+  "description": "Student portal for assignments, goals, and grades",
+  "start_url": "/student/",
+  "display": "standalone",
+  "background_color": "#0e1210",
+  "theme_color": "#3b82f6",
+  "icons": [
+    { "src": "/assets/icon-192.svg", "sizes": "192x192", "type": "image/svg+xml" },
+    { "src": "/assets/icon-512.svg", "sizes": "512x512", "type": "image/svg+xml" }
+  ]
+}
