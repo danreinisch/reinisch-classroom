@@ -12,6 +12,7 @@
         : '/';
       function addCSS(href){ var l=document.createElement('link'); l.rel='stylesheet'; l.href=href; document.head.appendChild(l); }
       function addJS(src){ var s=document.createElement('script'); s.defer=true; s.src=src; document.head.appendChild(s); }
+      addCSS(root + 'assets/css/rc-theme.css');
       addCSS(root + 'assets/css/site.css');
       addJS(root + 'assets/js/site.js');
     })();

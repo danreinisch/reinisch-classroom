@@ -1,14 +1,15 @@
 /* Global App Shell - Left-side Navigation Rail */
 /* Provides consistent navigation across reinischclassroom.com */
+/* Uses rc-theme.css as base — aliases for backward compat */
 
 :root {
   --shell-bg: rgba(15, 23, 42, 0.92);
-  --shell-border: rgba(255, 255, 255, 0.12);
-  --shell-hover: rgba(255, 255, 255, 0.08);
+  --shell-border: var(--rc-border-strong);
+  --shell-hover: var(--rc-glass-hover);
   --shell-active: rgba(34, 197, 94, 0.15);
-  --shell-text: #e6edf3;
-  --shell-text-dim: #cbd5e1;
-  --shell-accent: #22c55e;
+  --shell-text: var(--rc-ink);
+  --shell-text-dim: var(--rc-ink-dim);
+  --shell-accent: var(--rc-brand);
   --shell-width: 260px;
   --shell-width-collapsed: 56px;
   --shell-z: 1000;

@@ -5,33 +5,21 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Reinisch Classroom – Home</title>
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="stylesheet" href="/assets/css/rc-theme.css" />
     <style>
+      /* Page-specific aliases for consistency */
       :root {
-        /* Base surfaces and ink - matching Hub */
-        --base: #0b1220;
-        --panel: #0f172a;
-        --panel-2: #111827;
-        --ink: #e6edf3;
-        --ink-dim: #cbd5e1;
-        --muted: #94a3b8;
-        --line: rgba(255, 255, 255, 0.08);
-        --line-strong: rgba(255, 255, 255, 0.14);
-        --brand: #22c55e;
-        --brand-2: #06b6d4;
-        --shadow-1: 0 6px 28px rgba(0, 0, 0, 0.35);
-      }
-      
-      * {
-        box-sizing: border-box;
-      }
-      
-      html,
-      body {
-        height: 100%;
-        margin: 0;
-        font-family: ui-sans-serif, -apple-system, Segoe UI, Roboto, Inter, Helvetica, Arial, sans-serif;
-        color: var(--ink);
-        overflow-x: hidden;
+        --base: var(--rc-base);
+        --panel: var(--rc-panel);
+        --panel-2: var(--rc-panel-2);
+        --ink: var(--rc-ink);
+        --ink-dim: var(--rc-ink-dim);
+        --muted: var(--rc-muted);
+        --line: var(--rc-border);
+        --line-strong: var(--rc-border-strong);
+        --brand: var(--rc-brand);
+        --brand-2: var(--rc-brand-2);
+        --shadow-1: var(--rc-shadow);
       }
       
       body {
@@ -39,7 +27,7 @@
           url("/assets/bg/bg5e_soft_grid.svg") center/cover no-repeat fixed,
           radial-gradient(1200px 800px at 20% -10%, rgba(34, 197, 94, 0.08), transparent 50%),
           radial-gradient(1200px 800px at 120% 20%, rgba(6, 182, 212, 0.06), transparent 50%),
-          linear-gradient(180deg, #0b1220, #0c1322 60%, #0b0f14);
+          linear-gradient(180deg, var(--rc-base), #0c1322 60%, #0b0f14);
       }
       
       .home-container {

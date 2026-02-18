@@ -4,19 +4,16 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Language Arts – Reinisch Classroom</title>
+  <link rel="stylesheet" href="/assets/css/rc-theme.css" />
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    /* Page-specific aliases and overrides */
     :root {
-      --glass: rgba(255,255,255,.14);
-      --glass-brd: rgba(255,255,255,.28);
-      --text: #e8edf5;
+      --glass: var(--rc-glass);
+      --glass-brd: var(--rc-border-strong);
+      --text: var(--rc-ink);
     }
     body {
       min-height: 100vh;
-      font-family: Segoe UI, Roboto, Arial, sans-serif;
-      color: var(--text);
-      background: linear-gradient(rgba(5,10,20,.6),rgba(5,10,20,.78)),
-                  url("/assets/images/la_main_bg") center/cover no-repeat fixed;
       display: grid;
       place-items: center;
       text-align: center;
