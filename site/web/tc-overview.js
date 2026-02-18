@@ -241,11 +241,14 @@
       miniCalEl.innerHTML = html;
 
       // Count upcoming events (next 7 days)
+      const todayStr = formatDateYMD(today);
       const nextWeek = new Date(today);
       nextWeek.setDate(nextWeek.getDate() + 7);
+      const nextWeekStr = formatDateYMD(nextWeek);
       
       const upcomingEvents = events.filter(e => {
-        return e.date >= today && e.date <= nextWeek;
+        const eventStr = formatDateYMD(e.date);
+        return eventStr >= todayStr && eventStr <= nextWeekStr;
       });
 
       upcomingEl.innerHTML = `${upcomingEvents.length} event${upcomingEvents.length !== 1 ? 's' : ''} in the next 7 days`;

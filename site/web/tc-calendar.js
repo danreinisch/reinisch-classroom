@@ -87,7 +87,7 @@
   function getSchoolYear(date) {
     const month = date.getMonth();
     const year = date.getFullYear();
-    // If month is Aug (7) or later, school year is current year
+    // If month is Aug (7 in zero-indexed getMonth()) or later, school year is current year
     // Otherwise, school year started last year
     return month >= 7 ? year : year - 1;
   }
@@ -245,10 +245,7 @@
    */
   function getEventsForDate(date) {
     const dateStr = formatDateYMD(date);
-    return allEvents.filter(event => {
-      const eventDateStr = formatDateYMD(event.date);
-      return eventDateStr === dateStr;
-    });
+    return allEvents.filter(event => formatDateYMD(event.date) === dateStr);
   }
 
   /**
