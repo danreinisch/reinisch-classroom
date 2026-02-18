@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Teacher Center — Calendar</title>
+  <link rel="stylesheet" href="/web/teacher-shell.css" />
+  <style>
+    .tc-card {
+      border-radius: 14px;
+      padding: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(0, 0, 0, 0.18);
+      backdrop-filter: blur(10px);
+    }
+    .tc-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: rgba(255, 255, 255, 0.06);
+    }
+    .tc-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: rgba(255, 255, 255, 0.06);
+      color: inherit;
+      text-decoration: none;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s ease;
+    }
+    .tc-btn:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.24);
+    }
+
+    /* Calendar specific styles */
+    .cal-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .cal-nav {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .cal-view-toggle {
+      display: flex;
+      gap: 4px;
+    }
+    .cal-view-toggle button {
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: rgba(255, 255, 255, 0.06);
+      color: inherit;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s ease;
+    }
+    .cal-view-toggle button.active {
+      background: rgba(59, 130, 246, 0.3);
+      border-color: rgba(59, 130, 246, 0.5);
+    }
+    .cal-view-toggle button:hover {
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    .cal-header-title {
+      font-size: 20px;
+      font-weight: 700;
+      min-width: 180px;
+      text-align: center;
+    }
+
+    /* Calendar grid */
+    .cal-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 1px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .cal-day-header {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 8px;
+      text-align: center;
+      font-size: 12px;
+      font-weight: 600;
+      opacity: 0.9;
+    }
+    .cal-day-cell {
+      background: rgba(0, 0, 0, 0.18);
+      min-height: 100px;
+      padding: 6px;
+      position: relative;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .cal-day-cell:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+    .cal-day-cell.other-month {
+      opacity: 0.4;
+    }
+    .cal-day-cell.today {
+      background: rgba(59, 130, 246, 0.15);
+      border: 2px solid rgba(59, 130, 246, 0.5);
+    }
+    .cal-day-num {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .cal-events {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .cal-event {
+      font-size: 11px;
+      padding: 2px 4px;
+      border-radius: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      border: 1px solid;
+    }
+    .cal-event.assignment {
+      background: rgba(59, 130, 246, 0.2);
+      border-color: rgba(59, 130, 246, 0.4);
+    }
+    .cal-event.iep {
+      background: rgba(34, 197, 94, 0.2);
+      border-color: rgba(34, 197, 94, 0.4);
+    }
+    .cal-event.eval {
+      background: rgba(249, 115, 22, 0.2);
+      border-color: rgba(249, 115, 22, 0.4);
+    }
+
+    /* Quarter background bands */
+    .cal-quarter-band {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .cal-quarter-band.q1 {
+      background: rgba(59, 130, 246, 0.05);
+    }
+    .cal-quarter-band.q2 {
+      background: rgba(34, 197, 94, 0.05);
+    }
+    .cal-quarter-band.q3 {
+      background: rgba(249, 115, 22, 0.05);
+    }
+    .cal-quarter-band.q4 {
+      background: rgba(168, 85, 247, 0.05);
+    }
+
+    /* Week view */
+    .cal-week-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 8px;
+    }
+    .cal-week-day {
+      background: rgba(0, 0, 0, 0.18);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 12px;
+      min-height: 300px;
+    }
+    .cal-week-day.today {
+      background: rgba(59, 130, 246, 0.15);
+      border-color: rgba(59, 130, 246, 0.5);
+    }
+    .cal-week-day-header {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .cal-week-events {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .cal-week-event {
+      font-size: 12px;
+      padding: 6px 8px;
+      border-radius: 6px;
+      border: 1px solid;
+    }
+
+    /* Quick-add modal */
+    .cal-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    .cal-modal.active {
+      display: flex;
+    }
+    .cal-modal-content {
+      background: rgba(20, 20, 30, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+      padding: 24px;
+      max-width: 500px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .cal-modal-header {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 20px;
+    }
+    .cal-form-group {
+      margin-bottom: 16px;
+    }
+    .cal-form-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      opacity: 0.9;
+    }
+    .cal-form-input,
+    .cal-form-select,
+    .cal-form-textarea {
+      width: 100%;
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(0, 0, 0, 0.3);
+      color: inherit;
+      font-size: 14px;
+    }
+    .cal-form-textarea {
+      min-height: 80px;
+      resize: vertical;
+    }
+    .cal-form-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+      margin-top: 20px;
+    }
+
+    @media (max-width: 768px) {
+      .cal-grid {
+        font-size: 12px;
+      }
+      .cal-day-cell {
+        min-height: 80px;
+        padding: 4px;
+      }
+      .cal-event {
+        font-size: 10px;
+      }
+      .cal-week-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="tc-app">
+    <header class="tc-topbar">
+      <button class="tc-btn" id="tcSidebarToggle" aria-label="Toggle sidebar" aria-expanded="false">☰</button>
+      <a class="tc-btn" href="/" target="_blank" rel="noopener" aria-label="Home">🏠</a>
+      <div class="tc-title">Teacher Center — Calendar</div>
+    </header>
+
+    <div class="tc-shell">
+      <aside class="tc-sidebar" aria-label="Teacher navigation">
+        <nav class="tc-nav">
+          <a data-href="/teacher/" href="/teacher/"><span class="tc-icon">🏁</span><span class="tc-label">Overview</span></a>
+          <a data-href="/teacher/work/" href="/teacher/work/"><span class="tc-icon">🗂️</span><span class="tc-label">Work</span></a>
+          <a data-href="/teacher/library/" href="/teacher/library/"><span class="tc-icon">📚</span><span class="tc-label">Library</span></a>
+          <a data-href="/teacher/review/" href="/teacher/review/"><span class="tc-icon">✍️</span><span class="tc-label">Review</span></a>
+          <a data-href="/teacher/gradebook/" href="/teacher/gradebook/"><span class="tc-icon">📊</span><span class="tc-label">Gradebook</span></a>
+          <a data-href="/teacher/students/" href="/teacher/students/"><span class="tc-icon">🧑‍🎓</span><span class="tc-label">Students</span></a>
+          <a data-href="/teacher/calendar/" href="/teacher/calendar/"><span class="tc-icon">📅</span><span class="tc-label">Calendar</span></a>
+
+          <a data-href="/teacher/data/" href="/teacher/data/"><span class="tc-icon">🧾</span><span class="tc-label">Data</span></a>
+          <a data-href="/teacher/archive/" href="/teacher/archive/"><span class="tc-icon">📦</span><span class="tc-label">Archive</span></a>
+          <a data-href="/teacher/admin/" href="/teacher/admin/"><span class="tc-icon">🛡️</span><span class="tc-label">Admin</span></a>
+          <a data-href="/teacher/reporting/" href="/teacher/reporting/"><span class="tc-icon">📑</span><span class="tc-label">Reporting</span></a>
+          <a data-href="/teacher/settings/" href="/teacher/settings/"><span class="tc-icon">⚙️</span><span class="tc-label">Settings</span></a>
+        </nav>
+      </aside>
+
+      <main class="tc-main">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+          <h1 style="margin: 0;">Calendar</h1>
+          <span class="tc-pill" id="calSyncStatus" style="display: none;">
+            <span id="calSyncIcon">🟡</span>
+            <span id="calSyncText">Local mode</span>
+          </span>
+        </div>
+
+        <!-- Calendar Controls -->
+        <div class="cal-controls">
+          <div class="cal-nav">
+            <button class="tc-btn" id="calPrevBtn">◀ Prev</button>
+            <button class="tc-btn" id="calTodayBtn">Today</button>
+            <button class="tc-btn" id="calNextBtn">Next ▶</button>
+          </div>
+          <div class="cal-header-title" id="calTitle">Loading...</div>
+          <div class="cal-view-toggle">
+            <button id="calMonthViewBtn" class="active">Month</button>
+            <button id="calWeekViewBtn">Week</button>
+          </div>
+        </div>
+
+        <!-- Calendar Container -->
+        <div class="tc-card" id="calendarContainer">
+          <div id="calMonthView" style="display: block;">
+            <!-- Month view will be rendered here -->
+          </div>
+          <div id="calWeekView" style="display: none;">
+            <!-- Week view will be rendered here -->
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Quick-add Assignment Modal -->
+  <div class="cal-modal" id="quickAddModal">
+    <div class="cal-modal-content">
+      <div class="cal-modal-header">Quick Add Assignment</div>
+      <form id="quickAddForm">
+        <div class="cal-form-group">
+          <label class="cal-form-label" for="qaTitle">Title *</label>
+          <input type="text" class="cal-form-input" id="qaTitle" required />
+        </div>
+        <div class="cal-form-group">
+          <label class="cal-form-label" for="qaClass">Class *</label>
+          <select class="cal-form-select" id="qaClass" required>
+            <option value="">Select a class...</option>
+          </select>
+        </div>
+        <div class="cal-form-group">
+          <label class="cal-form-label" for="qaDueDate">Due Date *</label>
+          <input type="date" class="cal-form-input" id="qaDueDate" required />
+        </div>
+        <div class="cal-form-group">
+          <label class="cal-form-label" for="qaNotes">Notes (optional)</label>
+          <textarea class="cal-form-textarea" id="qaNotes"></textarea>
+        </div>
+        <div class="cal-form-actions">
+          <button type="button" class="tc-btn" id="qaCancelBtn">Cancel</button>
+          <button type="submit" class="tc-btn">Create Assignment</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script defer src="/web/teacher-shell.js"></script>
+  <script defer src="/web/tc-calendar.js"></script>
+</body>
+</html>
