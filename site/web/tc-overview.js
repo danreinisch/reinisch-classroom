@@ -124,6 +124,152 @@
     }
   }
 
+  /**
+   * Render mini calendar snapshot
+   */
+  async function renderCalendarSnapshot() {
+    try {
+      const miniCalEl = $("ovMiniCalendar");
+      const upcomingEl = $("ovUpcomingEvents");
+      
+      if (!miniCalEl || !upcomingEl) return;
+
+      // Load events (similar to calendar page)
+      const DRAFT_KEY = "rc_tc_work_drafts_v1";
+      const events = [];
+      
+      // Load assignment instances
+      const instances = await db.listAssignmentInstances();
+      const assignments = await db.listAssignments();
+      const assignmentMap = new Map(assignments.map(a => [a.id, a]));
+      
+      for (const inst of instances) {
+        if (inst.due_at) {
+          const assignment = assignmentMap.get(inst.assignment_id);
+          events.push({
+            type: "assignment",
+            date: new Date(inst.due_at),
+            title: assignment ? assignment.title : "Assignment",
+          });
+        }
+      }
+
+      // Load IEP/eval dates
+      const students = await db.listStudents();
+      for (const student of students) {
+        if (student.iep_due) {
+          events.push({
+            type: "iep",
+            date: new Date(student.iep_due),
+            title: `IEP: ${student.name}`,
+          });
+        }
+        if (student.eval_due) {
+          events.push({
+            type: "eval",
+            date: new Date(student.eval_due),
+            title: `Eval: ${student.name}`,
+          });
+        }
+      }
+
+      // Load drafts
+      const draftsJson = localStorage.getItem(DRAFT_KEY);
+      if (draftsJson) {
+        try {
+          const drafts = JSON.parse(draftsJson);
+          for (const draft of drafts) {
+            if (draft.dueDate) {
+              events.push({
+                type: "assignment",
+                date: new Date(draft.dueDate),
+                title: draft.title || "Draft Assignment",
+              });
+            }
+          }
+        } catch (e) {
+          console.warn("[tc-overview] Failed to parse drafts:", e);
+        }
+      }
+
+      // Render mini calendar
+      const today = new Date();
+      const currentMonth = today.getMonth();
+      const currentYear = today.getFullYear();
+      const firstDay = new Date(currentYear, currentMonth, 1);
+      const lastDay = new Date(currentYear, currentMonth + 1, 0);
+      
+      // Get calendar grid dates
+      const startDate = new Date(firstDay);
+      startDate.setDate(startDate.getDate() - firstDay.getDay());
+      
+      const endDate = new Date(lastDay);
+      endDate.setDate(endDate.getDate() + (6 - lastDay.getDay()));
+      
+      const dates = [];
+      const current = new Date(startDate);
+      while (current <= endDate) {
+        dates.push(new Date(current));
+        current.setDate(current.getDate() + 1);
+      }
+
+      // Build mini calendar HTML
+      let html = '<div class="mini-cal-grid">';
+      
+      // Day headers
+      const dayNames = ["S", "M", "T", "W", "T", "F", "S"];
+      for (const day of dayNames) {
+        html += `<div class="mini-cal-header">${day}</div>`;
+      }
+
+      // Day cells
+      for (const date of dates) {
+        const isOtherMonth = date.getMonth() !== currentMonth;
+        const isToday = formatDateYMD(date) === formatDateYMD(today);
+        const dateStr = formatDateYMD(date);
+        const hasEvents = events.some(e => formatDateYMD(e.date) === dateStr);
+
+        let cellClass = "mini-cal-day";
+        if (isOtherMonth) cellClass += " other-month";
+        if (isToday) cellClass += " today";
+        if (hasEvents) cellClass += " has-events";
+
+        html += `<div class="${cellClass}">${date.getDate()}</div>`;
+      }
+
+      html += '</div>';
+      miniCalEl.innerHTML = html;
+
+      // Count upcoming events (next 7 days)
+      const todayStr = formatDateYMD(today);
+      const nextWeek = new Date(today);
+      nextWeek.setDate(nextWeek.getDate() + 7);
+      const nextWeekStr = formatDateYMD(nextWeek);
+      
+      const upcomingEvents = events.filter(e => {
+        const eventStr = formatDateYMD(e.date);
+        return eventStr >= todayStr && eventStr <= nextWeekStr;
+      });
+
+      upcomingEl.innerHTML = `${upcomingEvents.length} event${upcomingEvents.length !== 1 ? 's' : ''} in the next 7 days`;
+
+      console.log("[tc-overview] Calendar snapshot rendered:", upcomingEvents.length, "upcoming events");
+    } catch (error) {
+      console.error("[tc-overview] Error rendering calendar snapshot:", error);
+    }
+  }
+
+  /**
+   * Format date as YYYY-MM-DD
+   */
+  function formatDateYMD(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+
   // Initialize
   await loadKPIs();
+  await renderCalendarSnapshot();
 })();
