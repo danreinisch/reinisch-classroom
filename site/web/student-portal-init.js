@@ -21,6 +21,15 @@
   const LOG_PREFIX = '[student-portal]';
   const STUDENT_PORTAL_PATH = '/student/';
   
+  // Feature constants
+  const MIN_WRITING_ANSWER_LENGTH = 10;
+  const AUTO_SAVE_DEBOUNCE_MS = 1000;
+  const WRITER_BADGE_WORD_THRESHOLD = 50;
+  const SPEECH_PAUSE_MS = 300;
+  const TOAST_DISPLAY_DURATION_MS = 5000;
+  const TOAST_FADE_OUT_DURATION_MS = 300;
+  const TIMER_INIT_DELAY_MS = 100;
+  
   // State management
   const state = {
     bootWatchdogTimer: null,
@@ -301,7 +310,7 @@
       // Count non-empty answers
       return Object.values(savedAnswers).filter(ans => {
         if (typeof ans === 'string') {
-          return ans.trim().length > 10; // For writing, require at least 10 chars
+          return ans.trim().length > MIN_WRITING_ANSWER_LENGTH;
         }
         return ans !== null && ans !== undefined;
       }).length;
@@ -1405,7 +1414,7 @@
           const questionId = `writing_${dayData.day_number}`;
           saveAnswer(instance.id, questionId, this.value);
           updateViewerProgress(instance);
-        }, 1000); // 1 second debounce
+        }, AUTO_SAVE_DEBOUNCE_MS);
       });
     }
     
@@ -3093,7 +3102,7 @@
       return Object.values(answers).some(ans => {
         if (typeof ans === 'string') {
           const wordCount = ans.trim().split(/\s+/).length;
-          return wordCount > 50;
+          return wordCount > WRITER_BADGE_WORD_THRESHOLD;
         }
         return false;
       });
@@ -3214,7 +3223,7 @@
     const utterance = new SpeechSynthesisUtterance(item.text);
     utterance.onend = () => {
       readAloudState.currentIndex++;
-      setTimeout(() => speakNext(panel), 300);
+      setTimeout(() => speakNext(panel), SPEECH_PAUSE_MS);
     };
     utterance.onerror = () => {
       readAloudState.speaking = false;
@@ -3301,7 +3310,7 @@
       setTimeout(() => {
         const btn = document.getElementById('btnToggleTimer');
         if (btn) btn.click();
-      }, 100);
+      }, TIMER_INIT_DELAY_MS);
     }
   }
 
@@ -3422,8 +3431,8 @@
         if (toast.parentNode === container) {
           container.removeChild(toast);
         }
-      }, 300);
-    }, 5000);
+      }, TOAST_FADE_OUT_DURATION_MS);
+    }, TOAST_DISPLAY_DURATION_MS);
   }
 
   // ============================================================================
