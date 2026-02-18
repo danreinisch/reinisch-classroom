@@ -1,190 +1,1824 @@
-(function () {
-  const KEY_CANDIDATES = ["rc_tc_work_drafts","rc_tc_drafts","tc_work_drafts","teacher_center_work_drafts"];
+/**
+ * Teacher Center Reporting Module
+ * Comprehensive reporting engine for IEP compliance, grades, and admin oversight
+ */
 
-  function $(id){ return document.getElementById(id); }
+(async () => {
+  "use strict";
 
-  function safeParseJSON(s){
-    try { return JSON.parse(s); } catch (_) { return null; }
+  // Only run on reporting page
+  if (!location.pathname.startsWith("/teacher/reporting")) return;
+
+  console.log("[tc-reporting] Initializing reporting engine");
+
+  // Import data adapter and Supabase client
+  const { db, isRemote } = await import("/web/data-adapter.js");
+  const { getSupabase } = await import("/web/supabase-client.js");
+
+  // Constants - keep in sync with other teacher pages
+  const CANON_CLASSES = [
+    "Language Arts 1 SC",
+    "Language Arts 2 SC",
+    "Language Arts 3 SC",
+    "Language Arts 4 SC",
+    "Life Skills Language Arts SC",
+    "Life Skills",
+    "Consumer Math",
+    "Geometry SC",
+    "Speech/Language",
+    "Warrior Academy",
+  ];
+
+  // Reserved for future use - display abbreviations for space constraints
+  // const CLASS_DISPLAY = {
+  //   "Language Arts 1 SC": "LA 1 SC",
+  //   "Language Arts 2 SC": "LA 2 SC",
+  //   "Language Arts 3 SC": "LA 3 SC",
+  //   "Language Arts 4 SC": "LA 4 SC",
+  //   "Life Skills Language Arts SC": "Life Skills LA",
+  //   "Life Skills": "Life Skills",
+  //   "Consumer Math": "Consumer Math",
+  //   "Geometry SC": "Geometry SC",
+  //   "Speech/Language": "Speech/Language",
+  //   "Warrior Academy": "Warrior Academy",
+  // };
+
+  // DOM helper
+  const $ = (id) => document.getElementById(id);
+
+  // State
+  let studentsData = [];
+  let goalsData = [];
+  let progressData = [];
+  let assignmentsData = [];
+  let instancesData = [];
+  let submissionsData = [];
+  let enrollmentsData = [];
+  let usingSupabase = false;
+  let currentTab = "iep-quarterly";
+
+  // Tab state
+  let tab1State = { studentCode: null, quarter: getCurrentQuarter() };
+  let tab2State = { studentCode: null };
+  let tab3State = { classFilter: "All Classes" };
+  let tab4State = { classFilter: "All Classes", quarter: getCurrentQuarter() };
+
+  /**
+   * Get current quarter based on today's date
+   */
+  function getCurrentQuarter() {
+    const now = new Date();
+    const month = now.getMonth() + 1;
+    const day = now.getDate();
+
+    if ((month === 8 && day >= 14) || month === 9 || (month === 10 && day <= 10)) return "Q1";
+    if ((month === 10 && day >= 13) || month === 11 || (month === 12 && day <= 19)) return "Q2";
+    if ((month === 12 && day >= 20) || month === 1 || month === 2 || (month === 3 && day <= 13))
+      return "Q3";
+    if ((month === 3 && day >= 16) || month === 4 || (month === 5 && day <= 21)) return "Q4";
+
+    // Summer fallback
+    return "Q4";
   }
 
-  function isDraftArray(x){
-    if (!Array.isArray(x)) return false;
-    if (x.length === 0) return true;
-    const d = x[0];
-    return d && typeof d === "object" && ("id" in d || "title" in d) && ("mapping" in d || "assignment" in d);
-  }
+  /**
+   * Get quarter date range
+   */
+  function getQuarterDateRange(quarter) {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+    const schoolYear = month >= 8 ? year : year - 1;
 
-  function detectDraftsFromLocalStorage(){
-    for (const k of KEY_CANDIDATES){
-      const raw = localStorage.getItem(k);
-      if (!raw) continue;
-      const v = safeParseJSON(raw);
-      if (isDraftArray(v)) return { key: k, drafts: v };
-    }
-
-    const hits = [];
-    for (let i = 0; i < localStorage.length; i++){
-      const k = localStorage.key(i);
-      if (!k) continue;
-      const raw = localStorage.getItem(k);
-      if (!raw || raw.length < 2) continue;
-      if (raw[0] !== "[" && raw[0] !== "{") continue;
-
-      const v = safeParseJSON(raw);
-      if (isDraftArray(v)) hits.push({ key: k, drafts: v });
-    }
-
-    hits.sort((a,b) => (b.drafts?.length || 0) - (a.drafts?.length || 0));
-    return hits[0] || { key: null, drafts: [] };
-  }
-
-  function fmtDate(ts){
-    if (!ts) return "—";
-    const d = new Date(ts);
-    if (Number.isNaN(d.getTime())) return "—";
-    return d.toLocaleString();
-  }
-
-  function inferCreatedAt(d){
-    return d.createdAt || d.created_at || d.ts || d.timestamp || null;
-  }
-
-  function inferAssignmentType(d){
-    const a = d.assignment || d.assignmentFile || d.assignmentLink || null;
-    if (!a) return "unknown";
-    if (typeof a === "string"){
-      if (/^https?:\/\//i.test(a)) return "link";
-      return "file";
-    }
-    if (typeof a === "object"){
-      if (a.url || a.link) return "link";
-      if (a.name || a.fileName || a.file) return "file";
-      if (a.type) return String(a.type);
-    }
-    return "unknown";
-  }
-
-  function hasMapping(d){
-    const m = d.mapping || d.mappingFile || null;
-    if (!m) return false;
-    if (typeof m === "string") return m.trim().length > 0;
-    if (typeof m === "object") return !!(m.name || m.fileName || m.file || m.url || m.link);
-    return true;
-  }
-
-  function summarize(drafts){
-    const total = drafts.length;
-    const withMapping = drafts.filter(hasMapping).length;
-
-    let link = 0, file = 0, unknown = 0;
-    let newest = null;
-
-    for (const d of drafts){
-      const t = inferAssignmentType(d);
-      if (t === "link") link++;
-      else if (t === "file") file++;
-      else unknown++;
-
-      const ts = inferCreatedAt(d);
-      if (ts){
-        const dt = new Date(ts).getTime();
-        if (!Number.isNaN(dt)){
-          if (newest === null || dt > newest) newest = dt;
-        }
-      }
-    }
-
-    return {
-      total,
-      withMapping,
-      typeMix: total === 0 ? "—" : `${link} link / ${file} file`,
-      newest: newest ? fmtDate(newest) : "—",
-      link, file, unknown
+    const ranges = {
+      Q1: { start: `${schoolYear}-08-14`, end: `${schoolYear}-10-10` },
+      Q2: { start: `${schoolYear}-10-13`, end: `${schoolYear}-12-19` },
+      Q3: { start: `${schoolYear}-12-20`, end: `${schoolYear + 1}-03-13` },
+      Q4: { start: `${schoolYear + 1}-03-16`, end: `${schoolYear + 1}-05-21` },
     };
+
+    return ranges[quarter] || { start: null, end: null };
   }
 
-  function escapeHtml(s){
-    return String(s)
-      .replaceAll("&","&amp;")
-      .replaceAll("<","&lt;")
-      .replaceAll(">","&gt;")
-      .replaceAll('"',"&quot;")
-      .replaceAll("'","&#039;");
+  /**
+   * Get quarter label with date range
+   */
+  function getQuarterLabel(quarter) {
+    const labels = {
+      Q1: "Q1 (Aug 14-Oct 10)",
+      Q2: "Q2 (Oct 13-Dec 19)",
+      Q3: "Q3 (Dec 20-Mar 13)",
+      Q4: "Q4 (Mar 16-May 21)",
+    };
+    return labels[quarter] || quarter;
   }
 
-  function renderTable(drafts){
-    const body = $("draftsBody");
-    if (!body) return;
+  /**
+   * Escape HTML for XSS prevention
+   */
+  function escapeHtml(text) {
+    if (!text && text !== 0) return "";
+    const div = document.createElement("div");
+    div.textContent = String(text);
+    return div.innerHTML;
+  }
 
-    const rows = (drafts || [])
-      .slice()
-      .sort((a,b) => new Date(inferCreatedAt(b) || 0).getTime() - new Date(inferCreatedAt(a) || 0).getTime())
-      .slice(0, 20);
+  /**
+   * Escape XML for DOCX export
+   */
+  function escapeXml(text) {
+    if (!text && text !== 0) return "";
+    return String(text)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&apos;");
+  }
 
-    if (rows.length === 0){
-      body.innerHTML = '<tr><td colspan="5" class="tc-subtle">No drafts found yet. Create one in <a href="/teacher/work/">Work</a>.</td></tr>';
+  /**
+   * Format date as "Jan 15, 2026"
+   */
+  function formatDate(dateStr) {
+    if (!dateStr) return "N/A";
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return "N/A";
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  }
+
+  /**
+   * Format date as YYYY-MM-DD
+   */
+  function formatDateYYYYMMDD(date = new Date()) {
+    return date.toISOString().split("T")[0];
+  }
+
+  /**
+   * Get score color for visual feedback
+   */
+  function scoreColor(score) {
+    if (score == null || isNaN(score)) return "rgba(200,200,200,0.6)";
+    if (score >= 80) return "rgba(34,197,94,0.8)";
+    if (score >= 60) return "rgba(234,179,8,0.8)";
+    return "rgba(239,68,68,0.8)";
+  }
+
+  /**
+   * Load all data from Supabase or localStorage
+   */
+  async function loadData() {
+    try {
+      console.log("[tc-reporting] Loading data...");
+
+      usingSupabase = await isRemote();
+
+      const pillMode = $("pillMode");
+      if (pillMode) {
+        pillMode.textContent = usingSupabase ? "Supabase" : "Local (browser)";
+      }
+
+      // Load all data in parallel
+      const [students, goals, assignments, instances, submissions, enrollments] = await Promise.all(
+        [
+          db.listStudents(),
+          db.listGoalsAll ? db.listGoalsAll() : [],
+          db.listAssignments ? db.listAssignments() : [],
+          db.listAssignmentInstances ? db.listAssignmentInstances() : [],
+          db.listSubmissions ? db.listSubmissions() : [],
+          db.listClassEnrollments ? db.listClassEnrollments() : [],
+        ]
+      );
+
+      studentsData = students || [];
+      goalsData = goals || [];
+      assignmentsData = assignments || [];
+      instancesData = instances || [];
+      submissionsData = submissions || [];
+      enrollmentsData = enrollments || [];
+
+      console.log("[tc-reporting] Data loaded:", {
+        students: studentsData.length,
+        goals: goalsData.length,
+        assignments: assignmentsData.length,
+        instances: instancesData.length,
+        submissions: submissionsData.length,
+      });
+
+      // Update UI
+      updateSyncStatus();
+      renderCurrentTab();
+    } catch (err) {
+      console.error("[tc-reporting] Error loading data:", err);
+      alert("Error loading data. Please check console for details.");
+    }
+  }
+
+  /**
+   * Update sync status indicator
+   */
+  function updateSyncStatus() {
+    const pillMode = $("pillMode");
+    if (pillMode) {
+      pillMode.textContent = usingSupabase ? "Supabase" : "Local (browser)";
+    }
+  }
+
+  /**
+   * Switch active tab
+   */
+  function switchTab(tabId) {
+    currentTab = tabId;
+
+    // Update tab buttons
+    document.querySelectorAll(".rp-tab").forEach((btn) => {
+      btn.classList.toggle("active", btn.dataset.tab === tabId);
+    });
+
+    // Update tab content
+    document.querySelectorAll(".rp-tab-content").forEach((content) => {
+      content.classList.toggle("active", content.dataset.tab === tabId);
+    });
+
+    // Render current tab content
+    renderCurrentTab();
+  }
+
+  /**
+   * Render current active tab
+   */
+  function renderCurrentTab() {
+    switch (currentTab) {
+      case "iep-quarterly":
+        renderTab1();
+        break;
+      case "student-summary":
+        renderTab2();
+        break;
+      case "class-performance":
+        renderTab3();
+        break;
+      case "compliance-log":
+        renderTab4();
+        break;
+    }
+  }
+
+  /**
+   * TAB 1: IEP Quarterly Progress Report
+   */
+  function renderTab1() {
+    const container = $("tab1Content");
+    if (!container) return;
+
+    // Render filters
+    const studentsHtml = studentsData
+      .filter((s) => s.active !== false)
+      .map(
+        (s) =>
+          `<option value="${escapeHtml(s.code)}" ${s.code === tab1State.studentCode ? "selected" : ""}>${escapeHtml(s.name || s.code)}</option>`
+      )
+      .join("");
+
+    const filtersHtml = `
+      <div class="rp-filters">
+        <div class="rp-filter-group">
+          <label for="tab1Student">Student:</label>
+          <select id="tab1Student" class="rp-select">
+            <option value="">-- Select Student --</option>
+            ${studentsHtml}
+          </select>
+        </div>
+        <div class="rp-filter-group">
+          <label for="tab1Quarter">Quarter:</label>
+          <select id="tab1Quarter" class="rp-select">
+            <option value="Q1" ${tab1State.quarter === "Q1" ? "selected" : ""}>${getQuarterLabel("Q1")}</option>
+            <option value="Q2" ${tab1State.quarter === "Q2" ? "selected" : ""}>${getQuarterLabel("Q2")}</option>
+            <option value="Q3" ${tab1State.quarter === "Q3" ? "selected" : ""}>${getQuarterLabel("Q3")}</option>
+            <option value="Q4" ${tab1State.quarter === "Q4" ? "selected" : ""}>${getQuarterLabel("Q4")}</option>
+          </select>
+        </div>
+      </div>
+    `;
+
+    if (!tab1State.studentCode) {
+      container.innerHTML =
+        filtersHtml +
+        '<div class="rp-empty">Select a student and quarter to view IEP progress report.</div>';
+
+      // Attach event listeners
+      const studentSelect = $("tab1Student");
+      const quarterSelect = $("tab1Quarter");
+      if (studentSelect) {
+        studentSelect.addEventListener("change", (e) => {
+          tab1State.studentCode = e.target.value || null;
+          renderTab1();
+        });
+      }
+      if (quarterSelect) {
+        quarterSelect.addEventListener("change", (e) => {
+          tab1State.quarter = e.target.value;
+          renderTab1();
+        });
+      }
       return;
     }
 
-    body.innerHTML = rows.map((d) => {
-      const title = (d.title || "Untitled").toString();
-      const id = (d.id || "—").toString();
-      const created = fmtDate(inferCreatedAt(d));
-      const atype = inferAssignmentType(d);
-      const mapping = hasMapping(d) ? "yes" : "no";
-      return `
-        <tr>
-          <td>${escapeHtml(title)}</td>
-          <td>${escapeHtml(atype)}</td>
-          <td>${escapeHtml(mapping)}</td>
-          <td>${escapeHtml(created)}</td>
-          <td class="tc-mono">${escapeHtml(id)}</td>
-        </tr>
-      `;
-    }).join("");
-  }
+    // Load student data
+    const student = studentsData.find((s) => s.code === tab1State.studentCode);
+    if (!student) {
+      container.innerHTML = filtersHtml + '<div class="rp-error">Student not found.</div>';
+      return;
+    }
 
-  function download(filename, text){
-    const blob = new Blob([text], { type: "application/json;charset=utf-8" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 0);
-  }
+    // Get quarter date range
+    const quarterRange = getQuarterDateRange(tab1State.quarter);
 
-  function refresh(){
-    const found = detectDraftsFromLocalStorage();
-    const key = found.key || "none";
-    const drafts = Array.isArray(found.drafts) ? found.drafts : [];
-    const s = summarize(drafts);
+    // Get student's goals
+    const studentGoals = goalsData.filter(
+      (g) => g.student_code === tab1State.studentCode && g.status === "active"
+    );
 
-    const pillSource = $("pillSource");
-    if (pillSource) pillSource.textContent = `drafts: ${drafts.length} (key: ${key})`;
+    // Build report HTML
+    let reportHtml = `
+      ${filtersHtml}
+      <div class="rp-report-card" id="iepReportCard">
+        <div class="rp-report-header">
+          <h2>IEP Quarterly Progress Report</h2>
+          <div class="rp-report-meta">
+            <div><strong>Student:</strong> ${escapeHtml(student.name || student.code)}</div>
+            <div><strong>Code:</strong> ${escapeHtml(student.code)}</div>
+            <div><strong>Quarter:</strong> ${getQuarterLabel(tab1State.quarter)}</div>
+            <div><strong>IEP Due:</strong> ${formatDate(student.iep_due)}</div>
+            <div><strong>Eval Due:</strong> ${formatDate(student.eval_due)}</div>
+          </div>
+        </div>
+    `;
 
-    if ($("kpiDrafts")) $("kpiDrafts").textContent = String(s.total);
-    if ($("kpiWithMapping")) $("kpiWithMapping").textContent = String(s.withMapping);
-    if ($("kpiTypeMix")) $("kpiTypeMix").textContent = s.typeMix;
-    if ($("kpiRecent")) $("kpiRecent").textContent = s.newest;
+    if (studentGoals.length === 0) {
+      reportHtml += '<div class="rp-empty">No active IEP goals found for this student.</div>';
+    } else {
+      reportHtml += '<div class="rp-goals-section">';
 
-    renderTable(drafts);
+      // Process each goal
+      for (const goal of studentGoals) {
+        const goalProgressData = getGoalProgressForQuarter(
+          goal.code,
+          tab1State.studentCode,
+          quarterRange
+        );
+        const prevQuarterRange = getPreviousQuarterRange(tab1State.quarter);
+        const prevGoalProgressData = prevQuarterRange
+          ? getGoalProgressForQuarter(goal.code, tab1State.studentCode, prevQuarterRange)
+          : null;
 
-    const btnExport = $("btnExport");
-    if (btnExport){
-      btnExport.onclick = () => {
-        const payload = { generatedAt: new Date().toISOString(), sourceKey: key, summary: s, drafts };
-        download(`tc-reporting_${new Date().toISOString().slice(0,10)}.json`, JSON.stringify(payload, null, 2));
-      };
+        const narrative = generateNarrative(student, goal, goalProgressData, prevGoalProgressData);
+        const trend = getTrendIndicator(goalProgressData, prevGoalProgressData);
+
+        reportHtml += `
+          <div class="rp-goal-card">
+            <div class="rp-goal-header">
+              <div class="rp-goal-title">
+                <span class="rp-goal-code">${escapeHtml(goal.code)}</span>
+                <span class="rp-goal-area">${escapeHtml(goal.goal_area || "N/A")}</span>
+              </div>
+              <div class="rp-goal-trend">${trend}</div>
+            </div>
+            <div class="rp-goal-desc">${escapeHtml(goal.desc || "No description")}</div>
+            <div class="rp-goal-targets">
+              <div><strong>Baseline:</strong> ${goal.baseline || 0}%</div>
+              <div><strong>Target:</strong> ${goal.target || 100}%</div>
+              <div><strong>Current:</strong> ${goalProgressData.average != null ? goalProgressData.average.toFixed(0) : "N/A"}%</div>
+              <div><strong>Data Points:</strong> ${goalProgressData.count}</div>
+            </div>
+            <div class="rp-goal-narrative">
+              <label><strong>Progress Narrative:</strong></label>
+              <textarea class="rp-narrative-edit" data-goal="${escapeHtml(goal.code)}" rows="4">${narrative}</textarea>
+            </div>
+            <div class="rp-goal-status">
+              <label><strong>Progress Status:</strong></label>
+              <select class="rp-status-select" data-goal="${escapeHtml(goal.code)}">
+                <option value="adequate">Making Adequate Progress</option>
+                <option value="insufficient">Progressing but Not Sufficient</option>
+                <option value="not-progressing">Not Making Progress</option>
+                <option value="met">Goal Met</option>
+              </select>
+            </div>
+          </div>
+        `;
+      }
+
+      reportHtml += "</div>";
+    }
+
+    // Grades section
+    const gradesHtml = renderGradesForQuarter(tab1State.studentCode, quarterRange);
+    reportHtml += gradesHtml;
+
+    // Export buttons
+    reportHtml += `
+      <div class="rp-export-actions">
+        <button class="tc-btn" id="btnExportPDF" type="button">📄 Export as PDF</button>
+        <button class="tc-btn" id="btnExportDOCX" type="button">📄 Export as DOCX</button>
+      </div>
+      </div>
+    `;
+
+    container.innerHTML = reportHtml;
+
+    // Attach event listeners for filters
+    const studentSelect = $("tab1Student");
+    const quarterSelect = $("tab1Quarter");
+    if (studentSelect) {
+      studentSelect.addEventListener("change", (e) => {
+        tab1State.studentCode = e.target.value || null;
+        renderTab1();
+      });
+    }
+    if (quarterSelect) {
+      quarterSelect.addEventListener("change", (e) => {
+        tab1State.quarter = e.target.value;
+        renderTab1();
+      });
+    }
+
+    // Attach export listeners
+    const btnPDF = $("btnExportPDF");
+    const btnDOCX = $("btnExportDOCX");
+    if (btnPDF) {
+      btnPDF.addEventListener("click", () => exportReportAsPDF());
+    }
+    if (btnDOCX) {
+      btnDOCX.addEventListener("click", () => exportReportAsDOCX());
     }
   }
 
-  function init(){
-    const btnRefresh = $("btnRefresh");
-    if (btnRefresh) btnRefresh.addEventListener("click", refresh);
-    refresh();
+  /**
+   * Get progress data for a goal in a specific quarter
+   */
+  function getGoalProgressForQuarter(goalCode, studentCode, quarterRange) {
+    if (!quarterRange.start || !quarterRange.end) {
+      return { average: null, count: 0, values: [] };
+    }
+
+    const startDate = new Date(quarterRange.start);
+    const endDate = new Date(quarterRange.end);
+
+    // Filter progress data for this goal and quarter
+    const relevantProgress = progressData.filter((p) => {
+      if (p.goal_code !== goalCode) return false;
+      if (p.student_code !== studentCode) return false;
+      const pDate = new Date(p.date);
+      return pDate >= startDate && pDate <= endDate;
+    });
+
+    if (relevantProgress.length === 0) {
+      return { average: null, count: 0, values: [] };
+    }
+
+    const values = relevantProgress.map((p) => parseFloat(p.value)).filter((v) => !isNaN(v));
+    const average =
+      values.length > 0 ? values.reduce((sum, v) => sum + v, 0) / values.length : null;
+
+    return { average, count: values.length, values };
   }
 
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
-  else init();
+  /**
+   * Get previous quarter range
+   */
+  function getPreviousQuarterRange(currentQuarter) {
+    const quarters = ["Q1", "Q2", "Q3", "Q4"];
+    const currentIndex = quarters.indexOf(currentQuarter);
+    if (currentIndex <= 0) return null; // No previous quarter in same school year
+
+    const prevQuarter = quarters[currentIndex - 1];
+    return getQuarterDateRange(prevQuarter);
+  }
+
+  /**
+   * Get trend indicator
+   */
+  function getTrendIndicator(currentData, prevData) {
+    if (currentData.average == null) return '<span class="rp-trend-neutral">No Data</span>';
+    if (!prevData || prevData.average == null) return '<span class="rp-trend-neutral">—</span>';
+
+    if (currentData.average > prevData.average) {
+      return '<span class="rp-trend-up">Improving ↑</span>';
+    } else if (currentData.average < prevData.average) {
+      return '<span class="rp-trend-down">Declining ↓</span>';
+    } else {
+      return '<span class="rp-trend-neutral">Maintaining →</span>';
+    }
+  }
+
+  /**
+   * Generate narrative for goal progress
+   */
+  function generateNarrative(student, goal, quarterData, prevQuarterData) {
+    const name = student.name || student.code;
+    const avg = quarterData.average != null ? quarterData.average.toFixed(0) : "N/A";
+    const baseline = goal.baseline || "N/A";
+    const target = goal.target || "N/A";
+    const dataPoints = quarterData.count;
+    const goalArea = goal.goal_area || goal.code;
+
+    let progressStatement = "";
+    if (quarterData.average != null && prevQuarterData?.average != null) {
+      if (quarterData.average > prevQuarterData.average) {
+        progressStatement = `${name} is making adequate progress toward the annual goal.`;
+      } else if (quarterData.average === prevQuarterData.average) {
+        progressStatement = `${name} is maintaining current performance levels.`;
+      } else {
+        progressStatement = `${name} has shown a decline in performance. Consider reviewing supports and interventions.`;
+      }
+    } else if (quarterData.average != null) {
+      progressStatement = `${name} is working toward the annual goal.`;
+    } else {
+      progressStatement = `Insufficient data collected this quarter to determine progress.`;
+    }
+
+    if (quarterData.average != null) {
+      return `${name} demonstrated ${avg}% accuracy in ${goalArea}, compared to a baseline of ${baseline}%. Based on ${dataPoints} data point${dataPoints !== 1 ? "s" : ""} collected this quarter, ${progressStatement} Annual goal target: ${target}%.`;
+    } else {
+      return `${name} has a baseline of ${baseline}% in ${goalArea}. ${progressStatement} Annual goal target: ${target}%.`;
+    }
+  }
+
+  /**
+   * Render grades for a specific quarter
+   */
+  function renderGradesForQuarter(studentCode, quarterRange) {
+    if (!quarterRange.start || !quarterRange.end) {
+      return '<div class="rp-grades-section"><h3>Grades This Quarter</h3><div class="rp-empty">Invalid quarter range.</div></div>';
+    }
+
+    const startDate = new Date(quarterRange.start);
+    const endDate = new Date(quarterRange.end);
+
+    // Get student's assignment instances for this quarter
+    const studentInstances = instancesData.filter((inst) => {
+      if (inst.student_code !== studentCode && inst.student_id !== studentCode) return false;
+      if (!inst.assigned_at) return false;
+      const assignedDate = new Date(inst.assigned_at);
+      return assignedDate >= startDate && assignedDate <= endDate;
+    });
+
+    if (studentInstances.length === 0) {
+      return '<div class="rp-grades-section"><h3>Grades This Quarter</h3><div class="rp-empty">No assignments found for this quarter.</div></div>';
+    }
+
+    // Build grades table
+    let html =
+      '<div class="rp-grades-section"><h3>Grades This Quarter</h3><table class="rp-table"><thead><tr><th>Assignment</th><th>Due Date</th><th>Status</th><th>Score</th></tr></thead><tbody>';
+
+    let totalScore = 0;
+    let scoredCount = 0;
+    let submittedCount = 0;
+
+    for (const inst of studentInstances) {
+      const assignment = assignmentsData.find((a) => a.id === inst.assignment_id);
+      const submission = submissionsData.find((s) => s.instance_id === inst.id);
+
+      const title = assignment?.title || `Assignment ${inst.assignment_id}`;
+      const dueDate = formatDate(inst.due_at);
+      const status = submission ? "Submitted" : inst.status || "Assigned";
+      const score = submission?.score_total != null ? submission.score_total : null;
+
+      if (submission) submittedCount++;
+      if (score != null) {
+        totalScore += score;
+        scoredCount++;
+      }
+
+      html += `
+        <tr>
+          <td>${escapeHtml(title)}</td>
+          <td>${escapeHtml(dueDate)}</td>
+          <td>${escapeHtml(status)}</td>
+          <td style="color: ${scoreColor(score)}">${score != null ? score + "%" : "—"}</td>
+        </tr>
+      `;
+    }
+
+    html += "</tbody></table>";
+
+    // Summary stats
+    const avgScore = scoredCount > 0 ? (totalScore / scoredCount).toFixed(1) : "N/A";
+    const completionRate =
+      studentInstances.length > 0
+        ? ((submittedCount / studentInstances.length) * 100).toFixed(0)
+        : "0";
+
+    html += `
+      <div class="rp-grades-summary">
+        <div><strong>Average Grade:</strong> <span style="color: ${scoreColor(parseFloat(avgScore))}">${avgScore}${avgScore !== "N/A" ? "%" : ""}</span></div>
+        <div><strong>Completion Rate:</strong> ${completionRate}% (${submittedCount}/${studentInstances.length})</div>
+      </div>
+      </div>
+    `;
+
+    return html;
+  }
+
+  /**
+   * Export report as PDF (using browser print)
+   */
+  function exportReportAsPDF() {
+    // Create a print-friendly version
+    const reportCard = $("iepReportCard");
+    if (!reportCard) return;
+
+    // Create new window with print-friendly content
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      alert("Please allow popups to export PDF");
+      return;
+    }
+
+    // Clean the HTML content
+    const cleanedContent = cleanHtmlForExport(reportCard.innerHTML);
+    const generatedDate = new Date().toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>IEP Progress Report</title>
+        <style>
+          body { font-family: 'Calibri', Arial, sans-serif; margin: 40px; color: #000; background: #fff; }
+          h2 { font-size: 24pt; margin-bottom: 10px; }
+          h3 { font-size: 18pt; margin-top: 20px; margin-bottom: 10px; }
+          .rp-report-meta { margin-bottom: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+          .rp-report-meta div { margin: 3px 0; }
+          .rp-goal-card { border: 1px solid #ccc; padding: 15px; margin-bottom: 15px; page-break-inside: avoid; }
+          .rp-goal-header { display: flex; justify-content: space-between; margin-bottom: 10px; }
+          .rp-goal-code { font-weight: bold; margin-right: 10px; }
+          .rp-goal-area { color: #666; }
+          .rp-goal-desc { margin: 10px 0; }
+          .rp-goal-targets { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; margin: 10px 0; }
+          .rp-goal-narrative, .rp-goal-status { margin: 10px 0; }
+          .rp-narrative-edit { width: 100%; border: 1px solid #ccc; padding: 8px; font-family: inherit; }
+          .rp-table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+          .rp-table th, .rp-table td { border: 1px solid #000; padding: 8px; text-align: left; }
+          .rp-table th { background-color: #f0f0f0; font-weight: bold; }
+          .rp-grades-summary { margin: 15px 0; display: flex; gap: 30px; }
+          .rp-trend-up { color: green; }
+          .rp-trend-down { color: red; }
+          .rp-trend-neutral { color: gray; }
+        </style>
+      </head>
+      <body>
+        ${cleanedContent}
+        <p style="margin-top: 30px; font-size: 10pt; color: #666;"><em>Generated on ${generatedDate}</em></p>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+
+    setTimeout(() => {
+      printWindow.print();
+    }, 500);
+  }
+
+  /**
+   * Clean HTML content for export by removing interactive elements
+   */
+  function cleanHtmlForExport(htmlString) {
+    const tempDiv = document.createElement("div");
+    tempDiv.innerHTML = htmlString;
+
+    // Remove all buttons
+    tempDiv.querySelectorAll("button").forEach((btn) => btn.remove());
+
+    // Replace select elements with their current selected text
+    tempDiv.querySelectorAll("select").forEach((select) => {
+      const selectedText = select.options[select.selectedIndex]?.text || "[Dropdown]";
+      const span = document.createElement("span");
+      span.textContent = selectedText;
+      select.replaceWith(span);
+    });
+
+    return tempDiv.innerHTML;
+  }
+
+  /**
+   * Export report as DOCX
+   */
+  function exportReportAsDOCX() {
+    const reportCard = $("iepReportCard");
+    if (!reportCard) return;
+
+    const student = studentsData.find((s) => s.code === tab1State.studentCode);
+    if (!student) return;
+
+    // Clean the HTML content
+    const cleanedContent = cleanHtmlForExport(reportCard.innerHTML);
+    const generatedDate = new Date().toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+
+    const htmlContent = `
+<!DOCTYPE html>
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">
+<head>
+  <meta charset="utf-8">
+  <title>IEP Progress Report</title>
+  <style>
+    body { font-family: 'Calibri', Arial, sans-serif; margin: 40px; }
+    h1 { font-size: 24pt; font-weight: bold; margin-bottom: 20px; }
+    h2 { font-size: 18pt; font-weight: bold; margin-top: 20px; margin-bottom: 10px; }
+    p { margin: 5px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+    th, td { border: 1px solid #000; padding: 8px; text-align: left; }
+    th { background-color: #f0f0f0; font-weight: bold; }
+  </style>
+</head>
+<body>
+  ${cleanedContent}
+  <p style="margin-top: 30px;"><em>Generated on ${escapeXml(generatedDate)}</em></p>
+</body>
+</html>
+    `;
+
+    const blob = new Blob([htmlContent], { type: "application/msword" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${student.code}_IEP_Progress_${tab1State.quarter}.docx`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    console.log("[tc-reporting] DOCX export complete");
+  }
+
+  /**
+   * TAB 2: Student Summary (One-Pager)
+   */
+  function renderTab2() {
+    const container = $("tab2Content");
+    if (!container) return;
+
+    // Render student selector
+    const studentsHtml = studentsData
+      .filter((s) => s.active !== false)
+      .map(
+        (s) =>
+          `<option value="${escapeHtml(s.code)}" ${s.code === tab2State.studentCode ? "selected" : ""}>${escapeHtml(s.name || s.code)}</option>`
+      )
+      .join("");
+
+    const filterHtml = `
+      <div class="rp-filters">
+        <div class="rp-filter-group">
+          <label for="tab2Student">Student:</label>
+          <select id="tab2Student" class="rp-select">
+            <option value="">-- Select Student --</option>
+            ${studentsHtml}
+          </select>
+        </div>
+      </div>
+    `;
+
+    if (!tab2State.studentCode) {
+      container.innerHTML =
+        filterHtml + '<div class="rp-empty">Select a student to view summary.</div>';
+
+      const studentSelect = $("tab2Student");
+      if (studentSelect) {
+        studentSelect.addEventListener("change", (e) => {
+          tab2State.studentCode = e.target.value || null;
+          renderTab2();
+        });
+      }
+      return;
+    }
+
+    const student = studentsData.find((s) => s.code === tab2State.studentCode);
+    if (!student) {
+      container.innerHTML = filterHtml + '<div class="rp-error">Student not found.</div>';
+      return;
+    }
+
+    // Get student's goals
+    const studentGoals = goalsData.filter((g) => g.student_code === tab2State.studentCode);
+
+    // Get student's classes
+    const studentEnrollments = enrollmentsData.filter(
+      (e) => e.student_code === tab2State.studentCode
+    );
+    const studentClasses =
+      studentEnrollments.map((e) => e.class_name || "Unknown").join(", ") || "None";
+
+    // Build summary HTML
+    let summaryHtml = `
+      ${filterHtml}
+      <div class="rp-summary-card" id="studentSummaryCard">
+        <div class="rp-summary-header">
+          <h2>Student Summary: ${escapeHtml(student.name || student.code)}</h2>
+          <button class="tc-btn" id="btnPrintSummary" type="button">📄 Print / PDF</button>
+        </div>
+
+        <div class="rp-summary-identity">
+          <div class="rp-summary-row">
+            <div><strong>Student Code:</strong> ${escapeHtml(student.code)}</div>
+            <div><strong>Name:</strong> ${escapeHtml(student.name || "N/A")}</div>
+          </div>
+          <div class="rp-summary-row">
+            <div><strong>Classes:</strong> ${escapeHtml(studentClasses)}</div>
+          </div>
+          <div class="rp-summary-row">
+            <div><strong>IEP Due:</strong> ${formatDate(student.iep_due)}</div>
+            <div><strong>Eval Due:</strong> ${formatDate(student.eval_due)}</div>
+          </div>
+        </div>
+
+        <h3>IEP Goals Overview</h3>
+    `;
+
+    if (studentGoals.length === 0) {
+      summaryHtml += '<div class="rp-empty">No IEP goals found.</div>';
+    } else {
+      summaryHtml += '<div class="rp-goals-overview">';
+
+      for (const goal of studentGoals) {
+        // Get last 10 data points for sparkline
+        const goalProgress = progressData
+          .filter((p) => p.goal_code === goal.code && p.student_code === tab2State.studentCode)
+          .sort((a, b) => new Date(a.date) - new Date(b.date))
+          .slice(-10);
+
+        const latestValue =
+          goalProgress.length > 0 ? parseFloat(goalProgress[goalProgress.length - 1].value) : null;
+        const sparkline = renderSparkline(goalProgress.map((p) => parseFloat(p.value)));
+
+        summaryHtml += `
+          <div class="rp-goal-summary-item">
+            <div class="rp-goal-summary-header">
+              <span class="rp-goal-code">${escapeHtml(goal.code)}</span>
+              <span class="rp-goal-area">${escapeHtml(goal.goal_area || "N/A")}</span>
+            </div>
+            <div class="rp-goal-summary-stats">
+              <div><strong>Baseline:</strong> ${goal.baseline || 0}%</div>
+              <div><strong>Latest:</strong> ${latestValue != null ? latestValue.toFixed(0) : "N/A"}%</div>
+              <div><strong>Target:</strong> ${goal.target || 100}%</div>
+            </div>
+            <div class="rp-sparkline">${sparkline}</div>
+          </div>
+        `;
+      }
+
+      summaryHtml += "</div>";
+    }
+
+    // Grades overview
+    summaryHtml += renderGradesOverview(tab2State.studentCode);
+
+    // Assignment completion
+    summaryHtml += renderAssignmentCompletion(tab2State.studentCode);
+
+    // Data collection summary
+    summaryHtml += renderDataCollectionSummary(tab2State.studentCode);
+
+    summaryHtml += "</div>";
+
+    container.innerHTML = summaryHtml;
+
+    // Attach event listeners
+    const studentSelect = $("tab2Student");
+    if (studentSelect) {
+      studentSelect.addEventListener("change", (e) => {
+        tab2State.studentCode = e.target.value || null;
+        renderTab2();
+      });
+    }
+
+    const btnPrint = $("btnPrintSummary");
+    if (btnPrint) {
+      btnPrint.addEventListener("click", () => {
+        window.print();
+      });
+    }
+  }
+
+  /**
+   * Render sparkline SVG
+   */
+  function renderSparkline(values) {
+    if (!values || values.length === 0) {
+      return '<svg width="80" height="24"><text x="5" y="16" font-size="10" fill="currentColor">No data</text></svg>';
+    }
+
+    const width = 80;
+    const height = 24;
+    const padding = 2;
+
+    const max = Math.max(...values, 100);
+    const min = Math.min(...values, 0);
+    const range = max - min || 1;
+
+    const points = values
+      .map((val, i) => {
+        const x = padding + (i / (values.length - 1 || 1)) * (width - 2 * padding);
+        const y = height - padding - ((val - min) / range) * (height - 2 * padding);
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      })
+      .join(" ");
+
+    return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+      <polyline points="${points}" fill="none" stroke="rgba(59,130,246,0.8)" stroke-width="2"/>
+    </svg>`;
+  }
+
+  /**
+   * Render grades overview
+   */
+  function renderGradesOverview(studentCode) {
+    const studentInstances = instancesData.filter(
+      (inst) => inst.student_code === studentCode || inst.student_id === studentCode
+    );
+
+    if (studentInstances.length === 0) {
+      return '<h3>Grades Overview</h3><div class="rp-empty">No assignments found.</div>';
+    }
+
+    let totalScore = 0;
+    let scoredCount = 0;
+
+    const gradeRows = studentInstances
+      .slice(0, 10)
+      .map((inst) => {
+        const assignment = assignmentsData.find((a) => a.id === inst.assignment_id);
+        const submission = submissionsData.find((s) => s.instance_id === inst.id);
+
+        const title = assignment?.title || `Assignment ${inst.assignment_id}`;
+        const score = submission?.score_total;
+        const date = formatDate(submission?.submitted_at || inst.assigned_at);
+
+        if (score != null) {
+          totalScore += score;
+          scoredCount++;
+        }
+
+        return `
+        <tr>
+          <td>${escapeHtml(title)}</td>
+          <td style="color: ${scoreColor(score)}">${score != null ? score + "%" : "—"}</td>
+          <td>${escapeHtml(date)}</td>
+        </tr>
+      `;
+      })
+      .join("");
+
+    const avgScore = scoredCount > 0 ? (totalScore / scoredCount).toFixed(1) : "N/A";
+
+    return `
+      <h3>Grades Overview</h3>
+      <div class="rp-grades-stats">
+        <div><strong>Overall Average:</strong> <span style="color: ${scoreColor(parseFloat(avgScore))}">${avgScore}${avgScore !== "N/A" ? "%" : ""}</span></div>
+      </div>
+      <table class="rp-table">
+        <thead><tr><th>Assignment</th><th>Score</th><th>Date</th></tr></thead>
+        <tbody>${gradeRows}</tbody>
+      </table>
+    `;
+  }
+
+  /**
+   * Render assignment completion stats
+   */
+  function renderAssignmentCompletion(studentCode) {
+    const studentInstances = instancesData.filter(
+      (inst) => inst.student_code === studentCode || inst.student_id === studentCode
+    );
+
+    const totalAssigned = studentInstances.length;
+    const submitted = studentInstances.filter((inst) => {
+      return submissionsData.some((s) => s.instance_id === inst.id);
+    }).length;
+    const missing = totalAssigned - submitted;
+
+    const onTime = studentInstances.filter((inst) => {
+      const submission = submissionsData.find((s) => s.instance_id === inst.id);
+      if (!submission) return false;
+      if (!inst.due_at) return true;
+      return new Date(submission.submitted_at) <= new Date(inst.due_at);
+    }).length;
+
+    const onTimeRate = submitted > 0 ? ((onTime / submitted) * 100).toFixed(0) : "0";
+
+    return `
+      <h3>Assignment Completion</h3>
+      <div class="rp-completion-stats">
+        <div><strong>Total Assigned:</strong> ${totalAssigned}</div>
+        <div><strong>Submitted:</strong> ${submitted}</div>
+        <div><strong>Missing:</strong> ${missing}</div>
+        <div><strong>On-Time Rate:</strong> ${onTimeRate}%</div>
+      </div>
+      <div class="rp-completion-bar">
+        <div class="rp-bar-segment rp-bar-complete" style="width: ${totalAssigned > 0 ? (submitted / totalAssigned) * 100 : 0}%"></div>
+        <div class="rp-bar-segment rp-bar-missing" style="width: ${totalAssigned > 0 ? (missing / totalAssigned) * 100 : 0}%"></div>
+      </div>
+    `;
+  }
+
+  /**
+   * Render data collection summary
+   */
+  function renderDataCollectionSummary(studentCode) {
+    const studentGoals = goalsData.filter((g) => g.student_code === studentCode);
+    const studentProgress = progressData.filter((p) => p.student_code === studentCode);
+
+    const currentQuarter = getCurrentQuarter();
+    const quarterRange = getQuarterDateRange(currentQuarter);
+    const quarterStart = new Date(quarterRange.start);
+    const quarterEnd = new Date(quarterRange.end);
+
+    const quarterProgress = studentProgress.filter((p) => {
+      const pDate = new Date(p.date);
+      return pDate >= quarterStart && pDate <= quarterEnd;
+    });
+
+    const goalBreakdown = studentGoals
+      .map((goal) => {
+        const goalQuarterData = quarterProgress.filter((p) => p.goal_code === goal.code);
+        const latestPoint = studentProgress
+          .filter((p) => p.goal_code === goal.code)
+          .sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+
+        return `
+        <tr>
+          <td>${escapeHtml(goal.code)}</td>
+          <td>${escapeHtml(goal.goal_area || "N/A")}</td>
+          <td>${goalQuarterData.length}</td>
+          <td>${latestPoint ? parseFloat(latestPoint.value).toFixed(0) + "%" : "N/A"}</td>
+        </tr>
+      `;
+      })
+      .join("");
+
+    return `
+      <h3>Data Collection Summary</h3>
+      <div class="rp-data-stats">
+        <div><strong>Total Data Points (All Time):</strong> ${studentProgress.length}</div>
+        <div><strong>Data Points This Quarter:</strong> ${quarterProgress.length}</div>
+      </div>
+      ${
+        studentGoals.length > 0
+          ? `
+        <table class="rp-table">
+          <thead><tr><th>Goal</th><th>Area</th><th>Points (Q)</th><th>Latest Value</th></tr></thead>
+          <tbody>${goalBreakdown}</tbody>
+        </table>
+      `
+          : '<div class="rp-empty">No goals found.</div>'
+      }
+    `;
+  }
+
+  /**
+   * TAB 3: Class Performance Overview
+   */
+  function renderTab3() {
+    const container = $("tab3Content");
+    if (!container) return;
+
+    // Render class selector
+    const classOptions = ["All Classes", ...CANON_CLASSES]
+      .map(
+        (cls) =>
+          `<option value="${escapeHtml(cls)}" ${cls === tab3State.classFilter ? "selected" : ""}>${escapeHtml(cls)}</option>`
+      )
+      .join("");
+
+    let html = `
+      <div class="rp-filters">
+        <div class="rp-filter-group">
+          <label for="tab3Class">Class:</label>
+          <select id="tab3Class" class="rp-select">
+            ${classOptions}
+          </select>
+        </div>
+      </div>
+    `;
+
+    // Filter students by class
+    let filteredStudents = studentsData.filter((s) => s.active !== false);
+    if (tab3State.classFilter !== "All Classes") {
+      const classEnrollments = enrollmentsData.filter(
+        (e) => e.class_name === tab3State.classFilter
+      );
+      const enrolledCodes = classEnrollments.map((e) => e.student_code);
+      filteredStudents = filteredStudents.filter((s) => enrolledCodes.includes(s.code));
+    }
+
+    // Get current quarter for data points metric
+    const currentQuarter = getCurrentQuarter();
+    const quarterRange = getQuarterDateRange(currentQuarter);
+
+    // Calculate KPIs
+    const totalStudents = filteredStudents.length;
+
+    // Calculate average grade
+    let totalGradeSum = 0;
+    let totalGradeCount = 0;
+    filteredStudents.forEach((student) => {
+      const studentInstances = instancesData.filter(
+        (inst) => inst.student_code === student.code || inst.student_id === student.code
+      );
+      studentInstances.forEach((inst) => {
+        const submission = submissionsData.find((s) => s.instance_id === inst.id);
+        if (submission?.score_total != null) {
+          totalGradeSum += submission.score_total;
+          totalGradeCount++;
+        }
+      });
+    });
+    const avgGrade = totalGradeCount > 0 ? (totalGradeSum / totalGradeCount).toFixed(1) : "N/A";
+
+    // Calculate completion rate
+    let totalAssigned = 0;
+    let totalSubmitted = 0;
+    filteredStudents.forEach((student) => {
+      const studentInstances = instancesData.filter(
+        (inst) => inst.student_code === student.code || inst.student_id === student.code
+      );
+      totalAssigned += studentInstances.length;
+      totalSubmitted += studentInstances.filter((inst) =>
+        submissionsData.some((s) => s.instance_id === inst.id)
+      ).length;
+    });
+    const completionRate =
+      totalAssigned > 0 ? ((totalSubmitted / totalAssigned) * 100).toFixed(0) : "0";
+
+    // Calculate avg data points per student per goal this quarter
+    let totalDataPoints = 0;
+    let totalGoals = 0;
+    filteredStudents.forEach((student) => {
+      const studentGoals = goalsData.filter((g) => g.student_code === student.code);
+      totalGoals += studentGoals.length;
+      studentGoals.forEach((goal) => {
+        const goalData = getGoalProgressForQuarter(goal.code, student.code, quarterRange);
+        totalDataPoints += goalData.count;
+      });
+    });
+    const avgDataPoints = totalGoals > 0 ? (totalDataPoints / totalGoals).toFixed(1) : "0";
+
+    // KPI cards
+    html += `
+      <div class="rp-kpis">
+        <div class="rp-kpi-card">
+          <div class="rp-kpi-label">Total Students</div>
+          <div class="rp-kpi-value">${totalStudents}</div>
+        </div>
+        <div class="rp-kpi-card">
+          <div class="rp-kpi-label">Average Grade</div>
+          <div class="rp-kpi-value" style="color: ${scoreColor(parseFloat(avgGrade))}">${avgGrade}${avgGrade !== "N/A" ? "%" : ""}</div>
+        </div>
+        <div class="rp-kpi-card">
+          <div class="rp-kpi-label">Completion Rate</div>
+          <div class="rp-kpi-value">${completionRate}%</div>
+        </div>
+        <div class="rp-kpi-card">
+          <div class="rp-kpi-label">Avg Data Points/Goal (Q)</div>
+          <div class="rp-kpi-value">${avgDataPoints}</div>
+        </div>
+      </div>
+    `;
+
+    // Assignment performance table
+    html += renderAssignmentPerformanceTable(tab3State.classFilter);
+
+    // Student performance table
+    html += renderStudentPerformanceTable(filteredStudents, quarterRange);
+
+    // Export actions
+    html += `
+      <div class="rp-export-actions">
+        <button class="tc-btn" id="btnExportClassCSV" type="button">⬇️ Export CSV</button>
+        <button class="tc-btn" id="btnPrintClass" type="button">📄 Print</button>
+      </div>
+    `;
+
+    container.innerHTML = html;
+
+    // Attach event listeners
+    const classSelect = $("tab3Class");
+    if (classSelect) {
+      classSelect.addEventListener("change", (e) => {
+        tab3State.classFilter = e.target.value;
+        renderTab3();
+      });
+    }
+
+    const btnExportCSV = $("btnExportClassCSV");
+    if (btnExportCSV) {
+      btnExportCSV.addEventListener("click", () => exportClassPerformanceCSV());
+    }
+
+    const btnPrint = $("btnPrintClass");
+    if (btnPrint) {
+      btnPrint.addEventListener("click", () => window.print());
+    }
+  }
+
+  /**
+   * Render assignment performance table
+   */
+  function renderAssignmentPerformanceTable(classFilter) {
+    // Filter assignments by class if needed
+    let relevantAssignments = assignmentsData;
+    if (classFilter !== "All Classes") {
+      relevantAssignments = assignmentsData.filter((a) => a.class_id === classFilter);
+    }
+
+    if (relevantAssignments.length === 0) {
+      return '<h3>Assignment Performance</h3><div class="rp-empty">No assignments found.</div>';
+    }
+
+    const assignmentStats = relevantAssignments
+      .map((assignment) => {
+        const instances = instancesData.filter((inst) => inst.assignment_id === assignment.id);
+        const submissions = instances
+          .map((inst) => submissionsData.find((s) => s.instance_id === inst.id))
+          .filter((s) => s);
+
+        const scores = submissions.map((s) => s.score_total).filter((s) => s != null);
+        const avgScore =
+          scores.length > 0 ? scores.reduce((sum, s) => sum + s, 0) / scores.length : null;
+        const completionRate =
+          instances.length > 0 ? ((submissions.length / instances.length) * 100).toFixed(0) : 0;
+        const highest = scores.length > 0 ? Math.max(...scores) : null;
+        const lowest = scores.length > 0 ? Math.min(...scores) : null;
+
+        return {
+          title: assignment.title || `Assignment ${assignment.id}`,
+          avgScore,
+          completionRate,
+          highest,
+          lowest,
+          submitted: submissions.length,
+        };
+      })
+      .slice(0, 20); // Limit to 20 for performance
+
+    const rows = assignmentStats
+      .map(
+        (stat) => `
+      <tr>
+        <td>${escapeHtml(stat.title)}</td>
+        <td style="color: ${scoreColor(stat.avgScore)}">${stat.avgScore != null ? stat.avgScore.toFixed(1) + "%" : "—"}</td>
+        <td>${stat.completionRate}%</td>
+        <td>${stat.highest != null ? stat.highest + "%" : "—"}</td>
+        <td>${stat.lowest != null ? stat.lowest + "%" : "—"}</td>
+        <td>${stat.submitted}</td>
+      </tr>
+    `
+      )
+      .join("");
+
+    return `
+      <h3>Assignment Performance</h3>
+      <div class="rp-table-container">
+        <table class="rp-table rp-sortable">
+          <thead>
+            <tr>
+              <th>Assignment Title</th>
+              <th>Avg Score</th>
+              <th>Completion Rate</th>
+              <th>Highest</th>
+              <th>Lowest</th>
+              <th># Submitted</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  /**
+   * Render student performance table
+   */
+  function renderStudentPerformanceTable(students, quarterRange) {
+    if (students.length === 0) {
+      return '<h3>Student Performance</h3><div class="rp-empty">No students found.</div>';
+    }
+
+    const studentStats = students.map((student) => {
+      const studentInstances = instancesData.filter(
+        (inst) => inst.student_code === student.code || inst.student_id === student.code
+      );
+
+      const submissions = studentInstances
+        .map((inst) => submissionsData.find((s) => s.instance_id === inst.id))
+        .filter((s) => s);
+
+      const scores = submissions.map((s) => s.score_total).filter((s) => s != null);
+      const avgGrade =
+        scores.length > 0 ? scores.reduce((sum, s) => sum + s, 0) / scores.length : null;
+      const complete = submissions.length;
+      const missing = studentInstances.length - submissions.length;
+
+      // Goals on track
+      const studentGoals = goalsData.filter((g) => g.student_code === student.code);
+      const goalsOnTrack = studentGoals.filter((goal) => {
+        const goalData = getGoalProgressForQuarter(goal.code, student.code, quarterRange);
+        return goalData.average != null && goalData.average >= (goal.baseline || 0);
+      }).length;
+
+      return {
+        code: student.code,
+        name: student.name || student.code,
+        avgGrade,
+        complete,
+        missing,
+        goalsOnTrack,
+        totalGoals: studentGoals.length,
+      };
+    });
+
+    const rows = studentStats
+      .map((stat) => {
+        const needsAttention = (stat.avgGrade != null && stat.avgGrade < 60) || stat.missing > 2;
+        const rowClass = needsAttention ? "rp-row-warning" : "";
+
+        return `
+        <tr class="${rowClass}">
+          <td>${escapeHtml(stat.code)}</td>
+          <td>${escapeHtml(stat.name)}</td>
+          <td style="color: ${scoreColor(stat.avgGrade)}">${stat.avgGrade != null ? stat.avgGrade.toFixed(1) + "%" : "—"}</td>
+          <td>${stat.complete}</td>
+          <td>${stat.missing}</td>
+          <td>${stat.goalsOnTrack}/${stat.totalGoals}</td>
+        </tr>
+      `;
+      })
+      .join("");
+
+    return `
+      <h3>Student Performance</h3>
+      <div class="rp-table-container">
+        <table class="rp-table rp-sortable">
+          <thead>
+            <tr>
+              <th>Student Code</th>
+              <th>Name</th>
+              <th>Avg Grade</th>
+              <th>Assignments Complete</th>
+              <th>Missing</th>
+              <th>Goals On Track</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  /**
+   * Export class performance as CSV
+   */
+  function exportClassPerformanceCSV() {
+    // Build CSV content
+    let csv = "Student Code,Name,Avg Grade,Assignments Complete,Missing,Goals On Track\n";
+
+    // Filter students by class
+    let filteredStudents = studentsData.filter((s) => s.active !== false);
+    if (tab3State.classFilter !== "All Classes") {
+      const classEnrollments = enrollmentsData.filter(
+        (e) => e.class_name === tab3State.classFilter
+      );
+      const enrolledCodes = classEnrollments.map((e) => e.student_code);
+      filteredStudents = filteredStudents.filter((s) => enrolledCodes.includes(s.code));
+    }
+
+    const currentQuarter = getCurrentQuarter();
+    const quarterRange = getQuarterDateRange(currentQuarter);
+
+    filteredStudents.forEach((student) => {
+      const studentInstances = instancesData.filter(
+        (inst) => inst.student_code === student.code || inst.student_id === student.code
+      );
+
+      const submissions = studentInstances
+        .map((inst) => submissionsData.find((s) => s.instance_id === inst.id))
+        .filter((s) => s);
+
+      const scores = submissions.map((s) => s.score_total).filter((s) => s != null);
+      const avgGrade =
+        scores.length > 0
+          ? (scores.reduce((sum, s) => sum + s, 0) / scores.length).toFixed(1)
+          : "N/A";
+      const complete = submissions.length;
+      const missing = studentInstances.length - submissions.length;
+
+      const studentGoals = goalsData.filter((g) => g.student_code === student.code);
+      const goalsOnTrack = studentGoals.filter((goal) => {
+        const goalData = getGoalProgressForQuarter(goal.code, student.code, quarterRange);
+        return goalData.average != null && goalData.average >= (goal.baseline || 0);
+      }).length;
+
+      csv += `${student.code},"${student.name || student.code}",${avgGrade},${complete},${missing},${goalsOnTrack}/${studentGoals.length}\n`;
+    });
+
+    // Download CSV
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `class_performance_${tab3State.classFilter.replace(/\s+/g, "_")}_${formatDateYYYYMMDD()}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  /**
+   * TAB 4: Data Collection Compliance Log
+   */
+  function renderTab4() {
+    const container = $("tab4Content");
+    if (!container) return;
+
+    // Render filters
+    const classOptions = ["All Classes", ...CANON_CLASSES]
+      .map(
+        (cls) =>
+          `<option value="${escapeHtml(cls)}" ${cls === tab4State.classFilter ? "selected" : ""}>${escapeHtml(cls)}</option>`
+      )
+      .join("");
+
+    let html = `
+      <div class="rp-filters">
+        <div class="rp-filter-group">
+          <label for="tab4Class">Class:</label>
+          <select id="tab4Class" class="rp-select">
+            ${classOptions}
+          </select>
+        </div>
+        <div class="rp-filter-group">
+          <label for="tab4Quarter">Quarter:</label>
+          <select id="tab4Quarter" class="rp-select">
+            <option value="Q1" ${tab4State.quarter === "Q1" ? "selected" : ""}>${getQuarterLabel("Q1")}</option>
+            <option value="Q2" ${tab4State.quarter === "Q2" ? "selected" : ""}>${getQuarterLabel("Q2")}</option>
+            <option value="Q3" ${tab4State.quarter === "Q3" ? "selected" : ""}>${getQuarterLabel("Q3")}</option>
+            <option value="Q4" ${tab4State.quarter === "Q4" ? "selected" : ""}>${getQuarterLabel("Q4")}</option>
+          </select>
+        </div>
+      </div>
+    `;
+
+    // Filter students by class
+    let filteredStudents = studentsData.filter((s) => s.active !== false);
+    if (tab4State.classFilter !== "All Classes") {
+      const classEnrollments = enrollmentsData.filter(
+        (e) => e.class_name === tab4State.classFilter
+      );
+      const enrolledCodes = classEnrollments.map((e) => e.student_code);
+      filteredStudents = filteredStudents.filter((s) => enrolledCodes.includes(s.code));
+    }
+
+    const quarterRange = getQuarterDateRange(tab4State.quarter);
+
+    // Calculate compliance metrics
+    const allGoals = [];
+    filteredStudents.forEach((student) => {
+      const studentGoals = goalsData.filter(
+        (g) => g.student_code === student.code && g.status === "active"
+      );
+      studentGoals.forEach((goal) => {
+        const goalData = getGoalProgressForQuarter(goal.code, student.code, quarterRange);
+        allGoals.push({
+          studentCode: student.code,
+          studentName: student.name || student.code,
+          goalCode: goal.code,
+          goalArea: goal.goal_area || "N/A",
+          dataPoints: goalData.count,
+          lastCollected: getLastCollectedDate(goal.code, student.code),
+        });
+      });
+    });
+
+    const totalGoals = allGoals.length;
+    const goalsWithAdequateData = allGoals.filter((g) => g.dataPoints >= 3).length;
+    const goalsWithNoData = allGoals.filter((g) => g.dataPoints === 0).length;
+    const compliancePercent =
+      totalGoals > 0 ? ((goalsWithAdequateData / totalGoals) * 100).toFixed(0) : "0";
+
+    // KPI cards
+    html += `
+      <div class="rp-kpis">
+        <div class="rp-kpi-card">
+          <div class="rp-kpi-label">Total Active Goals</div>
+          <div class="rp-kpi-value">${totalGoals}</div>
+        </div>
+        <div class="rp-kpi-card">
+          <div class="rp-kpi-label">Goals with ≥3 Data Points</div>
+          <div class="rp-kpi-value" style="color: rgba(34,197,94,0.8)">${goalsWithAdequateData}</div>
+        </div>
+        <div class="rp-kpi-card">
+          <div class="rp-kpi-label">Goals with No Data</div>
+          <div class="rp-kpi-value" style="color: rgba(239,68,68,0.8)">${goalsWithNoData}</div>
+        </div>
+        <div class="rp-kpi-card">
+          <div class="rp-kpi-label">Compliance %</div>
+          <div class="rp-kpi-value">${compliancePercent}%</div>
+        </div>
+      </div>
+    `;
+
+    // Compliance table
+    // Sort by data points ascending (least data collection first) to highlight gaps
+    const complianceRows = allGoals
+      .sort((a, b) => a.dataPoints - b.dataPoints)
+      .map((goal) => {
+        let status, statusClass;
+        if (goal.dataPoints >= 3) {
+          status = "✅ On Track";
+          statusClass = "rp-status-good";
+        } else if (goal.dataPoints > 0) {
+          status = "⚠️ Needs Data";
+          statusClass = "rp-status-warning";
+        } else {
+          status = "❌ No Data";
+          statusClass = "rp-status-critical";
+        }
+
+        return `
+          <tr class="${statusClass}">
+            <td>${escapeHtml(goal.studentCode)}</td>
+            <td>${escapeHtml(goal.studentName)}</td>
+            <td>${escapeHtml(goal.goalCode)}</td>
+            <td>${escapeHtml(goal.goalArea)}</td>
+            <td>${goal.dataPoints}</td>
+            <td>${escapeHtml(goal.lastCollected)}</td>
+            <td>${status}</td>
+          </tr>
+        `;
+      })
+      .join("");
+
+    html += `
+      <h3>Compliance Table</h3>
+      <div class="rp-table-container">
+        <table class="rp-table">
+          <thead>
+            <tr>
+              <th>Student Code</th>
+              <th>Student Name</th>
+              <th>Goal Code</th>
+              <th>Goal Area</th>
+              <th>Data Points (Q)</th>
+              <th>Last Collected</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>${complianceRows}</tbody>
+        </table>
+      </div>
+    `;
+
+    // Gaps list
+    const gaps = allGoals.filter((g) => g.dataPoints === 0);
+    if (gaps.length > 0) {
+      html += `
+        <div class="rp-gaps-section">
+          <h3>⚠️ ${gaps.length} goal${gaps.length !== 1 ? "s" : ""} need data collection:</h3>
+          <ul>
+            ${gaps.map((g) => `<li><strong>${escapeHtml(g.studentCode)}</strong> (${escapeHtml(g.studentName)}) — <strong>${escapeHtml(g.goalCode)}:</strong> ${escapeHtml(g.goalArea)} — last collected: ${escapeHtml(g.lastCollected)}</li>`).join("")}
+          </ul>
+        </div>
+      `;
+    }
+
+    // Grade completion gaps
+    html += renderGradeCompletionGaps(filteredStudents);
+
+    // Export actions
+    html += `
+      <div class="rp-export-actions">
+        <button class="tc-btn" id="btnExportComplianceCSV" type="button">⬇️ Export CSV</button>
+        <button class="tc-btn" id="btnPrintCompliance" type="button">📄 Print</button>
+      </div>
+    `;
+
+    container.innerHTML = html;
+
+    // Attach event listeners
+    const classSelect = $("tab4Class");
+    const quarterSelect = $("tab4Quarter");
+    if (classSelect) {
+      classSelect.addEventListener("change", (e) => {
+        tab4State.classFilter = e.target.value;
+        renderTab4();
+      });
+    }
+    if (quarterSelect) {
+      quarterSelect.addEventListener("change", (e) => {
+        tab4State.quarter = e.target.value;
+        renderTab4();
+      });
+    }
+
+    const btnExportCSV = $("btnExportComplianceCSV");
+    if (btnExportCSV) {
+      btnExportCSV.addEventListener("click", () => exportComplianceCSV());
+    }
+
+    const btnPrint = $("btnPrintCompliance");
+    if (btnPrint) {
+      btnPrint.addEventListener("click", () => window.print());
+    }
+  }
+
+  /**
+   * Get last collected date for a goal
+   */
+  function getLastCollectedDate(goalCode, studentCode) {
+    const goalProgress = progressData
+      .filter((p) => p.goal_code === goalCode && p.student_code === studentCode)
+      .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    if (goalProgress.length === 0) return "never";
+    return formatDate(goalProgress[0].date);
+  }
+
+  /**
+   * Render grade completion gaps
+   */
+  function renderGradeCompletionGaps(students) {
+    const gaps = [];
+
+    students.forEach((student) => {
+      const studentInstances = instancesData.filter(
+        (inst) =>
+          (inst.student_code === student.code || inst.student_id === student.code) &&
+          inst.status !== "Graded"
+      );
+
+      studentInstances.forEach((inst) => {
+        const submission = submissionsData.find((s) => s.instance_id === inst.id);
+        if (!submission) {
+          const assignment = assignmentsData.find((a) => a.id === inst.assignment_id);
+          gaps.push({
+            studentCode: student.code,
+            assignmentTitle: assignment?.title || `Assignment ${inst.assignment_id}`,
+            assignedDate: formatDate(inst.assigned_at),
+            dueDate: formatDate(inst.due_at),
+            status: "Missing",
+          });
+        }
+      });
+    });
+
+    if (gaps.length === 0) {
+      return '<h3>Grade Completion Gaps</h3><div class="rp-empty">No missing assignments found.</div>';
+    }
+
+    const rows = gaps
+      .slice(0, 20)
+      .map(
+        (gap) => `
+      <tr>
+        <td>${escapeHtml(gap.studentCode)}</td>
+        <td>${escapeHtml(gap.assignmentTitle)}</td>
+        <td>${escapeHtml(gap.assignedDate)}</td>
+        <td>${escapeHtml(gap.dueDate)}</td>
+        <td class="rp-status-critical">${escapeHtml(gap.status)}</td>
+      </tr>
+    `
+      )
+      .join("");
+
+    return `
+      <h3>Grade Completion Gaps</h3>
+      <div class="rp-table-container">
+        <table class="rp-table">
+          <thead>
+            <tr>
+              <th>Student Code</th>
+              <th>Assignment</th>
+              <th>Assigned Date</th>
+              <th>Due Date</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  /**
+   * Export compliance data as CSV
+   */
+  function exportComplianceCSV() {
+    let csv =
+      "Student Code,Student Name,Goal Code,Goal Area,Data Points (Q),Last Collected,Status\n";
+
+    // Filter students by class
+    let filteredStudents = studentsData.filter((s) => s.active !== false);
+    if (tab4State.classFilter !== "All Classes") {
+      const classEnrollments = enrollmentsData.filter(
+        (e) => e.class_name === tab4State.classFilter
+      );
+      const enrolledCodes = classEnrollments.map((e) => e.student_code);
+      filteredStudents = filteredStudents.filter((s) => enrolledCodes.includes(s.code));
+    }
+
+    const quarterRange = getQuarterDateRange(tab4State.quarter);
+
+    filteredStudents.forEach((student) => {
+      const studentGoals = goalsData.filter(
+        (g) => g.student_code === student.code && g.status === "active"
+      );
+      studentGoals.forEach((goal) => {
+        const goalData = getGoalProgressForQuarter(goal.code, student.code, quarterRange);
+        const lastCollected = getLastCollectedDate(goal.code, student.code);
+        let status;
+        if (goalData.count >= 3) {
+          status = "On Track";
+        } else if (goalData.count > 0) {
+          status = "Needs Data";
+        } else {
+          status = "No Data";
+        }
+
+        csv += `${student.code},"${student.name || student.code}",${goal.code},"${goal.goal_area || "N/A"}",${goalData.count},${lastCollected},${status}\n`;
+      });
+    });
+
+    // Download CSV
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `compliance_log_${tab4State.quarter}_${formatDateYYYYMMDD()}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  /**
+   * Initialize the reporting module
+   */
+  async function init() {
+    console.log("[tc-reporting] Initializing...");
+
+    // Check if Supabase is configured
+    const supabase = getSupabase();
+    if (!supabase) {
+      const mainContent = document.querySelector(".tc-main");
+      if (mainContent) {
+        mainContent.innerHTML =
+          '<div class="rp-error">Reporting requires Supabase. Please configure your database connection in Settings.</div>';
+      }
+      return;
+    }
+
+    // Setup tab switching
+    document.querySelectorAll(".rp-tab").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        const tabId = e.currentTarget.dataset.tab;
+        switchTab(tabId);
+      });
+    });
+
+    // Load progress data for all quarters (not just current)
+    // Users can switch quarters in Tab 1 and Tab 4 dropdowns
+    try {
+      progressData = await db.listGoalProgress({
+        // Load all progress data without date filtering
+        // Filter by quarter date ranges will happen in report rendering
+      });
+      console.log("[tc-reporting] Loaded", progressData.length, "progress entries (all quarters)");
+    } catch (err) {
+      console.warn("[tc-reporting] Error loading progress data:", err);
+      progressData = [];
+    }
+
+    // Load all data
+    await loadData();
+
+    console.log("[tc-reporting] Initialization complete");
+  }
+
+  // Initialize when DOM is ready
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
 })();
