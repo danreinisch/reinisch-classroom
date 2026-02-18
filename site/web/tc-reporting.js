@@ -62,6 +62,7 @@
   let tab2State = { studentCode: null };
   let tab3State = { classFilter: "All Classes" };
   let tab4State = { classFilter: "All Classes", quarter: getCurrentQuarter() };
+  let tab5State = { quarter: getCurrentQuarter() };
 
   /**
    * Get current quarter based on today's date
@@ -71,11 +72,18 @@
     const month = now.getMonth() + 1;
     const day = now.getDate();
 
-    if ((month === 8 && day >= 14) || month === 9 || (month === 10 && day <= 10)) return "Q1";
-    if ((month === 10 && day >= 13) || month === 11 || (month === 12 && day <= 19)) return "Q2";
-    if ((month === 12 && day >= 20) || month === 1 || month === 2 || (month === 3 && day <= 13))
+    // Q1: August 16 - October 17
+    if ((month === 8 && day >= 16) || month === 9 || (month === 10 && day <= 17)) return "Q1";
+
+    // Q2: October 18 - December 19
+    if ((month === 10 && day >= 18) || month === 11 || (month === 12 && day <= 19)) return "Q2";
+
+    // Q3: December 20 - March 6 (spans year boundary)
+    if ((month === 12 && day >= 20) || month === 1 || month === 2 || (month === 3 && day <= 6))
       return "Q3";
-    if ((month === 3 && day >= 16) || month === 4 || (month === 5 && day <= 21)) return "Q4";
+
+    // Q4: March 7 - May 20
+    if ((month === 3 && day >= 7) || month === 4 || (month === 5 && day <= 20)) return "Q4";
 
     // Summer fallback
     return "Q4";
@@ -91,10 +99,10 @@
     const schoolYear = month >= 8 ? year : year - 1;
 
     const ranges = {
-      Q1: { start: `${schoolYear}-08-14`, end: `${schoolYear}-10-10` },
-      Q2: { start: `${schoolYear}-10-13`, end: `${schoolYear}-12-19` },
-      Q3: { start: `${schoolYear}-12-20`, end: `${schoolYear + 1}-03-13` },
-      Q4: { start: `${schoolYear + 1}-03-16`, end: `${schoolYear + 1}-05-21` },
+      Q1: { start: `${schoolYear}-08-16`, end: `${schoolYear}-10-17` },
+      Q2: { start: `${schoolYear}-10-18`, end: `${schoolYear}-12-19` },
+      Q3: { start: `${schoolYear}-12-20`, end: `${schoolYear + 1}-03-06` },
+      Q4: { start: `${schoolYear + 1}-03-07`, end: `${schoolYear + 1}-05-20` },
     };
 
     return ranges[quarter] || { start: null, end: null };
@@ -105,10 +113,10 @@
    */
   function getQuarterLabel(quarter) {
     const labels = {
-      Q1: "Q1 (Aug 14-Oct 10)",
-      Q2: "Q2 (Oct 13-Dec 19)",
-      Q3: "Q3 (Dec 20-Mar 13)",
-      Q4: "Q4 (Mar 16-May 21)",
+      Q1: "Q1 (Aug 16-Oct 17)",
+      Q2: "Q2 (Oct 18-Dec 19)",
+      Q3: "Q3 (Dec 20-Mar 6)",
+      Q4: "Q4 (Mar 7-May 20)",
     };
     return labels[quarter] || quarter;
   }
@@ -259,6 +267,9 @@
         break;
       case "compliance-log":
         renderTab4();
+        break;
+      case "batch-reports":
+        renderTab5();
         break;
     }
   }
@@ -1769,6 +1780,299 @@
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  }
+
+  /**
+   * TAB 5: Batch Reports - Generate Quarterly Progress Reports for All Students
+   */
+  function renderTab5() {
+    // Set quarter selector to current quarter
+    const quarterSelect = $("batchQuarterSelect");
+    if (quarterSelect && !quarterSelect.value) {
+      quarterSelect.value = tab5State.quarter;
+    }
+
+    // Setup event listeners if not already done
+    const generateBtn = $("generateBatchReportsBtn");
+    if (generateBtn && !generateBtn.dataset.listenerAttached) {
+      generateBtn.addEventListener("click", generateBatchReports);
+      generateBtn.dataset.listenerAttached = "true";
+    }
+
+    if (quarterSelect && !quarterSelect.dataset.listenerAttached) {
+      quarterSelect.addEventListener("change", (e) => {
+        tab5State.quarter = e.target.value;
+      });
+      quarterSelect.dataset.listenerAttached = "true";
+    }
+  }
+
+  /**
+   * Generate batch quarterly progress reports for all students
+   */
+  function generateBatchReports() {
+    const quarter = tab5State.quarter;
+    const quarterRange = getQuarterDateRange(quarter);
+    const quarterLabel = getQuarterLabel(quarter);
+
+    // Get school year
+    const now = new Date();
+    const month = now.getMonth() + 1;
+    const schoolYear = month >= 8 ? now.getFullYear() : now.getFullYear() - 1;
+    const schoolYearLabel = `${schoolYear} - ${schoolYear + 1}`;
+
+    // Get all active students
+    const activeStudents = studentsData.filter((s) => s.active !== false);
+
+    if (activeStudents.length === 0) {
+      alert("No active students found.");
+      return;
+    }
+
+    // Generate HTML for all students
+    let allStudentReportsHTML = "";
+
+    activeStudents.forEach((student, index) => {
+      // Get student's goals
+      const studentGoals = goalsData.filter(
+        (g) => g.student_code === student.code && g.status === "active"
+      );
+
+      if (studentGoals.length === 0) {
+        // Skip students with no goals
+        return;
+      }
+
+      // Get student's grade from enrollments
+      const enrollment = enrollmentsData.find((e) => e.student_code === student.code);
+      const grade = enrollment?.class_name || "N/A";
+
+      // Start student section with page break (except for first student)
+      const pageBreakStyle = index > 0 ? "page-break-before: always;" : "";
+      allStudentReportsHTML += `
+        <div class="student-section" style="${pageBreakStyle}">
+          <div style="font-size: 18px; font-weight: bold; margin-bottom: 8px; display: flex; justify-content: space-between;">
+            <span>Student Name: ${escapeHtml(student.name || student.code)}</span>
+            <span>Grade: ${escapeHtml(grade)}</span>
+          </div>
+          <div style="font-size: 18px; font-weight: bold; margin-bottom: 20px;">
+            Progress for ${escapeHtml(quarter)} Quarter of their ${escapeHtml(schoolYearLabel)} School Year
+          </div>
+      `;
+
+      // Generate report for each goal
+      studentGoals.forEach((goal) => {
+        const goalProgress = getGoalProgressForQuarter(goal.code, student.code, quarterRange);
+        const dataPoints = getGoalDataPoints(goal.code, student.code, quarterRange);
+
+        // Calculate min, max for narrative
+        const values = dataPoints.map((dp) => parseFloat(dp.value) || 0);
+        const minValue = values.length > 0 ? Math.min(...values) : 0;
+        const maxValue = values.length > 0 ? Math.max(...values) : 0;
+
+        // Generate narrative
+        const narrative = generateProgressNarrative(
+          student.name || student.code,
+          goal,
+          quarter,
+          goalProgress.average,
+          minValue,
+          maxValue
+        );
+
+        allStudentReportsHTML += `
+          <div style="border-bottom: 2px solid #000; margin: 20px 0; padding-bottom: 20px;">
+            <div style="margin-bottom: 12px;">
+              <strong>Goal Code:</strong> ${escapeHtml(goal.code)}
+            </div>
+            
+            <div style="margin-bottom: 12px;">
+              <strong>Goal Area:</strong> ${escapeHtml(goal.goal_area || "N/A")}
+            </div>
+            
+            <div style="margin-bottom: 12px;">
+              <strong>Goal Description:</strong><br/>
+              ${escapeHtml(goal.desc || "N/A")}
+            </div>
+            
+            <div style="margin-bottom: 12px;">
+              <strong>Baseline:</strong> ${escapeHtml(goal.baseline || "N/A")}% &nbsp;&nbsp;&nbsp;&nbsp;
+              <strong>Target/Mastery:</strong> ${escapeHtml(goal.target || "N/A")}%
+            </div>
+            
+            <div style="margin-bottom: 12px;">
+              <strong>Average of progress for the quarter:</strong> ${goalProgress.average}%<br/>
+              (Based on ${goalProgress.count} data point${goalProgress.count !== 1 ? "s" : ""} collected)
+            </div>
+            
+            <div style="margin-bottom: 12px;">
+              <strong>Snapshot of data collected:</strong><br/>
+              ${generateDataPointsList(dataPoints)}
+            </div>
+            
+            <div style="margin-bottom: 12px;">
+              <strong>Description of progress supporting selected summary statement:</strong><br/>
+              ${escapeHtml(narrative)}
+            </div>
+          </div>
+        `;
+      });
+
+      allStudentReportsHTML += `</div>`; // Close student section
+    });
+
+    // Open print window
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      alert("Please allow popups to generate reports");
+      return;
+    }
+
+    const generatedDate = new Date().toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Quarterly Progress Reports - ${quarterLabel}</title>
+        <style>
+          body { 
+            font-family: 'Calibri', Arial, sans-serif; 
+            margin: 40px; 
+            color: #000; 
+            background: #fff; 
+            font-size: 14px;
+            line-height: 1.5;
+          }
+          .print-header {
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #000;
+          }
+          .print-header h1 {
+            margin: 0 0 10px 0;
+            font-size: 24px;
+          }
+          .print-btn {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            padding: 10px 20px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+          }
+          .print-btn:hover {
+            background: #2563eb;
+          }
+          .student-section {
+            margin-bottom: 40px;
+          }
+          @media print {
+            .print-btn {
+              display: none;
+            }
+            .student-section {
+              page-break-inside: avoid;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <button class="print-btn" onclick="window.print()">🖨️ Print / Save as PDF</button>
+        
+        <div class="print-header">
+          <h1>Quarterly Progress Reports</h1>
+          <div><strong>Quarter:</strong> ${quarterLabel}</div>
+          <div><strong>School Year:</strong> ${schoolYearLabel}</div>
+          <div><strong>Generated:</strong> ${generatedDate}</div>
+        </div>
+
+        ${allStudentReportsHTML}
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+  }
+
+  /**
+   * Get goal data points for a quarter
+   */
+  function getGoalDataPoints(goalCode, studentCode, quarterRange) {
+    const startDate = new Date(quarterRange.start);
+    const endDate = new Date(quarterRange.end);
+
+    const dataPoints = progressData.filter((p) => {
+      if (p.goal_code !== goalCode) return false;
+      if (p.student_code !== studentCode) return false;
+      const pDate = new Date(p.date);
+      return pDate >= startDate && pDate <= endDate;
+    });
+
+    // Sort by date
+    dataPoints.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    return dataPoints;
+  }
+
+  /**
+   * Generate formatted list of data points
+   */
+  function generateDataPointsList(dataPoints) {
+    if (dataPoints.length === 0) {
+      return "No data collected for this quarter.";
+    }
+
+    return dataPoints
+      .map((dp, index) => {
+        const date = formatDate(dp.date);
+        const value = parseFloat(dp.value) || 0;
+        const source = dp.source || "Manual entry";
+        return `${index + 1}. ${date} — ${value}% (${source})`;
+      })
+      .join("<br/>\n    ");
+  }
+
+  /**
+   * Generate progress narrative
+   */
+  function generateProgressNarrative(studentName, goal, quarter, avgValue, minValue, maxValue) {
+    const firstName = studentName.split(" ")[0];
+
+    // Restate goal in past tense - simple heuristic
+    // Note: This is a basic conversion that removes modal verbs but doesn't add proper past tense
+    // Teachers can manually edit the narrative as needed in the generated report
+    let goalPastTense = goal.desc || "";
+    if (goalPastTense) {
+      goalPastTense = goalPastTense
+        .replace(/will be able to/gi, "")
+        .replace(/will /gi, "")
+        .replace(/can /gi, "")
+        .trim();
+    }
+
+    // Handle empty goal descriptions
+    if (!goalPastTense) {
+      goalPastTense = "work on their IEP goal";
+    }
+
+    const narrative = `${firstName} was able to ${goalPastTense}. During the ${quarter} quarter, ${firstName}'s scores ranged from ${minValue}% to ${maxValue}%, with an average of ${avgValue}%.`;
+
+    return narrative;
   }
 
   /**

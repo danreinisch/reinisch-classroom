@@ -615,6 +615,9 @@
               <button class="rp-tab" data-tab="compliance-log" type="button">
                 📅 Compliance Log
               </button>
+              <button class="rp-tab" data-tab="batch-reports" type="button">
+                📋 Batch Reports
+              </button>
             </div>
 
             <!-- Tab 1: IEP Quarterly Progress Report -->
@@ -642,6 +645,43 @@
             <div class="rp-tab-content" data-tab="compliance-log">
               <div id="tab4Content">
                 <div class="rp-empty">Loading...</div>
+              </div>
+            </div>
+
+            <!-- Tab 5: Batch Reports -->
+            <div class="rp-tab-content" data-tab="batch-reports">
+              <div class="tc-card">
+                <h2 style="margin: 0 0 16px 0">📋 Generate Quarterly Progress Reports</h2>
+                <p style="opacity: 0.8; margin-bottom: 20px">
+                  Generate printable quarterly progress reports for all active students on your caseload.
+                  Reports include goal descriptions, baselines, targets, progress data, and narrative summaries.
+                </p>
+
+                <div class="rp-filters">
+                  <div class="rp-filter-group">
+                    <label for="batchQuarterSelect">Quarter</label>
+                    <select id="batchQuarterSelect" class="rp-select">
+                      <option value="Q1">Q1 (Aug 16-Oct 17)</option>
+                      <option value="Q2">Q2 (Oct 18-Dec 19)</option>
+                      <option value="Q3">Q3 (Dec 20-Mar 6)</option>
+                      <option value="Q4">Q4 (Mar 7-May 20)</option>
+                    </select>
+                  </div>
+
+                  <div style="display: flex; align-items: flex-end;">
+                    <button id="generateBatchReportsBtn" class="tc-btn" type="button">
+                      🖨️ Generate All Quarterly Reports
+                    </button>
+                  </div>
+                </div>
+
+                <div style="margin-top: 20px; padding: 16px; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 8px;">
+                  <p style="margin: 0; font-size: 13px; opacity: 0.9">
+                    <strong>Note:</strong> This will generate a report for all active students with goals.
+                    The report will open in a new window and can be printed or saved as PDF.
+                    Each student's section will start on a new page for easy printing.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
