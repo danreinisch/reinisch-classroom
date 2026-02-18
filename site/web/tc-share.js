@@ -22,7 +22,11 @@
   function generateToken() {
     const arr = new Uint8Array(24);
     crypto.getRandomValues(arr);
-    return Array.from(arr, b => b.toString(36).padStart(2, '0')).join('').slice(0, 32);
+    return btoa(String.fromCharCode(...arr))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=/g, '')
+      .slice(0, 32);
   }
 
   // Helper to format date
@@ -251,11 +255,11 @@
         <td><span class="share-status ${statusClass}">${status}</span></td>
         <td style="text-align: center;">${token.entries.length}</td>
         <td>
-          <button class="share-btn" onclick="window.tcShare.copyLink('${escapeHtml(token.token)}')" ${isRevoked ? 'disabled' : ''}>
+          <button class="share-btn" data-token="${escapeHtml(token.token)}" ${isRevoked ? 'disabled' : ''}>
             📋 Copy
           </button>
           ${!isRevoked && !isExpired ? `
-            <button class="share-btn" onclick="window.tcShare.revokeToken(${index})" style="margin-left: 4px;">
+            <button class="share-btn" data-token-id="${escapeHtml(token.id)}" style="margin-left: 4px;">
               🚫 Revoke
             </button>
           ` : ''}
@@ -290,32 +294,42 @@
         tbody.appendChild(auditRow);
       }
     });
+    
+    // Add event listeners to buttons
+    tbody.querySelectorAll('button[data-token]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const token = btn.dataset.token;
+        const shareUrl = `${window.location.origin}/share/?token=${token}`;
+        navigator.clipboard.writeText(shareUrl).then(() => {
+          showToast('📋 Link copied to clipboard!');
+        }).catch(err => {
+          console.error('Failed to copy:', err);
+          alert('Failed to copy link to clipboard');
+        });
+      });
+    });
+    
+    tbody.querySelectorAll('button[data-token-id]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tokenId = btn.dataset.tokenId;
+        if (!confirm('Are you sure you want to revoke this share link? It will no longer accept data entries.')) {
+          return;
+        }
+        
+        const tokens = loadShareTokens();
+        const tokenIndex = tokens.findIndex(t => t.id === tokenId);
+        if (tokenIndex >= 0) {
+          tokens[tokenIndex].revoked = true;
+          saveShareTokens(tokens);
+          renderShareLinksTable();
+          showToast('🚫 Share link revoked');
+        }
+      });
+    });
   }
 
-  // Global functions for onclick handlers
+  // Global functions for onclick handlers (kept for audit trail toggle)
   window.tcShare = {
-    copyLink: (token) => {
-      const shareUrl = `${window.location.origin}/share/?token=${token}`;
-      navigator.clipboard.writeText(shareUrl).then(() => {
-        showToast('📋 Link copied to clipboard!');
-      }).catch(err => {
-        console.error('Failed to copy:', err);
-        alert('Failed to copy link to clipboard');
-      });
-    },
-    
-    revokeToken: (index) => {
-      if (!confirm('Are you sure you want to revoke this share link? It will no longer accept data entries.')) {
-        return;
-      }
-      
-      const tokens = loadShareTokens();
-      tokens[index].revoked = true;
-      saveShareTokens(tokens);
-      renderShareLinksTable();
-      showToast('🚫 Share link revoked');
-    },
-    
     toggleAudit: (el) => {
       const content = el.nextElementSibling;
       content.classList.toggle('show');

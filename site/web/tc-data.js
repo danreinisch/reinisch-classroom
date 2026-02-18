@@ -1525,7 +1525,7 @@
       const goal = goalMap.get(`${p.student_code}_${p.goal_code}`);
       const issueKey = `${p.student_code}_${p.goal_code}_${p.date}`;
       
-      // Progress > Mastery (using target field based on memory)
+      // Progress > Mastery (using goal.target field which represents mastery threshold percentage)
       if (goal && goal.target && p.percent > goal.target) {
         const key = `exceeds_mastery_${issueKey}`;
         if (!dismissed.has(key)) {
