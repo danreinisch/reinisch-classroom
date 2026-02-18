@@ -673,7 +673,7 @@
           events.push({
             type: 'submission',
             date: new Date(sub.submitted_at),
-            text: `${student?.code || sub.student_code} submitted ${assignment?.title || 'Assignment'}`,
+            text: `${student?.name || sub.student_code} submitted ${assignment?.title || 'Assignment'}`,
             icon: '📝'
           });
         }
@@ -686,7 +686,7 @@
           events.push({
             type: 'progress',
             date: new Date(p.date),
-            text: `Progress recorded for ${student?.code || p.student_code} Goal ${p.goal_code}`,
+            text: `Progress recorded for ${student?.name || p.student_code} Goal ${p.goal_code}`,
             icon: '📈'
           });
         }

@@ -1521,12 +1521,29 @@
     const testInput = $("weightTest");
     const projectInput = $("weightProject");
 
-    const weights = {
-      assignment: parseFloat(assignmentInput?.value || 1.0),
-      quiz: parseFloat(quizInput?.value || 1.5),
-      test: parseFloat(testInput?.value || 2.0),
-      project: parseFloat(projectInput?.value || 2.0)
+    const MIN_WEIGHT = 0.1;
+    const MAX_WEIGHT = 10.0;
+
+    const parseAndValidateWeight = (input, defaultValue) => {
+      const value = parseFloat(input?.value || defaultValue);
+      if (isNaN(value) || value < MIN_WEIGHT || value > MAX_WEIGHT) {
+        return null;
+      }
+      return value;
     };
+
+    const weights = {
+      assignment: parseAndValidateWeight(assignmentInput, 1.0),
+      quiz: parseAndValidateWeight(quizInput, 1.5),
+      test: parseAndValidateWeight(testInput, 2.0),
+      project: parseAndValidateWeight(projectInput, 2.0)
+    };
+
+    // Check if any weight is invalid
+    if (Object.values(weights).some(w => w === null)) {
+      alert(`Please enter valid weights between ${MIN_WEIGHT} and ${MAX_WEIGHT}`);
+      return;
+    }
 
     saveCategoryWeights(weights);
     hideWeightsModal();
