@@ -5,32 +5,55 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Assignment Hub – Language Arts</title>
   <meta name="section" content="Language Arts" />
-  <script>
-    (function(){
-      var root = location.pathname.indexOf('/site/') >= 0
-        ? location.pathname.slice(0, location.pathname.indexOf('/site/') + 6)
-        : '/';
-      function addCSS(href){ var l=document.createElement('link'); l.rel='stylesheet'; l.href=href; document.head.appendChild(l); }
-      function addJS(src){ var s=document.createElement('script'); s.defer=true; s.src=src; document.head.appendChild(s); }
-      addCSS(root + 'assets/css/rc-theme.css');
-      addCSS(root + 'assets/css/site.css');
-      addJS(root + 'assets/js/site.js');
-    })();
-  </script>
+  
+  <!-- RC Theme Design System -->
+  <link rel="stylesheet" href="/assets/css/rc-theme.css" />
+  <link rel="stylesheet" href="/assets/css/app-shell.css" />
+  
   <style>
     .assignments { max-width: 900px; margin: 0 auto; padding: 1rem; }
-    .card { border: 1px solid rgba(255,255,255,0.10); border-radius:.5rem; padding:1rem; margin:.75rem 0; background: rgba(255,255,255,0.03); }
-    .meta { color:#555; font-size:.9rem; margin-bottom:.5rem; }
-    form { display:grid; gap:.5rem; margin-top:.5rem; }
-    input[type=text], textarea { width:100%; padding:.5rem; border:1px solid #cbd5e1; border-radius:.375rem; }
-    button { padding:.5rem .9rem; border:1px solid #1a73e8; background:#1a73e8; color:#fff; border-radius:.375rem; }
-    .ok { color:#0a7f2d; font-weight:600; }
-    .err { color:#b00020; font-weight:600; }
+    .card { 
+      background: var(--rc-glass);
+      border: 1px solid var(--rc-glass-border);
+      border-radius: var(--rc-radius);
+      padding: 1rem;
+      margin: 0.75rem 0;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+    .meta { color: var(--rc-muted); font-size: 0.9rem; margin-bottom: 0.5rem; }
+    form { display: grid; gap: 0.5rem; margin-top: 0.5rem; }
+    input[type=text], textarea { 
+      width: 100%;
+      padding: 0.5rem;
+      border: 1px solid var(--rc-border);
+      border-radius: var(--rc-radius-sm);
+      background: var(--rc-glass);
+      color: var(--rc-ink);
+      font-family: var(--rc-font);
+    }
+    button { 
+      padding: 0.5rem 0.9rem;
+      border: 1px solid var(--rc-brand);
+      background: var(--rc-brand);
+      color: var(--rc-ink);
+      border-radius: var(--rc-radius-sm);
+      cursor: pointer;
+      font-family: var(--rc-font);
+      font-weight: 500;
+    }
+    button:hover {
+      opacity: 0.9;
+    }
+    .ok { color: var(--rc-success); font-weight: 600; }
+    .err { color: var(--rc-danger); font-weight: 600; }
   </style>
+  
+  <script defer src="/assets/js/app-shell.js"></script>
 </head>
 <body>
   <main class="assignments">
-    <h1>Assignment Hub</h1>
+    <h1 class="rc-heading">Assignment Hub</h1>
     <div id="list">Loading assignments…</div>
   </main>
 
