@@ -5,6 +5,82 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Teacher Center — Overview</title>
   <link rel="stylesheet" href="/web/teacher-shell.css" />
+  <style>
+    .tc-kpis {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+    @media (max-width: 1100px) {
+      .tc-kpis {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+    @media (max-width: 640px) {
+      .tc-kpis {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .tc-card {
+      border-radius: 14px;
+      padding: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(0, 0, 0, 0.18);
+      backdrop-filter: blur(10px);
+    }
+    .tc-kpi-label {
+      font-size: 12px;
+      opacity: 0.8;
+    }
+    .tc-kpi-value {
+      font-size: 28px;
+      font-weight: 900;
+      line-height: 1.1;
+      margin-top: 6px;
+    }
+    .tc-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: rgba(255, 255, 255, 0.06);
+    }
+    .tc-quick-links {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 12px;
+    }
+    .tc-quick-link {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      padding: 20px;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(0, 0, 0, 0.18);
+      backdrop-filter: blur(10px);
+      text-decoration: none;
+      color: inherit;
+      transition: all 0.2s ease;
+    }
+    .tc-quick-link:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-2px);
+    }
+    .tc-ql-icon {
+      font-size: 32px;
+    }
+    .tc-ql-label {
+      font-size: 14px;
+      font-weight: 600;
+    }
+  </style>
 </head>
 <body>
   <div class="tc-app">
@@ -23,7 +99,7 @@
           <a data-href="/teacher/review/" href="/teacher/review/"><span class="tc-icon">✍️</span><span class="tc-label">Review</span></a>
           <a data-href="/teacher/gradebook/" href="/teacher/gradebook/"><span class="tc-icon">📊</span><span class="tc-label">Gradebook</span></a>
           <a data-href="/teacher/students/" href="/teacher/students/"><span class="tc-icon">🧑‍🎓</span><span class="tc-label">Students</span></a>
-          <a data-href="/teacher/classes/" href="/teacher/classes/"><span class="tc-icon">🏫</span><span class="tc-label">Classes</span></a>
+
           <a data-href="/teacher/data/" href="/teacher/data/"><span class="tc-icon">🧾</span><span class="tc-label">Data</span></a>
           <a data-href="/teacher/archive/" href="/teacher/archive/"><span class="tc-icon">📦</span><span class="tc-label">Archive</span></a>
           <a data-href="/teacher/admin/" href="/teacher/admin/"><span class="tc-icon">🛡️</span><span class="tc-label">Admin</span></a>
@@ -33,12 +109,69 @@
       </aside>
 
       <main class="tc-main">
-        <h1>Overview</h1>
-        <p>Welcome to Teacher Center. Use the sidebar to navigate between modules.</p>
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+          <h1 style="margin: 0;">Overview</h1>
+          <span class="tc-pill" id="ovSyncStatus" style="display: none;">
+            <span id="ovSyncIcon">🟡</span>
+            <span id="ovSyncText">Local mode</span>
+          </span>
+        </div>
+
+        <!-- KPI Cards -->
+        <div class="tc-kpis" id="ovKpis">
+          <div class="tc-card">
+            <div class="tc-kpi-label">Total Students</div>
+            <div class="tc-kpi-value" id="kpiStudents">—</div>
+          </div>
+          <div class="tc-card">
+            <div class="tc-kpi-label">Needs Review</div>
+            <div class="tc-kpi-value" id="kpiReview">—</div>
+          </div>
+          <div class="tc-card">
+            <div class="tc-kpi-label">Current Quarter</div>
+            <div class="tc-kpi-value" id="kpiQuarter">—</div>
+          </div>
+          <div class="tc-card">
+            <div class="tc-kpi-label">Active Goals</div>
+            <div class="tc-kpi-value" id="kpiGoals">—</div>
+          </div>
+        </div>
+
+        <!-- Quick Links -->
+        <div style="margin-top: 20px;">
+          <h2 style="font-size: 20px; margin-bottom: 12px;">Quick Access</h2>
+          <div class="tc-quick-links" id="ovQuickLinks">
+            <a href="/teacher/work/" class="tc-quick-link">
+              <span class="tc-ql-icon">🗂️</span>
+              <span class="tc-ql-label">Work</span>
+            </a>
+            <a href="/teacher/gradebook/" class="tc-quick-link">
+              <span class="tc-ql-icon">📊</span>
+              <span class="tc-ql-label">Gradebook</span>
+            </a>
+            <a href="/teacher/review/" class="tc-quick-link">
+              <span class="tc-ql-icon">✍️</span>
+              <span class="tc-ql-label">Review</span>
+            </a>
+            <a href="/teacher/students/" class="tc-quick-link">
+              <span class="tc-ql-icon">🧑‍🎓</span>
+              <span class="tc-ql-label">Students</span>
+            </a>
+            <a href="/teacher/data/" class="tc-quick-link">
+              <span class="tc-ql-icon">🧾</span>
+              <span class="tc-ql-label">Data</span>
+            </a>
+            <a href="/teacher/reporting/" class="tc-quick-link">
+              <span class="tc-ql-icon">📑</span>
+              <span class="tc-ql-label">Reporting</span>
+            </a>
+          </div>
+        </div>
       </main>
     </div>
   </div>
 
   <script defer src="/web/teacher-shell.js"></script>
+  <script defer src="/web/tc-overview.js"></script>
 </body>
 </html>

@@ -5,6 +5,111 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Teacher Center — Settings</title>
   <link rel="stylesheet" href="/web/teacher-shell.css" />
+  <style>
+    .tc-card {
+      border-radius: 14px;
+      padding: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(0, 0, 0, 0.18);
+      backdrop-filter: blur(10px);
+      margin-bottom: 16px;
+    }
+    .tc-card h2 {
+      margin: 0 0 12px 0;
+      font-size: 18px;
+      font-weight: 700;
+    }
+    .tc-card p {
+      margin: 0 0 12px 0;
+      opacity: 0.85;
+      font-size: 14px;
+    }
+    .tc-form-group {
+      margin-bottom: 16px;
+    }
+    .tc-form-group label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      opacity: 0.9;
+    }
+    .tc-input {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      background: rgba(255, 255, 255, 0.06);
+      color: inherit;
+      font-family: inherit;
+      font-size: 14px;
+    }
+    .tc-input:focus {
+      outline: none;
+      border-color: rgba(59, 130, 246, 0.5);
+      background: rgba(255, 255, 255, 0.08);
+    }
+    .tc-btn {
+      padding: 10px 16px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      background: rgba(255, 255, 255, 0.06);
+      color: inherit;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .tc-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+    .tc-btn.primary {
+      background: rgba(34, 197, 94, 0.18);
+      border-color: rgba(34, 197, 94, 0.35);
+    }
+    .tc-btn.primary:hover {
+      background: rgba(34, 197, 94, 0.25);
+    }
+    .tc-btn.danger {
+      background: rgba(239, 68, 68, 0.18);
+      border-color: rgba(239, 68, 68, 0.35);
+    }
+    .tc-btn.danger:hover {
+      background: rgba(239, 68, 68, 0.25);
+    }
+    .tc-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: rgba(255, 255, 255, 0.06);
+    }
+    .tc-quarter-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 12px;
+    }
+    .tc-quarter-item {
+      padding: 12px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .tc-quarter-item label {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 12px;
+      opacity: 0.8;
+    }
+    .tc-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+  </style>
 </head>
 <body>
   <div class="tc-app">
@@ -23,7 +128,7 @@
           <a data-href="/teacher/review/" href="/teacher/review/"><span class="tc-icon">✍️</span><span class="tc-label">Review</span></a>
           <a data-href="/teacher/gradebook/" href="/teacher/gradebook/"><span class="tc-icon">📊</span><span class="tc-label">Gradebook</span></a>
           <a data-href="/teacher/students/" href="/teacher/students/"><span class="tc-icon">🧑‍🎓</span><span class="tc-label">Students</span></a>
-          <a data-href="/teacher/classes/" href="/teacher/classes/"><span class="tc-icon">🏫</span><span class="tc-label">Classes</span></a>
+
           <a data-href="/teacher/data/" href="/teacher/data/"><span class="tc-icon">🧾</span><span class="tc-label">Data</span></a>
           <a data-href="/teacher/archive/" href="/teacher/archive/"><span class="tc-icon">📦</span><span class="tc-label">Archive</span></a>
           <a data-href="/teacher/admin/" href="/teacher/admin/"><span class="tc-icon">🛡️</span><span class="tc-label">Admin</span></a>
@@ -34,11 +139,122 @@
 
       <main class="tc-main">
         <h1>Settings</h1>
-        <p>Shell ready. Next PR will wire real Teacher Center modules into these routes.</p>
+        <p>Configure your Teacher Center preferences and data settings.</p>
+
+        <!-- Teacher Profile -->
+        <div class="tc-card">
+          <h2>👤 Teacher Profile</h2>
+          <div class="tc-form-group">
+            <label for="teacherNameInput">Teacher Name</label>
+            <input
+              type="text"
+              id="teacherNameInput"
+              class="tc-input"
+              placeholder="Enter your name"
+            />
+          </div>
+          <button id="saveTeacherNameBtn" class="tc-btn primary">Save Name</button>
+        </div>
+
+        <!-- Quarter Date Configuration -->
+        <div class="tc-card">
+          <h2>📅 Quarter Date Configuration</h2>
+          <p>
+            Configure the date ranges for each quarter. These dates are used throughout the
+            application for reporting and data filtering.
+          </p>
+
+          <div class="tc-quarter-grid">
+            <div class="tc-quarter-item">
+              <h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 700;">Q1</h3>
+              <div style="display: grid; gap: 8px;">
+                <div>
+                  <label for="q1Start">Start Date</label>
+                  <input type="text" id="q1Start" class="tc-input" placeholder="Aug 16" />
+                </div>
+                <div>
+                  <label for="q1End">End Date</label>
+                  <input type="text" id="q1End" class="tc-input" placeholder="Oct 17" />
+                </div>
+              </div>
+            </div>
+
+            <div class="tc-quarter-item">
+              <h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 700;">Q2</h3>
+              <div style="display: grid; gap: 8px;">
+                <div>
+                  <label for="q2Start">Start Date</label>
+                  <input type="text" id="q2Start" class="tc-input" placeholder="Oct 18" />
+                </div>
+                <div>
+                  <label for="q2End">End Date</label>
+                  <input type="text" id="q2End" class="tc-input" placeholder="Dec 19" />
+                </div>
+              </div>
+            </div>
+
+            <div class="tc-quarter-item">
+              <h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 700;">Q3</h3>
+              <div style="display: grid; gap: 8px;">
+                <div>
+                  <label for="q3Start">Start Date</label>
+                  <input type="text" id="q3Start" class="tc-input" placeholder="Dec 20" />
+                </div>
+                <div>
+                  <label for="q3End">End Date</label>
+                  <input type="text" id="q3End" class="tc-input" placeholder="Mar 6" />
+                </div>
+              </div>
+            </div>
+
+            <div class="tc-quarter-item">
+              <h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 700;">Q4</h3>
+              <div style="display: grid; gap: 8px;">
+                <div>
+                  <label for="q4Start">Start Date</label>
+                  <input type="text" id="q4Start" class="tc-input" placeholder="Mar 7" />
+                </div>
+                <div>
+                  <label for="q4End">End Date</label>
+                  <input type="text" id="q4End" class="tc-input" placeholder="May 20" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="tc-actions" style="margin-top: 16px;">
+            <button id="saveQuarterDatesBtn" class="tc-btn primary">Save Quarter Dates</button>
+            <button id="resetQuarterDatesBtn" class="tc-btn">Reset to Defaults</button>
+          </div>
+        </div>
+
+        <!-- Data Management -->
+        <div class="tc-card">
+          <h2>💾 Data Management</h2>
+          
+          <div style="margin-bottom: 16px;">
+            <h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 700;">Supabase Connection</h3>
+            <span class="tc-pill" id="settingsSyncStatus">
+              <span id="settingsSyncIcon">🟡</span>
+              <span id="settingsSyncText">Local mode</span>
+            </span>
+          </div>
+
+          <div class="tc-actions">
+            <button id="exportDataBtn" class="tc-btn">📥 Export All Data (JSON)</button>
+            <button id="clearDataBtn" class="tc-btn danger">🗑️ Clear Local Data</button>
+          </div>
+          
+          <p style="margin-top: 12px; font-size: 12px; opacity: 0.7;">
+            <strong>Note:</strong> Clearing local data will remove all localStorage data with the
+            <code>rc_</code> prefix. This action cannot be undone.
+          </p>
+        </div>
       </main>
     </div>
   </div>
 
   <script defer src="/web/teacher-shell.js"></script>
+  <script defer src="/web/tc-settings.js"></script>
 </body>
 </html>

@@ -41,6 +41,7 @@ docs/*AUTH*.md
 # Test screenshots
 screenshots/
 test-reactive-client.html
+tmp/
 
 # Playwright
 test-results/
