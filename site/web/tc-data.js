@@ -1235,6 +1235,700 @@
     alert('Bulk Add Progress feature coming soon!\n\nThis will allow you to quickly add progress data for multiple students/goals at once.');
   }
 
+  // ===== SPEDTRACK IMPORT FUNCTIONALITY =====
+  
+  const IMPORT_HISTORY_KEY = 'rc_import_history';
+  
+  // Helper to escape HTML
+  function escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+  
+  function parseCSV(text) {
+    const lines = text.trim().split(/\r?\n/);
+    const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g, ''));
+    const rows = [];
+    for (let i = 1; i < lines.length; i++) {
+      if (!lines[i].trim()) continue;
+      const vals = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+      const row = {};
+      headers.forEach((h, idx) => { row[h] = vals[idx] || ''; });
+      rows.push(row);
+    }
+    return { headers, rows };
+  }
+  
+  function validateImportRow(row) {
+    // Map common column names
+    const student = row.student || row.student_code || row['student code'] || '';
+    const goal = row.goal || row.goal_code || row['goal code'] || '';
+    const date = row.date || '';
+    const percent = row.percent || row.score || row.value || '';
+    const notes = row.notes || row.note || row.comments || '';
+    
+    // Validate student exists
+    const studentMatch = studentsData.find(s => 
+      s.code === student || s.name.toLowerCase().includes(student.toLowerCase())
+    );
+    
+    // Validate goal exists for student
+    let goalMatch = null;
+    if (studentMatch) {
+      goalMatch = goalsData.find(g => 
+        g.student_code === studentMatch.code && g.code === goal
+      );
+    }
+    
+    // Validate date format
+    const dateValid = /^\d{4}-\d{2}-\d{2}$/.test(date);
+    
+    // Validate percent range
+    const percentNum = parseInt(percent);
+    const percentValid = !isNaN(percentNum) && percentNum >= 0 && percentNum <= 100;
+    
+    let status = 'valid';
+    let message = '';
+    
+    if (!studentMatch) {
+      status = 'error';
+      message = 'Student not found';
+    } else if (!goalMatch) {
+      status = 'error';
+      message = 'Goal not found for student';
+    } else if (!dateValid) {
+      status = 'warning';
+      message = 'Invalid date format (use YYYY-MM-DD)';
+    } else if (!percentValid) {
+      status = 'error';
+      message = 'Invalid percent value (must be 0-100)';
+    }
+    
+    return {
+      status,
+      message,
+      student: studentMatch ? studentMatch.code : student,
+      studentName: studentMatch ? studentMatch.name : student,
+      goal,
+      date,
+      percent: percentNum,
+      notes,
+      valid: status === 'valid'
+    };
+  }
+  
+  let importPreviewData = [];
+  
+  function setupImportHandlers() {
+    const togglePasteBtn = $('dtImportTogglePaste');
+    const toggleFileBtn = $('dtImportToggleFile');
+    const pasteArea = $('dtImportPasteArea');
+    const fileArea = $('dtImportFileArea');
+    const parseBtn = $('dtImportParse');
+    const uploadBtn = $('dtImportUpload');
+    const confirmBtn = $('dtImportConfirm');
+    const cancelBtn = $('dtImportCancel');
+    
+    if (togglePasteBtn) {
+      togglePasteBtn.addEventListener('click', () => {
+        pasteArea.style.display = 'block';
+        fileArea.style.display = 'none';
+        $('dtImportPreview').style.display = 'none';
+      });
+    }
+    
+    if (toggleFileBtn) {
+      toggleFileBtn.addEventListener('click', () => {
+        pasteArea.style.display = 'none';
+        fileArea.style.display = 'block';
+        $('dtImportPreview').style.display = 'none';
+      });
+    }
+    
+    if (parseBtn) {
+      parseBtn.addEventListener('click', () => {
+        const text = $('dtImportTextarea').value;
+        if (!text.trim()) {
+          alert('Please paste CSV data first');
+          return;
+        }
+        processImportCSV(text);
+      });
+    }
+    
+    if (uploadBtn) {
+      uploadBtn.addEventListener('click', () => {
+        const fileInput = $('dtImportFile');
+        const file = fileInput.files[0];
+        if (!file) {
+          alert('Please select a file first');
+          return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          processImportCSV(e.target.result);
+        };
+        reader.readAsText(file);
+      });
+    }
+    
+    if (confirmBtn) {
+      confirmBtn.addEventListener('click', async () => {
+        const validEntries = importPreviewData.filter(row => row.valid);
+        
+        if (validEntries.length === 0) {
+          alert('No valid entries to import');
+          return;
+        }
+        
+        try {
+          // Import each entry
+          for (const entry of validEntries) {
+            const progressEntry = {
+              student_code: entry.student,
+              goal_code: entry.goal,
+              date: entry.date,
+              percent: entry.percent,
+              notes: entry.notes,
+              source: 'spedtrack_import',
+              timestamp: new Date().toISOString()
+            };
+            
+            // Try to add to database
+            try {
+              await db.addGoalProgress(progressEntry);
+            } catch (err) {
+              console.error('Error adding progress entry:', err);
+              // Also add to localStorage as fallback
+              const progressData = JSON.parse(localStorage.getItem('rc_goal_progress') || '[]');
+              progressData.push(progressEntry);
+              localStorage.setItem('rc_goal_progress', JSON.stringify(progressData));
+            }
+          }
+          
+          // Save import history
+          const history = JSON.parse(localStorage.getItem(IMPORT_HISTORY_KEY) || '[]');
+          history.unshift({
+            date: new Date().toISOString(),
+            records: validEntries.length,
+            source: 'CSV Import'
+          });
+          // Keep only last 5
+          localStorage.setItem(IMPORT_HISTORY_KEY, JSON.stringify(history.slice(0, 5)));
+          
+          // Reload data and close preview
+          await loadData();
+          $('dtImportPreview').style.display = 'none';
+          $('dtImportTextarea').value = '';
+          if ($('dtImportFile')) $('dtImportFile').value = '';
+          renderImportHistory();
+          
+          alert(`✓ Successfully imported ${validEntries.length} records!`);
+        } catch (err) {
+          console.error('Import error:', err);
+          alert('Error importing data: ' + err.message);
+        }
+      });
+    }
+    
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', () => {
+        $('dtImportPreview').style.display = 'none';
+        importPreviewData = [];
+      });
+    }
+    
+    renderImportHistory();
+  }
+  
+  function processImportCSV(text) {
+    try {
+      const { rows } = parseCSV(text);
+      
+      if (rows.length === 0) {
+        alert('No data found in CSV');
+        return;
+      }
+      
+      // Validate each row
+      importPreviewData = rows.map(validateImportRow);
+      
+      // Render preview
+      const previewBody = $('dtImportPreviewBody');
+      previewBody.innerHTML = importPreviewData.map(row => {
+        const statusClass = row.status === 'valid' ? 'dt-score-green' : 
+                           row.status === 'warning' ? 'dt-score-amber' : 'dt-score-red';
+        const statusText = row.status === 'valid' ? '✓' : 
+                          row.status === 'warning' ? '⚠' : '✗';
+        
+        return `
+          <tr>
+            <td class="${statusClass}">${statusText} ${row.message || 'Valid'}</td>
+            <td>${escapeHtml(row.studentName)} <small>(${escapeHtml(row.student)})</small></td>
+            <td>${escapeHtml(row.goal)}</td>
+            <td>${escapeHtml(row.date)}</td>
+            <td>${row.percent}%</td>
+            <td><small>${escapeHtml(row.notes)}</small></td>
+          </tr>
+        `;
+      }).join('');
+      
+      const validCount = importPreviewData.filter(r => r.valid).length;
+      $('dtImportCount').textContent = validCount;
+      $('dtImportPreview').style.display = 'block';
+      
+    } catch (err) {
+      console.error('CSV parse error:', err);
+      alert('Error parsing CSV: ' + err.message);
+    }
+  }
+  
+  function renderImportHistory() {
+    const historyList = $('dtImportHistoryList');
+    if (!historyList) return;
+    
+    const history = JSON.parse(localStorage.getItem(IMPORT_HISTORY_KEY) || '[]');
+    
+    if (history.length === 0) {
+      historyList.innerHTML = '<p style="opacity: 0.7; text-align: center;">No imports yet</p>';
+      return;
+    }
+    
+    historyList.innerHTML = history.map(h => `
+      <div style="padding: 8px; margin-bottom: 8px; border: 1px solid rgba(255,255,255,.08); border-radius: 8px; background: rgba(0,0,0,.2);">
+        <strong>${new Date(h.date).toLocaleDateString()} ${new Date(h.date).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}</strong>
+        - ${h.records} records from ${h.source}
+      </div>
+    `).join('');
+  }
+
+  // ===== DATA QUALITY VALIDATION FUNCTIONALITY =====
+  
+  const DISMISSED_VALIDATIONS_KEY = 'rc_dismissed_validations';
+  let validationIssues = [];
+  
+  function validateProgressData() {
+    const issues = [];
+    const dismissed = new Set(JSON.parse(localStorage.getItem(DISMISSED_VALIDATIONS_KEY) || '[]'));
+    
+    // Build lookup maps
+    const goalMap = new Map();
+    for (const g of goalsData) {
+      goalMap.set(`${g.student_code}_${g.code}`, g);
+    }
+    
+    // Check each progress entry
+    for (const p of progressData) {
+      const goal = goalMap.get(`${p.student_code}_${p.goal_code}`);
+      const issueKey = `${p.student_code}_${p.goal_code}_${p.date}`;
+      
+      // Progress > Mastery (using goal.target field which represents mastery threshold percentage)
+      if (goal && goal.target && p.percent > goal.target) {
+        const key = `exceeds_mastery_${issueKey}`;
+        if (!dismissed.has(key)) {
+          issues.push({
+            id: key,
+            type: 'exceeds_mastery',
+            severity: 'warning',
+            student_code: p.student_code,
+            goal_code: p.goal_code,
+            message: `Progress (${p.percent}%) exceeds mastery target (${goal.target}%)`,
+            date: p.date
+          });
+        }
+      }
+      
+      // Future date
+      if (new Date(p.date) > new Date()) {
+        const key = `future_date_${issueKey}`;
+        if (!dismissed.has(key)) {
+          issues.push({
+            id: key,
+            type: 'future_date',
+            severity: 'error',
+            student_code: p.student_code,
+            goal_code: p.goal_code,
+            message: `Entry dated in the future: ${p.date}`,
+            date: p.date
+          });
+        }
+      }
+      
+      // Out of range
+      if (p.percent < 0 || p.percent > 100) {
+        const key = `out_of_range_${issueKey}`;
+        if (!dismissed.has(key)) {
+          issues.push({
+            id: key,
+            type: 'out_of_range',
+            severity: 'error',
+            student_code: p.student_code,
+            goal_code: p.goal_code,
+            message: `Value out of range: ${p.percent}%`,
+            date: p.date
+          });
+        }
+      }
+    }
+    
+    // Check for duplicate entries
+    const seen = new Map();
+    for (const p of progressData) {
+      const key = `${p.student_code}_${p.goal_code}_${p.date}_${p.percent}`;
+      if (seen.has(key)) {
+        const issueKey = `duplicate_${key}`;
+        if (!dismissed.has(issueKey)) {
+          issues.push({
+            id: issueKey,
+            type: 'duplicate',
+            severity: 'warning',
+            student_code: p.student_code,
+            goal_code: p.goal_code,
+            message: 'Duplicate entry detected',
+            date: p.date
+          });
+        }
+      }
+      seen.set(key, true);
+    }
+    
+    // Check for missing baselines
+    const goalsWithProgress = new Set(progressData.map(p => `${p.student_code}_${p.goal_code}`));
+    for (const g of goalsData) {
+      const key = `${g.student_code}_${g.code}`;
+      if (goalsWithProgress.has(key) && g.baseline == null) {
+        const issueKey = `missing_baseline_${key}`;
+        if (!dismissed.has(issueKey)) {
+          issues.push({
+            id: issueKey,
+            type: 'missing_baseline',
+            severity: 'warning',
+            student_code: g.student_code,
+            goal_code: g.code,
+            message: 'Goal has progress data but no baseline set'
+          });
+        }
+      }
+    }
+    
+    // Check for stale goals (no data in 60+ days)
+    const now = new Date();
+    for (const g of goalsData) {
+      const goalProgress = progressData
+        .filter(p => p.student_code === g.student_code && p.goal_code === g.code)
+        .sort((a, b) => new Date(b.date) - new Date(a.date));
+      
+      if (goalProgress.length > 0) {
+        const lastDate = new Date(goalProgress[0].date);
+        const daysSince = Math.floor((now - lastDate) / (1000 * 60 * 60 * 24));
+        if (daysSince > 60) {
+          const issueKey = `stale_${g.student_code}_${g.code}`;
+          if (!dismissed.has(issueKey)) {
+            issues.push({
+              id: issueKey,
+              type: 'stale',
+              severity: 'warning',
+              student_code: g.student_code,
+              goal_code: g.code,
+              message: `No data collected in ${daysSince} days`
+            });
+          }
+        }
+      }
+    }
+    
+    validationIssues = issues;
+    return issues;
+  }
+  
+  function renderValidationDashboard() {
+    const issues = validateProgressData();
+    const summaryEl = $('dtValidationSummary');
+    const issuesEl = $('dtValidationIssues');
+    const emptyEl = $('dtValidationEmpty');
+    
+    if (!summaryEl) return;
+    
+    if (issues.length === 0) {
+      summaryEl.innerHTML = '';
+      issuesEl.style.display = 'none';
+      emptyEl.style.display = 'block';
+      return;
+    }
+    
+    emptyEl.style.display = 'none';
+    issuesEl.style.display = 'block';
+    
+    // Count by type
+    const counts = {};
+    issues.forEach(i => {
+      counts[i.type] = (counts[i.type] || 0) + 1;
+    });
+    
+    // Summary cards
+    summaryEl.innerHTML = Object.entries(counts).map(([type, count]) => {
+      const labels = {
+        exceeds_mastery: 'Progress > Mastery',
+        future_date: 'Future Dates',
+        out_of_range: 'Out of Range',
+        duplicate: 'Duplicates',
+        missing_baseline: 'Missing Baseline',
+        stale: 'Stale Goals (60+ days)'
+      };
+      return `
+        <div style="padding: 12px; border: 1px solid rgba(245,158,11,.35); border-radius: 10px; background: rgba(245,158,11,.08);">
+          <div style="font-size: 20px; font-weight: 700;">${count}</div>
+          <div style="font-size: 12px; opacity: 0.85;">${labels[type] || type}</div>
+        </div>
+      `;
+    }).join('');
+    
+    // Issues list
+    const accordion = $('dtValidationAccordion');
+    if (!accordion) return;
+    
+    accordion.innerHTML = issues.map((issue, idx) => {
+      const student = studentsData.find(s => s.code === issue.student_code);
+      const icon = issue.severity === 'error' ? '🔴' : '⚠️';
+      
+      return `
+        <div class="dt-accordion-item">
+          <div class="dt-accordion-header" data-toggle-issue="${idx}">
+            <div class="dt-accordion-title">
+              <span>${icon}</span>
+              <span><strong>${student ? student.name : issue.student_code}</strong> - Goal ${escapeHtml(issue.goal_code)}</span>
+            </div>
+            <span class="dt-accordion-icon">▶</span>
+          </div>
+          <div class="dt-accordion-content">
+            <p style="margin: 0 0 12px 0;">${escapeHtml(issue.message)}</p>
+            ${issue.date ? `<p style="margin: 0 0 12px 0; opacity: 0.7;"><small>Date: ${issue.date}</small></p>` : ''}
+            <div style="display: flex; gap: 8px;">
+              <button class="dt-btn" data-dismiss-issue="${issue.id}">Dismiss</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+    
+    // Add event listeners for issue toggles
+    accordion.querySelectorAll('[data-toggle-issue]').forEach(el => {
+      el.addEventListener('click', () => {
+        el.closest('.dt-accordion-item').classList.toggle('expanded');
+      });
+    });
+    
+    // Add event listeners for dismiss buttons
+    accordion.querySelectorAll('[data-dismiss-issue]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const issueId = btn.dataset.dismissIssue;
+        const dismissed = JSON.parse(localStorage.getItem(DISMISSED_VALIDATIONS_KEY) || '[]');
+        dismissed.push(issueId);
+        localStorage.setItem(DISMISSED_VALIDATIONS_KEY, JSON.stringify(dismissed));
+        renderValidationDashboard();
+      });
+    });
+  }
+  
+  function setupValidationHandlers() {
+    const refreshBtn = $('dtValidationRefresh');
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', () => {
+        renderValidationDashboard();
+      });
+    }
+    
+    renderValidationDashboard();
+  }
+
+  // ===== DATA COLLECTION SCHEDULE FUNCTIONALITY =====
+  
+  const SCHEDULE_KEY = 'rc_data_schedule';
+  
+  function getScheduleFrequency(studentCode, goalCode) {
+    const schedules = JSON.parse(localStorage.getItem(SCHEDULE_KEY) || '{}');
+    return schedules[`${studentCode}_${goalCode}`] || 'quarterly';
+  }
+  
+  function setScheduleFrequency(studentCode, goalCode, frequency) {
+    const schedules = JSON.parse(localStorage.getItem(SCHEDULE_KEY) || '{}');
+    schedules[`${studentCode}_${goalCode}`] = frequency;
+    localStorage.setItem(SCHEDULE_KEY, JSON.stringify(schedules));
+  }
+  
+  function calculateNextDue(lastCollected, frequency) {
+    if (!lastCollected) {
+      return new Date(); // Return current date to indicate immediate collection needed
+    }
+    
+    const last = new Date(lastCollected);
+    const next = new Date(last);
+    
+    switch (frequency) {
+      case 'weekly':
+        next.setDate(next.getDate() + 7);
+        break;
+      case 'biweekly':
+        next.setDate(next.getDate() + 14);
+        break;
+      case 'monthly':
+        next.setMonth(next.getMonth() + 1);
+        break;
+      case 'quarterly':
+      default:
+        next.setMonth(next.getMonth() + 3);
+        break;
+    }
+    
+    return next;
+  }
+  
+  function getCollectionStatus(nextDue) {
+    const now = new Date();
+    const daysUntil = Math.floor((nextDue - now) / (1000 * 60 * 60 * 24));
+    
+    if (daysUntil < 0) {
+      return { status: 'overdue', icon: '🔴', label: 'Overdue' };
+    } else if (daysUntil <= 3) {
+      return { status: 'due_soon', icon: '🟡', label: 'Due Soon' };
+    } else {
+      return { status: 'on_track', icon: '🟢', label: 'On Track' };
+    }
+  }
+  
+  function renderCollectionSchedule() {
+    const scheduleBody = $('dtScheduleTableBody');
+    const thisWeekList = $('dtScheduleThisWeekList');
+    
+    if (!scheduleBody || !thisWeekList) return;
+    
+    const scheduleItems = [];
+    const thisWeekItems = [];
+    const now = new Date();
+    const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    
+    // Build schedule for each goal
+    goalsData.forEach(goal => {
+      const student = studentsData.find(s => s.code === goal.student_code);
+      if (!student) return;
+      
+      const frequency = getScheduleFrequency(goal.student_code, goal.code);
+      
+      // Find last collected date
+      const goalProgress = progressData
+        .filter(p => p.student_code === goal.student_code && p.goal_code === goal.code)
+        .sort((a, b) => new Date(b.date) - new Date(a.date));
+      
+      const lastCollected = goalProgress.length > 0 ? goalProgress[0].date : null;
+      const nextDue = calculateNextDue(lastCollected, frequency);
+      const { status, icon, label } = getCollectionStatus(nextDue);
+      
+      const item = {
+        student,
+        goal,
+        frequency,
+        lastCollected,
+        nextDue,
+        status,
+        icon,
+        label
+      };
+      
+      scheduleItems.push(item);
+      
+      // Add to this week if due within 7 days
+      if (nextDue <= weekFromNow) {
+        thisWeekItems.push(item);
+      }
+    });
+    
+    // Sort by next due date
+    scheduleItems.sort((a, b) => a.nextDue - b.nextDue);
+    thisWeekItems.sort((a, b) => a.nextDue - b.nextDue);
+    
+    // Render this week
+    if (thisWeekItems.length === 0) {
+      thisWeekList.innerHTML = '<p style="margin: 0; opacity: 0.7;">No data collection due this week</p>';
+    } else {
+      thisWeekList.innerHTML = thisWeekItems.map(item => `
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px; margin-bottom: 8px; border-radius: 8px; background: rgba(0,0,0,.2);">
+          <div>
+            <strong>${escapeHtml(item.student.name)}</strong> - Goal ${escapeHtml(item.goal.code)}
+            <br><small style="opacity: 0.7;">Due: ${item.nextDue.toLocaleDateString()}</small>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span>${item.icon}</span>
+            <button class="dt-btn" data-collect-student="${item.student.code}">
+              Collect Now
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+    
+    // Render full schedule
+    scheduleBody.innerHTML = scheduleItems.map(item => `
+      <tr>
+        <td>${escapeHtml(item.student.name)}<br><small style="opacity: 0.7;">${item.student.code}</small></td>
+        <td>${escapeHtml(item.goal.code)}<br><small style="opacity: 0.7;">${escapeHtml(item.goal.description || '')}</small></td>
+        <td>
+          <select 
+            class="dt-search-input" 
+            style="padding: 6px 8px; font-size: 13px; width: auto;"
+            data-schedule-student="${item.student.code}"
+            data-schedule-goal="${item.goal.code}"
+          >
+            <option value="weekly" ${item.frequency === 'weekly' ? 'selected' : ''}>Weekly</option>
+            <option value="biweekly" ${item.frequency === 'biweekly' ? 'selected' : ''}>Biweekly</option>
+            <option value="monthly" ${item.frequency === 'monthly' ? 'selected' : ''}>Monthly</option>
+            <option value="quarterly" ${item.frequency === 'quarterly' ? 'selected' : ''}>Quarterly</option>
+          </select>
+        </td>
+        <td>${item.lastCollected ? new Date(item.lastCollected).toLocaleDateString() : 'Never'}</td>
+        <td>${item.nextDue.toLocaleDateString()}</td>
+        <td>${item.icon} ${item.label}</td>
+        <td>
+          <button class="dt-btn" data-collect-student="${item.student.code}">
+            Collect
+          </button>
+        </td>
+      </tr>
+    `).join('');
+    
+    // Add event listeners for collect buttons
+    document.querySelectorAll('[data-collect-student]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const studentCode = btn.dataset.collectStudent;
+        window.location.href = `/teacher/students/?student=${studentCode}`;
+      });
+    });
+    
+    // Add event listeners for frequency dropdowns
+    scheduleBody.querySelectorAll('[data-schedule-student]').forEach(select => {
+      select.addEventListener('change', () => {
+        const studentCode = select.dataset.scheduleStudent;
+        const goalCode = select.dataset.scheduleGoal;
+        const frequency = select.value;
+        setScheduleFrequency(studentCode, goalCode, frequency);
+        renderCollectionSchedule();
+      });
+    });
+  }
+  
+  function setupScheduleHandlers() {
+    const settingsBtn = $('dtScheduleSettings');
+    if (settingsBtn) {
+      settingsBtn.addEventListener('click', () => {
+        alert('Schedule Settings\n\nYou can set collection frequency for each goal in the table below.');
+      });
+    }
+    
+    renderCollectionSchedule();
+  }
+
   // Main render function
   function render() {
     renderClassFilters();
@@ -1287,6 +1981,11 @@
     if (bulkAddBtn) {
       bulkAddBtn.addEventListener('click', bulkAddProgress);
     }
+    
+    // Set up new feature handlers
+    setupImportHandlers();
+    setupValidationHandlers();
+    setupScheduleHandlers();
   }
 
   // Start the app
