@@ -634,6 +634,16 @@
       return;
     }
 
+    // Clean the HTML content
+    const cleanedContent = cleanHtmlForExport(reportCard.innerHTML);
+    const generatedDate = new Date().toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+
     const printContent = `
       <!DOCTYPE html>
       <html>
@@ -663,8 +673,8 @@
         </style>
       </head>
       <body>
-        ${reportCard.innerHTML.replace(/<button[^>]*>.*?<\/button>/gi, "")}
-        <p style="margin-top: 30px; font-size: 10pt; color: #666;"><em>Generated on ${new Date().toLocaleString()}</em></p>
+        ${cleanedContent}
+        <p style="margin-top: 30px; font-size: 10pt; color: #666;"><em>Generated on ${generatedDate}</em></p>
       </body>
       </html>
     `;
@@ -678,6 +688,27 @@
   }
 
   /**
+   * Clean HTML content for export by removing interactive elements
+   */
+  function cleanHtmlForExport(htmlString) {
+    const tempDiv = document.createElement("div");
+    tempDiv.innerHTML = htmlString;
+
+    // Remove all buttons
+    tempDiv.querySelectorAll("button").forEach((btn) => btn.remove());
+
+    // Replace select elements with their current selected text
+    tempDiv.querySelectorAll("select").forEach((select) => {
+      const selectedText = select.options[select.selectedIndex]?.text || "[Dropdown]";
+      const span = document.createElement("span");
+      span.textContent = selectedText;
+      select.replaceWith(span);
+    });
+
+    return tempDiv.innerHTML;
+  }
+
+  /**
    * Export report as DOCX
    */
   function exportReportAsDOCX() {
@@ -686,6 +717,14 @@
 
     const student = studentsData.find((s) => s.code === tab1State.studentCode);
     if (!student) return;
+
+    // Clean the HTML content
+    const cleanedContent = cleanHtmlForExport(reportCard.innerHTML);
+    const generatedDate = new Date().toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
 
     const htmlContent = `
 <!DOCTYPE html>
@@ -704,8 +743,8 @@
   </style>
 </head>
 <body>
-  ${reportCard.innerHTML.replace(/<button[^>]*>.*?<\/button>/gi, "").replace(/<select[^>]*>.*?<\/select>/gi, "[Dropdown]")}
-  <p style="margin-top: 30px;"><em>Generated on ${escapeXml(new Date().toLocaleString())}</em></p>
+  ${cleanedContent}
+  <p style="margin-top: 30px;"><em>Generated on ${escapeXml(generatedDate)}</em></p>
 </body>
 </html>
     `;
@@ -1500,8 +1539,9 @@
     `;
 
     // Compliance table
+    // Sort by data points ascending (least data collection first) to highlight gaps
     const complianceRows = allGoals
-      .sort((a, b) => a.dataPoints - b.dataPoints) // Sort worst first
+      .sort((a, b) => a.dataPoints - b.dataPoints)
       .map((goal) => {
         let status, statusClass;
         if (goal.dataPoints >= 3) {
@@ -1756,21 +1796,14 @@
       });
     });
 
-    // Load progress data for current quarter
-    const currentQuarter = getCurrentQuarter();
-    const quarterRange = getQuarterDateRange(currentQuarter);
-
+    // Load progress data for all quarters (not just current)
+    // Users can switch quarters in Tab 1 and Tab 4 dropdowns
     try {
       progressData = await db.listGoalProgress({
-        startDate: quarterRange.start,
-        endDate: quarterRange.end,
+        // Load all progress data without date filtering
+        // Filter by quarter date ranges will happen in report rendering
       });
-      console.log(
-        "[tc-reporting] Loaded",
-        progressData.length,
-        "progress entries for",
-        currentQuarter
-      );
+      console.log("[tc-reporting] Loaded", progressData.length, "progress entries (all quarters)");
     } catch (err) {
       console.warn("[tc-reporting] Error loading progress data:", err);
       progressData = [];
