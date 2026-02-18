@@ -7,20 +7,6 @@
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="stylesheet" href="/assets/css/rc-theme.css" />
     <style>
-      /* Page-specific aliases for consistency */
-      :root {
-        --base: var(--rc-base);
-        --panel: var(--rc-panel);
-        --panel-2: var(--rc-panel-2);
-        --ink: var(--rc-ink);
-        --ink-dim: var(--rc-ink-dim);
-        --muted: var(--rc-muted);
-        --line: var(--rc-border);
-        --line-strong: var(--rc-border-strong);
-        --brand: var(--rc-brand);
-        --brand-2: var(--rc-brand-2);
-        --shadow-1: var(--rc-shadow);
-      }
       
       body {
         background:
@@ -50,7 +36,7 @@
         font-weight: 900;
         margin: 0 0 16px 0;
         letter-spacing: -0.5px;
-        background: linear-gradient(135deg, var(--brand), var(--brand-2));
+        background: linear-gradient(135deg, var(--rc-brand), var(--rc-brand-2));
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
@@ -58,7 +44,7 @@
       
       .home-subtitle {
         font-size: 1.25rem;
-        color: var(--ink-dim);
+        color: var(--rc-ink-dim);
         margin: 0;
         max-width: 600px;
         margin-left: auto;
@@ -78,12 +64,12 @@
         flex-direction: column;
         gap: 12px;
         padding: 32px 24px;
-        background: var(--panel);
-        border: 1px solid var(--line);
+        background: var(--rc-panel);
+        border: 1px solid var(--rc-border);
         border-radius: 16px;
         text-decoration: none;
         transition: all 0.2s ease;
-        box-shadow: var(--shadow-1);
+        box-shadow: var(--rc-shadow);
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
       }
@@ -97,13 +83,13 @@
       .home-card-title {
         font-size: 1.25rem;
         font-weight: 800;
-        color: var(--ink);
+        color: var(--rc-ink);
         margin: 0;
       }
       
       .home-card-desc {
         font-size: 0.9rem;
-        color: var(--ink-dim);
+        color: var(--rc-ink-dim);
         margin: 0;
         line-height: 1.5;
       }
@@ -111,7 +97,7 @@
       .home-footer {
         text-align: center;
         margin-top: 2rem;
-        color: var(--muted);
+        color: var(--rc-muted);
         font-size: 0.875rem;
       }
       
@@ -127,7 +113,6 @@
       }
     </style>
     
-    <!-- Global App Shell CSS -->
     <link rel="stylesheet" href="/assets/css/app-shell.css" />
   </head>
   <body>
