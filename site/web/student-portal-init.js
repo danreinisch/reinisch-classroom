@@ -648,13 +648,12 @@
       console.warn(LOG_PREFIX, 'Assignment has no structured content (meta.days is empty)');
     }
     
-    // Create backdrop
+    // Create backdrop (now the flex container)
     const backdrop = document.createElement('div');
     backdrop.className = 'st-panel-backdrop';
     backdrop.id = 'assignmentPanelBackdrop';
-    backdrop.addEventListener('click', closeAssignmentViewer);
     
-    // Create panel
+    // Create panel as a child of backdrop
     const panel = document.createElement('div');
     panel.className = 'st-assignment-panel';
     panel.id = 'assignmentPanel';
@@ -668,8 +667,16 @@
       renderStructuredAssignment(panel, instance);
     }
     
+    // Append panel to backdrop, then backdrop to body
+    backdrop.appendChild(panel);
     document.body.appendChild(backdrop);
-    document.body.appendChild(panel);
+    
+    // Add backdrop click handler (but not on panel clicks)
+    backdrop.addEventListener('click', function(e) {
+      if (e.target === backdrop) {
+        closeAssignmentViewer();
+      }
+    });
     
     // Trigger animation
     requestAnimationFrame(() => {
@@ -941,6 +948,128 @@
       <button class="st-submit-btn" id="submitWritingBtn">Submit Response</button>
     `;
     
+    // Builder toggle button (only show if not read-only)
+    const builderToggleHtml = !isReadOnly ? `
+      <button class="st-builder-toggle-btn" id="builderToggleBtn">📝 Use Writing Builder</button>
+    ` : '';
+    
+    // Builder tips from structure
+    const builderTipsHtml = dayData.structure && dayData.structure.length > 0 ? 
+      dayData.structure.map(item => `<div class="st-builder-tip">${escapeHtml(item)}</div>`).join('') : '';
+    
+    // Builder UI
+    const builderHtml = !isReadOnly ? `
+      <div class="st-writing-builder" id="writingBuilder">
+        ${builderTipsHtml}
+        
+        <!-- Topic Sentence Section -->
+        <div class="st-builder-section" data-section="topic">
+          <div class="st-builder-section-header">
+            <span>Topic Sentence</span>
+            <span class="st-builder-word-count" id="builderTopicCount">0 words</span>
+          </div>
+          <textarea 
+            class="st-builder-textarea" 
+            id="builderTopicSentence"
+            placeholder="Write your main claim or thesis statement here..."></textarea>
+          <div class="st-builder-feedback" id="builderTopicFeedback"></div>
+        </div>
+        
+        <!-- Supporting Detail 1 -->
+        <div class="st-builder-section" data-section="detail">
+          <div class="st-builder-section-header">
+            <span>Supporting Detail 1</span>
+            <span class="st-builder-word-count" id="builderDetail1Count">0 words</span>
+          </div>
+          <select class="st-builder-select" id="builderTransition1">
+            <option value="">Choose a transition...</option>
+            <option value="First,">First,</option>
+            <option value="To begin with,">To begin with,</option>
+            <option value="For instance,">For instance,</option>
+            <option value="For example,">For example,</option>
+            <option value="One reason is that">One reason is that</option>
+          </select>
+          <textarea 
+            class="st-builder-textarea" 
+            id="builderDetail1"
+            placeholder="Provide evidence or an example that supports your topic sentence..."></textarea>
+          <div class="st-builder-feedback" id="builderDetail1Feedback"></div>
+        </div>
+        
+        <!-- Supporting Detail 2 -->
+        <div class="st-builder-section" data-section="detail">
+          <div class="st-builder-section-header">
+            <span>Supporting Detail 2</span>
+            <span class="st-builder-word-count" id="builderDetail2Count">0 words</span>
+          </div>
+          <select class="st-builder-select" id="builderTransition2">
+            <option value="">Choose a transition...</option>
+            <option value="Additionally,">Additionally,</option>
+            <option value="Furthermore,">Furthermore,</option>
+            <option value="Moreover,">Moreover,</option>
+            <option value="Another reason is">Another reason is</option>
+            <option value="In addition,">In addition,</option>
+            <option value="Also,">Also,</option>
+          </select>
+          <textarea 
+            class="st-builder-textarea" 
+            id="builderDetail2"
+            placeholder="Provide a second piece of evidence or example..."></textarea>
+          <div class="st-builder-feedback" id="builderDetail2Feedback"></div>
+        </div>
+        
+        <!-- Add Detail 3 Button -->
+        <button class="st-builder-add-detail-btn" id="builderAddDetail3Btn">+ Add Third Detail (Optional)</button>
+        
+        <!-- Supporting Detail 3 (Hidden by default) -->
+        <div class="st-builder-section" data-section="detail" id="builderDetail3Section" style="display: none;">
+          <div class="st-builder-section-header">
+            <span>Supporting Detail 3 (Optional)</span>
+            <span class="st-builder-word-count" id="builderDetail3Count">0 words</span>
+          </div>
+          <select class="st-builder-select" id="builderTransition3">
+            <option value="">Choose a transition...</option>
+            <option value="Finally,">Finally,</option>
+            <option value="Lastly,">Lastly,</option>
+            <option value="Most importantly,">Most importantly,</option>
+            <option value="The most significant">The most significant</option>
+          </select>
+          <textarea 
+            class="st-builder-textarea" 
+            id="builderDetail3"
+            placeholder="Provide a third piece of evidence or example (optional)..."></textarea>
+          <div class="st-builder-feedback" id="builderDetail3Feedback"></div>
+        </div>
+        
+        <!-- Conclusion Section -->
+        <div class="st-builder-section" data-section="conclusion">
+          <div class="st-builder-section-header">
+            <span>Conclusion</span>
+            <span class="st-builder-word-count" id="builderConclusionCount">0 words</span>
+          </div>
+          <select class="st-builder-select" id="builderTransitionConc">
+            <option value="">Choose a transition...</option>
+            <option value="In conclusion,">In conclusion,</option>
+            <option value="To summarize,">To summarize,</option>
+            <option value="Overall,">Overall,</option>
+            <option value="Therefore,">Therefore,</option>
+            <option value="Ultimately,">Ultimately,</option>
+          </select>
+          <textarea 
+            class="st-builder-textarea" 
+            id="builderConclusion"
+            placeholder="Restate your main point and summarize why it matters..."></textarea>
+          <div class="st-builder-feedback" id="builderConclusionFeedback"></div>
+        </div>
+        
+        <!-- Builder Actions -->
+        <div class="st-builder-actions">
+          <button class="st-builder-transfer-btn" id="builderTransferBtn">Transfer to Response ↓</button>
+          <button class="st-builder-clear-btn" id="builderClearBtn">Clear Builder</button>
+        </div>
+      </div>
+    ` : '';
+    
     container.innerHTML = `
       <h3 style="margin-top: 0; margin-bottom: 20px; font-size: 18px;">
         ${escapeHtml(dayData.label)}
@@ -952,6 +1081,8 @@
           <button class="st-tts-btn" data-text="${escapeHtml(dayData.prompt)}" title="Read this writing prompt aloud" aria-label="Read writing prompt aloud">🔊</button>
         </div>
         ${structureHtml}
+        ${builderToggleHtml}
+        ${builderHtml}
         <textarea 
           class="st-writing-textarea" 
           id="writingResponse" 
@@ -962,6 +1093,89 @@
         ${submitButtonHtml}
       </div>
     `;
+    
+    // Attach builder toggle handler
+    const toggleBtn = container.querySelector('#builderToggleBtn');
+    if (toggleBtn) {
+      toggleBtn.addEventListener('click', function() {
+        const builder = document.getElementById('writingBuilder');
+        if (builder) {
+          builder.classList.toggle('show');
+          this.textContent = builder.classList.contains('show') ? '📝 Hide Writing Builder' : '📝 Use Writing Builder';
+        }
+      });
+    }
+    
+    // Attach builder event handlers
+    if (!isReadOnly) {
+      // Word count and validation for topic sentence
+      const topicInput = container.querySelector('#builderTopicSentence');
+      if (topicInput) {
+        const handler = () => {
+          updateBuilderWordCount('builderTopicSentence', 'builderTopicCount');
+          validateTopicSentence();
+        };
+        topicInput.addEventListener('input', handler);
+      }
+      
+      // Word count and validation for detail 1
+      const detail1Input = container.querySelector('#builderDetail1');
+      if (detail1Input) {
+        const handler = () => {
+          updateBuilderWordCount('builderDetail1', 'builderDetail1Count');
+          validateSupportingDetail('builderDetail1', 'builderDetail1Feedback');
+        };
+        detail1Input.addEventListener('input', handler);
+      }
+      
+      // Word count and validation for detail 2
+      const detail2Input = container.querySelector('#builderDetail2');
+      if (detail2Input) {
+        const handler = () => {
+          updateBuilderWordCount('builderDetail2', 'builderDetail2Count');
+          validateSupportingDetail('builderDetail2', 'builderDetail2Feedback');
+        };
+        detail2Input.addEventListener('input', handler);
+      }
+      
+      // Word count and validation for detail 3
+      const detail3Input = container.querySelector('#builderDetail3');
+      if (detail3Input) {
+        const handler = () => {
+          updateBuilderWordCount('builderDetail3', 'builderDetail3Count');
+          validateSupportingDetail('builderDetail3', 'builderDetail3Feedback');
+        };
+        detail3Input.addEventListener('input', handler);
+      }
+      
+      // Word count and validation for conclusion
+      const conclusionInput = container.querySelector('#builderConclusion');
+      if (conclusionInput) {
+        const handler = () => {
+          updateBuilderWordCount('builderConclusion', 'builderConclusionCount');
+          validateConclusion();
+        };
+        conclusionInput.addEventListener('input', handler);
+      }
+      
+      // Add detail 3 button
+      const addDetail3Btn = container.querySelector('#builderAddDetail3Btn');
+      if (addDetail3Btn) {
+        addDetail3Btn.addEventListener('click', toggleDetail3);
+      }
+      
+      // Transfer button
+      const transferBtn = container.querySelector('#builderTransferBtn');
+      if (transferBtn) {
+        transferBtn.addEventListener('click', transferBuilderToResponse);
+      }
+      
+      // Clear button
+      const clearBtn = container.querySelector('#builderClearBtn');
+      if (clearBtn) {
+        clearBtn.addEventListener('click', clearBuilder);
+      }
+    }
     
     // Attach hint handler
     const hintsBtn = container.querySelector('#writingHintsBtn');
@@ -1105,6 +1319,260 @@
     }
     
     console.log(LOG_PREFIX, 'Writing response submitted successfully');
+  }
+  
+  /**
+   * Writing Builder Functions - Ported from written-response-builder.js
+   */
+  
+  function updateBuilderWordCount(textareaId, countId) {
+    const textarea = document.getElementById(textareaId);
+    const countElement = document.getElementById(countId);
+    if (!textarea || !countElement) return;
+    
+    const text = textarea.value.trim();
+    const wordCount = text === '' ? 0 : text.split(/\s+/).length;
+    countElement.textContent = `${wordCount} words`;
+  }
+  
+  function validateTopicSentence() {
+    const input = document.getElementById('builderTopicSentence');
+    const feedback = document.getElementById('builderTopicFeedback');
+    if (!input || !feedback) return;
+    
+    const text = input.value.trim();
+    const messages = [];
+    if (!text) { feedback.innerHTML = ''; return; }
+    
+    if (text[0] === text[0].toLowerCase()) messages.push('<p class="error">Your sentence should start with a capital letter.</p>');
+    if (!/[.!?]$/.test(text)) messages.push('<p class="error">Your sentence should end with proper punctuation (. ! or ?).</p>');
+    if (text.endsWith('?')) messages.push('<p class="error">Topic sentences should be statements, not questions. Make a claim instead of asking.</p>');
+    
+    const words = text.split(/\s+/);
+    if (text.length < 15) messages.push('<p class="error">Too short. A strong topic sentence needs more development (aim for at least 10-15 words).</p>');
+    else if (words.length < 8) messages.push('<p class="warn">Your sentence is quite brief. Consider adding more detail about your main point.</p>');
+    else if (words.length <= 25) messages.push('<p>✔️ Good sentence length.</p>');
+    else messages.push('<p class="warn">Your sentence is quite long. Consider breaking it into two sentences or simplifying.</p>');
+    
+    const weakStarters = /^(i think|i believe|i feel|in my opinion|i guess|i would say|this essay|this paragraph|this paper)/i;
+    if (weakStarters.test(text)) messages.push('<p class="error">Avoid weak starters like "I think," "I believe," or "This essay." State your claim directly and confidently.</p>');
+    
+    if (/^(yes|no|maybe|sure|not really|kind of|sort of)/i.test(text)) messages.push('<p class="error">This sounds like a simple answer, not a topic sentence. Restate the question as a complete claim in your own words.</p>');
+    
+    const pronouns = ["he","she","they","it","we","you","i"];
+    const contentWords = text.toLowerCase().replace(/[^a-z\s]/g, '').split(/\s+/);
+    const mainWords = contentWords.filter(w => w.length > 3 && !pronouns.includes(w));
+    if (mainWords.length === 0) messages.push('<p class="error">Your sentence needs a clear, specific subject. What exactly are you writing about?</p>');
+    else if (mainWords.length < 3) messages.push('<p class="warn">Your topic sentence could be more specific. Add more detail about your subject.</p>');
+    else messages.push('<p>✔️ Your sentence has a clear subject.</p>');
+    
+    const vagueWords = /(thing|stuff|good|bad|nice|interesting|a lot|very|really|some|many)/i;
+    if (vagueWords.test(text)) messages.push('<p class="warn">Try to be more specific. Avoid vague words like "thing," "stuff," "good," "bad," "nice," "interesting," etc.</p>');
+    
+    const purposefulPatterns = /(should|must|because|since|therefore|demonstrates|proves|shows|reveals|argues|suggests|explains|indicates|illustrates|the main reason|one reason|the primary|the key|the most important)/i;
+    if (purposefulPatterns.test(text)) messages.push('<p>✔️ Your sentence has clear direction and purpose. Excellent!</p>');
+    else messages.push('<p class="warn">Your sentence needs stronger direction. Include words that show your position or reasoning (e.g., "because," "demonstrates," "proves," "should").</p>');
+    
+    if (/will (discuss|talk about|explain|write about|tell you)/i.test(text)) messages.push('<p class="error">Don\'t announce what you\'ll do ("I will discuss..."). Instead, make your claim directly.</p>');
+    
+    const sentenceCount = (text.match(/[.!?]+/g) || []).length;
+    if (sentenceCount > 1) messages.push('<p class="warn">A topic sentence should typically be ONE sentence. Consider combining your ideas or using only the strongest one.</p>');
+    
+    if (/n't|'re|'ve|'ll|'d|'s/.test(text)) messages.push('<p class="warn">Avoid contractions in formal writing. Write out "don\'t" as "do not," etc.</p>');
+    
+    const errorCount = messages.filter(m => m.includes('class="error"')).length;
+    const warnCount = messages.filter(m => m.includes('class="warn"')).length;
+    if (errorCount === 0 && warnCount === 0) messages.push('<p style="background: rgba(16,185,129,.2); font-weight: bold;">🌟 Excellent topic sentence! This is ready to use.</p>');
+    else if (errorCount === 0 && warnCount <= 2) messages.push('<p style="background: rgba(34,197,94,.15);">✅ Good topic sentence! Consider addressing the suggestions above to make it even stronger.</p>');
+    else if (errorCount > 0) messages.push('<p style="background: rgba(239,68,68,.2); font-weight: bold;">⚠️ This needs revision. Please address the errors above before continuing.</p>');
+    
+    feedback.innerHTML = messages.join('');
+  }
+  
+  function validateSupportingDetail(detailId, feedbackId) {
+    const detail = document.getElementById(detailId);
+    const feedback = document.getElementById(feedbackId);
+    const topicSentence = document.getElementById('builderTopicSentence');
+    if (!detail || !feedback) return;
+    
+    const text = detail.value.trim();
+    const messages = [];
+    if (!text) { feedback.innerHTML = ''; return; }
+    
+    const words = text.split(/\s+/);
+    if (words.length < 15) messages.push('<p class="error">Too short. Supporting details need substantial development (aim for at least 15-20 words).</p>');
+    else if (words.length < 20) messages.push('<p class="warn">Consider adding more detail. Strong supporting details typically have 20+ words.</p>');
+    else if (words.length <= 75) messages.push('<p>✔️ Good detail length.</p>');
+    else messages.push('<p class="warn">Your detail is quite long. Consider breaking it into multiple sentences or being more concise.</p>');
+    
+    const hasEvidence = /(for example|for instance|such as|specifically|according to|shows that|demonstrates|proves|illustrates|evidence|data|study|research|")/i.test(text);
+    if (hasEvidence) messages.push('<p>✔️ Good! You included specific evidence or examples.</p>');
+    else messages.push('<p class="warn">Try to include specific evidence, examples, or data to support your claim.</p>');
+    
+    const hasExplanation = /(this shows|this demonstrates|this means|this proves|this illustrates|because|therefore|as a result|consequently|thus)/i.test(text);
+    if (hasExplanation) messages.push('<p>✔️ Good! You explained how your evidence supports your point.</p>');
+    else messages.push('<p class="warn">Explain how your evidence connects to your topic sentence.</p>');
+    
+    if (topicSentence && topicSentence.value.trim()) {
+      const topicKeyWords = topicSentence.value.trim().toLowerCase().replace(/[^a-z\s]/g, '').split(/\s+/).filter(w => w.length > 4);
+      const detailLower = text.toLowerCase();
+      const hasConnection = topicKeyWords.some(word => detailLower.includes(word));
+      if (!hasConnection && topicKeyWords.length > 0) messages.push('<p class="warn">This detail doesn\'t clearly connect to your topic sentence. Make sure it supports your main argument.</p>');
+    }
+    
+    if (!/[.!?]$/.test(text)) messages.push('<p class="error">Your detail should end with proper punctuation.</p>');
+    
+    const errorCount = messages.filter(m => m.includes('class="error"')).length;
+    if (errorCount === 0 && messages.length <= 3) messages.push('<p style="background: rgba(16,185,129,.2);">✅ Strong supporting detail!</p>');
+    
+    feedback.innerHTML = messages.join('');
+  }
+  
+  function validateConclusion() {
+    const conclusion = document.getElementById('builderConclusion');
+    const feedback = document.getElementById('builderConclusionFeedback');
+    const topicSentence = document.getElementById('builderTopicSentence');
+    if (!conclusion || !feedback) return;
+    
+    const text = conclusion.value.trim();
+    const messages = [];
+    if (!text) { feedback.innerHTML = ''; return; }
+    
+    const words = text.split(/\s+/);
+    if (words.length < 20) messages.push('<p class="error">Too short. Conclusions should restate your thesis and summarize key points (aim for at least 20 words).</p>');
+    else if (words.length <= 60) messages.push('<p>✔️ Good conclusion length.</p>');
+    else messages.push('<p class="warn">Your conclusion is quite long. Keep it concise while restating your main points.</p>');
+    
+    if (!/[.!?]$/.test(text)) messages.push('<p class="error">Your conclusion should end with proper punctuation.</p>');
+    
+    const introducesNew = /(new|another|also|additionally|furthermore|first time|never mentioned)/i.test(text);
+    if (introducesNew) messages.push('<p class="warn">Avoid introducing completely new ideas in your conclusion. Focus on summarizing what you already discussed.</p>');
+    
+    if (topicSentence && topicSentence.value.trim()) {
+      const topicLower = topicSentence.value.trim().toLowerCase();
+      const conclusionLower = text.toLowerCase();
+      const topicWords = topicLower.replace(/[^a-z\s]/g, '').split(/\s+/).filter(w => w.length > 4);
+      const sharedWords = topicWords.filter(word => conclusionLower.includes(word));
+      if (sharedWords.length === 0 && topicWords.length > 0) {
+        messages.push('<p class="error">Your conclusion doesn\'t connect to your topic sentence. Restate your main argument in different words.</p>');
+      } else if (sharedWords.length > 0) {
+        const similarity = sharedWords.length / topicWords.length;
+        if (similarity > 0.7 && topicSentence.value.trim().length > 30) {
+          const topicStart = topicLower.substring(0, 40);
+          const conclusionStart = conclusionLower.substring(0, 40);
+          if (topicStart === conclusionStart) {
+            messages.push('<p class="warn">Your conclusion is too similar to your topic sentence. Restate your thesis using different words.</p>');
+          } else {
+            messages.push('<p>✔️ Good! Your conclusion restates your main argument.</p>');
+          }
+        } else {
+          messages.push('<p>✔️ Good! Your conclusion connects to your topic sentence.</p>');
+        }
+      }
+    }
+    
+    const hasSummary = /(in conclusion|to summarize|in summary|overall|ultimately|therefore|thus|as shown|as demonstrated)/i.test(text);
+    if (hasSummary) messages.push('<p>✔️ Good use of concluding language.</p>');
+    
+    const weakEndings = /(that is all|the end|that's it|i'm done|this concludes|in this essay i|i have shown)/i;
+    if (weakEndings.test(text)) messages.push('<p class="warn">Avoid weak endings. End with a strong statement or thought-provoking insight.</p>');
+    
+    const hasImpact = /(important|significant|matters|crucial|essential|should|must|needs|future|impact|consequence)/i.test(text);
+    if (hasImpact) messages.push('<p>✔️ Good! You emphasized the importance or broader implications of your argument.</p>');
+    else messages.push('<p class="warn">Consider ending with why your argument matters or what readers should take away.</p>');
+    
+    const errorCount = messages.filter(m => m.includes('class="error"')).length;
+    if (errorCount === 0 && messages.length <= 4) messages.push('<p style="background: rgba(16,185,129,.2);">✅ Strong conclusion!</p>');
+    
+    feedback.innerHTML = messages.join('');
+  }
+  
+  function transferBuilderToResponse() {
+    const topic = document.getElementById('builderTopicSentence');
+    const detail1 = document.getElementById('builderDetail1');
+    const detail2 = document.getElementById('builderDetail2');
+    const detail3 = document.getElementById('builderDetail3');
+    const conclusion = document.getElementById('builderConclusion');
+    
+    const transition1 = document.getElementById('builderTransition1');
+    const transition2 = document.getElementById('builderTransition2');
+    const transition3 = document.getElementById('builderTransition3');
+    const transitionConc = document.getElementById('builderTransitionConc');
+    
+    const mainTextarea = document.getElementById('writingResponse');
+    if (!mainTextarea) return;
+    
+    let response = '';
+    if (topic && topic.value.trim()) response += `${topic.value.trim()} `;
+    if (detail1 && detail1.value.trim()) {
+      const trans1 = transition1 ? transition1.value : '';
+      response += `${trans1 ? trans1 + ' ' : ''}${detail1.value.trim()} `;
+    }
+    if (detail2 && detail2.value.trim()) {
+      const trans2 = transition2 ? transition2.value : '';
+      response += `${trans2 ? trans2 + ' ' : ''}${detail2.value.trim()} `;
+    }
+    if (detail3 && detail3.value.trim()) {
+      const trans3 = transition3 ? transition3.value : '';
+      response += `${trans3 ? trans3 + ' ' : ''}${detail3.value.trim()} `;
+    }
+    if (conclusion && conclusion.value.trim()) {
+      const transC = transitionConc ? transitionConc.value : '';
+      response += `${transC ? transC + ' ' : ''}${conclusion.value.trim()}`;
+    }
+    
+    mainTextarea.value = response.trim();
+    
+    // Show success message briefly
+    const transferBtn = document.getElementById('builderTransferBtn');
+    if (transferBtn) {
+      const originalText = transferBtn.textContent;
+      transferBtn.textContent = '✓ Transferred!';
+      transferBtn.style.background = 'rgba(34, 197, 94, 0.3)';
+      setTimeout(() => {
+        transferBtn.textContent = originalText;
+        transferBtn.style.background = '';
+      }, 2000);
+    }
+  }
+  
+  function clearBuilder() {
+    if (!confirm('Are you sure you want to clear all builder content?')) return;
+    
+    const fields = ['builderTopicSentence', 'builderDetail1', 'builderDetail2', 'builderDetail3', 'builderConclusion'];
+    fields.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    
+    const selects = ['builderTransition1', 'builderTransition2', 'builderTransition3', 'builderTransitionConc'];
+    selects.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    
+    const feedbacks = ['builderTopicFeedback', 'builderDetail1Feedback', 'builderDetail2Feedback', 'builderDetail3Feedback', 'builderConclusionFeedback'];
+    feedbacks.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = '';
+    });
+    
+    const counts = ['builderTopicCount', 'builderDetail1Count', 'builderDetail2Count', 'builderDetail3Count', 'builderConclusionCount'];
+    counts.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = '0 words';
+    });
+  }
+  
+  function toggleDetail3() {
+    const detail3Section = document.getElementById('builderDetail3Section');
+    const addBtn = document.getElementById('builderAddDetail3Btn');
+    if (!detail3Section || !addBtn) return;
+    
+    if (detail3Section.style.display === 'none' || !detail3Section.style.display) {
+      detail3Section.style.display = 'block';
+      addBtn.style.display = 'none';
+    }
   }
   
   /**
