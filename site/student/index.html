@@ -400,26 +400,25 @@
         justify-content: flex-end;
       }
 
-      /* Assignment slide panel */
+      /* Assignment centered modal */
       .st-assignment-panel {
-        position: fixed;
-        top: 0;
-        right: 0;
-        width: 65%;
-        max-width: 800px;
-        height: 100vh;
+        position: relative;
+        width: min(1100px, 92vw);
+        max-height: 90vh;
         background: rgba(14, 18, 16, 0.97);
-        border-left: 1px solid rgba(255, 255, 255, 0.1);
-        box-shadow: -10px 0 40px rgba(0, 0, 0, 0.5);
-        z-index: 10000;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 16px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
         overflow-y: auto;
-        transform: translateX(100%);
-        transition: transform 0.3s ease;
         padding: 24px;
+        opacity: 0;
+        transform: scale(0.96);
+        transition: opacity 0.3s ease, transform 0.3s ease;
       }
 
       .st-assignment-panel.open {
-        transform: translateX(0);
+        opacity: 1;
+        transform: scale(1);
       }
 
       .st-panel-backdrop {
@@ -428,8 +427,11 @@
         left: 0;
         width: 100%;
         height: 100%;
-        background: rgba(0, 0, 0, 0.5);
+        background: rgba(0, 0, 0, 0.7);
         z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         opacity: 0;
         transition: opacity 0.3s ease;
         pointer-events: none;
@@ -772,9 +774,207 @@
         cursor: not-allowed;
       }
 
+      /* Writing Builder Styles */
+      .st-builder-toggle-btn {
+        background: rgba(59, 130, 246, 0.12);
+        border: 1px solid rgba(59, 130, 246, 0.35);
+        border-radius: 10px;
+        color: #93c5fd;
+        padding: 10px 16px;
+        cursor: pointer;
+        font-size: 14px;
+        margin-top: 16px;
+        transition: all 0.2s;
+      }
+
+      .st-builder-toggle-btn:hover {
+        background: rgba(59, 130, 246, 0.18);
+      }
+
+      .st-writing-builder {
+        margin-top: 24px;
+        padding: 20px;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        display: none;
+      }
+
+      .st-writing-builder.show {
+        display: block;
+      }
+
+      .st-builder-section {
+        margin-bottom: 24px;
+        padding: 16px;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 10px;
+        border-left: 3px solid rgba(255, 255, 255, 0.3);
+      }
+
+      .st-builder-section[data-section="topic"] {
+        border-left-color: #3b82f6;
+      }
+
+      .st-builder-section[data-section="detail"] {
+        border-left-color: #10b981;
+      }
+
+      .st-builder-section[data-section="conclusion"] {
+        border-left-color: #8b5cf6;
+      }
+
+      .st-builder-section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        font-weight: 600;
+        font-size: 14px;
+      }
+
+      .st-builder-word-count {
+        font-size: 12px;
+        opacity: 0.7;
+        font-weight: normal;
+      }
+
+      .st-builder-textarea {
+        width: 100%;
+        min-height: 80px;
+        padding: 12px;
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 8px;
+        color: inherit;
+        font-size: 14px;
+        font-family: inherit;
+        line-height: 1.5;
+        resize: vertical;
+      }
+
+      .st-builder-textarea:focus {
+        outline: none;
+        border-color: rgba(59, 130, 246, 0.5);
+      }
+
+      .st-builder-select {
+        width: 100%;
+        padding: 10px 12px;
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 8px;
+        color: inherit;
+        font-size: 14px;
+        margin-bottom: 8px;
+        cursor: pointer;
+      }
+
+      .st-builder-select:focus {
+        outline: none;
+        border-color: rgba(59, 130, 246, 0.5);
+      }
+
+      .st-builder-feedback {
+        margin-top: 12px;
+        padding: 12px;
+        border-radius: 8px;
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      .st-builder-feedback p {
+        margin: 6px 0;
+      }
+
+      .st-builder-feedback .error {
+        color: #fca5a5;
+        background: rgba(239, 68, 68, 0.08);
+        padding: 6px 10px;
+        border-radius: 6px;
+        margin: 4px 0;
+      }
+
+      .st-builder-feedback .warn {
+        color: #fde047;
+        background: rgba(234, 179, 8, 0.08);
+        padding: 6px 10px;
+        border-radius: 6px;
+        margin: 4px 0;
+      }
+
+      .st-builder-actions {
+        display: flex;
+        gap: 12px;
+        margin-top: 24px;
+        flex-wrap: wrap;
+      }
+
+      .st-builder-transfer-btn {
+        background: rgba(34, 197, 94, 0.15);
+        border: 1px solid rgba(34, 197, 94, 0.35);
+        border-radius: 10px;
+        color: #86efac;
+        padding: 12px 20px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        transition: all 0.2s;
+      }
+
+      .st-builder-transfer-btn:hover {
+        background: rgba(34, 197, 94, 0.25);
+      }
+
+      .st-builder-clear-btn {
+        background: rgba(239, 68, 68, 0.12);
+        border: 1px solid rgba(239, 68, 68, 0.35);
+        border-radius: 10px;
+        color: #fca5a5;
+        padding: 12px 20px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        transition: all 0.2s;
+      }
+
+      .st-builder-clear-btn:hover {
+        background: rgba(239, 68, 68, 0.2);
+      }
+
+      .st-builder-tip {
+        padding: 10px 14px;
+        margin-bottom: 12px;
+        background: rgba(59, 130, 246, 0.08);
+        border: 1px solid rgba(59, 130, 246, 0.25);
+        border-radius: 8px;
+        font-size: 13px;
+        line-height: 1.5;
+        color: #93c5fd;
+      }
+
+      .st-builder-add-detail-btn {
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 8px;
+        color: inherit;
+        padding: 8px 14px;
+        cursor: pointer;
+        font-size: 13px;
+        margin-top: 12px;
+        transition: all 0.2s;
+      }
+
+      .st-builder-add-detail-btn:hover {
+        background: rgba(255, 255, 255, 0.1);
+      }
+
       @media (max-width: 768px) {
         .st-assignment-panel {
           width: 100%;
+          height: 100vh;
+          max-height: 100vh;
+          border-radius: 0;
         }
       }
     </style>
