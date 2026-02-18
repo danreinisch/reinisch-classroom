@@ -7,21 +7,6 @@
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="stylesheet" href="/assets/css/rc-theme.css" />
     <style>
-      /* Page-specific aliases for consistency */
-      :root {
-        --base: var(--rc-base);
-        --panel: var(--rc-panel);
-        --panel-2: var(--rc-panel-2);
-        --ink: var(--rc-ink);
-        --ink-dim: var(--rc-ink-dim);
-        --muted: var(--rc-muted);
-        --line: var(--rc-border);
-        --line-strong: var(--rc-border-strong);
-        --brand: var(--rc-brand);
-        --brand-2: var(--rc-brand-2);
-        --shadow-1: var(--rc-shadow);
-      }
-      
       body {
         background:
           url("/assets/bg/bg5e_soft_grid.svg") center/cover no-repeat fixed,
@@ -29,7 +14,7 @@
           radial-gradient(1200px 800px at 120% 20%, rgba(6, 182, 212, 0.06), transparent 50%),
           linear-gradient(180deg, var(--rc-base), #0c1322 60%, #0b0f14);
       }
-      
+
       .home-container {
         min-height: 100vh;
         display: flex;
@@ -39,32 +24,32 @@
         padding: 2rem;
         gap: 2rem;
       }
-      
+
       .home-header {
         text-align: center;
         margin-bottom: 1rem;
       }
-      
+
       .home-title {
         font-size: clamp(2rem, 5vw, 3.5rem);
         font-weight: 900;
         margin: 0 0 16px 0;
         letter-spacing: -0.5px;
-        background: linear-gradient(135deg, var(--brand), var(--brand-2));
+        background: linear-gradient(135deg, var(--rc-brand), var(--rc-brand-2));
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
       }
-      
+
       .home-subtitle {
         font-size: 1.25rem;
-        color: var(--ink-dim);
+        color: var(--rc-ink-dim);
         margin: 0;
         max-width: 600px;
         margin-left: auto;
         margin-right: auto;
       }
-      
+
       .home-nav {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -72,62 +57,63 @@
         width: 100%;
         max-width: 900px;
       }
-      
+
       .home-card {
         display: flex;
         flex-direction: column;
         gap: 12px;
         padding: 32px 24px;
-        background: var(--panel);
-        border: 1px solid var(--line);
+        background: var(--rc-panel);
+        border: 1px solid var(--rc-border);
         border-radius: 16px;
         text-decoration: none;
         transition: all 0.2s ease;
-        box-shadow: var(--shadow-1);
+        box-shadow: var(--rc-shadow);
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
       }
-      
+
       .home-card:hover {
         transform: translateY(-4px);
         border-color: rgba(34, 197, 94, 0.4);
-        box-shadow: 0 12px 48px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+        box-shadow:
+          0 12px 48px rgba(0, 0, 0, 0.4),
+          inset 0 1px 0 rgba(255, 255, 255, 0.05);
       }
-      
+
       .home-card-title {
         font-size: 1.25rem;
         font-weight: 800;
-        color: var(--ink);
+        color: var(--rc-ink);
         margin: 0;
       }
-      
+
       .home-card-desc {
         font-size: 0.9rem;
-        color: var(--ink-dim);
+        color: var(--rc-ink-dim);
         margin: 0;
         line-height: 1.5;
       }
-      
+
       .home-footer {
         text-align: center;
         margin-top: 2rem;
-        color: var(--muted);
+        color: var(--rc-muted);
         font-size: 0.875rem;
       }
-      
+
       @media (max-width: 768px) {
         .home-nav {
           grid-template-columns: 1fr;
           max-width: 400px;
         }
-        
+
         .home-card {
           padding: 24px 20px;
         }
       }
     </style>
-    
-    <!-- Global App Shell CSS -->
+
     <link rel="stylesheet" href="/assets/css/app-shell.css" />
   </head>
   <body>
@@ -136,37 +122,39 @@
         <h1 class="home-title">Reinisch Classroom</h1>
         <p class="home-subtitle">Empowering Every Learner Through Accessible Education</p>
       </header>
-      
+
       <nav class="home-nav">
         <a class="home-card" href="/language-arts/">
           <h2 class="home-card-title">Language Arts</h2>
-          <p class="home-card-desc">Explore literature, reading comprehension, and writing skills</p>
+          <p class="home-card-desc">
+            Explore literature, reading comprehension, and writing skills
+          </p>
         </a>
-        
+
         <a class="home-card" href="/life-skills/">
           <h2 class="home-card-title">Life Skills</h2>
           <p class="home-card-desc">Build independence through practical daily living skills</p>
         </a>
-        
+
         <a class="home-card" href="/math-toolkit/">
           <h2 class="home-card-title">Math Toolkit</h2>
           <p class="home-card-desc">Interactive math tools and learning resources</p>
         </a>
-        
+
         <a class="home-card" href="/teacher/">
           <h2 class="home-card-title">Teacher Center</h2>
           <p class="home-card-desc">Manage students, goals, and assignments</p>
         </a>
       </nav>
-      
+
       <footer class="home-footer">
         <p>Use the navigation rail on the left to quickly access all sections</p>
       </footer>
     </div>
-    
+
     <!-- Legacy viewer compatibility redirect -->
     <script src="/assets/js/viewer-compat.js"></script>
-    
+
     <!-- Global App Shell JS -->
     <script defer src="/assets/js/app-shell.js"></script>
   </body>
