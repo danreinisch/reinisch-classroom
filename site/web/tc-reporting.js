@@ -1851,8 +1851,9 @@
       const pageBreakStyle = index > 0 ? "page-break-before: always;" : "";
       allStudentReportsHTML += `
         <div class="student-section" style="${pageBreakStyle}">
-          <div style="font-size: 18px; font-weight: bold; margin-bottom: 8px;">
-            Student Name: ${escapeHtml(student.name || student.code)}     Grade: ${escapeHtml(grade)}
+          <div style="font-size: 18px; font-weight: bold; margin-bottom: 8px; display: flex; justify-content: space-between;">
+            <span>Student Name: ${escapeHtml(student.name || student.code)}</span>
+            <span>Grade: ${escapeHtml(grade)}</span>
           </div>
           <div style="font-size: 18px; font-weight: bold; margin-bottom: 20px;">
             Progress for ${escapeHtml(quarter)} Quarter of their ${escapeHtml(schoolYearLabel)} School Year
@@ -1895,7 +1896,7 @@
             </div>
             
             <div style="margin-bottom: 12px;">
-              <strong>Baseline:</strong> ${escapeHtml(goal.baseline || "N/A")}%     
+              <strong>Baseline:</strong> ${escapeHtml(goal.baseline || "N/A")}% &nbsp;&nbsp;&nbsp;&nbsp;
               <strong>Target/Mastery:</strong> ${escapeHtml(goal.target || "N/A")}%
             </div>
             
@@ -2056,12 +2057,12 @@
     if (goalPastTense) {
       // Simple past tense conversion for common patterns
       goalPastTense = goalPastTense
-        .replace(/will be able to/gi, "was able to")
+        .replace(/will be able to/gi, "")
         .replace(/will /gi, "")
         .replace(/can /gi, "");
     }
 
-    const narrative = `${firstName} was able to ${goalPastTense.toLowerCase()}. During the ${quarter} quarter, ${firstName}'s scores ranged from ${minValue}% to ${maxValue}%, with an average of ${avgValue}%.`;
+    const narrative = `${firstName} was able to ${goalPastTense}. During the ${quarter} quarter, ${firstName}'s scores ranged from ${minValue}% to ${maxValue}%, with an average of ${avgValue}%.`;
 
     return narrative;
   }
