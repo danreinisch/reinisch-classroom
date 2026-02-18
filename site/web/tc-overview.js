@@ -22,26 +22,14 @@
 
   /**
    * Get current quarter based on today's date
-   * Reads from localStorage if available, otherwise uses hardcoded defaults
+   * Note: Quarter date customization is managed in Settings page
+   * Future enhancement: Read custom dates from localStorage rc_quarter_dates
    */
   function getCurrentQuarter() {
-    // Try to read from localStorage first (set in Settings)
-    const savedDates = localStorage.getItem("rc_quarter_dates");
-    let quarterDates = null;
-    
-    if (savedDates) {
-      try {
-        quarterDates = JSON.parse(savedDates);
-      } catch (e) {
-        console.warn("[tc-overview] Failed to parse saved quarter dates:", e);
-      }
-    }
-
     const now = new Date();
     const month = now.getMonth() + 1;
     const day = now.getDate();
 
-    // Use saved dates if available, otherwise use defaults
     // Default: Q1: August 16 - October 17
     if ((month === 8 && day >= 16) || month === 9 || (month === 10 && day <= 17)) return "Q1";
 

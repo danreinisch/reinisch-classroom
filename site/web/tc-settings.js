@@ -34,10 +34,8 @@
     
     if (input && savedName) {
       input.value = savedName;
-    } else if (input) {
-      // Default value
-      input.value = "Dan Reinisch";
     }
+    // Note: Leave input empty if no saved name - let teacher enter their own
   }
 
   /**
