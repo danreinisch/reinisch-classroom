@@ -253,104 +253,6 @@
   }
   
   /**
-   * Load and render student goals
-   */
-  async function loadStudentGoals(studentCode) {
-    console.log(LOG_PREFIX, 'Loading goals for:', studentCode);
-    
-    const goalsContainer = document.getElementById('goalsContent');
-    const goalsCount = document.getElementById('goalsCount');
-    
-    if (!goalsContainer) {
-      console.warn(LOG_PREFIX, 'Goals container not found');
-      return;
-    }
-    
-    // Show loading state
-    goalsContainer.innerHTML = `
-      <div style="text-align: center; padding: 40px; color: var(--muted);">
-        <div style="font-size: 48px; margin-bottom: 16px;">⏳</div>
-        <div>Loading your goals...</div>
-      </div>
-    `;
-    
-    try {
-      // Fetch goals
-      const goalsUrl = `/.netlify/functions/student-goals?code=${encodeURIComponent(studentCode)}`;
-      const goalsResponse = await fetch(goalsUrl);
-      
-      if (!goalsResponse.ok) {
-        throw new Error(`Failed to fetch goals: ${goalsResponse.status}`);
-      }
-      
-      const goalsData = await goalsResponse.json();
-      
-      if (!goalsData.ok) {
-        throw new Error(goalsData.error || 'Failed to load goals');
-      }
-      
-      const goals = goalsData.goals || [];
-      
-      // Fetch progress data
-      let progressMap = new Map();
-      try {
-        const progressUrl = `/.netlify/functions/student-goal-progress?code=${encodeURIComponent(studentCode)}`;
-        const progressResponse = await fetch(progressUrl);
-        
-        if (progressResponse.ok) {
-          const progressData = await progressResponse.json();
-          if (progressData.ok && progressData.progress) {
-            // Build map of goal_id -> progress entries
-            progressData.progress.forEach(entry => {
-              if (!progressMap.has(entry.goal_id)) {
-                progressMap.set(entry.goal_id, []);
-              }
-              progressMap.get(entry.goal_id).push(entry);
-            });
-          }
-        }
-      } catch (err) {
-        console.warn(LOG_PREFIX, 'Failed to load progress data:', err);
-        // Continue without progress data
-      }
-      
-      // Render goals
-      if (goals.length === 0) {
-        goalsContainer.innerHTML = `
-          <div style="text-align: center; padding: 40px; color: var(--muted);">
-            <div style="font-size: 48px; margin-bottom: 16px;">📋</div>
-            <div>No goals found for your account.</div>
-          </div>
-        `;
-        if (goalsCount) {
-          goalsCount.textContent = '0 goals';
-        }
-      } else {
-        goalsContainer.innerHTML = goals.map(goal => renderGoalCard(goal, progressMap)).join('');
-        if (goalsCount) {
-          goalsCount.textContent = goals.length === 1 ? '1 goal' : `${goals.length} goals`;
-        }
-        
-        // Attach event listeners to "Show more" buttons
-        attachShowMoreListeners();
-      }
-      
-    } catch (err) {
-      console.error(LOG_PREFIX, 'Error loading goals:', err);
-      goalsContainer.innerHTML = `
-        <div style="text-align: center; padding: 40px; color: var(--muted);">
-          <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
-          <div style="color: var(--ink);">Goals temporarily unavailable</div>
-          <div style="margin-top: 8px; font-size: 14px;">Please try refreshing the page or contact your teacher if this persists.</div>
-        </div>
-      `;
-      if (goalsCount) {
-        goalsCount.textContent = 'Unavailable';
-      }
-    }
-  }
-  
-  /**
    * Render a single goal card
    */
   function renderGoalCard(goal, progressMap) {
@@ -724,7 +626,7 @@
     const questions = dayData.questions || [];
     const isReadOnly = assignmentViewerState.isReadOnly;
     
-    const questionsHtml = questions.map((q, idx) => {
+    const questionsHtml = questions.map((q) => {
       const questionId = `${dayData.day_number}_${q.number}`;
       const choices = q.choices || [];
       const savedAnswer = assignmentViewerState.answers.get(questionId);
@@ -1543,7 +1445,7 @@
     // Reload assignments to reflect updated status
     const studentCode = sessionStorage.getItem('rc_user_code');
     if (studentCode) {
-      loadStudentAssignments(studentCode).catch(err => {
+      loadStudentAssignmentsForTabs(studentCode).catch(err => {
         console.error(LOG_PREFIX, 'Failed to reload assignments:', err);
       });
     }
