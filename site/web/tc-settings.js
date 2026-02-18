@@ -177,6 +177,7 @@
       const data = {
         students: await db.listStudents(),
         goals: await db.listGoalsAll(),
+        // Pass empty array to get all goal progress (API filters when array has length > 0)
         goalProgress: await db.listGoalProgress({ studentCodes: [] }),
         assignments: await db.listAssignments(),
         submissions: await db.listSubmissions(),

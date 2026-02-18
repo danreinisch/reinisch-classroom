@@ -7,7 +7,8 @@
   "use strict";
 
   // Only run on overview page
-  if (!location.pathname.startsWith("/teacher/") || location.pathname !== "/teacher/" && location.pathname !== "/teacher/index.html") return;
+  if (!location.pathname.startsWith("/teacher/")) return;
+  if (location.pathname !== "/teacher/" && location.pathname !== "/teacher/index.html") return;
 
   console.log("[tc-overview] Initializing overview dashboard");
 
@@ -21,9 +22,9 @@
   let syncStatus = "local";
 
   /**
-   * Get current quarter based on today's date
-   * Note: Quarter date customization is managed in Settings page
-   * Future enhancement: Read custom dates from localStorage rc_quarter_dates
+   * Get current quarter based on today's date using default hardcoded ranges
+   * Note: Custom quarter dates can be configured in Settings page (rc_quarter_dates)
+   * but are not yet used for auto-detection here - this uses hardcoded defaults only
    */
   function getCurrentQuarter() {
     const now = new Date();
