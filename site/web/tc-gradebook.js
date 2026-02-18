@@ -642,6 +642,18 @@
     thAvg.style.minWidth = "80px";
     headerRow.appendChild(thAvg);
 
+    // Weighted Average column
+    const thWeighted = document.createElement("th");
+    thWeighted.textContent = "Weighted";
+    thWeighted.style.minWidth = "80px";
+    headerRow.appendChild(thWeighted);
+
+    // Trend column
+    const thTrend = document.createElement("th");
+    thTrend.textContent = "Trend";
+    thTrend.style.minWidth = "60px";
+    headerRow.appendChild(thTrend);
+
     tableHead.appendChild(headerRow);
 
     // Build data rows
@@ -711,6 +723,38 @@
       }
       tr.appendChild(tdAvg);
 
+      // Weighted Average cell
+      const tdWeighted = document.createElement("td");
+      tdWeighted.className = "gb-score-cell";
+      const weighted = calculateWeightedAverage(student.code, scoreMap, drafts);
+      if (weighted !== null) {
+        tdWeighted.textContent = `${weighted}%`;
+        // Apply color class to weighted average
+        const colorClass = scoreColorClass(weighted);
+        if (colorClass) {
+          tdWeighted.classList.add(colorClass);
+        }
+      } else {
+        tdWeighted.textContent = "—";
+      }
+      tr.appendChild(tdWeighted);
+
+      // Trend cell
+      const tdTrend = document.createElement("td");
+      tdTrend.className = "gb-score-cell";
+      tdTrend.style.textAlign = "center";
+      const trend = calculateTrend(student.code, scoreMap, drafts);
+      let trendHTML = '';
+      if (trend === 'up') {
+        trendHTML = '<span class="gb-trend-arrow gb-trend-up">↗️</span>';
+      } else if (trend === 'down') {
+        trendHTML = '<span class="gb-trend-arrow gb-trend-down">↘️</span>';
+      } else {
+        trendHTML = '<span class="gb-trend-arrow gb-trend-flat">→</span>';
+      }
+      tdTrend.innerHTML = trendHTML;
+      tr.appendChild(tdTrend);
+
       tableBody.appendChild(tr);
     }
 
@@ -768,6 +812,37 @@
       tdOverallAvg.textContent = "—";
     }
     summaryRow.appendChild(tdOverallAvg);
+
+    // Overall weighted average
+    const tdOverallWeighted = document.createElement("td");
+    tdOverallWeighted.className = "gb-score-cell";
+    const allWeightedScores = [];
+    for (const student of students) {
+      const weighted = calculateWeightedAverage(student.code, scoreMap, drafts);
+      if (weighted !== null) {
+        allWeightedScores.push(weighted);
+      }
+    }
+    const overallWeighted =
+      allWeightedScores.length > 0
+        ? Math.round(allWeightedScores.reduce((a, b) => a + b, 0) / allWeightedScores.length)
+        : null;
+    if (overallWeighted !== null) {
+      tdOverallWeighted.textContent = `${overallWeighted}%`;
+      const colorClass = scoreColorClass(overallWeighted);
+      if (colorClass) {
+        tdOverallWeighted.classList.add(colorClass);
+      }
+    } else {
+      tdOverallWeighted.textContent = "—";
+    }
+    summaryRow.appendChild(tdOverallWeighted);
+
+    // Empty trend cell for summary row
+    const tdTrendEmpty = document.createElement("td");
+    tdTrendEmpty.className = "gb-score-cell";
+    tdTrendEmpty.textContent = "—";
+    summaryRow.appendChild(tdTrendEmpty);
 
     tableBody.appendChild(summaryRow);
   }
@@ -1103,6 +1178,356 @@
     }
   }
 
+  /**
+   * Get category weights from localStorage or defaults
+   */
+  function getCategoryWeights() {
+    const defaults = {
+      assignment: 1.0,
+      quiz: 1.5,
+      test: 2.0,
+      project: 2.0
+    };
+    
+    try {
+      const stored = localStorage.getItem('rc_gradebook_weights');
+      if (stored) {
+        return { ...defaults, ...JSON.parse(stored) };
+      }
+    } catch (e) {
+      console.warn('[gradebook] Error loading weights:', e);
+    }
+    
+    return defaults;
+  }
+
+  /**
+   * Save category weights to localStorage
+   */
+  function saveCategoryWeights(weights) {
+    try {
+      localStorage.setItem('rc_gradebook_weights', JSON.stringify(weights));
+    } catch (e) {
+      console.error('[gradebook] Error saving weights:', e);
+    }
+  }
+
+  /**
+   * Get assignment category (default to 'assignment')
+   */
+  function getAssignmentCategory(draft) {
+    return (draft.type || 'assignment').toLowerCase();
+  }
+
+  /**
+   * Calculate weighted average for a student
+   */
+  function calculateWeightedAverage(studentCode, scoreMap, drafts) {
+    const studentScores = scoreMap.get(studentCode);
+    if (!studentScores) return null;
+
+    const weights = getCategoryWeights();
+    let totalWeightedScore = 0;
+    let totalWeight = 0;
+
+    for (const draft of drafts) {
+      if (studentScores.has(draft.id)) {
+        const score = studentScores.get(draft.id);
+        if (typeof score === "number") {
+          const category = getAssignmentCategory(draft);
+          const weight = weights[category] || 1.0;
+          totalWeightedScore += score * weight;
+          totalWeight += weight;
+        }
+      }
+    }
+
+    if (totalWeight === 0) return null;
+    return Math.round(totalWeightedScore / totalWeight);
+  }
+
+  /**
+   * Calculate trend for a student (up/down/flat)
+   */
+  function calculateTrend(studentCode, scoreMap, drafts) {
+    const studentScores = scoreMap.get(studentCode);
+    if (!studentScores) return 'flat';
+
+    const scores = [];
+    for (const draft of drafts) {
+      if (studentScores.has(draft.id)) {
+        const score = studentScores.get(draft.id);
+        if (typeof score === "number") {
+          scores.push(score);
+        }
+      }
+    }
+
+    if (scores.length < 3) return 'flat';
+
+    const recent = scores.slice(-3);
+    const earlier = scores.slice(-6, -3);
+    
+    if (earlier.length === 0) return 'flat';
+
+    const recentAvg = recent.reduce((a, b) => a + b, 0) / recent.length;
+    const earlierAvg = earlier.reduce((a, b) => a + b, 0) / earlier.length;
+    const diff = recentAvg - earlierAvg;
+
+    if (diff > 3) return 'up';
+    if (diff < -3) return 'down';
+    return 'flat';
+  }
+
+  /**
+   * Render score distribution analytics
+   */
+  function renderAnalytics() {
+    const data = buildGradebookData();
+    const contentEl = $("gbAnalyticsContent");
+    
+    if (!data || !contentEl) return;
+
+    const { students, drafts, scoreMap } = data;
+
+    if (drafts.length === 0) {
+      contentEl.innerHTML = '<div style="opacity: 0.7; text-align: center; padding: 20px;">No assignments to analyze</div>';
+      return;
+    }
+
+    let html = '';
+
+    for (const draft of drafts) {
+      const scores = [];
+      for (const student of students) {
+        const studentScores = scoreMap.get(student.code);
+        if (studentScores && studentScores.has(draft.id)) {
+          const score = studentScores.get(draft.id);
+          if (typeof score === "number") {
+            scores.push(score);
+          }
+        }
+      }
+
+      if (scores.length === 0) continue;
+
+      // Calculate statistics
+      const avg = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+      const sorted = [...scores].sort((a, b) => a - b);
+      const median = sorted.length % 2 === 0 
+        ? Math.round((sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2)
+        : sorted[Math.floor(sorted.length / 2)];
+      const min = Math.min(...scores);
+      const max = Math.max(...scores);
+
+      // Calculate distribution bins
+      const bins = [0, 0, 0, 0, 0]; // 0-59, 60-69, 70-79, 80-89, 90-100
+      const colors = ['#ef4444', '#f59e0b', '#eab308', '#84cc16', '#22c55e'];
+      const labels = ['0-59%', '60-69%', '70-79%', '80-89%', '90-100%'];
+
+      for (const s of scores) {
+        if (s < 60) bins[0]++;
+        else if (s < 70) bins[1]++;
+        else if (s < 80) bins[2]++;
+        else if (s < 90) bins[3]++;
+        else bins[4]++;
+      }
+
+      const maxBin = Math.max(...bins, 1);
+
+      html += '<div class="gb-analytics-assignment">';
+      html += `<div class="gb-analytics-title">${draft.title || '(untitled)'}</div>`;
+      html += '<div class="gb-analytics-stats">';
+      html += `<div class="gb-analytics-stat"><span style="opacity: 0.7;">Avg:</span><span>${avg}%</span></div>`;
+      html += `<div class="gb-analytics-stat"><span style="opacity: 0.7;">Median:</span><span>${median}%</span></div>`;
+      html += `<div class="gb-analytics-stat"><span style="opacity: 0.7;">Min:</span><span>${min}%</span></div>`;
+      html += `<div class="gb-analytics-stat"><span style="opacity: 0.7;">Max:</span><span>${max}%</span></div>`;
+      html += `<div class="gb-analytics-stat"><span style="opacity: 0.7;">n:</span><span>${scores.length}</span></div>`;
+      html += '</div>';
+
+      html += '<div class="gb-distribution-chart">';
+      for (let i = 0; i < bins.length; i++) {
+        const width = maxBin > 0 ? (bins[i] / maxBin) * 100 : 0;
+        html += '<div class="gb-distribution-bar">';
+        html += `<div class="gb-distribution-label">${labels[i]}</div>`;
+        html += '<div class="gb-distribution-bar-bg">';
+        html += `<div class="gb-distribution-bar-fill" style="width: ${width}%; background-color: ${colors[i]};">${bins[i] > 0 ? bins[i] : ''}</div>`;
+        html += '</div>';
+        html += '</div>';
+      }
+      html += '</div>';
+      html += '</div>';
+    }
+
+    contentEl.innerHTML = html;
+  }
+
+  /**
+   * Render missing work tracker
+   */
+  function renderMissingWork() {
+    const contentEl = $("gbMissingWorkContent");
+    const badgeEl = $("gbMissingWorkBadge");
+    
+    if (!contentEl || !badgeEl) return;
+
+    const now = new Date();
+    const missing = [];
+
+    // Find overdue assignments
+    for (const instance of assignmentInstancesData) {
+      if (!instance.due_at) continue;
+      
+      const dueDate = new Date(instance.due_at);
+      if (dueDate >= now) continue; // Not overdue yet
+
+      // Check if student has submitted
+      const submission = submissionsData.find(s => s.assignment_instance_id === instance.id);
+      if (submission) continue; // Already submitted
+
+      const student = studentsData.find(s => s.code === instance.student_code);
+      const draft = draftsData.find(d => d.id === instance.assignment_id);
+
+      const daysOverdue = Math.floor((now - dueDate) / (1000 * 60 * 60 * 24));
+
+      missing.push({
+        studentCode: student?.code || instance.student_code,
+        studentName: student?.name || instance.student_code,
+        assignmentTitle: draft?.title || 'Assignment',
+        dueDate: dueDate,
+        daysOverdue: daysOverdue
+      });
+    }
+
+    // Update badge
+    badgeEl.textContent = `${missing.length} missing`;
+
+    if (missing.length === 0) {
+      contentEl.innerHTML = '<div style="opacity: 0.7; text-align: center; padding: 20px;">✅ No missing work!</div>';
+      badgeEl.style.background = 'rgba(34,197,94,.15)';
+      badgeEl.style.borderColor = 'rgba(34,197,94,.4)';
+      return;
+    }
+
+    badgeEl.style.background = 'rgba(239,68,68,.15)';
+    badgeEl.style.borderColor = 'rgba(239,68,68,.4)';
+
+    // Sort by days overdue (most overdue first)
+    missing.sort((a, b) => b.daysOverdue - a.daysOverdue);
+
+    let html = '<table class="gb-missing-table">';
+    html += '<thead><tr>';
+    html += '<th>Student Code</th>';
+    html += '<th>Student Name</th>';
+    html += '<th>Assignment</th>';
+    html += '<th>Due Date</th>';
+    html += '<th>Days Overdue</th>';
+    html += '</tr></thead>';
+    html += '<tbody>';
+
+    for (const item of missing) {
+      html += '<tr>';
+      html += `<td>${item.studentCode}</td>`;
+      html += `<td>${item.studentName}</td>`;
+      html += `<td>${item.assignmentTitle}</td>`;
+      html += `<td>${item.dueDate.toLocaleDateString()}</td>`;
+      html += `<td class="gb-days-overdue">${item.daysOverdue} day${item.daysOverdue !== 1 ? 's' : ''}</td>`;
+      html += '</tr>';
+    }
+
+    html += '</tbody></table>';
+    contentEl.innerHTML = html;
+  }
+
+  /**
+   * Toggle analytics panel visibility
+   */
+  function toggleAnalytics() {
+    const panel = $("gbAnalyticsPanel");
+    const btn = $("btnToggleAnalytics");
+    
+    if (!panel || !btn) return;
+
+    if (panel.style.display === "none") {
+      panel.style.display = "block";
+      btn.classList.add("primary");
+      renderAnalytics();
+    } else {
+      panel.style.display = "none";
+      btn.classList.remove("primary");
+    }
+  }
+
+  /**
+   * Toggle missing work panel visibility
+   */
+  function toggleMissingWork() {
+    const panel = $("gbMissingWorkPanel");
+    const btn = $("btnToggleMissing");
+    
+    if (!panel || !btn) return;
+
+    if (panel.style.display === "none") {
+      panel.style.display = "block";
+      btn.classList.add("primary");
+      renderMissingWork();
+    } else {
+      panel.style.display = "none";
+      btn.classList.remove("primary");
+    }
+  }
+
+  /**
+   * Show weights settings modal
+   */
+  function showWeightsModal() {
+    const modal = $("gbWeightsModal");
+    if (!modal) return;
+
+    const weights = getCategoryWeights();
+    
+    const assignmentInput = $("weightAssignment");
+    const quizInput = $("weightQuiz");
+    const testInput = $("weightTest");
+    const projectInput = $("weightProject");
+
+    if (assignmentInput) assignmentInput.value = weights.assignment;
+    if (quizInput) quizInput.value = weights.quiz;
+    if (testInput) testInput.value = weights.test;
+    if (projectInput) projectInput.value = weights.project;
+
+    modal.style.display = "flex";
+  }
+
+  /**
+   * Hide weights settings modal
+   */
+  function hideWeightsModal() {
+    const modal = $("gbWeightsModal");
+    if (modal) modal.style.display = "none";
+  }
+
+  /**
+   * Save weights and re-render gradebook
+   */
+  function saveWeights() {
+    const assignmentInput = $("weightAssignment");
+    const quizInput = $("weightQuiz");
+    const testInput = $("weightTest");
+    const projectInput = $("weightProject");
+
+    const weights = {
+      assignment: parseFloat(assignmentInput?.value || 1.0),
+      quiz: parseFloat(quizInput?.value || 1.5),
+      test: parseFloat(testInput?.value || 2.0),
+      project: parseFloat(projectInput?.value || 2.0)
+    };
+
+    saveCategoryWeights(weights);
+    hideWeightsModal();
+    renderGradebook(); // Re-render to update weighted averages
+  }
+
   // Initialize
   async function init() {
     await loadData();
@@ -1127,6 +1552,45 @@
       quarterFilter.addEventListener("change", () => {
         currentQuarterFilter = quarterFilter.value;
         renderGradebook();
+      });
+    }
+    
+    // Wire analytics toggle button
+    const btnToggleAnalytics = $("btnToggleAnalytics");
+    if (btnToggleAnalytics) {
+      btnToggleAnalytics.addEventListener("click", toggleAnalytics);
+    }
+    
+    // Wire missing work toggle button
+    const btnToggleMissing = $("btnToggleMissing");
+    if (btnToggleMissing) {
+      btnToggleMissing.addEventListener("click", toggleMissingWork);
+    }
+    
+    // Wire weights settings button
+    const btnWeightsSettings = $("btnWeightsSettings");
+    if (btnWeightsSettings) {
+      btnWeightsSettings.addEventListener("click", showWeightsModal);
+    }
+    
+    // Wire weights modal buttons
+    const btnSaveWeights = $("btnSaveWeights");
+    if (btnSaveWeights) {
+      btnSaveWeights.addEventListener("click", saveWeights);
+    }
+    
+    const btnCancelWeights = $("btnCancelWeights");
+    if (btnCancelWeights) {
+      btnCancelWeights.addEventListener("click", hideWeightsModal);
+    }
+    
+    // Close modal when clicking outside
+    const weightsModal = $("gbWeightsModal");
+    if (weightsModal) {
+      weightsModal.addEventListener("click", (e) => {
+        if (e.target === weightsModal) {
+          hideWeightsModal();
+        }
       });
     }
     
