@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Teacher Center — Share</title>
+    <link rel="stylesheet" href="/web/teacher-shell.css" />
+    <style>
+      .share-card {
+        border: 1px solid rgba(255,255,255,.08);
+        border-radius: 18px;
+        background: rgba(0,0,0,.25);
+        padding: 20px;
+        margin-bottom: 20px;
+      }
+      .share-form-group {
+        margin-bottom: 16px;
+      }
+      .share-form-group label {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 14px;
+        font-weight: 600;
+        color: rgba(240,255,250,.92);
+      }
+      .share-select, .share-input, .share-textarea {
+        width: 100%;
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid rgba(255,255,255,.16);
+        background: rgba(0,0,0,.3);
+        color: rgba(240,255,250,.92);
+        font-family: inherit;
+        font-size: 14px;
+      }
+      .share-select:focus, .share-input:focus, .share-textarea:focus {
+        outline: none;
+        border-color: rgba(34,197,94,.5);
+      }
+      .share-checkbox-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 12px;
+        border: 1px solid rgba(255,255,255,.08);
+        border-radius: 10px;
+        background: rgba(0,0,0,.2);
+        max-height: 300px;
+        overflow-y: auto;
+      }
+      .share-checkbox-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px;
+        border-radius: 8px;
+        background: rgba(255,255,255,.02);
+      }
+      .share-checkbox-item:hover {
+        background: rgba(255,255,255,.06);
+      }
+      .share-checkbox-item input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+      }
+      .share-checkbox-item label {
+        margin: 0;
+        cursor: pointer;
+        flex: 1;
+        font-weight: 400;
+      }
+      .share-btn {
+        padding: 10px 16px;
+        border-radius: 10px;
+        border: 1px solid rgba(255,255,255,.16);
+        background: rgba(255,255,255,.06);
+        color: rgba(240,255,250,.92);
+        cursor: pointer;
+        font-family: inherit;
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .share-btn:hover {
+        background: rgba(255,255,255,.1);
+      }
+      .share-btn.primary {
+        background: rgba(34,197,94,.18);
+        border-color: rgba(34,197,94,.35);
+      }
+      .share-btn.primary:hover {
+        background: rgba(34,197,94,.25);
+      }
+      .share-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .share-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 16px;
+      }
+      .share-table th,
+      .share-table td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid rgba(255,255,255,.08);
+      }
+      .share-table th {
+        font-weight: 600;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        color: rgba(240,255,250,.78);
+        background: rgba(0,0,0,.2);
+      }
+      .share-table td {
+        font-size: 14px;
+        color: rgba(240,255,250,.92);
+      }
+      .share-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 600;
+      }
+      .share-status.active {
+        background: rgba(34,197,94,.15);
+        border: 1px solid #22c55e;
+        color: #22c55e;
+      }
+      .share-status.expired {
+        background: rgba(239,68,68,.15);
+        border: 1px solid #ef4444;
+        color: #ef4444;
+      }
+      .share-status.revoked {
+        background: rgba(120,120,120,.15);
+        border: 1px solid #888;
+        color: #aaa;
+      }
+      .share-link-display {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px;
+        border: 1px solid rgba(34,197,94,.35);
+        border-radius: 10px;
+        background: rgba(34,197,94,.08);
+        margin-top: 16px;
+      }
+      .share-link-url {
+        flex: 1;
+        font-family: monospace;
+        font-size: 13px;
+        color: rgba(240,255,250,.92);
+        word-break: break-all;
+      }
+      .share-empty {
+        text-align: center;
+        padding: 40px 20px;
+        color: rgba(240,255,250,.78);
+      }
+      .share-audit-trail {
+        margin-top: 12px;
+        padding: 12px;
+        border: 1px solid rgba(255,255,255,.08);
+        border-radius: 8px;
+        background: rgba(0,0,0,.2);
+        font-size: 13px;
+      }
+      .share-audit-entry {
+        padding: 8px;
+        margin-bottom: 8px;
+        border-radius: 6px;
+        background: rgba(255,255,255,.02);
+      }
+      .share-audit-entry:last-child {
+        margin-bottom: 0;
+      }
+      .share-toast {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        padding: 12px 20px;
+        border-radius: 10px;
+        background: rgba(34,197,94,.9);
+        color: white;
+        font-weight: 600;
+        box-shadow: 0 4px 12px rgba(0,0,0,.3);
+        opacity: 0;
+        transform: translateY(20px);
+        transition: opacity 0.3s, transform 0.3s;
+        z-index: 1000;
+      }
+      .share-toast.show {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      .share-expandable {
+        cursor: pointer;
+        user-select: none;
+      }
+      .share-expandable:hover {
+        background: rgba(255,255,255,.06);
+      }
+      .share-expanded-content {
+        display: none;
+      }
+      .share-expanded-content.show {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="tc-app">
+      <header class="tc-topbar">
+        <button class="tc-btn" id="tcSidebarToggle" aria-label="Toggle sidebar" aria-expanded="false">☰</button>
+        <a class="tc-btn" href="/" target="_blank" rel="noopener" aria-label="Home">🏠</a>
+        <div class="tc-title">Teacher Center — Share</div>
+      </header>
+
+      <div class="tc-shell">
+        <aside class="tc-sidebar" aria-label="Teacher navigation">
+          <nav class="tc-nav">
+            <a data-href="/teacher/" href="/teacher/"><span class="tc-icon">🏁</span><span class="tc-label">Overview</span></a>
+            <a data-href="/teacher/work/" href="/teacher/work/"><span class="tc-icon">🗂️</span><span class="tc-label">Work</span></a>
+            <a data-href="/teacher/library/" href="/teacher/library/"><span class="tc-icon">📚</span><span class="tc-label">Library</span></a>
+            <a data-href="/teacher/review/" href="/teacher/review/"><span class="tc-icon">✍️</span><span class="tc-label">Review</span></a>
+            <a data-href="/teacher/gradebook/" href="/teacher/gradebook/"><span class="tc-icon">📊</span><span class="tc-label">Gradebook</span></a>
+            <a data-href="/teacher/students/" href="/teacher/students/"><span class="tc-icon">🧑‍🎓</span><span class="tc-label">Students</span></a>
+            <a data-href="/teacher/calendar/" href="/teacher/calendar/"><span class="tc-icon">📅</span><span class="tc-label">Calendar</span></a>
+  
+            <a data-href="/teacher/data/" href="/teacher/data/"><span class="tc-icon">🧾</span><span class="tc-label">Data</span></a>
+            <a data-href="/teacher/archive/" href="/teacher/archive/"><span class="tc-icon">📦</span><span class="tc-label">Archive</span></a>
+            <a data-href="/teacher/admin/" href="/teacher/admin/"><span class="tc-icon">🛡️</span><span class="tc-label">Admin</span></a>
+            <a data-href="/teacher/reporting/" href="/teacher/reporting/"><span class="tc-icon">📑</span><span class="tc-label">Reporting</span></a>
+            <a data-href="/teacher/share/" href="/teacher/share/"><span class="tc-icon">🔗</span><span class="tc-label">Share</span></a>
+            <a data-href="/teacher/settings/" href="/teacher/settings/"><span class="tc-icon">⚙️</span><span class="tc-label">Settings</span></a>
+          </nav>
+        </aside>
+
+        <main class="tc-main">
+          <h1 style="margin-top: 0">Share & Collaborate</h1>
+          <p style="margin-top: -6px; color: rgba(240,255,250,.78)">
+            Generate secure share links for paraprofessionals and SLPs to enter progress data.
+          </p>
+
+          <!-- Generate Share Link Section -->
+          <section class="share-card">
+            <h2 style="margin-top: 0">Generate Share Link</h2>
+            
+            <form id="shareGenerateForm">
+              <div class="share-form-group">
+                <label for="shareStudent">Select Student</label>
+                <select id="shareStudent" class="share-select" required>
+                  <option value="">-- Choose a student --</option>
+                </select>
+              </div>
+
+              <div class="share-form-group">
+                <label>Select Goals to Share</label>
+                <div id="shareGoalsList" class="share-checkbox-group">
+                  <p style="text-align: center; color: rgba(240,255,250,.6); margin: 0;">
+                    Select a student first
+                  </p>
+                </div>
+              </div>
+
+              <div class="share-form-group">
+                <label for="shareExpiration">Link Expiration</label>
+                <select id="shareExpiration" class="share-select">
+                  <option value="24">24 hours</option>
+                  <option value="168" selected>7 days</option>
+                  <option value="720">30 days</option>
+                  <option value="0">No expiration</option>
+                </select>
+              </div>
+
+              <button type="submit" class="share-btn primary" id="shareGenerateBtn">
+                🔗 Generate Share Link
+              </button>
+            </form>
+
+            <div id="shareLinkDisplay" style="display: none;">
+              <div class="share-link-display">
+                <div class="share-link-url" id="shareLinkUrl"></div>
+                <button type="button" class="share-btn primary" id="shareCopyBtn">
+                  📋 Copy Link
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <!-- Active Share Links Section -->
+          <section class="share-card">
+            <h2 style="margin-top: 0">Active Share Links</h2>
+            
+            <div id="shareLinksEmpty" class="share-empty">
+              <p><strong>No share links yet</strong></p>
+              <p>Generate a share link above to get started.</p>
+            </div>
+
+            <div id="shareLinksTable" style="display: none;">
+              <table class="share-table">
+                <thead>
+                  <tr>
+                    <th>Student</th>
+                    <th>Goals</th>
+                    <th>Created</th>
+                    <th>Expires</th>
+                    <th>Status</th>
+                    <th>Entries</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="shareLinksBody">
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <!-- Toast notification -->
+    <div id="shareToast" class="share-toast"></div>
+
+    <script defer src="/web/teacher-shell.js"></script>
+    <script type="module" src="/web/tc-share.js"></script>
+  </body>
+</html>

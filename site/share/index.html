@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Progress Data Entry</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        color: rgba(240,255,250,.92);
+        min-height: 100vh;
+        padding: 20px;
+      }
+      
+      .container {
+        max-width: 700px;
+        margin: 0 auto;
+      }
+      
+      .header {
+        text-align: center;
+        margin-bottom: 30px;
+        padding: 20px;
+        border: 1px solid rgba(255,255,255,.08);
+        border-radius: 18px;
+        background: rgba(0,0,0,.25);
+      }
+      
+      .header h1 {
+        font-size: 24px;
+        margin-bottom: 8px;
+      }
+      
+      .header p {
+        color: rgba(240,255,250,.78);
+        font-size: 14px;
+      }
+      
+      .card {
+        border: 1px solid rgba(255,255,255,.08);
+        border-radius: 18px;
+        background: rgba(0,0,0,.25);
+        padding: 24px;
+        margin-bottom: 20px;
+      }
+      
+      .card h2 {
+        font-size: 18px;
+        margin-bottom: 16px;
+      }
+      
+      .form-group {
+        margin-bottom: 20px;
+      }
+      
+      .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        color: rgba(240,255,250,.92);
+      }
+      
+      .form-input, .form-textarea {
+        width: 100%;
+        padding: 12px;
+        border-radius: 10px;
+        border: 1px solid rgba(255,255,255,.16);
+        background: rgba(0,0,0,.3);
+        color: rgba(240,255,250,.92);
+        font-family: inherit;
+        font-size: 14px;
+      }
+      
+      .form-input:focus, .form-textarea:focus {
+        outline: none;
+        border-color: rgba(34,197,94,.5);
+      }
+      
+      .form-textarea {
+        min-height: 80px;
+        resize: vertical;
+      }
+      
+      .goal-entry {
+        border: 1px solid rgba(255,255,255,.08);
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 16px;
+        background: rgba(0,0,0,.2);
+      }
+      
+      .goal-header {
+        margin-bottom: 12px;
+      }
+      
+      .goal-code {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 6px;
+        background: rgba(34,197,94,.18);
+        border: 1px solid rgba(34,197,94,.35);
+        color: #22c55e;
+        font-weight: 600;
+        font-size: 13px;
+        margin-right: 10px;
+      }
+      
+      .goal-description {
+        color: rgba(240,255,250,.85);
+        font-size: 14px;
+        margin-bottom: 12px;
+      }
+      
+      .btn {
+        padding: 12px 24px;
+        border-radius: 10px;
+        border: 1px solid rgba(255,255,255,.16);
+        background: rgba(255,255,255,.06);
+        color: rgba(240,255,250,.92);
+        cursor: pointer;
+        font-family: inherit;
+        font-size: 16px;
+        font-weight: 600;
+        width: 100%;
+      }
+      
+      .btn:hover {
+        background: rgba(255,255,255,.1);
+      }
+      
+      .btn.primary {
+        background: rgba(34,197,94,.18);
+        border-color: rgba(34,197,94,.35);
+        color: #22c55e;
+      }
+      
+      .btn.primary:hover {
+        background: rgba(34,197,94,.25);
+      }
+      
+      .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      
+      .error-message {
+        background: rgba(239,68,68,.15);
+        border: 1px solid #ef4444;
+        color: #ef4444;
+        padding: 20px;
+        border-radius: 12px;
+        text-align: center;
+      }
+      
+      .success-message {
+        background: rgba(34,197,94,.15);
+        border: 1px solid #22c55e;
+        color: #22c55e;
+        padding: 20px;
+        border-radius: 12px;
+        text-align: center;
+      }
+      
+      .loading {
+        text-align: center;
+        padding: 40px;
+        color: rgba(240,255,250,.78);
+      }
+      
+      .help-text {
+        font-size: 12px;
+        color: rgba(240,255,250,.6);
+        margin-top: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>📊 Progress Data Entry</h1>
+        <p>Enter student progress data</p>
+      </div>
+      
+      <div id="loadingMessage" class="card loading">
+        Loading...
+      </div>
+      
+      <div id="errorMessage" style="display: none;">
+        <div class="card error-message">
+          <h2>⚠️ Invalid or Expired Link</h2>
+          <p style="margin-top: 12px;">
+            This share link is no longer valid. Please contact the teacher for a new link.
+          </p>
+        </div>
+      </div>
+      
+      <div id="successMessage" style="display: none;">
+        <div class="card success-message">
+          <h2>✅ Data Submitted Successfully!</h2>
+          <p style="margin-top: 12px;">
+            Thank you for entering progress data. You can enter more data or close this page.
+          </p>
+        </div>
+      </div>
+      
+      <div id="entryForm" style="display: none;">
+        <div class="card">
+          <h2>Student: <span id="studentName"></span></h2>
+          
+          <form id="dataEntryForm">
+            <div class="form-group">
+              <label for="entryDate">Date</label>
+              <input type="date" id="entryDate" class="form-input" required>
+            </div>
+            
+            <div class="form-group">
+              <label for="enteredBy">Your Name</label>
+              <input type="text" id="enteredBy" class="form-input" placeholder="e.g., Sarah Johnson" required>
+              <div class="help-text">Who is entering this data?</div>
+            </div>
+            
+            <div id="goalsContainer">
+              <!-- Goals will be populated here -->
+            </div>
+            
+            <button type="submit" class="btn primary" id="submitBtn">
+              Submit Progress Data
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/web/share-entry.js"></script>
+  </body>
+</html>
