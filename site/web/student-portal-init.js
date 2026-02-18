@@ -1373,7 +1373,7 @@
     if (purposefulPatterns.test(text)) messages.push('<p>✔️ Your sentence has clear direction and purpose. Excellent!</p>');
     else messages.push('<p class="warn">Your sentence needs stronger direction. Include words that show your position or reasoning (e.g., "because," "demonstrates," "proves," "should").</p>');
     
-    if (/will (discuss|talk about|explain|write about|tell you)/i.test(text)) messages.push('<p class="error">Don\'t announce what you\'ll do ("I will discuss..."). Instead, make your claim directly.</p>');
+    if (/will (discuss|talk about|explain|write about|tell you)/i.test(text)) messages.push(`<p class="error">Don't announce what you'll do ("I will discuss..."). Instead, make your claim directly.</p>`);
     
     const sentenceCount = (text.match(/[.!?]+/g) || []).length;
     if (sentenceCount > 1) messages.push('<p class="warn">A topic sentence should typically be ONE sentence. Consider combining your ideas or using only the strongest one.</p>');
@@ -1458,8 +1458,9 @@
       } else if (sharedWords.length > 0) {
         const similarity = sharedWords.length / topicWords.length;
         if (similarity > 0.7 && topicSentence.value.trim().length > 30) {
-          const topicStart = topicLower.substring(0, 40);
-          const conclusionStart = conclusionLower.substring(0, 40);
+          const compareLength = Math.min(40, topicLower.length, conclusionLower.length);
+          const topicStart = topicLower.substring(0, compareLength);
+          const conclusionStart = conclusionLower.substring(0, compareLength);
           if (topicStart === conclusionStart) {
             messages.push('<p class="warn">Your conclusion is too similar to your topic sentence. Restate your thesis using different words.</p>');
           } else {
