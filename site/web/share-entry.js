@@ -4,7 +4,7 @@
   // Storage keys
   const SHARE_TOKENS_KEY = 'rc_share_tokens';
   const PROGRESS_KEY = 'rc_goal_progress';
-  const MAX_ENTRIES_PER_TOKEN = 50;
+  const MAX_ENTRIES_PER_TOKEN = 50; // Rate limit to prevent abuse and excessive localStorage usage
   
   // Today's date for form default (global scope)
   const today = new Date().toISOString().split('T')[0];
@@ -114,6 +114,7 @@
     document.getElementById('entryForm').style.display = 'block';
     
     // Populate student name (first name only for privacy)
+    // Note: Assumes Western name ordering (given name first). Single-name or non-Western names display as-is.
     const firstName = shareToken.student_name ? shareToken.student_name.split(' ')[0] : 'Student';
     document.getElementById('studentName').textContent = firstName;
     

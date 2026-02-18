@@ -1599,7 +1599,7 @@
     const goalsWithProgress = new Set(progressData.map(p => `${p.student_code}_${p.goal_code}`));
     for (const g of goalsData) {
       const key = `${g.student_code}_${g.code}`;
-      if (goalsWithProgress.has(key) && (g.baseline === null || g.baseline === undefined)) {
+      if (goalsWithProgress.has(key) && g.baseline == null) {
         const issueKey = `missing_baseline_${key}`;
         if (!dismissed.has(issueKey)) {
           issues.push({
@@ -1761,7 +1761,7 @@
   
   function calculateNextDue(lastCollected, frequency) {
     if (!lastCollected) {
-      return new Date(); // Overdue if never collected
+      return new Date(); // Return current date to indicate immediate collection needed
     }
     
     const last = new Date(lastCollected);
