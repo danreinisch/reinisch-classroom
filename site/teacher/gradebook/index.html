@@ -215,6 +215,105 @@
       td.gb-score-cell.editing {
         padding: 4px 6px;
       }
+      
+      /* Analytics styles */
+      .gb-analytics-assignment {
+        margin-bottom: 20px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid rgba(255,255,255,.08);
+      }
+      .gb-analytics-assignment:last-child {
+        border-bottom: none;
+      }
+      .gb-analytics-title {
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 8px;
+      }
+      .gb-analytics-stats {
+        display: flex;
+        gap: 16px;
+        margin-bottom: 8px;
+        font-size: 12px;
+        opacity: 0.85;
+      }
+      .gb-analytics-stat {
+        display: flex;
+        gap: 4px;
+      }
+      .gb-distribution-chart {
+        margin-top: 8px;
+      }
+      .gb-distribution-bar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 4px;
+        font-size: 12px;
+      }
+      .gb-distribution-label {
+        width: 70px;
+        text-align: right;
+        opacity: 0.8;
+      }
+      .gb-distribution-bar-bg {
+        flex: 1;
+        height: 20px;
+        background: rgba(255,255,255,.05);
+        border-radius: 4px;
+        overflow: hidden;
+        position: relative;
+      }
+      .gb-distribution-bar-fill {
+        height: 100%;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        font-weight: 600;
+        transition: width 0.3s ease;
+      }
+      
+      /* Missing work styles */
+      .gb-missing-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+      .gb-missing-table th,
+      .gb-missing-table td {
+        padding: 8px;
+        border-bottom: 1px solid rgba(255,255,255,.06);
+        text-align: left;
+      }
+      .gb-missing-table th {
+        font-size: 12px;
+        text-transform: uppercase;
+        opacity: 0.8;
+      }
+      .gb-missing-table tr:last-child td {
+        border-bottom: none;
+      }
+      .gb-days-overdue {
+        color: rgba(239,68,68,.9);
+        font-weight: 600;
+      }
+      
+      /* Trend arrow styles */
+      .gb-trend-arrow {
+        margin-left: 6px;
+        font-size: 14px;
+      }
+      .gb-trend-up {
+        color: rgba(34,197,94,.9);
+      }
+      .gb-trend-down {
+        color: rgba(239,68,68,.9);
+      }
+      .gb-trend-flat {
+        color: rgba(156,163,175,.7);
+      }
     </style>
   </head>
   <body>
@@ -298,6 +397,9 @@
                   <option value="Q3">Q3 (Dec 20–Mar 6)</option>
                   <option value="Q4">Q4 (Mar 7–May 20)</option>
                 </select>
+                <button class="gb-btn" type="button" id="btnToggleAnalytics">📊 Analytics</button>
+                <button class="gb-btn" type="button" id="btnToggleMissing">🚨 Missing Work</button>
+                <button class="gb-btn" type="button" id="btnWeightsSettings">⚙️ Weights</button>
                 <button class="gb-btn primary" type="button" id="btnExportCSV">Export CSV</button>
                 <button class="gb-btn primary" type="button" id="btnExportPDF">Export PDF</button>
               </div>
@@ -307,6 +409,55 @@
               <!-- Filter buttons populated by JS -->
             </div>
           </section>
+
+          <!-- Analytics Panel (hidden by default) -->
+          <section class="gb-card" aria-label="Assignment Analytics" id="gbAnalyticsPanel" style="margin-top: 16px; display: none;">
+            <h2 style="margin: 0 0 12px;">📊 Score Distribution Analytics</h2>
+            <div id="gbAnalyticsContent">
+              <!-- Analytics content will be rendered here -->
+            </div>
+          </section>
+
+          <!-- Missing Work Panel (hidden by default) -->
+          <section class="gb-card" aria-label="Missing Work Tracker" id="gbMissingWorkPanel" style="margin-top: 16px; display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+              <h2 style="margin: 0;">🚨 Missing Work Tracker</h2>
+              <div id="gbMissingWorkBadge" style="padding: 4px 12px; border-radius: 8px; background: rgba(239,68,68,.15); border: 1px solid rgba(239,68,68,.4); font-size: 13px; font-weight: 600;">
+                0 missing
+              </div>
+            </div>
+            <div id="gbMissingWorkContent">
+              <!-- Missing work content will be rendered here -->
+            </div>
+          </section>
+
+          <!-- Weights Settings Modal (hidden by default) -->
+          <div id="gbWeightsModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,.7); z-index: 1000; align-items: center; justify-content: center;">
+            <div class="gb-card" style="max-width: 500px; margin: 20px;">
+              <h2 style="margin: 0 0 16px;">⚙️ Category Weights</h2>
+              <p style="font-size: 13px; opacity: 0.8; margin-bottom: 16px;">Enter weights between 0.1 and 10.0</p>
+              <div style="margin-bottom: 12px;">
+                <label style="display: block; margin-bottom: 4px; font-size: 13px;">Assignment Weight:</label>
+                <input type="number" id="weightAssignment" min="0.1" max="10" step="0.1" value="1.0" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,.2); background: rgba(0,0,0,.3); color: inherit;">
+              </div>
+              <div style="margin-bottom: 12px;">
+                <label style="display: block; margin-bottom: 4px; font-size: 13px;">Quiz Weight:</label>
+                <input type="number" id="weightQuiz" min="0.1" max="10" step="0.1" value="1.5" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,.2); background: rgba(0,0,0,.3); color: inherit;">
+              </div>
+              <div style="margin-bottom: 12px;">
+                <label style="display: block; margin-bottom: 4px; font-size: 13px;">Test Weight:</label>
+                <input type="number" id="weightTest" min="0.1" max="10" step="0.1" value="2.0" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,.2); background: rgba(0,0,0,.3); color: inherit;">
+              </div>
+              <div style="margin-bottom: 16px;">
+                <label style="display: block; margin-bottom: 4px; font-size: 13px;">Project Weight:</label>
+                <input type="number" id="weightProject" min="0.1" max="10" step="0.1" value="2.0" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,.2); background: rgba(0,0,0,.3); color: inherit;">
+              </div>
+              <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                <button class="gb-btn" id="btnCancelWeights">Cancel</button>
+                <button class="gb-btn primary" id="btnSaveWeights">Save</button>
+              </div>
+            </div>
+          </div>
 
           <section class="gb-card" aria-label="Gradebook grid" style="margin-top: 16px">
             <div id="gbEmpty" class="gb-empty" style="display: none">
