@@ -490,77 +490,6 @@
   /**
    * Load and render student assignments
    */
-  async function loadStudentAssignments(studentCode) {
-    console.log(LOG_PREFIX, 'Loading assignments for:', studentCode);
-    
-    const assignmentsContainer = document.getElementById('assignmentsContent');
-    const assignmentsCount = document.getElementById('assignmentsCount');
-    
-    if (!assignmentsContainer) {
-      console.warn(LOG_PREFIX, 'Assignments container not found');
-      return;
-    }
-    
-    // Show loading state
-    assignmentsContainer.innerHTML = `
-      <div style="text-align: center; padding: 40px; color: var(--muted);">
-        <div style="font-size: 48px; margin-bottom: 16px;">⏳</div>
-        <div>Loading your assignments...</div>
-      </div>
-    `;
-    
-    try {
-      const assignmentsUrl = `/.netlify/functions/student-assignments?code=${encodeURIComponent(studentCode)}`;
-      const response = await fetch(assignmentsUrl);
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch assignments: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      
-      if (!data.ok) {
-        throw new Error(data.error || 'Failed to load assignments');
-      }
-      
-      const instances = data.instances || [];
-      
-      // Render assignments
-      if (instances.length === 0) {
-        assignmentsContainer.innerHTML = `
-          <div style="text-align: center; padding: 40px; color: var(--muted);">
-            <div style="font-size: 48px; margin-bottom: 16px;">📚</div>
-            <div>No assignments yet</div>
-          </div>
-        `;
-        if (assignmentsCount) {
-          assignmentsCount.textContent = '0 assignments';
-        }
-      } else {
-        assignmentsContainer.innerHTML = instances.map(inst => renderAssignmentCard(inst)).join('');
-        if (assignmentsCount) {
-          assignmentsCount.textContent = instances.length === 1 ? '1 assignment' : `${instances.length} assignments`;
-        }
-        
-        // Attach click handlers
-        attachAssignmentCardHandlers(instances);
-      }
-      
-    } catch (err) {
-      console.error(LOG_PREFIX, 'Error loading assignments:', err);
-      assignmentsContainer.innerHTML = `
-        <div style="text-align: center; padding: 40px; color: var(--muted);">
-          <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
-          <div style="color: var(--ink);">Assignments temporarily unavailable</div>
-          <div style="margin-top: 8px; font-size: 14px;">Please try refreshing the page or contact your teacher if this persists.</div>
-        </div>
-      `;
-      if (assignmentsCount) {
-        assignmentsCount.textContent = 'Unavailable';
-      }
-    }
-  }
-  
   /**
    * Render an assignment card
    */
@@ -819,6 +748,7 @@
           <button class="st-hint-btn" data-hint-id="hint_${questionId}">💡 Show Hint</button>
           <div class="st-hint-content" id="hint_${questionId}">
             ${escapeHtml(q.hint)}
+            <button class="st-tts-btn" data-text="${q.hint}" title="Read this hint aloud" aria-label="Read hint aloud">🔊</button>
           </div>
         </div>
       ` : '';
@@ -927,7 +857,12 @@
         <button class="st-hint-btn" id="writingHintsBtn">💡 Show Writing Hints</button>
         <div class="st-hint-content" id="writingHints">
           <ul style="margin: 0; padding-left: 20px;">
-            ${dayData.hints.map(hint => `<li>${escapeHtml(hint)}</li>`).join('')}
+            ${dayData.hints.map(hint => `
+              <li>
+                ${escapeHtml(hint)}
+                <button class="st-tts-btn" data-text="${hint}" title="Read this hint aloud" aria-label="Read hint aloud">🔊</button>
+              </li>
+            `).join('')}
           </ul>
         </div>
       </div>
@@ -1188,6 +1123,18 @@
         }
       });
     }
+    
+    // Attach TTS handlers for writing prompt and hints
+    container.querySelectorAll('.st-tts-btn').forEach(btn => {
+      btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const text = this.getAttribute('data-text');
+        if (text) {
+          speakText(text);
+        }
+      });
+    });
     
     // Attach submit handler
     const submitBtn = container.querySelector('#submitWritingBtn');
@@ -1866,21 +1813,495 @@
         btnLogout.addEventListener('click', handleLogout);
       }
       
+      // Setup tab switching
+      setupTabSwitching();
+      
       state.dashboardHandlersAttached = true;
     }
     
     console.log(LOG_PREFIX, 'Dashboard view shown for:', studentCode);
     
-    // Load student goals and progress data
+    // Load student data for all tabs
     if (studentCode) {
+      loadAllStudentData(studentCode);
+    }
+  }
+
+  /**
+   * Tab switching state
+   */
+  const tabState = {
+    currentTab: 'dashboard',
+    assignmentsData: [],
+    goalsData: [],
+    gradesData: [],
+  };
+
+  /**
+   * Setup tab switching functionality
+   */
+  function setupTabSwitching() {
+    const tabLinks = document.querySelectorAll('[data-tab]');
+    
+    tabLinks.forEach(link => {
+      link.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const tabName = this.getAttribute('data-tab');
+        switchToTab(tabName);
+      });
+    });
+  }
+
+  /**
+   * Switch to a specific tab
+   */
+  function switchToTab(tabName) {
+    console.log(LOG_PREFIX, 'Switching to tab:', tabName);
+    
+    // Update tab state
+    tabState.currentTab = tabName;
+    
+    // Hide all tab panels
+    const allPanels = document.querySelectorAll('.st-tab-panel');
+    allPanels.forEach(panel => panel.classList.remove('active'));
+    
+    // Show target panel
+    const targetPanel = document.getElementById('tab' + tabName.charAt(0).toUpperCase() + tabName.slice(1));
+    if (targetPanel) {
+      targetPanel.classList.add('active');
+    }
+    
+    // Update sidebar active state
+    const allLinks = document.querySelectorAll('[data-tab]');
+    allLinks.forEach(link => link.classList.remove('active'));
+    
+    const activeLink = document.querySelector(`[data-tab="${tabName}"]`);
+    if (activeLink) {
+      activeLink.classList.add('active');
+    }
+  }
+
+  /**
+   * Load all student data for all tabs
+   */
+  async function loadAllStudentData(studentCode) {
+    try {
+      // Load goals
       loadStudentGoals(studentCode).catch(err => {
         console.error(LOG_PREFIX, 'Failed to load student goals:', err);
       });
       
-      // Load student assignments
-      loadStudentAssignments(studentCode).catch(err => {
+      // Load assignments
+      loadStudentAssignmentsForTabs(studentCode).catch(err => {
         console.error(LOG_PREFIX, 'Failed to load student assignments:', err);
       });
+      
+      // Load grades
+      loadStudentGrades(studentCode).catch(err => {
+        console.error(LOG_PREFIX, 'Failed to load student grades:', err);
+      });
+    } catch (err) {
+      console.error(LOG_PREFIX, 'Error loading student data:', err);
+    }
+  }
+
+  /**
+   * Load assignments and populate both Assignments tab and Dashboard
+   */
+  async function loadStudentAssignmentsForTabs(studentCode) {
+    console.log(LOG_PREFIX, 'Loading assignments for tabs:', studentCode);
+    
+    const assignmentsContainer = document.getElementById('assignmentsContent');
+    const dashRecentContainer = document.getElementById('dashRecentAssignments');
+    
+    if (!assignmentsContainer) {
+      console.warn(LOG_PREFIX, 'Assignments container not found');
+      return;
+    }
+    
+    // Show loading state
+    assignmentsContainer.innerHTML = `
+      <div style="text-align: center; padding: 40px; color: var(--muted);">
+        <div style="font-size: 48px; margin-bottom: 16px;">⏳</div>
+        <div>Loading your assignments...</div>
+      </div>
+    `;
+    
+    try {
+      const assignmentsUrl = `/.netlify/functions/student-assignments?code=${encodeURIComponent(studentCode)}`;
+      const response = await fetch(assignmentsUrl);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch assignments: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (!data.ok) {
+        throw new Error(data.error || 'Failed to load assignments');
+      }
+      
+      const instances = data.instances || [];
+      tabState.assignmentsData = instances;
+      
+      // Render assignments tab (with all status)
+      renderAssignmentsTab(instances);
+      
+      // Populate dashboard summary cards
+      populateDashboardSummary(instances);
+      
+      // Populate dashboard recent assignments (max 5)
+      if (dashRecentContainer) {
+        const recent = instances.slice(0, 5);
+        if (recent.length === 0) {
+          dashRecentContainer.innerHTML = '<p style="opacity:0.7;">No assignments yet</p>';
+        } else {
+          dashRecentContainer.innerHTML = recent.map(inst => renderAssignmentCard(inst)).join('');
+          attachAssignmentCardHandlers(recent);
+        }
+      }
+      
+      // Setup status filter handlers
+      setupStatusFilters();
+      
+    } catch (err) {
+      console.error(LOG_PREFIX, 'Error loading assignments:', err);
+      assignmentsContainer.innerHTML = `
+        <div style="text-align: center; padding: 40px; color: var(--muted);">
+          <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
+          <div style="color: var(--ink);">Assignments temporarily unavailable</div>
+          <div style="margin-top: 8px; font-size: 14px;">Please try refreshing the page or contact your teacher if this persists.</div>
+        </div>
+      `;
+    }
+  }
+
+  /**
+   * Render assignments in the Assignments tab
+   */
+  function renderAssignmentsTab(instances, statusFilter = 'all') {
+    const assignmentsContainer = document.getElementById('assignmentsContent');
+    if (!assignmentsContainer) return;
+    
+    // Filter by status
+    const filtered = filterAssignmentsByStatus(instances, statusFilter);
+    
+    if (filtered.length === 0) {
+      assignmentsContainer.innerHTML = `
+        <div style="text-align: center; padding: 40px; color: var(--muted);">
+          <div style="font-size: 48px; margin-bottom: 16px;">📚</div>
+          <div>No ${statusFilter !== 'all' ? statusFilter.replace('-', ' ') : ''} assignments</div>
+        </div>
+      `;
+    } else {
+      assignmentsContainer.innerHTML = filtered.map(inst => renderAssignmentCard(inst)).join('');
+      attachAssignmentCardHandlers(filtered);
+    }
+  }
+
+  /**
+   * Filter assignments by status
+   */
+  function filterAssignmentsByStatus(instances, status) {
+    if (status === 'all') return instances;
+    
+    const now = new Date();
+    
+    return instances.filter(inst => {
+      const instStatus = getAssignmentStatus(inst, now);
+      return instStatus === status;
+    });
+  }
+
+  /**
+   * Get assignment status
+   */
+  function getAssignmentStatus(instance, now = new Date()) {
+    const status = (instance.status || 'Assigned').toLowerCase();
+    
+    // Check if graded
+    if (status === 'graded') return 'completed';
+    
+    // Check if submitted
+    if (status === 'submitted') return 'submitted';
+    
+    // Check if overdue (assigned but past due date)
+    if (instance.due_at) {
+      const dueDate = new Date(instance.due_at);
+      if (dueDate < now && status !== 'submitted' && status !== 'graded') {
+        return 'overdue';
+      }
+    }
+    
+    // Otherwise it's in progress (assigned)
+    return 'in-progress';
+  }
+
+  /**
+   * Setup status filter handlers
+   */
+  function setupStatusFilters() {
+    const filterTabs = document.querySelectorAll('.st-status-tab');
+    
+    filterTabs.forEach(tab => {
+      tab.addEventListener('click', function() {
+        const status = this.getAttribute('data-status');
+        
+        // Update active state
+        filterTabs.forEach(t => t.classList.remove('active'));
+        this.classList.add('active');
+        
+        // Re-render with filter
+        renderAssignmentsTab(tabState.assignmentsData, status);
+      });
+    });
+  }
+
+  /**
+   * Populate dashboard summary cards
+   */
+  function populateDashboardSummary(instances) {
+    const now = new Date();
+    
+    // Count by status
+    let inProgressCount = 0;
+    let overdueCount = 0;
+    
+    instances.forEach(inst => {
+      const status = getAssignmentStatus(inst, now);
+      if (status === 'in-progress') inProgressCount++;
+      if (status === 'overdue') overdueCount++;
+    });
+    
+    // Update counts
+    const dashUpcoming = document.getElementById('dashUpcomingCount');
+    const dashOverdue = document.getElementById('dashOverdueCount');
+    
+    if (dashUpcoming) dashUpcoming.textContent = inProgressCount;
+    if (dashOverdue) dashOverdue.textContent = overdueCount;
+  }
+
+  /**
+   * Load student grades
+   */
+  async function loadStudentGrades(studentCode) {
+    console.log(LOG_PREFIX, 'Loading grades for:', studentCode);
+    
+    const gradesContainer = document.getElementById('gradesContent');
+    const dashAvgGrade = document.getElementById('dashAvgGrade');
+    
+    if (!gradesContainer) {
+      console.warn(LOG_PREFIX, 'Grades container not found');
+      return;
+    }
+    
+    // Show loading state
+    gradesContainer.innerHTML = `
+      <div style="text-align: center; padding: 40px; color: var(--muted);">
+        <div style="font-size: 48px; margin-bottom: 16px;">⏳</div>
+        <div>Loading your grades...</div>
+      </div>
+    `;
+    
+    try {
+      // Fetch submissions with scores
+      const submissionsUrl = `/.netlify/functions/student-submissions?code=${encodeURIComponent(studentCode)}`;
+      const response = await fetch(submissionsUrl);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch submissions: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (!data.ok) {
+        throw new Error(data.error || 'Failed to load grades');
+      }
+      
+      const submissions = data.submissions || [];
+      tabState.gradesData = submissions;
+      
+      // Filter to only graded submissions
+      const graded = submissions.filter(sub => sub.score !== null && sub.score !== undefined);
+      
+      // Calculate average
+      let avgGrade = '—';
+      if (graded.length > 0) {
+        const sum = graded.reduce((acc, sub) => acc + (sub.score || 0), 0);
+        avgGrade = Math.round(sum / graded.length) + '%';
+      }
+      
+      // Update dashboard
+      if (dashAvgGrade) {
+        dashAvgGrade.textContent = avgGrade;
+      }
+      
+      // Render grades
+      if (graded.length === 0) {
+        gradesContainer.innerHTML = `
+          <div style="text-align: center; padding: 40px; color: var(--muted);">
+            <div style="font-size: 48px; margin-bottom: 16px;">📊</div>
+            <div>No grades yet — keep working on your assignments!</div>
+          </div>
+        `;
+      } else {
+        // Show average at top
+        let html = `
+          <div class="st-average-display">
+            <h3>Your Overall Average</h3>
+            <div class="st-average-value">${avgGrade}</div>
+          </div>
+        `;
+        
+        // Show graded assignments
+        html += graded.map(sub => renderGradeRow(sub)).join('');
+        gradesContainer.innerHTML = html;
+      }
+      
+    } catch (err) {
+      console.error(LOG_PREFIX, 'Error loading grades:', err);
+      gradesContainer.innerHTML = `
+        <div style="text-align: center; padding: 40px; color: var(--muted);">
+          <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
+          <div style="color: var(--ink);">Grades temporarily unavailable</div>
+          <div style="margin-top: 8px; font-size: 14px;">Please try refreshing the page or contact your teacher if this persists.</div>
+        </div>
+      `;
+      if (dashAvgGrade) {
+        dashAvgGrade.textContent = '—';
+      }
+    }
+  }
+
+  /**
+   * Render a grade row
+   */
+  function renderGradeRow(submission) {
+    const title = escapeHtml(submission.assignment_title || 'Untitled Assignment');
+    const score = submission.score !== null ? submission.score : 0;
+    const scoreClass = score >= 70 ? 'good' : 'poor';
+    const submittedDate = submission.submitted_at ? formatDate(submission.submitted_at) : 'N/A';
+    const className = escapeHtml(submission.class_name || 'General');
+    
+    return `
+      <div class="st-grade-row">
+        <div class="st-grade-info">
+          <h4>${title}</h4>
+          <div class="st-grade-meta">${className} • Submitted: ${submittedDate}</div>
+        </div>
+        <div class="st-grade-score ${scoreClass}">${Math.round(score)}%</div>
+      </div>
+    `;
+  }
+
+  /**
+   * Update goals display for dashboard snapshot
+   */
+  async function loadStudentGoals(studentCode) {
+    console.log(LOG_PREFIX, 'Loading goals for:', studentCode);
+    
+    const goalsContainer = document.getElementById('goalsContent');
+    const dashGoalsSnapshot = document.getElementById('dashGoalsSnapshot');
+    const dashGoalsCount = document.getElementById('dashGoalsCount');
+    
+    if (!goalsContainer) {
+      console.warn(LOG_PREFIX, 'Goals container not found');
+      return;
+    }
+    
+    // Show loading state
+    goalsContainer.innerHTML = `
+      <div style="text-align: center; padding: 40px; color: var(--muted);">
+        <div style="font-size: 48px; margin-bottom: 16px;">⏳</div>
+        <div>Loading your goals...</div>
+      </div>
+    `;
+    
+    try {
+      // Fetch goals
+      const goalsUrl = `/.netlify/functions/student-goals?code=${encodeURIComponent(studentCode)}`;
+      const goalsResponse = await fetch(goalsUrl);
+      
+      if (!goalsResponse.ok) {
+        throw new Error(`Failed to fetch goals: ${goalsResponse.status}`);
+      }
+      
+      const goalsData = await goalsResponse.json();
+      
+      if (!goalsData.ok) {
+        throw new Error(goalsData.error || 'Failed to load goals');
+      }
+      
+      const goals = goalsData.goals || [];
+      tabState.goalsData = goals;
+      
+      // Fetch progress data
+      let progressMap = new Map();
+      try {
+        const progressUrl = `/.netlify/functions/student-goal-progress?code=${encodeURIComponent(studentCode)}`;
+        const progressResponse = await fetch(progressUrl);
+        
+        if (progressResponse.ok) {
+          const progressData = await progressResponse.json();
+          if (progressData.ok && progressData.progress) {
+            // Build map of goal_id -> progress entries
+            progressData.progress.forEach(entry => {
+              if (!progressMap.has(entry.goal_id)) {
+                progressMap.set(entry.goal_id, []);
+              }
+              progressMap.get(entry.goal_id).push(entry);
+            });
+          }
+        }
+      } catch (err) {
+        console.warn(LOG_PREFIX, 'Failed to load progress data:', err);
+        // Continue without progress data
+      }
+      
+      // Update dashboard goals count
+      if (dashGoalsCount) {
+        dashGoalsCount.textContent = goals.length;
+      }
+      
+      // Render goals in Goals tab
+      if (goals.length === 0) {
+        goalsContainer.innerHTML = `
+          <div style="text-align: center; padding: 40px; color: var(--muted);">
+            <div style="font-size: 48px; margin-bottom: 16px;">📋</div>
+            <div>No goals found for your account.</div>
+          </div>
+        `;
+      } else {
+        goalsContainer.innerHTML = goals.map(goal => renderGoalCard(goal, progressMap)).join('');
+        
+        // Attach event listeners to "Show more" buttons
+        attachShowMoreListeners();
+      }
+      
+      // Render goals snapshot for dashboard (max 3)
+      if (dashGoalsSnapshot) {
+        const snapshot = goals.slice(0, 3);
+        if (snapshot.length === 0) {
+          dashGoalsSnapshot.innerHTML = '<p style="opacity:0.7;">No goals yet</p>';
+        } else {
+          dashGoalsSnapshot.innerHTML = snapshot.map(goal => renderGoalCard(goal, progressMap)).join('');
+        }
+      }
+      
+    } catch (err) {
+      console.error(LOG_PREFIX, 'Error loading goals:', err);
+      goalsContainer.innerHTML = `
+        <div style="text-align: center; padding: 40px; color: var(--muted);">
+          <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
+          <div style="color: var(--ink);">Goals temporarily unavailable</div>
+          <div style="margin-top: 8px; font-size: 14px;">Please try refreshing the page or contact your teacher if this persists.</div>
+        </div>
+      `;
+      if (dashGoalsCount) {
+        dashGoalsCount.textContent = '0';
+      }
     }
   }
 
