@@ -1776,6 +1776,20 @@
   function switchToTab(tabName) {
     console.log(LOG_PREFIX, 'Switching to tab:', tabName);
     
+    // Tab name to ID mapping
+    const tabIdMap = {
+      'dashboard': 'tabDashboard',
+      'goals': 'tabGoals',
+      'assignments': 'tabAssignments',
+      'grades': 'tabGrades'
+    };
+    
+    const targetPanelId = tabIdMap[tabName];
+    if (!targetPanelId) {
+      console.warn(LOG_PREFIX, 'Invalid tab name:', tabName);
+      return;
+    }
+    
     // Update tab state
     tabState.currentTab = tabName;
     
@@ -1784,9 +1798,11 @@
     allPanels.forEach(panel => panel.classList.remove('active'));
     
     // Show target panel
-    const targetPanel = document.getElementById('tab' + tabName.charAt(0).toUpperCase() + tabName.slice(1));
+    const targetPanel = document.getElementById(targetPanelId);
     if (targetPanel) {
       targetPanel.classList.add('active');
+    } else {
+      console.error(LOG_PREFIX, 'Tab panel not found:', targetPanelId);
     }
     
     // Update sidebar active state
@@ -1904,11 +1920,14 @@
     // Filter by status
     const filtered = filterAssignmentsByStatus(instances, statusFilter);
     
+    // Create friendly message based on filter
+    const filterMessage = statusFilter === 'all' ? 'No assignments' : `No ${statusFilter.replaceAll('-', ' ')} assignments`;
+    
     if (filtered.length === 0) {
       assignmentsContainer.innerHTML = `
         <div style="text-align: center; padding: 40px; color: var(--muted);">
           <div style="font-size: 48px; margin-bottom: 16px;">📚</div>
-          <div>No ${statusFilter !== 'all' ? statusFilter.replaceAll('-', ' ') : ''} assignments</div>
+          <div>${filterMessage}</div>
         </div>
       `;
     } else {
