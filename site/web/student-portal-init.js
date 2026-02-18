@@ -354,6 +354,76 @@
     }
   }
 
+  // ============================================================================
+  // Feature 11: Vocabulary Word Bank
+  // ============================================================================
+  function extractVocabulary(content) {
+    const vocab = new Set();
+    
+    // Extract words in ALL CAPS (at least 3 chars)
+    const capsMatches = content.match(/\b[A-Z]{3,}\b/g);
+    if (capsMatches) {
+      capsMatches.forEach(word => vocab.add(word));
+    }
+    
+    // Extract words in quotes
+    const quoteMatches = content.match(/"([^"]+)"/g);
+    if (quoteMatches) {
+      quoteMatches.forEach(match => {
+        const word = match.replace(/"/g, '').trim();
+        if (word.length >= 3) vocab.add(word);
+      });
+    }
+    
+    // Look for "Vocabulary:" or "Key Terms:" sections
+    const vocabSection = content.match(/(?:Vocabulary|Key Terms):\s*(.+?)(?:\n\n|\n[A-Z]|$)/s);
+    if (vocabSection && vocabSection[1]) {
+      const terms = vocabSection[1].split(/[,;\n]/).map(t => t.trim()).filter(t => t.length >= 3);
+      terms.forEach(term => vocab.add(term));
+    }
+    
+    return Array.from(vocab);
+  }
+
+  function renderVocabularySection(dayData) {
+    // Collect all text from day
+    let allText = dayData.label || '';
+    
+    if (dayData.type === 'questions' && dayData.questions) {
+      dayData.questions.forEach(q => {
+        allText += ' ' + (q.text || '');
+        if (q.choices) {
+          q.choices.forEach(c => allText += ' ' + (c.text || ''));
+        }
+      });
+    } else if (dayData.type === 'writing_prompt') {
+      allText += ' ' + (dayData.prompt || '');
+      if (dayData.structure) {
+        allText += ' ' + dayData.structure.join(' ');
+      }
+    }
+    
+    const vocab = extractVocabulary(allText);
+    
+    if (vocab.length === 0) return '';
+    
+    const vocabWordsHtml = vocab.map(word => `
+      <div class="st-vocab-word">
+        ${escapeHtml(word)}
+        <button class="st-tts-btn" data-text="${escapeHtml(word)}" title="Hear pronunciation" aria-label="Hear pronunciation of ${escapeHtml(word)}" style="font-size: 12px; padding: 2px 4px;">🔊</button>
+      </div>
+    `).join('');
+    
+    return `
+      <details class="st-vocab-section">
+        <summary>📖 Vocabulary (${vocab.length} terms)</summary>
+        <div class="st-vocab-list">
+          ${vocabWordsHtml}
+        </div>
+      </details>
+    `;
+  }
+
   /**
    * Update progress display in viewer
    */
@@ -723,7 +793,13 @@
       </button>
       <div class="st-panel-header">
         <h2>${title}</h2>
-        <button class="st-panel-close-btn" id="panelCloseBtn">✕</button>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span class="st-timer hidden" id="assignmentTimer">⏱️ <span id="timerDisplay">00:00</span></span>
+          <button class="st-btn secondary" id="btnToggleTimer" title="Show/hide timer" style="padding: 6px 12px;">⏱️</button>
+          <button class="st-btn secondary st-read-aloud-btn" id="btnReadAloud" style="padding: 6px 12px;">🔊 Read Aloud</button>
+          <button class="st-btn secondary" id="btnPrint" title="Print assignment" style="padding: 6px 12px;">🖨️</button>
+          <button class="st-panel-close-btn" id="panelCloseBtn">✕</button>
+        </div>
       </div>
       ${days.length > 1 ? `<div class="st-day-tabs" id="dayTabs">${dayTabsHtml}</div>` : ''}
       <div id="dayContent"></div>
@@ -731,6 +807,27 @@
     
     panel.querySelector('#panelBackBtn').addEventListener('click', closeAssignmentViewer);
     panel.querySelector('#panelCloseBtn').addEventListener('click', closeAssignmentViewer);
+    
+    // Feature 8: Print button
+    const btnPrint = panel.querySelector('#btnPrint');
+    if (btnPrint) {
+      btnPrint.addEventListener('click', () => window.print());
+    }
+    
+    // Feature 12: Read Aloud button
+    const btnReadAloud = panel.querySelector('#btnReadAloud');
+    if (btnReadAloud) {
+      btnReadAloud.addEventListener('click', () => toggleReadAloud(panel));
+    }
+    
+    // Feature 13: Timer toggle
+    const btnToggleTimer = panel.querySelector('#btnToggleTimer');
+    if (btnToggleTimer) {
+      btnToggleTimer.addEventListener('click', () => toggleTimer(instance));
+    }
+    
+    // Initialize timer if previously enabled
+    initTimer(instance);
     
     // Attach day tab handlers
     const dayTabs = panel.querySelectorAll('.st-day-tab');
@@ -838,12 +935,16 @@
       </div>
     ` : '';
     
+    // Feature 11: Vocabulary section
+    const vocabHtml = renderVocabularySection(dayData);
+    
     container.innerHTML = `
       <h3 style="margin-top: 0; margin-bottom: 20px; font-size: 18px;">
         ${escapeHtml(dayData.label)}
       </h3>
       ${readOnlyBanner}
       ${progressHtml}
+      ${vocabHtml}
       ${questionsHtml}
     `;
     
@@ -973,6 +1074,9 @@
         </div>
       </div>
     ` : '';
+    
+    // Feature 11: Vocabulary section
+    const vocabHtml = renderVocabularySection(dayData);
     
     const submitButtonHtml = isReadOnly ? `
       <div class="st-submitted-message">✓ Submitted — Waiting for teacher review</div>
@@ -1108,6 +1212,7 @@
       </h3>
       ${readOnlyBanner}
       ${progressHtml}
+      ${vocabHtml}
       <div class="st-writing-section">
         <div class="st-writing-prompt">
           ${escapeHtml(dayData.prompt)}
@@ -3016,6 +3121,188 @@
     `).join('');
 
     badgesContainer.innerHTML = `<div class="st-badges">${badgesHtml}</div>`;
+  }
+
+  // ============================================================================
+  // Feature 12: Read Aloud Mode
+  // ============================================================================
+  let readAloudState = {
+    speaking: false,
+    utterances: [],
+    currentIndex: 0
+  };
+
+  function toggleReadAloud(panel) {
+    const btn = document.getElementById('btnReadAloud');
+    if (!btn) return;
+
+    if (readAloudState.speaking) {
+      // Stop reading
+      window.speechSynthesis.cancel();
+      readAloudState.speaking = false;
+      readAloudState.utterances = [];
+      readAloudState.currentIndex = 0;
+      btn.textContent = '🔊 Read Aloud';
+      
+      // Remove reading highlights
+      panel.querySelectorAll('.reading').forEach(el => el.classList.remove('reading'));
+    } else {
+      // Start reading
+      const dayContent = panel.querySelector('#dayContent');
+      if (!dayContent) return;
+
+      // Collect all text to read
+      const textElements = [];
+      
+      // Day label
+      const dayLabel = dayContent.querySelector('h3');
+      if (dayLabel) {
+        textElements.push({ element: dayLabel, text: dayLabel.textContent });
+      }
+      
+      // Questions and choices
+      dayContent.querySelectorAll('.st-question-container').forEach(container => {
+        const questionText = container.querySelector('.st-question-text');
+        if (questionText) {
+          const text = questionText.textContent.replace(/🔊/g, '').trim();
+          textElements.push({ element: container, text });
+        }
+        
+        container.querySelectorAll('.st-choice-label').forEach(choice => {
+          const text = choice.textContent.replace(/🔊/g, '').trim();
+          textElements.push({ element: choice.closest('.st-choice'), text });
+        });
+      });
+      
+      // Writing prompts
+      const writingPrompt = dayContent.querySelector('.st-writing-prompt');
+      if (writingPrompt) {
+        const text = writingPrompt.textContent.replace(/🔊/g, '').trim();
+        textElements.push({ element: writingPrompt, text });
+      }
+
+      if (textElements.length === 0) return;
+
+      readAloudState.speaking = true;
+      readAloudState.utterances = textElements;
+      readAloudState.currentIndex = 0;
+      btn.textContent = '⏹ Stop Reading';
+
+      speakNext(panel);
+    }
+  }
+
+  function speakNext(panel) {
+    if (!readAloudState.speaking || readAloudState.currentIndex >= readAloudState.utterances.length) {
+      readAloudState.speaking = false;
+      const btn = document.getElementById('btnReadAloud');
+      if (btn) btn.textContent = '🔊 Read Aloud';
+      panel.querySelectorAll('.reading').forEach(el => el.classList.remove('reading'));
+      return;
+    }
+
+    const item = readAloudState.utterances[readAloudState.currentIndex];
+    
+    // Remove previous highlight
+    panel.querySelectorAll('.reading').forEach(el => el.classList.remove('reading'));
+    
+    // Highlight current element
+    if (item.element) {
+      item.element.classList.add('reading');
+    }
+
+    const utterance = new SpeechSynthesisUtterance(item.text);
+    utterance.onend = () => {
+      readAloudState.currentIndex++;
+      setTimeout(() => speakNext(panel), 300);
+    };
+    utterance.onerror = () => {
+      readAloudState.speaking = false;
+      const btn = document.getElementById('btnReadAloud');
+      if (btn) btn.textContent = '🔊 Read Aloud';
+      panel.querySelectorAll('.reading').forEach(el => el.classList.remove('reading'));
+    };
+    
+    window.speechSynthesis.speak(utterance);
+  }
+
+  // ============================================================================
+  // Feature 13: Visual Timer
+  // ============================================================================
+  let timerState = {
+    startTime: null,
+    elapsed: 0,
+    interval: null,
+    instanceId: null
+  };
+
+  function toggleTimer(instance) {
+    const timerEl = document.getElementById('assignmentTimer');
+    if (!timerEl) return;
+
+    const isVisible = !timerEl.classList.contains('hidden');
+    
+    if (isVisible) {
+      // Hide timer
+      timerEl.classList.add('hidden');
+      if (timerState.interval) {
+        clearInterval(timerState.interval);
+        timerState.interval = null;
+      }
+      // Save preference
+      localStorage.setItem('rc_student_timer_enabled', 'false');
+    } else {
+      // Show timer
+      timerEl.classList.remove('hidden');
+      timerState.instanceId = instance.id;
+      
+      // Load elapsed time from localStorage
+      const savedTime = localStorage.getItem(`rc_student_timer_${instance.id}`);
+      if (savedTime) {
+        timerState.elapsed = parseInt(savedTime, 10) || 0;
+      } else {
+        timerState.elapsed = 0;
+      }
+      
+      timerState.startTime = Date.now() - timerState.elapsed;
+      
+      // Start interval
+      updateTimerDisplay();
+      timerState.interval = setInterval(updateTimerDisplay, 1000);
+      
+      // Save preference
+      localStorage.setItem('rc_student_timer_enabled', 'true');
+    }
+  }
+
+  function updateTimerDisplay() {
+    const displayEl = document.getElementById('timerDisplay');
+    if (!displayEl) return;
+
+    timerState.elapsed = Date.now() - timerState.startTime;
+    
+    const totalSeconds = Math.floor(timerState.elapsed / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    
+    displayEl.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    
+    // Save to localStorage
+    if (timerState.instanceId) {
+      localStorage.setItem(`rc_student_timer_${timerState.instanceId}`, String(timerState.elapsed));
+    }
+  }
+
+  function initTimer(instance) {
+    // Check if timer was previously enabled
+    const timerEnabled = localStorage.getItem('rc_student_timer_enabled') === 'true';
+    if (timerEnabled) {
+      // Auto-enable timer
+      setTimeout(() => {
+        const btn = document.getElementById('btnToggleTimer');
+        if (btn) btn.click();
+      }, 100);
+    }
   }
 
   /**
