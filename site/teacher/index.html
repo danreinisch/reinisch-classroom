@@ -120,6 +120,83 @@
       opacity: 0.7;
       padding: 4px 0;
     }
+    
+    /* Alert card styles */
+    .alert-red {
+      border-color: rgba(239,68,68,.4);
+      background: rgba(239,68,68,.15);
+    }
+    .alert-amber {
+      border-color: rgba(245,158,11,.4);
+      background: rgba(245,158,11,.15);
+    }
+    .alert-green {
+      border-color: rgba(34,197,94,.4);
+      background: rgba(34,197,94,.15);
+    }
+    
+    /* Checklist styles */
+    .checklist-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+    }
+    .checklist-item:last-child {
+      border-bottom: none;
+    }
+    .checklist-checkbox {
+      margin-top: 2px;
+      cursor: pointer;
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+    }
+    .checklist-text {
+      flex: 1;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+    .checklist-text a {
+      color: rgba(59,130,246,.9);
+      text-decoration: none;
+    }
+    .checklist-text a:hover {
+      text-decoration: underline;
+    }
+    
+    /* Activity feed styles */
+    .activity-item {
+      display: flex;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+      font-size: 13px;
+      line-height: 1.4;
+    }
+    .activity-item:last-child {
+      border-bottom: none;
+    }
+    .activity-icon {
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+    .activity-text {
+      flex: 1;
+    }
+    .activity-time {
+      opacity: 0.6;
+      font-size: 11px;
+      white-space: nowrap;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 1100px) {
+      .tc-card > div[style*="grid-template-columns"] {
+        grid-template-columns: 1fr !important;
+      }
+    }
   </style>
 </head>
 <body>
@@ -178,19 +255,47 @@
           </div>
         </div>
 
+        <!-- Actionable Alerts -->
+        <div style="margin-top: 20px;">
+          <h2 style="font-size: 20px; margin-bottom: 12px;">Command Center</h2>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+            <div class="tc-card" id="ovOverdueCard">
+              <h2 style="font-size: 16px; margin: 0 0 10px;">🔴 Overdue Items</h2>
+              <div id="ovOverdueContent">Loading...</div>
+            </div>
+            <div class="tc-card" id="ovAtRiskCard">
+              <h2 style="font-size: 16px; margin: 0 0 10px;">⚠️ At-Risk Students</h2>
+              <div id="ovAtRiskContent">Loading...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Checklist + Feed -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px;">
+          <div class="tc-card" id="ovChecklistCard">
+            <h2 style="font-size: 16px; margin: 0 0 10px;">📋 Today's Checklist</h2>
+            <div id="ovChecklistContent">Loading...</div>
+          </div>
+          <div class="tc-card" id="ovFeedCard">
+            <h2 style="font-size: 16px; margin: 0 0 10px;">📰 Recent Activity</h2>
+            <div id="ovFeedContent">Loading...</div>
+          </div>
+        </div>
+
         <!-- Calendar Snapshot -->
         <div style="margin-top: 20px;">
-          <h2 style="font-size: 20px; margin-bottom: 12px;">Upcoming</h2>
-          <div class="tc-card" id="ovCalendarSnapshot" style="padding: 16px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-              <div style="font-size: 14px; font-weight: 600;">Calendar</div>
-              <a href="/teacher/calendar/" style="color: rgba(59, 130, 246, 0.9); text-decoration: none; font-size: 13px;">View Calendar →</a>
+          <div class="tc-card" style="padding: 16px;" id="ovCalendarCard">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <h2 style="font-size: 16px; margin: 0;">📅 Calendar Snapshot</h2>
+              <a href="/teacher/calendar/" style="color: rgba(56,255,166,.8); font-size: 13px;">View Calendar →</a>
             </div>
-            <div id="ovMiniCalendar" style="margin-bottom: 12px;">
-              <!-- Mini calendar will be rendered here -->
-            </div>
-            <div id="ovUpcomingEvents" style="font-size: 13px; opacity: 0.9;">
-              <!-- Upcoming events count will be rendered here -->
+            <div id="ovCalendarContent" style="margin-top: 10px;">
+              <div id="ovMiniCalendar" style="margin-bottom: 12px;">
+                <!-- Mini calendar will be rendered here -->
+              </div>
+              <div id="ovUpcomingEvents" style="font-size: 13px; opacity: 0.9;">
+                <!-- Upcoming events count will be rendered here -->
+              </div>
             </div>
           </div>
         </div>
