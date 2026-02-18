@@ -4,6 +4,11 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Student Portal</title>
+    <!-- Feature 7: PWA Support -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#3b82f6">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="stylesheet" href="/web/teacher-shell.css" />
     <script defer src="/assets/js/student-auto-login.js"></script>
     <style>
@@ -1320,6 +1325,323 @@
           -webkit-overflow-scrolling: touch;
         }
       }
+
+      /* Feature 2: Due Soon Banner */
+      .st-due-soon-banner {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 16px 20px;
+        border-radius: 14px;
+        margin-bottom: 24px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .st-due-soon-banner.warning {
+        background: rgba(234, 179, 8, 0.1);
+        border: 1px solid rgba(234, 179, 8, 0.35);
+        color: #fde047;
+      }
+      .st-due-soon-banner.urgent {
+        background: rgba(239, 68, 68, 0.1);
+        border: 1px solid rgba(239, 68, 68, 0.35);
+        color: #fca5a5;
+      }
+      .st-due-soon-icon { font-size: 32px; }
+      .st-due-soon-text { flex: 1; }
+      .st-due-soon-text strong { display: block; font-size: 16px; margin-bottom: 4px; }
+
+      /* Feature 3: Progress Tracker */
+      .st-progress-mini {
+        font-size: 12px;
+        opacity: 0.7;
+        margin-top: 6px;
+      }
+      .st-progress-bar-mini {
+        height: 4px;
+        background: rgba(255,255,255,0.1);
+        border-radius: 2px;
+        overflow: hidden;
+        margin-top: 4px;
+        width: 100%;
+      }
+      .st-progress-bar-mini .fill {
+        height: 100%;
+        background: rgba(59,130,246,0.6);
+        border-radius: 2px;
+        transition: width 0.3s ease;
+      }
+      .st-viewer-progress {
+        padding: 12px 16px;
+        background: rgba(59,130,246,0.08);
+        border: 1px solid rgba(59,130,246,0.25);
+        border-radius: 10px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .st-viewer-progress-text { font-size: 14px; font-weight: 600; }
+      .st-viewer-progress-bar {
+        flex: 1;
+        height: 8px;
+        background: rgba(255,255,255,0.1);
+        border-radius: 4px;
+        overflow: hidden;
+      }
+      .st-viewer-progress-bar .fill {
+        height: 100%;
+        background: #3b82f6;
+        transition: width 0.3s ease;
+      }
+
+      /* Feature 4: Light Mode */
+      [data-theme="light"] {
+        --bg: #f8f9fa;
+        --surface: #ffffff;
+        --ink: #1a1a2e;
+        --muted: #6b7280;
+        --border: rgba(0,0,0,0.12);
+      }
+      [data-theme="light"] body {
+        background: var(--bg);
+        color: var(--ink);
+      }
+      [data-theme="light"] .tc-topbar {
+        background: var(--surface);
+        border-bottom-color: var(--border);
+        color: var(--ink);
+      }
+      [data-theme="light"] .tc-sidebar {
+        background: var(--surface);
+        border-right-color: var(--border);
+      }
+      [data-theme="light"] .tc-sidebar a {
+        color: var(--ink);
+      }
+      [data-theme="light"] .st-login-container,
+      [data-theme="light"] .st-assignment-card,
+      [data-theme="light"] .st-goal-card,
+      [data-theme="light"] .st-question-container,
+      [data-theme="light"] .st-writing-section {
+        background: var(--surface);
+        border-color: var(--border);
+        color: var(--ink);
+      }
+      [data-theme="light"] .st-assignment-panel {
+        background: var(--surface);
+        border-color: var(--border);
+        color: var(--ink);
+      }
+      [data-theme="light"] .st-choice {
+        background: #f3f4f6;
+        border-color: var(--border);
+        color: var(--ink);
+      }
+      [data-theme="light"] .st-writing-textarea,
+      [data-theme="light"] .st-builder-textarea {
+        background: #f3f4f6;
+        border-color: var(--border);
+        color: var(--ink);
+      }
+      [data-theme="light"] .st-hint-content {
+        background: rgba(168,85,247,0.06);
+        border-color: rgba(168,85,247,0.2);
+        color: #7c3aed;
+      }
+      [data-theme="light"] .st-btn {
+        color: var(--ink);
+      }
+      [data-theme="light"] .st-panel-backdrop {
+        background: rgba(0,0,0,0.4);
+      }
+      [data-theme="light"] input,
+      [data-theme="light"] select,
+      [data-theme="light"] textarea {
+        background: #f3f4f6;
+        border-color: var(--border);
+        color: var(--ink);
+      }
+
+      /* Feature 5: Font Size Controls */
+      html { font-size: var(--base-font-size, 16px); }
+      html[data-font-size="small"] { --base-font-size: 14px; }
+      html[data-font-size="normal"] { --base-font-size: 16px; }
+      html[data-font-size="large"] { --base-font-size: 18px; }
+      html[data-font-size="xlarge"] { --base-font-size: 20px; }
+      html[data-font-size="xxlarge"] { --base-font-size: 22px; }
+
+      .st-question-text { font-size: 1rem; }
+      .st-choice-label { font-size: 0.9375rem; }
+      .st-writing-textarea { font-size: 0.9375rem; }
+      .st-hint-content { font-size: 0.875rem; }
+
+      /* Feature 6: Toast Notifications */
+      .st-toast-container {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 11000;
+        display: flex;
+        flex-direction: column-reverse;
+        gap: 8px;
+      }
+      .st-toast {
+        padding: 14px 20px;
+        background: rgba(59,130,246,0.15);
+        border: 1px solid rgba(59,130,246,0.35);
+        border-radius: 12px;
+        color: #93c5fd;
+        font-size: 14px;
+        max-width: 360px;
+        animation: slideUp 0.3s ease;
+        backdrop-filter: blur(12px);
+      }
+      .st-toast.success {
+        background: rgba(34,197,94,0.15);
+        border-color: rgba(34,197,94,0.35);
+        color: #86efac;
+      }
+      @keyframes slideUp {
+        from { transform: translateY(20px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+      }
+
+      /* Feature 8: Print Styles */
+      @media print {
+        .tc-topbar, .tc-sidebar, .st-panel-backdrop,
+        .st-panel-close-btn, .st-panel-back-btn,
+        .st-tts-btn, .st-hint-btn, .st-submit-btn,
+        .st-builder-toggle-btn, .st-actions,
+        .st-due-soon-banner, .st-toast-container,
+        #themeToggle, #fontDecrease, #fontIncrease,
+        #btnLogout { display: none !important; }
+        
+        body { background: white !important; color: black !important; }
+        
+        .tc-main { margin: 0 !important; padding: 20px !important; }
+        
+        .st-assignment-panel {
+          position: static !important;
+          width: 100% !important;
+          max-height: none !important;
+          box-shadow: none !important;
+          border: none !important;
+          padding: 0 !important;
+          opacity: 1 !important;
+          transform: none !important;
+        }
+        
+        .st-question-container, .st-writing-section {
+          break-inside: avoid;
+          border: 1px solid #ccc !important;
+          background: white !important;
+        }
+        
+        .st-choice { background: #f5f5f5 !important; border-color: #ccc !important; }
+        .st-hint-content { display: block !important; }
+      }
+
+      /* Feature 9: Profile Card */
+      .st-profile-card {
+        padding: 16px;
+        margin: 16px 12px;
+        border-radius: 12px;
+        border: 1px solid rgba(255,255,255,0.1);
+        background: rgba(255,255,255,0.03);
+        text-align: center;
+        font-size: 13px;
+      }
+      .st-profile-avatar { font-size: 32px; margin-bottom: 8px; }
+      .st-profile-name { font-weight: 600; margin-bottom: 4px; }
+      .st-profile-code { opacity: 0.7; font-size: 12px; }
+      .st-profile-class { opacity: 0.6; font-size: 11px; margin-top: 4px; }
+
+      [data-theme="light"] .st-profile-card {
+        background: #f3f4f6;
+        border-color: rgba(0,0,0,0.1);
+      }
+
+      /* Feature 10: Badges */
+      .st-badges {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-bottom: 24px;
+      }
+      .st-badge {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 14px;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 500;
+        background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.14);
+      }
+      .st-badge .badge-icon { font-size: 18px; }
+      .st-badge.gold { border-color: rgba(234,179,8,0.4); background: rgba(234,179,8,0.08); color: #fde047; }
+      .st-badge.green { border-color: rgba(34,197,94,0.4); background: rgba(34,197,94,0.08); color: #86efac; }
+      .st-badge.blue { border-color: rgba(59,130,246,0.4); background: rgba(59,130,246,0.08); color: #93c5fd; }
+      .st-badge.purple { border-color: rgba(168,85,247,0.4); background: rgba(168,85,247,0.08); color: #d8b4fe; }
+
+      /* Feature 11: Vocabulary */
+      .st-vocab-section {
+        margin-bottom: 20px;
+        border: 1px solid rgba(59,130,246,0.25);
+        border-radius: 10px;
+        overflow: hidden;
+      }
+      .st-vocab-section summary {
+        padding: 12px 16px;
+        background: rgba(59,130,246,0.08);
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 14px;
+      }
+      .st-vocab-list {
+        padding: 12px 16px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .st-vocab-word {
+        padding: 6px 12px;
+        background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.14);
+        border-radius: 8px;
+        font-size: 13px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      /* Feature 12: Read Aloud */
+      .st-read-aloud-btn {
+        width: auto;
+        padding: 8px 16px;
+      }
+      .reading {
+        outline: 2px solid rgba(59,130,246,0.5);
+        outline-offset: 4px;
+        border-radius: 8px;
+      }
+
+      /* Feature 13: Timer */
+      .st-timer {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.14);
+        border-radius: 8px;
+        font-size: 13px;
+        font-family: monospace;
+        opacity: 0.7;
+      }
+      .st-timer.hidden { display: none; }
     </style>
   </head>
   <body>
@@ -1335,6 +1657,9 @@
         </button>
         <a class="tc-btn" href="/" target="_blank" rel="noopener" aria-label="Home">🏠</a>
         <div class="tc-title">Student Portal</div>
+        <button class="tc-btn" id="fontDecrease" aria-label="Decrease font size" title="Decrease font size">A⁻</button>
+        <button class="tc-btn" id="fontIncrease" aria-label="Increase font size" title="Increase font size">A⁺</button>
+        <button class="tc-btn" id="themeToggle" aria-label="Toggle theme" title="Toggle light/dark mode">🌙</button>
       </header>
 
       <div class="tc-shell">
@@ -1353,6 +1678,13 @@
               ><span class="tc-icon">📊</span><span class="tc-label">Grades</span></a
             >
           </nav>
+          <!-- Feature 9: Profile Card -->
+          <div class="st-profile-card" id="profileCard" style="display: none;">
+            <div class="st-profile-avatar">👤</div>
+            <div class="st-profile-name" id="profileName">Student</div>
+            <div class="st-profile-code" id="profileCode">—</div>
+            <div class="st-profile-class" id="profileClass">—</div>
+          </div>
         </aside>
 
         <main class="tc-main">
@@ -1434,6 +1766,10 @@
                   <h1>Welcome back, <span id="studentCodeDisplay">Student</span>!</h1>
                   <p>Here's what's happening in your learning journey</p>
                 </div>
+                <!-- Feature 2: Due Soon Banner (will be populated by JS) -->
+                <div id="dueSoonBanner"></div>
+                <!-- Feature 10: Badges (will be populated by JS) -->
+                <div id="badgesContainer"></div>
                 <div class="st-summary-cards">
                   <div class="st-summary-card">
                     <div class="st-summary-icon">📋</div>
@@ -1508,6 +1844,9 @@
         </main>
       </div>
     </div>
+
+    <!-- Feature 6: Toast Container -->
+    <div class="st-toast-container" id="toastContainer"></div>
 
     <script defer src="/web/student-shell.js"></script>
     <script defer src="/web/student-portal-init.js"></script>

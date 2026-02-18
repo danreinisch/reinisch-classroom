@@ -265,6 +265,94 @@
       return 'N/A';
     }
   }
+
+  // ============================================================================
+  // Feature 1 & 3: Auto-Save and Progress Tracking Helpers
+  // ============================================================================
+  
+  /**
+   * Get total question count for an assignment
+   */
+  function getTotalQuestionCount(instance) {
+    const assignment = instance.assignment || {};
+    const meta = assignment.meta || {};
+    const days = meta.days || [];
+    
+    let total = 0;
+    days.forEach(day => {
+      if (day.type === 'questions' && day.questions) {
+        total += day.questions.length;
+      } else if (day.type === 'writing_prompt') {
+        total += 1; // Count writing prompt as 1 question
+      }
+    });
+    
+    return total;
+  }
+
+  /**
+   * Get answered question count from localStorage
+   */
+  function getAnsweredCount(instanceId) {
+    try {
+      const savedAnswers = getSavedAnswers(instanceId);
+      if (!savedAnswers) return 0;
+      
+      // Count non-empty answers
+      return Object.values(savedAnswers).filter(ans => {
+        if (typeof ans === 'string') {
+          return ans.trim().length > 10; // For writing, require at least 10 chars
+        }
+        return ans !== null && ans !== undefined;
+      }).length;
+    } catch (err) {
+      console.error(LOG_PREFIX, 'Error getting answered count:', err);
+      return 0;
+    }
+  }
+
+  /**
+   * Get saved answers for an instance from localStorage
+   */
+  function getSavedAnswers(instanceId) {
+    try {
+      const key = `rc_student_answers_${instanceId}`;
+      const data = localStorage.getItem(key);
+      return data ? JSON.parse(data) : null;
+    } catch (err) {
+      console.error(LOG_PREFIX, 'Error getting saved answers:', err);
+      return null;
+    }
+  }
+
+  /**
+   * Save answer to localStorage (debounced for textareas)
+   */
+  function saveAnswer(instanceId, questionId, answer) {
+    try {
+      const key = `rc_student_answers_${instanceId}`;
+      const existing = getSavedAnswers(instanceId) || {};
+      existing[questionId] = answer;
+      localStorage.setItem(key, JSON.stringify(existing));
+      
+      // Show save indicator
+      showToast('✓ Progress saved', 'success');
+    } catch (err) {
+      console.error(LOG_PREFIX, 'Error saving answer:', err);
+    }
+  }
+
+  /**
+   * Clear saved answers for an instance
+   */
+  function clearSavedAnswers(instanceId) {
+    try {
+      const key = `rc_student_answers_${instanceId}`;
+      localStorage.removeItem(key);
+    } catch (err) {
+      console.error(LOG_PREFIX, 'Error clearing saved answers:', err);
+    }
+  }
   
   /**
    * Render a single goal card
@@ -425,6 +513,19 @@
       </span>
     ` : '';
     
+    // Feature 3: Progress tracking
+    const totalQuestions = getTotalQuestionCount(instance);
+    const answeredCount = getAnsweredCount(instance.id);
+    const progressPercent = totalQuestions > 0 ? (answeredCount / totalQuestions) * 100 : 0;
+    const progressHtml = totalQuestions > 0 && status !== 'submitted' && status !== 'graded' ? `
+      <div class="st-progress-mini">
+        ${answeredCount} of ${totalQuestions} answered
+      </div>
+      <div class="st-progress-bar-mini">
+        <div class="fill" style="width: ${progressPercent}%"></div>
+      </div>
+    ` : '';
+    
     return `
       <div class="st-assignment-card" data-instance-id="${escapeHtml(instance.id)}">
         <h3 class="st-assignment-title">${title}</h3>
@@ -437,6 +538,7 @@
           <span class="st-assignment-status ${status}">${statusText}</span>
           ${scoreHtml}
         </div>
+        ${progressHtml}
       </div>
     `;
   }
@@ -1540,6 +1642,10 @@
       // Initialize guardrails
       initNetworkGuardrails();
       
+      // Initialize quality-of-life features
+      initThemeToggle();
+      initFontSizeControls();
+      
       // Check if already authenticated (from auto-login or existing session)
       if (isAuthenticated()) {
         console.log(LOG_PREFIX, 'Already authenticated, showing dashboard');
@@ -1723,6 +1829,9 @@
       studentCodeDisplay.textContent = studentCode;
     }
     
+    // Update profile card
+    updateProfileCard(studentCode);
+    
     // Setup event handlers only once to prevent duplicates
     if (!state.dashboardHandlersAttached) {
       if (btnLogout) {
@@ -1877,6 +1986,15 @@
       
       const instances = data.instances || [];
       tabState.assignmentsData = instances;
+      
+      // Feature 2: Check for due soon assignments and show banner
+      checkDueSoonBanner(instances);
+      
+      // Feature 6: Check for new assignments and show toasts
+      checkNewAssignments(instances);
+      
+      // Feature 10: Calculate and render badges
+      renderBadges(instances);
       
       // Render assignments tab (with all status)
       renderAssignmentsTab(instances);
@@ -2623,6 +2741,185 @@
     }
   }
 
+  // ============================================================================
+  // Feature 2: Due Soon Banner
+  // ============================================================================
+  function checkDueSoonBanner(instances) {
+    const bannerContainer = document.getElementById('dueSoonBanner');
+    if (!bannerContainer) return;
+
+    const now = new Date();
+    const dueSoon = instances.filter(inst => {
+      if (!inst.due_at) return false;
+      const dueDate = new Date(inst.due_at);
+      const hoursUntilDue = (dueDate - now) / (1000 * 60 * 60);
+      const status = (inst.status || 'Assigned').toLowerCase();
+      const isNotSubmitted = status !== 'submitted' && status !== 'graded';
+      return hoursUntilDue > 0 && hoursUntilDue <= 48 && isNotSubmitted;
+    });
+
+    if (dueSoon.length === 0) {
+      bannerContainer.innerHTML = '';
+      return;
+    }
+
+    // Check if any are urgent (within 24 hours)
+    const urgent = dueSoon.some(inst => {
+      const dueDate = new Date(inst.due_at);
+      const hoursUntilDue = (dueDate - now) / (1000 * 60 * 60);
+      return hoursUntilDue <= 24;
+    });
+
+    const bannerClass = urgent ? 'urgent' : 'warning';
+    const icon = urgent ? '🔴' : '⚠️';
+    const title = urgent ? 'Urgent: Assignments Due Soon!' : 'Heads Up: Assignments Due Soon';
+    const message = `You have ${dueSoon.length} assignment${dueSoon.length > 1 ? 's' : ''} due within ${urgent ? '24 hours' : '48 hours'}.`;
+
+    bannerContainer.innerHTML = `
+      <div class="st-due-soon-banner ${bannerClass}" id="dueSoonBannerEl">
+        <div class="st-due-soon-icon">${icon}</div>
+        <div class="st-due-soon-text">
+          <strong>${escapeHtml(title)}</strong>
+          <div>${escapeHtml(message)}</div>
+        </div>
+      </div>
+    `;
+
+    // Make banner clickable to switch to Assignments tab
+    const bannerEl = document.getElementById('dueSoonBannerEl');
+    if (bannerEl) {
+      bannerEl.addEventListener('click', () => {
+        switchToTab('assignments');
+      });
+    }
+  }
+
+  // ============================================================================
+  // Feature 6: New Assignment Notifications
+  // ============================================================================
+  function checkNewAssignments(instances) {
+    try {
+      const seenKey = 'rc_student_seen_assignments';
+      const seenStr = localStorage.getItem(seenKey);
+      const seenSet = seenStr ? new Set(JSON.parse(seenStr)) : new Set();
+      
+      const newAssignments = instances.filter(inst => !seenSet.has(inst.id));
+      
+      // Add all current IDs to seen set
+      instances.forEach(inst => seenSet.add(inst.id));
+      localStorage.setItem(seenKey, JSON.stringify([...seenSet]));
+      
+      // Show toasts for new assignments
+      newAssignments.forEach(inst => {
+        const title = (inst.assignment && inst.assignment.title) || 'Untitled Assignment';
+        showToast(`📬 New assignment: ${title}`);
+      });
+    } catch (err) {
+      console.error(LOG_PREFIX, 'Error checking new assignments:', err);
+    }
+  }
+
+  // ============================================================================
+  // Feature 10: Achievement Badges
+  // ============================================================================
+  function renderBadges(instances) {
+    const badgesContainer = document.getElementById('badgesContainer');
+    if (!badgesContainer) return;
+
+    const badges = [];
+    const now = new Date();
+
+    // On Time badge: assignments submitted before due date
+    const onTimeCount = instances.filter(inst => {
+      if (!inst.due_at || !inst.submitted_at) return false;
+      const status = (inst.status || '').toLowerCase();
+      if (status !== 'submitted' && status !== 'graded') return false;
+      return new Date(inst.submitted_at) <= new Date(inst.due_at);
+    }).length;
+
+    if (onTimeCount > 0) {
+      badges.push({
+        icon: '⏰',
+        label: `On Time: ${onTimeCount}`,
+        color: 'green'
+      });
+    }
+
+    // Perfect score badge
+    const perfectCount = instances.filter(inst => {
+      return inst.grade === 100;
+    }).length;
+
+    if (perfectCount > 0) {
+      badges.push({
+        icon: '💯',
+        label: `Perfect: ${perfectCount}`,
+        color: 'gold'
+      });
+    }
+
+    // Streak badge: consecutive on-time submissions
+    const sortedSubmitted = instances
+      .filter(inst => {
+        const status = (inst.status || '').toLowerCase();
+        return (status === 'submitted' || status === 'graded') && inst.submitted_at && inst.due_at;
+      })
+      .sort((a, b) => new Date(b.submitted_at) - new Date(a.submitted_at));
+
+    let streak = 0;
+    for (const inst of sortedSubmitted) {
+      if (new Date(inst.submitted_at) <= new Date(inst.due_at)) {
+        streak++;
+      } else {
+        break;
+      }
+    }
+
+    if (streak >= 3) {
+      badges.push({
+        icon: '🔥',
+        label: `Streak: ${streak}`,
+        color: 'blue'
+      });
+    }
+
+    // Writer badge: writing prompts completed with >50 words
+    const writerCount = instances.filter(inst => {
+      if (!inst.settings || !inst.settings.answers) return false;
+      const answers = inst.settings.answers;
+      return Object.values(answers).some(ans => {
+        if (typeof ans === 'string') {
+          const wordCount = ans.trim().split(/\s+/).length;
+          return wordCount > 50;
+        }
+        return false;
+      });
+    }).length;
+
+    if (writerCount > 0) {
+      badges.push({
+        icon: '✍️',
+        label: `Writer: ${writerCount}`,
+        color: 'purple'
+      });
+    }
+
+    // Render badges
+    if (badges.length === 0) {
+      badgesContainer.innerHTML = '';
+      return;
+    }
+
+    const badgesHtml = badges.map(badge => `
+      <div class="st-badge ${badge.color}">
+        <span class="badge-icon">${badge.icon}</span>
+        <span>${escapeHtml(badge.label)}</span>
+      </div>
+    `).join('');
+
+    badgesContainer.innerHTML = `<div class="st-badges">${badgesHtml}</div>`;
+  }
+
   /**
    * Show message
    * PR student-portal-reliability: Added null check
@@ -2653,6 +2950,117 @@
           container.innerHTML = '';
         }
       }, 5000);
+    }
+  }
+
+  // ============================================================================
+  // Feature 4: Light/Dark Mode Toggle
+  // ============================================================================
+  function initThemeToggle() {
+    const themeToggle = document.getElementById('themeToggle');
+    if (!themeToggle) return;
+
+    // Restore saved theme
+    const savedTheme = localStorage.getItem('rc_student_theme');
+    if (savedTheme === 'light') {
+      document.documentElement.setAttribute('data-theme', 'light');
+      themeToggle.textContent = '☀️';
+    }
+
+    themeToggle.addEventListener('click', function() {
+      const currentTheme = document.documentElement.getAttribute('data-theme');
+      const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+      
+      if (newTheme === 'light') {
+        document.documentElement.setAttribute('data-theme', 'light');
+        themeToggle.textContent = '☀️';
+        localStorage.setItem('rc_student_theme', 'light');
+      } else {
+        document.documentElement.removeAttribute('data-theme');
+        themeToggle.textContent = '🌙';
+        localStorage.setItem('rc_student_theme', 'dark');
+      }
+    });
+  }
+
+  // ============================================================================
+  // Feature 5: Font Size Controls
+  // ============================================================================
+  function initFontSizeControls() {
+    const fontDecrease = document.getElementById('fontDecrease');
+    const fontIncrease = document.getElementById('fontIncrease');
+    if (!fontDecrease || !fontIncrease) return;
+
+    const sizes = ['small', 'normal', 'large', 'xlarge', 'xxlarge'];
+    
+    // Restore saved font size
+    const savedSize = localStorage.getItem('rc_student_font_size') || 'normal';
+    document.documentElement.setAttribute('data-font-size', savedSize);
+
+    fontDecrease.addEventListener('click', function() {
+      const current = document.documentElement.getAttribute('data-font-size') || 'normal';
+      const currentIndex = sizes.indexOf(current);
+      if (currentIndex > 0) {
+        const newSize = sizes[currentIndex - 1];
+        document.documentElement.setAttribute('data-font-size', newSize);
+        localStorage.setItem('rc_student_font_size', newSize);
+      }
+    });
+
+    fontIncrease.addEventListener('click', function() {
+      const current = document.documentElement.getAttribute('data-font-size') || 'normal';
+      const currentIndex = sizes.indexOf(current);
+      if (currentIndex < sizes.length - 1) {
+        const newSize = sizes[currentIndex + 1];
+        document.documentElement.setAttribute('data-font-size', newSize);
+        localStorage.setItem('rc_student_font_size', newSize);
+      }
+    });
+  }
+
+  // ============================================================================
+  // Feature 6: Toast Notifications
+  // ============================================================================
+  function showToast(message, type = 'info') {
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = `st-toast ${type}`;
+    toast.textContent = message;
+    container.appendChild(toast);
+
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      setTimeout(() => {
+        if (toast.parentNode === container) {
+          container.removeChild(toast);
+        }
+      }, 300);
+    }, 5000);
+  }
+
+  // ============================================================================
+  // Feature 9: Student Profile Card
+  // ============================================================================
+  function updateProfileCard(studentCode) {
+    const profileCard = document.getElementById('profileCard');
+    const profileName = document.getElementById('profileName');
+    const profileCodeEl = document.getElementById('profileCode');
+    const profileClass = document.getElementById('profileClass');
+
+    if (!profileCard) return;
+
+    profileCard.style.display = 'block';
+    if (profileCodeEl) {
+      profileCodeEl.textContent = studentCode || '—';
+    }
+    if (profileName) {
+      profileName.textContent = 'Student'; // Could be enhanced with actual name from DB
+    }
+    if (profileClass) {
+      profileClass.textContent = '—'; // Could be enhanced with class info
     }
   }
 
