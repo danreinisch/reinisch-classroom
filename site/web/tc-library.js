@@ -507,7 +507,7 @@
           <span class="toggle-icon" style="font-size: 16px; transition: transform 0.2s;">▶</span>
         </button>
         
-        <div id="${unitId}" class="lesson-unit-content" style="display: none; margin-top: 12px; display: flex; flex-direction: column; gap: 8px;">
+        <div id="${unitId}" class="lesson-unit-content" style="display: none; margin-top: 12px;">
           ${unit.presentations.map(pres => renderPresentation(pres)).join('')}
         </div>
       </div>
@@ -724,8 +724,9 @@
 
   // Export library as JSON
   function exportLibraryJSON() {
+    const now = new Date();
     const exportData = {
-      exported_at: new Date().toISOString(),
+      exported_at: now.toISOString(),
       sync_status: syncStatus,
       assignments: assignmentsData,
       lessons: lessonsData,
@@ -739,7 +740,7 @@
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `library-export-${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `library-export-${now.toISOString().split('T')[0]}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
