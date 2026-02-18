@@ -771,6 +771,8 @@
       tabContent = await renderStudentGoalsTab(student, studentGoals);
     } else if (selectedDetailTab === 'classes') {
       tabContent = renderStudentClassesTab(student, enrollments);
+    } else if (selectedDetailTab === 'compliance') {
+      tabContent = await renderComplianceTab(student, studentGoals);
     } else if (selectedDetailTab === 'settings') {
       tabContent = renderStudentSettingsTab(student);
     }
@@ -797,6 +799,7 @@
       <div class="st-tabs">
         <button class="st-tab ${selectedDetailTab === 'goals' ? 'active' : ''}" data-tab="goals">Goals</button>
         <button class="st-tab ${selectedDetailTab === 'classes' ? 'active' : ''}" data-tab="classes">Classes</button>
+        <button class="st-tab ${selectedDetailTab === 'compliance' ? 'active' : ''}" data-tab="compliance">Compliance</button>
         <button class="st-tab ${selectedDetailTab === 'settings' ? 'active' : ''}" data-tab="settings">Settings</button>
       </div>
 
@@ -1742,6 +1745,16 @@
           return;
         }
         
+        // Add Communication Entry button
+        if (e.target.id === 'add-comm-entry-btn') {
+          const studentCode = e.target.dataset.studentCode;
+          if (studentCode) {
+            showAddCommEntryModal(studentCode);
+          }
+          e.stopPropagation();
+          return;
+        }
+        
         // PRIORITY 2: Handle tab switching (medium priority)
         if (e.target.classList.contains('st-tab')) {
           const expandedDetail = e.target.closest('.st-expanded-content');
@@ -2312,6 +2325,77 @@
     } catch (error) {
       console.error('[tc-students] Error adding goal:', error);
       alert('Failed to add goal');
+    }
+  }
+
+  function showAddCommEntryModal(studentCode) {
+    const today = new Date().toISOString().split('T')[0];
+    
+    const modal = createModal('Add Communication Entry', `
+      <form id="add-comm-form">
+        <div class="st-form-group">
+          <label class="st-form-label">Date:</label>
+          <input type="date" name="date" class="st-form-input" value="${today}" required>
+        </div>
+        <div class="st-form-group">
+          <label class="st-form-label">Type:</label>
+          <select name="type" class="st-form-select" required>
+            <option value="Email">Email</option>
+            <option value="Phone">Phone</option>
+            <option value="Meeting">Meeting</option>
+            <option value="Report Sent">Report Sent</option>
+          </select>
+        </div>
+        <div class="st-form-group">
+          <label class="st-form-label">Notes:</label>
+          <textarea name="notes" class="st-form-textarea" rows="4" required></textarea>
+        </div>
+        <div class="st-modal-footer">
+          <button type="button" class="st-btn st-btn-secondary" id="cancel-comm">Cancel</button>
+          <button type="submit" class="st-btn st-btn-primary">Add Entry</button>
+        </div>
+      </form>
+    `);
+
+    document.body.appendChild(modal);
+
+    document.getElementById('cancel-comm').addEventListener('click', () => {
+      modal.remove();
+    });
+
+    document.getElementById('add-comm-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await handleAddCommEntry(e.target, studentCode);
+      modal.remove();
+    });
+  }
+
+  async function handleAddCommEntry(form, studentCode) {
+    const formData = new FormData(form);
+    const entry = {
+      date: formData.get('date'),
+      type: formData.get('type'),
+      notes: formData.get('notes')
+    };
+
+    try {
+      const allLogs = getParentCommLog();
+      if (!allLogs[studentCode]) {
+        allLogs[studentCode] = [];
+      }
+      allLogs[studentCode].push(entry);
+      saveParentCommLog(allLogs);
+      
+      showToast('Communication entry added');
+      
+      // Refresh the compliance tab
+      if (expandedStudents.has(studentCode)) {
+        selectedDetailTabMap.set(studentCode, 'compliance');
+        await renderExpandedDetail(studentCode);
+      }
+    } catch (error) {
+      console.error('[tc-students] Error adding communication entry:', error);
+      alert('Failed to add communication entry');
     }
   }
 
@@ -3461,6 +3545,393 @@
     });
 
     return modal;
+  }
+
+  // ============================================================================
+  // IEP COMPLIANCE DASHBOARD FUNCTIONS
+  // ============================================================================
+
+  /**
+   * Linear regression helper for goal mastery predictions
+   */
+  function linearRegression(points) {
+    const n = points.length;
+    if (n < 2) return null;
+    const sumX = points.reduce((a, p) => a + p.x, 0);
+    const sumY = points.reduce((a, p) => a + p.y, 0);
+    const sumXY = points.reduce((a, p) => a + p.x * p.y, 0);
+    const sumX2 = points.reduce((a, p) => a + p.x * p.x, 0);
+    const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+    const intercept = (sumY - slope * sumX) / n;
+    return { slope, intercept };
+  }
+
+  /**
+   * Predict value at future date
+   */
+  function predictAt(regression, daysSinceStart) {
+    return regression.intercept + regression.slope * daysSinceStart;
+  }
+
+  /**
+   * Get or create parent communication log from localStorage
+   */
+  function getParentCommLog() {
+    const stored = localStorage.getItem('rc_parent_comm_log');
+    return stored ? JSON.parse(stored) : {};
+  }
+
+  /**
+   * Save parent communication log to localStorage
+   */
+  function saveParentCommLog(log) {
+    localStorage.setItem('rc_parent_comm_log', JSON.stringify(log));
+  }
+
+  /**
+   * Render the Compliance tab content
+   */
+  async function renderComplianceTab(student, studentGoals) {
+    const progressData = await db.listGoalProgress({ studentCodes: [student.code] });
+    
+    // Get quarter dates
+    const quarterDates = getQuarterDates();
+    
+    // Render all compliance sections
+    const sections = [
+      renderGoalProgressTimelines(student, studentGoals, progressData),
+      renderComplianceChecklist(student, studentGoals, progressData, quarterDates),
+      renderParentCommunicationLog(student),
+      renderGoalMasteryPredictions(student, studentGoals, progressData)
+    ];
+    
+    return `
+      <div class="st-detail-section">
+        ${sections.join('')}
+      </div>
+    `;
+  }
+
+  /**
+   * A1. Goal Progress Timeline Charts (SVG-based)
+   */
+  function renderGoalProgressTimelines(student, studentGoals, progressData) {
+    if (studentGoals.length === 0) {
+      return `
+        <div class="st-compliance-section">
+          <h3>📈 Goal Progress Timelines</h3>
+          <p style="opacity: 0.7;">No goals to display</p>
+        </div>
+      `;
+    }
+    
+    const charts = studentGoals.map(goal => {
+      const goalProgress = progressData.filter(p => p.goal_code === goal.code);
+      return renderTimelineChart(goal, goalProgress);
+    }).join('');
+    
+    return `
+      <div class="st-compliance-section">
+        <h3>📈 Goal Progress Timelines</h3>
+        ${charts}
+      </div>
+    `;
+  }
+
+  /**
+   * Render a single SVG timeline chart for a goal
+   */
+  function renderTimelineChart(goal, progressEntries) {
+    if (!progressEntries || progressEntries.length === 0) {
+      return `
+        <div class="st-timeline-chart-container" style="margin-bottom: 24px;">
+          <div style="font-weight: 600; margin-bottom: 8px;">${escapeHtml(goal.code)} - ${escapeHtml(goal.goal_area || '')}</div>
+          <div style="padding: 40px; text-align: center; background: rgba(255,255,255,0.04); border-radius: 8px; opacity: 0.7;">
+            No data collected yet
+          </div>
+        </div>
+      `;
+    }
+    
+    // Sort progress by date
+    const sorted = [...progressEntries].sort((a, b) => new Date(a.date) - new Date(b.date));
+    
+    // Chart dimensions
+    const width = 600;
+    const height = 200;
+    const padding = { top: 20, right: 20, bottom: 40, left: 50 };
+    const chartWidth = width - padding.left - padding.right;
+    const chartHeight = height - padding.top - padding.bottom;
+    
+    // Get data range
+    const minDate = new Date(sorted[0].date);
+    const maxDate = new Date(sorted[sorted.length - 1].date);
+    const dateRange = maxDate - minDate || 1; // Avoid division by zero
+    
+    const baseline = goal.baseline || 0;
+    const mastery = goal.mastery || 100;
+    const maxY = Math.max(100, mastery, ...sorted.map(p => p.percent));
+    const minY = Math.min(0, baseline);
+    const yRange = maxY - minY || 1;
+    
+    // Scale functions
+    const scaleX = (date) => {
+      const d = new Date(date);
+      return padding.left + ((d - minDate) / dateRange) * chartWidth;
+    };
+    const scaleY = (value) => {
+      return height - padding.bottom - ((value - minY) / yRange) * chartHeight;
+    };
+    
+    // Build SVG path for progress line
+    const pathData = sorted.map((p, i) => {
+      const x = scaleX(p.date);
+      const y = scaleY(p.percent);
+      return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
+    }).join(' ');
+    
+    // Build data point circles
+    const circles = sorted.map(p => {
+      const cx = scaleX(p.date);
+      const cy = scaleY(p.percent);
+      const dateStr = formatDate(p.date);
+      return `<circle cx="${cx}" cy="${cy}" r="4" fill="#22c55e" stroke="#1a1a1a" stroke-width="2">
+        <title>${dateStr}: ${p.percent}%</title>
+      </circle>`;
+    }).join('');
+    
+    // Baseline and mastery lines
+    const baselineY = scaleY(baseline);
+    const masteryY = scaleY(mastery);
+    
+    return `
+      <div class="st-timeline-chart-container" style="margin-bottom: 24px;">
+        <div style="font-weight: 600; margin-bottom: 8px;">${escapeHtml(goal.code)} - ${escapeHtml(goal.goal_area || '')}</div>
+        <svg width="${width}" height="${height}" style="background: rgba(255,255,255,0.04); border-radius: 8px;">
+          <!-- Baseline line (gray dashed) -->
+          <line x1="${padding.left}" y1="${baselineY}" x2="${width - padding.right}" y2="${baselineY}" 
+                stroke="#9ca3af" stroke-width="2" stroke-dasharray="5,5" />
+          <text x="${padding.left - 5}" y="${baselineY - 5}" fill="#9ca3af" font-size="10" text-anchor="end">
+            Baseline: ${baseline}%
+          </text>
+          
+          <!-- Mastery line (gold dashed) -->
+          <line x1="${padding.left}" y1="${masteryY}" x2="${width - padding.right}" y2="${masteryY}" 
+                stroke="#fbbf24" stroke-width="2" stroke-dasharray="5,5" />
+          <text x="${padding.left - 5}" y="${masteryY - 5}" fill="#fbbf24" font-size="10" text-anchor="end">
+            Target: ${mastery}%
+          </text>
+          
+          <!-- Progress line (teal/green) -->
+          <path d="${pathData}" fill="none" stroke="#22c55e" stroke-width="3" />
+          
+          <!-- Data points -->
+          ${circles}
+          
+          <!-- Y-axis labels -->
+          <text x="${padding.left - 10}" y="${scaleY(0)}" fill="rgba(240,255,250,0.6)" font-size="10" text-anchor="end">0%</text>
+          <text x="${padding.left - 10}" y="${scaleY(50)}" fill="rgba(240,255,250,0.6)" font-size="10" text-anchor="end">50%</text>
+          <text x="${padding.left - 10}" y="${scaleY(100)}" fill="rgba(240,255,250,0.6)" font-size="10" text-anchor="end">100%</text>
+        </svg>
+      </div>
+    `;
+  }
+
+  /**
+   * A2. Compliance Checklist (Quarterly Grid)
+   */
+  function renderComplianceChecklist(student, studentGoals, progressData, quarterDates) {
+    if (studentGoals.length === 0) {
+      return `
+        <div class="st-compliance-section">
+          <h3>✅ Compliance Checklist</h3>
+          <p style="opacity: 0.7;">No goals to track</p>
+        </div>
+      `;
+    }
+    
+    const currentQ = getCurrentQuarter();
+    const quarters = ['Q1', 'Q2', 'Q3', 'Q4'];
+    
+    // Build compliance grid
+    const rows = studentGoals.map(goal => {
+      const cells = quarters.map(q => {
+        const qRange = getQuarterDateRange(q);
+        const hasData = progressData.some(p => 
+          p.goal_code === goal.code && 
+          p.date >= qRange.start && 
+          p.date <= qRange.end
+        );
+        const indicator = hasData ? '✅' : '⚠️';
+        return `<td style="text-align: center; font-size: 20px; ${q === currentQ ? 'background: rgba(34,197,94,0.15);' : ''}">${indicator}</td>`;
+      }).join('');
+      
+      return `
+        <tr>
+          <td style="font-weight: 600;">${escapeHtml(goal.code)}</td>
+          <td style="opacity: 0.8;">${escapeHtml(goal.goal_area || '')}</td>
+          ${cells}
+        </tr>
+      `;
+    }).join('');
+    
+    // Calculate compliance score for current quarter
+    const currentQRange = getQuarterDateRange(currentQ);
+    const goalsWithData = studentGoals.filter(goal => {
+      return progressData.some(p => 
+        p.goal_code === goal.code && 
+        p.date >= currentQRange.start && 
+        p.date <= currentQRange.end
+      );
+    }).length;
+    const compliancePercent = studentGoals.length > 0 
+      ? Math.round((goalsWithData / studentGoals.length) * 100) 
+      : 0;
+    
+    return `
+      <div class="st-compliance-section">
+        <h3>✅ Compliance Checklist</h3>
+        <div style="margin-bottom: 12px; padding: 12px; background: rgba(59,130,246,0.15); border-radius: 8px; border: 1px solid rgba(59,130,246,0.35);">
+          <strong>${goalsWithData}/${studentGoals.length}</strong> goals have data this quarter 
+          (<strong>${compliancePercent}%</strong> compliance)
+        </div>
+        <div style="overflow-x: auto;">
+          <table class="st-table" style="min-width: 500px;">
+            <thead>
+              <tr>
+                <th>Goal Code</th>
+                <th>Area</th>
+                <th style="text-align: center; ${currentQ === 'Q1' ? 'background: rgba(34,197,94,0.15);' : ''}">Q1</th>
+                <th style="text-align: center; ${currentQ === 'Q2' ? 'background: rgba(34,197,94,0.15);' : ''}">Q2</th>
+                <th style="text-align: center; ${currentQ === 'Q3' ? 'background: rgba(34,197,94,0.15);' : ''}">Q3</th>
+                <th style="text-align: center; ${currentQ === 'Q4' ? 'background: rgba(34,197,94,0.15);' : ''}">Q4</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  }
+
+  /**
+   * A3. Parent Communication Log
+   */
+  function renderParentCommunicationLog(student) {
+    const allLogs = getParentCommLog();
+    const studentLog = allLogs[student.code] || [];
+    const sorted = [...studentLog].sort((a, b) => new Date(b.date) - new Date(a.date));
+    const recent = sorted.slice(0, 10);
+    
+    const rows = recent.map(entry => `
+      <tr>
+        <td>${formatDate(entry.date)}</td>
+        <td>${escapeHtml(entry.type)}</td>
+        <td>${escapeHtml(entry.notes)}</td>
+      </tr>
+    `).join('');
+    
+    return `
+      <div class="st-compliance-section">
+        <h3>📬 Parent Communication Log</h3>
+        <button class="st-btn st-btn-primary st-btn-small" id="add-comm-entry-btn" data-student-code="${escapeHtml(student.code)}">+ Add Entry</button>
+        ${recent.length === 0 ? '<p style="opacity: 0.7; margin-top: 12px;">No communication entries yet</p>' : `
+          <table class="st-table" style="margin-top: 12px;">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Type</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows}
+            </tbody>
+          </table>
+          ${sorted.length > 10 ? `<p style="margin-top: 8px; opacity: 0.7; font-size: 12px;">Showing 10 most recent. ${sorted.length - 10} more entries.</p>` : ''}
+        `}
+      </div>
+    `;
+  }
+
+  /**
+   * A4. Goal Mastery Predictions
+   */
+  function renderGoalMasteryPredictions(student, studentGoals, progressData) {
+    if (studentGoals.length === 0) {
+      return `
+        <div class="st-compliance-section">
+          <h3>🔮 Goal Mastery Predictions</h3>
+          <p style="opacity: 0.7;">No goals to predict</p>
+        </div>
+      `;
+    }
+    
+    const predictions = studentGoals.map(goal => {
+      const goalProgress = progressData.filter(p => p.goal_code === goal.code);
+      if (goalProgress.length < 3) {
+        return `
+          <div style="padding: 12px; background: rgba(255,255,255,0.04); border-radius: 8px; margin-bottom: 12px;">
+            <div style="font-weight: 600;">${escapeHtml(goal.code)} - ${escapeHtml(goal.goal_area || '')}</div>
+            <div style="opacity: 0.7; font-size: 13px; margin-top: 4px;">Need more data for prediction (${goalProgress.length}/3 data points)</div>
+          </div>
+        `;
+      }
+      
+      // Calculate linear regression
+      const sorted = [...goalProgress].sort((a, b) => new Date(a.date) - new Date(b.date));
+      const startDate = new Date(sorted[0].date);
+      const points = sorted.map(p => ({
+        x: Math.floor((new Date(p.date) - startDate) / (1000 * 60 * 60 * 24)), // days since start
+        y: p.percent
+      }));
+      
+      const regression = linearRegression(points);
+      if (!regression) {
+        return '';
+      }
+      
+      // Project to IEP due date
+      const iepDue = student.iep_due ? new Date(student.iep_due) : null;
+      const projectionDate = iepDue || new Date(new Date().setFullYear(new Date().getFullYear() + 1));
+      const daysToProject = Math.floor((projectionDate - startDate) / (1000 * 60 * 60 * 24));
+      const projected = predictAt(regression, daysToProject);
+      const mastery = goal.mastery || 80;
+      
+      let status, color;
+      if (projected >= mastery) {
+        status = '🟢 On track to meet mastery';
+        color = '#22c55e';
+      } else if (regression.slope > 0) {
+        status = '🟡 Trending up but may not reach mastery';
+        color = '#fbbf24';
+      } else {
+        status = '🔴 At risk — not on track';
+        color = '#ef4444';
+      }
+      
+      return `
+        <div style="padding: 12px; background: rgba(255,255,255,0.04); border-radius: 8px; margin-bottom: 12px;">
+          <div style="font-weight: 600;">${escapeHtml(goal.code)} - ${escapeHtml(goal.goal_area || '')}</div>
+          <div style="margin-top: 8px; font-size: 13px;">
+            Projected to reach <strong>${Math.round(projected)}%</strong> by ${iepDue ? formatDate(iepDue) : 'next year'} 
+            (target: <strong>${mastery}%</strong>)
+          </div>
+          <div style="margin-top: 8px; color: ${color}; font-weight: 600; font-size: 14px;">
+            ${status}
+          </div>
+        </div>
+      `;
+    }).filter(Boolean).join('');
+    
+    return `
+      <div class="st-compliance-section">
+        <h3>🔮 Goal Mastery Predictions</h3>
+        ${predictions || '<p style="opacity: 0.7;">Insufficient data for predictions</p>'}
+      </div>
+    `;
   }
 
   /**
