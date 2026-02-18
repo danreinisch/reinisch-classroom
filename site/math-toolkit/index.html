@@ -5,61 +5,39 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Math Toolkit | Reinisch Classroom</title>
 
+  <!-- RC Theme Design System -->
   <link rel="stylesheet" href="/assets/css/rc-theme.css" />
-  <!-- Global App Shell CSS -->
   <link rel="stylesheet" href="/assets/css/app-shell.css" />
-  <!-- Context Navigation CSS -->
 
   <style>
-    :root {
-      --gap: 1rem;
-      --ink: var(--rc-ink);
-      --glass: var(--rc-glass);
-      --glass-brd: var(--rc-border-strong);
-      --card-brd: var(--rc-border-strong);
-    }
     /* Layout */
     .container { max-width: 1100px; margin: 0 auto; padding: 1rem; }
 
-    /* Glass buttons (match home style) */
-    .btn{background:var(--glass); border:1px solid var(--glass-brd); color:#fff; padding:.6rem 1rem;
-         border-radius:.6rem; text-decoration:none; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-         transition: background .2s, transform .2s}
-    .btn:hover{background:rgba(255,255,255,.24); transform: translateY(-1px)}
-
-    /* Header actions */
-    .home{position:fixed; top:1rem; left:1rem; z-index:1}
-
-    /* Grid of modules (thumbnail + description only, whole card clickable) */
-    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--gap); padding-top: 3.5rem; }
-    .card-link { display:block; color: inherit; text-decoration:none; }
-    .card { border:1px solid var(--card-brd); border-radius: 1rem; overflow:hidden; background: rgba(0,0,0,.25); }
-    .thumb { width: 100%; aspect-ratio: 16/9; object-fit: cover; display:block; }
-    .desc { padding: .85rem 1rem; color: #f0f4ff; min-height: 3rem; }
+    /* Grid of modules (dynamically populated by math-toolkit-loader.js) */
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; padding-top: 1rem; }
+    .card-link { display: block; color: inherit; text-decoration: none; }
+    .card { border: 1px solid var(--rc-border-strong); border-radius: var(--rc-radius-lg); overflow: hidden; background: var(--rc-glass); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); box-shadow: var(--rc-shadow-sm); transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease; }
+    .card:hover { transform: translateY(-2px); border-color: rgba(255,255,255,.28); background: var(--rc-glass-hover); }
+    .thumb { width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block; }
+    .desc { padding: .85rem 1rem; color: var(--rc-ink); min-height: 3rem; }
 
     /* Empty state */
-    .empty { border: 1px dashed var(--glass-brd); border-radius: 10px; padding: 1rem; background: rgba(0,0,0,.18); color:#dfe8ff; }
+    .empty { border: 1px dashed var(--rc-border-strong); border-radius: var(--rc-radius); padding: 1rem; background: rgba(0,0,0,.18); color: var(--rc-ink-dim); }
 
-    /* Search (optional) */
-    .controls { position: sticky; top: .75rem; display:flex; justify-content:flex-end; z-index: 1; }
-    .search { padding: 0.6rem 0.75rem; border: 1px solid var(--glass-brd); border-radius: 8px; width: 260px; max-width: 100%; background: rgba(0,0,0,.25); color: #fff; }
-    .search::placeholder{color:#c7d2fe}
+    /* Search */
+    .controls { position: sticky; top: .75rem; display: flex; justify-content: flex-end; z-index: 1; }
+    .search { padding: 0.6rem 0.75rem; border: 1px solid var(--rc-border); border-radius: var(--rc-radius); width: 260px; max-width: 100%; background: rgba(0,0,0,.22); color: var(--rc-ink); font-family: var(--rc-font); font-size: 16px; outline: none; transition: border-color 0.2s ease; }
+    .search::placeholder { color: var(--rc-muted); }
+    .search:focus { border-color: var(--rc-brand); }
   </style>
 
-  <script src="/assets/js/site-assets-loader.js"></script>
   <script src="/assets/js/open-in-viewer.js"></script>
 </head>
 <body>
-  <!-- Static background anchor (video + overlay will be injected by site.js before this element) -->
-  <div class="bg"></div>
-
-  <!-- Fixed Home button (glass) -->
-  <a class="btn home" href="/">Home</a>
-
   <div class="container">
     <header class="container" style="padding-top:2.5rem;">
       <h1 style="margin:0 0 .25rem; font-size: clamp(1.75rem, 3.5vw, 2.25rem);">Math Toolkit</h1>
-      <p style="margin:.25rem 0 1rem; opacity:.95; max-width: 72ch;">Explore math modules. Click a card to open the module. Use Teacher Tools to add or update modules.</p>
+      <p style="margin:.25rem 0 1rem; color: var(--rc-ink-dim); max-width: 72ch;">Explore math modules. Click a card to open the module. Use Teacher Tools to add or update modules.</p>
       <div class="controls">
         <input class="search" id="search" type="search" placeholder="Search modules..." aria-label="Search modules" />
       </div>
@@ -74,9 +52,6 @@
   </div>
 
   <script src="/assets/js/math-toolkit-loader.js"></script>
-  
-  <!-- Global App Shell JS -->
   <script defer src="/assets/js/app-shell.js"></script>
-  <!-- Context Navigation JS -->
 </body>
 </html>
