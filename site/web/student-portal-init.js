@@ -353,6 +353,28 @@
       console.error(LOG_PREFIX, 'Error clearing saved answers:', err);
     }
   }
+
+  /**
+   * Update progress display in viewer
+   */
+  function updateViewerProgress(instance) {
+    const progressEl = document.getElementById('viewerProgress');
+    if (!progressEl) return;
+    
+    const totalQuestions = getTotalQuestionCount(instance);
+    const answeredCount = getAnsweredCount(instance.id);
+    const progressPercent = totalQuestions > 0 ? (answeredCount / totalQuestions) * 100 : 0;
+    
+    const textEl = progressEl.querySelector('.st-viewer-progress-text');
+    const fillEl = progressEl.querySelector('.fill');
+    
+    if (textEl) {
+      textEl.textContent = `Progress: ${answeredCount} of ${totalQuestions} questions answered`;
+    }
+    if (fillEl) {
+      fillEl.style.width = `${progressPercent}%`;
+    }
+  }
   
   /**
    * Render a single goal card
@@ -578,11 +600,22 @@
     const isReadOnly = instance.status === 'Submitted' || instance.status === 'Graded';
     assignmentViewerState.isReadOnly = isReadOnly;
     
-    // Load saved answers from instance settings if in read-only mode
+    // Feature 1: Load saved answers from instance settings if in read-only mode
     if (isReadOnly && instance.settings && instance.settings.answers) {
       Object.entries(instance.settings.answers).forEach(([key, value]) => {
         assignmentViewerState.answers.set(key, value);
       });
+    } else if (!isReadOnly) {
+      // Feature 1: Load saved answers from localStorage for in-progress assignments
+      const savedAnswers = getSavedAnswers(instance.id);
+      if (savedAnswers) {
+        console.log(LOG_PREFIX, 'Resuming progress from localStorage');
+        Object.entries(savedAnswers).forEach(([key, value]) => {
+          assignmentViewerState.answers.set(key, value);
+        });
+        // Show "resuming" toast
+        showToast('📌 Resuming your progress...');
+      }
     }
     
     const assignment = instance.assignment || {};
@@ -792,11 +825,25 @@
       </div>
     ` : '';
     
+    // Feature 3: Progress tracker in viewer
+    const totalQuestions = getTotalQuestionCount(instance);
+    const answeredCount = getAnsweredCount(instance.id);
+    const progressPercent = totalQuestions > 0 ? (answeredCount / totalQuestions) * 100 : 0;
+    const progressHtml = totalQuestions > 0 && !isReadOnly ? `
+      <div class="st-viewer-progress" id="viewerProgress">
+        <div class="st-viewer-progress-text">Progress: ${answeredCount} of ${totalQuestions} questions answered</div>
+        <div class="st-viewer-progress-bar">
+          <div class="fill" style="width: ${progressPercent}%"></div>
+        </div>
+      </div>
+    ` : '';
+    
     container.innerHTML = `
       <h3 style="margin-top: 0; margin-bottom: 20px; font-size: 18px;">
         ${escapeHtml(dayData.label)}
       </h3>
       ${readOnlyBanner}
+      ${progressHtml}
       ${questionsHtml}
     `;
     
@@ -825,6 +872,16 @@
           
           // Save answer
           assignmentViewerState.answers.set(questionId, letter);
+          
+          // Feature 1: Auto-save to localStorage (if not read-only)
+          if (!assignmentViewerState.isReadOnly) {
+            saveAnswer(instance.id, questionId, letter);
+          }
+          
+          // Feature 3: Update progress display in real-time
+          updateViewerProgress(instance);
+          
+          // Save to server
           saveAnswersToServer(instance);
         });
       });
@@ -886,12 +943,34 @@
       </div>
     ` : '';
     
-    // Get saved writing response from instance settings
-    const savedResponse = (instance.settings && instance.settings.writing_response) || '';
+    // Get saved writing response from instance settings or localStorage
+    let savedResponse = (instance.settings && instance.settings.writing_response) || '';
+    
+    // Feature 1: If not read-only and no saved response from server, check localStorage
+    if (!isReadOnly && !savedResponse) {
+      const questionId = `writing_${dayData.day_number}`;
+      const savedAnswers = getSavedAnswers(instance.id);
+      if (savedAnswers && savedAnswers[questionId]) {
+        savedResponse = savedAnswers[questionId];
+      }
+    }
     
     const readOnlyBanner = isReadOnly ? `
       <div class="st-submitted-banner">
         ✓ Submitted — Waiting for teacher review
+      </div>
+    ` : '';
+    
+    // Feature 3: Progress tracker in viewer
+    const totalQuestions = getTotalQuestionCount(instance);
+    const answeredCount = getAnsweredCount(instance.id);
+    const progressPercent = totalQuestions > 0 ? (answeredCount / totalQuestions) * 100 : 0;
+    const progressHtml = totalQuestions > 0 && !isReadOnly ? `
+      <div class="st-viewer-progress" id="viewerProgress">
+        <div class="st-viewer-progress-text">Progress: ${answeredCount} of ${totalQuestions} questions answered</div>
+        <div class="st-viewer-progress-bar">
+          <div class="fill" style="width: ${progressPercent}%"></div>
+        </div>
       </div>
     ` : '';
     
@@ -1028,6 +1107,7 @@
         ${escapeHtml(dayData.label)}
       </h3>
       ${readOnlyBanner}
+      ${progressHtml}
       <div class="st-writing-section">
         <div class="st-writing-prompt">
           ${escapeHtml(dayData.prompt)}
@@ -1184,6 +1264,10 @@
         
         try {
           await saveWritingResponseToServer(instance, response);
+          
+          // Feature 1: Clear saved answers after successful submit
+          clearSavedAnswers(instance.id);
+          
           this.textContent = '✓ Submitted!';
           setTimeout(() => {
             this.textContent = 'Submit Response';
@@ -1203,6 +1287,20 @@
           this.textContent = 'Submit Response';
           this.disabled = false;
         }
+      });
+    }
+    
+    // Feature 1: Auto-save writing textarea with debounce
+    const writingTextarea = container.querySelector('#writingResponse');
+    if (writingTextarea && !isReadOnly) {
+      let saveTimeout;
+      writingTextarea.addEventListener('input', function() {
+        clearTimeout(saveTimeout);
+        saveTimeout = setTimeout(() => {
+          const questionId = `writing_${dayData.day_number}`;
+          saveAnswer(instance.id, questionId, this.value);
+          updateViewerProgress(instance);
+        }, 1000); // 1 second debounce
       });
     }
     
