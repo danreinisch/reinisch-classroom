@@ -9,31 +9,39 @@
   // Only run on reporting page
   if (!location.pathname.startsWith("/teacher/reporting")) return;
 
-  console.log('[tc-reporting] Initializing reporting engine');
+  console.log("[tc-reporting] Initializing reporting engine");
 
   // Import data adapter and Supabase client
-  const { db, isRemote } = await import('/web/data-adapter.js');
-  const { getSupabase } = await import('/web/supabase-client.js');
+  const { db, isRemote } = await import("/web/data-adapter.js");
+  const { getSupabase } = await import("/web/supabase-client.js");
 
   // Constants - keep in sync with other teacher pages
   const CANON_CLASSES = [
-    "Language Arts 1 SC", "Language Arts 2 SC", "Language Arts 3 SC",
-    "Language Arts 4 SC", "Life Skills Language Arts SC", "Life Skills",
-    "Consumer Math", "Geometry SC", "Speech/Language", "Warrior Academy"
+    "Language Arts 1 SC",
+    "Language Arts 2 SC",
+    "Language Arts 3 SC",
+    "Language Arts 4 SC",
+    "Life Skills Language Arts SC",
+    "Life Skills",
+    "Consumer Math",
+    "Geometry SC",
+    "Speech/Language",
+    "Warrior Academy",
   ];
 
-  const CLASS_DISPLAY = {
-    "Language Arts 1 SC": "LA 1 SC",
-    "Language Arts 2 SC": "LA 2 SC",
-    "Language Arts 3 SC": "LA 3 SC",
-    "Language Arts 4 SC": "LA 4 SC",
-    "Life Skills Language Arts SC": "Life Skills LA",
-    "Life Skills": "Life Skills",
-    "Consumer Math": "Consumer Math",
-    "Geometry SC": "Geometry SC",
-    "Speech/Language": "Speech/Language",
-    "Warrior Academy": "Warrior Academy"
-  };
+  // Reserved for future use - display abbreviations for space constraints
+  // const CLASS_DISPLAY = {
+  //   "Language Arts 1 SC": "LA 1 SC",
+  //   "Language Arts 2 SC": "LA 2 SC",
+  //   "Language Arts 3 SC": "LA 3 SC",
+  //   "Language Arts 4 SC": "LA 4 SC",
+  //   "Life Skills Language Arts SC": "Life Skills LA",
+  //   "Life Skills": "Life Skills",
+  //   "Consumer Math": "Consumer Math",
+  //   "Geometry SC": "Geometry SC",
+  //   "Speech/Language": "Speech/Language",
+  //   "Warrior Academy": "Warrior Academy",
+  // };
 
   // DOM helper
   const $ = (id) => document.getElementById(id);
@@ -47,13 +55,13 @@
   let submissionsData = [];
   let enrollmentsData = [];
   let usingSupabase = false;
-  let currentTab = 'iep-quarterly';
+  let currentTab = "iep-quarterly";
 
   // Tab state
   let tab1State = { studentCode: null, quarter: getCurrentQuarter() };
   let tab2State = { studentCode: null };
-  let tab3State = { classFilter: 'All Classes' };
-  let tab4State = { classFilter: 'All Classes', quarter: getCurrentQuarter() };
+  let tab3State = { classFilter: "All Classes" };
+  let tab4State = { classFilter: "All Classes", quarter: getCurrentQuarter() };
 
   /**
    * Get current quarter based on today's date
@@ -62,14 +70,15 @@
     const now = new Date();
     const month = now.getMonth() + 1;
     const day = now.getDate();
-    
-    if ((month === 8 && day >= 14) || month === 9 || (month === 10 && day <= 10)) return 'Q1';
-    if ((month === 10 && day >= 13) || month === 11 || (month === 12 && day <= 19)) return 'Q2';
-    if ((month === 12 && day >= 20) || month === 1 || month === 2 || (month === 3 && day <= 13)) return 'Q3';
-    if ((month === 3 && day >= 16) || month === 4 || (month === 5 && day <= 21)) return 'Q4';
-    
+
+    if ((month === 8 && day >= 14) || month === 9 || (month === 10 && day <= 10)) return "Q1";
+    if ((month === 10 && day >= 13) || month === 11 || (month === 12 && day <= 19)) return "Q2";
+    if ((month === 12 && day >= 20) || month === 1 || month === 2 || (month === 3 && day <= 13))
+      return "Q3";
+    if ((month === 3 && day >= 16) || month === 4 || (month === 5 && day <= 21)) return "Q4";
+
     // Summer fallback
-    return 'Q4';
+    return "Q4";
   }
 
   /**
@@ -80,14 +89,14 @@
     const year = now.getFullYear();
     const month = now.getMonth() + 1;
     const schoolYear = month >= 8 ? year : year - 1;
-    
+
     const ranges = {
-      'Q1': { start: `${schoolYear}-08-14`, end: `${schoolYear}-10-10` },
-      'Q2': { start: `${schoolYear}-10-13`, end: `${schoolYear}-12-19` },
-      'Q3': { start: `${schoolYear}-12-20`, end: `${schoolYear + 1}-03-13` },
-      'Q4': { start: `${schoolYear + 1}-03-16`, end: `${schoolYear + 1}-05-21` }
+      Q1: { start: `${schoolYear}-08-14`, end: `${schoolYear}-10-10` },
+      Q2: { start: `${schoolYear}-10-13`, end: `${schoolYear}-12-19` },
+      Q3: { start: `${schoolYear}-12-20`, end: `${schoolYear + 1}-03-13` },
+      Q4: { start: `${schoolYear + 1}-03-16`, end: `${schoolYear + 1}-05-21` },
     };
-    
+
     return ranges[quarter] || { start: null, end: null };
   }
 
@@ -96,10 +105,10 @@
    */
   function getQuarterLabel(quarter) {
     const labels = {
-      'Q1': 'Q1 (Aug 14-Oct 10)',
-      'Q2': 'Q2 (Oct 13-Dec 19)',
-      'Q3': 'Q3 (Dec 20-Mar 13)',
-      'Q4': 'Q4 (Mar 16-May 21)'
+      Q1: "Q1 (Aug 14-Oct 10)",
+      Q2: "Q2 (Oct 13-Dec 19)",
+      Q3: "Q3 (Dec 20-Mar 13)",
+      Q4: "Q4 (Mar 16-May 21)",
     };
     return labels[quarter] || quarter;
   }
@@ -108,8 +117,8 @@
    * Escape HTML for XSS prevention
    */
   function escapeHtml(text) {
-    if (!text && text !== 0) return '';
-    const div = document.createElement('div');
+    if (!text && text !== 0) return "";
+    const div = document.createElement("div");
     div.textContent = String(text);
     return div.innerHTML;
   }
@@ -118,40 +127,40 @@
    * Escape XML for DOCX export
    */
   function escapeXml(text) {
-    if (!text && text !== 0) return '';
+    if (!text && text !== 0) return "";
     return String(text)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&apos;');
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&apos;");
   }
 
   /**
    * Format date as "Jan 15, 2026"
    */
   function formatDate(dateStr) {
-    if (!dateStr) return 'N/A';
+    if (!dateStr) return "N/A";
     const date = new Date(dateStr);
-    if (isNaN(date.getTime())) return 'N/A';
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    if (isNaN(date.getTime())) return "N/A";
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
   }
 
   /**
    * Format date as YYYY-MM-DD
    */
   function formatDateYYYYMMDD(date = new Date()) {
-    return date.toISOString().split('T')[0];
+    return date.toISOString().split("T")[0];
   }
 
   /**
    * Get score color for visual feedback
    */
   function scoreColor(score) {
-    if (score == null || isNaN(score)) return 'rgba(200,200,200,0.6)';
-    if (score >= 80) return 'rgba(34,197,94,0.8)';
-    if (score >= 60) return 'rgba(234,179,8,0.8)';
-    return 'rgba(239,68,68,0.8)';
+    if (score == null || isNaN(score)) return "rgba(200,200,200,0.6)";
+    if (score >= 80) return "rgba(34,197,94,0.8)";
+    if (score >= 60) return "rgba(234,179,8,0.8)";
+    return "rgba(239,68,68,0.8)";
   }
 
   /**
@@ -159,24 +168,26 @@
    */
   async function loadData() {
     try {
-      console.log('[tc-reporting] Loading data...');
-      
+      console.log("[tc-reporting] Loading data...");
+
       usingSupabase = await isRemote();
-      
-      const pillMode = $('pillMode');
+
+      const pillMode = $("pillMode");
       if (pillMode) {
-        pillMode.textContent = usingSupabase ? 'Supabase' : 'Local (browser)';
+        pillMode.textContent = usingSupabase ? "Supabase" : "Local (browser)";
       }
 
       // Load all data in parallel
-      const [students, goals, assignments, instances, submissions, enrollments] = await Promise.all([
-        db.listStudents(),
-        db.listGoalsAll ? db.listGoalsAll() : [],
-        db.listAssignments ? db.listAssignments() : [],
-        db.listAssignmentInstances ? db.listAssignmentInstances() : [],
-        db.listSubmissions ? db.listSubmissions() : [],
-        db.listClassEnrollments ? db.listClassEnrollments() : []
-      ]);
+      const [students, goals, assignments, instances, submissions, enrollments] = await Promise.all(
+        [
+          db.listStudents(),
+          db.listGoalsAll ? db.listGoalsAll() : [],
+          db.listAssignments ? db.listAssignments() : [],
+          db.listAssignmentInstances ? db.listAssignmentInstances() : [],
+          db.listSubmissions ? db.listSubmissions() : [],
+          db.listClassEnrollments ? db.listClassEnrollments() : [],
+        ]
+      );
 
       studentsData = students || [];
       goalsData = goals || [];
@@ -185,21 +196,20 @@
       submissionsData = submissions || [];
       enrollmentsData = enrollments || [];
 
-      console.log('[tc-reporting] Data loaded:', {
+      console.log("[tc-reporting] Data loaded:", {
         students: studentsData.length,
         goals: goalsData.length,
         assignments: assignmentsData.length,
         instances: instancesData.length,
-        submissions: submissionsData.length
+        submissions: submissionsData.length,
       });
 
       // Update UI
       updateSyncStatus();
       renderCurrentTab();
-
     } catch (err) {
-      console.error('[tc-reporting] Error loading data:', err);
-      alert('Error loading data. Please check console for details.');
+      console.error("[tc-reporting] Error loading data:", err);
+      alert("Error loading data. Please check console for details.");
     }
   }
 
@@ -207,9 +217,9 @@
    * Update sync status indicator
    */
   function updateSyncStatus() {
-    const pillMode = $('pillMode');
+    const pillMode = $("pillMode");
     if (pillMode) {
-      pillMode.textContent = usingSupabase ? 'Supabase' : 'Local (browser)';
+      pillMode.textContent = usingSupabase ? "Supabase" : "Local (browser)";
     }
   }
 
@@ -218,17 +228,17 @@
    */
   function switchTab(tabId) {
     currentTab = tabId;
-    
+
     // Update tab buttons
-    document.querySelectorAll('.rp-tab').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.tab === tabId);
+    document.querySelectorAll(".rp-tab").forEach((btn) => {
+      btn.classList.toggle("active", btn.dataset.tab === tabId);
     });
-    
+
     // Update tab content
-    document.querySelectorAll('.rp-tab-content').forEach(content => {
-      content.classList.toggle('active', content.dataset.tab === tabId);
+    document.querySelectorAll(".rp-tab-content").forEach((content) => {
+      content.classList.toggle("active", content.dataset.tab === tabId);
     });
-    
+
     // Render current tab content
     renderCurrentTab();
   }
@@ -237,17 +247,17 @@
    * Render current active tab
    */
   function renderCurrentTab() {
-    switch(currentTab) {
-      case 'iep-quarterly':
+    switch (currentTab) {
+      case "iep-quarterly":
         renderTab1();
         break;
-      case 'student-summary':
+      case "student-summary":
         renderTab2();
         break;
-      case 'class-performance':
+      case "class-performance":
         renderTab3();
         break;
-      case 'compliance-log':
+      case "compliance-log":
         renderTab4();
         break;
     }
@@ -257,14 +267,17 @@
    * TAB 1: IEP Quarterly Progress Report
    */
   function renderTab1() {
-    const container = $('tab1Content');
+    const container = $("tab1Content");
     if (!container) return;
 
     // Render filters
     const studentsHtml = studentsData
-      .filter(s => s.active !== false)
-      .map(s => `<option value="${escapeHtml(s.code)}" ${s.code === tab1State.studentCode ? 'selected' : ''}>${escapeHtml(s.name || s.code)}</option>`)
-      .join('');
+      .filter((s) => s.active !== false)
+      .map(
+        (s) =>
+          `<option value="${escapeHtml(s.code)}" ${s.code === tab1State.studentCode ? "selected" : ""}>${escapeHtml(s.name || s.code)}</option>`
+      )
+      .join("");
 
     const filtersHtml = `
       <div class="rp-filters">
@@ -278,29 +291,31 @@
         <div class="rp-filter-group">
           <label for="tab1Quarter">Quarter:</label>
           <select id="tab1Quarter" class="rp-select">
-            <option value="Q1" ${tab1State.quarter === 'Q1' ? 'selected' : ''}>${getQuarterLabel('Q1')}</option>
-            <option value="Q2" ${tab1State.quarter === 'Q2' ? 'selected' : ''}>${getQuarterLabel('Q2')}</option>
-            <option value="Q3" ${tab1State.quarter === 'Q3' ? 'selected' : ''}>${getQuarterLabel('Q3')}</option>
-            <option value="Q4" ${tab1State.quarter === 'Q4' ? 'selected' : ''}>${getQuarterLabel('Q4')}</option>
+            <option value="Q1" ${tab1State.quarter === "Q1" ? "selected" : ""}>${getQuarterLabel("Q1")}</option>
+            <option value="Q2" ${tab1State.quarter === "Q2" ? "selected" : ""}>${getQuarterLabel("Q2")}</option>
+            <option value="Q3" ${tab1State.quarter === "Q3" ? "selected" : ""}>${getQuarterLabel("Q3")}</option>
+            <option value="Q4" ${tab1State.quarter === "Q4" ? "selected" : ""}>${getQuarterLabel("Q4")}</option>
           </select>
         </div>
       </div>
     `;
 
     if (!tab1State.studentCode) {
-      container.innerHTML = filtersHtml + '<div class="rp-empty">Select a student and quarter to view IEP progress report.</div>';
-      
+      container.innerHTML =
+        filtersHtml +
+        '<div class="rp-empty">Select a student and quarter to view IEP progress report.</div>';
+
       // Attach event listeners
-      const studentSelect = $('tab1Student');
-      const quarterSelect = $('tab1Quarter');
+      const studentSelect = $("tab1Student");
+      const quarterSelect = $("tab1Quarter");
       if (studentSelect) {
-        studentSelect.addEventListener('change', (e) => {
+        studentSelect.addEventListener("change", (e) => {
           tab1State.studentCode = e.target.value || null;
           renderTab1();
         });
       }
       if (quarterSelect) {
-        quarterSelect.addEventListener('change', (e) => {
+        quarterSelect.addEventListener("change", (e) => {
           tab1State.quarter = e.target.value;
           renderTab1();
         });
@@ -309,7 +324,7 @@
     }
 
     // Load student data
-    const student = studentsData.find(s => s.code === tab1State.studentCode);
+    const student = studentsData.find((s) => s.code === tab1State.studentCode);
     if (!student) {
       container.innerHTML = filtersHtml + '<div class="rp-error">Student not found.</div>';
       return;
@@ -317,11 +332,11 @@
 
     // Get quarter date range
     const quarterRange = getQuarterDateRange(tab1State.quarter);
-    const quarterStart = new Date(quarterRange.start);
-    const quarterEnd = new Date(quarterRange.end);
 
     // Get student's goals
-    const studentGoals = goalsData.filter(g => g.student_code === tab1State.studentCode && g.status === 'active');
+    const studentGoals = goalsData.filter(
+      (g) => g.student_code === tab1State.studentCode && g.status === "active"
+    );
 
     // Build report HTML
     let reportHtml = `
@@ -343,30 +358,36 @@
       reportHtml += '<div class="rp-empty">No active IEP goals found for this student.</div>';
     } else {
       reportHtml += '<div class="rp-goals-section">';
-      
+
       // Process each goal
       for (const goal of studentGoals) {
-        const goalProgressData = getGoalProgressForQuarter(goal.code, tab1State.studentCode, quarterRange);
+        const goalProgressData = getGoalProgressForQuarter(
+          goal.code,
+          tab1State.studentCode,
+          quarterRange
+        );
         const prevQuarterRange = getPreviousQuarterRange(tab1State.quarter);
-        const prevGoalProgressData = prevQuarterRange ? getGoalProgressForQuarter(goal.code, tab1State.studentCode, prevQuarterRange) : null;
-        
+        const prevGoalProgressData = prevQuarterRange
+          ? getGoalProgressForQuarter(goal.code, tab1State.studentCode, prevQuarterRange)
+          : null;
+
         const narrative = generateNarrative(student, goal, goalProgressData, prevGoalProgressData);
         const trend = getTrendIndicator(goalProgressData, prevGoalProgressData);
-        
+
         reportHtml += `
           <div class="rp-goal-card">
             <div class="rp-goal-header">
               <div class="rp-goal-title">
                 <span class="rp-goal-code">${escapeHtml(goal.code)}</span>
-                <span class="rp-goal-area">${escapeHtml(goal.goal_area || 'N/A')}</span>
+                <span class="rp-goal-area">${escapeHtml(goal.goal_area || "N/A")}</span>
               </div>
               <div class="rp-goal-trend">${trend}</div>
             </div>
-            <div class="rp-goal-desc">${escapeHtml(goal.desc || 'No description')}</div>
+            <div class="rp-goal-desc">${escapeHtml(goal.desc || "No description")}</div>
             <div class="rp-goal-targets">
               <div><strong>Baseline:</strong> ${goal.baseline || 0}%</div>
               <div><strong>Target:</strong> ${goal.target || 100}%</div>
-              <div><strong>Current:</strong> ${goalProgressData.average != null ? goalProgressData.average.toFixed(0) : 'N/A'}%</div>
+              <div><strong>Current:</strong> ${goalProgressData.average != null ? goalProgressData.average.toFixed(0) : "N/A"}%</div>
               <div><strong>Data Points:</strong> ${goalProgressData.count}</div>
             </div>
             <div class="rp-goal-narrative">
@@ -385,8 +406,8 @@
           </div>
         `;
       }
-      
-      reportHtml += '</div>';
+
+      reportHtml += "</div>";
     }
 
     // Grades section
@@ -405,29 +426,29 @@
     container.innerHTML = reportHtml;
 
     // Attach event listeners for filters
-    const studentSelect = $('tab1Student');
-    const quarterSelect = $('tab1Quarter');
+    const studentSelect = $("tab1Student");
+    const quarterSelect = $("tab1Quarter");
     if (studentSelect) {
-      studentSelect.addEventListener('change', (e) => {
+      studentSelect.addEventListener("change", (e) => {
         tab1State.studentCode = e.target.value || null;
         renderTab1();
       });
     }
     if (quarterSelect) {
-      quarterSelect.addEventListener('change', (e) => {
+      quarterSelect.addEventListener("change", (e) => {
         tab1State.quarter = e.target.value;
         renderTab1();
       });
     }
 
     // Attach export listeners
-    const btnPDF = $('btnExportPDF');
-    const btnDOCX = $('btnExportDOCX');
+    const btnPDF = $("btnExportPDF");
+    const btnDOCX = $("btnExportDOCX");
     if (btnPDF) {
-      btnPDF.addEventListener('click', () => exportReportAsPDF());
+      btnPDF.addEventListener("click", () => exportReportAsPDF());
     }
     if (btnDOCX) {
-      btnDOCX.addEventListener('click', () => exportReportAsDOCX());
+      btnDOCX.addEventListener("click", () => exportReportAsDOCX());
     }
   }
 
@@ -443,7 +464,7 @@
     const endDate = new Date(quarterRange.end);
 
     // Filter progress data for this goal and quarter
-    const relevantProgress = progressData.filter(p => {
+    const relevantProgress = progressData.filter((p) => {
       if (p.goal_code !== goalCode) return false;
       if (p.student_code !== studentCode) return false;
       const pDate = new Date(p.date);
@@ -454,8 +475,9 @@
       return { average: null, count: 0, values: [] };
     }
 
-    const values = relevantProgress.map(p => parseFloat(p.value)).filter(v => !isNaN(v));
-    const average = values.length > 0 ? values.reduce((sum, v) => sum + v, 0) / values.length : null;
+    const values = relevantProgress.map((p) => parseFloat(p.value)).filter((v) => !isNaN(v));
+    const average =
+      values.length > 0 ? values.reduce((sum, v) => sum + v, 0) / values.length : null;
 
     return { average, count: values.length, values };
   }
@@ -464,10 +486,10 @@
    * Get previous quarter range
    */
   function getPreviousQuarterRange(currentQuarter) {
-    const quarters = ['Q1', 'Q2', 'Q3', 'Q4'];
+    const quarters = ["Q1", "Q2", "Q3", "Q4"];
     const currentIndex = quarters.indexOf(currentQuarter);
     if (currentIndex <= 0) return null; // No previous quarter in same school year
-    
+
     const prevQuarter = quarters[currentIndex - 1];
     return getQuarterDateRange(prevQuarter);
   }
@@ -478,7 +500,7 @@
   function getTrendIndicator(currentData, prevData) {
     if (currentData.average == null) return '<span class="rp-trend-neutral">No Data</span>';
     if (!prevData || prevData.average == null) return '<span class="rp-trend-neutral">—</span>';
-    
+
     if (currentData.average > prevData.average) {
       return '<span class="rp-trend-up">Improving ↑</span>';
     } else if (currentData.average < prevData.average) {
@@ -493,13 +515,13 @@
    */
   function generateNarrative(student, goal, quarterData, prevQuarterData) {
     const name = student.name || student.code;
-    const avg = quarterData.average != null ? quarterData.average.toFixed(0) : 'N/A';
-    const baseline = goal.baseline || 'N/A';
-    const target = goal.target || 'N/A';
+    const avg = quarterData.average != null ? quarterData.average.toFixed(0) : "N/A";
+    const baseline = goal.baseline || "N/A";
+    const target = goal.target || "N/A";
     const dataPoints = quarterData.count;
     const goalArea = goal.goal_area || goal.code;
-    
-    let progressStatement = '';
+
+    let progressStatement = "";
     if (quarterData.average != null && prevQuarterData?.average != null) {
       if (quarterData.average > prevQuarterData.average) {
         progressStatement = `${name} is making adequate progress toward the annual goal.`;
@@ -513,9 +535,9 @@
     } else {
       progressStatement = `Insufficient data collected this quarter to determine progress.`;
     }
-    
+
     if (quarterData.average != null) {
-      return `${name} demonstrated ${avg}% accuracy in ${goalArea}, compared to a baseline of ${baseline}%. Based on ${dataPoints} data point${dataPoints !== 1 ? 's' : ''} collected this quarter, ${progressStatement} Annual goal target: ${target}%.`;
+      return `${name} demonstrated ${avg}% accuracy in ${goalArea}, compared to a baseline of ${baseline}%. Based on ${dataPoints} data point${dataPoints !== 1 ? "s" : ""} collected this quarter, ${progressStatement} Annual goal target: ${target}%.`;
     } else {
       return `${name} has a baseline of ${baseline}% in ${goalArea}. ${progressStatement} Annual goal target: ${target}%.`;
     }
@@ -533,7 +555,7 @@
     const endDate = new Date(quarterRange.end);
 
     // Get student's assignment instances for this quarter
-    const studentInstances = instancesData.filter(inst => {
+    const studentInstances = instancesData.filter((inst) => {
       if (inst.student_code !== studentCode && inst.student_id !== studentCode) return false;
       if (!inst.assigned_at) return false;
       const assignedDate = new Date(inst.assigned_at);
@@ -545,19 +567,20 @@
     }
 
     // Build grades table
-    let html = '<div class="rp-grades-section"><h3>Grades This Quarter</h3><table class="rp-table"><thead><tr><th>Assignment</th><th>Due Date</th><th>Status</th><th>Score</th></tr></thead><tbody>';
+    let html =
+      '<div class="rp-grades-section"><h3>Grades This Quarter</h3><table class="rp-table"><thead><tr><th>Assignment</th><th>Due Date</th><th>Status</th><th>Score</th></tr></thead><tbody>';
 
     let totalScore = 0;
     let scoredCount = 0;
     let submittedCount = 0;
 
     for (const inst of studentInstances) {
-      const assignment = assignmentsData.find(a => a.id === inst.assignment_id);
-      const submission = submissionsData.find(s => s.instance_id === inst.id);
-      
+      const assignment = assignmentsData.find((a) => a.id === inst.assignment_id);
+      const submission = submissionsData.find((s) => s.instance_id === inst.id);
+
       const title = assignment?.title || `Assignment ${inst.assignment_id}`;
       const dueDate = formatDate(inst.due_at);
-      const status = submission ? 'Submitted' : (inst.status || 'Assigned');
+      const status = submission ? "Submitted" : inst.status || "Assigned";
       const score = submission?.score_total != null ? submission.score_total : null;
 
       if (submission) submittedCount++;
@@ -571,20 +594,23 @@
           <td>${escapeHtml(title)}</td>
           <td>${escapeHtml(dueDate)}</td>
           <td>${escapeHtml(status)}</td>
-          <td style="color: ${scoreColor(score)}">${score != null ? score + '%' : '—'}</td>
+          <td style="color: ${scoreColor(score)}">${score != null ? score + "%" : "—"}</td>
         </tr>
       `;
     }
 
-    html += '</tbody></table>';
+    html += "</tbody></table>";
 
     // Summary stats
-    const avgScore = scoredCount > 0 ? (totalScore / scoredCount).toFixed(1) : 'N/A';
-    const completionRate = studentInstances.length > 0 ? ((submittedCount / studentInstances.length) * 100).toFixed(0) : '0';
+    const avgScore = scoredCount > 0 ? (totalScore / scoredCount).toFixed(1) : "N/A";
+    const completionRate =
+      studentInstances.length > 0
+        ? ((submittedCount / studentInstances.length) * 100).toFixed(0)
+        : "0";
 
     html += `
       <div class="rp-grades-summary">
-        <div><strong>Average Grade:</strong> <span style="color: ${scoreColor(parseFloat(avgScore))}">${avgScore}${avgScore !== 'N/A' ? '%' : ''}</span></div>
+        <div><strong>Average Grade:</strong> <span style="color: ${scoreColor(parseFloat(avgScore))}">${avgScore}${avgScore !== "N/A" ? "%" : ""}</span></div>
         <div><strong>Completion Rate:</strong> ${completionRate}% (${submittedCount}/${studentInstances.length})</div>
       </div>
       </div>
@@ -598,13 +624,13 @@
    */
   function exportReportAsPDF() {
     // Create a print-friendly version
-    const reportCard = $('iepReportCard');
+    const reportCard = $("iepReportCard");
     if (!reportCard) return;
 
     // Create new window with print-friendly content
-    const printWindow = window.open('', '_blank');
+    const printWindow = window.open("", "_blank");
     if (!printWindow) {
-      alert('Please allow popups to export PDF');
+      alert("Please allow popups to export PDF");
       return;
     }
 
@@ -637,7 +663,7 @@
         </style>
       </head>
       <body>
-        ${reportCard.innerHTML.replace(/<button[^>]*>.*?<\/button>/gi, '')}
+        ${reportCard.innerHTML.replace(/<button[^>]*>.*?<\/button>/gi, "")}
         <p style="margin-top: 30px; font-size: 10pt; color: #666;"><em>Generated on ${new Date().toLocaleString()}</em></p>
       </body>
       </html>
@@ -645,7 +671,7 @@
 
     printWindow.document.write(printContent);
     printWindow.document.close();
-    
+
     setTimeout(() => {
       printWindow.print();
     }, 500);
@@ -655,10 +681,10 @@
    * Export report as DOCX
    */
   function exportReportAsDOCX() {
-    const reportCard = $('iepReportCard');
+    const reportCard = $("iepReportCard");
     if (!reportCard) return;
 
-    const student = studentsData.find(s => s.code === tab1State.studentCode);
+    const student = studentsData.find((s) => s.code === tab1State.studentCode);
     if (!student) return;
 
     const htmlContent = `
@@ -678,15 +704,15 @@
   </style>
 </head>
 <body>
-  ${reportCard.innerHTML.replace(/<button[^>]*>.*?<\/button>/gi, '').replace(/<select[^>]*>.*?<\/select>/gi, '[Dropdown]')}
+  ${reportCard.innerHTML.replace(/<button[^>]*>.*?<\/button>/gi, "").replace(/<select[^>]*>.*?<\/select>/gi, "[Dropdown]")}
   <p style="margin-top: 30px;"><em>Generated on ${escapeXml(new Date().toLocaleString())}</em></p>
 </body>
 </html>
     `;
 
-    const blob = new Blob([htmlContent], { type: 'application/msword' });
+    const blob = new Blob([htmlContent], { type: "application/msword" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
     a.download = `${student.code}_IEP_Progress_${tab1State.quarter}.docx`;
     document.body.appendChild(a);
@@ -694,21 +720,24 @@
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
-    console.log('[tc-reporting] DOCX export complete');
+    console.log("[tc-reporting] DOCX export complete");
   }
 
   /**
    * TAB 2: Student Summary (One-Pager)
    */
   function renderTab2() {
-    const container = $('tab2Content');
+    const container = $("tab2Content");
     if (!container) return;
 
     // Render student selector
     const studentsHtml = studentsData
-      .filter(s => s.active !== false)
-      .map(s => `<option value="${escapeHtml(s.code)}" ${s.code === tab2State.studentCode ? 'selected' : ''}>${escapeHtml(s.name || s.code)}</option>`)
-      .join('');
+      .filter((s) => s.active !== false)
+      .map(
+        (s) =>
+          `<option value="${escapeHtml(s.code)}" ${s.code === tab2State.studentCode ? "selected" : ""}>${escapeHtml(s.name || s.code)}</option>`
+      )
+      .join("");
 
     const filterHtml = `
       <div class="rp-filters">
@@ -723,11 +752,12 @@
     `;
 
     if (!tab2State.studentCode) {
-      container.innerHTML = filterHtml + '<div class="rp-empty">Select a student to view summary.</div>';
-      
-      const studentSelect = $('tab2Student');
+      container.innerHTML =
+        filterHtml + '<div class="rp-empty">Select a student to view summary.</div>';
+
+      const studentSelect = $("tab2Student");
       if (studentSelect) {
-        studentSelect.addEventListener('change', (e) => {
+        studentSelect.addEventListener("change", (e) => {
           tab2State.studentCode = e.target.value || null;
           renderTab2();
         });
@@ -735,18 +765,21 @@
       return;
     }
 
-    const student = studentsData.find(s => s.code === tab2State.studentCode);
+    const student = studentsData.find((s) => s.code === tab2State.studentCode);
     if (!student) {
       container.innerHTML = filterHtml + '<div class="rp-error">Student not found.</div>';
       return;
     }
 
     // Get student's goals
-    const studentGoals = goalsData.filter(g => g.student_code === tab2State.studentCode);
+    const studentGoals = goalsData.filter((g) => g.student_code === tab2State.studentCode);
 
     // Get student's classes
-    const studentEnrollments = enrollmentsData.filter(e => e.student_code === tab2State.studentCode);
-    const studentClasses = studentEnrollments.map(e => e.class_name || 'Unknown').join(', ') || 'None';
+    const studentEnrollments = enrollmentsData.filter(
+      (e) => e.student_code === tab2State.studentCode
+    );
+    const studentClasses =
+      studentEnrollments.map((e) => e.class_name || "Unknown").join(", ") || "None";
 
     // Build summary HTML
     let summaryHtml = `
@@ -760,7 +793,7 @@
         <div class="rp-summary-identity">
           <div class="rp-summary-row">
             <div><strong>Student Code:</strong> ${escapeHtml(student.code)}</div>
-            <div><strong>Name:</strong> ${escapeHtml(student.name || 'N/A')}</div>
+            <div><strong>Name:</strong> ${escapeHtml(student.name || "N/A")}</div>
           </div>
           <div class="rp-summary-row">
             <div><strong>Classes:</strong> ${escapeHtml(studentClasses)}</div>
@@ -778,34 +811,35 @@
       summaryHtml += '<div class="rp-empty">No IEP goals found.</div>';
     } else {
       summaryHtml += '<div class="rp-goals-overview">';
-      
+
       for (const goal of studentGoals) {
         // Get last 10 data points for sparkline
         const goalProgress = progressData
-          .filter(p => p.goal_code === goal.code && p.student_code === tab2State.studentCode)
+          .filter((p) => p.goal_code === goal.code && p.student_code === tab2State.studentCode)
           .sort((a, b) => new Date(a.date) - new Date(b.date))
           .slice(-10);
 
-        const latestValue = goalProgress.length > 0 ? parseFloat(goalProgress[goalProgress.length - 1].value) : null;
-        const sparkline = renderSparkline(goalProgress.map(p => parseFloat(p.value)));
+        const latestValue =
+          goalProgress.length > 0 ? parseFloat(goalProgress[goalProgress.length - 1].value) : null;
+        const sparkline = renderSparkline(goalProgress.map((p) => parseFloat(p.value)));
 
         summaryHtml += `
           <div class="rp-goal-summary-item">
             <div class="rp-goal-summary-header">
               <span class="rp-goal-code">${escapeHtml(goal.code)}</span>
-              <span class="rp-goal-area">${escapeHtml(goal.goal_area || 'N/A')}</span>
+              <span class="rp-goal-area">${escapeHtml(goal.goal_area || "N/A")}</span>
             </div>
             <div class="rp-goal-summary-stats">
               <div><strong>Baseline:</strong> ${goal.baseline || 0}%</div>
-              <div><strong>Latest:</strong> ${latestValue != null ? latestValue.toFixed(0) : 'N/A'}%</div>
+              <div><strong>Latest:</strong> ${latestValue != null ? latestValue.toFixed(0) : "N/A"}%</div>
               <div><strong>Target:</strong> ${goal.target || 100}%</div>
             </div>
             <div class="rp-sparkline">${sparkline}</div>
           </div>
         `;
       }
-      
-      summaryHtml += '</div>';
+
+      summaryHtml += "</div>";
     }
 
     // Grades overview
@@ -817,22 +851,22 @@
     // Data collection summary
     summaryHtml += renderDataCollectionSummary(tab2State.studentCode);
 
-    summaryHtml += '</div>';
+    summaryHtml += "</div>";
 
     container.innerHTML = summaryHtml;
 
     // Attach event listeners
-    const studentSelect = $('tab2Student');
+    const studentSelect = $("tab2Student");
     if (studentSelect) {
-      studentSelect.addEventListener('change', (e) => {
+      studentSelect.addEventListener("change", (e) => {
         tab2State.studentCode = e.target.value || null;
         renderTab2();
       });
     }
 
-    const btnPrint = $('btnPrintSummary');
+    const btnPrint = $("btnPrintSummary");
     if (btnPrint) {
-      btnPrint.addEventListener('click', () => {
+      btnPrint.addEventListener("click", () => {
         window.print();
       });
     }
@@ -849,16 +883,18 @@
     const width = 80;
     const height = 24;
     const padding = 2;
-    
+
     const max = Math.max(...values, 100);
     const min = Math.min(...values, 0);
     const range = max - min || 1;
 
-    const points = values.map((val, i) => {
-      const x = padding + (i / (values.length - 1 || 1)) * (width - 2 * padding);
-      const y = height - padding - ((val - min) / range) * (height - 2 * padding);
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    }).join(' ');
+    const points = values
+      .map((val, i) => {
+        const x = padding + (i / (values.length - 1 || 1)) * (width - 2 * padding);
+        const y = height - padding - ((val - min) / range) * (height - 2 * padding);
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      })
+      .join(" ");
 
     return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
       <polyline points="${points}" fill="none" stroke="rgba(59,130,246,0.8)" stroke-width="2"/>
@@ -869,8 +905,8 @@
    * Render grades overview
    */
   function renderGradesOverview(studentCode) {
-    const studentInstances = instancesData.filter(inst => 
-      inst.student_code === studentCode || inst.student_id === studentCode
+    const studentInstances = instancesData.filter(
+      (inst) => inst.student_code === studentCode || inst.student_id === studentCode
     );
 
     if (studentInstances.length === 0) {
@@ -880,34 +916,37 @@
     let totalScore = 0;
     let scoredCount = 0;
 
-    const gradeRows = studentInstances.slice(0, 10).map(inst => {
-      const assignment = assignmentsData.find(a => a.id === inst.assignment_id);
-      const submission = submissionsData.find(s => s.instance_id === inst.id);
-      
-      const title = assignment?.title || `Assignment ${inst.assignment_id}`;
-      const score = submission?.score_total;
-      const date = formatDate(submission?.submitted_at || inst.assigned_at);
+    const gradeRows = studentInstances
+      .slice(0, 10)
+      .map((inst) => {
+        const assignment = assignmentsData.find((a) => a.id === inst.assignment_id);
+        const submission = submissionsData.find((s) => s.instance_id === inst.id);
 
-      if (score != null) {
-        totalScore += score;
-        scoredCount++;
-      }
+        const title = assignment?.title || `Assignment ${inst.assignment_id}`;
+        const score = submission?.score_total;
+        const date = formatDate(submission?.submitted_at || inst.assigned_at);
 
-      return `
+        if (score != null) {
+          totalScore += score;
+          scoredCount++;
+        }
+
+        return `
         <tr>
           <td>${escapeHtml(title)}</td>
-          <td style="color: ${scoreColor(score)}">${score != null ? score + '%' : '—'}</td>
+          <td style="color: ${scoreColor(score)}">${score != null ? score + "%" : "—"}</td>
           <td>${escapeHtml(date)}</td>
         </tr>
       `;
-    }).join('');
+      })
+      .join("");
 
-    const avgScore = scoredCount > 0 ? (totalScore / scoredCount).toFixed(1) : 'N/A';
+    const avgScore = scoredCount > 0 ? (totalScore / scoredCount).toFixed(1) : "N/A";
 
     return `
       <h3>Grades Overview</h3>
       <div class="rp-grades-stats">
-        <div><strong>Overall Average:</strong> <span style="color: ${scoreColor(parseFloat(avgScore))}">${avgScore}${avgScore !== 'N/A' ? '%' : ''}</span></div>
+        <div><strong>Overall Average:</strong> <span style="color: ${scoreColor(parseFloat(avgScore))}">${avgScore}${avgScore !== "N/A" ? "%" : ""}</span></div>
       </div>
       <table class="rp-table">
         <thead><tr><th>Assignment</th><th>Score</th><th>Date</th></tr></thead>
@@ -920,24 +959,24 @@
    * Render assignment completion stats
    */
   function renderAssignmentCompletion(studentCode) {
-    const studentInstances = instancesData.filter(inst => 
-      inst.student_code === studentCode || inst.student_id === studentCode
+    const studentInstances = instancesData.filter(
+      (inst) => inst.student_code === studentCode || inst.student_id === studentCode
     );
 
     const totalAssigned = studentInstances.length;
-    const submitted = studentInstances.filter(inst => {
-      return submissionsData.some(s => s.instance_id === inst.id);
+    const submitted = studentInstances.filter((inst) => {
+      return submissionsData.some((s) => s.instance_id === inst.id);
     }).length;
     const missing = totalAssigned - submitted;
-    
-    const onTime = studentInstances.filter(inst => {
-      const submission = submissionsData.find(s => s.instance_id === inst.id);
+
+    const onTime = studentInstances.filter((inst) => {
+      const submission = submissionsData.find((s) => s.instance_id === inst.id);
       if (!submission) return false;
       if (!inst.due_at) return true;
       return new Date(submission.submitted_at) <= new Date(inst.due_at);
     }).length;
-    
-    const onTimeRate = submitted > 0 ? ((onTime / submitted) * 100).toFixed(0) : '0';
+
+    const onTimeRate = submitted > 0 ? ((onTime / submitted) * 100).toFixed(0) : "0";
 
     return `
       <h3>Assignment Completion</h3>
@@ -948,8 +987,8 @@
         <div><strong>On-Time Rate:</strong> ${onTimeRate}%</div>
       </div>
       <div class="rp-completion-bar">
-        <div class="rp-bar-segment rp-bar-complete" style="width: ${totalAssigned > 0 ? (submitted / totalAssigned * 100) : 0}%"></div>
-        <div class="rp-bar-segment rp-bar-missing" style="width: ${totalAssigned > 0 ? (missing / totalAssigned * 100) : 0}%"></div>
+        <div class="rp-bar-segment rp-bar-complete" style="width: ${totalAssigned > 0 ? (submitted / totalAssigned) * 100 : 0}%"></div>
+        <div class="rp-bar-segment rp-bar-missing" style="width: ${totalAssigned > 0 ? (missing / totalAssigned) * 100 : 0}%"></div>
       </div>
     `;
   }
@@ -958,34 +997,36 @@
    * Render data collection summary
    */
   function renderDataCollectionSummary(studentCode) {
-    const studentGoals = goalsData.filter(g => g.student_code === studentCode);
-    const studentProgress = progressData.filter(p => p.student_code === studentCode);
-    
+    const studentGoals = goalsData.filter((g) => g.student_code === studentCode);
+    const studentProgress = progressData.filter((p) => p.student_code === studentCode);
+
     const currentQuarter = getCurrentQuarter();
     const quarterRange = getQuarterDateRange(currentQuarter);
     const quarterStart = new Date(quarterRange.start);
     const quarterEnd = new Date(quarterRange.end);
-    
-    const quarterProgress = studentProgress.filter(p => {
+
+    const quarterProgress = studentProgress.filter((p) => {
       const pDate = new Date(p.date);
       return pDate >= quarterStart && pDate <= quarterEnd;
     });
 
-    const goalBreakdown = studentGoals.map(goal => {
-      const goalQuarterData = quarterProgress.filter(p => p.goal_code === goal.code);
-      const latestPoint = studentProgress
-        .filter(p => p.goal_code === goal.code)
-        .sort((a, b) => new Date(b.date) - new Date(a.date))[0];
-      
-      return `
+    const goalBreakdown = studentGoals
+      .map((goal) => {
+        const goalQuarterData = quarterProgress.filter((p) => p.goal_code === goal.code);
+        const latestPoint = studentProgress
+          .filter((p) => p.goal_code === goal.code)
+          .sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+
+        return `
         <tr>
           <td>${escapeHtml(goal.code)}</td>
-          <td>${escapeHtml(goal.goal_area || 'N/A')}</td>
+          <td>${escapeHtml(goal.goal_area || "N/A")}</td>
           <td>${goalQuarterData.length}</td>
-          <td>${latestPoint ? parseFloat(latestPoint.value).toFixed(0) + '%' : 'N/A'}</td>
+          <td>${latestPoint ? parseFloat(latestPoint.value).toFixed(0) + "%" : "N/A"}</td>
         </tr>
       `;
-    }).join('');
+      })
+      .join("");
 
     return `
       <h3>Data Collection Summary</h3>
@@ -993,12 +1034,16 @@
         <div><strong>Total Data Points (All Time):</strong> ${studentProgress.length}</div>
         <div><strong>Data Points This Quarter:</strong> ${quarterProgress.length}</div>
       </div>
-      ${studentGoals.length > 0 ? `
+      ${
+        studentGoals.length > 0
+          ? `
         <table class="rp-table">
           <thead><tr><th>Goal</th><th>Area</th><th>Points (Q)</th><th>Latest Value</th></tr></thead>
           <tbody>${goalBreakdown}</tbody>
         </table>
-      ` : '<div class="rp-empty">No goals found.</div>'}
+      `
+          : '<div class="rp-empty">No goals found.</div>'
+      }
     `;
   }
 
@@ -1006,13 +1051,16 @@
    * TAB 3: Class Performance Overview
    */
   function renderTab3() {
-    const container = $('tab3Content');
+    const container = $("tab3Content");
     if (!container) return;
 
     // Render class selector
-    const classOptions = ['All Classes', ...CANON_CLASSES].map(cls => 
-      `<option value="${escapeHtml(cls)}" ${cls === tab3State.classFilter ? 'selected' : ''}>${escapeHtml(cls)}</option>`
-    ).join('');
+    const classOptions = ["All Classes", ...CANON_CLASSES]
+      .map(
+        (cls) =>
+          `<option value="${escapeHtml(cls)}" ${cls === tab3State.classFilter ? "selected" : ""}>${escapeHtml(cls)}</option>`
+      )
+      .join("");
 
     let html = `
       <div class="rp-filters">
@@ -1026,11 +1074,13 @@
     `;
 
     // Filter students by class
-    let filteredStudents = studentsData.filter(s => s.active !== false);
-    if (tab3State.classFilter !== 'All Classes') {
-      const classEnrollments = enrollmentsData.filter(e => e.class_name === tab3State.classFilter);
-      const enrolledCodes = classEnrollments.map(e => e.student_code);
-      filteredStudents = filteredStudents.filter(s => enrolledCodes.includes(s.code));
+    let filteredStudents = studentsData.filter((s) => s.active !== false);
+    if (tab3State.classFilter !== "All Classes") {
+      const classEnrollments = enrollmentsData.filter(
+        (e) => e.class_name === tab3State.classFilter
+      );
+      const enrolledCodes = classEnrollments.map((e) => e.student_code);
+      filteredStudents = filteredStudents.filter((s) => enrolledCodes.includes(s.code));
     }
 
     // Get current quarter for data points metric
@@ -1039,50 +1089,51 @@
 
     // Calculate KPIs
     const totalStudents = filteredStudents.length;
-    
+
     // Calculate average grade
     let totalGradeSum = 0;
     let totalGradeCount = 0;
-    filteredStudents.forEach(student => {
-      const studentInstances = instancesData.filter(inst => 
-        inst.student_code === student.code || inst.student_id === student.code
+    filteredStudents.forEach((student) => {
+      const studentInstances = instancesData.filter(
+        (inst) => inst.student_code === student.code || inst.student_id === student.code
       );
-      studentInstances.forEach(inst => {
-        const submission = submissionsData.find(s => s.instance_id === inst.id);
+      studentInstances.forEach((inst) => {
+        const submission = submissionsData.find((s) => s.instance_id === inst.id);
         if (submission?.score_total != null) {
           totalGradeSum += submission.score_total;
           totalGradeCount++;
         }
       });
     });
-    const avgGrade = totalGradeCount > 0 ? (totalGradeSum / totalGradeCount).toFixed(1) : 'N/A';
+    const avgGrade = totalGradeCount > 0 ? (totalGradeSum / totalGradeCount).toFixed(1) : "N/A";
 
     // Calculate completion rate
     let totalAssigned = 0;
     let totalSubmitted = 0;
-    filteredStudents.forEach(student => {
-      const studentInstances = instancesData.filter(inst => 
-        inst.student_code === student.code || inst.student_id === student.code
+    filteredStudents.forEach((student) => {
+      const studentInstances = instancesData.filter(
+        (inst) => inst.student_code === student.code || inst.student_id === student.code
       );
       totalAssigned += studentInstances.length;
-      totalSubmitted += studentInstances.filter(inst => 
-        submissionsData.some(s => s.instance_id === inst.id)
+      totalSubmitted += studentInstances.filter((inst) =>
+        submissionsData.some((s) => s.instance_id === inst.id)
       ).length;
     });
-    const completionRate = totalAssigned > 0 ? ((totalSubmitted / totalAssigned) * 100).toFixed(0) : '0';
+    const completionRate =
+      totalAssigned > 0 ? ((totalSubmitted / totalAssigned) * 100).toFixed(0) : "0";
 
     // Calculate avg data points per student per goal this quarter
     let totalDataPoints = 0;
     let totalGoals = 0;
-    filteredStudents.forEach(student => {
-      const studentGoals = goalsData.filter(g => g.student_code === student.code);
+    filteredStudents.forEach((student) => {
+      const studentGoals = goalsData.filter((g) => g.student_code === student.code);
       totalGoals += studentGoals.length;
-      studentGoals.forEach(goal => {
+      studentGoals.forEach((goal) => {
         const goalData = getGoalProgressForQuarter(goal.code, student.code, quarterRange);
         totalDataPoints += goalData.count;
       });
     });
-    const avgDataPoints = totalGoals > 0 ? (totalDataPoints / totalGoals).toFixed(1) : '0';
+    const avgDataPoints = totalGoals > 0 ? (totalDataPoints / totalGoals).toFixed(1) : "0";
 
     // KPI cards
     html += `
@@ -1093,7 +1144,7 @@
         </div>
         <div class="rp-kpi-card">
           <div class="rp-kpi-label">Average Grade</div>
-          <div class="rp-kpi-value" style="color: ${scoreColor(parseFloat(avgGrade))}">${avgGrade}${avgGrade !== 'N/A' ? '%' : ''}</div>
+          <div class="rp-kpi-value" style="color: ${scoreColor(parseFloat(avgGrade))}">${avgGrade}${avgGrade !== "N/A" ? "%" : ""}</div>
         </div>
         <div class="rp-kpi-card">
           <div class="rp-kpi-label">Completion Rate</div>
@@ -1123,22 +1174,22 @@
     container.innerHTML = html;
 
     // Attach event listeners
-    const classSelect = $('tab3Class');
+    const classSelect = $("tab3Class");
     if (classSelect) {
-      classSelect.addEventListener('change', (e) => {
+      classSelect.addEventListener("change", (e) => {
         tab3State.classFilter = e.target.value;
         renderTab3();
       });
     }
 
-    const btnExportCSV = $('btnExportClassCSV');
+    const btnExportCSV = $("btnExportClassCSV");
     if (btnExportCSV) {
-      btnExportCSV.addEventListener('click', () => exportClassPerformanceCSV());
+      btnExportCSV.addEventListener("click", () => exportClassPerformanceCSV());
     }
 
-    const btnPrint = $('btnPrintClass');
+    const btnPrint = $("btnPrintClass");
     if (btnPrint) {
-      btnPrint.addEventListener('click', () => window.print());
+      btnPrint.addEventListener("click", () => window.print());
     }
   }
 
@@ -1148,46 +1199,54 @@
   function renderAssignmentPerformanceTable(classFilter) {
     // Filter assignments by class if needed
     let relevantAssignments = assignmentsData;
-    if (classFilter !== 'All Classes') {
-      relevantAssignments = assignmentsData.filter(a => a.class_id === classFilter);
+    if (classFilter !== "All Classes") {
+      relevantAssignments = assignmentsData.filter((a) => a.class_id === classFilter);
     }
 
     if (relevantAssignments.length === 0) {
       return '<h3>Assignment Performance</h3><div class="rp-empty">No assignments found.</div>';
     }
 
-    const assignmentStats = relevantAssignments.map(assignment => {
-      const instances = instancesData.filter(inst => inst.assignment_id === assignment.id);
-      const submissions = instances
-        .map(inst => submissionsData.find(s => s.instance_id === inst.id))
-        .filter(s => s);
-      
-      const scores = submissions.map(s => s.score_total).filter(s => s != null);
-      const avgScore = scores.length > 0 ? scores.reduce((sum, s) => sum + s, 0) / scores.length : null;
-      const completionRate = instances.length > 0 ? (submissions.length / instances.length * 100).toFixed(0) : 0;
-      const highest = scores.length > 0 ? Math.max(...scores) : null;
-      const lowest = scores.length > 0 ? Math.min(...scores) : null;
+    const assignmentStats = relevantAssignments
+      .map((assignment) => {
+        const instances = instancesData.filter((inst) => inst.assignment_id === assignment.id);
+        const submissions = instances
+          .map((inst) => submissionsData.find((s) => s.instance_id === inst.id))
+          .filter((s) => s);
 
-      return {
-        title: assignment.title || `Assignment ${assignment.id}`,
-        avgScore,
-        completionRate,
-        highest,
-        lowest,
-        submitted: submissions.length
-      };
-    }).slice(0, 20); // Limit to 20 for performance
+        const scores = submissions.map((s) => s.score_total).filter((s) => s != null);
+        const avgScore =
+          scores.length > 0 ? scores.reduce((sum, s) => sum + s, 0) / scores.length : null;
+        const completionRate =
+          instances.length > 0 ? ((submissions.length / instances.length) * 100).toFixed(0) : 0;
+        const highest = scores.length > 0 ? Math.max(...scores) : null;
+        const lowest = scores.length > 0 ? Math.min(...scores) : null;
 
-    const rows = assignmentStats.map(stat => `
+        return {
+          title: assignment.title || `Assignment ${assignment.id}`,
+          avgScore,
+          completionRate,
+          highest,
+          lowest,
+          submitted: submissions.length,
+        };
+      })
+      .slice(0, 20); // Limit to 20 for performance
+
+    const rows = assignmentStats
+      .map(
+        (stat) => `
       <tr>
         <td>${escapeHtml(stat.title)}</td>
-        <td style="color: ${scoreColor(stat.avgScore)}">${stat.avgScore != null ? stat.avgScore.toFixed(1) + '%' : '—'}</td>
+        <td style="color: ${scoreColor(stat.avgScore)}">${stat.avgScore != null ? stat.avgScore.toFixed(1) + "%" : "—"}</td>
         <td>${stat.completionRate}%</td>
-        <td>${stat.highest != null ? stat.highest + '%' : '—'}</td>
-        <td>${stat.lowest != null ? stat.lowest + '%' : '—'}</td>
+        <td>${stat.highest != null ? stat.highest + "%" : "—"}</td>
+        <td>${stat.lowest != null ? stat.lowest + "%" : "—"}</td>
         <td>${stat.submitted}</td>
       </tr>
-    `).join('');
+    `
+      )
+      .join("");
 
     return `
       <h3>Assignment Performance</h3>
@@ -1217,23 +1276,24 @@
       return '<h3>Student Performance</h3><div class="rp-empty">No students found.</div>';
     }
 
-    const studentStats = students.map(student => {
-      const studentInstances = instancesData.filter(inst => 
-        inst.student_code === student.code || inst.student_id === student.code
+    const studentStats = students.map((student) => {
+      const studentInstances = instancesData.filter(
+        (inst) => inst.student_code === student.code || inst.student_id === student.code
       );
-      
+
       const submissions = studentInstances
-        .map(inst => submissionsData.find(s => s.instance_id === inst.id))
-        .filter(s => s);
-      
-      const scores = submissions.map(s => s.score_total).filter(s => s != null);
-      const avgGrade = scores.length > 0 ? scores.reduce((sum, s) => sum + s, 0) / scores.length : null;
+        .map((inst) => submissionsData.find((s) => s.instance_id === inst.id))
+        .filter((s) => s);
+
+      const scores = submissions.map((s) => s.score_total).filter((s) => s != null);
+      const avgGrade =
+        scores.length > 0 ? scores.reduce((sum, s) => sum + s, 0) / scores.length : null;
       const complete = submissions.length;
       const missing = studentInstances.length - submissions.length;
-      
+
       // Goals on track
-      const studentGoals = goalsData.filter(g => g.student_code === student.code);
-      const goalsOnTrack = studentGoals.filter(goal => {
+      const studentGoals = goalsData.filter((g) => g.student_code === student.code);
+      const goalsOnTrack = studentGoals.filter((goal) => {
         const goalData = getGoalProgressForQuarter(goal.code, student.code, quarterRange);
         return goalData.average != null && goalData.average >= (goal.baseline || 0);
       }).length;
@@ -1245,25 +1305,27 @@
         complete,
         missing,
         goalsOnTrack,
-        totalGoals: studentGoals.length
+        totalGoals: studentGoals.length,
       };
     });
 
-    const rows = studentStats.map(stat => {
-      const needsAttention = (stat.avgGrade != null && stat.avgGrade < 60) || stat.missing > 2;
-      const rowClass = needsAttention ? 'rp-row-warning' : '';
-      
-      return `
+    const rows = studentStats
+      .map((stat) => {
+        const needsAttention = (stat.avgGrade != null && stat.avgGrade < 60) || stat.missing > 2;
+        const rowClass = needsAttention ? "rp-row-warning" : "";
+
+        return `
         <tr class="${rowClass}">
           <td>${escapeHtml(stat.code)}</td>
           <td>${escapeHtml(stat.name)}</td>
-          <td style="color: ${scoreColor(stat.avgGrade)}">${stat.avgGrade != null ? stat.avgGrade.toFixed(1) + '%' : '—'}</td>
+          <td style="color: ${scoreColor(stat.avgGrade)}">${stat.avgGrade != null ? stat.avgGrade.toFixed(1) + "%" : "—"}</td>
           <td>${stat.complete}</td>
           <td>${stat.missing}</td>
           <td>${stat.goalsOnTrack}/${stat.totalGoals}</td>
         </tr>
       `;
-    }).join('');
+      })
+      .join("");
 
     return `
       <h3>Student Performance</h3>
@@ -1290,35 +1352,40 @@
    */
   function exportClassPerformanceCSV() {
     // Build CSV content
-    let csv = 'Student Code,Name,Avg Grade,Assignments Complete,Missing,Goals On Track\n';
-    
+    let csv = "Student Code,Name,Avg Grade,Assignments Complete,Missing,Goals On Track\n";
+
     // Filter students by class
-    let filteredStudents = studentsData.filter(s => s.active !== false);
-    if (tab3State.classFilter !== 'All Classes') {
-      const classEnrollments = enrollmentsData.filter(e => e.class_name === tab3State.classFilter);
-      const enrolledCodes = classEnrollments.map(e => e.student_code);
-      filteredStudents = filteredStudents.filter(s => enrolledCodes.includes(s.code));
+    let filteredStudents = studentsData.filter((s) => s.active !== false);
+    if (tab3State.classFilter !== "All Classes") {
+      const classEnrollments = enrollmentsData.filter(
+        (e) => e.class_name === tab3State.classFilter
+      );
+      const enrolledCodes = classEnrollments.map((e) => e.student_code);
+      filteredStudents = filteredStudents.filter((s) => enrolledCodes.includes(s.code));
     }
 
     const currentQuarter = getCurrentQuarter();
     const quarterRange = getQuarterDateRange(currentQuarter);
 
-    filteredStudents.forEach(student => {
-      const studentInstances = instancesData.filter(inst => 
-        inst.student_code === student.code || inst.student_id === student.code
+    filteredStudents.forEach((student) => {
+      const studentInstances = instancesData.filter(
+        (inst) => inst.student_code === student.code || inst.student_id === student.code
       );
-      
+
       const submissions = studentInstances
-        .map(inst => submissionsData.find(s => s.instance_id === inst.id))
-        .filter(s => s);
-      
-      const scores = submissions.map(s => s.score_total).filter(s => s != null);
-      const avgGrade = scores.length > 0 ? (scores.reduce((sum, s) => sum + s, 0) / scores.length).toFixed(1) : 'N/A';
+        .map((inst) => submissionsData.find((s) => s.instance_id === inst.id))
+        .filter((s) => s);
+
+      const scores = submissions.map((s) => s.score_total).filter((s) => s != null);
+      const avgGrade =
+        scores.length > 0
+          ? (scores.reduce((sum, s) => sum + s, 0) / scores.length).toFixed(1)
+          : "N/A";
       const complete = submissions.length;
       const missing = studentInstances.length - submissions.length;
-      
-      const studentGoals = goalsData.filter(g => g.student_code === student.code);
-      const goalsOnTrack = studentGoals.filter(goal => {
+
+      const studentGoals = goalsData.filter((g) => g.student_code === student.code);
+      const goalsOnTrack = studentGoals.filter((goal) => {
         const goalData = getGoalProgressForQuarter(goal.code, student.code, quarterRange);
         return goalData.average != null && goalData.average >= (goal.baseline || 0);
       }).length;
@@ -1327,11 +1394,11 @@
     });
 
     // Download CSV
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
-    a.download = `class_performance_${tab3State.classFilter.replace(/\s+/g, '_')}_${formatDateYYYYMMDD()}.csv`;
+    a.download = `class_performance_${tab3State.classFilter.replace(/\s+/g, "_")}_${formatDateYYYYMMDD()}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -1342,13 +1409,16 @@
    * TAB 4: Data Collection Compliance Log
    */
   function renderTab4() {
-    const container = $('tab4Content');
+    const container = $("tab4Content");
     if (!container) return;
 
     // Render filters
-    const classOptions = ['All Classes', ...CANON_CLASSES].map(cls => 
-      `<option value="${escapeHtml(cls)}" ${cls === tab4State.classFilter ? 'selected' : ''}>${escapeHtml(cls)}</option>`
-    ).join('');
+    const classOptions = ["All Classes", ...CANON_CLASSES]
+      .map(
+        (cls) =>
+          `<option value="${escapeHtml(cls)}" ${cls === tab4State.classFilter ? "selected" : ""}>${escapeHtml(cls)}</option>`
+      )
+      .join("");
 
     let html = `
       <div class="rp-filters">
@@ -1361,46 +1431,51 @@
         <div class="rp-filter-group">
           <label for="tab4Quarter">Quarter:</label>
           <select id="tab4Quarter" class="rp-select">
-            <option value="Q1" ${tab4State.quarter === 'Q1' ? 'selected' : ''}>${getQuarterLabel('Q1')}</option>
-            <option value="Q2" ${tab4State.quarter === 'Q2' ? 'selected' : ''}>${getQuarterLabel('Q2')}</option>
-            <option value="Q3" ${tab4State.quarter === 'Q3' ? 'selected' : ''}>${getQuarterLabel('Q3')}</option>
-            <option value="Q4" ${tab4State.quarter === 'Q4' ? 'selected' : ''}>${getQuarterLabel('Q4')}</option>
+            <option value="Q1" ${tab4State.quarter === "Q1" ? "selected" : ""}>${getQuarterLabel("Q1")}</option>
+            <option value="Q2" ${tab4State.quarter === "Q2" ? "selected" : ""}>${getQuarterLabel("Q2")}</option>
+            <option value="Q3" ${tab4State.quarter === "Q3" ? "selected" : ""}>${getQuarterLabel("Q3")}</option>
+            <option value="Q4" ${tab4State.quarter === "Q4" ? "selected" : ""}>${getQuarterLabel("Q4")}</option>
           </select>
         </div>
       </div>
     `;
 
     // Filter students by class
-    let filteredStudents = studentsData.filter(s => s.active !== false);
-    if (tab4State.classFilter !== 'All Classes') {
-      const classEnrollments = enrollmentsData.filter(e => e.class_name === tab4State.classFilter);
-      const enrolledCodes = classEnrollments.map(e => e.student_code);
-      filteredStudents = filteredStudents.filter(s => enrolledCodes.includes(s.code));
+    let filteredStudents = studentsData.filter((s) => s.active !== false);
+    if (tab4State.classFilter !== "All Classes") {
+      const classEnrollments = enrollmentsData.filter(
+        (e) => e.class_name === tab4State.classFilter
+      );
+      const enrolledCodes = classEnrollments.map((e) => e.student_code);
+      filteredStudents = filteredStudents.filter((s) => enrolledCodes.includes(s.code));
     }
 
     const quarterRange = getQuarterDateRange(tab4State.quarter);
 
     // Calculate compliance metrics
     const allGoals = [];
-    filteredStudents.forEach(student => {
-      const studentGoals = goalsData.filter(g => g.student_code === student.code && g.status === 'active');
-      studentGoals.forEach(goal => {
+    filteredStudents.forEach((student) => {
+      const studentGoals = goalsData.filter(
+        (g) => g.student_code === student.code && g.status === "active"
+      );
+      studentGoals.forEach((goal) => {
         const goalData = getGoalProgressForQuarter(goal.code, student.code, quarterRange);
         allGoals.push({
           studentCode: student.code,
           studentName: student.name || student.code,
           goalCode: goal.code,
-          goalArea: goal.goal_area || 'N/A',
+          goalArea: goal.goal_area || "N/A",
           dataPoints: goalData.count,
-          lastCollected: getLastCollectedDate(goal.code, student.code)
+          lastCollected: getLastCollectedDate(goal.code, student.code),
         });
       });
     });
 
     const totalGoals = allGoals.length;
-    const goalsWithAdequateData = allGoals.filter(g => g.dataPoints >= 3).length;
-    const goalsWithNoData = allGoals.filter(g => g.dataPoints === 0).length;
-    const compliancePercent = totalGoals > 0 ? ((goalsWithAdequateData / totalGoals) * 100).toFixed(0) : '0';
+    const goalsWithAdequateData = allGoals.filter((g) => g.dataPoints >= 3).length;
+    const goalsWithNoData = allGoals.filter((g) => g.dataPoints === 0).length;
+    const compliancePercent =
+      totalGoals > 0 ? ((goalsWithAdequateData / totalGoals) * 100).toFixed(0) : "0";
 
     // KPI cards
     html += `
@@ -1427,17 +1502,17 @@
     // Compliance table
     const complianceRows = allGoals
       .sort((a, b) => a.dataPoints - b.dataPoints) // Sort worst first
-      .map(goal => {
+      .map((goal) => {
         let status, statusClass;
         if (goal.dataPoints >= 3) {
-          status = '✅ On Track';
-          statusClass = 'rp-status-good';
+          status = "✅ On Track";
+          statusClass = "rp-status-good";
         } else if (goal.dataPoints > 0) {
-          status = '⚠️ Needs Data';
-          statusClass = 'rp-status-warning';
+          status = "⚠️ Needs Data";
+          statusClass = "rp-status-warning";
         } else {
-          status = '❌ No Data';
-          statusClass = 'rp-status-critical';
+          status = "❌ No Data";
+          statusClass = "rp-status-critical";
         }
 
         return `
@@ -1451,7 +1526,8 @@
             <td>${status}</td>
           </tr>
         `;
-      }).join('');
+      })
+      .join("");
 
     html += `
       <h3>Compliance Table</h3>
@@ -1474,13 +1550,13 @@
     `;
 
     // Gaps list
-    const gaps = allGoals.filter(g => g.dataPoints === 0);
+    const gaps = allGoals.filter((g) => g.dataPoints === 0);
     if (gaps.length > 0) {
       html += `
         <div class="rp-gaps-section">
-          <h3>⚠️ ${gaps.length} goal${gaps.length !== 1 ? 's' : ''} need data collection:</h3>
+          <h3>⚠️ ${gaps.length} goal${gaps.length !== 1 ? "s" : ""} need data collection:</h3>
           <ul>
-            ${gaps.map(g => `<li><strong>${escapeHtml(g.studentCode)}</strong> (${escapeHtml(g.studentName)}) — <strong>${escapeHtml(g.goalCode)}:</strong> ${escapeHtml(g.goalArea)} — last collected: ${escapeHtml(g.lastCollected)}</li>`).join('')}
+            ${gaps.map((g) => `<li><strong>${escapeHtml(g.studentCode)}</strong> (${escapeHtml(g.studentName)}) — <strong>${escapeHtml(g.goalCode)}:</strong> ${escapeHtml(g.goalArea)} — last collected: ${escapeHtml(g.lastCollected)}</li>`).join("")}
           </ul>
         </div>
       `;
@@ -1500,29 +1576,29 @@
     container.innerHTML = html;
 
     // Attach event listeners
-    const classSelect = $('tab4Class');
-    const quarterSelect = $('tab4Quarter');
+    const classSelect = $("tab4Class");
+    const quarterSelect = $("tab4Quarter");
     if (classSelect) {
-      classSelect.addEventListener('change', (e) => {
+      classSelect.addEventListener("change", (e) => {
         tab4State.classFilter = e.target.value;
         renderTab4();
       });
     }
     if (quarterSelect) {
-      quarterSelect.addEventListener('change', (e) => {
+      quarterSelect.addEventListener("change", (e) => {
         tab4State.quarter = e.target.value;
         renderTab4();
       });
     }
 
-    const btnExportCSV = $('btnExportComplianceCSV');
+    const btnExportCSV = $("btnExportComplianceCSV");
     if (btnExportCSV) {
-      btnExportCSV.addEventListener('click', () => exportComplianceCSV());
+      btnExportCSV.addEventListener("click", () => exportComplianceCSV());
     }
 
-    const btnPrint = $('btnPrintCompliance');
+    const btnPrint = $("btnPrintCompliance");
     if (btnPrint) {
-      btnPrint.addEventListener('click', () => window.print());
+      btnPrint.addEventListener("click", () => window.print());
     }
   }
 
@@ -1531,10 +1607,10 @@
    */
   function getLastCollectedDate(goalCode, studentCode) {
     const goalProgress = progressData
-      .filter(p => p.goal_code === goalCode && p.student_code === studentCode)
+      .filter((p) => p.goal_code === goalCode && p.student_code === studentCode)
       .sort((a, b) => new Date(b.date) - new Date(a.date));
-    
-    if (goalProgress.length === 0) return 'never';
+
+    if (goalProgress.length === 0) return "never";
     return formatDate(goalProgress[0].date);
   }
 
@@ -1543,23 +1619,24 @@
    */
   function renderGradeCompletionGaps(students) {
     const gaps = [];
-    
-    students.forEach(student => {
-      const studentInstances = instancesData.filter(inst => 
-        (inst.student_code === student.code || inst.student_id === student.code) &&
-        inst.status !== 'Graded'
+
+    students.forEach((student) => {
+      const studentInstances = instancesData.filter(
+        (inst) =>
+          (inst.student_code === student.code || inst.student_id === student.code) &&
+          inst.status !== "Graded"
       );
-      
-      studentInstances.forEach(inst => {
-        const submission = submissionsData.find(s => s.instance_id === inst.id);
+
+      studentInstances.forEach((inst) => {
+        const submission = submissionsData.find((s) => s.instance_id === inst.id);
         if (!submission) {
-          const assignment = assignmentsData.find(a => a.id === inst.assignment_id);
+          const assignment = assignmentsData.find((a) => a.id === inst.assignment_id);
           gaps.push({
             studentCode: student.code,
             assignmentTitle: assignment?.title || `Assignment ${inst.assignment_id}`,
             assignedDate: formatDate(inst.assigned_at),
             dueDate: formatDate(inst.due_at),
-            status: 'Missing'
+            status: "Missing",
           });
         }
       });
@@ -1569,7 +1646,10 @@
       return '<h3>Grade Completion Gaps</h3><div class="rp-empty">No missing assignments found.</div>';
     }
 
-    const rows = gaps.slice(0, 20).map(gap => `
+    const rows = gaps
+      .slice(0, 20)
+      .map(
+        (gap) => `
       <tr>
         <td>${escapeHtml(gap.studentCode)}</td>
         <td>${escapeHtml(gap.assignmentTitle)}</td>
@@ -1577,7 +1657,9 @@
         <td>${escapeHtml(gap.dueDate)}</td>
         <td class="rp-status-critical">${escapeHtml(gap.status)}</td>
       </tr>
-    `).join('');
+    `
+      )
+      .join("");
 
     return `
       <h3>Grade Completion Gaps</h3>
@@ -1602,40 +1684,45 @@
    * Export compliance data as CSV
    */
   function exportComplianceCSV() {
-    let csv = 'Student Code,Student Name,Goal Code,Goal Area,Data Points (Q),Last Collected,Status\n';
-    
+    let csv =
+      "Student Code,Student Name,Goal Code,Goal Area,Data Points (Q),Last Collected,Status\n";
+
     // Filter students by class
-    let filteredStudents = studentsData.filter(s => s.active !== false);
-    if (tab4State.classFilter !== 'All Classes') {
-      const classEnrollments = enrollmentsData.filter(e => e.class_name === tab4State.classFilter);
-      const enrolledCodes = classEnrollments.map(e => e.student_code);
-      filteredStudents = filteredStudents.filter(s => enrolledCodes.includes(s.code));
+    let filteredStudents = studentsData.filter((s) => s.active !== false);
+    if (tab4State.classFilter !== "All Classes") {
+      const classEnrollments = enrollmentsData.filter(
+        (e) => e.class_name === tab4State.classFilter
+      );
+      const enrolledCodes = classEnrollments.map((e) => e.student_code);
+      filteredStudents = filteredStudents.filter((s) => enrolledCodes.includes(s.code));
     }
 
     const quarterRange = getQuarterDateRange(tab4State.quarter);
 
-    filteredStudents.forEach(student => {
-      const studentGoals = goalsData.filter(g => g.student_code === student.code && g.status === 'active');
-      studentGoals.forEach(goal => {
+    filteredStudents.forEach((student) => {
+      const studentGoals = goalsData.filter(
+        (g) => g.student_code === student.code && g.status === "active"
+      );
+      studentGoals.forEach((goal) => {
         const goalData = getGoalProgressForQuarter(goal.code, student.code, quarterRange);
         const lastCollected = getLastCollectedDate(goal.code, student.code);
         let status;
         if (goalData.count >= 3) {
-          status = 'On Track';
+          status = "On Track";
         } else if (goalData.count > 0) {
-          status = 'Needs Data';
+          status = "Needs Data";
         } else {
-          status = 'No Data';
+          status = "No Data";
         }
 
-        csv += `${student.code},"${student.name || student.code}",${goal.code},"${goal.goal_area || 'N/A'}",${goalData.count},${lastCollected},${status}\n`;
+        csv += `${student.code},"${student.name || student.code}",${goal.code},"${goal.goal_area || "N/A"}",${goalData.count},${lastCollected},${status}\n`;
       });
     });
 
     // Download CSV
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
     a.download = `compliance_log_${tab4State.quarter}_${formatDateYYYYMMDD()}.csv`;
     document.body.appendChild(a);
@@ -1648,21 +1735,22 @@
    * Initialize the reporting module
    */
   async function init() {
-    console.log('[tc-reporting] Initializing...');
+    console.log("[tc-reporting] Initializing...");
 
     // Check if Supabase is configured
     const supabase = getSupabase();
     if (!supabase) {
-      const mainContent = document.querySelector('.tc-main');
+      const mainContent = document.querySelector(".tc-main");
       if (mainContent) {
-        mainContent.innerHTML = '<div class="rp-error">Reporting requires Supabase. Please configure your database connection in Settings.</div>';
+        mainContent.innerHTML =
+          '<div class="rp-error">Reporting requires Supabase. Please configure your database connection in Settings.</div>';
       }
       return;
     }
 
     // Setup tab switching
-    document.querySelectorAll('.rp-tab').forEach(btn => {
-      btn.addEventListener('click', (e) => {
+    document.querySelectorAll(".rp-tab").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
         const tabId = e.currentTarget.dataset.tab;
         switchTab(tabId);
       });
@@ -1671,29 +1759,33 @@
     // Load progress data for current quarter
     const currentQuarter = getCurrentQuarter();
     const quarterRange = getQuarterDateRange(currentQuarter);
-    
+
     try {
       progressData = await db.listGoalProgress({
         startDate: quarterRange.start,
-        endDate: quarterRange.end
+        endDate: quarterRange.end,
       });
-      console.log('[tc-reporting] Loaded', progressData.length, 'progress entries for', currentQuarter);
+      console.log(
+        "[tc-reporting] Loaded",
+        progressData.length,
+        "progress entries for",
+        currentQuarter
+      );
     } catch (err) {
-      console.warn('[tc-reporting] Error loading progress data:', err);
+      console.warn("[tc-reporting] Error loading progress data:", err);
       progressData = [];
     }
 
     // Load all data
     await loadData();
 
-    console.log('[tc-reporting] Initialization complete');
+    console.log("[tc-reporting] Initialization complete");
   }
 
   // Initialize when DOM is ready
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
   } else {
     init();
   }
-
 })();

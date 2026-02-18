@@ -1,215 +1,655 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Teacher Center — Reporting</title>
-  <link rel="stylesheet" href="/web/teacher-shell.css" />
-  <style>
-    .tc-stack { display: grid; gap: 14px; }
-    .tc-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
-    @media (max-width: 1100px){ .tc-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-    @media (max-width: 640px){ .tc-kpis { grid-template-columns: 1fr; } }
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Teacher Center — Reporting</title>
+    <link rel="stylesheet" href="/web/teacher-shell.css" />
+    <style>
+      .tc-stack {
+        display: grid;
+        gap: 14px;
+      }
+      .tc-kpis {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+      }
+      @media (max-width: 1100px) {
+        .tc-kpis {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+      @media (max-width: 640px) {
+        .tc-kpis {
+          grid-template-columns: 1fr;
+        }
+      }
 
-    .tc-card {
-      border-radius: 14px;
-      padding: 14px;
-      border: 1px solid rgba(255,255,255,.10);
-      background: rgba(0,0,0,.18);
-      backdrop-filter: blur(10px);
-    }
-    .tc-kpi-label { font-size: 12px; opacity: .80; }
-    .tc-kpi-value { font-size: 28px; font-weight: 900; line-height: 1.1; margin-top: 6px; }
-    .tc-row { display:flex; gap:10px; align-items:center; flex-wrap: wrap; }
-    .tc-subtle { opacity: .78; }
-    .tc-table { width: 100%; border-collapse: collapse; }
-    .tc-table th, .tc-table td { padding: 10px 10px; border-top: 1px solid rgba(255,255,255,.10); vertical-align: top; }
-    .tc-table thead th { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; opacity: .85; border-top: none; }
-    .tc-pill { display:inline-flex; align-items:center; gap:6px; padding: 3px 10px; border-radius: 999px; font-size: 12px; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.06); }
-    .tc-btnrow { display:flex; gap:10px; align-items:center; justify-content: space-between; flex-wrap: wrap; }
-    .tc-actions { display:flex; gap:10px; align-items:center; flex-wrap: wrap; }
-    .tc-small { font-size: 12px; opacity: .85; }
-    .tc-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
-    .tc-note { font-size: 12px; opacity: .80; }
+      .tc-card {
+        border-radius: 14px;
+        padding: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(0, 0, 0, 0.18);
+        backdrop-filter: blur(10px);
+      }
+      .tc-kpi-label {
+        font-size: 12px;
+        opacity: 0.8;
+      }
+      .tc-kpi-value {
+        font-size: 28px;
+        font-weight: 900;
+        line-height: 1.1;
+        margin-top: 6px;
+      }
+      .tc-row {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .tc-subtle {
+        opacity: 0.78;
+      }
+      .tc-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      .tc-table th,
+      .tc-table td {
+        padding: 10px 10px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        vertical-align: top;
+      }
+      .tc-table thead th {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        opacity: 0.85;
+        border-top: none;
+      }
+      .tc-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 3px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.06);
+      }
+      .tc-btnrow {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+      }
+      .tc-actions {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .tc-small {
+        font-size: 12px;
+        opacity: 0.85;
+      }
+      .tc-mono {
+        font-family:
+          ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
+          monospace;
+      }
+      .tc-note {
+        font-size: 12px;
+        opacity: 0.8;
+      }
 
-    /* Reporting page specific styles */
-    .rp-tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,.1); }
-    .rp-tab { padding: 10px 18px; cursor: pointer; border: none; background: none; color: inherit; opacity: 0.6; border-bottom: 2px solid transparent; font-size: 14px; font-weight: 500; transition: all 0.2s; }
-    .rp-tab:hover { opacity: 0.8; }
-    .rp-tab.active { opacity: 1; border-bottom-color: #3b82f6; color: #93c5fd; }
-    .rp-tab-content { display: none; }
-    .rp-tab-content.active { display: block; }
-    
-    .rp-filters { display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; align-items: flex-end; }
-    .rp-filter-group { display: flex; flex-direction: column; gap: 6px; }
-    .rp-filter-group label { font-size: 12px; opacity: 0.8; }
-    .rp-select { padding: 8px 12px; border-radius: 8px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14); color: inherit; font-size: 14px; min-width: 200px; }
-    .rp-select:focus { outline: none; border-color: #3b82f6; }
-    
-    .rp-empty { padding: 40px; text-align: center; opacity: 0.6; }
-    .rp-error { padding: 20px; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); border-radius: 8px; color: #fca5a5; }
-    
-    .rp-report-card { border-radius: 14px; padding: 20px; border: 1px solid rgba(255,255,255,.10); background: rgba(0,0,0,.18); backdrop-filter: blur(10px); }
-    .rp-report-header h2 { margin: 0 0 16px 0; font-size: 24px; }
-    .rp-report-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 20px; padding: 16px; background: rgba(255,255,255,.04); border-radius: 8px; }
-    .rp-report-meta div { font-size: 14px; }
-    
-    .rp-goals-section { display: grid; gap: 16px; margin: 20px 0; }
-    .rp-goal-card { padding: 16px; background: rgba(255,255,255,.04); border-radius: 10px; border: 1px solid rgba(255,255,255,.08); }
-    .rp-goal-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
-    .rp-goal-title { display: flex; gap: 10px; align-items: baseline; }
-    .rp-goal-code { font-weight: 700; font-size: 14px; }
-    .rp-goal-area { opacity: 0.7; font-size: 13px; }
-    .rp-goal-desc { margin: 10px 0; opacity: 0.9; }
-    .rp-goal-targets { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin: 12px 0; }
-    .rp-goal-targets > div { font-size: 13px; }
-    .rp-goal-narrative { margin: 12px 0; }
-    .rp-goal-narrative label { display: block; margin-bottom: 6px; font-size: 13px; }
-    .rp-narrative-edit { width: 100%; padding: 10px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14); border-radius: 6px; color: inherit; font-family: inherit; font-size: 13px; resize: vertical; }
-    .rp-narrative-edit:focus { outline: none; border-color: #3b82f6; }
-    .rp-goal-status { margin: 12px 0; }
-    .rp-goal-status label { display: block; margin-bottom: 6px; font-size: 13px; }
-    .rp-status-select { padding: 8px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14); border-radius: 6px; color: inherit; font-size: 13px; }
-    
-    .rp-trend-up { color: rgba(34,197,94,0.9); font-weight: 600; }
-    .rp-trend-down { color: rgba(239,68,68,0.9); font-weight: 600; }
-    .rp-trend-neutral { color: rgba(200,200,200,0.7); font-weight: 500; }
-    
-    .rp-grades-section { margin: 24px 0; padding: 16px; background: rgba(255,255,255,.04); border-radius: 10px; }
-    .rp-grades-section h3 { margin: 0 0 16px 0; font-size: 18px; }
-    .rp-grades-summary { display: flex; gap: 24px; margin-top: 16px; }
-    .rp-grades-summary > div { font-size: 14px; }
-    
-    .rp-table { width: 100%; border-collapse: collapse; margin: 12px 0; }
-    .rp-table th, .rp-table td { padding: 10px; border-top: 1px solid rgba(255,255,255,.10); text-align: left; }
-    .rp-table thead th { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; opacity: .85; border-top: none; font-weight: 600; }
-    .rp-table tbody tr:hover { background: rgba(255,255,255,.04); }
-    .rp-table-container { overflow-x: auto; }
-    
-    .rp-export-actions { display: flex; gap: 12px; margin-top: 20px; }
-    
-    .rp-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 20px 0; }
-    @media (max-width: 1100px){ .rp-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-    @media (max-width: 640px){ .rp-kpis { grid-template-columns: 1fr; } }
-    .rp-kpi-card { padding: 16px; background: rgba(255,255,255,.04); border-radius: 10px; border: 1px solid rgba(255,255,255,.08); }
-    .rp-kpi-label { font-size: 12px; opacity: .80; }
-    .rp-kpi-value { font-size: 28px; font-weight: 900; line-height: 1.1; margin-top: 6px; }
-    
-    .rp-summary-card { border-radius: 14px; padding: 20px; border: 1px solid rgba(255,255,255,.10); background: rgba(0,0,0,.18); backdrop-filter: blur(10px); }
-    .rp-summary-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-    .rp-summary-header h2 { margin: 0; font-size: 24px; }
-    .rp-summary-identity { margin-bottom: 24px; padding: 16px; background: rgba(255,255,255,.04); border-radius: 8px; }
-    .rp-summary-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 8px; }
-    .rp-summary-row:last-child { margin-bottom: 0; }
-    
-    .rp-goals-overview { display: grid; gap: 12px; margin: 16px 0; }
-    .rp-goal-summary-item { padding: 12px; background: rgba(255,255,255,.04); border-radius: 8px; }
-    .rp-goal-summary-header { display: flex; gap: 10px; margin-bottom: 8px; }
-    .rp-goal-summary-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 8px 0; font-size: 13px; }
-    .rp-sparkline { margin-top: 8px; }
-    
-    .rp-grades-stats { margin-bottom: 16px; }
-    .rp-completion-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 12px; }
-    .rp-completion-bar { display: flex; height: 24px; border-radius: 6px; overflow: hidden; background: rgba(255,255,255,.1); }
-    .rp-bar-segment { transition: width 0.3s; }
-    .rp-bar-complete { background: rgba(34,197,94,0.8); }
-    .rp-bar-missing { background: rgba(239,68,68,0.8); }
-    
-    .rp-data-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 16px; }
-    
-    .rp-row-warning { background: rgba(239,68,68,0.08); }
-    .rp-status-good { background: rgba(34,197,94,0.05); }
-    .rp-status-warning { background: rgba(234,179,8,0.05); }
-    .rp-status-critical { background: rgba(239,68,68,0.05); }
-    
-    .rp-gaps-section { margin: 24px 0; padding: 16px; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); border-radius: 10px; }
-    .rp-gaps-section h3 { margin: 0 0 12px 0; color: #fca5a5; }
-    .rp-gaps-section ul { margin: 0; padding-left: 20px; }
-    .rp-gaps-section li { margin: 8px 0; }
-    
-    /* Print styles */
-    @media print {
-      .tc-topbar, .tc-sidebar, .rp-tabs, .rp-filters, .rp-export-actions { display: none !important; }
-      .tc-main { margin: 0; padding: 20px; }
-      .rp-report-card, .rp-summary-card { border: 1px solid #000; background: #fff; color: #000; }
-      body { background: #fff; color: #000; }
-    }
-  </style>
-</head>
-<body>
-  <div class="tc-app">
-    <header class="tc-topbar">
-      <button class="tc-btn" id="tcSidebarToggle" aria-label="Toggle sidebar" aria-expanded="false">☰</button>
-      <a class="tc-btn" href="/" target="_blank" rel="noopener" aria-label="Home">🏠</a>
-      <div class="tc-title">Teacher Center — Reporting</div>
-    </header>
+      /* Reporting page specific styles */
+      .rp-tabs {
+        display: flex;
+        gap: 4px;
+        margin-bottom: 20px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      .rp-tab {
+        padding: 10px 18px;
+        cursor: pointer;
+        border: none;
+        background: none;
+        color: inherit;
+        opacity: 0.6;
+        border-bottom: 2px solid transparent;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.2s;
+      }
+      .rp-tab:hover {
+        opacity: 0.8;
+      }
+      .rp-tab.active {
+        opacity: 1;
+        border-bottom-color: #3b82f6;
+        color: #93c5fd;
+      }
+      .rp-tab-content {
+        display: none;
+      }
+      .rp-tab-content.active {
+        display: block;
+      }
 
-    <div class="tc-shell">
-      <aside class="tc-sidebar" aria-label="Teacher navigation">
-        <nav class="tc-nav">
-          <a data-href="/teacher/" href="/teacher/"><span class="tc-icon">🏁</span><span class="tc-label">Overview</span></a>
-          <a data-href="/teacher/work/" href="/teacher/work/"><span class="tc-icon">🗂️</span><span class="tc-label">Work</span></a>
-          <a data-href="/teacher/library/" href="/teacher/library/"><span class="tc-icon">📚</span><span class="tc-label">Library</span></a>
-          <a data-href="/teacher/review/" href="/teacher/review/"><span class="tc-icon">✍️</span><span class="tc-label">Review</span></a>
-          <a data-href="/teacher/gradebook/" href="/teacher/gradebook/"><span class="tc-icon">📊</span><span class="tc-label">Gradebook</span></a>
-          <a data-href="/teacher/students/" href="/teacher/students/"><span class="tc-icon">🧑‍🎓</span><span class="tc-label">Students</span></a>
-          <a data-href="/teacher/classes/" href="/teacher/classes/"><span class="tc-icon">🏫</span><span class="tc-label">Classes</span></a>
-          <a data-href="/teacher/data/" href="/teacher/data/"><span class="tc-icon">🧾</span><span class="tc-label">Data</span></a>
-          <a data-href="/teacher/archive/" href="/teacher/archive/"><span class="tc-icon">📦</span><span class="tc-label">Archive</span></a>
-          <a data-href="/teacher/admin/" href="/teacher/admin/"><span class="tc-icon">🛡️</span><span class="tc-label">Admin</span></a>
-          <a data-href="/teacher/reporting/" href="/teacher/reporting/"><span class="tc-icon">📑</span><span class="tc-label">Reporting</span></a>
-          <a data-href="/teacher/settings/" href="/teacher/settings/"><span class="tc-icon">⚙️</span><span class="tc-label">Settings</span></a>
-        </nav>
-      </aside>
+      .rp-filters {
+        display: flex;
+        gap: 16px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+        align-items: flex-end;
+      }
+      .rp-filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .rp-filter-group label {
+        font-size: 12px;
+        opacity: 0.8;
+      }
+      .rp-select {
+        padding: 8px 12px;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        color: inherit;
+        font-size: 14px;
+        min-width: 200px;
+      }
+      .rp-select:focus {
+        outline: none;
+        border-color: #3b82f6;
+      }
 
-      <main class="tc-main">
-        <div class="tc-stack">
-          <div class="tc-row">
-            <h1 style="margin: 0">Reporting</h1>
-            <span class="tc-pill" id="pillMode">Local (browser)</span>
-          </div>
+      .rp-empty {
+        padding: 40px;
+        text-align: center;
+        opacity: 0.6;
+      }
+      .rp-error {
+        padding: 20px;
+        background: rgba(239, 68, 68, 0.1);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        border-radius: 8px;
+        color: #fca5a5;
+      }
 
-          <!-- Tab Navigation -->
-          <div class="rp-tabs">
-            <button class="rp-tab active" data-tab="iep-quarterly" type="button">📋 IEP Quarterly Progress</button>
-            <button class="rp-tab" data-tab="student-summary" type="button">📊 Student Summary</button>
-            <button class="rp-tab" data-tab="class-performance" type="button">📈 Class Performance</button>
-            <button class="rp-tab" data-tab="compliance-log" type="button">📅 Compliance Log</button>
-          </div>
+      .rp-report-card {
+        border-radius: 14px;
+        padding: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(0, 0, 0, 0.18);
+        backdrop-filter: blur(10px);
+      }
+      .rp-report-header h2 {
+        margin: 0 0 16px 0;
+        font-size: 24px;
+      }
+      .rp-report-meta {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 10px;
+        margin-bottom: 20px;
+        padding: 16px;
+        background: rgba(255, 255, 255, 0.04);
+        border-radius: 8px;
+      }
+      .rp-report-meta div {
+        font-size: 14px;
+      }
 
-          <!-- Tab 1: IEP Quarterly Progress Report -->
-          <div class="rp-tab-content active" data-tab="iep-quarterly">
-            <div id="tab1Content">
-              <div class="rp-empty">Loading...</div>
+      .rp-goals-section {
+        display: grid;
+        gap: 16px;
+        margin: 20px 0;
+      }
+      .rp-goal-card {
+        padding: 16px;
+        background: rgba(255, 255, 255, 0.04);
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      .rp-goal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 10px;
+      }
+      .rp-goal-title {
+        display: flex;
+        gap: 10px;
+        align-items: baseline;
+      }
+      .rp-goal-code {
+        font-weight: 700;
+        font-size: 14px;
+      }
+      .rp-goal-area {
+        opacity: 0.7;
+        font-size: 13px;
+      }
+      .rp-goal-desc {
+        margin: 10px 0;
+        opacity: 0.9;
+      }
+      .rp-goal-targets {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 12px;
+        margin: 12px 0;
+      }
+      .rp-goal-targets > div {
+        font-size: 13px;
+      }
+      .rp-goal-narrative {
+        margin: 12px 0;
+      }
+      .rp-goal-narrative label {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 13px;
+      }
+      .rp-narrative-edit {
+        width: 100%;
+        padding: 10px;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 6px;
+        color: inherit;
+        font-family: inherit;
+        font-size: 13px;
+        resize: vertical;
+      }
+      .rp-narrative-edit:focus {
+        outline: none;
+        border-color: #3b82f6;
+      }
+      .rp-goal-status {
+        margin: 12px 0;
+      }
+      .rp-goal-status label {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 13px;
+      }
+      .rp-status-select {
+        padding: 8px;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 6px;
+        color: inherit;
+        font-size: 13px;
+      }
+
+      .rp-trend-up {
+        color: rgba(34, 197, 94, 0.9);
+        font-weight: 600;
+      }
+      .rp-trend-down {
+        color: rgba(239, 68, 68, 0.9);
+        font-weight: 600;
+      }
+      .rp-trend-neutral {
+        color: rgba(200, 200, 200, 0.7);
+        font-weight: 500;
+      }
+
+      .rp-grades-section {
+        margin: 24px 0;
+        padding: 16px;
+        background: rgba(255, 255, 255, 0.04);
+        border-radius: 10px;
+      }
+      .rp-grades-section h3 {
+        margin: 0 0 16px 0;
+        font-size: 18px;
+      }
+      .rp-grades-summary {
+        display: flex;
+        gap: 24px;
+        margin-top: 16px;
+      }
+      .rp-grades-summary > div {
+        font-size: 14px;
+      }
+
+      .rp-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 12px 0;
+      }
+      .rp-table th,
+      .rp-table td {
+        padding: 10px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        text-align: left;
+      }
+      .rp-table thead th {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        opacity: 0.85;
+        border-top: none;
+        font-weight: 600;
+      }
+      .rp-table tbody tr:hover {
+        background: rgba(255, 255, 255, 0.04);
+      }
+      .rp-table-container {
+        overflow-x: auto;
+      }
+
+      .rp-export-actions {
+        display: flex;
+        gap: 12px;
+        margin-top: 20px;
+      }
+
+      .rp-kpis {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        margin: 20px 0;
+      }
+      @media (max-width: 1100px) {
+        .rp-kpis {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+      @media (max-width: 640px) {
+        .rp-kpis {
+          grid-template-columns: 1fr;
+        }
+      }
+      .rp-kpi-card {
+        padding: 16px;
+        background: rgba(255, 255, 255, 0.04);
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      .rp-kpi-label {
+        font-size: 12px;
+        opacity: 0.8;
+      }
+      .rp-kpi-value {
+        font-size: 28px;
+        font-weight: 900;
+        line-height: 1.1;
+        margin-top: 6px;
+      }
+
+      .rp-summary-card {
+        border-radius: 14px;
+        padding: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(0, 0, 0, 0.18);
+        backdrop-filter: blur(10px);
+      }
+      .rp-summary-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+      }
+      .rp-summary-header h2 {
+        margin: 0;
+        font-size: 24px;
+      }
+      .rp-summary-identity {
+        margin-bottom: 24px;
+        padding: 16px;
+        background: rgba(255, 255, 255, 0.04);
+        border-radius: 8px;
+      }
+      .rp-summary-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 10px;
+        margin-bottom: 8px;
+      }
+      .rp-summary-row:last-child {
+        margin-bottom: 0;
+      }
+
+      .rp-goals-overview {
+        display: grid;
+        gap: 12px;
+        margin: 16px 0;
+      }
+      .rp-goal-summary-item {
+        padding: 12px;
+        background: rgba(255, 255, 255, 0.04);
+        border-radius: 8px;
+      }
+      .rp-goal-summary-header {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 8px;
+      }
+      .rp-goal-summary-stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        margin: 8px 0;
+        font-size: 13px;
+      }
+      .rp-sparkline {
+        margin-top: 8px;
+      }
+
+      .rp-grades-stats {
+        margin-bottom: 16px;
+      }
+      .rp-completion-stats {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+      .rp-completion-bar {
+        display: flex;
+        height: 24px;
+        border-radius: 6px;
+        overflow: hidden;
+        background: rgba(255, 255, 255, 0.1);
+      }
+      .rp-bar-segment {
+        transition: width 0.3s;
+      }
+      .rp-bar-complete {
+        background: rgba(34, 197, 94, 0.8);
+      }
+      .rp-bar-missing {
+        background: rgba(239, 68, 68, 0.8);
+      }
+
+      .rp-data-stats {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+
+      .rp-row-warning {
+        background: rgba(239, 68, 68, 0.08);
+      }
+      .rp-status-good {
+        background: rgba(34, 197, 94, 0.05);
+      }
+      .rp-status-warning {
+        background: rgba(234, 179, 8, 0.05);
+      }
+      .rp-status-critical {
+        background: rgba(239, 68, 68, 0.05);
+      }
+
+      .rp-gaps-section {
+        margin: 24px 0;
+        padding: 16px;
+        background: rgba(239, 68, 68, 0.08);
+        border: 1px solid rgba(239, 68, 68, 0.2);
+        border-radius: 10px;
+      }
+      .rp-gaps-section h3 {
+        margin: 0 0 12px 0;
+        color: #fca5a5;
+      }
+      .rp-gaps-section ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+      .rp-gaps-section li {
+        margin: 8px 0;
+      }
+
+      /* Print styles */
+      @media print {
+        .tc-topbar,
+        .tc-sidebar,
+        .rp-tabs,
+        .rp-filters,
+        .rp-export-actions {
+          display: none !important;
+        }
+        .tc-main {
+          margin: 0;
+          padding: 20px;
+        }
+        .rp-report-card,
+        .rp-summary-card {
+          border: 1px solid #000;
+          background: #fff;
+          color: #000;
+        }
+        body {
+          background: #fff;
+          color: #000;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="tc-app">
+      <header class="tc-topbar">
+        <button
+          class="tc-btn"
+          id="tcSidebarToggle"
+          aria-label="Toggle sidebar"
+          aria-expanded="false"
+        >
+          ☰
+        </button>
+        <a class="tc-btn" href="/" target="_blank" rel="noopener" aria-label="Home">🏠</a>
+        <div class="tc-title">Teacher Center — Reporting</div>
+      </header>
+
+      <div class="tc-shell">
+        <aside class="tc-sidebar" aria-label="Teacher navigation">
+          <nav class="tc-nav">
+            <a data-href="/teacher/" href="/teacher/"
+              ><span class="tc-icon">🏁</span><span class="tc-label">Overview</span></a
+            >
+            <a data-href="/teacher/work/" href="/teacher/work/"
+              ><span class="tc-icon">🗂️</span><span class="tc-label">Work</span></a
+            >
+            <a data-href="/teacher/library/" href="/teacher/library/"
+              ><span class="tc-icon">📚</span><span class="tc-label">Library</span></a
+            >
+            <a data-href="/teacher/review/" href="/teacher/review/"
+              ><span class="tc-icon">✍️</span><span class="tc-label">Review</span></a
+            >
+            <a data-href="/teacher/gradebook/" href="/teacher/gradebook/"
+              ><span class="tc-icon">📊</span><span class="tc-label">Gradebook</span></a
+            >
+            <a data-href="/teacher/students/" href="/teacher/students/"
+              ><span class="tc-icon">🧑‍🎓</span><span class="tc-label">Students</span></a
+            >
+            <a data-href="/teacher/classes/" href="/teacher/classes/"
+              ><span class="tc-icon">🏫</span><span class="tc-label">Classes</span></a
+            >
+            <a data-href="/teacher/data/" href="/teacher/data/"
+              ><span class="tc-icon">🧾</span><span class="tc-label">Data</span></a
+            >
+            <a data-href="/teacher/archive/" href="/teacher/archive/"
+              ><span class="tc-icon">📦</span><span class="tc-label">Archive</span></a
+            >
+            <a data-href="/teacher/admin/" href="/teacher/admin/"
+              ><span class="tc-icon">🛡️</span><span class="tc-label">Admin</span></a
+            >
+            <a data-href="/teacher/reporting/" href="/teacher/reporting/"
+              ><span class="tc-icon">📑</span><span class="tc-label">Reporting</span></a
+            >
+            <a data-href="/teacher/settings/" href="/teacher/settings/"
+              ><span class="tc-icon">⚙️</span><span class="tc-label">Settings</span></a
+            >
+          </nav>
+        </aside>
+
+        <main class="tc-main">
+          <div class="tc-stack">
+            <div class="tc-row">
+              <h1 style="margin: 0">Reporting</h1>
+              <span class="tc-pill" id="pillMode">Local (browser)</span>
+            </div>
+
+            <!-- Tab Navigation -->
+            <div class="rp-tabs">
+              <button class="rp-tab active" data-tab="iep-quarterly" type="button">
+                📋 IEP Quarterly Progress
+              </button>
+              <button class="rp-tab" data-tab="student-summary" type="button">
+                📊 Student Summary
+              </button>
+              <button class="rp-tab" data-tab="class-performance" type="button">
+                📈 Class Performance
+              </button>
+              <button class="rp-tab" data-tab="compliance-log" type="button">
+                📅 Compliance Log
+              </button>
+            </div>
+
+            <!-- Tab 1: IEP Quarterly Progress Report -->
+            <div class="rp-tab-content active" data-tab="iep-quarterly">
+              <div id="tab1Content">
+                <div class="rp-empty">Loading...</div>
+              </div>
+            </div>
+
+            <!-- Tab 2: Student Summary (One-Pager) -->
+            <div class="rp-tab-content" data-tab="student-summary">
+              <div id="tab2Content">
+                <div class="rp-empty">Loading...</div>
+              </div>
+            </div>
+
+            <!-- Tab 3: Class Performance Overview -->
+            <div class="rp-tab-content" data-tab="class-performance">
+              <div id="tab3Content">
+                <div class="rp-empty">Loading...</div>
+              </div>
+            </div>
+
+            <!-- Tab 4: Data Collection Compliance Log -->
+            <div class="rp-tab-content" data-tab="compliance-log">
+              <div id="tab4Content">
+                <div class="rp-empty">Loading...</div>
+              </div>
             </div>
           </div>
-
-          <!-- Tab 2: Student Summary (One-Pager) -->
-          <div class="rp-tab-content" data-tab="student-summary">
-            <div id="tab2Content">
-              <div class="rp-empty">Loading...</div>
-            </div>
-          </div>
-
-          <!-- Tab 3: Class Performance Overview -->
-          <div class="rp-tab-content" data-tab="class-performance">
-            <div id="tab3Content">
-              <div class="rp-empty">Loading...</div>
-            </div>
-          </div>
-
-          <!-- Tab 4: Data Collection Compliance Log -->
-          <div class="rp-tab-content" data-tab="compliance-log">
-            <div id="tab4Content">
-              <div class="rp-empty">Loading...</div>
-            </div>
-          </div>
-        </div>
-      </main>
+        </main>
+      </div>
     </div>
-  </div>
 
-  <script defer src="/web/teacher-shell.js"></script>
-  <script defer src="/web/tc-reporting.js"></script>
-</body>
+    <script defer src="/web/teacher-shell.js"></script>
+    <script defer src="/web/tc-reporting.js"></script>
+  </body>
 </html>
