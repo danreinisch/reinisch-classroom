@@ -4,119 +4,67 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Language Arts – Reinisch Classroom</title>
+  
+  <!-- RC Theme Design System -->
   <link rel="stylesheet" href="/assets/css/rc-theme.css" />
+  <link rel="stylesheet" href="/assets/css/app-shell.css" />
+  
   <style>
-    /* Page-specific aliases and overrides */
-    :root {
-      --glass: var(--rc-glass);
-      --glass-brd: var(--rc-border-strong);
-      --text: var(--rc-ink);
-    }
+    /* Minimal page-specific layout only */
     body {
       min-height: 100vh;
       display: grid;
       place-items: center;
-      text-align: center;
       padding: 2rem;
     }
-    .home-button {
-      position: fixed;
-      top: 1rem;
-      left: 1rem;
-      text-decoration: none;
-      background: var(--glass);
-      border: 1px solid var(--glass-brd);
-      color: #fff;
-      padding: .6rem 1rem;
-      border-radius: .6rem;
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      transition: background .2s, transform .2s;
-    }
-    .home-button:hover {
-      background: rgba(255,255,255,.24);
-      transform: translateY(-1px);
-    }
-    h1 {
-      font-size: clamp(2rem, 4vw, 2.75rem);
-      margin-bottom: .75rem;
-      margin-top: 3rem;
-    }
-    .description {
-      max-width: 740px;
-      margin-bottom: 1.25rem;
-      opacity: .95;
-    }
-    .toolkit {
-      margin: 0 auto 1.25rem;
-      max-width: 900px;
-    }
-    .toolkit .btn {
-      display: block;
-      background: var(--glass);
-      border: 1px solid var(--glass-brd);
-      color: var(--text);
-      padding: 1rem 1.25rem;
-      border-radius: 1rem;
-      text-decoration: none;
-      font-size: 1.1rem;
-      box-shadow: 0 10px 30px rgba(0,0,0,.15);
-      transition: transform .2s, background .2s;
-    }
-    .toolkit .btn:hover {
-      background: rgba(255,255,255,.22);
-      transform: translateY(-2px);
-    }
-    .button-grid {
+    
+    .page-container {
       width: 100%;
       max-width: 900px;
-      display: grid;
-      gap: 1.25rem;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      text-align: center;
     }
-    .book-button {
-      display: block;
-      background: var(--glass);
-      border: 1px solid var(--glass-brd);
-      color: var(--text);
-      padding: 1rem 1.25rem;
-      border-radius: 1rem;
-      text-decoration: none;
-      font-size: 1.1rem;
-      box-shadow: 0 10px 30px rgba(0,0,0,.15);
-      transition: transform .2s, background .2s;
+    
+    .page-container h1 {
+      margin-top: 0;
     }
-    .book-button:hover {
-      background: rgba(255,255,255,.22);
-      transform: translateY(-2px);
+    
+    .page-container p {
+      margin-bottom: 1.5rem;
+    }
+    
+    .toolkit-section {
+      margin-bottom: 1.5rem;
     }
   </style>
-  
-  <!-- Global App Shell CSS -->
-  <link rel="stylesheet" href="/assets/css/app-shell.css" />
-  <!-- Context Navigation CSS -->
   
   <script src="/assets/js/site-assets-loader.js"></script>
 </head>
 <body>
-  <a class="home-button" href="/">Home</a>
-  <main>
-    <h1>Language Arts</h1>
-    <p class="description">Choose a book or open the toolkit for skills reference & mini-lessons.</p>
-    <div class="toolkit">
-      <a class="btn" href="/language-arts/toolkit/index.html">Language Arts Toolkit</a>
+  <main class="page-container">
+    <h1 class="rc-heading">Language Arts</h1>
+    <p class="rc-muted">Choose a book or open the toolkit for skills reference & mini-lessons.</p>
+    
+    <div class="toolkit-section">
+      <a class="rc-btn primary" href="/language-arts/toolkit/index.html">Language Arts Toolkit</a>
     </div>
-    <div class="button-grid">
-      <a class="book-button" href="/language-arts/a-door-into-time/index.html">A Door Into Time</a>
-      <a class="book-button" href="/language-arts/lost-in-kragdon-ah/index.html">Lost in Kragdon-ah</a>
-      <a class="book-button" href="/language-arts/return-from-kragdon-ah/index.html">Return from Kragdon-ah</a>
-      <a class="book-button" href="/language-arts/warrior-of-kragdon-ah/index.html">Warrior of Kragdon-ah</a>
+    
+    <div class="rc-grid rc-grid-auto">
+      <a class="rc-card" href="/language-arts/a-door-into-time/index.html">
+        <strong>A Door Into Time</strong>
+      </a>
+      <a class="rc-card" href="/language-arts/lost-in-kragdon-ah/index.html">
+        <strong>Lost in Kragdon-ah</strong>
+      </a>
+      <a class="rc-card" href="/language-arts/return-from-kragdon-ah/index.html">
+        <strong>Return from Kragdon-ah</strong>
+      </a>
+      <a class="rc-card" href="/language-arts/warrior-of-kragdon-ah/index.html">
+        <strong>Warrior of Kragdon-ah</strong>
+      </a>
     </div>
   </main>
   
-  <!-- Global App Shell JS -->
   <script defer src="/assets/js/app-shell.js"></script>
-  <!-- Context Navigation JS -->
   <script defer src="/assets/js/open-in-viewer.js"></script>
 </body>
 </html>
