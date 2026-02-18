@@ -281,6 +281,138 @@
         transition: width 0.3s ease;
       }
 
+      /* Additional goal card styling for new structure */
+      .st-goal-card[data-area="Reading"] {
+        border-left-color: #3b82f6;
+      }
+
+      .st-goal-card[data-area="Writing"] {
+        border-left-color: #10b981;
+      }
+
+      .st-goal-card[data-area="Math"] {
+        border-left-color: #f59e0b;
+      }
+
+      .st-goal-card[data-area="Behavior"] {
+        border-left-color: #ef4444;
+      }
+
+      .st-goal-card[data-area="LifeSkills"] {
+        border-left-color: #8b5cf6;
+      }
+
+      .st-goal-card[data-area="Social"] {
+        border-left-color: #ec4899;
+      }
+
+      .st-goal-card[data-area="Language"] {
+        border-left-color: #06b6d4;
+      }
+
+      .st-goal-card[data-area="Emotional"] {
+        border-left-color: #a855f7;
+      }
+
+      .st-goal-header {
+        margin-bottom: 12px;
+      }
+
+      .st-goal-title-line {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .st-goal-icon {
+        font-size: 20px;
+      }
+
+      .st-goal-area-name {
+        font-weight: 600;
+        font-size: 16px;
+      }
+
+      .st-goal-code {
+        font-size: 13px;
+        opacity: 0.7;
+      }
+
+      .st-badge {
+        padding: 4px 8px;
+        border-radius: 8px;
+        font-size: 11px;
+        font-weight: 500;
+        text-transform: uppercase;
+      }
+
+      .st-badge-measurement {
+        background: rgba(59, 130, 246, 0.12);
+        border: 1px solid rgba(59, 130, 246, 0.3);
+        color: #93c5fd;
+      }
+
+      .st-goal-desc {
+        margin: 12px 0;
+        opacity: 0.9;
+        line-height: 1.5;
+      }
+
+      .st-goal-show-more {
+        background: none;
+        border: none;
+        color: #60a5fa;
+        cursor: pointer;
+        font-size: 13px;
+        text-decoration: underline;
+        padding: 0;
+        margin-left: 4px;
+      }
+
+      .st-goal-desc.expanded .st-goal-desc-short {
+        display: none;
+      }
+
+      .st-goal-desc.expanded .st-goal-desc-full {
+        display: inline !important;
+      }
+
+      .st-goal-metrics {
+        display: flex;
+        gap: 24px;
+        margin: 12px 0;
+      }
+
+      .st-metric {
+        display: flex;
+        gap: 6px;
+        font-size: 14px;
+      }
+
+      .st-metric-label {
+        opacity: 0.7;
+      }
+
+      .st-metric-value {
+        font-weight: 600;
+      }
+
+      .st-goal-data-status {
+        display: flex;
+        gap: 20px;
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        font-size: 13px;
+      }
+
+      .st-data-status-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
       /* Assignment cards */
       .st-assignment-card {
         padding: 18px 20px;
@@ -969,12 +1101,223 @@
         background: rgba(255, 255, 255, 0.1);
       }
 
+      /* Tab System */
+      .st-tab-panel {
+        display: none;
+      }
+
+      .st-tab-panel.active {
+        display: block;
+      }
+
+      /* Summary Cards for Dashboard */
+      .st-summary-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 16px;
+        margin-bottom: 32px;
+      }
+
+      .st-summary-card {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 14px;
+        padding: 24px;
+        text-align: center;
+        transition: all 0.2s;
+      }
+
+      .st-summary-card:hover {
+        background: rgba(255, 255, 255, 0.06);
+        border-color: rgba(255, 255, 255, 0.2);
+      }
+
+      .st-summary-card.overdue {
+        background: rgba(239, 68, 68, 0.08);
+        border-color: rgba(239, 68, 68, 0.3);
+      }
+
+      .st-summary-icon {
+        font-size: 36px;
+        margin-bottom: 12px;
+      }
+
+      .st-summary-value {
+        font-size: 32px;
+        font-weight: 700;
+        margin-bottom: 8px;
+      }
+
+      .st-summary-label {
+        font-size: 14px;
+        opacity: 0.8;
+      }
+
+      /* Status Tabs for Assignments */
+      .st-status-tabs {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 24px;
+        flex-wrap: wrap;
+        overflow-x: auto;
+        padding-bottom: 8px;
+      }
+
+      .st-status-tab {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 20px;
+        padding: 8px 16px;
+        cursor: pointer;
+        font-size: 14px;
+        color: rgba(255, 255, 255, 0.8);
+        transition: all 0.2s;
+        white-space: nowrap;
+      }
+
+      .st-status-tab:hover {
+        background: rgba(255, 255, 255, 0.08);
+      }
+
+      .st-status-tab.active {
+        background: rgba(59, 130, 246, 0.2);
+        border-color: rgba(59, 130, 246, 0.5);
+        color: #93c5fd;
+      }
+
+      /* Enhanced Assignment Cards with Status Pills */
+      .st-assignment-card {
+        padding: 18px 20px;
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.04);
+        margin-bottom: 12px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .st-assignment-card:hover {
+        background: rgba(255, 255, 255, 0.06);
+        border-color: rgba(255, 255, 255, 0.2);
+      }
+
+      .st-assignment-card h3 {
+        margin: 0 0 8px 0;
+        font-size: 16px;
+      }
+
+      .st-assignment-card .assignment-meta {
+        display: flex;
+        gap: 16px;
+        font-size: 13px;
+        opacity: 0.8;
+        margin-bottom: 8px;
+      }
+
+      .st-assignment-status {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 500;
+      }
+
+      .st-assignment-status.in-progress,
+      .st-assignment-status.assigned {
+        background: rgba(59, 130, 246, 0.12);
+        border: 1px solid rgba(59, 130, 246, 0.35);
+        color: #93c5fd;
+      }
+
+      .st-assignment-status.submitted {
+        background: rgba(34, 197, 94, 0.12);
+        border: 1px solid rgba(34, 197, 94, 0.35);
+        color: #86efac;
+      }
+
+      .st-assignment-status.overdue {
+        background: rgba(239, 68, 68, 0.12);
+        border: 1px solid rgba(239, 68, 68, 0.35);
+        color: #fca5a5;
+      }
+
+      .st-assignment-status.completed,
+      .st-assignment-status.graded {
+        background: rgba(139, 92, 246, 0.12);
+        border: 1px solid rgba(139, 92, 246, 0.35);
+        color: #c4b5fd;
+      }
+
+      /* Grade Display */
+      .st-grade-row {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 12px;
+        padding: 16px 20px;
+        margin-bottom: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .st-grade-info h4 {
+        margin: 0 0 4px 0;
+        font-size: 16px;
+      }
+
+      .st-grade-meta {
+        font-size: 13px;
+        opacity: 0.7;
+      }
+
+      .st-grade-score {
+        font-size: 24px;
+        font-weight: 700;
+      }
+
+      .st-grade-score.good {
+        color: #86efac;
+      }
+
+      .st-grade-score.poor {
+        color: #fca5a5;
+      }
+
+      .st-average-display {
+        background: rgba(59, 130, 246, 0.1);
+        border: 1px solid rgba(59, 130, 246, 0.3);
+        border-radius: 14px;
+        padding: 24px;
+        text-align: center;
+        margin-bottom: 32px;
+      }
+
+      .st-average-display h3 {
+        margin: 0 0 8px 0;
+        font-size: 18px;
+      }
+
+      .st-average-value {
+        font-size: 48px;
+        font-weight: 700;
+        color: #93c5fd;
+      }
+
       @media (max-width: 768px) {
         .st-assignment-panel {
           width: 100%;
           height: 100vh;
           max-height: 100vh;
           border-radius: 0;
+        }
+
+        .st-summary-cards {
+          grid-template-columns: repeat(2, 1fr);
+        }
+
+        .st-status-tabs {
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
         }
       }
     </style>
@@ -997,16 +1340,16 @@
       <div class="tc-shell">
         <aside class="tc-sidebar" aria-label="Student navigation">
           <nav class="tc-nav">
-            <a data-href="/student/" href="/student/"
+            <a data-tab="dashboard" href="#" class="active"
               ><span class="tc-icon">🏠</span><span class="tc-label">Dashboard</span></a
             >
-            <a data-href="/student/" href="/student/"
+            <a data-tab="goals" href="#"
               ><span class="tc-icon">🎯</span><span class="tc-label">Goals</span></a
             >
-            <a data-href="/student/" href="/student/"
+            <a data-tab="assignments" href="#"
               ><span class="tc-icon">📚</span><span class="tc-label">Assignments</span></a
             >
-            <a data-href="/student/" href="/student/"
+            <a data-tab="grades" href="#"
               ><span class="tc-icon">📊</span><span class="tc-label">Grades</span></a
             >
           </nav>
@@ -1084,44 +1427,82 @@
 
           <!-- Dashboard View -->
           <div id="studentDashboardView" class="hidden">
-            <div class="st-dashboard-content">
-              <div class="st-welcome-header">
-                <h1>Welcome back, <span id="studentCodeDisplay">Student</span>!</h1>
-                <p>Here's what's happening in your learning journey</p>
-              </div>
-
-              <div class="st-banner">
-                <h2>📖 Keep Learning</h2>
-                <p>You're making great progress! Check your goals and assignments below.</p>
-              </div>
-
-              <!-- Goals Section -->
-              <section class="st-section" id="goalsSection">
-                <h2>
-                  🎯 Your Goals
-                  <span class="count" id="goalsCount">0</span>
-                </h2>
-                <div id="goalsContent">
-                  <p style="opacity: 0.7;">Loading your goals...</p>
+            <!-- Tab: Dashboard -->
+            <div id="tabDashboard" class="st-tab-panel active">
+              <div class="st-dashboard-content">
+                <div class="st-welcome-header">
+                  <h1>Welcome back, <span id="studentCodeDisplay">Student</span>!</h1>
+                  <p>Here's what's happening in your learning journey</p>
                 </div>
-              </section>
-
-              <!-- Assignments Section -->
-              <section class="st-section" id="assignmentsSection">
-                <h2>
-                  📚 Assignments
-                  <span class="count" id="assignmentsCount">0</span>
-                </h2>
-                <div id="assignmentsContent">
-                  <p style="opacity: 0.7;">Loading your assignments...</p>
+                <div class="st-summary-cards">
+                  <div class="st-summary-card">
+                    <div class="st-summary-icon">📋</div>
+                    <div class="st-summary-value" id="dashUpcomingCount">0</div>
+                    <div class="st-summary-label">In Progress</div>
+                  </div>
+                  <div class="st-summary-card overdue">
+                    <div class="st-summary-icon">⚠️</div>
+                    <div class="st-summary-value" id="dashOverdueCount">0</div>
+                    <div class="st-summary-label">Overdue</div>
+                  </div>
+                  <div class="st-summary-card">
+                    <div class="st-summary-icon">📊</div>
+                    <div class="st-summary-value" id="dashAvgGrade">—</div>
+                    <div class="st-summary-label">Average</div>
+                  </div>
+                  <div class="st-summary-card">
+                    <div class="st-summary-icon">🎯</div>
+                    <div class="st-summary-value" id="dashGoalsCount">0</div>
+                    <div class="st-summary-label">Active Goals</div>
+                  </div>
                 </div>
-              </section>
-
-              <div class="st-actions">
-                <button type="button" class="st-btn secondary" id="btnLogout">
-                  Log Out
-                </button>
+                <section class="st-section">
+                  <h2>📚 Recent Assignments</h2>
+                  <div id="dashRecentAssignments"><p style="opacity:0.7;">Loading...</p></div>
+                </section>
+                <section class="st-section">
+                  <h2>🎯 Goals Snapshot</h2>
+                  <div id="dashGoalsSnapshot"><p style="opacity:0.7;">Loading...</p></div>
+                </section>
               </div>
+            </div>
+
+            <!-- Tab: Goals -->
+            <div id="tabGoals" class="st-tab-panel">
+              <div class="st-dashboard-content">
+                <h1 style="margin-top:0;">🎯 My Goals</h1>
+                <p style="opacity:0.8; margin-bottom:24px;">Track your IEP goals and progress</p>
+                <div id="goalsContent"><p style="opacity:0.7;">Loading your goals...</p></div>
+              </div>
+            </div>
+
+            <!-- Tab: Assignments -->
+            <div id="tabAssignments" class="st-tab-panel">
+              <div class="st-dashboard-content">
+                <h1 style="margin-top:0;">📚 My Assignments</h1>
+                <p style="opacity:0.8; margin-bottom:24px;">View and manage your assignments</p>
+                <div class="st-status-tabs" id="assignmentStatusTabs">
+                  <button class="st-status-tab active" data-status="all">All</button>
+                  <button class="st-status-tab" data-status="in-progress">In Progress</button>
+                  <button class="st-status-tab" data-status="submitted">Submitted</button>
+                  <button class="st-status-tab" data-status="overdue">Overdue</button>
+                  <button class="st-status-tab" data-status="completed">Completed</button>
+                </div>
+                <div id="assignmentsContent"><p style="opacity:0.7;">Loading your assignments...</p></div>
+              </div>
+            </div>
+
+            <!-- Tab: Grades -->
+            <div id="tabGrades" class="st-tab-panel">
+              <div class="st-dashboard-content">
+                <h1 style="margin-top:0;">📊 My Grades</h1>
+                <p style="opacity:0.8; margin-bottom:24px;">View your grades and performance</p>
+                <div id="gradesContent"><p style="opacity:0.7;">Loading your grades...</p></div>
+              </div>
+            </div>
+
+            <div class="st-actions">
+              <button type="button" class="st-btn secondary" id="btnLogout">Log Out</button>
             </div>
           </div>
         </main>
