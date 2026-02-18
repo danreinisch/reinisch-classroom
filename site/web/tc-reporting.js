@@ -1934,6 +1934,7 @@
       day: "numeric",
       hour: "numeric",
       minute: "2-digit",
+      hour12: true,
     });
 
     const printContent = `
@@ -2053,13 +2054,20 @@
     const firstName = studentName.split(" ")[0];
 
     // Restate goal in past tense - simple heuristic
+    // Note: This is a basic conversion that removes modal verbs but doesn't add proper past tense
+    // Teachers can manually edit the narrative as needed in the generated report
     let goalPastTense = goal.desc || "";
     if (goalPastTense) {
-      // Simple past tense conversion for common patterns
       goalPastTense = goalPastTense
         .replace(/will be able to/gi, "")
         .replace(/will /gi, "")
-        .replace(/can /gi, "");
+        .replace(/can /gi, "")
+        .trim();
+    }
+
+    // Handle empty goal descriptions
+    if (!goalPastTense) {
+      goalPastTense = "work on their IEP goal";
     }
 
     const narrative = `${firstName} was able to ${goalPastTense}. During the ${quarter} quarter, ${firstName}'s scores ranged from ${minValue}% to ${maxValue}%, with an average of ${avgValue}%.`;
