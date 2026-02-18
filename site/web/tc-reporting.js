@@ -58,9 +58,9 @@
   let currentTab = "iep-quarterly";
 
   // Tab state
-  let tab1State = { studentCode: null, quarter: getCurrentQuarter() };
+  let tab1State = { studentCode: null, quarter: getCurrentQuarter(), template: 'iep-progress' };
   let tab2State = { studentCode: null };
-  let tab3State = { classFilter: "All Classes" };
+  let tab3State = { classFilter: "All Classes", compareQuarters: false };
   let tab4State = { classFilter: "All Classes", quarter: getCurrentQuarter() };
   let tab5State = { quarter: getCurrentQuarter() };
 
@@ -275,6 +275,391 @@
   }
 
   /**
+   * Render IEP Progress Report template (detailed)
+   */
+  function renderIEPProgressTemplate(student, studentGoals, quarterRange) {
+    let html = `
+      <div class="rp-report-card" id="iepReportCard">
+        <div class="rp-report-header">
+          <h2>IEP Quarterly Progress Report</h2>
+          <div class="rp-report-meta">
+            <div><strong>Student:</strong> ${escapeHtml(student.name || student.code)}</div>
+            <div><strong>Code:</strong> ${escapeHtml(student.code)}</div>
+            <div><strong>Quarter:</strong> ${getQuarterLabel(tab1State.quarter)}</div>
+            <div><strong>IEP Due:</strong> ${formatDate(student.iep_due)}</div>
+            <div><strong>Eval Due:</strong> ${formatDate(student.eval_due)}</div>
+          </div>
+        </div>
+    `;
+
+    if (studentGoals.length === 0) {
+      html += '<div class="rp-empty">No active IEP goals found for this student.</div>';
+    } else {
+      html += '<div class="rp-goals-section">';
+
+      // Process each goal
+      for (const goal of studentGoals) {
+        const goalProgressData = getGoalProgressForQuarter(
+          goal.code,
+          tab1State.studentCode,
+          quarterRange
+        );
+        const prevQuarterRange = getPreviousQuarterRange(tab1State.quarter);
+        const prevGoalProgressData = prevQuarterRange
+          ? getGoalProgressForQuarter(goal.code, tab1State.studentCode, prevQuarterRange)
+          : null;
+
+        const narrative = generateNarrative(student, goal, goalProgressData, prevGoalProgressData);
+        const trend = getTrendIndicator(goalProgressData, prevGoalProgressData);
+
+        html += `
+          <div class="rp-goal-card">
+            <div class="rp-goal-header">
+              <div class="rp-goal-title">
+                <span class="rp-goal-code">${escapeHtml(goal.code)}</span>
+                <span class="rp-goal-area">${escapeHtml(goal.goal_area || "N/A")}</span>
+              </div>
+              <div class="rp-goal-trend">${trend}</div>
+            </div>
+            <div class="rp-goal-desc">${escapeHtml(goal.desc || "No description")}</div>
+            <div class="rp-goal-targets">
+              <div><strong>Baseline:</strong> ${goal.baseline || 0}%</div>
+              <div><strong>Target:</strong> ${goal.target || 100}%</div>
+              <div><strong>Current:</strong> ${goalProgressData.average != null ? goalProgressData.average.toFixed(0) : "N/A"}%</div>
+              <div><strong>Data Points:</strong> ${goalProgressData.count}</div>
+            </div>
+            <div class="rp-goal-narrative">
+              <label><strong>Progress Narrative:</strong></label>
+              <textarea class="rp-narrative-edit" data-goal="${escapeHtml(goal.code)}" rows="4">${narrative}</textarea>
+            </div>
+            <div class="rp-goal-status">
+              <label><strong>Progress Status:</strong></label>
+              <select class="rp-status-select" data-goal="${escapeHtml(goal.code)}">
+                <option value="adequate">Making Adequate Progress</option>
+                <option value="insufficient">Progressing but Not Sufficient</option>
+                <option value="not-progressing">Not Making Progress</option>
+                <option value="met">Goal Met</option>
+              </select>
+            </div>
+            <div style="margin-top: 12px;">
+              <button class="tc-btn tc-btn-small copy-spedtrack-btn" data-goal-code="${escapeHtml(goal.code)}" data-student-code="${escapeHtml(student.code)}">
+                📋 Copy for SpedTrack
+              </button>
+            </div>
+          </div>
+        `;
+      }
+
+      html += "</div>";
+    }
+
+    // Grades section
+    html += renderGradesForQuarter(tab1State.studentCode, quarterRange);
+
+    // Export buttons
+    html += `
+      <div class="rp-export-actions">
+        <button class="tc-btn" id="btnCopyAllSpedTrack" type="button">📋 Copy All Goals for SpedTrack</button>
+        <button class="tc-btn" id="btnExportPDF" type="button">📄 Export as PDF</button>
+        <button class="tc-btn" id="btnExportDOCX" type="button">📄 Export as DOCX</button>
+      </div>
+      </div>
+    `;
+
+    return html;
+  }
+
+  /**
+   * Render Parent-Facing Summary template (simplified)
+   */
+  function renderParentSummaryTemplate(student, studentGoals, quarterRange) {
+    let html = `
+      <div class="rp-report-card" id="parentReportCard">
+        <div class="rp-report-header">
+          <h2>Progress Report for ${escapeHtml(student.name || student.code)}</h2>
+          <div class="rp-report-meta">
+            <div><strong>Reporting Period:</strong> ${getQuarterLabel(tab1State.quarter)}</div>
+            <div><strong>Next IEP Review:</strong> ${formatDate(student.iep_due)}</div>
+          </div>
+        </div>
+        <p style="margin: 20px 0; opacity: 0.9;">This report provides an overview of your child's progress on their Individualized Education Program (IEP) goals.</p>
+    `;
+
+    if (studentGoals.length === 0) {
+      html += '<div class="rp-empty">No active IEP goals found for this student.</div>';
+    } else {
+      html += '<div class="rp-goals-section">';
+
+      for (const goal of studentGoals) {
+        const goalProgressData = getGoalProgressForQuarter(
+          goal.code,
+          tab1State.studentCode,
+          quarterRange
+        );
+        const prevQuarterRange = getPreviousQuarterRange(tab1State.quarter);
+        const prevGoalProgressData = prevQuarterRange
+          ? getGoalProgressForQuarter(goal.code, tab1State.studentCode, prevQuarterRange)
+          : null;
+
+        // Simplified language
+        let statusText = "No data collected yet";
+        let statusColor = "#9ca3af";
+        
+        if (goalProgressData.average != null) {
+          const progress = ((goalProgressData.average - (goal.baseline || 0)) / ((goal.target || 100) - (goal.baseline || 0))) * 100;
+          if (progress >= 80) {
+            statusText = "Excellent progress";
+            statusColor = "#22c55e";
+          } else if (progress >= 50) {
+            statusText = "Good progress";
+            statusColor = "#22c55e";
+          } else if (progress >= 0) {
+            statusText = "Making progress";
+            statusColor = "#fbbf24";
+          } else {
+            statusText = "Needs support";
+            statusColor = "#ef4444";
+          }
+        }
+
+        html += `
+          <div class="rp-goal-card">
+            <h3 style="margin: 0 0 12px 0; font-size: 16px;">${escapeHtml(goal.goal_area || "Goal")}</h3>
+            <div style="background: rgba(255,255,255,0.04); padding: 12px; border-radius: 8px; margin-bottom: 12px;">
+              <strong>What we're working on:</strong><br/>
+              ${escapeHtml(goal.desc || "No description")}
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+              <div><strong>Starting point:</strong> ${goal.baseline || 0}%</div>
+              <div><strong>Current:</strong> ${goalProgressData.average != null ? goalProgressData.average.toFixed(0) : "N/A"}%</div>
+              <div><strong>Goal:</strong> ${goal.target || 100}%</div>
+            </div>
+            <div style="padding: 12px; background: rgba(255,255,255,0.04); border-radius: 8px; border-left: 4px solid ${statusColor};">
+              <strong style="color: ${statusColor};">${statusText}</strong>
+            </div>
+            <div style="margin-top: 12px; padding: 12px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+              <strong>Teacher Comments:</strong><br/>
+              <div style="min-height: 60px; margin-top: 8px; font-style: italic; opacity: 0.9;">
+                (Add comments here)
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      html += "</div>";
+    }
+
+    html += `
+      <div class="rp-export-actions">
+        <button class="tc-btn" id="btnExportPDF" type="button">📄 Export as PDF</button>
+      </div>
+      </div>
+    `;
+
+    return html;
+  }
+
+  /**
+   * Render Admin Summary template (compact table format)
+   */
+  function renderAdminSummaryTemplate(student, studentGoals, quarterRange) {
+    let html = `
+      <div class="rp-report-card" id="adminReportCard">
+        <div class="rp-report-header">
+          <h2>Admin Summary — ${escapeHtml(student.code)}</h2>
+          <div class="rp-report-meta">
+            <div><strong>Student:</strong> ${escapeHtml(student.name || student.code)}</div>
+            <div><strong>Quarter:</strong> ${getQuarterLabel(tab1State.quarter)}</div>
+            <div><strong>Case Manager:</strong> ${escapeHtml(student.primary_case_manager || "N/A")}</div>
+          </div>
+        </div>
+    `;
+
+    if (studentGoals.length === 0) {
+      html += '<div class="rp-empty">No active IEP goals found.</div>';
+    } else {
+      // Compact table format
+      html += `
+        <table class="rp-table" style="margin-top: 20px;">
+          <thead>
+            <tr>
+              <th>Goal Code</th>
+              <th>Area</th>
+              <th>Baseline</th>
+              <th>Current</th>
+              <th>Target</th>
+              <th>Data Points</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      for (const goal of studentGoals) {
+        const goalProgressData = getGoalProgressForQuarter(
+          goal.code,
+          tab1State.studentCode,
+          quarterRange
+        );
+        
+        let status = "❌ No Data";
+        let rowClass = "";
+        
+        if (goalProgressData.average != null) {
+          if (goalProgressData.average >= (goal.target || 80)) {
+            status = "✅ At Target";
+            rowClass = "rp-status-good";
+          } else if (goalProgressData.average >= (goal.baseline || 0)) {
+            status = "⚠️ Progressing";
+            rowClass = "rp-status-warning";
+          } else {
+            status = "🔴 Below Baseline";
+            rowClass = "rp-status-critical";
+          }
+        }
+
+        html += `
+          <tr class="${rowClass}">
+            <td><strong>${escapeHtml(goal.code)}</strong></td>
+            <td>${escapeHtml(goal.goal_area || "N/A")}</td>
+            <td>${goal.baseline || 0}%</td>
+            <td>${goalProgressData.average != null ? goalProgressData.average.toFixed(0) : "N/A"}%</td>
+            <td>${goal.target || 100}%</td>
+            <td>${goalProgressData.count}</td>
+            <td>${status}</td>
+          </tr>
+        `;
+      }
+
+      html += `
+          </tbody>
+        </table>
+      `;
+
+      // Compliance summary
+      const goalsWithData = studentGoals.filter(g => {
+        const data = getGoalProgressForQuarter(g.code, student.code, quarterRange);
+        return data.count > 0;
+      }).length;
+      const compliancePercent = studentGoals.length > 0 
+        ? Math.round((goalsWithData / studentGoals.length) * 100) 
+        : 0;
+
+      html += `
+        <div style="margin-top: 20px; padding: 16px; background: rgba(59,130,246,0.15); border-radius: 8px; border: 1px solid rgba(59,130,246,0.35);">
+          <strong>Compliance:</strong> ${goalsWithData}/${studentGoals.length} goals with data this quarter 
+          (<strong>${compliancePercent}%</strong>)
+        </div>
+      `;
+    }
+
+    html += `
+      <div class="rp-export-actions">
+        <button class="tc-btn" id="btnExportPDF" type="button">📄 Export as PDF</button>
+      </div>
+      </div>
+    `;
+
+    return html;
+  }
+
+  /**
+   * Generate SpedTrack format text for a goal
+   */
+  function generateSpedTrackText(goalCode, studentCode, quarterRange) {
+    const goal = goalsData.find(g => g.code === goalCode && g.student_code === studentCode);
+    if (!goal) return "";
+
+    const student = studentsData.find(s => s.code === studentCode);
+    const goalProgressData = getGoalProgressForQuarter(goalCode, studentCode, quarterRange);
+    const dataPoints = getGoalDataPoints(goalCode, studentCode, quarterRange);
+
+    const quarterLabel = getQuarterLabel(tab1State.quarter);
+    const quarterDates = getQuarterDateRange(tab1State.quarter);
+    const current = goalProgressData.average != null ? goalProgressData.average.toFixed(1) : "N/A";
+    const baseline = goal.baseline || "N/A";
+    const target = goal.target || "N/A";
+
+    // Calculate trend
+    const prevQuarterRange = getPreviousQuarterRange(tab1State.quarter);
+    const prevGoalProgressData = prevQuarterRange
+      ? getGoalProgressForQuarter(goalCode, studentCode, prevQuarterRange)
+      : null;
+
+    let trend = "N/A";
+    if (goalProgressData.average != null && prevGoalProgressData?.average != null) {
+      const diff = goalProgressData.average - prevGoalProgressData.average;
+      if (diff > 0) {
+        trend = `Improving (+${diff.toFixed(1)}% over quarter)`;
+      } else if (diff < 0) {
+        trend = `Declining (${diff.toFixed(1)}% over quarter)`;
+      } else {
+        trend = "Maintaining (no change)";
+      }
+    } else if (goalProgressData.average != null) {
+      trend = "New data this quarter";
+    }
+
+    // Format data points
+    const dataPointsStr = dataPoints.length > 0
+      ? dataPoints.map(dp => `${formatDate(dp.date)} (${parseFloat(dp.value).toFixed(1)}%)`).join(', ')
+      : "No data collected";
+
+    // Determine status
+    let status = "No data collected";
+    if (goalProgressData.average != null) {
+      if (goalProgressData.average >= (goal.target || 80)) {
+        status = "Met mastery criteria";
+      } else if (goalProgressData.average >= (goal.baseline || 0)) {
+        status = "Progressing toward mastery";
+      } else {
+        status = "Below baseline — review needed";
+      }
+    }
+
+    const method = goal.measurement_type || "N/A";
+
+    return `[Goal Code: ${goalCode}] ${goal.goal_area || ""}
+Reporting Period: ${quarterLabel} (${quarterDates.start} - ${quarterDates.end})
+Baseline: ${baseline}% | Current: ${current}% | Target: ${target}%
+Data Points: ${dataPointsStr}
+Trend: ${trend}
+Method: ${method}
+Status: ${status}`;
+  }
+
+  /**
+   * Show toast notification
+   */
+  function showToast(message) {
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: rgba(34, 197, 94, 0.95);
+      color: white;
+      padding: 16px 24px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      z-index: 10000;
+      font-size: 14px;
+      max-width: 300px;
+    `;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+      toast.style.transition = 'opacity 0.3s';
+      toast.style.opacity = '0';
+      setTimeout(() => {
+        document.body.removeChild(toast);
+      }, 300);
+    }, 3000);
+  }
+
+  /**
    * TAB 1: IEP Quarterly Progress Report
    */
   function renderTab1() {
@@ -308,6 +693,14 @@
             <option value="Q4" ${tab1State.quarter === "Q4" ? "selected" : ""}>${getQuarterLabel("Q4")}</option>
           </select>
         </div>
+        <div class="rp-filter-group">
+          <label for="tab1Template">Report Template:</label>
+          <select id="tab1Template" class="rp-select">
+            <option value="iep-progress" ${tab1State.template === "iep-progress" ? "selected" : ""}>IEP Progress Report</option>
+            <option value="parent-summary" ${tab1State.template === "parent-summary" ? "selected" : ""}>Parent-Facing Summary</option>
+            <option value="admin-summary" ${tab1State.template === "admin-summary" ? "selected" : ""}>Admin Summary</option>
+          </select>
+        </div>
       </div>
     `;
 
@@ -319,6 +712,7 @@
       // Attach event listeners
       const studentSelect = $("tab1Student");
       const quarterSelect = $("tab1Quarter");
+      const templateSelect = $("tab1Template");
       if (studentSelect) {
         studentSelect.addEventListener("change", (e) => {
           tab1State.studentCode = e.target.value || null;
@@ -328,6 +722,13 @@
       if (quarterSelect) {
         quarterSelect.addEventListener("change", (e) => {
           tab1State.quarter = e.target.value;
+          renderTab1();
+        });
+      }
+      if (templateSelect) {
+        templateSelect.addEventListener("change", (e) => {
+          tab1State.template = e.target.value;
+          localStorage.setItem('rc_report_template', e.target.value);
           renderTab1();
         });
       }
@@ -349,89 +750,25 @@
       (g) => g.student_code === tab1State.studentCode && g.status === "active"
     );
 
-    // Build report HTML
-    let reportHtml = `
-      ${filtersHtml}
-      <div class="rp-report-card" id="iepReportCard">
-        <div class="rp-report-header">
-          <h2>IEP Quarterly Progress Report</h2>
-          <div class="rp-report-meta">
-            <div><strong>Student:</strong> ${escapeHtml(student.name || student.code)}</div>
-            <div><strong>Code:</strong> ${escapeHtml(student.code)}</div>
-            <div><strong>Quarter:</strong> ${getQuarterLabel(tab1State.quarter)}</div>
-            <div><strong>IEP Due:</strong> ${formatDate(student.iep_due)}</div>
-            <div><strong>Eval Due:</strong> ${formatDate(student.eval_due)}</div>
-          </div>
-        </div>
-    `;
-
-    if (studentGoals.length === 0) {
-      reportHtml += '<div class="rp-empty">No active IEP goals found for this student.</div>';
-    } else {
-      reportHtml += '<div class="rp-goals-section">';
-
-      // Process each goal
-      for (const goal of studentGoals) {
-        const goalProgressData = getGoalProgressForQuarter(
-          goal.code,
-          tab1State.studentCode,
-          quarterRange
-        );
-        const prevQuarterRange = getPreviousQuarterRange(tab1State.quarter);
-        const prevGoalProgressData = prevQuarterRange
-          ? getGoalProgressForQuarter(goal.code, tab1State.studentCode, prevQuarterRange)
-          : null;
-
-        const narrative = generateNarrative(student, goal, goalProgressData, prevGoalProgressData);
-        const trend = getTrendIndicator(goalProgressData, prevGoalProgressData);
-
-        reportHtml += `
-          <div class="rp-goal-card">
-            <div class="rp-goal-header">
-              <div class="rp-goal-title">
-                <span class="rp-goal-code">${escapeHtml(goal.code)}</span>
-                <span class="rp-goal-area">${escapeHtml(goal.goal_area || "N/A")}</span>
-              </div>
-              <div class="rp-goal-trend">${trend}</div>
-            </div>
-            <div class="rp-goal-desc">${escapeHtml(goal.desc || "No description")}</div>
-            <div class="rp-goal-targets">
-              <div><strong>Baseline:</strong> ${goal.baseline || 0}%</div>
-              <div><strong>Target:</strong> ${goal.target || 100}%</div>
-              <div><strong>Current:</strong> ${goalProgressData.average != null ? goalProgressData.average.toFixed(0) : "N/A"}%</div>
-              <div><strong>Data Points:</strong> ${goalProgressData.count}</div>
-            </div>
-            <div class="rp-goal-narrative">
-              <label><strong>Progress Narrative:</strong></label>
-              <textarea class="rp-narrative-edit" data-goal="${escapeHtml(goal.code)}" rows="4">${narrative}</textarea>
-            </div>
-            <div class="rp-goal-status">
-              <label><strong>Progress Status:</strong></label>
-              <select class="rp-status-select" data-goal="${escapeHtml(goal.code)}">
-                <option value="adequate">Making Adequate Progress</option>
-                <option value="insufficient">Progressing but Not Sufficient</option>
-                <option value="not-progressing">Not Making Progress</option>
-                <option value="met">Goal Met</option>
-              </select>
-            </div>
-          </div>
-        `;
-      }
-
-      reportHtml += "</div>";
+    // Render based on template selection
+    let reportContent = '';
+    switch (tab1State.template) {
+      case 'parent-summary':
+        reportContent = renderParentSummaryTemplate(student, studentGoals, quarterRange);
+        break;
+      case 'admin-summary':
+        reportContent = renderAdminSummaryTemplate(student, studentGoals, quarterRange);
+        break;
+      case 'iep-progress':
+      default:
+        reportContent = renderIEPProgressTemplate(student, studentGoals, quarterRange);
+        break;
     }
 
-    // Grades section
-    const gradesHtml = renderGradesForQuarter(tab1State.studentCode, quarterRange);
-    reportHtml += gradesHtml;
-
-    // Export buttons
-    reportHtml += `
-      <div class="rp-export-actions">
-        <button class="tc-btn" id="btnExportPDF" type="button">📄 Export as PDF</button>
-        <button class="tc-btn" id="btnExportDOCX" type="button">📄 Export as DOCX</button>
-      </div>
-      </div>
+    // Build report HTML with template content
+    let reportHtml = `
+      ${filtersHtml}
+      ${reportContent}
     `;
 
     container.innerHTML = reportHtml;
@@ -439,6 +776,7 @@
     // Attach event listeners for filters
     const studentSelect = $("tab1Student");
     const quarterSelect = $("tab1Quarter");
+    const templateSelect = $("tab1Template");
     if (studentSelect) {
       studentSelect.addEventListener("change", (e) => {
         tab1State.studentCode = e.target.value || null;
@@ -451,16 +789,53 @@
         renderTab1();
       });
     }
+    if (templateSelect) {
+      templateSelect.addEventListener("change", (e) => {
+        tab1State.template = e.target.value;
+        localStorage.setItem('rc_report_template', e.target.value);
+        renderTab1();
+      });
+    }
 
     // Attach export listeners
     const btnPDF = $("btnExportPDF");
     const btnDOCX = $("btnExportDOCX");
+    const btnCopyAllSpedTrack = $("btnCopyAllSpedTrack");
+    
     if (btnPDF) {
       btnPDF.addEventListener("click", () => exportReportAsPDF());
     }
     if (btnDOCX) {
       btnDOCX.addEventListener("click", () => exportReportAsDOCX());
     }
+    if (btnCopyAllSpedTrack) {
+      btnCopyAllSpedTrack.addEventListener("click", () => {
+        const allText = studentGoals.map(g => 
+          generateSpedTrackText(g.code, tab1State.studentCode, quarterRange)
+        ).join('\n\n---\n\n');
+        navigator.clipboard.writeText(allText).then(() => {
+          showToast('✅ Copied all goals to clipboard!');
+        }).catch(err => {
+          console.error('Failed to copy:', err);
+          alert('Failed to copy to clipboard');
+        });
+      });
+    }
+
+    // Attach SpedTrack copy listeners
+    document.querySelectorAll('.copy-spedtrack-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const goalCode = e.target.dataset.goalCode;
+        const studentCode = e.target.dataset.studentCode;
+        const text = generateSpedTrackText(goalCode, studentCode, quarterRange);
+        navigator.clipboard.writeText(text).then(() => {
+          showToast('✅ Copied to clipboard!');
+        }).catch(err => {
+          console.error('Failed to copy:', err);
+          alert('Failed to copy to clipboard');
+        });
+      });
+    });
   }
 
   /**
@@ -1120,6 +1495,12 @@
             ${classOptions}
           </select>
         </div>
+        <div class="rp-filter-group">
+          <label>
+            <input type="checkbox" id="tab3CompareQuarters" ${tab3State.compareQuarters ? 'checked' : ''}>
+            Compare Quarters
+          </label>
+        </div>
       </div>
     `;
 
@@ -1213,6 +1594,11 @@
     // Student performance table
     html += renderStudentPerformanceTable(filteredStudents, quarterRange);
 
+    // Quarter comparison section (if enabled)
+    if (tab3State.compareQuarters) {
+      html += renderQuarterComparison(filteredStudents);
+    }
+
     // Export actions
     html += `
       <div class="rp-export-actions">
@@ -1225,9 +1611,18 @@
 
     // Attach event listeners
     const classSelect = $("tab3Class");
+    const compareCheckbox = $("tab3CompareQuarters");
+    
     if (classSelect) {
       classSelect.addEventListener("change", (e) => {
         tab3State.classFilter = e.target.value;
+        renderTab3();
+      });
+    }
+
+    if (compareCheckbox) {
+      compareCheckbox.addEventListener("change", (e) => {
+        tab3State.compareQuarters = e.target.checked;
         renderTab3();
       });
     }
@@ -1395,6 +1790,97 @@
         </table>
       </div>
     `;
+  }
+
+  /**
+   * Render Quarter Comparison view (B3)
+   */
+  function renderQuarterComparison(students) {
+    if (students.length === 0) {
+      return '<h3>📊 Quarter Comparison</h3><div class="rp-empty">No students to compare.</div>';
+    }
+
+    let html = '<h3>📊 Quarter Comparison - Goal Progress Across Quarters</h3>';
+    
+    // Build comparison table
+    html += `
+      <div class="rp-table-container">
+        <table class="rp-table">
+          <thead>
+            <tr>
+              <th>Student</th>
+              <th>Goal</th>
+              <th>Q1 Avg</th>
+              <th>Q2 Avg</th>
+              <th>Q3 Avg</th>
+              <th>Q4 Avg</th>
+              <th>Trend</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+
+    for (const student of students) {
+      const studentGoals = goalsData.filter(g => g.student_code === student.code && g.status === 'active');
+      
+      for (const goal of studentGoals) {
+        const q1Data = getGoalProgressForQuarter(goal.code, student.code, getQuarterDateRange('Q1'));
+        const q2Data = getGoalProgressForQuarter(goal.code, student.code, getQuarterDateRange('Q2'));
+        const q3Data = getGoalProgressForQuarter(goal.code, student.code, getQuarterDateRange('Q3'));
+        const q4Data = getGoalProgressForQuarter(goal.code, student.code, getQuarterDateRange('Q4'));
+
+        const q1Avg = q1Data.average != null ? q1Data.average.toFixed(0) + '%' : '—';
+        const q2Avg = q2Data.average != null ? q2Data.average.toFixed(0) + '%' : '—';
+        const q3Avg = q3Data.average != null ? q3Data.average.toFixed(0) + '%' : '—';
+        const q4Avg = q4Data.average != null ? q4Data.average.toFixed(0) + '%' : '—';
+
+        // Calculate trend
+        const values = [q1Data.average, q2Data.average, q3Data.average, q4Data.average].filter(v => v != null);
+        let trend = '—';
+        let trendColor = '#9ca3af';
+        
+        if (values.length >= 2) {
+          const first = values[0];
+          const last = values[values.length - 1];
+          if (last > first) {
+            trend = `↗️ +${(last - first).toFixed(1)}%`;
+            trendColor = '#22c55e';
+          } else if (last < first) {
+            trend = `↘️ ${(last - first).toFixed(1)}%`;
+            trendColor = '#ef4444';
+          } else {
+            trend = '→ No change';
+            trendColor = '#fbbf24';
+          }
+        }
+
+        // Color-code cells based on improvement
+        const q1Color = q1Data.average != null ? scoreColor(q1Data.average) : 'inherit';
+        const q2Color = q2Data.average != null ? scoreColor(q2Data.average) : 'inherit';
+        const q3Color = q3Data.average != null ? scoreColor(q3Data.average) : 'inherit';
+        const q4Color = q4Data.average != null ? scoreColor(q4Data.average) : 'inherit';
+
+        html += `
+          <tr>
+            <td>${escapeHtml(student.code)}</td>
+            <td>${escapeHtml(goal.code)}</td>
+            <td style="color: ${q1Color}">${q1Avg}</td>
+            <td style="color: ${q2Color}">${q2Avg}</td>
+            <td style="color: ${q3Color}">${q3Avg}</td>
+            <td style="color: ${q4Color}">${q4Avg}</td>
+            <td style="color: ${trendColor}; font-weight: 600;">${trend}</td>
+          </tr>
+        `;
+      }
+    }
+
+    html += `
+          </tbody>
+        </table>
+      </div>
+    `;
+
+    return html;
   }
 
   /**
