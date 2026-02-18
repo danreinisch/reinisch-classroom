@@ -1,79 +1,66 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="emerald">
+<html lang="en">
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Language Arts Toolkit – Reinisch Classroom</title>
+  
+  <!-- RC Theme Design System -->
   <link rel="stylesheet" href="/assets/css/rc-theme.css" />
+  <link rel="stylesheet" href="/assets/css/app-shell.css" />
+  
   <style>
-    :root{--glass:var(--rc-glass);--glass-brd:var(--rc-border-strong);--text:var(--rc-ink)}
-    body{display:flex;flex-direction:column;align-items:center;text-align:center;padding:2rem}
-    .grid{width:100%;max-width:1100px;display:grid;gap:1rem;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
-    .card{background:var(--glass);border:1px solid var(--glass-brd);border-radius:1rem;padding:1rem 1.25rem;color:var(--text);text-decoration:none;min-height:86px;display:flex;flex-direction:column;justify-content:center;align-items:center;box-shadow:0 10px 30px rgba(0,0,0,.15)}
+    /* Link styling for rc-card */
+    a.rc-card {
+      text-decoration: none;
+      color: inherit;
+      display: block;
+    }
   </style>
+  
   <script src="/assets/js/open-in-viewer.js"></script>
   <script src="/assets/js/toolkit-nav.js" defer></script>
-
-<link rel="stylesheet" href="/assets/css/rc-emerald-dashboard-theme.css" />
-
-<link rel="stylesheet" href="/assets/css/app-shell.css" />
-
-<script defer src="/assets/js/app-shell.js"></script>
-
-<style>
-/* Rail-safe: reserve space for the left app shell rail on desktop */
-.rc-shell-safe { min-width: 0; }
-
-@media (min-width: 900px) {
-  .rc-shell-safe { margin-left: var(--shell-width, 260px); }
-}
-
-/* Prevent horizontal scroll caused by wide content */
-html, body { overflow-x: hidden; }
-</style>
-
-
+  <script defer src="/assets/js/app-shell.js"></script>
 </head>
 <body>
-  <div class=\"rc-shell-safe\">
-  <header>
-    <h1>Language Arts Toolkit</h1>
-    <p style="opacity:.9;margin:14px 0 22px">Unit hub</p>
-  </header>
-  <section class="grid">
-    <a class="card" href="/viewer/?src=%2Fpresentations%2Flanguage-arts-toolkit%2Fpresentation-01%2F">
-      <strong>Prefixes and Suffixes: Building Vocabulary</strong>
-      <small>Open presentation</small>
-    </a>
-    <a class="card" href="/viewer/?src=%2Fpresentations%2Flanguage-arts-toolkit%2Fpresentation-02%2F">
-      <strong>Summarizing vs Retelling: Quality Over Quantity</strong>
-      <small>Open presentation</small>
-    </a>
-    <a class="card" href="/viewer/?src=%2Fpresentations%2Flanguage-arts-toolkit%2Fpresentation-03%2F">
-      <strong>Topic Sentence Checker</strong>
-      <small>Open presentation</small>
-    </a>
-    <a class="card" href="/viewer/?src=%2Fpresentations%2Flanguage-arts-toolkit%2Fpresentation-04%2F">
-      <strong>Transition Words and Phrases: Creating Flow</strong>
-      <small>Open presentation</small>
-    </a>
-    <a class="card" href="/viewer/?src=%2Fpresentations%2Flanguage-arts-toolkit%2Fpresentation-05%2F">
-      <strong>Parts of Speech - Interactive Presentation</strong>
-      <small>Open presentation</small>
-    </a>
-    <a class="card" href="/viewer/?src=%2Fpresentations%2Flanguage-arts-toolkit%2Fpresentation-06%2F">
-      <strong>Effective Written Response Structure</strong>
-      <small>Open presentation</small>
-    </a>
-    <a class="card" href="/viewer/?src=%2Fpresentations%2Flanguage-arts-toolkit%2Fpresentation-07%2F">
-      <strong>Written Response Builder</strong>
-      <small>Open presentation</small>
-    </a>
-    <a class="card" href="/viewer/?src=%2Fpresentations%2Flanguage-arts-toolkit%2Fpresentation-08%2Findex.html&title=Essay+Builder">
-      <strong>Essay Builder</strong>
-      <small>Open presentation</small>
-    </a>
-  </section>
-  </div>
+  <main class="rc-container" style="padding-top: 2rem; text-align: center;">
+    <h1 class="rc-heading">Language Arts Toolkit</h1>
+    <p class="rc-muted">Unit hub</p>
+    
+    <div class="rc-grid rc-grid-auto">
+      <a class="rc-card" href="/viewer/?src=%2Fpresentations%2Flanguage-arts-toolkit%2Fpresentation-01%2F">
+        <strong>Prefixes and Suffixes: Building Vocabulary</strong>
+        <small class="rc-muted">Open presentation</small>
+      </a>
+      <a class="rc-card" href="/viewer/?src=%2Fpresentations%2Flanguage-arts-toolkit%2Fpresentation-02%2F">
+        <strong>Summarizing vs Retelling: Quality Over Quantity</strong>
+        <small class="rc-muted">Open presentation</small>
+      </a>
+      <a class="rc-card" href="/viewer/?src=%2Fpresentations%2Flanguage-arts-toolkit%2Fpresentation-03%2F">
+        <strong>Topic Sentence Checker</strong>
+        <small class="rc-muted">Open presentation</small>
+      </a>
+      <a class="rc-card" href="/viewer/?src=%2Fpresentations%2Flanguage-arts-toolkit%2Fpresentation-04%2F">
+        <strong>Transition Words and Phrases: Creating Flow</strong>
+        <small class="rc-muted">Open presentation</small>
+      </a>
+      <a class="rc-card" href="/viewer/?src=%2Fpresentations%2Flanguage-arts-toolkit%2Fpresentation-05%2F">
+        <strong>Parts of Speech - Interactive Presentation</strong>
+        <small class="rc-muted">Open presentation</small>
+      </a>
+      <a class="rc-card" href="/viewer/?src=%2Fpresentations%2Flanguage-arts-toolkit%2Fpresentation-06%2F">
+        <strong>Effective Written Response Structure</strong>
+        <small class="rc-muted">Open presentation</small>
+      </a>
+      <a class="rc-card" href="/viewer/?src=%2Fpresentations%2Flanguage-arts-toolkit%2Fpresentation-07%2F">
+        <strong>Written Response Builder</strong>
+        <small class="rc-muted">Open presentation</small>
+      </a>
+      <a class="rc-card" href="/viewer/?src=%2Fpresentations%2Flanguage-arts-toolkit%2Fpresentation-08%2Findex.html&title=Essay+Builder">
+        <strong>Essay Builder</strong>
+        <small class="rc-muted">Open presentation</small>
+      </a>
+    </div>
+  </main>
 </body>
 </html>

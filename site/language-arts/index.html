@@ -10,41 +10,22 @@
   <link rel="stylesheet" href="/assets/css/app-shell.css" />
   
   <style>
-    /* Minimal page-specific layout only */
-    body {
-      min-height: 100vh;
-      display: grid;
-      place-items: center;
-      padding: 2rem;
-    }
-    
-    .page-container {
-      width: 100%;
-      max-width: 900px;
-      text-align: center;
-    }
-    
-    .page-container h1 {
-      margin-top: 0;
-    }
-    
-    .page-container p {
-      margin-bottom: 1.5rem;
-    }
-    
-    .toolkit-section {
-      margin-bottom: 1.5rem;
+    /* Link styling for rc-card */
+    a.rc-card {
+      text-decoration: none;
+      color: inherit;
+      display: block;
     }
   </style>
   
   <script src="/assets/js/site-assets-loader.js"></script>
 </head>
 <body>
-  <main class="page-container">
+  <main class="rc-container" style="padding-top: 2rem; text-align: center;">
     <h1 class="rc-heading">Language Arts</h1>
     <p class="rc-muted">Choose a book or open the toolkit for skills reference & mini-lessons.</p>
     
-    <div class="toolkit-section">
+    <div style="margin-bottom: 1.5rem;">
       <a class="rc-btn primary" href="/language-arts/toolkit/index.html">Language Arts Toolkit</a>
     </div>
     
