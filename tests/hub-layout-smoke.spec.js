@@ -26,9 +26,9 @@ test.describe('Hub Layout Transformation Smoke Tests', () => {
     await page.goto('/hub/');
     await page.waitForLoadState('networkidle');
     
-    // Check localStorage for emerald theme
+    // Emerald is the default theme; legacy rc_glass_theme key is removed by hub-theme-boot.js
     const theme = await page.evaluate(() => localStorage.getItem('rc_glass_theme'));
-    expect(theme).toBe('emerald');
+    expect(theme).toBeNull();
     
     // Verify no glass-bold class on body
     const hasGlassBold = await page.evaluate(() => 

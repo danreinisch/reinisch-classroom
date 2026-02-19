@@ -435,8 +435,8 @@
       }
     </style>
     <!-- Emerald Glass Dashboard Theme - Moved to end of head to win CSS cascade -->
-    <link rel="stylesheet" href="/assets/css/rc-emerald-dashboard-theme.css?v=emerald-5" />
-    <link rel="stylesheet" href="/assets/css/rc-emerald-bridge.css?v=emerald-5" />
+    <link rel="stylesheet" href="/assets/css/rc-emerald-dashboard-theme.css?v=emerald-5" id="rc-emerald-dashboard-theme" />
+    <link rel="stylesheet" href="/assets/css/rc-emerald-bridge.css?v=emerald-5" id="rc-emerald-bridge" />
 
     <!-- Global App Shell CSS -->
     <link rel="stylesheet" href="/assets/css/app-shell.css" />
@@ -469,6 +469,10 @@
             >
               Sign Out
             </button>
+            <!-- Role buttons and user chip -->
+            <span id="currentUserChip" class="hub-tag" style="font-size: 12px; opacity: 0.8; display: none"></span>
+            <button class="btn small" id="btnTeacher" style="display: none">Teacher</button>
+            <button class="btn small" id="btnStudent" style="display: none">Student</button>
           </div>
         </header>
 
@@ -583,6 +587,11 @@
             <div class="hub-menu-header" id="submenuTitle">Overview</div>
             <div class="nav" id="submenu">
               <!-- Submenu items will be populated by JS -->
+            </div>
+            <div style="display: flex; gap: 6px; padding: 8px 0 0; border-top: 1px solid rgba(255,255,255,0.06); margin-top: 8px;">
+              <button class="btn small" id="navPrev" title="Previous tab" style="flex:1">&#8592;</button>
+              <button class="btn small" id="navNext" title="Next tab" style="flex:1">&#8594;</button>
+              <button class="btn small" id="navExit" title="Switch role" style="flex:1">&#215;</button>
             </div>
           </aside>
 
