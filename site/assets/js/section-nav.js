@@ -33,6 +33,11 @@
   function ensureNav(){
     const sec = sectionFor(location.pathname);
     if (!sec) return;
+    
+    // Don't inject nav on section landing pages
+    const cleanPath = location.pathname.replace(/index\.html$/, '').replace(/\/+$/, '/');
+    if (cleanPath === '/' + sec + '/') return;
+    
     if (document.querySelector('.glass-nav')) return;
 
     const nav = makeEl('div', 'glass-nav');
