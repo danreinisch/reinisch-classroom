@@ -162,10 +162,17 @@
     // Note: These paths match the canonical theme assets used by /hub/
     // If these files are moved, update paths here and in hub HTML
     const themeFiles = [
-      { href: '/assets/css/rc-emerald-dashboard-theme.css', id: 'rc-emerald-dashboard-theme' },
-      { href: '/assets/css/rc-emerald-bridge.css', id: 'rc-emerald-bridge' },
       { href: '/assets/css/app-shell.css', id: 'app-shell-css' }
     ];
+
+    // Only inject hub-specific theme CSS on /hub/ pages
+    const pathname = window.location.pathname;
+    if (pathname === '/hub' || pathname.startsWith('/hub/')) {
+      themeFiles.unshift(
+        { href: '/assets/css/rc-emerald-dashboard-theme.css', id: 'rc-emerald-dashboard-theme' },
+        { href: '/assets/css/rc-emerald-bridge.css', id: 'rc-emerald-bridge' }
+      );
+    }
 
     // Inject each CSS file if not already loaded (idempotent)
     themeFiles.forEach(file => {

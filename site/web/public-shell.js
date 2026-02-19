@@ -1,6 +1,17 @@
 (function(){
   const KEY = 'rc_public_sidebar';
   const DEFAULT = 'collapsed';
+  const MOBILE_BREAKPOINT = 768;
+
+  // FOUC prevention: apply collapsed state immediately (before DOMContentLoaded)
+  try {
+    const saved = localStorage.getItem(KEY) || DEFAULT;
+    if (saved !== 'expanded') {
+      document.documentElement.classList.add('tc-collapsed');
+    }
+  } catch(_) {
+    document.documentElement.classList.add('tc-collapsed');
+  }
 
   function setCollapsed(isCollapsed){
     document.documentElement.classList.toggle('tc-collapsed', isCollapsed);
@@ -31,8 +42,13 @@
 
   function init(){
     // Public pages - no authentication required
-    
-    setCollapsed(getCollapsed());
+
+    // On mobile, always start collapsed regardless of saved preference
+    if (window.innerWidth <= MOBILE_BREAKPOINT) {
+      setCollapsed(true);
+    } else {
+      setCollapsed(getCollapsed());
+    }
 
     const toggle = document.getElementById('tcSidebarToggle');
     if(toggle){
@@ -41,6 +57,26 @@
         setCollapsed(!isCollapsed);
       });
     }
+
+    // Close sidebar when clicking a nav link on mobile
+    document.querySelectorAll('.tc-nav a').forEach(link => {
+      link.addEventListener('click', () => {
+        if (window.innerWidth <= MOBILE_BREAKPOINT) {
+          setCollapsed(true);
+        }
+      });
+    });
+
+    // Close sidebar when clicking the overlay backdrop on mobile
+    document.addEventListener('click', (e) => {
+      if (window.innerWidth <= MOBILE_BREAKPOINT && !document.documentElement.classList.contains('tc-collapsed')) {
+        const sidebar = document.querySelector('.tc-sidebar');
+        const toggle = document.getElementById('tcSidebarToggle');
+        if (sidebar && !sidebar.contains(e.target) && toggle && !toggle.contains(e.target)) {
+          setCollapsed(true);
+        }
+      }
+    });
 
     wireNavActive();
   }
