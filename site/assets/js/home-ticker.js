@@ -42,11 +42,12 @@
       const titles = cat.titles || [];
       const links = cat.links || [];
       const unitTitle = unitMap[catId] || catId;
+      /* Iterate in reverse so highest-numbered (newest) slots come first */
       for (let i = titles.length - 1; i >= 0; i--) {
         const title = (titles[i] || '').trim();
         const link = (links[i] || '').trim();
         if (title && link) {
-          items.push({ label: `📖 ${unitTitle} — ${title}`, href: link });
+          items.push({ unitTitle, title, href: link });
           if (items.length >= MAX_ITEMS) break;
         }
       }
@@ -68,7 +69,11 @@
           const a = document.createElement('a');
           a.className = 'home-ticker-item';
           a.href = item.href;
-          a.textContent = item.label;
+          /* Emoji is decorative; aria-label provides the accessible text */
+          a.setAttribute('aria-label', item.unitTitle + ' — ' + item.title);
+          a.innerHTML =
+            '<span aria-hidden="true">📖</span> ' +
+            item.unitTitle + ' \u2014 ' + item.title;
           return a.outerHTML + sep;
         })
         .join('');
