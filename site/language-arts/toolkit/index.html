@@ -7,7 +7,7 @@
   
   <!-- RC Theme Design System -->
   <link rel="stylesheet" href="/assets/css/rc-theme.css" />
-  <link rel="stylesheet" href="/assets/css/app-shell.css" />
+  <link rel="stylesheet" href="/web/teacher-shell.css" />
   
   <style>
     /* Link styling for rc-card */
@@ -16,51 +16,106 @@
       color: inherit;
       display: block;
     }
+
+    .content-wrapper {
+      padding-top: 1rem;
+      text-align: center;
+    }
   </style>
   
   <script src="/assets/js/open-in-viewer.js"></script>
   <script src="/assets/js/toolkit-nav.js" defer></script>
-  <script defer src="/assets/js/app-shell.js"></script>
 </head>
 <body>
-  <main class="rc-container" style="padding-top: 2rem; text-align: center;">
-    <h1 class="rc-heading">Language Arts Toolkit</h1>
-    <p class="rc-muted">Unit hub</p>
-    
-    <div class="rc-grid rc-grid-auto">
-      <a class="rc-card" href="/viewer/?src=%2Fpresentations%2Flanguage-arts-toolkit%2Fpresentation-01%2F">
-        <strong>Prefixes and Suffixes: Building Vocabulary</strong>
-        <small class="rc-muted">Open presentation</small>
-      </a>
-      <a class="rc-card" href="/viewer/?src=%2Fpresentations%2Flanguage-arts-toolkit%2Fpresentation-02%2F">
-        <strong>Summarizing vs Retelling: Quality Over Quantity</strong>
-        <small class="rc-muted">Open presentation</small>
-      </a>
-      <a class="rc-card" href="/viewer/?src=%2Fpresentations%2Flanguage-arts-toolkit%2Fpresentation-03%2F">
-        <strong>Topic Sentence Checker</strong>
-        <small class="rc-muted">Open presentation</small>
-      </a>
-      <a class="rc-card" href="/viewer/?src=%2Fpresentations%2Flanguage-arts-toolkit%2Fpresentation-04%2F">
-        <strong>Transition Words and Phrases: Creating Flow</strong>
-        <small class="rc-muted">Open presentation</small>
-      </a>
-      <a class="rc-card" href="/viewer/?src=%2Fpresentations%2Flanguage-arts-toolkit%2Fpresentation-05%2F">
-        <strong>Parts of Speech - Interactive Presentation</strong>
-        <small class="rc-muted">Open presentation</small>
-      </a>
-      <a class="rc-card" href="/viewer/?src=%2Fpresentations%2Flanguage-arts-toolkit%2Fpresentation-06%2F">
-        <strong>Effective Written Response Structure</strong>
-        <small class="rc-muted">Open presentation</small>
-      </a>
-      <a class="rc-card" href="/viewer/?src=%2Fpresentations%2Flanguage-arts-toolkit%2Fpresentation-07%2F">
-        <strong>Written Response Builder</strong>
-        <small class="rc-muted">Open presentation</small>
-      </a>
-      <a class="rc-card" href="/viewer/?src=%2Fpresentations%2Flanguage-arts-toolkit%2Fpresentation-08%2Findex.html&title=Essay+Builder">
-        <strong>Essay Builder</strong>
-        <small class="rc-muted">Open presentation</small>
-      </a>
+  <div class="tc-app">
+    <header class="tc-topbar">
+      <button class="tc-btn" id="tcSidebarToggle" aria-label="Toggle sidebar" aria-expanded="false">☰</button>
+      <a class="tc-btn" href="/" aria-label="Home">🏠</a>
+      <div class="tc-title">Language Arts Toolkit</div>
+    </header>
+
+    <div class="tc-shell">
+      <aside class="tc-sidebar" aria-label="Navigation">
+        <nav class="tc-nav">
+          <a href="/" data-href="/">
+            <span class="tc-icon">🏠</span>
+            <span class="tc-label">Home</span>
+          </a>
+          <a href="/language-arts/" data-href="/language-arts/">
+            <span class="tc-icon">📖</span>
+            <span class="tc-label">Language Arts</span>
+          </a>
+          <a href="/language-arts/toolkit/" data-href="/language-arts/toolkit/">
+            <span class="tc-icon">📚</span>
+            <span class="tc-label">Toolkit</span>
+          </a>
+          <a href="/language-arts/assignment-hub/" data-href="/language-arts/assignment-hub/">
+            <span class="tc-icon">📋</span>
+            <span class="tc-label">Assignment Hub</span>
+          </a>
+          <a href="/language-arts/a-door-into-time/" data-href="/language-arts/a-door-into-time/">
+            <span class="tc-icon">📕</span>
+            <span class="tc-label">A Door Into Time</span>
+          </a>
+          <a href="/language-arts/lost-in-kragdon-ah/" data-href="/language-arts/lost-in-kragdon-ah/">
+            <span class="tc-icon">📗</span>
+            <span class="tc-label">Lost in Kragdon-ah</span>
+          </a>
+          <a href="/language-arts/return-from-kragdon-ah/" data-href="/language-arts/return-from-kragdon-ah/">
+            <span class="tc-icon">📘</span>
+            <span class="tc-label">Return from Kragdon-ah</span>
+          </a>
+          <a href="/language-arts/warrior-of-kragdon-ah/" data-href="/language-arts/warrior-of-kragdon-ah/">
+            <span class="tc-icon">📙</span>
+            <span class="tc-label">Warrior of Kragdon-ah</span>
+          </a>
+        </nav>
+      </aside>
+
+      <main class="tc-main">
+        <div class="content-wrapper">
+          <h1 class="rc-heading">Language Arts Toolkit</h1>
+          <p class="rc-muted">Unit hub</p>
+          
+          <div class="rc-grid rc-grid-auto">
+            <a class="rc-card" href="/viewer/?src=%2Fpresentations%2Flanguage-arts-toolkit%2Fpresentation-01%2F">
+              <strong>Prefixes and Suffixes: Building Vocabulary</strong>
+              <small class="rc-muted">Open presentation</small>
+            </a>
+            <a class="rc-card" href="/viewer/?src=%2Fpresentations%2Flanguage-arts-toolkit%2Fpresentation-02%2F">
+              <strong>Summarizing vs Retelling: Quality Over Quantity</strong>
+              <small class="rc-muted">Open presentation</small>
+            </a>
+            <a class="rc-card" href="/viewer/?src=%2Fpresentations%2Flanguage-arts-toolkit%2Fpresentation-03%2F">
+              <strong>Topic Sentence Checker</strong>
+              <small class="rc-muted">Open presentation</small>
+            </a>
+            <a class="rc-card" href="/viewer/?src=%2Fpresentations%2Flanguage-arts-toolkit%2Fpresentation-04%2F">
+              <strong>Transition Words and Phrases: Creating Flow</strong>
+              <small class="rc-muted">Open presentation</small>
+            </a>
+            <a class="rc-card" href="/viewer/?src=%2Fpresentations%2Flanguage-arts-toolkit%2Fpresentation-05%2F">
+              <strong>Parts of Speech - Interactive Presentation</strong>
+              <small class="rc-muted">Open presentation</small>
+            </a>
+            <a class="rc-card" href="/viewer/?src=%2Fpresentations%2Flanguage-arts-toolkit%2Fpresentation-06%2F">
+              <strong>Effective Written Response Structure</strong>
+              <small class="rc-muted">Open presentation</small>
+            </a>
+            <a class="rc-card" href="/viewer/?src=%2Fpresentations%2Flanguage-arts-toolkit%2Fpresentation-07%2F">
+              <strong>Written Response Builder</strong>
+              <small class="rc-muted">Open presentation</small>
+            </a>
+            <a class="rc-card" href="/viewer/?src=%2Fpresentations%2Flanguage-arts-toolkit%2Fpresentation-08%2Findex.html&title=Essay+Builder">
+              <strong>Essay Builder</strong>
+              <small class="rc-muted">Open presentation</small>
+            </a>
+          </div>
+        </div>
+      </main>
     </div>
-  </main>
+  </div>
+
+  <script defer src="/web/student-shell.js"></script>
 </body>
 </html>
