@@ -49,25 +49,27 @@
         align-items: center;
         gap: 16px;
         padding: 20px;
-        background: var(--rc-glass);
-        border: 1px solid var(--rc-border);
+        background: linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+        backdrop-filter: blur(12px) saturate(130%);
+        -webkit-backdrop-filter: blur(12px) saturate(130%);
+        border: 1px solid rgba(255, 255, 255, 0.10);
         border-left: 3px solid transparent;
         border-radius: 16px;
         text-decoration: none;
         color: inherit;
-        transition: all 0.2s ease;
-        box-shadow: var(--rc-shadow);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
+        transition: all 0.25s ease;
+        box-shadow: 
+          0 8px 32px rgba(0, 0, 0, 0.3),
+          inset 0 1px 0 rgba(255, 255, 255, 0.08);
         min-height: 90px;
       }
 
       .book-card:hover {
-        transform: translateY(-3px);
-        border-color: rgba(34, 197, 94, 0.4);
-        box-shadow:
-          0 12px 48px rgba(0, 0, 0, 0.4),
-          inset 0 1px 0 rgba(255, 255, 255, 0.05);
+        transform: translateY(-4px);
+        border-color: rgba(34, 197, 94, 0.35);
+        box-shadow: 
+          0 16px 48px rgba(0, 0, 0, 0.4),
+          inset 0 1px 0 rgba(255, 255, 255, 0.12);
       }
 
       .book-card:nth-child(1) { border-left-color: rgba(239, 68, 68, 0.5); }
@@ -95,8 +97,19 @@
   <body>
     <div class="tc-app">
       <header class="tc-topbar">
-        <button class="tc-btn" id="tcSidebarToggle" aria-label="Toggle sidebar" aria-expanded="false">☰</button>
-        <a class="tc-btn" href="/" aria-label="Home">🏠</a>
+        <button class="tc-btn" id="tcSidebarToggle" aria-label="Toggle sidebar" aria-expanded="false">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
+        <a class="tc-btn" href="/" aria-label="Home">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+            <polyline points="9 22 9 12 15 12 15 22"></polyline>
+          </svg>
+        </a>
         <div class="tc-title">Language Arts</div>
       </header>
 
@@ -104,35 +117,75 @@
         <aside class="tc-sidebar" aria-label="Navigation">
           <nav class="tc-nav">
             <a href="/" data-href="/">
-              <span class="tc-icon">🏠</span>
+              <span class="tc-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                  <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                </svg>
+              </span>
               <span class="tc-label">Home</span>
             </a>
             <a href="/language-arts/" data-href="/language-arts/">
-              <span class="tc-icon">📖</span>
+              <span class="tc-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                </svg>
+              </span>
               <span class="tc-label">Language Arts</span>
             </a>
             <a href="/language-arts/toolkit/" data-href="/language-arts/toolkit/">
-              <span class="tc-icon">📚</span>
+              <span class="tc-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+              </span>
               <span class="tc-label">Toolkit</span>
             </a>
             <a href="/language-arts/assignment-hub/" data-href="/language-arts/assignment-hub/">
-              <span class="tc-icon">📋</span>
+              <span class="tc-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                  <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                </svg>
+              </span>
               <span class="tc-label">Assignment Hub</span>
             </a>
             <a href="/language-arts/a-door-into-time/" data-href="/language-arts/a-door-into-time/">
-              <span class="tc-icon">📕</span>
+              <span class="tc-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                </svg>
+              </span>
               <span class="tc-label">A Door Into Time</span>
             </a>
             <a href="/language-arts/lost-in-kragdon-ah/" data-href="/language-arts/lost-in-kragdon-ah/">
-              <span class="tc-icon">📗</span>
+              <span class="tc-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                </svg>
+              </span>
               <span class="tc-label">Lost in Kragdon-ah</span>
             </a>
             <a href="/language-arts/return-from-kragdon-ah/" data-href="/language-arts/return-from-kragdon-ah/">
-              <span class="tc-icon">📘</span>
+              <span class="tc-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                </svg>
+              </span>
               <span class="tc-label">Return from Kragdon-ah</span>
             </a>
             <a href="/language-arts/warrior-of-kragdon-ah/" data-href="/language-arts/warrior-of-kragdon-ah/">
-              <span class="tc-icon">📙</span>
+              <span class="tc-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                </svg>
+              </span>
               <span class="tc-label">Warrior of Kragdon-ah</span>
             </a>
           </nav>
@@ -146,24 +199,50 @@
             </p>
 
             <div style="margin-bottom: 1.5rem">
-              <a class="rc-btn primary" href="/language-arts/toolkit/index.html">📚 Language Arts Toolkit</a>
+              <a class="rc-btn primary" href="/language-arts/toolkit/index.html">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display: inline-block; vertical-align: middle; margin-right: 6px;">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+                Language Arts Toolkit
+              </a>
             </div>
 
             <div class="book-grid">
               <a class="book-card" href="/language-arts/a-door-into-time/index.html">
-                <div class="book-icon">📕</div>
+                <div class="book-icon">
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                  </svg>
+                </div>
                 <strong class="book-title">A Door Into Time</strong>
               </a>
               <a class="book-card" href="/language-arts/lost-in-kragdon-ah/index.html">
-                <div class="book-icon">📗</div>
+                <div class="book-icon">
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                  </svg>
+                </div>
                 <strong class="book-title">Lost in Kragdon-ah</strong>
               </a>
               <a class="book-card" href="/language-arts/return-from-kragdon-ah/index.html">
-                <div class="book-icon">📘</div>
+                <div class="book-icon">
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                  </svg>
+                </div>
                 <strong class="book-title">Return from Kragdon-ah</strong>
               </a>
               <a class="book-card" href="/language-arts/warrior-of-kragdon-ah/index.html">
-                <div class="book-icon">📙</div>
+                <div class="book-icon">
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                  </svg>
+                </div>
                 <strong class="book-title">Warrior of Kragdon-ah</strong>
               </a>
             </div>
