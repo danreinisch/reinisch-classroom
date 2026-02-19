@@ -134,6 +134,12 @@
   to = "/site/assets/css/theme.css"
   status = 200
 
+# Redirect for unit-grid.css to canonical location in site/assets
+[[redirects]]
+  from = "/assets/css/unit-grid.css"
+  to = "/site/assets/css/unit-grid.css"
+  status = 200
+
 # Redirect for student-portal-init.js to canonical location in site/web
 [[redirects]]
   from = "/web/student-portal-init.js"
