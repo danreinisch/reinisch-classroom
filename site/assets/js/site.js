@@ -369,6 +369,12 @@
   const ASSET_CHECK_TIMEOUT = 2000;
   
   function loadAppShell() {
+    // Don't load app-shell on pages that use the tc-sidebar system
+    if (document.querySelector('.tc-sidebar') || document.querySelector('.tc-app')) {
+      console.log('[site.js] Page uses tc-sidebar system, skipping app-shell');
+      return;
+    }
+
     // Check if already loaded
     if (!document.querySelector('link[rel="stylesheet"][href="/assets/css/app-shell.css"]')) {
           if (document.querySelector('link[href*="app-shell.css"]')) {
