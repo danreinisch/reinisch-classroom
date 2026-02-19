@@ -30,7 +30,7 @@
   }
 
   function init(){
-    // No teacher auth gating for public pages
+    // Public pages - no authentication required
     
     setCollapsed(getCollapsed());
 
