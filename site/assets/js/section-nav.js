@@ -21,11 +21,11 @@
     return '';
   }
   function addThemeOnce(){
-    const hasTheme = Array.from(document.styleSheets).some(s => (s.href||'').includes('/assets/css/theme.css'));
+    const hasTheme = Array.from(document.styleSheets).some(s => (s.href||'').includes('/assets/css/rc-theme.css'));
     if (!hasTheme){
       const link = document.createElement('link');
       link.rel = 'stylesheet';
-      link.href = '/assets/css/theme.css';
+      link.href = '/assets/css/rc-theme.css';
       document.head.appendChild(link);
     }
   }

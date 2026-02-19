@@ -1,3 +1,6 @@
+/* DEPRECATED: This file is kept only for backward compatibility with cached pages.
+   All new pages should use /assets/css/rc-theme.css instead.
+   This file and its Netlify redirect will be removed in a future cleanup. */
 :root{
   --bg:#0b1220;
   --panel:rgba(255,255,255,.06);

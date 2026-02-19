@@ -128,6 +128,8 @@
   to = "/site/assets/js/section-nav.js"
   status = 200
 
+# DEPRECATED: theme.css redirect kept for backward compat with cached pages.
+# All new pages use rc-theme.css. Remove this redirect in a future cleanup.
 # Redirect for theme.css to canonical location in site/assets
 [[redirects]]
   from = "/assets/css/theme.css"

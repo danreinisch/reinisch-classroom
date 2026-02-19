@@ -429,7 +429,7 @@ function redirectIndexHtml(title, targetRel, unitPagePath, section){
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>${escapeHtml(title)}</title>
-  <link rel="stylesheet" href="/assets/css/theme.css"/>
+  <link rel="stylesheet" href="/assets/css/rc-theme.css"/>
   <script src="/assets/js/section-nav.js" defer></script>`;
 
   const nav = `
