@@ -70,6 +70,11 @@
       return;
     }
 
+    // Don't inject app-shell on pages that already use the tc-sidebar system
+    if (document.querySelector('.tc-sidebar') || document.querySelector('.tc-app')) {
+      return;
+    }
+
     // Phase 1: Ensure global theme is loaded before shell initialization
     ensureGlobalTheme();
 
