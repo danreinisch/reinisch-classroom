@@ -1,0 +1,121 @@
+(function(){
+  // ── SVG icon strings (20px sidebar, 18px topbar) ──────────────────────────
+  var SVG_ATTRS = 'fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"';
+
+  function icon20(body){
+    return '<svg width="20" height="20" viewBox="0 0 24 24" '+SVG_ATTRS+'>'+body+'</svg>';
+  }
+  function icon18(body){
+    return '<svg width="18" height="18" viewBox="0 0 24 24" '+SVG_ATTRS+'>'+body+'</svg>';
+  }
+
+  var I = {
+    home18: icon18('<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline>'),
+    menu18: icon18('<line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line>'),
+    home:   icon20('<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline>'),
+    book:   icon20('<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>'),
+    life:   icon20('<path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"></path><path d="M9 18h6"></path><path d="M10 22h4"></path>'),
+    calc:   icon20('<rect x="4" y="2" width="16" height="20" rx="2"></rect><line x1="8" y1="6" x2="16" y2="6"></line><line x1="16" y1="14" x2="16" y2="18"></line><path d="M16 10h.01"></path><path d="M12 10h.01"></path><path d="M8 10h.01"></path><path d="M12 14h.01"></path><path d="M8 14h.01"></path><path d="M12 18h.01"></path><path d="M8 18h.01"></path>'),
+    teacher:icon20('<rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><path d="M21 15l-5-5L5 21"></path>'),
+    student:icon20('<path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c3 3 9 3 12 0v-5"></path>'),
+    wrench: icon20('<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>'),
+    clip:   icon20('<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>'),
+  };
+
+  // ── Nav configs ────────────────────────────────────────────────────────────
+  var MAIN_NAV = [
+    { href: '/',               label: 'Home',          icon: I.home    },
+    { href: '/language-arts/', label: 'Language Arts', icon: I.book    },
+    { href: '/life-skills/',   label: 'Life Skills',   icon: I.life    },
+    { href: '/math-toolkit/',  label: 'Math Toolkit',  icon: I.calc    },
+    { href: '/teacher/',       label: 'Teacher',       icon: I.teacher },
+    { href: '/student/',       label: 'Student',       icon: I.student },
+  ];
+
+  var LA_NAV = [
+    { href: '/',                                   label: 'Home',                  icon: I.home   },
+    { href: '/language-arts/',                     label: 'Language Arts',         icon: I.book   },
+    { href: '/language-arts/toolkit/',             label: 'Toolkit',               icon: I.wrench },
+    { href: '/language-arts/assignment-hub/',      label: 'Assignment Hub',        icon: I.clip   },
+    { href: '/language-arts/a-door-into-time/',    label: 'A Door Into Time',      icon: I.book   },
+    { href: '/language-arts/lost-in-kragdon-ah/',  label: 'Lost in Kragdon-ah',    icon: I.book   },
+    { href: '/language-arts/return-from-kragdon-ah/', label: 'Return from Kragdon-ah', icon: I.book },
+    { href: '/language-arts/warrior-of-kragdon-ah/',  label: 'Warrior of Kragdon-ah',  icon: I.book },
+  ];
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  function esc(s){
+    return String(s)
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;');
+  }
+
+  function chooseNav(){
+    return location.pathname.startsWith('/language-arts/') ? LA_NAV : MAIN_NAV;
+  }
+
+  function buildNavItem(item){
+    return '<a href="'+esc(item.href)+'" data-href="'+esc(item.href)+'">'
+      +'<span class="tc-icon">'+item.icon+'</span>'
+      +'<span class="tc-label">'+esc(item.label)+'</span>'
+      +'</a>';
+  }
+
+  function getTitle(app){
+    var t = app.getAttribute('data-page-title');
+    if(t) return t;
+    var raw = document.title || '';
+    return raw.split(/\s*[–—|]\s*/)[0].trim() || 'Reinisch Classroom';
+  }
+
+  function buildTopbar(title){
+    return '<header class="tc-topbar">'
+      +'<button class="tc-btn" id="tcSidebarToggle" aria-label="Toggle sidebar" aria-expanded="false">'+I.menu18+'</button>'
+      +'<a class="tc-btn" href="/" aria-label="Home">'+I.home18+'</a>'
+      +'<div class="tc-title">'+esc(title)+'</div>'
+      +'</header>';
+  }
+
+  function buildSidebar(navItems){
+    return '<aside class="tc-sidebar" aria-label="Navigation">'
+      +'<nav class="tc-nav">'
+      +navItems.map(buildNavItem).join('')
+      +'</nav>'
+      +'</aside>';
+  }
+
+  // ── Inject ─────────────────────────────────────────────────────────────────
+  function inject(){
+    var app = document.querySelector('.tc-app');
+    if(!app) return;
+
+    var navItems = chooseNav();
+    var title    = getTitle(app);
+    var topbarHTML  = buildTopbar(title);
+    var sidebarHTML = buildSidebar(navItems);
+
+    var existingTopbar  = app.querySelector('header.tc-topbar');
+    var shell           = app.querySelector('.tc-shell');
+    var existingSidebar = shell ? shell.querySelector('aside.tc-sidebar') : null;
+
+    if(existingTopbar){
+      existingTopbar.outerHTML = topbarHTML;
+    } else {
+      app.insertAdjacentHTML('afterbegin', topbarHTML);
+    }
+
+    if(existingSidebar){
+      existingSidebar.outerHTML = sidebarHTML;
+    } else if(shell){
+      shell.insertAdjacentHTML('afterbegin', sidebarHTML);
+    }
+  }
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', inject);
+  } else {
+    inject();
+  }
+})();
