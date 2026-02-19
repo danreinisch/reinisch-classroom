@@ -11,6 +11,14 @@
   <link rel="stylesheet" href="/web/teacher-shell.css"/>
   
   <style>
+    body {
+      background:
+        url("/assets/bg/bg5e_soft_grid.svg") center/cover no-repeat fixed,
+        radial-gradient(1200px 800px at 20% -10%, rgba(34, 197, 94, 0.08), transparent 50%),
+        radial-gradient(1200px 800px at 120% 20%, rgba(6, 182, 212, 0.06), transparent 50%),
+        linear-gradient(180deg, var(--rc-base), #0c1322 60%, #0b0f14);
+    }
+
     /* Styles for unit-grid.js generated elements */
     .wrap{ max-width:1100px; margin:1rem auto; padding:0 1rem }
     header{ margin-bottom:1.2rem }
@@ -32,8 +40,19 @@
 <body>
   <div class="tc-app">
     <header class="tc-topbar">
-      <button class="tc-btn" id="tcSidebarToggle" aria-label="Toggle sidebar" aria-expanded="false">☰</button>
-      <a class="tc-btn" href="/" aria-label="Home">🏠</a>
+      <button class="tc-btn" id="tcSidebarToggle" aria-label="Toggle sidebar" aria-expanded="false">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="3" y1="12" x2="21" y2="12"></line>
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+      </button>
+      <a class="tc-btn" href="/" aria-label="Home">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+          <polyline points="9 22 9 12 15 12 15 22"></polyline>
+        </svg>
+      </a>
       <div class="tc-title">Lost in Kragdon-ah</div>
     </header>
 
@@ -41,35 +60,65 @@
       <aside class="tc-sidebar" aria-label="Navigation">
         <nav class="tc-nav">
           <a href="/" data-href="/">
-            <span class="tc-icon">🏠</span>
+            <span class="tc-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                <polyline points="9 22 9 12 15 12 15 22"></polyline>
+              </svg>
+            </span>
             <span class="tc-label">Home</span>
           </a>
           <a href="/language-arts/" data-href="/language-arts/">
-            <span class="tc-icon">📖</span>
+            <span class="tc-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+              </svg>
+            </span>
             <span class="tc-label">Language Arts</span>
           </a>
           <a href="/language-arts/toolkit/" data-href="/language-arts/toolkit/">
-            <span class="tc-icon">📚</span>
+            <span class="tc-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+              </svg>
+            </span>
             <span class="tc-label">Toolkit</span>
           </a>
-          <a href="/language-arts/assignment-hub/" data-href="/language-arts/assignment-hub/">
-            <span class="tc-icon">📋</span>
-            <span class="tc-label">Assignment Hub</span>
-          </a>
           <a href="/language-arts/a-door-into-time/" data-href="/language-arts/a-door-into-time/">
-            <span class="tc-icon">📕</span>
+            <span class="tc-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+              </svg>
+            </span>
             <span class="tc-label">A Door Into Time</span>
           </a>
           <a href="/language-arts/lost-in-kragdon-ah/" data-href="/language-arts/lost-in-kragdon-ah/">
-            <span class="tc-icon">📗</span>
+            <span class="tc-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+              </svg>
+            </span>
             <span class="tc-label">Lost in Kragdon-ah</span>
           </a>
           <a href="/language-arts/return-from-kragdon-ah/" data-href="/language-arts/return-from-kragdon-ah/">
-            <span class="tc-icon">📘</span>
+            <span class="tc-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+              </svg>
+            </span>
             <span class="tc-label">Return from Kragdon-ah</span>
           </a>
           <a href="/language-arts/warrior-of-kragdon-ah/" data-href="/language-arts/warrior-of-kragdon-ah/">
-            <span class="tc-icon">📙</span>
+            <span class="tc-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+              </svg>
+            </span>
             <span class="tc-label">Warrior of Kragdon-ah</span>
           </a>
         </nav>
