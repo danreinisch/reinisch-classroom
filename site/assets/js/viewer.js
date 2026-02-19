@@ -22,16 +22,27 @@
    * Toggle sidebar collapsed state
    */
   function toggleSidebar() {
+    // Teacher-shell sidebar toggle
+    const isCollapsed = document.documentElement.classList.contains('tc-collapsed');
+    document.documentElement.classList.toggle('tc-collapsed', !isCollapsed);
+    
+    // Update toggle button aria-expanded
+    const btn = document.getElementById('sidebarToggleBtn');
+    if (btn) btn.setAttribute('aria-expanded', String(isCollapsed));
+    
+    // Legacy: also check for old app-shell-rail if it exists
     const rail = document.querySelector('.app-shell-rail');
     const lessonsNav = document.querySelector('.lessons-navigator');
     
     // Always close lessons navigator first
     if (lessonsNav) lessonsNav.classList.remove('open');
     
-    // Toggle the main sidebar
+    // Toggle the main sidebar (legacy)
     if (rail) {
       rail.classList.toggle('open');
       console.log('[viewer] Sidebar', rail.classList.contains('open') ? 'opened' : 'closed');
+    } else {
+      console.log('[viewer] Sidebar', isCollapsed ? 'expanded' : 'collapsed');
     }
   }
 
@@ -57,12 +68,8 @@
     // Load content in iframe
     loadContent(src);
 
-    // Use icon-only mode instead of complete hide on desktop
-    if (window.innerWidth > 768) {
-      document.body.classList.add('app-shell-icon-only');
-    } else {
-      document.body.classList.add('viewer-sidebar-collapsed');
-    }
+    // Start with collapsed sidebar for viewer
+    document.documentElement.classList.add('tc-collapsed');
 
     // Setup event handlers
     setupEventHandlers();

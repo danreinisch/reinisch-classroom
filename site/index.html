@@ -6,6 +6,7 @@
     <title>Reinisch Classroom – Home</title>
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="stylesheet" href="/assets/css/rc-theme.css" />
+    <link rel="stylesheet" href="/web/teacher-shell.css" />
     <style>
       body {
         background:
@@ -15,19 +16,9 @@
           linear-gradient(180deg, var(--rc-base), #0c1322 60%, #0b0f14);
       }
 
-      .home-container {
-        min-height: 100vh;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        padding: 2rem;
-        gap: 2rem;
-      }
-
       .home-header {
         text-align: center;
-        margin-bottom: 1rem;
+        margin-bottom: 1.5rem;
       }
 
       .home-title {
@@ -45,17 +36,13 @@
         font-size: 1.25rem;
         color: var(--rc-ink-dim);
         margin: 0;
-        max-width: 600px;
-        margin-left: auto;
-        margin-right: auto;
       }
 
       .home-nav {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
         gap: 1.25rem;
-        width: 100%;
-        max-width: 900px;
+        margin-top: 2rem;
       }
 
       .home-card {
@@ -95,17 +82,9 @@
         line-height: 1.5;
       }
 
-      .home-footer {
-        text-align: center;
-        margin-top: 2rem;
-        color: var(--rc-muted);
-        font-size: 0.875rem;
-      }
-
       @media (max-width: 768px) {
         .home-nav {
           grid-template-columns: 1fr;
-          max-width: 400px;
         }
 
         .home-card {
@@ -113,49 +92,82 @@
         }
       }
     </style>
-
-    <link rel="stylesheet" href="/assets/css/app-shell.css" />
   </head>
   <body>
-    <div class="home-container">
-      <header class="home-header">
-        <h1 class="home-title">Reinisch Classroom</h1>
-        <p class="home-subtitle">Empowering Every Learner Through Accessible Education</p>
+    <div class="tc-app">
+      <header class="tc-topbar">
+        <button class="tc-btn" id="tcSidebarToggle" aria-label="Toggle sidebar" aria-expanded="false">☰</button>
+        <a class="tc-btn" href="/" aria-label="Home">🏠</a>
+        <div class="tc-title">Reinisch Classroom</div>
       </header>
 
-      <nav class="home-nav">
-        <a class="home-card" href="/language-arts/">
-          <h2 class="home-card-title">Language Arts</h2>
-          <p class="home-card-desc">
-            Explore literature, reading comprehension, and writing skills
-          </p>
-        </a>
+      <div class="tc-shell">
+        <aside class="tc-sidebar" aria-label="Navigation">
+          <nav class="tc-nav">
+            <a href="/" data-href="/">
+              <span class="tc-icon">🏠</span>
+              <span class="tc-label">Home</span>
+            </a>
+            <a href="/language-arts/" data-href="/language-arts/">
+              <span class="tc-icon">📖</span>
+              <span class="tc-label">Language Arts</span>
+            </a>
+            <a href="/life-skills/" data-href="/life-skills/">
+              <span class="tc-icon">🧠</span>
+              <span class="tc-label">Life Skills</span>
+            </a>
+            <a href="/math-toolkit/" data-href="/math-toolkit/">
+              <span class="tc-icon">🔢</span>
+              <span class="tc-label">Math Toolkit</span>
+            </a>
+            <a href="/teacher/" data-href="/teacher/">
+              <span class="tc-icon">👨‍🏫</span>
+              <span class="tc-label">Teacher</span>
+            </a>
+            <a href="/student/" data-href="/student/">
+              <span class="tc-icon">🎓</span>
+              <span class="tc-label">Student</span>
+            </a>
+          </nav>
+        </aside>
 
-        <a class="home-card" href="/life-skills/">
-          <h2 class="home-card-title">Life Skills</h2>
-          <p class="home-card-desc">Build independence through practical daily living skills</p>
-        </a>
+        <main class="tc-main">
+          <header class="home-header">
+            <h1 class="home-title">Reinisch Classroom</h1>
+            <p class="home-subtitle">Empowering Every Learner Through Accessible Education</p>
+          </header>
 
-        <a class="home-card" href="/math-toolkit/">
-          <h2 class="home-card-title">Math Toolkit</h2>
-          <p class="home-card-desc">Interactive math tools and learning resources</p>
-        </a>
+          <nav class="home-nav">
+            <a class="home-card" href="/language-arts/">
+              <h2 class="home-card-title">Language Arts</h2>
+              <p class="home-card-desc">
+                Explore literature, reading comprehension, and writing skills
+              </p>
+            </a>
 
-        <a class="home-card" href="/teacher/">
-          <h2 class="home-card-title">Teacher Center</h2>
-          <p class="home-card-desc">Manage students, goals, and assignments</p>
-        </a>
-      </nav>
+            <a class="home-card" href="/life-skills/">
+              <h2 class="home-card-title">Life Skills</h2>
+              <p class="home-card-desc">Build independence through practical daily living skills</p>
+            </a>
 
-      <footer class="home-footer">
-        <p>Use the navigation rail on the left to quickly access all sections</p>
-      </footer>
+            <a class="home-card" href="/math-toolkit/">
+              <h2 class="home-card-title">Math Toolkit</h2>
+              <p class="home-card-desc">Interactive math tools and learning resources</p>
+            </a>
+
+            <a class="home-card" href="/teacher/">
+              <h2 class="home-card-title">Teacher Center</h2>
+              <p class="home-card-desc">Manage students, goals, and assignments</p>
+            </a>
+          </nav>
+        </main>
+      </div>
     </div>
 
     <!-- Legacy viewer compatibility redirect -->
     <script src="/assets/js/viewer-compat.js"></script>
 
-    <!-- Global App Shell JS -->
-    <script defer src="/assets/js/app-shell.js"></script>
+    <!-- Teacher Shell JS -->
+    <script defer src="/web/student-shell.js"></script>
   </body>
 </html>

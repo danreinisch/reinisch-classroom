@@ -7,7 +7,7 @@
 
     <!-- RC Theme Design System -->
     <link rel="stylesheet" href="/assets/css/rc-theme.css" />
-    <link rel="stylesheet" href="/assets/css/app-shell.css" />
+    <link rel="stylesheet" href="/web/teacher-shell.css" />
 
     <style>
       /* Link styling for rc-card */
@@ -18,40 +18,89 @@
       }
 
       /* Main content styling */
-      main {
-        padding-top: 2rem;
+      .content-wrapper {
+        padding-top: 1rem;
         text-align: center;
       }
     </style>
   </head>
   <body>
-    <main class="rc-container">
-      <h1 class="rc-heading">Language Arts</h1>
-      <p class="rc-muted">
-        Choose a book or open the toolkit for skills reference &amp; mini-lessons.
-      </p>
+    <div class="tc-app">
+      <header class="tc-topbar">
+        <button class="tc-btn" id="tcSidebarToggle" aria-label="Toggle sidebar" aria-expanded="false">☰</button>
+        <a class="tc-btn" href="/" aria-label="Home">🏠</a>
+        <div class="tc-title">Language Arts</div>
+      </header>
 
-      <div style="margin-bottom: 1.5rem">
-        <a class="rc-btn primary" href="/language-arts/toolkit/index.html">Language Arts Toolkit</a>
+      <div class="tc-shell">
+        <aside class="tc-sidebar" aria-label="Navigation">
+          <nav class="tc-nav">
+            <a href="/" data-href="/">
+              <span class="tc-icon">🏠</span>
+              <span class="tc-label">Home</span>
+            </a>
+            <a href="/language-arts/" data-href="/language-arts/">
+              <span class="tc-icon">📖</span>
+              <span class="tc-label">Language Arts</span>
+            </a>
+            <a href="/language-arts/toolkit/" data-href="/language-arts/toolkit/">
+              <span class="tc-icon">📚</span>
+              <span class="tc-label">Toolkit</span>
+            </a>
+            <a href="/language-arts/assignment-hub/" data-href="/language-arts/assignment-hub/">
+              <span class="tc-icon">📋</span>
+              <span class="tc-label">Assignment Hub</span>
+            </a>
+            <a href="/language-arts/a-door-into-time/" data-href="/language-arts/a-door-into-time/">
+              <span class="tc-icon">📕</span>
+              <span class="tc-label">A Door Into Time</span>
+            </a>
+            <a href="/language-arts/lost-in-kragdon-ah/" data-href="/language-arts/lost-in-kragdon-ah/">
+              <span class="tc-icon">📗</span>
+              <span class="tc-label">Lost in Kragdon-ah</span>
+            </a>
+            <a href="/language-arts/return-from-kragdon-ah/" data-href="/language-arts/return-from-kragdon-ah/">
+              <span class="tc-icon">📘</span>
+              <span class="tc-label">Return from Kragdon-ah</span>
+            </a>
+            <a href="/language-arts/warrior-of-kragdon-ah/" data-href="/language-arts/warrior-of-kragdon-ah/">
+              <span class="tc-icon">📙</span>
+              <span class="tc-label">Warrior of Kragdon-ah</span>
+            </a>
+          </nav>
+        </aside>
+
+        <main class="tc-main">
+          <div class="content-wrapper">
+            <h1 class="rc-heading">Language Arts</h1>
+            <p class="rc-muted">
+              Choose a book or open the toolkit for skills reference &amp; mini-lessons.
+            </p>
+
+            <div style="margin-bottom: 1.5rem">
+              <a class="rc-btn primary" href="/language-arts/toolkit/index.html">Language Arts Toolkit</a>
+            </div>
+
+            <div class="rc-grid rc-grid-auto">
+              <a class="rc-card" href="/language-arts/a-door-into-time/index.html">
+                <strong>A Door Into Time</strong>
+              </a>
+              <a class="rc-card" href="/language-arts/lost-in-kragdon-ah/index.html">
+                <strong>Lost in Kragdon-ah</strong>
+              </a>
+              <a class="rc-card" href="/language-arts/return-from-kragdon-ah/index.html">
+                <strong>Return from Kragdon-ah</strong>
+              </a>
+              <a class="rc-card" href="/language-arts/warrior-of-kragdon-ah/index.html">
+                <strong>Warrior of Kragdon-ah</strong>
+              </a>
+            </div>
+          </div>
+        </main>
       </div>
+    </div>
 
-      <div class="rc-grid rc-grid-auto">
-        <a class="rc-card" href="/language-arts/a-door-into-time/index.html">
-          <strong>A Door Into Time</strong>
-        </a>
-        <a class="rc-card" href="/language-arts/lost-in-kragdon-ah/index.html">
-          <strong>Lost in Kragdon-ah</strong>
-        </a>
-        <a class="rc-card" href="/language-arts/return-from-kragdon-ah/index.html">
-          <strong>Return from Kragdon-ah</strong>
-        </a>
-        <a class="rc-card" href="/language-arts/warrior-of-kragdon-ah/index.html">
-          <strong>Warrior of Kragdon-ah</strong>
-        </a>
-      </div>
-    </main>
-
-    <script defer src="/assets/js/app-shell.js"></script>
+    <script defer src="/web/student-shell.js"></script>
     <script defer src="/assets/js/open-in-viewer.js"></script>
   </body>
 </html>

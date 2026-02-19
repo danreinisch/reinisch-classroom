@@ -7,12 +7,9 @@
 
   <!-- RC Theme Design System -->
   <link rel="stylesheet" href="/assets/css/rc-theme.css" />
-  <link rel="stylesheet" href="/assets/css/app-shell.css" />
+  <link rel="stylesheet" href="/web/teacher-shell.css" />
 
   <style>
-    /* Layout */
-    .container { max-width: 1100px; margin: 0 auto; padding: 1rem; }
-
     /* Grid of modules (dynamically populated by math-toolkit-loader.js) */
     .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; padding-top: 1rem; }
     .card-link { display: block; color: inherit; text-decoration: none; }
@@ -25,7 +22,7 @@
     .empty { border: 1px dashed var(--rc-border-strong); border-radius: var(--rc-radius); padding: 1rem; background: rgba(0,0,0,.18); color: var(--rc-ink-dim); }
 
     /* Search */
-    .controls { position: sticky; top: .75rem; display: flex; justify-content: flex-end; z-index: 1; }
+    .controls { position: sticky; top: .75rem; display: flex; justify-content: flex-end; z-index: 1; margin-bottom: 1rem; }
     .search { padding: 0.6rem 0.75rem; border: 1px solid var(--rc-border); border-radius: var(--rc-radius); width: 260px; max-width: 100%; background: rgba(0,0,0,.22); color: var(--rc-ink); font-family: var(--rc-font); font-size: 16px; outline: none; transition: border-color 0.2s ease; }
     .search::placeholder { color: var(--rc-muted); }
     .search:focus { border-color: var(--rc-brand); }
@@ -34,24 +31,43 @@
   <script src="/assets/js/open-in-viewer.js"></script>
 </head>
 <body>
-  <div class="container">
-    <header class="container" style="padding-top:2.5rem;">
-      <h1 style="margin:0 0 .25rem; font-size: clamp(1.75rem, 3.5vw, 2.25rem);">Math Toolkit</h1>
-      <p style="margin:.25rem 0 1rem; color: var(--rc-ink-dim); max-width: 72ch;">Explore math modules. Click a card to open the module. Use Teacher Tools to add or update modules.</p>
-      <div class="controls">
-        <input class="search" id="search" type="search" placeholder="Search modules..." aria-label="Search modules" />
-      </div>
+  <div class="tc-app">
+    <header class="tc-topbar">
+      <button class="tc-btn" id="tcSidebarToggle" aria-label="Toggle sidebar" aria-expanded="false">☰</button>
+      <a class="tc-btn" href="/" aria-label="Home">🏠</a>
+      <div class="tc-title">Math Toolkit</div>
     </header>
 
-    <main class="container" style="padding-top:0;">
-      <div id="modules" class="grid" role="list"></div>
-      <div id="empty" class="empty" hidden>
-        <p>No modules yet. Teachers can upload modules via Teacher Tools.</p>
-      </div>
-    </main>
+    <div class="tc-shell">
+      <aside class="tc-sidebar" aria-label="Navigation">
+        <nav class="tc-nav">
+          <a href="/" data-href="/">
+            <span class="tc-icon">🏠</span>
+            <span class="tc-label">Home</span>
+          </a>
+          <a href="/math-toolkit/" data-href="/math-toolkit/">
+            <span class="tc-icon">🔢</span>
+            <span class="tc-label">Math Toolkit</span>
+          </a>
+        </nav>
+      </aside>
+
+      <main class="tc-main">
+        <h1 style="margin:0 0 .25rem; font-size: clamp(1.75rem, 3.5vw, 2.25rem);">Math Toolkit</h1>
+        <p style="margin:.25rem 0 1rem; color: var(--rc-ink-dim); max-width: 72ch;">Explore math modules. Click a card to open the module. Use Teacher Tools to add or update modules.</p>
+        <div class="controls">
+          <input class="search" id="search" type="search" placeholder="Search modules..." aria-label="Search modules" />
+        </div>
+
+        <div id="modules" class="grid" role="list"></div>
+        <div id="empty" class="empty" hidden>
+          <p>No modules yet. Teachers can upload modules via Teacher Tools.</p>
+        </div>
+      </main>
+    </div>
   </div>
 
   <script src="/assets/js/math-toolkit-loader.js"></script>
-  <script defer src="/assets/js/app-shell.js"></script>
+  <script defer src="/web/student-shell.js"></script>
 </body>
 </html>

@@ -7,30 +7,42 @@
   
   <!-- RC Theme Design System -->
   <link rel="stylesheet" href="/assets/css/rc-theme.css" />
-  <link rel="stylesheet" href="/assets/css/app-shell.css" />
-  <link rel="stylesheet" href="/assets/css/app-shell-layout.css" />
+  <link rel="stylesheet" href="/web/teacher-shell.css" />
   <link rel="stylesheet" href="/assets/css/viewer.css">
 </head>
 <body>
-  <div class="viewer-container">
-    <div class="viewer-controls" id="viewerControls">
-      <button class="viewer-btn" id="sidebarToggleBtn" aria-label="Toggle sidebar">☰</button>
-      <button class="viewer-btn" id="closeBtn" aria-label="Close viewer">Close</button>
-      <button class="viewer-btn" id="presentationModeBtn" aria-label="Toggle presentation mode">Presentation Mode</button>
-      <button class="viewer-btn" id="fullscreenBtn" aria-label="Toggle fullscreen">Full Screen</button>
-    </div>
-    <div class="viewer-frame" id="viewerFrame">
-      <iframe 
-        id="contentIframe" 
-        class="viewer-iframe"
-        sandbox="allow-scripts allow-same-origin allow-forms"
-        allow="fullscreen"
-        allowfullscreen
-        title="Content viewer"></iframe>
+  <div class="tc-app">
+    <div class="tc-shell" style="min-height: 100vh;">
+      <aside class="tc-sidebar" aria-label="Navigation">
+        <nav class="tc-nav">
+          <a href="/" data-href="/">
+            <span class="tc-icon">🏠</span>
+            <span class="tc-label">Home</span>
+          </a>
+        </nav>
+      </aside>
+
+      <div style="flex: 1; display: flex; flex-direction: column; min-height: 100vh;">
+        <div class="viewer-controls" id="viewerControls">
+          <button class="viewer-btn" id="sidebarToggleBtn" aria-label="Toggle sidebar">☰</button>
+          <button class="viewer-btn" id="closeBtn" aria-label="Close viewer">Close</button>
+          <button class="viewer-btn" id="presentationModeBtn" aria-label="Toggle presentation mode">Presentation Mode</button>
+          <button class="viewer-btn" id="fullscreenBtn" aria-label="Toggle fullscreen">Full Screen</button>
+        </div>
+        <div class="viewer-frame" id="viewerFrame" style="flex: 1;">
+          <iframe 
+            id="contentIframe" 
+            class="viewer-iframe"
+            sandbox="allow-scripts allow-same-origin allow-forms"
+            allow="fullscreen"
+            allowfullscreen
+            title="Content viewer"></iframe>
+        </div>
+      </div>
     </div>
   </div>
   
-  <script defer src="/assets/js/app-shell.js"></script>
+  <script defer src="/web/student-shell.js"></script>
   <script src="/assets/js/viewer.js"></script>
 </body>
 </html>
