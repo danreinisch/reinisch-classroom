@@ -3,16 +3,6 @@
   const DEFAULT = 'collapsed';
   const MOBILE_BREAKPOINT = 768;
 
-  // FOUC prevention: apply collapsed state immediately (before DOMContentLoaded)
-  try {
-    const saved = localStorage.getItem(KEY) || DEFAULT;
-    if (saved !== 'expanded') {
-      document.documentElement.classList.add('tc-collapsed');
-    }
-  } catch(_) {
-    document.documentElement.classList.add('tc-collapsed');
-  }
-
   function setCollapsed(isCollapsed){
     document.documentElement.classList.toggle('tc-collapsed', isCollapsed);
     try{ localStorage.setItem(KEY, isCollapsed ? 'collapsed' : 'expanded'); }catch(_){ /* noop */ }
@@ -47,16 +37,26 @@
     if (window.innerWidth <= MOBILE_BREAKPOINT) {
       setCollapsed(true);
     } else {
-      setCollapsed(getCollapsed());
+      // Only update if different from what the FOUC inline script already set
+      const shouldCollapse = getCollapsed();
+      const isAlreadyCollapsed = document.documentElement.classList.contains('tc-collapsed');
+      if (shouldCollapse !== isAlreadyCollapsed) {
+        setCollapsed(shouldCollapse);
+      } else {
+        // Sync the aria-expanded attribute without triggering a class toggle
+        const btn = document.getElementById('tcSidebarToggle');
+        if(btn) btn.setAttribute('aria-expanded', String(!shouldCollapse));
+      }
     }
 
-    const toggle = document.getElementById('tcSidebarToggle');
-    if(toggle){
-      toggle.addEventListener('click', ()=>{
+    // Use event delegation for hamburger toggle to avoid race condition with public-nav.js
+    document.addEventListener('click', (e) => {
+      const toggle = e.target.closest('#tcSidebarToggle');
+      if (toggle) {
         const isCollapsed = document.documentElement.classList.contains('tc-collapsed');
         setCollapsed(!isCollapsed);
-      });
-    }
+      }
+    });
 
     // Close sidebar when clicking a nav link on mobile
     document.querySelectorAll('.tc-nav a').forEach(link => {

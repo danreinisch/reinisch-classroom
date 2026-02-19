@@ -75,9 +75,10 @@ body {
   letter-spacing: 0.1px;
   
   background:
-    radial-gradient(1100px 700px at 16% 25%, rgba(0, 150, 90, 0.30), transparent 60%),
-    radial-gradient(1000px 650px at 70% 55%, rgba(0, 120, 170, 0.22), transparent 60%),
-    var(--rc-base);
+    url("/assets/bg/bg5e_soft_grid.svg") center/cover no-repeat fixed,
+    radial-gradient(1200px 800px at 20% -10%, rgba(34, 197, 94, 0.08), transparent 50%),
+    radial-gradient(1200px 800px at 120% 20%, rgba(6, 182, 212, 0.06), transparent 50%),
+    linear-gradient(180deg, #0b1220, #0c1322 60%, #0b0f14);
 }
 
 /* ============================================================
