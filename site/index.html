@@ -17,25 +17,22 @@
       }
 
       .home-header {
-        text-align: center;
-        margin-bottom: 1.5rem;
+        margin-bottom: 2rem;
       }
 
       .home-title {
-        font-size: clamp(2rem, 5vw, 3.5rem);
-        font-weight: 900;
-        margin: 0 0 16px 0;
-        letter-spacing: -0.5px;
-        background: linear-gradient(135deg, var(--rc-brand), var(--rc-brand-2));
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
+        font-size: 38px;
+        font-weight: 850;
+        margin: 0 0 12px 0;
+        letter-spacing: -0.02em;
+        color: var(--rc-ink);
       }
 
       .home-subtitle {
-        font-size: 1.25rem;
+        font-size: 1.15rem;
         color: var(--rc-ink-dim);
         margin: 0;
+        max-width: 72ch;
       }
 
       .home-nav {
@@ -48,24 +45,41 @@
       .home-card {
         display: flex;
         flex-direction: column;
-        gap: 12px;
-        padding: 32px 24px;
-        background: var(--rc-panel);
+        gap: 10px;
+        padding: 28px 24px;
+        background: var(--rc-glass);
         border: 1px solid var(--rc-border);
-        border-radius: 16px;
+        border-left: 3px solid transparent;
+        border-radius: 18px;
         text-decoration: none;
         transition: all 0.2s ease;
         box-shadow: var(--rc-shadow);
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
+        min-height: 140px;
       }
 
       .home-card:hover {
-        transform: translateY(-4px);
+        transform: translateY(-3px);
         border-color: rgba(34, 197, 94, 0.4);
         box-shadow:
           0 12px 48px rgba(0, 0, 0, 0.4),
           inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      }
+
+      .home-card:nth-child(1) { border-left-color: rgba(239, 68, 68, 0.5); }
+      .home-card:nth-child(1):hover { border-left-color: rgba(239, 68, 68, 0.8); }
+      .home-card:nth-child(2) { border-left-color: rgba(34, 197, 94, 0.5); }
+      .home-card:nth-child(2):hover { border-left-color: rgba(34, 197, 94, 0.8); }
+      .home-card:nth-child(3) { border-left-color: rgba(59, 130, 246, 0.5); }
+      .home-card:nth-child(3):hover { border-left-color: rgba(59, 130, 246, 0.8); }
+      .home-card:nth-child(4) { border-left-color: rgba(168, 85, 247, 0.5); }
+      .home-card:nth-child(4):hover { border-left-color: rgba(168, 85, 247, 0.8); }
+
+      .home-card-icon {
+        font-size: 2rem;
+        line-height: 1;
+        margin: 0;
       }
 
       .home-card-title {
@@ -139,6 +153,7 @@
 
           <nav class="home-nav">
             <a class="home-card" href="/language-arts/">
+              <div class="home-card-icon">📖</div>
               <h2 class="home-card-title">Language Arts</h2>
               <p class="home-card-desc">
                 Explore literature, reading comprehension, and writing skills
@@ -146,16 +161,19 @@
             </a>
 
             <a class="home-card" href="/life-skills/">
+              <div class="home-card-icon">🧠</div>
               <h2 class="home-card-title">Life Skills</h2>
               <p class="home-card-desc">Build independence through practical daily living skills</p>
             </a>
 
             <a class="home-card" href="/math-toolkit/">
+              <div class="home-card-icon">🔢</div>
               <h2 class="home-card-title">Math Toolkit</h2>
               <p class="home-card-desc">Interactive math tools and learning resources</p>
             </a>
 
             <a class="home-card" href="/teacher/">
+              <div class="home-card-icon">👨‍🏫</div>
               <h2 class="home-card-title">Teacher Center</h2>
               <p class="home-card-desc">Manage students, goals, and assignments</p>
             </a>
@@ -167,7 +185,7 @@
     <!-- Legacy viewer compatibility redirect -->
     <script src="/assets/js/viewer-compat.js"></script>
 
-    <!-- Teacher Shell JS -->
-    <script defer src="/web/student-shell.js"></script>
+    <!-- Public Shell JS -->
+    <script defer src="/web/public-shell.js"></script>
   </body>
 </html>

@@ -10,6 +10,9 @@
   <link rel="stylesheet" href="/web/teacher-shell.css" />
 
   <style>
+    /* Main heading */
+    h1 { margin:0 0 .25rem; font-size:2.25rem; font-weight:850; letter-spacing:-0.02em; }
+
     /* Grid of modules (dynamically populated by math-toolkit-loader.js) */
     .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; padding-top: 1rem; }
     .card-link { display: block; color: inherit; text-decoration: none; }
@@ -53,7 +56,7 @@
       </aside>
 
       <main class="tc-main">
-        <h1 style="margin:0 0 .25rem; font-size: clamp(1.75rem, 3.5vw, 2.25rem);">Math Toolkit</h1>
+        <h1>Math Toolkit</h1>
         <p style="margin:.25rem 0 1rem; color: var(--rc-ink-dim); max-width: 72ch;">Explore math modules. Click a card to open the module. Use Teacher Tools to add or update modules.</p>
         <div class="controls">
           <input class="search" id="search" type="search" placeholder="Search modules..." aria-label="Search modules" />
@@ -68,6 +71,6 @@
   </div>
 
   <script src="/assets/js/math-toolkit-loader.js"></script>
-  <script defer src="/web/student-shell.js"></script>
+  <script defer src="/web/public-shell.js"></script>
 </body>
 </html>

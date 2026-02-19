@@ -20,7 +20,75 @@
       /* Main content styling */
       .content-wrapper {
         padding-top: 1rem;
-        text-align: center;
+      }
+
+      .content-wrapper h1 {
+        font-size: 38px;
+        font-weight: 850;
+        margin: 0 0 12px 0;
+        letter-spacing: -0.02em;
+        color: var(--rc-ink);
+      }
+
+      .content-wrapper > p {
+        font-size: 1.05rem;
+        color: var(--rc-ink-dim);
+        margin: 0 0 1.5rem 0;
+        max-width: 72ch;
+      }
+
+      .book-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 1.25rem;
+        margin-top: 2rem;
+      }
+
+      .book-card {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 20px;
+        background: var(--rc-glass);
+        border: 1px solid var(--rc-border);
+        border-left: 3px solid transparent;
+        border-radius: 16px;
+        text-decoration: none;
+        color: inherit;
+        transition: all 0.2s ease;
+        box-shadow: var(--rc-shadow);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        min-height: 90px;
+      }
+
+      .book-card:hover {
+        transform: translateY(-3px);
+        border-color: rgba(34, 197, 94, 0.4);
+        box-shadow:
+          0 12px 48px rgba(0, 0, 0, 0.4),
+          inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      }
+
+      .book-card:nth-child(1) { border-left-color: rgba(239, 68, 68, 0.5); }
+      .book-card:nth-child(1):hover { border-left-color: rgba(239, 68, 68, 0.8); }
+      .book-card:nth-child(2) { border-left-color: rgba(34, 197, 94, 0.5); }
+      .book-card:nth-child(2):hover { border-left-color: rgba(34, 197, 94, 0.8); }
+      .book-card:nth-child(3) { border-left-color: rgba(59, 130, 246, 0.5); }
+      .book-card:nth-child(3):hover { border-left-color: rgba(59, 130, 246, 0.8); }
+      .book-card:nth-child(4) { border-left-color: rgba(168, 85, 247, 0.5); }
+      .book-card:nth-child(4):hover { border-left-color: rgba(168, 85, 247, 0.8); }
+
+      .book-icon {
+        font-size: 2.5rem;
+        line-height: 1;
+        flex-shrink: 0;
+      }
+
+      .book-title {
+        font-size: 1.1rem;
+        font-weight: 800;
+        margin: 0;
       }
     </style>
   </head>
@@ -72,27 +140,31 @@
 
         <main class="tc-main">
           <div class="content-wrapper">
-            <h1 class="rc-heading">Language Arts</h1>
-            <p class="rc-muted">
+            <h1>Language Arts</h1>
+            <p>
               Choose a book or open the toolkit for skills reference &amp; mini-lessons.
             </p>
 
             <div style="margin-bottom: 1.5rem">
-              <a class="rc-btn primary" href="/language-arts/toolkit/index.html">Language Arts Toolkit</a>
+              <a class="rc-btn primary" href="/language-arts/toolkit/index.html">📚 Language Arts Toolkit</a>
             </div>
 
-            <div class="rc-grid rc-grid-auto">
-              <a class="rc-card" href="/language-arts/a-door-into-time/index.html">
-                <strong>A Door Into Time</strong>
+            <div class="book-grid">
+              <a class="book-card" href="/language-arts/a-door-into-time/index.html">
+                <div class="book-icon">📕</div>
+                <strong class="book-title">A Door Into Time</strong>
               </a>
-              <a class="rc-card" href="/language-arts/lost-in-kragdon-ah/index.html">
-                <strong>Lost in Kragdon-ah</strong>
+              <a class="book-card" href="/language-arts/lost-in-kragdon-ah/index.html">
+                <div class="book-icon">📗</div>
+                <strong class="book-title">Lost in Kragdon-ah</strong>
               </a>
-              <a class="rc-card" href="/language-arts/return-from-kragdon-ah/index.html">
-                <strong>Return from Kragdon-ah</strong>
+              <a class="book-card" href="/language-arts/return-from-kragdon-ah/index.html">
+                <div class="book-icon">📘</div>
+                <strong class="book-title">Return from Kragdon-ah</strong>
               </a>
-              <a class="rc-card" href="/language-arts/warrior-of-kragdon-ah/index.html">
-                <strong>Warrior of Kragdon-ah</strong>
+              <a class="book-card" href="/language-arts/warrior-of-kragdon-ah/index.html">
+                <div class="book-icon">📙</div>
+                <strong class="book-title">Warrior of Kragdon-ah</strong>
               </a>
             </div>
           </div>
@@ -100,7 +172,7 @@
       </div>
     </div>
 
-    <script defer src="/web/student-shell.js"></script>
+    <script defer src="/web/public-shell.js"></script>
     <script defer src="/assets/js/open-in-viewer.js"></script>
   </body>
 </html>
