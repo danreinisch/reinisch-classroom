@@ -36,7 +36,6 @@
     { href: '/',                                   label: 'Home',                  icon: I.home   },
     { href: '/language-arts/',                     label: 'Language Arts',         icon: I.book   },
     { href: '/language-arts/toolkit/',             label: 'Toolkit',               icon: I.wrench },
-    { href: '/language-arts/assignment-hub/',      label: 'Assignment Hub',        icon: I.clip   },
     { href: '/language-arts/a-door-into-time/',    label: 'A Door Into Time',      icon: I.book   },
     { href: '/language-arts/lost-in-kragdon-ah/',  label: 'Lost in Kragdon-ah',    icon: I.book   },
     { href: '/language-arts/return-from-kragdon-ah/', label: 'Return from Kragdon-ah', icon: I.book },
