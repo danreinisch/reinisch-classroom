@@ -71,8 +71,10 @@ function countPresentations(siteState) {
   return counts;
 }
 
-function getCountdownSvg(type) {
-  var svgOpen = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">';
+function getCountdownSvg(type, size, extraAttr) {
+  var w = size || 20;
+  var extra = extraAttr ? ' ' + extraAttr : '';
+  var svgOpen = '<svg width="' + w + '" height="' + w + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"' + extra + '>';
   if (type === 'break') {
     return svgOpen + '<circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>';
   } else if (type === 'milestone') {
@@ -138,6 +140,10 @@ function renderCountdowns(homeConfig) {
   }
 }
 
+function escHtml(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 function renderStats(homeConfig, siteState) {
   var el = document.getElementById('home-stats');
   if (!el) return;
@@ -151,24 +157,29 @@ function renderStats(homeConfig, siteState) {
     return endDate >= today;
   });
 
+  var icoBook = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>';
+  var icoBulb = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"></path><path d="M9 18h6"></path><path d="M10 22h4"></path></svg>';
+  var icoPencil = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>';
+
   var parts = [];
   upcoming.slice(0, 2).forEach(function(item) {
     var eventDate = parseEventDate(item.date);
     var endDate = item.endDate ? parseEventDate(item.endDate) : null;
+    var ico = getCountdownSvg(item.type, 14, 'style="vertical-align:middle"');
     if (endDate && today >= eventDate && today <= endDate) {
-      parts.push(item.emoji + ' ' + item.label + ' \u2014 Enjoy!');
+      parts.push(ico + ' ' + escHtml(item.label) + ' \u2014 Enjoy!');
     } else {
       var daysLeft = Math.ceil((eventDate - today) / MS_PER_DAY);
-      parts.push(item.emoji + ' ' + daysLeft + ' days until ' + item.label);
+      parts.push(ico + ' ' + escHtml(daysLeft) + ' days until ' + escHtml(item.label));
     }
   });
 
-  parts.push('\uD83D\uDCDA ' + counts.books + ' Books');
-  parts.push('\uD83D\uDCA1 ' + counts.life + ' Life Skills');
-  parts.push('\u270F\uFE0F ' + counts.toolkit + ' Toolkit Lessons');
-  parts.push(counts.total + ' total presentations');
+  parts.push(icoBook + ' ' + escHtml(counts.books) + ' Books');
+  parts.push(icoBulb + ' ' + escHtml(counts.life) + ' Life Skills');
+  parts.push(icoPencil + ' ' + escHtml(counts.toolkit) + ' Toolkit Lessons');
+  parts.push(escHtml(counts.total) + ' total presentations');
 
-  el.textContent = parts.join(' \u00B7 ');
+  el.innerHTML = parts.join(' \u00B7 ');
 }
 
 function renderFocusCards(homeConfig) {

@@ -12,6 +12,9 @@
     <script src="/web/sidebar-init.js"></script>
     <script defer src="/web/home-dashboard.js"></script>
     <style>
+      /* Prevent tc-main from overflowing its flex bounds (ticker nowrap fix) */
+      .tc-main { min-width: 0; }
+
       /* Page-level body background (defensive override matching rc-theme.css) */
       body {
         background:
@@ -80,7 +83,7 @@
       /* This Week's Focus */
       .home-focus {
         display: grid;
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: 1fr 1fr 1fr;
         gap: 16px;
         margin-top: 32px;
       }
@@ -93,6 +96,9 @@
         -webkit-backdrop-filter: blur(8px);
       }
       .focus-label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
         font-size: 0.7rem;
         text-transform: uppercase;
         letter-spacing: 0.06em;
@@ -204,11 +210,29 @@
         letter-spacing: 0.01em;
       }
 
+      /* Footer 2-column row (quote + stats) */
+      .home-footer-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        margin-top: 32px;
+        align-items: start;
+      }
+      .home-footer-row .home-quote-section { margin-top: 0; }
+      .home-footer-row .home-stats { margin-top: 0; padding-top: 18px; }
+
       /* Mobile */
-      @media (max-width: 768px) {
+      @media (max-width: 767px) {
         .home-hero-title { font-size: 1.75rem; }
         .home-focus { grid-template-columns: 1fr; }
+        .home-footer-row { grid-template-columns: 1fr; }
         .ticker-content { font-size: 0.8rem; }
+      }
+
+      /* Tablet / Chromebook portrait (768px–1023px) */
+      @media (min-width: 768px) and (max-width: 1023px) {
+        .home-focus { grid-template-columns: 1fr 1fr; }
+        .home-focus-countdowns { grid-column: 1 / -1; }
       }
 
       /* Large classroom displays (1920px+) */
@@ -222,10 +246,11 @@
         .focus-unit { font-size: 1.4rem; }
         .focus-current { font-size: 1.15rem; }
         .focus-next { font-size: 1.1rem; }
-        .countdown-pill { font-size: 1.1rem; padding: 12px 20px; }
+        .countdown-card { font-size: 1.1rem; padding: 14px 18px; }
         .home-student-cta { font-size: 1.2rem; padding: 18px 24px; }
         .home-quote-body { font-size: 1.2rem; }
         .home-stats { font-size: 0.95rem; }
+        .home-footer-row { gap: 24px; }
       }
 
       /* 4K / Ultra-wide classroom displays (3000px+) */
@@ -235,9 +260,10 @@
         .home-hero-tagline { font-size: 1.8rem; }
         .ticker-content { font-size: 1.6rem; }
         .home-focus-card { padding: 36px; }
-        .countdown-pill { font-size: 1.3rem; padding: 16px 28px; }
+        .countdown-card { font-size: 1.3rem; padding: 18px 24px; }
         .home-student-cta { font-size: 1.5rem; padding: 24px 32px; }
         .home-quote-body { font-size: 1.5rem; }
+        .home-footer-row { gap: 32px; }
       }
 
       /* Calendar Countdowns - Taller cards with icons */
@@ -327,15 +353,10 @@
             </div>
           </div>
 
-          <!-- 3. Student Quick Login (above grid) -->
-          <a class="home-student-cta" href="/student/">
-            🎓 Students — Log in to your portal →
-          </a>
-
-          <!-- 4. 3-Column Dashboard Grid -->
+          <!-- 3. 3-Column Dashboard Grid -->
           <section class="home-focus" id="home-focus-section" style="display:none">
             <div class="home-focus-card" id="focus-la">
-              <div class="focus-label">📖 LANGUAGE ARTS</div>
+              <div class="focus-label"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg> LANGUAGE ARTS</div>
               <div class="focus-unit">Loading…</div>
               <div class="focus-current"></div>
               <div class="focus-divider"></div>
@@ -344,7 +365,7 @@
               <a class="focus-link" href="/language-arts/lost-in-kragdon-ah/">→ Open Unit</a>
             </div>
             <div class="home-focus-card" id="focus-life">
-              <div class="focus-label">💡 LIFE SKILLS</div>
+              <div class="focus-label"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"></path><path d="M9 18h6"></path><path d="M10 22h4"></path></svg> LIFE SKILLS</div>
               <div class="focus-current">Loading…</div>
               <div class="focus-divider"></div>
               <div class="focus-next-label">Up Next:</div>
@@ -352,19 +373,26 @@
               <a class="focus-link" href="/life-skills/">→ Open Life Skills</a>
             </div>
             <div class="home-focus-card home-focus-countdowns">
-              <div class="focus-label">📅 UPCOMING</div>
+              <div class="focus-label"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg> UPCOMING</div>
               <div id="home-countdowns" class="home-countdowns"></div>
             </div>
           </section>
 
-          <!-- 5. Daily Quote -->
-          <section class="home-quote-section">
-            <div class="home-quote-label">💡 Daily Inspiration</div>
-            <div id="daily-quote" class="home-quote-body">Loading…</div>
-          </section>
+          <!-- 4. Student Quick Login (below grid) -->
+          <a class="home-student-cta" href="/student/">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle;margin-right:6px"><path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c3 3 9 3 12 0v-5"></path></svg>Students — Log in to your portal →
+          </a>
 
-          <!-- 6. Stats + Countdown -->
-          <div class="home-stats" id="home-stats">Loading stats…</div>
+          <!-- 5. Footer row: Daily Quote + Stats -->
+          <div class="home-footer-row">
+            <section class="home-quote-section">
+              <div class="home-quote-label"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle;margin-right:4px"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg> DAILY INSPIRATION</div>
+              <div id="daily-quote" class="home-quote-body">Loading…</div>
+            </section>
+
+            <!-- Stats -->
+            <div class="home-stats" id="home-stats">Loading stats…</div>
+          </div>
 
         </main>
       </div>
