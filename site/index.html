@@ -86,6 +86,7 @@
         grid-template-columns: 1fr 1fr 1fr;
         gap: 16px;
         margin-top: 32px;
+        align-items: stretch; /* equal-height columns */
       }
       .home-focus-card {
         padding: 20px;
@@ -94,6 +95,12 @@
         border: 1px solid rgba(255, 255, 255, 0.08);
         backdrop-filter: blur(8px);
         -webkit-backdrop-filter: blur(8px);
+        transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+      }
+      .home-focus-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+        background: rgba(255, 255, 255, 0.05);
       }
       .focus-label {
         display: flex;
@@ -148,8 +155,9 @@
 
       /* Student Quick Login */
       .home-student-cta {
+        grid-column: 1 / -1; /* span full width of the 3-col grid */
         display: block;
-        margin-top: 32px;
+        margin-top: 0;
         padding: 14px 20px;
         border-radius: 12px;
         background: rgba(255, 255, 255, 0.03);
@@ -217,15 +225,29 @@
         gap: 16px;
         margin-top: 32px;
         align-items: start;
+        /* Glass panel treatment */
+        padding: 20px;
+        border-radius: 16px;
+        background: rgba(0, 0, 0, 0.18);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
       }
-      .home-footer-row .home-quote-section { margin-top: 0; }
-      .home-footer-row .home-stats { margin-top: 0; padding-top: 18px; }
+      .home-footer-row .home-quote-section {
+        margin-top: 0;
+        background: none;
+        border: none;
+        border-left: 3px solid rgba(148, 163, 184, 0.3);
+        border-radius: 0;
+        padding: 0 0 0 16px;
+      }
+      .home-footer-row .home-stats { margin-top: 0; padding-top: 0; text-align: left; }
 
       /* Mobile */
       @media (max-width: 767px) {
         .home-hero-title { font-size: 1.75rem; }
         .home-focus { grid-template-columns: 1fr; }
-        .home-footer-row { grid-template-columns: 1fr; }
+        .home-footer-row { grid-template-columns: 1fr; padding: 14px; }
         .ticker-content { font-size: 0.8rem; }
       }
 
@@ -233,6 +255,7 @@
       @media (min-width: 768px) and (max-width: 1023px) {
         .home-focus { grid-template-columns: 1fr 1fr; }
         .home-focus-countdowns { grid-column: 1 / -1; }
+        .home-student-cta { grid-column: 1 / -1; }
       }
 
       /* Large classroom displays (1920px+) */
@@ -246,8 +269,9 @@
         .focus-unit { font-size: 1.4rem; }
         .focus-current { font-size: 1.15rem; }
         .focus-next { font-size: 1.1rem; }
+        .focus-link { padding: 8px 0; font-size: 1.1rem; }
         .countdown-card { font-size: 1.1rem; padding: 14px 18px; }
-        .home-student-cta { font-size: 1.2rem; padding: 18px 24px; }
+        .home-student-cta { min-height: 56px; font-size: 1.2rem; padding: 18px 24px; }
         .home-quote-body { font-size: 1.2rem; }
         .home-stats { font-size: 0.95rem; }
         .home-footer-row { gap: 24px; }
@@ -260,8 +284,9 @@
         .home-hero-tagline { font-size: 1.8rem; }
         .ticker-content { font-size: 1.6rem; }
         .home-focus-card { padding: 36px; }
+        .focus-link { padding: 12px 0; font-size: 1.3rem; }
         .countdown-card { font-size: 1.3rem; padding: 18px 24px; }
-        .home-student-cta { font-size: 1.5rem; padding: 24px 32px; }
+        .home-student-cta { min-height: 72px; font-size: 1.5rem; padding: 24px 32px; }
         .home-quote-body { font-size: 1.5rem; }
         .home-footer-row { gap: 32px; }
       }
@@ -391,12 +416,12 @@
               <div class="focus-label"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg> UPCOMING</div>
               <div id="home-countdowns" class="home-countdowns"></div>
             </div>
-          </section>
 
-          <!-- 4. Student Quick Login (below grid) -->
-          <a class="home-student-cta" href="/student/">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle;margin-right:6px"><path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c3 3 9 3 12 0v-5"></path></svg>Students — Log in to your portal →
-          </a>
+            <!-- Student Quick Login (inside grid, full-width row) -->
+            <a class="home-student-cta" href="/student/">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle;margin-right:6px"><path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c3 3 9 3 12 0v-5"></path></svg>Students — Log in to your portal →
+            </a>
+          </section>
 
           <!-- 5. Footer row: Daily Quote + Stats -->
           <div class="home-footer-row">
