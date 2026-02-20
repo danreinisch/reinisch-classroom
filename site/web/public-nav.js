@@ -29,6 +29,7 @@
     { href: '/life-skills/',   label: 'Life Skills',   icon: I.life    },
     { href: '/math-toolkit/',  label: 'Math Toolkit',  icon: I.calc    },
     { href: '/teacher/',       label: 'Teacher',       icon: I.teacher },
+    { href: '/substitute/',    label: 'Substitute',    icon: I.clip    },
     { href: '/student/',       label: 'Student',       icon: I.student },
   ];
 
