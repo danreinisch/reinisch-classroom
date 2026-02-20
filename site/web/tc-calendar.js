@@ -141,18 +141,27 @@
 
     if (syncStatus === "synced") {
       statusEl.classList.add("synced");
-      iconEl.textContent = "🟢";
+      iconEl.innerHTML = '<svg width="10" height="10" viewBox="0 0 10 10" style="fill: var(--rc-success)" aria-hidden="true"><circle cx="5" cy="5" r="5"/></svg>';
       textEl.textContent = "Synced with Supabase";
     } else if (syncStatus === "error") {
       statusEl.classList.add("error");
-      iconEl.textContent = "🔴";
+      iconEl.innerHTML = '<svg width="10" height="10" viewBox="0 0 10 10" style="fill: var(--rc-danger)" aria-hidden="true"><circle cx="5" cy="5" r="5"/></svg>';
       textEl.textContent = "Sync error (using local data)";
     } else {
       statusEl.classList.add("local");
-      iconEl.textContent = "🟡";
+      iconEl.innerHTML = '<svg width="10" height="10" viewBox="0 0 10 10" style="fill: var(--rc-warning)" aria-hidden="true"><circle cx="5" cy="5" r="5"/></svg>';
       textEl.textContent = "Local mode";
     }
   }
+
+  /**
+   * SVG icons for event types (Lucide-style, inline for calendar cells)
+   */
+  const ICONS = {
+    assignment: '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 9.5-9.5z"/></svg>',
+    iep: '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>',
+    eval: '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
+  };
 
   /**
    * Load events from database
@@ -173,7 +182,7 @@
             type: "assignment",
             date: new Date(inst.due_at),
             title: assignment ? assignment.title : "Assignment",
-            icon: "📝",
+            icon: ICONS.assignment,
             id: inst.id
           });
         }
@@ -187,7 +196,7 @@
             type: "iep",
             date: new Date(student.iep_due),
             title: `IEP: ${student.name}`,
-            icon: "📋",
+            icon: ICONS.iep,
             id: `iep-${student.id}`
           });
         }
@@ -196,7 +205,7 @@
             type: "eval",
             date: new Date(student.eval_due),
             title: `Eval: ${student.name}`,
-            icon: "🔍",
+            icon: ICONS.eval,
             id: `eval-${student.id}`
           });
         }
@@ -213,7 +222,7 @@
                 type: "assignment",
                 date: new Date(draft.dueDate),
                 title: draft.title || "Draft Assignment",
-                icon: "📝",
+                icon: ICONS.assignment,
                 id: `draft-${draft.id}`,
                 isDraft: true
               });
@@ -359,8 +368,8 @@
         html += `<div class="cal-quarter-band ${quarter.toLowerCase()}"></div>`;
       }
 
-      html += `<div class="cal-day-num" style="position: relative; z-index: 1;">${date.getDate()}</div>`;
-      html += '<div class="cal-events" style="position: relative; z-index: 1;">';
+      html += `<div class="cal-day-num">${date.getDate()}</div>`;
+      html += '<div class="cal-events">';
       
       // Show up to 3 events
       const visibleEvents = events.slice(0, 3);
@@ -371,7 +380,7 @@
       }
       
       if (events.length > 3) {
-        html += `<div class="cal-event" style="font-size: 10px; opacity: 0.7;">+${events.length - 3} more</div>`;
+        html += `<div class="cal-event-overflow">+${events.length - 3} more</div>`;
       }
       
       html += '</div></div>';
@@ -421,6 +430,10 @@
         html += `<div class="cal-week-event ${event.type}" title="${escapeHtml(event.title)}">`;
         html += `${event.icon} ${escapeHtml(event.title)}`;
         html += '</div>';
+      }
+
+      if (events.length === 0) {
+        html += '<p class="cal-week-empty">No events</p>';
       }
 
       html += '</div></div>';
