@@ -1,0 +1,25 @@
+{
+  "weekOf": "2026-02-16",
+  "semesterEnd": "2026-06-05",
+  "languageArts": {
+    "unit": "Lost in Kragdon-ah",
+    "unitLink": "/language-arts/lost-in-kragdon-ah/",
+    "currentWeek": 5,
+    "currentTitle": "Sentence Fragments vs. Complete Sentences",
+    "currentLink": "/viewer/?src=%2Fpresentations%2Flost-in-kragdon-ah%2Fpresentation-05%2F",
+    "nextWeek": 6,
+    "nextTitle": "Sentence Fragments vs. Complete Sentences (Part 2)",
+    "nextLink": "/viewer/?src=%2Fpresentations%2Flost-in-kragdon-ah%2Fpresentation-06%2F"
+  },
+  "lifeSkills": {
+    "currentTitle": "Keeping the Job",
+    "currentLink": "/viewer/?src=%2Flife-skills%2Fpresentations%2Fpresentation-09%2F",
+    "nextTitle": "Understanding Your Workplace",
+    "nextLink": "/viewer/?src=%2Flife-skills%2Fpresentations%2Fpresentation-10%2F",
+    "unitLink": "/life-skills/"
+  },
+  "announcements": [
+    "Finals prep materials now available in A Door Into Time",
+    "New Life Skills content: Understanding Your Workplace coming next week"
+  ]
+}
