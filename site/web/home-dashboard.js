@@ -159,11 +159,12 @@ function renderFocusCards(homeConfig) {
   var lifeEl = document.getElementById('focus-life');
   if (lifeEl && ls) {
     var lifeCurrent = lifeEl.querySelector('.focus-current');
-    if (lifeCurrent) lifeCurrent.textContent = ls.currentTitle;
+    if (lifeCurrent) lifeCurrent.textContent = ls.currentTitle || 'Current lesson loading...';
     var lifeNext = lifeEl.querySelector('.focus-next');
-    if (lifeNext) lifeNext.textContent = ls.nextTitle;
+    if (lifeNext) lifeNext.textContent = ls.nextTitle || '';
     var lifeLink = lifeEl.querySelector('.focus-link');
     if (lifeLink && ls.unitLink) lifeLink.href = ls.unitLink;
+    lifeEl.style.display = '';
   }
 
   // Show the focus section now that data has loaded
@@ -247,7 +248,8 @@ function init() {
       renderCountdowns(homeConfig);
       renderStats(homeConfig, siteState);
     })
-    .catch(function() {
+    .catch(function(err) {
+      console.warn('[home-dashboard] Failed to load config:', err);
       var tickerEl = document.querySelector('.ticker-content');
       if (tickerEl) tickerEl.textContent = '\uD83D\uDCC5 Reinisch Classroom \u25C6 Language Arts \u25C6 Life Skills \u25C6 Math Toolkit';
       var statsEl = document.getElementById('home-stats');
