@@ -45,10 +45,6 @@
         margin-top: 20px;
       }
 
-      /* Ensure sidebar matches all other pages */
-      .tc-sidebar { width: var(--tc-side-w); }
-      html.tc-collapsed .tc-sidebar { width: var(--tc-rail-w); }
-
       /* Ticker bar */
       .ticker-bar {
         margin: 20px 0;
@@ -213,6 +209,35 @@
         .home-hero-title { font-size: 1.75rem; }
         .home-focus { grid-template-columns: 1fr; }
         .ticker-content { font-size: 0.8rem; }
+      }
+
+      /* Large classroom displays (1920px+) */
+      @media (min-width: 1920px) {
+        html { font-size: 20px; }
+        .home-hero-title { font-size: 3.5rem; }
+        .home-hero-tagline { font-size: 1.4rem; }
+        .ticker-content { font-size: 1.3rem; }
+        .home-focus { gap: 24px; }
+        .home-focus-card { padding: 28px; }
+        .focus-unit { font-size: 1.4rem; }
+        .focus-current { font-size: 1.15rem; }
+        .focus-next { font-size: 1.1rem; }
+        .countdown-pill { font-size: 1.1rem; padding: 12px 20px; }
+        .home-student-cta { font-size: 1.2rem; padding: 18px 24px; }
+        .home-quote-body { font-size: 1.2rem; }
+        .home-stats { font-size: 0.95rem; }
+      }
+
+      /* 4K / Ultra-wide classroom displays (3000px+) */
+      @media (min-width: 3000px) {
+        html { font-size: 28px; }
+        .home-hero-title { font-size: 5rem; }
+        .home-hero-tagline { font-size: 1.8rem; }
+        .ticker-content { font-size: 1.6rem; }
+        .home-focus-card { padding: 36px; }
+        .countdown-pill { font-size: 1.3rem; padding: 16px 28px; }
+        .home-student-cta { font-size: 1.5rem; padding: 24px 32px; }
+        .home-quote-body { font-size: 1.5rem; }
       }
 
       /* Calendar Countdowns - Taller cards with icons */
