@@ -62,7 +62,7 @@
       .ticker-track {
         display: flex;
         white-space: nowrap;
-        animation: ticker-scroll 90s linear infinite;
+        animation: ticker-scroll 45s linear infinite;
       }
       .ticker-track:hover {
         animation-play-state: paused;
@@ -84,9 +84,9 @@
       /* This Week's Focus */
       .home-focus {
         display: grid;
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: 1fr 1fr 1fr;
         gap: 16px;
-        margin-top: 24px;
+        margin-top: 32px;
       }
       .home-focus-card {
         padding: 20px;
@@ -147,7 +147,7 @@
       /* Student Quick Login */
       .home-student-cta {
         display: block;
-        margin-top: 20px;
+        margin-top: 32px;
         padding: 14px 20px;
         border-radius: 12px;
         background: rgba(255, 255, 255, 0.03);
@@ -168,7 +168,7 @@
 
       /* Daily Quote */
       .home-quote-section {
-        margin-top: 20px;
+        margin-top: 32px;
         padding: 18px 20px;
         border-radius: 14px;
         background: rgba(255, 255, 255, 0.02);
@@ -200,16 +200,13 @@
 
       .focus-unit-hidden { display: none; }
       .home-stats {
-        margin-top: 20px;
+        margin-top: 32px;
         padding: 10px 0;
         font-size: 0.75rem;
         color: var(--rc-muted);
         text-align: center;
         letter-spacing: 0.01em;
       }
-
-      /* Constrain home page content width */
-      .home-content-wrap { max-width: 960px; }
 
       /* Mobile */
       @media (max-width: 768px) {
@@ -218,29 +215,54 @@
         .ticker-content { font-size: 0.8rem; }
       }
 
-      /* Calendar Countdowns */
+      /* Calendar Countdowns - Taller cards with icons */
       .home-countdowns {
         display: flex;
-        flex-wrap: wrap;
+        flex-direction: column;
         gap: 10px;
-        margin-top: 20px;
+        flex: 1;
       }
-      .countdown-pill {
-        display: inline-flex;
+      .home-focus-countdowns {
+        display: flex;
+        flex-direction: column;
+      }
+      .countdown-card {
+        display: flex;
         align-items: center;
-        gap: 6px;
-        padding: 8px 16px;
+        gap: 12px;
+        padding: 12px 16px;
         border-radius: 12px;
         background: rgba(255, 255, 255, 0.04);
         border: 1px solid rgba(255, 255, 255, 0.08);
-        font-size: 0.85rem;
-        color: var(--rc-ink);
         backdrop-filter: blur(8px);
         -webkit-backdrop-filter: blur(8px);
+        transition: all 0.2s ease;
       }
-      .countdown-pill .countdown-days {
-        font-weight: 700;
+      .countdown-card:hover {
+        background: rgba(255, 255, 255, 0.07);
+        border-color: rgba(148, 163, 184, 0.3);
+      }
+      .countdown-card-icon {
+        flex-shrink: 0;
+        color: rgba(148, 163, 184, 0.6);
+        transition: color 0.2s ease, filter 0.2s ease;
+      }
+      .countdown-card:hover .countdown-card-icon {
         color: rgba(147, 197, 253, 0.9);
+        filter: drop-shadow(0 0 4px rgba(147, 197, 253, 0.4));
+      }
+      .countdown-card-body { flex: 1; }
+      .countdown-card-label {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--rc-ink);
+        line-height: 1.3;
+      }
+      .countdown-card-days {
+        font-size: 0.8rem;
+        color: rgba(147, 197, 253, 0.85);
+        font-weight: 700;
+        margin-top: 2px;
       }
     </style>
   </head>
@@ -265,7 +287,6 @@
         </aside>
 
         <main class="tc-main">
-          <div class="home-content-wrap">
 
           <!-- 1. Hero Section -->
           <section class="home-hero">
@@ -281,7 +302,12 @@
             </div>
           </div>
 
-          <!-- 3. This Week's Focus -->
+          <!-- 3. Student Quick Login (above grid) -->
+          <a class="home-student-cta" href="/student/">
+            🎓 Students — Log in to your portal →
+          </a>
+
+          <!-- 4. 3-Column Dashboard Grid -->
           <section class="home-focus" id="home-focus-section" style="display:none">
             <div class="home-focus-card" id="focus-la">
               <div class="focus-label">📖 LANGUAGE ARTS</div>
@@ -300,15 +326,11 @@
               <div class="focus-next"></div>
               <a class="focus-link" href="/life-skills/">→ Open Life Skills</a>
             </div>
+            <div class="home-focus-card home-focus-countdowns">
+              <div class="focus-label">📅 UPCOMING</div>
+              <div id="home-countdowns" class="home-countdowns"></div>
+            </div>
           </section>
-
-          <!-- 3b. Calendar Countdowns -->
-          <div id="home-countdowns" class="home-countdowns"></div>
-
-          <!-- 4. Student Quick Login -->
-          <a class="home-student-cta" href="/student/">
-            🎓 Students — Log in to your portal →
-          </a>
 
           <!-- 5. Daily Quote -->
           <section class="home-quote-section">
@@ -319,7 +341,6 @@
           <!-- 6. Stats + Countdown -->
           <div class="home-stats" id="home-stats">Loading stats…</div>
 
-          </div>
         </main>
       </div>
     </div>

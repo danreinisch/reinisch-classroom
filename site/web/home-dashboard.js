@@ -71,6 +71,17 @@ function countPresentations(siteState) {
   return counts;
 }
 
+function getCountdownSvg(type) {
+  var svgOpen = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">';
+  if (type === 'break') {
+    return svgOpen + '<circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>';
+  } else if (type === 'milestone') {
+    return svgOpen + '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>';
+  }
+  // default: quarter → bar-chart
+  return svgOpen + '<line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>';
+}
+
 function renderCountdowns(homeConfig) {
   var el = document.getElementById('home-countdowns');
   if (!el) return;
@@ -87,24 +98,44 @@ function renderCountdowns(homeConfig) {
     var effectiveEnd = endDate || eventDate;
     if (effectiveEnd < today) return;
 
-    var pill = document.createElement('div');
-    pill.className = 'countdown-pill';
+    var card = document.createElement('div');
+    card.className = 'countdown-card';
+
+    var iconEl = document.createElement('div');
+    iconEl.className = 'countdown-card-icon';
+    iconEl.innerHTML = getCountdownSvg(item.type);
+
+    var bodyEl = document.createElement('div');
+    bodyEl.className = 'countdown-card-body';
+
+    var labelEl = document.createElement('div');
+    labelEl.className = 'countdown-card-label';
+
+    var daysEl = document.createElement('div');
+    daysEl.className = 'countdown-card-days';
 
     // Check if currently in a range event (e.g. Spring Break)
     if (endDate && today >= eventDate && today <= endDate) {
-      pill.textContent = item.emoji + ' ' + item.label + ' \u2014 Enjoy!';
+      labelEl.textContent = item.label;
+      daysEl.textContent = 'Enjoy!';
     } else {
       var daysLeft = Math.ceil((eventDate - today) / MS_PER_DAY);
-      var daysSpan = document.createElement('span');
-      daysSpan.className = 'countdown-days';
-      daysSpan.textContent = daysLeft + ' days';
-      pill.appendChild(document.createTextNode(item.emoji + ' '));
-      pill.appendChild(daysSpan);
-      pill.appendChild(document.createTextNode(' until ' + item.label));
+      labelEl.textContent = item.label;
+      daysEl.textContent = daysLeft + ' days';
     }
 
-    el.appendChild(pill);
+    bodyEl.appendChild(labelEl);
+    bodyEl.appendChild(daysEl);
+    card.appendChild(iconEl);
+    card.appendChild(bodyEl);
+    el.appendChild(card);
   });
+
+  // Ensure the focus section is visible when countdowns are present
+  if (el.children.length > 0) {
+    var focusSection = document.getElementById('home-focus-section');
+    if (focusSection) focusSection.style.display = '';
+  }
 }
 
 function renderStats(homeConfig, siteState) {
