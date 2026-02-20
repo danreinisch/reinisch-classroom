@@ -4,9 +4,9 @@
   "countdowns": [
     { "label": "End of Q3", "date": "2026-03-06", "emoji": "📊", "type": "quarter" },
     { "label": "Spring Break", "date": "2026-03-16", "endDate": "2026-03-20", "emoji": "🏖️", "type": "break" },
-    { "label": "St. Patrick's Day", "date": "2026-03-17", "emoji": "☘️", "type": "holiday" },
-    { "label": "Easter", "date": "2026-04-05", "emoji": "🐣", "type": "holiday" },
-    { "label": "Last Day of School", "date": "2026-05-20", "emoji": "🎉", "type": "milestone" }
+    { "label": "Easter Break", "date": "2026-04-03", "endDate": "2026-04-06", "emoji": "🐣", "type": "break" },
+    { "label": "Last Day of School", "date": "2026-05-20", "emoji": "🎉", "type": "milestone" },
+    { "label": "Graduation", "date": "2026-05-24", "emoji": "🎓", "type": "milestone" }
   ],
   "languageArts": {
     "unit": "Lost in Kragdon-ah",
