@@ -40,7 +40,7 @@
       .home-accent-line {
         width: 80px;
         height: 3px;
-        background: var(--rc-brand);
+        background: linear-gradient(90deg, rgba(148, 163, 184, 0.5), rgba(148, 163, 184, 0.1));
         border-radius: 2px;
         margin-top: 20px;
       }
@@ -48,10 +48,10 @@
       /* Ticker bar */
       .ticker-bar {
         margin: 20px -18px;
-        padding: 10px 0;
-        background: rgba(0, 0, 0, 0.25);
-        border-top: 1px solid rgba(255, 255, 255, 0.06);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        padding: 14px 0;
+        background: rgba(0, 0, 0, 0.35);
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
         overflow: hidden;
         position: relative;
       }
@@ -66,9 +66,11 @@
       .ticker-content {
         display: inline-block;
         padding: 0 2rem;
-        font-size: 0.85rem;
-        color: var(--rc-ink-dim);
-        letter-spacing: 0.01em;
+        font-size: 1rem;
+        font-family: 'Courier New', 'Consolas', monospace;
+        color: rgba(255, 255, 255, 0.75);
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
       }
       @keyframes ticker-scroll {
         0% { transform: translateX(0); }
@@ -94,7 +96,7 @@
         font-size: 0.7rem;
         text-transform: uppercase;
         letter-spacing: 0.06em;
-        color: var(--rc-brand);
+        color: rgba(156, 163, 175, 0.9);
         font-weight: 700;
         margin-bottom: 10px;
       }
@@ -130,7 +132,7 @@
         display: inline-block;
         margin-top: 12px;
         font-size: 0.85rem;
-        color: var(--rc-brand);
+        color: rgba(147, 197, 253, 0.85);
         text-decoration: none;
         font-weight: 600;
       }
@@ -167,13 +169,13 @@
         border-radius: 14px;
         background: rgba(255, 255, 255, 0.02);
         border: 1px solid rgba(255, 255, 255, 0.06);
-        border-left: 3px solid var(--rc-brand);
+        border-left: 3px solid rgba(148, 163, 184, 0.3);
       }
       .home-quote-label {
         font-size: 0.65rem;
         text-transform: uppercase;
         letter-spacing: 0.05em;
-        color: var(--rc-brand);
+        color: rgba(156, 163, 175, 0.9);
         font-weight: 700;
         margin-bottom: 10px;
       }
@@ -231,7 +233,7 @@
       }
       .countdown-pill .countdown-days {
         font-weight: 700;
-        color: var(--rc-brand);
+        color: rgba(147, 197, 253, 0.9);
       }
     </style>
   </head>
