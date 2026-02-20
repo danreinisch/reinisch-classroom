@@ -1,6 +1,11 @@
 {
   "weekOf": "2026-02-16",
   "semesterEnd": "2026-06-05",
+  "countdowns": [
+    { "label": "End of Q3", "date": "2026-03-06", "emoji": "📊", "type": "quarter" },
+    { "label": "Spring Break", "date": "2026-03-16", "endDate": "2026-03-20", "emoji": "🏖️", "type": "break" },
+    { "label": "Last Day of School", "date": "2026-05-20", "emoji": "🎉", "type": "milestone" }
+  ],
   "languageArts": {
     "unit": "Lost in Kragdon-ah",
     "unitLink": "/language-arts/lost-in-kragdon-ah/",

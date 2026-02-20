@@ -193,6 +193,29 @@
         letter-spacing: 0.01em;
       }
 
+      /* Countdowns */
+      .home-countdowns {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 20px;
+      }
+      .countdown-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 14px;
+        border-radius: var(--rc-radius-pill);
+        background: var(--rc-glass);
+        border: 1px solid var(--rc-glass-border);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        font-size: 0.82rem;
+        color: var(--rc-ink);
+        font-weight: 500;
+        letter-spacing: 0.01em;
+        white-space: nowrap;
+      }
+
       /* Mobile */
       @media (max-width: 768px) {
         .home-hero-title { font-size: 1.75rem; }
@@ -259,7 +282,10 @@
             </div>
           </section>
 
-          <!-- 4. Student Quick Login -->
+          <!-- 4. Countdowns -->
+          <div id="home-countdowns" class="home-countdowns"></div>
+
+          <!-- 5. Student Quick Login -->
           <a class="home-student-cta" href="/student/">
             🎓 Students — Log in to your portal →
           </a>

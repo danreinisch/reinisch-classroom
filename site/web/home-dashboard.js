@@ -65,15 +65,71 @@ function countPresentations(siteState) {
   return counts;
 }
 
+function getUpcomingCountdowns(countdowns) {
+  var today = new Date();
+  today.setHours(0, 0, 0, 0);
+  var upcoming = [];
+  for (var i = 0; i < countdowns.length; i++) {
+    var c = countdowns[i];
+    var startDate = new Date(c.date + 'T00:00:00');
+    var endDate = c.endDate ? new Date(c.endDate + 'T00:00:00') : null;
+    if (endDate && today >= startDate && today <= endDate) {
+      upcoming.push({ label: c.label, emoji: c.emoji, type: c.type, inProgress: true, daysLeft: 0 });
+    } else if (startDate > today) {
+      var daysLeft = Math.ceil((startDate - today) / (1000 * 60 * 60 * 24));
+      upcoming.push({ label: c.label, emoji: c.emoji, type: c.type, inProgress: false, daysLeft: daysLeft });
+    }
+  }
+  return upcoming;
+}
+
+function renderCountdowns(homeConfig) {
+  var el = document.getElementById('home-countdowns');
+  if (!el) return;
+  var countdowns = homeConfig.countdowns;
+  if (!countdowns || !countdowns.length) return;
+  var upcoming = getUpcomingCountdowns(countdowns);
+  if (!upcoming.length) {
+    el.style.display = 'none';
+    return;
+  }
+  el.innerHTML = '';
+  for (var i = 0; i < upcoming.length; i++) {
+    var c = upcoming[i];
+    var pill = document.createElement('span');
+    pill.className = 'countdown-pill';
+    pill.textContent = c.inProgress
+      ? c.emoji + ' ' + c.label + ' \u2014 Enjoy!'
+      : c.emoji + ' ' + c.daysLeft + ' day' + (c.daysLeft !== 1 ? 's' : '') + ' until ' + c.label;
+    el.appendChild(pill);
+  }
+}
+
 function renderStats(homeConfig, siteState) {
   var el = document.getElementById('home-stats');
   if (!el) return;
-  var semEnd = new Date(homeConfig.semesterEnd + 'T00:00:00');
   var today = new Date();
   today.setHours(0, 0, 0, 0);
-  var daysLeft = Math.ceil((semEnd - today) / (1000 * 60 * 60 * 24));
   var counts = countPresentations(siteState);
-  el.textContent = '\uD83D\uDCC5 ' + daysLeft + ' days until end of semester \u00B7 \uD83D\uDCDA ' + counts.books + ' Books \u00B7 \uD83D\uDCA1 ' + counts.life + ' Life Skills \u00B7 \u270F\uFE0F ' + counts.toolkit + ' Toolkit Lessons \u00B7 ' + counts.total + ' total presentations';
+  var countdownPart = '';
+  var countdowns = homeConfig.countdowns;
+  if (countdowns && countdowns.length) {
+    var upcoming = getUpcomingCountdowns(countdowns);
+    var parts = [];
+    for (var i = 0; i < Math.min(upcoming.length, 3); i++) {
+      var c = upcoming[i];
+      parts.push(c.inProgress
+        ? c.emoji + ' ' + c.label + ' \u2014 Enjoy!'
+        : c.emoji + ' ' + c.daysLeft + ' days until ' + c.label);
+    }
+    if (parts.length) countdownPart = parts.join(' \u00B7 ') + ' \u00B7 ';
+  }
+  if (!countdownPart) {
+    var semEnd = new Date(homeConfig.semesterEnd + 'T00:00:00');
+    var daysLeft = Math.ceil((semEnd - today) / (1000 * 60 * 60 * 24));
+    countdownPart = '\uD83D\uDCC5 ' + daysLeft + ' days until end of semester \u00B7 ';
+  }
+  el.textContent = countdownPart + '\uD83D\uDCDA ' + counts.books + ' Books \u00B7 \uD83D\uDCA1 ' + counts.life + ' Life Skills \u00B7 \u270F\uFE0F ' + counts.toolkit + ' Toolkit Lessons \u00B7 ' + counts.total + ' total presentations';
 }
 
 function renderFocusCards(homeConfig) {
@@ -131,6 +187,17 @@ function buildTicker(homeConfig, siteState) {
     items.push('\uD83D\uDCE2 ' + announcements[i]);
   }
 
+  var countdowns = homeConfig.countdowns;
+  if (countdowns && countdowns.length) {
+    var upcoming = getUpcomingCountdowns(countdowns);
+    for (var j = 0; j < Math.min(upcoming.length, 2); j++) {
+      var c = upcoming[j];
+      items.push(c.inProgress
+        ? c.emoji + ' ' + c.label + ' \u2014 Enjoy!'
+        : c.emoji + ' ' + c.daysLeft + ' days until ' + c.label);
+    }
+  }
+
   items.push('\u2728 ' + counts.total + ' presentations across all sections');
 
   var joined = items.join('  \u2022  ');
@@ -155,6 +222,7 @@ function init() {
       buildTicker(homeConfig, siteState);
       renderFocusCards(homeConfig);
       renderStats(homeConfig, siteState);
+      renderCountdowns(homeConfig);
     })
     .catch(function() {
       var tickerEl = document.querySelector('.ticker-content');
