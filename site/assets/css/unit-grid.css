@@ -1,7 +1,7 @@
 /* Shared styles for unit hub pages using unit-grid.js */
 .wrap{ max-width:1100px; margin:1rem auto; padding:0.5rem 1rem 0 }
 header{ margin-bottom:1.5rem }
-h1{ margin:.2rem 0 .3rem 0; font-size:2.25rem; font-weight:850; letter-spacing:-0.02em }
+h1{ margin:.2rem 0 .3rem 0; font-size:38px; line-height:1.05; font-weight:850; letter-spacing:-0.02em }
 .sub{ color:var(--rc-muted); margin:0 0 1.2rem 0 }
 .unit-subtitle{ font-size:1.05rem; color:var(--rc-ink-dim); margin:0; max-width:60ch }
 .grid{ display:grid; gap:16px; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); align-items:stretch }

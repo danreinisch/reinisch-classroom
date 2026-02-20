@@ -45,9 +45,13 @@
         margin-top: 20px;
       }
 
+      /* Ensure sidebar matches all other pages */
+      .tc-sidebar { width: var(--tc-side-w); }
+      html.tc-collapsed .tc-sidebar { width: var(--tc-rail-w); }
+
       /* Ticker bar */
       .ticker-bar {
-        margin: 20px -18px;
+        margin: 20px 0;
         padding: 14px 0;
         background: rgba(0, 0, 0, 0.35);
         border-top: 1px solid rgba(255, 255, 255, 0.08);

@@ -85,11 +85,11 @@
       const t = (titles[i-1] || '').trim();
       const l = (links[i-1]  || '').trim();
 
-      // Skip empty placeholder slots (no title and no link)
-      if (!t && !l) continue;
+      // Skip slots with no title — these are truly empty/placeholder
+      if (!t) continue;
 
-      const title = t || `Presentation ${i}`;
-      const sub   = l ? 'Open presentation' : 'Placeholder';
+      const title = t;
+      const sub   = l ? 'Open presentation' : 'Coming soon';
 
       let card;
       if (l){
