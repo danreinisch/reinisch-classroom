@@ -175,6 +175,70 @@
       white-space: nowrap;
     }
     
+    /* Command center 2-column grid */
+    .ov-command-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    @media (max-width: 767px) {
+      .ov-command-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Section heading */
+    .ov-section-title {
+      font-size: 20px;
+      margin-bottom: 12px;
+    }
+
+    /* Card sub-heading row */
+    .ov-card-header {
+      font-size: 16px;
+      margin: 0 0 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Action link (e.g. "View Calendar →") */
+    .ov-link {
+      color: rgba(56, 255, 166, 0.8);
+      font-size: 13px;
+      text-decoration: none;
+    }
+    .ov-link:hover {
+      text-decoration: underline;
+    }
+
+    /* Empty / success state */
+    .ov-card-empty {
+      color: rgba(34, 197, 94, 0.9);
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Error state */
+    .ov-card-error {
+      opacity: 0.7;
+      font-size: 13px;
+    }
+
+    /* Alert state (generic) */
+    .ov-card-alert {
+      font-size: 13px;
+      opacity: 0.9;
+    }
+
+    /* List body wrapper */
+    .ov-list-body {
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
     /* Responsive adjustments */
     @media (max-width: 1100px) {
       .rc-card > div[style*="grid-template-columns"] {
@@ -333,27 +397,27 @@
 
         <!-- Actionable Alerts -->
         <div style="margin-top: 20px;">
-          <h2 style="font-size: 20px; margin-bottom: 12px;">Command Center</h2>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+          <h2 class="ov-section-title">Command Center</h2>
+          <div class="ov-command-grid">
             <div class="rc-card" id="ovOverdueCard">
-              <h2 style="font-size: 16px; margin: 0 0 10px; display: flex; align-items: center; gap: 8px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> Overdue Items</h2>
+              <h2 class="ov-card-header"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> Overdue Items</h2>
               <div id="ovOverdueContent">Loading...</div>
             </div>
             <div class="rc-card" id="ovAtRiskCard">
-              <h2 style="font-size: 16px; margin: 0 0 10px; display: flex; align-items: center; gap: 8px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> At-Risk Students</h2>
+              <h2 class="ov-card-header"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> At-Risk Students</h2>
               <div id="ovAtRiskContent">Loading...</div>
             </div>
           </div>
         </div>
 
         <!-- Checklist + Feed -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px;">
+        <div class="ov-command-grid" style="margin-top: 14px;">
           <div class="rc-card" id="ovChecklistCard">
-            <h2 style="font-size: 16px; margin: 0 0 10px; display: flex; align-items: center; gap: 8px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg> Today's Checklist</h2>
+            <h2 class="ov-card-header"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg> Today's Checklist</h2>
             <div id="ovChecklistContent">Loading...</div>
           </div>
           <div class="rc-card" id="ovFeedCard">
-            <h2 style="font-size: 16px; margin: 0 0 10px; display: flex; align-items: center; gap: 8px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> Recent Activity</h2>
+            <h2 class="ov-card-header"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> Recent Activity</h2>
             <div id="ovFeedContent">Loading...</div>
           </div>
         </div>
@@ -362,8 +426,8 @@
         <div style="margin-top: 20px;">
           <div class="rc-card" style="padding: 16px;" id="ovCalendarCard">
             <div style="display: flex; justify-content: space-between; align-items: center;">
-              <h2 style="font-size: 16px; margin: 0; display: flex; align-items: center; gap: 8px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Calendar Snapshot</h2>
-              <a href="/teacher/calendar/" style="color: rgba(56,255,166,.8); font-size: 13px;">View Calendar →</a>
+              <h2 class="ov-card-header" style="margin-bottom: 0;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Calendar Snapshot</h2>
+              <a href="/teacher/calendar/" class="ov-link">View Calendar →</a>
             </div>
             <div id="ovCalendarContent" style="margin-top: 10px;">
               <div id="ovMiniCalendar" style="margin-bottom: 12px;">
@@ -378,7 +442,7 @@
 
         <!-- Quick Links -->
         <div style="margin-top: 20px;">
-          <h2 style="font-size: 20px; margin-bottom: 12px;">Quick Access</h2>
+          <h2 class="ov-section-title">Quick Access</h2>
           <div class="tc-quick-links" id="ovQuickLinks">
             <a href="/teacher/work/" class="tc-quick-link">
               <span class="tc-ql-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg></span>
