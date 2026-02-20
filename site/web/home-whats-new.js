@@ -38,8 +38,10 @@ function renderWhatsNew(data) {
     }
   }
 
-  // Sort by slot descending (most recent first within each batch already reversed above)
-  // Then take top 6
+  // Sort by slot descending (most recent = highest slot index)
+  items.sort(function(a, b) { return b.slot - a.slot; });
+
+  // Take top 6 most recent items
   const top6 = items.slice(0, 6);
 
   if (top6.length === 0) {
@@ -71,7 +73,8 @@ function renderQuote() {
   const container = document.getElementById('daily-quote');
   if (!container) return;
 
-  const q = QUOTES[Math.floor(Math.random() * QUOTES.length)];
+  const dayIndex = Math.floor(Date.now() / 86400000) % QUOTES.length;
+  const q = QUOTES[dayIndex];
   const p = document.createElement('p');
   p.className = 'home-quote-text';
   p.textContent = '\u201c' + q.text + '\u201d';
