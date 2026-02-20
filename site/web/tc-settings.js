@@ -151,6 +151,161 @@
   }
 
   /**
+   * Home config working copy (loaded from fetch + localStorage overlay)
+   */
+  var homeConfig = null;
+
+  /**
+   * Load home config: fetch base JSON, overlay localStorage if present
+   */
+  async function loadHomeConfig() {
+    try {
+      var res = await fetch('/assets/data/home-config.json?t=' + Date.now());
+      homeConfig = await res.json();
+    } catch (e) {
+      console.warn('[tc-settings] Could not fetch home-config.json, using empty config:', e);
+      homeConfig = { announcements: [], countdowns: [] };
+    }
+
+    // Overlay localStorage if present
+    try {
+      var raw = localStorage.getItem('rc_home_config');
+      if (raw) homeConfig = JSON.parse(raw);
+    } catch (e) { /* noop */ }
+
+    if (!Array.isArray(homeConfig.announcements)) homeConfig.announcements = [];
+    if (!Array.isArray(homeConfig.countdowns)) homeConfig.countdowns = [];
+
+    renderAnnouncements();
+    renderCountdownsTable();
+  }
+
+  /**
+   * Render announcements list into #announcementsList
+   */
+  function renderAnnouncements() {
+    var el = $('announcementsList');
+    if (!el) return;
+    if (!homeConfig || homeConfig.announcements.length === 0) {
+      el.innerHTML = '<p style="opacity:0.6; font-size:13px;">No announcements.</p>';
+      return;
+    }
+    var html = '';
+    homeConfig.announcements.forEach(function(text, i) {
+      html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">' +
+        '<span style="flex:1;font-size:13px;">' + escapeHtml(text) + '</span>' +
+        '<button class="rc-btn danger" style="font-size:12px;padding:6px 10px;" data-remove-announcement="' + i + '">Remove</button>' +
+        '</div>';
+    });
+    el.innerHTML = html;
+    el.querySelectorAll('[data-remove-announcement]').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        removeAnnouncement(parseInt(btn.dataset.removeAnnouncement, 10));
+      });
+    });
+  }
+
+  /**
+   * Add a new announcement from input
+   */
+  function addAnnouncement() {
+    var input = $('newAnnouncementInput');
+    if (!input) return;
+    var text = input.value.trim();
+    if (!text) return;
+    homeConfig.announcements.push(text);
+    input.value = '';
+    renderAnnouncements();
+  }
+
+  /**
+   * Remove announcement at index
+   */
+  function removeAnnouncement(index) {
+    homeConfig.announcements.splice(index, 1);
+    renderAnnouncements();
+  }
+
+  /**
+   * Render countdowns table into #countdownsBody
+   */
+  function renderCountdownsTable() {
+    var tbody = $('countdownsBody');
+    if (!tbody) return;
+    if (!homeConfig || homeConfig.countdowns.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="opacity:0.6; font-size:13px;">No countdown events.</td></tr>';
+      return;
+    }
+    var html = '';
+    homeConfig.countdowns.forEach(function(item, i) {
+      html += '<tr>' +
+        '<td>' + escapeHtml(item.label || '') + '</td>' +
+        '<td>' + escapeHtml(item.date || '') + '</td>' +
+        '<td>' + escapeHtml(item.endDate || '') + '</td>' +
+        '<td>' + escapeHtml(item.type || '') + '</td>' +
+        '<td><button class="rc-btn danger" style="font-size:12px;padding:6px 10px;" data-remove-countdown="' + i + '">Remove</button></td>' +
+        '</tr>';
+    });
+    tbody.innerHTML = html;
+    tbody.querySelectorAll('[data-remove-countdown]').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        removeCountdown(parseInt(btn.dataset.removeCountdown, 10));
+      });
+    });
+  }
+
+  /**
+   * Add a new countdown from the add-form inputs
+   */
+  function addCountdown() {
+    var label = $('newCountdownLabel');
+    var start = $('newCountdownStart');
+    var end = $('newCountdownEnd');
+    var type = $('newCountdownType');
+    if (!label || !start || !type) return;
+    var labelVal = label.value.trim();
+    var startVal = start.value.trim();
+    if (!labelVal || !startVal) return;
+    var item = { label: labelVal, date: startVal, type: type.value };
+    if (end && end.value.trim()) item.endDate = end.value.trim();
+    homeConfig.countdowns.push(item);
+    label.value = '';
+    start.value = '';
+    if (end) end.value = '';
+    renderCountdownsTable();
+  }
+
+  /**
+   * Remove countdown at index
+   */
+  function removeCountdown(index) {
+    homeConfig.countdowns.splice(index, 1);
+    renderCountdownsTable();
+  }
+
+  /**
+   * Save home config to localStorage (live preview)
+   */
+  function saveHomeConfig() {
+    localStorage.setItem('rc_home_config', JSON.stringify(homeConfig));
+    showToast('✓ Saved! Changes are live on the home page.', '#22c55e', '#0b1220');
+  }
+
+  /**
+   * Download home-config.json for committing to the repo
+   */
+  function downloadHomeConfig() {
+    var json = JSON.stringify(homeConfig, null, 2);
+    var blob = new Blob([json], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'home-config.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  /**
    * Update sync status indicator
    */
   function updateSyncStatus() {
@@ -500,6 +655,40 @@
     if (revealAllToggle) {
       revealAllToggle.addEventListener("change", toggleRevealAll);
     }
+
+    var addAnnouncementBtn = $('addAnnouncementBtn');
+    if (addAnnouncementBtn) {
+      addAnnouncementBtn.addEventListener('click', addAnnouncement);
+    }
+    var newAnnouncementInput = $('newAnnouncementInput');
+    if (newAnnouncementInput) {
+      newAnnouncementInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') addAnnouncement();
+      });
+    }
+
+    var saveHomeConfigAnnouncementsBtn = $('saveHomeConfigAnnouncementsBtn');
+    if (saveHomeConfigAnnouncementsBtn) {
+      saveHomeConfigAnnouncementsBtn.addEventListener('click', saveHomeConfig);
+    }
+    var downloadHomeConfigAnnouncementsBtn = $('downloadHomeConfigAnnouncementsBtn');
+    if (downloadHomeConfigAnnouncementsBtn) {
+      downloadHomeConfigAnnouncementsBtn.addEventListener('click', downloadHomeConfig);
+    }
+
+    var addCountdownBtn = $('addCountdownBtn');
+    if (addCountdownBtn) {
+      addCountdownBtn.addEventListener('click', addCountdown);
+    }
+
+    var saveHomeConfigCountdownsBtn = $('saveHomeConfigCountdownsBtn');
+    if (saveHomeConfigCountdownsBtn) {
+      saveHomeConfigCountdownsBtn.addEventListener('click', saveHomeConfig);
+    }
+    var downloadHomeConfigCountdownsBtn = $('downloadHomeConfigCountdownsBtn');
+    if (downloadHomeConfigCountdownsBtn) {
+      downloadHomeConfigCountdownsBtn.addEventListener('click', downloadHomeConfig);
+    }
   }
 
   /**
@@ -511,6 +700,7 @@
     updateSyncStatus();
     setupEventListeners();
     loadStudentPasswords();
+    loadHomeConfig();
     console.log("[tc-settings] Settings page initialized");
   }
 

@@ -252,6 +252,58 @@
           </div>
         </div>
 
+        <!-- Ticker / Announcements Manager -->
+        <div class="rc-card" style="margin-bottom: 16px;">
+          <h2 style="margin: 0 0 12px 0; font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.36 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.25 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.18 6.18l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg> 📡 Ticker / Announcements</h2>
+          <p style="margin: 0 0 12px 0; opacity: 0.85; font-size: 14px;">Manage the scrolling ticker announcements on the home page. Changes take effect immediately.</p>
+          <div id="announcementsList" style="margin-bottom: 12px;"></div>
+          <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap;">
+            <input type="text" id="newAnnouncementInput" class="rc-input" placeholder="New announcement…" style="flex: 1; min-width: 200px;" />
+            <button id="addAnnouncementBtn" class="rc-btn primary" style="font-size:12px;padding:6px 10px;">Add</button>
+          </div>
+          <div class="tc-actions">
+            <button id="saveHomeConfigAnnouncementsBtn" class="rc-btn primary">Save to Live Site</button>
+            <button id="downloadHomeConfigAnnouncementsBtn" class="rc-btn">Download home-config.json</button>
+          </div>
+        </div>
+
+        <!-- Countdown Events Manager -->
+        <div class="rc-card" style="margin-bottom: 16px;">
+          <h2 style="margin: 0 0 12px 0; font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> ⏱️ Countdown Events</h2>
+          <p style="margin: 0 0 12px 0; opacity: 0.85; font-size: 14px;">Manage countdown events shown on the home page dashboard. Changes take effect immediately.</p>
+          <div style="overflow-x: auto; margin-bottom: 12px;">
+            <table class="rc-table">
+              <thead>
+                <tr>
+                  <th>Label</th>
+                  <th>Start Date</th>
+                  <th>End Date</th>
+                  <th>Type</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="countdownsBody">
+                <!-- Populated by tc-settings.js -->
+              </tbody>
+            </table>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px;">
+            <input type="text" id="newCountdownLabel" class="rc-input" placeholder="Event name" style="flex: 2; min-width: 120px;" />
+            <input type="date" id="newCountdownStart" class="rc-input" style="flex: 1; min-width: 130px;" />
+            <input type="date" id="newCountdownEnd" class="rc-input" style="flex: 1; min-width: 130px;" />
+            <select id="newCountdownType" class="rc-select" style="flex: 1; min-width: 110px;">
+              <option value="quarter">quarter</option>
+              <option value="break">break</option>
+              <option value="milestone">milestone</option>
+            </select>
+            <button id="addCountdownBtn" class="rc-btn primary" style="font-size:12px;padding:6px 10px;">Add</button>
+          </div>
+          <div class="tc-actions">
+            <button id="saveHomeConfigCountdownsBtn" class="rc-btn primary">Save to Live Site</button>
+            <button id="downloadHomeConfigCountdownsBtn" class="rc-btn">Download home-config.json</button>
+          </div>
+        </div>
+
         <!-- Data Management -->
         <div class="rc-card" style="margin-bottom: 16px;">
           <h2 style="margin: 0 0 12px 0; font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg> Data Management</h2>
