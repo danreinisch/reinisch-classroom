@@ -278,7 +278,17 @@ function init() {
   renderDailyQuote();
 
   var t = '?t=' + Date.now();
-  var homeP = fetch('/assets/data/home-config.json' + t).then(function(r) { return r.json(); });
+
+  // Check localStorage override first (set by Teacher Center Settings)
+  var localConfig = null;
+  try {
+    var raw = localStorage.getItem('rc_home_config');
+    if (raw) localConfig = JSON.parse(raw);
+  } catch(_) { /* noop */ }
+
+  var homeP = localConfig
+    ? Promise.resolve(localConfig)
+    : fetch('/assets/data/home-config.json' + t).then(function(r) { return r.json(); });
   var stateP = fetch('/assets/data/site-state.json' + t).then(function(r) { return r.json(); });
 
   Promise.all([homeP, stateP])
