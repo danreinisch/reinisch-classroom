@@ -3,90 +3,20 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Teacher Center — Settings</title>  <link rel="stylesheet" href="/assets/css/rc-theme.css" />
+  <title>Teacher Center — Settings</title>
+  <link rel="stylesheet" href="/assets/css/rc-theme.css" />
 
   <link rel="stylesheet" href="/web/teacher-shell.css" />
   <style>
-    .tc-card {
-      border-radius: 14px;
-      padding: 16px;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      background: rgba(0, 0, 0, 0.18);
-      backdrop-filter: blur(10px);
+    .settings-form-group {
       margin-bottom: 16px;
     }
-    .tc-card h2 {
-      margin: 0 0 12px 0;
-      font-size: 18px;
-      font-weight: 700;
-    }
-    .tc-card p {
-      margin: 0 0 12px 0;
-      opacity: 0.85;
-      font-size: 14px;
-    }
-    .tc-form-group {
-      margin-bottom: 16px;
-    }
-    .tc-form-group label {
+    .settings-form-group label {
       display: block;
       margin-bottom: 6px;
       font-size: 13px;
       font-weight: 600;
       opacity: 0.9;
-    }
-    .tc-input {
-      width: 100%;
-      padding: 10px 12px;
-      border-radius: 10px;
-      border: 1px solid rgba(255, 255, 255, 0.16);
-      background: rgba(255, 255, 255, 0.06);
-      color: inherit;
-      font-family: inherit;
-      font-size: 14px;
-    }
-    .tc-input:focus {
-      outline: none;
-      border-color: rgba(59, 130, 246, 0.5);
-      background: rgba(255, 255, 255, 0.08);
-    }
-    .tc-btn {
-      padding: 10px 16px;
-      border-radius: 10px;
-      border: 1px solid rgba(255, 255, 255, 0.16);
-      background: rgba(255, 255, 255, 0.06);
-      color: inherit;
-      cursor: pointer;
-      font-family: inherit;
-      font-size: 14px;
-      font-weight: 600;
-    }
-    .tc-btn:hover {
-      background: rgba(255, 255, 255, 0.1);
-    }
-    .tc-btn.primary {
-      background: rgba(34, 197, 94, 0.18);
-      border-color: rgba(34, 197, 94, 0.35);
-    }
-    .tc-btn.primary:hover {
-      background: rgba(34, 197, 94, 0.25);
-    }
-    .tc-btn.danger {
-      background: rgba(239, 68, 68, 0.18);
-      border-color: rgba(239, 68, 68, 0.35);
-    }
-    .tc-btn.danger:hover {
-      background: rgba(239, 68, 68, 0.25);
-    }
-    .tc-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 3px 10px;
-      border-radius: 999px;
-      font-size: 12px;
-      border: 1px solid rgba(255, 255, 255, 0.14);
-      background: rgba(255, 255, 255, 0.06);
     }
     .tc-quarter-grid {
       display: grid;
@@ -95,9 +25,9 @@
     }
     .tc-quarter-item {
       padding: 12px;
-      border-radius: 10px;
+      border-radius: var(--rc-radius);
       background: rgba(255, 255, 255, 0.04);
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--rc-glass-border);
     }
     .tc-quarter-item label {
       display: block;
@@ -236,24 +166,24 @@
         <p>Configure your Teacher Center preferences and data settings.</p>
 
         <!-- Teacher Profile -->
-        <div class="tc-card">
-          <h2>👤 Teacher Profile</h2>
-          <div class="tc-form-group">
+        <div class="rc-card" style="margin-bottom: 16px;">
+          <h2 style="margin: 0 0 12px 0; font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Teacher Profile</h2>
+          <div class="settings-form-group">
             <label for="teacherNameInput">Teacher Name</label>
             <input
               type="text"
               id="teacherNameInput"
-              class="tc-input"
+              class="rc-input"
               placeholder="Enter your name"
             />
           </div>
-          <button id="saveTeacherNameBtn" class="tc-btn primary">Save Name</button>
+          <button id="saveTeacherNameBtn" class="rc-btn primary">Save Name</button>
         </div>
 
         <!-- Quarter Date Configuration -->
-        <div class="tc-card">
-          <h2>📅 Quarter Date Configuration</h2>
-          <p>
+        <div class="rc-card" style="margin-bottom: 16px;">
+          <h2 style="margin: 0 0 12px 0; font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Quarter Date Configuration</h2>
+          <p style="margin: 0 0 12px 0; opacity: 0.85; font-size: 14px;">
             Configure the date ranges for each quarter. These dates are used throughout the
             application for reporting and data filtering.
           </p>
@@ -264,11 +194,11 @@
               <div style="display: grid; gap: 8px;">
                 <div>
                   <label for="q1Start">Start Date</label>
-                  <input type="text" id="q1Start" class="tc-input" placeholder="Aug 16" />
+                  <input type="text" id="q1Start" class="rc-input" placeholder="Aug 16" />
                 </div>
                 <div>
                   <label for="q1End">End Date</label>
-                  <input type="text" id="q1End" class="tc-input" placeholder="Oct 17" />
+                  <input type="text" id="q1End" class="rc-input" placeholder="Oct 17" />
                 </div>
               </div>
             </div>
@@ -278,11 +208,11 @@
               <div style="display: grid; gap: 8px;">
                 <div>
                   <label for="q2Start">Start Date</label>
-                  <input type="text" id="q2Start" class="tc-input" placeholder="Oct 18" />
+                  <input type="text" id="q2Start" class="rc-input" placeholder="Oct 18" />
                 </div>
                 <div>
                   <label for="q2End">End Date</label>
-                  <input type="text" id="q2End" class="tc-input" placeholder="Dec 19" />
+                  <input type="text" id="q2End" class="rc-input" placeholder="Dec 19" />
                 </div>
               </div>
             </div>
@@ -292,11 +222,11 @@
               <div style="display: grid; gap: 8px;">
                 <div>
                   <label for="q3Start">Start Date</label>
-                  <input type="text" id="q3Start" class="tc-input" placeholder="Dec 20" />
+                  <input type="text" id="q3Start" class="rc-input" placeholder="Dec 20" />
                 </div>
                 <div>
                   <label for="q3End">End Date</label>
-                  <input type="text" id="q3End" class="tc-input" placeholder="Mar 6" />
+                  <input type="text" id="q3End" class="rc-input" placeholder="Mar 6" />
                 </div>
               </div>
             </div>
@@ -306,43 +236,90 @@
               <div style="display: grid; gap: 8px;">
                 <div>
                   <label for="q4Start">Start Date</label>
-                  <input type="text" id="q4Start" class="tc-input" placeholder="Mar 7" />
+                  <input type="text" id="q4Start" class="rc-input" placeholder="Mar 7" />
                 </div>
                 <div>
                   <label for="q4End">End Date</label>
-                  <input type="text" id="q4End" class="tc-input" placeholder="May 20" />
+                  <input type="text" id="q4End" class="rc-input" placeholder="May 20" />
                 </div>
               </div>
             </div>
           </div>
 
           <div class="tc-actions" style="margin-top: 16px;">
-            <button id="saveQuarterDatesBtn" class="tc-btn primary">Save Quarter Dates</button>
-            <button id="resetQuarterDatesBtn" class="tc-btn">Reset to Defaults</button>
+            <button id="saveQuarterDatesBtn" class="rc-btn primary">Save Quarter Dates</button>
+            <button id="resetQuarterDatesBtn" class="rc-btn">Reset to Defaults</button>
           </div>
         </div>
 
         <!-- Data Management -->
-        <div class="tc-card">
-          <h2>💾 Data Management</h2>
+        <div class="rc-card" style="margin-bottom: 16px;">
+          <h2 style="margin: 0 0 12px 0; font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg> Data Management</h2>
           
           <div style="margin-bottom: 16px;">
             <h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 700;">Supabase Connection</h3>
-            <span class="tc-pill" id="settingsSyncStatus">
-              <span id="settingsSyncIcon">🟡</span>
+            <span class="rc-pill" id="settingsSyncStatus" style="gap: 6px;">
+              <span id="settingsSyncIcon" style="width:8px;height:8px;border-radius:50%;display:inline-block;background:#f59e0b;flex-shrink:0;"></span>
               <span id="settingsSyncText">Local mode</span>
             </span>
           </div>
 
           <div class="tc-actions">
-            <button id="exportDataBtn" class="tc-btn">📥 Export All Data (JSON)</button>
-            <button id="clearDataBtn" class="tc-btn danger">🗑️ Clear Local Data</button>
+            <button id="exportDataBtn" class="rc-btn">Export All Data (JSON)</button>
+            <button id="clearDataBtn" class="rc-btn danger">Clear Local Data</button>
           </div>
           
           <p style="margin-top: 12px; font-size: 12px; opacity: 0.7;">
             <strong>Note:</strong> Clearing local data will remove all localStorage data with the
             <code>rc_</code> prefix. This action cannot be undone.
           </p>
+        </div>
+
+        <!-- Change Teacher Password -->
+        <div class="rc-card" style="margin-bottom: 16px;">
+          <h2 style="margin: 0 0 12px 0; font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Change Teacher Password</h2>
+          <p style="margin: 0 0 12px 0; opacity: 0.85; font-size: 14px;">Update your Teacher Center login password.</p>
+          <div class="settings-form-group">
+            <label for="currentPasswordInput">Current Password</label>
+            <input type="password" id="currentPasswordInput" class="rc-input" placeholder="Enter current password" />
+          </div>
+          <div class="settings-form-group">
+            <label for="newPasswordInput">New Password</label>
+            <input type="password" id="newPasswordInput" class="rc-input" placeholder="Enter new password" />
+          </div>
+          <div class="settings-form-group">
+            <label for="confirmPasswordInput">Confirm New Password</label>
+            <input type="password" id="confirmPasswordInput" class="rc-input" placeholder="Confirm new password" />
+          </div>
+          <div id="passwordChangeMsg" style="display:none; margin-bottom: 12px; font-size: 13px;"></div>
+          <button id="changePasswordBtn" class="rc-btn primary">Change Password</button>
+        </div>
+
+        <!-- Student Passwords -->
+        <div class="rc-card" style="margin-bottom: 16px;">
+          <h2 style="margin: 0 0 12px 0; font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg> Student Passwords</h2>
+          <p style="margin: 0 0 12px 0; opacity: 0.85; font-size: 14px;">View and manage student login credentials.</p>
+          <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 12px;">
+            <input type="text" id="studentPwSearch" class="rc-input" placeholder="Search by name or S-code…" style="max-width: 300px;" />
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; white-space: nowrap;">
+              <input type="checkbox" id="revealAllToggle" /> Reveal all
+            </label>
+          </div>
+          <div style="overflow-x: auto;">
+            <table class="rc-table" id="studentPasswordTable">
+              <thead>
+                <tr>
+                  <th>Student</th>
+                  <th>Code</th>
+                  <th>Password</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="studentPasswordBody">
+                <!-- Populated by tc-settings.js -->
+              </tbody>
+            </table>
+          </div>
         </div>
       </main>
     </div>
