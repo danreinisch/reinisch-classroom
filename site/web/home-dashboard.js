@@ -222,8 +222,8 @@ function buildTicker(homeConfig, siteState) {
 
   items.push('\u2728 ' + counts.total + ' presentations across all sections');
 
-  var joined = items.join('  \u2022  ');
-  var full = joined + '  \u2022  ' + joined;
+  var joined = items.join('  \u25C6  ');
+  var full = joined + '  \u25C6  ' + joined;
 
   var tickerEl = document.querySelector('.ticker-content');
   if (tickerEl) tickerEl.textContent = full;
@@ -248,7 +248,7 @@ function init() {
     })
     .catch(function() {
       var tickerEl = document.querySelector('.ticker-content');
-      if (tickerEl) tickerEl.textContent = '\uD83D\uDCC5 Reinisch Classroom \u2022 Language Arts \u2022 Life Skills \u2022 Math Toolkit';
+      if (tickerEl) tickerEl.textContent = '\uD83D\uDCC5 Reinisch Classroom \u25C6 Language Arts \u25C6 Life Skills \u25C6 Math Toolkit';
       var statsEl = document.getElementById('home-stats');
       if (statsEl) statsEl.textContent = '';
     });
