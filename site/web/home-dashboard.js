@@ -159,7 +159,7 @@ function renderFocusCards(homeConfig) {
   var lifeEl = document.getElementById('focus-life');
   if (lifeEl && ls) {
     var lifeCurrent = lifeEl.querySelector('.focus-current');
-    if (lifeCurrent) lifeCurrent.textContent = ls.currentTitle || 'Current lesson loading...';
+    if (lifeCurrent) lifeCurrent.textContent = ls.currentTitle || 'Check back soon';
     var lifeNext = lifeEl.querySelector('.focus-next');
     if (lifeNext) lifeNext.textContent = ls.nextTitle || '';
     var lifeLink = lifeEl.querySelector('.focus-link');

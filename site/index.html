@@ -208,6 +208,9 @@
         letter-spacing: 0.01em;
       }
 
+      /* Constrain home page content width */
+      .home-content-wrap { max-width: 960px; }
+
       /* Mobile */
       @media (max-width: 768px) {
         .home-hero-title { font-size: 1.75rem; }
@@ -262,6 +265,7 @@
         </aside>
 
         <main class="tc-main">
+          <div class="home-content-wrap">
 
           <!-- 1. Hero Section -->
           <section class="home-hero">
@@ -290,7 +294,6 @@
             </div>
             <div class="home-focus-card" id="focus-life">
               <div class="focus-label">💡 LIFE SKILLS</div>
-              <div class="focus-unit focus-unit-hidden"></div>
               <div class="focus-current">Loading…</div>
               <div class="focus-divider"></div>
               <div class="focus-next-label">Up Next:</div>
@@ -316,6 +319,7 @@
           <!-- 6. Stats + Countdown -->
           <div class="home-stats" id="home-stats">Loading stats…</div>
 
+          </div>
         </main>
       </div>
     </div>
