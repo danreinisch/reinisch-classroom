@@ -12,8 +12,17 @@
     <script src="/web/sidebar-init.js"></script>
     <script defer src="/web/home-dashboard.js"></script>
     <style>
+      /* Page-level body background (defensive override matching rc-theme.css) */
+      body {
+        background:
+          radial-gradient(1200px 800px at 20% -10%, rgba(34, 197, 94, 0.22), transparent 50%),
+          radial-gradient(1000px 600px at 50% 30%, rgba(34, 197, 94, 0.10), transparent 60%),
+          radial-gradient(1200px 800px at 120% 20%, rgba(6, 182, 212, 0.12), transparent 50%),
+          linear-gradient(180deg, #0b1220, #0c1322 60%, #0b0f14);
+      }
+
       /* Hero */
-      .home-hero { margin-bottom: 0; }
+      .home-hero { margin-bottom: 8px; padding-top: 0.5rem; }
       .home-hero-title {
         font-size: 2.25rem;
         font-weight: 850;
@@ -33,7 +42,7 @@
         height: 3px;
         background: var(--rc-brand);
         border-radius: 2px;
-        margin-top: 16px;
+        margin-top: 20px;
       }
 
       /* Ticker bar */
@@ -49,7 +58,7 @@
       .ticker-track {
         display: flex;
         white-space: nowrap;
-        animation: ticker-scroll 45s linear infinite;
+        animation: ticker-scroll 90s linear infinite;
       }
       .ticker-track:hover {
         animation-play-state: paused;
@@ -199,6 +208,31 @@
         .home-focus { grid-template-columns: 1fr; }
         .ticker-content { font-size: 0.8rem; }
       }
+
+      /* Calendar Countdowns */
+      .home-countdowns {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 20px;
+      }
+      .countdown-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 16px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        font-size: 0.85rem;
+        color: var(--rc-ink);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+      }
+      .countdown-pill .countdown-days {
+        font-weight: 700;
+        color: var(--rc-brand);
+      }
     </style>
   </head>
   <body>
@@ -238,7 +272,7 @@
           </div>
 
           <!-- 3. This Week's Focus -->
-          <section class="home-focus">
+          <section class="home-focus" id="home-focus-section" style="display:none">
             <div class="home-focus-card" id="focus-la">
               <div class="focus-label">📖 LANGUAGE ARTS</div>
               <div class="focus-unit">Loading…</div>
@@ -258,6 +292,9 @@
               <a class="focus-link" href="/life-skills/">→ Open Life Skills</a>
             </div>
           </section>
+
+          <!-- 3b. Calendar Countdowns -->
+          <div id="home-countdowns" class="home-countdowns"></div>
 
           <!-- 4. Student Quick Login -->
           <a class="home-student-cta" href="/student/">
