@@ -190,37 +190,38 @@ function buildTicker(homeConfig, siteState) {
   });
 
   var items = [
-    '\uD83D\uDCC5 ' + dateStr,
+    '[DATE] ' + dateStr,
   ];
   if (la.unit && la.currentWeek && la.currentTitle) {
-    items.push('\uD83D\uDCDA This Week: ' + la.unit + ' \u2014 Week ' + la.currentWeek + ': ' + la.currentTitle);
+    items.push('[LA] This Week: ' + la.unit + ' \u2014 Week ' + la.currentWeek + ': ' + la.currentTitle);
   }
   if (ls.currentTitle) {
-    items.push('\uD83D\uDCA1 Life Skills: ' + ls.currentTitle);
+    items.push('[LIFE] ' + ls.currentTitle);
   }
   if (la.unit && la.nextWeek && la.nextTitle) {
-    items.push('\uD83D\uDCDA Next Week: ' + la.unit + ' \u2014 Week ' + la.nextWeek + ': ' + la.nextTitle);
+    items.push('[LA] Next Week: ' + la.unit + ' \u2014 Week ' + la.nextWeek + ': ' + la.nextTitle);
   }
   if (ls.nextTitle) {
-    items.push('\uD83D\uDCA1 Up Next: ' + ls.nextTitle);
+    items.push('[LIFE] Up Next: ' + ls.nextTitle);
   }
 
   upcomingCountdowns.slice(0, 2).forEach(function(item) {
     var eventDate = parseEventDate(item.date);
     var endDate = item.endDate ? parseEventDate(item.endDate) : null;
+    var typeLabel = item.type ? '[' + item.type.toUpperCase() + '] ' : '';
     if (endDate && today >= eventDate && today <= endDate) {
-      items.push(item.emoji + ' ' + item.label + ' \u2014 Enjoy!');
+      items.push(typeLabel + item.label + ' \u2014 Enjoy!');
     } else {
       var daysLeft = Math.ceil((eventDate - today) / MS_PER_DAY);
-      items.push(item.emoji + ' ' + daysLeft + ' days until ' + item.label);
+      items.push(typeLabel + daysLeft + ' days until ' + item.label);
     }
   });
 
   for (var i = 0; i < announcements.length; i++) {
-    items.push('\uD83D\uDCE2 ' + announcements[i]);
+    items.push('[NEWS] ' + announcements[i]);
   }
 
-  items.push('\u2728 ' + counts.total + ' presentations across all sections');
+  items.push('[TOTAL] ' + counts.total + ' presentations across all sections');
 
   var joined = items.join('  \u25C6  ');
   var full = joined + '  \u25C6  ' + joined;
