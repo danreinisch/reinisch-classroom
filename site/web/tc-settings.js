@@ -241,7 +241,23 @@
   }
 
   /**
-   * Escape HTML to prevent XSS
+   * Show a temporary toast notification
+   * @param {string} text - Message to display
+   * @param {string} bg - Background color
+   * @param {string} color - Text color
+   */
+  function showToast(text, bg, color) {
+    const msg = document.createElement("div");
+    msg.textContent = text;
+    msg.style.cssText = `position:fixed;bottom:24px;right:24px;background:${bg};color:${color};padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;z-index:9999;`;
+    document.body.appendChild(msg);
+    setTimeout(() => msg.remove(), 2000);
+  }
+
+  /**
+   * Escape HTML to prevent XSS injection in dynamically rendered content
+   * @param {string} str - Raw string to escape
+   * @returns {string} HTML-safe string
    */
   function escapeHtml(str) {
     const div = document.createElement('div');
@@ -356,11 +372,10 @@
       // Refresh table
       await loadStudentPasswords();
 
-      // Show brief confirmation
-      alert(`Password for ${studentCode} reset to default.`);
+      showToast(`Password for ${studentCode} reset to default.`, "#22c55e", "#0b1220");
     } catch (error) {
       console.error("[tc-settings] Error resetting student password:", error);
-      alert("Error resetting password. Check console for details.");
+      showToast("Error resetting password. Check console for details.", "#ef4444", "#fff");
     }
   }
 
@@ -370,16 +385,10 @@
   async function copyPassword(password) {
     try {
       await navigator.clipboard.writeText(password);
-      // Brief visual feedback via a temporary message
-      const msg = document.createElement("div");
-      msg.textContent = "Copied!";
-      msg.style.cssText =
-        "position:fixed;bottom:24px;right:24px;background:#22c55e;color:#0b1220;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;z-index:9999;";
-      document.body.appendChild(msg);
-      setTimeout(() => msg.remove(), 1800);
+      showToast("Copied!", "#22c55e", "#0b1220");
     } catch (error) {
       console.error("[tc-settings] Clipboard write failed:", error);
-      alert("Could not copy to clipboard.");
+      showToast("Could not copy to clipboard.", "#ef4444", "#fff");
     }
   }
 
