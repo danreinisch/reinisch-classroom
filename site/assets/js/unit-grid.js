@@ -110,9 +110,11 @@
         card.setAttribute('aria-disabled', 'true');
       }
 
+      const iconSvg = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>';
+      const ic = document.createElement('div'); ic.className = 'card-icon'; ic.innerHTML = iconSvg;
       const tt = document.createElement('div'); tt.className = 't'; tt.textContent = title;
       const ss = document.createElement('div'); ss.className = 's'; ss.textContent = sub;
-      card.appendChild(tt); card.appendChild(ss);
+      card.appendChild(ic); card.appendChild(tt); card.appendChild(ss);
       frag.appendChild(card);
     }
     root.innerHTML = '';
