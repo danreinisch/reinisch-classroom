@@ -35,7 +35,6 @@
         font-size: 1.05rem;
         color: var(--rc-ink-dim);
         margin: 8px 0 0;
-        max-width: 52ch;
       }
       .home-accent-line {
         width: 80px;
@@ -62,7 +61,7 @@
       .ticker-track {
         display: flex;
         white-space: nowrap;
-        animation: ticker-scroll 90s linear infinite;
+        animation: ticker-scroll 35s linear infinite;
       }
       .ticker-track:hover {
         animation-play-state: paused;
@@ -208,9 +207,6 @@
         letter-spacing: 0.01em;
       }
 
-      /* Constrain home page content width */
-      .home-content-wrap { max-width: 960px; }
-
       /* Mobile */
       @media (max-width: 768px) {
         .home-hero-title { font-size: 1.75rem; }
@@ -242,6 +238,15 @@
         font-weight: 700;
         color: rgba(147, 197, 253, 0.9);
       }
+      .countdown-icon {
+        display: inline-flex;
+        align-items: center;
+        color: rgba(148, 163, 184, 0.8);
+        flex-shrink: 0;
+      }
+      .countdown-icon svg {
+        display: block;
+      }
     </style>
   </head>
   <body>
@@ -265,7 +270,6 @@
         </aside>
 
         <main class="tc-main">
-          <div class="home-content-wrap">
 
           <!-- 1. Hero Section -->
           <section class="home-hero">
@@ -319,7 +323,6 @@
           <!-- 6. Stats + Countdown -->
           <div class="home-stats" id="home-stats">Loading stats…</div>
 
-          </div>
         </main>
       </div>
     </div>
