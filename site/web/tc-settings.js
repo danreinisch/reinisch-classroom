@@ -161,10 +161,10 @@
     if (!statusEl || !iconEl || !textEl) return;
 
     if (isRemote()) {
-      iconEl.textContent = "🟢";
+      iconEl.style.background = "#22c55e";
       textEl.textContent = "Connected to Supabase";
     } else {
-      iconEl.textContent = "🟡";
+      iconEl.style.background = "#f59e0b";
       textEl.textContent = "Local mode";
     }
   }
@@ -241,6 +241,218 @@
   }
 
   /**
+   * Escape HTML to prevent XSS
+   */
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  /**
+   * Load and display student passwords table
+   */
+  async function loadStudentPasswords() {
+    const tbody = $("studentPasswordBody");
+    if (!tbody) return;
+
+    try {
+      const students = await db.listStudents();
+      const active = students.filter((s) => s.active !== false);
+
+      if (active.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="opacity:0.6; font-size:13px;">No students found.</td></tr>';
+        return;
+      }
+
+      renderStudentPasswordRows(active, false);
+
+      // Wire search filter
+      const searchInput = $("studentPwSearch");
+      if (searchInput) {
+        searchInput.addEventListener("input", () => {
+          const q = searchInput.value.trim().toLowerCase();
+          const filtered = q
+            ? active.filter(
+                (s) =>
+                  (s.name || "").toLowerCase().includes(q) ||
+                  (s.code || "").toLowerCase().includes(q)
+              )
+            : active;
+          const revealAll = $("revealAllToggle")?.checked || false;
+          renderStudentPasswordRows(filtered, revealAll);
+        });
+      }
+    } catch (error) {
+      console.error("[tc-settings] Error loading student passwords:", error);
+      tbody.innerHTML = '<tr><td colspan="4" style="opacity:0.6; font-size:13px;">Error loading students.</td></tr>';
+    }
+  }
+
+  /**
+   * Render student password table rows
+   */
+  function renderStudentPasswordRows(students, reveal) {
+    const tbody = $("studentPasswordBody");
+    if (!tbody) return;
+
+    let html = "";
+    for (const s of students) {
+      const code = escapeHtml(s.code || "");
+      const name = escapeHtml(s.name || s.code || "");
+      const defaultPw = (s.code || "") + "!";
+      const pw = escapeHtml(s.password || defaultPw);
+      const masked = "••••••";
+
+      html += `<tr>
+        <td>${name}</td>
+        <td><code>${code}</code></td>
+        <td class="pw-cell" data-pw="${pw}">${reveal ? pw : masked}</td>
+        <td style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="rc-btn" style="font-size:12px;padding:6px 10px;" data-action="copy" data-code="${code}" data-pw="${pw}">Copy</button>
+          <button class="rc-btn danger" style="font-size:12px;padding:6px 10px;" data-action="reset" data-code="${code}">Reset</button>
+        </td>
+      </tr>`;
+    }
+    tbody.innerHTML = html;
+
+    // Wire action buttons
+    tbody.querySelectorAll("button[data-action]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const action = btn.dataset.action;
+        if (action === "copy") {
+          copyPassword(btn.dataset.pw);
+        } else if (action === "reset") {
+          resetStudentPassword(btn.dataset.code);
+        }
+      });
+    });
+  }
+
+  /**
+   * Toggle reveal all passwords in the table
+   */
+  function toggleRevealAll() {
+    const revealAll = $("revealAllToggle")?.checked || false;
+    const cells = document.querySelectorAll("#studentPasswordBody .pw-cell");
+    cells.forEach((cell) => {
+      cell.textContent = revealAll ? cell.dataset.pw : "••••••";
+    });
+  }
+
+  /**
+   * Reset a student's password to the default ({code}!)
+   */
+  async function resetStudentPassword(studentCode) {
+    if (!studentCode) return;
+    const defaultPw = studentCode + "!";
+
+    if (!confirm(`Reset password for ${studentCode} to default ("${defaultPw}")?`)) return;
+
+    try {
+      await db.setStudentPassword(studentCode, defaultPw);
+      console.log("[tc-settings] Student password reset for:", studentCode);
+
+      // Refresh table
+      await loadStudentPasswords();
+
+      // Show brief confirmation
+      alert(`Password for ${studentCode} reset to default.`);
+    } catch (error) {
+      console.error("[tc-settings] Error resetting student password:", error);
+      alert("Error resetting password. Check console for details.");
+    }
+  }
+
+  /**
+   * Copy a password to clipboard with brief feedback
+   */
+  async function copyPassword(password) {
+    try {
+      await navigator.clipboard.writeText(password);
+      // Brief visual feedback via a temporary message
+      const msg = document.createElement("div");
+      msg.textContent = "Copied!";
+      msg.style.cssText =
+        "position:fixed;bottom:24px;right:24px;background:#22c55e;color:#0b1220;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;z-index:9999;";
+      document.body.appendChild(msg);
+      setTimeout(() => msg.remove(), 1800);
+    } catch (error) {
+      console.error("[tc-settings] Clipboard write failed:", error);
+      alert("Could not copy to clipboard.");
+    }
+  }
+
+  /**
+   * Change the teacher's login password
+   */
+  async function changeTeacherPassword() {
+    const currentInput = $("currentPasswordInput");
+    const newInput = $("newPasswordInput");
+    const confirmInput = $("confirmPasswordInput");
+    const msgEl = $("passwordChangeMsg");
+
+    if (!currentInput || !newInput || !confirmInput || !msgEl) return;
+
+    const current = currentInput.value;
+    const newPw = newInput.value;
+    const confirm = confirmInput.value;
+
+    const showMsg = (text, color) => {
+      msgEl.textContent = text;
+      msgEl.style.color = color;
+      msgEl.style.display = "block";
+    };
+
+    if (!current || !newPw || !confirm) {
+      showMsg("Please fill in all password fields.", "#f59e0b");
+      return;
+    }
+
+    if (newPw.length < 8) {
+      showMsg("New password must be at least 8 characters.", "#ef4444");
+      return;
+    }
+
+    if (newPw !== confirm) {
+      showMsg("New passwords do not match.", "#ef4444");
+      return;
+    }
+
+    const btn = $("changePasswordBtn");
+    if (btn) btn.disabled = true;
+
+    try {
+      if (!isRemote()) {
+        showMsg("Password change is only available when connected to Supabase.", "#f59e0b");
+        return;
+      }
+
+      const res = await fetch("/.netlify/functions/teacher-change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPassword: current, newPassword: newPw }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok) {
+        showMsg("Password changed successfully.", "#22c55e");
+        currentInput.value = "";
+        newInput.value = "";
+        confirmInput.value = "";
+      } else {
+        showMsg(data.error || "Failed to change password. Please try again.", "#ef4444");
+      }
+    } catch (error) {
+      console.error("[tc-settings] Error changing teacher password:", error);
+      showMsg("Error changing password. Check console for details.", "#ef4444");
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  /**
    * Setup event listeners
    */
   function setupEventListeners() {
@@ -249,6 +461,8 @@
     const resetQuarterDatesBtn = $("resetQuarterDatesBtn");
     const exportDataBtn = $("exportDataBtn");
     const clearDataBtn = $("clearDataBtn");
+    const changePasswordBtn = $("changePasswordBtn");
+    const revealAllToggle = $("revealAllToggle");
 
     if (saveTeacherNameBtn) {
       saveTeacherNameBtn.addEventListener("click", saveTeacherName);
@@ -269,6 +483,14 @@
     if (clearDataBtn) {
       clearDataBtn.addEventListener("click", clearData);
     }
+
+    if (changePasswordBtn) {
+      changePasswordBtn.addEventListener("click", changeTeacherPassword);
+    }
+
+    if (revealAllToggle) {
+      revealAllToggle.addEventListener("change", toggleRevealAll);
+    }
   }
 
   /**
@@ -279,6 +501,7 @@
     loadQuarterDates();
     updateSyncStatus();
     setupEventListeners();
+    loadStudentPasswords();
     console.log("[tc-settings] Settings page initialized");
   }
 

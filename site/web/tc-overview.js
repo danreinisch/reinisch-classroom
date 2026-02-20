@@ -67,15 +67,15 @@
     // Add appropriate class and set content
     if (syncStatus === "synced") {
       statusEl.classList.add("synced");
-      iconEl.textContent = "🟢";
+      iconEl.style.background = "#22c55e";
       textEl.textContent = "Synced with Supabase";
     } else if (syncStatus === "error") {
       statusEl.classList.add("error");
-      iconEl.textContent = "🔴";
+      iconEl.style.background = "#ef4444";
       textEl.textContent = "Sync error (using local data)";
     } else {
       statusEl.classList.add("local");
-      iconEl.textContent = "🟡";
+      iconEl.style.background = "#f59e0b";
       textEl.textContent = "Local mode";
     }
   }
@@ -674,7 +674,7 @@
             type: 'submission',
             date: new Date(sub.submitted_at),
             text: `${student?.name || sub.student_code} submitted ${assignment?.title || 'Assignment'}`,
-            icon: '📝'
+            icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>'
           });
         }
       }
@@ -687,7 +687,7 @@
             type: 'progress',
             date: new Date(p.date),
             text: `Progress recorded for ${student?.name || p.student_code} Goal ${p.goal_code}`,
-            icon: '📈'
+            icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>'
           });
         }
       }
@@ -702,7 +702,7 @@
             type: 'assignment',
             date: new Date(inst.created_at),
             text: `${assignment?.title || 'Assignment'} issued`,
-            icon: '🗂️'
+            icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>'
           });
         }
       }
