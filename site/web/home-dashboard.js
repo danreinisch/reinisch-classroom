@@ -45,6 +45,12 @@ function renderDailyQuote() {
   el.appendChild(author);
 }
 
+var MS_PER_DAY = 1000 * 60 * 60 * 24;
+
+function parseEventDate(dateStr) {
+  return new Date(dateStr + 'T00:00:00');
+}
+
 function countPresentations(siteState) {
   var cats = siteState.categories || {};
   var counts = { books: 0, life: 0, toolkit: 0 };
@@ -65,15 +71,73 @@ function countPresentations(siteState) {
   return counts;
 }
 
+function renderCountdowns(homeConfig) {
+  var el = document.getElementById('home-countdowns');
+  if (!el) return;
+  var countdowns = homeConfig.countdowns || [];
+  var today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  el.innerHTML = '';
+  countdowns.forEach(function(item) {
+    var eventDate = parseEventDate(item.date);
+    var endDate = item.endDate ? parseEventDate(item.endDate) : null;
+
+    // Skip past events (event date + any end date is before today)
+    var effectiveEnd = endDate || eventDate;
+    if (effectiveEnd < today) return;
+
+    var pill = document.createElement('div');
+    pill.className = 'countdown-pill';
+
+    // Check if currently in a range event (e.g. Spring Break)
+    if (endDate && today >= eventDate && today <= endDate) {
+      pill.textContent = item.emoji + ' ' + item.label + ' \u2014 Enjoy!';
+    } else {
+      var daysLeft = Math.ceil((eventDate - today) / MS_PER_DAY);
+      var daysSpan = document.createElement('span');
+      daysSpan.className = 'countdown-days';
+      daysSpan.textContent = daysLeft + ' days';
+      pill.appendChild(document.createTextNode(item.emoji + ' '));
+      pill.appendChild(daysSpan);
+      pill.appendChild(document.createTextNode(' until ' + item.label));
+    }
+
+    el.appendChild(pill);
+  });
+}
+
 function renderStats(homeConfig, siteState) {
   var el = document.getElementById('home-stats');
   if (!el) return;
-  var semEnd = new Date(homeConfig.semesterEnd + 'T00:00:00');
+  var counts = countPresentations(siteState);
   var today = new Date();
   today.setHours(0, 0, 0, 0);
-  var daysLeft = Math.ceil((semEnd - today) / (1000 * 60 * 60 * 24));
-  var counts = countPresentations(siteState);
-  el.textContent = '\uD83D\uDCC5 ' + daysLeft + ' days until end of semester \u00B7 \uD83D\uDCDA ' + counts.books + ' Books \u00B7 \uD83D\uDCA1 ' + counts.life + ' Life Skills \u00B7 \u270F\uFE0F ' + counts.toolkit + ' Toolkit Lessons \u00B7 ' + counts.total + ' total presentations';
+
+  var countdowns = homeConfig.countdowns || [];
+  var upcoming = countdowns.filter(function(item) {
+    var endDate = item.endDate ? parseEventDate(item.endDate) : parseEventDate(item.date);
+    return endDate >= today;
+  });
+
+  var parts = [];
+  upcoming.slice(0, 2).forEach(function(item) {
+    var eventDate = parseEventDate(item.date);
+    var endDate = item.endDate ? parseEventDate(item.endDate) : null;
+    if (endDate && today >= eventDate && today <= endDate) {
+      parts.push(item.emoji + ' ' + item.label + ' \u2014 Enjoy!');
+    } else {
+      var daysLeft = Math.ceil((eventDate - today) / MS_PER_DAY);
+      parts.push(item.emoji + ' ' + daysLeft + ' days until ' + item.label);
+    }
+  });
+
+  parts.push('\uD83D\uDCDA ' + counts.books + ' Books');
+  parts.push('\uD83D\uDCA1 ' + counts.life + ' Life Skills');
+  parts.push('\u270F\uFE0F ' + counts.toolkit + ' Toolkit Lessons');
+  parts.push(counts.total + ' total presentations');
+
+  el.textContent = parts.join(' \u00B7 ');
 }
 
 function renderFocusCards(homeConfig) {
@@ -101,6 +165,12 @@ function renderFocusCards(homeConfig) {
     var lifeLink = lifeEl.querySelector('.focus-link');
     if (lifeLink && ls.unitLink) lifeLink.href = ls.unitLink;
   }
+
+  // Show the focus section now that data has loaded
+  var focusSection = document.getElementById('home-focus-section');
+  if (focusSection && (la || ls)) {
+    focusSection.style.display = '';
+  }
 }
 
 function buildTicker(homeConfig, siteState) {
@@ -110,6 +180,14 @@ function buildTicker(homeConfig, siteState) {
   var ls = homeConfig.lifeSkills || {};
   var announcements = homeConfig.announcements || [];
   var counts = countPresentations(siteState);
+
+  var today = new Date();
+  today.setHours(0, 0, 0, 0);
+  var countdowns = homeConfig.countdowns || [];
+  var upcomingCountdowns = countdowns.filter(function(item) {
+    var endDate = item.endDate ? parseEventDate(item.endDate) : parseEventDate(item.date);
+    return endDate >= today;
+  });
 
   var items = [
     '\uD83D\uDCC5 ' + dateStr,
@@ -126,6 +204,17 @@ function buildTicker(homeConfig, siteState) {
   if (ls.nextTitle) {
     items.push('\uD83D\uDCA1 Up Next: ' + ls.nextTitle);
   }
+
+  upcomingCountdowns.slice(0, 2).forEach(function(item) {
+    var eventDate = parseEventDate(item.date);
+    var endDate = item.endDate ? parseEventDate(item.endDate) : null;
+    if (endDate && today >= eventDate && today <= endDate) {
+      items.push(item.emoji + ' ' + item.label + ' \u2014 Enjoy!');
+    } else {
+      var daysLeft = Math.ceil((eventDate - today) / MS_PER_DAY);
+      items.push(item.emoji + ' ' + daysLeft + ' days until ' + item.label);
+    }
+  });
 
   for (var i = 0; i < announcements.length; i++) {
     items.push('\uD83D\uDCE2 ' + announcements[i]);
@@ -154,6 +243,7 @@ function init() {
       var siteState = results[1];
       buildTicker(homeConfig, siteState);
       renderFocusCards(homeConfig);
+      renderCountdowns(homeConfig);
       renderStats(homeConfig, siteState);
     })
     .catch(function() {
