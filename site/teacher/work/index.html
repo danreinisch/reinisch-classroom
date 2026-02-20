@@ -7,14 +7,22 @@
     <link rel="stylesheet" href="/assets/css/rc-theme.css" />
     <link rel="stylesheet" href="/web/teacher-shell.css" />
     <style>
+      /* Prevent tc-main from overflowing its flex bounds */
+      .tc-main { min-width: 0; }
+
       .work-subtle {
         opacity: 0.85;
       }
       .work-card {
-        border: 1px solid rgba(255, 255, 255, 0.12);
+        border: 1px solid var(--rc-glass-border);
         border-radius: 16px;
         padding: 16px;
-        background: rgba(255, 255, 255, 0.04);
+        background: rgba(255, 255, 255, 0.03);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+      }
+      .work-card:hover {
+        background: rgba(255, 255, 255, 0.06);
       }
       .work-grid {
         display: grid;
@@ -31,7 +39,7 @@
       .work-field label {
         display: block;
         font-size: 12px;
-        opacity: 0.9;
+        color: var(--rc-ink-dim);
         margin-bottom: 6px;
       }
       .work-field input,
@@ -39,8 +47,8 @@
       .work-field textarea {
         width: 100%;
         padding: 10px 12px;
-        border-radius: 12px;
-        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: var(--rc-radius);
+        border: 1px solid var(--rc-border-strong);
         background: rgba(0, 0, 0, 0.18);
         color: inherit;
         outline: none;
@@ -57,19 +65,29 @@
       }
       .work-btn {
         padding: 10px 12px;
-        border-radius: 12px;
-        border: 1px solid rgba(255, 255, 255, 0.16);
-        background: rgba(255, 255, 255, 0.06);
+        border-radius: var(--rc-radius);
+        border: 1px solid var(--rc-border-strong);
+        background: var(--rc-glass-hover);
         color: inherit;
         cursor: pointer;
+        transition: background 0.2s ease;
+      }
+      .work-btn:hover {
+        background: rgba(255, 255, 255, 0.12);
       }
       .work-btn.primary {
         background: rgba(34, 197, 94, 0.18);
         border-color: rgba(34, 197, 94, 0.35);
       }
+      .work-btn.primary:hover {
+        background: rgba(34, 197, 94, 0.28);
+      }
       .work-btn.danger {
         background: rgba(239, 68, 68, 0.12);
         border-color: rgba(239, 68, 68, 0.35);
+      }
+      .work-btn.danger:hover {
+        background: rgba(239, 68, 68, 0.22);
       }
       .work-btn:disabled {
         opacity: 0.6;
@@ -77,8 +95,8 @@
       }
       .work-tablewrap {
         overflow: auto;
-        border-radius: 14px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: var(--rc-radius);
+        border: 1px solid var(--rc-glass-border);
       }
       table.work-table {
         width: 100%;
@@ -88,29 +106,39 @@
       table.work-table th,
       table.work-table td {
         padding: 10px 12px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        border-bottom: 1px solid var(--rc-glass-border);
         vertical-align: top;
       }
       table.work-table th {
         font-size: 12px;
         letter-spacing: 0.02em;
         text-transform: uppercase;
-        opacity: 0.9;
+        color: var(--rc-ink-dim);
+      }
+      table.work-table tbody tr:hover td {
+        background: var(--rc-glass-hover);
       }
       .work-pill {
         display: inline-block;
         padding: 2px 8px;
-        border-radius: 999px;
+        border-radius: var(--rc-radius-pill);
         font-size: 12px;
-        border: 1px solid rgba(255, 255, 255, 0.16);
+        border: 1px solid var(--rc-border-strong);
         opacity: 0.95;
+      }
+      .work-empty {
+        margin-top: 10px;
+        padding: 24px;
+        text-align: center;
+        color: var(--rc-muted);
+        font-size: 14px;
       }
       .work-msg {
         margin-top: 10px;
         padding: 10px 12px;
-        border-radius: 12px;
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        background: rgba(255, 255, 255, 0.04);
+        border-radius: var(--rc-radius);
+        border: 1px solid var(--rc-glass-border);
+        background: rgba(255, 255, 255, 0.03);
       }
       .work-msg.ok {
         border-color: rgba(34, 197, 94, 0.35);
@@ -137,24 +165,53 @@
         width: min(980px, 100%);
         max-height: 85vh;
         overflow: auto;
-        border-radius: 18px;
-        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: var(--rc-radius-lg);
+        border: 1px solid var(--rc-border-strong);
         background: rgba(20, 20, 20, 0.92);
         padding: 14px;
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
       }
       .work-dialog pre {
         white-space: pre-wrap;
         word-break: break-word;
         margin: 0;
         padding: 12px;
-        border-radius: 14px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: var(--rc-radius);
+        border: 1px solid var(--rc-glass-border);
         background: rgba(0, 0, 0, 0.25);
         font-size: 12px;
         line-height: 1.45;
       }
       .work-dialog h3 {
         margin: 0;
+      }
+
+      /* Mobile (< 768px) */
+      @media (max-width: 767px) {
+        .work-grid { grid-template-columns: 1fr; }
+        .work-card { padding: 12px; }
+        .work-actions { gap: 8px; }
+        .work-btn { padding: 8px 10px; }
+        .work-tablewrap { font-size: 13px; }
+      }
+
+      /* Tablet / Chromebook portrait (768px–1023px) */
+      @media (min-width: 768px) and (max-width: 1023px) {
+        .work-grid { grid-template-columns: repeat(2, 1fr); }
+      }
+
+      /* Large classroom displays (1920px+) — Newline Smart TV */
+      @media (min-width: 1920px) {
+        html { font-size: 20px; }
+        .work-card { padding: 20px; }
+        .work-btn { padding: 12px 16px; }
+      }
+
+      /* 4K / Ultra-wide classroom displays (3000px+) */
+      @media (min-width: 3000px) {
+        html { font-size: 28px; }
+        .work-card { padding: 28px; }
       }
     </style>
   </head>
@@ -429,7 +486,10 @@ JSON:
               </div>
             </div>
 
-            <div id="draftsEmpty" class="work-subtle" style="margin-top: 10px">No drafts yet.</div>
+            <div id="draftsEmpty" class="work-empty">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="margin-bottom: 8px; opacity: 0.4"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+              <div>No drafts yet.</div>
+            </div>
 
             <div class="work-tablewrap" style="margin-top: 10px">
               <table class="work-table" id="draftsTable" style="display: none">
