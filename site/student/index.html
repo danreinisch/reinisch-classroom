@@ -232,6 +232,67 @@
         margin-top: 16px;
       }
 
+      /* Settings section */
+      .st-settings-section {
+        margin-bottom: 32px;
+      }
+
+      .st-settings-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 16px;
+        border-radius: 12px;
+        border: 1px solid var(--rc-glass-border);
+        background: rgba(255, 255, 255, 0.03);
+        color: inherit;
+        font-size: 14px;
+        cursor: pointer;
+        transition: background 0.2s ease;
+      }
+
+      .st-settings-toggle:hover {
+        background: rgba(255, 255, 255, 0.06);
+      }
+
+      .st-settings-card {
+        margin-top: 12px;
+        padding: 20px;
+        border-radius: var(--rc-radius-lg);
+        border: 1px solid var(--rc-glass-border);
+        background: rgba(255, 255, 255, 0.03);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        max-width: 480px;
+      }
+
+      .st-settings-card h3 {
+        margin: 0 0 16px 0;
+        font-size: 18px;
+      }
+
+      #stPasswordMsg {
+        margin-bottom: 12px;
+        font-size: 14px;
+        min-height: 0;
+      }
+
+      #stPasswordMsg.success {
+        padding: 10px 14px;
+        border-radius: 10px;
+        background: rgba(34, 197, 94, 0.1);
+        border: 1px solid rgba(34, 197, 94, 0.35);
+        color: #86efac;
+      }
+
+      #stPasswordMsg.error {
+        padding: 10px 14px;
+        border-radius: 10px;
+        background: rgba(239, 68, 68, 0.08);
+        border: 1px solid rgba(239, 68, 68, 0.35);
+        color: #fca5a5;
+      }
+
       /* Goal cards */
       .st-goal-card {
         padding: 20px;
@@ -1935,6 +1996,36 @@
                   </h2>
                   <div id="dashGoalsSnapshot"><p style="opacity:0.7;">Loading...</p></div>
                 </section>
+
+                <!-- Settings Section -->
+                <div class="st-settings-section">
+                  <button class="st-settings-toggle" id="btnToggleStudentSettings" type="button">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <circle cx="12" cy="12" r="3"></circle>
+                      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                    </svg>
+                    Settings
+                  </button>
+                  <div id="studentSettingsPanel" class="hidden">
+                    <div class="st-settings-card">
+                      <h3>Change Password</h3>
+                      <div class="st-form-group">
+                        <label for="stCurrentPassword">Current Password</label>
+                        <input type="password" id="stCurrentPassword" autocomplete="current-password" />
+                      </div>
+                      <div class="st-form-group">
+                        <label for="stNewPassword">New Password</label>
+                        <input type="password" id="stNewPassword" autocomplete="new-password" />
+                      </div>
+                      <div class="st-form-group">
+                        <label for="stConfirmPassword">Confirm New Password</label>
+                        <input type="password" id="stConfirmPassword" autocomplete="new-password" />
+                      </div>
+                      <div id="stPasswordMsg"></div>
+                      <button id="btnStudentChangePassword" class="st-btn" type="button">Change Password</button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 

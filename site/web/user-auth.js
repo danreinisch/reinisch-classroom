@@ -170,7 +170,12 @@ export async function verifyUserPassword(username, password) {
 }
 
 /**
- * Local password verification (fallback for offline mode)
+ * Local password verification (fallback for offline/local-dev mode only)
+ *
+ * IMPORTANT: This function is ONLY for local/offline development.
+ * Production authentication goes through Supabase RPC (`verify_user_password`).
+ * Do NOT add hardcoded credentials to this function.
+ *
  * Stores passwords in plaintext in localStorage (dev/offline only - not production secure)
  */
 function verifyLocalPassword(username, password) {
@@ -179,16 +184,6 @@ function verifyLocalPassword(username, password) {
   
   // Bootstrap default users if not found
   if (!user) {
-    // Check for default substitute password
-    if (username === 'substitute' && password === 'Winfield2025*') {
-      return {
-        username: 'substitute',
-        role: 'substitute',
-        student_id: null,
-        user_id: null
-      };
-    }
-    
     // Bootstrap generic teacher user for local dev ONLY
     // Only active when running on localhost to avoid shipping in production
     const isLocalDev = typeof window !== 'undefined' && 
@@ -207,7 +202,7 @@ function verifyLocalPassword(username, password) {
       users['teacher_local'] = bootstrappedUser;
       localStore.set('users', users);
       
-      console.log('[user-auth] Bootstrapped local dev user: teacher_local (teacher)');
+      console.warn('[user-auth] WARNING: Using dev-only bootstrapped teacher_local user. Do not use in production.');
       
       return {
         username: bootstrappedUser.username,

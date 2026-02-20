@@ -2052,6 +2052,9 @@
       
       // Setup tab switching
       setupTabSwitching();
+
+      // Setup student settings (change password)
+      initStudentSettings();
       
       state.dashboardHandlersAttached = true;
     }
@@ -3455,6 +3458,99 @@
     }
     if (profileClass) {
       profileClass.textContent = '—'; // Could be enhanced with class info
+    }
+  }
+
+  // ============================================================================
+  // Student Settings: Self-Service Password Change
+  // ============================================================================
+  function initStudentSettings() {
+    const toggleBtn = document.getElementById('btnToggleStudentSettings');
+    const settingsPanel = document.getElementById('studentSettingsPanel');
+    const changeBtn = document.getElementById('btnStudentChangePassword');
+
+    if (toggleBtn && settingsPanel) {
+      toggleBtn.addEventListener('click', function () {
+        settingsPanel.classList.toggle('hidden');
+      });
+    }
+
+    if (changeBtn) {
+      changeBtn.addEventListener('click', handleStudentChangePassword);
+    }
+  }
+
+  async function handleStudentChangePassword() {
+    const currentPassword = document.getElementById('stCurrentPassword');
+    const newPassword = document.getElementById('stNewPassword');
+    const confirmPassword = document.getElementById('stConfirmPassword');
+    const msgEl = document.getElementById('stPasswordMsg');
+    const changeBtn = document.getElementById('btnStudentChangePassword');
+
+    function setMsg(text, type) {
+      if (!msgEl) return;
+      msgEl.textContent = text;
+      msgEl.className = type || '';
+    }
+
+    if (!currentPassword || !newPassword || !confirmPassword) return;
+
+    setMsg('', '');
+
+    const currentVal = currentPassword.value;
+    const newVal = newPassword.value;
+    const confirmVal = confirmPassword.value;
+
+    if (!currentVal || !newVal || !confirmVal) {
+      setMsg('Please fill in all fields.', 'error');
+      return;
+    }
+
+    if (newVal !== confirmVal) {
+      setMsg('New passwords do not match.', 'error');
+      return;
+    }
+
+    if (newVal.length < 6) {
+      setMsg('New password must be at least 6 characters.', 'error');
+      return;
+    }
+
+    if (newVal === currentVal) {
+      setMsg('New password must be different from current password.', 'error');
+      return;
+    }
+
+    const studentCode = sessionStorage.getItem('rc_user_code');
+    if (!studentCode) {
+      setMsg('Session expired. Please log in again.', 'error');
+      return;
+    }
+
+    if (changeBtn) changeBtn.disabled = true;
+
+    try {
+      const res = await fetch('/.netlify/functions/student-change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentCode, currentPassword: currentVal, newPassword: newVal }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.ok) {
+        setMsg('Password changed successfully.', 'success');
+        currentPassword.value = '';
+        newPassword.value = '';
+        confirmPassword.value = '';
+      } else {
+        setMsg(data.error || 'Failed to change password.', 'error');
+      }
+    } catch (err) {
+      console.error(LOG_PREFIX, 'Error changing password:', err);
+      setMsg('Network error. Please try again.', 'error');
+    } finally {
+      if (changeBtn) changeBtn.disabled = false;
     }
   }
 

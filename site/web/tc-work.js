@@ -148,9 +148,19 @@
       const btnEdit = document.createElement("button");
       btnEdit.type = "button";
       btnEdit.className = "work-btn";
-      btnEdit.textContent = "Edit";
+      btnEdit.title = "Edit";
+      btnEdit.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg> Edit';
       btnEdit.addEventListener("click", () => startEdit(d.id));
       tdActions.appendChild(btnEdit);
+
+      const btnDuplicate = document.createElement("button");
+      btnDuplicate.type = "button";
+      btnDuplicate.className = "work-btn";
+      btnDuplicate.style.marginLeft = "8px";
+      btnDuplicate.title = "Duplicate";
+      btnDuplicate.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg> Duplicate';
+      btnDuplicate.addEventListener("click", () => duplicateOne(d.id));
+      tdActions.appendChild(btnDuplicate);
 
       const btnPreview = document.createElement("button");
       btnPreview.type = "button";
@@ -607,10 +617,27 @@ ${shown}
     setTimeout(clearMsg, 1200);
   }
 
+  function duplicateOne(id) {
+    const drafts = readDrafts();
+    const d = drafts.find((x) => x.id === id);
+    if (!d) return;
+    const copy = Object.assign({}, d, {
+      id: `draft_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      title: (safeStr(d.title) || "draft") + " (Copy)",
+      createdAt: nowISO(),
+      updatedAt: nowISO(),
+    });
+    const next = [...drafts, copy];
+    writeDrafts(next);
+    renderTable(next);
+    setMsg("ok", "Draft duplicated.");
+    setTimeout(clearMsg, 1200);
+  }
+
   function exportAll() {
     const drafts = readDrafts();
     download(
-      `tc-drafts_${new Date().toISOString().slice(0, 10)}.json`,
+      `work-drafts-${new Date().toISOString().slice(0, 10)}.json`,
       JSON.stringify(drafts, null, 2)
     );
   }
