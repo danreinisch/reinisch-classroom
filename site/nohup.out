@@ -1,0 +1,12 @@
+127.0.0.1 - - [20/Feb/2026 20:10:06] "GET /student/ HTTP/1.1" 200 -
+127.0.0.1 - - [20/Feb/2026 20:10:06] "GET /assets/css/rc-theme.css HTTP/1.1" 200 -
+127.0.0.1 - - [20/Feb/2026 20:10:06] "GET /web/teacher-shell.css HTTP/1.1" 200 -
+127.0.0.1 - - [20/Feb/2026 20:10:06] "GET /web/public-nav.js HTTP/1.1" 200 -
+127.0.0.1 - - [20/Feb/2026 20:10:06] "GET /web/sidebar-init.js HTTP/1.1" 200 -
+127.0.0.1 - - [20/Feb/2026 20:10:06] "GET /assets/js/student-auto-login.js HTTP/1.1" 200 -
+127.0.0.1 - - [20/Feb/2026 20:10:06] "GET /web/student-shell.js HTTP/1.1" 200 -
+127.0.0.1 - - [20/Feb/2026 20:10:06] "GET /web/student-portal-init.js HTTP/1.1" 200 -
+127.0.0.1 - - [20/Feb/2026 20:10:06] code 404, message File not found
+127.0.0.1 - - [20/Feb/2026 20:10:06] "GET /.netlify/functions/student-roster HTTP/1.1" 404 -
+127.0.0.1 - - [20/Feb/2026 20:10:06] "GET /manifest.json HTTP/1.1" 200 -
+127.0.0.1 - - [20/Feb/2026 20:10:06] "GET /assets/icon-192.svg HTTP/1.1" 200 -
