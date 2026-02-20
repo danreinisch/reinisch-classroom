@@ -3,17 +3,52 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <link rel="stylesheet" href="/assets/css/rc-theme.css"/>
-  <title>Substitute</title>
+  <title>Substitute – Reinisch Classroom</title>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+  <link rel="stylesheet" href="/assets/css/rc-theme.css" />
+  <link rel="stylesheet" href="/web/teacher-shell.css" />
+  <script src="/web/public-nav.js"></script>
+  <script src="/web/sidebar-init.js"></script>
+  <script defer src="/web/public-shell.js"></script>
 </head>
-<body style="font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 24px; line-height: 1.4">
-  <div style="max-width: 980px; margin: 0 auto">
-    <div style="display:flex; gap:12px; align-items:center; margin-bottom:16px">
-      <a href="/hub/" style="text-decoration:none; padding:10px 14px; border:1px solid #ccc; border-radius:10px">← Hub</a>
-      <div style="opacity:.8">Substitute</div>
+<body>
+  <div class="tc-app" data-page-title="Substitute">
+    <div class="tc-shell">
+      <main class="tc-main">
+        <h1 style="margin: 0 0 6px;">Substitute Plans</h1>
+        <p style="color: var(--rc-muted); margin: 0 0 24px;">Access today's lesson plans and classroom information.</p>
+
+        <div class="rc-card" id="subPlanContent" style="margin-bottom: 16px;">
+          <h2 style="margin: 0 0 12px 0; font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+              <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+            </svg>
+            Today's Plan
+          </h2>
+          <p style="opacity: 0.85; font-size: 14px; margin: 0 0 16px;">
+            Substitute plan content will appear here. This page is being connected to the sub-plans system.
+          </p>
+          <div class="rc-pill" style="gap: 6px;">
+            <span style="width:8px;height:8px;border-radius:50%;display:inline-block;background:#f59e0b;flex-shrink:0;"></span>
+            Coming Soon
+          </div>
+        </div>
+
+        <div class="rc-card" style="margin-bottom: 16px;">
+          <h2 style="margin: 0 0 12px 0; font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+            Authentication
+          </h2>
+          <p style="opacity: 0.85; font-size: 14px; margin: 0;">
+            🔒 Full substitute plans require authentication via the Hub sign-in. Contact the teacher for your substitute PIN and password.
+          </p>
+        </div>
+      </main>
     </div>
-    <h1 style="margin: 0 0 10px">Substitute</h1>
-    <p>Shell ready. This will later host substitute-ready plans.</p>
   </div>
 </body>
 </html>
