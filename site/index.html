@@ -10,167 +10,194 @@
     <link rel="stylesheet" href="/web/teacher-shell.css" />
     <script src="/web/public-nav.js"></script>
     <script src="/web/sidebar-init.js"></script>
+    <script defer src="/web/home-dashboard.js"></script>
     <style>
       /* Hero */
-      .home-hero {
-        padding-top: 1.5rem;
-        margin-bottom: 0.5rem;
-      }
-
+      .home-hero { margin-bottom: 0; }
       .home-hero-title {
-        font-size: 2.5rem;
+        font-size: 2.25rem;
         font-weight: 850;
         letter-spacing: -0.02em;
-        color: var(--rc-ink);
-        margin: 0 0 0.5rem 0;
-      }
-
-      .home-hero-tagline {
-        font-size: 1.15rem;
-        color: var(--rc-ink-dim);
         margin: 0;
+        color: var(--rc-ink);
+        line-height: 1.1;
+      }
+      .home-hero-tagline {
+        font-size: 1.05rem;
+        color: var(--rc-ink-dim);
+        margin: 8px 0 0;
         max-width: 52ch;
       }
-
       .home-accent-line {
         width: 80px;
         height: 3px;
         background: var(--rc-brand);
-        border: none;
-        margin-top: 1.25rem;
         border-radius: 2px;
+        margin-top: 16px;
       }
 
-      /* Quick Access Pills */
-      .home-pills {
+      /* Ticker bar */
+      .ticker-bar {
+        margin: 20px -18px;
+        padding: 10px 0;
+        background: rgba(0, 0, 0, 0.25);
+        border-top: 1px solid rgba(255, 255, 255, 0.06);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        overflow: hidden;
+        position: relative;
+      }
+      .ticker-track {
         display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        margin-top: 1.5rem;
+        white-space: nowrap;
+        animation: ticker-scroll 45s linear infinite;
+      }
+      .ticker-track:hover {
+        animation-play-state: paused;
+      }
+      .ticker-content {
+        display: inline-block;
+        padding: 0 2rem;
+        font-size: 0.85rem;
+        color: var(--rc-ink-dim);
+        letter-spacing: 0.01em;
+      }
+      @keyframes ticker-scroll {
+        0% { transform: translateX(0); }
+        100% { transform: translateX(-50%); }
       }
 
-      .home-pill {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 10px 20px;
-        border-radius: 999px;
-        background: var(--rc-glass);
-        border: 1px solid var(--rc-glass-border);
+      /* This Week's Focus */
+      .home-focus {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        margin-top: 24px;
+      }
+      .home-focus-card {
+        padding: 20px;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+      }
+      .focus-label {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--rc-brand);
+        font-weight: 700;
+        margin-bottom: 10px;
+      }
+      .focus-unit {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--rc-ink);
+        margin-bottom: 4px;
+      }
+      .focus-current {
+        font-size: 0.95rem;
+        color: var(--rc-ink-dim);
+        line-height: 1.4;
+      }
+      .focus-divider {
+        height: 1px;
+        background: rgba(255, 255, 255, 0.08);
+        margin: 12px 0;
+      }
+      .focus-next-label {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--rc-muted);
+        font-weight: 600;
+        margin-bottom: 4px;
+      }
+      .focus-next {
+        font-size: 0.9rem;
+        color: var(--rc-ink-dim);
+      }
+      .focus-link {
+        display: inline-block;
+        margin-top: 12px;
+        font-size: 0.85rem;
+        color: var(--rc-brand);
+        text-decoration: none;
+        font-weight: 600;
+      }
+      .focus-link:hover {
+        text-decoration: underline;
+      }
+
+      /* Student Quick Login */
+      .home-student-cta {
+        display: block;
+        margin-top: 20px;
+        padding: 14px 20px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-left: 3px solid rgba(59, 130, 246, 0.5);
         color: var(--rc-ink);
         text-decoration: none;
         font-size: 0.95rem;
         font-weight: 500;
         transition: all 0.2s ease;
+        text-align: center;
       }
-
-      .home-pill:hover {
-        background: var(--rc-glass-hover);
+      .home-student-cta:hover {
+        background: rgba(255, 255, 255, 0.06);
+        border-left-color: rgba(59, 130, 246, 0.8);
         transform: translateY(-1px);
       }
 
-      /* Section heading */
-      .home-section-heading {
-        font-size: 1.25rem;
-        font-weight: 700;
-        margin: 2.5rem 0 1rem;
-        color: var(--rc-ink);
-      }
-
-      /* What's New pulse animation */
-      .whats-new-pulse {
-        display: inline-block;
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: var(--rc-brand);
-        animation: pulse 2s ease-in-out infinite;
-        margin-left: 8px;
-        vertical-align: middle;
-      }
-
-      @keyframes pulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.3; }
-      }
-
-      /* What's New items */
-      #whats-new-list {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-      }
-
-      .whats-new-item {
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-        padding: 12px 16px;
-        border-radius: var(--rc-radius);
-        text-decoration: none;
-        transition: background 0.2s;
-      }
-
-      .whats-new-item:hover {
-        background: var(--rc-glass-hover);
-      }
-
-      .whats-new-category {
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-        color: var(--rc-brand);
-        font-weight: 600;
-      }
-
-      .whats-new-title {
-        font-size: 0.95rem;
-        color: var(--rc-ink);
-        font-weight: 500;
-      }
-
-      /* Daily Inspiration */
-      .home-quote {
-        margin-top: 2.5rem;
-        padding: 24px;
-        border-radius: var(--rc-radius-lg);
-        background: var(--rc-glass);
-        border: 1px solid var(--rc-glass-border);
+      /* Daily Quote */
+      .home-quote-section {
+        margin-top: 20px;
+        padding: 18px 20px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.06);
         border-left: 3px solid var(--rc-brand);
       }
-
       .home-quote-label {
-        font-size: 0.75rem;
+        font-size: 0.65rem;
         text-transform: uppercase;
-        letter-spacing: 0.04em;
+        letter-spacing: 0.05em;
         color: var(--rc-brand);
-        font-weight: 600;
-        margin-bottom: 12px;
+        font-weight: 700;
+        margin-bottom: 10px;
       }
-
-      .home-quote-text {
-        font-size: 1.1rem;
+      .home-quote-body {
+        font-size: 1rem;
         font-style: italic;
         color: var(--rc-ink);
-        line-height: 1.6;
-        margin: 0 0 8px;
+        line-height: 1.55;
       }
-
-      .home-quote-author {
-        font-size: 0.85rem;
+      .home-quote-body .quote-author {
+        display: block;
+        margin-top: 8px;
+        font-size: 0.8rem;
+        font-style: normal;
         color: var(--rc-muted);
         font-weight: 500;
-        margin: 0;
       }
 
-      @media (max-width: 768px) {
-        .home-hero-title {
-          font-size: 1.9rem;
-        }
+      .focus-unit-hidden { display: none; }
+      .home-stats {
+        margin-top: 20px;
+        padding: 10px 0;
+        font-size: 0.75rem;
+        color: var(--rc-muted);
+        text-align: center;
+        letter-spacing: 0.01em;
+      }
 
-        .home-pills {
-          gap: 8px;
-        }
+      /* Mobile */
+      @media (max-width: 768px) {
+        .home-hero-title { font-size: 1.75rem; }
+        .home-focus { grid-template-columns: 1fr; }
+        .ticker-content { font-size: 0.8rem; }
       }
     </style>
   </head>
@@ -195,32 +222,57 @@
         </aside>
 
         <main class="tc-main">
-          <!-- Hero -->
+
+          <!-- 1. Hero Section -->
           <section class="home-hero">
-            <h1 class="home-hero-title">Welcome to Reinisch Classroom</h1>
+            <h1 class="home-hero-title"><span id="home-greeting">Welcome to</span> Reinisch Classroom</h1>
             <p class="home-hero-tagline">Empowering Every Learner Through Accessible Education</p>
             <div class="home-accent-line"></div>
           </section>
 
-          <!-- Quick Access Pills -->
-          <nav class="home-pills" aria-label="Quick access">
-            <a class="home-pill" href="/language-arts/" aria-label="Language Arts"><span aria-hidden="true">📖</span> Language Arts</a>
-            <a class="home-pill" href="/life-skills/" aria-label="Life Skills"><span aria-hidden="true">💡</span> Life Skills</a>
-            <a class="home-pill" href="/math-toolkit/" aria-label="Math Toolkit"><span aria-hidden="true">🔢</span> Math Toolkit</a>
-            <a class="home-pill" href="/teacher/" aria-label="Teacher Center"><span aria-hidden="true">🏫</span> Teacher Center</a>
-          </nav>
+          <!-- 2. Scrolling Ticker -->
+          <div class="ticker-bar">
+            <div class="ticker-track">
+              <span class="ticker-content">Loading updates…</span>
+            </div>
+          </div>
 
-          <!-- What's New -->
-          <section class="home-whats-new">
-            <h2 class="home-section-heading">✨ What's New <span class="whats-new-pulse"></span></h2>
-            <div id="whats-new-list">Loading recent updates…</div>
+          <!-- 3. This Week's Focus -->
+          <section class="home-focus">
+            <div class="home-focus-card" id="focus-la">
+              <div class="focus-label">📖 LANGUAGE ARTS</div>
+              <div class="focus-unit">Loading…</div>
+              <div class="focus-current"></div>
+              <div class="focus-divider"></div>
+              <div class="focus-next-label">Up Next:</div>
+              <div class="focus-next"></div>
+              <a class="focus-link" href="/language-arts/lost-in-kragdon-ah/">→ Open Unit</a>
+            </div>
+            <div class="home-focus-card" id="focus-life">
+              <div class="focus-label">💡 LIFE SKILLS</div>
+              <div class="focus-unit focus-unit-hidden"></div>
+              <div class="focus-current">Loading…</div>
+              <div class="focus-divider"></div>
+              <div class="focus-next-label">Up Next:</div>
+              <div class="focus-next"></div>
+              <a class="focus-link" href="/life-skills/">→ Open Life Skills</a>
+            </div>
           </section>
 
-          <!-- Daily Quote -->
-          <section class="home-quote">
+          <!-- 4. Student Quick Login -->
+          <a class="home-student-cta" href="/student/">
+            🎓 Students — Log in to your portal →
+          </a>
+
+          <!-- 5. Daily Quote -->
+          <section class="home-quote-section">
             <div class="home-quote-label">💡 Daily Inspiration</div>
-            <div id="daily-quote">Loading…</div>
+            <div id="daily-quote" class="home-quote-body">Loading…</div>
           </section>
+
+          <!-- 6. Stats + Countdown -->
+          <div class="home-stats" id="home-stats">Loading stats…</div>
+
         </main>
       </div>
     </div>
@@ -230,9 +282,6 @@
 
     <!-- Public Shell JS -->
     <script defer src="/web/public-shell.js"></script>
-
-    <!-- Home page dynamic content -->
-    <script defer src="/web/home-whats-new.js"></script>
   </body>
 </html>
 
