@@ -71,9 +71,9 @@
         <td>${escapeHtml(plan.life_skills_topic || "")}</td>
         <td style="white-space:nowrap">${statusSvg} ${escapeHtml(statusLabel)}</td>
         <td style="white-space:nowrap">
-          <button class="sub-btn sub-btn-sm" type="button" onclick="tcSubEdit(${JSON.stringify(escapeHtml(plan.plan_date))})">Edit</button>
-          <button class="sub-btn sub-btn-sm" type="button" onclick="tcSubToggle(${JSON.stringify(escapeHtml(plan.plan_date))}, ${plan.published})">${escapeHtml(toggleLabel)}</button>
-          <button class="sub-btn sub-btn-sm danger" type="button" onclick="tcSubDelete(${JSON.stringify(escapeHtml(plan.plan_date))})">Delete</button>
+          <button class="sub-btn sub-btn-sm" type="button" onclick="tcSubEdit(${JSON.stringify(plan.plan_date)})">Edit</button>
+          <button class="sub-btn sub-btn-sm" type="button" onclick="tcSubToggle(${JSON.stringify(plan.plan_date)}, ${plan.published})">${toggleLabel}</button>
+          <button class="sub-btn sub-btn-sm danger" type="button" onclick="tcSubDelete(${JSON.stringify(plan.plan_date)})">Delete</button>
         </td>
       </tr>`;
     }).join("");
