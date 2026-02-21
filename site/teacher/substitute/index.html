@@ -3,249 +3,179 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Teacher Center — Archive</title>  <link rel="stylesheet" href="/assets/css/rc-theme.css" />
-
+  <title>Teacher Center — Substitute</title>
+  <link rel="stylesheet" href="/assets/css/rc-theme.css" />
   <link rel="stylesheet" href="/web/teacher-shell.css" />
   <style>
-    /* Archive-specific styles matching Data/Gradebook/Students tabs */
-    .ar-card {
-      border: 1px solid rgba(255, 255, 255, 0.12);
+    /* Prevent tc-main from overflowing its flex bounds */
+    .tc-main { min-width: 0; }
+
+    .sub-card {
+      border: 1px solid var(--rc-glass-border);
       border-radius: 16px;
       padding: 16px;
-      background: rgba(255, 255, 255, 0.04);
-      margin-bottom: 12px;
+      background: rgba(255, 255, 255, 0.03);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
     }
-
-    .ar-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 12px;
-      margin-bottom: 16px;
-    }
-
-    .ar-title {
-      font-size: 20px;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .ar-sync {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 13px;
-      opacity: 0.8;
-    }
-
-    .ar-filters {
-      display: flex;
-      gap: 12px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-
-    .ar-search-input {
-      padding: 8px 12px;
-      border-radius: 12px;
-      border: 1px solid rgba(255, 255, 255, 0.14);
-      background: rgba(0, 0, 0, 0.3);
-      color: inherit;
-      font-size: 13px;
-      min-width: 200px;
-    }
-
-    .ar-count {
-      font-size: 13px;
-      opacity: 0.8;
-    }
-
-    .ar-accordion {
-      margin-top: 16px;
-    }
-
-    .ar-accordion-item {
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      border-radius: 12px;
-      margin-bottom: 8px;
-      background: rgba(255, 255, 255, 0.04);
-      overflow: hidden;
-    }
-
-    .ar-accordion-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 14px 16px;
-      cursor: pointer;
-      user-select: none;
-      transition: background 0.2s;
-    }
-
-    .ar-accordion-header:hover {
+    .sub-card:hover {
       background: rgba(255, 255, 255, 0.06);
     }
-
-    .ar-accordion-title {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      font-weight: 500;
-    }
-
-    .ar-accordion-toggle {
-      font-size: 18px;
-      transition: transform 0.2s;
-    }
-
-    .ar-accordion-toggle.expanded {
-      transform: rotate(180deg);
-    }
-
-    .ar-accordion-meta {
-      font-size: 13px;
-      opacity: 0.8;
-      margin-left: 28px;
-    }
-
-    .ar-accordion-content {
-      padding: 0 16px 16px 16px;
-      display: none;
-    }
-
-    .ar-accordion-content.expanded {
-      display: block;
-    }
-
-    .ar-tabs {
-      display: flex;
-      gap: 8px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-      margin-bottom: 16px;
-    }
-
-    .ar-tab {
-      padding: 10px 16px;
-      border: none;
-      background: none;
-      color: inherit;
-      cursor: pointer;
-      border-bottom: 2px solid transparent;
-      font-size: 14px;
-      transition: all 0.2s;
-    }
-
-    .ar-tab:hover {
-      background: rgba(255, 255, 255, 0.06);
-    }
-
-    .ar-tab.active {
-      border-bottom-color: rgba(34, 197, 94, 0.8);
-      font-weight: 600;
-    }
-
-    .ar-tab-content {
-      display: none;
-    }
-
-    .ar-tab-content.active {
-      display: block;
-    }
-
-    .ar-actions {
+    .sub-row {
       display: flex;
       gap: 10px;
-      margin-top: 16px;
-      padding-top: 16px;
-      border-top: 1px solid rgba(255, 255, 255, 0.12);
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
     }
-
-    .ar-btn {
-      padding: 10px 16px;
-      border-radius: 10px;
-      border: 1px solid rgba(255, 255, 255, 0.16);
-      background: rgba(255, 255, 255, 0.06);
+    .sub-field {
+      margin-bottom: 14px;
+    }
+    .sub-field label {
+      display: block;
+      font-size: 12px;
+      color: var(--rc-ink-dim);
+      margin-bottom: 6px;
+    }
+    .sub-field input,
+    .sub-field textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: var(--rc-radius);
+      border: 1px solid var(--rc-border-strong);
+      background: rgba(0, 0, 0, 0.18);
+      color: inherit;
+      outline: none;
+      box-sizing: border-box;
+    }
+    .sub-field textarea {
+      min-height: 80px;
+      resize: vertical;
+    }
+    .sub-field.checkbox-field {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .sub-field.checkbox-field label {
+      margin-bottom: 0;
+    }
+    .sub-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .sub-btn {
+      padding: 10px 12px;
+      border-radius: var(--rc-radius);
+      border: 1px solid var(--rc-border-strong);
+      background: var(--rc-glass-hover);
       color: inherit;
       cursor: pointer;
-      font-size: 13px;
-      transition: all 0.2s;
+      transition: background 0.2s ease;
+      font-size: 14px;
     }
-
-    .ar-btn:hover {
+    .sub-btn:hover {
       background: rgba(255, 255, 255, 0.12);
     }
-
-    .ar-btn.primary {
+    .sub-btn.primary {
       background: rgba(34, 197, 94, 0.18);
       border-color: rgba(34, 197, 94, 0.35);
     }
-
-    .ar-table {
+    .sub-btn.primary:hover {
+      background: rgba(34, 197, 94, 0.28);
+    }
+    .sub-btn.danger {
+      background: rgba(239, 68, 68, 0.12);
+      border-color: rgba(239, 68, 68, 0.35);
+    }
+    .sub-btn.danger:hover {
+      background: rgba(239, 68, 68, 0.22);
+    }
+    .sub-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .sub-btn-sm {
+      padding: 5px 8px;
+      font-size: 12px;
+    }
+    .sub-tablewrap {
+      overflow: auto;
+      border-radius: var(--rc-radius);
+      border: 1px solid var(--rc-glass-border);
+    }
+    table.sub-table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 13px;
-    }
-
-    .ar-table th {
-      text-align: left;
-      padding: 10px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-      font-weight: 600;
-      opacity: 0.9;
-    }
-
-    .ar-table td {
-      padding: 10px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    }
-
-    .ar-goal-item {
-      padding: 12px;
-      background: rgba(255, 255, 255, 0.04);
-      border-radius: 8px;
-      margin-bottom: 12px;
-      border-left: 3px solid rgba(34, 197, 94, 0.5);
-    }
-
-    .ar-goal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 8px;
-    }
-
-    .ar-goal-code {
-      font-weight: 600;
       font-size: 14px;
     }
-
-    .ar-goal-desc {
-      font-size: 13px;
-      opacity: 0.9;
-      margin-bottom: 8px;
-      line-height: 1.4;
+    table.sub-table th,
+    table.sub-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--rc-glass-border);
+      vertical-align: top;
     }
-
-    .ar-goal-stats {
-      display: flex;
-      gap: 16px;
+    table.sub-table th {
       font-size: 12px;
-      opacity: 0.8;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      color: var(--rc-ink-dim);
     }
-
-    .ar-empty {
+    table.sub-table tbody tr:hover td {
+      background: var(--rc-glass-hover);
+    }
+    .sub-empty {
+      margin-top: 10px;
+      padding: 24px;
       text-align: center;
-      padding: 40px;
-      opacity: 0.7;
+      color: var(--rc-muted);
       font-size: 14px;
     }
+    .sub-msg {
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: var(--rc-radius);
+      border: 1px solid var(--rc-glass-border);
+      background: rgba(255, 255, 255, 0.03);
+    }
+    .sub-msg.ok {
+      border-color: rgba(34, 197, 94, 0.35);
+      background: rgba(34, 197, 94, 0.1);
+    }
+    .sub-msg.err {
+      border-color: rgba(239, 68, 68, 0.35);
+      background: rgba(239, 68, 68, 0.08);
+    }
 
-    .ar-sparkline {
-      width: 120px;
-      height: 30px;
+    /* Mobile (< 768px) */
+    @media (max-width: 767px) {
+      .sub-card { padding: 12px; }
+      .sub-actions { gap: 8px; }
+      .sub-btn { padding: 8px 10px; }
+      .sub-tablewrap { font-size: 13px; }
+    }
+
+    /* Tablet / Chromebook portrait (768px–1023px) */
+    @media (min-width: 768px) and (max-width: 1023px) {
+      .sub-card { padding: 14px; }
+    }
+
+    /* Large classroom displays (1920px+) — Smart TV */
+    @media (min-width: 1920px) {
+      html { font-size: 20px; }
+      .sub-btn { padding: 12px 16px; font-size: 16px; }
+      .sub-field input,
+      .sub-field textarea { font-size: 16px; }
+    }
+
+    /* 4K / Ultra-wide classroom displays (3000px+) */
+    @media (min-width: 3000px) {
+      html { font-size: 28px; }
+      .sub-btn { padding: 16px 22px; font-size: 20px; }
+      .sub-field input,
+      .sub-field textarea { font-size: 20px; }
     }
   </style>
 </head>
@@ -265,7 +195,7 @@
           <polyline points="9 22 9 12 15 12 15 22"></polyline>
         </svg>
       </a>
-      <div class="tc-title">Teacher Center — Archive</div>
+      <div class="tc-title">Teacher Center — Substitute</div>
     </header>
 
     <div class="tc-shell">
@@ -325,7 +255,6 @@
               <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
             </svg>
           </span><span class="tc-label">Substitute</span></a>
-
           <a data-href="/teacher/data/" href="/teacher/data/"><span class="tc-icon">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
@@ -375,46 +304,75 @@
       </aside>
 
       <main class="tc-main">
-        <div class="ar-card">
-          <div class="ar-header">
-            <div class="ar-title">
-              <span>📦</span>
-              <span>Archive</span>
-            </div>
-            <div class="ar-sync">
-              <span id="arSyncIcon">🟢</span>
-              <span id="arSyncText">Synced</span>
+        <h1 style="margin: 0 0 16px">Substitute Plans</h1>
+
+        <!-- Create / Edit Plan Form -->
+        <section class="sub-card" aria-label="Create / edit substitute plan">
+          <div class="sub-row">
+            <h2 style="margin: 0" id="subFormTitle">Create Plan</h2>
+            <div class="sub-actions">
+              <button class="sub-btn primary" type="submit" form="subPlanForm" id="btnSavePlan">Save Plan</button>
+              <button class="sub-btn" type="button" id="btnClearForm">Clear Form</button>
+              <button class="sub-btn" type="button" id="btnCancelEdit" style="display:none">Cancel Edit</button>
             </div>
           </div>
-          
-          <p style="margin-bottom: 16px; opacity: 0.85;">
-            Archived students with full historical records.
-          </p>
+          <form id="subPlanForm" style="margin-top:14px">
+            <div class="sub-field">
+              <label for="subDate">Plan Date *</label>
+              <input type="date" id="subDate" name="subDate" required />
+            </div>
+            <div class="sub-field">
+              <label for="subLaLesson">LA Lesson</label>
+              <input type="text" id="subLaLesson" name="subLaLesson" />
+            </div>
+            <div class="sub-field">
+              <label for="subLaBook">LA Book</label>
+              <input type="text" id="subLaBook" name="subLaBook" />
+            </div>
+            <div class="sub-field">
+              <label for="subLaPresentations">LA Presentations</label>
+              <textarea id="subLaPresentations" name="subLaPresentations"></textarea>
+            </div>
+            <div class="sub-field">
+              <label for="subLifeSkillsTopic">Life Skills Topic</label>
+              <input type="text" id="subLifeSkillsTopic" name="subLifeSkillsTopic" />
+            </div>
+            <div class="sub-field">
+              <label for="subLifeSkillsPresentations">Life Skills Presentations</label>
+              <textarea id="subLifeSkillsPresentations" name="subLifeSkillsPresentations"></textarea>
+            </div>
+            <div class="sub-field">
+              <label for="subNotes">Notes</label>
+              <textarea id="subNotes" name="subNotes"></textarea>
+            </div>
+            <div class="sub-field checkbox-field">
+              <input type="checkbox" id="subPublished" name="subPublished" />
+              <label for="subPublished">Published</label>
+            </div>
+            <div id="subMsg" style="display:none"></div>
+          </form>
+        </section>
 
-          <div class="ar-filters">
-            <input 
-              type="text" 
-              id="arSearchInput" 
-              class="ar-search-input" 
-              placeholder="Search students..." 
-            />
-            <span id="arCount" class="ar-count">0 archived students</span>
+        <!-- All Plans Table -->
+        <section class="sub-card" style="margin-top:16px" aria-label="All substitute plans">
+          <h2 style="margin:0 0 10px">All Plans</h2>
+          <div id="subPlansEmpty" class="sub-empty">No plans yet.</div>
+          <div class="sub-tablewrap" style="margin-top:10px">
+            <table class="sub-table" id="subPlansTable" style="display:none">
+              <thead>
+                <tr>
+                  <th>Date</th><th>LA Lesson</th><th>Life Skills</th><th>Status</th><th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="subPlansTbody"></tbody>
+            </table>
           </div>
-        </div>
-
-        <div id="arAccordion" class="ar-accordion">
-          <!-- Accordion items will be rendered here -->
-        </div>
-
-        <div id="arEmpty" class="ar-empty" style="display: none;">
-          No archived students. When you archive a student from the Students tab, 
-          they'll appear here with their full historical records.
-        </div>
+        </section>
       </main>
     </div>
   </div>
 
   <script defer src="/web/teacher-shell.js"></script>
-  <script type="module" src="/web/tc-archive.js"></script>
+  <script defer src="/web/tc-substitute.js"></script>
 </body>
 </html>
