@@ -256,6 +256,9 @@
 
     .sp-pres-list li {
       margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
 
     .sp-pres-list li:last-child { margin-bottom: 0; }
@@ -286,6 +289,26 @@
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+    }
+
+    .sp-pres-mode-dot {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--rc-warning);
+      border: none;
+      cursor: pointer;
+      transition: background 0.15s ease, transform 0.15s ease;
+      flex-shrink: 0;
+      text-decoration: none;
+    }
+
+    .sp-pres-mode-dot:hover {
+      background: #fbbf24;
+      transform: scale(1.15);
     }
 
     .sp-notes-box {
@@ -540,14 +563,17 @@
         try { label = new URL(url).pathname.split('/').filter(Boolean).pop() || url; } catch (_) {
           label = url.includes('/') ? url.split('/').pop() : url;
         }
-        return `<li><a class="sp-pres-link" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">
+        const returnPath = encodeURIComponent('/substitute/');
+        const viewerHref = `/viewer/?src=${encodeURIComponent(url)}&return=${returnPath}`;
+        const presHref = `/viewer/?src=${encodeURIComponent(url)}&return=${returnPath}&mode=presentation`;
+        return `<li><a class="sp-pres-link" href="${escapeHtml(viewerHref)}">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
             <polyline points="15 3 21 3 21 9"></polyline>
             <line x1="10" y1="14" x2="21" y2="3"></line>
           </svg>
           <span class="sp-pres-link-text">${escapeHtml(label)}</span>
-        </a></li>`;
+        </a><a class="sp-pres-mode-dot" href="${escapeHtml(presHref)}" title="Presentation Mode" aria-label="Open in Presentation Mode"></a></li>`;
       }).join('');
       return `<ul class="sp-pres-list">${items}</ul>`;
     }

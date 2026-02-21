@@ -74,6 +74,12 @@
     // Setup event handlers
     setupEventHandlers();
 
+    // Auto-enter presentation mode if requested via URL
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('mode') === 'presentation') {
+      togglePresentationMode();
+    }
+
     console.log('[viewer] Initialized with src:', src, 'return:', returnUrl);
   }
 
