@@ -9,6 +9,9 @@
   --tc-muted: var(--rc-ink-dim);
   --tc-border: var(--rc-border);
   --tc-glass: var(--rc-glass);
+
+  /* Emerald accent at 70% opacity for active nav left border */
+  --tc-nav-active-accent: rgba(34, 197, 94, 0.7);
 }
 
 .tc-app{min-height:100vh;display:flex;flex-direction:column}
@@ -69,10 +72,32 @@
   color:var(--tc-text);
   text-decoration:none;
   opacity:.92;
+  border-left:2px solid transparent;
+  transition: background 0.2s ease, transform 0.15s ease, opacity 0.15s ease, border-color 0.2s ease;
 }
-.tc-nav a:hover{background:rgba(255,255,255,.07)}
-.tc-nav a[aria-current="page"]{background:rgba(255,255,255,.10);opacity:1}
-.tc-icon{width:28px;display:inline-flex;justify-content:center}
+.tc-nav a:hover{background:rgba(255,255,255,.07);transform:translateX(2px);opacity:1}
+.tc-nav a[aria-current="page"]{
+  background:rgba(255,255,255,.10);
+  border-left-color:var(--tc-nav-active-accent);
+  opacity:1;
+}
+.tc-icon{width:28px;display:inline-flex;justify-content:center;flex-shrink:0}
+
+/* Section divider before utility/data pages */
+.tc-nav a[data-href="/teacher/data/"]{
+  margin-top:8px;
+  position:relative;
+}
+.tc-nav a[data-href="/teacher/data/"]::before{
+  content:'';
+  position:absolute;
+  top:-7px;
+  left:6px;
+  right:6px;
+  height:1px;
+  background:rgba(255,255,255,.10);
+  pointer-events:none;
+}
 
 .tc-main{
   flex:1;
@@ -102,7 +127,10 @@
 
 html.tc-collapsed .tc-sidebar{width:var(--tc-rail-w)}
 html.tc-collapsed .tc-label{display:none}
-html.tc-collapsed .tc-nav a{justify-content:center}
+html.tc-collapsed .tc-nav a{justify-content:center;border-left-color:transparent}
+html.tc-collapsed .tc-nav a:hover{transform:none}
+html.tc-collapsed .tc-nav a[data-href="/teacher/data/"]{margin-top:8px}
+html.tc-collapsed .tc-nav a[data-href="/teacher/data/"]::before{display:none}
 
 
 /* SAFETY: hide stray file inputs */
