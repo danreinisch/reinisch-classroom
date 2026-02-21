@@ -98,9 +98,7 @@
     const form = $("subPlanForm");
     if (form) form.reset();
     const d = $("subDate"); if (d) d.value = todayStr;
-    const title = $("subFormTitle"); if (title) title.textContent = "Create Plan";
-    const save = $("btnSavePlan"); if (save) save.textContent = "Save Plan";
-    const cancel = $("btnCancelEdit"); if (cancel) cancel.style.display = "none";
+    setFormMode("create");
     showMsg("", "");
   }
 
@@ -140,15 +138,37 @@
     }
   }
 
+  function setFormMode(mode) {
+    const isEdit = mode === "edit";
+    const title = $("subFormTitle"); if (title) title.textContent = isEdit ? "Edit Plan" : "Create Plan";
+    const save = $("btnSavePlan"); if (save) save.textContent = isEdit ? "Update Plan" : "Save Plan";
+    const cancel = $("btnCancelEdit"); if (cancel) cancel.style.display = isEdit ? "" : "none";
+  }
+
+  // Load an existing plan for a given date into the form (teacher view loads all plans incl. drafts)
+  function loadPlanForDate(dateStr) {
+    const plan = allPlans.find(p => p.plan_date === dateStr);
+    if (plan) {
+      editingDate = dateStr;
+      populateForm(plan);
+      setFormMode("edit");
+    } else {
+      // No existing plan for this date — clear editing state but keep date
+      editingDate = null;
+      const form = $("subPlanForm"); if (form) form.reset();
+      const d = $("subDate"); if (d) d.value = dateStr;
+      setFormMode("create");
+    }
+    showMsg("", "");
+  }
+
   // Global handlers for table buttons
   window.tcSubEdit = function(planDate) {
     const plan = allPlans.find(p => p.plan_date === planDate);
     if (!plan) return;
     editingDate = planDate;
     populateForm(plan);
-    const title = $("subFormTitle"); if (title) title.textContent = "Edit Plan";
-    const save = $("btnSavePlan"); if (save) save.textContent = "Update Plan";
-    const cancel = $("btnCancelEdit"); if (cancel) cancel.style.display = "";
+    setFormMode("edit");
     showMsg("", "");
     $("subPlanForm")?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
@@ -187,6 +207,14 @@
   const cancelBtn = $("btnCancelEdit");
   if (cancelBtn) cancelBtn.addEventListener("click", clearForm);
 
+  if (dateInput) {
+    dateInput.addEventListener("change", () => {
+      loadPlanForDate(dateInput.value);
+    });
+  }
+
   // Initial load
   await loadPlans();
+  // Populate form with today's plan if one exists
+  loadPlanForDate(todayStr);
 })();
