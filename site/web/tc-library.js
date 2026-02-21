@@ -72,7 +72,7 @@
     if (!main) return;
 
     const tabBarHtml = `
-      <div class="tc-lib-tabs" style="display: flex; gap: 12px; margin-bottom: 24px; border-bottom: 1px solid rgba(255,255,255,.10); padding-bottom: 12px;">
+      <div class="tc-lib-tabs">
         <button class="tc-btn tc-lib-tab-btn" data-tab="assignments" style="display: flex; align-items: center; gap: 8px;">
           <span>📝</span> Assignments
         </button>
@@ -109,8 +109,7 @@
     // Update tab buttons
     document.querySelectorAll('.tc-lib-tab-btn').forEach(btn => {
       const isActive = btn.dataset.tab === tabName;
-      btn.style.background = isActive ? 'rgba(255,255,255,.15)' : '';
-      btn.style.borderColor = isActive ? 'rgba(255,255,255,.20)' : '';
+      btn.classList.toggle('active', isActive);
     });
 
     // Show/hide tab content
@@ -210,7 +209,7 @@
       </div>
 
       <!-- KPI Row -->
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
+      <div class="tc-lib-kpi-grid">
         ${renderKPI("Total Assignments", kpis.total)}
         ${renderKPI("File Assignments", kpis.fileCount)}
         ${renderKPI("Link Assignments", kpis.linkCount)}
@@ -261,7 +260,7 @@
       `;
     } else {
       html += `
-        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
+        <div class="tc-lib-grid">
           ${filtered.map(renderAssignmentCard).join('')}
         </div>
       `;
@@ -369,8 +368,7 @@
   function updateActiveClassFilter() {
     document.querySelectorAll('.tc-lib-class-filter').forEach(btn => {
       const isActive = btn.dataset.class === filters.assignments.classFilter;
-      btn.style.background = isActive ? 'rgba(255,255,255,.15)' : '';
-      btn.style.borderColor = isActive ? 'rgba(255,255,255,.20)' : '';
+      btn.classList.toggle('active', isActive);
     });
   }
 
