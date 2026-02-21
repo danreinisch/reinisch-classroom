@@ -39,14 +39,25 @@
           const t = encodeURIComponent(title);
           link.setAttribute('href', `/viewer/?src=${src}&title=${t}&return=${returnUrl}`);
         }
+
+        // Intercept click for inline overlay
+        const _src = currentHref, _title = title;
+        link.addEventListener('click', function (e) {
+          if (typeof window.openInlineViewer === 'function') {
+            e.preventDefault();
+            window.openInlineViewer(_src, { title: _title });
+          }
+        });
         return;
       }
 
       if (currentHref && !currentHref.includes('return=')) {
+        let presPath = null;
         try {
           // Extract src from current href
           const url = new URL(currentHref, window.location.origin);
           const src = url.searchParams.get('src');
+          presPath = src || null;
           
           if (src && typeof window.buildViewerUrl === 'function') {
             // Use shared helper to build canonical URL
@@ -64,6 +75,18 @@
           const separator = currentHref.includes('?') ? '&' : '?';
           const returnUrl = encodeURIComponent(location.pathname + location.search);
           link.setAttribute('href', currentHref + separator + 'return=' + returnUrl);
+        }
+
+        // Intercept click for inline overlay
+        if (presPath) {
+          const _src = presPath;
+          const _title = link.querySelector('strong')?.textContent || '';
+          link.addEventListener('click', function (e) {
+            if (typeof window.openInlineViewer === 'function') {
+              e.preventDefault();
+              window.openInlineViewer(_src, { title: _title });
+            }
+          });
         }
       }
     });

@@ -30,7 +30,7 @@
       const thumb = m.thumbnail ? `<img class="thumb" src="${m.thumbnail}" alt="" loading="lazy" decoding="async">` : '';
       const desc = m.description ? `${m.description}` : 'Module';
       
-      // Use shared viewer helper to build canonical URL
+      // Use shared viewer helper to build canonical URL (fallback href)
       let viewerURL;
       if (typeof window.buildViewerUrl === 'function') {
         viewerURL = window.buildViewerUrl(m.url, { title: m.title || m.description });
@@ -39,9 +39,12 @@
         const returnUrl = encodeURIComponent(location.pathname + location.search);
         viewerURL = `/viewer/?src=${encodeURIComponent(m.url)}&return=${returnUrl}`;
       }
+
+      const inlineSrc = (m.url || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+      const inlineTitle = (m.title || m.description || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;');
       
       return `
-        <a class="card-link" href="${viewerURL}" role="listitem" aria-label="Open module">
+        <a class="card-link" href="${viewerURL}" data-inline-src="${inlineSrc}" data-inline-title="${inlineTitle}" role="listitem" aria-label="Open module">
           <article class="card">
             ${thumb}
             <div class="desc">${desc}</div>
@@ -80,6 +83,19 @@
     }
 
     searchEl.addEventListener('input', () => render(filter(searchEl.value)));
+
+    // Inline overlay: intercept card clicks
+    listEl.addEventListener('click', function (e) {
+      const link = e.target.closest('.card-link[data-inline-src]');
+      if (!link) return;
+      const src = link.getAttribute('data-inline-src');
+      const title = link.getAttribute('data-inline-title') || '';
+      if (src && typeof window.openInlineViewer === 'function') {
+        e.preventDefault();
+        window.openInlineViewer(src, { title: title });
+      }
+    });
+
     load();
   }
 })();
