@@ -1463,10 +1463,13 @@
     const viewer = document.createElement('div');
     viewer.className = 'presentation-viewer';
     viewer.innerHTML = `
-      <div class="presentation-viewer-controls">
-        <button class="presentation-viewer-btn" data-viewer-action="close">Close</button>
-        <button class="presentation-viewer-btn" data-viewer-action="presentation-mode">Presentation Mode</button>
-        <button class="presentation-viewer-btn" data-viewer-action="fullscreen">Full screen</button>
+      <div class="pv-bar">
+        <div class="pv-traffic-lights">
+          <button class="pv-dot pv-dot-red"    data-viewer-action="close"             title="Close"             aria-label="Close"></button>
+          <button class="pv-dot pv-dot-yellow" data-viewer-action="presentation-mode" title="Presentation Mode" aria-label="Toggle presentation mode"></button>
+          <button class="pv-dot pv-dot-green"  data-viewer-action="fullscreen"        title="Full Screen"       aria-label="Toggle full screen"></button>
+        </div>
+        <div class="pv-title"></div>
       </div>
       <div class="presentation-viewer-frame">
         <iframe class="presentation-iframe" 
@@ -1551,6 +1554,16 @@
 
     // Load presentation in iframe
     iframe.src = url;
+
+    // Update title bar
+    const titleEl = viewer.querySelector('.pv-title');
+    if (titleEl) {
+      const day = (function () {
+        const m = /presentation-(\d+)/i.exec(url || '');
+        return m ? parseInt(m[1], 10) : null;
+      })();
+      titleEl.textContent = day !== null ? 'Day ' + day : '';
+    }
 
     // Show viewer
     viewer.classList.add('open');

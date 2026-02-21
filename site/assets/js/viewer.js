@@ -13,6 +13,7 @@
   const fullscreenBtn = document.getElementById('fullscreenBtn');
   const sidebarToggleBtn = document.getElementById('sidebarToggleBtn');
   const viewerFrame = document.getElementById('viewerFrame');
+  const viewerTitle = document.getElementById('viewerTitle');
 
   // State
   let presentationMode = false;
@@ -67,6 +68,20 @@
 
     // Load content in iframe
     loadContent(src);
+
+    // Display title (from URL param or parsed from src)
+    if (viewerTitle) {
+      const titleParam = (params.get('title') || '').trim();
+      const dayMatch = /presentation-(\d+)/i.exec(src);
+      const day = dayMatch ? parseInt(dayMatch[1], 10) : null;
+      if (titleParam && day !== null) {
+        viewerTitle.textContent = titleParam + ' \u2014 Day ' + day;
+      } else if (day !== null) {
+        viewerTitle.textContent = 'Day ' + day;
+      } else {
+        viewerTitle.textContent = titleParam;
+      }
+    }
 
     // Start with collapsed sidebar for viewer
     document.documentElement.classList.add('tc-collapsed');
@@ -261,11 +276,9 @@
     
     if (presentationMode) {
       document.body.classList.add('presentation-mode');
-      presentationModeBtn.textContent = 'Exit Presentation';
       console.log('[viewer] Entered presentation mode');
     } else {
       document.body.classList.remove('presentation-mode');
-      presentationModeBtn.textContent = 'Presentation Mode';
       
       // Exit fullscreen if active
       if (document.fullscreenElement) {
@@ -334,10 +347,8 @@
    */
   function handleFullscreenChange() {
     if (document.fullscreenElement) {
-      fullscreenBtn.textContent = 'Exit Fullscreen';
       console.log('[viewer] Entered fullscreen');
     } else {
-      fullscreenBtn.textContent = 'Full Screen';
       console.log('[viewer] Exited fullscreen');
     }
   }

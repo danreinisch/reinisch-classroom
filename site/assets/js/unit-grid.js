@@ -94,7 +94,7 @@
       let card;
       if (l){
         card = document.createElement('a');
-        // Use shared viewer helper to build canonical URL
+        // Use shared viewer helper to build canonical URL (fallback href)
         if (typeof window.buildViewerUrl === 'function') {
           card.href = window.buildViewerUrl(l, { title: title });
         } else {
@@ -102,6 +102,14 @@
           const returnUrl = encodeURIComponent(location.pathname + location.search);
           card.href = '/viewer/?src=' + encodeURIComponent(l) + '&return=' + returnUrl;
         }
+        // Prefer inline overlay when available
+        const _l = l, _title = title;
+        card.addEventListener('click', function (e) {
+          if (typeof window.openInlineViewer === 'function') {
+            e.preventDefault();
+            window.openInlineViewer(_l, { title: _title });
+          }
+        });
         card.className = 'card';
         card.setAttribute('aria-label', `Open ${title}`);
       } else {

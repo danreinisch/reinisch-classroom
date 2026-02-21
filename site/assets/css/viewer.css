@@ -29,10 +29,12 @@ body {
   width: 100%; /* Full width by default; overridden with calc() when .app-shell-icon-only is applied (line 166) */
 }
 
-.viewer-controls {
+/* Traffic-light control bar */
+.pv-bar {
   display: flex;
-  gap: 0.5rem;
-  padding: 0.75rem 1rem;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent 55%), var(--rc-glass, rgba(17, 26, 21, 0.58));
   border-bottom: 1px solid var(--rc-border-strong, rgba(255, 255, 255, 0.14));
   backdrop-filter: blur(14px) saturate(125%);
@@ -41,34 +43,69 @@ body {
   z-index: 900;
 }
 
-.viewer-btn {
-  padding: 0.5rem 1rem;
+.pv-traffic-lights {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+}
+
+.pv-dot {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition: transform 0.1s ease, filter 0.1s ease;
+}
+
+.pv-dot:hover {
+  transform: scale(1.15);
+  filter: brightness(1.15);
+}
+
+.pv-dot:active {
+  transform: scale(0.95);
+}
+
+.pv-dot:focus {
+  outline: 2px solid color-mix(in oklab, var(--rc-brand, #35e08a) 55%, transparent);
+  outline-offset: 2px;
+}
+
+.pv-dot-red    { background: #ff5f57; box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.3); }
+.pv-dot-yellow { background: #ffbd2e; box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.3); }
+.pv-dot-green  { background: #28c840; box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.3); }
+
+.pv-title {
+  font-size: 12px;
+  color: var(--rc-ink-dim, #a9bbb1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+  font-family: var(--rc-font, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif);
+}
+
+/* Sidebar toggle button (kept as text-style button to the far right) */
+.viewer-btn-sidebar {
+  margin-left: auto;
+  padding: 0.4rem 0.6rem;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent 60%), var(--rc-glass, rgba(17, 26, 21, 0.58));
   border: 1px solid var(--rc-border, rgba(255, 255, 255, 0.08));
   border-radius: var(--rc-radius-lg, 14px);
   color: var(--rc-ink, #e8f1ec);
-  font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.12s ease;
-  box-shadow: var(--rc-shadow, 0 12px 30px rgba(0, 0, 0, 0.45));
+  display: flex;
+  align-items: center;
 }
 
-.viewer-btn:hover {
-  transform: translateY(-1px);
+.viewer-btn-sidebar:hover {
   border-color: var(--rc-border-strong, rgba(255, 255, 255, 0.14));
-  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.6);
-}
-
-.viewer-btn:active {
-  transform: translateY(0) scale(0.99);
-}
-
-.viewer-btn:focus {
-  outline: 2px solid color-mix(in oklab, var(--rc-brand, #35e08a) 55%, transparent);
-  outline-offset: 2px;
-  box-shadow:
-    0 0 0 4px color-mix(in oklab, var(--rc-brand, #35e08a) 18%, transparent),
-    0 18px 50px rgba(0, 0, 0, 0.6);
 }
 
 .viewer-frame {
@@ -87,7 +124,7 @@ body {
 }
 
 /* Presentation mode: hide controls and maximize iframe */
-body.presentation-mode .viewer-controls {
+body.presentation-mode .pv-bar {
   display: none;
 }
 
@@ -129,14 +166,18 @@ body.presentation-mode .viewer-frame {
 
 /* Mobile responsiveness */
 @media (max-width: 768px) {
-  .viewer-controls {
-    gap: 0.25rem;
-    padding: 0.5rem;
+  .pv-bar {
+    gap: 8px;
+    padding: 6px 10px;
   }
 
-  .viewer-btn {
-    padding: 0.4rem 0.75rem;
-    font-size: 0.85rem;
+  .pv-dot {
+    width: 11px;
+    height: 11px;
+  }
+
+  .pv-title {
+    font-size: 11px;
   }
 }
 
@@ -147,9 +188,9 @@ body:-moz-full-screen {
   background: var(--rc-base, #070a08);
 }
 
-body:fullscreen .viewer-controls,
-body:-webkit-full-screen .viewer-controls,
-body:-moz-full-screen .viewer-controls {
+body:fullscreen .pv-bar,
+body:-webkit-full-screen .pv-bar,
+body:-moz-full-screen .pv-bar {
   background: rgba(0, 0, 0, 0.9);
 }
 
