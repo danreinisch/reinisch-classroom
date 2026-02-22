@@ -225,11 +225,11 @@
     // Do NOT check for .tc-sidebar early — it may be the pre-replacement element
     // that public-nav.js is about to destroy with outerHTML.
     document.addEventListener('rc-nav-ready', function() {
-      if (!document.querySelector('.tc-class-mode')) { init(); }
+      if (!document.getElementById('tcClassModeTab')) { init(); }
     }, { once: true });
     // Safety fallback in case rc-nav-ready already fired or public-nav.js isn't loaded
     setTimeout(function() {
-      if (!document.querySelector('.tc-class-mode')) { init(); }
+      if (!document.getElementById('tcClassModeTab')) { init(); }
     }, 3000);
   }
 
