@@ -62,6 +62,7 @@
   transition: width 0.2s ease, transform 0.25s ease;
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
 
 .tc-nav{display:flex;flex-direction:column;padding:10px;gap:6px}
