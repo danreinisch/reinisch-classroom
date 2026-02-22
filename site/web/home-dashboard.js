@@ -301,6 +301,12 @@ function buildTicker(homeConfig, siteState) {
 
   var tickerEl = document.querySelector('.ticker-content');
   if (tickerEl) tickerEl.innerHTML = full;
+
+  var trackEl = document.querySelector('.ticker-track');
+  if (trackEl) {
+    var speed = (ticker && ticker.speed) || 45;
+    trackEl.style.animationDuration = speed + 's';
+  }
 }
 
 function init() {

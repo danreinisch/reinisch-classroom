@@ -32,6 +32,7 @@
   "ticker": {
     "dateFormat": "Day, Month DD, YYYY",
     "timeFormat": "h:mm AM/PM",
+    "speed": 45,
     "languageArts": "",
     "lifeSkills": "",
     "custom": []
