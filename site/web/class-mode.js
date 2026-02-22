@@ -137,8 +137,8 @@
 
   function deferInit() {
     // If nav is already injected (script loaded late), run now
-    var sidebar = document.querySelector('.tc-sidebar .tc-nav');
-    if (sidebar && !document.querySelector('.tc-class-mode')) {
+    var target = document.querySelector('.tc-sidebar .tc-nav') || document.querySelector('.tc-topbar');
+    if (target && !document.querySelector('.tc-class-mode')) {
       init();
       return;
     }

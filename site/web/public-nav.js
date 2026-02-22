@@ -111,7 +111,9 @@
     } else if(shell){
       shell.insertAdjacentHTML('afterbegin', sidebarHTML);
     }
-    document.dispatchEvent(new CustomEvent('rc-nav-ready'));
+    setTimeout(function() {
+      document.dispatchEvent(new CustomEvent('rc-nav-ready'));
+    }, 0);
   }
 
   if(document.readyState === 'loading'){
