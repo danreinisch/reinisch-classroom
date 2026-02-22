@@ -14,10 +14,12 @@
   const sidebarToggleBtn = document.getElementById('sidebarToggleBtn');
   const viewerFrame = document.getElementById('viewerFrame');
   const viewerTitle = document.getElementById('viewerTitle');
+  const clockEl = document.getElementById('viewerClock');
 
   // State
   let presentationMode = false;
   let returnUrl = null;
+  let clockInterval = null;
 
   /**
    * Toggle sidebar collapsed state
@@ -79,6 +81,10 @@
 
     // Setup event handlers
     setupEventHandlers();
+
+    // Clock
+    updateClock();
+    clockInterval = setInterval(updateClock, 1000);
 
     // Auto-enter presentation mode if requested via URL
     const urlParams = new URLSearchParams(window.location.search);
@@ -266,6 +272,10 @@
     presentationMode = !presentationMode;
     
     if (presentationMode) {
+      // Exit browser fullscreen first if active
+      if (document.fullscreenElement) {
+        exitFullscreen();
+      }
       document.body.classList.add('presentation-mode');
       document.documentElement.classList.add('tc-collapsed');
       console.log('[viewer] Entered presentation mode');
@@ -279,6 +289,20 @@
       
       console.log('[viewer] Exited presentation mode');
     }
+  }
+
+  /**
+   * Update the clock display
+   */
+  function updateClock() {
+    if (!clockEl) return;
+    const now = new Date();
+    clockEl.textContent = now.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true
+    });
   }
 
   /**
@@ -446,4 +470,12 @@
   } else {
     init();
   }
+
+  // Clean up clock interval on page unload
+  window.addEventListener('pagehide', function () {
+    if (clockInterval) {
+      clearInterval(clockInterval);
+      clockInterval = null;
+    }
+  });
 })();

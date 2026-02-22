@@ -88,6 +88,16 @@ body {
   flex: 1;
   min-width: 0;
   font-family: var(--rc-font, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif);
+  text-align: center;
+}
+
+.pv-clock {
+  font-size: 12px;
+  color: var(--rc-ink-dim, rgba(240, 255, 250, 0.78));
+  white-space: nowrap;
+  font-family: var(--rc-font, system-ui, -apple-system, sans-serif);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
 }
 
 /* Sidebar toggle button (kept as text-style button to the far right) */
@@ -170,6 +180,10 @@ body {
 
   .pv-title {
     font-size: 11px;
+  }
+
+  .pv-clock {
+    font-size: 10px;
   }
 }
 
