@@ -12,7 +12,7 @@
     return;
   }
 
-  var CLASS_MODE_PIN = '1234';
+  var CLASS_MODE_PIN = '6278';
   var SESSION_KEY = 'rc-class-mode';
   var CLASS_ACTIVE = 'rc-class-mode-active';
 
