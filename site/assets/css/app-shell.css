@@ -763,10 +763,6 @@ body.app-shell-icon-only .presentation-viewer.open {
 }
 
 /* Presentation Mode adjustments for viewer */
-body.presentation-mode .pv-bar {
-  display: none;
-}
-
 body.presentation-mode .lessons-navigator {
   display: none;
 }
