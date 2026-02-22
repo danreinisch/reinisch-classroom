@@ -48,6 +48,11 @@
     iconEl.innerHTML = isActive() ? ICON_UNLOCKED : ICON_LOCKED;
   }
 
+  function syncTabIcon() {
+    var tabIcon = document.getElementById('tcTabIcon');
+    if (tabIcon) { updateIcon(tabIcon); }
+  }
+
   function init() {
     // Restore session state before building UI
     if (sessionStorage.getItem(SESSION_KEY) === '1') {
@@ -103,6 +108,7 @@
           if (pinInput.value === CLASS_MODE_PIN) {
             activate();
             updateIcon(iconEl);
+            syncTabIcon();
             closePin();
           } else {
             pinInput.value = '';
@@ -115,6 +121,7 @@
           if (isActive()) {
             deactivate();
             updateIcon(iconEl);
+            syncTabIcon();
             closePin();
           } else {
             if (pinForm.classList.contains('open')) {
@@ -133,18 +140,94 @@
         });
       }
     }
+
+    // Build fixed bottom tab
+    if (!document.getElementById('tcClassModeTab')) {
+      var tab = document.createElement('div');
+      tab.className = 'tc-class-mode-tab';
+      tab.id = 'tcClassModeTab';
+      tab.innerHTML =
+        '<div class="tc-class-mode-tab-panel" id="tcTabPanel">' +
+          '<input type="password" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="PIN" id="tcTabPinInput" aria-label="Enter 4-digit class mode PIN" />' +
+          '<div class="tc-class-mode-tab-actions">' +
+            '<button type="button" class="primary" id="tcTabSubmit">Unlock</button>' +
+            '<button type="button" id="tcTabCancel" aria-label="Cancel">\u00d7</button>' +
+          '</div>' +
+          '<div class="tc-class-mode-tab-error" id="tcTabError">Wrong PIN</div>' +
+        '</div>' +
+        '<button type="button" class="tc-class-mode-tab-btn" id="tcTabBtn" aria-label="Toggle Class Mode">' +
+          '<span id="tcTabIcon"></span>' +
+        '</button>';
+      document.body.appendChild(tab);
+
+      var tabBtn = document.getElementById('tcTabBtn');
+      var tabPinInput = document.getElementById('tcTabPinInput');
+      var tabSubmit = document.getElementById('tcTabSubmit');
+      var tabCancel = document.getElementById('tcTabCancel');
+      var tabError = document.getElementById('tcTabError');
+
+      syncTabIcon();
+
+      var openTab = function () {
+        tabPinInput.value = '';
+        tabError.classList.remove('visible');
+        tab.classList.add('open');
+        tabPinInput.focus();
+      };
+
+      var closeTab = function () {
+        tab.classList.remove('open');
+        tabPinInput.value = '';
+        tabError.classList.remove('visible');
+      };
+
+      var submitTab = function () {
+        if (tabPinInput.value === CLASS_MODE_PIN) {
+          activate();
+          syncTabIcon();
+          var sidebarIcon = document.getElementById('tcClassModeIcon');
+          if (sidebarIcon) { updateIcon(sidebarIcon); }
+          closeTab();
+        } else {
+          tabPinInput.value = '';
+          tabError.classList.add('visible');
+          tabPinInput.focus();
+        }
+      };
+
+      tabBtn.addEventListener('click', function () {
+        if (isActive()) {
+          deactivate();
+          syncTabIcon();
+          var sidebarIcon = document.getElementById('tcClassModeIcon');
+          if (sidebarIcon) { updateIcon(sidebarIcon); }
+          closeTab();
+        } else {
+          if (tab.classList.contains('open')) {
+            closeTab();
+          } else {
+            openTab();
+          }
+        }
+      });
+
+      tabSubmit.addEventListener('click', submitTab);
+      tabCancel.addEventListener('click', closeTab);
+      tabPinInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { submitTab(); }
+        else if (e.key === 'Escape') { closeTab(); }
+      });
+    }
   }
 
   function deferInit() {
-    // If nav is already injected (script loaded late), run now
-    var target = document.querySelector('.tc-sidebar .tc-nav') || document.querySelector('.tc-topbar');
-    if (target && !document.querySelector('.tc-class-mode')) {
-      init();
-      return;
-    }
-    // Otherwise wait for public-nav.js to signal completion
-    document.addEventListener('rc-nav-ready', function() { init(); }, { once: true });
-    // Safety fallback in case event was already fired or public-nav.js isn't loaded
+    // ALWAYS wait for public-nav.js to finish replacing the sidebar.
+    // Do NOT check for .tc-sidebar early — it may be the pre-replacement element
+    // that public-nav.js is about to destroy with outerHTML.
+    document.addEventListener('rc-nav-ready', function() {
+      if (!document.querySelector('.tc-class-mode')) { init(); }
+    }, { once: true });
+    // Safety fallback in case rc-nav-ready already fired or public-nav.js isn't loaded
     setTimeout(function() {
       if (!document.querySelector('.tc-class-mode')) { init(); }
     }, 3000);
