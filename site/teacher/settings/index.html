@@ -310,18 +310,59 @@
           </div>
         </div>
 
-        <!-- Ticker / Announcements Manager -->
+        <!-- Ticker Configuration -->
         <div class="rc-card" style="margin-bottom: 16px;">
-          <h2 style="margin: 0 0 12px 0; font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.36 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.25 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.18 6.18l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg> 📡 Ticker / Announcements</h2>
-          <p style="margin: 0 0 12px 0; opacity: 0.85; font-size: 14px;">Manage the scrolling ticker announcements on the home page. Changes take effect immediately.</p>
-          <div id="announcementsList" style="margin-bottom: 12px;"></div>
-          <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap;">
-            <input type="text" id="newAnnouncementInput" class="rc-input" placeholder="New announcement…" style="flex: 1; min-width: 200px;" />
-            <button id="addAnnouncementBtn" class="rc-btn primary" style="font-size:12px;padding:6px 10px;">Add</button>
+          <h2 style="margin: 0 0 12px 0; font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.36 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.25 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.18 6.18l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg> 📡 Ticker Configuration</h2>
+          <p style="margin: 0 0 12px 0; opacity: 0.85; font-size: 14px;">Configure exactly what appears in the scrolling ticker on the home page. Changes take effect immediately.</p>
+
+          <!-- Row 1: Date & Time Format -->
+          <div class="settings-form-group">
+            <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+              <div style="flex: 1; min-width: 180px;">
+                <label for="tickerDateFormat">Date Format</label>
+                <select id="tickerDateFormat" class="rc-select">
+                  <option value="MM/DD/YYYY">MM/DD/YYYY</option>
+                  <option value="MM/DD/YY">MM/DD/YY</option>
+                  <option value="M/D/YYYY">M/D/YYYY</option>
+                  <option value="M/D/YY">M/D/YY</option>
+                  <option value="Day, Month DD, YYYY">Day, Month DD, YYYY (e.g. Sunday, February 22, 2026)</option>
+                  <option value="Month DD, YYYY">Month DD, YYYY (e.g. February 22, 2026)</option>
+                  <option value="none">None (hide date)</option>
+                </select>
+              </div>
+              <div style="flex: 1; min-width: 160px;">
+                <label for="tickerTimeFormat">Time Format</label>
+                <select id="tickerTimeFormat" class="rc-select">
+                  <option value="h:mm AM/PM">h:mm AM/PM</option>
+                  <option value="HH:mm">HH:mm (24-hour)</option>
+                  <option value="none">None (hide time)</option>
+                </select>
+              </div>
+            </div>
           </div>
+
+          <!-- Row 2: Language Arts -->
+          <div class="settings-form-group">
+            <label for="tickerLA">Language Arts</label>
+            <input type="text" id="tickerLA" class="rc-input" placeholder="e.g. Week 5: Sentence Fragments" />
+          </div>
+
+          <!-- Row 3: Life Skills -->
+          <div class="settings-form-group">
+            <label for="tickerLS">Life Skills</label>
+            <input type="text" id="tickerLS" class="rc-input" placeholder="e.g. Keeping the Job" />
+          </div>
+
+          <!-- Row 4: Custom Announcements -->
+          <div class="settings-form-group">
+            <label>Custom Announcements</label>
+            <div id="tickerCustomRows" style="margin-bottom: 8px;"></div>
+            <button id="addTickerRowBtn" class="rc-btn" style="font-size:12px;padding:6px 10px;">+ Add Row</button>
+          </div>
+
           <div class="tc-actions">
-            <button id="saveHomeConfigAnnouncementsBtn" class="rc-btn primary">Save to Live Site</button>
-            <button id="downloadHomeConfigAnnouncementsBtn" class="rc-btn">Download home-config.json</button>
+            <button id="saveTickerConfigBtn" class="rc-btn primary">Save to Live Site</button>
+            <button id="downloadTickerConfigBtn" class="rc-btn">Download home-config.json</button>
           </div>
         </div>
 

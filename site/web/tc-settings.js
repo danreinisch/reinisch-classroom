@@ -190,54 +190,86 @@
     if ($('lsCurrentTitle')) $('lsCurrentTitle').value = ls.currentTitle || '';
     if ($('lsNextTitle')) $('lsNextTitle').value = ls.nextTitle || '';
 
-    renderAnnouncements();
+    loadTickerConfig();
     renderCountdownsTable();
   }
 
   /**
-   * Render announcements list into #announcementsList
+   * Load ticker config fields from homeConfig.ticker
    */
-  function renderAnnouncements() {
-    var el = $('announcementsList');
+  function loadTickerConfig() {
+    var ticker = homeConfig.ticker || {};
+    var dateFormatEl = $('tickerDateFormat');
+    var timeFormatEl = $('tickerTimeFormat');
+    if (dateFormatEl) dateFormatEl.value = ticker.dateFormat || 'Day, Month DD, YYYY';
+    if (timeFormatEl) timeFormatEl.value = ticker.timeFormat || 'h:mm AM/PM';
+    if ($('tickerLA')) $('tickerLA').value = ticker.languageArts || '';
+    if ($('tickerLS')) $('tickerLS').value = ticker.lifeSkills || '';
+    renderTickerRows();
+  }
+
+  /**
+   * Render the dynamic custom announcement rows into #tickerCustomRows
+   */
+  function renderTickerRows() {
+    var el = $('tickerCustomRows');
     if (!el) return;
-    if (!homeConfig || homeConfig.announcements.length === 0) {
-      el.innerHTML = '<p style="opacity:0.6; font-size:13px;">No announcements.</p>';
-      return;
-    }
+    var ticker = homeConfig.ticker || {};
+    var custom = ticker.custom || [];
     var html = '';
-    homeConfig.announcements.forEach(function(text, i) {
+    custom.forEach(function(text, i) {
       html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">' +
-        '<span style="flex:1;font-size:13px;">' + escapeHtml(text) + '</span>' +
-        '<button class="rc-btn danger" style="font-size:12px;padding:6px 10px;" data-remove-announcement="' + i + '">Remove</button>' +
+        '<input type="text" class="rc-input ticker-custom-input" data-ticker-index="' + i + '" value="' + escapeHtml(text) + '" style="flex:1;" />' +
+        '<button class="rc-btn danger" style="font-size:12px;padding:6px 10px;" data-remove-ticker="' + i + '">Remove</button>' +
         '</div>';
     });
     el.innerHTML = html;
-    el.querySelectorAll('[data-remove-announcement]').forEach(function(btn) {
+    el.querySelectorAll('[data-remove-ticker]').forEach(function(btn) {
       btn.addEventListener('click', function() {
-        removeAnnouncement(parseInt(btn.dataset.removeAnnouncement, 10));
+        removeTickerRow(parseInt(btn.dataset.removeTicker, 10));
       });
     });
   }
 
   /**
-   * Add a new announcement from input
+   * Add a new blank custom announcement row
    */
-  function addAnnouncement() {
-    var input = $('newAnnouncementInput');
-    if (!input) return;
-    var text = input.value.trim();
-    if (!text) return;
-    homeConfig.announcements.push(text);
-    input.value = '';
-    renderAnnouncements();
+  function addTickerRow() {
+    if (!homeConfig.ticker) homeConfig.ticker = {};
+    if (!Array.isArray(homeConfig.ticker.custom)) homeConfig.ticker.custom = [];
+    homeConfig.ticker.custom.push('');
+    renderTickerRows();
   }
 
   /**
-   * Remove announcement at index
+   * Remove custom announcement row at index
    */
-  function removeAnnouncement(index) {
-    homeConfig.announcements.splice(index, 1);
-    renderAnnouncements();
+  function removeTickerRow(index) {
+    if (!homeConfig.ticker || !Array.isArray(homeConfig.ticker.custom)) return;
+    homeConfig.ticker.custom.splice(index, 1);
+    renderTickerRows();
+  }
+
+  /**
+   * Save ticker configuration to homeConfig.ticker and localStorage
+   */
+  function saveTickerConfig() {
+    if (!homeConfig) return;
+    // Collect current values from custom input fields before saving
+    var customInputs = document.querySelectorAll('.ticker-custom-input');
+    var custom = [];
+    customInputs.forEach(function(input) {
+      var val = input.value.trim();
+      if (val) custom.push(val);
+    });
+    homeConfig.ticker = {
+      dateFormat: ($('tickerDateFormat') && $('tickerDateFormat').value) || 'Day, Month DD, YYYY',
+      timeFormat: ($('tickerTimeFormat') && $('tickerTimeFormat').value) || 'h:mm AM/PM',
+      languageArts: ($('tickerLA') && $('tickerLA').value.trim()) || '',
+      lifeSkills: ($('tickerLS') && $('tickerLS').value.trim()) || '',
+      custom: custom
+    };
+    saveHomeConfig();
   }
 
   /**
@@ -691,24 +723,18 @@
       revealAllToggle.addEventListener("change", toggleRevealAll);
     }
 
-    var addAnnouncementBtn = $('addAnnouncementBtn');
-    if (addAnnouncementBtn) {
-      addAnnouncementBtn.addEventListener('click', addAnnouncement);
-    }
-    var newAnnouncementInput = $('newAnnouncementInput');
-    if (newAnnouncementInput) {
-      newAnnouncementInput.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') addAnnouncement();
-      });
+    var addTickerRowBtn = $('addTickerRowBtn');
+    if (addTickerRowBtn) {
+      addTickerRowBtn.addEventListener('click', addTickerRow);
     }
 
-    var saveHomeConfigAnnouncementsBtn = $('saveHomeConfigAnnouncementsBtn');
-    if (saveHomeConfigAnnouncementsBtn) {
-      saveHomeConfigAnnouncementsBtn.addEventListener('click', saveHomeConfig);
+    var saveTickerConfigBtn = $('saveTickerConfigBtn');
+    if (saveTickerConfigBtn) {
+      saveTickerConfigBtn.addEventListener('click', saveTickerConfig);
     }
-    var downloadHomeConfigAnnouncementsBtn = $('downloadHomeConfigAnnouncementsBtn');
-    if (downloadHomeConfigAnnouncementsBtn) {
-      downloadHomeConfigAnnouncementsBtn.addEventListener('click', downloadHomeConfig);
+    var downloadTickerConfigBtn = $('downloadTickerConfigBtn');
+    if (downloadTickerConfigBtn) {
+      downloadTickerConfigBtn.addEventListener('click', downloadHomeConfig);
     }
 
     var addCountdownBtn = $('addCountdownBtn');

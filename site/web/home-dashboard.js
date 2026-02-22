@@ -217,54 +217,71 @@ function renderFocusCards(homeConfig) {
 }
 
 function buildTicker(homeConfig, siteState) {
-  var now = new Date();
-  var dateStr = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-  var la = homeConfig.languageArts || {};
-  var ls = homeConfig.lifeSkills || {};
-  var announcements = homeConfig.announcements || [];
-  var counts = countPresentations(siteState);
+  var ticker = homeConfig && homeConfig.ticker;
+  var items = [];
 
-  var today = new Date();
-  today.setHours(0, 0, 0, 0);
-  var countdowns = homeConfig.countdowns || [];
-  var upcomingCountdowns = countdowns.filter(function(item) {
-    var endDate = item.endDate ? parseEventDate(item.endDate) : parseEventDate(item.date);
-    return endDate >= today;
-  });
+  if (ticker) {
+    var now = new Date();
 
-  var items = [
-    '[DATE] ' + dateStr,
-  ];
-  if (la.unit && la.currentWeek && la.currentTitle) {
-    items.push('[LA] This Week: ' + la.unit + ' \u2014 Week ' + la.currentWeek + ': ' + la.currentTitle);
-  }
-  if (ls.currentTitle) {
-    items.push('[LIFE] ' + ls.currentTitle);
-  }
-  if (la.unit && la.nextWeek && la.nextTitle) {
-    items.push('[LA] Next Week: ' + la.unit + ' \u2014 Week ' + la.nextWeek + ': ' + la.nextTitle);
-  }
-  if (ls.nextTitle) {
-    items.push('[LIFE] Up Next: ' + ls.nextTitle);
-  }
-
-  upcomingCountdowns.slice(0, 2).forEach(function(item) {
-    var eventDate = parseEventDate(item.date);
-    var endDate = item.endDate ? parseEventDate(item.endDate) : null;
-    var typeLabel = item.type ? '[' + item.type.toUpperCase() + '] ' : '';
-    if (endDate && today >= eventDate && today <= endDate) {
-      items.push(typeLabel + item.label + ' \u2014 Enjoy!');
-    } else {
-      var daysLeft = Math.ceil((eventDate - today) / MS_PER_DAY);
-      items.push(typeLabel + daysLeft + ' days until ' + item.label);
+    // Date segment
+    if (ticker.dateFormat && ticker.dateFormat !== 'none') {
+      var fmt = ticker.dateFormat;
+      var dateStr;
+      if (fmt === 'Day, Month DD, YYYY') {
+        dateStr = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+      } else if (fmt === 'Month DD, YYYY') {
+        dateStr = now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+      } else {
+        // Numeric formats: MM/DD/YYYY, MM/DD/YY, M/D/YYYY, M/D/YY
+        var m = now.getMonth() + 1;
+        var d = now.getDate();
+        var y = now.getFullYear();
+        var mm = fmt.startsWith('MM') ? String(m).padStart(2, '0') : String(m);
+        var dd = fmt.indexOf('/DD/') !== -1 ? String(d).padStart(2, '0') : String(d);
+        var yr = fmt.endsWith('YYYY') ? String(y) : String(y).slice(-2);
+        dateStr = mm + '/' + dd + '/' + yr;
+      }
+      if (dateStr) items.push(dateStr);
     }
-  });
 
-  for (var i = 0; i < announcements.length; i++) {
-    items.push('[NEWS] ' + announcements[i]);
+    // Time segment
+    if (ticker.timeFormat && ticker.timeFormat !== 'none') {
+      var hours = now.getHours();
+      var mins = String(now.getMinutes()).padStart(2, '0');
+      var timeStr;
+      if (ticker.timeFormat === 'HH:mm') {
+        timeStr = String(hours).padStart(2, '0') + ':' + mins;
+      } else {
+        // h:mm AM/PM
+        var ampm = hours >= 12 ? 'PM' : 'AM';
+        var h12 = hours % 12 || 12;
+        timeStr = h12 + ':' + mins + ' ' + ampm;
+      }
+      if (timeStr) items.push(timeStr);
+    }
+
+    // Language Arts
+    if (ticker.languageArts && ticker.languageArts.trim()) {
+      items.push('[LA] ' + ticker.languageArts.trim());
+    }
+
+    // Life Skills
+    if (ticker.lifeSkills && ticker.lifeSkills.trim()) {
+      items.push('[LIFE] ' + ticker.lifeSkills.trim());
+    }
+
+    // Custom announcements
+    var custom = ticker.custom || [];
+    for (var i = 0; i < custom.length; i++) {
+      if (custom[i] && custom[i].trim()) items.push(custom[i].trim());
+    }
+  } else {
+    // Backwards compatibility fallback
+    items.push('\uD83D\uDCC5 Reinisch Classroom');
+    items.push('Language Arts');
+    items.push('Life Skills');
+    items.push('Math Toolkit');
   }
-
-  items.push('[TOTAL] ' + counts.total + ' presentations across all sections');
 
   var joined = items.join('  \u25C6  ');
   var full = joined + '  \u25C6  ' + joined;
