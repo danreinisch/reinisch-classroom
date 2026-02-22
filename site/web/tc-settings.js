@@ -176,6 +176,20 @@
     if (!Array.isArray(homeConfig.announcements)) homeConfig.announcements = [];
     if (!Array.isArray(homeConfig.countdowns)) homeConfig.countdowns = [];
 
+    // Populate Language Arts fields
+    var la = homeConfig.languageArts || {};
+    if ($('laUnit')) $('laUnit').value = la.unit || '';
+    if ($('laCurrentWeek')) $('laCurrentWeek').value = la.currentWeek || '';
+    if ($('laCurrentTitle')) $('laCurrentTitle').value = la.currentTitle || '';
+    if ($('laNextWeek')) $('laNextWeek').value = la.nextWeek || '';
+    if ($('laNextTitle')) $('laNextTitle').value = la.nextTitle || '';
+    if ($('laUnitLink')) $('laUnitLink').value = la.unitLink || '';
+
+    // Populate Life Skills fields
+    var ls = homeConfig.lifeSkills || {};
+    if ($('lsCurrentTitle')) $('lsCurrentTitle').value = ls.currentTitle || '';
+    if ($('lsNextTitle')) $('lsNextTitle').value = ls.nextTitle || '';
+
     renderAnnouncements();
     renderCountdownsTable();
   }
@@ -281,6 +295,27 @@
   function removeCountdown(index) {
     homeConfig.countdowns.splice(index, 1);
     renderCountdownsTable();
+  }
+
+  /**
+   * Save Language Arts and Life Skills focus data to homeConfig and localStorage
+   */
+  function saveClassFocus() {
+    if (!homeConfig) return;
+
+    homeConfig.languageArts = homeConfig.languageArts || {};
+    homeConfig.languageArts.unit = ($('laUnit') && $('laUnit').value.trim()) || '';
+    homeConfig.languageArts.currentWeek = ($('laCurrentWeek') && $('laCurrentWeek').value.trim()) || '';
+    homeConfig.languageArts.currentTitle = ($('laCurrentTitle') && $('laCurrentTitle').value.trim()) || '';
+    homeConfig.languageArts.nextWeek = ($('laNextWeek') && $('laNextWeek').value.trim()) || '';
+    homeConfig.languageArts.nextTitle = ($('laNextTitle') && $('laNextTitle').value.trim()) || '';
+    homeConfig.languageArts.unitLink = ($('laUnitLink') && $('laUnitLink').value.trim()) || '';
+
+    homeConfig.lifeSkills = homeConfig.lifeSkills || {};
+    homeConfig.lifeSkills.currentTitle = ($('lsCurrentTitle') && $('lsCurrentTitle').value.trim()) || '';
+    homeConfig.lifeSkills.nextTitle = ($('lsNextTitle') && $('lsNextTitle').value.trim()) || '';
+
+    saveHomeConfig();
   }
 
   /**
@@ -688,6 +723,23 @@
     var downloadHomeConfigCountdownsBtn = $('downloadHomeConfigCountdownsBtn');
     if (downloadHomeConfigCountdownsBtn) {
       downloadHomeConfigCountdownsBtn.addEventListener('click', downloadHomeConfig);
+    }
+
+    var saveClassFocusBtn = $('saveClassFocusBtn');
+    if (saveClassFocusBtn) {
+      saveClassFocusBtn.addEventListener('click', saveClassFocus);
+    }
+    var downloadClassFocusBtn = $('downloadClassFocusBtn');
+    if (downloadClassFocusBtn) {
+      downloadClassFocusBtn.addEventListener('click', downloadHomeConfig);
+    }
+    var saveLsFocusBtn = $('saveLsFocusBtn');
+    if (saveLsFocusBtn) {
+      saveLsFocusBtn.addEventListener('click', saveClassFocus);
+    }
+    var downloadLsFocusBtn = $('downloadLsFocusBtn');
+    if (downloadLsFocusBtn) {
+      downloadLsFocusBtn.addEventListener('click', downloadHomeConfig);
     }
   }
 
