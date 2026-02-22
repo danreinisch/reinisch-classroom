@@ -123,15 +123,7 @@ body {
   display: block;
 }
 
-/* Presentation mode: hide controls and maximize iframe */
-body.presentation-mode .pv-bar {
-  display: none;
-}
-
-body.presentation-mode .viewer-frame {
-  height: 100vh;
-}
-
+/* Presentation mode: iframe fills remaining space below control bar (flex: 1 on .viewer-frame handles this) */
 /* Loading state */
 .viewer-loading {
   position: absolute;

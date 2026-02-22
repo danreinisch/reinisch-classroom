@@ -94,7 +94,7 @@
     'font-family:var(--rc-font,system-ui,-apple-system,sans-serif);}',
     '.rc-inline-viewer .pv-frame{flex:1;position:relative;overflow:hidden;min-height:0;}',
     '.rc-inline-viewer .pv-iframe{position:absolute;inset:0;width:100%;height:100%;border:none;}',
-    '.rc-inline-viewer.presentation-mode .pv-bar{display:none;}',
+    '/* presentation-mode: pv-bar stays visible; pv-frame flex:1 fills remaining space */',
     '@media(max-width:768px){',
     '.rc-inline-viewer .pv-bar{padding:6px 10px;}',
     '.rc-inline-viewer .pv-dot{width:11px;height:11px;}',
@@ -110,14 +110,6 @@
     document.head.appendChild(s);
   }
 
-  /**
-   * Parse day number from a presentation URL path
-   * e.g. /presentations/unit/presentation-04/index.html → 4
-   */
-  function _parseDayFromUrl(url) {
-    var m = /presentation-(\d+)/i.exec(url || '');
-    return m ? parseInt(m[1], 10) : null;
-  }
 
   function _buildViewerEl() {
     if (_viewerEl) return _viewerEl;
@@ -202,16 +194,9 @@
     var src = srcPath.endsWith('/') ? srcPath + 'index.html' : srcPath;
     iframe.src = src;
 
-    // Build title string: "Presentation Title — Day N"
+    // Set title
     var title = (opts.title || '').trim();
-    var day = _parseDayFromUrl(srcPath);
-    if (title && day !== null) {
-      titleEl.textContent = title + ' \u2014 Day ' + day;
-    } else if (day !== null) {
-      titleEl.textContent = 'Day ' + day;
-    } else {
-      titleEl.textContent = title;
-    }
+    titleEl.textContent = title;
 
     _presMode = false;
     el.classList.remove('presentation-mode');

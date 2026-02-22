@@ -69,18 +69,9 @@
     // Load content in iframe
     loadContent(src);
 
-    // Display title (from URL param or parsed from src)
+    // Display title (from URL param)
     if (viewerTitle) {
-      const titleParam = (params.get('title') || '').trim();
-      const dayMatch = /presentation-(\d+)/i.exec(src);
-      const day = dayMatch ? parseInt(dayMatch[1], 10) : null;
-      if (titleParam && day !== null) {
-        viewerTitle.textContent = titleParam + ' \u2014 Day ' + day;
-      } else if (day !== null) {
-        viewerTitle.textContent = 'Day ' + day;
-      } else {
-        viewerTitle.textContent = titleParam;
-      }
+      viewerTitle.textContent = (params.get('title') || '').trim();
     }
 
     // Start with collapsed sidebar for viewer
@@ -276,6 +267,7 @@
     
     if (presentationMode) {
       document.body.classList.add('presentation-mode');
+      document.documentElement.classList.add('tc-collapsed');
       console.log('[viewer] Entered presentation mode');
     } else {
       document.body.classList.remove('presentation-mode');
