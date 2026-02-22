@@ -202,8 +202,20 @@
   }
 
   function deferInit() {
-    // Defer to allow public-nav.js to finish replacing the topbar
-    requestAnimationFrame(function () { setTimeout(init, 0); });
+    // Poll until public-nav.js has finished replacing/injecting the topbar
+    var attempts = 0;
+    function tryInit() {
+      // Wait until at least one target container exists
+      if (document.querySelector('.pv-bar') || document.querySelector('.tc-topbar')) {
+        init();
+      } else if (attempts < 20) {
+        attempts++;
+        setTimeout(tryInit, 100);
+      } else {
+        console.warn('[class-clock] Could not find .pv-bar or .tc-topbar after 20 attempts.');
+      }
+    }
+    tryInit();
   }
 
   if (document.readyState === 'loading') {
