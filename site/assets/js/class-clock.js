@@ -216,9 +216,9 @@
     }, 3000);
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', deferInit);
-  } else {
+  if (document.readyState === 'complete') {
     deferInit();
+  } else {
+    document.addEventListener('DOMContentLoaded', deferInit);
   }
 })();
