@@ -38,6 +38,34 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Class Mode: hide sensitive period/label info by default */
+.tc-clock-period,
+.tc-clock-label {
+  display: none;
+}
+
+/* Show when Class Mode is active */
+html.rc-class-mode-active .tc-clock-period,
+html.rc-class-mode-active .tc-clock-label {
+  display: inline;
+}
+
+/* Also hide the countdown when not in class mode */
+.tc-clock-countdown {
+  display: none;
+}
+html.rc-class-mode-active .tc-clock-countdown {
+  display: inline;
+}
+
+/* Also hide the separator dot when not in class mode (only time+icon visible) */
+.tc-clock-sep {
+  display: none;
+}
+html.rc-class-mode-active .tc-clock-sep {
+  display: inline;
+}
+
 /* Mobile: compact */
 @media (max-width: 768px) {
   .tc-clock { font-size: 12px; gap: 5px; }

@@ -1,0 +1,103 @@
+/* Class Mode Toggle — positioned at bottom of .tc-sidebar */
+.tc-class-mode {
+  margin-top: auto;
+  padding: 10px;
+  border-top: 1px solid var(--tc-border, rgba(255, 255, 255, 0.08));
+}
+
+.tc-class-mode-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--rc-ink-dim, #a9bbb1);
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.tc-class-mode-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--rc-ink, #e8f1ec);
+}
+
+/* Active state */
+html.rc-class-mode-active .tc-class-mode-btn {
+  color: var(--rc-brand, #35e08a);
+}
+
+/* PIN form */
+.tc-class-mode-pin {
+  display: none;
+  padding: 10px 12px;
+  margin-top: 6px;
+}
+
+.tc-class-mode-pin.open {
+  display: block;
+}
+
+.tc-class-mode-pin input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--rc-border, rgba(255, 255, 255, 0.08));
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  color: var(--rc-ink, #e8f1ec);
+  font-size: 16px;
+  letter-spacing: 6px;
+  text-align: center;
+  font-family: var(--rc-mono, ui-monospace, monospace);
+  box-sizing: border-box;
+}
+
+.tc-class-mode-pin input:focus {
+  outline: none;
+  border-color: var(--rc-brand, #35e08a);
+  box-shadow: 0 0 0 2px rgba(53, 224, 138, 0.2);
+}
+
+.tc-class-mode-pin-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.tc-class-mode-pin-actions button {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid var(--rc-border, rgba(255, 255, 255, 0.08));
+  border-radius: 8px;
+  background: transparent;
+  color: var(--rc-ink-dim, #a9bbb1);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.tc-class-mode-pin-actions button.primary {
+  background: var(--rc-brand, #35e08a);
+  color: #0a0e0c;
+  border-color: transparent;
+  font-weight: 600;
+}
+
+.tc-class-mode-pin-error {
+  display: none;
+  color: #ff6b6b;
+  font-size: 12px;
+  margin-top: 6px;
+  text-align: center;
+}
+
+.tc-class-mode-pin-error.visible {
+  display: block;
+}
+
+/* Hide label text in collapsed sidebar */
+html.tc-collapsed .tc-class-mode-label {
+  display: none;
+}
