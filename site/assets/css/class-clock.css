@@ -10,17 +10,11 @@
   flex-shrink: 0;
 }
 
-.tc-clock-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
+.tc-clock-icon {
   flex-shrink: 0;
+  width: 16px;
+  height: 16px;
 }
-
-.tc-clock-dot--active  { background: var(--rc-brand, #35e08a); }
-.tc-clock-dot--passing { background: #ffbd2e; }
-.tc-clock-dot--before  { background: #60a5fa; }
-.tc-clock-dot--dim     { background: var(--rc-ink-dim, #a9bbb1); }
 
 .tc-clock-period {
   font-weight: 600;
