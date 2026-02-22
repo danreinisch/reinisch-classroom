@@ -143,9 +143,21 @@
   }
 
   function deferInit() {
-    // Double-defer (rAF + setTimeout) matches class-clock.js pattern to ensure
-    // public-nav.js has finished replacing/injecting .tc-sidebar before we append
-    requestAnimationFrame(function () { setTimeout(init, 0); });
+    // Poll until public-nav.js has finished replacing/injecting .tc-sidebar
+    var attempts = 0;
+    function tryInit() {
+      var sidebar = document.querySelector('.tc-sidebar');
+      // Ensure public-nav.js has finished replacing/injecting the sidebar
+      if (sidebar && sidebar.querySelector('.tc-nav')) {
+        init();
+      } else if (attempts < 20) {
+        attempts++;
+        setTimeout(tryInit, 100);
+      } else {
+        console.warn('[class-mode] Could not find .tc-sidebar with .tc-nav after 20 attempts.');
+      }
+    }
+    tryInit();
   }
 
   if (document.readyState === 'loading') {
