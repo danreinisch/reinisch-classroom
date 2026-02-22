@@ -144,8 +144,7 @@ export async function upsertSchedule(periods) {
     label: p.label,
     is_planning: p.isPlanning || false,
     active: true,
-    sort_order: i + 1,
-    updated_at: new Date().toISOString()
+    sort_order: i + 1
   }));
 
   const { error: insError } = await supabase
@@ -183,7 +182,6 @@ export function getCurrentPeriod(schedule, now) {
     return { status: 'no-school' };
   }
 
-  const nowMins = now.getHours() * 60 + now.getMinutes();
   const nowSecs = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
 
   // Check each period
@@ -223,7 +221,7 @@ export function getCurrentPeriod(schedule, now) {
   // Before first period
   const firstStartMins = parseTime(periods[0].start);
   const firstStartSecs = firstStartMins * 60;
-  if (nowMins < firstStartMins) {
+  if (nowSecs < firstStartSecs) {
     return {
       status: 'before-school',
       nextPeriod: periods[0],

@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS public.class_schedule (
   id serial PRIMARY KEY,
-  hour_number int NOT NULL,
+  hour_number int NOT NULL UNIQUE,
   start_time time NOT NULL,
   end_time time NOT NULL,
   label text NOT NULL,
