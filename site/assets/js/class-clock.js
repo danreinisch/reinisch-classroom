@@ -202,14 +202,11 @@
   }
 
   function deferInit() {
-    // If topbar/pv-bar is already present, run now
-    var target = document.querySelector('.pv-bar') || document.querySelector('.tc-topbar');
-    if (target && !document.getElementById('classClock')) {
-      init();
-      return;
-    }
-    // Wait for public-nav.js to signal completion
-    document.addEventListener('rc-nav-ready', function() { init(); }, { once: true });
+    // ALWAYS wait for public-nav.js to finish replacing the topbar/sidebar.
+    // Do NOT check for .pv-bar/.tc-topbar early — they may be pre-replacement elements.
+    document.addEventListener('rc-nav-ready', function() {
+      if (!document.getElementById('classClock')) { init(); }
+    }, { once: true });
     // Safety fallback
     setTimeout(function() {
       if (!document.getElementById('classClock')) { init(); }
