@@ -1,0 +1,55 @@
+/* Class Clock — injected into .tc-topbar or .pv-bar */
+.tc-clock {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  font-size: 13px;
+  white-space: nowrap;
+  color: var(--rc-ink-dim, #a9bbb1);
+  flex-shrink: 0;
+}
+
+.tc-clock-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.tc-clock-dot--active  { background: var(--rc-brand, #35e08a); }
+.tc-clock-dot--passing { background: #ffbd2e; }
+.tc-clock-dot--before  { background: #60a5fa; }
+.tc-clock-dot--dim     { background: var(--rc-ink-dim, #a9bbb1); }
+
+.tc-clock-period {
+  font-weight: 600;
+  color: var(--rc-ink, #e8f1ec);
+}
+
+.tc-clock-label {
+  opacity: 0.85;
+}
+
+.tc-clock-countdown {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.75;
+}
+
+.tc-clock-sep {
+  opacity: 0.4;
+}
+
+.tc-clock-time {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Mobile: compact */
+@media (max-width: 768px) {
+  .tc-clock { font-size: 12px; gap: 5px; }
+  .tc-clock-label { display: none; }
+}
+
+@media (max-width: 480px) {
+  .tc-clock-period { display: none; }
+}
