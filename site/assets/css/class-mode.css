@@ -87,7 +87,7 @@ html.rc-class-mode-active .tc-class-mode-btn {
 
 .tc-class-mode-pin-error {
   display: none;
-  color: #ff6b6b;
+  color: var(--rc-danger, #ef4444);
   font-size: 12px;
   margin-top: 6px;
   text-align: center;
@@ -197,7 +197,7 @@ html.rc-class-mode-active .tc-class-mode-tab-btn {
 
 .tc-class-mode-tab-error {
   display: none;
-  color: #ff6b6b;
+  color: var(--rc-danger, #ef4444);
   font-size: 12px;
   margin-top: 5px;
   text-align: center;
