@@ -86,8 +86,10 @@ export async function getSchedule() {
 
   if (await isSupabaseAvailable()) {
     periods = await fetchFromSupabase();
-    if (periods) {
+    if (periods && periods.length > 0) {
       console.log('[class-schedule] Loaded from Supabase, count:', periods.length);
+    } else {
+      periods = null; // Fall through to fallback
     }
   }
 

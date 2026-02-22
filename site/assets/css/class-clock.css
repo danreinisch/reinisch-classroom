@@ -10,12 +10,6 @@
   flex-shrink: 0;
 }
 
-.tc-clock-icon {
-  flex-shrink: 0;
-  width: 16px;
-  height: 16px;
-}
-
 .tc-clock-dot {
   width: 8px;
   height: 8px;
