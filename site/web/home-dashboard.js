@@ -220,6 +220,11 @@ function buildTicker(homeConfig, siteState) {
   var ticker = homeConfig && homeConfig.ticker;
   var items = [];
 
+  // Trusted SVG icon strings (hardcoded constants — never sourced from user input or config)
+  var ICON_LA = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>';
+  var ICON_LIFE = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"></path><path d="M9 18h6"></path><path d="M10 22h4"></path></svg>';
+  var ICON_CALC = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle"><rect x="4" y="2" width="16" height="20" rx="2"></rect><line x1="8" y1="6" x2="16" y2="6"></line><line x1="16" y1="14" x2="16" y2="18"></line><path d="M16 10h.01"></path><path d="M12 10h.01"></path><path d="M8 10h.01"></path><path d="M12 14h.01"></path><path d="M8 14h.01"></path><path d="M12 18h.01"></path><path d="M8 18h.01"></path></svg>';
+
   if (ticker) {
     var now = new Date();
 
@@ -241,7 +246,7 @@ function buildTicker(homeConfig, siteState) {
         var yr = fmt.endsWith('YYYY') ? String(y) : String(y).slice(-2);
         dateStr = mm + '/' + dd + '/' + yr;
       }
-      if (dateStr) items.push(dateStr);
+      if (dateStr) items.push(escHtml(dateStr));
     }
 
     // Time segment
@@ -257,37 +262,45 @@ function buildTicker(homeConfig, siteState) {
         var h12 = hours % 12 || 12;
         timeStr = h12 + ':' + mins + ' ' + ampm;
       }
-      if (timeStr) items.push(timeStr);
+      if (timeStr) items.push(escHtml(timeStr));
     }
 
-    // Language Arts
-    if (ticker.languageArts && ticker.languageArts.trim()) {
-      items.push('[LA] ' + ticker.languageArts.trim());
+    // Unified items array (new format)
+    var tickerItems = ticker.items || [];
+
+    // Backwards compatibility: migrate old languageArts / lifeSkills / custom fields
+    if (tickerItems.length === 0) {
+      if (ticker.languageArts && ticker.languageArts.trim()) {
+        tickerItems.push({ category: 'language-arts', text: ticker.languageArts.trim() });
+      }
+      if (ticker.lifeSkills && ticker.lifeSkills.trim()) {
+        tickerItems.push({ category: 'life-skills', text: ticker.lifeSkills.trim() });
+      }
+      var custom = ticker.custom || [];
+      for (var j = 0; j < custom.length; j++) {
+        if (custom[j] && custom[j].trim()) tickerItems.push({ category: 'none', text: custom[j].trim() });
+      }
     }
 
-    // Life Skills
-    if (ticker.lifeSkills && ticker.lifeSkills.trim()) {
-      items.push('[LIFE] ' + ticker.lifeSkills.trim());
-    }
-
-    // Custom announcements
-    var custom = ticker.custom || [];
-    for (var i = 0; i < custom.length; i++) {
-      if (custom[i] && custom[i].trim()) items.push(custom[i].trim());
+    for (var i = 0; i < tickerItems.length; i++) {
+      var item = tickerItems[i];
+      if (!item.text || !item.text.trim()) continue;
+      var icon = '';
+      if (item.category === 'language-arts') icon = ICON_LA + ' ';
+      else if (item.category === 'life-skills') icon = ICON_LIFE + ' ';
+      else if (item.category === 'math-toolkit') icon = ICON_CALC + ' ';
+      items.push(icon + escHtml(item.text.trim()));
     }
   } else {
-    // Backwards compatibility fallback
-    items.push('\uD83D\uDCC5 Reinisch Classroom');
-    items.push('Language Arts');
-    items.push('Life Skills');
-    items.push('Math Toolkit');
+    // No ticker config
+    items.push('Welcome to Reinisch Classroom');
   }
 
   var joined = items.join('  \u25C6  ');
   var full = joined + '  \u25C6  ' + joined;
 
   var tickerEl = document.querySelector('.ticker-content');
-  if (tickerEl) tickerEl.textContent = full;
+  if (tickerEl) tickerEl.innerHTML = full;
 }
 
 function init() {
@@ -320,7 +333,7 @@ function init() {
     .catch(function(err) {
       console.warn('[home-dashboard] Failed to load config:', err);
       var tickerEl = document.querySelector('.ticker-content');
-      if (tickerEl) tickerEl.textContent = '\uD83D\uDCC5 Reinisch Classroom \u25C6 Language Arts \u25C6 Life Skills \u25C6 Math Toolkit';
+      if (tickerEl) tickerEl.textContent = 'Welcome to Reinisch Classroom';
       var statsEl = document.getElementById('home-stats');
       if (statsEl) statsEl.textContent = '';
     });

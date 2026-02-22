@@ -198,28 +198,50 @@
    * Load ticker config fields from homeConfig.ticker
    */
   function loadTickerConfig() {
-    var ticker = homeConfig.ticker || {};
+    if (!homeConfig.ticker) homeConfig.ticker = {};
+    var ticker = homeConfig.ticker;
     var dateFormatEl = $('tickerDateFormat');
     var timeFormatEl = $('tickerTimeFormat');
     if (dateFormatEl) dateFormatEl.value = ticker.dateFormat || 'Day, Month DD, YYYY';
     if (timeFormatEl) timeFormatEl.value = ticker.timeFormat || 'h:mm AM/PM';
-    if ($('tickerLA')) $('tickerLA').value = ticker.languageArts || '';
-    if ($('tickerLS')) $('tickerLS').value = ticker.lifeSkills || '';
+
+    // Backwards compatibility: migrate old languageArts/lifeSkills/custom fields to items[]
+    if (!Array.isArray(ticker.items)) {
+      ticker.items = [];
+      if (ticker.languageArts && ticker.languageArts.trim()) {
+        ticker.items.push({ category: 'language-arts', text: ticker.languageArts.trim() });
+      }
+      if (ticker.lifeSkills && ticker.lifeSkills.trim()) {
+        ticker.items.push({ category: 'life-skills', text: ticker.lifeSkills.trim() });
+      }
+      var legacy = ticker.custom || [];
+      legacy.forEach(function(text) {
+        if (text && text.trim()) ticker.items.push({ category: 'none', text: text.trim() });
+      });
+    }
+
     renderTickerRows();
   }
 
   /**
-   * Render the dynamic custom announcement rows into #tickerCustomRows
+   * Render the dynamic ticker item rows into #tickerCustomRows
    */
   function renderTickerRows() {
     var el = $('tickerCustomRows');
     if (!el) return;
     var ticker = homeConfig.ticker || {};
-    var custom = ticker.custom || [];
+    var items = ticker.items || [];
     var html = '';
-    custom.forEach(function(text, i) {
+    items.forEach(function(item, i) {
+      var cat = item.category || 'none';
       html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">' +
-        '<input type="text" class="rc-input ticker-custom-input" data-ticker-index="' + i + '" value="' + escapeHtml(text) + '" style="flex:1;" />' +
+        '<select class="rc-select ticker-item-category" data-ticker-index="' + i + '" style="flex:0 0 auto;width:140px;">' +
+          '<option value="none"' + (cat === 'none' ? ' selected' : '') + '>None</option>' +
+          '<option value="language-arts"' + (cat === 'language-arts' ? ' selected' : '') + '>Language Arts</option>' +
+          '<option value="life-skills"' + (cat === 'life-skills' ? ' selected' : '') + '>Life Skills</option>' +
+          '<option value="math-toolkit"' + (cat === 'math-toolkit' ? ' selected' : '') + '>Math Toolkit</option>' +
+        '</select>' +
+        '<input type="text" class="rc-input ticker-item-text" data-ticker-index="' + i + '" value="' + escapeHtml(item.text || '') + '" style="flex:1;" />' +
         '<button class="rc-btn danger" style="font-size:12px;padding:6px 10px;" data-remove-ticker="' + i + '">Remove</button>' +
         '</div>';
     });
@@ -232,21 +254,21 @@
   }
 
   /**
-   * Add a new blank custom announcement row
+   * Add a new blank ticker item row
    */
   function addTickerRow() {
     if (!homeConfig.ticker) homeConfig.ticker = {};
-    if (!Array.isArray(homeConfig.ticker.custom)) homeConfig.ticker.custom = [];
-    homeConfig.ticker.custom.push('');
+    if (!Array.isArray(homeConfig.ticker.items)) homeConfig.ticker.items = [];
+    homeConfig.ticker.items.push({ category: 'none', text: '' });
     renderTickerRows();
   }
 
   /**
-   * Remove custom announcement row at index
+   * Remove ticker item row at index
    */
   function removeTickerRow(index) {
-    if (!homeConfig.ticker || !Array.isArray(homeConfig.ticker.custom)) return;
-    homeConfig.ticker.custom.splice(index, 1);
+    if (!homeConfig.ticker || !Array.isArray(homeConfig.ticker.items)) return;
+    homeConfig.ticker.items.splice(index, 1);
     renderTickerRows();
   }
 
@@ -255,19 +277,18 @@
    */
   function saveTickerConfig() {
     if (!homeConfig) return;
-    // Collect current values from custom input fields before saving
-    var customInputs = document.querySelectorAll('.ticker-custom-input');
-    var custom = [];
-    customInputs.forEach(function(input) {
-      var val = input.value.trim();
-      if (val) custom.push(val);
+    // Collect current values from item rows before saving
+    var selects = document.querySelectorAll('.ticker-item-category');
+    var texts = document.querySelectorAll('.ticker-item-text');
+    var items = [];
+    selects.forEach(function(sel, i) {
+      var text = texts[i] ? texts[i].value.trim() : '';
+      if (text) items.push({ category: sel.value, text: text });
     });
     homeConfig.ticker = {
       dateFormat: ($('tickerDateFormat') && $('tickerDateFormat').value) || 'Day, Month DD, YYYY',
       timeFormat: ($('tickerTimeFormat') && $('tickerTimeFormat').value) || 'h:mm AM/PM',
-      languageArts: ($('tickerLA') && $('tickerLA').value.trim()) || '',
-      lifeSkills: ($('tickerLS') && $('tickerLS').value.trim()) || '',
-      custom: custom
+      items: items
     };
     saveHomeConfig();
   }
