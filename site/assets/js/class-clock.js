@@ -202,18 +202,9 @@
   }
 
   function deferInit() {
-    // If topbar/pv-bar is already present, run now
-    var target = document.querySelector('.pv-bar') || document.querySelector('.tc-topbar');
-    if (target && !document.getElementById('classClock')) {
-      init();
-      return;
-    }
-    // Wait for public-nav.js to signal completion
-    document.addEventListener('rc-nav-ready', function() { init(); }, { once: true });
-    // Safety fallback
-    setTimeout(function() {
-      if (!document.getElementById('classClock')) { init(); }
-    }, 3000);
+    // Double-defer: requestAnimationFrame waits for the current paint, then setTimeout(0)
+    // yields to the event loop — ensuring public-nav.js has finished injecting .tc-topbar.
+    requestAnimationFrame(function () { setTimeout(init, 0); });
   }
 
   if (document.readyState === 'loading') {
