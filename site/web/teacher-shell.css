@@ -63,7 +63,16 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
+  height: calc(100vh - var(--tc-topbar-h));
+  overflow-y: auto;
+  position: sticky;
+  top: var(--tc-topbar-h);
 }
+
+.tc-sidebar::-webkit-scrollbar{width:4px}
+.tc-sidebar::-webkit-scrollbar-track{background:transparent}
+.tc-sidebar::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:4px}
+.tc-sidebar::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.28)}
 
 .tc-nav{display:flex;flex-direction:column;padding:10px;gap:6px}
 .tc-nav a{
