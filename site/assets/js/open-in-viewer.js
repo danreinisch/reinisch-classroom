@@ -71,6 +71,7 @@
 
   var _viewerEl = null;
   var _presMode = false;
+  var _clockInterval = null;
 
   var _STYLES = [
     '.rc-inline-viewer{position:fixed;inset:0;z-index:9999;display:none;flex-direction:column;background:var(--rc-base,#070a08);}',
@@ -91,7 +92,10 @@
     '.rc-inline-viewer .pv-dot-green{background:#28c840;box-shadow:inset 0 0 0 0.5px rgba(0,0,0,0.3);}',
     '.rc-inline-viewer .pv-title{font-size:12px;color:var(--rc-ink-dim,rgba(240,255,250,0.78));',
     'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0;',
-    'font-family:var(--rc-font,system-ui,-apple-system,sans-serif);}',
+    'font-family:var(--rc-font,system-ui,-apple-system,sans-serif);text-align:center;}',
+    '.rc-inline-viewer .pv-clock{font-size:12px;color:var(--rc-ink-dim,rgba(240,255,250,0.78));',
+    'white-space:nowrap;font-family:var(--rc-font,system-ui,-apple-system,sans-serif);',
+    'font-variant-numeric:tabular-nums;flex-shrink:0;}',
     '.rc-inline-viewer .pv-frame{flex:1;position:relative;overflow:hidden;min-height:0;}',
     '.rc-inline-viewer .pv-iframe{position:absolute;inset:0;width:100%;height:100%;border:none;}',
     '/* presentation-mode: pv-bar stays visible; pv-frame flex:1 fills remaining space */',
@@ -99,6 +103,7 @@
     '.rc-inline-viewer .pv-bar{padding:6px 10px;}',
     '.rc-inline-viewer .pv-dot{width:11px;height:11px;}',
     '.rc-inline-viewer .pv-title{font-size:11px;}',
+    '.rc-inline-viewer .pv-clock{font-size:10px;}',
     '}'
   ].join('');
 
@@ -126,6 +131,7 @@
           '<button class="pv-dot pv-dot-green"  id="pvDotFull"  title="Full Screen"       aria-label="Toggle full screen"></button>' +
         '</div>' +
         '<div class="pv-title" id="pvInlineTitle"></div>' +
+        '<div class="pv-clock" id="pvInlineClock"></div>' +
       '</div>' +
       '<div class="pv-frame">' +
         '<iframe class="pv-iframe" id="pvInlineIframe" ' +
@@ -160,6 +166,12 @@
   function _togglePresMode() {
     if (!_viewerEl) return;
     _presMode = !_presMode;
+    if (_presMode) {
+      // Exit browser fullscreen first if active
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(function () {});
+      }
+    }
     _viewerEl.classList.toggle('presentation-mode', _presMode);
   }
 
@@ -170,6 +182,18 @@
     } else if (_viewerEl.requestFullscreen) {
       _viewerEl.requestFullscreen().catch(function () {});
     }
+  }
+
+  function _updateClock() {
+    var clockEl = document.getElementById('pvInlineClock');
+    if (!clockEl) return;
+    var now = new Date();
+    clockEl.textContent = now.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true
+    });
   }
 
   /**
@@ -202,6 +226,10 @@
     el.classList.remove('presentation-mode');
     el.classList.add('open');
     document.body.style.overflow = 'hidden';
+
+    // Start clock
+    _updateClock();
+    _clockInterval = setInterval(_updateClock, 1000);
   }
 
   /**
@@ -216,6 +244,11 @@
     document.body.style.overflow = '';
     if (document.fullscreenElement) {
       document.exitFullscreen().catch(function () {});
+    }
+    // Stop clock
+    if (_clockInterval) {
+      clearInterval(_clockInterval);
+      _clockInterval = null;
     }
   }
 
