@@ -1,0 +1,119 @@
+/**
+ * Class Clock CSS — Slim info bar for the bell schedule
+ * Uses RC Theme design system tokens
+ */
+
+.class-clock {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 16px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent 55%), var(--rc-glass, rgba(0, 0, 0, 0.34));
+  border-bottom: 1px solid var(--rc-border-strong, rgba(255, 255, 255, 0.14));
+  backdrop-filter: blur(14px) saturate(125%);
+  -webkit-backdrop-filter: blur(14px) saturate(125%);
+  font-family: var(--rc-font, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif);
+  font-size: 13px;
+  color: var(--rc-ink-dim, rgba(240, 255, 250, 0.78));
+  flex-shrink: 0;
+  min-height: 36px;
+}
+
+.class-clock-date {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--rc-ink-dim, rgba(240, 255, 250, 0.78));
+}
+
+.class-clock-period {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: center;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.class-clock-time {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  font-family: var(--rc-font-mono, ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace);
+  font-size: 12px;
+  color: var(--rc-ink-dim, rgba(240, 255, 250, 0.78));
+}
+
+/* Status dot */
+.cc-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.cc-dot-green  { background: var(--rc-brand, #22c55e); box-shadow: 0 0 4px var(--rc-brand, #22c55e); }
+.cc-dot-yellow { background: #ffbd2e; box-shadow: 0 0 4px #ffbd2e; }
+.cc-dot-blue   { background: #60a5fa; box-shadow: 0 0 4px #60a5fa; }
+.cc-dot-dim    { background: var(--rc-ink-dim, rgba(240, 255, 250, 0.40)); }
+
+/* Period label */
+.class-clock-period strong {
+  font-weight: 600;
+  color: var(--rc-ink, rgba(240, 255, 250, 0.92));
+  font-size: 13px;
+}
+
+/* Countdown */
+.cc-countdown {
+  font-variant-numeric: tabular-nums;
+  font-family: var(--rc-font-mono, ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace);
+  color: var(--rc-ink-dim, rgba(240, 255, 250, 0.78));
+  font-size: 12px;
+}
+
+/* Viewer integration — period info in the pv-bar */
+.pv-clock-period {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--rc-ink-dim, rgba(240, 255, 250, 0.78));
+  white-space: nowrap;
+  font-family: var(--rc-font, system-ui, -apple-system, sans-serif);
+  flex-shrink: 0;
+}
+
+.pv-clock-period .cc-dot {
+  width: 7px;
+  height: 7px;
+}
+
+.pv-clock-period .cc-countdown {
+  font-size: 11px;
+}
+
+/* Utility: hide the bar */
+.class-clock-hidden {
+  display: none !important;
+}
+
+/* Responsive: hide date on mobile */
+@media (max-width: 768px) {
+  .class-clock-date {
+    display: none;
+  }
+
+  .class-clock {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+
+  .class-clock-period strong {
+    font-size: 12px;
+  }
+}
