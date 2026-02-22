@@ -111,6 +111,7 @@
     } else if(shell){
       shell.insertAdjacentHTML('afterbegin', sidebarHTML);
     }
+    document.dispatchEvent(new CustomEvent('rc-nav-ready'));
   }
 
   if(document.readyState === 'loading'){

@@ -202,20 +202,18 @@
   }
 
   function deferInit() {
-    // Poll until public-nav.js has finished replacing/injecting the topbar
-    var attempts = 0;
-    function tryInit() {
-      // Wait until at least one target container exists
-      if (document.querySelector('.pv-bar') || document.querySelector('.tc-topbar')) {
-        init();
-      } else if (attempts < 20) {
-        attempts++;
-        setTimeout(tryInit, 100);
-      } else {
-        console.warn('[class-clock] Could not find .pv-bar or .tc-topbar after 20 attempts.');
-      }
+    // If topbar/pv-bar is already present, run now
+    var target = document.querySelector('.pv-bar') || document.querySelector('.tc-topbar');
+    if (target && !document.getElementById('classClock')) {
+      init();
+      return;
     }
-    tryInit();
+    // Wait for public-nav.js to signal completion
+    document.addEventListener('rc-nav-ready', function() { init(); }, { once: true });
+    // Safety fallback
+    setTimeout(function() {
+      if (!document.getElementById('classClock')) { init(); }
+    }, 3000);
   }
 
   if (document.readyState === 'loading') {
