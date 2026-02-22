@@ -143,21 +143,18 @@
   }
 
   function deferInit() {
-    // Poll until public-nav.js has finished replacing/injecting .tc-sidebar
-    var attempts = 0;
-    function tryInit() {
-      var sidebar = document.querySelector('.tc-sidebar');
-      // Ensure public-nav.js has finished replacing/injecting the sidebar
-      if (sidebar && sidebar.querySelector('.tc-nav')) {
-        init();
-      } else if (attempts < 20) {
-        attempts++;
-        setTimeout(tryInit, 100);
-      } else {
-        console.warn('[class-mode] Could not find .tc-sidebar with .tc-nav after 20 attempts.');
-      }
+    // If nav is already injected (script loaded late), run now
+    var sidebar = document.querySelector('.tc-sidebar .tc-nav');
+    if (sidebar && !document.querySelector('.tc-class-mode')) {
+      init();
+      return;
     }
-    tryInit();
+    // Otherwise wait for public-nav.js to signal completion
+    document.addEventListener('rc-nav-ready', function() { init(); }, { once: true });
+    // Safety fallback in case event was already fired or public-nav.js isn't loaded
+    setTimeout(function() {
+      if (!document.querySelector('.tc-class-mode')) { init(); }
+    }, 3000);
   }
 
   if (document.readyState === 'loading') {
