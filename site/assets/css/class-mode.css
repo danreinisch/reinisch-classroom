@@ -107,10 +107,15 @@ html.tc-collapsed .tc-class-mode-label {
   position: fixed;
   bottom: 0;
   right: 24px;
-  z-index: 1000;
+  z-index: 9999;
   display: flex;
   flex-direction: column;
   align-items: center;
+}
+
+/* Hide the fixed tab when the sidebar is visible/expanded on desktop */
+html:not(.tc-collapsed):has(.tc-sidebar) .tc-class-mode-tab {
+  display: none;
 }
 
 .tc-class-mode-tab-btn {
