@@ -60,6 +60,8 @@
   background: rgba(10,12,16,.66);
   backdrop-filter: blur(10px);
   transition: width 0.2s ease, transform 0.25s ease;
+  display: flex;
+  flex-direction: column;
 }
 
 .tc-nav{display:flex;flex-direction:column;padding:10px;gap:6px}
