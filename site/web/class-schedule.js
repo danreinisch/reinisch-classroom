@@ -29,11 +29,16 @@ async function isSupabaseAvailable() {
 
 /**
  * Parse "HH:MM" time string to minutes since midnight
- * @param {string} timeStr - Time string in "HH:MM" format
- * @returns {number} Minutes since midnight
+ * @param {string} timeStr - Time string in "HH:MM" or "H:MM" format
+ * @returns {number} Minutes since midnight, or 0 if invalid
  */
 export function parseTime(timeStr) {
-  const [h, m] = timeStr.split(':').map(Number);
+  if (!timeStr || typeof timeStr !== 'string') return 0;
+  const parts = timeStr.split(':');
+  if (parts.length < 2) return 0;
+  const h = parseInt(parts[0], 10);
+  const m = parseInt(parts[1], 10);
+  if (isNaN(h) || isNaN(m)) return 0;
   return h * 60 + m;
 }
 
@@ -78,14 +83,26 @@ export async function getSchedule() {
 }
 
 /**
+ * Normalize a Postgres time string to "HH:MM" format
+ * Handles both "HH:MM:SS" and "H:MM:SS" output formats
+ */
+function normalizeTimeStr(timeStr) {
+  if (!timeStr) return '00:00';
+  const parts = timeStr.split(':');
+  const h = String(parseInt(parts[0], 10) || 0).padStart(2, '0');
+  const m = String(parseInt(parts[1], 10) || 0).padStart(2, '0');
+  return `${h}:${m}`;
+}
+
+/**
  * Normalize Supabase rows to schedule format
  */
 function normalizeRemoteSchedule(rows) {
   return {
     periods: rows.map(r => ({
       hour: r.hour_number,
-      start: r.start_time.slice(0, 5),
-      end: r.end_time.slice(0, 5),
+      start: normalizeTimeStr(r.start_time),
+      end: normalizeTimeStr(r.end_time),
       label: r.label,
       isPlanning: !!r.is_planning
     })),

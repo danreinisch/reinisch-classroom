@@ -127,7 +127,7 @@
   function addRow() {
     const lastHour = currentPeriods.length > 0 ? currentPeriods[currentPeriods.length - 1].hour : 0;
     currentPeriods.push({
-      hour: lastHour + 1,
+      hour: Math.min(lastHour + 1, 99),
       start: "",
       end: "",
       label: "",
