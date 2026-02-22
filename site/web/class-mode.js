@@ -49,103 +49,183 @@
   }
 
   function init() {
-    var sidebar = document.querySelector('.tc-sidebar');
-    if (!sidebar) return;
-
     // Restore session state before building UI
     if (sessionStorage.getItem(SESSION_KEY) === '1') {
       document.documentElement.classList.add(CLASS_ACTIVE);
     }
 
-    // Build the class-mode widget HTML
-    var wrapper = document.createElement('div');
-    wrapper.className = 'tc-class-mode';
-    wrapper.innerHTML =
-      '<div class="tc-class-mode-pin" id="tcClassModePin">' +
-        '<input type="password" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="PIN" id="tcClassModePinInput" aria-label="Enter 4-digit PIN" />' +
-        '<div class="tc-class-mode-pin-actions">' +
-          '<button type="button" class="primary" id="tcClassModePinSubmit">Submit</button>' +
-          '<button type="button" id="tcClassModePinCancel">Cancel</button>' +
+    // Build sidebar widget (if sidebar exists)
+    var sidebar = document.querySelector('.tc-sidebar');
+    if (sidebar) {
+      var wrapper = document.createElement('div');
+      wrapper.className = 'tc-class-mode';
+      wrapper.innerHTML =
+        '<div class="tc-class-mode-pin" id="tcClassModePin">' +
+          '<input type="password" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="PIN" id="tcClassModePinInput" aria-label="Enter 4-digit PIN" />' +
+          '<div class="tc-class-mode-pin-actions">' +
+            '<button type="button" class="primary" id="tcClassModePinSubmit">Submit</button>' +
+            '<button type="button" id="tcClassModePinCancel">Cancel</button>' +
+          '</div>' +
+          '<div class="tc-class-mode-pin-error" id="tcClassModePinError">Incorrect PIN. Try again.</div>' +
         '</div>' +
-        '<div class="tc-class-mode-pin-error" id="tcClassModePinError">Incorrect PIN. Try again.</div>' +
-      '</div>' +
-      '<button type="button" class="tc-class-mode-btn" id="tcClassModeBtn" aria-label="Toggle Class Mode">' +
-        '<span class="tc-icon" id="tcClassModeIcon"></span>' +
-        '<span class="tc-class-mode-label">Class Mode</span>' +
-      '</button>';
+        '<button type="button" class="tc-class-mode-btn" id="tcClassModeBtn" aria-label="Toggle Class Mode">' +
+          '<span class="tc-icon" id="tcClassModeIcon"></span>' +
+          '<span class="tc-class-mode-label">Class Mode</span>' +
+        '</button>';
 
-    sidebar.appendChild(wrapper);
+      sidebar.appendChild(wrapper);
 
-    var btn = document.getElementById('tcClassModeBtn');
-    var iconEl = document.getElementById('tcClassModeIcon');
-    var pinForm = document.getElementById('tcClassModePin');
-    var pinInput = document.getElementById('tcClassModePinInput');
-    var pinSubmit = document.getElementById('tcClassModePinSubmit');
-    var pinCancel = document.getElementById('tcClassModePinCancel');
-    var pinError = document.getElementById('tcClassModePinError');
+      var btn = document.getElementById('tcClassModeBtn');
+      var iconEl = document.getElementById('tcClassModeIcon');
+      var pinForm = document.getElementById('tcClassModePin');
+      var pinInput = document.getElementById('tcClassModePinInput');
+      var pinSubmit = document.getElementById('tcClassModePinSubmit');
+      var pinCancel = document.getElementById('tcClassModePinCancel');
+      var pinError = document.getElementById('tcClassModePinError');
 
-    if (!btn || !iconEl || !pinForm || !pinInput || !pinSubmit || !pinCancel || !pinError) return;
-
-    // Set correct icon based on current state
-    updateIcon(iconEl);
-
-    function openPin() {
-      pinInput.value = '';
-      pinError.classList.remove('visible');
-      pinForm.classList.add('open');
-      pinInput.focus();
-    }
-
-    function closePin() {
-      pinForm.classList.remove('open');
-      pinInput.value = '';
-      pinError.classList.remove('visible');
-    }
-
-    function submitPin() {
-      var entered = pinInput.value;
-      if (entered === CLASS_MODE_PIN) {
-        activate();
+      if (btn && iconEl && pinForm && pinInput && pinSubmit && pinCancel && pinError) {
         updateIcon(iconEl);
-        closePin();
-      } else {
-        pinInput.value = '';
-        pinError.classList.add('visible');
-        pinInput.focus();
+
+        var openPin = function () {
+          pinInput.value = '';
+          pinError.classList.remove('visible');
+          pinForm.classList.add('open');
+          pinInput.focus();
+        };
+
+        var closePin = function () {
+          pinForm.classList.remove('open');
+          pinInput.value = '';
+          pinError.classList.remove('visible');
+        };
+
+        var submitPin = function () {
+          if (pinInput.value === CLASS_MODE_PIN) {
+            activate();
+            updateIcon(iconEl);
+            closePin();
+            syncTabIcon();
+          } else {
+            pinInput.value = '';
+            pinError.classList.add('visible');
+            pinInput.focus();
+          }
+        };
+
+        btn.addEventListener('click', function () {
+          if (isActive()) {
+            deactivate();
+            updateIcon(iconEl);
+            closePin();
+            syncTabIcon();
+          } else {
+            if (pinForm.classList.contains('open')) {
+              closePin();
+            } else {
+              openPin();
+            }
+          }
+        });
+
+        pinSubmit.addEventListener('click', submitPin);
+        pinCancel.addEventListener('click', closePin);
+        pinInput.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter') { submitPin(); }
+          else if (e.key === 'Escape') { closePin(); }
+        });
       }
     }
 
-    btn.addEventListener('click', function () {
-      if (isActive()) {
-        deactivate();
-        updateIcon(iconEl);
-        closePin();
-      } else {
-        if (pinForm.classList.contains('open')) {
-          closePin();
+    // Build fixed bottom tab (always visible on public pages)
+    if (!document.getElementById('tcClassModeTab')) {
+      var tab = document.createElement('div');
+      tab.className = 'tc-class-mode-tab';
+      tab.id = 'tcClassModeTab';
+      tab.innerHTML =
+        '<div class="tc-class-mode-tab-panel" id="tcTabPanel">' +
+          '<input type="password" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="PIN" id="tcTabPinInput" aria-label="Enter 4-digit class mode PIN" />' +
+          '<div class="tc-class-mode-tab-actions">' +
+            '<button type="button" class="primary" id="tcTabSubmit">Unlock</button>' +
+            '<button type="button" id="tcTabCancel">\u00d7</button>' +
+          '</div>' +
+          '<div class="tc-class-mode-tab-error" id="tcTabError">Wrong PIN</div>' +
+        '</div>' +
+        '<button type="button" class="tc-class-mode-tab-btn" id="tcTabBtn" aria-label="Toggle Class Mode">' +
+          '<span id="tcTabIcon"></span>' +
+        '</button>';
+
+      document.body.appendChild(tab);
+
+      var tabBtn = document.getElementById('tcTabBtn');
+      var tabPinInput = document.getElementById('tcTabPinInput');
+      var tabSubmit = document.getElementById('tcTabSubmit');
+      var tabCancel = document.getElementById('tcTabCancel');
+      var tabError = document.getElementById('tcTabError');
+
+      syncTabIcon();
+
+      var openTabPin = function () {
+        tabPinInput.value = '';
+        tabError.classList.remove('visible');
+        tab.classList.add('open');
+        tabPinInput.focus();
+      };
+
+      var closeTabPin = function () {
+        tab.classList.remove('open');
+        tabPinInput.value = '';
+        tabError.classList.remove('visible');
+      };
+
+      var submitTabPin = function () {
+        if (tabPinInput.value === CLASS_MODE_PIN) {
+          activate();
+          syncTabIcon();
+          closeTabPin();
+          var sidebarIcon = document.getElementById('tcClassModeIcon');
+          if (sidebarIcon) { updateIcon(sidebarIcon); }
         } else {
-          openPin();
+          tabPinInput.value = '';
+          tabError.classList.add('visible');
+          tabPinInput.focus();
         }
-      }
-    });
+      };
 
-    pinSubmit.addEventListener('click', submitPin);
+      tabBtn.addEventListener('click', function () {
+        if (isActive()) {
+          deactivate();
+          syncTabIcon();
+          closeTabPin();
+          var sidebarIcon = document.getElementById('tcClassModeIcon');
+          if (sidebarIcon) { updateIcon(sidebarIcon); }
+        } else {
+          if (tab.classList.contains('open')) {
+            closeTabPin();
+          } else {
+            openTabPin();
+          }
+        }
+      });
 
-    pinCancel.addEventListener('click', closePin);
+      tabSubmit.addEventListener('click', submitTabPin);
+      tabCancel.addEventListener('click', closeTabPin);
+      tabPinInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { submitTabPin(); }
+        else if (e.key === 'Escape') { closeTabPin(); }
+      });
+    }
+  }
 
-    pinInput.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') {
-        submitPin();
-      } else if (e.key === 'Escape') {
-        closePin();
-      }
-    });
+  // Helper used by sidebar to keep tab in sync
+  function syncTabIcon() {
+    var tabIcon = document.getElementById('tcTabIcon');
+    if (tabIcon) { tabIcon.innerHTML = isActive() ? ICON_UNLOCKED : ICON_LOCKED; }
   }
 
   function deferInit() {
     // If nav is already injected (script loaded late), run now
     var sidebar = document.querySelector('.tc-sidebar .tc-nav');
-    if (sidebar && !document.querySelector('.tc-class-mode')) {
+    if (sidebar && !document.getElementById('tcClassModeTab')) {
       init();
       return;
     }
@@ -153,7 +233,7 @@
     document.addEventListener('rc-nav-ready', function() { init(); }, { once: true });
     // Safety fallback in case event was already fired or public-nav.js isn't loaded
     setTimeout(function() {
-      if (!document.querySelector('.tc-class-mode')) { init(); }
+      if (!document.getElementById('tcClassModeTab')) { init(); }
     }, 3000);
   }
 
