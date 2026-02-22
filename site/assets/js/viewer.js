@@ -93,6 +93,13 @@
     }
 
     console.log('[viewer] Initialized with src:', src, 'return:', returnUrl);
+
+    // Dispatch rc-nav-ready so deferred scripts (class-clock.js, class-mode.js) initialize
+    // promptly. Use setTimeout(0) so their DOMContentLoaded handlers run first and set up
+    // their rc-nav-ready listeners before this event fires.
+    setTimeout(function () {
+      document.dispatchEvent(new CustomEvent('rc-nav-ready'));
+    }, 0);
   }
 
   /**
