@@ -72,6 +72,7 @@
   var _viewerEl = null;
   var _presMode = false;
   var _clockInterval = null;
+  var _classClockCtrl = null; // { start, stop } from window.RCClassClock
 
   var _STYLES = [
     '.rc-inline-viewer{position:fixed;inset:0;z-index:9999;display:none;flex-direction:column;background:var(--rc-base,#070a08);}',
@@ -227,9 +228,19 @@
     el.classList.add('open');
     document.body.style.overflow = 'hidden';
 
-    // Start clock
-    _updateClock();
-    _clockInterval = setInterval(_updateClock, 1000);
+    // Start clock — use class clock if available, otherwise fall back to simple time
+    if (!_classClockCtrl && window.RCClassClock) {
+      var pvBar = el.querySelector('.pv-bar');
+      var simpleClock = el.querySelector('#pvInlineClock');
+      if (simpleClock) simpleClock.style.display = 'none';
+      _classClockCtrl = window.RCClassClock.attachToBar(pvBar);
+    }
+    if (_classClockCtrl) {
+      _classClockCtrl.start();
+    } else {
+      _updateClock();
+      _clockInterval = setInterval(_updateClock, 1000);
+    }
   }
 
   /**
@@ -246,7 +257,9 @@
       document.exitFullscreen().catch(function () {});
     }
     // Stop clock
-    if (_clockInterval) {
+    if (_classClockCtrl) {
+      _classClockCtrl.stop();
+    } else if (_clockInterval) {
       clearInterval(_clockInterval);
       _clockInterval = null;
     }

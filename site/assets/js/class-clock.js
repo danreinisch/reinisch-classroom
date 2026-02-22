@@ -145,6 +145,56 @@
   }
 
   /**
+   * Attach a live class clock to any bar element.
+   * Creates a .tc-clock div, appends it to barEl, and returns a { start, stop } controller.
+   * Calling start() begins the per-second tick (idempotent while running).
+   * Calling stop() clears the interval so it can be restarted later.
+   * @param {Element} barEl - The container element to append the clock into
+   * @returns {{ start: function, stop: function }}
+   */
+  function attachToBar(barEl) {
+    var clockEl = document.createElement('div');
+    clockEl.className = 'tc-clock';
+    barEl.appendChild(clockEl);
+
+    var iv = null;
+    var _active = false; // true between start() and stop() calls
+
+    function start() {
+      if (_active) return;
+      _active = true;
+      import('/web/class-schedule.js').then(function (mod) {
+        if (!_active) return; // stop() was called while module was loading
+        var getSchedule = mod.getSchedule;
+        var getCurrentPeriod = mod.getCurrentPeriod;
+        getSchedule().then(function (schedule) {
+          if (!_active || iv) return; // stop() called or interval already set
+          function tick() {
+            var now = new Date();
+            clockEl.innerHTML = buildClockHtml(getCurrentPeriod(schedule, now), now);
+          }
+          tick();
+          iv = setInterval(tick, 1000);
+        }).catch(function (err) {
+          console.warn('[class-clock] attachToBar: Failed to load schedule:', err);
+        });
+      }).catch(function (err) {
+        console.warn('[class-clock] attachToBar: Failed to import class-schedule.js:', err);
+      });
+    }
+
+    function stop() {
+      _active = false;
+      if (iv) { clearInterval(iv); iv = null; }
+    }
+
+    return { start: start, stop: stop };
+  }
+
+  // Expose API for use by other scripts (e.g. open-in-viewer.js)
+  window.RCClassClock = { attachToBar: attachToBar };
+
+  /**
    * Initialize the clock after DOMContentLoaded
    */
   function init() {
