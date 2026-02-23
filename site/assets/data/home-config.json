@@ -1,5 +1,5 @@
 {
-  "weekOf": "2026-02-16",
+  "weekOf": "2026-02-23",
   "semesterEnd": "2026-06-05",
   "countdowns": [
     { "label": "End of Q3", "date": "2026-03-06", "emoji": "📊", "type": "quarter" },
@@ -34,11 +34,9 @@
     "timeFormat": "h:mm AM/PM",
     "speed": 45,
     "items": [
-      { "category": "language-arts", "text": "LA — Lost in Kragdon-ah — Chapters 14-16: Structure" },
-      { "category": "life-skills", "text": "Life Skills — Understanding Your Workplace" }
-    ],
-    "languageArts": "",
-    "lifeSkills": "",
-    "custom": []
+      { "category": "language-arts", "text": "Language Arts: Lost in Kragdon-ah — Week 5: Sentence Fragments vs. Complete Sentences" },
+      { "category": "life-skills", "text": "Life Skills: Keeping the Job" },
+      { "category": "none", "text": "🧘 Mindful Monday: Take a deep breath and focus on one thing at a time." }
+    ]
   }
 }
