@@ -334,16 +334,23 @@ function init() {
 
   var t = '?t=' + Date.now();
 
-  // Check localStorage override first (set by Teacher Center Settings)
-  var localConfig = null;
+  // Fetch JSON first, then shallow-merge localStorage overrides on top
+  var localOverrides = null;
   try {
     var raw = localStorage.getItem('rc_home_config');
-    if (raw) localConfig = JSON.parse(raw);
+    if (raw) localOverrides = JSON.parse(raw);
   } catch(_) { /* noop */ }
 
-  var homeP = localConfig
-    ? Promise.resolve(localConfig)
-    : fetch('/assets/data/home-config.json' + t).then(function(r) { return r.json(); });
+  var homeP = fetch('/assets/data/home-config.json' + t).then(function(r) { return r.json(); }).then(function(base) {
+    if (localOverrides && typeof localOverrides === 'object' && !Array.isArray(localOverrides)) {
+      for (var key in localOverrides) {
+        if (Object.prototype.hasOwnProperty.call(localOverrides, key)) {
+          base[key] = localOverrides[key];
+        }
+      }
+    }
+    return base;
+  });
   var stateP = fetch('/assets/data/site-state.json' + t).then(function(r) { return r.json(); });
 
   Promise.all([homeP, stateP])
