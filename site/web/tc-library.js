@@ -320,13 +320,13 @@
   // Get sync status badge
   function getSyncStatusBadge() {
     if (syncStatus === "synced") {
-      return '<span style="color: #10b981;">🟢 Synced</span>';
+      return '<span style="display:inline-flex;align-items:center;gap:5px;color:#e8f1ec;"><span class="rc-status-dot rc-status-dot--ok"></span>Synced</span>';
     } else if (syncStatus === "local") {
-      return '<span style="color: #f59e0b;">🟡 Local</span>';
+      return '<span style="display:inline-flex;align-items:center;gap:5px;color:#e8f1ec;"><span class="rc-status-dot rc-status-dot--warn"></span>Local</span>';
     } else if (syncStatus === "error") {
-      return '<span style="color: #ef4444;">🔴 Error</span>';
+      return '<span style="display:inline-flex;align-items:center;gap:5px;color:#e8f1ec;"><span class="rc-status-dot rc-status-dot--error"></span>Error</span>';
     } else {
-      return '<span style="color: rgba(255,255,255,.40);">⚪ Loading...</span>';
+      return '<span style="display:inline-flex;align-items:center;gap:5px;color:rgba(255,255,255,.40);"><span class="rc-status-dot rc-status-dot--loading"></span>Loading...</span>';
     }
   }
 

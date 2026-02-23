@@ -33,15 +33,14 @@
         var(--shadow-1, 0 18px 50px rgba(0, 0, 0, 0.6));
     }
     .tc-main button.primary{
-      border:0;background:linear-gradient(180deg, color-mix(in oklab, var(--accent, #35e08a) 80%, transparent), color-mix(in oklab, var(--accent2, #14b86a) 80%, transparent));
-      cursor:pointer;color:#032313;font-weight:800;
-      box-shadow: 0 4px 16px var(--glow, rgba(53, 224, 138, 0.2));
+      border:1px solid rgba(148,163,184,0.3);background:rgba(148,163,184,0.15);
+      cursor:pointer;color:var(--rc-ink,#e8f1ec);font-weight:600;
     }
     .tc-main button.primary:hover{
-      box-shadow: 0 6px 22px var(--glow, rgba(53, 224, 138, 0.3));
+      background:rgba(148,163,184,0.22);border-color:rgba(148,163,184,0.4);
     }
     .tc-main button.warn{
-      border:1px solid #f59e0b;background:linear-gradient(180deg,#fbbf24,#f59e0b);cursor:pointer;color:#1b2437;font-weight:800;
+      border:1px solid rgba(245,158,11,0.3);background:rgba(245,158,11,0.12);cursor:pointer;color:rgba(245,158,11,0.9);font-weight:600;
     }
     .admin-btn{
       display:inline-flex;align-items:center;justify-content:center;gap:0.4rem;

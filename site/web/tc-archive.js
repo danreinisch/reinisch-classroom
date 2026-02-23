@@ -170,13 +170,13 @@
    */
   function updateSyncStatus() {
     if (syncStatus === 'synced') {
-      arSyncIcon.textContent = '🟢';
+      arSyncIcon.innerHTML = '<span class="rc-status-dot rc-status-dot--ok"></span>';
       arSyncText.textContent = 'Synced';
     } else if (syncStatus === 'local') {
-      arSyncIcon.textContent = '🟡';
+      arSyncIcon.innerHTML = '<span class="rc-status-dot rc-status-dot--warn"></span>';
       arSyncText.textContent = 'Local mode';
     } else {
-      arSyncIcon.textContent = '🔴';
+      arSyncIcon.innerHTML = '<span class="rc-status-dot rc-status-dot--error"></span>';
       arSyncText.textContent = 'Error';
     }
   }

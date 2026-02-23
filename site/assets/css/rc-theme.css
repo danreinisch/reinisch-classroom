@@ -129,27 +129,27 @@ body {
 }
 
 .rc-btn.primary {
-  background: var(--rc-brand);
-  border-color: var(--rc-brand);
-  color: #0b1220;
+  background: rgba(148, 163, 184, 0.15);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  color: var(--rc-ink, #e8f1ec);
   font-weight: 600;
 }
 
 .rc-btn.primary:hover {
-  background: #1ea34e;
-  border-color: #1ea34e;
+  background: rgba(148, 163, 184, 0.22);
+  border-color: rgba(148, 163, 184, 0.4);
 }
 
 .rc-btn.danger {
-  background: var(--rc-danger);
-  border-color: var(--rc-danger);
-  color: white;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: rgba(239, 68, 68, 0.9);
   font-weight: 600;
 }
 
 .rc-btn.danger:hover {
-  background: #dc2626;
-  border-color: #dc2626;
+  background: rgba(239, 68, 68, 0.18);
+  border-color: rgba(239, 68, 68, 0.35);
 }
 
 /* Form Inputs */
@@ -351,4 +351,29 @@ body {
   .rc-heading-2 {
     font-size: 20px;
   }
+}
+
+/* ============================================================
+   STATUS DOT UTILITIES
+   ============================================================ */
+
+.rc-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.rc-status-dot--ok { background: rgba(34, 197, 94, 0.85); }
+.rc-status-dot--warn { background: rgba(245, 158, 11, 0.85); }
+.rc-status-dot--error { background: rgba(239, 68, 68, 0.85); }
+.rc-status-dot--loading {
+  background: rgba(148, 163, 184, 0.5);
+  animation: rc-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes rc-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
 }
