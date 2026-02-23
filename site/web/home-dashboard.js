@@ -297,10 +297,12 @@ function buildTicker(homeConfig, siteState) {
   }
 
   var joined = items.join('  \u25C6  ');
-  var full = joined + '  \u25C6  ' + joined;
+  var full = joined + '  \u25C6  ';
 
-  var tickerEl = document.querySelector('.ticker-content');
-  if (tickerEl) tickerEl.innerHTML = full;
+  var tickerEls = document.querySelectorAll('.ticker-content');
+  for (var k = 0; k < tickerEls.length; k++) {
+    tickerEls[k].textContent = full;
+  }
 
   var trackEl = document.querySelector('.ticker-track');
   if (trackEl) {
