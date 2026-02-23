@@ -83,6 +83,14 @@ html.rc-class-mode-active .tc-clock-sep {
   display: inline;
 }
 
+/* Teacher Center: always show full clock details in the topbar */
+.tc-topbar .tc-clock .tc-clock-period,
+.tc-topbar .tc-clock .tc-clock-label,
+.tc-topbar .tc-clock .tc-clock-countdown,
+.tc-topbar .tc-clock .tc-clock-sep {
+  display: inline;
+}
+
 /* Mobile: compact */
 @media (max-width: 768px) {
   .tc-clock { font-size: 12px; gap: 5px; }

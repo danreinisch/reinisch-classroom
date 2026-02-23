@@ -301,7 +301,7 @@ function buildTicker(homeConfig, siteState) {
 
   var tickerEls = document.querySelectorAll('.ticker-content');
   for (var k = 0; k < tickerEls.length; k++) {
-    tickerEls[k].textContent = full;
+    tickerEls[k].innerHTML = full;
   }
 
   var trackEl = document.querySelector('.ticker-track');
