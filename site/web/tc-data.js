@@ -232,29 +232,26 @@
     }
   }
 
-  // Render class filter buttons
+  // Render class filter dropdown
   function renderClassFilters() {
-    const container = $('dtClassFilterBar');
-    if (!container) return;
-    
-    const allBtn = `<button class="dt-filter-btn ${currentClassFilter === 'All Classes' ? 'active' : ''}" data-class="All Classes">All Classes</button>`;
-    
-    const classButtons = CANON_CLASSES.map(cls => 
-      `<button class="dt-filter-btn ${currentClassFilter === cls ? 'active' : ''}" data-class="${cls}">${cls}</button>`
-    ).join('');
-    
-    container.innerHTML = allBtn + classButtons;
-    
-    // Add click handlers
-    container.querySelectorAll('.dt-filter-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        currentClassFilter = btn.dataset.class;
-        render();
-      });
-    });
+    const select = $('dtClassFilter');
+    if (!select) return;
+
+    const options = [
+      `<option value="All Classes"${currentClassFilter === 'All Classes' ? ' selected' : ''}>All Classes</option>`
+    ].concat(CANON_CLASSES.map(cls =>
+      `<option value="${cls}"${currentClassFilter === cls ? ' selected' : ''}>${cls}</option>`
+    ));
+
+    select.innerHTML = options.join('');
+
+    select.onchange = () => {
+      currentClassFilter = select.value;
+      render();
+    };
   }
 
-  // Render quarter filter buttons
+  // Render quarter filter buttons (compact toggle group)
   function renderQuarterFilters() {
     const container = $('dtQuarterFilterBar');
     if (!container) return;
@@ -263,16 +260,15 @@
     const currentQ = getCurrentQuarter();
     
     const buttons = quarters.map(q => {
-      const label = getQuarterLabel(q);
       const isCurrent = q === currentQ;
       const isActive = currentQuarterFilter === q;
-      return `<button class="dt-filter-btn ${isActive ? 'active' : ''}" data-quarter="${q}">${label}${isCurrent ? ' *' : ''}</button>`;
+      return `<button class="dt-q-btn ${isActive ? 'active' : ''}" data-quarter="${q}">${q}${isCurrent ? ' *' : ''}</button>`;
     }).join('');
     
     container.innerHTML = buttons;
     
     // Add click handlers
-    container.querySelectorAll('.dt-filter-btn').forEach(btn => {
+    container.querySelectorAll('.dt-q-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
         currentQuarterFilter = btn.dataset.quarter;
         await loadProgressForQuarter(currentQuarterFilter);
@@ -281,48 +277,44 @@
     });
   }
 
-  // Render goal area filter buttons
+  // Render goal area filter dropdown
   async function renderGoalAreaFilters() {
-    const container = $('dtGoalAreaFilterBar');
-    if (!container) return;
+    const select = $('dtGoalAreaFilter');
+    if (!select) return;
     
     // Get unique goal areas from goals data
     const goalAreas = [...new Set(goalsData.map(g => g.goal_area || 'Uncategorized').filter(Boolean))].sort();
     
-    const allBtn = `<button class="dt-filter-btn ${currentGoalAreaFilter === 'All' ? 'active' : ''}" data-area="All">All Goal Areas</button>`;
-    
-    const areaButtons = goalAreas.map(area => 
-      `<button class="dt-filter-btn ${currentGoalAreaFilter === area ? 'active' : ''}" data-area="${area}">${area}</button>`
-    ).join('');
-    
-    container.innerHTML = allBtn + areaButtons;
-    
-    // Add click handlers
-    container.querySelectorAll('.dt-filter-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        currentGoalAreaFilter = btn.dataset.area;
-        render();
-      });
-    });
+    const options = [
+      `<option value="All"${currentGoalAreaFilter === 'All' ? ' selected' : ''}>All Goal Areas</option>`
+    ].concat(goalAreas.map(area =>
+      `<option value="${area}"${currentGoalAreaFilter === area ? ' selected' : ''}>${area}</option>`
+    ));
+
+    select.innerHTML = options.join('');
+
+    select.onchange = () => {
+      currentGoalAreaFilter = select.value;
+      render();
+    };
   }
 
-  // Render data collector filter buttons (My Goals Only vs All Goals)
+  // Render data collector filter dropdown
   function renderDataCollectorFilter() {
-    const container = $('dtDataCollectorFilterBar');
-    if (!container) return;
-    
-    const allBtn = `<button class="dt-filter-btn ${currentDataCollectorFilter === 'All' ? 'active' : ''}" data-collector="All">All Goals</button>`;
-    const myBtn = `<button class="dt-filter-btn ${currentDataCollectorFilter === 'My Goals Only' ? 'active' : ''}" data-collector="My Goals Only">My Goals Only</button>`;
-    
-    container.innerHTML = allBtn + myBtn;
-    
-    // Add click handlers
-    container.querySelectorAll('.dt-filter-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        currentDataCollectorFilter = btn.dataset.collector;
-        render();
-      });
-    });
+    const select = $('dtDataCollectorFilter');
+    if (!select) return;
+
+    const options = [
+      `<option value="All"${currentDataCollectorFilter === 'All' ? ' selected' : ''}>All Goals</option>`,
+      `<option value="My Goals Only"${currentDataCollectorFilter === 'My Goals Only' ? ' selected' : ''}>My Goals Only</option>`
+    ];
+
+    select.innerHTML = options.join('');
+
+    select.onchange = () => {
+      currentDataCollectorFilter = select.value;
+      render();
+    };
   }
 
   // Filter students based on current filters
@@ -1646,54 +1638,42 @@
   
   function renderValidationDashboard() {
     const issues = validateProgressData();
-    const summaryEl = $('dtValidationSummary');
-    const issuesEl = $('dtValidationIssues');
-    const emptyEl = $('dtValidationEmpty');
-    
-    if (!summaryEl) return;
-    
+    const banner = $('dtQualityBanner');
+    const bannerText = $('dtQualityBannerText');
+    const accordion = $('dtValidationAccordion');
+
+    if (!banner) return;
+
     if (issues.length === 0) {
-      summaryEl.innerHTML = '';
-      issuesEl.style.display = 'none';
-      emptyEl.style.display = 'block';
+      banner.style.display = 'none';
       return;
     }
-    
-    emptyEl.style.display = 'none';
-    issuesEl.style.display = 'block';
-    
-    // Count by type
+
+    banner.style.display = 'block';
+
+    // Build compact summary text
     const counts = {};
-    issues.forEach(i => {
-      counts[i.type] = (counts[i.type] || 0) + 1;
-    });
-    
-    // Summary cards
-    summaryEl.innerHTML = Object.entries(counts).map(([type, count]) => {
-      const labels = {
-        exceeds_mastery: 'Progress > Mastery',
-        future_date: 'Future Dates',
-        out_of_range: 'Out of Range',
-        duplicate: 'Duplicates',
-        missing_baseline: 'Missing Baseline',
-        stale: 'Stale Goals (60+ days)'
-      };
-      return `
-        <div style="padding: 12px; border: 1px solid rgba(245,158,11,.35); border-radius: 10px; background: rgba(245,158,11,.08);">
-          <div style="font-size: 20px; font-weight: 700;">${count}</div>
-          <div style="font-size: 12px; opacity: 0.85;">${labels[type] || type}</div>
-        </div>
-      `;
-    }).join('');
-    
-    // Issues list
-    const accordion = $('dtValidationAccordion');
+    issues.forEach(i => { counts[i.type] = (counts[i.type] || 0) + 1; });
+    const labels = {
+      exceeds_mastery: 'Progress > Mastery',
+      future_date: 'Future Dates',
+      out_of_range: 'Out of Range',
+      duplicate: 'Duplicates',
+      missing_baseline: 'Missing Baseline',
+      stale: 'Stale Goals (60+ days)'
+    };
+    const summaryParts = Object.entries(counts).map(([type, count]) => `${count} ${labels[type] || type}`);
+    if (bannerText) {
+      bannerText.textContent = `⚠️ ${issues.length} data quality issue${issues.length !== 1 ? 's' : ''}: ${summaryParts.join(', ')}`;
+    }
+
     if (!accordion) return;
-    
+
+    // Issues list
     accordion.innerHTML = issues.map((issue, idx) => {
       const student = studentsData.find(s => s.code === issue.student_code);
       const icon = issue.severity === 'error' ? '🔴' : '⚠️';
-      
+
       return `
         <div class="dt-accordion-item">
           <div class="dt-accordion-header" data-toggle-issue="${idx}">
@@ -1713,14 +1693,14 @@
         </div>
       `;
     }).join('');
-    
+
     // Add event listeners for issue toggles
     accordion.querySelectorAll('[data-toggle-issue]').forEach(el => {
       el.addEventListener('click', () => {
         el.closest('.dt-accordion-item').classList.toggle('expanded');
       });
     });
-    
+
     // Add event listeners for dismiss buttons
     accordion.querySelectorAll('[data-dismiss-issue]').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -1738,6 +1718,17 @@
     if (refreshBtn) {
       refreshBtn.addEventListener('click', () => {
         renderValidationDashboard();
+      });
+    }
+
+    const toggleBtn = $('dtQualityToggle');
+    if (toggleBtn) {
+      toggleBtn.addEventListener('click', () => {
+        const details = $('dtQualityDetails');
+        if (details) {
+          details.classList.toggle('open');
+          toggleBtn.textContent = details.classList.contains('open') ? 'Details ▲' : 'Details ▼';
+        }
       });
     }
     
@@ -1934,6 +1925,7 @@
     renderClassFilters();
     renderQuarterFilters();
     renderGoalAreaFilters();
+    renderDataCollectorFilter();
     renderAccordion();
   }
 
@@ -1951,6 +1943,9 @@
         section.classList.toggle('active', section.dataset.tab === tabName);
       });
       localStorage.setItem(TAB_KEY, tabName);
+      if (tabName === 'schedule') {
+        renderCollectionSchedule();
+      }
     }
     document.querySelectorAll('.dt-tab-btn').forEach(btn => {
       btn.addEventListener('click', () => activateTab(btn.dataset.tab));
