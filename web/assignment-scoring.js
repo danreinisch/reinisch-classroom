@@ -35,10 +35,15 @@ export function scoreItem(item, studentAnswer) {
       detail.type = 'boolean';
       break;
       
-    case 'multi':
-      isCorrect = scoreMulti(item.correct, studentAnswer);
-      detail.type = 'multi';
-      break;
+    case 'multi': {
+      const multiResult = scoreMulti(item.correct, studentAnswer);
+      return {
+        is_correct: multiResult.is_correct,
+        earned_points: Math.round(maxPoints * multiResult.ratio * 100) / 100,
+        max_points: maxPoints,
+        detail: { type: 'multi', ratio: multiResult.ratio }
+      };
+    }
       
     case 'constructed': {
       const constructedResult = scoreConstructed(item, studentAnswer);
@@ -102,7 +107,7 @@ function scoreBoolean(correctAnswer, studentAnswer) {
 /**
  * Score Multi-select
  * Order-agnostic set equality
- * Phase 1: Full credit or zero (no partial credit)
+ * Partial credit: earned = (correct_hits - incorrect_picks) / total_correct, clamped to [0,1]
  */
 function scoreMulti(correctAnswer, studentAnswer) {
   // Normalize to arrays
@@ -123,10 +128,20 @@ function scoreMulti(correctAnswer, studentAnswer) {
   const correct = normalizeArray(correctAnswer);
   const student = normalizeArray(studentAnswer);
   
-  // Must have same length and all elements match
-  if (correct.length !== student.length) return false;
+  const correctSet = new Set(correct);
+  let correctHits = 0;
+  let incorrectPicks = 0;
+  for (const v of student) {
+    if (correctSet.has(v)) correctHits++;
+    else incorrectPicks++;
+  }
   
-  return correct.every((val, idx) => val === student[idx]);
+  const totalCorrect = correct.length;
+  const earned = correctHits - incorrectPicks;
+  const ratio = totalCorrect > 0 ? Math.max(0, earned) / totalCorrect : 0;
+  const is_correct = correctHits === totalCorrect && incorrectPicks === 0;
+  
+  return { is_correct, ratio };
 }
 
 /**
