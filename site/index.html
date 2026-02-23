@@ -66,6 +66,7 @@
         display: flex;
         white-space: nowrap;
         animation: ticker-scroll 45s linear infinite;
+        will-change: transform;
       }
       .ticker-track:hover {
         animation-play-state: paused;
@@ -81,8 +82,8 @@
         text-transform: uppercase;
       }
       @keyframes ticker-scroll {
-        0% { transform: translateX(0); }
-        100% { transform: translateX(-50%); }
+        0%   { transform: translate3d(0, 0, 0); }
+        100% { transform: translate3d(var(--ticker-offset, -50%), 0, 0); }
       }
 
       /* This Week's Focus */

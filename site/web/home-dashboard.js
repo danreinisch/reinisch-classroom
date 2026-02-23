@@ -308,8 +308,25 @@ function buildTicker(homeConfig, siteState) {
   if (trackEl) {
     var speed = (ticker && ticker.speed) || 45;
     trackEl.style.animationDuration = speed + 's';
+    updateTickerOffset(trackEl);
   }
 }
+
+function updateTickerOffset(trackEl) {
+  var firstSpan = trackEl.querySelector('.ticker-content');
+  if (firstSpan) {
+    trackEl.style.setProperty('--ticker-offset', '-' + firstSpan.offsetWidth + 'px');
+  }
+}
+
+var _tickerResizeTimer;
+window.addEventListener('resize', function() {
+  clearTimeout(_tickerResizeTimer);
+  _tickerResizeTimer = setTimeout(function() {
+    var trackEl = document.querySelector('.ticker-track');
+    if (trackEl) updateTickerOffset(trackEl);
+  }, 100);
+});
 
 function init() {
   setGreeting();
