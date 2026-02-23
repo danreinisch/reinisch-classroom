@@ -1934,13 +1934,28 @@
     renderClassFilters();
     renderQuarterFilters();
     renderGoalAreaFilters();
-    renderDataCollectorFilter();
     renderAccordion();
   }
 
   // Initialize
   async function init() {
     await loadData();
+
+    // Sub-tab navigation
+    const TAB_KEY = 'rc_data_active_tab';
+    function activateTab(tabName) {
+      document.querySelectorAll('.dt-tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tabName);
+      });
+      document.querySelectorAll('.dt-tab-section').forEach(section => {
+        section.classList.toggle('active', section.dataset.tab === tabName);
+      });
+      localStorage.setItem(TAB_KEY, tabName);
+    }
+    document.querySelectorAll('.dt-tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => activateTab(btn.dataset.tab));
+    });
+    activateTab(localStorage.getItem(TAB_KEY) || 'progress');
     
     // Set up search input
     const searchInput = $('dtSearch');

@@ -158,16 +158,46 @@ exports.handler = async (event) => {
         { 'Cache-Control': 'no-store' },
         requestId
       );
-    } else {
-      console.log(`[student-login] [${requestId}] Invalid credentials`);
-      return jsonResponse(
-        event,
-        401,
-        { ok: false, error: 'Invalid credentials' },
-        { 'Cache-Control': 'no-store' },
-        requestId
-      );
     }
+
+    // verify_student_password returned false — try verify_user_password as fallback
+    // (handles the case where password was written to app_users but not student_passwords)
+    console.log(`[student-login] [${requestId}] verify_student_password returned false, trying fallback`);
+    const fallbackUrl = `${SUPABASE_URL}/rest/v1/rpc/verify_user_password`;
+    const fallbackResponse = await fetch(fallbackUrl, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_SERVICE_ROLE_KEY,
+        'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ p_username: codeNorm.toLowerCase(), p_password: password })
+    });
+
+    if (fallbackResponse.ok) {
+      const fallbackResult = await fallbackResponse.json();
+      // verify_user_password returns TABLE rows (user objects), not booleans
+      if (Array.isArray(fallbackResult) && fallbackResult.length > 0 &&
+          typeof fallbackResult[0] === 'object' && fallbackResult[0] !== null) {
+        console.log(`[student-login] [${requestId}] Login successful via fallback`);
+        return jsonResponse(
+          event,
+          200,
+          { ok: true, code: codeNorm, name: codeNorm },
+          { 'Cache-Control': 'no-store' },
+          requestId
+        );
+      }
+    }
+
+    console.log(`[student-login] [${requestId}] Invalid credentials`);
+    return jsonResponse(
+      event,
+      401,
+      { ok: false, error: 'Invalid credentials' },
+      { 'Cache-Control': 'no-store' },
+      requestId
+    );
     
   } catch (err) {
     console.error(`[student-login] [${requestId}] Error:`, err.message);
