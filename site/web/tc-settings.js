@@ -25,6 +25,9 @@
     Q4: { start: "Mar 7", end: "May 20" },
   };
 
+  // Default ticker scroll speed (animation duration in seconds)
+  var DEFAULT_TICKER_SPEED = 45;
+
   /**
    * Load and display teacher name
    */
@@ -195,6 +198,20 @@
   }
 
   /**
+   * Map ticker speed (animation duration in seconds) to a human-friendly label
+   */
+  function tickerSpeedLabel(seconds) {
+    var s = Number(seconds);
+    if (s <= 17) return 'Very Fast';
+    if (s <= 30) return 'Fast';
+    if (s <= 40) return 'Moderate';
+    if (s <= 50) return 'Normal';
+    if (s <= 75) return 'Slow';
+    if (s <= 105) return 'Very Slow';
+    return 'Crawl';
+  }
+
+  /**
    * Load ticker config fields from homeConfig.ticker
    */
   function loadTickerConfig() {
@@ -204,6 +221,12 @@
     var timeFormatEl = $('tickerTimeFormat');
     if (dateFormatEl) dateFormatEl.value = ticker.dateFormat || 'Day, Month DD, YYYY';
     if (timeFormatEl) timeFormatEl.value = ticker.timeFormat || 'h:mm AM/PM';
+
+    var speedEl = $('tickerSpeed');
+    var speedLabelEl = $('tickerSpeedLabel');
+    var speed = ticker.speed || DEFAULT_TICKER_SPEED;
+    if (speedEl) speedEl.value = speed;
+    if (speedLabelEl) speedLabelEl.textContent = tickerSpeedLabel(speed);
 
     // Backwards compatibility: migrate old languageArts/lifeSkills/custom fields to items[]
     if (!Array.isArray(ticker.items)) {
@@ -288,6 +311,7 @@
     homeConfig.ticker = {
       dateFormat: ($('tickerDateFormat') && $('tickerDateFormat').value) || 'Day, Month DD, YYYY',
       timeFormat: ($('tickerTimeFormat') && $('tickerTimeFormat').value) || 'h:mm AM/PM',
+      speed: parseInt(($('tickerSpeed') && $('tickerSpeed').value) || String(DEFAULT_TICKER_SPEED), 10),
       items: items
     };
     saveHomeConfig();
@@ -747,6 +771,24 @@
     var addTickerRowBtn = $('addTickerRowBtn');
     if (addTickerRowBtn) {
       addTickerRowBtn.addEventListener('click', addTickerRow);
+    }
+
+    var tickerSpeedEl = $('tickerSpeed');
+    if (tickerSpeedEl) {
+      tickerSpeedEl.addEventListener('input', function() {
+        var labelEl = $('tickerSpeedLabel');
+        if (labelEl) labelEl.textContent = tickerSpeedLabel(tickerSpeedEl.value);
+      });
+    }
+
+    var tickerSpeedResetBtn = $('tickerSpeedResetBtn');
+    if (tickerSpeedResetBtn) {
+      tickerSpeedResetBtn.addEventListener('click', function() {
+        var speedEl = $('tickerSpeed');
+        if (speedEl) speedEl.value = DEFAULT_TICKER_SPEED;
+        var labelEl = $('tickerSpeedLabel');
+        if (labelEl) labelEl.textContent = tickerSpeedLabel(DEFAULT_TICKER_SPEED);
+      });
     }
 
     var saveTickerConfigBtn = $('saveTickerConfigBtn');
