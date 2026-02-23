@@ -365,6 +365,43 @@
         html { font-size: 28px; }
         .dt-card { padding: 28px; }
       }
+
+      /* Sub-tab navigation */
+      .dt-tab-bar {
+        display: flex;
+        gap: 4px;
+        margin-bottom: 16px;
+        border-bottom: 1px solid var(--rc-glass-border);
+        flex-wrap: wrap;
+      }
+      .dt-tab-btn {
+        padding: 8px 18px;
+        border-radius: var(--rc-radius) var(--rc-radius) 0 0;
+        border: 1px solid transparent;
+        border-bottom: none;
+        background: transparent;
+        color: inherit;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 500;
+        transition: background 0.2s ease;
+        opacity: 0.7;
+        position: relative;
+        bottom: -1px;
+      }
+      .dt-tab-btn:hover {
+        background: var(--rc-glass-hover);
+        opacity: 1;
+      }
+      .dt-tab-btn.active {
+        background: rgba(34, 197, 94, 0.1);
+        border-color: var(--rc-glass-border);
+        border-bottom-color: transparent;
+        color: var(--rc-brand, #22c55e);
+        opacity: 1;
+      }
+      .dt-tab-section { display: none; }
+      .dt-tab-section.active { display: block; }
     </style>
   </head>
   <body>
@@ -498,188 +535,223 @@
             Track IEP goal progress across quarters with rolling averages.
           </p>
 
-          <section class="dt-card" aria-label="Data filters">
-            <div class="dt-row">
-              <div style="display: flex; align-items: center; gap: 12px;">
-                <h2 style="margin: 0">Filters</h2>
-                <span id="dtSyncStatus" class="dt-sync-status local" style="display: none;">
-                  <span id="dtSyncIcon"><span class="rc-status-dot rc-status-dot--warn"></span></span>
-                  <span id="dtSyncText">Local mode</span>
-                </span>
-              </div>
-              <div class="dt-actions">
-                <input 
-                  type="search" 
-                  id="dtSearch" 
-                  class="dt-search-input" 
-                  placeholder="Search students or goals..."
-                />
-              </div>
-            </div>
+          <nav class="dt-tab-bar" aria-label="Data sub-tabs">
+            <button class="dt-tab-btn" data-tab="progress">Progress</button>
+            <button class="dt-tab-btn" data-tab="goals">Goals</button>
+            <button class="dt-tab-btn" data-tab="students">Students</button>
+            <button class="dt-tab-btn" data-tab="import-export">Import / Export</button>
+          </nav>
 
-            <div class="dt-filter-bar" id="dtClassFilterBar">
-              <!-- Class filter buttons populated by JS -->
-            </div>
+          <!-- Progress tab -->
+          <section class="dt-tab-section" data-tab="progress">
 
-            <div class="dt-filter-bar" id="dtQuarterFilterBar">
-              <!-- Quarter filter buttons populated by JS -->
-            </div>
+            <section class="dt-card" aria-label="Data filters">
+              <div class="dt-row">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                  <h2 style="margin: 0">Filters</h2>
+                  <span id="dtSyncStatus" class="dt-sync-status local" style="display: none;">
+                    <span id="dtSyncIcon"><span class="rc-status-dot rc-status-dot--warn"></span></span>
+                    <span id="dtSyncText">Local mode</span>
+                  </span>
+                </div>
+                <div class="dt-actions">
+                  <input 
+                    type="search" 
+                    id="dtSearch" 
+                    class="dt-search-input" 
+                    placeholder="Search students or goals..."
+                  />
+                </div>
+              </div>
 
-            <div class="dt-filter-bar" id="dtGoalAreaFilterBar">
-              <!-- Goal area filter buttons populated by JS -->
-            </div>
+              <div class="dt-filter-bar" id="dtClassFilterBar">
+                <!-- Class filter buttons populated by JS -->
+              </div>
 
-            <div class="dt-filter-bar" id="dtDataCollectorFilterBar">
-              <!-- Data collector filter buttons populated by JS -->
-            </div>
-          </section>
+              <div class="dt-filter-bar" id="dtQuarterFilterBar">
+                <!-- Quarter filter buttons populated by JS -->
+              </div>
 
-          <!-- SpedTrack Import Section -->
-          <section class="dt-card" aria-label="SpedTrack import" style="margin-top: 16px">
-            <h2 style="margin: 0 0 12px 0">📥 SpedTrack Import</h2>
-            <p style="margin: 0 0 16px 0; opacity: 0.85; font-size: 14px;">
-              Import progress data from SpedTrack CSV exports. Paste CSV data or upload a file.
-            </p>
-            
-            <div style="display: flex; gap: 12px; margin-bottom: 16px;">
-              <button class="dt-btn" id="dtImportTogglePaste">📋 Paste CSV</button>
-              <button class="dt-btn" id="dtImportToggleFile">📁 Upload File</button>
-            </div>
-            
-            <div id="dtImportPasteArea" style="display: none;">
-              <div style="margin-bottom: 12px;">
-                <label for="dtImportTextarea" style="display: block; font-size: 14px; font-weight: 600; margin-bottom: 6px;">
-                  Paste CSV Data
-                </label>
-                <textarea 
-                  id="dtImportTextarea" 
-                  class="dt-search-input" 
-                  style="min-height: 150px; width: 100%; font-family: monospace; font-size: 12px;"
-                  placeholder="Student,Goal,Date,Percent,Notes&#10;S001,1.1,2026-01-15,72,Improving on reading comp&#10;S001,2.3,2026-01-15,65,Still working on writing&#10;S003,1.1,2026-01-15,80,Strong progress"
-                ></textarea>
+              <div class="dt-filter-bar" id="dtGoalAreaFilterBar">
+                <!-- Goal area filter buttons populated by JS -->
               </div>
-              <button class="dt-btn primary" id="dtImportParse">Parse CSV</button>
-            </div>
-            
-            <div id="dtImportFileArea" style="display: none;">
-              <div style="margin-bottom: 12px;">
-                <label for="dtImportFile" style="display: block; font-size: 14px; font-weight: 600; margin-bottom: 6px;">
-                  Upload CSV File
-                </label>
-                <input type="file" id="dtImportFile" accept=".csv" class="dt-search-input" />
-              </div>
-              <button class="dt-btn primary" id="dtImportUpload">Upload & Parse</button>
-            </div>
-            
-            <div id="dtImportPreview" style="display: none; margin-top: 16px;">
-              <h3 style="margin: 0 0 12px 0; font-size: 16px;">Import Preview</h3>
-              <div style="overflow-x: auto; border: 1px solid rgba(255,255,255,.08); border-radius: 8px; margin-bottom: 12px;">
-                <table class="dt-data-table" id="dtImportPreviewTable">
-                  <thead>
-                    <tr>
-                      <th>Status</th>
-                      <th>Student</th>
-                      <th>Goal</th>
-                      <th>Date</th>
-                      <th>Percent</th>
-                      <th>Notes</th>
-                    </tr>
-                  </thead>
-                  <tbody id="dtImportPreviewBody">
-                  </tbody>
-                </table>
-              </div>
-              <div style="display: flex; gap: 10px;">
-                <button class="dt-btn primary" id="dtImportConfirm">✓ Import <span id="dtImportCount">0</span> Records</button>
-                <button class="dt-btn" id="dtImportCancel">Cancel</button>
-              </div>
-            </div>
-            
-            <div id="dtImportHistory" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,.08);">
-              <h3 style="margin: 0 0 12px 0; font-size: 16px;">Import History</h3>
-              <div id="dtImportHistoryList">
-                <p style="opacity: 0.7; text-align: center;">No imports yet</p>
-              </div>
-            </div>
-          </section>
+            </section>
 
-          <!-- Data Quality Validation Section -->
-          <section class="dt-card" aria-label="Data quality" style="margin-top: 16px">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-              <h2 style="margin: 0">⚠️ Data Quality</h2>
-              <button class="dt-btn" id="dtValidationRefresh">🔄 Re-run Validation</button>
-            </div>
-            
-            <div id="dtValidationSummary" style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px;">
-              <!-- Validation summary populated by JS -->
-            </div>
-            
-            <div id="dtValidationIssues" style="display: none;">
-              <div class="dt-accordion" id="dtValidationAccordion">
-                <!-- Validation issues populated by JS -->
+            <!-- Data Quality Validation Section -->
+            <section class="dt-card" aria-label="Data quality" style="margin-top: 16px">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <h2 style="margin: 0">⚠️ Data Quality</h2>
+                <button class="dt-btn" id="dtValidationRefresh">🔄 Re-run Validation</button>
               </div>
-            </div>
-            
-            <div id="dtValidationEmpty" style="text-align: center; padding: 20px 0; opacity: 0.7;">
-              ✅ No data quality issues found
-            </div>
-          </section>
+              
+              <div id="dtValidationSummary" style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px;">
+                <!-- Validation summary populated by JS -->
+              </div>
+              
+              <div id="dtValidationIssues" style="display: none;">
+                <div class="dt-accordion" id="dtValidationAccordion">
+                  <!-- Validation issues populated by JS -->
+                </div>
+              </div>
+              
+              <div id="dtValidationEmpty" style="text-align: center; padding: 20px 0; opacity: 0.7;">
+                ✅ No data quality issues found
+              </div>
+            </section>
 
-          <!-- Data Collection Schedule Section -->
-          <section class="dt-card" aria-label="Collection schedule" style="margin-top: 16px">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-              <h2 style="margin: 0">📅 Data Collection Schedule</h2>
-              <button class="dt-btn" id="dtScheduleSettings">⚙️ Schedule Settings</button>
-            </div>
-            
-            <div id="dtScheduleThisWeek" style="margin-bottom: 20px; padding: 16px; border: 1px solid rgba(245,158,11,.35); border-radius: 12px; background: rgba(245,158,11,.08);">
-              <h3 style="margin: 0 0 12px 0; font-size: 16px;">This Week</h3>
-              <div id="dtScheduleThisWeekList">
-                <!-- This week's collection items populated by JS -->
+            <!-- Data Collection Schedule Section -->
+            <section class="dt-card" aria-label="Collection schedule" style="margin-top: 16px">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <h2 style="margin: 0">📅 Data Collection Schedule</h2>
+                <button class="dt-btn" id="dtScheduleSettings">⚙️ Schedule Settings</button>
               </div>
-            </div>
-            
-            <div>
-              <h3 style="margin: 0 0 12px 0; font-size: 16px;">Full Schedule</h3>
-              <div style="overflow-x: auto; border: 1px solid rgba(255,255,255,.08); border-radius: 8px;">
-                <table class="dt-data-table">
-                  <thead>
-                    <tr>
-                      <th>Student</th>
-                      <th>Goal</th>
-                      <th>Frequency</th>
-                      <th>Last Collected</th>
-                      <th>Next Due</th>
-                      <th>Status</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody id="dtScheduleTableBody">
-                    <!-- Schedule rows populated by JS -->
-                  </tbody>
-                </table>
+              
+              <div id="dtScheduleThisWeek" style="margin-bottom: 20px; padding: 16px; border: 1px solid rgba(245,158,11,.35); border-radius: 12px; background: rgba(245,158,11,.08);">
+                <h3 style="margin: 0 0 12px 0; font-size: 16px;">This Week</h3>
+                <div id="dtScheduleThisWeekList">
+                  <!-- This week's collection items populated by JS -->
+                </div>
               </div>
-            </div>
-          </section>
+              
+              <div>
+                <h3 style="margin: 0 0 12px 0; font-size: 16px;">Full Schedule</h3>
+                <div style="overflow-x: auto; border: 1px solid rgba(255,255,255,.08); border-radius: 8px;">
+                  <table class="dt-data-table">
+                    <thead>
+                      <tr>
+                        <th>Student</th>
+                        <th>Goal</th>
+                        <th>Frequency</th>
+                        <th>Last Collected</th>
+                        <th>Next Due</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody id="dtScheduleTableBody">
+                      <!-- Schedule rows populated by JS -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
 
-          <section class="dt-card" aria-label="IEP goals data" style="margin-top: 16px">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-              <h2 style="margin: 0">IEP Goals</h2>
-              <div style="display: flex; gap: 8px;">
-                <button class="dt-btn" id="dtExportCsv">📊 Export CSV</button>
-                <button class="dt-btn primary" id="dtBulkAdd">+ Bulk Add Progress</button>
+            <section class="dt-card" aria-label="IEP goals data" style="margin-top: 16px">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h2 style="margin: 0">IEP Goals</h2>
+                <div style="display: flex; gap: 8px;">
+                  <button class="dt-btn" id="dtExportCsv">📊 Export CSV</button>
+                  <button class="dt-btn primary" id="dtBulkAdd">+ Bulk Add Progress</button>
+                </div>
               </div>
-            </div>
-            
-            <div id="dtEmpty" class="dt-empty" style="display: none">
-              <p><strong>No IEP goals to display</strong></p>
-              <p>Add students and IEP goals in the Students tab to track progress here.</p>
-            </div>
+              
+              <div id="dtEmpty" class="dt-empty" style="display: none">
+                <p><strong>No IEP goals to display</strong></p>
+                <p>Add students and IEP goals in the Students tab to track progress here.</p>
+              </div>
 
-            <div class="dt-accordion" id="dtAccordion">
-              <!-- Student accordions populated by JS -->
+              <div class="dt-accordion" id="dtAccordion">
+                <!-- Student accordions populated by JS -->
+              </div>
+            </section>
+
+          </section><!-- /progress tab -->
+
+          <!-- Goals tab -->
+          <section class="dt-tab-section" data-tab="goals">
+            <div class="dt-card" style="margin-top: 0">
+              <h2 style="margin: 0 0 12px 0">Goals</h2>
+              <p style="margin: 0; opacity: 0.85; font-size: 14px;">
+                Goal management (add, edit, replace goals and view goal status) is available in the
+                <a href="/teacher/students/" style="color: var(--rc-brand, #22c55e);">Students</a> section.
+              </p>
             </div>
-          </section>
+          </section><!-- /goals tab -->
+
+          <!-- Students tab -->
+          <section class="dt-tab-section" data-tab="students">
+            <div class="dt-card" style="margin-top: 0">
+              <h2 style="margin: 0 0 12px 0">Students</h2>
+              <p style="margin: 0; opacity: 0.85; font-size: 14px;">
+                Manage student rosters, enrollment, and class assignments in the
+                <a href="/teacher/students/" style="color: var(--rc-brand, #22c55e);">Students</a> section.
+              </p>
+            </div>
+          </section><!-- /students tab -->
+
+          <!-- Import / Export tab -->
+          <section class="dt-tab-section" data-tab="import-export">
+
+            <!-- SpedTrack Import Section -->
+            <section class="dt-card" aria-label="SpedTrack import" style="margin-top: 0">
+              <h2 style="margin: 0 0 12px 0">📥 SpedTrack Import</h2>
+              <p style="margin: 0 0 16px 0; opacity: 0.85; font-size: 14px;">
+                Import progress data from SpedTrack CSV exports. Paste CSV data or upload a file.
+              </p>
+              
+              <div style="display: flex; gap: 12px; margin-bottom: 16px;">
+                <button class="dt-btn" id="dtImportTogglePaste">📋 Paste CSV</button>
+                <button class="dt-btn" id="dtImportToggleFile">📁 Upload File</button>
+              </div>
+              
+              <div id="dtImportPasteArea" style="display: none;">
+                <div style="margin-bottom: 12px;">
+                  <label for="dtImportTextarea" style="display: block; font-size: 14px; font-weight: 600; margin-bottom: 6px;">
+                    Paste CSV Data
+                  </label>
+                  <textarea 
+                    id="dtImportTextarea" 
+                    class="dt-search-input" 
+                    style="min-height: 150px; width: 100%; font-family: monospace; font-size: 12px;"
+                    placeholder="Student,Goal,Date,Percent,Notes&#10;S001,1.1,2026-01-15,72,Improving on reading comp&#10;S001,2.3,2026-01-15,65,Still working on writing&#10;S003,1.1,2026-01-15,80,Strong progress"
+                  ></textarea>
+                </div>
+                <button class="dt-btn primary" id="dtImportParse">Parse CSV</button>
+              </div>
+              
+              <div id="dtImportFileArea" style="display: none;">
+                <div style="margin-bottom: 12px;">
+                  <label for="dtImportFile" style="display: block; font-size: 14px; font-weight: 600; margin-bottom: 6px;">
+                    Upload CSV File
+                  </label>
+                  <input type="file" id="dtImportFile" accept=".csv" class="dt-search-input" />
+                </div>
+                <button class="dt-btn primary" id="dtImportUpload">Upload &amp; Parse</button>
+              </div>
+              
+              <div id="dtImportPreview" style="display: none; margin-top: 16px;">
+                <h3 style="margin: 0 0 12px 0; font-size: 16px;">Import Preview</h3>
+                <div style="overflow-x: auto; border: 1px solid rgba(255,255,255,.08); border-radius: 8px; margin-bottom: 12px;">
+                  <table class="dt-data-table" id="dtImportPreviewTable">
+                    <thead>
+                      <tr>
+                        <th>Status</th>
+                        <th>Student</th>
+                        <th>Goal</th>
+                        <th>Date</th>
+                        <th>Percent</th>
+                        <th>Notes</th>
+                      </tr>
+                    </thead>
+                    <tbody id="dtImportPreviewBody">
+                    </tbody>
+                  </table>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                  <button class="dt-btn primary" id="dtImportConfirm">✓ Import <span id="dtImportCount">0</span> Records</button>
+                  <button class="dt-btn" id="dtImportCancel">Cancel</button>
+                </div>
+              </div>
+              
+              <div id="dtImportHistory" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,.08);">
+                <h3 style="margin: 0 0 12px 0; font-size: 16px;">Import History</h3>
+                <div id="dtImportHistoryList">
+                  <p style="opacity: 0.7; text-align: center;">No imports yet</p>
+                </div>
+              </div>
+            </section>
+
+          </section><!-- /import-export tab -->
         </main>
       </div>
     </div>

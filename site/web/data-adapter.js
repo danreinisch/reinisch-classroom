@@ -1134,7 +1134,12 @@ const remote = {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
     const { error } = await supabase.rpc('set_student_password', { p_code: code, p_password: plain });
-    if (error) throw error; return true;
+    if (error) throw error;
+    // Also write to app_users table for cross-system compatibility
+    const username = code.trim().toLowerCase();
+    await supabase.rpc('set_user_password', { p_username: username, p_password: plain, p_role: 'student', p_student_id: null })
+      .catch(e => console.warn('[data-adapter] set_user_password sync failed for', username, ':', e?.message));
+    return true;
   },
   async verifyStudentPassword(code, plain) {
     const supabase = await getSupabase();
