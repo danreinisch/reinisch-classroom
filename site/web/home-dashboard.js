@@ -334,16 +334,26 @@ function init() {
 
   var t = '?t=' + Date.now();
 
-  // Check localStorage override first (set by Teacher Center Settings)
-  var localConfig = null;
+  // Read localStorage overrides (set by Teacher Center Settings)
+  var localOverrides = null;
   try {
     var raw = localStorage.getItem('rc_home_config');
-    if (raw) localConfig = JSON.parse(raw);
+    if (raw) localOverrides = JSON.parse(raw);
   } catch(_) { /* noop */ }
 
-  var homeP = localConfig
-    ? Promise.resolve(localConfig)
-    : fetch('/assets/data/home-config.json' + t).then(function(r) { return r.json(); });
+  var homeP = fetch('/assets/data/home-config.json' + t)
+    .then(function(r) { return r.json(); })
+    .then(function(base) {
+      if (localOverrides && typeof localOverrides === 'object' && !Array.isArray(localOverrides)) {
+        // Shallow merge: localStorage keys override base keys
+        for (var key in localOverrides) {
+          if (localOverrides.hasOwnProperty(key)) {
+            base[key] = localOverrides[key];
+          }
+        }
+      }
+      return base;
+    });
   var stateP = fetch('/assets/data/site-state.json' + t).then(function(r) { return r.json(); });
 
   Promise.all([homeP, stateP])
