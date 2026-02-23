@@ -81,6 +81,72 @@
         background: rgba(34, 197, 94, 0.18);
         border-color: rgba(34, 197, 94, 0.35);
       }
+      /* Compact filter row */
+      .dt-filter-row {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        align-items: center;
+        padding: 10px 0 4px 0;
+      }
+      .dt-filter-select {
+        padding: 7px 10px;
+        border-radius: var(--rc-radius);
+        border: 1px solid var(--rc-border-strong);
+        background: rgba(0, 0, 0, 0.3);
+        color: inherit;
+        font-size: 13px;
+        outline: none;
+        cursor: pointer;
+        transition: border-color 0.2s ease;
+      }
+      .dt-filter-select:focus {
+        border-color: var(--rc-brand);
+      }
+      .dt-q-group {
+        display: flex;
+        gap: 3px;
+      }
+      .dt-q-btn {
+        padding: 6px 10px;
+        border-radius: var(--rc-radius);
+        border: 1px solid var(--rc-border-strong);
+        background: rgba(255, 255, 255, 0.04);
+        color: inherit;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 500;
+        transition: background 0.2s ease;
+        white-space: nowrap;
+      }
+      .dt-q-btn:hover {
+        background: rgba(255, 255, 255, 0.08);
+      }
+      .dt-q-btn.active {
+        background: rgba(34, 197, 94, 0.18);
+        border-color: rgba(34, 197, 94, 0.35);
+      }
+      /* Data quality banner */
+      .dt-quality-banner {
+        border: 1px solid rgba(245, 158, 11, 0.35);
+        border-radius: var(--rc-radius);
+        background: rgba(245, 158, 11, 0.08);
+        padding: 10px 14px;
+        margin-bottom: 12px;
+      }
+      .dt-quality-banner-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .dt-quality-banner-details {
+        display: none;
+        margin-top: 12px;
+      }
+      .dt-quality-banner-details.open {
+        display: block;
+      }
       .dt-search-input {
         padding: 8px 12px;
         border-radius: var(--rc-radius);
@@ -530,13 +596,20 @@
         </aside>
 
         <main class="tc-main">
-          <h1 style="margin-top: 0">Data</h1>
-          <p class="dt-subtle" style="margin-top: -6px">
+          <div style="display: flex; align-items: center; gap: 12px; margin-top: 0; flex-wrap: wrap;">
+            <h1 style="margin: 0">Data</h1>
+            <span id="dtSyncStatus" class="dt-sync-status local" style="display: none;">
+              <span id="dtSyncIcon"><span class="rc-status-dot rc-status-dot--warn"></span></span>
+              <span id="dtSyncText">Local mode</span>
+            </span>
+          </div>
+          <p class="dt-subtle" style="margin-top: 4px">
             Track IEP goal progress across quarters with rolling averages.
           </p>
 
           <nav class="dt-tab-bar" aria-label="Data sub-tabs">
             <button class="dt-tab-btn" data-tab="progress">Progress</button>
+            <button class="dt-tab-btn" data-tab="schedule">Schedule</button>
             <button class="dt-tab-btn" data-tab="goals">Goals</button>
             <button class="dt-tab-btn" data-tab="students">Students</button>
             <button class="dt-tab-btn" data-tab="import-export">Import / Export</button>
@@ -545,74 +618,79 @@
           <!-- Progress tab -->
           <section class="dt-tab-section" data-tab="progress">
 
-            <section class="dt-card" aria-label="Data filters">
-              <div class="dt-row">
-                <div style="display: flex; align-items: center; gap: 12px;">
-                  <h2 style="margin: 0">Filters</h2>
-                  <span id="dtSyncStatus" class="dt-sync-status local" style="display: none;">
-                    <span id="dtSyncIcon"><span class="rc-status-dot rc-status-dot--warn"></span></span>
-                    <span id="dtSyncText">Local mode</span>
-                  </span>
-                </div>
-                <div class="dt-actions">
-                  <input 
-                    type="search" 
-                    id="dtSearch" 
-                    class="dt-search-input" 
-                    placeholder="Search students or goals..."
-                  />
-                </div>
+            <!-- Compact filter row -->
+            <div class="dt-filter-row" aria-label="Data filters">
+              <select id="dtClassFilter" class="dt-filter-select" aria-label="Filter by class">
+                <!-- options populated by JS -->
+              </select>
+              <div id="dtQuarterFilterBar" class="dt-q-group">
+                <!-- quarter buttons populated by JS -->
               </div>
+              <select id="dtGoalAreaFilter" class="dt-filter-select" aria-label="Filter by goal area">
+                <!-- options populated by JS -->
+              </select>
+              <select id="dtDataCollectorFilter" class="dt-filter-select" aria-label="Filter by data collector">
+                <!-- options populated by JS -->
+              </select>
+              <input
+                type="search"
+                id="dtSearch"
+                class="dt-search-input"
+                placeholder="Search students or goals..."
+                aria-label="Search students or goals"
+              />
+            </div>
 
-              <div class="dt-filter-bar" id="dtClassFilterBar">
-                <!-- Class filter buttons populated by JS -->
+            <!-- Data Quality banner (only shown when there are issues) -->
+            <div id="dtQualityBanner" class="dt-quality-banner" style="display: none;" aria-label="Data quality issues">
+              <div class="dt-quality-banner-row">
+                <span style="flex: 1;" id="dtQualityBannerText"></span>
+                <button class="dt-btn" id="dtQualityToggle">Details ▼</button>
+                <button class="dt-btn" id="dtValidationRefresh">🔄</button>
               </div>
-
-              <div class="dt-filter-bar" id="dtQuarterFilterBar">
-                <!-- Quarter filter buttons populated by JS -->
-              </div>
-
-              <div class="dt-filter-bar" id="dtGoalAreaFilterBar">
-                <!-- Goal area filter buttons populated by JS -->
-              </div>
-            </section>
-
-            <!-- Data Quality Validation Section -->
-            <section class="dt-card" aria-label="Data quality" style="margin-top: 16px">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                <h2 style="margin: 0">⚠️ Data Quality</h2>
-                <button class="dt-btn" id="dtValidationRefresh">🔄 Re-run Validation</button>
-              </div>
-              
-              <div id="dtValidationSummary" style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px;">
-                <!-- Validation summary populated by JS -->
-              </div>
-              
-              <div id="dtValidationIssues" style="display: none;">
+              <div class="dt-quality-banner-details" id="dtQualityDetails">
                 <div class="dt-accordion" id="dtValidationAccordion">
                   <!-- Validation issues populated by JS -->
                 </div>
               </div>
+            </div>
+
+            <section class="dt-card" aria-label="IEP goals data" style="margin-top: 0">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h2 style="margin: 0">IEP Goals</h2>
+                <div style="display: flex; gap: 8px;">
+                  <button class="dt-btn" id="dtExportCsv">📊 Export CSV</button>
+                  <button class="dt-btn primary" id="dtBulkAdd">+ Bulk Add Progress</button>
+                </div>
+              </div>
               
-              <div id="dtValidationEmpty" style="text-align: center; padding: 20px 0; opacity: 0.7;">
-                ✅ No data quality issues found
+              <div id="dtEmpty" class="dt-empty" style="display: none">
+                <p><strong>No IEP goals to display</strong></p>
+                <p>Add students and IEP goals in the Students tab to track progress here.</p>
+              </div>
+
+              <div class="dt-accordion" id="dtAccordion">
+                <!-- Student accordions populated by JS -->
               </div>
             </section>
 
-            <!-- Data Collection Schedule Section -->
-            <section class="dt-card" aria-label="Collection schedule" style="margin-top: 16px">
+          </section><!-- /progress tab -->
+
+          <!-- Schedule tab -->
+          <section class="dt-tab-section" data-tab="schedule">
+            <section class="dt-card" aria-label="Collection schedule" style="margin-top: 0">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                 <h2 style="margin: 0">📅 Data Collection Schedule</h2>
                 <button class="dt-btn" id="dtScheduleSettings">⚙️ Schedule Settings</button>
               </div>
-              
+
               <div id="dtScheduleThisWeek" style="margin-bottom: 20px; padding: 16px; border: 1px solid rgba(245,158,11,.35); border-radius: 12px; background: rgba(245,158,11,.08);">
                 <h3 style="margin: 0 0 12px 0; font-size: 16px;">This Week</h3>
                 <div id="dtScheduleThisWeekList">
                   <!-- This week's collection items populated by JS -->
                 </div>
               </div>
-              
+
               <div>
                 <h3 style="margin: 0 0 12px 0; font-size: 16px;">Full Schedule</h3>
                 <div style="overflow-x: auto; border: 1px solid rgba(255,255,255,.08); border-radius: 8px;">
@@ -635,27 +713,7 @@
                 </div>
               </div>
             </section>
-
-            <section class="dt-card" aria-label="IEP goals data" style="margin-top: 16px">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                <h2 style="margin: 0">IEP Goals</h2>
-                <div style="display: flex; gap: 8px;">
-                  <button class="dt-btn" id="dtExportCsv">📊 Export CSV</button>
-                  <button class="dt-btn primary" id="dtBulkAdd">+ Bulk Add Progress</button>
-                </div>
-              </div>
-              
-              <div id="dtEmpty" class="dt-empty" style="display: none">
-                <p><strong>No IEP goals to display</strong></p>
-                <p>Add students and IEP goals in the Students tab to track progress here.</p>
-              </div>
-
-              <div class="dt-accordion" id="dtAccordion">
-                <!-- Student accordions populated by JS -->
-              </div>
-            </section>
-
-          </section><!-- /progress tab -->
+          </section><!-- /schedule tab -->
 
           <!-- Goals tab -->
           <section class="dt-tab-section" data-tab="goals">
