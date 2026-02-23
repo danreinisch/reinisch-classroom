@@ -238,6 +238,19 @@ iframe[src*="app.netlify.com"]{
   pointer-events: auto !important;
 }
 
+/* ── Ungraded submissions badge on Review nav link ── */
+.tc-badge {
+  background: #ef4444;
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 10px;
+  margin-left: auto;
+  line-height: 1.4;
+  flex-shrink: 0;
+}
+
 /* ── Mobile responsive: sidebar becomes off-canvas overlay ── */
 /* Note: breakpoint matches MOBILE_BREAKPOINT in public-shell.js */
 @media (max-width: 768px) {

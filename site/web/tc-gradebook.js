@@ -35,6 +35,16 @@
     return new Date().toISOString().split("T")[0];
   }
 
+  // Helper to format date as MM/DD for column headers
+  function formatShortDate(dateStr) {
+    if (!dateStr) return "";
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return "";
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${mm}/${dd}`;
+  }
+
   // Helper to generate unique submission ID
   function generateSubmissionId() {
     const timestamp = Date.now();
@@ -71,6 +81,11 @@
     } catch {
       return [];
     }
+  }
+
+  // Helper to calculate earned points from a percentage score and total possible
+  function calculateEarnedPoints(score, totalPossible) {
+    return Math.round(score * totalPossible / 100);
   }
 
   // Helper to determine score color class based on percentage
@@ -618,8 +633,29 @@
     // Assignment columns
     for (const draft of drafts) {
       const th = document.createElement("th");
-      th.textContent = draft.title || "(untitled)";
       th.style.minWidth = "120px";
+
+      const titleEl = document.createElement("div");
+      titleEl.className = "gb-col-title";
+      titleEl.textContent = draft.title || "(untitled)";
+      th.appendChild(titleEl);
+
+      const dateStr = formatShortDate(draft.dueAt || draft.due_at || draft.createdAt || draft.created_at);
+      if (dateStr) {
+        const dateEl = document.createElement("div");
+        dateEl.className = "gb-col-date";
+        dateEl.textContent = dateStr;
+        th.appendChild(dateEl);
+      }
+
+      const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
+      if (totalPossible) {
+        const ptsEl = document.createElement("div");
+        ptsEl.className = "gb-col-pts";
+        ptsEl.textContent = `${totalPossible} pts`;
+        th.appendChild(ptsEl);
+      }
+
       headerRow.appendChild(th);
     }
 
@@ -672,8 +708,14 @@
         if (studentScores && studentScores.has(draft.id)) {
           const score = studentScores.get(draft.id);
           if (typeof score === "number") {
-            td.textContent = `${score}%`;
             currentScore = score;
+            const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
+            if (totalPossible) {
+              td.textContent = `${calculateEarnedPoints(score, totalPossible)}/${totalPossible}`;
+              td.title = `${score}%`;
+            } else {
+              td.textContent = `${score}%`;
+            }
             // Apply color class
             const colorClass = scoreColorClass(score);
             if (colorClass) {
@@ -887,7 +929,12 @@
     // Build CSV header
     const headers = ["Student"];
     for (const draft of drafts) {
-      headers.push(draft.title || "(untitled)");
+      const dateStr = formatShortDate(draft.dueAt || draft.due_at || draft.createdAt || draft.created_at);
+      const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
+      let headerLabel = draft.title || "(untitled)";
+      const extras = [dateStr, totalPossible ? `${totalPossible} pts` : ""].filter(Boolean);
+      if (extras.length) headerLabel += ` (${extras.join(", ")})`;
+      headers.push(headerLabel);
     }
     headers.push("Average");
 
@@ -901,7 +948,16 @@
       for (const draft of drafts) {
         if (studentScores && studentScores.has(draft.id)) {
           const score = studentScores.get(draft.id);
-          row.push(typeof score === "number" ? score : "");
+          if (typeof score === "number") {
+            const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
+            if (totalPossible) {
+              row.push(`${calculateEarnedPoints(score, totalPossible)}/${totalPossible}`);
+            } else {
+              row.push(score);
+            }
+          } else {
+            row.push("");
+          }
         } else {
           row.push("");
         }
@@ -991,7 +1047,12 @@
       // Build table data
       const headers = ["Student"];
       for (const draft of drafts) {
-        headers.push((draft.title || "(untitled)").substring(0, 20)); // Truncate long titles
+        const dateStr = formatShortDate(draft.dueAt || draft.due_at || draft.createdAt || draft.created_at);
+        const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
+        let label = (draft.title || "(untitled)").substring(0, 20);
+        if (dateStr) label += ` ${dateStr}`;
+        if (totalPossible) label += ` ${totalPossible}pt`;
+        headers.push(label);
       }
       headers.push("Avg");
       
@@ -1003,7 +1064,16 @@
         for (const draft of drafts) {
           if (studentScores && studentScores.has(draft.id)) {
             const score = studentScores.get(draft.id);
-            row.push(typeof score === "number" ? `${score}%` : "—");
+            if (typeof score === "number") {
+              const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
+              if (totalPossible) {
+                row.push(`${calculateEarnedPoints(score, totalPossible)}/${totalPossible}`);
+              } else {
+                row.push(`${score}%`);
+              }
+            } else {
+              row.push("—");
+            }
           } else {
             row.push("—");
           }

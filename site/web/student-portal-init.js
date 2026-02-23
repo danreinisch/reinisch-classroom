@@ -606,10 +606,18 @@
     const status = (instance.status || 'Assigned').toLowerCase().replace(/\s+/g, '-');
     const statusText = escapeHtml(instance.status || 'Assigned');
     
-    // TODO: Get score from submissions when available
-    const score = null;
+    // Get score from submissions if already loaded in tabState
+    const submissions = tabState.gradesData || [];
+    const sub = submissions.find(s => s.instance_id === instance.id);
+    let score = null;
+    if (sub) {
+      if (sub.score_total != null) score = sub.score_total;
+      else if (sub.score_manual != null) score = sub.score_manual;
+      else if (sub.score_auto != null) score = sub.score_auto;
+    }
+    const scoreColorClass = score !== null ? (score >= 80 ? 'good' : score >= 60 ? 'ok' : 'poor') : '';
     const scoreHtml = score !== null ? `
-      <span class="st-assignment-score ${score >= 70 ? 'good' : 'poor'}">
+      <span class="st-assignment-score ${scoreColorClass}">
         ${Math.round(score)}%
       </span>
     ` : '';

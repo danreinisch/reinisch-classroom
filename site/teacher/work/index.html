@@ -479,6 +479,30 @@ JSON:
               <!-- File preview panel (populated dynamically after file upload) -->
               <div id="rcFilePreviewPanel" style="margin-top: 16px; display: none"></div>
 
+              <!-- Scoring Configuration -->
+              <div class="work-field" style="margin-top: 16px">
+                <label style="font-weight: 600; font-size: 13px;">Scoring Configuration</label>
+                <div class="work-grid" style="margin-top: 8px; grid-template-columns: repeat(4, 1fr);">
+                  <div class="work-field">
+                    <label for="scoringMcq">MCQ pts</label>
+                    <input id="scoringMcq" name="scoringMcq" type="number" min="0" value="1" style="width: 100%;" />
+                  </div>
+                  <div class="work-field">
+                    <label for="scoringBoolean">True/False pts</label>
+                    <input id="scoringBoolean" name="scoringBoolean" type="number" min="0" value="1" style="width: 100%;" />
+                  </div>
+                  <div class="work-field">
+                    <label for="scoringConstructed">Written pts</label>
+                    <input id="scoringConstructed" name="scoringConstructed" type="number" min="0" value="5" style="width: 100%;" />
+                  </div>
+                  <div class="work-field">
+                    <label for="scoringMulti">Multi-Select pts</label>
+                    <input id="scoringMulti" name="scoringMulti" type="number" min="0" value="1" style="width: 100%;" />
+                  </div>
+                </div>
+                <div id="scoringTotalDisplay" class="tc-subtle" style="margin-top: 6px; font-size: 12px;"></div>
+              </div>
+
               <div class="work-field" style="margin-top: 12px">
                 <label for="draftNotes">Notes (optional)</label>
                 <textarea id="draftNotes" placeholder="Any teacher-only notes…"></textarea>
