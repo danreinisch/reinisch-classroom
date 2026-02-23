@@ -1,1 +1,45 @@
-{"weekOf":"2026-02-23","semesterEnd":"2026-06-05","countdowns":[{"label":"End of Q3","date":"2026-03-06","emoji":"📊","type":"quarter"},{"label":"Spring Break","date":"2026-03-16","endDate":"2026-03-20","emoji":"🏖️","type":"break"},{"label":"Easter Break","date":"2026-04-03","endDate":"2026-04-06","emoji":"🐣","type":"break"},{"label":"Last Day of School","date":"2026-05-20","emoji":"🎉","type":"milestone"},{"label":"Graduation","date":"2026-05-24","emoji":"🎓","type":"milestone"}],"languageArts":{"unit":"Lost in Kragdon-ah","unitLink":"/language-arts/lost-in-kragdon-ah/","currentWeek":6,"currentTitle":"Sentence Fragments vs. Complete Sentences (Part 2)","currentLink":"/viewer/?src=%2Fpresentations%2Flost-in-kragdon-ah%2Fpresentation-06%2F","nextWeek":7,"nextTitle":"Verb Tenses - Past, Present, Future","nextLink":"/viewer/?src=%2Fpresentations%2Flost-in-kragdon-ah%2Fpresentation-07%2F"},"lifeSkills":{"currentTitle":"Understanding Your Workplace","currentLink":"/viewer/?src=%2Flife-skills%2Fpresentations%2Fpresentation-10%2F","nextTitle":"Your Rights & Responsibilities","nextLink":"/viewer/?src=%2Flife-skills%2Fpresentations%2Fpresentation-11%2F","unitLink":"/life-skills/"},"announcements":["Finals prep materials now available in A Door Into Time","New Life Skills content: Understanding Your Workplace coming next week"],"ticker":{"dateFormat":"Day, Month DD, YYYY","timeFormat":"h:mm AM/PM","speed":45,"items":[{"category":"language-arts","text":"Week 6: Chapters 17-19: Sentence Fragments vs. Complete Sentences (Part 2)"},{"category":"life-skills","text":"Understanding Your Workplace: 4 Day Lesson"},{"category":"none","text":"Mindful Monday Humans, may your coffee kick in before reality does. – Napz Cherub Pellazo"}],"languageArts":"","lifeSkills":"","custom":[]}
+{
+  "weekOf": "2026-02-23",
+  "semesterEnd": "2026-06-05",
+  "countdowns": [
+    { "label": "End of Q3", "date": "2026-03-06", "emoji": "📊", "type": "quarter" },
+    { "label": "Spring Break", "date": "2026-03-16", "endDate": "2026-03-20", "emoji": "🏖️", "type": "break" },
+    { "label": "Easter Break", "date": "2026-04-03", "endDate": "2026-04-06", "emoji": "🐣", "type": "break" },
+    { "label": "Last Day of School", "date": "2026-05-20", "emoji": "🎉", "type": "milestone" },
+    { "label": "Graduation", "date": "2026-05-24", "emoji": "🎓", "type": "milestone" }
+  ],
+  "languageArts": {
+    "unit": "Lost in Kragdon-ah",
+    "unitLink": "/language-arts/lost-in-kragdon-ah/",
+    "currentWeek": 6,
+    "currentTitle": "Sentence Fragments vs. Complete Sentences (Part 2)",
+    "currentLink": "/viewer/?src=%2Fpresentations%2Flost-in-kragdon-ah%2Fpresentation-06%2F",
+    "nextWeek": 7,
+    "nextTitle": "Verb Tenses - Past, Present, Future",
+    "nextLink": "/viewer/?src=%2Fpresentations%2Flost-in-kragdon-ah%2Fpresentation-07%2F"
+  },
+  "lifeSkills": {
+    "currentTitle": "Understanding Your Workplace",
+    "currentLink": "/viewer/?src=%2Flife-skills%2Fpresentations%2Fpresentation-10%2F",
+    "nextTitle": "Your Rights & Responsibilities",
+    "nextLink": "/viewer/?src=%2Flife-skills%2Fpresentations%2Fpresentation-11%2F",
+    "unitLink": "/life-skills/"
+  },
+  "announcements": [
+    "Finals prep materials now available in A Door Into Time",
+    "New Life Skills content: Understanding Your Workplace coming next week"
+  ],
+  "ticker": {
+    "dateFormat": "Day, Month DD, YYYY",
+    "timeFormat": "h:mm AM/PM",
+    "speed": 45,
+    "items": [
+      { "category": "language-arts", "text": "Week 6: Chapters 17-19: Sentence Fragments vs. Complete Sentences (Part 2)" },
+      { "category": "life-skills", "text": "Understanding Your Workplace: 4 Day Lesson" },
+      { "category": "none", "text": "Mindful Monday Humans, may your coffee kick in before reality does. – Napz Cherub Pellazo" }
+    ],
+    "languageArts": "",
+    "lifeSkills": "",
+    "custom": []
+  }
+}
