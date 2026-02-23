@@ -7,26 +7,13 @@
   // Import data adapter for Supabase/localStorage abstraction
   const { db, isRemote } = await import('/web/data-adapter.js');
   const { getSupabase } = await import('/web/supabase-client.js');
+  const { CANON_CLASSES } = await import('/web/constants.js');
 
   const STORAGE_KEY_DRAFTS = "rc_tc_work_drafts_v1";
   const NS = "rc_unified_";
   const REALTIME_DEBOUNCE_MS = 1000; // Debounce realtime updates to prevent excessive refreshes
 
-  // NOTE: Keep in sync with CANON_CLASSES in tc-work.js and CLASS_LABELS in tc-work-qol.js
-  // Full class names matching CSV data
-  const CANON_CLASSES = [
-    "Language Arts 1 SC",
-    "Language Arts 2 SC",
-    "Language Arts 3 SC",
-    "Language Arts 4 SC",
-    "Life Skills Language Arts SC",
-    "Life Skills",
-    "Consumer Math",
-    "Geometry SC",
-    "Speech/Language",
-    "Warrior Academy"
-  ];
-  
+
   // Display abbreviations for space constraints
   const CLASS_DISPLAY = {
     "Language Arts 1 SC": "LA 1 SC",
