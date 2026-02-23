@@ -55,32 +55,32 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Class Mode: hide sensitive period/label info by default */
+/* Clock details: visible by default on all devices */
+/* Use .rc-class-mode-hidden to explicitly hide on student-facing pages for privacy */
 .tc-clock-period,
 .tc-clock-label {
-  display: none;
-}
-
-/* Show when Class Mode is active */
-html.rc-class-mode-active .tc-clock-period,
-html.rc-class-mode-active .tc-clock-label {
   display: inline;
 }
 
-/* Also hide the countdown when not in class mode */
+html.rc-class-mode-hidden .tc-clock-period,
+html.rc-class-mode-hidden .tc-clock-label {
+  display: none;
+}
+
 .tc-clock-countdown {
-  display: none;
-}
-html.rc-class-mode-active .tc-clock-countdown {
   display: inline;
 }
 
-/* Also hide the separator dot when not in class mode (only time+icon visible) */
-.tc-clock-sep {
+html.rc-class-mode-hidden .tc-clock-countdown {
   display: none;
 }
-html.rc-class-mode-active .tc-clock-sep {
+
+.tc-clock-sep {
   display: inline;
+}
+
+html.rc-class-mode-hidden .tc-clock-sep {
+  display: none;
 }
 
 /* Teacher Center: always show full clock details in the topbar */

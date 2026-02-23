@@ -33,6 +33,10 @@
     "dateFormat": "Day, Month DD, YYYY",
     "timeFormat": "h:mm AM/PM",
     "speed": 45,
+    "items": [
+      { "category": "language-arts", "text": "LA — Lost in Kragdon-ah — Chapters 14-16: Structure" },
+      { "category": "life-skills", "text": "Life Skills — Understanding Your Workplace" }
+    ],
     "languageArts": "",
     "lifeSkills": "",
     "custom": []

@@ -26,7 +26,7 @@
 }
 
 /* Active state */
-html.rc-class-mode-active .tc-class-mode-btn {
+html:not(.rc-class-mode-hidden) .tc-class-mode-btn {
   color: var(--rc-brand, #35e08a);
 }
 
@@ -138,7 +138,7 @@ html:not(.tc-collapsed):has(.tc-sidebar) .tc-class-mode-tab {
   color: var(--rc-ink, #e8f1ec);
 }
 
-html.rc-class-mode-active .tc-class-mode-tab-btn {
+html:not(.rc-class-mode-hidden) .tc-class-mode-tab-btn {
   color: var(--rc-brand, #35e08a);
 }
 
