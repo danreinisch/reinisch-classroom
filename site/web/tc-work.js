@@ -2161,15 +2161,15 @@ function normalizeTaggedAssignmentText(input) {
       if (!display) return;
       const mcqPts = Math.max(0, parseInt((document.getElementById("scoringMcq") || {}).value || "1", 10) || 1);
       const constructedPts = Math.max(0, parseInt((document.getElementById("scoringConstructed") || {}).value || "5", 10) || 5);
-      const nMcq = lastItemCounts.questions - lastItemCounts.writingPrompts;
+      const nOtherQuestions = lastItemCounts.questions - lastItemCounts.writingPrompts;
       const nConstructed = lastItemCounts.writingPrompts;
-      if (nMcq + nConstructed === 0) {
+      if (nOtherQuestions + nConstructed === 0) {
         display.textContent = "";
         return;
       }
-      const total = nMcq * mcqPts + nConstructed * constructedPts;
+      const total = nOtherQuestions * mcqPts + nConstructed * constructedPts;
       const parts = [];
-      if (nMcq > 0) parts.push(`${nMcq} MCQ × ${mcqPts}pt`);
+      if (nOtherQuestions > 0) parts.push(`${nOtherQuestions} Questions × ${mcqPts}pt`);
       if (nConstructed > 0) parts.push(`${nConstructed} Written × ${constructedPts}pt`);
       display.textContent = `Total: ${total} pts (${parts.join(" + ")})`;
     }

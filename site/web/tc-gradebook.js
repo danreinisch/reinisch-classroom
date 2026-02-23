@@ -83,6 +83,11 @@
     }
   }
 
+  // Helper to calculate earned points from a percentage score and total possible
+  function calculateEarnedPoints(score, totalPossible) {
+    return Math.round(score * totalPossible / 100);
+  }
+
   // Helper to determine score color class based on percentage
   function scoreColorClass(score) {
     if (score == null || isNaN(score)) return "";
@@ -706,8 +711,7 @@
             currentScore = score;
             const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
             if (totalPossible) {
-              const earned = Math.round(score * totalPossible / 100);
-              td.textContent = `${earned}/${totalPossible}`;
+              td.textContent = `${calculateEarnedPoints(score, totalPossible)}/${totalPossible}`;
               td.title = `${score}%`;
             } else {
               td.textContent = `${score}%`;
@@ -947,7 +951,7 @@
           if (typeof score === "number") {
             const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
             if (totalPossible) {
-              row.push(`${Math.round(score * totalPossible / 100)}/${totalPossible}`);
+              row.push(`${calculateEarnedPoints(score, totalPossible)}/${totalPossible}`);
             } else {
               row.push(score);
             }
@@ -1063,7 +1067,7 @@
             if (typeof score === "number") {
               const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
               if (totalPossible) {
-                row.push(`${Math.round(score * totalPossible / 100)}/${totalPossible}`);
+                row.push(`${calculateEarnedPoints(score, totalPossible)}/${totalPossible}`);
               } else {
                 row.push(`${score}%`);
               }

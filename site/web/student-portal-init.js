@@ -609,7 +609,12 @@
     // Get score from submissions if already loaded in tabState
     const submissions = tabState.gradesData || [];
     const sub = submissions.find(s => s.instance_id === instance.id);
-    const score = sub ? (sub.score_total != null ? sub.score_total : (sub.score_manual != null ? sub.score_manual : (sub.score_auto != null ? sub.score_auto : null))) : null;
+    let score = null;
+    if (sub) {
+      if (sub.score_total != null) score = sub.score_total;
+      else if (sub.score_manual != null) score = sub.score_manual;
+      else if (sub.score_auto != null) score = sub.score_auto;
+    }
     const scoreColorClass = score !== null ? (score >= 80 ? 'good' : score >= 60 ? 'ok' : 'poor') : '';
     const scoreHtml = score !== null ? `
       <span class="st-assignment-score ${scoreColorClass}">
