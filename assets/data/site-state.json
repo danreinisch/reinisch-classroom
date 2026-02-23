@@ -1,6 +1,6 @@
 {
   "version": "v1",
-  "updated": "2026-02-16T22:50:58.666Z",
+  "updated": "2026-02-23T13:02:11.153Z",
   "categories": {
     "toolkit": {
       "slots": 8,
@@ -252,5 +252,66 @@
         ""
       ]
     }
+  },
+  "schedule": {
+    "periods": [
+      {
+        "hour": 1,
+        "start": "07:20",
+        "end": "08:10",
+        "label": "Planning Period",
+        "isPlanning": true
+      },
+      {
+        "hour": 2,
+        "start": "08:14",
+        "end": "09:04",
+        "label": "Language Arts 2 SC"
+      },
+      {
+        "hour": 3,
+        "start": "09:08",
+        "end": "09:58",
+        "label": "Language Arts 4 SC"
+      },
+      {
+        "hour": 4,
+        "start": "10:02",
+        "end": "10:52",
+        "label": "Life Skills Language Arts SC"
+      },
+      {
+        "hour": 5,
+        "start": "10:54",
+        "end": "11:40",
+        "label": "Tribe Time"
+      },
+      {
+        "hour": 6,
+        "start": "11:44",
+        "end": "12:34",
+        "label": "Language Arts 1 SC"
+      },
+      {
+        "hour": 7,
+        "start": "12:38",
+        "end": "13:28",
+        "label": "Language Arts 2 SC"
+      },
+      {
+        "hour": 8,
+        "start": "13:32",
+        "end": "14:22",
+        "label": "Life Skills SC"
+      }
+    ],
+    "passingMinutes": 4,
+    "schoolDays": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ]
   }
 }

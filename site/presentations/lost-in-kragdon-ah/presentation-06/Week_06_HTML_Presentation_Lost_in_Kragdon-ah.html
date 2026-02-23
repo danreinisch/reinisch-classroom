@@ -40,6 +40,11 @@
             background-position: center;
             opacity: 0;
             transition: opacity 3s ease-in-out;
+            will-change: opacity;
+            transform: translateZ(0);
+            -webkit-transform: translateZ(0);
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
         }
 
         .bg-image.active {
@@ -1318,11 +1323,20 @@
         let currentBg = 0;
         const bgImages = document.querySelectorAll('.bg-image');
         const totalBgImages = 12;
-        
+        const TRANSITION_MS = 3000; // must match CSS transition duration
+
+        // Activate first image immediately
+        bgImages[0].classList.add('active');
+
         function rotateBg() {
-            bgImages[currentBg].classList.remove('active');
+            const prevBg = currentBg;
             currentBg = (currentBg + 1) % totalBgImages;
+            // Fade NEW image IN first — avoids black flash
             bgImages[currentBg].classList.add('active');
+            // After the crossfade completes, fade OUT the old image
+            setTimeout(function() {
+                bgImages[prevBg].classList.remove('active');
+            }, TRANSITION_MS);
         }
         
         setInterval(rotateBg, 8000);
