@@ -73,6 +73,7 @@
       .ticker-content {
         display: inline-block;
         padding: 0 2rem;
+        flex-shrink: 0;
         font-size: 1rem;
         font-family: 'Courier New', 'Consolas', monospace;
         color: rgba(255, 255, 255, 0.75);
@@ -394,6 +395,7 @@
           <div class="ticker-bar">
             <div class="ticker-track">
               <span class="ticker-content">Loading updates…</span>
+              <span class="ticker-content" aria-hidden="true">Loading updates…</span>
             </div>
           </div>
 
