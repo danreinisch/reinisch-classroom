@@ -118,7 +118,7 @@ async function handleChangePassword(event) {
     // Also update student_passwords table for cross-system compatibility
     const codeUpper = String(studentCode).trim().toUpperCase();
     await rpc('set_student_password', { p_code: codeUpper, p_password: newPassword })
-      .catch(e => console.warn(`[student-change-password] [${requestId}] set_student_password sync failed:`, e?.message));
+      .catch(e => console.warn(`[student-change-password] [${requestId}] set_student_password sync failed for ${codeUpper}:`, e?.message));
 
     console.log(`[student-change-password] [${requestId}] Password changed for student:`, username);
 
