@@ -103,6 +103,24 @@
     }
 
     wireNavActive();
+    loadUngradedBadge();
+  }
+
+  async function loadUngradedBadge(){
+    try{
+      const r = await fetch('/.netlify/functions/teacher-ungraded-count', { cache:'no-store', credentials:'include' });
+      if(!r.ok) return;
+      const data = await r.json();
+      const count = data && data.count > 0 ? data.count : 0;
+      if(count === 0) return;
+      const reviewLink = document.querySelector('.tc-nav a[data-href="/teacher/review/"]');
+      if(!reviewLink) return;
+      const badge = document.createElement('span');
+      badge.className = 'tc-badge';
+      badge.textContent = count > 99 ? '99+' : String(count);
+      badge.setAttribute('aria-label', count + ' ungraded submission' + (count === 1 ? '' : 's'));
+      reviewLink.appendChild(badge);
+    }catch(_){ /* noop — badge is non-critical */ }
   }
 
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

@@ -714,6 +714,14 @@ ${shown}
     const cancelBtn = $("btnCancelEdit");
     if (cancelBtn) cancelBtn.style.display = "";
 
+    // Populate scoring defaults if available in draft.meta
+    const meta = d.meta || {};
+    const sd = meta.scoring_defaults || {};
+    if ($("scoringMcq")) $("scoringMcq").value = sd.mcq != null ? sd.mcq : 1;
+    if ($("scoringBoolean")) $("scoringBoolean").value = sd.boolean != null ? sd.boolean : 1;
+    if ($("scoringConstructed")) $("scoringConstructed").value = sd.constructed != null ? sd.constructed : 5;
+    if ($("scoringMulti")) $("scoringMulti").value = sd.multi != null ? sd.multi : 1;
+
     // Scroll form into view
     const form = $("workDraftForm");
     if (form) {
@@ -940,6 +948,19 @@ ${shown}
     const dueAt = safeStr($("draftDue").value).trim();
     const notes = safeStr($("draftNotes").value).trim();
 
+    // Read scoring defaults from form (with fallbacks)
+    const scoringDefaults = {
+      mcq: Math.max(0, parseInt(($("scoringMcq") && $("scoringMcq").value) || "1", 10) || 1),
+      boolean: Math.max(0, parseInt(($("scoringBoolean") && $("scoringBoolean").value) || "1", 10) || 1),
+      constructed: Math.max(0, parseInt(($("scoringConstructed") && $("scoringConstructed").value) || "5", 10) || 5),
+      multi: Math.max(0, parseInt(($("scoringMulti") && $("scoringMulti").value) || "1", 10) || 1),
+    };
+
+    // Extract total_possible from scoring display (updated dynamically by wire())
+    const scoringDisplay = $("scoringTotalDisplay");
+    const totalPossibleMatch = scoringDisplay && scoringDisplay.textContent.match(/Total:\s*(\d+)\s*pts/);
+    const totalPossible = totalPossibleMatch ? parseInt(totalPossibleMatch[1], 10) : null;
+
     const assignmentFile = $("assignmentFile").files && $("assignmentFile").files[0];
     const assignmentLink = safeStr($("assignmentLink").value).trim();
     const mappingFile = $("mappingFile").files && $("mappingFile").files[0];
@@ -966,6 +987,7 @@ ${shown}
       draft.dueAt = dueAt || null;
       draft.notes = notes || null;
       draft.updatedAt = nowISO();
+      draft.meta = Object.assign({}, draft.meta || {}, { scoring_defaults: scoringDefaults, total_possible: totalPossible });
 
       // Handle assignment updates
       const hasNewAssignmentFile = assignmentFile && assignmentFile.size > 0;
@@ -1079,6 +1101,7 @@ ${shown}
       dueAt: dueAt || null,
       notes: notes || null,
       createdAt: nowISO(),
+      meta: { scoring_defaults: scoringDefaults, total_possible: totalPossible },
       assignment: { kind: null, name: null, link: null, text: null },
       mapping: {
         kind: mappingFile ? "file" : "auto",
@@ -2130,6 +2153,32 @@ function normalizeTaggedAssignmentText(input) {
 
     const classSel = document.getElementById("draftClass");
 
+    // Scoring total display
+    let lastItemCounts = { questions: 0, writingPrompts: 0 };
+
+    function updateScoringTotalDisplay() {
+      const display = document.getElementById("scoringTotalDisplay");
+      if (!display) return;
+      const mcqPts = Math.max(0, parseInt((document.getElementById("scoringMcq") || {}).value || "1", 10) || 1);
+      const constructedPts = Math.max(0, parseInt((document.getElementById("scoringConstructed") || {}).value || "5", 10) || 5);
+      const nMcq = lastItemCounts.questions - lastItemCounts.writingPrompts;
+      const nConstructed = lastItemCounts.writingPrompts;
+      if (nMcq + nConstructed === 0) {
+        display.textContent = "";
+        return;
+      }
+      const total = nMcq * mcqPts + nConstructed * constructedPts;
+      const parts = [];
+      if (nMcq > 0) parts.push(`${nMcq} MCQ × ${mcqPts}pt`);
+      if (nConstructed > 0) parts.push(`${nConstructed} Written × ${constructedPts}pt`);
+      display.textContent = `Total: ${total} pts (${parts.join(" + ")})`;
+    }
+
+    ["scoringMcq", "scoringBoolean", "scoringConstructed", "scoringMulti"].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener("input", updateScoringTotalDisplay);
+    });
+
     if (form) {
       const { assignment: aIn } = pickFileInputs(form);
       if (aIn) {
@@ -2148,11 +2197,19 @@ function normalizeTaggedAssignmentText(input) {
                 classSel.disabled = false;
                 updateClassDropdownLabel("Individual Class");
               }
+              lastItemCounts = { questions: 0, writingPrompts: 0 };
+              updateScoringTotalDisplay();
               return;
             }
             
             const txt = await readFileText(f);
             renderFilePreviewPanel(txt);
+            // Update scoring total from parsed file
+            if (typeof countSectionItems === "function") {
+              const counts = countSectionItems(txt);
+              lastItemCounts = { questions: counts.questions || 0, writingPrompts: counts.writingPrompts || 0 };
+              updateScoringTotalDisplay();
+            }
           } catch (e) {
             console.warn("File preview failed:", e);
           }
