@@ -221,13 +221,13 @@
     statusEl.className = `dt-sync-status ${syncStatus}`;
     
     if (syncStatus === 'synced') {
-      iconEl.textContent = '🟢';
+      iconEl.innerHTML = '<span class="rc-status-dot rc-status-dot--ok"></span>';
       textEl.textContent = 'Synced';
     } else if (syncStatus === 'local') {
-      iconEl.textContent = '🟡';
+      iconEl.innerHTML = '<span class="rc-status-dot rc-status-dot--warn"></span>';
       textEl.textContent = 'Local mode';
     } else {
-      iconEl.textContent = '🔴';
+      iconEl.innerHTML = '<span class="rc-status-dot rc-status-dot--error"></span>';
       textEl.textContent = 'Error';
     }
   }

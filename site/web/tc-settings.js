@@ -202,12 +202,15 @@
    */
   function tickerSpeedLabel(seconds) {
     var s = Number(seconds);
-    if (s <= 17) return 'Very Fast';
-    if (s <= 30) return 'Fast';
-    if (s <= 40) return 'Moderate';
-    if (s <= 50) return 'Normal';
-    if (s <= 75) return 'Slow';
-    if (s <= 105) return 'Very Slow';
+    if (s <= 5) return 'Blazing';
+    if (s <= 8) return 'Very Fast';
+    if (s <= 12) return 'Fast';
+    if (s <= 20) return 'Moderate';
+    if (s <= 30) return 'Brisk';
+    if (s <= 45) return 'Normal';
+    if (s <= 60) return 'Relaxed';
+    if (s <= 90) return 'Slow';
+    if (s <= 120) return 'Very Slow';
     return 'Crawl';
   }
 

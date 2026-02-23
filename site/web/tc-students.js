@@ -598,10 +598,10 @@
     const indicator = document.getElementById('stSyncStatus');
     if (indicator) {
       if (isSyncing) {
-        indicator.textContent = '🔄';
+        indicator.innerHTML = '<span class="rc-status-dot rc-status-dot--loading"></span>';
         indicator.title = 'Syncing...';
       } else {
-        indicator.textContent = '🟢';
+        indicator.innerHTML = '<span class="rc-status-dot rc-status-dot--ok"></span>';
         indicator.title = 'Connected';
       }
     }
