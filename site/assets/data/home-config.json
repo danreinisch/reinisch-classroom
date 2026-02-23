@@ -11,18 +11,18 @@
   "languageArts": {
     "unit": "Lost in Kragdon-ah",
     "unitLink": "/language-arts/lost-in-kragdon-ah/",
-    "currentWeek": 5,
-    "currentTitle": "Sentence Fragments vs. Complete Sentences",
-    "currentLink": "/viewer/?src=%2Fpresentations%2Flost-in-kragdon-ah%2Fpresentation-05%2F",
-    "nextWeek": 6,
-    "nextTitle": "Sentence Fragments vs. Complete Sentences (Part 2)",
-    "nextLink": "/viewer/?src=%2Fpresentations%2Flost-in-kragdon-ah%2Fpresentation-06%2F"
+    "currentWeek": 6,
+    "currentTitle": "Sentence Fragments vs. Complete Sentences (Part 2)",
+    "currentLink": "/viewer/?src=%2Fpresentations%2Flost-in-kragdon-ah%2Fpresentation-06%2F",
+    "nextWeek": 7,
+    "nextTitle": "TBD",
+    "nextLink": ""
   },
   "lifeSkills": {
-    "currentTitle": "Keeping the Job",
-    "currentLink": "/viewer/?src=%2Flife-skills%2Fpresentations%2Fpresentation-09%2F",
-    "nextTitle": "Understanding Your Workplace",
-    "nextLink": "/viewer/?src=%2Flife-skills%2Fpresentations%2Fpresentation-10%2F",
+    "currentTitle": "Understanding Your Workplace",
+    "currentLink": "/viewer/?src=%2Flife-skills%2Fpresentations%2Fpresentation-10%2F",
+    "nextTitle": "TBD",
+    "nextLink": "",
     "unitLink": "/life-skills/"
   },
   "announcements": [
@@ -34,9 +34,12 @@
     "timeFormat": "h:mm AM/PM",
     "speed": 45,
     "items": [
-      { "category": "language-arts", "text": "Language Arts: Lost in Kragdon-ah — Week 5: Sentence Fragments vs. Complete Sentences" },
-      { "category": "life-skills", "text": "Life Skills: Keeping the Job" },
-      { "category": "none", "text": "🧘 Mindful Monday: Take a deep breath and focus on one thing at a time." }
-    ]
+      { "category": "language-arts", "text": "Week 6: Chapters 17-19: Sentence Fragments vs. Complete Sentences (Part 2)" },
+      { "category": "life-skills", "text": "Understanding Your Workplace: 4 Day Lesson" },
+      { "category": "none", "text": "Mindful Monday Humans, may your coffee kick in before reality does. – Napz Cherub Pellazo" }
+    ],
+    "languageArts": "",
+    "lifeSkills": "",
+    "custom": []
   }
 }
