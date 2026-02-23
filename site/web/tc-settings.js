@@ -170,10 +170,19 @@
       homeConfig = { announcements: [], countdowns: [] };
     }
 
-    // Overlay localStorage if present
+    // Merge localStorage overrides on top of fetched config
     try {
       var raw = localStorage.getItem('rc_home_config');
-      if (raw) homeConfig = JSON.parse(raw);
+      if (raw) {
+        var overrides = JSON.parse(raw);
+        if (overrides && typeof overrides === 'object' && !Array.isArray(overrides)) {
+          for (var key in overrides) {
+            if (Object.prototype.hasOwnProperty.call(overrides, key)) {
+              homeConfig[key] = overrides[key];
+            }
+          }
+        }
+      }
     } catch (e) { /* noop */ }
 
     if (!Array.isArray(homeConfig.announcements)) homeConfig.announcements = [];
