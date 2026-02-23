@@ -689,6 +689,24 @@ const local = {
     return true;
   },
 
+  /**
+   * Update a submission with grading fields (score_manual, status, graded_at, graded_by, feedback)
+   * @param {Object} params - { id, score_manual, status, graded_at, graded_by, feedback }
+   * @returns {boolean} Success
+   */
+  async upsertSubmission({ id, score_manual, status, graded_at, graded_by, feedback }) {
+    const submissions = store.get('submissions', []);
+    const submission = submissions.find(s => s.id === id);
+    if (!submission) throw new Error('Submission not found');
+    if (score_manual !== undefined) submission.score_manual = score_manual;
+    if (status !== undefined) submission.review_status = status === 'Graded' ? 'reviewed' : status.toLowerCase();
+    if (graded_at !== undefined) submission.graded_at = graded_at;
+    if (graded_by !== undefined) submission.graded_by = graded_by;
+    if (feedback !== undefined) submission.feedback = feedback;
+    store.set('submissions', submissions);
+    return true;
+  },
+
   // ============================================================================
   // Archive Tab: Student Archive Management
   // ============================================================================
@@ -1962,6 +1980,25 @@ const remote = {
       if (instanceError) throw instanceError;
     }
     
+    return true;
+  },
+
+  /**
+   * Update a submission with grading fields (score_manual, status, graded_at, graded_by, feedback)
+   * @param {Object} params - { id, score_manual, status, graded_at, graded_by, feedback }
+   * @returns {boolean} Success
+   */
+  async upsertSubmission({ id, score_manual, status, graded_at, graded_by, feedback }) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+    const updates = {};
+    if (score_manual !== undefined) updates.score_manual = score_manual;
+    if (status !== undefined) updates.review_status = status === 'Graded' ? 'reviewed' : status.toLowerCase();
+    if (graded_at !== undefined) updates.graded_at = graded_at;
+    if (graded_by !== undefined) updates.graded_by = graded_by;
+    if (feedback !== undefined) updates.feedback = feedback;
+    const { error } = await supabase.from('submissions').update(updates).eq('id', id);
+    if (error) throw error;
     return true;
   },
 

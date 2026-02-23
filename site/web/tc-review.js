@@ -8,23 +8,24 @@
   const { db, isRemote } = await import('/web/data-adapter.js');
   const { getSupabase } = await import('/web/supabase-client.js');
   const { getAssignmentItems } = await import('/web/assignment-mapping-db.js');
+  const { CANON_CLASSES } = await import('/web/constants.js');
 
   const NS = "rc_unified_";
   const REALTIME_DEBOUNCE_MS = 1000;
 
-  // NOTE: Keep in sync with CANON_CLASSES in tc-work.js and tc-gradebook.js
-  const CANON_CLASSES = [
-    "LA 1 SC",
-    "LA 2 SC",
-    "LA 3 SC",
-    "LA 4 SC",
-    "Life Skills",
-    "Life Skills LA",
-    "Consumer Math",
-    "Geometry SC",
-    "Speech/Language",
-    "Warrior Academy"
-  ];
+  // Display abbreviations for class filter buttons
+  const CLASS_DISPLAY = {
+    "Language Arts 1 SC": "LA 1",
+    "Language Arts 2 SC": "LA 2",
+    "Language Arts 3 SC": "LA 3",
+    "Language Arts 4 SC": "LA 4",
+    "Life Skills Language Arts SC": "LS LA",
+    "Life Skills": "Life Skills",
+    "Consumer Math": "Consumer Math",
+    "Geometry SC": "Geometry",
+    "Speech/Language": "Speech/Lang",
+    "Warrior Academy": "Warrior"
+  };
 
   const $ = (id) => document.getElementById(id);
 
@@ -621,7 +622,7 @@
                           data-submission-id="${submission.id}">${currentNote}</textarea>
               </div>
               
-              <button class="rv-btn rv-btn-save" 
+              <button class="rv-btn rv-btn-save-item" 
                       data-item-id="${item.id}"
                       data-submission-id="${submission.id}">
                 💾 Save
@@ -668,6 +669,41 @@
       </div>
     `;
     
+    // Grading section — overall manual grade (0–100) and feedback
+    const currentScore = submission.score_manual != null ? submission.score_manual : (submission.score_auto || '');
+    const currentFeedback = submission.feedback || '';
+    const gradingSection = `
+      <div class="rv-section rv-grade-section">
+        <div class="rv-section-header">
+          <span>Grade</span>
+        </div>
+        <div class="rv-quick-grade" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+          <button class="rv-btn rv-btn-quickgrade" data-score="100" data-submission-id="${submission.id}">✅ Full Credit</button>
+          <button class="rv-btn rv-btn-quickgrade" data-score="50" data-submission-id="${submission.id}">½ Half Credit</button>
+          <button class="rv-btn rv-btn-quickgrade" data-score="0" data-submission-id="${submission.id}">❌ No Credit</button>
+        </div>
+        <div class="rv-score-input-group">
+          <label>Score (0–100):</label>
+          <input type="number" class="rv-grade-score-input rv-score-input" min="0" max="100"
+                 value="${currentScore}"
+                 data-submission-id="${submission.id}">
+          <span>/ 100</span>
+        </div>
+        <div class="rv-note-input-group">
+          <label>Feedback:</label>
+          <textarea class="rv-grade-feedback-input rv-note-input" rows="3"
+                    placeholder="Feedback for student (optional)..."
+                    data-submission-id="${submission.id}">${currentFeedback}</textarea>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="rv-btn rv-btn-save-grade"
+                  data-submission-id="${submission.id}">💾 Save Grade</button>
+          <button class="rv-btn rv-btn-return"
+                  data-submission-id="${submission.id}">↩ Return for Revision</button>
+        </div>
+      </div>
+    `;
+
     // Action buttons
     const allConstructedScored = manualScored === manualTotal;
     const finalizeDisabled = constructedItems.length > 0 && !allConstructedScored;
@@ -691,6 +727,7 @@
       ${autoSection}
       ${writtenSection}
       ${summarySection}
+      ${gradingSection}
       ${actionsSection}
     `;
   }
@@ -778,13 +815,37 @@
           return;
         }
         
-        // Handle save button click
-        const saveBtn = e.target.closest('.rv-btn-save');
+        // Handle per-item save button click
+        const saveBtn = e.target.closest('.rv-btn-save-item');
         if (saveBtn) {
           await handleSaveScore(saveBtn);
           return;
         }
-        
+
+        // Handle quick-grade buttons (fill in score input)
+        const quickBtn = e.target.closest('.rv-btn-quickgrade');
+        if (quickBtn) {
+          const score = quickBtn.dataset.score;
+          const submissionId = quickBtn.dataset.submissionId;
+          const scoreInput = document.querySelector(`.rv-grade-score-input[data-submission-id="${submissionId}"]`);
+          if (scoreInput) scoreInput.value = score;
+          return;
+        }
+
+        // Handle save-grade button click
+        const saveGradeBtn = e.target.closest('.rv-btn-save-grade');
+        if (saveGradeBtn) {
+          await handleSaveGrade(saveGradeBtn);
+          return;
+        }
+
+        // Handle return-for-revision button click
+        const returnBtn = e.target.closest('.rv-btn-return');
+        if (returnBtn) {
+          await handleReturnForRevision(returnBtn);
+          return;
+        }
+
         // Handle finalize button click
         const finalizeBtn = e.target.closest('.rv-btn-finalize');
         if (finalizeBtn) {
@@ -1067,11 +1128,120 @@
     select.innerHTML = options.join('');
   }
 
+  // Dynamically populate class filter buttons from shared CANON_CLASSES
+  function populateClassFilters() {
+    const bar = $('rvClassFilters');
+    if (!bar) return;
+    const btns = ['<button class="rv-filter-btn active" data-class="All Classes">All Classes</button>'];
+    CANON_CLASSES.forEach(cls => {
+      const label = CLASS_DISPLAY[cls] || cls;
+      btns.push(`<button class="rv-filter-btn" data-class="${cls}">${label}</button>`);
+    });
+    bar.innerHTML = btns.join('');
+  }
+
+  // Show a brief toast notification
+  function showToast(text, bg, color) {
+    const msg = document.createElement('div');
+    msg.textContent = text;
+    msg.style.cssText = `position:fixed;bottom:24px;right:24px;background:${bg};color:${color};padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;z-index:9999;`;
+    document.body.appendChild(msg);
+    setTimeout(() => msg.remove(), 2500);
+  }
+
+  // Save an overall manual grade (score_manual) for a submission
+  async function handleSaveGrade(button) {
+    const submissionId = button.dataset.submissionId;
+    const scoreInput = document.querySelector(`.rv-grade-score-input[data-submission-id="${submissionId}"]`);
+    const feedbackInput = document.querySelector(`.rv-grade-feedback-input[data-submission-id="${submissionId}"]`);
+
+    const scoreManual = scoreInput ? parseFloat(scoreInput.value) : 0;
+    if (isNaN(scoreManual) || scoreManual < 0 || scoreManual > 100) {
+      showToast('Score must be 0–100', '#ef4444', '#fff');
+      return;
+    }
+    const feedback = feedbackInput ? feedbackInput.value.trim() : '';
+    const gradedAt = new Date().toISOString();
+    const gradedBy = localStorage.getItem('rc_teacher_name') || '';
+
+    button.disabled = true;
+    try {
+      await db.upsertSubmission({
+        id: submissionId,
+        score_manual: scoreManual,
+        status: 'Graded',
+        graded_at: gradedAt,
+        graded_by: gradedBy,
+        feedback
+      });
+
+      // Update local cache
+      const submission = submissionsData.find(s => s.id === submissionId);
+      if (submission) {
+        submission.score_manual = scoreManual;
+        submission.review_status = 'reviewed';
+        submission.graded_at = gradedAt;
+        submission.graded_by = gradedBy;
+        submission.feedback = feedback;
+      }
+
+      showToast('✓ Grade saved!', '#22c55e', '#0b1220');
+      expandedSubmissions.add(submissionId);
+      await render();
+    } catch (err) {
+      console.error('[tc-review] Error saving grade:', err);
+      showToast('Error saving grade', '#ef4444', '#fff');
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  // Return a submission for revision
+  async function handleReturnForRevision(button) {
+    const submissionId = button.dataset.submissionId;
+    const feedbackInput = document.querySelector(`.rv-grade-feedback-input[data-submission-id="${submissionId}"]`);
+    const feedback = feedbackInput ? feedbackInput.value.trim() : '';
+
+    if (!confirm('Return this submission for revision? The student will need to resubmit.')) return;
+
+    const submission = submissionsData.find(s => s.id === submissionId);
+    if (!submission) return;
+
+    button.disabled = true;
+    try {
+      await db.createResubmission({
+        instance_id: submission.instance_id,
+        original_submission_id: submissionId,
+        answers: {}
+      });
+
+      await db.upsertSubmission({
+        id: submissionId,
+        status: 'Returned',
+        graded_at: new Date().toISOString(),
+        graded_by: localStorage.getItem('rc_teacher_name') || '',
+        feedback
+      });
+
+      submission.review_status = 'returned';
+
+      showToast('↩ Returned for revision', '#f59e0b', '#0b1220');
+      expandedSubmissions.delete(submissionId);
+      await render();
+    } catch (err) {
+      console.error('[tc-review] Error returning submission:', err);
+      showToast('Error returning submission', '#ef4444', '#fff');
+    } finally {
+      button.disabled = false;
+    }
+  }
+
   // Initialize
   async function init() {
     console.log('[tc-review] Initializing Review tab');
     
     await loadData();
+    populateClassFilters();
     populateAssignmentFilter();
     setupEventListeners();
   }
