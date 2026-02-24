@@ -8,7 +8,7 @@
   const { db, isRemote } = await import('/web/data-adapter.js');
   const { getSupabase } = await import('/web/supabase-client.js');
   const { CANON_CLASSES } = await import('/web/constants.js');
-  const { getQuarterDates: getGradebookQuarterDates, parseQuarterDate: parseGradebookQuarterDate, getSchoolYear: getGradebookSchoolYear } = await import('/web/quarter-utils.js');
+  const { getQuarterDates, getQuarterForDate } = await import('/web/quarter-utils.js');
 
   const STORAGE_KEY_DRAFTS = "rc_tc_work_drafts_v1";
   const NS = "rc_unified_";
@@ -95,33 +95,6 @@
     if (score >= 80) return "gb-score-green";
     if (score >= 60) return "gb-score-amber";
     return "gb-score-red";
-  }
-
-  // Helper to get quarter from a date — reads rc_quarter_dates from localStorage,
-  // falls back to school-year defaults if not set.
-  function getQuarter(dateStr) {
-    if (!dateStr) return null;
-    const date = new Date(dateStr);
-    if (isNaN(date.getTime())) return null;
-
-    const quarterDates = getGradebookQuarterDates();
-    const schoolYear = getGradebookSchoolYear(date);
-
-    for (const q of ["Q1", "Q2", "Q3", "Q4"]) {
-      const range = quarterDates[q];
-      if (!range || !range.start || !range.end) continue;
-
-      let start = parseGradebookQuarterDate(range.start, schoolYear);
-      let end = parseGradebookQuarterDate(range.end, schoolYear);
-      if (!start || !end) continue;
-
-      // Handle year-boundary quarters (e.g. Q3: Dec–Mar)
-      if (end < start) end = new Date(schoolYear + 1, end.getMonth(), end.getDate());
-
-      if (date >= start && date <= end) return q;
-    }
-
-    return null;
   }
 
   // State
@@ -290,7 +263,7 @@
         // Check both created_at and created fields for compatibility
         const dateStr = draft.created_at || draft.created || draft.release;
         if (!dateStr) return false;
-        return getQuarter(dateStr) === currentQuarterFilter;
+        return getQuarterForDate(dateStr) === currentQuarterFilter;
       });
     }
 
@@ -1721,7 +1694,7 @@
     const quarterFilter = $("gbQuarterFilter");
     if (!quarterFilter) return;
 
-    const quarterDates = getGradebookQuarterDates();
+    const quarterDates = getQuarterDates();
 
     for (const q of ["Q1", "Q2", "Q3", "Q4"]) {
       const option = quarterFilter.querySelector(`option[value="${q}"]`);
