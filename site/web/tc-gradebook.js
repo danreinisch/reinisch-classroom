@@ -964,7 +964,7 @@
       if (extras.length) headerLabel += ` (${extras.join(", ")})`;
       headers.push(headerLabel);
     }
-    headers.push("Average");
+    headers.push("Average", "Weighted", "Trend");
 
     const rows = [headers];
 
@@ -993,6 +993,10 @@
 
       const avg = calculateRowAverage(student.code, scoreMap, drafts);
       row.push(avg !== null ? avg : "");
+      const weighted = calculateWeightedAverage(student.code, scoreMap, drafts);
+      row.push(weighted !== null ? weighted : "");
+      const trend = calculateTrend(student.code, scoreMap, drafts);
+      row.push(trend || "");
 
       rows.push(row);
     }
@@ -1004,17 +1008,22 @@
       summaryRow.push(avg !== null ? avg : "");
     }
     const allScores = [];
+    const allWeightedScores = [];
     for (const student of students) {
       const avg = calculateRowAverage(student.code, scoreMap, drafts);
-      if (avg !== null) {
-        allScores.push(avg);
-      }
+      if (avg !== null) allScores.push(avg);
+      const weighted = calculateWeightedAverage(student.code, scoreMap, drafts);
+      if (weighted !== null) allWeightedScores.push(weighted);
     }
     const overallAvg =
       allScores.length > 0
         ? Math.round(allScores.reduce((a, b) => a + b, 0) / allScores.length)
         : "";
-    summaryRow.push(overallAvg);
+    const overallWeighted =
+      allWeightedScores.length > 0
+        ? Math.round(allWeightedScores.reduce((a, b) => a + b, 0) / allWeightedScores.length)
+        : "";
+    summaryRow.push(overallAvg, overallWeighted, "—");
     rows.push(summaryRow);
 
     // Convert to CSV string
@@ -1082,7 +1091,7 @@
         if (totalPossible) label += ` ${totalPossible}pt`;
         headers.push(label);
       }
-      headers.push("Avg");
+      headers.push("Avg", "Wtd", "Trend");
       
       const tableData = [];
       for (const student of students) {
@@ -1109,6 +1118,10 @@
         
         const avg = calculateRowAverage(student.code, scoreMap, drafts);
         row.push(avg !== null ? `${avg}%` : "—");
+        const weighted = calculateWeightedAverage(student.code, scoreMap, drafts);
+        row.push(weighted !== null ? `${weighted}%` : "—");
+        const trend = calculateTrend(student.code, scoreMap, drafts);
+        row.push(trend || "—");
         
         tableData.push(row);
       }
@@ -1120,16 +1133,22 @@
         summaryRow.push(avg !== null ? `${avg}%` : "—");
       }
       const allScores = [];
+      const allWeightedScores = [];
       for (const student of students) {
         const avg = calculateRowAverage(student.code, scoreMap, drafts);
-        if (avg !== null) {
-          allScores.push(avg);
-        }
+        if (avg !== null) allScores.push(avg);
+        const weighted = calculateWeightedAverage(student.code, scoreMap, drafts);
+        if (weighted !== null) allWeightedScores.push(weighted);
       }
       const overallAvg = allScores.length > 0
         ? Math.round(allScores.reduce((a, b) => a + b, 0) / allScores.length)
         : null;
+      const overallWeighted = allWeightedScores.length > 0
+        ? Math.round(allWeightedScores.reduce((a, b) => a + b, 0) / allWeightedScores.length)
+        : null;
       summaryRow.push(overallAvg !== null ? `${overallAvg}%` : "—");
+      summaryRow.push(overallWeighted !== null ? `${overallWeighted}%` : "—");
+      summaryRow.push("—");
       tableData.push(summaryRow);
       
       // Add table using autoTable plugin if available, otherwise basic table
@@ -1722,9 +1741,31 @@
     renderGradebook(); // Re-render to update weighted averages
   }
 
+  // Update quarter filter dropdown labels from localStorage rc_quarter_dates
+  function updateQuarterFilterLabels() {
+    const quarterFilter = $("gbQuarterFilter");
+    if (!quarterFilter) return;
+
+    let quarterDates = GRADEBOOK_DEFAULT_QUARTER_DATES;
+    try {
+      const saved = localStorage.getItem("rc_quarter_dates");
+      if (saved) quarterDates = JSON.parse(saved);
+    } catch (e) {
+      // use defaults
+    }
+
+    for (const q of ["Q1", "Q2", "Q3", "Q4"]) {
+      const option = quarterFilter.querySelector(`option[value="${q}"]`);
+      if (option && quarterDates[q]) {
+        option.textContent = `${q} (${quarterDates[q].start}–${quarterDates[q].end})`;
+      }
+    }
+  }
+
   // Initialize
   async function init() {
     await loadData();
+    updateQuarterFilterLabels();
     renderClassFilter();
     renderGradebook();
 
@@ -1799,8 +1840,8 @@
 
   // Wait for DOM ready
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init);
+    document.addEventListener("DOMContentLoaded", () => init().catch(err => console.error('[gradebook] Init error:', err)));
   } else {
-    init();
+    init().catch(err => console.error('[gradebook] Init error:', err));
   }
 })();
