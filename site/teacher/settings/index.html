@@ -36,6 +36,31 @@
       font-size: 12px;
       opacity: 0.8;
     }
+    .tc-quarter-item.q1 { border-left: 3px solid rgba(59,130,246,0.7); }
+    .tc-quarter-item.q2 { border-left: 3px solid rgba(245,158,11,0.7); }
+    .tc-quarter-item.q3 { border-left: 3px solid rgba(16,185,129,0.7); }
+    .tc-quarter-item.q4 { border-left: 3px solid rgba(139,92,246,0.7); }
+    .tc-quarter-timeline {
+      display: flex;
+      border-radius: var(--rc-radius);
+      overflow: hidden;
+      margin-bottom: 16px;
+      border: 1px solid var(--rc-glass-border);
+    }
+    .tc-qt-seg {
+      flex: 1;
+      padding: 8px 6px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .tc-qt-label { font-weight: 700; font-size: 13px; }
+    .tc-qt-dates { opacity: 0.7; font-size: 11px; }
+    .tc-qt-seg.q1 { background: rgba(59,130,246,0.18); }
+    .tc-qt-seg.q2 { background: rgba(245,158,11,0.18); }
+    .tc-qt-seg.q3 { background: rgba(16,185,129,0.18); }
+    .tc-qt-seg.q4 { background: rgba(139,92,246,0.18); }
     .tc-actions {
       display: flex;
       gap: 10px;
@@ -191,13 +216,20 @@
         <div class="rc-card" style="margin-bottom: 16px;">
           <h2 style="margin: 0 0 12px 0; font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Quarter Date Configuration</h2>
           <p style="margin: 0 0 12px 0; opacity: 0.85; font-size: 14px;">
-            Configure the date ranges for each quarter. These dates are used throughout the
-            application for reporting and data filtering.
+            Configure the date ranges for each quarter. Use 3-letter month abbreviations followed by the day: <strong>Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec</strong> (e.g., <code>Aug 16</code>, <code>Mar 6</code>).
           </p>
 
+          <!-- Quarter timeline bar -->
+          <div class="tc-quarter-timeline">
+            <div class="tc-qt-seg q1"><span class="tc-qt-label">Q1</span><span class="tc-qt-dates" id="qtBar1">Aug 16 – Oct 17</span></div>
+            <div class="tc-qt-seg q2"><span class="tc-qt-label">Q2</span><span class="tc-qt-dates" id="qtBar2">Oct 18 – Dec 19</span></div>
+            <div class="tc-qt-seg q3"><span class="tc-qt-label">Q3</span><span class="tc-qt-dates" id="qtBar3">Dec 20 – Mar 6</span></div>
+            <div class="tc-qt-seg q4"><span class="tc-qt-label">Q4</span><span class="tc-qt-dates" id="qtBar4">Mar 7 – May 20</span></div>
+          </div>
+
           <div class="tc-quarter-grid">
-            <div class="tc-quarter-item">
-              <h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 700;">Q1</h3>
+            <div class="tc-quarter-item q1">
+              <h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 700; color: rgba(59,130,246,0.9);">Q1</h3>
               <div style="display: grid; gap: 8px;">
                 <div>
                   <label for="q1Start">Start Date</label>
@@ -210,8 +242,8 @@
               </div>
             </div>
 
-            <div class="tc-quarter-item">
-              <h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 700;">Q2</h3>
+            <div class="tc-quarter-item q2">
+              <h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 700; color: rgba(245,158,11,0.9);">Q2</h3>
               <div style="display: grid; gap: 8px;">
                 <div>
                   <label for="q2Start">Start Date</label>
@@ -224,8 +256,8 @@
               </div>
             </div>
 
-            <div class="tc-quarter-item">
-              <h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 700;">Q3</h3>
+            <div class="tc-quarter-item q3">
+              <h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 700; color: rgba(16,185,129,0.9);">Q3</h3>
               <div style="display: grid; gap: 8px;">
                 <div>
                   <label for="q3Start">Start Date</label>
@@ -238,8 +270,8 @@
               </div>
             </div>
 
-            <div class="tc-quarter-item">
-              <h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 700;">Q4</h3>
+            <div class="tc-quarter-item q4">
+              <h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 700; color: rgba(139,92,246,0.9);">Q4</h3>
               <div style="display: grid; gap: 8px;">
                 <div>
                   <label for="q4Start">Start Date</label>
@@ -257,6 +289,7 @@
             <button id="saveQuarterDatesBtn" class="rc-btn primary">Save Quarter Dates</button>
             <button id="resetQuarterDatesBtn" class="rc-btn">Reset to Defaults</button>
           </div>
+          <p style="margin: 10px 0 0; font-size: 12px; opacity: 0.7;">These dates are used by the Gradebook to filter assignments by quarter.</p>
         </div>
 
         <!-- Language Arts Weekly Focus -->
@@ -313,7 +346,7 @@
 
         <!-- Ticker Configuration -->
         <div class="rc-card" style="margin-bottom: 16px;">
-          <h2 style="margin: 0 0 12px 0; font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.36 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.25 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.18 6.18l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg> 📡 Ticker Configuration</h2>
+          <h2 style="margin: 0 0 12px 0; font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.36 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.25 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.18 6.18l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg> Ticker Configuration</h2>
           <p style="margin: 0 0 12px 0; opacity: 0.85; font-size: 14px;">Configure exactly what appears in the scrolling ticker on the home page. Changes take effect immediately.</p>
 
           <!-- Row 1: Date & Time Format -->
@@ -371,7 +404,7 @@
 
         <!-- Countdown Events Manager -->
         <div class="rc-card" style="margin-bottom: 16px;">
-          <h2 style="margin: 0 0 12px 0; font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> ⏱️ Countdown Events</h2>
+          <h2 style="margin: 0 0 12px 0; font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Countdown Events</h2>
           <p style="margin: 0 0 12px 0; opacity: 0.85; font-size: 14px;">Manage countdown events shown on the home page dashboard. Changes take effect immediately.</p>
           <div style="overflow-x: auto; margin-bottom: 12px;">
             <table class="rc-table">

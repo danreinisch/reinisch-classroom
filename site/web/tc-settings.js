@@ -69,6 +69,18 @@
   }
 
   /**
+   * Update the quarter timeline bar labels to reflect current dates
+   */
+  function updateQuarterTimeline(dates) {
+    ["Q1", "Q2", "Q3", "Q4"].forEach((q, i) => {
+      const el = $(`qtBar${i + 1}`);
+      if (el && dates[q]) {
+        el.textContent = `${dates[q].start} – ${dates[q].end}`;
+      }
+    });
+  }
+
+  /**
    * Load and display quarter dates
    */
   function loadQuarterDates() {
@@ -96,6 +108,8 @@
         endInput.value = dates[q].end || DEFAULT_QUARTER_DATES[q].end;
       }
     });
+
+    updateQuarterTimeline(dates);
   }
 
   /**
@@ -118,6 +132,8 @@
 
     localStorage.setItem("rc_quarter_dates", JSON.stringify(dates));
     console.log("[tc-settings] Quarter dates saved:", dates);
+
+    updateQuarterTimeline(dates);
 
     // Show success feedback
     const btn = $("saveQuarterDatesBtn");
