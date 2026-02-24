@@ -1176,6 +1176,40 @@
       }
 
       /* Tab System */
+      .st-tab-nav {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        padding: 12px 0 8px;
+        margin-bottom: 8px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .st-tab-link {
+        padding: 8px 18px;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.04);
+        color: inherit;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        opacity: 0.8;
+        transition: background 0.2s ease, opacity 0.15s ease, border-color 0.2s ease;
+      }
+
+      .st-tab-link:hover {
+        background: rgba(255, 255, 255, 0.08);
+        opacity: 1;
+      }
+
+      .st-tab-link.active {
+        background: rgba(34, 197, 94, 0.12);
+        border-color: rgba(34, 197, 94, 0.35);
+        color: rgba(34, 197, 94, 0.9);
+        opacity: 1;
+      }
+
       .st-tab-panel {
         display: none;
       }
@@ -1923,6 +1957,13 @@
 
           <!-- Dashboard View -->
           <div id="studentDashboardView" class="hidden">
+            <!-- Tab Navigation -->
+            <nav class="st-tab-nav" id="studentTabNav">
+              <button class="st-tab-link active" data-tab="dashboard">Dashboard</button>
+              <button class="st-tab-link" data-tab="assignments">Assignments</button>
+              <button class="st-tab-link" data-tab="grades">Grades</button>
+              <button class="st-tab-link" data-tab="goals">Goals</button>
+            </nav>
             <!-- Tab: Dashboard -->
             <div id="tabDashboard" class="st-tab-panel active">
               <div class="st-dashboard-content">

@@ -681,7 +681,14 @@
     const autoPercentStr = autoMax > 0 ? `(${Math.round((autoEarned / autoMax) * 100)}%)` : '';
     const manualPercentStr = manualMax > 0 ? `(${Math.round((manualEarned / manualMax) * 100)}%)` : '';
     
-    const summarySection = `
+    const summarySection = totalMax === 0 ? `
+      <div class="rv-summary">
+        <div class="rv-summary-row rv-summary-total">
+          <span>Items:</span>
+          <span>No items</span>
+        </div>
+      </div>
+    ` : `
       <div class="rv-summary">
         <div class="rv-summary-row">
           <span>Auto:</span>
@@ -699,7 +706,7 @@
     `;
     
     // Grading section — overall manual grade (0–100) and feedback
-    const currentScore = submission.score_manual != null ? submission.score_manual : (submission.score_auto || '');
+    const currentScore = submission.score_manual != null ? submission.score_manual : (submission.score_auto ?? '');
     const currentFeedback = submission.feedback || '';
     const gradingSection = `
       <div class="rv-section rv-grade-section">
@@ -707,16 +714,16 @@
           <span>Grade</span>
         </div>
         <div class="rv-quick-grade" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
-          <button class="rv-btn rv-btn-quickgrade" data-score="${totalMax}" data-submission-id="${submission.id}">✅ Full Credit</button>
-          <button class="rv-btn rv-btn-quickgrade" data-score="${Math.round(totalMax / 2)}" data-submission-id="${submission.id}">½ Half Credit</button>
+          <button class="rv-btn rv-btn-quickgrade" data-score="100" data-submission-id="${submission.id}">✅ Full Credit</button>
+          <button class="rv-btn rv-btn-quickgrade" data-score="50" data-submission-id="${submission.id}">½ Half Credit</button>
           <button class="rv-btn rv-btn-quickgrade" data-score="0" data-submission-id="${submission.id}">❌ No Credit</button>
         </div>
         <div class="rv-score-input-group">
-          <label>Score (0–${totalMax}):</label>
-          <input type="number" class="rv-grade-score-input rv-score-input" min="0" max="${totalMax}"
+          <label>Score (0–100):</label>
+          <input type="number" class="rv-grade-score-input rv-score-input" min="0" max="100"
                  value="${currentScore}"
                  data-submission-id="${submission.id}">
-          <span>/ ${totalMax}</span>
+          <span>/ 100</span>
         </div>
         <div class="rv-note-input-group">
           <label>Feedback:</label>
