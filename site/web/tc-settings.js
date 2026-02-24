@@ -177,7 +177,7 @@
         var overrides = JSON.parse(raw);
         if (overrides && typeof overrides === 'object' && !Array.isArray(overrides)) {
           for (var key in overrides) {
-            if (Object.prototype.hasOwnProperty.call(overrides, key)) {
+            if (Object.hasOwn(overrides, key)) {
               homeConfig[key] = overrides[key];
             }
           }
