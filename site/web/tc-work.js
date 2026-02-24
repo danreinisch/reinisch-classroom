@@ -135,7 +135,8 @@
       tr.appendChild(tdClass);
 
       const tdWhen = document.createElement("td");
-      tdWhen.innerHTML = `<div>Release: ${formatWhen(d.releaseAt)}</div><div>Due: ${formatWhen(d.dueAt)}</div>`;
+      const autoReleaseIcon = d.autoRelease ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-1px; margin-left:4px; opacity:0.7;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>' : '';
+      tdWhen.innerHTML = `<div>Release: ${formatWhen(d.releaseAt)}${autoReleaseIcon}</div><div>Due: ${formatWhen(d.dueAt)}</div>`;
       tr.appendChild(tdWhen);
 
       const tdSrc = document.createElement("td");
@@ -678,6 +679,7 @@ ${shown}
     $("draftRelease").value = isoToDatetimeLocal(d.releaseAt);
     $("draftDue").value = isoToDatetimeLocal(d.dueAt);
     $("draftNotes").value = d.notes || "";
+    if ($("draftAutoRelease")) $("draftAutoRelease").checked = !!d.autoRelease;
 
     // Update file labels to show current files
     const aLabel = $("assignmentFileName");
@@ -734,6 +736,7 @@ ${shown}
   function cancelEdit() {
     editingId = null;
     $("workDraftForm").reset();
+    if ($("draftAutoRelease")) $("draftAutoRelease").checked = false;
     
     const saveBtn = $("btnSaveDraft");
     if (saveBtn) saveBtn.textContent = "Save Draft";
@@ -947,6 +950,7 @@ ${shown}
     const releaseAt = safeStr($("draftRelease").value).trim();
     const dueAt = safeStr($("draftDue").value).trim();
     const notes = safeStr($("draftNotes").value).trim();
+    const autoRelease = $("draftAutoRelease") ? !!$("draftAutoRelease").checked : false;
 
     // Read scoring defaults from form (with fallbacks)
     const scoringDefaults = {
@@ -986,6 +990,7 @@ ${shown}
       draft.releaseAt = releaseAt || null;
       draft.dueAt = dueAt || null;
       draft.notes = notes || null;
+      draft.autoRelease = autoRelease;
       draft.updatedAt = nowISO();
       draft.meta = Object.assign({}, draft.meta || {}, { scoring_defaults: scoringDefaults, total_possible: totalPossible });
 
@@ -1100,6 +1105,7 @@ ${shown}
       releaseAt: releaseAt || null,
       dueAt: dueAt || null,
       notes: notes || null,
+      autoRelease,
       createdAt: nowISO(),
       meta: { scoring_defaults: scoringDefaults, total_possible: totalPossible },
       assignment: { kind: null, name: null, link: null, text: null },
@@ -1437,6 +1443,47 @@ ${shown}
     }
   }
 
+  function showToast(text, bg = '#22c55e', color = '#0b1220') {
+    const msg = document.createElement('div');
+    msg.textContent = text;
+    msg.style.cssText = `position:fixed;bottom:24px;right:24px;background:${bg};color:${color};padding:10px 18px;border-radius:10px;font-size:13px;font-weight:600;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.3);`;
+    document.body.appendChild(msg);
+    setTimeout(() => msg.remove(), 3000);
+  }
+
+  async function autoIssueDueReleases() {
+    const drafts = readDrafts();
+    const now = new Date();
+    let autoIssuedCount = 0;
+
+    for (const draft of drafts) {
+      if (!draft.autoRelease) continue;
+      if (!draft.releaseAt) continue;
+      if (new Date(draft.releaseAt) > now) continue;
+      if (draft.issuedAt) continue; // already issued
+      if (!draft.className) continue;
+
+      try {
+        await handleIssueDraft(draft.id);
+        // Mark as issued
+        const updatedDrafts = readDrafts();
+        const d = updatedDrafts.find(x => x.id === draft.id);
+        if (d) {
+          d.issuedAt = nowISO();
+          writeDrafts(updatedDrafts);
+        }
+        autoIssuedCount++;
+      } catch (err) {
+        console.warn('[tc-work] Auto-issue failed for draft:', draft.id, err);
+      }
+    }
+
+    if (autoIssuedCount > 0) {
+      showToast(`⏰ Auto-released ${autoIssuedCount} assignment${autoIssuedCount !== 1 ? 's' : ''}`);
+      renderTable(readDrafts());
+    }
+  }
+
   // Issue Assignment functionality
   function init() {
     const drafts = readDrafts();
@@ -1460,6 +1507,9 @@ ${shown}
     
     // Background sync with Supabase (non-blocking)
     remoteLoadDrafts();
+
+    // Auto-issue assignments whose release date has passed (non-blocking)
+    autoIssueDueReleases();
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);

@@ -121,27 +121,90 @@
   /**
    * Load and display KPIs (uses pre-fetched data bundle)
    */
-  function renderKPIs({ students, submissions, goals }) {
-    const totalStudents = students.filter((s) => s.active !== false).length;
-    const pendingReview = submissions.filter((s) => s.review_status === "pending").length;
+  function renderKPIs({ students, submissions, goals, instances, progress }) {
     const currentQuarter = getCurrentQuarter();
-    const activeGoals = goals.filter((g) => g.status === "active").length;
+    const quarterRange = getQuarterDateRange(currentQuarter);
+
+    // 1. Active Students
+    const activeStudents = students.filter((s) => s.active !== false).length;
+    const totalStudents = students.length;
+    const inactiveStudents = totalStudents - activeStudents;
+
+    // 2. Pending Reviews — pending + in_progress
+    const pendingReview = submissions.filter(
+      (s) => s.review_status === "pending" || s.review_status === "in_progress"
+    ).length;
+
+    // 3. Assignments This Quarter — instances created within the current quarter
+    let assignmentsThisQuarter = 0;
+    if (quarterRange) {
+      assignmentsThisQuarter = instances.filter((inst) => {
+        if (!inst.created_at) return false;
+        const d = new Date(inst.created_at);
+        return d >= quarterRange.start && d <= quarterRange.end;
+      }).length;
+    }
+
+    // 4. Goal Progress — average progress across all active goals' latest entries this quarter
+    const activeGoals = goals.filter((g) => g.status === "active");
+    let avgProgress = null;
+    if (activeGoals.length > 0) {
+      let sumPercent = 0;
+      let countWithProgress = 0;
+      for (const goal of activeGoals) {
+        const goalProgress = progress.filter(
+          (p) =>
+            p.goal_code === goal.code &&
+            p.student_code === goal.student_code &&
+            (!quarterRange ||
+              (new Date(p.date) >= quarterRange.start && new Date(p.date) <= quarterRange.end))
+        );
+        if (goalProgress.length === 0) continue;
+        goalProgress.sort((a, b) => new Date(b.date) - new Date(a.date));
+        const latest = goalProgress[0];
+        const val = latest.percent != null ? latest.percent : latest.value != null ? latest.value : null;
+        if (val != null) {
+          sumPercent += val;
+          countWithProgress++;
+        }
+      }
+      if (countWithProgress > 0) {
+        avgProgress = Math.round(sumPercent / countWithProgress);
+      }
+    }
 
     const kpiStudents = $("kpiStudents");
+    const kpiStudentsSub = $("kpiStudentsSub");
     const kpiReview = $("kpiReview");
+    const kpiReviewSub = $("kpiReviewSub");
     const kpiQuarter = $("kpiQuarter");
+    const kpiQuarterSub = $("kpiQuarterSub");
     const kpiGoals = $("kpiGoals");
+    const kpiGoalsSub = $("kpiGoalsSub");
 
-    if (kpiStudents) kpiStudents.textContent = totalStudents;
+    if (kpiStudents) kpiStudents.textContent = activeStudents;
+    if (kpiStudentsSub)
+      kpiStudentsSub.textContent =
+        inactiveStudents > 0 ? `of ${totalStudents} total` : "";
+
     if (kpiReview) kpiReview.textContent = pendingReview;
-    if (kpiQuarter) kpiQuarter.textContent = currentQuarter;
-    if (kpiGoals) kpiGoals.textContent = activeGoals;
+    if (kpiReviewSub)
+      kpiReviewSub.textContent = pendingReview > 0 ? "needs attention" : "";
+
+    if (kpiQuarter) kpiQuarter.textContent = assignmentsThisQuarter;
+    if (kpiQuarterSub) kpiQuarterSub.textContent = currentQuarter;
+
+    if (kpiGoals) kpiGoals.textContent = avgProgress != null ? `${avgProgress}%` : "—";
+    if (kpiGoalsSub)
+      kpiGoalsSub.textContent =
+        activeGoals.length > 0 ? `Avg across ${activeGoals.length} goal${activeGoals.length !== 1 ? "s" : ""}` : "";
 
     console.log("[tc-overview] KPIs rendered:", {
-      totalStudents,
+      activeStudents,
       pendingReview,
+      assignmentsThisQuarter,
+      avgProgress,
       currentQuarter,
-      activeGoals,
     });
   }
 

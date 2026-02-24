@@ -34,6 +34,11 @@
       line-height: 1.1;
       margin-top: 6px;
     }
+    .tc-kpi-sub {
+      font-size: 11px;
+      opacity: 0.6;
+      margin-top: 2px;
+    }
     .tc-quick-links {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
@@ -392,20 +397,24 @@
         <!-- KPI Cards -->
         <div class="tc-kpis" id="ovKpis">
           <div class="rc-card">
-            <div class="tc-kpi-label">Total Students</div>
+            <div class="tc-kpi-label">Active Students</div>
             <div class="tc-kpi-value" id="kpiStudents">—</div>
+            <div class="tc-kpi-sub" id="kpiStudentsSub"></div>
           </div>
           <div class="rc-card">
-            <div class="tc-kpi-label">Needs Review</div>
+            <div class="tc-kpi-label">Pending Reviews</div>
             <div class="tc-kpi-value" id="kpiReview">—</div>
+            <div class="tc-kpi-sub" id="kpiReviewSub"></div>
           </div>
           <div class="rc-card">
-            <div class="tc-kpi-label">Current Quarter</div>
+            <div class="tc-kpi-label">Assignments This Quarter</div>
             <div class="tc-kpi-value" id="kpiQuarter">—</div>
+            <div class="tc-kpi-sub" id="kpiQuarterSub"></div>
           </div>
           <div class="rc-card">
-            <div class="tc-kpi-label">Active Goals</div>
+            <div class="tc-kpi-label">Goal Progress</div>
             <div class="tc-kpi-value" id="kpiGoals">—</div>
+            <div class="tc-kpi-sub" id="kpiGoalsSub"></div>
           </div>
         </div>
 

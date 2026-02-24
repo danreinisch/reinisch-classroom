@@ -348,6 +348,46 @@
     }
   }
 
+  // Render batch action bar
+  async function renderBatchBar() {
+    const barEl = $('rvBatchBar');
+    const finalizeBtn = $('rvBtnFinalizeAll');
+    const markBtn = $('rvBtnMarkAllReviewed');
+    if (!barEl || !finalizeBtn || !markBtn) return;
+
+    const queue = buildReviewQueue();
+    const unreviewed = queue.filter(s => (s.review_status || 'pending') !== 'reviewed');
+
+    // Count finalizable: all constructed items scored but not yet reviewed
+    let finalizableCount = 0;
+    for (const submission of unreviewed) {
+      const assignmentId = submission.assignment_id;
+      if (!assignmentId) continue;
+      const items = assignmentItemsCache[assignmentId] || [];
+      const constructedItems = items.filter(item => item.answer_type === 'constructed');
+      if (constructedItems.length === 0) continue; // MCQ-only handled by autoFinalize
+      const answers = submissionAnswersCache[submission.id] || [];
+      const allScored = constructedItems.every(item => {
+        const answer = answers.find(a => a.item_id === item.id);
+        return answer && answer.earned_points != null;
+      });
+      if (allScored) finalizableCount++;
+    }
+
+    const markableCount = unreviewed.length;
+
+    // Show bar only if there are unreviewed submissions
+    barEl.style.display = markableCount > 0 ? 'flex' : 'none';
+
+    finalizeBtn.textContent = '';
+    finalizeBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> Finalize All Scored (${finalizableCount})`;
+    finalizeBtn.disabled = finalizableCount === 0;
+
+    markBtn.textContent = '';
+    markBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg> Mark All Reviewed (${markableCount})`;
+    markBtn.disabled = markableCount === 0;
+  }
+
   // Render the UI
   async function render() {
     const queue = buildReviewQueue();
@@ -375,6 +415,9 @@
     if (allBtn) {
       allBtn.innerHTML = `All <span class="rv-badge">${submissionsData.length}</span>`;
     }
+
+    // Render batch bar
+    await renderBatchBar();
     
     // Render queue
     const queueContainer = $('rvQueue');
@@ -798,6 +841,21 @@
       });
     }
     
+    // Batch action buttons
+    const finalizeAllBtn = $('rvBtnFinalizeAll');
+    if (finalizeAllBtn) {
+      finalizeAllBtn.addEventListener('click', async () => {
+        await handleFinalizeAllScored();
+      });
+    }
+
+    const markAllReviewedBtn = $('rvBtnMarkAllReviewed');
+    if (markAllReviewedBtn) {
+      markAllReviewedBtn.addEventListener('click', async () => {
+        await handleMarkAllReviewed();
+      });
+    }
+
     // Queue container - event delegation
     const queueContainer = $('rvQueue');
     if (queueContainer) {
@@ -861,6 +919,93 @@
         }
       });
     }
+  }
+
+  // Handle "Finalize All Scored" batch action
+  async function handleFinalizeAllScored() {
+    const queue = buildReviewQueue();
+    const unreviewed = queue.filter(s => (s.review_status || 'pending') !== 'reviewed');
+
+    // Find finalizable submissions (all constructed items scored)
+    const finalizable = [];
+    for (const submission of unreviewed) {
+      const assignmentId = submission.assignment_id;
+      if (!assignmentId) continue;
+      const items = assignmentItemsCache[assignmentId] || [];
+      const constructedItems = items.filter(item => item.answer_type === 'constructed');
+      if (constructedItems.length === 0) continue;
+      const answers = submissionAnswersCache[submission.id] || [];
+      const allScored = constructedItems.every(item => {
+        const answer = answers.find(a => a.item_id === item.id);
+        return answer && answer.earned_points != null;
+      });
+      if (allScored) finalizable.push(submission);
+    }
+
+    if (finalizable.length === 0) return;
+
+    if (!confirm(`Finalize ${finalizable.length} submission${finalizable.length !== 1 ? 's' : ''}? This will trigger goal progress updates for each.`)) return;
+
+    let processed = 0;
+    for (const submission of finalizable) {
+      try {
+        const items = assignmentItemsCache[submission.assignment_id] || [];
+        const answers = submissionAnswersCache[submission.id] || [];
+        const constructedItems = items.filter(item => item.answer_type === 'constructed');
+        let scoreManual = 0;
+        constructedItems.forEach(item => {
+          const answer = answers.find(a => a.item_id === item.id);
+          if (answer) scoreManual += answer.earned_points || 0;
+        });
+        const scoreAuto = submission.score_auto || 0;
+        const scoreTotal = scoreAuto + scoreManual;
+
+        await db.finalizeSubmission(submission.id, { scoreManual, scoreTotal });
+        await triggerGoalProgressUpdates(submission.id, items, answers);
+
+        submission.score_manual = scoreManual;
+        submission.score_total = scoreTotal;
+        submission.review_status = 'reviewed';
+        delete submissionAnswersCache[submission.id];
+        expandedSubmissions.delete(submission.id);
+        processed++;
+      } catch (err) {
+        console.error('[tc-review] Batch finalize error:', submission.id, err);
+      }
+    }
+
+    showToast(`✓ Finalized ${processed} submission${processed !== 1 ? 's' : ''}`, '#22c55e', '#0b1220');
+    await render();
+  }
+
+  // Handle "Mark All Reviewed" batch action
+  async function handleMarkAllReviewed() {
+    const queue = buildReviewQueue();
+    const unreviewed = queue.filter(s => (s.review_status || 'pending') !== 'reviewed');
+
+    if (unreviewed.length === 0) return;
+
+    if (!confirm(`Mark ${unreviewed.length} submission${unreviewed.length !== 1 ? 's' : ''} as reviewed?`)) return;
+
+    let processed = 0;
+    for (const submission of unreviewed) {
+      try {
+        const scoreAuto = submission.score_auto || 0;
+        const scoreManual = submission.score_manual || 0;
+        const scoreTotal = scoreAuto + scoreManual;
+
+        await db.finalizeSubmission(submission.id, { scoreManual, scoreTotal });
+
+        submission.review_status = 'reviewed';
+        expandedSubmissions.delete(submission.id);
+        processed++;
+      } catch (err) {
+        console.error('[tc-review] Batch mark reviewed error:', submission.id, err);
+      }
+    }
+
+    showToast(`✓ Marked ${processed} submission${processed !== 1 ? 's' : ''} as reviewed`, '#22c55e', '#0b1220');
+    await render();
   }
 
   // Handle saving a score for an item

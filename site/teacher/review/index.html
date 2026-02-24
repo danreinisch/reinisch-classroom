@@ -578,6 +578,39 @@
       font-weight: 600;
     }
     
+    .rv-batch-bar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      margin-bottom: 12px;
+    }
+    .rv-btn-batch {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: rgba(255, 255, 255, 0.06);
+      color: inherit;
+      cursor: pointer;
+      font-size: 13px;
+      transition: background 0.15s;
+    }
+    .rv-btn-batch:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+    .rv-btn-batch:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .rv-btn-batch svg {
+      flex-shrink: 0;
+    }
+    
     .rv-hint {
       font-size: 12px;
       opacity: 0.7;
@@ -792,6 +825,18 @@
           </button>
           <button id="rvStatusAll" class="rv-status-tab">
             All <span class="rv-badge">0</span>
+          </button>
+        </div>
+
+        <!-- Batch actions bar -->
+        <div class="rv-batch-bar" id="rvBatchBar" style="display:none;">
+          <button class="rv-btn rv-btn-batch" id="rvBtnFinalizeAll" disabled>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+            Finalize All Scored (0)
+          </button>
+          <button class="rv-btn rv-btn-batch" id="rvBtnMarkAllReviewed" disabled>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+            Mark All Reviewed (0)
           </button>
         </div>
 
