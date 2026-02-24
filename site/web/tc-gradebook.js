@@ -96,34 +96,97 @@
     return "gb-score-red";
   }
 
-  // Helper to get quarter from a date using actual school calendar
-  // TODO: Make quarter dates configurable from /teacher/overview/ settings
-  // Q1: August 16 - October 17
-  // Q2: October 18 - December 19
-  // Q3: December 20 - March 6
-  // Q4: March 7 - May 20
+  // Default quarter dates (matching tc-settings.js DEFAULT_QUARTER_DATES)
+  const DEFAULT_QUARTER_DATES = {
+    Q1: { start: "Aug 16", end: "Oct 17" },
+    Q2: { start: "Oct 18", end: "Dec 19" },
+    Q3: { start: "Dec 20", end: "Mar 6" },
+    Q4: { start: "Mar 7", end: "May 20" },
+  };
+
+  // Month abbreviation to 0-based index map (used for parsing rc_quarter_dates)
+  const MONTH_MAP = {
+    Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5,
+    Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11,
+  };
+
+  // Helper to get quarter from a date, reading configured dates from localStorage
+  // Falls back to hardcoded school-calendar defaults when rc_quarter_dates is not set
   function getQuarter(dateStr) {
     if (!dateStr) return null;
     const date = new Date(dateStr);
-    const month = date.getMonth() + 1; // getMonth is 0-indexed (1-12)
+    if (isNaN(date.getTime())) return null;
+
+    // Try configured dates from localStorage first
+    try {
+      const saved = localStorage.getItem("rc_quarter_dates");
+      if (saved) {
+        const dates = JSON.parse(saved);
+        const dateYear = date.getFullYear();
+        for (const quarter of ["Q1", "Q2", "Q3", "Q4"]) {
+          const range = dates[quarter];
+          if (!range || !range.start || !range.end) continue;
+          const [sMon, sDay] = range.start.split(" ");
+          const [eMon, eDay] = range.end.split(" ");
+          const sm = MONTH_MAP[sMon];
+          const em = MONTH_MAP[eMon];
+          if (sm === undefined || em === undefined) continue;
+          // Try both the date's year and the previous year as the quarter anchor
+          // to correctly handle year-crossing quarters (e.g. Q3: Dec–Mar)
+          for (const baseYear of [dateYear, dateYear - 1]) {
+            const start = new Date(baseYear, sm, parseInt(sDay, 10));
+            let end = new Date(baseYear, em, parseInt(eDay, 10));
+            if (end < start) end = new Date(baseYear + 1, em, parseInt(eDay, 10));
+            if (date >= start && date <= end) return quarter;
+          }
+        }
+        return null;
+      }
+    } catch (e) {
+      // Fall through to hardcoded logic
+    }
+
+    // Hardcoded fallback based on default school-year calendar
+    const month = date.getMonth() + 1;
     const day = date.getDate();
-    
-    // Q1: August 16 - October 17
     if ((month === 8 && day >= 16) || month === 9 || (month === 10 && day <= 17)) return "Q1";
-    
-    // Q2: October 18 - December 19 (spans year boundary)
     if ((month === 10 && day >= 18) || month === 11 || (month === 12 && day <= 19)) return "Q2";
-    
-    // Q3: December 20 - March 6 (spans year boundary)
     if ((month === 12 && day >= 20) || month === 1 || month === 2 || (month === 3 && day <= 6)) return "Q3";
-    
-    // Q4: March 7 - May 20
     if ((month === 3 && day >= 7) || month === 4 || (month === 5 && day <= 20)) return "Q4";
-    
-    // Summer months (May 21-Aug 15) - might be Q4 or no quarter
-    if ((month === 5 && day > 20) || month === 6 || month === 7 || (month === 8 && day < 16)) return "Q4"; // Include summer in Q4
-    
     return null;
+  }
+
+  // Return the trend arrow character for a given trend value ('up', 'down', or flat)
+  function getTrendArrow(trend) {
+    if (trend === "up") return "↗";
+    if (trend === "down") return "↘";
+    return "→";
+  }
+
+  // Update <select id="gbQuarterFilter"> option labels to reflect configured quarter dates
+  function updateQuarterFilterLabels() {
+    const select = $("gbQuarterFilter");
+    if (!select) return;
+
+    let dates = DEFAULT_QUARTER_DATES;
+    try {
+      const saved = localStorage.getItem("rc_quarter_dates");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && parsed.Q1 && parsed.Q2 && parsed.Q3 && parsed.Q4) {
+          dates = parsed;
+        }
+      }
+    } catch (e) {
+      // Use defaults
+    }
+
+    for (const option of select.options) {
+      const q = option.value;
+      if (q && dates[q]) {
+        option.textContent = `${q} (${dates[q].start}–${dates[q].end})`;
+      }
+    }
   }
 
   // State
@@ -942,6 +1005,8 @@
       headers.push(headerLabel);
     }
     headers.push("Average");
+    headers.push("Weighted");
+    headers.push("Trend");
 
     const rows = [headers];
 
@@ -971,6 +1036,12 @@
       const avg = calculateRowAverage(student.code, scoreMap, drafts);
       row.push(avg !== null ? avg : "");
 
+      const weighted = calculateWeightedAverage(student.code, scoreMap, drafts);
+      row.push(weighted !== null ? weighted : "");
+
+      const trend = calculateTrend(student.code, scoreMap, drafts);
+      row.push(getTrendArrow(trend));
+
       rows.push(row);
     }
 
@@ -992,6 +1063,18 @@
         ? Math.round(allScores.reduce((a, b) => a + b, 0) / allScores.length)
         : "";
     summaryRow.push(overallAvg);
+
+    const allWeightedScores = [];
+    for (const student of students) {
+      const weighted = calculateWeightedAverage(student.code, scoreMap, drafts);
+      if (weighted !== null) allWeightedScores.push(weighted);
+    }
+    const overallWeighted =
+      allWeightedScores.length > 0
+        ? Math.round(allWeightedScores.reduce((a, b) => a + b, 0) / allWeightedScores.length)
+        : "";
+    summaryRow.push(overallWeighted);
+    summaryRow.push("—");
     rows.push(summaryRow);
 
     // Convert to CSV string
@@ -1060,6 +1143,8 @@
         headers.push(label);
       }
       headers.push("Avg");
+      headers.push("Wtd");
+      headers.push("Trend");
       
       const tableData = [];
       for (const student of students) {
@@ -1086,7 +1171,13 @@
         
         const avg = calculateRowAverage(student.code, scoreMap, drafts);
         row.push(avg !== null ? `${avg}%` : "—");
-        
+
+        const weighted = calculateWeightedAverage(student.code, scoreMap, drafts);
+        row.push(weighted !== null ? `${weighted}%` : "—");
+
+        const trend = calculateTrend(student.code, scoreMap, drafts);
+        row.push(getTrendArrow(trend));
+
         tableData.push(row);
       }
       
@@ -1107,6 +1198,17 @@
         ? Math.round(allScores.reduce((a, b) => a + b, 0) / allScores.length)
         : null;
       summaryRow.push(overallAvg !== null ? `${overallAvg}%` : "—");
+
+      const allWeightedScores = [];
+      for (const student of students) {
+        const weighted = calculateWeightedAverage(student.code, scoreMap, drafts);
+        if (weighted !== null) allWeightedScores.push(weighted);
+      }
+      const overallWeighted = allWeightedScores.length > 0
+        ? Math.round(allWeightedScores.reduce((a, b) => a + b, 0) / allWeightedScores.length)
+        : null;
+      summaryRow.push(overallWeighted !== null ? `${overallWeighted}%` : "—");
+      summaryRow.push("—");
       tableData.push(summaryRow);
       
       // Add table using autoTable plugin if available, otherwise basic table
@@ -1720,6 +1822,7 @@
     // Wire quarter filter
     const quarterFilter = $("gbQuarterFilter");
     if (quarterFilter) {
+      updateQuarterFilterLabels();
       quarterFilter.addEventListener("change", () => {
         currentQuarterFilter = quarterFilter.value;
         renderGradebook();
