@@ -13,17 +13,10 @@
 
   // Import data adapter
   const { db, isRemote } = await import("/web/data-adapter.js");
+  const { DEFAULT_QUARTER_DATES } = await import("/web/quarter-utils.js");
 
   // DOM helper
   const $ = (id) => document.getElementById(id);
-
-  // Default quarter dates
-  const DEFAULT_QUARTER_DATES = {
-    Q1: { start: "Aug 16", end: "Oct 17" },
-    Q2: { start: "Oct 18", end: "Dec 19" },
-    Q3: { start: "Dec 20", end: "Mar 6" },
-    Q4: { start: "Mar 7", end: "May 20" },
-  };
 
   // Default ticker scroll speed (animation duration in seconds)
   var DEFAULT_TICKER_SPEED = 45;

@@ -8,6 +8,7 @@
   const { db, isRemote } = await import('/web/data-adapter.js');
   const { getSupabase } = await import('/web/supabase-client.js');
   const { CANON_CLASSES } = await import('/web/constants.js');
+  const { getQuarterDates: getGradebookQuarterDates, parseQuarterDate: parseGradebookQuarterDate, getSchoolYear: getGradebookSchoolYear } = await import('/web/quarter-utils.js');
 
   const STORAGE_KEY_DRAFTS = "rc_tc_work_drafts_v1";
   const NS = "rc_unified_";
@@ -96,20 +97,6 @@
     return "gb-score-red";
   }
 
-  // Default quarter dates (matches tc-settings.js defaults)
-  const GRADEBOOK_DEFAULT_QUARTER_DATES = {
-    Q1: { start: "Aug 16", end: "Oct 17" },
-    Q2: { start: "Oct 18", end: "Dec 19" },
-    Q3: { start: "Dec 20", end: "Mar 6" },
-    Q4: { start: "Mar 7", end: "May 20" },
-  };
-
-  // Month name → 0-indexed month number
-  const GRADEBOOK_MONTH_MAP = {
-    Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5,
-    Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11,
-  };
-
   // Helper to get quarter from a date — reads rc_quarter_dates from localStorage,
   // falls back to school-year defaults if not set.
   function getQuarter(dateStr) {
@@ -117,31 +104,19 @@
     const date = new Date(dateStr);
     if (isNaN(date.getTime())) return null;
 
-    let quarterDates = GRADEBOOK_DEFAULT_QUARTER_DATES;
-    try {
-      const saved = localStorage.getItem("rc_quarter_dates");
-      if (saved) quarterDates = JSON.parse(saved);
-    } catch (e) {
-      // use defaults
-    }
-
-    // School year: Aug–Dec belongs to the start year, Jan–Jul to the following year
-    const schoolYear = date.getMonth() >= 7 ? date.getFullYear() : date.getFullYear() - 1;
+    const quarterDates = getGradebookQuarterDates();
+    const schoolYear = getGradebookSchoolYear(date);
 
     for (const q of ["Q1", "Q2", "Q3", "Q4"]) {
       const range = quarterDates[q];
       if (!range || !range.start || !range.end) continue;
 
-      const [sMon, sDay] = range.start.split(" ");
-      const [eMon, eDay] = range.end.split(" ");
-      const sm = GRADEBOOK_MONTH_MAP[sMon];
-      const em = GRADEBOOK_MONTH_MAP[eMon];
-      if (sm === undefined || em === undefined) continue;
+      let start = parseGradebookQuarterDate(range.start, schoolYear);
+      let end = parseGradebookQuarterDate(range.end, schoolYear);
+      if (!start || !end) continue;
 
-      let start = new Date(schoolYear, sm, parseInt(sDay, 10));
-      let end = new Date(schoolYear, em, parseInt(eDay, 10));
       // Handle year-boundary quarters (e.g. Q3: Dec–Mar)
-      if (end < start) end = new Date(schoolYear + 1, em, parseInt(eDay, 10));
+      if (end < start) end = new Date(schoolYear + 1, end.getMonth(), end.getDate());
 
       if (date >= start && date <= end) return q;
     }
@@ -1746,13 +1721,7 @@
     const quarterFilter = $("gbQuarterFilter");
     if (!quarterFilter) return;
 
-    let quarterDates = GRADEBOOK_DEFAULT_QUARTER_DATES;
-    try {
-      const saved = localStorage.getItem("rc_quarter_dates");
-      if (saved) quarterDates = JSON.parse(saved);
-    } catch (e) {
-      // use defaults
-    }
+    const quarterDates = getGradebookQuarterDates();
 
     for (const q of ["Q1", "Q2", "Q3", "Q4"]) {
       const option = quarterFilter.querySelector(`option[value="${q}"]`);

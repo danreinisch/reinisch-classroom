@@ -14,6 +14,7 @@
 
   // Import data adapter
   const { db, isRemote } = await import("/web/data-adapter.js");
+  const { getCurrentQuarter, getQuarterDateRange } = await import("/web/quarter-utils.js");
 
   // DOM helper
   const $ = (id) => document.getElementById(id);
@@ -24,47 +25,6 @@
 
   // State
   let syncStatus = "local";
-
-  /**
-   * Get current quarter — reads from rc_quarter_dates localStorage first,
-   * falls back to hardcoded school-year defaults.
-   */
-  function getCurrentQuarter() {
-    const now = new Date();
-    const savedDates = JSON.parse(localStorage.getItem("rc_quarter_dates") || "null");
-
-    if (savedDates) {
-      const monthMap = {
-        Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5,
-        Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11,
-      };
-      for (const quarter of ["Q1", "Q2", "Q3", "Q4"]) {
-        const range = savedDates[quarter];
-        if (!range || !range.start || !range.end) continue;
-        const [sMon, sDay] = range.start.split(" ");
-        const [eMon, eDay] = range.end.split(" ");
-        const sm = monthMap[sMon];
-        const em = monthMap[eMon];
-        if (sm === undefined || em === undefined) continue;
-        const year = now.getFullYear();
-        const start = new Date(year, sm, parseInt(sDay, 10));
-        let end = new Date(year, em, parseInt(eDay, 10));
-        // Handle year-boundary quarters (e.g. Q3: Dec–Mar)
-        if (end < start) end = new Date(year + 1, em, parseInt(eDay, 10));
-        if (now >= start && now <= end) return quarter;
-      }
-    }
-
-    // Hardcoded fallback based on default school-year calendar
-    const month = now.getMonth() + 1;
-    const day = now.getDate();
-    if ((month === 8 && day >= 16) || month === 9 || (month === 10 && day <= 17)) return "Q1";
-    if ((month === 10 && day >= 18) || month === 11 || (month === 12 && day <= 19)) return "Q2";
-    if ((month === 12 && day >= 20) || month === 1 || month === 2 || (month === 3 && day <= 6))
-      return "Q3";
-    if ((month === 3 && day >= 7) || month === 4 || (month === 5 && day <= 20)) return "Q4";
-    return "Q4";
-  }
 
   /**
    * Update sync status indicator
@@ -237,52 +197,6 @@
     if (diffDays < 30)
       return `${Math.floor(diffDays / 7)} week${Math.floor(diffDays / 7) !== 1 ? "s" : ""} ago`;
     return date.toLocaleDateString();
-  }
-
-  /**
-   * Get quarter date range for the current quarter
-   */
-  function getQuarterDateRange(quarter) {
-    const quarterDates = JSON.parse(localStorage.getItem("rc_quarter_dates") || "null") || {
-      Q1: { start: "Aug 16", end: "Oct 17" },
-      Q2: { start: "Oct 18", end: "Dec 19" },
-      Q3: { start: "Dec 20", end: "Mar 6" },
-      Q4: { start: "Mar 7", end: "May 20" },
-    };
-
-    const range = quarterDates[quarter];
-    if (!range) return null;
-
-    const now = new Date();
-    const year = now.getFullYear();
-
-    // Parse dates and handle year boundaries
-    const parseQuarterDate = (dateStr) => {
-      const [monthStr, dayStr] = dateStr.split(" ");
-      const monthMap = {
-        Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5,
-        Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11,
-      };
-      const month = monthMap[monthStr];
-      const day = parseInt(dayStr, 10);
-
-      // Handle year boundary: if end month is before start month, it crosses year boundary
-      const startMonth = monthMap[range.start.split(" ")[0]];
-      const endMonth = monthMap[range.end.split(" ")[0]];
-
-      let adjustedYear = year;
-      if (endMonth < startMonth && month <= endMonth) {
-        // Quarter crosses year boundary and this date is in the next year
-        adjustedYear = year + 1;
-      }
-
-      return new Date(adjustedYear, month, day);
-    };
-
-    return {
-      start: parseQuarterDate(range.start),
-      end: parseQuarterDate(range.end),
-    };
   }
 
   /**

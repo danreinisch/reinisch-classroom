@@ -8,24 +8,10 @@
   const { db, isRemote } = await import('/web/data-adapter.js');
   const { getSupabase } = await import('/web/supabase-client.js');
   const { getAssignmentItems } = await import('/web/assignment-mapping-db.js');
-  const { CANON_CLASSES } = await import('/web/constants.js');
+  const { CANON_CLASSES, CLASS_DISPLAY } = await import('/web/constants.js');
 
   const NS = "rc_unified_";
   const REALTIME_DEBOUNCE_MS = 1000;
-
-  // Display abbreviations for class filter buttons
-  const CLASS_DISPLAY = {
-    "Language Arts 1 SC": "LA 1",
-    "Language Arts 2 SC": "LA 2",
-    "Language Arts 3 SC": "LA 3",
-    "Language Arts 4 SC": "LA 4",
-    "Life Skills Language Arts SC": "LS LA",
-    "Life Skills": "Life Skills",
-    "Consumer Math": "Consumer Math",
-    "Geometry SC": "Geometry",
-    "Speech/Language": "Speech/Lang",
-    "Warrior Academy": "Warrior"
-  };
 
   const $ = (id) => document.getElementById(id);
 

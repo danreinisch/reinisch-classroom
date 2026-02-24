@@ -6,6 +6,7 @@
 
   // Import data adapter for Supabase/localStorage abstraction
   const { db, isRemote } = await import('/web/data-adapter.js');
+  const { getCurrentQuarter, getQuarterDateRange, getQuarterLabel } = await import('/web/quarter-utils.js');
 
   // NOTE: Keep in sync with CANON_CLASSES in tc-work.js and tc-gradebook.js
   // Full class names matching CSV data
@@ -68,110 +69,6 @@
     if (score >= 80) return "dt-score-green";
     if (score >= 60) return "dt-score-amber";
     return "dt-score-red";
-  }
-
-  // Helper to get saved quarter dates from localStorage
-  function getSavedQuarterDates() {
-    return JSON.parse(localStorage.getItem('rc_quarter_dates') || 'null');
-  }
-
-  // Helper to get current quarter based on today's date
-  function getCurrentQuarter() {
-    const now = new Date();
-    const savedDates = getSavedQuarterDates();
-
-    if (savedDates) {
-      const monthMap = {
-        Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5,
-        Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11,
-      };
-      for (const quarter of ['Q1', 'Q2', 'Q3', 'Q4']) {
-        const range = savedDates[quarter];
-        if (!range || !range.start || !range.end) continue;
-        const [sMon, sDay] = range.start.split(' ');
-        const [eMon, eDay] = range.end.split(' ');
-        const sm = monthMap[sMon];
-        const em = monthMap[eMon];
-        if (sm === undefined || em === undefined) continue;
-        const year = now.getFullYear();
-        const start = new Date(year, sm, parseInt(sDay, 10));
-        let end = new Date(year, em, parseInt(eDay, 10));
-        // Handle year-boundary quarters (e.g. Q3: Dec–Mar)
-        if (end < start) end = new Date(year + 1, em, parseInt(eDay, 10));
-        if (now >= start && now <= end) return quarter;
-      }
-    }
-
-    // Hardcoded fallback based on default school-year calendar
-    const month = now.getMonth() + 1; // 1-12
-    const day = now.getDate();
-    if ((month === 8 && day >= 16) || month === 9 || (month === 10 && day <= 17)) return 'Q1';
-    if ((month === 10 && day >= 18) || month === 11 || (month === 12 && day <= 19)) return 'Q2';
-    if ((month === 12 && day >= 20) || month === 1 || month === 2 || (month === 3 && day <= 6)) return 'Q3';
-    if ((month === 3 && day >= 7) || month === 4 || (month === 5 && day <= 20)) return 'Q4';
-    return 'Q4'; // default (summer)
-  }
-
-  // Helper to get quarter date range
-  function getQuarterDateRange(quarter) {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth() + 1;
-
-    // Determine school year
-    const schoolYear = month >= 8 ? year : year - 1;
-
-    const savedDates = getSavedQuarterDates();
-    if (savedDates && savedDates[quarter]) {
-      const range = savedDates[quarter];
-      if (range.start && range.end) {
-        const monthMap = {
-          Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5,
-          Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11,
-        };
-        const [sMon, sDay] = range.start.split(' ');
-        const [eMon, eDay] = range.end.split(' ');
-        const sm = monthMap[sMon];
-        const em = monthMap[eMon];
-        if (sm !== undefined && em !== undefined) {
-          // Months >= Aug (index 7) are in schoolYear, earlier months are in schoolYear+1
-          const startYear = sm >= 7 ? schoolYear : schoolYear + 1;
-          const endYear = em >= 7 ? schoolYear : schoolYear + 1;
-          const pad = (n) => String(n).padStart(2, '0');
-          return {
-            start: `${startYear}-${pad(sm + 1)}-${pad(parseInt(sDay, 10))}`,
-            end: `${endYear}-${pad(em + 1)}-${pad(parseInt(eDay, 10))}`
-          };
-        }
-      }
-    }
-
-    const ranges = {
-      'Q1': { start: `${schoolYear}-08-16`, end: `${schoolYear}-10-17` },
-      'Q2': { start: `${schoolYear}-10-18`, end: `${schoolYear}-12-19` },
-      'Q3': { start: `${schoolYear}-12-20`, end: `${schoolYear + 1}-03-06` },
-      'Q4': { start: `${schoolYear + 1}-03-07`, end: `${schoolYear + 1}-05-20` }
-    };
-    
-    return ranges[quarter] || { start: null, end: null };
-  }
-
-  // Helper to get quarter label
-  function getQuarterLabel(quarter) {
-    const savedDates = getSavedQuarterDates();
-    if (savedDates && savedDates[quarter]) {
-      const range = savedDates[quarter];
-      if (range.start && range.end) {
-        return `${quarter} (${range.start}-${range.end})`;
-      }
-    }
-    const labels = {
-      'Q1': 'Q1 (Aug 16-Oct 17)',
-      'Q2': 'Q2 (Oct 18-Dec 19)',
-      'Q3': 'Q3 (Dec 20-Mar 6)',
-      'Q4': 'Q4 (Mar 7-May 20)'
-    };
-    return labels[quarter] || quarter;
   }
 
   // Load data from Supabase or localStorage
@@ -246,8 +143,8 @@
       const range = getQuarterDateRange(quarter);
       
       progressData = await db.listGoalProgress({
-        startDate: range.start,
-        endDate: range.end
+        startDate: formatDateYYYYMMDD(range.start),
+        endDate: formatDateYYYYMMDD(range.end)
       });
       
       console.log(`[data] Loaded ${progressData.length} progress entries for ${quarter}`);
