@@ -14,23 +14,10 @@
   // Import data adapter
   const { db, isRemote } = await import("/web/data-adapter.js");
   const { getQuarterDates, parseQuarterDate, getSchoolYear } = await import("/web/quarter-utils.js");
+  const { CANON_CLASSES } = await import("/web/constants.js");
 
   // DOM helper
   const $ = (id) => document.getElementById(id);
-
-  // CANON_CLASSES for quick-add dropdown (matching tc-work.js pattern)
-  const CANON_CLASSES = [
-    "Language Arts 1 SC",
-    "Language Arts 2 SC",
-    "Language Arts 3 SC",
-    "Language Arts 4 SC",
-    "Life Skills Language Arts SC",
-    "Life Skills",
-    "Consumer Math",
-    "Geometry SC",
-    "Speech/Language",
-    "Warrior Academy"
-  ];
 
   // State
   let currentView = "month"; // "month" or "week"

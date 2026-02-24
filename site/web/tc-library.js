@@ -11,23 +11,10 @@
 
   // Import data adapter
   const { db, isRemote } = await import('/web/data-adapter.js');
+  const { CANON_CLASSES } = await import('/web/constants.js');
 
   // DOM helper
   const $ = (id) => document.getElementById(id);
-
-  // Canon classes (must match tc-work.js, tc-gradebook.js, tc-reporting.js)
-  const CANON_CLASSES = [
-    "Language Arts 1 SC",
-    "Language Arts 2 SC", 
-    "Language Arts 3 SC",
-    "Language Arts 4 SC",
-    "Life Skills Language Arts SC",
-    "Life Skills",
-    "Consumer Math",
-    "Geometry SC",
-    "Speech/Language",
-    "Warrior Academy"
-  ];
 
   // State
   let currentTab = "assignments";
