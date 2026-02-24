@@ -160,6 +160,43 @@ export function getQuarterDateRange(quarter) {
 }
 
 /**
+ * Determine which quarter an arbitrary date falls in.
+ * Uses saved quarter dates from localStorage, with hardcoded fallback.
+ *
+ * @param {Date|string} date - The date to check
+ * @returns {"Q1"|"Q2"|"Q3"|"Q4"|null}
+ */
+export function getQuarterForDate(date) {
+  if (!date) return null;
+  const d = typeof date === "string" ? new Date(date) : date;
+  if (isNaN(d.getTime())) return null;
+
+  const dates = getQuarterDates();
+  const schoolYear = getSchoolYear(d);
+
+  for (const quarter of ["Q1", "Q2", "Q3", "Q4"]) {
+    const range = dates[quarter];
+    if (!range || !range.start || !range.end) continue;
+
+    const [sMon, sDay] = range.start.split(" ");
+    const [eMon, eDay] = range.end.split(" ");
+    const sm = MONTH_MAP[sMon];
+    const em = MONTH_MAP[eMon];
+    if (sm === undefined || em === undefined) continue;
+
+    const startYear = sm >= 7 ? schoolYear : schoolYear + 1;
+    const endYear = em >= 7 ? schoolYear : schoolYear + 1;
+
+    const start = new Date(startYear, sm, parseInt(sDay, 10));
+    const end = new Date(endYear, em, parseInt(eDay, 10));
+
+    if (d >= start && d <= end) return quarter;
+  }
+
+  return null;
+}
+
+/**
  * Return a human-readable label for a quarter, e.g. "Q1 (Aug 16–Oct 17)".
  * Uses saved dates when available.
  * @param {"Q1"|"Q2"|"Q3"|"Q4"} quarter

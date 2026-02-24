@@ -1,6 +1,8 @@
 // Portal B Helper Functions
 // Status computation, assignment grouping, and grade calculations
 
+import { getQuarterForDate as _getQuarterForDate } from '/web/quarter-utils.js';
+
 /**
  * Assignment status enumeration
  */
@@ -317,27 +319,9 @@ export function countLateAssignments(groups) {
  */
 export function getQuarter(date) {
   if (!date) return null;
-  
-  const d = typeof date === 'string' ? new Date(date) : date;
-  const month = d.getUTCMonth() + 1; // getUTCMonth is 0-indexed (1-12)
-  const day = d.getUTCDate();
-  
-  // Q1: August 16 - October 17
-  if ((month === 8 && day >= 16) || month === 9 || (month === 10 && day <= 17)) return 1;
-  
-  // Q2: October 18 - December 19
-  if ((month === 10 && day >= 18) || month === 11 || (month === 12 && day <= 19)) return 2;
-  
-  // Q3: December 20 - March 6 (spans year boundary)
-  if ((month === 12 && day >= 20) || month === 1 || month === 2 || (month === 3 && day <= 6)) return 3;
-  
-  // Q4: March 7 - May 20
-  if ((month === 3 && day >= 7) || month === 4 || (month === 5 && day <= 20)) return 4;
-  
-  // Summer months (May 21-Aug 15) - treat as Q4
-  if ((month === 5 && day > 20) || month === 6 || month === 7 || (month === 8 && day < 16)) return 4;
-  
-  return 1; // default to Q1
+  const q = _getQuarterForDate(date);
+  if (!q) return null;
+  return parseInt(q.charAt(1), 10); // "Q1" → 1, "Q2" → 2, etc.
 }
 
 /**

@@ -16,6 +16,7 @@
 
 import { getFeatureFlag } from './feature-flags.js';
 import { isRealtimeDisabled } from './runtime-config.js';
+import { getCurrentQuarter, getQuarterDateRange, getQuarterLabel } from '/web/quarter-utils.js';
 
 export class ProgressGridV2 {
   constructor(dataAdapter, options = {}) {
@@ -124,56 +125,15 @@ export class ProgressGridV2 {
   // ========================================================================
   
   getCurrentQuarter() {
-    const now = new Date();
-    const month = now.getMonth() + 1; // 1-12
-    const day = now.getDate();
-    
-    // TODO: Make quarter dates configurable from /teacher/overview/ settings
-    // Q1: August 16 - October 17
-    if ((month === 8 && day >= 16) || month === 9 || (month === 10 && day <= 17)) return 'Q1';
-    
-    // Q2: October 18 - December 19
-    if ((month === 10 && day >= 18) || month === 11 || (month === 12 && day <= 19)) return 'Q2';
-    
-    // Q3: December 20 - March 6 (spans year boundary)
-    if ((month === 12 && day >= 20) || month === 1 || month === 2 || (month === 3 && day <= 6)) return 'Q3';
-    
-    // Q4: March 7 - May 20 (including summer)
-    if ((month === 3 && day >= 7) || month === 4 || (month === 5 && day <= 20)) return 'Q4';
-    
-    // Summer months (May 21-Aug 15)
-    if ((month === 5 && day > 20) || month === 6 || month === 7 || (month === 8 && day < 16)) return 'Q4';
-    
-    return 'Q1'; // default
+    return getCurrentQuarter();
   }
-  
+
   getQuarterDateRange(quarter) {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth() + 1;
-    
-    // Determine school year (August-July, aligns with Q1-Q4 quarters)
-    // School year starts in August, so Aug-Dec use current year, Jan-July use previous year
-    const schoolYear = month >= 8 ? year : year - 1;
-    
-    const ranges = {
-      'Q1': { start: `${schoolYear}-08-16`, end: `${schoolYear}-10-17` },
-      'Q2': { start: `${schoolYear}-10-18`, end: `${schoolYear}-12-19` },
-      'Q3': { start: `${schoolYear}-12-20`, end: `${schoolYear + 1}-03-06` },
-      'Q4': { start: `${schoolYear + 1}-03-07`, end: `${schoolYear + 1}-05-20` }
-    };
-    
-    return ranges[quarter] || { start: null, end: null };
+    return getQuarterDateRange(quarter);
   }
-  
+
   getQuarterLabel(quarter) {
-    const labels = {
-      'Q1': 'Q1 (Aug 16-Oct 17)',
-      'Q2': 'Q2 (Oct 18-Dec 19)',
-      'Q3': 'Q3 (Dec 20-Mar 6)',
-      'Q4': 'Q4 (Mar 7-May 20)'
-    };
-    return labels[quarter] || quarter;
+    return getQuarterLabel(quarter);
   }
   
   // ========================================================================
