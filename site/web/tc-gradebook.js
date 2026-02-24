@@ -137,6 +137,11 @@
   let usingSupabase = false;
   let syncStatus = "local"; // "synced", "local", "error"
   let realtimeChannel = null;
+  let realtimeRetryCount = 0;
+  let realtimeRetryTimer = null;
+  let realtimeFlashTimer = null;
+  const REALTIME_MAX_RETRIES = 3;
+  const REALTIME_RETRY_DELAY_MS = 5000;
 
   // Load data from Supabase (if available) or localStorage
   async function loadData() {
@@ -1184,11 +1189,11 @@
         return;
       }
       
-      console.log('[gradebook] Setting up realtime subscription for submissions');
+      console.log('[gradebook] Setting up realtime subscription for submissions, assignment_instances, assignments');
       
-      // Subscribe to submissions table changes
+      // Subscribe to submissions, assignment_instances, and assignments table changes
       realtimeChannel = supabase
-        .channel('gradebook_submissions_changes')
+        .channel('gradebook_changes')
         .on('postgres_changes',
           { event: 'INSERT', schema: 'public', table: 'submissions' },
           handleRealtimeChange
@@ -1197,15 +1202,80 @@
           { event: 'UPDATE', schema: 'public', table: 'submissions' },
           handleRealtimeChange
         )
+        .on('postgres_changes',
+          { event: 'DELETE', schema: 'public', table: 'submissions' },
+          handleRealtimeChange
+        )
+        .on('postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'assignment_instances' },
+          handleRealtimeChange
+        )
+        .on('postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'assignment_instances' },
+          handleRealtimeChange
+        )
+        .on('postgres_changes',
+          { event: 'DELETE', schema: 'public', table: 'assignment_instances' },
+          handleRealtimeChange
+        )
+        .on('postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'assignments' },
+          handleRealtimeChange
+        )
+        .on('postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'assignments' },
+          handleRealtimeChange
+        )
+        .on('postgres_changes',
+          { event: 'DELETE', schema: 'public', table: 'assignments' },
+          handleRealtimeChange
+        )
         .subscribe((status) => {
           console.log('[gradebook] Realtime subscription status:', status);
           if (status === 'SUBSCRIBED') {
             console.log('[gradebook] Realtime subscription active');
+            realtimeRetryCount = 0;
+          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            handleRealtimeConnectionError();
           }
         });
     } catch (err) {
       console.warn('[gradebook] Error setting up realtime subscription:', err);
     }
+  }
+  
+  // Handle realtime connection errors with retry logic
+  function handleRealtimeConnectionError() {
+    if (realtimeRetryCount >= REALTIME_MAX_RETRIES) {
+      console.warn('[gradebook] Realtime: max retries reached, giving up');
+      const iconEl = $("gbSyncIcon");
+      const textEl = $("gbSyncText");
+      if (iconEl && textEl) {
+        iconEl.textContent = "🔴";
+        textEl.textContent = "Connection lost";
+      }
+      return;
+    }
+    
+    realtimeRetryCount++;
+    console.log(`[gradebook] Realtime: connection error, retry ${realtimeRetryCount}/${REALTIME_MAX_RETRIES} in ${REALTIME_RETRY_DELAY_MS}ms`);
+    
+    const iconEl = $("gbSyncIcon");
+    const textEl = $("gbSyncText");
+    if (iconEl && textEl) {
+      iconEl.textContent = "🔴";
+      textEl.textContent = "Reconnecting...";
+    }
+    
+    if (realtimeChannel) {
+      realtimeChannel.unsubscribe();
+      realtimeChannel = null;
+    }
+    
+    realtimeRetryTimer = setTimeout(() => {
+      realtimeRetryTimer = null;
+      setupRealtimeSubscription();
+    }, REALTIME_RETRY_DELAY_MS);
   }
   
   // Handle realtime changes
@@ -1220,6 +1290,19 @@
         console.log('[gradebook] Refreshing gradebook data after realtime change');
         await loadData();
         renderGradebook();
+        // Briefly flash "🔄 Updated" then revert to "🟢 Synced with Supabase"
+        const iconEl = $("gbSyncIcon");
+        const textEl = $("gbSyncText");
+        if (iconEl && textEl) {
+          clearTimeout(realtimeFlashTimer);
+          iconEl.textContent = "🔄";
+          textEl.textContent = "Updated";
+          realtimeFlashTimer = setTimeout(() => {
+            realtimeFlashTimer = null;
+            iconEl.textContent = "🟢";
+            textEl.textContent = "Synced with Supabase";
+          }, 2000);
+        }
       } catch (err) {
         console.error('[gradebook] Error refreshing after realtime change:', err);
       }
@@ -1228,6 +1311,15 @@
   
   // Cleanup realtime subscription on page unload
   function cleanupRealtime() {
+    if (realtimeFlashTimer) {
+      clearTimeout(realtimeFlashTimer);
+      realtimeFlashTimer = null;
+    }
+    if (realtimeRetryTimer) {
+      clearTimeout(realtimeRetryTimer);
+      realtimeRetryTimer = null;
+    }
+    realtimeRetryCount = 0;
     if (realtimeChannel) {
       console.log('[gradebook] Cleaning up realtime subscription');
       realtimeChannel.unsubscribe();
