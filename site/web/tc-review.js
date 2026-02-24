@@ -1065,6 +1065,60 @@
     }
   }
 
+  // Auto-finalize submissions for MCQ-only assignments (no constructed-response items)
+  async function autoFinalizeMcqOnlySubmissions() {
+    const pendingSubmissions = submissionsData.filter(s => {
+      const status = s.review_status || 'pending';
+      return status === 'pending' || status === 'in_progress';
+    });
+
+    if (pendingSubmissions.length === 0) return;
+
+    let anyFinalized = false;
+
+    for (const submission of pendingSubmissions) {
+      const instance = assignmentInstancesData.find(i => i.id === submission.instance_id);
+      if (!instance) continue;
+      const assignmentId = instance.assignment_id;
+      if (!assignmentId) continue;
+
+      const items = await getAssignmentItemsForAssignment(assignmentId);
+      const constructedItems = items.filter(item => item.answer_type === 'constructed');
+
+      // Only auto-finalize if there are zero constructed items and at least one item
+      if (items.length === 0 || constructedItems.length > 0) continue;
+
+      try {
+        const answers = await getSubmissionAnswers(submission.id);
+        const scoreAuto = submission.score_auto || 0;
+        const scoreTotal = scoreAuto;
+
+        await db.finalizeSubmission(submission.id, {
+          scoreManual: 0,
+          scoreTotal
+        });
+
+        await triggerGoalProgressUpdates(submission.id, items, answers);
+
+        submission.score_manual = 0;
+        submission.score_total = scoreTotal;
+        submission.review_status = 'reviewed';
+
+        delete submissionAnswersCache[submission.id];
+        expandedSubmissions.delete(submission.id);
+
+        console.log('[tc-review] Auto-finalized MCQ-only submission:', submission.id);
+        anyFinalized = true;
+      } catch (err) {
+        console.error('[tc-review] Error auto-finalizing submission:', submission.id, err);
+      }
+    }
+
+    if (anyFinalized) {
+      await render();
+    }
+  }
+
   // Advance to next unreviewed submission for same assignment (or any assignment)
   async function advanceToNextSubmission(currentSubmissionId) {
     const currentSubmission = submissionsData.find(s => s.id === currentSubmissionId);
@@ -1241,6 +1295,7 @@
     console.log('[tc-review] Initializing Review tab');
     
     await loadData();
+    await autoFinalizeMcqOnlySubmissions();
     populateClassFilters();
     populateAssignmentFilter();
     setupEventListeners();
