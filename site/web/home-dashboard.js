@@ -344,7 +344,7 @@ function init() {
   var homeP = fetch('/assets/data/home-config.json' + t).then(function(r) { return r.json(); }).then(function(base) {
     if (localOverrides && typeof localOverrides === 'object' && !Array.isArray(localOverrides)) {
       for (var key in localOverrides) {
-        if (Object.prototype.hasOwnProperty.call(localOverrides, key)) {
+        if (Object.hasOwn(localOverrides, key)) {
           base[key] = localOverrides[key];
         }
       }
