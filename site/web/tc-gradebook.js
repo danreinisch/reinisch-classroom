@@ -7,27 +7,13 @@
   // Import data adapter for Supabase/localStorage abstraction
   const { db, isRemote } = await import('/web/data-adapter.js');
   const { getSupabase } = await import('/web/supabase-client.js');
-  const { CANON_CLASSES } = await import('/web/constants.js');
+  const { CANON_CLASSES, CLASS_DISPLAY } = await import('/web/constants.js');
   const { getQuarterDates, getQuarterForDate } = await import('/web/quarter-utils.js');
 
   const STORAGE_KEY_DRAFTS = "rc_tc_work_drafts_v1";
   const NS = "rc_unified_";
   const REALTIME_DEBOUNCE_MS = 1000; // Debounce realtime updates to prevent excessive refreshes
 
-
-  // Display abbreviations for space constraints
-  const CLASS_DISPLAY = {
-    "Language Arts 1 SC": "LA 1 SC",
-    "Language Arts 2 SC": "LA 2 SC",
-    "Language Arts 3 SC": "LA 3 SC",
-    "Language Arts 4 SC": "LA 4 SC",
-    "Life Skills Language Arts SC": "Life Skills LA",
-    "Life Skills": "Life Skills",
-    "Consumer Math": "Consumer Math",
-    "Geometry SC": "Geometry SC",
-    "Speech/Language": "Speech/Language",
-    "Warrior Academy": "Warrior Academy"
-  };
 
   const $ = (id) => document.getElementById(id);
 
