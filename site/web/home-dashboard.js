@@ -334,22 +334,40 @@ function init() {
 
   var t = '?t=' + Date.now();
 
-  // Fetch JSON first, then shallow-merge localStorage overrides on top
-  var localOverrides = null;
-  try {
-    var raw = localStorage.getItem('rc_home_config');
-    if (raw) localOverrides = JSON.parse(raw);
-  } catch(_) { /* noop */ }
+  // Try Supabase first (for Smart TV and cross-device access), fall back to static JSON + localStorage
+  var homeP = import('/web/data-adapter.js').then(function(mod) {
+    return mod.isRemote().then(function(remote) {
+      if (remote) {
+        return mod.db.getAppConfig('home_config').then(function(cfg) {
+          if (cfg && typeof cfg === 'object') return cfg;
+          // Remote returned null, fall through to static+localStorage
+          return null;
+        }).catch(function() { return null; });
+      }
+      return null;
+    });
+  }).catch(function() { return null; }).then(function(remoteConfig) {
+    if (remoteConfig && typeof remoteConfig === 'object') {
+      return remoteConfig;
+    }
 
-  var homeP = fetch('/assets/data/home-config.json' + t).then(function(r) { return r.json(); }).then(function(base) {
-    if (localOverrides && typeof localOverrides === 'object' && !Array.isArray(localOverrides)) {
-      for (var key in localOverrides) {
-        if (Object.hasOwn(localOverrides, key)) {
-          base[key] = localOverrides[key];
+    // Fallback: static JSON + localStorage overlay (original behavior)
+    var localOverrides = null;
+    try {
+      var raw = localStorage.getItem('rc_home_config');
+      if (raw) localOverrides = JSON.parse(raw);
+    } catch(_) { /* noop */ }
+
+    return fetch('/assets/data/home-config.json' + t).then(function(r) { return r.json(); }).then(function(base) {
+      if (localOverrides && typeof localOverrides === 'object' && !Array.isArray(localOverrides)) {
+        for (var key in localOverrides) {
+          if (Object.hasOwn(localOverrides, key)) {
+            base[key] = localOverrides[key];
+          }
         }
       }
-    }
-    return base;
+      return base;
+    });
   });
   var stateP = fetch('/assets/data/site-state.json' + t).then(function(r) { return r.json(); });
 

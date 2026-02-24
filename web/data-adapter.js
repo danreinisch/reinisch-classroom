@@ -1043,6 +1043,17 @@ const local = {
     
     return deleted;
   },
+
+  // App config (key-value store for cross-device settings like home config)
+  async getAppConfig(key) {
+    try {
+      return JSON.parse(localStorage.getItem('rc_app_config_' + key)) ?? null;
+    } catch { return null; }
+  },
+  async setAppConfig(key, value) {
+    localStorage.setItem('rc_app_config_' + key, JSON.stringify(value));
+    return value;
+  },
 };
 
 const remote = {

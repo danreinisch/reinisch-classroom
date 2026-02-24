@@ -417,11 +417,20 @@
   }
 
   /**
-   * Save home config to localStorage (live preview)
+   * Save home config to localStorage (live preview) and Supabase (cross-device sync)
    */
-  function saveHomeConfig() {
+  async function saveHomeConfig() {
+    // Always save to localStorage for instant local preview
     localStorage.setItem('rc_home_config', JSON.stringify(homeConfig));
-    showToast('✓ Saved! Changes are live on the home page.', '#22c55e', '#0b1220');
+
+    // Also persist to Supabase so other devices (Smart TV) see changes
+    try {
+      await db.setAppConfig('home_config', homeConfig);
+      showToast('✓ Saved & synced! Changes are live everywhere.', '#22c55e', '#0b1220');
+    } catch (err) {
+      console.warn('[tc-settings] Failed to sync home config to remote:', err);
+      showToast('✓ Saved locally. Remote sync failed — TV may not update.', '#f59e0b', '#0b1220');
+    }
   }
 
   /**
