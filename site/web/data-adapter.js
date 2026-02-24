@@ -866,6 +866,17 @@ const local = {
 
     return true;
   },
+
+  // App config (key-value store for cross-device settings like home config)
+  async getAppConfig(key) {
+    try {
+      return JSON.parse(localStorage.getItem('rc_app_config_' + key)) ?? null;
+    } catch { return null; }
+  },
+  async setAppConfig(key, value) {
+    localStorage.setItem('rc_app_config_' + key, JSON.stringify(value));
+    return value;
+  },
 };
 
 const remote = {
@@ -2228,6 +2239,32 @@ const remote = {
 
     if (error) throw error;
     return true;
+  },
+
+  // App config (key-value store for cross-device settings like home config)
+  async getAppConfig(key) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+
+    const { data, error } = await supabase
+      .from('app_config')
+      .select('value')
+      .eq('key', key)
+      .maybeSingle();
+
+    if (error) throw error;
+    return data ? data.value : null;
+  },
+  async setAppConfig(key, value) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+
+    const { error } = await supabase
+      .from('app_config')
+      .upsert({ key, value }, { onConflict: 'key' });
+
+    if (error) throw error;
+    return value;
   }
 };
 
