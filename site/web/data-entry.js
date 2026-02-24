@@ -12,13 +12,8 @@
   // Import Supabase client (vendored library)
   const { getSupabase } = await import('/web/supabase-client.js');
 
-  // Quarter date ranges (school year calendar)
-  const QUARTERS = {
-    Q1: { start: '08-16', end: '10-17' },
-    Q2: { start: '10-18', end: '12-19' },
-    Q3: { start: '12-20', end: '03-06' },
-    Q4: { start: '03-07', end: '05-20' }
-  };
+  // Import shared quarter utilities
+  const { getCurrentQuarter, getQuarterDateRange } = await import('/web/quarter-utils.js');
 
   // State
   let tokenData = null;
@@ -73,50 +68,6 @@
    */
   function hideAlert() {
     deAlert.style.display = 'none';
-  }
-
-  /**
-   * Get current quarter based on today's date
-   */
-  function getCurrentQuarter() {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth() + 1; // 1-12
-    const day = now.getDate();
-    
-    // Determine school year (starts Aug 16)
-    let schoolYear = year;
-    if (month < 8 || (month === 8 && day < 16)) {
-      schoolYear = year - 1;
-    }
-
-    // Check each quarter
-    for (const [quarter, range] of Object.entries(QUARTERS)) {
-      const [startMonth, startDay] = range.start.split('-').map(Number);
-      const [endMonth, endDay] = range.end.split('-').map(Number);
-
-      let startYear = schoolYear;
-      let endYear = schoolYear;
-
-      // Handle year boundary (Q3 and Q4 span into next year)
-      if (startMonth >= 8) {
-        startYear = schoolYear;
-        endYear = schoolYear + 1;
-      } else {
-        startYear = schoolYear + 1;
-        endYear = schoolYear + 1;
-      }
-
-      const startDate = new Date(startYear, startMonth - 1, startDay);
-      const endDate = new Date(endYear, endMonth - 1, endDay, 23, 59, 59);
-
-      if (now >= startDate && now <= endDate) {
-        return { quarter, schoolYear, startDate, endDate };
-      }
-    }
-
-    // Default to Q1 if outside all quarters
-    return { quarter: 'Q1', schoolYear, startDate: null, endDate: null };
   }
 
   /**
@@ -241,7 +192,9 @@
     const supabase = await getSupabase();
     if (!supabase || !goalData || !studentData) return;
 
-    currentQuarter = getCurrentQuarter();
+    const quarter = getCurrentQuarter();
+    const range = getQuarterDateRange(quarter);
+    currentQuarter = { quarter, startDate: range ? range.start : null, endDate: range ? range.end : null };
 
     try {
       // Get progress entries for this goal in current quarter

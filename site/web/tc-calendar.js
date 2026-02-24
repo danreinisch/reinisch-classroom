@@ -13,7 +13,7 @@
 
   // Import data adapter
   const { db, isRemote } = await import("/web/data-adapter.js");
-  const { getQuarterDates, parseQuarterDate, getSchoolYear } = await import("/web/quarter-utils.js");
+  const { getQuarterForDate } = await import("/web/quarter-utils.js");
   const { CANON_CLASSES } = await import("/web/constants.js");
 
   // DOM helper
@@ -25,40 +25,6 @@
   let syncStatus = "local";
   let allEvents = [];
   const DRAFT_KEY = "rc_tc_work_drafts_v1";
-
-  /**
-   * Check if a date falls within a quarter range
-   */
-  function isDateInQuarter(date, quarter, quarterDates) {
-    const schoolYear = getSchoolYear(date);
-    const q = quarterDates[quarter];
-    if (!q) return false;
-
-    let start = parseQuarterDate(q.start, schoolYear);
-    let end = parseQuarterDate(q.end, schoolYear);
-
-    if (!start || !end) return false;
-
-    // Handle year boundary (e.g., Q3 spans Dec to Mar)
-    if (end < start) {
-      end.setFullYear(end.getFullYear() + 1);
-    }
-
-    return date >= start && date <= end;
-  }
-
-  /**
-   * Get which quarter a date belongs to
-   */
-  function getQuarterForDate(date) {
-    const quarterDates = getQuarterDates();
-    for (const q of ["Q1", "Q2", "Q3", "Q4"]) {
-      if (isDateInQuarter(date, q, quarterDates)) {
-        return q;
-      }
-    }
-    return null;
-  }
 
   /**
    * Update sync status indicator
