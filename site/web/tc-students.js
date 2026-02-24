@@ -7,6 +7,7 @@
   // Import data adapter for Supabase/localStorage abstraction
   const { db } = await import('/web/data-adapter.js');
   const { getSupabase } = await import('/web/supabase-client.js');
+  const { getCurrentQuarter, getQuarterDateRange } = await import('/web/quarter-utils.js');
 
   // Constants
   const FULL_CLASS_NAMES = [
@@ -289,42 +290,9 @@
     localStorage.setItem('rc_quarter_dates', JSON.stringify(dates));
   }
 
-  function getCurrentQuarter() {
-    const dates = getQuarterDates();
-    const today = new Date();
-    
-    for (const [quarter, range] of Object.entries(dates)) {
-      const start = new Date(range.start);
-      const end = new Date(range.end);
-      if (today >= start && today <= end) {
-        return quarter.toUpperCase();
-      }
-    }
-    return 'Q1'; // Default
-  }
-
   function formatQuarterDate(dateStr) {
     const date = new Date(dateStr);
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  }
-
-  /**
-   * Get quarter date range in YYYY-MM-DD format
-   */
-  function getQuarterDateRange(quarter) {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth() + 1;
-    const schoolYear = month >= 8 ? year : year - 1;
-
-    const ranges = {
-      Q1: { start: `${schoolYear}-08-16`, end: `${schoolYear}-10-17` },
-      Q2: { start: `${schoolYear}-10-18`, end: `${schoolYear}-12-19` },
-      Q3: { start: `${schoolYear}-12-20`, end: `${schoolYear + 1}-03-06` },
-      Q4: { start: `${schoolYear + 1}-03-07`, end: `${schoolYear + 1}-05-20` },
-    };
-
-    return ranges[quarter] || { start: null, end: null };
   }
 
   function renderQuarterBar() {
@@ -445,17 +413,12 @@
   }
 
   function getProgressThisQuarter(studentCode, goalCode) {
-    const dates = getQuarterDates();
-    const current = getCurrentQuarter().toLowerCase();
-    const range = dates[current];
+    const range = getQuarterDateRange(getCurrentQuarter());
     if (!range) return [];
-    
-    const start = new Date(range.start);
-    const end = new Date(range.end);
-    
+
     return getProgressForGoal(studentCode, goalCode).filter(p => {
       const d = new Date(p.date);
-      return d >= start && d <= end;
+      return d >= range.start && d <= range.end;
     });
   }
 
@@ -477,13 +440,11 @@
     const count = thisQuarter.length;
     
     // Calculate how far through the quarter we are
-    const dates = getQuarterDates();
-    const current = getCurrentQuarter().toLowerCase();
-    const range = dates[current];
+    const range = getQuarterDateRange(getCurrentQuarter());
     if (!range) return { status: 'ok', count, expected: expectedMin };
     
-    const start = new Date(range.start);
-    const end = new Date(range.end);
+    const start = range.start;
+    const end = range.end;
     const now = new Date();
     const totalDays = (end - start) / (1000 * 60 * 60 * 24);
     const daysPassed = (now - start) / (1000 * 60 * 60 * 24);
@@ -3787,8 +3748,8 @@
         const qRange = getQuarterDateRange(q);
         const hasData = progressData.some(p => 
           p.goal_code === goal.code && 
-          p.date >= qRange.start && 
-          p.date <= qRange.end
+          new Date(p.date) >= qRange.start && 
+          new Date(p.date) <= qRange.end
         );
         const indicator = hasData ? '✅' : '⚠️';
         return `<td style="text-align: center; font-size: 20px; ${q === currentQ ? 'background: rgba(34,197,94,0.15);' : ''}">${indicator}</td>`;
@@ -3808,8 +3769,8 @@
     const goalsWithData = studentGoals.filter(goal => {
       return progressData.some(p => 
         p.goal_code === goal.code && 
-        p.date >= currentQRange.start && 
-        p.date <= currentQRange.end
+        new Date(p.date) >= currentQRange.start && 
+        new Date(p.date) <= currentQRange.end
       );
     }).length;
     const compliancePercent = studentGoals.length > 0 

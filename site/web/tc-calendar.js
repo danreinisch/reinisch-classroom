@@ -13,6 +13,7 @@
 
   // Import data adapter
   const { db, isRemote } = await import("/web/data-adapter.js");
+  const { getQuarterDates, parseQuarterDate, getSchoolYear } = await import("/web/quarter-utils.js");
 
   // DOM helper
   const $ = (id) => document.getElementById(id);
@@ -31,66 +32,12 @@
     "Warrior Academy"
   ];
 
-  // Default quarter dates
-  const DEFAULT_QUARTER_DATES = {
-    Q1: { start: "Aug 16", end: "Oct 17" },
-    Q2: { start: "Oct 18", end: "Dec 19" },
-    Q3: { start: "Dec 20", end: "Mar 6" },
-    Q4: { start: "Mar 7", end: "May 20" },
-  };
-
   // State
   let currentView = "month"; // "month" or "week"
   let currentDate = new Date();
   let syncStatus = "local";
   let allEvents = [];
   const DRAFT_KEY = "rc_tc_work_drafts_v1";
-
-  /**
-   * Get quarter dates from localStorage or defaults
-   */
-  function getQuarterDates() {
-    const saved = localStorage.getItem("rc_quarter_dates");
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.warn("[tc-calendar] Failed to parse quarter dates:", e);
-      }
-    }
-    return DEFAULT_QUARTER_DATES;
-  }
-
-  /**
-   * Parse a date string like "Aug 16" or "Oct 17" into a Date object for the current school year
-   */
-  function parseQuarterDate(dateStr, year) {
-    const months = {
-      Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5,
-      Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11
-    };
-    const parts = dateStr.trim().split(" ");
-    if (parts.length !== 2) return null;
-    
-    const month = months[parts[0]];
-    const day = parseInt(parts[1], 10);
-    
-    if (month === undefined || isNaN(day)) return null;
-    
-    return new Date(year, month, day);
-  }
-
-  /**
-   * Get the school year for a given date
-   * School year starts in August, so Aug-Dec = year, Jan-Jul = year-1
-   */
-  function getSchoolYear(date) {
-    const month = date.getMonth();
-    const year = date.getFullYear();
-    // If month is Aug (7 in zero-indexed getMonth()) or later, school year is current year
-    // Otherwise, school year started last year
-    return month >= 7 ? year : year - 1;
-  }
 
   /**
    * Check if a date falls within a quarter range

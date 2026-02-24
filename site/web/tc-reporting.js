@@ -14,6 +14,7 @@
   // Import data adapter and Supabase client
   const { db, isRemote } = await import("/web/data-adapter.js");
   const { getSupabase } = await import("/web/supabase-client.js");
+  const { getCurrentQuarter, getQuarterDateRange, getQuarterLabel } = await import("/web/quarter-utils.js");
 
   // Constants - keep in sync with other teacher pages
   const CANON_CLASSES = [
@@ -67,63 +68,6 @@
   let tab3State = { classFilter: "All Classes", compareQuarters: false };
   let tab4State = { classFilter: "All Classes", quarter: getCurrentQuarter() };
   let tab5State = { quarter: getCurrentQuarter() };
-
-  /**
-   * Get current quarter based on today's date
-   */
-  function getCurrentQuarter() {
-    const now = new Date();
-    const month = now.getMonth() + 1;
-    const day = now.getDate();
-
-    // Q1: August 16 - October 17
-    if ((month === 8 && day >= 16) || month === 9 || (month === 10 && day <= 17)) return "Q1";
-
-    // Q2: October 18 - December 19
-    if ((month === 10 && day >= 18) || month === 11 || (month === 12 && day <= 19)) return "Q2";
-
-    // Q3: December 20 - March 6 (spans year boundary)
-    if ((month === 12 && day >= 20) || month === 1 || month === 2 || (month === 3 && day <= 6))
-      return "Q3";
-
-    // Q4: March 7 - May 20
-    if ((month === 3 && day >= 7) || month === 4 || (month === 5 && day <= 20)) return "Q4";
-
-    // Summer fallback
-    return "Q4";
-  }
-
-  /**
-   * Get quarter date range
-   */
-  function getQuarterDateRange(quarter) {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth() + 1;
-    const schoolYear = month >= 8 ? year : year - 1;
-
-    const ranges = {
-      Q1: { start: `${schoolYear}-08-16`, end: `${schoolYear}-10-17` },
-      Q2: { start: `${schoolYear}-10-18`, end: `${schoolYear}-12-19` },
-      Q3: { start: `${schoolYear}-12-20`, end: `${schoolYear + 1}-03-06` },
-      Q4: { start: `${schoolYear + 1}-03-07`, end: `${schoolYear + 1}-05-20` },
-    };
-
-    return ranges[quarter] || { start: null, end: null };
-  }
-
-  /**
-   * Get quarter label with date range
-   */
-  function getQuarterLabel(quarter) {
-    const labels = {
-      Q1: "Q1 (Aug 16-Oct 17)",
-      Q2: "Q2 (Oct 18-Dec 19)",
-      Q3: "Q3 (Dec 20-Mar 6)",
-      Q4: "Q4 (Mar 7-May 20)",
-    };
-    return labels[quarter] || quarter;
-  }
 
   /**
    * Escape HTML for XSS prevention
@@ -645,7 +589,7 @@
     const method = goal.measurement_type || "N/A";
 
     return `[Goal Code: ${goalCode}] ${goal.goal_area || ""}
-Reporting Period: ${quarterLabel} (${quarterDates.start} - ${quarterDates.end})
+Reporting Period: ${quarterLabel} (${formatDateYYYYMMDD(quarterDates.start)} - ${formatDateYYYYMMDD(quarterDates.end)})
 Baseline: ${baseline}% | Current: ${current}% | Target: ${target}%
 Data Points: ${dataPointsStr}
 Trend: ${trend}
