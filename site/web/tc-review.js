@@ -707,16 +707,16 @@
           <span>Grade</span>
         </div>
         <div class="rv-quick-grade" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
-          <button class="rv-btn rv-btn-quickgrade" data-score="100" data-submission-id="${submission.id}">✅ Full Credit</button>
-          <button class="rv-btn rv-btn-quickgrade" data-score="50" data-submission-id="${submission.id}">½ Half Credit</button>
+          <button class="rv-btn rv-btn-quickgrade" data-score="${totalMax}" data-submission-id="${submission.id}">✅ Full Credit</button>
+          <button class="rv-btn rv-btn-quickgrade" data-score="${Math.round(totalMax / 2)}" data-submission-id="${submission.id}">½ Half Credit</button>
           <button class="rv-btn rv-btn-quickgrade" data-score="0" data-submission-id="${submission.id}">❌ No Credit</button>
         </div>
         <div class="rv-score-input-group">
-          <label>Score (0–100):</label>
-          <input type="number" class="rv-grade-score-input rv-score-input" min="0" max="100"
+          <label>Score (0–${totalMax}):</label>
+          <input type="number" class="rv-grade-score-input rv-score-input" min="0" max="${totalMax}"
                  value="${currentScore}"
                  data-submission-id="${submission.id}">
-          <span>/ 100</span>
+          <span>/ ${totalMax}</span>
         </div>
         <div class="rv-note-input-group">
           <label>Feedback:</label>
@@ -1341,8 +1341,9 @@
     const feedbackInput = document.querySelector(`.rv-grade-feedback-input[data-submission-id="${submissionId}"]`);
 
     const scoreManual = scoreInput ? parseFloat(scoreInput.value) : 0;
-    if (isNaN(scoreManual) || scoreManual < 0 || scoreManual > 100) {
-      showToast('Score must be 0–100', '#ef4444', '#fff');
+    const scoreMax = scoreInput ? (parseFloat(scoreInput.max) || 100) : 100;
+    if (isNaN(scoreManual) || scoreManual < 0 || scoreManual > scoreMax) {
+      showToast(`Score must be 0–${scoreMax}`, '#ef4444', '#fff');
       return;
     }
     const feedback = feedbackInput ? feedbackInput.value.trim() : '';

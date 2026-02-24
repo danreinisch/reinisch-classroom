@@ -441,7 +441,8 @@
   }
 
   // Make a score cell editable
-  function makeScoreEditable(td, studentCode, draftId, currentScore) {
+  function makeScoreEditable(td, studentCode, draftId, currentScore, totalPossible) {
+    const maxScore = totalPossible || 100;
     // Store original content
     const originalText = td.textContent;
     td.classList.add("editing");
@@ -454,7 +455,7 @@
     const input = document.createElement("input");
     input.type = "number";
     input.min = "0";
-    input.max = "100";
+    input.max = String(maxScore);
     input.value = currentScore !== null ? currentScore : "";
 
     // Create save button (✓)
@@ -488,8 +489,8 @@
       }
 
       const score = parseInt(newValue, 10);
-      if (isNaN(score) || score < 0 || score > 100) {
-        alert("Please enter a score between 0 and 100.");
+      if (isNaN(score) || score < 0 || score > maxScore) {
+        alert(`Please enter a score between 0 and ${maxScore}.`);
         input.focus();
         return;
       }
@@ -549,7 +550,7 @@
         const increment = e.shiftKey ? 5 : 1;
         const currentVal = input.value.trim() === "" ? 0 : parseInt(input.value, 10);
         if (!isNaN(currentVal)) {
-          input.value = Math.min(100, currentVal + increment);
+          input.value = Math.min(maxScore, currentVal + increment);
         }
       } else if (e.key === "ArrowDown") {
         e.preventDefault();
@@ -692,7 +693,8 @@
 
         // Make cell editable on click
         td.addEventListener("click", () => {
-          makeScoreEditable(td, student.code, draft.id, currentScore);
+          const totalPossible = draft.meta && draft.meta.total_possible ? draft.meta.total_possible : null;
+          makeScoreEditable(td, student.code, draft.id, currentScore, totalPossible);
         });
 
         tr.appendChild(td);
