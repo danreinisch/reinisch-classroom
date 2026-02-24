@@ -2000,7 +2000,7 @@
       dashboardView.classList.add('hidden');
     }
     
-    // PR fix-student-watchdog-login: Try to restore form inputs
+    document.documentElement.classList.remove('st-authenticated');
     // This preserves user input during re-renders
     setTimeout(() => {
       const restored = restoreFormInputs();
@@ -2043,7 +2043,7 @@
       return;
     }
     
-    // Display student code
+    document.documentElement.classList.add('st-authenticated');
     const studentCode = sessionStorage.getItem('rc_user_code');
     if (studentCodeDisplay && studentCode) {
       studentCodeDisplay.textContent = studentCode;
@@ -2113,7 +2113,8 @@
       'dashboard': 'tabDashboard',
       'goals': 'tabGoals',
       'assignments': 'tabAssignments',
-      'grades': 'tabGrades'
+      'grades': 'tabGrades',
+      'settings': 'tabSettings'
     };
     
     const targetPanelId = tabIdMap[tabName];
@@ -2137,14 +2138,11 @@
       console.error(LOG_PREFIX, 'Tab panel not found:', targetPanelId);
     }
     
-    // Update sidebar active state
+    // Update active state on all matching [data-tab] elements (sidebar + tab nav)
     const allLinks = document.querySelectorAll('[data-tab]');
     allLinks.forEach(link => link.classList.remove('active'));
     
-    const activeLink = document.querySelector(`[data-tab="${tabName}"]`);
-    if (activeLink) {
-      activeLink.classList.add('active');
-    }
+    document.querySelectorAll(`[data-tab="${tabName}"]`).forEach(link => link.classList.add('active'));
   }
 
   /**

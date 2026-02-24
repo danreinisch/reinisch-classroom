@@ -17,13 +17,7 @@
   }
 
   function wireNavActive(){
-    const path = location.pathname.replace(/\/+$/, '/') || '/student/';
-    document.querySelectorAll('.tc-nav a[data-href]').forEach(a=>{
-      const href = a.getAttribute('data-href');
-      const isActive = href === path;
-      if(isActive) a.setAttribute('aria-current','page');
-      else a.removeAttribute('aria-current');
-      // Tooltips in collapsed mode
+    document.querySelectorAll('.tc-nav a[data-tab]').forEach(a=>{
       const label = a.querySelector('.tc-label');
       if(label) a.title = label.textContent.trim();
     });
