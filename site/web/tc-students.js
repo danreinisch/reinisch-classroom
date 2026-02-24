@@ -7,7 +7,7 @@
   // Import data adapter for Supabase/localStorage abstraction
   const { db } = await import('/web/data-adapter.js');
   const { getSupabase } = await import('/web/supabase-client.js');
-  const { getCurrentQuarter, getQuarterDateRange } = await import('/web/quarter-utils.js');
+  const { getCurrentQuarter, getQuarterDateRange, getQuarterDates, saveQuarterDates, DEFAULT_QUARTER_DATES, getQuarterLabel, parseQuarterDate } = await import('/web/quarter-utils.js');
 
   // Constants
   const FULL_CLASS_NAMES = [
@@ -269,31 +269,6 @@
   let expandMode = 'none'; // 'none', 'students', 'all' - Track bulk expand state
   let progressLookupMap = new Map(); // Map<"studentCode:goalCode", progressEntry[]> - Performance optimization
 
-  // Quarter dates management
-  const DEFAULT_QUARTER_DATES = {
-    q1: { start: "2025-08-18", end: "2025-10-17" },
-    q2: { start: "2025-10-20", end: "2026-01-23" },
-    q3: { start: "2026-01-27", end: "2026-03-28" },
-    q4: { start: "2026-03-30", end: "2026-05-22" }
-  };
-
-  function getQuarterDates() {
-    try {
-      const saved = localStorage.getItem('rc_quarter_dates');
-      return saved ? JSON.parse(saved) : DEFAULT_QUARTER_DATES;
-    } catch (e) {
-      return DEFAULT_QUARTER_DATES;
-    }
-  }
-
-  function saveQuarterDates(dates) {
-    localStorage.setItem('rc_quarter_dates', JSON.stringify(dates));
-  }
-
-  function formatQuarterDate(dateStr) {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  }
 
   function renderQuarterBar() {
     const displayEl = document.getElementById('stQuarterDisplay');
@@ -311,12 +286,11 @@
 
     // Then add quarter items
     html += Object.entries(dates).map(([quarter, range]) => {
-      const q = quarter.toUpperCase();
-      const isCurrent = q === current;
-      const isSelected = selectedQuarter === q;
+      const isCurrent = quarter === current;
+      const isSelected = selectedQuarter === quarter;
       return `
-        <div class="st-quarter-item ${isCurrent ? 'current' : ''} ${isSelected ? 'selected' : ''}" data-quarter="${q}" style="cursor: pointer;">
-          ${q}: ${formatQuarterDate(range.start)}–${formatQuarterDate(range.end)}
+        <div class="st-quarter-item ${isCurrent ? 'current' : ''} ${isSelected ? 'selected' : ''}" data-quarter="${quarter}" style="cursor: pointer;">
+          ${quarter}: ${range.start}–${range.end}
         </div>
       `;
     }).join('');
@@ -332,10 +306,10 @@
 
     const html = Object.entries(dates).map(([quarter, range]) => `
       <div class="st-quarter-edit-row">
-        <label>${quarter.toUpperCase()}:</label>
-        <input type="date" name="${quarter}-start" value="${range.start}" />
+        <label>${quarter}:</label>
+        <input type="text" name="${quarter}-start" value="${range.start}" placeholder="Mon DD" />
         <span>to</span>
-        <input type="date" name="${quarter}-end" value="${range.end}" />
+        <input type="text" name="${quarter}-end" value="${range.end}" placeholder="Mon DD" />
       </div>
     `).join('') + `
       <div class="st-quarter-edit-row">
@@ -1799,23 +1773,31 @@
         const formEl = document.getElementById('stQuarterEditForm');
         if (formEl) {
           const dates = {
-            q1: {
-              start: formEl.querySelector('[name="q1-start"]').value,
-              end: formEl.querySelector('[name="q1-end"]').value
+            Q1: {
+              start: formEl.querySelector('[name="Q1-start"]').value.trim(),
+              end: formEl.querySelector('[name="Q1-end"]').value.trim()
             },
-            q2: {
-              start: formEl.querySelector('[name="q2-start"]').value,
-              end: formEl.querySelector('[name="q2-end"]').value
+            Q2: {
+              start: formEl.querySelector('[name="Q2-start"]').value.trim(),
+              end: formEl.querySelector('[name="Q2-end"]').value.trim()
             },
-            q3: {
-              start: formEl.querySelector('[name="q3-start"]').value,
-              end: formEl.querySelector('[name="q3-end"]').value
+            Q3: {
+              start: formEl.querySelector('[name="Q3-start"]').value.trim(),
+              end: formEl.querySelector('[name="Q3-end"]').value.trim()
             },
-            q4: {
-              start: formEl.querySelector('[name="q4-start"]').value,
-              end: formEl.querySelector('[name="q4-end"]').value
+            Q4: {
+              start: formEl.querySelector('[name="Q4-start"]').value.trim(),
+              end: formEl.querySelector('[name="Q4-end"]').value.trim()
             }
           };
+          const dummyYear = 2025;
+          const allValid = Object.values(dates).every(r =>
+            parseQuarterDate(r.start, dummyYear) && parseQuarterDate(r.end, dummyYear)
+          );
+          if (!allValid) {
+            showToast('Invalid date format. Use "Mon DD" (e.g. "Aug 16").');
+            return;
+          }
           saveQuarterDates(dates);
           renderQuarterBar();
           const displayEl = document.getElementById('stQuarterDisplay');
