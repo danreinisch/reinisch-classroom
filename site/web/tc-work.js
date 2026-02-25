@@ -517,8 +517,8 @@ ${shown}
     const setActive = (name) => {
       for (const b of btns) {
         const isOn = b.getAttribute("data-pv-tab") === name;
+        b.classList.toggle("active", isOn);
         b.style.opacity = isOn ? "1" : ".7";
-        b.style.borderColor = isOn ? "rgba(255,255,255,.28)" : "rgba(255,255,255,.12)";
       }
       for (const k of Object.keys(panes)) {
         if (panes[k]) panes[k].hidden = k !== name;
