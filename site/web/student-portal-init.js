@@ -494,10 +494,10 @@
     // Baseline and target display with friendly empty states
     const baselineHtml = goal.baseline
       ? escapeHtml(goal.baseline)
-      : '<span style="opacity:0.5; font-weight:400; font-size:0.9em;">Not yet set</span>';
+      : '<span class="st-metric-empty">Not yet set</span>';
     const targetHtml = goal.target
       ? escapeHtml(goal.target)
-      : '<span style="opacity:0.5; font-weight:400; font-size:0.9em;">Not yet set</span>';
+      : '<span class="st-metric-empty">Not yet set</span>';
     
     return `
       <div class="st-goal-card" data-goal-id="${goal.id}" data-area="${colorCategory}">
