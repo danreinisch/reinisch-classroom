@@ -107,7 +107,11 @@
     }
 
     if(existingSidebar){
-      existingSidebar.outerHTML = sidebarHTML;
+      // Don't overwrite sidebars that have custom data-tab navigation (e.g., Student Portal)
+      var hasCustomTabs = existingSidebar.querySelector('[data-tab]');
+      if(!hasCustomTabs){
+        existingSidebar.outerHTML = sidebarHTML;
+      }
     } else if(shell){
       shell.insertAdjacentHTML('afterbegin', sidebarHTML);
     }
