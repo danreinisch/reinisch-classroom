@@ -1184,6 +1184,13 @@
         border-bottom: 1px solid rgba(255, 255, 255, 0.08);
       }
 
+      /* Hide horizontal tab bar on desktop — sidebar handles navigation */
+      @media (min-width: 769px) {
+        .st-tab-nav {
+          display: none;
+        }
+      }
+
       .st-tab-link {
         padding: 8px 18px;
         border-radius: 10px;
@@ -1220,7 +1227,7 @@
       /* Summary Cards for Dashboard */
       .st-summary-cards {
         display: grid;
-        grid-template-columns: 1fr 1fr 1fr;
+        grid-template-columns: repeat(2, 1fr);
         gap: 16px;
         margin-bottom: 32px;
       }
@@ -1863,6 +1870,12 @@
       }
       .st-timer.hidden { display: none; }
 
+      .st-metric-empty {
+        opacity: 0.5;
+        font-weight: 400;
+        font-size: 0.9em;
+      }
+
       /* Hide student sidebar nav when not authenticated; show after login */
       .tc-sidebar .tc-nav [data-tab] { display: none; }
       .st-authenticated .tc-sidebar .tc-nav [data-tab] { display: flex; }
@@ -1981,9 +1994,11 @@
                 <div class="st-summary-cards">
                   <div class="st-summary-card">
                     <div class="st-summary-icon">
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
                         <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                        <line x1="12" y1="11" x2="12" y2="17"></line>
+                        <line x1="9" y1="14" x2="15" y2="14"></line>
                       </svg>
                     </div>
                     <div class="st-summary-value" id="dashUpcomingCount">0</div>
@@ -1991,7 +2006,7 @@
                   </div>
                   <div class="st-summary-card overdue">
                     <div class="st-summary-icon">
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path>
                         <line x1="12" y1="9" x2="12" y2="13"></line>
                         <line x1="12" y1="17" x2="12.01" y2="17"></line>
@@ -2002,7 +2017,7 @@
                   </div>
                   <div class="st-summary-card">
                     <div class="st-summary-icon">
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <line x1="18" y1="20" x2="18" y2="10"></line>
                         <line x1="12" y1="20" x2="12" y2="4"></line>
                         <line x1="6" y1="20" x2="6" y2="14"></line>
@@ -2013,7 +2028,7 @@
                   </div>
                   <div class="st-summary-card">
                     <div class="st-summary-icon">
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <circle cx="12" cy="12" r="10"></circle>
                         <circle cx="12" cy="12" r="6"></circle>
                         <circle cx="12" cy="12" r="2"></circle>
