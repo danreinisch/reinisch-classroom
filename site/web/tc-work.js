@@ -307,22 +307,22 @@
     if (kind === "link" && link) {
       const safeLink = escapeHtml(link);
       bodyHtml = `
-        <div style="margin:0 0 10px 0;">
-          <div style="font-weight:700;">Google Form link</div>
+        <div class="pv-content-card" style="white-space:normal;">
+          <div style="font-weight:700; margin-bottom:6px;">Google Form link</div>
           <div><a href="${safeLink}" target="_blank" rel="noopener noreferrer">${safeLink}</a></div>
-          <div style="opacity:.8;margin-top:6px;">Student view will open this link in a new tab.</div>
+          <div style="opacity:.8; margin-top:8px; font-size:13px;">Student view will open this link in a new tab.</div>
         </div>
       `;
     } else if (kind === "file") {
       const ext = fileExt(name);
       if (ext === "pdf") {
-        bodyHtml = `<div style="opacity:.85;">PDF uploaded. Preview can’t render PDFs (will work once upload/storage is implemented).</div>`;
+        bodyHtml = `<div class="pv-content-card" style="white-space:normal; opacity:.85;">PDF uploaded. Preview can't render PDFs (will work once upload/storage is implemented).</div>`;
       } else if (ext === "html" || ext === "htm") {
         const studentHtml = stripTeacherTags(text);
         const srcdoc = escapeHtml(studentHtml || "<p>(No HTML stored for this draft.)</p>");
         bodyHtml = `
-          <div style="opacity:.7; margin-bottom:6px;">Rendered Student View (sandboxed)</div>
-          <iframe sandbox="allow-same-origin" style="width:100%; height:520px; border:1px solid rgba(255,255,255,.12); border-radius:12px; background:#0b0f0d;"
+          <div style="opacity:.7; margin-bottom:8px; font-size:13px;">Rendered Student View (sandboxed)</div>
+          <iframe sandbox="allow-same-origin" style="width:100%; height:520px; border:1px solid rgba(255,255,255,.12); border-radius:var(--rc-radius); background:#0b0f0d;"
             srcdoc="${srcdoc}"></iframe>
         `;
       } else {
@@ -330,27 +330,23 @@
         const shown = studentText
           ? escapeHtml(studentText)
           : "(No assignment text stored for this draft.)";
-        bodyHtml = `
-          <div style="white-space:pre-wrap; font-family:system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; line-height:1.5; font-size:14px;">
-${shown}
-          </div>
-        `;
+        bodyHtml = `<div class="pv-content-card">${shown}</div>`;
       }
     } else {
-      bodyHtml = `<div style="opacity:.85;">(No assignment content found for this draft.)</div>`;
+      bodyHtml = `<div class="pv-content-card" style="white-space:normal; opacity:.85;">(No assignment content found for this draft.)</div>`;
     }
 
-    const meta = `
-      <div style="margin-bottom:10px;">
-        <div style="font-weight:800; font-size:16px;">${title}</div>
-        ${cls ? `<div style="opacity:.85; margin-top:2px;"><strong>Class:</strong> ${cls}</div>` : ``}
-        ${notes ? `<div style="opacity:.85; margin-top:2px;"><strong>Notes:</strong> ${notes}</div>` : ``}
-        <div style="opacity:.7; margin-top:6px;">Preview: <strong>Student View</strong> (DESE/IEP tags hidden)</div>
+    return `
+      <div>
+        <div class="pv-meta-card">
+          <div style="font-weight:800; font-size:16px;">${title}</div>
+          ${cls ? `<div style="opacity:.85; margin-top:4px;"><strong>Class:</strong> ${cls}</div>` : ``}
+          ${notes ? `<div style="opacity:.85; margin-top:4px;"><strong>Notes:</strong> ${notes}</div>` : ``}
+          <div style="opacity:.6; margin-top:6px; font-size:12px; text-transform:uppercase; letter-spacing:.04em;">Student View \u2014 DESE/IEP tags hidden</div>
+        </div>
+        ${bodyHtml}
       </div>
-      <hr style="border:none; border-top:1px solid rgba(255,255,255,.15); margin:12px 0;">
     `;
-
-    return `<div>${meta}${bodyHtml}</div>`;
   }
 
   function renderTeacherPreviewHtml(d) {
@@ -367,40 +363,50 @@ ${shown}
     if (kind === "link" && link) {
       const safeLink = escapeHtml(link);
       bodyHtml = `
-        <div style="margin:0 0 10px 0;">
-          <div style="font-weight:700;">Google Form link</div>
+        <div class="pv-content-card" style="white-space:normal;">
+          <div style="font-weight:700; margin-bottom:6px;">Google Form link</div>
           <div><a href="${safeLink}" target="_blank" rel="noopener noreferrer">${safeLink}</a></div>
-          <div style="opacity:.8;margin-top:6px;">Teacher view: mapping required when using links.</div>
+          <div style="opacity:.8; margin-top:8px; font-size:13px;">Teacher view: mapping required when using links.</div>
         </div>
       `;
     } else if (kind === "file") {
       const ext = fileExt(name);
       if (ext === "pdf") {
-        bodyHtml = `<div style="opacity:.85;">PDF uploaded. Teacher preview can’t render PDFs yet (will work once upload/storage is implemented).</div>`;
+        bodyHtml = `<div class="pv-content-card" style="white-space:normal; opacity:.85;">PDF uploaded. Teacher preview can't render PDFs yet (will work once upload/storage is implemented).</div>`;
       } else {
         const shown = text ? escapeHtml(text) : "(No assignment text stored for this draft.)";
-        bodyHtml = `<pre style="white-space:pre-wrap; line-height:1.4; padding:12px; border-radius:12px; border:1px solid rgba(255,255,255,.12); background:rgba(0,0,0,.22);">${shown}</pre>`;
+        bodyHtml = `<div class="pv-content-card">${shown}</div>`;
       }
     } else {
-      bodyHtml = `<div style="opacity:.85;">(No assignment content found for this draft.)</div>`;
+      bodyHtml = `<div class="pv-content-card" style="white-space:normal; opacity:.85;">(No assignment content found for this draft.)</div>`;
     }
 
-    const meta = `
-      <div style="margin-bottom:10px;">
-        <div style="font-weight:800; font-size:16px;">${title}</div>
-        ${cls ? `<div style="opacity:.85; margin-top:2px;"><strong>Class:</strong> ${cls}</div>` : ``}
-        ${notes ? `<div style="opacity:.85; margin-top:2px;"><strong>Notes:</strong> ${notes}</div>` : ``}
-        <div style="opacity:.7; margin-top:6px;">Preview: <strong>Teacher View</strong> (codes visible)</div>
+    return `
+      <div>
+        <div class="pv-meta-card">
+          <div style="font-weight:800; font-size:16px;">${title}</div>
+          ${cls ? `<div style="opacity:.85; margin-top:4px;"><strong>Class:</strong> ${cls}</div>` : ``}
+          ${notes ? `<div style="opacity:.85; margin-top:4px;"><strong>Notes:</strong> ${notes}</div>` : ``}
+          <div style="opacity:.6; margin-top:6px; font-size:12px; text-transform:uppercase; letter-spacing:.04em;">Teacher View \u2014 codes visible</div>
+        </div>
+        ${bodyHtml}
       </div>
-      <hr style="border:none; border-top:1px solid rgba(255,255,255,.15); margin:12px 0;">
     `;
-
-    return `<div>${meta}${bodyHtml}</div>`;
   }
+
+  // Section color palette (cycles for > 4 sections)
+  var SECTION_COLORS = [
+    { border: "rgba(59,130,246,0.7)",  bg: "rgba(59,130,246,0.12)",  text: "rgba(59,130,246,0.95)" },
+    { border: "rgba(245,158,11,0.7)",  bg: "rgba(245,158,11,0.12)",  text: "rgba(245,158,11,0.95)" },
+    { border: "rgba(16,185,129,0.7)",  bg: "rgba(16,185,129,0.12)",  text: "rgba(16,185,129,0.95)" },
+    { border: "rgba(139,92,246,0.7)",  bg: "rgba(139,92,246,0.12)",  text: "rgba(139,92,246,0.95)" },
+    { border: "rgba(236,72,153,0.7)",  bg: "rgba(236,72,153,0.12)",  text: "rgba(236,72,153,0.95)" },
+    { border: "rgba(20,184,166,0.7)",  bg: "rgba(20,184,166,0.12)",  text: "rgba(20,184,166,0.95)" },
+  ];
 
   function renderMappingPreviewHtml(d) {
     const raw = getMappingText(d);
-    if (!raw) return `<div style="opacity:.85;">(No mapping content stored for this draft.)</div>`;
+    if (!raw) return `<div class="pv-meta-card" style="opacity:.85;">(No mapping content stored for this draft.)</div>`;
 
     // Try JSON first (auto-map + JSON mapping)
     try {
@@ -417,91 +423,93 @@ ${shown}
 
       const warnCount = Number.isFinite(counts.warnings) ? counts.warnings : warnings.length;
 
-      const secList = sections
-        .slice(0, 8)
-        .map((s) => {
-          const t = escapeHtml(s && s.title ? s.title : "Section");
-          const n = Array.isArray(s.items) ? s.items.length : 0;
-          return `<li>${t} <span style="opacity:.75;">(${n} items)</span></li>`;
+      // Section cards (like quarter date cards)
+      const sectionCards = sections
+        .map((s, idx) => {
+          const color = SECTION_COLORS[idx % SECTION_COLORS.length];
+          const sTitle = escapeHtml(s && s.title ? s.title : "Section");
+          const items = Array.isArray(s.items) ? s.items : [];
+          const rows = items
+            .slice(0, 20)
+            .map((it) => {
+              const key = escapeHtml(it && it.key ? it.key : "");
+              const dese = escapeHtml(Array.isArray(it && it.dese) ? it.dese.join(", ") : "");
+              const iep = escapeHtml(Array.isArray(it && it.iep) ? it.iep.join(", ") : "");
+              return `
+                <tr>
+                  <td style="padding:5px 6px; border-bottom:1px solid rgba(255,255,255,.07); vertical-align:top;">${key}</td>
+                  <td style="padding:5px 6px; border-bottom:1px solid rgba(255,255,255,.07); vertical-align:top; opacity:.9;">${dese}</td>
+                  <td style="padding:5px 6px; border-bottom:1px solid rgba(255,255,255,.07); vertical-align:top; opacity:.9;">${iep}</td>
+                </tr>
+              `;
+            })
+            .join("");
+          const moreNote = items.length > 20
+            ? `<div style="opacity:.6; font-size:11px; margin-top:6px;">\u2026 and ${items.length - 20} more items</div>`
+            : "";
+          const tableHtml = rows
+            ? `
+              <table style="width:100%; border-collapse:collapse; font-size:12px;">
+                <thead><tr>
+                  <th style="text-align:left; padding:4px 6px; border-bottom:1px solid rgba(255,255,255,.12); opacity:.7; font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.03em;">Key</th>
+                  <th style="text-align:left; padding:4px 6px; border-bottom:1px solid rgba(255,255,255,.12); opacity:.7; font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.03em;">DESE</th>
+                  <th style="text-align:left; padding:4px 6px; border-bottom:1px solid rgba(255,255,255,.12); opacity:.7; font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.03em;">IEP</th>
+                </tr></thead>
+                <tbody>${rows}</tbody>
+              </table>
+              ${moreNote}
+            `
+            : `<div style="opacity:.6; font-size:12px;">(no items)</div>`;
+          return `
+            <div style="padding:14px 16px; border-radius:var(--rc-radius); border:1px solid rgba(255,255,255,.1); border-left:3px solid ${color.border}; background:${color.bg};">
+              <div style="font-size:13px; font-weight:700; color:${color.text}; margin:0 0 10px 0;">${sTitle} <span style="opacity:.6; font-weight:400; font-size:11px;">(${items.length})</span></div>
+              ${tableHtml}
+            </div>
+          `;
         })
         .join("");
 
-      // Sample first ~12 items across sections
-      const sampleRows = [];
-      for (const s of sections) {
-        const title = escapeHtml(s && s.title ? s.title : "Section");
-        const items = Array.isArray(s.items) ? s.items : [];
-        for (const it of items) {
-          const key = escapeHtml(it && it.key ? it.key : "");
-          const dese = Array.isArray(it && it.dese) ? it.dese.join(", ") : "";
-          const iep = Array.isArray(it && it.iep) ? it.iep.join(", ") : "";
-          sampleRows.push({ title, key, dese, iep });
-          if (sampleRows.length >= 12) break;
-        }
-        if (sampleRows.length >= 12) break;
-      }
-
-      const table = sampleRows.length
-        ? `
-        <div style="opacity:.8; margin:10px 0 6px;">Sample items</div>
-        <table style="width:100%; border-collapse:collapse; font-size:13px;">
-          <thead>
-            <tr>
-              <th style="text-align:left; padding:6px; border-bottom:1px solid rgba(255,255,255,.12);">Section</th>
-              <th style="text-align:left; padding:6px; border-bottom:1px solid rgba(255,255,255,.12);">Key</th>
-              <th style="text-align:left; padding:6px; border-bottom:1px solid rgba(255,255,255,.12);">DESE</th>
-              <th style="text-align:left; padding:6px; border-bottom:1px solid rgba(255,255,255,.12);">IEP</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${sampleRows
-              .map(
-                (r) => `
-              <tr>
-                <td style="padding:6px; border-bottom:1px solid rgba(255,255,255,.08); opacity:.9;">${r.title}</td>
-                <td style="padding:6px; border-bottom:1px solid rgba(255,255,255,.08);">${r.key}</td>
-                <td style="padding:6px; border-bottom:1px solid rgba(255,255,255,.08); opacity:.9;">${escapeHtml(r.dese)}</td>
-                <td style="padding:6px; border-bottom:1px solid rgba(255,255,255,.08); opacity:.9;">${escapeHtml(r.iep)}</td>
-              </tr>
-            `
-              )
-              .join("")}
-          </tbody>
-        </table>
-      `
-        : "";
-
+      // Warnings card
       const warnHtml = warnCount
         ? `
-        <details style="margin-top:10px;">
-          <summary style="cursor:pointer;">Warnings (${warnCount})</summary>
-          <pre style="white-space:pre-wrap; margin-top:8px; padding:10px; border-radius:12px; border:1px solid rgba(255,255,255,.12); background:rgba(0,0,0,.22);">${escapeHtml(warnings.slice(0, 40).join("\n"))}${warnings.length > 40 ? "\n…(truncated)\n" : ""}</pre>
-        </details>
-      `
+          <div style="margin-top:12px; padding:12px 14px; border-radius:var(--rc-radius); border:1px solid rgba(245,158,11,0.4); background:rgba(245,158,11,0.1);">
+            <div style="font-weight:700; margin-bottom:6px; color:rgba(245,158,11,0.95);">\u26a0 Warnings (${warnCount})</div>
+            <div style="white-space:pre-wrap; font-size:12px; line-height:1.5;">${escapeHtml(warnings.slice(0, 40).join("\n"))}${warnings.length > 40 ? "\n\u2026(truncated)" : ""}</div>
+          </div>
+        `
         : "";
 
       return `
-        <div style="margin-bottom:10px;">
-          <div style="opacity:.7;">Preview: <strong>Mapping</strong></div>
-          <div style="margin-top:6px;">
-            <span style="display:inline-block; margin-right:14px;"><strong>Sections:</strong> ${sectionCount}</span>
-            <span style="display:inline-block; margin-right:14px;"><strong>Items:</strong> ${itemsCount}</span>
-            <span style="display:inline-block;"><strong>Warnings:</strong> ${warnCount}</span>
+        <div>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); border-radius:var(--rc-radius); overflow:hidden; border:1px solid var(--rc-glass-border); margin-bottom:16px;">
+            <div style="padding:10px 12px; text-align:center; background:rgba(59,130,246,0.16); display:flex; flex-direction:column; gap:2px;">
+              <span style="font-weight:700; font-size:18px;">${sectionCount}</span>
+              <span style="opacity:.75; font-size:11px; text-transform:uppercase; letter-spacing:.04em;">Sections</span>
+            </div>
+            <div style="padding:10px 12px; text-align:center; background:rgba(16,185,129,0.16); display:flex; flex-direction:column; gap:2px;">
+              <span style="font-weight:700; font-size:18px;">${itemsCount}</span>
+              <span style="opacity:.75; font-size:11px; text-transform:uppercase; letter-spacing:.04em;">Items</span>
+            </div>
+            <div style="padding:10px 12px; text-align:center; background:rgba(245,158,11,0.16); display:flex; flex-direction:column; gap:2px;">
+              <span style="font-weight:700; font-size:18px;">${warnCount}</span>
+              <span style="opacity:.75; font-size:11px; text-transform:uppercase; letter-spacing:.04em;">Warnings</span>
+            </div>
           </div>
+          ${sectionCards ? `<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:12px; margin-bottom:12px;">${sectionCards}</div>` : ""}
+          ${warnHtml}
+          <details style="margin-top:12px;">
+            <summary style="cursor:pointer; opacity:.7; font-size:13px;">Raw mapping JSON</summary>
+            <pre style="white-space:pre-wrap; margin-top:8px; padding:10px; border-radius:var(--rc-radius); border:1px solid rgba(255,255,255,.12); background:rgba(0,0,0,.22); font-size:11px;">${escapeHtml(raw.slice(0, 120000))}${raw.length > 120000 ? "\n\u2026(truncated)\n" : ""}</pre>
+          </details>
         </div>
-        ${secList ? `<div style="opacity:.8;">Sections</div><ul style="margin:6px 0 0 18px;">${secList}</ul>` : ""}
-        ${table}
-        ${warnHtml}
-        <details style="margin-top:12px;">
-          <summary style="cursor:pointer;">Raw mapping JSON</summary>
-          <pre style="white-space:pre-wrap; margin-top:8px; padding:10px; border-radius:12px; border:1px solid rgba(255,255,255,.12); background:rgba(0,0,0,.22);">${escapeHtml(raw.slice(0, 120000))}${raw.length > 120000 ? "\n…(truncated)\n" : ""}</pre>
-        </details>
       `;
     } catch (_) {
       // Not JSON (CSV or other): just show raw
       return `
-        <div style="opacity:.7; margin-bottom:6px;">Preview: <strong>Mapping</strong> (raw)</div>
-        <pre style="white-space:pre-wrap; line-height:1.4; padding:12px; border-radius:12px; border:1px solid rgba(255,255,255,.12); background:rgba(0,0,0,.22);">${escapeHtml(raw.slice(0, 120000))}${raw.length > 120000 ? "\n…(truncated)\n" : ""}</pre>
+        <div>
+          <div style="opacity:.7; font-size:13px; margin-bottom:10px; padding:10px 14px; border-radius:var(--rc-radius); border:1px solid var(--rc-glass-border); background:rgba(0,0,0,.2);">Mapping (raw \u2014 not JSON)</div>
+          <pre style="white-space:pre-wrap; line-height:1.4; padding:12px; border-radius:var(--rc-radius); border:1px solid rgba(255,255,255,.12); background:rgba(0,0,0,.22);">${escapeHtml(raw.slice(0, 120000))}${raw.length > 120000 ? "\n\u2026(truncated)\n" : ""}</pre>
+        </div>
       `;
     }
   }
