@@ -578,7 +578,24 @@
         return;
       }
 
-      renderStudentPasswordRows(active, false);
+      // Fetch password statuses to determine default vs custom (graceful fallback)
+      const pwStatusMap = {};
+      try {
+        const statuses = await db.getStudentPasswordStatuses();
+        (statuses || []).forEach((ps) => {
+          pwStatusMap[ps.student_code] = ps.is_default_password;
+        });
+      } catch (e) {
+        console.warn("[tc-settings] Could not fetch password statuses:", e.message);
+      }
+
+      // Annotate each student with their password status
+      const annotated = active.map((s) => ({
+        ...s,
+        _isDefaultPw: s.code in pwStatusMap ? pwStatusMap[s.code] : null,
+      }));
+
+      renderStudentPasswordRows(annotated, false);
 
       // Wire search filter
       const searchInput = $("studentPwSearch");
@@ -586,12 +603,12 @@
         searchInput.addEventListener("input", () => {
           const q = searchInput.value.trim().toLowerCase();
           const filtered = q
-            ? active.filter(
+            ? annotated.filter(
                 (s) =>
                   (s.name || "").toLowerCase().includes(q) ||
                   (s.code || "").toLowerCase().includes(q)
               )
-            : active;
+            : annotated;
           const revealAll = $("revealAllToggle")?.checked || false;
           renderStudentPasswordRows(filtered, revealAll);
         });
@@ -614,15 +631,22 @@
       const code = escapeHtml(s.code || "");
       const name = escapeHtml(s.name || s.code || "");
       const defaultPw = (s.code || "") + "!";
-      const pw = escapeHtml(s.password || defaultPw);
       const masked = "••••••";
+
+      // _isDefaultPw: true = known default ({code}!), false = custom password set, null = unverified
+      const isCustom = s._isDefaultPw === false;
+      const pw = isCustom ? "" : escapeHtml(defaultPw);
+
+      // Build cell content: custom passwords show a badge instead of the actual value
+      const customBadge = `${masked}&nbsp;<span style="font-size:11px;background:rgba(139,92,246,0.18);color:#a78bfa;border:1px solid rgba(139,92,246,0.35);border-radius:4px;padding:1px 6px;" title="Student has set a custom password">custom</span>`;
+      const pwCellContent = isCustom ? customBadge : (reveal ? pw : masked);
 
       html += `<tr>
         <td>${name}</td>
         <td><code>${code}</code></td>
-        <td class="pw-cell" data-pw="${pw}">${reveal ? pw : masked}</td>
+        <td class="pw-cell" data-pw="${pw}" data-custom="${isCustom}">${pwCellContent}</td>
         <td style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="rc-btn" style="font-size:12px;padding:6px 10px;" data-action="copy" data-code="${code}" data-pw="${pw}">Copy</button>
+          ${!isCustom ? `<button class="rc-btn" style="font-size:12px;padding:6px 10px;" data-action="copy" data-code="${code}" data-pw="${pw}">Copy</button>` : ""}
           <button class="rc-btn danger" style="font-size:12px;padding:6px 10px;" data-action="reset" data-code="${code}">Reset</button>
         </td>
       </tr>`;
@@ -649,6 +673,7 @@
     const revealAll = $("revealAllToggle")?.checked || false;
     const cells = document.querySelectorAll("#studentPasswordBody .pw-cell");
     cells.forEach((cell) => {
+      if (cell.dataset.custom === "true") return; // custom passwords: keep badge visible
       cell.textContent = revealAll ? cell.dataset.pw : "••••••";
     });
   }
