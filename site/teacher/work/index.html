@@ -65,6 +65,9 @@
         align-items: center;
       }
       .work-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
         padding: 10px 12px;
         border-radius: var(--rc-radius);
         border: 1px solid var(--rc-border-strong);
@@ -349,9 +352,7 @@
         <main class="tc-main">
           <h1 style="margin-top: 0">Work</h1>
           <p class="work-subtle" style="margin-top: -6px">
-            MVP: create <strong>assignment drafts</strong> (client-side only). Requires two inputs:
-            <span class="work-pill">Assignment</span> + <span class="work-pill">Mapping</span>.
-            Drafts persist in your browser and can be exported as JSON.
+            Create and manage assignment drafts. Upload an assignment file or paste a link, then issue to students.
           </p>
 
           <section class="work-card" aria-label="Create assignment draft">
@@ -461,8 +462,7 @@
                     assignment TXT.
                   </div>
                   <div class="work-subtle" style="font-size: 12px; margin-top: 8px">
-                    MVP accepts CSV or JSON. This will evolve into your official “question →
-                    DESE/IEP tags” artifact.
+                    Accepts CSV or JSON format for question-to-standard tag mapping.
                   </div>
                   <details style="margin-top: 10px">
                     <summary class="work-subtle" style="cursor: pointer">
@@ -524,8 +524,14 @@ JSON:
             <div class="work-row">
               <h2 style="margin: 0">Drafts<span id="syncStatus" class="tc-subtle" style="margin-left: 12px; font-size: 12px;"></span></h2>
               <div class="work-actions">
-                <button class="work-btn" type="button" id="btnExportAll">Export all</button>
-                <button class="work-btn danger" type="button" id="btnClearAll">Clear all</button>
+                <button class="work-btn" type="button" id="btnExportAll">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                  Export all
+                </button>
+                <button class="work-btn danger" type="button" id="btnClearAll">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                  Clear all
+                </button>
               </div>
             </div>
 
@@ -555,8 +561,14 @@ JSON:
               <div class="work-row" style="margin-bottom: 10px">
                 <h3 id="previewTitle">Draft Preview</h3>
                 <div class="work-actions">
-                  <button class="work-btn" type="button" id="btnDownloadOne">Export JSON</button>
-                  <button class="work-btn" type="button" id="btnClosePreview">Close</button>
+                  <button class="work-btn" type="button" id="btnDownloadOne">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    Export JSON
+                  </button>
+                  <button class="work-btn" type="button" id="btnClosePreview">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    Close
+                  </button>
                 </div>
               </div>
               <pre id="previewBody">(preview)</pre>
