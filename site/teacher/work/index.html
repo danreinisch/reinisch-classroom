@@ -97,6 +97,10 @@
         opacity: 0.6;
         cursor: not-allowed;
       }
+      .work-btn[data-pv-tab].active {
+        background: rgba(255, 255, 255, 0.14);
+        border-color: var(--rc-brand, rgba(34, 197, 94, 0.6));
+      }
       .work-tablewrap {
         overflow: auto;
         border-radius: var(--rc-radius);
@@ -158,7 +162,7 @@
       .work-overlay {
         position: fixed;
         inset: 0;
-        background: rgba(0, 0, 0, 0.55);
+        background: rgba(0, 0, 0, 0.85);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -166,7 +170,7 @@
         z-index: 9999;
       }
       .work-dialog {
-        width: min(980px, 100%);
+        width: min(900px, 90vw);
         max-height: 85vh;
         overflow: auto;
         border-radius: var(--rc-radius-lg);
@@ -488,7 +492,7 @@ JSON:
               <div id="rcFilePreviewPanel" style="margin-top: 16px; display: none"></div>
 
               <!-- Scoring Configuration -->
-              <div class="work-field" style="margin-top: 16px">
+              <div class="work-field" style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--rc-glass-border);">
                 <label style="font-weight: 600; font-size: 13px;">Scoring Configuration</label>
                 <div class="work-grid" style="margin-top: 8px; grid-template-columns: repeat(4, 1fr);">
                   <div class="work-field">
