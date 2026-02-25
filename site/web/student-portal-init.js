@@ -2544,9 +2544,6 @@
         `;
       } else {
         goalsContainer.innerHTML = goals.map(goal => renderGoalCard(goal, progressMap)).join('');
-        
-        // Attach event listeners to "Show more" buttons
-        attachShowMoreListeners();
       }
       
       // Render goals snapshot for dashboard (max 3)
@@ -2557,6 +2554,11 @@
         } else {
           dashGoalsSnapshot.innerHTML = snapshot.map(goal => renderGoalCard(goal, progressMap)).join('');
         }
+      }
+      
+      // Attach event listeners to "Show more" buttons in both Goals tab and Dashboard snapshot
+      if (goals.length > 0) {
+        attachShowMoreListeners();
       }
       
     } catch (err) {
