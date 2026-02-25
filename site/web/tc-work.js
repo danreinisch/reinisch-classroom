@@ -167,7 +167,8 @@
       btnPreview.type = "button";
       btnPreview.className = "work-btn";
       btnPreview.style.marginLeft = "8px";
-      btnPreview.textContent = "Preview";
+      btnPreview.title = "Preview";
+      btnPreview.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg> Preview';
       btnPreview.addEventListener("click", () => openPreview(d.id));
       tdActions.appendChild(btnPreview);
 
@@ -175,7 +176,8 @@
       btnIssue.type = "button";
       btnIssue.className = "work-btn primary";
       btnIssue.style.marginLeft = "8px";
-      btnIssue.textContent = "Issue";
+      btnIssue.title = "Issue";
+      btnIssue.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg> Issue';
       btnIssue.addEventListener("click", () => handleIssueDraft(d.id));
       tdActions.appendChild(btnIssue);
 
@@ -183,7 +185,8 @@
       btnExport.type = "button";
       btnExport.className = "work-btn";
       btnExport.style.marginLeft = "8px";
-      btnExport.textContent = "Export";
+      btnExport.title = "Export";
+      btnExport.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg> Export';
       btnExport.addEventListener("click", () => exportOne(d.id));
       tdActions.appendChild(btnExport);
 
@@ -191,7 +194,8 @@
       btnDel.type = "button";
       btnDel.className = "work-btn danger";
       btnDel.style.marginLeft = "8px";
-      btnDel.textContent = "Delete";
+      btnDel.title = "Delete";
+      btnDel.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg> Delete';
       btnDel.addEventListener("click", () => deleteOne(d.id));
       tdActions.appendChild(btnDel);
 
@@ -606,6 +610,7 @@ ${shown}
   }
 
   function deleteOne(id) {
+    if (!confirm("Delete this draft? This cannot be undone.")) return;
     const drafts = readDrafts();
     const next = drafts.filter((x) => x.id !== id);
     writeDrafts(next);
