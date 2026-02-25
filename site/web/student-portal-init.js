@@ -202,25 +202,6 @@
   const MAX_DESC_LENGTH = 120; // Max characters before truncating description
   const MONTHS_PER_QUARTER = 3; // Number of months in a quarter
   
-  // Goal area icons (matching teacher center)
-  const GOAL_AREA_ICONS = {
-    "Reading Comprehension": "📖",
-    "Written Expression": "✍️",
-    "Basic Reading": "📚",
-    "Behavior": "🎯",
-    "Life Skills Transition": "🚀",
-    "Life Skills Reading Skills": "📖",
-    "Life Skills Writing Skills": "✍️",
-    "Math Calculation": "🔢",
-    "Math Problem Solving": "🧮",
-    "Reading Fluency": "📝",
-    "Social Skills": "🤝",
-    "Language": "💬",
-    "Life Skills": "🛠️",
-    "Emotional Regulation": "😌",
-    "Reading Skills": "📕"
-  };
-  
   /**
    * Map a goal area to a color category for the left border
    */
@@ -459,7 +440,6 @@
    * Render a single goal card
    */
   function renderGoalCard(goal, progressMap) {
-    const icon = GOAL_AREA_ICONS[goal.goal_area] || '📌';
     const colorCategory = goalAreaToColorCategory(goal.goal_area);
     const fullDesc = goal.desc || goal.goal_text || '(No goal description provided)';
     
@@ -499,39 +479,54 @@
       lastDate = formatDate(sortedEntries[0].date);
     }
     
-    const statusEmoji = thisQuarterEntries.length > 0 ? '✅' : '⏸️';
+    const statusSvg = thisQuarterEntries.length > 0
+      ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>'
+      : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>';
     const statusText = thisQuarterEntries.length > 0 
       ? `${thisQuarterEntries.length} data ${thisQuarterEntries.length === 1 ? 'point' : 'points'} this quarter`
       : 'No data this quarter';
+    
+    // Measurement badge: show map-pin SVG + text, or hide if no measurement type
+    const measurementBadgeHtml = goal.measurement_type
+      ? `<span class="st-badge st-badge-measurement"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:inline-block;vertical-align:middle;margin-right:3px;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>${escapeHtml(goal.measurement_type)}</span>`
+      : '';
+    
+    // Baseline and target display with friendly empty states
+    const baselineHtml = goal.baseline
+      ? escapeHtml(goal.baseline)
+      : '<span style="opacity:0.5; font-weight:400; font-size:0.9em;">Not yet set</span>';
+    const targetHtml = goal.target
+      ? escapeHtml(goal.target)
+      : '<span style="opacity:0.5; font-weight:400; font-size:0.9em;">Not yet set</span>';
     
     return `
       <div class="st-goal-card" data-goal-id="${goal.id}" data-area="${colorCategory}">
         <div class="st-goal-header">
           <div class="st-goal-title-line">
-            <span class="st-goal-icon">${icon}</span>
-            <span class="st-goal-area-name">${escapeHtml(goal.goal_area || 'N/A')}</span>
+            <span class="st-goal-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg></span>
+            <span class="st-goal-area-name">${escapeHtml(goal.goal_area || 'Goal')}</span>
             <span class="st-goal-code">${escapeHtml(goal.code || '')}</span>
-            <span class="st-badge st-badge-measurement">${escapeHtml(goal.measurement_type || 'N/A')}</span>
+            ${measurementBadgeHtml}
           </div>
         </div>
         ${descHtml}
         <div class="st-goal-metrics">
           <div class="st-metric">
             <span class="st-metric-label">Baseline:</span>
-            <span class="st-metric-value">${escapeHtml(goal.baseline || 'N/A')}</span>
+            <span class="st-metric-value">${baselineHtml}</span>
           </div>
           <div class="st-metric">
             <span class="st-metric-label">Target:</span>
-            <span class="st-metric-value">${escapeHtml(goal.target || 'N/A')}</span>
+            <span class="st-metric-value">${targetHtml}</span>
           </div>
         </div>
         <div class="st-goal-data-status">
           <div class="st-data-status-item">
-            <span>${statusEmoji}</span>
+            <span>${statusSvg}</span>
             <span>${statusText}</span>
           </div>
           <div class="st-data-status-item">
-            <span>📅</span>
+            <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg></span>
             <span>Last: ${lastDate}</span>
           </div>
         </div>
@@ -2186,7 +2181,7 @@
     // Show loading state
     assignmentsContainer.innerHTML = `
       <div style="text-align: center; padding: 40px; color: var(--muted);">
-        <div style="font-size: 48px; margin-bottom: 16px;">⏳</div>
+        <div style="margin-bottom: 16px; opacity: 0.5;"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></div>
         <div>Loading your assignments...</div>
       </div>
     `;
@@ -2241,7 +2236,7 @@
       console.error(LOG_PREFIX, 'Error loading assignments:', err);
       assignmentsContainer.innerHTML = `
         <div style="text-align: center; padding: 40px; color: var(--muted);">
-          <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
+          <div style="margin-bottom: 16px; opacity: 0.5;"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></div>
           <div style="color: var(--ink);">Assignments temporarily unavailable</div>
           <div style="margin-top: 8px; font-size: 14px;">Please try refreshing the page or contact your teacher if this persists.</div>
         </div>
@@ -2265,7 +2260,7 @@
     if (filtered.length === 0) {
       assignmentsContainer.innerHTML = `
         <div style="text-align: center; padding: 40px; color: var(--muted);">
-          <div style="font-size: 48px; margin-bottom: 16px;">📚</div>
+          <div style="margin-bottom: 16px; opacity: 0.5;"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg></div>
           <div>${filterMessage}</div>
         </div>
       `;
@@ -2374,7 +2369,7 @@
     // Show loading state
     gradesContainer.innerHTML = `
       <div style="text-align: center; padding: 40px; color: var(--muted);">
-        <div style="font-size: 48px; margin-bottom: 16px;">⏳</div>
+        <div style="margin-bottom: 16px; opacity: 0.5;"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></div>
         <div>Loading your grades...</div>
       </div>
     `;
@@ -2416,7 +2411,7 @@
       if (graded.length === 0) {
         gradesContainer.innerHTML = `
           <div style="text-align: center; padding: 40px; color: var(--muted);">
-            <div style="font-size: 48px; margin-bottom: 16px;">📊</div>
+            <div style="margin-bottom: 16px; opacity: 0.5;"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg></div>
             <div>No grades yet — keep working on your assignments!</div>
           </div>
         `;
@@ -2438,7 +2433,7 @@
       console.error(LOG_PREFIX, 'Error loading grades:', err);
       gradesContainer.innerHTML = `
         <div style="text-align: center; padding: 40px; color: var(--muted);">
-          <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
+          <div style="margin-bottom: 16px; opacity: 0.5;"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></div>
           <div style="color: var(--ink);">Grades temporarily unavailable</div>
           <div style="margin-top: 8px; font-size: 14px;">Please try refreshing the page or contact your teacher if this persists.</div>
         </div>
@@ -2488,7 +2483,7 @@
     // Show loading state
     goalsContainer.innerHTML = `
       <div style="text-align: center; padding: 40px; color: var(--muted);">
-        <div style="font-size: 48px; margin-bottom: 16px;">⏳</div>
+        <div style="margin-bottom: 16px; opacity: 0.5;"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></div>
         <div>Loading your goals...</div>
       </div>
     `;
@@ -2543,7 +2538,7 @@
       if (goals.length === 0) {
         goalsContainer.innerHTML = `
           <div style="text-align: center; padding: 40px; color: var(--muted);">
-            <div style="font-size: 48px; margin-bottom: 16px;">📋</div>
+            <div style="margin-bottom: 16px; opacity: 0.5;"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg></div>
             <div>No goals found for your account.</div>
           </div>
         `;
@@ -2568,7 +2563,7 @@
       console.error(LOG_PREFIX, 'Error loading goals:', err);
       goalsContainer.innerHTML = `
         <div style="text-align: center; padding: 40px; color: var(--muted);">
-          <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
+          <div style="margin-bottom: 16px; opacity: 0.5;"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></div>
           <div style="color: var(--ink);">Goals temporarily unavailable</div>
           <div style="margin-top: 8px; font-size: 14px;">Please try refreshing the page or contact your teacher if this persists.</div>
         </div>
