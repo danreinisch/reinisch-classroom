@@ -316,7 +316,7 @@
     } else if (kind === "file") {
       const ext = fileExt(name);
       if (ext === "pdf") {
-        bodyHtml = `<div style="opacity:.85;">PDF uploaded. MVP preview can’t render PDFs yet (will work once upload/storage is implemented).</div>`;
+        bodyHtml = `<div style="opacity:.85;">PDF uploaded. Preview can’t render PDFs (will work once upload/storage is implemented).</div>`;
       } else if (ext === "html" || ext === "htm") {
         const studentHtml = stripTeacherTags(text);
         const srcdoc = escapeHtml(studentHtml || "<p>(No HTML stored for this draft.)</p>");
@@ -776,7 +776,7 @@ ${shown}
   function fillExample() {
     $("draftTitle").value = "Week 1 — ADIT — Day 1 Assignment";
     $("draftClass").value = "LA 1 SC";
-    $("draftNotes").value = "MVP example draft. Replace with real content.";
+    $("draftNotes").value = "Example draft. Replace with real content.";
     $("assignmentLink").value = "https://docs.google.com/forms/d/EXAMPLE/viewform";
   }
 
@@ -1010,7 +1010,7 @@ ${shown}
           name: assignmentFile.name,
           link: null,
           text: bytesOf(assignmentText) > MAX_TEXT_BYTES
-            ? assignmentText.slice(0, 120000) + "\n…(truncated for MVP)\n"
+            ? assignmentText.slice(0, 120000) + "\n…(truncated)\n"
             : assignmentText,
         };
       } else if (hasAssignmentLink) {
@@ -1034,7 +1034,7 @@ ${shown}
         // New mapping file uploaded
         const mappingText = await readFileAsText(mappingFile);
         if (bytesOf(mappingText) > MAX_TEXT_BYTES) {
-          return setMsg("err", "Mapping file is too large for MVP local storage. Keep it smaller for now.");
+          return setMsg("err", "Mapping file is too large for local storage. Keep it smaller for now.");
         }
         draft.mapping = {
           kind: "file",
@@ -1068,7 +1068,7 @@ ${shown}
           2
         );
         if (bytesOf(mappingText) > MAX_TEXT_BYTES) {
-          return setMsg("err", "Auto-generated mapping is too large for MVP local storage.");
+          return setMsg("err", "Auto-generated mapping is too large for local storage.");
         }
         draft.mapping = {
           kind: "auto",
@@ -1126,7 +1126,7 @@ ${shown}
       if (bytesOf(mappingText) > MAX_TEXT_BYTES) {
         return setMsg(
           "err",
-          "Mapping file is too large for MVP local storage. Keep it smaller for now."
+          "Mapping file is too large for local storage. Keep it smaller for now."
         );
       }
       draft.mapping.text = mappingText;
@@ -1156,7 +1156,7 @@ ${shown}
         2
       );
       if (bytesOf(mappingText) > MAX_TEXT_BYTES) {
-        return setMsg("err", "Auto-generated mapping is too large for MVP local storage.");
+        return setMsg("err", "Auto-generated mapping is too large for local storage.");
       }
       draft.mapping.text = mappingText;
       const w = autoMapping && autoMapping.counts ? autoMapping.counts.warnings || 0 : 0;
@@ -1180,7 +1180,7 @@ ${shown}
 
       if (bytesOf(assignmentText) > MAX_TEXT_BYTES) {
         // store a bounded preview (so Preview isn't blank)
-        draft.assignment.text = assignmentText.slice(0, 120000) + "\n…(truncated for MVP)\n";
+        draft.assignment.text = assignmentText.slice(0, 120000) + "\n…(truncated)\n";
       } else {
         draft.assignment.text = assignmentText;
       }
@@ -1194,7 +1194,7 @@ ${shown}
     // Remote sync
     remoteSaveDraft(draft);
 
-    setMsg("ok", "Draft saved (browser-local).");
+    setMsg("ok", "Draft saved.");
     $("workDraftForm").reset();
     setTimeout(clearMsg, 1400);
   }
