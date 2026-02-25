@@ -169,6 +169,14 @@ const local = {
     const expected = s?.password || (code + '!');
     return expected === plain;
   },
+  async getStudentPasswordStatuses() {
+    const arr = store.get('students', []);
+    return arr.map(s => ({
+      student_code: s.code,
+      // If no password stored, treat as default ({code}!); otherwise compare
+      is_default_password: s.password == null || s.password === (s.code + '!'),
+    }));
+  },
 
   // Assignments / Instances (local placeholders)
   async createAssignment(a) {
@@ -1175,6 +1183,13 @@ const remote = {
     if (!supabase) throw new Error('supabase-not-configured');
     const { data, error } = await supabase.rpc('verify_student_password', { p_code: code, p_password: plain });
     if (error) throw error; return !!data;
+  },
+  async getStudentPasswordStatuses() {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+    const { data, error } = await supabase.rpc('list_student_password_statuses');
+    if (error) throw error;
+    return data || [];
   },
   
   // Assignments
