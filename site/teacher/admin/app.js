@@ -820,6 +820,8 @@
     const btnGen = document.getElementById('copyGenerateIndexCmd');
     const btnFull = document.getElementById('copyFullWorkflowCmd');
 
+    const clipboardSvg = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>';
+
     function currentTitle() {
       return (input && input.value ? input.value : '').trim();
     }
@@ -844,7 +846,7 @@
       const ok = await copyToClipboard(cmds.scaffold);
       previewFull(t);
       if (ok) btnWith.textContent = 'Copied ✅';
-      setTimeout(() => { btnWith.textContent = 'Copy: scaffold category + Presentation 1'; }, 900);
+      setTimeout(() => { btnWith.innerHTML = clipboardSvg + ' Copy: scaffold category + Presentation 1'; }, 900);
     });
 
     if (btnNo) btnNo.addEventListener('click', async () => {
@@ -853,14 +855,14 @@
       const ok = await copyToClipboard(cmds.scaffold);
       previewFull(t);
       if (ok) btnNo.textContent = 'Copied ✅';
-      setTimeout(() => { btnNo.textContent = 'Copy: scaffold category only'; }, 900);
+      setTimeout(() => { btnNo.innerHTML = clipboardSvg + ' Copy: scaffold category only'; }, 900);
     });
 
     if (btnGen) btnGen.addEventListener('click', async () => {
       const cmds = buildCommands('x', true);
       const ok = await copyToClipboard(cmds.gen);
       if (ok) btnGen.textContent = 'Copied ✅';
-      setTimeout(() => { btnGen.textContent = 'Copy: regenerate Lessons index'; }, 900);
+      setTimeout(() => { btnGen.innerHTML = clipboardSvg + ' Copy: regenerate Lessons index'; }, 900);
     });
 
     if (btnFull) btnFull.addEventListener('click', async () => {
@@ -869,7 +871,7 @@
       const ok = await copyToClipboard(cmds.full);
       previewFull(t);
       if (ok) btnFull.textContent = 'Copied ✅';
-      setTimeout(() => { btnFull.textContent = 'Copy: full workflow'; }, 900);
+      setTimeout(() => { btnFull.innerHTML = clipboardSvg + ' Copy: full workflow'; }, 900);
     });
   });
 })();
