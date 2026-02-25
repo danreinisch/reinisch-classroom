@@ -170,13 +170,13 @@
         z-index: 9999;
       }
       .work-dialog {
-        width: min(900px, 90vw);
+        width: min(960px, 92vw);
         max-height: 85vh;
         overflow: auto;
         border-radius: var(--rc-radius-lg);
         border: 1px solid var(--rc-border-strong);
         background: rgba(20, 20, 20, 0.92);
-        padding: 14px;
+        padding: 18px;
         backdrop-filter: blur(8px);
         -webkit-backdrop-filter: blur(8px);
       }
@@ -193,6 +193,100 @@
       }
       .work-dialog h3 {
         margin: 0;
+      }
+
+      /* Preview: section cards (mapping tab) */
+      .pv-summary-bar {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+        gap: 0;
+        border-radius: var(--rc-radius);
+        overflow: hidden;
+        border: 1px solid var(--rc-glass-border);
+        margin-bottom: 16px;
+      }
+      .pv-summary-seg {
+        padding: 10px 12px;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .pv-summary-seg .pv-seg-count { font-weight: 700; font-size: 18px; }
+      .pv-summary-seg .pv-seg-label { opacity: 0.75; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+      .pv-summary-seg.seg-sections { background: rgba(59,130,246,0.16); }
+      .pv-summary-seg.seg-items    { background: rgba(16,185,129,0.16); }
+      .pv-summary-seg.seg-warnings { background: rgba(245,158,11,0.16); }
+
+      .pv-sections-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+      .pv-section-card {
+        padding: 14px 16px;
+        border-radius: var(--rc-radius);
+        border: 1px solid var(--rc-glass-border);
+        background: rgba(0, 0, 0, 0.2);
+      }
+      .pv-section-card h4 {
+        margin: 0 0 10px 0;
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .pv-section-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+      }
+      .pv-section-table th {
+        text-align: left;
+        padding: 4px 6px;
+        border-bottom: 1px solid rgba(255,255,255,.12);
+        opacity: 0.7;
+        font-weight: 600;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: .03em;
+      }
+      .pv-section-table td {
+        padding: 5px 6px;
+        border-bottom: 1px solid rgba(255,255,255,.07);
+        vertical-align: top;
+      }
+      .pv-warn-box {
+        margin-top: 12px;
+        padding: 12px 14px;
+        border-radius: var(--rc-radius);
+        border: 1px solid rgba(245,158,11,0.4);
+        background: rgba(245,158,11,0.1);
+        font-size: 12px;
+        line-height: 1.5;
+      }
+      .pv-warn-box .pv-warn-title {
+        font-weight: 700;
+        margin-bottom: 6px;
+        color: rgba(245,158,11,0.95);
+      }
+
+      /* Preview: assignment content card (student/teacher tab) */
+      .pv-meta-card {
+        padding: 14px 16px;
+        border-radius: var(--rc-radius);
+        border: 1px solid var(--rc-glass-border);
+        background: rgba(0, 0, 0, 0.2);
+        margin-bottom: 12px;
+      }
+      .pv-content-card {
+        padding: 16px;
+        border-radius: var(--rc-radius);
+        border: 1px solid var(--rc-glass-border);
+        background: rgba(0, 0, 0, 0.2);
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+        font-size: 14px;
+        line-height: 1.55;
+        white-space: pre-wrap;
       }
 
       /* Mobile (< 768px) */
@@ -428,7 +522,8 @@
                 </div>
               </div>
 
-              <div class="work-grid" style="margin-top: 12px">
+              <!-- Content: assignment + mapping -->
+              <div class="work-grid" style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--rc-glass-border);">
                 <div class="work-field">
                   <label>Assignment (file OR link)</label>
                   <input
@@ -575,7 +670,7 @@ JSON:
                   </button>
                 </div>
               </div>
-              <pre id="previewBody">(preview)</pre>
+              <div id="previewBody">(preview)</div>
             </div>
           </div>
         </main>
