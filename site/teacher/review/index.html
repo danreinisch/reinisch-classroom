@@ -215,6 +215,9 @@
     }
     
     .rv-status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
       padding: 4px 10px;
       border-radius: var(--rc-radius-sm);
       font-size: 12px;
@@ -240,8 +243,10 @@
     }
     
     .rv-expand-icon {
-      font-size: 14px;
+      display: flex;
+      align-items: center;
       opacity: 0.7;
+      flex-shrink: 0;
     }
     
     .rv-submission-body {
@@ -785,7 +790,7 @@
         <div class="rv-header">
           <h1>Review</h1>
           <div id="rvSyncStatus" class="rv-sync-status local">
-            <span id="rvSyncIcon">🟡</span>
+            <span id="rvSyncIcon"></span>
             <span id="rvSyncText">Local</span>
           </div>
         </div>

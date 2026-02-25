@@ -12,6 +12,22 @@
 
   const NS = "rc_unified_";
   const REALTIME_DEBOUNCE_MS = 1000;
+  const FILTER_STORAGE_KEY = 'rc_tc_review_filters_v1';
+
+  // SVG icon helpers
+  const SAVE_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>';
+  const CHECK_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>';
+  const X_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>';
+  const CLOCK_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>';
+  const PAUSE_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="10" y1="15" x2="10" y2="9"></line><line x1="14" y1="15" x2="14" y2="9"></line></svg>';
+  const RETURN_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>';
+  const RULER_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>';
+  const SKIP_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></svg>';
+  const HALF_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path><line x1="12" y1="2" x2="12" y2="22"></line></svg>';
+  const CHEVRON_RIGHT_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>';
+  const CHEVRON_DOWN_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>';
+  const DOT_SVG = '<svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor" aria-hidden="true"><circle cx="5" cy="5" r="5"/></svg>';
+  const INBOX_SVG = '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="opacity:0.4"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"></polyline><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path></svg>';
 
   const $ = (id) => document.getElementById(id);
 
@@ -165,13 +181,13 @@
     statusEl.className = `rv-sync-status ${syncStatus}`;
     
     if (syncStatus === 'synced') {
-      iconEl.textContent = '🟢';
+      iconEl.innerHTML = DOT_SVG;
       textEl.textContent = 'Synced';
     } else if (syncStatus === 'local') {
-      iconEl.textContent = '🟡';
+      iconEl.innerHTML = DOT_SVG;
       textEl.textContent = 'Local';
     } else if (syncStatus === 'error') {
-      iconEl.textContent = '🔴';
+      iconEl.innerHTML = DOT_SVG;
       textEl.textContent = 'Error';
     }
   }
@@ -412,7 +428,9 @@
     if (queue.length === 0) {
       queueContainer.innerHTML = `
         <div class="rv-empty">
-          <p>No submissions found matching current filters.</p>
+          <div style="margin-bottom:12px;">${INBOX_SVG}</div>
+          <p style="font-weight:500;margin-bottom:4px;">No submissions found</p>
+          <p style="font-size:13px;opacity:0.6;">Try changing the class, assignment, or status filter.</p>
         </div>
       `;
       return;
@@ -451,13 +469,42 @@
     const status = submission.review_status || 'pending';
     let statusBadge = '';
     if (status === 'reviewed') {
-      statusBadge = '<span class="rv-status-badge reviewed">✅ Reviewed</span>';
+      statusBadge = `<span class="rv-status-badge reviewed">${CHECK_SVG} Reviewed</span>`;
     } else if (status === 'in_progress') {
-      statusBadge = '<span class="rv-status-badge in-progress">⏳ In Progress</span>';
+      statusBadge = `<span class="rv-status-badge in-progress">${CLOCK_SVG} In Progress</span>`;
     } else {
-      statusBadge = '<span class="rv-status-badge pending">⏸️ Pending</span>';
+      statusBadge = `<span class="rv-status-badge pending">${PAUSE_SVG} Pending</span>`;
     }
     
+    // Score preview for collapsed rows (from cache if available)
+    let scorePreview = '';
+    const assignmentId = submission.assignment_id;
+    if (assignmentId && assignmentItemsCache[assignmentId]) {
+      const items = assignmentItemsCache[assignmentId];
+      const answers = submissionAnswersCache[submission.id] || [];
+      const totalMax = items.reduce((sum, i) => sum + (i.points || 0), 0);
+      if (totalMax > 0) {
+        const constructedItems = items.filter(i => i.answer_type === 'constructed');
+        const hasUnscored = constructedItems.some(item => {
+          const answer = answers.find(a => a.item_id === item.id);
+          return !answer || answer.earned_points == null;
+        });
+        if (hasUnscored) {
+          scorePreview = `<span class="rv-score-preview" style="font-size:13px;font-family:monospace;opacity:0.75;">___/${totalMax} — ___%</span>`;
+        } else {
+          const autoEarned = submission.score_auto || 0;
+          const manualEarned = constructedItems.reduce((sum, item) => {
+            const ans = answers.find(a => a.item_id === item.id);
+            return sum + (ans?.earned_points || 0);
+          }, 0);
+          const totalEarned = autoEarned + manualEarned;
+          const pct = Math.round((totalEarned / totalMax) * 100);
+          const cls = scoreColorClass(pct);
+          scorePreview = `<span class="rv-score-preview ${cls}" style="font-size:13px;font-weight:600;">${totalEarned}/${totalMax} — ${pct}%</span>`;
+        }
+      }
+    }
+
     // Header content
     const headerHtml = `
       <div class="rv-submission-header" data-submission-id="${submission.id}">
@@ -465,9 +512,10 @@
           <span class="rv-student">${student?.name || submission.student_code || 'Unknown'}</span>
           <span class="rv-assignment">${assignment?.title || 'Unknown Assignment'}</span>
           <span class="rv-date">${formatDate(submission.submitted_at)}</span>
+          ${scorePreview}
           ${statusBadge}
         </div>
-        <span class="rv-expand-icon">${isExpanded ? '▼' : '▶'}</span>
+        <span class="rv-expand-icon">${isExpanded ? CHEVRON_DOWN_SVG : CHEVRON_RIGHT_SVG}</span>
       </div>
     `;
     
@@ -546,7 +594,7 @@
             <td><span class="rv-type-badge">${item.answer_type}</span></td>
             <td>${typeof studentAnswer === 'object' ? JSON.stringify(studentAnswer) : studentAnswer}</td>
             <td>${typeof correctAnswer === 'object' ? JSON.stringify(correctAnswer) : correctAnswer}</td>
-            <td>${isCorrect ? '✅' : '❌'}</td>
+            <td>${isCorrect ? CHECK_SVG : X_SVG}</td>
             <td>${answer?.earned_points || 0}/${item.points || 0}</td>
           </tr>
         `;
@@ -557,7 +605,7 @@
           <details class="rv-details">
             <summary class="rv-section-header">
               <span>Auto-Graded (${autoGradedItems.length} items)</span>
-              <span class="rv-section-status">✅ Complete (${autoCorrect}/${autoTotal} = ${autoPercent}%)</span>
+              <span class="rv-section-status">${CHECK_SVG} Complete (${autoCorrect}/${autoTotal} = ${autoPercent}%)</span>
             </summary>
             <table class="rv-auto-table">
               <thead>
@@ -583,12 +631,14 @@
     let writtenSection = '';
     if (constructedItems.length > 0) {
       const allScored = manualScored === manualTotal;
-      const statusLabel = allScored ? '✅ Scored' : `⏳ Needs Scoring (${manualScored}/${manualTotal})`;
+      const statusLabel = allScored ? `${CHECK_SVG} Scored` : `${CLOCK_SVG} Needs Scoring (${manualScored}/${manualTotal})`;
       
       const responseCards = constructedItems.map(item => {
         const answer = answers.find(a => a.item_id === item.id);
         const studentResponse = answer?.raw_answer || '(No response)';
-        const currentScore = answer?.earned_points || 0;
+        const isScored = answer && answer.earned_points != null;
+        const currentScore = isScored ? answer.earned_points : 0;
+        const scoreDisplay = isScored ? String(currentScore) : '___';
         const currentNote = answer?.teacher_note || '';
         const maxPoints = item.points || 5;
         
@@ -623,7 +673,7 @@
             <div>Max Points: ${maxPoints}</div>
             
             <details class="rv-rubric-details">
-              <summary>📏 Scoring Guide</summary>
+              <summary>${RULER_SVG} Scoring Guide</summary>
               <div class="rv-rubric">
                 ${rubricHtml}
               </div>
@@ -639,7 +689,7 @@
                        value="${currentScore}"
                        data-item-id="${item.id}"
                        data-submission-id="${submission.id}">
-                <span>/ ${maxPoints}</span>
+                <span>/ ${maxPoints} ${!isScored ? '<em style="opacity:0.6;font-size:12px;">(unscored)</em>' : ''}</span>
               </div>
               
               <div class="rv-note-input-group">
@@ -654,7 +704,7 @@
               <button class="rv-btn rv-btn-save-item" 
                       data-item-id="${item.id}"
                       data-submission-id="${submission.id}">
-                💾 Save
+                ${SAVE_SVG} Save
               </button>
               <span class="rv-save-status" data-item-id="${item.id}"></span>
             </div>
@@ -679,7 +729,18 @@
     const autoEarned = submission.score_auto || 0;
     const autoMax = autoGradedItems.reduce((sum, i) => sum + (i.points || 0), 0);
     const autoPercentStr = autoMax > 0 ? `(${Math.round((autoEarned / autoMax) * 100)}%)` : '';
-    const manualPercentStr = manualMax > 0 ? `(${Math.round((manualEarned / manualMax) * 100)}%)` : '';
+    const allItemsScored = manualTotal === 0 || manualScored === manualTotal;
+    const manualDisplay = allItemsScored
+      ? `${manualEarned}/${manualMax}`
+      : `___/${manualMax}`;
+    const manualPercentDisplay = allItemsScored && manualMax > 0
+      ? `(${Math.round((manualEarned / manualMax) * 100)}%)`
+      : '(__%)';
+    
+    const totalDisplay = allItemsScored
+      ? `${totalEarned}/${totalMax} (${totalPercent}%)`
+      : `___/${totalMax} — ___%`;
+    const totalColorClass = allItemsScored ? scoreColorClass(totalPercent) : '';
     
     const summarySection = totalMax === 0 ? `
       <div class="rv-summary">
@@ -696,35 +757,36 @@
         </div>
         <div class="rv-summary-row">
           <span>Manual:</span>
-          <span>${manualEarned}/${manualMax} ${manualPercentStr} (${manualScored}/${manualTotal} scored)</span>
+          <span>${manualDisplay} ${manualPercentDisplay} (${manualScored}/${manualTotal} scored)</span>
         </div>
         <div class="rv-summary-row rv-summary-total">
           <span>Total:</span>
-          <span class="${scoreColorClass(totalPercent)}">${totalEarned}/${totalMax} (${totalPercent}%)</span>
+          <span class="${totalColorClass}">${totalDisplay}</span>
         </div>
       </div>
     `;
     
-    // Grading section — overall manual grade (0–100) and feedback
-    const currentScore = submission.score_manual != null ? submission.score_manual : (submission.score_auto ?? '');
+    // Grading section — computed score summary + quick grade + feedback
+    const halfCredit = totalMax > 0 ? Math.round(totalMax / 2) : 0;
+    const gradeSummaryDisplay = allItemsScored && totalMax > 0
+      ? `<span class="${scoreColorClass(totalPercent)}" style="font-size:18px;font-weight:700;">${totalEarned}/${totalMax} — ${totalPercent}%</span>`
+      : `<span style="font-size:18px;font-weight:700;font-family:monospace;">___/${totalMax} — ___%</span>`;
     const currentFeedback = submission.feedback || '';
     const gradingSection = `
       <div class="rv-section rv-grade-section">
         <div class="rv-section-header">
           <span>Grade</span>
         </div>
+        <div style="margin-bottom:12px;padding:12px;background:rgba(255,255,255,0.04);border-radius:var(--rc-radius);border:1px solid var(--rc-glass-border);">
+          ${gradeSummaryDisplay}
+        </div>
+        ${totalMax > 0 ? `
         <div class="rv-quick-grade" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
-          <button class="rv-btn rv-btn-quickgrade" data-score="100" data-submission-id="${submission.id}">✅ Full Credit</button>
-          <button class="rv-btn rv-btn-quickgrade" data-score="50" data-submission-id="${submission.id}">½ Half Credit</button>
-          <button class="rv-btn rv-btn-quickgrade" data-score="0" data-submission-id="${submission.id}">❌ No Credit</button>
+          <button class="rv-btn rv-btn-quickgrade" data-score="${totalMax}" data-submission-id="${submission.id}">${CHECK_SVG} Full Credit (${totalMax}/${totalMax})</button>
+          <button class="rv-btn rv-btn-quickgrade" data-score="${halfCredit}" data-submission-id="${submission.id}">${HALF_SVG} Half Credit (${halfCredit}/${totalMax})</button>
+          <button class="rv-btn rv-btn-quickgrade" data-score="0" data-submission-id="${submission.id}">${X_SVG} No Credit (0/${totalMax})</button>
         </div>
-        <div class="rv-score-input-group">
-          <label>Score (0–100):</label>
-          <input type="number" class="rv-grade-score-input rv-score-input" min="0" max="100"
-                 value="${currentScore}"
-                 data-submission-id="${submission.id}">
-          <span>/ 100</span>
-        </div>
+        ` : ''}
         <div class="rv-note-input-group">
           <label>Feedback:</label>
           <textarea class="rv-grade-feedback-input rv-note-input" rows="3"
@@ -733,9 +795,9 @@
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="rv-btn rv-btn-save-grade"
-                  data-submission-id="${submission.id}">💾 Save Grade</button>
+                  data-submission-id="${submission.id}">${SAVE_SVG} Save Grade</button>
           <button class="rv-btn rv-btn-return"
-                  data-submission-id="${submission.id}">↩ Return for Revision</button>
+                  data-submission-id="${submission.id}">${RETURN_SVG} Return for Revision</button>
         </div>
       </div>
     `;
@@ -749,11 +811,11 @@
         <button class="rv-btn rv-btn-primary rv-btn-finalize" 
                 data-submission-id="${submission.id}"
                 ${finalizeDisabled ? 'disabled' : ''}>
-          ✅ Finalize Submission
+          ${CHECK_SVG} Finalize Submission
         </button>
         <button class="rv-btn rv-btn-next" 
                 data-submission-id="${submission.id}">
-          ⏭ Next Student
+          ${SKIP_SVG} Next Student
         </button>
         ${finalizeDisabled ? '<span class="rv-hint">Score all written responses to finalize</span>' : ''}
       </div>
@@ -784,6 +846,7 @@
           });
           e.target.classList.add('active');
           
+          saveFilters();
           render();
         }
       });
@@ -794,6 +857,7 @@
     if (assignmentFilter) {
       assignmentFilter.addEventListener('change', (e) => {
         currentAssignmentFilter = e.target.value;
+        saveFilters();
         render();
       });
     }
@@ -820,6 +884,7 @@
             }
           });
           
+          saveFilters();
           render();
         });
       }
@@ -873,13 +938,10 @@
           return;
         }
 
-        // Handle quick-grade buttons (fill in score input)
+        // Handle quick-grade buttons (save grade directly with the given score)
         const quickBtn = e.target.closest('.rv-btn-quickgrade');
         if (quickBtn) {
-          const score = quickBtn.dataset.score;
-          const submissionId = quickBtn.dataset.submissionId;
-          const scoreInput = document.querySelector(`.rv-grade-score-input[data-submission-id="${submissionId}"]`);
-          if (scoreInput) scoreInput.value = score;
+          await handleQuickGrade(quickBtn);
           return;
         }
 
@@ -967,7 +1029,7 @@
       }
     }
 
-    showToast(`✓ Finalized ${processed} submission${processed !== 1 ? 's' : ''}`, '#22c55e', '#0b1220');
+    showToast(`Finalized ${processed} submission${processed !== 1 ? 's' : ''}`, '#22c55e', '#0b1220');
     await render();
   }
 
@@ -997,7 +1059,7 @@
       }
     }
 
-    showToast(`✓ Marked ${processed} submission${processed !== 1 ? 's' : ''} as reviewed`, '#22c55e', '#0b1220');
+    showToast(`Marked ${processed} submission${processed !== 1 ? 's' : ''} as reviewed`, '#22c55e', '#0b1220');
     await render();
   }
 
@@ -1030,7 +1092,7 @@
       
       // Show success
       if (statusSpan) {
-        statusSpan.textContent = '✓ Saved';
+        statusSpan.textContent = 'Saved';
         statusSpan.className = 'rv-save-status success';
         setTimeout(() => {
           statusSpan.textContent = '';
@@ -1066,7 +1128,7 @@
     } catch (err) {
       console.error('[tc-review] Error saving score:', err);
       if (statusSpan) {
-        statusSpan.textContent = '✗ Error';
+        statusSpan.textContent = 'Error';
         statusSpan.className = 'rv-save-status error';
       }
     }
@@ -1318,18 +1380,30 @@
     });
     
     select.innerHTML = options.join('');
+    // Restore saved assignment filter
+    if (currentAssignmentFilter !== 'All Assignments') {
+      select.value = currentAssignmentFilter;
+    }
   }
 
   // Dynamically populate class filter buttons from shared CANON_CLASSES
   function populateClassFilters() {
     const bar = $('rvClassFilters');
     if (!bar) return;
-    const btns = ['<button class="rv-filter-btn active" data-class="All Classes">All Classes</button>'];
-    CANON_CLASSES.forEach(cls => {
+    const btns = CANON_CLASSES.map(cls => {
       const label = CLASS_DISPLAY[cls] || cls;
-      btns.push(`<button class="rv-filter-btn" data-class="${cls}">${label}</button>`);
+      const isActive = currentClassFilter === cls;
+      return `<button class="rv-filter-btn${isActive ? ' active' : ''}" data-class="${cls}">${label}</button>`;
     });
+    btns.unshift(`<button class="rv-filter-btn${currentClassFilter === 'All Classes' ? ' active' : ''}" data-class="All Classes">All Classes</button>`);
     bar.innerHTML = btns.join('');
+    // Restore saved status tab
+    ['rvStatusNeedsReview', 'rvStatusReviewed', 'rvStatusAll'].forEach(btnId => {
+      const btn = $(btnId);
+      if (!btn) return;
+      const maps = { rvStatusNeedsReview: 'needs-review', rvStatusReviewed: 'reviewed', rvStatusAll: 'all' };
+      btn.classList.toggle('active', maps[btnId] === currentStatusFilter);
+    });
   }
 
   // Show a brief toast notification
@@ -1341,18 +1415,11 @@
     setTimeout(() => msg.remove(), 2500);
   }
 
-  // Save an overall manual grade (score_manual) for a submission
-  async function handleSaveGrade(button) {
+  // Apply a quick-grade (full/half/no credit) and save immediately
+  async function handleQuickGrade(button) {
+    const scoreManual = parseInt(button.dataset.score, 10);
     const submissionId = button.dataset.submissionId;
-    const scoreInput = document.querySelector(`.rv-grade-score-input[data-submission-id="${submissionId}"]`);
     const feedbackInput = document.querySelector(`.rv-grade-feedback-input[data-submission-id="${submissionId}"]`);
-
-    const scoreManual = scoreInput ? parseFloat(scoreInput.value) : 0;
-    const scoreMax = scoreInput ? (parseFloat(scoreInput.max) || 100) : 100;
-    if (isNaN(scoreManual) || scoreManual < 0 || scoreManual > scoreMax) {
-      showToast(`Score must be 0–${scoreMax}`, '#ef4444', '#fff');
-      return;
-    }
     const feedback = feedbackInput ? feedbackInput.value.trim() : '';
     const gradedAt = new Date().toISOString();
     const gradedBy = localStorage.getItem('rc_teacher_name') || '';
@@ -1368,7 +1435,6 @@
         feedback
       });
 
-      // Update local cache
       const submission = submissionsData.find(s => s.id === submissionId);
       if (submission) {
         submission.score_manual = scoreManual;
@@ -1378,7 +1444,60 @@
         submission.feedback = feedback;
       }
 
-      showToast('✓ Grade saved!', '#22c55e', '#0b1220');
+      showToast('Grade saved!', '#22c55e', '#0b1220');
+      expandedSubmissions.add(submissionId);
+      await render();
+    } catch (err) {
+      console.error('[tc-review] Error saving quick grade:', err);
+      showToast('Error saving grade', '#ef4444', '#fff');
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  // Save an overall manual grade (score_manual) computed from per-item scores + feedback
+  async function handleSaveGrade(button) {
+    const submissionId = button.dataset.submissionId;
+    const feedbackInput = document.querySelector(`.rv-grade-feedback-input[data-submission-id="${submissionId}"]`);
+    const feedback = feedbackInput ? feedbackInput.value.trim() : '';
+    const gradedAt = new Date().toISOString();
+    const gradedBy = localStorage.getItem('rc_teacher_name') || '';
+
+    // Compute score_manual from per-item constructed-response answers
+    const submission = submissionsData.find(s => s.id === submissionId);
+    if (!submission) return;
+    const items = assignmentItemsCache[submission.assignment_id] || [];
+    const answers = submissionAnswersCache[submissionId] || [];
+    const constructedItems = items.filter(item => item.answer_type === 'constructed');
+    let scoreManual = 0;
+    constructedItems.forEach(item => {
+      const answer = answers.find(a => a.item_id === item.id);
+      if (answer && answer.earned_points != null) {
+        scoreManual += answer.earned_points || 0;
+      }
+    });
+
+    button.disabled = true;
+    try {
+      await db.upsertSubmission({
+        id: submissionId,
+        score_manual: scoreManual,
+        status: 'Graded',
+        graded_at: gradedAt,
+        graded_by: gradedBy,
+        feedback
+      });
+
+      // Update local cache
+      if (submission) {
+        submission.score_manual = scoreManual;
+        submission.review_status = 'reviewed';
+        submission.graded_at = gradedAt;
+        submission.graded_by = gradedBy;
+        submission.feedback = feedback;
+      }
+
+      showToast('Grade saved!', '#22c55e', '#0b1220');
       expandedSubmissions.add(submissionId);
       await render();
     } catch (err) {
@@ -1418,7 +1537,7 @@
 
       submission.review_status = 'returned';
 
-      showToast('↩ Returned for revision', '#f59e0b', '#0b1220');
+      showToast('Returned for revision', '#f59e0b', '#0b1220');
       expandedSubmissions.delete(submissionId);
       await render();
     } catch (err) {
@@ -1429,10 +1548,33 @@
     }
   }
 
+  // Save filter state to localStorage
+  function saveFilters() {
+    try {
+      localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify({
+        classFilter: currentClassFilter,
+        assignmentFilter: currentAssignmentFilter,
+        statusFilter: currentStatusFilter
+      }));
+    } catch (e) { /* ignore */ }
+  }
+
+  // Restore filter state from localStorage
+  function restoreFilters() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(FILTER_STORAGE_KEY) || 'null');
+      if (!saved) return;
+      if (saved.classFilter) currentClassFilter = saved.classFilter;
+      if (saved.assignmentFilter) currentAssignmentFilter = saved.assignmentFilter;
+      if (saved.statusFilter) currentStatusFilter = saved.statusFilter;
+    } catch (e) { /* ignore */ }
+  }
+
   // Initialize
   async function init() {
     console.log('[tc-review] Initializing Review tab');
     
+    restoreFilters();
     await loadData();
     await autoFinalizeMcqOnlySubmissions();
     populateClassFilters();
