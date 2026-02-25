@@ -2,7 +2,7 @@
   "use strict";
 
   const STORAGE_KEY = "rc_tc_work_drafts_v1";
-  const MAX_TEXT_BYTES = 800_000; // keep localStorage safe-ish (MVP only)
+  const MAX_TEXT_BYTES = 800_000; // keep localStorage safe-ish
 
   const $ = (id) => document.getElementById(id);
 
