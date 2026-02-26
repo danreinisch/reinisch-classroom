@@ -670,6 +670,63 @@
     setTimeout(clearMsg, 1200);
   }
 
+  async function deleteAllAssignments() {
+    if (!confirm("This will permanently delete ALL assignments, assignment instances, and submissions. This cannot be undone. Are you sure?")) return;
+    if (!confirm("Are you absolutely sure? This action cannot be reversed.")) return;
+
+    const btn = $("btnDeleteAllAssignments");
+    if (btn) btn.disabled = true;
+
+    try {
+      // Clear remote drafts first (best-effort)
+      try {
+        const draftsRes = await fetch("/.netlify/functions/teacher-drafts", {
+          method: "DELETE",
+          credentials: "same-origin",
+        });
+        if (!draftsRes.ok) {
+          console.warn("[tc-work] Remote drafts clear skipped (status " + draftsRes.status + ")");
+        }
+      } catch (draftsErr) {
+        console.warn("[tc-work] Remote drafts clear failed:", draftsErr?.message || String(draftsErr));
+      }
+
+      // Clear local Work page drafts
+      try {
+        localStorage.removeItem("rc_tc_work_drafts_v1");
+      } catch (_) { /* ignore */ }
+
+      // Call the clear-assignments function
+      const res = await fetch("/.netlify/functions/admin-clear-assignments", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      let data = null;
+      try { data = await res.json(); } catch (_) { /* ignore */ }
+
+      if (!res.ok) {
+        const msg = data?.error || ("Request failed with status " + res.status);
+        setMsg("err", "Clear failed: " + msg);
+        return;
+      }
+
+      const d = data?.deleted || {};
+      const summary = `submissions: ${d.submissions ?? "?"}, instances: ${d.assignment_instances ?? "?"}, assignments: ${d.assignments ?? "?"}`;
+      setMsg("ok", "✓ All issued assignments deleted. Deleted — " + summary);
+
+      // Refresh the drafts table (now empty)
+      writeDrafts([]);
+      renderTable([]);
+    } catch (e) {
+      console.error("[tc-work] deleteAllAssignments error:", e);
+      setMsg("err", "Error: " + (e?.message || String(e)));
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+
   function startEdit(id) {
     const drafts = readDrafts();
     const d = drafts.find((x) => x.id === id);
@@ -1507,6 +1564,8 @@
     if (_ea) _ea.addEventListener("click", exportAll);
     const _ca = $("btnClearAll");
     if (_ca) _ca.addEventListener("click", clearAll);
+    const _daa = $("btnDeleteAllAssignments");
+    if (_daa) _daa.addEventListener("click", deleteAllAssignments);
     const _fe = $("btnFillExample");
     if (_fe) _fe.addEventListener("click", fillExample);
     const _ce = $("btnCancelEdit");
