@@ -171,7 +171,7 @@ exports.handler = async (event) => {
         'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ p_username: codeNorm.toLowerCase(), p_password: password })
+      body: JSON.stringify({ p_username: codeNorm, p_password: password })
     });
 
     if (fallbackResponse.ok) {

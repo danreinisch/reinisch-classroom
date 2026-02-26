@@ -79,7 +79,7 @@ async function handleChangePassword(event) {
     return jsonResponse(event, 400, { error: 'New password must be different from current password' }, {}, requestId);
   }
 
-  const username = String(studentCode).trim().toLowerCase();
+  const username = String(studentCode).trim().toUpperCase();
 
   try {
     // Verify current password
