@@ -702,6 +702,45 @@
   }
 
   /**
+   * Reset ALL student passwords to the default ({code}!) format via server
+   */
+  async function resetAllStudentPasswords() {
+    if (!confirm("This will reset ALL student passwords to their default ({code}!). Students with custom passwords will lose them. Are you sure?")) return;
+
+    const btn = $("resetAllPasswordsBtn");
+    if (btn) btn.disabled = true;
+
+    try {
+      const res = await fetch("/.netlify/functions/admin-reset-passwords", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        console.error("[tc-settings] Reset all passwords failed:", data);
+        showToast(data.error || "Failed to reset passwords. Check console for details.", "#ef4444", "#fff");
+        return;
+      }
+
+      const count = data.reset_count != null ? data.reset_count : "all";
+      console.log("[tc-settings] Reset all student passwords. Count:", count);
+
+      // Refresh table
+      await loadStudentPasswords();
+
+      showToast(`✓ Reset ${count} student passwords to default`, "#22c55e", "#0b1220");
+    } catch (error) {
+      console.error("[tc-settings] Error resetting all student passwords:", error);
+      showToast("Error resetting passwords. Check console for details.", "#ef4444", "#fff");
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  /**
    * Copy a password to clipboard with brief feedback
    */
   async function copyPassword(password) {
@@ -821,6 +860,11 @@
 
     if (revealAllToggle) {
       revealAllToggle.addEventListener("change", toggleRevealAll);
+    }
+
+    var resetAllPasswordsBtn = $("resetAllPasswordsBtn");
+    if (resetAllPasswordsBtn) {
+      resetAllPasswordsBtn.addEventListener("click", resetAllStudentPasswords);
     }
 
     var addTickerRowBtn = $('addTickerRowBtn');
