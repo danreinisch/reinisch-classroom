@@ -729,6 +729,70 @@
     }
   });
 
+  // Clear All Assignments handler
+  const clearAssignmentsBtn = document.getElementById('clearAssignmentsBtn');
+  if (clearAssignmentsBtn) {
+    clearAssignmentsBtn.addEventListener('click', async () => {
+      if (!confirm('This will permanently delete ALL assignments, assignment instances, and submissions. This cannot be undone. Are you sure?')) return;
+
+      clearAssignmentsBtn.disabled = true;
+      log('Clearing all assignments…');
+
+      try {
+        // Clear remote drafts first (best-effort)
+        try {
+          const draftsRes = await fetch('/.netlify/functions/teacher-drafts', {
+            method: 'DELETE',
+            credentials: 'same-origin',
+          });
+          if (draftsRes.ok) {
+            log('✓ Remote drafts cleared');
+          } else {
+            log('⚠ Remote drafts clear skipped (status ' + draftsRes.status + ')');
+          }
+        } catch (draftsErr) {
+          log('⚠ Remote drafts clear failed: ' + (draftsErr?.message || String(draftsErr)));
+        }
+
+        // Clear local Work page drafts
+        try {
+          localStorage.removeItem('rc_tc_work_drafts_v1');
+          log('✓ Local Work drafts cleared');
+        } catch (_) { /* ignore */ }
+
+        // Call the clear-assignments function
+        const res = await fetch('/.netlify/functions/admin-clear-assignments', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+        });
+
+        let data = null;
+        try {
+          data = await res.json();
+        } catch (_) { /* ignore */ }
+
+        if (!res.ok) {
+          const msg = data?.error || ('Request failed with status ' + res.status);
+          log('ERROR: ' + msg);
+          alert('Clear failed: ' + msg);
+          return;
+        }
+
+        const d = data?.deleted || {};
+        const summary = `submissions: ${d.submissions ?? '?'}, assignment_instances: ${d.assignment_instances ?? '?'}, assignments: ${d.assignments ?? '?'}`;
+        log('✓ All assignments cleared. Deleted — ' + summary);
+        alert('✓ All assignments cleared.\n\nDeleted:\n  ' + summary.replace(/, /g, '\n  '));
+      } catch (e) {
+        console.error(e);
+        log('ERROR: ' + (e?.message || String(e)));
+        alert('Clear error: ' + (e?.message || String(e)));
+      } finally {
+        clearAssignmentsBtn.disabled = false;
+      }
+    });
+  }
+
   (async()=>{
     await loadUnits();
     await loadState();
