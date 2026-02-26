@@ -233,8 +233,8 @@
     const tagRe = /\[\s*(?:(?:DESE|MLS)\s*[.:]\s*[^\]]+|(?:IG|IEP)\s*:\s*[^\]]+)\s*\]/gi;
     const out = [];
     for (const line of lines) {
-      // Skip entire line if it's a labeled format (DESE Standard(s): or IEP Goal Code(s):)
-      if (/^\s*(?:DESE\s+Standards?|IEP\s+Goal\s+Codes?)\s*(?:\(s\))?\s*:/i.test(line)) {
+      // Skip entire line if it's a labeled format (DESE Standard(s): or IEP Goal Code(s): or IEP Goal(s):)
+      if (/^\s*(?:DESE\s+Standards?(?:\(s\))?|IEP\s+Goal(?:\s+Codes?)?(?:\(s\))?)\s*:/i.test(line)) {
         continue; // Skip this line entirely
       }
       
@@ -330,7 +330,7 @@
         const shown = studentText
           ? escapeHtml(studentText)
           : "(No assignment text stored for this draft.)";
-        bodyHtml = `<div class="pv-content-card">${shown}</div>`;
+        bodyHtml = `<div class="pv-content-card" data-preview-text>${shown}</div>`;
       }
     } else {
       bodyHtml = `<div class="pv-content-card" style="white-space:normal; opacity:.85;">(No assignment content found for this draft.)</div>`;
@@ -1601,6 +1601,7 @@ function sanitizeStudentPreviewText(src) {
 
     // Drop obvious answer-key lines
     if (/^\s*(Answer|Correct Answer|Correct)\s*[:-]/i.test(line)) continue;
+    if (/^\s*Hint\s*:/i.test(line)) continue;
 
     // TRUE/FALSE: many keys only include the correct line (e.g., "TRUE ✓").
     // If the stem says TRUE or FALSE and the next non-empty line is just TRUE/FALSE,
@@ -1708,8 +1709,8 @@ function normalizeTaggedAssignmentText(input) {
     }
     
     // Match IEP Goal Code(s): followed by codes
-    // Handles: "IEP Goal Code:", "IEP Goal Codes:", "IEP Goal Code(s):", "IEP Goal Codes (s):"
-    const iepMatch = line.match(/^\s*IEP\s+Goal\s+Codes?\s*(?:\(s\))?\s*:\s*(.+)$/i);
+    // Handles: "IEP Goal Code:", "IEP Goal Codes:", "IEP Goal Code(s):", "IEP Goal(s):", "IEP Goal:"
+    const iepMatch = line.match(/^\s*IEP\s+Goal\s*(?:Codes?)?\s*(?:\(s\))?\s*:\s*(.+)$/i);
     if (iepMatch) {
       const codesStr = iepMatch[1].trim();
       const codes = codesStr.split(/\s*,\s*/).map(c => c.trim()).filter(Boolean);
@@ -1970,8 +1971,8 @@ function normalizeTaggedAssignmentText(input) {
     for (const line of lines) {
       const trimmed = line.trim();
       
-      // Count questions: "Question 1:", "1.", "Q1)", etc.
-      if (/^(?:Question\s+)?\d+\s*[.):]/i.test(trimmed)) {
+      // Count questions: "Question 1:", "Q1:", "1.", etc.
+      if (/^(?:Question\s+|Q)?\d+\s*[.):-]/i.test(trimmed)) {
         questions++;
       }
       
@@ -1993,8 +1994,8 @@ function normalizeTaggedAssignmentText(input) {
       const bracketDese = trimmed.matchAll(/\[MLS[^\]]*\]/gi);
       for (const m of bracketDese) deseCodes.add(m[0]);
       
-      // Extract IEP codes from labeled format: "IEP Goal Code(s): S015.11.1-2, S016.11.2-2"
-      const iepMatch = trimmed.match(/IEP\s+Goal\s+Code(?:\(s\)|s)?\s*:\s*(.+)/i);
+      // Extract IEP codes from labeled format: "IEP Goal Code(s): S015.11.1-2, S016.11.2-2" or "IEP Goal(s): ..."
+      const iepMatch = trimmed.match(/IEP\s+Goal\s*(?:Code)?\s*(?:\(s\)|s)?\s*:\s*(.+)/i);
       if (iepMatch) {
         iepMatch[1].split(/[,;]/).forEach(c => {
           const code = c.trim();

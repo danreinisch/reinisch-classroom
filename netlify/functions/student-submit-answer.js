@@ -110,7 +110,7 @@ exports.handler = async (event) => {
     const student = students[0];
 
     // Step 2: Verify assignment instance exists and belongs to this student
-    const instanceUrl = `${SUPABASE_URL}/rest/v1/assignment_instances?select=id,student_id,settings,status&id=eq.${encodeURIComponent(instance_id)}`;
+    const instanceUrl = `${SUPABASE_URL}/rest/v1/assignment_instances?select=id,student_id,assignment_id,settings,status&id=eq.${encodeURIComponent(instance_id)}`;
     
     const instanceResponse = await fetch(instanceUrl, {
       method: 'GET',
@@ -182,38 +182,149 @@ exports.handler = async (event) => {
 
     console.log(`[student-submit-answer] [${requestId}] Successfully saved answers for instance ${instance_id}`);
     
-    // Step 6: Insert into submissions table if status is "Submitted"
+    // Step 6: Upsert submission record if status is "Submitted"
+    let submissionId = null;
     if (newStatus === 'Submitted') {
-      console.log(`[student-submit-answer] [${requestId}] Creating submission record`);
-      
-      const submissionUrl = `${SUPABASE_URL}/rest/v1/submissions`;
-      
-      const submissionResponse = await fetch(submissionUrl, {
-        method: 'POST',
+      console.log(`[student-submit-answer] [${requestId}] Upserting submission record`);
+
+      // Check if a submission already exists for this instance
+      const checkSubUrl = `${SUPABASE_URL}/rest/v1/submissions?instance_id=eq.${encodeURIComponent(instance_id)}&select=id&limit=1`;
+      const checkSubResponse = await fetch(checkSubUrl, {
+        method: 'GET',
         headers: {
           'apikey': SUPABASE_SERVICE_ROLE_KEY,
           'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-          'Content-Type': 'application/json',
-          'Prefer': 'return=representation'
-        },
-        body: JSON.stringify({
-          instance_id: instance_id,
-          answers: answers || {},
-          submitted_at: new Date().toISOString()
-        })
+          'Content-Type': 'application/json'
+        }
       });
-      
-      if (!submissionResponse.ok) {
-        const errorText = await submissionResponse.text();
-        console.error(`[student-submit-answer] [${requestId}] Submission insert failed: ${submissionResponse.status} - ${errorText}`);
-        console.error(`[student-submit-answer] [${requestId}] WARNING: Assignment status is 'Submitted' but no submission record created for instance ${instance_id}`);
-        // Don't fail the whole request - the answers are already saved in the instance
-        // The student will see the assignment as submitted, but teachers won't see it in review queue
-        // This should be monitored and alerted on in production
+
+      const existingSubs = checkSubResponse.ok ? await checkSubResponse.json() : [];
+      const existingSubmission = existingSubs && existingSubs[0];
+
+      if (existingSubmission) {
+        // Update existing submission instead of creating a duplicate
+        const updateSubUrl = `${SUPABASE_URL}/rest/v1/submissions?id=eq.${encodeURIComponent(existingSubmission.id)}`;
+        const updateSubResponse = await fetch(updateSubUrl, {
+          method: 'PATCH',
+          headers: {
+            'apikey': SUPABASE_SERVICE_ROLE_KEY,
+            'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=representation'
+          },
+          body: JSON.stringify({
+            answers: answers || {},
+            submitted_at: new Date().toISOString()
+          })
+        });
+
+        if (!updateSubResponse.ok) {
+          const errorText = await updateSubResponse.text();
+          console.error(`[student-submit-answer] [${requestId}] Submission update failed: ${updateSubResponse.status} - ${errorText}`);
+        } else {
+          submissionId = existingSubmission.id;
+          console.log(`[student-submit-answer] [${requestId}] Submission updated with ID: ${submissionId}`);
+        }
       } else {
-        const submissionData = await submissionResponse.json();
-        const submissionId = submissionData && submissionData[0] ? submissionData[0].id : 'unknown';
-        console.log(`[student-submit-answer] [${requestId}] Submission created with ID: ${submissionId}`);
+        // Create new submission
+        const submissionUrl = `${SUPABASE_URL}/rest/v1/submissions`;
+        const submissionResponse = await fetch(submissionUrl, {
+          method: 'POST',
+          headers: {
+            'apikey': SUPABASE_SERVICE_ROLE_KEY,
+            'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=representation'
+          },
+          body: JSON.stringify({
+            instance_id: instance_id,
+            answers: answers || {},
+            submitted_at: new Date().toISOString()
+          })
+        });
+
+        if (!submissionResponse.ok) {
+          const errorText = await submissionResponse.text();
+          console.error(`[student-submit-answer] [${requestId}] Submission insert failed: ${submissionResponse.status} - ${errorText}`);
+          console.error(`[student-submit-answer] [${requestId}] WARNING: Assignment status is 'Submitted' but no submission record created for instance ${instance_id}`);
+          // Don't fail the whole request - the answers are already saved in the instance
+        } else {
+          const submissionData = await submissionResponse.json();
+          submissionId = submissionData && submissionData[0] ? submissionData[0].id : null;
+          console.log(`[student-submit-answer] [${requestId}] Submission created with ID: ${submissionId}`);
+        }
+      }
+
+      // Step 7: Create/upsert submission_answers linked to assignment_items with auto-scoring
+      if (submissionId && answers && Object.keys(answers).length > 0 && instance.assignment_id) {
+        const itemsUrl = `${SUPABASE_URL}/rest/v1/assignment_items?assignment_id=eq.${encodeURIComponent(instance.assignment_id)}&select=id,item_ref,answer_type,meta`;
+        const itemsResponse = await fetch(itemsUrl, {
+          method: 'GET',
+          headers: {
+            'apikey': SUPABASE_SERVICE_ROLE_KEY,
+            'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (itemsResponse.ok) {
+          const items = await itemsResponse.json();
+          if (items && items.length > 0) {
+            // Build item_ref lookup map
+            const itemMap = {};
+            for (const item of items) {
+              itemMap[item.item_ref] = item;
+            }
+
+            // Build submission_answers rows for each answered question
+            const subAnswers = [];
+            for (const [itemRef, studentAnswer] of Object.entries(answers)) {
+              const item = itemMap[itemRef];
+              if (!item) continue;
+
+              let isCorrect = null;
+              let earnedPoints = null;
+              let maxPoints = null;
+
+              if (item.answer_type === 'mcq' && item.meta && item.meta.correct) {
+                isCorrect = String(studentAnswer).trim().toUpperCase() === String(item.meta.correct).trim().toUpperCase();
+                maxPoints = 1;
+                earnedPoints = isCorrect ? 1 : 0;
+              }
+
+              subAnswers.push({
+                submission_id: submissionId,
+                assignment_item_id: item.id,
+                raw_answer: { value: studentAnswer },
+                is_correct: isCorrect,
+                earned_points: earnedPoints,
+                max_points: maxPoints,
+                scored_at: new Date().toISOString()
+              });
+            }
+
+            if (subAnswers.length > 0) {
+              const subAnswersUrl = `${SUPABASE_URL}/rest/v1/submission_answers`;
+              const subAnswersResponse = await fetch(subAnswersUrl, {
+                method: 'POST',
+                headers: {
+                  'apikey': SUPABASE_SERVICE_ROLE_KEY,
+                  'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+                  'Content-Type': 'application/json',
+                  'Prefer': 'resolution=merge-duplicates,return=minimal'
+                },
+                body: JSON.stringify(subAnswers)
+              });
+
+              if (!subAnswersResponse.ok) {
+                const errorText = await subAnswersResponse.text();
+                console.error(`[student-submit-answer] [${requestId}] submission_answers upsert failed: ${subAnswersResponse.status} - ${errorText}`);
+              } else {
+                console.log(`[student-submit-answer] [${requestId}] Upserted ${subAnswers.length} submission_answers`);
+              }
+            }
+          }
+        }
       }
     }
     

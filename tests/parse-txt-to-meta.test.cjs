@@ -148,7 +148,7 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
       if (nextLineIndex < classLines.length) {
         const nextLine = classLines[nextLineIndex].trim();
         // If the next line is not a special marker, it might be a subtitle
-        const isSpecialLine = nextLine.match(/^(Question\s+\d+:|DESE\s+Standard|IEP\s+Goal\s+Code|[A-Z]\)|Correct\s+Answer:|Hint:|Writing\s+Prompt:|Writing\s+Structure:|Hints?:)/i);
+        const isSpecialLine = nextLine.match(/^(Question\s+\d+:|Q\d+:|DESE\s+Standard|IEP\s+Goal|[A-Z]\)|Correct\s+Answer:|ANSWER:|Hint:|Writing\s+Prompt:|Writing\s+Structure:|Hints?:)/i);
         if (!isSpecialLine && nextLine.length > 0) {
           dayLabel += ' - ' + nextLine;
           i = nextLineIndex;
@@ -176,14 +176,14 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
 
     if (!currentDay) continue;
 
-    // Skip DESE Standard(s) and IEP Goal Code(s) lines
-    if (trimmed.startsWith('DESE Standard') || trimmed.startsWith('IEP Goal Code')) {
+    // Skip DESE Standard(s) and IEP Goal lines (both "IEP Goal Code(s):" and "IEP Goal(s):" formats)
+    if (/^DESE\s+Standard/i.test(trimmed) || /^IEP\s+Goal\b/i.test(trimmed)) {
       continue;
     }
 
     if (currentDay.type === 'questions') {
-      // Check for Question N:
-      const questionMatch = trimmed.match(/^Question\s+(\d+):/i);
+      // Check for Question N: or QN: format
+      const questionMatch = trimmed.match(/^(?:Question\s+|Q)(\d+):/i);
       if (questionMatch) {
         // Save previous question if exists
         if (currentQuestion) {
@@ -218,8 +218,8 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
           continue;
         }
 
-        // Check for Correct Answer
-        const correctMatch = trimmed.match(/^Correct\s+Answer:\s*([A-Z])/i);
+        // Check for Correct Answer: or ANSWER:
+        const correctMatch = trimmed.match(/^(?:Correct\s+Answer|ANSWER):\s*([A-Z])/i);
         if (correctMatch) {
           currentQuestion.correct = correctMatch[1];
           continue;
@@ -477,6 +477,55 @@ Correct Answer: A`;
   assert(result !== null, 'Should parse Life Skills LA short alias');
   assert.strictEqual(result.days.length, 1, 'Should have 1 day');
   assert.strictEqual(result.days[0].questions.length, 1, 'Should have 1 question');
+});
+
+// Test 11: Week 6 format - Q1: style questions with ANSWER: and IEP Goal(s):
+test('Parse Week 6 format with Q1: questions, ANSWER: and IEP Goal(s):', () => {
+  const txtContent = `DAY 1 QUESTIONS
+
+IEP Goal(s): S016.11.2-1, S019.10.1
+
+Q1: Who attacks Alex at the beginning of the story?
+A) A stranger
+B) His brother
+C) A dog
+ANSWER: B
+
+Q2: Where does the story take place?
+A) A city
+B) A farm
+C) A forest
+ANSWER: C`;
+
+  const result = parseTxtToMeta(txtContent, 'Language Arts 3 SC', 'test.txt');
+
+  assert(result !== null, 'Should parse Week 6 Q1: format');
+  assert.strictEqual(result.days.length, 1, 'Should have 1 day');
+  assert.strictEqual(result.days[0].questions.length, 2, 'Should have 2 questions');
+  assert.strictEqual(result.days[0].questions[0].number, 1, 'First question number should be 1');
+  assert.strictEqual(result.days[0].questions[0].text, 'Who attacks Alex at the beginning of the story?', 'Should parse Q1 text');
+  assert.strictEqual(result.days[0].questions[0].correct, 'B', 'Should parse ANSWER: B as correct answer');
+  assert.strictEqual(result.days[0].questions[1].number, 2, 'Second question number should be 2');
+  assert.strictEqual(result.days[0].questions[1].correct, 'C', 'Should parse ANSWER: C as correct answer');
+});
+
+// Test 12: IEP Goal(s): line is skipped (no "Code" in label)
+test('Skip IEP Goal(s): lines without "Code" keyword', () => {
+  const txtContent = `DAY 1 QUESTIONS
+
+IEP Goal(s): S016.11.2-1
+IEP Goal Code(s): S015.11.1-2
+
+Q1: Test question?
+A) Yes
+B) No
+ANSWER: A`;
+
+  const result = parseTxtToMeta(txtContent, 'Language Arts 3 SC', 'test.txt');
+
+  assert(result !== null, 'Should parse while skipping both IEP Goal formats');
+  assert.strictEqual(result.days[0].questions.length, 1, 'Should have 1 question (not IEP lines)');
+  assert.strictEqual(result.days[0].questions[0].text, 'Test question?', 'Should parse question text correctly');
 });
 
 console.log('\n✅ All tests passed!');

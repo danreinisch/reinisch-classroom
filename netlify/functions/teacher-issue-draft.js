@@ -176,7 +176,7 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
         const nextLine = classLines[nextLineIndex].trim();
         // If the next line is not a special marker, it might be a subtitle
         // NOTE: This regex pattern is also used in tests/parse-txt-to-meta.test.cjs - keep in sync
-        const isSpecialLine = nextLine.match(/^(Question\s+\d+:|DESE\s+Standard|IEP\s+Goal\s+Code|[A-Z]\)|Correct\s+Answer:|Hint:|Writing\s+Prompt:|Writing\s+Structure:|Hints?:)/i);
+        const isSpecialLine = nextLine.match(/^(Question\s+\d+:|Q\d+:|DESE\s+Standard|IEP\s+Goal|[A-Z]\)|Correct\s+Answer:|ANSWER:|Hint:|Writing\s+Prompt:|Writing\s+Structure:|Hints?:)/i);
         if (!isSpecialLine && nextLine.length > 0) {
           // This is likely a subtitle, append it to the label
           dayLabel += ' - ' + nextLine;
@@ -206,14 +206,14 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
 
     if (!currentDay) continue;
 
-    // Skip DESE Standard(s) and IEP Goal Code(s) lines
-    if (trimmed.startsWith('DESE Standard') || trimmed.startsWith('IEP Goal Code')) {
+    // Skip DESE Standard(s) and IEP Goal lines (both "IEP Goal Code(s):" and "IEP Goal(s):" formats)
+    if (/^DESE\s+Standard/i.test(trimmed) || /^IEP\s+Goal\b/i.test(trimmed)) {
       continue;
     }
 
     if (currentDay.type === 'questions') {
-      // Check for Question N:
-      const questionMatch = trimmed.match(/^Question\s+(\d+):/i);
+      // Check for Question N: or QN: format
+      const questionMatch = trimmed.match(/^(?:Question\s+|Q)(\d+):/i);
       if (questionMatch) {
         // Save previous question if exists
         if (currentQuestion) {
@@ -249,8 +249,8 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
           continue;
         }
 
-        // Check for Correct Answer:
-        const correctMatch = trimmed.match(/^Correct\s+Answer:\s*([A-Z])/i);
+        // Check for Correct Answer: or ANSWER:
+        const correctMatch = trimmed.match(/^(?:Correct\s+Answer|ANSWER):\s*([A-Z])/i);
         if (correctMatch) {
           currentQuestion.correct = correctMatch[1];
           continue;
@@ -763,6 +763,68 @@ exports.handler = async (event) => {
           console.warn(`[teacher-issue-draft] [${requestId}] Failed to update assignment meta: ${updateResponse.status}`);
         } else {
           console.log(`[teacher-issue-draft] [${requestId}] Successfully updated assignment meta`);
+        }
+      }
+    }
+
+    // Step 5b: Create/upsert assignment_items from parsed meta questions and writing prompts
+    if (parsedMeta && parsedMeta.days && parsedMeta.days.length > 0) {
+      const itemsToUpsert = [];
+      for (const day of parsedMeta.days) {
+        if (day.type === 'questions' && Array.isArray(day.questions)) {
+          for (const q of day.questions) {
+            itemsToUpsert.push({
+              assignment_id: assignmentId,
+              item_ref: `${day.day_number}_${q.number}`,
+              answer_type: 'mcq',
+              points: 1,
+              meta: {
+                day: day.day_number,
+                question_number: q.number,
+                text: q.text,
+                choices: q.choices,
+                correct: q.correct,
+                hint: q.hint
+              }
+            });
+          }
+        } else if (day.type === 'writing_prompt') {
+          itemsToUpsert.push({
+            assignment_id: assignmentId,
+            item_ref: `writing_${day.day_number}`,
+            answer_type: 'constructed',
+            points: 0,
+            meta: {
+              day: day.day_number,
+              prompt: day.prompt,
+              structure: day.structure,
+              hints: day.hints
+            }
+          });
+        }
+      }
+
+      if (itemsToUpsert.length > 0) {
+        console.log(`[teacher-issue-draft] [${requestId}] Creating/updating ${itemsToUpsert.length} assignment_items`);
+
+        const itemsUrl = `${SUPABASE_URL}/rest/v1/assignment_items`;
+        const itemsResponse = await fetch(itemsUrl, {
+          method: 'POST',
+          headers: {
+            'apikey': SUPABASE_SERVICE_ROLE_KEY,
+            'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'resolution=merge-duplicates,return=minimal'
+          },
+          body: JSON.stringify(itemsToUpsert)
+        });
+
+        if (!itemsResponse.ok) {
+          const errorText = await itemsResponse.text();
+          console.warn(`[teacher-issue-draft] [${requestId}] assignment_items upsert failed: ${itemsResponse.status} - ${errorText}`);
+          // Non-fatal: assignment and instances are still created
+        } else {
+          console.log(`[teacher-issue-draft] [${requestId}] Successfully upserted ${itemsToUpsert.length} assignment_items`);
         }
       }
     }
