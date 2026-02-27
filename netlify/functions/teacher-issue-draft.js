@@ -797,11 +797,12 @@ exports.handler = async (event) => {
         } else if (day.type === 'writing_prompt') {
           itemsToUpsert.push({
             assignment_id: assignmentId,
-            item_ref: `writing_${day.day_number}`,
+            item_ref: `WP_${day.day_number}`,
             answer_type: 'constructed',
-            points: 0,
+            points: 5,
             meta: {
               day: day.day_number,
+              type: 'writing_prompt',
               prompt: day.prompt,
               structure: day.structure,
               hints: day.hints
