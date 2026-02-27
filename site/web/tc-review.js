@@ -753,7 +753,7 @@
       <div class="rv-summary">
         <div class="rv-summary-row rv-summary-total">
           <span>Items:</span>
-          <span>No items</span>
+          <span>⚠️ No assignment items found for assignment ID ${assignmentId}. Items may need to be backfilled.</span>
         </div>
       </div>
     ` : `
