@@ -412,14 +412,25 @@
     try {
       const obj = JSON.parse(raw);
 
-      const sections = Array.isArray(obj.sections) ? obj.sections : [];
+      const allSections = Array.isArray(obj.sections) ? obj.sections : [];
       const warnings = Array.isArray(obj.warnings) ? obj.warnings : [];
       const counts = obj.counts || {};
-      const sectionCount = Number.isFinite(counts.sections) ? counts.sections : sections.length;
+
+      // Filter sections to only those matching the draft's className
+      const CLASS_HEADER_RE = /^\s*(LANGUAGE\s+ARTS|LIFE\s+SKILLS)\b/i;
+      const sections = d && d.className
+        ? allSections.filter((s) => {
+            const t = String(s && s.title ? s.title : "");
+            // Keep section if its title contains the draft's className,
+            // or if it does NOT match any known class header pattern (generic sections)
+            if (!CLASS_HEADER_RE.test(t)) return true;
+            return t.toUpperCase().includes(d.className.toUpperCase());
+          })
+        : allSections;
+      const sectionCount = sections.length;
 
       let itemsCount = 0;
       for (const s of sections) itemsCount += Array.isArray(s.items) ? s.items.length : 0;
-      if (Number.isFinite(counts.items)) itemsCount = counts.items;
 
       const warnCount = Number.isFinite(counts.warnings) ? counts.warnings : warnings.length;
 
@@ -433,11 +444,15 @@
             .slice(0, 20)
             .map((it) => {
               const key = escapeHtml(it && it.key ? it.key : "");
+              const question = escapeHtml(it && it.question ? it.question : "");
               const dese = escapeHtml(Array.isArray(it && it.dese) ? it.dese.join(", ") : "");
               const iep = escapeHtml(Array.isArray(it && it.iep) ? it.iep.join(", ") : "");
+              const questionDisplay = question
+                ? `${question.length > 80 ? question.slice(0, 80) + "\u2026" : question}<br><span style="opacity:.5; font-size:10px;">${key}</span>`
+                : key;
               return `
                 <tr>
-                  <td style="padding:5px 6px; border-bottom:1px solid rgba(255,255,255,.07); vertical-align:top;">${key}</td>
+                  <td style="padding:5px 6px; border-bottom:1px solid rgba(255,255,255,.07); vertical-align:top;">${questionDisplay}</td>
                   <td style="padding:5px 6px; border-bottom:1px solid rgba(255,255,255,.07); vertical-align:top; opacity:.9;">${dese}</td>
                   <td style="padding:5px 6px; border-bottom:1px solid rgba(255,255,255,.07); vertical-align:top; opacity:.9;">${iep}</td>
                 </tr>
@@ -451,7 +466,7 @@
             ? `
               <table style="width:100%; border-collapse:collapse; font-size:12px;">
                 <thead><tr>
-                  <th style="text-align:left; padding:4px 6px; border-bottom:1px solid rgba(255,255,255,.12); opacity:.7; font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.03em;">Key</th>
+                  <th style="text-align:left; padding:4px 6px; border-bottom:1px solid rgba(255,255,255,.12); opacity:.7; font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.03em;">Question</th>
                   <th style="text-align:left; padding:4px 6px; border-bottom:1px solid rgba(255,255,255,.12); opacity:.7; font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.03em;">DESE</th>
                   <th style="text-align:left; padding:4px 6px; border-bottom:1px solid rgba(255,255,255,.12); opacity:.7; font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.03em;">IEP</th>
                 </tr></thead>
@@ -871,9 +886,10 @@
       currentDay = null;
     };
 
-    const addItem = (key, tags) => {
+    const addItem = (key, tags, question) => {
       if (!cur) startSection("Assignment");
       const item = { key: String(key), dese: uniq(tags?.dese), iep: uniq(tags?.iep) };
+      if (question) item.question = String(question).trim();
       cur.items.push(item);
     };
 
@@ -941,7 +957,7 @@
             };
           }
         }
-        addItem(wpKey, tags);
+        addItem(wpKey, tags, line.trim());
         pendingWR = null;
         continue;
       }
@@ -965,6 +981,8 @@
         const qNum = qm ? qm[1] : "";
         // BUG 3 FIX: Prefix question with day number if in a day section
         const qKey = currentDay ? `D${currentDay}.Q${qNum}` : `Q${qNum}`;
+        // Extract question text: content after the number prefix
+        const qText = qm ? line.slice(line.indexOf(qm[0]) + qm[0].length).replace(/\[[^\]]*\]/g, "").trim() : "";
         let tags = parseTagsFromLine(line);
 
         // BUG 5 FIX: Collect ALL tag lines between questions (not just first)
@@ -981,7 +999,7 @@
           }
         }
 
-        addItem(qKey, tags);
+        addItem(qKey, tags, qText);
         pendingWR = null;
         continue;
       }
