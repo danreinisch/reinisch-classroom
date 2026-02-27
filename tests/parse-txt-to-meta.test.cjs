@@ -122,8 +122,11 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
     // Skip empty lines
     if (!trimmed) continue;
 
+    // Strip decorative dashes wrapping day headers: "--- DAY 1 QUESTIONS ---" → "DAY 1 QUESTIONS"
+    const strippedLine = trimmed.replace(/^-{2,}\s*/, '').replace(/\s*-{2,}$/, '');
+
     // Check for DAY header (trailing content is optional)
-    const dayMatch = trimmed.match(/^DAY\s+(\d+)\b(.*)$/i);
+    const dayMatch = strippedLine.match(/^DAY\s+(\d+)\b(.*)$/i);
     if (dayMatch) {
       // Save previous question to previous day if exists
       if (currentQuestion && currentDay && currentDay.type === 'questions') {
@@ -136,8 +139,8 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
       }
 
       const dayNumber = parseInt(dayMatch[1], 10);
-      let dayLabel = trimmed;
-      const dayType = trimmed.toUpperCase().includes('WRITING PROMPT') ? 'writing_prompt' : 'questions';
+      let dayLabel = strippedLine;
+      const dayType = strippedLine.toUpperCase().includes('WRITING PROMPT') ? 'writing_prompt' : 'questions';
 
       // Check if the next non-empty line is a subtitle
       let nextLineIndex = i + 1;
@@ -148,7 +151,9 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
       if (nextLineIndex < classLines.length) {
         const nextLine = classLines[nextLineIndex].trim();
         // If the next line is not a special marker, it might be a subtitle
-        const isSpecialLine = nextLine.match(/^(Question\s+\d+:|Q\d+:|DESE\s+Standard|IEP\s+Goal|[A-Z]\)|Correct\s+Answer:|ANSWER:|Hint:|Writing\s+Prompt:|Writing\s+Structure:|Hints?:)/i);
+        const nextStripped = nextLine.replace(/^-{2,}\s*/, '').replace(/\s*-{2,}$/, '');
+        const isSpecialLine = nextLine.match(/^(Question\s+\d+:|Q\d+:|DESE\s+Standard|IEP\s+Goal|[A-Z]\)|Correct\s+Answer:|ANSWER:|Hint:|Writing\s+Prompt:|Writing\s+Structure:|Hints?:)/i)
+          || nextStripped.match(/^DAY\s+(\d+)\b/i);
         if (!isSpecialLine && nextLine.length > 0) {
           dayLabel += ' - ' + nextLine;
           i = nextLineIndex;
@@ -526,6 +531,39 @@ ANSWER: A`;
   assert(result !== null, 'Should parse while skipping both IEP Goal formats');
   assert.strictEqual(result.days[0].questions.length, 1, 'Should have 1 question (not IEP lines)');
   assert.strictEqual(result.days[0].questions[0].text, 'Test question?', 'Should parse question text correctly');
+});
+
+// Test 13: Dashed DAY headers from mega-split format
+test('Parse dashed DAY headers from mega-split format', () => {
+  const txtContent = `LA 1 SC
+===
+--- DAY 1 QUESTIONS - Chapter 29: Arrival ---
+
+Question 1: How long did it take the team to reach Okrent-ah?
+A) 20 days; the horses were slow
+B) 47 days; they had many close calls with animals and people
+C) 25 days; the weather was bad
+Correct Answer: B
+
+--- DAY 4 WRITING PROMPT ---
+
+Writing Prompt: What challenges did Alex and his team face?
+Writing Structure:
+- Topic Sentence: State the main idea
+- Supporting Detail 1
+Hints:
+- Use at least ONE compound sentence
+- Use at least THREE transition words`;
+
+  const result = parseTxtToMeta(txtContent, 'Language Arts 1 SC', 'test.txt');
+
+  assert(result !== null, 'Should parse dashed DAY headers');
+  assert.strictEqual(result.days.length, 2, 'Should have 2 days');
+  assert.strictEqual(result.days[0].day_number, 1, 'First day should be day 1');
+  assert.strictEqual(result.days[0].type, 'questions', 'Day 1 should be questions type');
+  assert.strictEqual(result.days[0].questions.length, 1, 'Day 1 should have 1 question');
+  assert.strictEqual(result.days[1].day_number, 4, 'Second day should be day 4');
+  assert.strictEqual(result.days[1].type, 'writing_prompt', 'Day 4 should be writing_prompt type');
 });
 
 console.log('\n✅ All tests passed!');
