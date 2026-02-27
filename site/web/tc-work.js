@@ -1603,6 +1603,12 @@ function sanitizeStudentPreviewText(src) {
     if (/^\s*(Answer|Correct Answer|Correct)\s*[:-]/i.test(line)) continue;
     if (/^\s*Hint\s*:/i.test(line)) continue;
 
+    // Drop DESE standard lines
+    if (/^\s*DESE\s+Standard/i.test(line)) continue;
+
+    // Drop IEP goal lines
+    if (/^\s*IEP\s+Goal/i.test(line)) continue;
+
     // TRUE/FALSE: many keys only include the correct line (e.g., "TRUE ✓").
     // If the stem says TRUE or FALSE and the next non-empty line is just TRUE/FALSE,
     // expand to both options so the student preview doesn't leak the answer.
@@ -1971,8 +1977,8 @@ function normalizeTaggedAssignmentText(input) {
     for (const line of lines) {
       const trimmed = line.trim();
       
-      // Count questions: "Question 1:", "Q1:", "1.", etc.
-      if (/^(?:Question\s+|Q)?\d+\s*[.):-]/i.test(trimmed)) {
+      // Count questions: "Question 1:", "Q1:", etc. (not bare "1." to avoid counting answer choices)
+      if (/^(?:Question\s+)\d+\s*[.):]/i.test(trimmed) || /^Q\d+\s*[.):]/i.test(trimmed)) {
         questions++;
       }
       
