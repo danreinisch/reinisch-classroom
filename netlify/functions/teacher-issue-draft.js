@@ -167,7 +167,8 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
 
       const dayNumber = parseInt(dayMatch[1], 10);
       let dayLabel = strippedLine;
-      const dayType = strippedLine.toUpperCase().includes('WRITING PROMPT') ? 'writing_prompt' : 'questions';
+      const upperLine = strippedLine.toUpperCase();
+      const dayType = (upperLine.includes('WRITING PROMPT') || upperLine.includes('WRITING WORKSHOP') || upperLine.includes('WRITTEN RESPONSE')) ? 'writing_prompt' : 'questions';
 
       // Check if the next non-empty line is a subtitle (not a Question/DESE/IEP/choice/answer line)
       let nextLineIndex = i + 1;
@@ -180,7 +181,7 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
         // If the next line is not a special marker, it might be a subtitle
         // NOTE: This regex pattern is also used in tests/parse-txt-to-meta.test.cjs - keep in sync
         const nextStripped = nextLine.replace(/^-{2,}\s*/, '').replace(/\s*-{2,}$/, '');
-        const isSpecialLine = nextLine.match(/^(Question\s+\d+:|Q\d+:|DESE\s+Standard|IEP\s+Goal|[A-Z]\)|Correct\s+Answer:|ANSWER:|Hint:|Writing\s+Prompt:|Writing\s+Structure:|Hints?:)/i)
+        const isSpecialLine = nextLine.match(/^(Question\s+\d+:|Q\d+:|DESE\s+Standard|IEP\s+Goal|[A-Z][):]|Correct\s+Answer:|ANSWER:|Answer:|Hint:|Writing\s+Prompt:|Writing\s+Structure:|Writing\s+Workshop|REMEMBER\s+YOUR|Hints?(?:\s+FOR)?:)/i)
           || nextStripped.match(/^DAY\s+(\d+)\b/i);
         if (!isSpecialLine && nextLine.length > 0) {
           // This is likely a subtitle, append it to the label
@@ -288,14 +289,14 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
         continue;
       }
 
-      // Check for Writing Structure:
-      if (trimmed.match(/^Writing\s+Structure:/i)) {
+      // Check for Writing Structure: or REMEMBER YOUR WRITING STRUCTURE: or REMEMBER YOUR STRUCTURE:
+      if (trimmed.match(/^(?:REMEMBER\s+YOUR\s+)?(?:WRITING\s+)?STRUCTURE:/i)) {
         currentSection = 'structure';
         continue;
       }
 
-      // Check for Hints:
-      if (trimmed.match(/^Hints?:/i)) {
+      // Check for Hints: or HINTS FOR YOUR RESPONSE: or HINTS FOR YOUR WRITING:
+      if (trimmed.match(/^Hints?(?:\s+FOR\s+YOUR\s+(?:RESPONSE|WRITING))?:/i)) {
         currentSection = 'hints';
         continue;
       }

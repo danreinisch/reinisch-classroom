@@ -140,7 +140,8 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
 
       const dayNumber = parseInt(dayMatch[1], 10);
       let dayLabel = strippedLine;
-      const dayType = strippedLine.toUpperCase().includes('WRITING PROMPT') ? 'writing_prompt' : 'questions';
+      const upperLine = strippedLine.toUpperCase();
+      const dayType = (upperLine.includes('WRITING PROMPT') || upperLine.includes('WRITING WORKSHOP') || upperLine.includes('WRITTEN RESPONSE')) ? 'writing_prompt' : 'questions';
 
       // Check if the next non-empty line is a subtitle
       let nextLineIndex = i + 1;
@@ -152,7 +153,7 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
         const nextLine = classLines[nextLineIndex].trim();
         // If the next line is not a special marker, it might be a subtitle
         const nextStripped = nextLine.replace(/^-{2,}\s*/, '').replace(/\s*-{2,}$/, '');
-        const isSpecialLine = nextLine.match(/^(Question\s+\d+:|Q\d+:|DESE\s+Standard|IEP\s+Goal|[A-Z]\)|Correct\s+Answer:|ANSWER:|Hint:|Writing\s+Prompt:|Writing\s+Structure:|Hints?:)/i)
+        const isSpecialLine = nextLine.match(/^(Question\s+\d+:|Q\d+:|DESE\s+Standard|IEP\s+Goal|[A-Z][):]|Correct\s+Answer:|ANSWER:|Answer:|Hint:|Writing\s+Prompt:|Writing\s+Structure:|Writing\s+Workshop|REMEMBER\s+YOUR|Hints?(?:\s+FOR)?:)/i)
           || nextStripped.match(/^DAY\s+(\d+)\b/i);
         if (!isSpecialLine && nextLine.length > 0) {
           dayLabel += ' - ' + nextLine;
@@ -245,6 +246,39 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
             currentQuestion.text = trimmed;
           }
         }
+      }
+    } else if (currentDay.type === 'writing_prompt') {
+      // Check for Writing Prompt:
+      if (trimmed.match(/^Writing\s+Prompt:/i)) {
+        currentSection = 'prompt';
+        const promptText = trimmed.substring(trimmed.indexOf(':') + 1).trim();
+        if (promptText) {
+          currentDay.prompt = promptText;
+        }
+        continue;
+      }
+
+      // Check for Writing Structure: or REMEMBER YOUR WRITING STRUCTURE: or REMEMBER YOUR STRUCTURE:
+      if (trimmed.match(/^(?:REMEMBER\s+YOUR\s+)?(?:WRITING\s+)?STRUCTURE:/i)) {
+        currentSection = 'structure';
+        continue;
+      }
+
+      // Check for Hints: or HINTS FOR YOUR RESPONSE: or HINTS FOR YOUR WRITING:
+      if (trimmed.match(/^Hints?(?:\s+FOR\s+YOUR\s+(?:RESPONSE|WRITING))?:/i)) {
+        currentSection = 'hints';
+        continue;
+      }
+
+      // Append content based on current section
+      if (currentSection === 'prompt' && currentDay.prompt) {
+        currentDay.prompt += ' ' + trimmed;
+      } else if (currentSection === 'prompt') {
+        currentDay.prompt = trimmed;
+      } else if (currentSection === 'structure' && trimmed.startsWith('-')) {
+        currentDay.structure.push(trimmed.substring(1).trim());
+      } else if (currentSection === 'hints' && trimmed.startsWith('-')) {
+        currentDay.hints.push(trimmed.substring(1).trim());
       }
     }
   }
@@ -618,6 +652,44 @@ Answer: A`;
   assert.strictEqual(result.days[1].questions[0].choices.length, 3, 'Day 2 Q1 should have 3 choices');
   assert.strictEqual(result.days[0].questions[0].correct, 'B', 'Day 1 correct answer');
   assert.strictEqual(result.days[1].questions[0].correct, 'A', 'Day 2 correct answer');
+});
+
+test('Parse WRITING WORKSHOP day type with REMEMBER YOUR WRITING STRUCTURE format', () => {
+  const txtContent = `--- DAY 1: CHAPTER 17 - A WHIRLING DERVISH ---
+
+Q1: Who attacks Alex?
+A: Soldiers
+B: Six highwaymen
+C: Wild animals
+Answer: B
+
+--- DAY 4: WRITING WORKSHOP ---
+
+WRITING PROMPT: Why does Alex agree to hunt the dandra-ta? Use details from Chapter 19.
+
+REMEMBER YOUR WRITING STRUCTURE:
+- Topic Sentence: Tell why Alex agrees
+- Supporting Detail 1: What does Alex need?
+- Conclusion: Restate your main idea
+
+HINTS FOR YOUR RESPONSE:
+- What is blocking Alex's path?
+- What will he get if he wins?
+
+Example start: "Alex agrees to hunt the dandra-ta because he needs to cross the lake."`;
+
+  const result = parseTxtToMeta(txtContent, 'Language Arts 1 SC', 'test.txt');
+
+  assert(result !== null, 'Should parse WRITING WORKSHOP day');
+  assert.strictEqual(result.days.length, 2, 'Should have 2 days');
+  assert.strictEqual(result.days[0].type, 'questions', 'Day 1 should be questions');
+  assert.strictEqual(result.days[0].questions.length, 1, 'Day 1 should have 1 question');
+  assert.strictEqual(result.days[0].questions[0].correct, 'B', 'Day 1 Q1 correct answer');
+  assert.strictEqual(result.days[1].type, 'writing_prompt', 'Day 4 should be writing_prompt');
+  assert.strictEqual(result.days[1].day_number, 4, 'Day 4 number');
+  assert(result.days[1].prompt.includes('dandra-ta'), 'Should capture writing prompt text');
+  assert(result.days[1].structure.length >= 2, 'Should capture at least 2 structure items');
+  assert(result.days[1].hints.length >= 1, 'Should capture at least 1 hint');
 });
 
 console.log('\n✅ All tests passed!');
