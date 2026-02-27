@@ -642,6 +642,11 @@
         const currentNote = answer?.teacher_note || '';
         const maxPoints = item.points || 5;
         
+        // Extract display text from raw_answer (may be stored as { value: "..." } object)
+        const responseText = (typeof studentResponse === 'object' && studentResponse !== null && studentResponse.value !== undefined)
+          ? studentResponse.value
+          : (typeof studentResponse === 'object' && studentResponse !== null ? JSON.stringify(studentResponse, null, 2) : studentResponse);
+        
         // Generate rubric
         const rubricTiers = generateRubricTiers(maxPoints);
         const rubricHtml = rubricTiers.map(tier => `
@@ -666,7 +671,7 @@
             
             <div class="rv-student-response">
               <strong>Student Response:</strong>
-              <div class="rv-response-text">${typeof studentResponse === 'object' ? JSON.stringify(studentResponse, null, 2) : studentResponse}</div>
+              <div class="rv-response-text">${responseText}</div>
             </div>
             
             ${codesHtml}

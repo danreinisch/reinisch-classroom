@@ -959,6 +959,10 @@
     // Feature 11: Vocabulary section
     const vocabHtml = renderVocabularySection(dayData);
     
+    const submitQuestionsHtml = !isReadOnly ? `
+      <button class="st-submit-btn" id="submitQuestionsBtn">Submit Assignment</button>
+    ` : '';
+    
     container.innerHTML = `
       <h3 style="margin-top: 0; margin-bottom: 20px; font-size: 18px;">
         ${escapeHtml(dayData.label)}
@@ -967,6 +971,7 @@
       ${progressHtml}
       ${vocabHtml}
       ${questionsHtml}
+      ${submitQuestionsHtml}
     `;
     
     // Attach choice handlers (only if not read-only)
@@ -1032,6 +1037,44 @@
         }
       });
     });
+    
+    // Attach submit handler for MCQ questions day
+    const submitQuestionsBtn = container.querySelector('#submitQuestionsBtn');
+    if (submitQuestionsBtn) {
+      submitQuestionsBtn.addEventListener('click', async function() {
+        if (!confirm('Are you sure? You won\'t be able to change your answers.')) {
+          return;
+        }
+        
+        this.disabled = true;
+        this.textContent = 'Submitting...';
+        
+        try {
+          await saveAnswersToServer(instance);
+          
+          // Feature 1: Clear saved answers after successful submit
+          clearSavedAnswers(instance.id);
+          
+          this.textContent = '✓ Submitted!';
+          setTimeout(() => {
+            assignmentViewerState.isReadOnly = true;
+            renderQuestionsDay(container, dayData, instance);
+          }, 1000);
+        } catch (err) {
+          console.error(LOG_PREFIX, 'Failed to submit assignment:', err);
+          let errorMsg = container.querySelector('.st-submit-error');
+          if (!errorMsg) {
+            errorMsg = document.createElement('div');
+            errorMsg.className = 'st-submit-error';
+            errorMsg.style.cssText = 'color: #fca5a5; margin-top: 8px; font-size: 14px;';
+            this.parentElement.insertBefore(errorMsg, this.nextSibling);
+          }
+          errorMsg.textContent = 'Failed to submit. Please try again.';
+          this.textContent = 'Submit Assignment';
+          this.disabled = false;
+        }
+      });
+    }
   }
   
   /**
