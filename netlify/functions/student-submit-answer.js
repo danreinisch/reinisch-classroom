@@ -256,8 +256,10 @@ exports.handler = async (event) => {
       }
 
       // Step 7: Create/upsert submission_answers linked to assignment_items with auto-scoring
-      if (submissionId && answers && Object.keys(answers).length > 0 && instance.assignment_id) {
-        const itemsUrl = `${SUPABASE_URL}/rest/v1/assignment_items?assignment_id=eq.${encodeURIComponent(instance.assignment_id)}&select=id,item_ref,answer_type,meta`;
+      const hasAnswers = answers && Object.keys(answers).length > 0;
+      const hasWriting = writing_response && typeof writing_response === 'string' && writing_response.trim().length > 0;
+      if (submissionId && (hasAnswers || hasWriting) && instance.assignment_id) {
+        const itemsUrl = `${SUPABASE_URL}/rest/v1/assignment_items?assignment_id=eq.${encodeURIComponent(instance.assignment_id)}&select=id,item_ref,answer_type,points,meta`;
         const itemsResponse = await fetch(itemsUrl, {
           method: 'GET',
           headers: {
@@ -278,29 +280,50 @@ exports.handler = async (event) => {
 
             // Build submission_answers rows for each answered question
             const subAnswers = [];
-            for (const [itemRef, studentAnswer] of Object.entries(answers)) {
-              const item = itemMap[itemRef];
-              if (!item) continue;
+            if (hasAnswers) {
+              for (const [itemRef, studentAnswer] of Object.entries(answers)) {
+                const item = itemMap[itemRef];
+                if (!item) continue;
 
-              let isCorrect = null;
-              let earnedPoints = null;
-              let maxPoints = null;
+                let isCorrect = null;
+                let earnedPoints = null;
+                let maxPoints = null;
 
-              if (item.answer_type === 'mcq' && item.meta && item.meta.correct) {
-                isCorrect = String(studentAnswer).trim().toUpperCase() === String(item.meta.correct).trim().toUpperCase();
-                maxPoints = 1;
-                earnedPoints = isCorrect ? 1 : 0;
+                if (item.answer_type === 'mcq' && item.meta && item.meta.correct) {
+                  isCorrect = String(studentAnswer).trim().toUpperCase() === String(item.meta.correct).trim().toUpperCase();
+                  maxPoints = 1;
+                  earnedPoints = isCorrect ? 1 : 0;
+                }
+
+                subAnswers.push({
+                  submission_id: submissionId,
+                  assignment_item_id: item.id,
+                  raw_answer: { value: studentAnswer },
+                  is_correct: isCorrect,
+                  earned_points: earnedPoints,
+                  max_points: maxPoints,
+                  scored_at: new Date().toISOString()
+                });
               }
+            }
 
-              subAnswers.push({
-                submission_id: submissionId,
-                assignment_item_id: item.id,
-                raw_answer: { value: studentAnswer },
-                is_correct: isCorrect,
-                earned_points: earnedPoints,
-                max_points: maxPoints,
-                scored_at: new Date().toISOString()
-              });
+            // Add writing response as a constructed submission_answer (requires teacher scoring)
+            if (hasWriting) {
+              const constructedItem = items.find(i => i.answer_type === 'constructed');
+              if (constructedItem) {
+                subAnswers.push({
+                  submission_id: submissionId,
+                  assignment_item_id: constructedItem.id,
+                  raw_answer: { value: writing_response },
+                  is_correct: null,
+                  earned_points: null,
+                  max_points: constructedItem.points != null ? constructedItem.points : null,
+                  scored_at: null
+                });
+                console.log(`[student-submit-answer] [${requestId}] Added writing response submission_answer for item ${constructedItem.item_ref}`);
+              } else {
+                console.warn(`[student-submit-answer] [${requestId}] No constructed assignment_item found for assignment ${instance.assignment_id}; writing_response not linked to submission_answer`);
+              }
             }
 
             if (subAnswers.length > 0) {
