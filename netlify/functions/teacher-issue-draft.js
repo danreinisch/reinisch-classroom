@@ -828,8 +828,8 @@ exports.handler = async (event) => {
 
         if (!itemsResponse.ok) {
           const errorText = await itemsResponse.text();
-          console.warn(`[teacher-issue-draft] [${requestId}] assignment_items upsert failed: ${itemsResponse.status} - ${errorText}`);
-          // Non-fatal: assignment and instances are still created
+          console.error(`[teacher-issue-draft] [${requestId}] assignment_items upsert failed: ${itemsResponse.status} - ${errorText}`);
+          throw new Error(`Failed to create assignment items: ${itemsResponse.status} - ${errorText}`);
         } else {
           console.log(`[teacher-issue-draft] [${requestId}] Successfully upserted ${itemsToUpsert.length} assignment_items`);
         }
