@@ -180,7 +180,7 @@ export async function saveSubmissionAnswers(supabase, submissionId, scoredResult
     // Build submission_answers records
     const answerRecords = scoredResults.map(result => ({
       submission_id: submissionId,
-      item_id: result.item_id,  // Must be provided by caller
+      assignment_item_id: result.item_id,  // Must be provided by caller
       raw_answer: result.raw_answer,
       is_correct: result.is_correct,
       earned_points: result.earned_points,

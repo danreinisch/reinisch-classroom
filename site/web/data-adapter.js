@@ -617,8 +617,9 @@ const local = {
     
     // Enrich with item and mapping data
     return submissionAnswers.map(answer => {
-      const item = items.find(i => i.id === answer.item_id) || {};
-      const mapping = mappings.find(m => m.item_id === answer.item_id) || {};
+      const itemId = answer.assignment_item_id ?? answer.item_id;
+      const item = items.find(i => i.id === itemId) || {};
+      const mapping = mappings.find(m => m.item_id === itemId) || {};
       
       return {
         ...answer,
@@ -641,12 +642,12 @@ const local = {
   async updateSubmissionAnswer({ submissionId, itemId, earnedPoints, teacherNote }) {
     const answers = store.get('submissionAnswers', []);
     const existingIndex = answers.findIndex(
-      a => a.submission_id === submissionId && a.item_id === itemId
+      a => a.submission_id === submissionId && (a.assignment_item_id === itemId || a.item_id === itemId)
     );
     
     const updatedAnswer = {
       submission_id: submissionId,
-      item_id: itemId,
+      assignment_item_id: itemId,
       earned_points: earnedPoints,
       // Note: is_correct is not set for manual grading as it's ambiguous (partial credit, 0-point items, etc.)
       teacher_note: teacherNote || '',
@@ -1893,39 +1894,46 @@ const remote = {
       .from('submission_answers')
       .select(`
         *,
-        assignment_items!inner(
+        assignment_items!assignment_item_id(
           id,
           item_ref,
           answer_type,
           points,
           meta
-        ),
-        assignment_item_mappings(
-          dese_codes,
-          goal_codes,
-          weight
         )
       `)
-      .eq('submission_id', submissionId)
-      .order('item_ref', { foreignTable: 'assignment_items' });
+      .eq('submission_id', submissionId);
     
     if (error) throw error;
     
+    // Fetch mappings separately for items that have them
+    const itemIds = (data || []).map(a => a.assignment_item_id).filter(Boolean);
+    let mappingsByItemId = {};
+    if (itemIds.length > 0) {
+      const { data: mappings } = await supabase
+        .from('assignment_item_mappings')
+        .select('*')
+        .in('item_id', itemIds);
+      (mappings || []).forEach(m => {
+        mappingsByItemId[m.item_id] = m;
+      });
+    }
+    
     // Flatten the nested structure
     return (data || []).map(answer => {
-      const item = answer.assignment_items;
-      const mapping = answer.assignment_item_mappings || {};
+      const item = answer.assignment_items || {};
+      const mapping = mappingsByItemId[answer.assignment_item_id] || {};
       
       return {
         id: answer.id,
         submission_id: answer.submission_id,
-        item_id: answer.item_id,
+        item_id: answer.assignment_item_id,
         raw_answer: answer.raw_answer,
         is_correct: answer.is_correct,
         earned_points: answer.earned_points,
         max_points: answer.max_points,
         teacher_note: answer.teacher_note,
-        created_at: answer.created_at,
+        scored_at: answer.scored_at,
         item_ref: item.item_ref,
         answer_type: item.answer_type,
         points: item.points,
@@ -1950,12 +1958,12 @@ const remote = {
       .from('submission_answers')
       .upsert({
         submission_id: submissionId,
-        item_id: itemId,
+        assignment_item_id: itemId,
         earned_points: earnedPoints,
         // Note: is_correct is not set for manual grading as it's ambiguous (partial credit, 0-point items, etc.)
         teacher_note: teacherNote || null
       }, {
-        onConflict: 'submission_id,item_id'
+        onConflict: 'submission_id,assignment_item_id'
       })
       .select()
       .single();
