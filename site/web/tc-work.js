@@ -915,7 +915,7 @@
     // BUG 3 FIX: Detect day headers
     const isDayLine = (line) => /^\s*DAY\s+(\d+)\b/i.test(line);
     // BUG 4 FIX: Detect writing prompt lines
-    const isWritingPromptLine = (line) => /^\s*(?:DAY\s+\d+\s+)?WRITING\s+PROMPT\b/i.test(line);
+    const isWritingPromptLine = (line) => /^\s*(?:DAY\s+\d+[\s:]*)?WRITING\s+(?:PROMPT|WORKSHOP)\b/i.test(line);
     const isWrittenResponseLine = (line) => /^\s*WRITTEN\s+RESPONSE\b/i.test(line);
     const isTagLine = (line) =>
       /\[[^\]]+\]/.test(line) &&

@@ -874,6 +874,15 @@
       renderQuestionsDay(dayContent, dayData, instance);
     } else if (dayData.type === 'writing_prompt') {
       renderWritingPromptDay(dayContent, dayData, instance);
+    } else {
+      // Fallback for unrecognized day types
+      dayContent.innerHTML = `
+        <div style="text-align: center; padding: 40px 24px;">
+          <div style="font-size: 48px; margin-bottom: 16px;">📋</div>
+          <h3 style="margin: 0 0 8px 0;">${escapeHtml(dayData.label || 'Day ' + dayData.day_number)}</h3>
+          <p style="opacity: 0.7; margin: 0;">This day's content could not be loaded. Your teacher may need to re-issue this assignment.</p>
+        </div>
+      `;
     }
   }
   
@@ -1029,6 +1038,18 @@
    * Render writing prompt day
    */
   function renderWritingPromptDay(container, dayData, instance) {
+    // Graceful fallback if writing prompt data is missing or empty
+    if (!dayData.prompt && (!dayData.structure || dayData.structure.length === 0)) {
+      container.innerHTML = `
+        <div style="text-align: center; padding: 40px 24px;">
+          <div style="font-size: 48px; margin-bottom: 16px;">✍️</div>
+          <h3 style="margin: 0 0 8px 0;">${escapeHtml(dayData.label || 'Writing Day')}</h3>
+          <p style="opacity: 0.7; margin: 0;">The writing prompt for this day hasn't been loaded yet. Your teacher may need to re-issue this assignment to include the prompt content.</p>
+        </div>
+      `;
+      return;
+    }
+
     const isReadOnly = assignmentViewerState.isReadOnly;
     
     const structureHtml = dayData.structure && dayData.structure.length > 0 ? `
