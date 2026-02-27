@@ -682,13 +682,14 @@
     const isReadOnly = instance.status === 'Submitted' || instance.status === 'Graded';
     assignmentViewerState.isReadOnly = isReadOnly;
     
-    // Feature 1: Load saved answers from instance settings if in read-only mode
-    if (isReadOnly && instance.settings && instance.settings.answers) {
+    // Feature 1: Load saved answers from instance settings
+    if (instance.settings && instance.settings.answers) {
       Object.entries(instance.settings.answers).forEach(([key, value]) => {
         assignmentViewerState.answers.set(key, value);
       });
-    } else if (!isReadOnly) {
-      // Feature 1: Load saved answers from localStorage for in-progress assignments
+    }
+    if (!isReadOnly) {
+      // Feature 1: Load saved answers from localStorage for in-progress assignments (overrides server)
       const savedAnswers = getSavedAnswers(instance.id);
       if (savedAnswers) {
         console.log(LOG_PREFIX, 'Resuming progress from localStorage');
