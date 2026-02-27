@@ -149,8 +149,11 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
     // Skip empty lines
     if (!trimmed) continue;
 
+    // Strip decorative dashes wrapping day headers: "--- DAY 1 QUESTIONS ---" → "DAY 1 QUESTIONS"
+    const strippedLine = trimmed.replace(/^-{2,}\s*/, '').replace(/\s*-{2,}$/, '');
+
     // Check for DAY header (trailing content is optional)
-    const dayMatch = trimmed.match(/^DAY\s+(\d+)\b(.*)$/i);
+    const dayMatch = strippedLine.match(/^DAY\s+(\d+)\b(.*)$/i);
     if (dayMatch) {
       // Save previous question to previous day if exists
       if (currentQuestion && currentDay && currentDay.type === 'questions') {
@@ -163,8 +166,8 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
       }
 
       const dayNumber = parseInt(dayMatch[1], 10);
-      let dayLabel = trimmed;
-      const dayType = trimmed.toUpperCase().includes('WRITING PROMPT') ? 'writing_prompt' : 'questions';
+      let dayLabel = strippedLine;
+      const dayType = strippedLine.toUpperCase().includes('WRITING PROMPT') ? 'writing_prompt' : 'questions';
 
       // Check if the next non-empty line is a subtitle (not a Question/DESE/IEP/choice/answer line)
       let nextLineIndex = i + 1;
@@ -176,7 +179,9 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
         const nextLine = classLines[nextLineIndex].trim();
         // If the next line is not a special marker, it might be a subtitle
         // NOTE: This regex pattern is also used in tests/parse-txt-to-meta.test.cjs - keep in sync
-        const isSpecialLine = nextLine.match(/^(Question\s+\d+:|Q\d+:|DESE\s+Standard|IEP\s+Goal|[A-Z]\)|Correct\s+Answer:|ANSWER:|Hint:|Writing\s+Prompt:|Writing\s+Structure:|Hints?:)/i);
+        const nextStripped = nextLine.replace(/^-{2,}\s*/, '').replace(/\s*-{2,}$/, '');
+        const isSpecialLine = nextLine.match(/^(Question\s+\d+:|Q\d+:|DESE\s+Standard|IEP\s+Goal|[A-Z]\)|Correct\s+Answer:|ANSWER:|Hint:|Writing\s+Prompt:|Writing\s+Structure:|Hints?:)/i)
+          || nextStripped.match(/^DAY\s+(\d+)\b/i);
         if (!isSpecialLine && nextLine.length > 0) {
           // This is likely a subtitle, append it to the label
           dayLabel += ' - ' + nextLine;
