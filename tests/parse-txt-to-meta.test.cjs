@@ -213,8 +213,8 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
       }
 
       if (currentQuestion) {
-        // Check for choices
-        const choiceMatch = trimmed.match(/^([A-Z])\)\s*(.*)$/);
+        // Check for choices (A), B), C), etc. or A:, B:, C:, etc.)
+        const choiceMatch = trimmed.match(/^([A-Z])[):]\s*(.*)$/);
         if (choiceMatch) {
           currentQuestion.choices.push({
             letter: choiceMatch[1],
@@ -223,8 +223,8 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
           continue;
         }
 
-        // Check for Correct Answer: or ANSWER:
-        const correctMatch = trimmed.match(/^(?:Correct\s+Answer|ANSWER):\s*([A-Z])/i);
+        // Check for Correct Answer:, ANSWER:, or Answer:
+        const correctMatch = trimmed.match(/^(?:Correct\s+)?Answer:\s*([A-Z])/i);
         if (correctMatch) {
           currentQuestion.correct = correctMatch[1];
           continue;
@@ -564,6 +564,60 @@ Hints:
   assert.strictEqual(result.days[0].questions.length, 1, 'Day 1 should have 1 question');
   assert.strictEqual(result.days[1].day_number, 4, 'Second day should be day 4');
   assert.strictEqual(result.days[1].type, 'writing_prompt', 'Day 4 should be writing_prompt type');
+});
+
+test('Parse A: colon-format choices', () => {
+  const txtContent = `DAY 1 QUESTIONS
+
+Q1: How many highwaymen attack Alex and his group?
+A: Four
+B: Six
+C: Ten
+Answer: B
+
+Q2: What weapon does Werda-ak use?
+A: A sword
+B: A bow
+C: A spear
+Answer: C`;
+
+  const result = parseTxtToMeta(txtContent, 'Language Arts 3 SC', 'test.txt');
+
+  assert(result !== null, 'Should parse A: colon-format choices');
+  assert.strictEqual(result.days.length, 1, 'Should have 1 day');
+  assert.strictEqual(result.days[0].questions.length, 2, 'Should have 2 questions');
+  assert.strictEqual(result.days[0].questions[0].choices.length, 3, 'Q1 should have 3 choices');
+  assert.strictEqual(result.days[0].questions[0].choices[0].letter, 'A', 'First choice letter should be A');
+  assert.strictEqual(result.days[0].questions[0].choices[0].text, 'Four', 'First choice text should be Four');
+  assert.strictEqual(result.days[0].questions[0].correct, 'B', 'Q1 correct answer should be B');
+  assert.strictEqual(result.days[0].questions[1].choices.length, 3, 'Q2 should have 3 choices');
+  assert.strictEqual(result.days[0].questions[1].correct, 'C', 'Q2 correct answer should be C');
+});
+
+test('Parse mixed A) and A: format choices', () => {
+  const txtContent = `DAY 1 QUESTIONS
+
+Question 1: What is the capital?
+A) Paris
+B) London
+Correct Answer: B
+
+DAY 2 QUESTIONS
+
+Q1: What color is the sky?
+A: Blue
+B: Red
+C: Green
+Answer: A`;
+
+  const result = parseTxtToMeta(txtContent, 'Language Arts 3 SC', 'test.txt');
+
+  assert(result !== null, 'Should parse mixed format choices');
+  assert.strictEqual(result.days.length, 2, 'Should have 2 days');
+  assert.strictEqual(result.days[0].questions[0].choices.length, 2, 'Day 1 Q1 should have 2 choices');
+  assert.strictEqual(result.days[1].questions[0].choices.length, 3, 'Day 2 Q1 should have 3 choices');
+  assert.strictEqual(result.days[0].questions[0].correct, 'B', 'Day 1 correct answer');
+  assert.strictEqual(result.days[1].questions[0].correct, 'A', 'Day 2 correct answer');
 });
 
 console.log('\n✅ All tests passed!');

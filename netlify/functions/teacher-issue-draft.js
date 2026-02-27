@@ -244,8 +244,8 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
       }
 
       if (currentQuestion) {
-        // Check for choices (A), B), C), etc.)
-        const choiceMatch = trimmed.match(/^([A-Z])\)\s*(.*)$/);
+        // Check for choices (A), B), C), etc. or A:, B:, C:, etc.)
+        const choiceMatch = trimmed.match(/^([A-Z])[):]\s*(.*)$/);
         if (choiceMatch) {
           currentQuestion.choices.push({
             letter: choiceMatch[1],
@@ -254,8 +254,8 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
           continue;
         }
 
-        // Check for Correct Answer: or ANSWER:
-        const correctMatch = trimmed.match(/^(?:Correct\s+Answer|ANSWER):\s*([A-Z])/i);
+        // Check for Correct Answer:, ANSWER:, or Answer:
+        const correctMatch = trimmed.match(/^(?:Correct\s+)?Answer:\s*([A-Z])/i);
         if (correctMatch) {
           currentQuestion.correct = correctMatch[1];
           continue;
