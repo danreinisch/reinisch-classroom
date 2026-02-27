@@ -1482,6 +1482,11 @@
       throw new Error('No student code in session');
     }
     
+    const answersObj = {};
+    assignmentViewerState.answers.forEach((value, key) => {
+      answersObj[key] = value;
+    });
+
     const response = await fetch('/.netlify/functions/student-submit-answer', {
       method: 'POST',
       headers: {
@@ -1490,7 +1495,8 @@
       body: JSON.stringify({
         instance_id: instance.id,
         student_code: studentCode,
-        writing_response: writingResponse
+        writing_response: writingResponse,
+        answers: answersObj
       })
     });
     
