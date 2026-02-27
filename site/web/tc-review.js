@@ -29,6 +29,8 @@
   const DOT_SVG = '<svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor" aria-hidden="true"><circle cx="5" cy="5" r="5"/></svg>';
   const INBOX_SVG = '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="opacity:0.4"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"></polyline><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path></svg>';
 
+  const ARCHIVE_SUBMISSION_URL = '/.netlify/functions/teacher-archive-submission';
+
   const $ = (id) => document.getElementById(id);
 
   // Helper to format date as readable string
@@ -1023,6 +1025,23 @@
         await db.finalizeSubmission(submission.id, { scoreManual, scoreTotal });
         await triggerGoalProgressUpdates(submission.id, items, answers);
 
+        // Archive submission for DESE compliance (non-fatal)
+        try {
+        const archiveRes = await fetch(ARCHIVE_SUBMISSION_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ submission_id: submission.id }),
+          });
+          const archiveData = await archiveRes.json();
+          if (!archiveData.ok) {
+            console.warn('[tc-review] Archive returned non-ok:', archiveData);
+          } else {
+            console.log('[tc-review] Archived submission:', archiveData.archive_id);
+          }
+        } catch (archiveErr) {
+          console.warn('[tc-review] Archive failed (non-fatal):', archiveErr);
+        }
+
         submission.score_manual = scoreManual;
         submission.score_total = scoreTotal;
         submission.review_status = 'reviewed';
@@ -1177,6 +1196,23 @@
       
       // Trigger goal progress updates
       await triggerGoalProgressUpdates(submissionId, items, answers);
+
+      // Archive submission for DESE compliance (non-fatal)
+      try {
+        const archiveRes = await fetch(ARCHIVE_SUBMISSION_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ submission_id: submissionId }),
+        });
+        const archiveData = await archiveRes.json();
+        if (!archiveData.ok) {
+          console.warn('[tc-review] Archive returned non-ok:', archiveData);
+        } else {
+          console.log('[tc-review] Archived submission:', archiveData.archive_id);
+        }
+      } catch (archiveErr) {
+        console.warn('[tc-review] Archive failed (non-fatal):', archiveErr);
+      }
       
       // Update local cache
       if (submission) {
