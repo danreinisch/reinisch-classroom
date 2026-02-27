@@ -144,7 +144,7 @@ exports.handler = async (event) => {
     const currentSettings = instance.settings || {};
     const updatedSettings = {
       ...currentSettings,
-      answers: answers || currentSettings.answers || {},
+      answers: (answers && Object.keys(answers).length > 0) ? answers : (currentSettings.answers || {}),
       writing_response: writing_response || currentSettings.writing_response || '',
       submitted_at: new Date().toISOString()
     };
