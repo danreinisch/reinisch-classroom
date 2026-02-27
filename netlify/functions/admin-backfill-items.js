@@ -98,12 +98,15 @@ exports.handler = async (event) => {
     return jsonResponse(event, 400, { ok: false, error: 'Invalid JSON body' }, {}, requestId);
   }
 
-  const { assignment_id } = body;
+  const { assignment_id, force } = body;
+
+  // force flag only applies when a specific assignment_id is given
+  const forceRebuild = force === true && assignment_id != null;
 
   try {
     // Fetch assignments to process
     let assignmentsUrl;
-    if (assignment_id !== undefined && assignment_id !== null) {
+    if (assignment_id != null) {
       assignmentsUrl = `${SUPABASE_URL}/rest/v1/assignments?id=eq.${encodeURIComponent(assignment_id)}&select=id,meta`;
     } else {
       // All assignments — we'll filter below to only those missing items
@@ -153,9 +156,30 @@ exports.handler = async (event) => {
       const existingItems = await existingRes.json();
 
       if (existingItems.length > 0) {
-        console.log(`[admin-backfill-items] [${requestId}] Assignment ${aId} already has items, skipping`);
-        results.push({ assignment_id: aId, skipped: true, reason: 'already has items' });
-        continue;
+        if (forceRebuild) {
+          // Delete existing items so they can be re-inserted from meta
+          console.log(`[admin-backfill-items] [${requestId}] Force rebuild: deleting ${existingItems.length} existing item(s) for assignment ${aId}`);
+          const deleteRes = await fetch(
+            `${SUPABASE_URL}/rest/v1/assignment_items?assignment_id=eq.${aId}`,
+            {
+              method: 'DELETE',
+              headers: {
+                'apikey': SUPABASE_SERVICE_ROLE_KEY,
+                'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+              },
+            }
+          );
+          if (!deleteRes.ok) {
+            const errorText = await deleteRes.text();
+            console.error(`[admin-backfill-items] [${requestId}] Delete failed for assignment ${aId}: ${deleteRes.status} - ${errorText}`);
+            results.push({ assignment_id: aId, error: `delete failed: ${deleteRes.status}` });
+            continue;
+          }
+        } else {
+          console.log(`[admin-backfill-items] [${requestId}] Assignment ${aId} already has items, skipping`);
+          results.push({ assignment_id: aId, skipped: true, reason: 'already has items' });
+          continue;
+        }
       }
 
       // Build items from meta
@@ -184,8 +208,8 @@ exports.handler = async (event) => {
         console.error(`[admin-backfill-items] [${requestId}] Upsert failed for assignment ${aId}: ${upsertRes.status} - ${errorText}`);
         results.push({ assignment_id: aId, error: `upsert failed: ${upsertRes.status}` });
       } else {
-        console.log(`[admin-backfill-items] [${requestId}] Backfilled ${itemsToUpsert.length} items for assignment ${aId}`);
-        results.push({ assignment_id: aId, items_created: itemsToUpsert.length });
+        console.log(`[admin-backfill-items] [${requestId}] ${forceRebuild ? 'Force-rebuilt' : 'Backfilled'} ${itemsToUpsert.length} items for assignment ${aId}`);
+        results.push({ assignment_id: aId, items_created: itemsToUpsert.length, ...(forceRebuild ? { forced: true } : {}) });
       }
     }
 
