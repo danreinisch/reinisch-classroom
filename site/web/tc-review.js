@@ -848,8 +848,7 @@
       </div>
     `;
     
-    // Grading section — computed score summary + quick grade + feedback
-    const halfCredit = totalMax > 0 ? Math.round(totalMax / 2) : 0;
+    // Grading section — computed score summary + feedback
     const gradeSummaryDisplay = allItemsScored && totalMax > 0
       ? `<span class="${scoreColorClass(totalPercent)}" style="font-size:18px;font-weight:700;">${totalEarned}/${totalMax} — ${totalPercent}%</span>`
       : `<span style="font-size:18px;font-weight:700;font-family:monospace;">___/${totalMax} — ___%</span>`;
@@ -862,13 +861,6 @@
         <div style="margin-bottom:12px;padding:12px;background:rgba(255,255,255,0.04);border-radius:var(--rc-radius);border:1px solid var(--rc-glass-border);">
           ${gradeSummaryDisplay}
         </div>
-        ${totalMax > 0 ? `
-        <div class="rv-quick-grade" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
-          <button class="rv-btn rv-btn-quickgrade" data-score="${totalMax}" data-submission-id="${submission.id}">${CHECK_SVG} Full Credit (${totalMax}/${totalMax})</button>
-          <button class="rv-btn rv-btn-quickgrade" data-score="${halfCredit}" data-submission-id="${submission.id}">${HALF_SVG} Half Credit (${halfCredit}/${totalMax})</button>
-          <button class="rv-btn rv-btn-quickgrade" data-score="0" data-submission-id="${submission.id}">${X_SVG} No Credit (0/${totalMax})</button>
-        </div>
-        ` : ''}
         <div class="rv-note-input-group">
           <label>Feedback:</label>
           <textarea class="rv-grade-feedback-input rv-note-input" rows="3"
@@ -1021,13 +1013,6 @@
         const saveBtn = e.target.closest('.rv-btn-save-item');
         if (saveBtn) {
           await handleSaveScore(saveBtn);
-          return;
-        }
-
-        // Handle quick-grade buttons (save grade directly with the given score)
-        const quickBtn = e.target.closest('.rv-btn-quickgrade');
-        if (quickBtn) {
-          await handleQuickGrade(quickBtn);
           return;
         }
 
@@ -1533,46 +1518,6 @@
     msg.style.cssText = `position:fixed;bottom:24px;right:24px;background:${bg};color:${color};padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;z-index:9999;`;
     document.body.appendChild(msg);
     setTimeout(() => msg.remove(), 2500);
-  }
-
-  // Apply a quick-grade (full/half/no credit) and save immediately
-  async function handleQuickGrade(button) {
-    const scoreManual = parseInt(button.dataset.score, 10);
-    const submissionId = button.dataset.submissionId;
-    const feedbackInput = document.querySelector(`.rv-grade-feedback-input[data-submission-id="${submissionId}"]`);
-    const feedback = feedbackInput ? feedbackInput.value.trim() : '';
-    const gradedAt = new Date().toISOString();
-    const gradedBy = localStorage.getItem('rc_teacher_name') || '';
-
-    button.disabled = true;
-    try {
-      await db.upsertSubmission({
-        id: submissionId,
-        score_manual: scoreManual,
-        status: 'Graded',
-        graded_at: gradedAt,
-        graded_by: gradedBy,
-        feedback
-      });
-
-      const submission = submissionsData.find(s => s.id === submissionId);
-      if (submission) {
-        submission.score_manual = scoreManual;
-        submission.review_status = 'reviewed';
-        submission.graded_at = gradedAt;
-        submission.graded_by = gradedBy;
-        submission.feedback = feedback;
-      }
-
-      showToast('Grade saved!', '#22c55e', '#0b1220');
-      expandedSubmissions.add(submissionId);
-      await render();
-    } catch (err) {
-      console.error('[tc-review] Error saving quick grade:', err);
-      showToast('Error saving grade', '#ef4444', '#fff');
-    } finally {
-      button.disabled = false;
-    }
   }
 
   // Save an overall manual grade (score_manual) computed from per-item scores + feedback
