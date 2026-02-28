@@ -286,6 +286,7 @@
 
   // Get or fetch assignment items for an assignment
   async function getAssignmentItemsForAssignment(assignmentId) {
+    if (!assignmentId) return [];
     if (assignmentItemsCache[assignmentId]) {
       return assignmentItemsCache[assignmentId];
     }
@@ -331,6 +332,7 @@
    * Returns the fresh items array. Throws on failure.
    */
   async function ensureRealItems(assignmentId) {
+    if (!assignmentId) return [];
     if (!syntheticAssignmentIds.has(assignmentId)) {
       return assignmentItemsCache[assignmentId] || await getAssignmentItemsForAssignment(assignmentId);
     }
@@ -432,24 +434,40 @@
 
     const virtualAnswers = [];
     for (const item of items) {
-      if (item.answer_type !== 'mcq' && item.answer_type !== 'boolean' && item.answer_type !== 'multi') continue;
-      const ref = item.item_ref || item.ref;
-      if (!ref) continue;
+      if (item.answer_type === 'mcq' || item.answer_type === 'boolean' || item.answer_type === 'multi') {
+        const ref = item.item_ref || item.ref;
+        if (!ref) continue;
 
-      const studentAnswer = rawAnswers[ref];
-      if (studentAnswer === undefined) continue;
+        const studentAnswer = rawAnswers[ref];
+        if (studentAnswer === undefined) continue;
 
-      const correctAnswer = item.meta?.correct ?? item.correct;
-      const isCorrect = correctAnswer !== undefined && String(studentAnswer) === String(correctAnswer);
-      const points = item.points || 0;
+        const correctAnswer = item.meta?.correct ?? item.correct;
+        const isCorrect = correctAnswer !== undefined && String(studentAnswer) === String(correctAnswer);
+        const points = item.points || 0;
 
-      virtualAnswers.push({
-        item_id: item.id,
-        raw_answer: studentAnswer,
-        is_correct: isCorrect,
-        earned_points: isCorrect ? points : 0,
-        max_points: points,
-      });
+        virtualAnswers.push({
+          item_id: item.id,
+          raw_answer: studentAnswer,
+          is_correct: isCorrect,
+          earned_points: isCorrect ? points : 0,
+          max_points: points,
+        });
+        continue;
+      }
+
+      // Handle constructed (writing) items — pull response from instance settings
+      if (item.answer_type === 'constructed') {
+        const writingResponse = submission.instance?.settings?.writing_response;
+        if (writingResponse) {
+          virtualAnswers.push({
+            item_id: item.id,
+            raw_answer: { value: writingResponse },
+            is_correct: null,
+            earned_points: null,
+            max_points: item.points || 0,
+          });
+        }
+      }
     }
     return virtualAnswers;
   }
@@ -847,7 +865,6 @@
                 <input type="number" 
                        class="rv-score-input" 
                        min="0" 
-                       max="${maxPoints}" 
                        value="${currentScore}"
                        data-item-id="${item.id}"
                        data-submission-id="${submission.id}">
@@ -976,6 +993,12 @@
     `;
     
     return `
+      <div class="rv-section" style="margin-bottom:8px;">
+        <a href="/teacher/work/?highlight=${encodeURIComponent(assignmentId)}" target="_blank" rel="noopener"
+           style="font-size:13px;color:var(--rc-accent);text-decoration:none;">
+          🔗 View Full Assignment
+        </a>
+      </div>
       ${syntheticAssignmentIds.has(assignmentId) ? `
         <div class="rv-section" style="background:rgba(234,179,8,0.08);border:1px solid rgba(234,179,8,0.3);border-radius:var(--rc-radius);padding:10px 14px;margin-bottom:12px;font-size:13px;color:#ca8a04;">
           ℹ️ Items were reconstructed from assignment metadata. Run backfill to persist.
