@@ -31,6 +31,7 @@
 
   const ARCHIVE_SUBMISSION_URL = '/.netlify/functions/teacher-archive-submission';
   const BACKFILL_ITEMS_URL = '/.netlify/functions/admin-backfill-items';
+  const SYNTHETIC_ID_PREFIX = 'synthetic_';
 
   const $ = (id) => document.getElementById(id);
 
@@ -364,7 +365,7 @@
         for (const q of day.questions) {
           const item_ref = `${day.day_number}_${q.number}`;
           items.push({
-            id: `synthetic_${item_ref}`,
+            id: `${SYNTHETIC_ID_PREFIX}${item_ref}`,
             assignment_id: assignmentId,
             item_ref,
             answer_type: 'mcq',
@@ -384,7 +385,7 @@
       } else if (day.type === 'writing_prompt') {
         const item_ref = `WP_${day.day_number}`;
         items.push({
-          id: `synthetic_${item_ref}`,
+          id: `${SYNTHETIC_ID_PREFIX}${item_ref}`,
           assignment_id: assignmentId,
           item_ref,
           answer_type: 'constructed',
@@ -440,7 +441,7 @@
 
       const correctAnswer = item.meta?.correct ?? item.correct;
       const isCorrect = correctAnswer !== undefined && String(studentAnswer) === String(correctAnswer);
-      const points = item.points || 1;
+      const points = item.points || 0;
 
       virtualAnswers.push({
         item_id: item.id,
@@ -688,8 +689,8 @@
     // Bug C fix: if items are synthetic, trigger backfill in the background so subsequent
     // saves use real bigint IDs. Non-blocking — re-render after completion.
     if (syntheticAssignmentIds.has(assignmentId)) {
-      ensureRealItems(assignmentId).then(freshItems => {
-        if (freshItems.length > 0 && !syntheticAssignmentIds.has(assignmentId) && expandedSubmissions.has(submissionId)) {
+      ensureRealItems(assignmentId).then(() => {
+        if (!syntheticAssignmentIds.has(assignmentId) && expandedSubmissions.has(submissionId)) {
           delete submissionAnswersCache[submissionId];
           render();
         }
@@ -1251,15 +1252,15 @@
     // Bug A fix: synthetic item IDs (e.g. "synthetic_WP_4") cannot be stored as bigint.
     // Backfill the assignment first, then resolve to the real DB item ID.
     let resolvedItemId = itemId;
-    if (itemId && String(itemId).startsWith('synthetic_')) {
+    if (itemId && String(itemId).startsWith(SYNTHETIC_ID_PREFIX)) {
       const submission = submissionsData.find(s => s.id === submissionId);
       const assignmentId = submission?.assignment_id;
-      const itemRef = String(itemId).replace(/^synthetic_/, '');
+      const itemRef = String(itemId).slice(SYNTHETIC_ID_PREFIX.length);
       try {
         if (statusSpan) { statusSpan.textContent = 'Backfilling…'; statusSpan.className = 'rv-save-status'; }
         const freshItems = await ensureRealItems(assignmentId);
         const realItem = freshItems.find(i => (i.item_ref || i.ref) === itemRef);
-        if (!realItem || String(realItem.id).startsWith('synthetic_')) {
+        if (!realItem || String(realItem.id).startsWith(SYNTHETIC_ID_PREFIX)) {
           if (statusSpan) { statusSpan.textContent = 'Error'; statusSpan.className = 'rv-save-status error'; }
           showToast('Could not get real item IDs. Please try again.', '#ef4444', '#fff');
           return;
