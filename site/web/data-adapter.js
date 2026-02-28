@@ -1959,9 +1959,8 @@ const remote = {
       .upsert({
         submission_id: submissionId,
         assignment_item_id: itemId,
-        earned_points: earnedPoints,
+        earned_points: earnedPoints
         // Note: is_correct is not set for manual grading as it's ambiguous (partial credit, 0-point items, etc.)
-        teacher_note: teacherNote || null
       }, {
         onConflict: 'submission_id,assignment_item_id'
       })
