@@ -30,6 +30,7 @@
   const INBOX_SVG = '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="opacity:0.4"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"></polyline><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path></svg>';
 
   const ARCHIVE_SUBMISSION_URL = '/.netlify/functions/teacher-archive-submission';
+  const BACKFILL_ITEMS_URL = '/.netlify/functions/admin-backfill-items';
 
   const $ = (id) => document.getElementById(id);
 
@@ -324,6 +325,32 @@
   }
 
   /**
+   * Ensure real (persisted) assignment items exist for assignmentId.
+   * If items are currently synthetic, triggers backfill, clears cache, and re-fetches.
+   * Returns the fresh items array. Throws on failure.
+   */
+  async function ensureRealItems(assignmentId) {
+    if (!syntheticAssignmentIds.has(assignmentId)) {
+      return assignmentItemsCache[assignmentId] || await getAssignmentItemsForAssignment(assignmentId);
+    }
+
+    const res = await fetch(BACKFILL_ITEMS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ assignment_id: assignmentId })
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || `Backfill failed: ${res.status}`);
+    }
+
+    // Clear stale synthetic cache and re-fetch real items from DB
+    delete assignmentItemsCache[assignmentId];
+    syntheticAssignmentIds.delete(assignmentId);
+    return await getAssignmentItemsForAssignment(assignmentId);
+  }
+
+  /**
    * Build synthetic assignment_items from assignment meta.
    * Mirrors buildItemsFromMeta in admin-backfill-items.js.
    * Items get id = "synthetic_" + item_ref so they are distinguishable from real DB rows.
@@ -391,6 +418,39 @@
       console.error('[tc-review] Error loading submission answers:', err);
       return [];
     }
+  }
+
+  /**
+   * Reconstruct virtual answer objects from raw submission.answers JSONB for display.
+   * Used when submission_answers rows are absent (backfill not yet run).
+   * Returns display-only answer objects — NOT cached in submissionAnswersCache.
+   */
+  function reconstructAnswersFromSubmission(submission, items) {
+    const rawAnswers = submission.answers;
+    if (!rawAnswers || typeof rawAnswers !== 'object') return [];
+
+    const virtualAnswers = [];
+    for (const item of items) {
+      if (item.answer_type !== 'mcq' && item.answer_type !== 'boolean' && item.answer_type !== 'multi') continue;
+      const ref = item.item_ref || item.ref;
+      if (!ref) continue;
+
+      const studentAnswer = rawAnswers[ref];
+      if (studentAnswer === undefined) continue;
+
+      const correctAnswer = item.meta?.correct ?? item.correct;
+      const isCorrect = correctAnswer !== undefined && String(studentAnswer) === String(correctAnswer);
+      const points = item.points || 1;
+
+      virtualAnswers.push({
+        item_id: item.id,
+        raw_answer: studentAnswer,
+        is_correct: isCorrect,
+        earned_points: isCorrect ? points : 0,
+        max_points: points,
+      });
+    }
+    return virtualAnswers;
   }
 
   // Generate rubric tiers based on max points
@@ -618,6 +678,25 @@
     // Load items and answers
     const items = await getAssignmentItemsForAssignment(assignmentId);
     const answers = await getSubmissionAnswers(submissionId);
+
+    // Bug B fix: if DB has no submission_answers rows but the submission carries raw JSONB answers,
+    // reconstruct virtual display-only answer objects so auto-graded scores show correctly.
+    const displayAnswers = (answers.length === 0 && submission.answers && typeof submission.answers === 'object')
+      ? reconstructAnswersFromSubmission(submission, items)
+      : answers;
+
+    // Bug C fix: if items are synthetic, trigger backfill in the background so subsequent
+    // saves use real bigint IDs. Non-blocking — re-render after completion.
+    if (syntheticAssignmentIds.has(assignmentId)) {
+      ensureRealItems(assignmentId).then(freshItems => {
+        if (freshItems.length > 0 && !syntheticAssignmentIds.has(assignmentId) && expandedSubmissions.has(submissionId)) {
+          delete submissionAnswersCache[submissionId];
+          render();
+        }
+      }).catch(err => {
+        console.warn('[tc-review] Background backfill failed:', err);
+      });
+    }
     
     // Separate auto-graded and constructed items
     const autoGradedItems = items.filter(item => 
@@ -632,7 +711,7 @@
     let autoCorrect = 0;
     let autoTotal = autoGradedItems.length;
     autoGradedItems.forEach(item => {
-      const answer = answers.find(a => a.item_id === item.id);
+      const answer = displayAnswers.find(a => a.item_id === item.id);
       if (answer && answer.is_correct) {
         autoCorrect++;
       }
@@ -643,7 +722,7 @@
     let manualEarned = 0;
     let manualMax = 0;
     constructedItems.forEach(item => {
-      const answer = answers.find(a => a.item_id === item.id);
+      const answer = displayAnswers.find(a => a.item_id === item.id);
       manualMax += item.points || 0;
       if (answer && answer.earned_points != null) {
         manualScored++;
@@ -660,7 +739,7 @@
     if (autoGradedItems.length > 0) {
       const autoPercent = autoTotal > 0 ? Math.round((autoCorrect / autoTotal) * 100) : 0;
       const autoRows = autoGradedItems.map(item => {
-        const answer = answers.find(a => a.item_id === item.id);
+        const answer = displayAnswers.find(a => a.item_id === item.id);
         const correctAnswer = item.meta?.correct || item.correct || '—';
         const studentAnswer = answer?.raw_answer || '—';
         const isCorrect = answer?.is_correct;
@@ -711,7 +790,7 @@
       const statusLabel = allScored ? `${CHECK_SVG} Scored` : `${CLOCK_SVG} Needs Scoring (${manualScored}/${manualTotal})`;
       
       const responseCards = constructedItems.map(item => {
-        const answer = answers.find(a => a.item_id === item.id);
+        const answer = displayAnswers.find(a => a.item_id === item.id);
         const studentResponse = answer?.raw_answer || '(No response)';
         const isScored = answer && answer.earned_points != null;
         const currentScore = isScored ? answer.earned_points : 0;
@@ -1057,6 +1136,9 @@
     for (const submission of unreviewed) {
       const assignmentId = submission.assignment_id;
       if (!assignmentId) continue;
+      // Bug A fix: skip submissions whose items haven't been backfilled yet — synthetic IDs
+      // would cause a bigint error when writing submission_answers rows.
+      if (syntheticAssignmentIds.has(assignmentId)) continue;
       const items = assignmentItemsCache[assignmentId] || [];
       const constructedItems = items.filter(item => item.answer_type === 'constructed');
       if (constructedItems.length === 0) continue;
@@ -1165,12 +1247,37 @@
     
     const earnedPoints = parseFloat(scoreInput.value) || 0;
     const teacherNote = noteInput ? noteInput.value.trim() : '';
+
+    // Bug A fix: synthetic item IDs (e.g. "synthetic_WP_4") cannot be stored as bigint.
+    // Backfill the assignment first, then resolve to the real DB item ID.
+    let resolvedItemId = itemId;
+    if (itemId && String(itemId).startsWith('synthetic_')) {
+      const submission = submissionsData.find(s => s.id === submissionId);
+      const assignmentId = submission?.assignment_id;
+      const itemRef = String(itemId).replace(/^synthetic_/, '');
+      try {
+        if (statusSpan) { statusSpan.textContent = 'Backfilling…'; statusSpan.className = 'rv-save-status'; }
+        const freshItems = await ensureRealItems(assignmentId);
+        const realItem = freshItems.find(i => (i.item_ref || i.ref) === itemRef);
+        if (!realItem || String(realItem.id).startsWith('synthetic_')) {
+          if (statusSpan) { statusSpan.textContent = 'Error'; statusSpan.className = 'rv-save-status error'; }
+          showToast('Could not get real item IDs. Please try again.', '#ef4444', '#fff');
+          return;
+        }
+        resolvedItemId = realItem.id;
+      } catch (err) {
+        console.error('[tc-review] Backfill required before save:', err);
+        if (statusSpan) { statusSpan.textContent = 'Error'; statusSpan.className = 'rv-save-status error'; }
+        showToast('Backfill failed. Cannot save score.', '#ef4444', '#fff');
+        return;
+      }
+    }
     
     try {
       // Update the submission answer
       await db.updateSubmissionAnswer({
         submissionId,
-        itemId,
+        itemId: resolvedItemId,
         earnedPoints,
         teacherNote
       });
@@ -1229,12 +1336,23 @@
     if (!confirm('Finalize this submission? This will trigger IEP goal progress updates and mark it as reviewed.')) {
       return;
     }
+
+    const assignmentId = submissionsData.find(s => s.id === submissionId)?.assignment_id;
+
+    // Bug A fix: ensure real item IDs exist before finalizing (needed for goal progress updates)
+    if (assignmentId && syntheticAssignmentIds.has(assignmentId)) {
+      try {
+        await ensureRealItems(assignmentId);
+      } catch (err) {
+        console.error('[tc-review] Backfill required before finalize:', err);
+        alert('Could not backfill assignment items. Please try again before finalizing.');
+        return;
+      }
+    }
     
     try {
       // Load fresh data
-      const items = await getAssignmentItemsForAssignment(
-        submissionsData.find(s => s.id === submissionId)?.assignment_id
-      );
+      const items = await getAssignmentItemsForAssignment(assignmentId);
       const answers = await getSubmissionAnswers(submissionId);
       
       // Calculate manual score
