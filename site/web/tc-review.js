@@ -64,6 +64,7 @@
   let submissionsData = [];
   let assignmentInstancesData = [];
   let assignmentItemsCache = {}; // Cache items by assignment_id
+  let syntheticAssignmentIds = new Set(); // Track assignments whose items were synthesized from meta
   let submissionAnswersCache = {}; // Cache answers by submission_id
   let classEnrollmentsData = [];
   let usingSupabase = false;
@@ -98,6 +99,11 @@
       assignmentsData = assignments || [];
       submissionsData = submissions || [];
       assignmentInstancesData = instances || [];
+
+      // Reset item/answer caches so refreshed data picks up any DB changes (e.g. after backfill)
+      assignmentItemsCache = {};
+      syntheticAssignmentIds = new Set();
+      submissionAnswersCache = {};
       
       // Load enrollments if available
       try {
@@ -293,6 +299,21 @@
         const allItems = JSON.parse(localStorage.getItem(NS + 'assignmentItems') || '[]');
         items = allItems.filter(item => item.assignment_id === assignmentId);
       }
+
+      // Fallback: synthesize items from assignment meta if DB returned nothing
+      if (items.length === 0) {
+        const assignment = assignmentsData.find(a => a.id === assignmentId);
+        if (assignment && assignment.meta) {
+          items = buildItemsFromMeta(assignmentId, assignment.meta);
+          if (items.length > 0) {
+            syntheticAssignmentIds.add(assignmentId);
+            console.log(`[tc-review] Synthesized ${items.length} items from meta for assignment ${assignmentId}`);
+          }
+        }
+      } else {
+        // Real items found — ensure any stale synthetic flag is cleared
+        syntheticAssignmentIds.delete(assignmentId);
+      }
       
       assignmentItemsCache[assignmentId] = items;
       return items;
@@ -300,6 +321,60 @@
       console.error('[tc-review] Error loading assignment items:', err);
       return [];
     }
+  }
+
+  /**
+   * Build synthetic assignment_items from assignment meta.
+   * Mirrors buildItemsFromMeta in admin-backfill-items.js.
+   * Items get id = "synthetic_" + item_ref so they are distinguishable from real DB rows.
+   */
+  function buildItemsFromMeta(assignmentId, meta) {
+    const items = [];
+    if (!meta || !Array.isArray(meta.days)) return items;
+
+    for (const day of meta.days) {
+      if (day.type === 'questions' && Array.isArray(day.questions)) {
+        for (const q of day.questions) {
+          const item_ref = `${day.day_number}_${q.number}`;
+          items.push({
+            id: `synthetic_${item_ref}`,
+            assignment_id: assignmentId,
+            item_ref,
+            answer_type: 'mcq',
+            points: 1,
+            meta: {
+              day: day.day_number,
+              question_number: q.number,
+              text: q.text,
+              choices: q.choices,
+              correct: q.correct,
+              hint: q.hint,
+            },
+            goal_codes: [],
+            dese_codes: [],
+          });
+        }
+      } else if (day.type === 'writing_prompt') {
+        const item_ref = `WP_${day.day_number}`;
+        items.push({
+          id: `synthetic_${item_ref}`,
+          assignment_id: assignmentId,
+          item_ref,
+          answer_type: 'constructed',
+          points: 5,
+          meta: {
+            day: day.day_number,
+            type: 'writing_prompt',
+            prompt: day.prompt,
+            structure: day.structure,
+            hints: day.hints,
+          },
+          goal_codes: [],
+          dese_codes: [],
+        });
+      }
+    }
+    return items;
   }
 
   // Get or fetch submission answers for a submission
@@ -829,6 +904,10 @@
     `;
     
     return `
+      ${syntheticAssignmentIds.has(assignmentId) ? `
+        <div class="rv-section" style="background:rgba(234,179,8,0.08);border:1px solid rgba(234,179,8,0.3);border-radius:var(--rc-radius);padding:10px 14px;margin-bottom:12px;font-size:13px;color:#ca8a04;">
+          ℹ️ Items were reconstructed from assignment metadata. Run backfill to persist.
+        </div>` : ''}
       ${autoSection}
       ${writtenSection}
       ${summarySection}
