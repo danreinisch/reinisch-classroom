@@ -48,6 +48,17 @@
     });
   }
 
+  // Escape HTML entities to prevent XSS when rendering user-provided content
+  function escapeHtml(str) {
+    if (str == null) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   // Helper to determine score color class based on percentage
   function scoreColorClass(score) {
     if (score == null || isNaN(score)) return "";
@@ -352,13 +363,41 @@
     syntheticAssignmentIds.delete(assignmentId);
     let items = await getAssignmentItemsForAssignment(assignmentId);
 
-    // If still empty/synthetic after backfill, retry once after a short delay
-    if (items.length === 0 || syntheticAssignmentIds.has(assignmentId)) {
-      console.warn('[tc-review] Items still empty after backfill, retrying in 500ms...');
-      await new Promise(r => setTimeout(r, 500));
+    // If still empty/synthetic after backfill, retry with exponential backoff (up to 3 attempts)
+    const retryDelays = [1000, 2000, 3000];
+    for (let attempt = 0; attempt < retryDelays.length && (items.length === 0 || syntheticAssignmentIds.has(assignmentId)); attempt++) {
+      console.warn(`[tc-review] Items still empty after backfill, retrying in ${retryDelays[attempt]}ms... (attempt ${attempt + 1}/${retryDelays.length})`);
+      await new Promise(r => setTimeout(r, retryDelays[attempt]));
       delete assignmentItemsCache[assignmentId];
       syntheticAssignmentIds.delete(assignmentId);
       items = await getAssignmentItemsForAssignment(assignmentId);
+    }
+
+    // Final fallback: bypass the Supabase JS client via direct REST API fetch to avoid client-side caching
+    if (items.length === 0 || syntheticAssignmentIds.has(assignmentId)) {
+      const supabaseUrl = window.SUPABASE_URL;
+      const supabaseKey = window.SUPABASE_ANON_KEY;
+      if (supabaseUrl && supabaseKey) {
+        try {
+          const restRes = await fetch(
+            `${supabaseUrl}/rest/v1/assignment_items?select=*&assignment_id=eq.${encodeURIComponent(assignmentId)}`,
+            { headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` } }
+          );
+          if (restRes.ok) {
+            const restItems = await restRes.json();
+            if (Array.isArray(restItems) && restItems.length > 0) {
+              console.log(`[tc-review] REST API fallback resolved ${restItems.length} items for assignment ${assignmentId}`);
+              syntheticAssignmentIds.delete(assignmentId);
+              assignmentItemsCache[assignmentId] = restItems;
+              items = restItems;
+            }
+          } else {
+            console.warn('[tc-review] REST API fallback returned', restRes.status, 'for assignment', assignmentId);
+          }
+        } catch (restErr) {
+          console.warn('[tc-review] Direct REST API fetch for items failed:', restErr);
+        }
+      }
     }
 
     return items;
@@ -1013,10 +1052,28 @@
     
     return `
       <div class="rv-section" style="margin-bottom:8px;">
-        <a href="/teacher/work/#assignment-${assignmentId}" target="_blank" rel="noopener"
-           style="font-size:13px;color:var(--rc-accent);text-decoration:none;">
-          🔗 View Full Assignment
-        </a>
+        <details class="rv-details rv-submission-details">
+          <summary style="font-size:13px;color:var(--rc-accent);">📋 View Raw Submission Data</summary>
+          <div class="rv-raw-data">
+            <h4>Submission Answers (JSON)</h4>
+            <pre>${escapeHtml(JSON.stringify(submission.answers, null, 2))}</pre>
+
+            <h4>Instance Settings</h4>
+            <pre>${escapeHtml(JSON.stringify(submission.instance?.settings, null, 2))}</pre>
+
+            <h4>Submission Metadata</h4>
+            <table class="rv-meta-table">
+              <tr><td>ID</td><td>${escapeHtml(submission.id)}</td></tr>
+              <tr><td>Instance ID</td><td>${escapeHtml(submission.instance_id)}</td></tr>
+              <tr><td>Assignment ID</td><td>${escapeHtml(submission.assignment_id)}</td></tr>
+              <tr><td>Score Auto</td><td>${escapeHtml(submission.score_auto)}</td></tr>
+              <tr><td>Score Manual</td><td>${escapeHtml(submission.score_manual)}</td></tr>
+              <tr><td>Score Total</td><td>${escapeHtml(submission.score_total)}</td></tr>
+              <tr><td>Review Status</td><td>${escapeHtml(submission.review_status)}</td></tr>
+              <tr><td>Submitted At</td><td>${escapeHtml(submission.submitted_at)}</td></tr>
+            </table>
+          </div>
+        </details>
       </div>
       ${syntheticAssignmentIds.has(assignmentId) ? `
         <div class="rv-section" style="background:rgba(234,179,8,0.08);border:1px solid rgba(234,179,8,0.3);border-radius:var(--rc-radius);padding:10px 14px;margin-bottom:12px;font-size:13px;color:#ca8a04;">
@@ -1303,27 +1360,34 @@
         const freshItems = await ensureRealItems(assignmentId);
         const realItem = freshItems.find(i => (i.item_ref || i.ref) === itemRef);
         if (!realItem || String(realItem.id).startsWith(SYNTHETIC_ID_PREFIX)) {
-          // Last resort: query Supabase directly for the item by item_ref
-          let resolvedViaSupabase = false;
-          if (usingSupabase) {
+          // Last resort: query REST API directly for the item by item_ref, bypassing JS client caching
+          let resolvedViaRest = false;
+          console.log('[tc-review] Trying direct REST lookup for item:', { assignmentId, itemRef });
+          const supabaseUrl = window.SUPABASE_URL;
+          const supabaseKey = window.SUPABASE_ANON_KEY;
+          if (assignmentId && itemRef && supabaseUrl && supabaseKey) {
             try {
-              const supabase = await getSupabase();
-              const { data: directItems } = await supabase
-                .from('assignment_items')
-                .select('id, item_ref')
-                .eq('assignment_id', assignmentId)
-                .eq('item_ref', itemRef)
-                .limit(1);
-              if (directItems && directItems.length > 0) {
-                resolvedItemId = directItems[0].id;
-                button.dataset.itemId = String(resolvedItemId);
-                resolvedViaSupabase = true;
+              const restRes = await fetch(
+                `${supabaseUrl}/rest/v1/assignment_items?select=id,item_ref&assignment_id=eq.${encodeURIComponent(assignmentId)}&item_ref=eq.${encodeURIComponent(itemRef)}&limit=1`,
+                { headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` } }
+              );
+              if (restRes.ok) {
+                const restItems = await restRes.json();
+                if (Array.isArray(restItems) && restItems.length > 0) {
+                  resolvedItemId = restItems[0].id;
+                  button.dataset.itemId = String(resolvedItemId);
+                  resolvedViaRest = true;
+                }
+              } else {
+                console.error('[tc-review] REST item lookup returned', restRes.status, 'for', { assignmentId, itemRef });
               }
-            } catch (dbErr) {
-              console.error('[tc-review] Direct Supabase item lookup failed:', dbErr);
+            } catch (restErr) {
+              console.error('[tc-review] Direct REST item lookup failed:', restErr);
             }
+          } else {
+            console.error('[tc-review] Cannot do REST lookup — missing params:', { assignmentId, itemRef, hasUrl: !!supabaseUrl, hasKey: !!supabaseKey });
           }
-          if (!resolvedViaSupabase) {
+          if (!resolvedViaRest) {
             if (statusSpan) { statusSpan.textContent = 'Error'; statusSpan.className = 'rv-save-status error'; }
             showToast('Could not get real item IDs. Please try again.', '#ef4444', '#fff');
             return;
