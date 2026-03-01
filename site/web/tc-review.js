@@ -350,7 +350,18 @@
     // Clear stale synthetic cache and re-fetch real items from DB
     delete assignmentItemsCache[assignmentId];
     syntheticAssignmentIds.delete(assignmentId);
-    return await getAssignmentItemsForAssignment(assignmentId);
+    let items = await getAssignmentItemsForAssignment(assignmentId);
+
+    // If still empty/synthetic after backfill, retry once after a short delay
+    if (items.length === 0 || syntheticAssignmentIds.has(assignmentId)) {
+      console.warn('[tc-review] Items still empty after backfill, retrying in 500ms...');
+      await new Promise(r => setTimeout(r, 500));
+      delete assignmentItemsCache[assignmentId];
+      syntheticAssignmentIds.delete(assignmentId);
+      items = await getAssignmentItemsForAssignment(assignmentId);
+    }
+
+    return items;
   }
 
   /**
@@ -754,7 +765,11 @@
       }
     });
     
-    const totalEarned = (submission.score_auto || 0) + manualEarned;
+    const autoEarned = autoGradedItems.reduce((sum, item) => {
+      const answer = displayAnswers.find(a => a.item_id === item.id);
+      return sum + (answer?.earned_points || 0);
+    }, 0);
+    const totalEarned = autoEarned + manualEarned;
     const totalMax = (autoGradedItems.reduce((sum, i) => sum + (i.points || 0), 0)) + manualMax;
     const totalPercent = totalMax > 0 ? Math.round((totalEarned / totalMax) * 100) : 0;
     
@@ -910,7 +925,6 @@
     }
     
     // Summary section
-    const autoEarned = submission.score_auto || 0;
     const autoMax = autoGradedItems.reduce((sum, i) => sum + (i.points || 0), 0);
     const autoPercentStr = autoMax > 0 ? `(${Math.round((autoEarned / autoMax) * 100)}%)` : '';
     const allItemsScored = manualTotal === 0 || manualScored === manualTotal;
@@ -999,7 +1013,7 @@
     
     return `
       <div class="rv-section" style="margin-bottom:8px;">
-        <a href="/teacher/work/?highlight=${encodeURIComponent(assignmentId)}" target="_blank" rel="noopener"
+        <a href="/teacher/work/#assignment-${assignmentId}" target="_blank" rel="noopener"
            style="font-size:13px;color:var(--rc-accent);text-decoration:none;">
           🔗 View Full Assignment
         </a>
@@ -1289,13 +1303,36 @@
         const freshItems = await ensureRealItems(assignmentId);
         const realItem = freshItems.find(i => (i.item_ref || i.ref) === itemRef);
         if (!realItem || String(realItem.id).startsWith(SYNTHETIC_ID_PREFIX)) {
-          if (statusSpan) { statusSpan.textContent = 'Error'; statusSpan.className = 'rv-save-status error'; }
-          showToast('Could not get real item IDs. Please try again.', '#ef4444', '#fff');
-          return;
+          // Last resort: query Supabase directly for the item by item_ref
+          let resolvedViaSupabase = false;
+          if (usingSupabase) {
+            try {
+              const supabase = await getSupabase();
+              const { data: directItems } = await supabase
+                .from('assignment_items')
+                .select('id, item_ref')
+                .eq('assignment_id', assignmentId)
+                .eq('item_ref', itemRef)
+                .limit(1);
+              if (directItems && directItems.length > 0) {
+                resolvedItemId = directItems[0].id;
+                button.dataset.itemId = String(resolvedItemId);
+                resolvedViaSupabase = true;
+              }
+            } catch (dbErr) {
+              console.error('[tc-review] Direct Supabase item lookup failed:', dbErr);
+            }
+          }
+          if (!resolvedViaSupabase) {
+            if (statusSpan) { statusSpan.textContent = 'Error'; statusSpan.className = 'rv-save-status error'; }
+            showToast('Could not get real item IDs. Please try again.', '#ef4444', '#fff');
+            return;
+          }
+        } else {
+          resolvedItemId = realItem.id;
+          // Update DOM so subsequent saves use the real ID directly without re-resolution
+          button.dataset.itemId = String(resolvedItemId);
         }
-        resolvedItemId = realItem.id;
-        // Update DOM so subsequent saves use the real ID directly without re-resolution
-        button.dataset.itemId = String(resolvedItemId);
       } catch (err) {
         console.error('[tc-review] Backfill required before save:', err);
         if (statusSpan) { statusSpan.textContent = 'Error'; statusSpan.className = 'rv-save-status error'; }
