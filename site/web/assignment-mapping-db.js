@@ -141,11 +141,13 @@ export async function getAssignmentItems(supabase, assignmentId) {
       return {
         id: item.id,
         ref: item.item_ref,
+        item_ref: item.item_ref,
         answer_type: item.answer_type,
         points: item.points,
         correct: item.meta?.correct,
         scoring: item.meta?.scoring || {},
         notes: item.meta?.notes || '',
+        meta: item.meta,
         dese_codes: mapping.dese_codes || [],
         goal_codes: mapping.goal_codes || [],
         weight: mapping.weight || 1.0

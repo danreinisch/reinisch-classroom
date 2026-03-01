@@ -709,7 +709,12 @@
     if (syntheticAssignmentIds.has(assignmentId)) {
       ensureRealItems(assignmentId).then(() => {
         if (!syntheticAssignmentIds.has(assignmentId) && expandedSubmissions.has(submissionId)) {
-          delete submissionAnswersCache[submissionId];
+          // Clear answers cache for all submissions of this assignment so they re-fetch with real IDs
+          submissionsData.forEach(s => {
+            if (s.assignment_id === assignmentId) {
+              delete submissionAnswersCache[s.id];
+            }
+          });
           render();
         }
       }).catch(err => {
@@ -1289,6 +1294,8 @@
           return;
         }
         resolvedItemId = realItem.id;
+        // Update DOM so subsequent saves use the real ID directly without re-resolution
+        button.dataset.itemId = String(resolvedItemId);
       } catch (err) {
         console.error('[tc-review] Backfill required before save:', err);
         if (statusSpan) { statusSpan.textContent = 'Error'; statusSpan.className = 'rv-save-status error'; }
