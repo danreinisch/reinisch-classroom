@@ -6,9 +6,14 @@
 
   // Import data adapter for Supabase/localStorage abstraction
   const { db, isRemote } = await import('/web/data-adapter.js');
-  const { getSupabase } = await import('/web/supabase-client.js');
+  const { getSupabase, getSupabaseConfig } = await import('/web/supabase-client.js');
   const { getAssignmentItems } = await import('/web/assignment-mapping-db.js');
   const { CANON_CLASSES, CLASS_DISPLAY } = await import('/web/constants.js');
+
+  // Cached Supabase connection details for direct REST fallback calls.
+  // Populated during loadData() once the Supabase client is available.
+  let SUPABASE_URL_CACHED = null;
+  let SUPABASE_KEY_CACHED = null;
 
   const NS = "rc_unified_";
   const REALTIME_DEBOUNCE_MS = 1000;
@@ -99,6 +104,13 @@
         console.log('[tc-review] Loading data from localStorage');
         syncStatus = "local";
       }
+
+      // Cache Supabase connection details for direct REST fallback calls.
+      // Use getSupabaseConfig() (reads from window globals / localStorage) so
+      // the values are available even when the Supabase JS client is null.
+      const sbConfig = getSupabaseConfig();
+      SUPABASE_URL_CACHED = sbConfig.url;
+      SUPABASE_KEY_CACHED = sbConfig.key;
       
       // Load core data
       const [students, assignments, submissions, instances] = await Promise.all([
@@ -295,6 +307,36 @@
     return queue;
   }
 
+  /**
+   * Fetch assignment items directly via Supabase REST API, bypassing the JS client.
+   * Useful when the JS client is blocked by RLS but the anon key has a SELECT policy.
+   * Returns an array of raw DB rows, or null when config is missing or the request fails.
+   */
+  async function fetchAssignmentItemsViaRest(assignmentId) {
+    if (!SUPABASE_URL_CACHED || !SUPABASE_KEY_CACHED) return null;
+    try {
+      const restRes = await fetch(
+        `${SUPABASE_URL_CACHED}/rest/v1/assignment_items?assignment_id=eq.${encodeURIComponent(assignmentId)}&select=*&order=item_ref`,
+        {
+          headers: {
+            'apikey': SUPABASE_KEY_CACHED,
+            'Authorization': `Bearer ${SUPABASE_KEY_CACHED}`,
+            'Accept': 'application/json',
+          }
+        }
+      );
+      if (restRes.ok) {
+        const items = await restRes.json();
+        return Array.isArray(items) ? items : null;
+      }
+      console.warn('[tc-review] Direct REST item fetch returned', restRes.status, 'for assignment', assignmentId);
+      return null;
+    } catch (restErr) {
+      console.warn('[tc-review] Direct REST item fetch failed:', restErr);
+      return null;
+    }
+  }
+
   // Get or fetch assignment items for an assignment
   async function getAssignmentItemsForAssignment(assignmentId) {
     if (!assignmentId) return [];
@@ -314,7 +356,17 @@
         items = allItems.filter(item => item.assignment_id === assignmentId);
       }
 
-      // Fallback: synthesize items from assignment meta if DB returned nothing
+      // Fallback: if the Supabase JS client returned nothing (e.g. RLS blocks anon reads),
+      // try a direct REST API request with the anon key before falling back to synthetic items.
+      if (items.length === 0 && SUPABASE_URL_CACHED && SUPABASE_KEY_CACHED) {
+        const restItems = await fetchAssignmentItemsViaRest(assignmentId);
+        if (restItems && restItems.length > 0) {
+          items = restItems;
+          console.log(`[tc-review] Loaded ${items.length} items via direct REST for assignment ${assignmentId}`);
+        }
+      }
+
+      // Last resort: synthesize items from assignment meta if DB returned nothing
       if (items.length === 0) {
         const assignment = assignmentsData.find(a => a.id === assignmentId);
         if (assignment && assignment.meta) {
@@ -360,45 +412,44 @@
     const itemsCreated = backfillData.summary?.items_created || 0;
     console.log(`[tc-review] Backfill response for assignment ${assignmentId}: ${itemsCreated} item(s) created`);
 
-    // Clear stale synthetic cache and re-fetch real items from DB
+    // Clear stale synthetic cache and re-fetch real items from DB.
+    // getAssignmentItemsForAssignment() already tries a direct REST fallback before
+    // synthesizing, so if items exist in the DB they will be returned here.
     delete assignmentItemsCache[assignmentId];
     syntheticAssignmentIds.delete(assignmentId);
     let items = await getAssignmentItemsForAssignment(assignmentId);
 
-    // If still empty/synthetic after backfill, retry with exponential backoff (up to 3 attempts)
-    const retryDelays = [1000, 2000, 3000];
-    for (let attempt = 0; attempt < retryDelays.length && (items.length === 0 || syntheticAssignmentIds.has(assignmentId)); attempt++) {
-      console.warn(`[tc-review] Items still empty after backfill, retrying in ${retryDelays[attempt]}ms... (attempt ${attempt + 1}/${retryDelays.length})`);
-      await new Promise(r => setTimeout(r, retryDelays[attempt]));
-      delete assignmentItemsCache[assignmentId];
-      syntheticAssignmentIds.delete(assignmentId);
-      items = await getAssignmentItemsForAssignment(assignmentId);
+    // If backfill created 0 items it means items already existed in the DB.
+    // In that case there is no point retrying via the Supabase JS client —
+    // go straight to the REST fallback (same path getAssignmentItemsForAssignment
+    // already tried, but kept here as a safety net with explicit logging).
+    if (itemsCreated === 0 && (items.length === 0 || syntheticAssignmentIds.has(assignmentId))) {
+      console.warn(`[tc-review] Backfill confirms items already exist for assignment ${assignmentId} but could not be read via JS client; REST fallback was attempted during fetch.`);
     }
 
-    // Final fallback: bypass the Supabase JS client via direct REST API fetch to avoid client-side caching
+    // If still empty/synthetic after backfill (and items were newly created this run),
+    // retry with exponential backoff — the DB write may not yet be visible.
+    if (itemsCreated > 0) {
+      const retryDelays = [1000, 2000, 3000];
+      for (let attempt = 0; attempt < retryDelays.length && (items.length === 0 || syntheticAssignmentIds.has(assignmentId)); attempt++) {
+        console.warn(`[tc-review] Items still empty after backfill, retrying in ${retryDelays[attempt]}ms... (attempt ${attempt + 1}/${retryDelays.length})`);
+        await new Promise(r => setTimeout(r, retryDelays[attempt]));
+        delete assignmentItemsCache[assignmentId];
+        syntheticAssignmentIds.delete(assignmentId);
+        items = await getAssignmentItemsForAssignment(assignmentId);
+      }
+    }
+
+    // Final safety net: direct REST fetch using cached Supabase config.
+    // This is now largely superseded by the REST fallback inside
+    // getAssignmentItemsForAssignment(), but kept for belt-and-suspenders.
     if (items.length === 0 || syntheticAssignmentIds.has(assignmentId)) {
-      const supabaseUrl = window.SUPABASE_URL;
-      const supabaseKey = window.SUPABASE_ANON_KEY;
-      if (supabaseUrl && supabaseKey) {
-        try {
-          const restRes = await fetch(
-            `${supabaseUrl}/rest/v1/assignment_items?select=*&assignment_id=eq.${encodeURIComponent(assignmentId)}`,
-            { headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` } }
-          );
-          if (restRes.ok) {
-            const restItems = await restRes.json();
-            if (Array.isArray(restItems) && restItems.length > 0) {
-              console.log(`[tc-review] REST API fallback resolved ${restItems.length} items for assignment ${assignmentId}`);
-              syntheticAssignmentIds.delete(assignmentId);
-              assignmentItemsCache[assignmentId] = restItems;
-              items = restItems;
-            }
-          } else {
-            console.warn('[tc-review] REST API fallback returned', restRes.status, 'for assignment', assignmentId);
-          }
-        } catch (restErr) {
-          console.warn('[tc-review] Direct REST API fetch for items failed:', restErr);
-        }
+      const restItems = await fetchAssignmentItemsViaRest(assignmentId);
+      if (restItems && restItems.length > 0) {
+        console.log(`[tc-review] REST API fallback resolved ${restItems.length} items for assignment ${assignmentId}`);
+        syntheticAssignmentIds.delete(assignmentId);
+        assignmentItemsCache[assignmentId] = restItems;
+        items = restItems;
       }
     }
 
@@ -1383,8 +1434,8 @@
           // Last resort: query REST API directly for the item by item_ref, bypassing JS client caching
           let resolvedViaRest = false;
           console.log('[tc-review] Trying direct REST lookup for item:', { assignmentId, itemRef });
-          const supabaseUrl = window.SUPABASE_URL;
-          const supabaseKey = window.SUPABASE_ANON_KEY;
+          const supabaseUrl = SUPABASE_URL_CACHED;
+          const supabaseKey = SUPABASE_KEY_CACHED;
           if (assignmentId && itemRef && supabaseUrl && supabaseKey) {
             try {
               const restRes = await fetch(
