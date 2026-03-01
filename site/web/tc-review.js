@@ -642,6 +642,17 @@
       return;
     }
     
+    // Trigger background backfill for any synthetic assignments visible in the current queue
+    // so real item IDs are ready when the teacher tries to score written responses.
+    const syntheticAssignmentIdsInQueue = [...new Set(
+      queue.map(s => s.assignment_id).filter(id => id && syntheticAssignmentIds.has(id))
+    )];
+    syntheticAssignmentIdsInQueue.forEach(assignmentId => {
+      ensureRealItems(assignmentId).catch(err => {
+        console.warn('[tc-review] Background backfill failed for assignment', assignmentId, err);
+      });
+    });
+
     // Render each submission as accordion item
     const itemsHtml = await Promise.all(queue.map(submission => 
       renderSubmissionRow(submission)
@@ -1051,10 +1062,19 @@
     `;
     
     return `
-      <div class="rv-section" style="margin-bottom:8px;">
-        <details class="rv-details rv-submission-details">
-          <summary style="font-size:13px;color:var(--rc-accent);">📋 View Raw Submission Data</summary>
-          <div class="rv-raw-data">
+      ${syntheticAssignmentIds.has(assignmentId) ? `
+        <div class="rv-section" style="background:rgba(234,179,8,0.08);border:1px solid rgba(234,179,8,0.3);border-radius:var(--rc-radius);padding:10px 14px;margin-bottom:12px;font-size:13px;color:#ca8a04;">
+          ⏳ Loading item data...
+        </div>` : ''}
+      ${autoSection}
+      ${writtenSection}
+      ${summarySection}
+      ${gradingSection}
+      ${actionsSection}
+      <div style="margin-top:16px;">
+        <details>
+          <summary style="font-size:11px;color:var(--rc-muted,#888);cursor:pointer;user-select:none;">🔧 Debug</summary>
+          <div class="rv-raw-data" style="margin-top:8px;">
             <h4>Submission Answers (JSON)</h4>
             <pre>${escapeHtml(JSON.stringify(submission.answers, null, 2))}</pre>
 
@@ -1075,15 +1095,6 @@
           </div>
         </details>
       </div>
-      ${syntheticAssignmentIds.has(assignmentId) ? `
-        <div class="rv-section" style="background:rgba(234,179,8,0.08);border:1px solid rgba(234,179,8,0.3);border-radius:var(--rc-radius);padding:10px 14px;margin-bottom:12px;font-size:13px;color:#ca8a04;">
-          ℹ️ Items were reconstructed from assignment metadata. Run backfill to persist.
-        </div>` : ''}
-      ${autoSection}
-      ${writtenSection}
-      ${summarySection}
-      ${gradingSection}
-      ${actionsSection}
     `;
   }
 
@@ -1389,7 +1400,7 @@
           }
           if (!resolvedViaRest) {
             if (statusSpan) { statusSpan.textContent = 'Error'; statusSpan.className = 'rv-save-status error'; }
-            showToast('Could not get real item IDs. Please try again.', '#ef4444', '#fff');
+            showToast('Score could not be saved. Please reload the page and try again.', '#ef4444', '#fff');
             return;
           }
         } else {
@@ -1400,7 +1411,7 @@
       } catch (err) {
         console.error('[tc-review] Backfill required before save:', err);
         if (statusSpan) { statusSpan.textContent = 'Error'; statusSpan.className = 'rv-save-status error'; }
-        showToast('Backfill failed. Cannot save score.', '#ef4444', '#fff');
+        showToast('Score could not be saved. Please reload the page and try again.', '#ef4444', '#fff');
         return;
       }
     }
