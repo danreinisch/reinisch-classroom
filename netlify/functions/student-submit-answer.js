@@ -344,6 +344,28 @@ exports.handler = async (event) => {
                 console.error(`[student-submit-answer] [${requestId}] submission_answers upsert failed: ${subAnswersResponse.status} - ${errorText}`);
               } else {
                 console.log(`[student-submit-answer] [${requestId}] Upserted ${subAnswers.length} submission_answers`);
+
+                // Compute score_auto from auto-scored answers and update the parent submission
+                const scoreAuto = subAnswers
+                  .filter(a => a.earned_points != null)
+                  .reduce((sum, a) => sum + (a.earned_points || 0), 0);
+                const submissionsUpdateUrl = `${SUPABASE_URL}/rest/v1/submissions?id=eq.${encodeURIComponent(submissionId)}`;
+                const scoreAutoResponse = await fetch(submissionsUpdateUrl, {
+                  method: 'PATCH',
+                  headers: {
+                    'apikey': SUPABASE_SERVICE_ROLE_KEY,
+                    'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=minimal'
+                  },
+                  body: JSON.stringify({ score_auto: scoreAuto })
+                });
+                if (!scoreAutoResponse.ok) {
+                  const errText = await scoreAutoResponse.text();
+                  console.error(`[student-submit-answer] [${requestId}] score_auto update failed: ${scoreAutoResponse.status} - ${errText}`);
+                } else {
+                  console.log(`[student-submit-answer] [${requestId}] Updated score_auto=${scoreAuto} for submission ${submissionId}`);
+                }
               }
             }
           }
