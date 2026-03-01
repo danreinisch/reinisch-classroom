@@ -152,6 +152,16 @@ export function resetSupabaseClient() {
 }
 
 /**
+ * Get the current Supabase URL and anon key from configuration.
+ * Returns null values when Supabase is not configured.
+ * @returns {{ url: string|null, key: string|null }}
+ */
+export function getSupabaseConfig() {
+  const config = readCurrentConfig();
+  return { url: config.url || null, key: config.key || null };
+}
+
+/**
  * Test connection to Supabase using auth/v1/settings endpoint
  * @returns {Promise<Object>} { ok: boolean, error?: string }
  */
