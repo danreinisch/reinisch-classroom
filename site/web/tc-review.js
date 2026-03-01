@@ -353,10 +353,12 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ assignment_id: assignmentId })
     });
+    const backfillData = await res.json().catch(() => ({}));
     if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      throw new Error(data.error || `Backfill failed: ${res.status}`);
+      throw new Error(backfillData.error || `Backfill failed: ${res.status}`);
     }
+    const itemsCreated = backfillData.summary?.items_created || 0;
+    console.log(`[tc-review] Backfill response for assignment ${assignmentId}: ${itemsCreated} item(s) created`);
 
     // Clear stale synthetic cache and re-fetch real items from DB
     delete assignmentItemsCache[assignmentId];
@@ -1364,7 +1366,14 @@
     let resolvedItemId = itemId;
     if (itemId && String(itemId).startsWith(SYNTHETIC_ID_PREFIX)) {
       const submission = submissionsData.find(s => s.id === submissionId);
-      const assignmentId = submission?.assignment_id;
+      // assignment_id is NOT on the raw submission — resolve via instance
+      const instance = assignmentInstancesData.find(i => i.id === submission?.instance_id);
+      const assignmentId = instance?.assignment_id;
+      if (!assignmentId) {
+        if (statusSpan) { statusSpan.textContent = 'Error'; statusSpan.className = 'rv-save-status error'; }
+        showToast('Cannot determine assignment for this submission. Please refresh and try again.', '#ef4444', '#fff');
+        return;
+      }
       const itemRef = String(itemId).slice(SYNTHETIC_ID_PREFIX.length);
       try {
         if (statusSpan) { statusSpan.textContent = 'Backfilling…'; statusSpan.className = 'rv-save-status'; }
@@ -1480,7 +1489,14 @@
       return;
     }
 
-    const assignmentId = submissionsData.find(s => s.id === submissionId)?.assignment_id;
+    const submission = submissionsData.find(s => s.id === submissionId);
+    // assignment_id is NOT on the raw submission — resolve via instance
+    const instance = assignmentInstancesData.find(i => i.id === submission?.instance_id);
+    const assignmentId = instance?.assignment_id;
+    if (!assignmentId) {
+      alert('Cannot determine assignment for this submission. Please refresh and try again.');
+      return;
+    }
 
     // Bug A fix: ensure real item IDs exist before finalizing (needed for goal progress updates)
     if (assignmentId && syntheticAssignmentIds.has(assignmentId)) {
