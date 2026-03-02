@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Volume | Math Toolkit</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:         #0d1117;
+      --surface:    #161d2e;
+      --surface2:   #1e2840;
+      --surface3:   #243050;
+      --border:     #2a3a58;
+      --border2:    #34466e;
+      --accent:     #14b8a6;
+      --accent-dim: #0d9488;
+      --accent2:    #38bdf8;
+      --accent3:    #fb923c;
+      --text:       #e2e8f0;
+      --text-muted: #8a9bbf;
+      --text-dim:   #5a6a8a;
+      --success:    #22c55e;
+      --error:      #f87171;
+      --formula-bg: #0a1628;
+      --mono:       'JetBrains Mono', monospace;
+    }
+    body { font-family: 'Outfit', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    .page-header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 2rem; display: flex; align-items: center; height: 56px; }
+    .breadcrumb { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: var(--text-muted); }
+    .breadcrumb a { color: var(--text-muted); text-decoration: none; }
+    .breadcrumb a:hover { color: var(--accent); }
+    .breadcrumb .sep { color: var(--text-dim); }
+    .breadcrumb .current { color: var(--text); font-weight: 500; }
+
+    .page-body { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+    .module-title { font-size: 1.65rem; font-weight: 700; color: var(--text); margin-bottom: 0.25rem; }
+    .module-title span { color: var(--accent); }
+    .module-subtitle { color: var(--text-muted); font-size: 0.92rem; margin-bottom: 2rem; }
+    .section-label { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 0.75rem; }
+
+    .shape-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)); gap: 0.75rem; margin-bottom: 2rem; }
+    .shape-btn {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+      padding: 1rem 0.75rem; cursor: pointer; transition: all 0.18s ease;
+      text-align: center; color: var(--text-muted); display: flex; flex-direction: column; align-items: center; gap: 0.4rem;
+    }
+    .shape-btn:hover { border-color: var(--accent); color: var(--text); background: var(--surface2); transform: translateY(-1px); }
+    .shape-btn.active { border-color: var(--accent); background: rgba(20,184,166,0.08); color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+    .shape-btn .shape-icon { font-size: 1.7rem; line-height: 1; }
+    .shape-btn .shape-name { font-size: 0.82rem; font-weight: 500; line-height: 1.2; }
+    .shape-btn .shape-formula { font-family: var(--mono); font-size: 0.65rem; color: var(--text-dim); line-height: 1.2; margin-top: 0.1rem; }
+    .shape-btn.active .shape-formula { color: var(--accent-dim); }
+
+    .sub-row { display: none; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+    .sub-row.visible { display: flex; }
+    .sub-btn {
+      flex: 1; min-width: 140px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+      padding: 0.6rem 1rem; cursor: pointer; font-family: 'Outfit', sans-serif;
+      font-size: 0.83rem; color: var(--text-muted); transition: all 0.15s; text-align: center;
+    }
+    .sub-btn:hover { border-color: var(--accent); color: var(--text); }
+    .sub-btn.active { border-color: var(--accent); background: rgba(20,184,166,0.1); color: var(--accent); }
+
+    #workspace { display: none; }
+    #workspace.visible { display: block; }
+
+    /* Volume concept panel — orange accent to distinguish from SA module */
+    .concept-panel {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent3);
+      border-radius: 10px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 1.25rem;
+      animation: slideDown 0.3s ease;
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+    .concept-icon { font-size: 1.5rem; flex-shrink: 0; }
+    .concept-text { font-size: 0.83rem; color: var(--text-muted); line-height: 1.6; }
+    .concept-text strong { color: var(--accent3); }
+
+    .formula-card {
+      background: var(--formula-bg); border: 1px solid var(--border); border-left: 3px solid var(--accent);
+      border-radius: 10px; padding: 1.25rem 1.5rem; margin-bottom: 1.5rem;
+      display: flex; align-items: flex-start; gap: 1.5rem; animation: slideDown 0.3s ease;
+    }
+    .formula-label { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 0.25rem; }
+    .formula-text { font-family: var(--mono); font-size: 1.25rem; font-weight: 500; color: var(--text); letter-spacing: 0.04em; line-height: 1.6; }
+    .formula-text .var { color: var(--accent2); }
+    .formula-desc { font-size: 0.82rem; color: var(--text-muted); margin-top: 0.35rem; line-height: 1.5; }
+    .formula-key { margin-left: auto; font-size: 0.78rem; color: var(--text-dim); line-height: 1.9; font-family: var(--mono); white-space: nowrap; flex-shrink: 0; }
+    .formula-key .kv { color: var(--accent2); }
+
+    /* Real-world connection chip */
+    .realworld-chip {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      background: rgba(251,146,60,0.08); border: 1px solid rgba(251,146,60,0.25);
+      border-radius: 20px; padding: 0.3rem 0.85rem;
+      font-size: 0.75rem; color: #fdba74; margin-top: 0.5rem;
+    }
+
+    .step-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 1rem; overflow: hidden; animation: slideDown 0.25s ease; transition: border-color 0.2s; }
+    .step-card.locked { opacity: 0.4; pointer-events: none; }
+    .step-card.complete { border-color: var(--success); }
+    .step-card.error    { border-color: var(--error); }
+    .step-header { padding: 0.85rem 1.25rem; display: flex; align-items: center; gap: 0.75rem; border-bottom: 1px solid var(--border); background: var(--surface2); }
+    .step-badge { width: 26px; height: 26px; border-radius: 50%; background: var(--surface3); border: 1px solid var(--border2); display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 700; color: var(--text-muted); flex-shrink: 0; }
+    .step-card.complete .step-badge { background: var(--success); border-color: var(--success); color: #fff; }
+    .step-title { font-weight: 600; font-size: 0.9rem; color: var(--text); }
+    .step-instruction { font-size: 0.82rem; color: var(--text-muted); margin-left: auto; text-align: right; max-width: 280px; }
+    .step-body { padding: 1.25rem; }
+
+    .known-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 0.85rem; margin-bottom: 1rem; }
+    .field-group { display: flex; flex-direction: column; gap: 0.3rem; }
+    .field-label { font-size: 0.78rem; font-weight: 500; color: var(--text-muted); }
+    .field-label .var-name { font-family: var(--mono); color: var(--accent2); font-size: 0.82rem; }
+    .field-hint { font-size: 0.71rem; color: var(--text-dim); }
+    .known-input { background: var(--surface2); border: 1px solid var(--border); border-radius: 7px; padding: 0.55rem 0.85rem; font-family: var(--mono); font-size: 1rem; color: var(--text); width: 100%; transition: border-color 0.15s; outline: none; }
+    .known-input:focus { border-color: var(--accent); }
+    .known-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+    .begin-btn { background: var(--accent); color: #0a1628; border: none; border-radius: 7px; padding: 0.6rem 1.5rem; font-family: 'Outfit', sans-serif; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.15s; margin-top: 0.5rem; }
+    .begin-btn:hover { background: #0d9488; transform: translateY(-1px); }
+    .begin-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    .expr-display { font-family: var(--mono); font-size: 1rem; color: var(--text); background: var(--formula-bg); border: 1px solid var(--border); border-radius: 7px; padding: 0.75rem 1rem; letter-spacing: 0.03em; line-height: 1.7; }
+    .expr-display .val { color: var(--accent2); }
+
+    .compute-row { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
+    .compute-row:last-child { margin-bottom: 0; }
+    .compute-expr { font-family: var(--mono); font-size: 0.97rem; color: var(--text); flex: 1; min-width: 0; line-height: 1.5; }
+    .compute-expr .val { color: var(--accent2); }
+    .compute-label { font-size: 0.75rem; color: var(--text-dim); margin-right: 0.3rem; font-style: italic; }
+    .answer-box { background: var(--surface2); border: 2px solid var(--border2); border-radius: 7px; padding: 0.45rem 0.75rem; font-family: var(--mono); font-size: 1rem; color: var(--text); width: 120px; outline: none; transition: border-color 0.15s; text-align: center; }
+    .answer-box:focus { border-color: var(--accent); }
+    .answer-box.correct { border-color: var(--success); background: rgba(34,197,94,0.08); color: var(--success); }
+    .answer-box.incorrect { border-color: var(--error); background: rgba(248,113,113,0.08); }
+    .check-btn { background: var(--surface3); border: 1px solid var(--border2); border-radius: 6px; padding: 0.45rem 0.85rem; font-family: 'Outfit', sans-serif; font-size: 0.82rem; font-weight: 500; color: var(--text-muted); cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+    .check-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .check-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .feedback-box { border-radius: 7px; padding: 0.65rem 1rem; font-size: 0.83rem; line-height: 1.5; margin-top: 0.75rem; display: none; }
+    .feedback-box.visible { display: block; }
+    .feedback-box.success { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3); color: #86efac; }
+    .feedback-box.error   { background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.3); color: #fca5a5; }
+    .feedback-box.hint    { background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.25); color: #fde68a; }
+
+    .final-answer-card { background: linear-gradient(135deg, rgba(20,184,166,0.12), rgba(251,146,60,0.08)); border: 1px solid var(--accent); border-radius: 10px; padding: 1.5rem; text-align: center; display: none; animation: celebrate 0.4s ease; }
+    .final-answer-card.visible { display: block; }
+    .final-answer-label { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 0.5rem; }
+    .final-answer-value { font-family: var(--mono); font-size: 2rem; font-weight: 700; color: var(--text); }
+    .final-answer-caption { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.35rem; }
+    .try-again-btn { margin-top: 1.25rem; background: transparent; border: 1px solid var(--border2); border-radius: 7px; padding: 0.5rem 1.25rem; font-family: 'Outfit', sans-serif; font-size: 0.85rem; color: var(--text-muted); cursor: pointer; transition: all 0.15s; }
+    .try-again-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .divider { height: 1px; background: var(--border); margin: 1.75rem 0; }
+
+    @keyframes slideDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes celebrate { 0% { transform: scale(0.95); opacity: 0; } 60% { transform: scale(1.02); } 100% { transform: scale(1); opacity: 1; } }
+
+    @media (max-width: 620px) {
+      .formula-card { flex-direction: column; gap: 0.75rem; }
+      .formula-key { margin-left: 0; }
+      .shape-grid { grid-template-columns: repeat(2, 1fr); }
+      .compute-row { flex-direction: column; align-items: flex-start; }
+      .answer-box { width: 100%; }
+      .step-instruction { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="page-header">
+  <nav class="breadcrumb">
+    <a href="/">Home</a>
+    <span class="sep">›</span>
+    <a href="/math-toolkit">Math Toolkit</a>
+    <span class="sep">›</span>
+    <span class="current">Volume</span>
+  </nav>
+</header>
+
+<main class="page-body">
+  <h1 class="module-title">Volume of <span>3D Shapes</span></h1>
+  <p class="module-subtitle">Select a 3D shape, enter your known measurements, then work through each step to find the volume.</p>
+
+  <div class="section-label">Choose a Shape</div>
+  <div class="shape-grid" id="shapeGrid"></div>
+
+  <!-- Pyramid sub-selector -->
+  <div class="sub-row" id="pyramidSub">
+    <button class="sub-btn active" data-pyr="square">Square Base Pyramid</button>
+    <button class="sub-btn" data-pyr="rectangular">Rectangular Base Pyramid</button>
+    <button class="sub-btn" data-pyr="triangular">Triangular Base Pyramid</button>
+  </div>
+
+  <!-- Prism sub-selector -->
+  <div class="sub-row" id="prismSub">
+    <button class="sub-btn active" data-prism="rectangular">Rectangular Prism</button>
+    <button class="sub-btn" data-prism="triangular">Triangular Prism</button>
+    <button class="sub-btn" data-prism="trapezoidal">Trapezoidal Prism</button>
+  </div>
+
+  <div id="workspace">
+    <div class="divider"></div>
+
+    <div class="concept-panel" id="conceptPanel">
+      <div class="concept-icon">📐</div>
+      <div class="concept-text" id="conceptText"></div>
+    </div>
+
+    <div class="formula-card" id="formulaCard">
+      <div style="flex:1">
+        <div class="formula-label">Formula</div>
+        <div class="formula-text" id="formulaText"></div>
+        <div class="formula-desc" id="formulaDesc"></div>
+        <div class="realworld-chip" id="realworldChip"></div>
+      </div>
+      <div class="formula-key" id="formulaKey"></div>
+    </div>
+
+    <div class="step-card" id="stepKnown">
+      <div class="step-header">
+        <div class="step-badge" id="badgeKnown">1</div>
+        <div class="step-title">Identify Your Known Values</div>
+        <div class="step-instruction">Enter the measurements from your problem.</div>
+      </div>
+      <div class="step-body">
+        <div class="known-grid" id="knownGrid"></div>
+        <button class="begin-btn" id="beginBtn" onclick="beginSteps()" disabled>Begin Solving →</button>
+      </div>
+    </div>
+
+    <div id="stepsContainer"></div>
+
+    <div class="final-answer-card" id="finalCard">
+      <div class="final-answer-label">✓ Volume</div>
+      <div class="final-answer-value" id="finalValue"></div>
+      <div class="final-answer-caption" id="finalCaption"></div>
+      <br>
+      <button class="try-again-btn" onclick="resetWorkspace()">↺ Try Another Problem</button>
+    </div>
+  </div>
+</main>
+
+<script>
+function round2(n) { return Math.round(n * 100) / 100; }
+function isClose(a, b) { return Math.abs(a - b) <= Math.max(0.06, Math.abs(b) * 0.015); }
+
+/* ================================================================
+   SHAPE DEFINITIONS
+================================================================ */
+const SHAPES = {
+
+  cube: {
+    name: 'Cube',
+    concept: 'Volume measures how much <strong>space</strong> is inside a 3D shape — measured in <strong>cubic units</strong> (units³). A cube has equal length, width, and height.',
+    realworld: '🎲 Think: dice, ice cubes, sugar cubes',
+    formulaText: 'V = <span class="var">s</span>³',
+    formulaDesc: 'Cube the side length — multiply it by itself three times.',
+    formulaKey: '<span class="kv">s</span> = side length',
+    knownFields: [{ id: 's', label: 'Side length (s)', varName: 's', hint: 'All edges are equal.' }],
+    steps: [
+      { title: 'Substitute Your Value', type: 'expression', displayFn: (k) => `V = <span class="val">${k.s}</span>³` },
+      {
+        title: 'Multiply s × s (s²)',
+        instruction: 'Start by squaring the side length.',
+        type: 'compute',
+        rows: [{
+          exprFn: (k) => `<span class="val">${k.s}</span> × <span class="val">${k.s}</span> =`,
+          answerId: 's2',
+          answerFn: (k) => round2(k.s * k.s),
+          hintFn: (k) => `Multiply ${k.s} × ${k.s}.`
+        }]
+      },
+      {
+        title: 'Multiply s² × s (s³)',
+        instruction: 'Now multiply your result by s one more time.',
+        type: 'compute',
+        rows: [{
+          exprFn: (k, c) => `<span class="val">${c.s2}</span> × <span class="val">${k.s}</span> =`,
+          answerId: 'V',
+          answerFn: (k, c) => round2(c.s2 * k.s),
+          hintFn: (k, c) => `Multiply ${c.s2} × ${k.s}.`
+        }],
+        isFinal: true
+      }
+    ]
+  },
+
+  'prism-rectangular': {
+    name: 'Rectangular Prism',
+    concept: 'Volume of a prism = <strong>Base Area × Height</strong>. For a rectangular prism, the base is a rectangle (l × w), then multiplied by the height.',
+    realworld: '📦 Think: cereal boxes, bricks, shoeboxes',
+    formulaText: 'V = <span class="var">l</span> × <span class="var">w</span> × <span class="var">h</span>',
+    formulaDesc: 'Multiply length times width times height.',
+    formulaKey: '<span class="kv">l</span> = length<br><span class="kv">w</span> = width<br><span class="kv">h</span> = height',
+    knownFields: [
+      { id: 'l', label: 'Length (l)', varName: 'l', hint: '' },
+      { id: 'w', label: 'Width (w)',  varName: 'w', hint: '' },
+      { id: 'h', label: 'Height (h)', varName: 'h', hint: '' }
+    ],
+    steps: [
+      { title: 'Substitute Your Values', type: 'expression', displayFn: (k) => `V = <span class="val">${k.l}</span> × <span class="val">${k.w}</span> × <span class="val">${k.h}</span>` },
+      {
+        title: 'Multiply Length × Width (Base Area)',
+        instruction: 'Find the area of the rectangular base first.',
+        type: 'compute',
+        rows: [{
+          exprFn: (k) => `<span class="val">${k.l}</span> × <span class="val">${k.w}</span> =`,
+          answerId: 'lw',
+          answerFn: (k) => round2(k.l * k.w),
+          hintFn: (k) => `Multiply ${k.l} × ${k.w}.`
+        }]
+      },
+      {
+        title: 'Multiply Base Area × Height',
+        instruction: 'Multiply the base area by the height to get the volume.',
+        type: 'compute',
+        rows: [{
+          exprFn: (k, c) => `<span class="val">${c.lw}</span> × <span class="val">${k.h}</span> =`,
+          answerId: 'V',
+          answerFn: (k, c) => round2(c.lw * k.h),
+          hintFn: (k, c) => `Multiply ${c.lw} × ${k.h}.`
+        }],
+        isFinal: true
+      }
+    ]
+  },
+
+  'prism-triangular': {
+    name: 'Triangular Prism',
+    concept: 'Volume = <strong>Base Area × Height</strong>. The base here is a triangle (½bh), then multiplied by the length of the prism.',
+    realworld: '🏕️ Think: tent shapes, Toblerone boxes, ramps',
+    formulaText: 'V = ½ × <span class="var">b</span> × <span class="var">h</span> × <span class="var">l</span>',
+    formulaDesc: 'One half times the triangle base times triangle height times the prism length.',
+    formulaKey: '<span class="kv">b</span> = triangle base<br><span class="kv">h</span> = triangle height<br><span class="kv">l</span> = prism length',
+    knownFields: [
+      { id: 'b', label: 'Triangle base (b)', varName: 'b', hint: 'Base of the triangular cross-section.' },
+      { id: 'h', label: 'Triangle height (h)', varName: 'h', hint: 'Perpendicular height of the triangle.' },
+      { id: 'l', label: 'Prism length (l)', varName: 'l', hint: 'How long the prism extends.' }
+    ],
+    steps: [
+      { title: 'Substitute Your Values', type: 'expression', displayFn: (k) => `V = 0.5 × <span class="val">${k.b}</span> × <span class="val">${k.h}</span> × <span class="val">${k.l}</span>` },
+      {
+        title: 'Find the Triangle Base Area (½bh)',
+        instruction: 'Multiply 0.5 × base × triangle height.',
+        type: 'compute',
+        rows: [{
+          exprFn: (k) => `0.5 × <span class="val">${k.b}</span> × <span class="val">${k.h}</span> =`,
+          answerId: 'triBase',
+          answerFn: (k) => round2(0.5 * k.b * k.h),
+          hintFn: (k) => `Multiply 0.5 × ${k.b} = ${round2(0.5 * k.b)}, then × ${k.h}.`
+        }]
+      },
+      {
+        title: 'Multiply Base Area × Prism Length',
+        instruction: 'Multiply the triangle area by the prism length.',
+        type: 'compute',
+        rows: [{
+          exprFn: (k, c) => `<span class="val">${c.triBase}</span> × <span class="val">${k.l}</span> =`,
+          answerId: 'V',
+          answerFn: (k, c) => round2(c.triBase * k.l),
+          hintFn: (k, c) => `Multiply ${c.triBase} × ${k.l}.`
+        }],
+        isFinal: true
+      }
+    ]
+  },
+
+  'prism-trapezoidal': {
+    name: 'Trapezoidal Prism',
+    concept: 'Volume = <strong>Base Area × Height</strong>. The base is a trapezoid (½(b₁+b₂)h), then multiplied by the prism length.',
+    realworld: '🏗️ Think: concrete support beams, certain swimming pool cross-sections',
+    formulaText: 'V = ½(<span class="var">b₁</span>+<span class="var">b₂</span>) × <span class="var">h</span> × <span class="var">l</span>',
+    formulaDesc: 'Average of the two bases × trapezoid height × prism length.',
+    formulaKey: '<span class="kv">b₁</span> = top base<br><span class="kv">b₂</span> = bottom base<br><span class="kv">h</span> = trap. height<br><span class="kv">l</span> = prism length',
+    knownFields: [
+      { id: 'b1', label: 'Top base (b₁)',      varName: 'b₁', hint: 'Shorter parallel side of the trapezoid.' },
+      { id: 'b2', label: 'Bottom base (b₂)',   varName: 'b₂', hint: 'Longer parallel side of the trapezoid.' },
+      { id: 'h',  label: 'Trap. height (h)',   varName: 'h',  hint: 'Perpendicular height of the trapezoid.' },
+      { id: 'l',  label: 'Prism length (l)',   varName: 'l',  hint: 'How long the prism extends.' }
+    ],
+    steps: [
+      { title: 'Substitute Your Values', type: 'expression', displayFn: (k) => `V = 0.5×(<span class="val">${k.b1}</span>+<span class="val">${k.b2}</span>)×<span class="val">${k.h}</span>×<span class="val">${k.l}</span>` },
+      {
+        title: 'Add the Two Bases',
+        instruction: 'Add b₁ + b₂ first.',
+        type: 'compute',
+        rows: [{
+          exprFn: (k) => `<span class="val">${k.b1}</span> + <span class="val">${k.b2}</span> =`,
+          answerId: 'sumB',
+          answerFn: (k) => round2(k.b1 + k.b2),
+          hintFn: (k) => `Add ${k.b1} + ${k.b2}.`
+        }]
+      },
+      {
+        title: 'Find the Trapezoid Base Area (½(b₁+b₂)×h)',
+        instruction: 'Multiply 0.5 × sum of bases × trapezoid height.',
+        type: 'compute',
+        rows: [{
+          exprFn: (k, c) => `0.5 × <span class="val">${c.sumB}</span> × <span class="val">${k.h}</span> =`,
+          answerId: 'trapBase',
+          answerFn: (k, c) => round2(0.5 * c.sumB * k.h),
+          hintFn: (k, c) => `Multiply 0.5 × ${c.sumB} = ${round2(0.5 * c.sumB)}, then × ${k.h}.`
+        }]
+      },
+      {
+        title: 'Multiply Base Area × Prism Length',
+        instruction: 'Multiply the trapezoid area by the prism length.',
+        type: 'compute',
+        rows: [{
+          exprFn: (k, c) => `<span class="val">${c.trapBase}</span> × <span class="val">${k.l}</span> =`,
+          answerId: 'V',
+          answerFn: (k, c) => round2(c.trapBase * k.l),
+          hintFn: (k, c) => `Multiply ${c.trapBase} × ${k.l}.`
+        }],
+        isFinal: true
+      }
+    ]
+  },
+
+  cylinder: {
+    name: 'Cylinder',
+    concept: 'Volume = <strong>Base Area × Height</strong>. The base is a circle (πr²), then multiplied by the height.',
+    realworld: '🥫 Think: soup cans, water tanks, paper towel rolls',
+    formulaText: 'V = π × <span class="var">r</span>² × <span class="var">h</span>',
+    formulaDesc: 'Pi times radius squared times height.',
+    formulaKey: '<span class="kv">r</span> = radius<br><span class="kv">h</span> = height<br>π ≈ 3.14',
+    knownFields: [
+      { id: 'r', label: 'Radius (r)', varName: 'r', hint: 'Radius of the circular base.' },
+      { id: 'h', label: 'Height (h)', varName: 'h', hint: 'Height of the cylinder.' }
+    ],
+    steps: [
+      { title: 'Substitute Your Values', type: 'expression', displayFn: (k) => `V = 3.14 × <span class="val">${k.r}</span>² × <span class="val">${k.h}</span>` },
+      {
+        title: 'Square the Radius',
+        instruction: 'Multiply the radius by itself.',
+        type: 'compute',
+        rows: [{
+          exprFn: (k) => `<span class="val">${k.r}</span> × <span class="val">${k.r}</span> =`,
+          answerId: 'r2',
+          answerFn: (k) => round2(k.r * k.r),
+          hintFn: (k) => `Multiply ${k.r} × ${k.r}.`
+        }]
+      },
+      {
+        title: 'Find the Circle Base Area (πr²)',
+        instruction: 'Multiply 3.14 by the squared radius.',
+        type: 'compute',
+        rows: [{
+          exprFn: (k, c) => `3.14 × <span class="val">${c.r2}</span> =`,
+          answerId: 'baseArea',
+          answerFn: (k, c) => round2(3.14 * c.r2),
+          hintFn: (k, c) => `Multiply 3.14 × ${c.r2}.`
+        }]
+      },
+      {
+        title: 'Multiply Base Area × Height',
+        instruction: 'Multiply the circle area by the height.',
+        type: 'compute',
+        rows: [{
+          exprFn: (k, c) => `<span class="val">${c.baseArea}</span> × <span class="val">${k.h}</span> =`,
+          answerId: 'V',
+          answerFn: (k, c) => round2(c.baseArea * k.h),
+          hintFn: (k, c) => `Multiply ${c.baseArea} × ${k.h}.`
+        }],
+        isFinal: true
+      }
+    ]
+  },
+
+  cone: {
+    name: 'Cone',
+    concept: 'A cone holds exactly <strong>⅓ the volume</strong> of a cylinder with the same base and height. That\'s where the ⅓ in the formula comes from!',
+    realworld: '🍦 Think: ice cream cones, party hats, funnels',
+    formulaText: 'V = ⅓ × π × <span class="var">r</span>² × <span class="var">h</span>',
+    formulaDesc: 'One third times pi times radius squared times height.',
+    formulaKey: '<span class="kv">r</span> = radius<br><span class="kv">h</span> = vertical height<br>π ≈ 3.14',
+    knownFields: [
+      { id: 'r', label: 'Radius (r)',          varName: 'r', hint: 'Radius of the circular base.' },
+      { id: 'h', label: 'Vertical height (h)', varName: 'h', hint: 'Straight up-and-down height — NOT the slant height.' }
+    ],
+    steps: [
+      { title: 'Substitute Your Values', type: 'expression', displayFn: (k) => `V = 0.333 × 3.14 × <span class="val">${k.r}</span>² × <span class="val">${k.h}</span>` },
+      {
+        title: 'Square the Radius',
+        instruction: 'Multiply the radius by itself.',
+        type: 'compute',
+        rows: [{
+          exprFn: (k) => `<span class="val">${k.r}</span> × <span class="val">${k.r}</span> =`,
+          answerId: 'r2',
+          answerFn: (k) => round2(k.r * k.r),
+          hintFn: (k) => `Multiply ${k.r} × ${k.r}.`
+        }]
+      },
+      {
+        title: 'Multiply π × r²',
+        instruction: 'Multiply 3.14 by the squared radius.',
+        type: 'compute',
+        rows: [{
+          exprFn: (k, c) => `3.14 × <span class="val">${c.r2}</span> =`,
+          answerId: 'pir2',
+          answerFn: (k, c) => round2(3.14 * c.r2),
+          hintFn: (k, c) => `Multiply 3.14 × ${c.r2}.`
+        }]
+      },
+      {
+        title: 'Multiply by Height',
+        instruction: 'Multiply by the vertical height.',
+        type: 'compute',
+        rows: [{
+          exprFn: (k, c) => `<span class="val">${c.pir2}</span> × <span class="val">${k.h}</span> =`,
+          answerId: 'pir2h',
+          answerFn: (k, c) => round2(c.pir2 * k.h),
+          hintFn: (k, c) => `Multiply ${c.pir2} × ${k.h}.`
+        }]
+      },
+      {
+        title: 'Multiply by ⅓ (Divide by 3)',
+        instruction: 'Finally, divide by 3 to apply the one-third.',
+        type: 'compute',
+        rows: [{
+          exprFn: (k, c) => `<span class="val">${c.pir2h}</span> ÷ 3 =`,
+          answerId: 'V',
+          answerFn: (k, c) => round2(c.pir2h / 3),
+          hintFn: (k, c) => `Divide ${c.pir2h} ÷ 3. Multiplying by ⅓ is the same as dividing by 3.`
+        }],
+        isFinal: true
+      }
+    ]
+  },
+
+  sphere: {
+    name: 'Sphere',
+    concept: 'The sphere formula uses <strong>⁴⁄₃</strong> — a fraction that comes from calculus. Think of it as 4 ÷ 3 ≈ 1.333, which you multiply with π and r³.',
+    realworld: '⚽ Think: basketballs, globes, planets, marbles',
+    formulaText: 'V = (4/3) × π × <span class="var">r</span>³',
+    formulaDesc: 'Four-thirds times pi times radius cubed. 4 ÷ 3 ≈ 1.333.',
+    formulaKey: '<span class="kv">r</span> = radius<br>π ≈ 3.14<br>4/3 ≈ 1.333',
+    knownFields: [
+      { id: 'r', label: 'Radius (r)', varName: 'r', hint: 'Distance from center to surface.' }
+    ],
+    steps: [
+      { title: 'Substitute Your Value', type: 'expression', displayFn: (k) => `V = 1.333 × 3.14 × <span class="val">${k.r}</span>³` },
+      {
+        title: 'Square the Radius (r²)',
+        instruction: 'Multiply the radius by itself.',
+        type: 'compute',
+        rows: [{
+          exprFn: (k) => `<span class="val">${k.r}</span> × <span class="val">${k.r}</span> =`,
+          answerId: 'r2',
+          answerFn: (k) => round2(k.r * k.r),
+          hintFn: (k) => `Multiply ${k.r} × ${k.r}.`
+        }]
+      },
+      {
+        title: 'Cube the Radius (r³)',
+        instruction: 'Multiply r² by r one more time.',
+        type: 'compute',
+        rows: [{
+          exprFn: (k, c) => `<span class="val">${c.r2}</span> × <span class="val">${k.r}</span> =`,
+          answerId: 'r3',
+          answerFn: (k, c) => round2(c.r2 * k.r),
+          hintFn: (k, c) => `Multiply ${c.r2} × ${k.r}.`
+        }]
+      },
+      {
+        title: 'Multiply 4/3 × π',
+        instruction: 'Multiply 1.333 × 3.14.',
+        type: 'compute',
+        rows: [{
+          exprFn: () => `1.333 × 3.14 =`,
+          answerId: 'coeff',
+          answerFn: () => round2(1.333 * 3.14),
+          hintFn: () => `Multiply 1.333 × 3.14. ≈ 4.186`
+        }]
+      },
+      {
+        title: 'Multiply by r³',
+        instruction: 'Multiply your coefficient by the cubed radius.',
+        type: 'compute',
+        rows: [{
+          exprFn: (k, c) => `<span class="val">${c.coeff}</span> × <span class="val">${c.r3}</span> =`,
+          answerId: 'V',
+          answerFn: (k, c) => round2(c.coeff * c.r3),
+          hintFn: (k, c) => `Multiply ${c.coeff} × ${c.r3}.`
+        }],
+        isFinal: true
+      }
+    ]
+  },
+
+  'pyramid-square': {
+    name: 'Square Pyramid',
+    concept: 'A pyramid holds exactly <strong>⅓ the volume</strong> of a prism with the same base and height — just like a cone is ⅓ of a cylinder.',
+    realworld: '🏺 Think: Egyptian pyramids, display stands, glass pyramid buildings',
+    formulaText: 'V = ⅓ × <span class="var">s</span>² × <span class="var">h</span>',
+    formulaDesc: 'One third times the square base area times the height.',
+    formulaKey: '<span class="kv">s</span> = base side length<br><span class="kv">h</span> = vertical height',
+    knownFields: [
+      { id: 's', label: 'Base side length (s)', varName: 's', hint: 'Length of one side of the square base.' },
+      { id: 'h', label: 'Vertical height (h)',  varName: 'h', hint: 'Straight up-and-down height from base to apex.' }
+    ],
+    steps: [
+      { title: 'Substitute Your Values', type: 'expression', displayFn: (k) => `V = 0.333 × <span class="val">${k.s}</span>² × <span class="val">${k.h}</span>` },
+      {
+        title: 'Find the Base Area (s²)',
+        instruction: 'Square the side length to get the base area.',
+        type: 'compute',
+        rows: [{
+          exprFn: (k) => `<span class="val">${k.s}</span> × <span class="val">${k.s}</span> =`,
+          answerId: 's2',
+          answerFn: (k) => round2(k.s * k.s),
+          hintFn: (k) => `Multiply ${k.s} × ${k.s}.`
+        }]
+      },
+      {
+        title: 'Multiply Base Area × Height',
+        instruction: 'Multiply the base area by the vertical height.',
+        type: 'compute',
+        rows: [{
+          exprFn: (k, c) => `<span class="val">${c.s2}</span> × <span class="val">${k.h}</span> =`,
+          answerId: 's2h',
+          answerFn: (k, c) => round2(c.s2 * k.h),
+          hintFn: (k, c) => `Multiply ${c.s2} × ${k.h}.`
+        }]
+      },
+      {
+        title: 'Divide by 3 (Apply ⅓)',
+        instruction: 'Divide your result by 3 to apply the one-third.',
+        type: 'compute',
+        rows: [{
+          exprFn: (k, c) => `<span class="val">${c.s2h}</span> ÷ 3 =`,
+          answerId: 'V',
+          answerFn: (k, c) => round2(c.s2h / 3),
+          hintFn: (k, c) => `Divide ${c.s2h} ÷ 3.`
+        }],
+        isFinal: true
+      }
+    ]
+  },
+
+  'pyramid-rectangular': {
+    name: 'Rectangular Pyramid',
+    concept: 'Volume = <strong>⅓ × Base Area × Height</strong>. The base is a rectangle (l × w), multiplied by height, then divided by 3.',
+    realworld: '🏛️ Think: some ancient temples, architectural roof designs',
+    formulaText: 'V = ⅓ × <span class="var">l</span> × <span class="var">w</span> × <span class="var">h</span>',
+    formulaDesc: 'One third times length times width times vertical height.',
+    formulaKey: '<span class="kv">l</span> = base length<br><span class="kv">w</span> = base width<br><span class="kv">h</span> = vertical height',
+    knownFields: [
+      { id: 'l', label: 'Base length (l)', varName: 'l', hint: '' },
+      { id: 'w', label: 'Base width (w)',  varName: 'w', hint: '' },
+      { id: 'h', label: 'Vertical height (h)', varName: 'h', hint: 'Height from base to apex, straight up.' }
+    ],
+    steps: [
+      { title: 'Substitute Your Values', type: 'expression', displayFn: (k) => `V = 0.333 × <span class="val">${k.l}</span> × <span class="val">${k.w}</span> × <span class="val">${k.h}</span>` },
+      {
+        title: 'Find the Base Area (l × w)',
+        instruction: 'Multiply length times width.',
+        type: 'compute',
+        rows: [{
+          exprFn: (k) => `<span class="val">${k.l}</span> × <span class="val">${k.w}</span> =`,
+          answerId: 'lw',
+          answerFn: (k) => round2(k.l * k.w),
+          hintFn: (k) => `Multiply ${k.l} × ${k.w}.`
+        }]
+      },
+      {
+        title: 'Multiply Base Area × Height',
+        instruction: 'Multiply the base area by the height.',
+        type: 'compute',
+        rows: [{
+          exprFn: (k, c) => `<span class="val">${c.lw}</span> × <span class="val">${k.h}</span> =`,
+          answerId: 'lwh',
+          answerFn: (k, c) => round2(c.lw * k.h),
+          hintFn: (k, c) => `Multiply ${c.lw} × ${k.h}.`
+        }]
+      },
+      {
+        title: 'Divide by 3 (Apply ⅓)',
+        instruction: 'Divide your result by 3.',
+        type: 'compute',
+        rows: [{
+          exprFn: (k, c) => `<span class="val">${c.lwh}</span> ÷ 3 =`,
+          answerId: 'V',
+          answerFn: (k, c) => round2(c.lwh / 3),
+          hintFn: (k, c) => `Divide ${c.lwh} ÷ 3.`
+        }],
+        isFinal: true
+      }
+    ]
+  },
+
+  'pyramid-triangular': {
+    name: 'Triangular Pyramid',
+    concept: 'Also called a <strong>tetrahedron</strong>. Volume = ⅓ × Triangle Base Area × Height. All four faces are triangles.',
+    realworld: '💎 Think: gem cuts, certain architectural structures',
+    formulaText: 'V = ⅓ × (½ × <span class="var">b</span> × <span class="var">h_b</span>) × <span class="var">H</span>',
+    formulaDesc: 'One third times the triangular base area times the pyramid height.',
+    formulaKey: '<span class="kv">b</span> = triangle base<br><span class="kv">h_b</span> = triangle height<br><span class="kv">H</span> = pyramid height',
+    knownFields: [
+      { id: 'b',  label: 'Triangle base (b)',     varName: 'b',   hint: 'Base of the triangular base face.' },
+      { id: 'hb', label: 'Triangle height (h_b)', varName: 'h_b', hint: 'Height of the triangular base face.' },
+      { id: 'H',  label: 'Pyramid height (H)',    varName: 'H',   hint: 'Vertical height from base to apex.' }
+    ],
+    steps: [
+      { title: 'Substitute Your Values', type: 'expression', displayFn: (k) => `V = 0.333 × (0.5 × <span class="val">${k.b}</span> × <span class="val">${k.hb}</span>) × <span class="val">${k.H}</span>` },
+      {
+        title: 'Find the Triangle Base Area (½bh)',
+        instruction: 'Multiply 0.5 × base × triangle height.',
+        type: 'compute',
+        rows: [{
+          exprFn: (k) => `0.5 × <span class="val">${k.b}</span> × <span class="val">${k.hb}</span> =`,
+          answerId: 'triArea',
+          answerFn: (k) => round2(0.5 * k.b * k.hb),
+          hintFn: (k) => `Multiply 0.5 × ${k.b} = ${round2(0.5 * k.b)}, then × ${k.hb}.`
+        }]
+      },
+      {
+        title: 'Multiply Base Area × Pyramid Height',
+        instruction: 'Multiply the triangle area by the pyramid\'s vertical height.',
+        type: 'compute',
+        rows: [{
+          exprFn: (k, c) => `<span class="val">${c.triArea}</span> × <span class="val">${k.H}</span> =`,
+          answerId: 'triH',
+          answerFn: (k, c) => round2(c.triArea * k.H),
+          hintFn: (k, c) => `Multiply ${c.triArea} × ${k.H}.`
+        }]
+      },
+      {
+        title: 'Divide by 3 (Apply ⅓)',
+        instruction: 'Divide your result by 3 to get the volume.',
+        type: 'compute',
+        rows: [{
+          exprFn: (k, c) => `<span class="val">${c.triH}</span> ÷ 3 =`,
+          answerId: 'V',
+          answerFn: (k, c) => round2(c.triH / 3),
+          hintFn: (k, c) => `Divide ${c.triH} ÷ 3.`
+        }],
+        isFinal: true
+      }
+    ]
+  }
+};
+
+/* ================================================================
+   STATE
+================================================================ */
+let currentShapeId = null;
+let pyrMode = 'square';
+let prismMode = 'rectangular';
+let knownValues = {}, computedValues = {}, stepAttempts = {};
+
+/* ================================================================
+   SHAPE GRID
+================================================================ */
+const shapeList = [
+  { id: 'cube',     name: 'Cube',             icon: '🧊', formula: 'V = s³' },
+  { id: 'prism',    name: 'Prism',            icon: '📦', formula: 'V = B × h' },
+  { id: 'cylinder', name: 'Cylinder',         icon: '🥫', formula: 'V = πr²h' },
+  { id: 'cone',     name: 'Cone',             icon: '🍦', formula: 'V = ⅓πr²h' },
+  { id: 'sphere',   name: 'Sphere',           icon: '🔵', formula: 'V = ⁴⁄₃πr³' },
+  { id: 'pyramid',  name: 'Pyramid',          icon: '🔺', formula: 'V = ⅓Bh' }
+];
+
+function buildShapeGrid() {
+  const grid = document.getElementById('shapeGrid');
+  shapeList.forEach(s => {
+    const btn = document.createElement('button');
+    btn.className = 'shape-btn';
+    btn.dataset.shape = s.id;
+    btn.innerHTML = `<span class="shape-icon">${s.icon}</span><span class="shape-name">${s.name}</span><span class="shape-formula">${s.formula}</span>`;
+    btn.addEventListener('click', () => selectShape(s.id));
+    grid.appendChild(btn);
+  });
+}
+
+function selectShape(id) {
+  currentShapeId = id;
+  document.querySelectorAll('.shape-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`.shape-btn[data-shape="${id}"]`).classList.add('active');
+  document.getElementById('pyramidSub').classList.toggle('visible', id === 'pyramid');
+  document.getElementById('prismSub').classList.toggle('visible', id === 'prism');
+  resetWorkspace();
+  renderWorkspace();
+}
+
+document.querySelectorAll('#pyramidSub .sub-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#pyramidSub .sub-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    pyrMode = btn.dataset.pyr;
+    resetWorkspace(); renderWorkspace();
+  });
+});
+document.querySelectorAll('#prismSub .sub-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#prismSub .sub-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    prismMode = btn.dataset.prism;
+    resetWorkspace(); renderWorkspace();
+  });
+});
+
+function getShape() {
+  if (!currentShapeId) return null;
+  if (currentShapeId === 'pyramid') return SHAPES[`pyramid-${pyrMode}`];
+  if (currentShapeId === 'prism')   return SHAPES[`prism-${prismMode}`];
+  return SHAPES[currentShapeId];
+}
+
+/* ================================================================
+   RENDER WORKSPACE
+================================================================ */
+function renderWorkspace() {
+  const shape = getShape();
+  if (!shape) return;
+  document.getElementById('workspace').classList.add('visible');
+
+  document.getElementById('conceptText').innerHTML = shape.concept;
+  document.getElementById('formulaText').innerHTML = shape.formulaText;
+  document.getElementById('formulaDesc').textContent = shape.formulaDesc;
+  document.getElementById('formulaKey').innerHTML = shape.formulaKey;
+  document.getElementById('realworldChip').textContent = shape.realworld;
+
+  const grid = document.getElementById('knownGrid');
+  grid.innerHTML = '';
+  shape.knownFields.forEach(field => {
+    const div = document.createElement('div');
+    div.className = 'field-group';
+    div.innerHTML = `
+      <label class="field-label">${field.label} &nbsp;<span class="var-name">(${field.varName})</span></label>
+      ${field.hint ? `<div class="field-hint">${field.hint}</div>` : ''}
+      <input class="known-input" id="known_${field.id}" type="number" step="any" min="0" placeholder="Enter value..." oninput="checkBeginReady()" />
+    `;
+    grid.appendChild(div);
+  });
+
+  document.getElementById('stepsContainer').innerHTML = '';
+  document.getElementById('finalCard').classList.remove('visible');
+  document.getElementById('badgeKnown').textContent = '1';
+  document.getElementById('stepKnown').classList.remove('complete');
+  document.getElementById('beginBtn').disabled = true;
+  document.getElementById('beginBtn').style.display = '';
+  document.querySelectorAll('.known-input').forEach(el => el.disabled = false);
+}
+
+function checkBeginReady() {
+  const shape = getShape();
+  if (!shape) return;
+  const allFilled = shape.knownFields.every(f => {
+    const v = document.getElementById(`known_${f.id}`)?.value.trim();
+    return v !== '' && !isNaN(parseFloat(v));
+  });
+  document.getElementById('beginBtn').disabled = !allFilled;
+}
+
+/* ================================================================
+   BEGIN SOLVING
+================================================================ */
+function beginSteps() {
+  const shape = getShape();
+  knownValues = {}; computedValues = {}; stepAttempts = {};
+  shape.knownFields.forEach(f => {
+    knownValues[f.id] = parseFloat(document.getElementById(`known_${f.id}`).value);
+  });
+  document.getElementById('stepKnown').classList.add('complete');
+  document.getElementById('badgeKnown').textContent = '✓';
+  document.querySelectorAll('.known-input').forEach(el => el.disabled = true);
+  document.getElementById('beginBtn').style.display = 'none';
+  renderSteps(shape);
+}
+
+/* ================================================================
+   RENDER STEPS
+================================================================ */
+function renderSteps(shape) {
+  const container = document.getElementById('stepsContainer');
+  container.innerHTML = '';
+  shape.steps.forEach((step, idx) => {
+    const stepNum = idx + 2;
+    const card = document.createElement('div');
+    card.className = 'step-card' + (idx > 0 ? ' locked' : '');
+    card.id = `dynStep_${idx}`;
+    let bodyHTML = '';
+    if (step.type === 'expression') {
+      bodyHTML = `<div class="expr-display">${step.displayFn(knownValues)}</div>`;
+    } else if (step.type === 'compute') {
+      bodyHTML = step.rows.map((row, rIdx) => {
+        const rowId = `row_${idx}_${rIdx}`;
+        return `
+          <div class="compute-row" id="${rowId}_wrap">
+            <div class="compute-expr">${row.exprFn(knownValues, computedValues)}</div>
+            <input class="answer-box" id="${rowId}_input" type="number" step="any" placeholder="?"
+              onkeydown="if(event.key==='Enter') checkRow('${rowId}',${idx},${rIdx})" />
+            <button class="check-btn" id="${rowId}_btn" onclick="checkRow('${rowId}',${idx},${rIdx})">Check</button>
+          </div>`;
+      }).join('');
+      bodyHTML += `<div class="feedback-box" id="fb_${idx}"></div>`;
+    }
+    card.innerHTML = `
+      <div class="step-header">
+        <div class="step-badge" id="badge_${idx}">${stepNum}</div>
+        <div class="step-title">Step ${stepNum}: ${step.title}</div>
+        <div class="step-instruction">${step.instruction || ''}</div>
+      </div>
+      <div class="step-body">${bodyHTML}</div>`;
+    container.appendChild(card);
+  });
+  document.getElementById('dynStep_0').classList.remove('locked');
+  if (shape.steps[0].type === 'expression') setTimeout(() => unlockStep(1), 350);
+}
+
+function unlockStep(idx) {
+  const card = document.getElementById(`dynStep_${idx}`);
+  if (!card) return;
+  card.classList.remove('locked');
+  const shape = getShape();
+  if (shape && shape.steps[idx] && shape.steps[idx].type === 'expression') {
+    const exprEl = card.querySelector('.expr-display');
+    if (exprEl) exprEl.innerHTML = shape.steps[idx].displayFn(knownValues);
+    setTimeout(() => unlockStep(idx + 1), 400);
+  }
+}
+
+/* ================================================================
+   CHECK ROW
+================================================================ */
+function checkRow(rowId, stepIdx, rowIdx) {
+  const shape = getShape();
+  const step = shape.steps[stepIdx];
+  const row  = step.rows[rowIdx];
+  const input = document.getElementById(`${rowId}_input`);
+  const btn   = document.getElementById(`${rowId}_btn`);
+  const fb    = document.getElementById(`fb_${stepIdx}`);
+  const badge = document.getElementById(`badge_${stepIdx}`);
+  const card  = document.getElementById(`dynStep_${stepIdx}`);
+
+  if (!input || input.value.trim() === '') { showFeedback(fb, 'hint', 'Please enter a number before checking.'); return; }
+
+  const userAnswer = parseFloat(input.value);
+  const correct    = row.answerFn(knownValues, computedValues);
+  stepAttempts[rowId] = (stepAttempts[rowId] || 0) + 1;
+
+  if (isClose(userAnswer, correct)) {
+    input.classList.add('correct'); input.disabled = true; btn.disabled = true;
+    computedValues[row.answerId] = round2(userAnswer);
+
+    const allDone = step.rows.every((r, ri) => {
+      const inp = document.getElementById(`row_${stepIdx}_${ri}_input`);
+      return inp && inp.disabled;
+    });
+
+    if (allDone) {
+      card.classList.add('complete'); badge.textContent = '✓';
+      if (step.isFinal) {
+        showFeedback(fb, 'success', `✓ Correct! You found the volume!`);
+        showFinalAnswer(computedValues[row.answerId]);
+      } else {
+        showFeedback(fb, 'success', `✓ Correct! Move on to the next step.`);
+        const nextIdx = stepIdx + 1;
+        const nextStep = shape.steps[nextIdx];
+        if (nextStep && nextStep.type === 'compute') {
+          nextStep.rows.forEach((nr, nri) => {
+            const exprEl = document.querySelector(`#row_${nextIdx}_${nri}_wrap .compute-expr`);
+            if (exprEl) exprEl.innerHTML = nr.exprFn(knownValues, computedValues);
+          });
+        }
+        setTimeout(() => unlockStep(nextIdx), 400);
+      }
+    } else {
+      showFeedback(fb, 'success', `✓ Correct! Complete the remaining calculations.`);
+    }
+  } else {
+    input.classList.add('incorrect'); card.classList.add('error');
+    setTimeout(() => { input.classList.remove('incorrect'); card.classList.remove('error'); }, 600);
+    const attempts = stepAttempts[rowId];
+    let msg = '';
+    if (attempts === 1)      msg = `Not quite — double-check your math and try again.`;
+    else if (attempts === 2) msg = `Still not right. Hint: ${row.hintFn(knownValues, computedValues)}`;
+    else                     msg = `The correct answer is <strong>${correct}</strong>. ${row.hintFn(knownValues, computedValues)}`;
+    showFeedback(fb, 'error', msg);
+  }
+}
+
+function showFeedback(el, type, msg) { el.className = `feedback-box visible ${type}`; el.innerHTML = msg; }
+
+function showFinalAnswer(value) {
+  const card = document.getElementById('finalCard');
+  document.getElementById('finalValue').textContent = value + ' cubic units';
+  document.getElementById('finalCaption').textContent = `You worked through every step of the formula — excellent problem solving!`;
+  card.classList.add('visible');
+  card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function resetWorkspace() {
+  knownValues = {}; computedValues = {}; stepAttempts = {};
+  document.getElementById('stepsContainer').innerHTML = '';
+  document.getElementById('finalCard').classList.remove('visible');
+  document.getElementById('workspace').classList.remove('visible');
+}
+
+buildShapeGrid();
+</script>
+</body>
+</html>
