@@ -49,12 +49,52 @@
       "pagePath": "/life-skills/"
     },
     {
-      "id": "math",
-      "title": "Math Toolkit",
+      "id": "math_geo",
+      "title": "Geometry",
       "section": "math-toolkit",
-      "baseOut": "math-toolkit/presentations",
-      "slots": 16,
-      "pagePath": "/math-toolkit/"
+      "baseOut": "math-toolkit/presentations/geometry",
+      "slots": 32,
+      "pagePath": "/math-toolkit/geometry/"
+    },
+    {
+      "id": "math_alg",
+      "title": "Algebra",
+      "section": "math-toolkit",
+      "baseOut": "math-toolkit/presentations/algebra",
+      "slots": 32,
+      "pagePath": "/math-toolkit/algebra/"
+    },
+    {
+      "id": "math_num",
+      "title": "Number Sense",
+      "section": "math-toolkit",
+      "baseOut": "math-toolkit/presentations/number-sense",
+      "slots": 32,
+      "pagePath": "/math-toolkit/number-sense/"
+    },
+    {
+      "id": "math_data",
+      "title": "Data &amp; Statistics",
+      "section": "math-toolkit",
+      "baseOut": "math-toolkit/presentations/data-statistics",
+      "slots": 32,
+      "pagePath": "/math-toolkit/data-statistics/"
+    },
+    {
+      "id": "math_money",
+      "title": "Money Math",
+      "section": "math-toolkit",
+      "baseOut": "math-toolkit/presentations/money-math",
+      "slots": 32,
+      "pagePath": "/math-toolkit/money-math/"
+    },
+    {
+      "id": "math_gen",
+      "title": "General Math",
+      "section": "math-toolkit",
+      "baseOut": "math-toolkit/presentations/general",
+      "slots": 32,
+      "pagePath": "/math-toolkit/general/"
     }
   ],
   "updated": "2026-03-02T00:00:00Z",

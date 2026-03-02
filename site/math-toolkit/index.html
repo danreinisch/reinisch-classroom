@@ -17,25 +17,90 @@
   <script defer src="/web/class-mode.js"></script>
 
   <style>
-    /* Main heading */
-    h1 { margin:0 0 .25rem; font-size:2.25rem; font-weight:850; letter-spacing:-0.02em; }
+    .content-wrapper { padding-top: 1rem; }
 
-    /* Grid of modules (dynamically populated by math-toolkit-loader.js) */
-    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; padding-top: 1rem; }
-    .card-link { display: block; color: inherit; text-decoration: none; }
-    .card { border: 1px solid rgba(255, 255, 255, 0.10); border-radius: var(--rc-radius-lg); overflow: hidden; background: linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02)); backdrop-filter: blur(12px) saturate(130%); -webkit-backdrop-filter: blur(12px) saturate(130%); box-shadow: 0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08); transition: all 0.25s ease; }
-    .card:hover { transform: translateY(-3px); border-color: rgba(34, 197, 94, 0.35); box-shadow: 0 16px 48px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.12); }
-    .thumb { width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block; }
-    .desc { padding: .85rem 1rem; color: var(--rc-ink); min-height: 3rem; }
+    .content-wrapper h1 {
+      font-size: 38px;
+      font-weight: 850;
+      margin: 0 0 12px 0;
+      letter-spacing: -0.02em;
+      color: var(--rc-ink);
+    }
 
-    /* Empty state */
-    .empty { border: 1px dashed var(--rc-border-strong); border-radius: var(--rc-radius); padding: 1rem; background: rgba(0,0,0,.18); color: var(--rc-ink-dim); }
+    .content-wrapper > p {
+      font-size: 1.05rem;
+      color: var(--rc-ink-dim);
+      margin: 0 0 1.5rem 0;
+      max-width: 72ch;
+    }
 
-    /* Search */
-    .controls { position: sticky; top: .75rem; display: flex; justify-content: flex-end; z-index: 1; margin-bottom: 1rem; }
-    .search { padding: 0.6rem 0.75rem; border: 1px solid var(--rc-border); border-radius: var(--rc-radius); width: 260px; max-width: 100%; background: rgba(0,0,0,.22); color: var(--rc-ink); font-family: var(--rc-font); font-size: 16px; outline: none; transition: border-color 0.2s ease; }
-    .search::placeholder { color: var(--rc-muted); }
-    .search:focus { border-color: var(--rc-brand); }
+    .book-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.25rem;
+      margin-top: 1rem;
+    }
+
+    .book-card {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 20px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+      backdrop-filter: blur(12px) saturate(130%);
+      -webkit-backdrop-filter: blur(12px) saturate(130%);
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      border-left: 3px solid transparent;
+      border-radius: 18px;
+      text-decoration: none;
+      color: inherit;
+      transition: all 0.25s ease;
+      box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      min-height: 90px;
+    }
+
+    .book-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(34, 197, 94, 0.35);
+      box-shadow:
+        0 16px 48px rgba(0, 0, 0, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    }
+
+    .book-card:nth-child(1) { border-left-color: rgba(59, 130, 246, 0.5); }
+    .book-card:nth-child(1):hover { border-left-color: rgba(59, 130, 246, 0.8); }
+    .book-card:nth-child(2) { border-left-color: rgba(168, 85, 247, 0.5); }
+    .book-card:nth-child(2):hover { border-left-color: rgba(168, 85, 247, 0.8); }
+    .book-card:nth-child(3) { border-left-color: rgba(34, 197, 94, 0.5); }
+    .book-card:nth-child(3):hover { border-left-color: rgba(34, 197, 94, 0.8); }
+    .book-card:nth-child(4) { border-left-color: rgba(239, 68, 68, 0.5); }
+    .book-card:nth-child(4):hover { border-left-color: rgba(239, 68, 68, 0.8); }
+    .book-card:nth-child(5) { border-left-color: rgba(234, 179, 8, 0.5); }
+    .book-card:nth-child(5):hover { border-left-color: rgba(234, 179, 8, 0.8); }
+    .book-card:nth-child(6) { border-left-color: rgba(20, 184, 166, 0.5); }
+    .book-card:nth-child(6):hover { border-left-color: rgba(20, 184, 166, 0.8); }
+
+    .book-icon {
+      font-size: 2.5rem;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+
+    .book-title {
+      font-size: 1.1rem;
+      font-weight: 800;
+      margin: 0;
+    }
+
+    .empty-state {
+      border: 1px dashed var(--rc-border-strong);
+      border-radius: var(--rc-radius);
+      padding: 1.5rem;
+      background: rgba(0,0,0,.18);
+      color: var(--rc-ink-dim);
+    }
   </style>
 
   <script src="/assets/js/open-in-viewer.js"></script>
@@ -46,21 +111,62 @@
     <div class="tc-shell">
 
       <main class="tc-main">
-        <h1>Math Toolkit</h1>
-        <p style="margin:.25rem 0 1rem; color: var(--rc-ink-dim); max-width: 72ch;">Explore math modules. Click a card to open the module. Use Teacher Tools to add or update modules.</p>
-        <div class="controls">
-          <input class="search" id="search" type="search" placeholder="Search modules..." aria-label="Search modules" />
-        </div>
+        <div class="content-wrapper">
+          <h1>Math Toolkit</h1>
+          <p>Choose a math category to explore presentations and activities.</p>
 
-        <div id="modules" class="grid" role="list"></div>
-        <div id="empty" class="empty" hidden>
-          <p>No modules yet. Teachers can upload modules via Teacher Tools.</p>
+          <div class="book-grid" id="mathGrid"></div>
+          <div class="empty-state" id="emptyState" hidden>
+            <p>No math modules yet. Teachers can upload modules via Teacher Tools.</p>
+          </div>
         </div>
       </main>
     </div>
   </div>
 
-  <script src="/assets/js/math-toolkit-loader.js"></script>
+  <script>
+    (function () {
+      var CATEGORIES = [
+        { id: 'math_geo',   title: 'Geometry',           path: '/math-toolkit/geometry/' },
+        { id: 'math_alg',   title: 'Algebra',            path: '/math-toolkit/algebra/' },
+        { id: 'math_num',   title: 'Number Sense',       path: '/math-toolkit/number-sense/' },
+        { id: 'math_data',  title: 'Data &amp; Statistics', path: '/math-toolkit/data-statistics/' },
+        { id: 'math_money', title: 'Money Math',         path: '/math-toolkit/money-math/' },
+        { id: 'math_gen',   title: 'General Math',       path: '/math-toolkit/general/' }
+      ];
+
+      var MATH_ICON = '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>';
+
+      function hasContent(cat) {
+        return cat && Array.isArray(cat.links) && cat.links.some(function (l) { return l && l.trim() !== ''; });
+      }
+
+      fetch('/assets/data/site-state.json?t=' + Date.now(), { cache: 'no-store' })
+        .then(function (r) { return r.ok ? r.json() : { categories: {} }; })
+        .catch(function () { return { categories: {} }; })
+        .then(function (state) {
+          var cats = state.categories || {};
+          var grid = document.getElementById('mathGrid');
+          var empty = document.getElementById('emptyState');
+          var shown = 0;
+
+          CATEGORIES.forEach(function (c) {
+            if (!hasContent(cats[c.id])) return;
+            shown++;
+            var a = document.createElement('a');
+            a.className = 'book-card';
+            a.href = c.path;
+            a.innerHTML = '<div class="book-icon">' + MATH_ICON + '</div><strong class="book-title">' + c.title + '</strong>';
+            grid.appendChild(a);
+          });
+
+          if (shown === 0) {
+            empty.hidden = false;
+          }
+        });
+    }());
+  </script>
+
   <script defer src="/web/public-shell.js"></script>
 </body>
 </html>
