@@ -812,11 +812,21 @@
     const items = await getAssignmentItemsForAssignment(assignmentId);
     const answers = await getSubmissionAnswers(submissionId);
 
-    // Bug B fix: if DB has no submission_answers rows but the submission carries raw JSONB answers,
-    // reconstruct virtual display-only answer objects so auto-graded scores show correctly.
-    const displayAnswers = (answers.length === 0 && submission.answers && typeof submission.answers === 'object')
-      ? reconstructAnswersFromSubmission(submission, items)
-      : answers;
+    // Bug B fix: if DB has no submission_answers rows (or fewer than the number of items) but the
+    // submission carries raw JSONB answers, reconstruct virtual display-only answer objects and
+    // merge them with any real submission_answers rows so auto-graded scores show correctly.
+    let displayAnswers = answers;
+    if (submission.answers && typeof submission.answers === 'object') {
+      const reconstructed = reconstructAnswersFromSubmission(submission, items);
+      if (answers.length === 0) {
+        displayAnswers = reconstructed;
+      } else if (answers.length < items.length) {
+        // Merge: prefer real submission_answers where they exist, fill gaps from reconstructed
+        const answeredItemIds = new Set(answers.map(a => a.item_id));
+        const missingAnswers = reconstructed.filter(r => !answeredItemIds.has(r.item_id));
+        displayAnswers = [...answers, ...missingAnswers];
+      }
+    }
 
     // Bug C fix: if items are synthetic, trigger backfill in the background so subsequent
     // saves use real bigint IDs. Non-blocking — re-render after completion.
@@ -1575,9 +1585,19 @@
         }
       });
       
-      // Get auto score
-      const submission = submissionsData.find(s => s.id === submissionId);
-      const scoreAuto = submission?.score_auto || 0;
+      // Get auto score — recompute from submission.answers JSONB to correct any stale stored value
+      // (submission is already resolved in the outer scope above the try block)
+      let scoreAuto = 0;
+      const rawAnswers = submission?.answers || {};
+      for (const item of items) {
+        if (item.answer_type !== 'mcq') continue;
+        const studentAnswer = rawAnswers[item.item_ref];
+        if (studentAnswer === undefined) continue;
+        const correct = item.meta?.correct;
+        if (correct && String(studentAnswer).trim().toUpperCase() === String(correct).trim().toUpperCase()) {
+          scoreAuto += (item.points || 1);
+        }
+      }
       const scoreTotal = scoreAuto + scoreManual;
       
       // Finalize submission

@@ -256,7 +256,10 @@ exports.handler = async (event) => {
       }
 
       // Step 7: Create/upsert submission_answers linked to assignment_items with auto-scoring
-      const hasAnswers = answers && Object.keys(answers).length > 0;
+      // Use updatedSettings.answers (the cumulative merged answers) so all MCQ answers are
+      // captured even when the final call only sends writing_response.
+      const cumulativeAnswers = updatedSettings.answers || {};
+      const hasAnswers = Object.keys(cumulativeAnswers).length > 0;
       const hasWriting = writing_response && typeof writing_response === 'string' && writing_response.trim().length > 0;
       if (submissionId && (hasAnswers || hasWriting) && instance.assignment_id) {
         const itemsUrl = `${SUPABASE_URL}/rest/v1/assignment_items?assignment_id=eq.${encodeURIComponent(instance.assignment_id)}&select=id,item_ref,answer_type,points,meta`;
@@ -281,7 +284,7 @@ exports.handler = async (event) => {
             // Build submission_answers rows for each answered question
             const subAnswers = [];
             if (hasAnswers) {
-              for (const [itemRef, studentAnswer] of Object.entries(answers)) {
+              for (const [itemRef, studentAnswer] of Object.entries(cumulativeAnswers)) {
                 const item = itemMap[itemRef];
                 if (!item) continue;
 
