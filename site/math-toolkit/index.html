@@ -19,6 +19,27 @@
     <style>
       a.rc-card { text-decoration: none; color: inherit; display: block; }
 
+      .back-link {
+        display: inline-block;
+        margin-bottom: 1rem;
+        font-size: 0.875rem;
+        color: var(--rc-ink-dim, rgba(255,255,255,0.5));
+        text-decoration: none;
+      }
+      .back-link:hover {
+        color: var(--rc-ink, rgba(255,255,255,0.85));
+      }
+
+      /* Glow-on-click */
+      @keyframes book-card-glow {
+        0%   { box-shadow: 0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08), 0 0 0 0 var(--glow-color,rgba(99,102,241,0.6)); }
+        40%  { box-shadow: 0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08), 0 0 22px 8px var(--glow-color,rgba(99,102,241,0.6)); }
+        100% { box-shadow: 0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08), 0 0 0 0 var(--glow-color,rgba(99,102,241,0.6)); }
+      }
+      .book-card-glow-active {
+        animation: book-card-glow 0.55s ease-out;
+      }
+
       .content-wrapper { padding-top: 1rem; }
 
       .content-wrapper h1 {
@@ -121,6 +142,7 @@
 
         <main class="tc-main">
           <div class="content-wrapper">
+            <a href="/toolkits/" class="back-link">← Back to Toolkits</a>
             <h1>Math Toolkit</h1>
             <p>Choose a math category to explore presentations and activities.</p>
 
@@ -187,5 +209,17 @@
 
     <script defer src="/web/public-shell.js"></script>
     <script defer src="/assets/js/open-in-viewer.js"></script>
+    <script>
+      const glowColors = ['rgba(59,130,246,0.65)','rgba(168,85,247,0.65)','rgba(34,197,94,0.65)','rgba(239,68,68,0.65)','rgba(234,179,8,0.65)','rgba(20,184,166,0.65)'];
+      document.querySelectorAll('.book-card').forEach(function(card, i) {
+        card.style.setProperty('--glow-color', glowColors[i % glowColors.length]);
+        card.addEventListener('click', function() {
+          card.classList.remove('book-card-glow-active');
+          void card.offsetWidth;
+          card.classList.add('book-card-glow-active');
+          card.addEventListener('animationend', function() { card.classList.remove('book-card-glow-active'); }, { once: true });
+        });
+      });
+    </script>
   </body>
 </html>
