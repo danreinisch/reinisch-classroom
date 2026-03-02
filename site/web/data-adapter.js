@@ -1978,7 +1978,7 @@ const remote = {
         })
         .eq('submission_id', submissionId)
         .eq('assignment_item_id', itemId)
-        .select()
+        .select('*')
         .single());
     } else {
       // Insert new row when no submission_answer exists yet
@@ -1990,7 +1990,7 @@ const remote = {
           earned_points: earnedPoints,
           teacher_note: teacherNote || ''
         })
-        .select()
+        .select('*')
         .single());
     }
 

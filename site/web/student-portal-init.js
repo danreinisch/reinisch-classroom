@@ -621,7 +621,7 @@
     const totalQuestions = getTotalQuestionCount(instance);
     const answeredCount = getAnsweredCount(instance.id);
     const progressPercent = totalQuestions > 0 ? (answeredCount / totalQuestions) * 100 : 0;
-    const progressHtml = totalQuestions > 0 && status !== 'submitted' && status !== 'graded' ? `
+    const progressHtml = totalQuestions > 0 && status !== 'submitted' && status !== 'graded' && status !== 'reviewed' ? `
       <div class="st-progress-mini">
         ${answeredCount} of ${totalQuestions} answered
       </div>
@@ -679,8 +679,10 @@
     assignmentViewerState.currentDay = 0;
     
     // Check if assignment is submitted or graded (read-only mode)
-    const isReadOnly = instance.status === 'Submitted' || instance.status === 'Graded';
+    const isReadOnly = instance.status === 'Submitted' || instance.status === 'Graded' || instance.status === 'Reviewed';
+    const isGraded = instance.status === 'Graded' || instance.status === 'Reviewed';
     assignmentViewerState.isReadOnly = isReadOnly;
+    assignmentViewerState.isGraded = isGraded;
     
     // Feature 1: Load saved answers from instance settings
     if (instance.settings && instance.settings.answers) {
@@ -893,6 +895,7 @@
   function renderQuestionsDay(container, dayData, instance) {
     const questions = dayData.questions || [];
     const isReadOnly = assignmentViewerState.isReadOnly;
+    const isGraded = assignmentViewerState.isGraded;
     
     const questionsHtml = questions.map((q) => {
       const questionId = `${dayData.day_number}_${q.number}`;
@@ -940,10 +943,10 @@
     
     const readOnlyBanner = isReadOnly ? `
       <div class="st-submitted-banner">
-        ✓ Submitted — Waiting for teacher review
+        ${isGraded ? '✓ Graded — Teacher has reviewed your submission' : '✓ Submitted — Waiting for teacher review'}
       </div>
     ` : '';
-    
+
     // Feature 3: Progress tracker in viewer
     const totalQuestions = getTotalQuestionCount(instance);
     const answeredCount = getAnsweredCount(instance.id);
@@ -956,7 +959,7 @@
         </div>
       </div>
     ` : '';
-    
+
     // Feature 11: Vocabulary section
     const vocabHtml = renderVocabularySection(dayData);
     
@@ -1095,6 +1098,7 @@
     }
 
     const isReadOnly = assignmentViewerState.isReadOnly;
+    const isGraded = assignmentViewerState.isGraded;
     
     const structureHtml = dayData.structure && dayData.structure.length > 0 ? `
       <div class="st-writing-structure">
@@ -1135,7 +1139,7 @@
     
     const readOnlyBanner = isReadOnly ? `
       <div class="st-submitted-banner">
-        ✓ Submitted — Waiting for teacher review
+        ${isGraded ? '✓ Graded — Teacher has reviewed your submission' : '✓ Submitted — Waiting for teacher review'}
       </div>
     ` : '';
     
@@ -1151,12 +1155,13 @@
         </div>
       </div>
     ` : '';
-    
+
+
     // Feature 11: Vocabulary section
     const vocabHtml = renderVocabularySection(dayData);
     
     const submitButtonHtml = isReadOnly ? `
-      <div class="st-submitted-message">✓ Submitted — Waiting for teacher review</div>
+      <div class="st-submitted-message">${isGraded ? '✓ Graded — Teacher has reviewed your submission' : '✓ Submitted — Waiting for teacher review'}</div>
     ` : `
       <button class="st-submit-btn" id="submitWritingBtn">Submit Response</button>
     `;
@@ -2362,7 +2367,7 @@
     const status = (instance.status || 'Assigned').toLowerCase();
     
     // Check if graded
-    if (status === 'graded') return 'completed';
+    if (status === 'graded' || status === 'reviewed') return 'completed';
     
     // Check if submitted
     if (status === 'submitted') return 'submitted';
@@ -2370,7 +2375,7 @@
     // Check if overdue (assigned but past due date)
     if (instance.due_at) {
       const dueDate = new Date(instance.due_at);
-      if (dueDate < now && status !== 'submitted' && status !== 'graded') {
+      if (dueDate < now && status !== 'submitted' && status !== 'graded' && status !== 'reviewed') {
         return 'overdue';
       }
     }
@@ -3043,7 +3048,7 @@
       const dueDate = new Date(inst.due_at);
       const hoursUntilDue = (dueDate - now) / (1000 * 60 * 60);
       const status = (inst.status || 'Assigned').toLowerCase();
-      const isNotSubmitted = status !== 'submitted' && status !== 'graded';
+      const isNotSubmitted = status !== 'submitted' && status !== 'graded' && status !== 'reviewed';
       return hoursUntilDue > 0 && hoursUntilDue <= 48 && isNotSubmitted;
     });
 
@@ -3122,7 +3127,7 @@
     const onTimeCount = instances.filter(inst => {
       if (!inst.due_at || !inst.submitted_at) return false;
       const status = (inst.status || '').toLowerCase();
-      if (status !== 'submitted' && status !== 'graded') return false;
+      if (status !== 'submitted' && status !== 'graded' && status !== 'reviewed') return false;
       return new Date(inst.submitted_at) <= new Date(inst.due_at);
     }).length;
 
@@ -3151,7 +3156,7 @@
     const sortedSubmitted = instances
       .filter(inst => {
         const status = (inst.status || '').toLowerCase();
-        return (status === 'submitted' || status === 'graded') && inst.submitted_at && inst.due_at;
+        return (status === 'submitted' || status === 'graded' || status === 'reviewed') && inst.submitted_at && inst.due_at;
       })
       .sort((a, b) => new Date(b.submitted_at) - new Date(a.submitted_at));
 

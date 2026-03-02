@@ -427,7 +427,88 @@ const local = {
     
     return { submission_id: id };
   },
-  
+
+  // Teacher Review: List submission answers with item details
+  async listSubmissionAnswers(submissionId) {
+    const answers = store.get('submissionAnswers', []);
+    const items = store.get('assignmentItems', []);
+    const mappings = store.get('assignmentItemMappings', []);
+    const submissionAnswers = answers.filter(a => a.submission_id === submissionId);
+    return submissionAnswers.map(answer => {
+      const itemId = answer.assignment_item_id ?? answer.item_id;
+      const item = items.find(i => i.id === itemId) || {};
+      const mapping = mappings.find(m => m.item_id === itemId) || {};
+      return {
+        ...answer,
+        item_ref: item.item_ref,
+        answer_type: item.answer_type,
+        points: item.points,
+        meta: item.meta,
+        dese_codes: mapping.dese_codes || [],
+        goal_codes: mapping.goal_codes || [],
+        weight: mapping.weight || 1.0
+      };
+    });
+  },
+
+  // Teacher Review: Update or create a submission answer with teacher scoring
+  async updateSubmissionAnswer({ submissionId, itemId, earnedPoints, teacherNote }) {
+    const answers = store.get('submissionAnswers', []);
+    const existingIndex = answers.findIndex(
+      a => a.submission_id === submissionId && (a.assignment_item_id === itemId || a.item_id === itemId)
+    );
+    const updatedAnswer = {
+      submission_id: submissionId,
+      assignment_item_id: itemId,
+      earned_points: earnedPoints,
+      teacher_note: teacherNote || '',
+      created_at: new Date().toISOString()
+    };
+    if (existingIndex >= 0) {
+      answers[existingIndex] = { ...answers[existingIndex], ...updatedAnswer };
+    } else {
+      updatedAnswer.id = 'SA' + Date.now() + '_' + Math.random().toString(36).slice(2, 9);
+      answers.push(updatedAnswer);
+    }
+    store.set('submissionAnswers', answers);
+    return updatedAnswer;
+  },
+
+  // Teacher Review: Update submission with grading fields
+  async upsertSubmission({ id, score_auto, score_manual, score_total, status, graded_at, graded_by, feedback }) {
+    const submissions = store.get('submissions', []);
+    const submission = submissions.find(s => s.id === id);
+    if (!submission) throw new Error('Submission not found');
+    if (score_auto !== undefined) submission.score_auto = score_auto;
+    if (score_manual !== undefined) submission.score_manual = score_manual;
+    if (score_total !== undefined) submission.score_total = score_total;
+    if (status !== undefined) submission.review_status = status === 'Graded' ? 'reviewed' : status.toLowerCase();
+    if (graded_at !== undefined) submission.graded_at = graded_at;
+    if (graded_by !== undefined) submission.graded_by = graded_by;
+    if (feedback !== undefined) submission.feedback = feedback;
+    store.set('submissions', submissions);
+    return true;
+  },
+
+  // Teacher Review: Finalize submission with scores
+  async finalizeSubmission(submissionId, { scoreAuto, scoreManual, scoreTotal }) {
+    const submissions = store.get('submissions', []);
+    const submission = submissions.find(s => s.id === submissionId);
+    if (!submission) throw new Error('Submission not found');
+    if (scoreAuto !== undefined) submission.score_auto = scoreAuto;
+    submission.score_manual = scoreManual;
+    submission.score_total = scoreTotal;
+    submission.review_status = 'reviewed';
+    store.set('submissions', submissions);
+    const instances = store.get('assignmentInstances', []);
+    const instance = instances.find(i => i.id === submission.instance_id);
+    if (instance) {
+      instance.status = 'Reviewed';
+      store.set('assignmentInstances', instances);
+    }
+    return true;
+  },
+
   // Phase B: Classes and Enrollments (local stub)
   async listClasses() {
     // Prefer stored classes; otherwise derive unique set from students[].class_id
@@ -1730,7 +1811,131 @@ const remote = {
       return { submission_id: data };
     });
   },
-  
+
+  // Teacher Review: List submission answers with item details
+  async listSubmissionAnswers(submissionId) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+    const { data, error } = await supabase
+      .from('submission_answers')
+      .select(`
+        *,
+        assignment_items!assignment_item_id(
+          id,
+          item_ref,
+          answer_type,
+          points,
+          meta
+        )
+      `)
+      .eq('submission_id', submissionId);
+    if (error) throw error;
+    const itemIds = (data || []).map(a => a.assignment_item_id).filter(Boolean);
+    let mappingsByItemId = {};
+    if (itemIds.length > 0) {
+      const { data: mappings } = await supabase
+        .from('assignment_item_mappings')
+        .select('*')
+        .in('item_id', itemIds);
+      (mappings || []).forEach(m => { mappingsByItemId[m.item_id] = m; });
+    }
+    return (data || []).map(answer => {
+      const item = answer.assignment_items || {};
+      const mapping = mappingsByItemId[answer.assignment_item_id] || {};
+      return {
+        id: answer.id,
+        submission_id: answer.submission_id,
+        item_id: answer.assignment_item_id,
+        raw_answer: answer.raw_answer,
+        is_correct: answer.is_correct,
+        earned_points: answer.earned_points,
+        max_points: answer.max_points,
+        teacher_note: answer.teacher_note,
+        scored_at: answer.scored_at,
+        item_ref: item.item_ref,
+        answer_type: item.answer_type,
+        points: item.points,
+        meta: item.meta,
+        dese_codes: mapping.dese_codes || [],
+        goal_codes: mapping.goal_codes || [],
+        weight: mapping.weight || 1.0
+      };
+    });
+  },
+
+  // Teacher Review: Update or create a submission answer with teacher scoring
+  async updateSubmissionAnswer({ submissionId, itemId, earnedPoints, teacherNote }) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+    const { data: existing, error: checkError } = await supabase
+      .from('submission_answers')
+      .select('id')
+      .eq('submission_id', submissionId)
+      .eq('assignment_item_id', itemId)
+      .maybeSingle();
+    if (checkError) throw checkError;
+    let data, error;
+    if (existing) {
+      ({ data, error } = await supabase
+        .from('submission_answers')
+        .update({ earned_points: earnedPoints, teacher_note: teacherNote || '' })
+        .eq('submission_id', submissionId)
+        .eq('assignment_item_id', itemId)
+        .select('*')
+        .single());
+    } else {
+      ({ data, error } = await supabase
+        .from('submission_answers')
+        .insert({ submission_id: submissionId, assignment_item_id: itemId, earned_points: earnedPoints, teacher_note: teacherNote || '' })
+        .select('*')
+        .single());
+    }
+    if (error) throw error;
+    return data;
+  },
+
+  // Teacher Review: Update submission with grading fields
+  async upsertSubmission({ id, score_auto, score_manual, score_total, status, graded_at, graded_by, feedback }) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+    const updates = {};
+    if (score_auto !== undefined) updates.score_auto = score_auto;
+    if (score_manual !== undefined) updates.score_manual = score_manual;
+    if (score_total !== undefined) updates.score_total = score_total;
+    if (status !== undefined) updates.review_status = status === 'Graded' ? 'reviewed' : status.toLowerCase();
+    if (graded_at !== undefined) updates.graded_at = graded_at;
+    if (graded_by !== undefined) updates.graded_by = graded_by;
+    if (feedback !== undefined) updates.feedback = feedback;
+    const { error } = await supabase.from('submissions').update(updates).eq('id', id);
+    if (error) throw error;
+    return true;
+  },
+
+  // Teacher Review: Finalize submission with scores and update instance status
+  async finalizeSubmission(submissionId, { scoreAuto, scoreManual, scoreTotal }) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error('supabase-not-configured');
+    const { error: updateError } = await supabase
+      .from('submissions')
+      .update({ score_auto: scoreAuto, score_manual: scoreManual, score_total: scoreTotal, review_status: 'reviewed' })
+      .eq('id', submissionId);
+    if (updateError) throw updateError;
+    const { data: submission, error: fetchError } = await supabase
+      .from('submissions')
+      .select('instance_id')
+      .eq('id', submissionId)
+      .single();
+    if (fetchError) throw fetchError;
+    if (submission?.instance_id) {
+      const { error: instanceError } = await supabase
+        .from('assignment_instances')
+        .update({ status: 'Reviewed' })
+        .eq('id', submission.instance_id);
+      if (instanceError) throw instanceError;
+    }
+    return true;
+  },
+
   // Phase B: Classes and Enrollments
   async listClasses() {
     const supabase = await getSupabase();

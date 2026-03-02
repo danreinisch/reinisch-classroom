@@ -764,12 +764,27 @@
         } else {
           const autoItems = items.filter(i => i.answer_type === 'mcq' || i.answer_type === 'boolean' || i.answer_type === 'multi');
           let autoEarned = 0;
-          if (answers.length > 0) {
+          if (answers && answers.length > 0) {
+            // Best: use submissionAnswersCache (loaded when expanded)
             autoEarned = autoItems.reduce((sum, item) => {
               const ans = answers.find(a => a.item_id === item.id);
               return sum + (ans?.earned_points || 0);
             }, 0);
+          } else if (submission.answers && typeof submission.answers === 'object' && Object.keys(submission.answers).length > 0) {
+            // Fallback: recompute from submission.answers JSONB (raw MCQ answers)
+            autoEarned = autoItems.reduce((sum, item) => {
+              const itemRef = item.item_ref || item.ref;
+              if (!itemRef) return sum;
+              const studentAnswer = submission.answers[itemRef];
+              if (studentAnswer === undefined || studentAnswer === null) return sum;
+              const correct = item.meta?.correct;
+              if (correct && String(studentAnswer).trim().toUpperCase() === String(correct).trim().toUpperCase()) {
+                return sum + (item.points || 1);
+              }
+              return sum;
+            }, 0);
           } else {
+            // Last resort: use stored score_auto (may be stale)
             autoEarned = submission.score_auto || 0;
           }
           const manualEarned = constructedItems.reduce((sum, item) => {
