@@ -1954,22 +1954,46 @@ const remote = {
   async updateSubmissionAnswer({ submissionId, itemId, earnedPoints, teacherNote }) {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
-    
-    const { data, error } = await supabase
+
+    // Check if a row already exists to avoid wiping raw_answer, is_correct, max_points, scored_at
+    const { data: existing, error: checkError } = await supabase
       .from('submission_answers')
-      .upsert({
-        submission_id: submissionId,
-        assignment_item_id: itemId,
-        earned_points: earnedPoints
-        // Note: is_correct is not set for manual grading as it's ambiguous (partial credit, 0-point items, etc.)
-      }, {
-        onConflict: 'submission_id,assignment_item_id'
-      })
-      .select()
-      .single();
-    
+      .select('id')
+      .eq('submission_id', submissionId)
+      .eq('assignment_item_id', itemId)
+      .maybeSingle();
+
+    if (checkError) throw checkError;
+
+    let data, error;
+    if (existing) {
+      // Update only scoring fields, preserving raw_answer, is_correct, max_points, scored_at
+      ({ data, error } = await supabase
+        .from('submission_answers')
+        .update({
+          earned_points: earnedPoints,
+          teacher_note: teacherNote || ''
+        })
+        .eq('submission_id', submissionId)
+        .eq('assignment_item_id', itemId)
+        .select()
+        .single());
+    } else {
+      // Insert new row when no submission_answer exists yet
+      ({ data, error } = await supabase
+        .from('submission_answers')
+        .insert({
+          submission_id: submissionId,
+          assignment_item_id: itemId,
+          earned_points: earnedPoints,
+          teacher_note: teacherNote || ''
+        })
+        .select()
+        .single());
+    }
+
     if (error) throw error;
-    
+
     return data;
   },
 
@@ -1993,7 +2017,10 @@ const remote = {
       })
       .eq('id', submissionId);
     
-    if (updateError) throw updateError;
+    if (updateError) {
+      console.error('[data-adapter] finalizeSubmission update error:', updateError);
+      throw updateError;
+    }
     
     // Get the submission to find the instance_id
     const { data: submission, error: fetchError } = await supabase
@@ -2002,7 +2029,10 @@ const remote = {
       .eq('id', submissionId)
       .single();
     
-    if (fetchError) throw fetchError;
+    if (fetchError) {
+      console.error('[data-adapter] finalizeSubmission fetch error:', fetchError);
+      throw fetchError;
+    }
     
     // Update instance status to 'Reviewed'
     if (submission?.instance_id) {
@@ -2011,7 +2041,10 @@ const remote = {
         .update({ status: 'Reviewed' })
         .eq('id', submission.instance_id);
       
-      if (instanceError) throw instanceError;
+      if (instanceError) {
+        console.error('[data-adapter] finalizeSubmission instance update error:', instanceError);
+        throw instanceError;
+      }
     }
     
     return true;
