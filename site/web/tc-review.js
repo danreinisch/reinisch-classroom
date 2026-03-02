@@ -1890,11 +1890,15 @@
       }
     });
 
+    const scoreAuto = submission.score_auto || 0;
+    const scoreTotal = scoreAuto + scoreManual;
+
     button.disabled = true;
     try {
       await db.upsertSubmission({
         id: submissionId,
         score_manual: scoreManual,
+        score_total: scoreTotal,
         status: 'Graded',
         graded_at: gradedAt,
         graded_by: gradedBy,
@@ -1904,6 +1908,7 @@
       // Update local cache
       if (submission) {
         submission.score_manual = scoreManual;
+        submission.score_total = scoreTotal;
         submission.review_status = 'reviewed';
         submission.graded_at = gradedAt;
         submission.graded_by = gradedBy;
