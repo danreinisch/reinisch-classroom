@@ -1,6 +1,6 @@
 {
   "version": "v1",
-  "updated": "2026-03-02T12:55:42.274Z",
+  "updated": "2026-03-02T13:06:39.621Z",
   "categories": {
     "toolkit": {
       "slots": 8,
@@ -188,7 +188,7 @@
         "Area",
         "Surface Area",
         "Volume",
-        "",
+        "Pythagorean Theorem",
         "",
         "",
         "",
@@ -222,7 +222,7 @@
         "/math-toolkit/presentations/geometry/presentation-02/",
         "/math-toolkit/presentations/geometry/presentation-03/",
         "/math-toolkit/presentations/geometry/presentation-04/",
-        "",
+        "/math-toolkit/presentations/geometry/presentation-05/",
         "",
         "",
         "",

@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pythagorean Theorem | Math Toolkit</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:         #0d1117;
+      --surface:    #161d2e;
+      --surface2:   #1e2840;
+      --surface3:   #243050;
+      --border:     #2a3a58;
+      --border2:    #34466e;
+      --accent:     #14b8a6;
+      --accent-dim: #0d9488;
+      --accent2:    #38bdf8;
+      --accent3:    #c084fc;
+      --text:       #e2e8f0;
+      --text-muted: #8a9bbf;
+      --text-dim:   #5a6a8a;
+      --success:    #22c55e;
+      --error:      #f87171;
+      --formula-bg: #0a1628;
+      --mono:       'JetBrains Mono', monospace;
+    }
+    body { font-family: 'Outfit', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    .page-header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 2rem; display: flex; align-items: center; height: 56px; }
+    .breadcrumb { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: var(--text-muted); }
+    .breadcrumb a { color: var(--text-muted); text-decoration: none; }
+    .breadcrumb a:hover { color: var(--accent); }
+    .breadcrumb .sep { color: var(--text-dim); }
+    .breadcrumb .current { color: var(--text); font-weight: 500; }
+
+    .page-body { max-width: 880px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+    .module-title { font-size: 1.65rem; font-weight: 700; color: var(--text); margin-bottom: 0.25rem; }
+    .module-title span { color: var(--accent); }
+    .module-subtitle { color: var(--text-muted); font-size: 0.92rem; margin-bottom: 2rem; }
+    .section-label { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 0.75rem; }
+
+    /* ── PROBLEM TYPE SELECTOR ── */
+    .problem-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.85rem; margin-bottom: 2rem; }
+    .prob-btn {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+      padding: 1.25rem 1rem; cursor: pointer; transition: all 0.18s ease;
+      text-align: left; color: var(--text-muted); display: flex; flex-direction: column; gap: 0.5rem;
+    }
+    .prob-btn:hover { border-color: var(--accent); background: var(--surface2); transform: translateY(-1px); }
+    .prob-btn.active { border-color: var(--accent); background: rgba(20,184,166,0.08); box-shadow: 0 0 0 1px var(--accent); }
+    .prob-btn .prob-icon { font-size: 1.8rem; }
+    .prob-btn .prob-name { font-size: 0.95rem; font-weight: 600; color: var(--text); line-height: 1.2; }
+    .prob-btn .prob-desc { font-size: 0.78rem; color: var(--text-muted); line-height: 1.4; }
+    .prob-btn .prob-formula { font-family: var(--mono); font-size: 0.75rem; color: var(--accent); margin-top: 0.25rem; }
+    .prob-btn.active .prob-name { color: var(--accent); }
+
+    /* ── TRIANGLE DIAGRAM ── */
+    #workspace { display: none; }
+    #workspace.visible { display: block; }
+
+    .triangle-diagram-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent3);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 2rem;
+      animation: slideDown 0.3s ease;
+    }
+    .diagram-svg-wrap { flex-shrink: 0; }
+    .diagram-info { flex: 1; }
+    .diagram-title { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent3); margin-bottom: 0.6rem; }
+    .diagram-rule { font-size: 0.9rem; color: var(--text); line-height: 1.65; margin-bottom: 0.75rem; }
+    .diagram-rule strong { color: var(--accent2); }
+    .diagram-legend { display: flex; flex-direction: column; gap: 0.3rem; }
+    .legend-item { display: flex; align-items: center; gap: 0.6rem; font-size: 0.8rem; }
+    .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .dot-c { background: #f87171; }
+    .dot-leg { background: var(--accent2); }
+    .dot-angle { background: #fbbf24; }
+
+    /* ── FORMULA CARD ── */
+    .formula-card {
+      background: var(--formula-bg); border: 1px solid var(--border); border-left: 3px solid var(--accent);
+      border-radius: 10px; padding: 1.25rem 1.5rem; margin-bottom: 1.5rem;
+      display: flex; align-items: flex-start; gap: 1.5rem; animation: slideDown 0.3s ease;
+    }
+    .formula-label { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 0.25rem; }
+    .formula-text { font-family: var(--mono); font-size: 1.35rem; font-weight: 500; color: var(--text); letter-spacing: 0.04em; }
+    .formula-text .var { color: var(--accent2); }
+    .formula-text .hyp { color: #f87171; }
+    .formula-desc { font-size: 0.82rem; color: var(--text-muted); margin-top: 0.35rem; line-height: 1.6; }
+    .formula-key { margin-left: auto; font-size: 0.78rem; color: var(--text-dim); line-height: 2; font-family: var(--mono); white-space: nowrap; flex-shrink: 0; }
+    .formula-key .kv { color: var(--accent2); }
+    .formula-key .kh { color: #f87171; }
+
+    /* ── STEP CARDS ── */
+    .step-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 1rem; overflow: hidden; animation: slideDown 0.25s ease; transition: border-color 0.2s; }
+    .step-card.locked { opacity: 0.4; pointer-events: none; }
+    .step-card.complete { border-color: var(--success); }
+    .step-card.error    { border-color: var(--error); }
+    .step-header { padding: 0.85rem 1.25rem; display: flex; align-items: center; gap: 0.75rem; border-bottom: 1px solid var(--border); background: var(--surface2); }
+    .step-badge { width: 26px; height: 26px; border-radius: 50%; background: var(--surface3); border: 1px solid var(--border2); display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 700; color: var(--text-muted); flex-shrink: 0; }
+    .step-card.complete .step-badge { background: var(--success); border-color: var(--success); color: #fff; }
+    .step-title { font-weight: 600; font-size: 0.9rem; color: var(--text); }
+    .step-instruction { font-size: 0.82rem; color: var(--text-muted); margin-left: auto; text-align: right; max-width: 300px; }
+    .step-body { padding: 1.25rem; }
+
+    .known-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.85rem; margin-bottom: 1rem; }
+    .field-group { display: flex; flex-direction: column; gap: 0.3rem; }
+    .field-label { font-size: 0.78rem; font-weight: 500; color: var(--text-muted); }
+    .field-label .var-name { font-family: var(--mono); color: var(--accent2); font-size: 0.82rem; }
+    .field-label .var-name.hyp { color: #f87171; }
+    .field-hint { font-size: 0.71rem; color: var(--text-dim); }
+    .known-input { background: var(--surface2); border: 1px solid var(--border); border-radius: 7px; padding: 0.55rem 0.85rem; font-family: var(--mono); font-size: 1rem; color: var(--text); width: 100%; transition: border-color 0.15s; outline: none; }
+    .known-input:focus { border-color: var(--accent); }
+    .known-input.hyp-input:focus { border-color: #f87171; }
+    .known-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+    .begin-btn { background: var(--accent); color: #0a1628; border: none; border-radius: 7px; padding: 0.6rem 1.5rem; font-family: 'Outfit', sans-serif; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.15s; margin-top: 0.5rem; }
+    .begin-btn:hover { background: #0d9488; transform: translateY(-1px); }
+    .begin-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    .expr-display { font-family: var(--mono); font-size: 1.05rem; color: var(--text); background: var(--formula-bg); border: 1px solid var(--border); border-radius: 7px; padding: 0.75rem 1rem; letter-spacing: 0.03em; line-height: 1.8; }
+    .expr-display .val { color: var(--accent2); }
+    .expr-display .hval { color: #f87171; }
+
+    .compute-row { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
+    .compute-row:last-child { margin-bottom: 0; }
+    .compute-expr { font-family: var(--mono); font-size: 0.97rem; color: var(--text); flex: 1; min-width: 0; line-height: 1.5; }
+    .compute-expr .val { color: var(--accent2); }
+    .compute-expr .hval { color: #f87171; }
+    .answer-box { background: var(--surface2); border: 2px solid var(--border2); border-radius: 7px; padding: 0.45rem 0.75rem; font-family: var(--mono); font-size: 1rem; color: var(--text); width: 120px; outline: none; transition: border-color 0.15s; text-align: center; }
+    .answer-box:focus { border-color: var(--accent); }
+    .answer-box.correct { border-color: var(--success); background: rgba(34,197,94,0.08); color: var(--success); }
+    .answer-box.incorrect { border-color: var(--error); background: rgba(248,113,113,0.08); }
+    .check-btn { background: var(--surface3); border: 1px solid var(--border2); border-radius: 6px; padding: 0.45rem 0.85rem; font-family: 'Outfit', sans-serif; font-size: 0.82rem; font-weight: 500; color: var(--text-muted); cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+    .check-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .check-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .feedback-box { border-radius: 7px; padding: 0.65rem 1rem; font-size: 0.83rem; line-height: 1.5; margin-top: 0.75rem; display: none; }
+    .feedback-box.visible { display: block; }
+    .feedback-box.success { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3); color: #86efac; }
+    .feedback-box.error   { background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.3); color: #fca5a5; }
+    .feedback-box.hint    { background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.25); color: #fde68a; }
+
+    /* sqrt note */
+    .sqrt-note {
+      background: rgba(192,132,252,0.08);
+      border: 1px solid rgba(192,132,252,0.25);
+      border-radius: 7px;
+      padding: 0.6rem 1rem;
+      font-size: 0.8rem;
+      color: #d8b4fe;
+      margin-top: 0.75rem;
+    }
+
+    .final-answer-card { background: linear-gradient(135deg, rgba(20,184,166,0.12), rgba(192,132,252,0.08)); border: 1px solid var(--accent); border-radius: 10px; padding: 1.5rem; text-align: center; display: none; animation: celebrate 0.4s ease; }
+    .final-answer-card.visible { display: block; }
+    .final-answer-label { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 0.5rem; }
+    .final-answer-value { font-family: var(--mono); font-size: 2rem; font-weight: 700; color: var(--text); }
+    .final-answer-caption { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.35rem; }
+    .try-again-btn { margin-top: 1.25rem; background: transparent; border: 1px solid var(--border2); border-radius: 7px; padding: 0.5rem 1.25rem; font-family: 'Outfit', sans-serif; font-size: 0.85rem; color: var(--text-muted); cursor: pointer; transition: all 0.15s; }
+    .try-again-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .divider { height: 1px; background: var(--border); margin: 1.75rem 0; }
+
+    @keyframes slideDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes celebrate { 0% { transform: scale(0.95); opacity: 0; } 60% { transform: scale(1.02); } 100% { transform: scale(1); opacity: 1; } }
+
+    @media (max-width: 620px) {
+      .triangle-diagram-card { flex-direction: column; }
+      .formula-card { flex-direction: column; gap: 0.75rem; }
+      .formula-key { margin-left: 0; }
+      .problem-grid { grid-template-columns: 1fr 1fr; }
+      .compute-row { flex-direction: column; align-items: flex-start; }
+      .answer-box { width: 100%; }
+      .step-instruction { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="page-header">
+  <nav class="breadcrumb">
+    <a href="/">Home</a>
+    <span class="sep">›</span>
+    <a href="/math-toolkit">Math Toolkit</a>
+    <span class="sep">›</span>
+    <span class="current">Pythagorean Theorem</span>
+  </nav>
+</header>
+
+<main class="page-body">
+  <h1 class="module-title">The <span>Pythagorean Theorem</span></h1>
+  <p class="module-subtitle">Choose what you are trying to find, enter your known values, and work through each step.</p>
+
+  <div class="section-label">What Are You Solving For?</div>
+  <div class="problem-grid" id="problemGrid"></div>
+
+  <div id="workspace">
+    <div class="divider"></div>
+
+    <!-- Triangle Diagram -->
+    <div class="triangle-diagram-card">
+      <div class="diagram-svg-wrap">
+        <svg id="triSVG" width="190" height="160" viewBox="0 0 190 160">
+          <!-- Triangle -->
+          <polygon points="20,140 170,140 20,20" fill="rgba(20,184,166,0.06)" stroke="#2a3a58" stroke-width="1.5"/>
+          <!-- Right angle marker -->
+          <polyline points="20,110 50,110 50,140" fill="none" stroke="#fbbf24" stroke-width="1.5"/>
+          <!-- Leg a (vertical) -->
+          <line x1="20" y1="20" x2="20" y2="140" stroke="#38bdf8" stroke-width="2.5"/>
+          <text x="6" y="88" fill="#38bdf8" font-size="14" font-family="JetBrains Mono,monospace" font-weight="600">a</text>
+          <!-- Leg b (horizontal) -->
+          <line x1="20" y1="140" x2="170" y2="140" stroke="#38bdf8" stroke-width="2.5"/>
+          <text x="88" y="156" fill="#38bdf8" font-size="14" font-family="JetBrains Mono,monospace" font-weight="600">b</text>
+          <!-- Hypotenuse c -->
+          <line x1="20" y1="20" x2="170" y2="140" stroke="#f87171" stroke-width="2.5"/>
+          <text x="106" y="68" fill="#f87171" font-size="14" font-family="JetBrains Mono,monospace" font-weight="600">c</text>
+        </svg>
+      </div>
+      <div class="diagram-info">
+        <div class="diagram-title">🔺 Right Triangle — Key Parts</div>
+        <div class="diagram-rule" id="diagramRule">
+          The <strong>Pythagorean Theorem</strong> only works on <strong>right triangles</strong> — triangles with one 90° angle.
+        </div>
+        <div class="diagram-legend">
+          <div class="legend-item"><div class="legend-dot dot-c"></div><span style="color:#f87171;font-weight:600">c</span>&nbsp;= Hypotenuse — the longest side, always opposite the right angle</div>
+          <div class="legend-item"><div class="legend-dot dot-leg"></div><span style="color:#38bdf8;font-weight:600">a, b</span>&nbsp;= Legs — the two shorter sides that form the right angle</div>
+          <div class="legend-item"><div class="legend-dot dot-angle"></div><span style="color:#fbbf24;font-weight:600">□</span>&nbsp;= Right angle (90°) marker</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Formula Card -->
+    <div class="formula-card">
+      <div style="flex:1">
+        <div class="formula-label">Formula</div>
+        <div class="formula-text" id="formulaText"></div>
+        <div class="formula-desc" id="formulaDesc"></div>
+      </div>
+      <div class="formula-key" id="formulaKey"></div>
+    </div>
+
+    <!-- Known Values Step -->
+    <div class="step-card" id="stepKnown">
+      <div class="step-header">
+        <div class="step-badge" id="badgeKnown">1</div>
+        <div class="step-title">Identify Your Known Values</div>
+        <div class="step-instruction">Enter the side lengths from your problem.</div>
+      </div>
+      <div class="step-body">
+        <div class="known-grid" id="knownGrid"></div>
+        <button class="begin-btn" id="beginBtn" onclick="beginSteps()" disabled>Begin Solving →</button>
+      </div>
+    </div>
+
+    <div id="stepsContainer"></div>
+
+    <div class="final-answer-card" id="finalCard">
+      <div class="final-answer-label" id="finalLabel">✓ Missing Side Length</div>
+      <div class="final-answer-value" id="finalValue"></div>
+      <div class="final-answer-caption" id="finalCaption"></div>
+      <br>
+      <button class="try-again-btn" onclick="resetWorkspace()">↺ Try Another Problem</button>
+    </div>
+  </div>
+</main>
+
+<script>
+function round2(n) { return Math.round(n * 100) / 100; }
+function round4(n) { return Math.round(n * 10000) / 10000; }
+function isClose(a, b) { return Math.abs(a - b) <= Math.max(0.06, Math.abs(b) * 0.015); }
+
+/* ================================================================
+   PROBLEM DEFINITIONS
+================================================================ */
+const PROBLEMS = {
+
+  hypotenuse: {
+    name: 'Find the Hypotenuse (c)',
+    icon: '📐',
+    desc: 'You know both legs. Find the longest side.',
+    formula: 'Find c',
+    formulaText: '<span class="hyp">c</span>² = <span class="var">a</span>² + <span class="var">b</span>²',
+    formulaDesc: 'Square both legs, add them together, then take the square root to find c.',
+    formulaKey: '<span class="kh">c</span> = hypotenuse (unknown)<br><span class="kv">a</span> = leg a (known)<br><span class="kv">b</span> = leg b (known)',
+    knownFields: [
+      { id: 'a', label: 'Leg a', varName: 'a', hint: 'One of the two shorter sides.', isHyp: false },
+      { id: 'b', label: 'Leg b', varName: 'b', hint: 'The other shorter side.', isHyp: false }
+    ],
+    finalLabel: '✓ Hypotenuse (c)',
+    finalCaption: (v) => `The hypotenuse is ${v} units long.`,
+    steps: [
+      {
+        title: 'Substitute Your Values',
+        type: 'expression',
+        displayFn: (k) => `c² = <span class="val">${k.a}</span>² + <span class="val">${k.b}</span>²`
+      },
+      {
+        title: 'Square Each Leg',
+        instruction: 'Square leg a and leg b separately.',
+        type: 'compute',
+        rows: [
+          {
+            exprFn: (k) => `<span class="val">${k.a}</span>² = <span class="val">${k.a}</span> × <span class="val">${k.a}</span> =`,
+            answerId: 'a2',
+            answerFn: (k) => round2(k.a * k.a),
+            hintFn: (k) => `Multiply ${k.a} × ${k.a}.`
+          },
+          {
+            exprFn: (k) => `<span class="val">${k.b}</span>² = <span class="val">${k.b}</span> × <span class="val">${k.b}</span> =`,
+            answerId: 'b2',
+            answerFn: (k) => round2(k.b * k.b),
+            hintFn: (k) => `Multiply ${k.b} × ${k.b}.`
+          }
+        ]
+      },
+      {
+        title: 'Add the Squares Together',
+        instruction: 'Add a² + b² to find c².',
+        type: 'compute',
+        rows: [{
+          exprFn: (k, c) => `<span class="val">${c.a2}</span> + <span class="val">${c.b2}</span> =`,
+          answerId: 'c2',
+          answerFn: (k, c) => round2(c.a2 + c.b2),
+          hintFn: (k, c) => `Add ${c.a2} + ${c.b2}.`
+        }]
+      },
+      {
+        title: 'Take the Square Root of c²',
+        instruction: 'Find √c² to get the length of the hypotenuse.',
+        type: 'compute',
+        sqrtNote: true,
+        rows: [{
+          exprFn: (k, c) => `√<span class="val">${c.c2}</span> =`,
+          answerId: 'c',
+          answerFn: (k, c) => round2(Math.sqrt(c.c2)),
+          hintFn: (k, c) => `Find the square root of ${c.c2}. Use a calculator: √${c.c2} ≈ ${round2(Math.sqrt(c.c2))}`
+        }],
+        isFinal: true
+      }
+    ]
+  },
+
+  leg_a: {
+    name: 'Find a Missing Leg',
+    icon: '📏',
+    desc: 'You know the hypotenuse and one leg. Find the other leg.',
+    formula: 'Find a or b',
+    formulaText: '<span class="var">a</span>² = <span class="hyp">c</span>² − <span class="var">b</span>²',
+    formulaDesc: 'Subtract the known leg² from the hypotenuse² to find the missing leg².',
+    formulaKey: '<span class="kh">c</span> = hypotenuse (known)<br><span class="kv">b</span> = known leg<br><span class="kv">a</span> = missing leg (unknown)',
+    knownFields: [
+      { id: 'c', label: 'Hypotenuse (c)', varName: 'c', hint: 'The longest side — opposite the right angle.', isHyp: true },
+      { id: 'b', label: 'Known leg (b)',  varName: 'b', hint: 'The leg you already know.', isHyp: false }
+    ],
+    finalLabel: '✓ Missing Leg (a)',
+    finalCaption: (v) => `The missing leg is ${v} units long.`,
+    steps: [
+      {
+        title: 'Substitute Your Values',
+        type: 'expression',
+        displayFn: (k) => `a² = <span class="hval">${k.c}</span>² − <span class="val">${k.b}</span>²`
+      },
+      {
+        title: 'Square the Hypotenuse and the Known Leg',
+        instruction: 'Square c and square b separately.',
+        type: 'compute',
+        rows: [
+          {
+            exprFn: (k) => `<span class="hval">${k.c}</span>² = <span class="hval">${k.c}</span> × <span class="hval">${k.c}</span> =`,
+            answerId: 'c2',
+            answerFn: (k) => round2(k.c * k.c),
+            hintFn: (k) => `Multiply ${k.c} × ${k.c}.`
+          },
+          {
+            exprFn: (k) => `<span class="val">${k.b}</span>² = <span class="val">${k.b}</span> × <span class="val">${k.b}</span> =`,
+            answerId: 'b2',
+            answerFn: (k) => round2(k.b * k.b),
+            hintFn: (k) => `Multiply ${k.b} × ${k.b}.`
+          }
+        ]
+      },
+      {
+        title: 'Subtract to Find a²',
+        instruction: 'Subtract b² from c² to isolate a².',
+        type: 'compute',
+        rows: [{
+          exprFn: (k, c) => `<span class="hval">${c.c2}</span> − <span class="val">${c.b2}</span> =`,
+          answerId: 'a2',
+          answerFn: (k, c) => round2(c.c2 - c.b2),
+          hintFn: (k, c) => `Subtract ${c.c2} − ${c.b2}.`
+        }]
+      },
+      {
+        title: 'Take the Square Root of a²',
+        instruction: 'Find √a² to get the length of the missing leg.',
+        type: 'compute',
+        sqrtNote: true,
+        rows: [{
+          exprFn: (k, c) => `√<span class="val">${c.a2}</span> =`,
+          answerId: 'a',
+          answerFn: (k, c) => round2(Math.sqrt(c.a2)),
+          hintFn: (k, c) => `Find the square root of ${c.a2}. Use a calculator: √${c.a2} ≈ ${round2(Math.sqrt(c.a2))}`
+        }],
+        isFinal: true
+      }
+    ]
+  },
+
+  is_right: {
+    name: 'Is It a Right Triangle?',
+    icon: '✅',
+    desc: 'You know all three sides. Check if the triangle is a right triangle.',
+    formula: 'Verify: a²+b²=c²',
+    formulaText: '<span class="var">a</span>² + <span class="var">b</span>² <span style="color:var(--text-muted)">?=</span> <span class="hyp">c</span>²',
+    formulaDesc: 'Square all three sides. If a² + b² equals c², it IS a right triangle. The largest side must be c.',
+    formulaKey: '<span class="kh">c</span> = longest side<br><span class="kv">a, b</span> = shorter sides',
+    knownFields: [
+      { id: 'a', label: 'Shorter side (a)', varName: 'a', hint: 'One of the two shorter sides.', isHyp: false },
+      { id: 'b', label: 'Shorter side (b)', varName: 'b', hint: 'The other shorter side.', isHyp: false },
+      { id: 'c', label: 'Longest side (c)', varName: 'c', hint: 'The longest side — this is your possible hypotenuse.', isHyp: true }
+    ],
+    finalLabel: '✓ Verdict',
+    finalCaption: null,
+    steps: [
+      {
+        title: 'Substitute Your Values',
+        type: 'expression',
+        displayFn: (k) => `<span class="val">${k.a}</span>² + <span class="val">${k.b}</span>² <span style="color:var(--text-muted)">?=</span> <span class="hval">${k.c}</span>²`
+      },
+      {
+        title: 'Square All Three Sides',
+        instruction: 'Square a, b, and c separately.',
+        type: 'compute',
+        rows: [
+          {
+            exprFn: (k) => `<span class="val">${k.a}</span>² = <span class="val">${k.a}</span> × <span class="val">${k.a}</span> =`,
+            answerId: 'a2',
+            answerFn: (k) => round2(k.a * k.a),
+            hintFn: (k) => `Multiply ${k.a} × ${k.a}.`
+          },
+          {
+            exprFn: (k) => `<span class="val">${k.b}</span>² = <span class="val">${k.b}</span> × <span class="val">${k.b}</span> =`,
+            answerId: 'b2',
+            answerFn: (k) => round2(k.b * k.b),
+            hintFn: (k) => `Multiply ${k.b} × ${k.b}.`
+          },
+          {
+            exprFn: (k) => `<span class="hval">${k.c}</span>² = <span class="hval">${k.c}</span> × <span class="hval">${k.c}</span> =`,
+            answerId: 'c2',
+            answerFn: (k) => round2(k.c * k.c),
+            hintFn: (k) => `Multiply ${k.c} × ${k.c}.`
+          }
+        ]
+      },
+      {
+        title: 'Add a² + b²',
+        instruction: 'Add the squares of the two shorter sides.',
+        type: 'compute',
+        rows: [{
+          exprFn: (k, c) => `<span class="val">${c.a2}</span> + <span class="val">${c.b2}</span> =`,
+          answerId: 'sum',
+          answerFn: (k, c) => round2(c.a2 + c.b2),
+          hintFn: (k, c) => `Add ${c.a2} + ${c.b2}.`
+        }]
+      },
+      {
+        title: 'Compare: Does a² + b² = c²?',
+        instruction: 'Compare your sum to c². Are they equal?',
+        type: 'verdict',
+        verdictFn: (k, c) => isClose(c.sum, c.c2),
+        verdictTrue:  (k, c) => `✓ YES — it IS a right triangle!<br><small>${c.sum} = ${c.c2} ✓ The equation a² + b² = c² holds true.</small>`,
+        verdictFalse: (k, c) => `✗ NO — it is NOT a right triangle.<br><small>${c.sum} ≠ ${c.c2}. The equation a² + b² = c² does not hold.</small>`,
+        isFinal: true
+      }
+    ]
+  },
+
+  distance: {
+    name: 'Distance Between Two Points',
+    icon: '📍',
+    desc: 'Find the straight-line distance between two coordinate points.',
+    formula: 'd = √((x₂−x₁)²+(y₂−y₁)²)',
+    formulaText: 'd = √((<span class="var">x₂</span>−<span class="var">x₁</span>)² + (<span class="var">y₂</span>−<span class="var">y₁</span>)²)',
+    formulaDesc: 'The distance formula is the Pythagorean theorem applied to a coordinate grid. The horizontal and vertical differences become the legs.',
+    formulaKey: '<span class="kv">x₁, y₁</span> = Point 1<br><span class="kv">x₂, y₂</span> = Point 2<br><span class="kv">d</span> = distance',
+    knownFields: [
+      { id: 'x1', label: 'Point 1 — x₁', varName: 'x₁', hint: 'x-coordinate of the first point.', isHyp: false, allowNeg: true },
+      { id: 'y1', label: 'Point 1 — y₁', varName: 'y₁', hint: 'y-coordinate of the first point.', isHyp: false, allowNeg: true },
+      { id: 'x2', label: 'Point 2 — x₂', varName: 'x₂', hint: 'x-coordinate of the second point.', isHyp: false, allowNeg: true },
+      { id: 'y2', label: 'Point 2 — y₂', varName: 'y₂', hint: 'y-coordinate of the second point.', isHyp: false, allowNeg: true }
+    ],
+    finalLabel: '✓ Distance (d)',
+    finalCaption: (v) => `The distance between the two points is ${v} units.`,
+    steps: [
+      {
+        title: 'Substitute Your Values',
+        type: 'expression',
+        displayFn: (k) => {
+          const dx = round2(k.x2 - k.x1);
+          const dy = round2(k.y2 - k.y1);
+          return `d = √((<span class="val">${k.x2}</span>−<span class="val">${k.x1}</span>)² + (<span class="val">${k.y2}</span>−<span class="val">${k.y1}</span>)²)<br>d = √(<span class="val">${dx}</span>² + <span class="val">${dy}</span>²)`;
+        }
+      },
+      {
+        title: 'Find the Differences (x₂−x₁) and (y₂−y₁)',
+        instruction: 'Subtract to find the horizontal and vertical distances.',
+        type: 'compute',
+        rows: [
+          {
+            exprFn: (k) => `<span class="val">${k.x2}</span> − <span class="val">${k.x1}</span> =`,
+            answerId: 'dx',
+            answerFn: (k) => round2(k.x2 - k.x1),
+            hintFn: (k) => `Subtract ${k.x2} − ${k.x1}. Be careful with negative numbers!`
+          },
+          {
+            exprFn: (k) => `<span class="val">${k.y2}</span> − <span class="val">${k.y1}</span> =`,
+            answerId: 'dy',
+            answerFn: (k) => round2(k.y2 - k.y1),
+            hintFn: (k) => `Subtract ${k.y2} − ${k.y1}. Be careful with negative numbers!`
+          }
+        ]
+      },
+      {
+        title: 'Square Each Difference',
+        instruction: 'Square the horizontal and vertical differences.',
+        type: 'compute',
+        rows: [
+          {
+            exprFn: (k, c) => `(<span class="val">${c.dx}</span>)² = <span class="val">${c.dx}</span> × <span class="val">${c.dx}</span> =`,
+            answerId: 'dx2',
+            answerFn: (k, c) => round2(c.dx * c.dx),
+            hintFn: (k, c) => `Multiply ${c.dx} × ${c.dx}. A negative × negative = positive!`
+          },
+          {
+            exprFn: (k, c) => `(<span class="val">${c.dy}</span>)² = <span class="val">${c.dy}</span> × <span class="val">${c.dy}</span> =`,
+            answerId: 'dy2',
+            answerFn: (k, c) => round2(c.dy * c.dy),
+            hintFn: (k, c) => `Multiply ${c.dy} × ${c.dy}.`
+          }
+        ]
+      },
+      {
+        title: 'Add the Squares',
+        instruction: 'Add the two squared differences together.',
+        type: 'compute',
+        rows: [{
+          exprFn: (k, c) => `<span class="val">${c.dx2}</span> + <span class="val">${c.dy2}</span> =`,
+          answerId: 'd2',
+          answerFn: (k, c) => round2(c.dx2 + c.dy2),
+          hintFn: (k, c) => `Add ${c.dx2} + ${c.dy2}.`
+        }]
+      },
+      {
+        title: 'Take the Square Root',
+        instruction: 'Find the square root to get the distance.',
+        type: 'compute',
+        sqrtNote: true,
+        rows: [{
+          exprFn: (k, c) => `√<span class="val">${c.d2}</span> =`,
+          answerId: 'd',
+          answerFn: (k, c) => round2(Math.sqrt(c.d2)),
+          hintFn: (k, c) => `Find the square root of ${c.d2}. Use a calculator: ≈ ${round2(Math.sqrt(c.d2))}`
+        }],
+        isFinal: true
+      }
+    ]
+  },
+
+  pythagorean_triples: {
+    name: 'Pythagorean Triples',
+    icon: '🔢',
+    desc: 'Learn the most common right triangle side sets — no calculator needed!',
+    formula: 'Common sets: 3-4-5, 5-12-13…',
+    formulaText: '<span class="var">a</span>² + <span class="var">b</span>² = <span class="hyp">c</span>²',
+    formulaDesc: 'A Pythagorean triple is a set of three whole numbers that satisfy a² + b² = c². Verify a classic triple by working through the formula.',
+    formulaKey: 'Common triples:<br>3-4-5<br>5-12-13<br>8-15-17<br>7-24-25',
+    knownFields: [
+      { id: 'a', label: 'Leg a', varName: 'a', hint: 'Try: 3, 5, 8, or 7', isHyp: false },
+      { id: 'b', label: 'Leg b', varName: 'b', hint: 'Try: 4, 12, 15, or 24', isHyp: false },
+      { id: 'c', label: 'Hypotenuse (c)', varName: 'c', hint: 'Try: 5, 13, 17, or 25', isHyp: true }
+    ],
+    finalLabel: '✓ Triple Verified',
+    finalCaption: null,
+    steps: [
+      {
+        title: 'Substitute Your Values',
+        type: 'expression',
+        displayFn: (k) => `<span class="val">${k.a}</span>² + <span class="val">${k.b}</span>² <span style="color:var(--text-muted)">?=</span> <span class="hval">${k.c}</span>²`
+      },
+      {
+        title: 'Square All Three Numbers',
+        instruction: 'Square a, b, and c.',
+        type: 'compute',
+        rows: [
+          {
+            exprFn: (k) => `<span class="val">${k.a}</span> × <span class="val">${k.a}</span> =`,
+            answerId: 'a2',
+            answerFn: (k) => round2(k.a * k.a),
+            hintFn: (k) => `Multiply ${k.a} × ${k.a}.`
+          },
+          {
+            exprFn: (k) => `<span class="val">${k.b}</span> × <span class="val">${k.b}</span> =`,
+            answerId: 'b2',
+            answerFn: (k) => round2(k.b * k.b),
+            hintFn: (k) => `Multiply ${k.b} × ${k.b}.`
+          },
+          {
+            exprFn: (k) => `<span class="hval">${k.c}</span> × <span class="hval">${k.c}</span> =`,
+            answerId: 'c2',
+            answerFn: (k) => round2(k.c * k.c),
+            hintFn: (k) => `Multiply ${k.c} × ${k.c}.`
+          }
+        ]
+      },
+      {
+        title: 'Add a² + b²',
+        instruction: 'Add the two leg squares together.',
+        type: 'compute',
+        rows: [{
+          exprFn: (k, c) => `<span class="val">${c.a2}</span> + <span class="val">${c.b2}</span> =`,
+          answerId: 'sum',
+          answerFn: (k, c) => round2(c.a2 + c.b2),
+          hintFn: (k, c) => `Add ${c.a2} + ${c.b2}.`
+        }]
+      },
+      {
+        title: 'Does a² + b² = c²?',
+        instruction: 'Compare your sum to c². If equal, it\'s a valid triple!',
+        type: 'verdict',
+        verdictFn: (k, c) => isClose(c.sum, c.c2),
+        verdictTrue:  (k, c) => `✓ It's a Pythagorean Triple! ${c.sum} = ${c.c2} ✓<br><small>These three numbers always form a right triangle.</small>`,
+        verdictFalse: (k, c) => `✗ Not a Pythagorean Triple. ${c.sum} ≠ ${c.c2}<br><small>Try 3-4-5, 5-12-13, 8-15-17, or 7-24-25.</small>`,
+        isFinal: true
+      }
+    ]
+  }
+};
+
+/* ================================================================
+   STATE
+================================================================ */
+let currentProbId = null;
+let knownValues = {}, computedValues = {}, stepAttempts = {};
+let verdictResult = null;
+
+/* ================================================================
+   PROBLEM GRID
+================================================================ */
+const probList = [
+  { id: 'hypotenuse',          name: 'Find the Hypotenuse',        icon: '📐', desc: 'Know both legs → find c',            formula: 'c = √(a²+b²)' },
+  { id: 'leg_a',               name: 'Find a Missing Leg',         icon: '📏', desc: 'Know hypotenuse + one leg → find the other', formula: 'a = √(c²−b²)' },
+  { id: 'is_right',            name: 'Is It a Right Triangle?',    icon: '✅', desc: 'Know all 3 sides → verify',          formula: 'a²+b² = c²?' },
+  { id: 'distance',            name: 'Distance Between Points',    icon: '📍', desc: 'Two coordinate points → find distance', formula: 'd = √(Δx²+Δy²)' },
+  { id: 'pythagorean_triples', name: 'Pythagorean Triples',        icon: '🔢', desc: 'Verify a whole-number right triangle', formula: '3-4-5, 5-12-13…' }
+];
+
+function buildProblemGrid() {
+  const grid = document.getElementById('problemGrid');
+  probList.forEach(p => {
+    const btn = document.createElement('button');
+    btn.className = 'prob-btn';
+    btn.dataset.prob = p.id;
+    btn.innerHTML = `
+      <span class="prob-icon">${p.icon}</span>
+      <span class="prob-name">${p.name}</span>
+      <span class="prob-desc">${p.desc}</span>
+      <span class="prob-formula">${p.formula}</span>
+    `;
+    btn.addEventListener('click', () => selectProblem(p.id));
+    grid.appendChild(btn);
+  });
+}
+
+function selectProblem(id) {
+  currentProbId = id;
+  document.querySelectorAll('.prob-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`.prob-btn[data-prob="${id}"]`).classList.add('active');
+  resetWorkspace();
+  renderWorkspace();
+}
+
+/* ================================================================
+   RENDER WORKSPACE
+================================================================ */
+function renderWorkspace() {
+  const prob = PROBLEMS[currentProbId];
+  if (!prob) return;
+  document.getElementById('workspace').classList.add('visible');
+  document.getElementById('formulaText').innerHTML  = prob.formulaText;
+  document.getElementById('formulaDesc').textContent = prob.formulaDesc;
+  document.getElementById('formulaKey').innerHTML   = prob.formulaKey;
+
+  // Update diagram rule text based on problem type
+  const ruleEl = document.getElementById('diagramRule');
+  if (currentProbId === 'distance') {
+    ruleEl.innerHTML = 'The <strong>Distance Formula</strong> is the Pythagorean theorem on a coordinate grid. The horizontal difference (Δx) and vertical difference (Δy) become the two legs.';
+  } else {
+    ruleEl.innerHTML = 'The <strong>Pythagorean Theorem</strong> only works on <strong>right triangles</strong>. The hypotenuse <span style="color:#f87171;font-weight:600">(c)</span> is always the longest side, opposite the right angle.';
+  }
+
+  // Known fields
+  const grid = document.getElementById('knownGrid');
+  grid.innerHTML = '';
+  prob.knownFields.forEach(field => {
+    const div = document.createElement('div');
+    div.className = 'field-group';
+    div.innerHTML = `
+      <label class="field-label">
+        ${field.label} &nbsp;
+        <span class="var-name ${field.isHyp ? 'hyp' : ''}">(${field.varName})</span>
+      </label>
+      ${field.hint ? `<div class="field-hint">${field.hint}</div>` : ''}
+      <input
+        class="known-input ${field.isHyp ? 'hyp-input' : ''}"
+        id="known_${field.id}"
+        type="number" step="any"
+        ${field.allowNeg ? '' : 'min="0"'}
+        placeholder="Enter value..."
+        oninput="checkBeginReady()"
+      />
+    `;
+    grid.appendChild(div);
+  });
+
+  document.getElementById('stepsContainer').innerHTML = '';
+  document.getElementById('finalCard').classList.remove('visible');
+  document.getElementById('badgeKnown').textContent = '1';
+  document.getElementById('stepKnown').classList.remove('complete');
+  document.getElementById('beginBtn').disabled = true;
+  document.getElementById('beginBtn').style.display = '';
+  document.querySelectorAll('.known-input').forEach(el => el.disabled = false);
+}
+
+function checkBeginReady() {
+  const prob = PROBLEMS[currentProbId];
+  if (!prob) return;
+  const allFilled = prob.knownFields.every(f => {
+    const v = document.getElementById(`known_${f.id}`)?.value.trim();
+    return v !== '' && !isNaN(parseFloat(v));
+  });
+  document.getElementById('beginBtn').disabled = !allFilled;
+}
+
+/* ================================================================
+   BEGIN SOLVING
+================================================================ */
+function beginSteps() {
+  const prob = PROBLEMS[currentProbId];
+  knownValues = {}; computedValues = {}; stepAttempts = {}; verdictResult = null;
+  prob.knownFields.forEach(f => {
+    knownValues[f.id] = parseFloat(document.getElementById(`known_${f.id}`).value);
+  });
+  document.getElementById('stepKnown').classList.add('complete');
+  document.getElementById('badgeKnown').textContent = '✓';
+  document.querySelectorAll('.known-input').forEach(el => el.disabled = true);
+  document.getElementById('beginBtn').style.display = 'none';
+  renderSteps(prob);
+}
+
+/* ================================================================
+   RENDER STEPS
+================================================================ */
+function renderSteps(prob) {
+  const container = document.getElementById('stepsContainer');
+  container.innerHTML = '';
+
+  prob.steps.forEach((step, idx) => {
+    const stepNum = idx + 2;
+    const card = document.createElement('div');
+    card.className = 'step-card' + (idx > 0 ? ' locked' : '');
+    card.id = `dynStep_${idx}`;
+
+    let bodyHTML = '';
+
+    if (step.type === 'expression') {
+      bodyHTML = `<div class="expr-display">${step.displayFn(knownValues)}</div>`;
+
+    } else if (step.type === 'compute') {
+      bodyHTML = step.rows.map((row, rIdx) => {
+        const rowId = `row_${idx}_${rIdx}`;
+        return `
+          <div class="compute-row" id="${rowId}_wrap">
+            <div class="compute-expr">${row.exprFn(knownValues, computedValues)}</div>
+            <input class="answer-box" id="${rowId}_input" type="number" step="any" placeholder="?"
+              onkeydown="if(event.key==='Enter') checkRow('${rowId}',${idx},${rIdx})" />
+            <button class="check-btn" id="${rowId}_btn" onclick="checkRow('${rowId}',${idx},${rIdx})">Check</button>
+          </div>`;
+      }).join('');
+      bodyHTML += `<div class="feedback-box" id="fb_${idx}"></div>`;
+      if (step.sqrtNote) {
+        bodyHTML += `<div class="sqrt-note">💡 <strong>Square root reminder:</strong> The square root "undoes" squaring. √25 = 5 because 5² = 25. Use a calculator for non-perfect squares and round to 2 decimal places.</div>`;
+      }
+
+    } else if (step.type === 'verdict') {
+      bodyHTML = `
+        <div style="font-family:var(--mono);font-size:0.97rem;color:var(--text-muted);margin-bottom:1rem;" id="verdictExpr_${idx}"></div>
+        <button class="begin-btn" style="background:var(--surface3);border:1px solid var(--border2);color:var(--text-muted);" onclick="renderVerdict(${idx})">
+          Compare &amp; Check →
+        </button>
+        <div class="feedback-box" id="fb_${idx}"></div>
+      `;
+    }
+
+    card.innerHTML = `
+      <div class="step-header">
+        <div class="step-badge" id="badge_${idx}">${stepNum}</div>
+        <div class="step-title">Step ${stepNum}: ${step.title}</div>
+        <div class="step-instruction">${step.instruction || ''}</div>
+      </div>
+      <div class="step-body">${bodyHTML}</div>`;
+    container.appendChild(card);
+  });
+
+  document.getElementById('dynStep_0').classList.remove('locked');
+  if (prob.steps[0].type === 'expression') setTimeout(() => unlockStep(1), 350);
+}
+
+/* ================================================================
+   VERDICT STEP (is_right / triples)
+================================================================ */
+function renderVerdict(stepIdx) {
+  const prob = PROBLEMS[currentProbId];
+  const step = prob.steps[stepIdx];
+  const fb    = document.getElementById(`fb_${stepIdx}`);
+  const badge = document.getElementById(`badge_${stepIdx}`);
+  const card  = document.getElementById(`dynStep_${stepIdx}`);
+
+  // Show the comparison expression
+  const exprEl = document.getElementById(`verdictExpr_${stepIdx}`);
+  if (exprEl && computedValues.sum !== undefined && computedValues.c2 !== undefined) {
+    exprEl.innerHTML = `<span style="color:var(--accent2)">${computedValues.sum}</span> <span style="color:var(--text-dim)">?=</span> <span style="color:#f87171">${computedValues.c2}</span>`;
+  }
+
+  const isRight = step.verdictFn(knownValues, computedValues);
+  verdictResult = isRight;
+
+  card.classList.add('complete');
+  badge.textContent = '✓';
+
+  const msg = isRight ? step.verdictTrue(knownValues, computedValues) : step.verdictFalse(knownValues, computedValues);
+  showFeedback(fb, isRight ? 'success' : 'error', msg);
+
+  // Show final card with verdict
+  const finalCard = document.getElementById('finalCard');
+  document.getElementById('finalLabel').textContent = prob.finalLabel;
+  document.getElementById('finalValue').textContent = isRight ? '✓ YES — Right Triangle!' : '✗ NOT a Right Triangle';
+  document.getElementById('finalValue').style.color = isRight ? 'var(--success)' : 'var(--error)';
+  document.getElementById('finalValue').style.fontSize = '1.5rem';
+  document.getElementById('finalCaption').textContent = isRight
+    ? `a² + b² = c² ✓ — This is a valid right triangle.`
+    : `a² + b² ≠ c² — The sides do not satisfy the Pythagorean theorem.`;
+  finalCard.classList.add('visible');
+  setTimeout(() => finalCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
+}
+
+/* ================================================================
+   UNLOCK STEP
+================================================================ */
+function unlockStep(idx) {
+  const card = document.getElementById(`dynStep_${idx}`);
+  if (!card) return;
+  card.classList.remove('locked');
+  const prob = PROBLEMS[currentProbId];
+  if (prob && prob.steps[idx] && prob.steps[idx].type === 'expression') {
+    const exprEl = card.querySelector('.expr-display');
+    if (exprEl) exprEl.innerHTML = prob.steps[idx].displayFn(knownValues);
+    setTimeout(() => unlockStep(idx + 1), 400);
+  }
+  // If it's a verdict step, pre-fill expression display
+  if (prob && prob.steps[idx] && prob.steps[idx].type === 'verdict') {
+    const exprEl = document.getElementById(`verdictExpr_${idx}`);
+    if (exprEl && computedValues.sum !== undefined && computedValues.c2 !== undefined) {
+      exprEl.innerHTML = `<span style="color:var(--accent2)">${computedValues.sum}</span> <span style="color:var(--text-dim)">?=</span> <span style="color:#f87171">${computedValues.c2}</span>`;
+    }
+  }
+}
+
+/* ================================================================
+   CHECK ROW
+================================================================ */
+function checkRow(rowId, stepIdx, rowIdx) {
+  const prob = PROBLEMS[currentProbId];
+  const step = prob.steps[stepIdx];
+  const row  = step.rows[rowIdx];
+  const input = document.getElementById(`${rowId}_input`);
+  const btn   = document.getElementById(`${rowId}_btn`);
+  const fb    = document.getElementById(`fb_${stepIdx}`);
+  const badge = document.getElementById(`badge_${stepIdx}`);
+  const card  = document.getElementById(`dynStep_${stepIdx}`);
+
+  if (!input || input.value.trim() === '') { showFeedback(fb, 'hint', 'Please enter a number before checking.'); return; }
+
+  const userAnswer = parseFloat(input.value);
+  const correct    = row.answerFn(knownValues, computedValues);
+  stepAttempts[rowId] = (stepAttempts[rowId] || 0) + 1;
+
+  if (isClose(userAnswer, correct)) {
+    input.classList.add('correct'); input.disabled = true; btn.disabled = true;
+    computedValues[row.answerId] = round2(userAnswer);
+
+    const allDone = step.rows.every((r, ri) => {
+      const inp = document.getElementById(`row_${stepIdx}_${ri}_input`);
+      return inp && inp.disabled;
+    });
+
+    if (allDone) {
+      card.classList.add('complete'); badge.textContent = '✓';
+      if (step.isFinal) {
+        showFeedback(fb, 'success', `✓ Correct! Great work applying the Pythagorean Theorem.`);
+        showFinalAnswer(step, computedValues[row.answerId]);
+      } else {
+        showFeedback(fb, 'success', `✓ Correct! Move on to the next step.`);
+        const nextIdx = stepIdx + 1;
+        const nextStep = prob.steps[nextIdx];
+        if (nextStep && nextStep.type === 'compute') {
+          nextStep.rows.forEach((nr, nri) => {
+            const exprEl = document.querySelector(`#row_${nextIdx}_${nri}_wrap .compute-expr`);
+            if (exprEl) exprEl.innerHTML = nr.exprFn(knownValues, computedValues);
+          });
+        }
+        setTimeout(() => unlockStep(nextIdx), 400);
+      }
+    } else {
+      showFeedback(fb, 'success', `✓ Correct! Complete the remaining calculations in this step.`);
+    }
+  } else {
+    input.classList.add('incorrect'); card.classList.add('error');
+    setTimeout(() => { input.classList.remove('incorrect'); card.classList.remove('error'); }, 600);
+    const attempts = stepAttempts[rowId];
+    let msg = '';
+    if (attempts === 1)      msg = `Not quite — double-check your math and try again.`;
+    else if (attempts === 2) msg = `Still not right. Hint: ${row.hintFn(knownValues, computedValues)}`;
+    else                     msg = `The correct answer is <strong>${correct}</strong>. ${row.hintFn(knownValues, computedValues)}`;
+    showFeedback(fb, 'error', msg);
+  }
+}
+
+function showFeedback(el, type, msg) { el.className = `feedback-box visible ${type}`; el.innerHTML = msg; }
+
+function showFinalAnswer(step, value) {
+  const prob = PROBLEMS[currentProbId];
+  const finalCard = document.getElementById('finalCard');
+  document.getElementById('finalLabel').textContent = prob.finalLabel;
+  document.getElementById('finalValue').textContent = value + ' units';
+  document.getElementById('finalValue').style.color = '';
+  document.getElementById('finalValue').style.fontSize = '';
+  document.getElementById('finalCaption').textContent = prob.finalCaption ? prob.finalCaption(value) : '';
+  finalCard.classList.add('visible');
+  setTimeout(() => finalCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
+}
+
+function resetWorkspace() {
+  knownValues = {}; computedValues = {}; stepAttempts = {}; verdictResult = null;
+  document.getElementById('stepsContainer').innerHTML = '';
+  document.getElementById('finalCard').classList.remove('visible');
+  document.getElementById('workspace').classList.remove('visible');
+}
+
+buildProblemGrid();
+</script>
+</body>
+</html>
