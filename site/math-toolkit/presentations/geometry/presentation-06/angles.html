@@ -1,0 +1,1240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Angles | Math Toolkit</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:         #0d1117;
+      --surface:    #161d2e;
+      --surface2:   #1e2840;
+      --surface3:   #243050;
+      --border:     #2a3a58;
+      --border2:    #34466e;
+      --accent:     #14b8a6;
+      --accent-dim: #0d9488;
+      --accent2:    #38bdf8;
+      --accent3:    #fb923c;
+      --accent4:    #a78bfa;
+      --text:       #e2e8f0;
+      --text-muted: #8a9bbf;
+      --text-dim:   #5a6a8a;
+      --success:    #22c55e;
+      --error:      #f87171;
+      --formula-bg: #0a1628;
+      --mono:       'JetBrains Mono', monospace;
+    }
+    body { font-family: 'Outfit', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    .page-header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 2rem; display: flex; align-items: center; height: 56px; }
+    .breadcrumb { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: var(--text-muted); }
+    .breadcrumb a { color: var(--text-muted); text-decoration: none; }
+    .breadcrumb a:hover { color: var(--accent); }
+    .breadcrumb .sep { color: var(--text-dim); }
+    .breadcrumb .current { color: var(--text); font-weight: 500; }
+
+    .page-body { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+    .module-title { font-size: 1.65rem; font-weight: 700; color: var(--text); margin-bottom: 0.25rem; }
+    .module-title span { color: var(--accent); }
+    .module-subtitle { color: var(--text-muted); font-size: 0.92rem; margin-bottom: 2rem; }
+    .section-label { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 0.75rem; }
+
+    /* ── PROBLEM TYPE GRID ── */
+    .problem-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.85rem; margin-bottom: 2rem; }
+    .prob-btn {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+      padding: 1.2rem 1rem; cursor: pointer; transition: all 0.18s ease;
+      text-align: left; color: var(--text-muted); display: flex; flex-direction: column; gap: 0.45rem;
+    }
+    .prob-btn:hover { border-color: var(--accent); background: var(--surface2); transform: translateY(-1px); }
+    .prob-btn.active { border-color: var(--accent); background: rgba(20,184,166,0.08); box-shadow: 0 0 0 1px var(--accent); }
+    .prob-btn .prob-icon { font-size: 1.6rem; }
+    .prob-btn .prob-name { font-size: 0.92rem; font-weight: 600; color: var(--text); line-height: 1.2; }
+    .prob-btn .prob-desc { font-size: 0.77rem; color: var(--text-muted); line-height: 1.4; }
+    .prob-btn .prob-rule { font-family: var(--mono); font-size: 0.72rem; color: var(--accent); margin-top: 0.1rem; }
+    .prob-btn.active .prob-name { color: var(--accent); }
+
+    /* ── WORKSPACE ── */
+    #workspace { display: none; }
+    #workspace.visible { display: block; }
+    .divider { height: 1px; background: var(--border); margin: 1.75rem 0; }
+
+    /* ── VISUAL DIAGRAM CARD ── */
+    .diagram-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent4);
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 2rem;
+      animation: slideDown 0.3s ease;
+    }
+    .diagram-svg-wrap { flex-shrink: 0; }
+    .diagram-info { flex: 1; min-width: 0; }
+    .diagram-tag { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent4); margin-bottom: 0.5rem; }
+    .diagram-rule { font-size: 0.88rem; color: var(--text); line-height: 1.65; margin-bottom: 0.6rem; }
+    .diagram-rule strong { color: var(--accent2); }
+    .diagram-rule .hi-orange { color: var(--accent3); }
+    .diagram-rule .hi-purple { color: var(--accent4); }
+    .diagram-legend { display: flex; flex-wrap: wrap; gap: 0.5rem 1.2rem; margin-top: 0.4rem; }
+    .leg-item { font-size: 0.78rem; display: flex; align-items: center; gap: 0.4rem; }
+    .leg-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+    /* ── FORMULA CARD ── */
+    .formula-card {
+      background: var(--formula-bg); border: 1px solid var(--border); border-left: 3px solid var(--accent);
+      border-radius: 10px; padding: 1.25rem 1.5rem; margin-bottom: 1.5rem;
+      display: flex; align-items: flex-start; gap: 1.5rem; animation: slideDown 0.3s ease;
+    }
+    .formula-label { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 0.25rem; }
+    .formula-text { font-family: var(--mono); font-size: 1.25rem; font-weight: 500; color: var(--text); letter-spacing: 0.04em; line-height: 1.7; }
+    .formula-text .var { color: var(--accent2); }
+    .formula-text .tot { color: var(--accent3); }
+    .formula-desc { font-size: 0.82rem; color: var(--text-muted); margin-top: 0.35rem; line-height: 1.6; }
+    .formula-key { margin-left: auto; font-size: 0.78rem; color: var(--text-dim); line-height: 1.9; font-family: var(--mono); white-space: nowrap; flex-shrink: 0; }
+    .formula-key .kv { color: var(--accent2); }
+    .formula-key .kt { color: var(--accent3); }
+
+    /* ── STEP CARDS ── */
+    .step-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 1rem; overflow: hidden; animation: slideDown 0.25s ease; transition: border-color 0.2s; }
+    .step-card.locked { opacity: 0.4; pointer-events: none; }
+    .step-card.complete { border-color: var(--success); }
+    .step-card.error    { border-color: var(--error); }
+    .step-header { padding: 0.85rem 1.25rem; display: flex; align-items: center; gap: 0.75rem; border-bottom: 1px solid var(--border); background: var(--surface2); flex-wrap: wrap; }
+    .step-badge { width: 26px; height: 26px; border-radius: 50%; background: var(--surface3); border: 1px solid var(--border2); display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 700; color: var(--text-muted); flex-shrink: 0; }
+    .step-card.complete .step-badge { background: var(--success); border-color: var(--success); color: #fff; }
+    .step-title { font-weight: 600; font-size: 0.9rem; color: var(--text); }
+    .step-instruction { font-size: 0.82rem; color: var(--text-muted); margin-left: auto; text-align: right; max-width: 300px; }
+    .step-body { padding: 1.25rem; }
+
+    .known-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 0.85rem; margin-bottom: 1rem; }
+    .field-group { display: flex; flex-direction: column; gap: 0.3rem; }
+    .field-label { font-size: 0.78rem; font-weight: 500; color: var(--text-muted); }
+    .field-label .var-name { font-family: var(--mono); color: var(--accent2); font-size: 0.82rem; }
+    .field-hint { font-size: 0.71rem; color: var(--text-dim); }
+    .known-input { background: var(--surface2); border: 1px solid var(--border); border-radius: 7px; padding: 0.55rem 0.85rem; font-family: var(--mono); font-size: 1rem; color: var(--text); width: 100%; transition: border-color 0.15s; outline: none; }
+    .known-input:focus { border-color: var(--accent); }
+    .known-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+    .begin-btn { background: var(--accent); color: #0a1628; border: none; border-radius: 7px; padding: 0.6rem 1.5rem; font-family: 'Outfit', sans-serif; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.15s; margin-top: 0.5rem; }
+    .begin-btn:hover { background: #0d9488; transform: translateY(-1px); }
+    .begin-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    .expr-display { font-family: var(--mono); font-size: 1.05rem; color: var(--text); background: var(--formula-bg); border: 1px solid var(--border); border-radius: 7px; padding: 0.75rem 1rem; letter-spacing: 0.03em; line-height: 1.8; }
+    .expr-display .val { color: var(--accent2); }
+    .expr-display .tot { color: var(--accent3); }
+
+    .compute-row { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
+    .compute-row:last-child { margin-bottom: 0; }
+    .compute-expr { font-family: var(--mono); font-size: 0.97rem; color: var(--text); flex: 1; min-width: 0; line-height: 1.5; }
+    .compute-expr .val { color: var(--accent2); }
+    .compute-expr .tot { color: var(--accent3); }
+    .compute-label { font-size: 0.75rem; color: var(--text-dim); margin-right: 0.3rem; font-style: italic; }
+    .answer-box { background: var(--surface2); border: 2px solid var(--border2); border-radius: 7px; padding: 0.45rem 0.75rem; font-family: var(--mono); font-size: 1rem; color: var(--text); width: 110px; outline: none; transition: border-color 0.15s; text-align: center; }
+    .answer-box:focus { border-color: var(--accent); }
+    .answer-box.correct { border-color: var(--success); background: rgba(34,197,94,0.08); color: var(--success); }
+    .answer-box.incorrect { border-color: var(--error); background: rgba(248,113,113,0.08); }
+    .check-btn { background: var(--surface3); border: 1px solid var(--border2); border-radius: 6px; padding: 0.45rem 0.85rem; font-family: 'Outfit', sans-serif; font-size: 0.82rem; font-weight: 500; color: var(--text-muted); cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+    .check-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .check-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .feedback-box { border-radius: 7px; padding: 0.65rem 1rem; font-size: 0.83rem; line-height: 1.5; margin-top: 0.75rem; display: none; }
+    .feedback-box.visible { display: block; }
+    .feedback-box.success { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3); color: #86efac; }
+    .feedback-box.error   { background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.3); color: #fca5a5; }
+    .feedback-box.hint    { background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.25); color: #fde68a; }
+
+    /* angle-pair info tags */
+    .angle-tag {
+      display: inline-block;
+      padding: 0.2rem 0.6rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-right: 0.3rem;
+    }
+    .tag-equal   { background: rgba(56,189,248,0.15); color: #38bdf8; border: 1px solid rgba(56,189,248,0.3); }
+    .tag-supp    { background: rgba(251,146,60,0.12); color: #fb923c; border: 1px solid rgba(251,146,60,0.25); }
+    .tag-total   { background: rgba(20,184,166,0.12); color: #14b8a6; border: 1px solid rgba(20,184,166,0.3); }
+
+    /* transversal pair legend table */
+    .pair-table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; font-size: 0.82rem; }
+    .pair-table th { text-align: left; color: var(--text-dim); font-weight: 600; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--border); }
+    .pair-table td { padding: 0.5rem; border-bottom: 1px solid var(--border2); color: var(--text-muted); vertical-align: top; }
+    .pair-table td:first-child { font-family: var(--mono); color: var(--accent2); font-size: 0.85rem; white-space: nowrap; }
+    .pair-table .equal-row td { color: #38bdf8; }
+    .pair-table .supp-row td  { color: #fb923c; }
+
+    .final-answer-card { background: linear-gradient(135deg, rgba(20,184,166,0.12), rgba(167,139,250,0.08)); border: 1px solid var(--accent); border-radius: 10px; padding: 1.5rem; text-align: center; display: none; animation: celebrate 0.4s ease; }
+    .final-answer-card.visible { display: block; }
+    .final-answer-label { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 0.5rem; }
+    .final-answer-value { font-family: var(--mono); font-size: 2rem; font-weight: 700; color: var(--text); }
+    .final-answer-caption { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.35rem; }
+    .try-again-btn { margin-top: 1.25rem; background: transparent; border: 1px solid var(--border2); border-radius: 7px; padding: 0.5rem 1.25rem; font-family: 'Outfit', sans-serif; font-size: 0.85rem; color: var(--text-muted); cursor: pointer; transition: all 0.15s; }
+    .try-again-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    @keyframes slideDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes celebrate { 0% { transform: scale(0.95); opacity: 0; } 60% { transform: scale(1.02); } 100% { transform: scale(1); opacity: 1; } }
+
+    @media (max-width: 640px) {
+      .diagram-card { flex-direction: column; gap: 1rem; }
+      .formula-card { flex-direction: column; gap: 0.75rem; }
+      .formula-key { margin-left: 0; }
+      .problem-grid { grid-template-columns: 1fr 1fr; }
+      .compute-row { flex-direction: column; align-items: flex-start; }
+      .answer-box { width: 100%; }
+      .step-instruction { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="page-header">
+  <nav class="breadcrumb">
+    <a href="/">Home</a>
+    <span class="sep">›</span>
+    <a href="/math-toolkit">Math Toolkit</a>
+    <span class="sep">›</span>
+    <span class="current">Angles</span>
+  </nav>
+</header>
+
+<main class="page-body">
+  <h1 class="module-title">Working with <span>Angles</span></h1>
+  <p class="module-subtitle">Select an angle relationship or problem type, then work step-by-step to find the missing angle.</p>
+
+  <div class="section-label">Choose a Problem Type</div>
+  <div class="problem-grid" id="problemGrid"></div>
+
+  <div id="workspace">
+    <div class="divider"></div>
+
+    <!-- Visual Diagram -->
+    <div class="diagram-card">
+      <div class="diagram-svg-wrap">
+        <svg id="diagramSVG" width="180" height="160" viewBox="0 0 180 160"></svg>
+      </div>
+      <div class="diagram-info">
+        <div class="diagram-tag" id="diagramTag">📐 Angle Relationship</div>
+        <div class="diagram-rule" id="diagramRule"></div>
+        <div class="diagram-legend" id="diagramLegend"></div>
+      </div>
+    </div>
+
+    <!-- Formula Card -->
+    <div class="formula-card">
+      <div style="flex:1">
+        <div class="formula-label">Formula / Rule</div>
+        <div class="formula-text" id="formulaText"></div>
+        <div class="formula-desc" id="formulaDesc"></div>
+      </div>
+      <div class="formula-key" id="formulaKey"></div>
+    </div>
+
+    <!-- Known Values -->
+    <div class="step-card" id="stepKnown">
+      <div class="step-header">
+        <div class="step-badge" id="badgeKnown">1</div>
+        <div class="step-title">Identify Your Known Values</div>
+        <div class="step-instruction">Enter the angle measurements from your problem.</div>
+      </div>
+      <div class="step-body">
+        <div class="known-grid" id="knownGrid"></div>
+        <button class="begin-btn" id="beginBtn" onclick="beginSteps()" disabled>Begin Solving →</button>
+      </div>
+    </div>
+
+    <div id="stepsContainer"></div>
+
+    <div class="final-answer-card" id="finalCard">
+      <div class="final-answer-label" id="finalLabel">✓ Missing Angle</div>
+      <div class="final-answer-value" id="finalValue"></div>
+      <div class="final-answer-caption" id="finalCaption"></div>
+      <br>
+      <button class="try-again-btn" onclick="resetWorkspace()">↺ Try Another Problem</button>
+    </div>
+  </div>
+</main>
+
+<script>
+function round2(n) { return Math.round(n * 100) / 100; }
+function isClose(a, b) { return Math.abs(a - b) <= Math.max(0.11, Math.abs(b) * 0.015); }
+
+/* ================================================================
+   SVG DIAGRAMS — drawn fresh for each problem type
+================================================================ */
+const DIAGRAMS = {
+
+  complementary: `
+    <line x1="90" y1="140" x2="90" y2="30" stroke="#38bdf8" stroke-width="2"/>
+    <line x1="30" y1="140" x2="90" y2="140" stroke="#2a3a58" stroke-width="2"/>
+    <line x1="90" y1="140" x2="160" y2="140" stroke="#2a3a58" stroke-width="2"/>
+    <path d="M90,125 A15,15 0 0,1 103,130" fill="none" stroke="#f87171" stroke-width="1.5"/>
+    <path d="M90,125 A15,15 0 0,0 75,130" fill="none" stroke="#fb923c" stroke-width="1.5"/>
+    <rect x="86" y="126" width="8" height="8" fill="none" stroke="#fbbf24" stroke-width="1.5"/>
+    <text x="108" y="138" fill="#f87171" font-size="12" font-family="JetBrains Mono,monospace">a</text>
+    <text x="64" y="138" fill="#fb923c" font-size="12" font-family="JetBrains Mono,monospace">b</text>
+    <text x="55" y="20" fill="#14b8a6" font-size="11" font-family="Outfit,sans-serif">a + b = 90°</text>
+  `,
+
+  supplementary: `
+    <line x1="20" y1="90" x2="160" y2="90" stroke="#2a3a58" stroke-width="2"/>
+    <line x1="70" y1="90" x2="130" y2="30" stroke="#38bdf8" stroke-width="2"/>
+    <path d="M70,90 m20,0 A20,20 0 0,0 83,69" fill="none" stroke="#f87171" stroke-width="1.5"/>
+    <path d="M70,90 m-20,0 A20,20 0 0,1 57,69" fill="none" stroke="#fb923c" stroke-width="1.5"/>
+    <text x="88" y="84" fill="#f87171" font-size="12" font-family="JetBrains Mono,monospace">a</text>
+    <text x="42" y="84" fill="#fb923c" font-size="12" font-family="JetBrains Mono,monospace">b</text>
+    <text x="45" y="20" fill="#14b8a6" font-size="11" font-family="Outfit,sans-serif">a + b = 180°</text>
+  `,
+
+  vertical: `
+    <line x1="20" y1="140" x2="160" y2="20" stroke="#38bdf8" stroke-width="2"/>
+    <line x1="20" y1="20" x2="160" y2="140" stroke="#38bdf8" stroke-width="2"/>
+    <path d="M90,80 m12,-8 A14,14 0 0,0 78,72" fill="none" stroke="#f87171" stroke-width="1.5"/>
+    <path d="M90,80 m-12,8 A14,14 0 0,0 102,88" fill="none" stroke="#f87171" stroke-width="1.5"/>
+    <path d="M90,80 m12,8 A14,14 0 0,1 78,88" fill="none" stroke="#fb923c" stroke-width="1.5"/>
+    <path d="M90,80 m-12,-8 A14,14 0 0,1 102,72" fill="none" stroke="#fb923c" stroke-width="1.5"/>
+    <text x="96" y="68" fill="#f87171" font-size="11" font-family="JetBrains Mono,monospace">a</text>
+    <text x="70" y="98" fill="#f87171" font-size="11" font-family="JetBrains Mono,monospace">a</text>
+    <text x="70" y="68" fill="#fb923c" font-size="11" font-family="JetBrains Mono,monospace">b</text>
+    <text x="96" y="98" fill="#fb923c" font-size="11" font-family="JetBrains Mono,monospace">b</text>
+    <text x="30" y="15" fill="#14b8a6" font-size="11" font-family="Outfit,sans-serif">a = a, b = b</text>
+  `,
+
+  triangle_sum: `
+    <polygon points="90,18 160,145 20,145" fill="rgba(20,184,166,0.06)" stroke="#2a3a58" stroke-width="1.5"/>
+    <path d="M90,18 m-10,14 A14,14 0 0,1 100,32" fill="none" stroke="#f87171" stroke-width="1.5"/>
+    <path d="M20,145 m18,-4 A14,14 0 0,1 35,131" fill="none" stroke="#38bdf8" stroke-width="1.5"/>
+    <path d="M160,145 m-18,-4 A14,14 0 0,0 145,131" fill="none" stroke="#fb923c" stroke-width="1.5"/>
+    <text x="84" y="52" fill="#f87171" font-size="12" font-family="JetBrains Mono,monospace">A</text>
+    <text x="28" y="138" fill="#38bdf8" font-size="12" font-family="JetBrains Mono,monospace">B</text>
+    <text x="140" y="138" fill="#fb923c" font-size="12" font-family="JetBrains Mono,monospace">C</text>
+    <text x="28" y="14" fill="#14b8a6" font-size="11" font-family="Outfit,sans-serif">A+B+C = 180°</text>
+  `,
+
+  exterior: `
+    <polygon points="90,18 160,145 20,145" fill="rgba(20,184,166,0.06)" stroke="#2a3a58" stroke-width="1.5"/>
+    <line x1="160" y1="145" x2="195" y2="145" stroke="#a78bfa" stroke-width="2" stroke-dasharray="4,3"/>
+    <path d="M20,145 m18,-4 A14,14 0 0,1 35,131" fill="none" stroke="#38bdf8" stroke-width="1.5"/>
+    <path d="M90,18 m-10,14 A14,14 0 0,1 100,32" fill="none" stroke="#f87171" stroke-width="1.5"/>
+    <path d="M160,145 m-14,0 A14,14 0 0,0 153,131" fill="none" stroke="#fb923c" stroke-width="1.5"/>
+    <path d="M160,145 m14,0 A14,14 0 0,0 167,131" fill="none" stroke="#a78bfa" stroke-width="2"/>
+    <text x="84" y="52" fill="#f87171" font-size="11" font-family="JetBrains Mono,monospace">A</text>
+    <text x="28" y="138" fill="#38bdf8" font-size="11" font-family="JetBrains Mono,monospace">B</text>
+    <text x="138" y="138" fill="#fb923c" font-size="11" font-family="JetBrains Mono,monospace">int</text>
+    <text x="163" y="138" fill="#a78bfa" font-size="11" font-family="JetBrains Mono,monospace">ext</text>
+  `,
+
+  transversal: `
+    <line x1="10" y1="55"  x2="170" y2="55"  stroke="#38bdf8" stroke-width="2"/>
+    <line x1="10" y1="115" x2="170" y2="115" stroke="#38bdf8" stroke-width="2"/>
+    <line x1="50" y1="15"  x2="130" y2="155" stroke="#fb923c" stroke-width="2"/>
+    <circle cx="72"  cy="55"  r="3" fill="#f87171"/>
+    <circle cx="108" cy="115" r="3" fill="#f87171"/>
+    <text x="78"  y="44"  fill="#f87171"  font-size="10" font-family="JetBrains Mono,monospace">1 2</text>
+    <text x="78"  y="68"  fill="#f87171"  font-size="10" font-family="JetBrains Mono,monospace">3 4</text>
+    <text x="114" y="104" fill="#f87171"  font-size="10" font-family="JetBrains Mono,monospace">5 6</text>
+    <text x="114" y="128" fill="#f87171"  font-size="10" font-family="JetBrains Mono,monospace">7 8</text>
+    <text x="10"  y="12"  fill="#14b8a6"  font-size="10" font-family="Outfit,sans-serif">Parallel lines</text>
+  `,
+
+  polygon_sum: `
+    <polygon points="90,15 155,55 145,130 35,130 25,55" fill="rgba(20,184,166,0.06)" stroke="#2a3a58" stroke-width="1.5"/>
+    <path d="M90,15 m-10,12 A12,12 0 0,1 100,27"   fill="none" stroke="#f87171" stroke-width="1.5"/>
+    <path d="M155,55 m-13,4 A12,12 0 0,1 155,68"   fill="none" stroke="#38bdf8" stroke-width="1.5"/>
+    <path d="M145,130 m-10,-9 A12,12 0 0,0 133,122" fill="none" stroke="#fb923c" stroke-width="1.5"/>
+    <path d="M35,130 m10,-9 A12,12 0 0,1 47,122"    fill="none" stroke="#a78bfa" stroke-width="1.5"/>
+    <path d="M25,55 m13,4 A12,12 0 0,0 25,68"       fill="none" stroke="#fbbf24" stroke-width="1.5"/>
+    <text x="20" y="12" fill="#14b8a6" font-size="10" font-family="Outfit,sans-serif">Sum = (n-2)×180°</text>
+  `,
+
+  isosceles: `
+    <polygon points="90,18 155,145 25,145" fill="rgba(20,184,166,0.06)" stroke="#2a3a58" stroke-width="1.5"/>
+    <line x1="90" y1="18" x2="25"  y2="145" stroke="#f87171" stroke-width="2.5"/>
+    <line x1="90" y1="18" x2="155" y2="145" stroke="#f87171" stroke-width="2.5"/>
+    <line x1="25" y1="145" x2="155" y2="145" stroke="#38bdf8" stroke-width="2"/>
+    <text x="26"  y="138" fill="#fb923c" font-size="11" font-family="JetBrains Mono,monospace">B</text>
+    <text x="140" y="138" fill="#fb923c" font-size="11" font-family="JetBrains Mono,monospace">B</text>
+    <text x="84"  y="50"  fill="#f87171" font-size="11" font-family="JetBrains Mono,monospace">A</text>
+    <text x="22" y="15" fill="#14b8a6" font-size="10" font-family="Outfit,sans-serif">Base angles equal</text>
+  `
+};
+
+/* ================================================================
+   PROBLEM DEFINITIONS
+================================================================ */
+const PROBLEMS = {
+
+  complementary: {
+    name: 'Complementary Angles',
+    icon: '🔲',
+    desc: 'Two angles that add up to 90°',
+    rule: 'a + b = 90°',
+    diagramTag: '🔲 Complementary Angles',
+    diagramKey: 'complementary',
+    diagramRule: 'Two angles are <strong>complementary</strong> if they add up to exactly <strong class="hi-orange">90°</strong>. If you know one angle, subtract it from 90° to find the other.',
+    diagramLegend: [
+      { color: '#f87171', label: 'Angle a — one part of the right angle' },
+      { color: '#fb923c', label: 'Angle b — the complement' },
+      { color: '#fbbf24', label: '□ — the 90° right angle marker' }
+    ],
+    formulaText: '<span class="var">a</span> + <span class="var">b</span> = <span class="tot">90°</span>',
+    formulaDesc: 'The two angles together form a right angle (90°). Subtract the known angle from 90° to find the missing one.',
+    formulaKey: '<span class="kv">a</span> = known angle<br><span class="kv">b</span> = missing angle<br><span class="kt">90°</span> = total',
+    knownFields: [{ id: 'a', label: 'Known angle (a)', varName: 'a°', hint: 'Must be less than 90°.' }],
+    finalLabel: '✓ Complementary Angle (b)',
+    finalCaption: (v, k) => `${k.a}° + ${v}° = 90° ✓`,
+    steps: [
+      { title: 'Substitute Your Value', type: 'expression', displayFn: (k) => `<span class="val">${k.a}</span>° + b = <span class="tot">90°</span>` },
+      {
+        title: 'Subtract to Find the Missing Angle',
+        instruction: 'Subtract the known angle from 90°.',
+        type: 'compute',
+        rows: [{
+          exprFn: (k) => `<span class="tot">90</span>° − <span class="val">${k.a}</span>° =`,
+          answerId: 'b',
+          answerFn: (k) => round2(90 - k.a),
+          hintFn: (k) => `Subtract 90 − ${k.a}.`
+        }],
+        isFinal: true
+      }
+    ]
+  },
+
+  supplementary: {
+    name: 'Supplementary Angles',
+    icon: '📏',
+    desc: 'Two angles that add up to 180°',
+    rule: 'a + b = 180°',
+    diagramTag: '📏 Supplementary Angles',
+    diagramKey: 'supplementary',
+    diagramRule: 'Two angles are <strong>supplementary</strong> if they add up to exactly <strong class="hi-orange">180°</strong>. They form a straight line together.',
+    diagramLegend: [
+      { color: '#f87171', label: 'Angle a — one part of the straight line' },
+      { color: '#fb923c', label: 'Angle b — the supplement' }
+    ],
+    formulaText: '<span class="var">a</span> + <span class="var">b</span> = <span class="tot">180°</span>',
+    formulaDesc: 'The two angles together form a straight line (180°). Subtract the known angle from 180° to find the missing one.',
+    formulaKey: '<span class="kv">a</span> = known angle<br><span class="kv">b</span> = missing angle<br><span class="kt">180°</span> = total',
+    knownFields: [{ id: 'a', label: 'Known angle (a)', varName: 'a°', hint: 'Must be less than 180°.' }],
+    finalLabel: '✓ Supplementary Angle (b)',
+    finalCaption: (v, k) => `${k.a}° + ${v}° = 180° ✓`,
+    steps: [
+      { title: 'Substitute Your Value', type: 'expression', displayFn: (k) => `<span class="val">${k.a}</span>° + b = <span class="tot">180°</span>` },
+      {
+        title: 'Subtract to Find the Missing Angle',
+        instruction: 'Subtract the known angle from 180°.',
+        type: 'compute',
+        rows: [{
+          exprFn: (k) => `<span class="tot">180</span>° − <span class="val">${k.a}</span>° =`,
+          answerId: 'b',
+          answerFn: (k) => round2(180 - k.a),
+          hintFn: (k) => `Subtract 180 − ${k.a}.`
+        }],
+        isFinal: true
+      }
+    ]
+  },
+
+  vertical: {
+    name: 'Vertical Angles',
+    icon: '✖️',
+    desc: 'Opposite angles formed by two intersecting lines',
+    rule: 'Vertical angles are equal',
+    diagramTag: '✖️ Vertical Angles',
+    diagramKey: 'vertical',
+    diagramRule: '<strong>Vertical angles</strong> are the angles directly across from each other when two lines cross. They are <strong>always equal</strong>. Adjacent angles are supplementary (add to 180°).',
+    diagramLegend: [
+      { color: '#f87171', label: 'Angle a — and its vertical partner (equal)' },
+      { color: '#fb923c', label: 'Angle b — and its vertical partner (equal)' }
+    ],
+    formulaText: '<span class="var">a</span> = <span class="var">a</span> &nbsp;(vertical angles equal)<br><span class="var">a</span> + <span class="var">b</span> = <span class="tot">180°</span> &nbsp;(adjacent)',
+    formulaDesc: 'Vertical angles are always equal. Adjacent angles add to 180°.',
+    formulaKey: '<span class="kv">a</span> = known angle<br>vertical partner = <span class="kv">a</span><br>adjacent = <span class="kt">180° − a</span>',
+    knownFields: [{ id: 'a', label: 'Known angle (a)', varName: 'a°', hint: 'One of the four angles at the intersection.' }],
+    finalLabel: '✓ All Four Angles',
+    finalCaption: null,
+    isMultiAnswer: true,
+    steps: [
+      { title: 'Substitute Your Value', type: 'expression', displayFn: (k) => `Angle a = <span class="val">${k.a}</span>°` },
+      {
+        title: 'Find the Vertical Angle (Equal to a)',
+        instruction: 'The angle directly across is always equal.',
+        type: 'compute',
+        rows: [{
+          exprFn: (k) => `Vertical angle = <span class="val">${k.a}</span>° (same value) =`,
+          answerId: 'vert',
+          answerFn: (k) => round2(k.a),
+          hintFn: (k) => `Vertical angles are always equal. The answer is ${k.a}°.`
+        }]
+      },
+      {
+        title: 'Find the Adjacent Angle (Supplementary)',
+        instruction: 'Adjacent angles add to 180°. Subtract a from 180°.',
+        type: 'compute',
+        rows: [{
+          exprFn: (k) => `<span class="tot">180</span>° − <span class="val">${k.a}</span>° =`,
+          answerId: 'adj',
+          answerFn: (k) => round2(180 - k.a),
+          hintFn: (k) => `Subtract 180 − ${k.a}.`
+        }]
+      },
+      {
+        title: 'Find the 4th Angle (Vertical to Adjacent)',
+        instruction: 'The last angle is vertical to the adjacent — they are equal.',
+        type: 'compute',
+        rows: [{
+          exprFn: (k, c) => `4th angle = <span class="val">${c.adj}</span>° (vertical to adjacent) =`,
+          answerId: 'adj2',
+          answerFn: (k, c) => round2(c.adj),
+          hintFn: (k, c) => `Vertical angles are equal. The 4th angle equals ${c.adj}°.`
+        }],
+        isFinal: true,
+        multiAnswerFn: (k, c) => `${k.a}°, ${c.vert}°, ${c.adj}°, ${c.adj2}°`,
+        multiCaption: (k, c) => `Two angles of ${k.a}° (vertical pair) and two angles of ${c.adj}° (vertical pair). All four add to 360°.`
+      }
+    ]
+  },
+
+  triangle_sum: {
+    name: 'Triangle Angle Sum',
+    icon: '🔺',
+    desc: 'All three angles of a triangle add to 180°',
+    rule: 'A + B + C = 180°',
+    diagramTag: '🔺 Triangle Angle Sum',
+    diagramKey: 'triangle_sum',
+    diagramRule: 'The three interior angles of <strong>any triangle</strong> always add up to exactly <strong class="hi-orange">180°</strong>. If you know two angles, subtract their sum from 180° to find the third.',
+    diagramLegend: [
+      { color: '#f87171', label: 'Angle A — top vertex' },
+      { color: '#38bdf8', label: 'Angle B — bottom left' },
+      { color: '#fb923c', label: 'Angle C — bottom right' }
+    ],
+    formulaText: '<span class="var">A</span> + <span class="var">B</span> + <span class="var">C</span> = <span class="tot">180°</span>',
+    formulaDesc: 'Add the two known angles, then subtract from 180° to find the missing angle.',
+    formulaKey: '<span class="kv">A, B</span> = known angles<br><span class="kv">C</span> = missing angle<br><span class="kt">180°</span> = total',
+    knownFields: [
+      { id: 'A', label: 'Angle A', varName: 'A°', hint: '' },
+      { id: 'B', label: 'Angle B', varName: 'B°', hint: '' }
+    ],
+    finalLabel: '✓ Missing Angle (C)',
+    finalCaption: (v, k) => `${k.A}° + ${k.B}° + ${v}° = 180° ✓`,
+    steps: [
+      { title: 'Substitute Your Values', type: 'expression', displayFn: (k) => `<span class="val">${k.A}</span>° + <span class="val">${k.B}</span>° + C = <span class="tot">180°</span>` },
+      {
+        title: 'Add the Two Known Angles',
+        instruction: 'Add angle A + angle B first.',
+        type: 'compute',
+        rows: [{
+          exprFn: (k) => `<span class="val">${k.A}</span>° + <span class="val">${k.B}</span>° =`,
+          answerId: 'sum',
+          answerFn: (k) => round2(k.A + k.B),
+          hintFn: (k) => `Add ${k.A} + ${k.B}.`
+        }]
+      },
+      {
+        title: 'Subtract from 180° to Find Angle C',
+        instruction: 'Subtract the sum of known angles from 180°.',
+        type: 'compute',
+        rows: [{
+          exprFn: (k, c) => `<span class="tot">180</span>° − <span class="val">${c.sum}</span>° =`,
+          answerId: 'C',
+          answerFn: (k, c) => round2(180 - c.sum),
+          hintFn: (k, c) => `Subtract 180 − ${c.sum}.`
+        }],
+        isFinal: true
+      }
+    ]
+  },
+
+  exterior: {
+    name: 'Exterior Angle Theorem',
+    icon: '📐',
+    desc: 'An exterior angle equals the sum of the two non-adjacent interior angles',
+    rule: 'ext = A + B',
+    diagramTag: '📐 Exterior Angle Theorem',
+    diagramKey: 'exterior',
+    diagramRule: 'An <strong>exterior angle</strong> of a triangle equals the sum of the <strong>two non-adjacent interior angles</strong> (the remote interior angles). The exterior and adjacent interior angle are supplementary (add to 180°).',
+    diagramLegend: [
+      { color: '#f87171', label: 'Angle A — remote interior angle' },
+      { color: '#38bdf8', label: 'Angle B — remote interior angle' },
+      { color: '#a78bfa', label: 'Exterior angle = A + B' }
+    ],
+    formulaText: '<span class="var">ext</span> = <span class="var">A</span> + <span class="var">B</span>',
+    formulaDesc: 'The exterior angle equals the sum of the two non-adjacent interior angles. You can solve for any one of the three values if you know the other two.',
+    formulaKey: '<span class="kv">A, B</span> = remote interior angles<br><span class="kv">ext</span> = exterior angle',
+    knownFields: [
+      { id: 'A', label: 'Remote interior angle A', varName: 'A°', hint: 'One of the two far interior angles.' },
+      { id: 'B', label: 'Remote interior angle B', varName: 'B°', hint: 'The other far interior angle.' }
+    ],
+    finalLabel: '✓ Exterior Angle',
+    finalCaption: (v, k) => `Exterior angle = ${k.A}° + ${k.B}° = ${v}° ✓`,
+    steps: [
+      { title: 'Substitute Your Values', type: 'expression', displayFn: (k) => `ext = <span class="val">${k.A}</span>° + <span class="val">${k.B}</span>°` },
+      {
+        title: 'Add the Two Remote Interior Angles',
+        instruction: 'The exterior angle equals A + B.',
+        type: 'compute',
+        rows: [{
+          exprFn: (k) => `<span class="val">${k.A}</span>° + <span class="val">${k.B}</span>° =`,
+          answerId: 'ext',
+          answerFn: (k) => round2(k.A + k.B),
+          hintFn: (k) => `Add ${k.A} + ${k.B}.`
+        }],
+        isFinal: true
+      }
+    ]
+  },
+
+  find_interior_from_exterior: {
+    name: 'Find Interior from Exterior',
+    icon: '🔍',
+    desc: 'Know the exterior angle and one interior — find the other interior',
+    rule: 'A = ext − B',
+    diagramTag: '🔍 Find Remote Interior Angle',
+    diagramKey: 'exterior',
+    diagramRule: 'If you know the <strong>exterior angle</strong> and <strong>one remote interior angle</strong>, subtract to find the other remote interior angle: <strong>A = ext − B</strong>.',
+    diagramLegend: [
+      { color: '#f87171', label: 'Angle A — unknown remote interior' },
+      { color: '#38bdf8', label: 'Angle B — known remote interior' },
+      { color: '#a78bfa', label: 'Exterior angle — known' }
+    ],
+    formulaText: '<span class="var">A</span> = <span class="var">ext</span> − <span class="var">B</span>',
+    formulaDesc: 'Subtract the known remote interior angle from the exterior angle to find the missing interior angle.',
+    formulaKey: '<span class="kv">ext</span> = exterior angle<br><span class="kv">B</span> = known interior<br><span class="kv">A</span> = missing interior',
+    knownFields: [
+      { id: 'ext', label: 'Exterior angle (ext)', varName: 'ext°', hint: 'The exterior angle of the triangle.' },
+      { id: 'B',   label: 'Known interior (B)',   varName: 'B°',   hint: 'One of the remote interior angles you know.' }
+    ],
+    finalLabel: '✓ Missing Interior Angle (A)',
+    finalCaption: (v, k) => `${v}° + ${k.B}° = ${k.ext}° ✓`,
+    steps: [
+      { title: 'Substitute Your Values', type: 'expression', displayFn: (k) => `A = <span class="val">${k.ext}</span>° − <span class="val">${k.B}</span>°` },
+      {
+        title: 'Subtract to Find the Missing Interior Angle',
+        instruction: 'Subtract the known interior angle from the exterior angle.',
+        type: 'compute',
+        rows: [{
+          exprFn: (k) => `<span class="val">${k.ext}</span>° − <span class="val">${k.B}</span>° =`,
+          answerId: 'A',
+          answerFn: (k) => round2(k.ext - k.B),
+          hintFn: (k) => `Subtract ${k.ext} − ${k.B}.`
+        }],
+        isFinal: true
+      }
+    ]
+  },
+
+  transversal: {
+    name: 'Parallel Lines & Transversal',
+    icon: '⚡',
+    desc: 'Angles formed when a line crosses two parallel lines',
+    rule: 'Multiple angle relationships',
+    diagramTag: '⚡ Parallel Lines & Transversal',
+    diagramKey: 'transversal',
+    diagramRule: 'When a <strong>transversal</strong> crosses two <strong>parallel lines</strong>, it creates 8 angles with special relationships. Enter one angle to find all others.',
+    diagramLegend: [
+      { color: '#38bdf8', label: 'Corresponding angles — equal (same position)' },
+      { color: '#f87171', label: 'Alternate interior angles — equal (Z-shape)' },
+      { color: '#fb923c', label: 'Co-interior (same-side) angles — add to 180°' }
+    ],
+    formulaText: 'Corresponding: <span class="var">∠1 = ∠5</span><br>Alt. Interior: <span class="var">∠3 = ∠6</span><br>Co-interior: <span class="var">∠3 + ∠5 = <span class="tot">180°</span></span>',
+    formulaDesc: 'All corresponding and alternate angles are equal. Co-interior (same-side interior) angles add to 180°.',
+    formulaKey: '∠1=∠3=∠5=∠7<br>∠2=∠4=∠6=∠8<br>∠1+∠2=<span class="kt">180°</span>',
+    knownFields: [{ id: 'ang1', label: 'One angle (any of the 8)', varName: '∠°', hint: 'Enter any one of the 8 angles formed.' }],
+    finalLabel: '✓ All 8 Angles',
+    finalCaption: null,
+    isTransversal: true,
+    steps: [
+      {
+        title: 'Substitute Your Value',
+        type: 'expression',
+        displayFn: (k) => `Known angle = <span class="val">${k.ang1}</span>°`
+      },
+      {
+        title: 'Find the Supplementary Angle (add to 180°)',
+        instruction: 'Adjacent angles at an intersection add to 180°.',
+        type: 'compute',
+        rows: [{
+          exprFn: (k) => `<span class="tot">180</span>° − <span class="val">${k.ang1}</span>° =`,
+          answerId: 'supp',
+          answerFn: (k) => round2(180 - k.ang1),
+          hintFn: (k) => `Subtract 180 − ${k.ang1}.`
+        }]
+      },
+      {
+        title: 'Identify All 8 Angles',
+        instruction: 'Corresponding angles are equal. Adjacent angles are supplementary.',
+        type: 'transversal_summary',
+        isFinal: true
+      }
+    ]
+  },
+
+  polygon_sum: {
+    name: 'Polygon Interior Angle Sum',
+    icon: '⬡',
+    desc: 'Find the total interior angle sum of any polygon',
+    rule: 'Sum = (n − 2) × 180°',
+    diagramTag: '⬡ Polygon Interior Angle Sum',
+    diagramKey: 'polygon_sum',
+    diagramRule: 'The sum of all <strong>interior angles</strong> of any polygon can be found using <strong>(n − 2) × 180°</strong>, where n is the number of sides. A triangle (3 sides) = 180°, a square (4 sides) = 360°, and so on.',
+    diagramLegend: [
+      { color: '#14b8a6', label: 'Any polygon with n sides' },
+      { color: '#f87171', label: 'Interior angles at each vertex' }
+    ],
+    formulaText: 'Sum = (<span class="var">n</span> − 2) × <span class="tot">180°</span>',
+    formulaDesc: 'Subtract 2 from the number of sides, then multiply by 180°. This gives the total sum of all interior angles.',
+    formulaKey: '<span class="kv">n</span> = number of sides<br><span class="kt">180°</span> = constant',
+    knownFields: [{ id: 'n', label: 'Number of sides (n)', varName: 'n', hint: 'e.g. Triangle=3, Square=4, Pentagon=5, Hexagon=6…' }],
+    finalLabel: '✓ Interior Angle Sum',
+    finalCaption: (v, k) => `A ${k.n}-sided polygon has an interior angle sum of ${v}°.`,
+    steps: [
+      { title: 'Substitute Your Value', type: 'expression', displayFn: (k) => `Sum = (<span class="val">${k.n}</span> − 2) × <span class="tot">180°</span>` },
+      {
+        title: 'Subtract 2 from the Number of Sides',
+        instruction: 'Calculate (n − 2) first.',
+        type: 'compute',
+        rows: [{
+          exprFn: (k) => `<span class="val">${k.n}</span> − 2 =`,
+          answerId: 'nm2',
+          answerFn: (k) => round2(k.n - 2),
+          hintFn: (k) => `Subtract ${k.n} − 2.`
+        }]
+      },
+      {
+        title: 'Multiply by 180°',
+        instruction: 'Multiply your result by 180 to get the total angle sum.',
+        type: 'compute',
+        rows: [{
+          exprFn: (k, c) => `<span class="val">${c.nm2}</span> × <span class="tot">180</span>° =`,
+          answerId: 'sum',
+          answerFn: (k, c) => round2(c.nm2 * 180),
+          hintFn: (k, c) => `Multiply ${c.nm2} × 180.`
+        }],
+        isFinal: true
+      }
+    ]
+  },
+
+  single_interior: {
+    name: 'Single Interior Angle (Regular Polygon)',
+    icon: '🔷',
+    desc: 'Find one interior angle of a regular polygon',
+    rule: 'angle = (n−2)×180° ÷ n',
+    diagramTag: '🔷 Regular Polygon — Each Angle',
+    diagramKey: 'polygon_sum',
+    diagramRule: 'In a <strong>regular polygon</strong>, all sides and angles are equal. Divide the total interior angle sum by the number of angles (= number of sides) to find each one.',
+    diagramLegend: [
+      { color: '#14b8a6', label: 'Regular polygon — all angles equal' }
+    ],
+    formulaText: 'Each angle = (<span class="var">n</span> − 2) × <span class="tot">180°</span> ÷ <span class="var">n</span>',
+    formulaDesc: 'First find the total sum using (n−2)×180°, then divide by n (the number of angles).',
+    formulaKey: '<span class="kv">n</span> = number of sides/angles',
+    knownFields: [{ id: 'n', label: 'Number of sides (n)', varName: 'n', hint: 'e.g. Pentagon=5, Hexagon=6, Octagon=8…' }],
+    finalLabel: '✓ Each Interior Angle',
+    finalCaption: (v, k) => `Each interior angle of a regular ${k.n}-gon measures ${v}°.`,
+    steps: [
+      { title: 'Substitute Your Value', type: 'expression', displayFn: (k) => `Each angle = (<span class="val">${k.n}</span> − 2) × <span class="tot">180°</span> ÷ <span class="val">${k.n}</span>` },
+      {
+        title: 'Subtract 2 from the Number of Sides',
+        instruction: 'Calculate (n − 2).',
+        type: 'compute',
+        rows: [{
+          exprFn: (k) => `<span class="val">${k.n}</span> − 2 =`,
+          answerId: 'nm2',
+          answerFn: (k) => round2(k.n - 2),
+          hintFn: (k) => `Subtract ${k.n} − 2.`
+        }]
+      },
+      {
+        title: 'Multiply by 180° (Total Sum)',
+        instruction: 'Find the total interior angle sum.',
+        type: 'compute',
+        rows: [{
+          exprFn: (k, c) => `<span class="val">${c.nm2}</span> × <span class="tot">180</span>° =`,
+          answerId: 'total',
+          answerFn: (k, c) => round2(c.nm2 * 180),
+          hintFn: (k, c) => `Multiply ${c.nm2} × 180.`
+        }]
+      },
+      {
+        title: 'Divide by n (Number of Angles)',
+        instruction: 'Divide the total sum by the number of sides to find each angle.',
+        type: 'compute',
+        rows: [{
+          exprFn: (k, c) => `<span class="val">${c.total}</span>° ÷ <span class="val">${k.n}</span> =`,
+          answerId: 'each',
+          answerFn: (k, c) => round2(c.total / k.n),
+          hintFn: (k, c) => `Divide ${c.total} ÷ ${k.n}.`
+        }],
+        isFinal: true
+      }
+    ]
+  },
+
+  isosceles: {
+    name: 'Isosceles Triangle Angles',
+    icon: '🔺',
+    desc: 'Two equal base angles — find missing angles',
+    rule: 'Base angles are equal',
+    diagramTag: '🔺 Isosceles Triangle',
+    diagramKey: 'isosceles',
+    diagramRule: 'An <strong>isosceles triangle</strong> has two equal sides — and the angles opposite those equal sides (the <strong>base angles</strong>) are always equal. All three angles still add to 180°.',
+    diagramLegend: [
+      { color: '#f87171', label: 'Equal sides (legs)' },
+      { color: '#fb923c', label: 'Base angles B — always equal to each other' },
+      { color: '#38bdf8', label: 'Base — the third side' }
+    ],
+    formulaText: 'B = B &nbsp;(base angles equal)<br><span class="var">A</span> + 2<span class="var">B</span> = <span class="tot">180°</span>',
+    formulaDesc: 'If you know the vertex angle A, you can find each base angle. If you know a base angle B, you can find the vertex angle A.',
+    formulaKey: '<span class="kv">A</span> = vertex angle<br><span class="kv">B</span> = each base angle',
+    knownFields: [
+      { id: 'mode', label: 'What do you know?', varName: '', hint: '', isSelect: true,
+        options: [
+          { value: 'vertex', label: 'I know the vertex angle (A) — find base angles (B)' },
+          { value: 'base',   label: 'I know a base angle (B) — find vertex angle (A)' }
+        ]
+      },
+      { id: 'known', label: 'Known angle value', varName: '°', hint: 'Enter the angle you know.' }
+    ],
+    finalLabel: '✓ All Three Angles',
+    finalCaption: null,
+    isIsosceles: true,
+    steps: [] // Generated dynamically
+  }
+};
+
+/* ================================================================
+   STATE
+================================================================ */
+let currentProbId = null;
+let knownValues = {}, computedValues = {}, stepAttempts = {};
+
+/* ================================================================
+   PROBLEM GRID
+================================================================ */
+const probList = [
+  { id: 'complementary',            name: 'Complementary',       icon: '🔲', desc: 'Two angles adding to 90°',        rule: 'a + b = 90°' },
+  { id: 'supplementary',            name: 'Supplementary',       icon: '📏', desc: 'Two angles adding to 180°',       rule: 'a + b = 180°' },
+  { id: 'vertical',                 name: 'Vertical Angles',     icon: '✖️', desc: 'Opposite angles at intersection', rule: 'Vertical = equal' },
+  { id: 'triangle_sum',             name: 'Triangle Angle Sum',  icon: '🔺', desc: 'Three angles adding to 180°',     rule: 'A + B + C = 180°' },
+  { id: 'exterior',                 name: 'Exterior Angle',      icon: '📐', desc: 'Exterior = sum of remote interior', rule: 'ext = A + B' },
+  { id: 'find_interior_from_exterior', name: 'Find Interior from Exterior', icon: '🔍', desc: 'Know exterior + one interior', rule: 'A = ext − B' },
+  { id: 'transversal',              name: 'Parallel & Transversal', icon: '⚡', desc: '8 angles, parallel lines',      rule: 'Corresponding = equal' },
+  { id: 'polygon_sum',              name: 'Polygon Angle Sum',   icon: '⬡', desc: 'Sum of all interior angles',      rule: '(n−2) × 180°' },
+  { id: 'single_interior',          name: 'Regular Polygon Angle', icon: '🔷', desc: 'Each angle of a regular polygon', rule: '(n−2)×180° ÷ n' },
+  { id: 'isosceles',                name: 'Isosceles Triangle',  icon: '🏔️', desc: 'Equal base angles',               rule: 'B = B, A + 2B = 180°' }
+];
+
+function buildProblemGrid() {
+  const grid = document.getElementById('problemGrid');
+  probList.forEach(p => {
+    const btn = document.createElement('button');
+    btn.className = 'prob-btn';
+    btn.dataset.prob = p.id;
+    btn.innerHTML = `
+      <span class="prob-icon">${p.icon}</span>
+      <span class="prob-name">${p.name}</span>
+      <span class="prob-desc">${p.desc}</span>
+      <span class="prob-rule">${p.rule}</span>
+    `;
+    btn.addEventListener('click', () => selectProblem(p.id));
+    grid.appendChild(btn);
+  });
+}
+
+function selectProblem(id) {
+  currentProbId = id;
+  document.querySelectorAll('.prob-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`.prob-btn[data-prob="${id}"]`).classList.add('active');
+  resetWorkspace();
+  renderWorkspace();
+}
+
+/* ================================================================
+   RENDER WORKSPACE
+================================================================ */
+function renderWorkspace() {
+  const prob = PROBLEMS[currentProbId];
+  if (!prob) return;
+  document.getElementById('workspace').classList.add('visible');
+
+  // Diagram
+  document.getElementById('diagramTag').textContent  = prob.diagramTag;
+  document.getElementById('diagramRule').innerHTML   = prob.diagramRule;
+  document.getElementById('diagramSVG').innerHTML    = DIAGRAMS[prob.diagramKey] || '';
+  const legendEl = document.getElementById('diagramLegend');
+  legendEl.innerHTML = (prob.diagramLegend || []).map(l =>
+    `<div class="leg-item"><div class="leg-dot" style="background:${l.color}"></div><span>${l.label}</span></div>`
+  ).join('');
+
+  // Formula
+  document.getElementById('formulaText').innerHTML  = prob.formulaText;
+  document.getElementById('formulaDesc').textContent = prob.formulaDesc;
+  document.getElementById('formulaKey').innerHTML   = prob.formulaKey;
+
+  // Known fields
+  const grid = document.getElementById('knownGrid');
+  grid.innerHTML = '';
+  prob.knownFields.forEach(field => {
+    const div = document.createElement('div');
+    div.className = 'field-group';
+    if (field.isSelect) {
+      div.innerHTML = `
+        <label class="field-label">${field.label}</label>
+        ${field.hint ? `<div class="field-hint">${field.hint}</div>` : ''}
+        <select class="known-input" id="known_${field.id}" onchange="checkBeginReady()" style="cursor:pointer">
+          ${field.options.map(o => `<option value="${o.value}">${o.label}</option>`).join('')}
+        </select>`;
+    } else {
+      div.innerHTML = `
+        <label class="field-label">${field.label} &nbsp;<span class="var-name">(${field.varName})</span></label>
+        ${field.hint ? `<div class="field-hint">${field.hint}</div>` : ''}
+        <input class="known-input" id="known_${field.id}" type="number" step="any" min="0" placeholder="Enter value..." oninput="checkBeginReady()" />`;
+    }
+    grid.appendChild(div);
+  });
+
+  document.getElementById('stepsContainer').innerHTML = '';
+  document.getElementById('finalCard').classList.remove('visible');
+  document.getElementById('badgeKnown').textContent = '1';
+  document.getElementById('stepKnown').classList.remove('complete');
+  document.getElementById('beginBtn').disabled = true;
+  document.getElementById('beginBtn').style.display = '';
+  document.querySelectorAll('.known-input').forEach(el => el.disabled = false);
+  checkBeginReady();
+}
+
+function checkBeginReady() {
+  const prob = PROBLEMS[currentProbId];
+  if (!prob) return;
+  const allFilled = prob.knownFields.every(f => {
+    if (f.isSelect) return true;
+    const v = document.getElementById(`known_${f.id}`)?.value.trim();
+    return v !== '' && !isNaN(parseFloat(v));
+  });
+  document.getElementById('beginBtn').disabled = !allFilled;
+}
+
+/* ================================================================
+   BEGIN SOLVING — with special handling for isosceles & transversal
+================================================================ */
+function beginSteps() {
+  const prob = PROBLEMS[currentProbId];
+  knownValues = {}; computedValues = {}; stepAttempts = {};
+
+  prob.knownFields.forEach(f => {
+    const el = document.getElementById(`known_${f.id}`);
+    if (f.isSelect) knownValues[f.id] = el.value;
+    else knownValues[f.id] = parseFloat(el.value);
+  });
+
+  document.getElementById('stepKnown').classList.add('complete');
+  document.getElementById('badgeKnown').textContent = '✓';
+  document.querySelectorAll('.known-input').forEach(el => el.disabled = true);
+  document.getElementById('beginBtn').style.display = 'none';
+
+  // Isosceles: build steps dynamically based on selected mode
+  if (currentProbId === 'isosceles') {
+    buildIsoscelesSteps();
+    return;
+  }
+
+  renderSteps(prob);
+}
+
+function buildIsoscelesSteps() {
+  const mode = knownValues.mode;
+  const val  = knownValues.known;
+  const dynamicProb = {
+    steps: mode === 'vertex'
+      ? [
+          { title: 'Substitute Your Value', type: 'expression',
+            displayFn: () => `<span class="val">${val}</span>° + 2B = <span class="tot">180°</span>` },
+          { title: 'Subtract Vertex Angle from 180°', instruction: 'Subtract the vertex angle from 180°.',
+            type: 'compute', rows: [{
+              exprFn: () => `<span class="tot">180</span>° − <span class="val">${val}</span>° =`,
+              answerId: 'rem', answerFn: () => round2(180 - val),
+              hintFn: () => `Subtract 180 − ${val}.`
+            }]},
+          { title: 'Divide by 2 (Two Equal Base Angles)', instruction: 'Divide by 2 since there are two equal base angles.',
+            type: 'compute', isFinal: true,
+            rows: [{
+              exprFn: (k, c) => `<span class="val">${c.rem}</span>° ÷ 2 =`,
+              answerId: 'B', answerFn: (k, c) => round2(c.rem / 2),
+              hintFn: (k, c) => `Divide ${c.rem} ÷ 2.`
+            }],
+            multiAnswerFn: (k, c) => `Vertex (A): ${val}°, Base angles (B): ${c.B}° each`,
+            multiCaption: (k, c) => `${val}° + ${c.B}° + ${c.B}° = 180° ✓`
+          }
+        ]
+      : [
+          { title: 'Substitute Your Value', type: 'expression',
+            displayFn: () => `A + 2(<span class="val">${val}</span>°) = <span class="tot">180°</span>` },
+          { title: 'Multiply the Base Angle by 2', instruction: 'There are two equal base angles.',
+            type: 'compute', rows: [{
+              exprFn: () => `2 × <span class="val">${val}</span>° =`,
+              answerId: 'twoB', answerFn: () => round2(2 * val),
+              hintFn: () => `Multiply 2 × ${val}.`
+            }]},
+          { title: 'Subtract from 180° to Find Vertex Angle', instruction: 'Subtract the combined base angles from 180°.',
+            type: 'compute', isFinal: true,
+            rows: [{
+              exprFn: (k, c) => `<span class="tot">180</span>° − <span class="val">${c.twoB}</span>° =`,
+              answerId: 'A', answerFn: (k, c) => round2(180 - c.twoB),
+              hintFn: (k, c) => `Subtract 180 − ${c.twoB}.`
+            }],
+            multiAnswerFn: (k, c) => `Vertex (A): ${c.A}°, Base angles (B): ${val}° each`,
+            multiCaption: (k, c) => `${c.A}° + ${val}° + ${val}° = 180° ✓`
+          }
+        ]
+  };
+  renderSteps(dynamicProb);
+}
+
+/* ================================================================
+   RENDER STEPS
+================================================================ */
+function renderSteps(prob) {
+  const container = document.getElementById('stepsContainer');
+  container.innerHTML = '';
+  prob.steps.forEach((step, idx) => {
+    const stepNum = idx + 2;
+    const card = document.createElement('div');
+    card.className = 'step-card' + (idx > 0 ? ' locked' : '');
+    card.id = `dynStep_${idx}`;
+    let bodyHTML = '';
+
+    if (step.type === 'expression') {
+      bodyHTML = `<div class="expr-display">${step.displayFn(knownValues)}</div>`;
+    } else if (step.type === 'compute') {
+      bodyHTML = step.rows.map((row, rIdx) => {
+        const rowId = `row_${idx}_${rIdx}`;
+        return `
+          <div class="compute-row" id="${rowId}_wrap">
+            <div class="compute-expr">${row.exprFn(knownValues, computedValues)}</div>
+            <input class="answer-box" id="${rowId}_input" type="number" step="any" placeholder="?"
+              onkeydown="if(event.key==='Enter') checkRow('${rowId}',${idx},${rIdx})" />
+            <button class="check-btn" id="${rowId}_btn" onclick="checkRow('${rowId}',${idx},${rIdx})">Check</button>
+          </div>`;
+      }).join('');
+      bodyHTML += `<div class="feedback-box" id="fb_${idx}"></div>`;
+    } else if (step.type === 'transversal_summary') {
+      bodyHTML = `
+        <div id="transversalSummary">
+          <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:0.75rem;">
+            Enter your known angle and the supplementary angle above, then click the button to see all 8 angles.
+          </p>
+          <button class="begin-btn" style="background:var(--surface3);border:1px solid var(--border2);color:var(--text-muted);" onclick="showTransversalSummary(${idx})">
+            Show All 8 Angles →
+          </button>
+        </div>
+        <div class="feedback-box" id="fb_${idx}"></div>`;
+    }
+
+    card.innerHTML = `
+      <div class="step-header">
+        <div class="step-badge" id="badge_${idx}">${stepNum}</div>
+        <div class="step-title">Step ${stepNum}: ${step.title}</div>
+        <div class="step-instruction">${step.instruction || ''}</div>
+      </div>
+      <div class="step-body">${bodyHTML}</div>`;
+    container.appendChild(card);
+  });
+  document.getElementById('dynStep_0').classList.remove('locked');
+  if (prob.steps[0] && prob.steps[0].type === 'expression') setTimeout(() => unlockStep(1), 350);
+}
+
+/* ================================================================
+   TRANSVERSAL SUMMARY
+================================================================ */
+function showTransversalSummary(stepIdx) {
+  const ang1 = knownValues.ang1;
+  const supp  = round2(180 - ang1);
+  const card  = document.getElementById(`dynStep_${stepIdx}`);
+  const badge = document.getElementById(`badge_${stepIdx}`);
+  const fb    = document.getElementById(`fb_${stepIdx}`);
+
+  card.classList.add('complete');
+  badge.textContent = '✓';
+
+  const summaryHTML = `
+    <table class="pair-table">
+      <thead><tr><th>Angles</th><th>Value</th><th>Relationship</th></tr></thead>
+      <tbody>
+        <tr class="equal-row"><td>∠1, ∠3, ∠5, ∠7</td><td>${ang1}°</td><td>Corresponding / Alternate — all equal</td></tr>
+        <tr class="supp-row"><td>∠2, ∠4, ∠6, ∠8</td><td>${supp}°</td><td>Supplementary partners — add to 180°</td></tr>
+        <tr><td colspan="3" style="color:var(--text-dim);font-size:0.75rem;padding-top:0.5rem">∠1+∠2 = ${ang1}+${supp} = 180° ✓ &nbsp;|&nbsp; ∠1+∠5 = ${ang1} (corresponding) ✓</td></tr>
+      </tbody>
+    </table>`;
+
+  document.getElementById('transversalSummary').innerHTML = summaryHTML;
+  showFeedback(fb, 'success', `✓ All 8 angles identified using corresponding and supplementary angle rules.`);
+
+  const finalCard = document.getElementById('finalCard');
+  document.getElementById('finalLabel').textContent = '✓ All 8 Angles';
+  document.getElementById('finalValue').textContent = `${ang1}° and ${supp}°`;
+  document.getElementById('finalCaption').textContent = `Four angles measure ${ang1}° and four angles measure ${supp}°. Each pair adds to 180°.`;
+  finalCard.classList.add('visible');
+  setTimeout(() => finalCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
+}
+
+/* ================================================================
+   UNLOCK STEP
+================================================================ */
+function unlockStep(idx) {
+  const card = document.getElementById(`dynStep_${idx}`);
+  if (!card) return;
+  card.classList.remove('locked');
+  const prob = currentProbId === 'isosceles' ? null : PROBLEMS[currentProbId];
+  const steps = prob ? prob.steps : null;
+  if (steps && steps[idx] && steps[idx].type === 'expression') {
+    const exprEl = card.querySelector('.expr-display');
+    if (exprEl) exprEl.innerHTML = steps[idx].displayFn(knownValues);
+    setTimeout(() => unlockStep(idx + 1), 400);
+  }
+}
+
+/* ================================================================
+   CHECK ROW
+================================================================ */
+function checkRow(rowId, stepIdx, rowIdx) {
+  const prob  = currentProbId === 'isosceles' ? null : PROBLEMS[currentProbId];
+  // get current steps array
+  const stepsContainer = document.getElementById('stepsContainer');
+  const stepCards = stepsContainer.querySelectorAll('.step-card');
+  // determine step from rendered cards
+  const step = getStepAt(stepIdx);
+  if (!step) return;
+
+  const row  = step.rows[rowIdx];
+  const input = document.getElementById(`${rowId}_input`);
+  const btn   = document.getElementById(`${rowId}_btn`);
+  const fb    = document.getElementById(`fb_${stepIdx}`);
+  const badge = document.getElementById(`badge_${stepIdx}`);
+  const card  = document.getElementById(`dynStep_${stepIdx}`);
+
+  if (!input || input.value.trim() === '') { showFeedback(fb, 'hint', 'Please enter a number before checking.'); return; }
+
+  const userAnswer = parseFloat(input.value);
+  const correct    = row.answerFn(knownValues, computedValues);
+  stepAttempts[rowId] = (stepAttempts[rowId] || 0) + 1;
+
+  if (isClose(userAnswer, correct)) {
+    input.classList.add('correct'); input.disabled = true; btn.disabled = true;
+    computedValues[row.answerId] = round2(userAnswer);
+
+    const allDone = step.rows.every((r, ri) => {
+      const inp = document.getElementById(`row_${stepIdx}_${ri}_input`);
+      return inp && inp.disabled;
+    });
+
+    if (allDone) {
+      card.classList.add('complete'); badge.textContent = '✓';
+      if (step.isFinal) {
+        showFeedback(fb, 'success', `✓ Correct! Great work.`);
+        // multi-answer final (vertical, isosceles)
+        if (step.multiAnswerFn) {
+          showMultiFinalAnswer(step.multiAnswerFn(knownValues, computedValues), step.multiCaption ? step.multiCaption(knownValues, computedValues) : '');
+        } else {
+          showFinalAnswer(prob || PROBLEMS[currentProbId], computedValues[row.answerId]);
+        }
+      } else {
+        showFeedback(fb, 'success', `✓ Correct! Move on to the next step.`);
+        const nextIdx = stepIdx + 1;
+        const nextStep = getStepAt(nextIdx);
+        if (nextStep && nextStep.type === 'compute') {
+          nextStep.rows.forEach((nr, nri) => {
+            const exprEl = document.querySelector(`#row_${nextIdx}_${nri}_wrap .compute-expr`);
+            if (exprEl) exprEl.innerHTML = nr.exprFn(knownValues, computedValues);
+          });
+        }
+        setTimeout(() => unlockStep(nextIdx), 400);
+      }
+    } else {
+      showFeedback(fb, 'success', `✓ Correct! Complete the remaining calculations.`);
+    }
+  } else {
+    input.classList.add('incorrect'); card.classList.add('error');
+    setTimeout(() => { input.classList.remove('incorrect'); card.classList.remove('error'); }, 600);
+    const attempts = stepAttempts[rowId];
+    let msg = '';
+    if (attempts === 1)      msg = `Not quite — double-check your math and try again.`;
+    else if (attempts === 2) msg = `Still not right. Hint: ${row.hintFn(knownValues, computedValues)}`;
+    else                     msg = `The correct answer is <strong>${correct}</strong>. ${row.hintFn(knownValues, computedValues)}`;
+    showFeedback(fb, 'error', msg);
+  }
+}
+
+// Resolve current step data — handles dynamic isosceles steps stored in closure
+let _isoscelesSteps = null;
+function getStepAt(idx) {
+  if (currentProbId === 'isosceles') {
+    // Re-derive isosceles steps from current knownValues
+    const mode = knownValues.mode;
+    const val  = knownValues.known;
+    const allSteps = mode === 'vertex'
+      ? [
+          { title: '', type: 'expression', displayFn: () => '' },
+          { title: '', type: 'compute', rows: [{ exprFn: () => '', answerId: 'rem', answerFn: () => round2(180 - val), hintFn: () => `Subtract 180 − ${val}.` }] },
+          { title: '', type: 'compute', isFinal: true,
+            rows: [{ exprFn: (k, c) => '', answerId: 'B', answerFn: (k, c) => round2(c.rem / 2), hintFn: (k, c) => `Divide ${c.rem} ÷ 2.` }],
+            multiAnswerFn: (k, c) => `Vertex (A): ${val}°, Base angles (B): ${c.B}° each`,
+            multiCaption: (k, c) => `${val}° + ${c.B}° + ${c.B}° = 180° ✓`
+          }
+        ]
+      : [
+          { title: '', type: 'expression', displayFn: () => '' },
+          { title: '', type: 'compute', rows: [{ exprFn: () => '', answerId: 'twoB', answerFn: () => round2(2 * val), hintFn: () => `Multiply 2 × ${val}.` }] },
+          { title: '', type: 'compute', isFinal: true,
+            rows: [{ exprFn: (k, c) => '', answerId: 'A', answerFn: (k, c) => round2(180 - c.twoB), hintFn: (k, c) => `Subtract 180 − ${c.twoB}.` }],
+            multiAnswerFn: (k, c) => `Vertex (A): ${c.A}°, Base angles (B): ${val}° each`,
+            multiCaption: (k, c) => `${c.A}° + ${val}° + ${val}° = 180° ✓`
+          }
+        ];
+    return allSteps[idx];
+  }
+  return PROBLEMS[currentProbId]?.steps[idx];
+}
+
+function showFeedback(el, type, msg) { el.className = `feedback-box visible ${type}`; el.innerHTML = msg; }
+
+function showFinalAnswer(prob, value) {
+  const finalCard = document.getElementById('finalCard');
+  document.getElementById('finalLabel').textContent = prob.finalLabel;
+  document.getElementById('finalValue').textContent = value + '°';
+  document.getElementById('finalValue').style.color  = '';
+  document.getElementById('finalValue').style.fontSize = '';
+  document.getElementById('finalCaption').textContent = prob.finalCaption ? prob.finalCaption(value, knownValues) : '';
+  finalCard.classList.add('visible');
+  setTimeout(() => finalCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
+}
+
+function showMultiFinalAnswer(valueStr, caption) {
+  const finalCard = document.getElementById('finalCard');
+  const prob = PROBLEMS[currentProbId];
+  document.getElementById('finalLabel').textContent  = prob.finalLabel;
+  document.getElementById('finalValue').textContent  = valueStr;
+  document.getElementById('finalValue').style.fontSize = '1.2rem';
+  document.getElementById('finalCaption').textContent = caption;
+  finalCard.classList.add('visible');
+  setTimeout(() => finalCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
+}
+
+function resetWorkspace() {
+  knownValues = {}; computedValues = {}; stepAttempts = {};
+  document.getElementById('stepsContainer').innerHTML = '';
+  document.getElementById('finalCard').classList.remove('visible');
+  document.getElementById('workspace').classList.remove('visible');
+}
+
+buildProblemGrid();
+</script>
+</body>
+</html>
