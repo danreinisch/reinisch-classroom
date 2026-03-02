@@ -762,7 +762,16 @@
         if (hasUnscored) {
           scorePreview = `<span class="rv-score-preview" style="font-size:13px;font-family:monospace;opacity:0.75;">___/${totalMax} — ___%</span>`;
         } else {
-          const autoEarned = submission.score_auto || 0;
+          const autoItems = items.filter(i => i.answer_type === 'mcq' || i.answer_type === 'boolean' || i.answer_type === 'multi');
+          let autoEarned = 0;
+          if (answers.length > 0) {
+            autoEarned = autoItems.reduce((sum, item) => {
+              const ans = answers.find(a => a.item_id === item.id);
+              return sum + (ans?.earned_points || 0);
+            }, 0);
+          } else {
+            autoEarned = submission.score_auto || 0;
+          }
           const manualEarned = constructedItems.reduce((sum, item) => {
             const ans = answers.find(a => a.item_id === item.id);
             return sum + (ans?.earned_points || 0);
@@ -1350,10 +1359,16 @@
           const answer = answers.find(a => a.item_id === item.id);
           if (answer) scoreManual += answer.earned_points || 0;
         });
-        const scoreAuto = submission.score_auto || 0;
+        const scoreAuto = answers.length > 0
+          ? items.filter(i => i.answer_type === 'mcq' || i.answer_type === 'boolean' || i.answer_type === 'multi')
+              .reduce((sum, item) => {
+                const ans = answers.find(a => a.item_id === item.id);
+                return sum + (ans?.earned_points || 0);
+              }, 0)
+          : (submission.score_auto || 0);
         const scoreTotal = computeScorePercentage(scoreAuto, scoreManual, items);
 
-        await db.finalizeSubmission(submission.id, { scoreManual, scoreTotal });
+        await db.finalizeSubmission(submission.id, { scoreAuto, scoreManual, scoreTotal });
         await triggerGoalProgressUpdates(submission.id, items, answers);
 
         // Archive submission for DESE compliance (non-fatal)
@@ -1373,6 +1388,7 @@
           console.warn('[tc-review] Archive failed (non-fatal):', archiveErr);
         }
 
+        submission.score_auto = scoreAuto;
         submission.score_manual = scoreManual;
         submission.score_total = scoreTotal;
         submission.review_status = 'reviewed';
@@ -1400,13 +1416,23 @@
     let processed = 0;
     for (const submission of unreviewed) {
       try {
-        const scoreAuto = submission.score_auto || 0;
-        const scoreManual = submission.score_manual || 0;
+        const answers = submissionAnswersCache[submission.id] || [];
         const items = assignmentItemsCache[submission.assignment_id] || [];
+        const scoreAuto = answers.length > 0
+          ? items.filter(i => i.answer_type === 'mcq' || i.answer_type === 'boolean' || i.answer_type === 'multi')
+              .reduce((sum, item) => {
+                const ans = answers.find(a => a.item_id === item.id);
+                return sum + (ans?.earned_points || 0);
+              }, 0)
+          : (submission.score_auto || 0);
+        const scoreManual = submission.score_manual || 0;
         const scoreTotal = computeScorePercentage(scoreAuto, scoreManual, items);
 
-        await db.finalizeSubmission(submission.id, { scoreManual, scoreTotal });
+        await db.finalizeSubmission(submission.id, { scoreAuto, scoreManual, scoreTotal });
 
+        submission.score_auto = scoreAuto;
+        submission.score_manual = scoreManual;
+        submission.score_total = scoreTotal;
         submission.review_status = 'reviewed';
         expandedSubmissions.delete(submission.id);
         processed++;
@@ -1614,6 +1640,7 @@
       
       // Finalize submission
       await db.finalizeSubmission(submissionId, {
+        scoreAuto,
         scoreManual,
         scoreTotal
       });
@@ -1640,6 +1667,7 @@
       
       // Update local cache
       if (submission) {
+        submission.score_auto = scoreAuto;
         submission.score_manual = scoreManual;
         submission.score_total = scoreTotal;
         submission.review_status = 'reviewed';
@@ -1755,16 +1783,24 @@
 
       try {
         const answers = await getSubmissionAnswers(submission.id);
-        const scoreAuto = submission.score_auto || 0;
+        const scoreAuto = answers.length > 0
+          ? items.filter(i => i.answer_type === 'mcq' || i.answer_type === 'boolean' || i.answer_type === 'multi')
+              .reduce((sum, item) => {
+                const ans = answers.find(a => a.item_id === item.id);
+                return sum + (ans?.earned_points || 0);
+              }, 0)
+          : (submission.score_auto || 0);
         const scoreTotal = computeScorePercentage(scoreAuto, 0, items);
 
         await db.finalizeSubmission(submission.id, {
+          scoreAuto,
           scoreManual: 0,
           scoreTotal
         });
 
         await triggerGoalProgressUpdates(submission.id, items, answers);
 
+        submission.score_auto = scoreAuto;
         submission.score_manual = 0;
         submission.score_total = scoreTotal;
         submission.review_status = 'reviewed';
