@@ -670,10 +670,10 @@ const local = {
   /**
    * Finalize a submission with scores and set review status to 'reviewed'
    * @param {string} submissionId - Submission ID
-   * @param {Object} params - { scoreManual, scoreTotal }
+   * @param {Object} params - { scoreAuto, scoreManual, scoreTotal }
    * @returns {boolean} Success
    */
-  async finalizeSubmission(submissionId, { scoreManual, scoreTotal }) {
+  async finalizeSubmission(submissionId, { scoreAuto, scoreManual, scoreTotal }) {
     const submissions = store.get('submissions', []);
     const submission = submissions.find(s => s.id === submissionId);
     
@@ -681,6 +681,7 @@ const local = {
       throw new Error('Submission not found');
     }
     
+    if (scoreAuto !== undefined) submission.score_auto = scoreAuto;
     submission.score_manual = scoreManual;
     submission.score_total = scoreTotal;
     submission.review_status = 'reviewed';
@@ -2001,10 +2002,10 @@ const remote = {
   /**
    * Finalize a submission with scores and set review status to 'reviewed'
    * @param {string} submissionId - Submission ID
-   * @param {Object} params - { scoreManual, scoreTotal }
+   * @param {Object} params - { scoreAuto, scoreManual, scoreTotal }
    * @returns {boolean} Success
    */
-  async finalizeSubmission(submissionId, { scoreManual, scoreTotal }) {
+  async finalizeSubmission(submissionId, { scoreAuto, scoreManual, scoreTotal }) {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
     
@@ -2012,6 +2013,7 @@ const remote = {
     const { error: updateError } = await supabase
       .from('submissions')
       .update({
+        score_auto: scoreAuto,
         score_manual: scoreManual,
         score_total: scoreTotal,
         review_status: 'reviewed'

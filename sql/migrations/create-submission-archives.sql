@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS public.submission_archives (
     submission_id uuid NOT NULL,
     student_id uuid NOT NULL,
     student_code text NOT NULL,
-    assignment_id bigint NOT NULL,
+    assignment_id text NOT NULL,
     title text NOT NULL,
     class_name text,
     answers jsonb,
