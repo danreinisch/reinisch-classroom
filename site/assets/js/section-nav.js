@@ -17,6 +17,7 @@
   function sectionFor(pathname){
     if (pathname.startsWith('/language-arts/')) return 'language-arts';
     if (pathname.startsWith('/life-skills/'))   return 'life-skills';
+    if (pathname.startsWith('/math-toolkit/'))  return 'math-toolkit';
     if (pathname.startsWith('/admin')) return 'admin';
     return '';
   }
@@ -53,6 +54,9 @@
     } else if (sec === 'life-skills'){
       const backLS = makeEl('a', 'btn', 'Back to Life Skills'); backLS.href = '/life-skills/';
       left.appendChild(backLS);
+    } else if (sec === 'math-toolkit'){
+      const backMT = makeEl('a', 'btn', 'Back to Math Toolkit'); backMT.href = '/math-toolkit/';
+      left.appendChild(backMT);
     }
 
     // Optional “Back to unit” if the page sets window.UNIT_PAGE.pagePath
