@@ -1305,6 +1305,12 @@
     }
   }
 
+  // Compute score_total as a percentage (0-100) from raw points and total possible
+  function computeScorePercentage(scoreAuto, scoreManual, items) {
+    const totalPossible = items.reduce((sum, i) => sum + (i.points || 0), 0);
+    return totalPossible > 0 ? Math.round(((scoreAuto + scoreManual) / totalPossible) * 100) : 0;
+  }
+
   // Handle "Finalize All Scored" batch action
   async function handleFinalizeAllScored() {
     const queue = buildReviewQueue();
@@ -1345,7 +1351,7 @@
           if (answer) scoreManual += answer.earned_points || 0;
         });
         const scoreAuto = submission.score_auto || 0;
-        const scoreTotal = scoreAuto + scoreManual;
+        const scoreTotal = computeScorePercentage(scoreAuto, scoreManual, items);
 
         await db.finalizeSubmission(submission.id, { scoreManual, scoreTotal });
         await triggerGoalProgressUpdates(submission.id, items, answers);
@@ -1396,7 +1402,8 @@
       try {
         const scoreAuto = submission.score_auto || 0;
         const scoreManual = submission.score_manual || 0;
-        const scoreTotal = scoreAuto + scoreManual;
+        const items = assignmentItemsCache[submission.assignment_id] || [];
+        const scoreTotal = computeScorePercentage(scoreAuto, scoreManual, items);
 
         await db.finalizeSubmission(submission.id, { scoreManual, scoreTotal });
 
@@ -1603,7 +1610,7 @@
           scoreAuto += (item.points || 1);
         }
       }
-      const scoreTotal = scoreAuto + scoreManual;
+      const scoreTotal = computeScorePercentage(scoreAuto, scoreManual, items);
       
       // Finalize submission
       await db.finalizeSubmission(submissionId, {
@@ -1749,7 +1756,7 @@
       try {
         const answers = await getSubmissionAnswers(submission.id);
         const scoreAuto = submission.score_auto || 0;
-        const scoreTotal = scoreAuto;
+        const scoreTotal = computeScorePercentage(scoreAuto, 0, items);
 
         await db.finalizeSubmission(submission.id, {
           scoreManual: 0,
@@ -1896,12 +1903,13 @@
     });
 
     const scoreAuto = submission.score_auto || 0;
-    const scoreTotal = scoreAuto + scoreManual;
+    const scoreTotal = computeScorePercentage(scoreAuto, scoreManual, items);
 
     button.disabled = true;
     try {
       await db.upsertSubmission({
         id: submissionId,
+        score_auto: scoreAuto,
         score_manual: scoreManual,
         score_total: scoreTotal,
         status: 'Graded',
@@ -1910,8 +1918,24 @@
         feedback
       });
 
+      // Update assignment_instances status to 'Graded'
+      if (usingSupabase) {
+        try {
+          const supabase = await getSupabase();
+          if (supabase && submission.instance_id) {
+            await supabase
+              .from('assignment_instances')
+              .update({ status: 'Graded' })
+              .eq('id', submission.instance_id);
+          }
+        } catch (err) {
+          console.warn('[tc-review] Could not update instance status:', err);
+        }
+      }
+
       // Update local cache
       if (submission) {
+        submission.score_auto = scoreAuto;
         submission.score_manual = scoreManual;
         submission.score_total = scoreTotal;
         submission.review_status = 'reviewed';
