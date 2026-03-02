@@ -1,6 +1,6 @@
 {
   "version": "v1",
-  "updated": "2026-03-02T02:09:05.638Z",
+  "updated": "2026-03-02T02:10:01.587Z",
   "categories": {
     "toolkit": {
       "slots": 8,
@@ -185,7 +185,7 @@
       "slots": 16,
       "titles": [
         "Perimeter and Circumference",
-        "",
+        "Area",
         "",
         "",
         "",
@@ -203,7 +203,7 @@
       ],
       "links": [
         "/math-toolkit/presentations/presentation-01/",
-        "",
+        "/math-toolkit/presentations/presentation-02/",
         "",
         "",
         "",
