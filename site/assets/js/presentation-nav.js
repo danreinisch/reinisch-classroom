@@ -94,7 +94,10 @@
       // Apply base styles if not present
       if (!div.style.position) {
         div.style.cssText =
-          'position:absolute;top:0;left:0;width:100%;height:100%;background-size:cover;background-position:center;opacity:0;transition:opacity 2s ease-in-out;';
+          'position:absolute;top:0;left:0;width:100%;height:100%;' +
+          'background-size:cover;background-position:center;' +
+          'opacity:0;transition:opacity 2s ease-in-out;' +
+          'will-change:opacity;transform:translateZ(0);backface-visibility:hidden;';
         if (index === 0) div.style.opacity = '1';
       }
       bgSlideshow.appendChild(div);
@@ -102,14 +105,21 @@
 
     // Rotate background every 8 seconds
     function rotateBg() {
-      const bgElements = document.querySelectorAll('.bg-image');
+      var bgElements = bgSlideshow.querySelectorAll('.bg-image');
       if (bgElements.length === 0) return;
 
-      bgElements[currentBgIndex].classList.remove('active');
-      bgElements[currentBgIndex].style.opacity = '0';
+      var prevIndex = currentBgIndex;
       currentBgIndex = (currentBgIndex + 1) % bgImages.length;
+
+      // Fade NEW image IN first — prevents black flash on low-power devices
       bgElements[currentBgIndex].classList.add('active');
       bgElements[currentBgIndex].style.opacity = '1';
+
+      // After the crossfade completes, fade OUT the old image
+      setTimeout(function () {
+        bgElements[prevIndex].classList.remove('active');
+        bgElements[prevIndex].style.opacity = '0';
+      }, 2000); // Match the CSS transition duration (2s)
     }
 
     if (bgImages.length > 1) {
