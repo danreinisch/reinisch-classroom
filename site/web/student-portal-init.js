@@ -2464,12 +2464,12 @@
       tabState.gradesData = submissions;
       
       // Filter to only graded submissions
-      const graded = submissions.filter(sub => sub.score !== null && sub.score !== undefined);
+      const graded = submissions.filter(sub => sub.score_total !== null && sub.score_total !== undefined);
       
       // Calculate average
       let avgGrade = '—';
       if (graded.length > 0) {
-        const sum = graded.reduce((acc, sub) => acc + (sub.score || 0), 0);
+        const sum = graded.reduce((acc, sub) => acc + (sub.score_total || 0), 0);
         avgGrade = Math.round(sum / graded.length) + '%';
       }
       
@@ -2520,7 +2520,7 @@
    */
   function renderGradeRow(submission) {
     const title = escapeHtml(submission.assignment_title || 'Untitled Assignment');
-    const score = submission.score !== null ? submission.score : 0;
+    const score = submission.score_total !== null ? submission.score_total : 0;
     const scoreClass = score >= 70 ? 'good' : 'poor';
     const submittedDate = submission.submitted_at ? formatDate(submission.submitted_at) : 'N/A';
     const className = escapeHtml(submission.class_name || 'General');

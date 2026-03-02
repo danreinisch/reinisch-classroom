@@ -699,14 +699,15 @@ const local = {
   },
 
   /**
-   * Update a submission with grading fields (score_manual, score_total, status, graded_at, graded_by, feedback)
-   * @param {Object} params - { id, score_manual, score_total, status, graded_at, graded_by, feedback }
+   * Update a submission with grading fields (score_auto, score_manual, score_total, status, graded_at, graded_by, feedback)
+   * @param {Object} params - { id, score_auto, score_manual, score_total, status, graded_at, graded_by, feedback }
    * @returns {boolean} Success
    */
-  async upsertSubmission({ id, score_manual, score_total, status, graded_at, graded_by, feedback }) {
+  async upsertSubmission({ id, score_auto, score_manual, score_total, status, graded_at, graded_by, feedback }) {
     const submissions = store.get('submissions', []);
     const submission = submissions.find(s => s.id === id);
     if (!submission) throw new Error('Submission not found');
+    if (score_auto !== undefined) submission.score_auto = score_auto;
     if (score_manual !== undefined) submission.score_manual = score_manual;
     if (score_total !== undefined) submission.score_total = score_total;
     if (status !== undefined) submission.review_status = status === 'Graded' ? 'reviewed' : status.toLowerCase();
@@ -2051,14 +2052,15 @@ const remote = {
   },
 
   /**
-   * Update a submission with grading fields (score_manual, score_total, status, graded_at, graded_by, feedback)
-   * @param {Object} params - { id, score_manual, score_total, status, graded_at, graded_by, feedback }
+   * Update a submission with grading fields (score_auto, score_manual, score_total, status, graded_at, graded_by, feedback)
+   * @param {Object} params - { id, score_auto, score_manual, score_total, status, graded_at, graded_by, feedback }
    * @returns {boolean} Success
    */
-  async upsertSubmission({ id, score_manual, score_total, status, graded_at, graded_by, feedback }) {
+  async upsertSubmission({ id, score_auto, score_manual, score_total, status, graded_at, graded_by, feedback }) {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
     const updates = {};
+    if (score_auto !== undefined) updates.score_auto = score_auto;
     if (score_manual !== undefined) updates.score_manual = score_manual;
     if (score_total !== undefined) updates.score_total = score_total;
     if (status !== undefined) updates.review_status = status === 'Graded' ? 'reviewed' : status.toLowerCase();
