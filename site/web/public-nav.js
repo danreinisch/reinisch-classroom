@@ -27,7 +27,7 @@
     { href: '/',               label: 'Home',          icon: I.home    },
     { href: '/language-arts/', label: 'Language Arts', icon: I.book    },
     { href: '/life-skills/',   label: 'Life Skills',   icon: I.life    },
-    { href: '/math-toolkit/',  label: 'Math Toolkit',  icon: I.calc    },
+    { href: '/toolkits/',      label: 'Toolkits',      icon: I.wrench  },
     { href: '/teacher/',       label: 'Teacher',       icon: I.teacher },
     { href: '/substitute/',    label: 'Substitute',    icon: I.clip    },
     { href: '/student/',       label: 'Student',       icon: I.student },
@@ -41,6 +41,7 @@
     { href: '/language-arts/lost-in-kragdon-ah/',  label: 'Lost in Kragdon-ah',    icon: I.book   },
     { href: '/language-arts/return-from-kragdon-ah/', label: 'Return from Kragdon-ah', icon: I.book },
     { href: '/language-arts/warrior-of-kragdon-ah/',  label: 'Warrior of Kragdon-ah',  icon: I.book },
+    { href: '/toolkits/',                          label: 'All Toolkits',          icon: I.wrench },
   ];
 
   // ── Helpers ────────────────────────────────────────────────────────────────
