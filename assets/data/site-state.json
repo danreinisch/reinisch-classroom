@@ -1,6 +1,6 @@
 {
   "version": "v1",
-  "updated": "2026-03-02T13:11:17.398Z",
+  "updated": "2026-03-02T13:13:41.387Z",
   "categories": {
     "toolkit": {
       "slots": 8,
@@ -190,7 +190,7 @@
         "Volume",
         "Pythagorean Theorem",
         "Angles",
-        "",
+        "Coordinate Geometry",
         "",
         "",
         "",
@@ -224,7 +224,7 @@
         "/math-toolkit/presentations/geometry/presentation-04/",
         "/math-toolkit/presentations/geometry/presentation-05/",
         "/math-toolkit/presentations/geometry/presentation-06/",
-        "",
+        "/math-toolkit/presentations/geometry/presentation-07/",
         "",
         "",
         "",
