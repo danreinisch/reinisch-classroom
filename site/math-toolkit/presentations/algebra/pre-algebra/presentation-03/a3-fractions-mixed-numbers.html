@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fractions & Mixed Numbers — Algebra Toolkit</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+  :root{
+    --bg:#0d1117;--surface:#161d2e;--surface2:#1e2840;--surface3:#243050;
+    --border:#2a3a58;--border2:#34466e;--accent:#14b8a6;--accent-blue:#38bdf8;
+    --accent-orange:#fb923c;--accent-purple:#a78bfa;--text:#e2e8f0;
+    --text-muted:#8a9bbf;--text-dim:#5a6a8a;--success:#22c55e;--error:#f87171;
+    --formula-bg:#0a1628;--font-body:'Outfit',sans-serif;--font-mono:'JetBrains Mono',monospace;
+  }
+  body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-height:100vh;line-height:1.6;overflow-x:hidden}
+
+  /* === BREADCRUMB === */
+  .breadcrumb{padding:16px 24px;font-size:.85rem;color:var(--text-dim);border-bottom:1px solid var(--border);background:var(--surface)}
+  .breadcrumb span{color:var(--text-dim);margin:0 6px}
+  .breadcrumb a{color:var(--text-muted);text-decoration:none;transition:color .2s}
+  .breadcrumb a:hover{color:var(--accent)}
+  .breadcrumb .current{color:var(--text);font-weight:500}
+
+  .tier-badge{display:inline-flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:6px 16px;font-size:.8rem;color:var(--accent-blue);font-weight:500;margin:20px 24px 0}
+  .container{max-width:820px;margin:0 auto;padding:20px 24px 60px}
+  h1{font-size:1.8rem;font-weight:700;margin:16px 0 6px}
+  .subtitle{color:var(--text-muted);font-size:.95rem;margin-bottom:28px}
+
+  /* === PROCESS BANNER === */
+  .process-banner{display:flex;gap:4px;margin-bottom:28px;border-radius:12px;overflow:hidden;border:1px solid var(--border);background:var(--surface)}
+  .proc-step{flex:1;text-align:center;padding:12px 4px 10px;background:var(--surface);transition:all .4s ease;cursor:default;position:relative}
+  .proc-step .p-icon{font-size:1.1rem;display:block;filter:grayscale(.6) opacity(.5);transition:all .4s}
+  .proc-step .p-label{font-size:.58rem;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:.4px;transition:all .4s}
+  .proc-step.active{background:var(--accent);box-shadow:0 0 24px rgba(20,184,166,.3)}
+  .proc-step.active .p-icon{filter:none}
+  .proc-step.active .p-label{color:rgba(255,255,255,.9)}
+  .proc-step.done{background:var(--surface2)}
+  .proc-step.done .p-icon{filter:grayscale(0) opacity(.7)}
+  .proc-step.done .p-label{color:var(--success)}
+  .proc-step.done::after{content:'✓';position:absolute;top:3px;right:5px;font-size:.55rem;color:var(--success)}
+
+  /* === BUTTONS === */
+  button{font-family:var(--font-body);font-weight:600;border:none;cursor:pointer;border-radius:10px;transition:all .25s ease}
+  .btn-primary{background:var(--accent);color:#fff;padding:14px 28px;font-size:.95rem}
+  .btn-primary:hover{background:#0fa396;transform:translateY(-1px)}
+  .btn-primary:disabled{opacity:.4;cursor:not-allowed;transform:none}
+  .btn-sm{padding:10px 22px;font-size:.85rem}
+  .btn-check{background:var(--accent);color:#fff;padding:10px 22px;font-size:.88rem}
+  .btn-check:hover{background:#0fa396}
+
+  /* === INPUT SECTION === */
+  .input-section{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:28px;margin-bottom:24px}
+  .input-section h2{font-size:1rem;font-weight:600;margin-bottom:4px}
+  .input-section .hint{font-size:.82rem;color:var(--text-muted);margin-bottom:18px}
+
+  /* Fraction Input Widget */
+  .frac-input-row{display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap;margin-bottom:18px}
+  .frac-widget{display:flex;align-items:center;gap:8px}
+  .frac-whole{width:52px;font-family:var(--font-mono);font-size:1.3rem;padding:10px 0;border-radius:8px;border:2px solid var(--border);background:var(--formula-bg);color:var(--text);outline:none;text-align:center;transition:border-color .3s}
+  .frac-whole:focus{border-color:var(--accent)}
+  .frac-whole::placeholder{color:var(--text-dim);font-size:.8rem}
+  .frac-stack{display:flex;flex-direction:column;align-items:center;gap:0}
+  .frac-num,.frac-den{width:58px;font-family:var(--font-mono);font-size:1.2rem;padding:7px 0;border-radius:6px;border:2px solid var(--border);background:var(--formula-bg);color:var(--text);outline:none;text-align:center;transition:border-color .3s}
+  .frac-num:focus,.frac-den:focus{border-color:var(--accent)}
+  .frac-num::placeholder,.frac-den::placeholder{color:var(--text-dim);font-size:.75rem}
+  .frac-bar{width:58px;height:3px;background:var(--text);border-radius:2px;margin:3px 0}
+
+  .op-selector-row{display:flex;gap:4px;margin:0 8px}
+  .op-btn{width:44px;height:44px;font-family:var(--font-mono);font-size:1.2rem;font-weight:700;display:flex;align-items:center;justify-content:center;border-radius:8px;background:var(--surface2);color:var(--text-muted);border:2px solid var(--border);cursor:pointer;transition:all .2s}
+  .op-btn:hover{border-color:var(--accent);color:var(--accent)}
+  .op-btn.selected{background:var(--accent);border-color:var(--accent);color:#fff}
+
+  .start-row{display:flex;justify-content:center;margin-top:12px}
+  .error-msg{background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);color:var(--error);border-radius:10px;padding:12px 18px;font-size:.88rem;margin-top:12px;display:none;text-align:center}
+  .error-msg.show{display:block;animation:fadeSlideIn .3s ease}
+
+  /* === EXAMPLES === */
+  .examples-panel{margin-top:16px;border-radius:12px;border:1px solid var(--border);background:var(--surface2);overflow:hidden}
+  .examples-toggle{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;cursor:pointer;font-size:.88rem;font-weight:500;color:var(--text-muted);transition:all .2s;user-select:none}
+  .examples-toggle:hover{color:var(--text);background:var(--surface3)}
+  .toggle-arrow{font-size:.7rem;transition:transform .3s ease}
+  .toggle-arrow.open{transform:rotate(180deg)}
+  .examples-body{max-height:0;overflow:hidden;transition:max-height .4s ease}
+  .examples-body.open{max-height:700px}
+  .example-category{padding:4px 18px 14px;border-top:1px solid var(--border)}
+  .category-label{font-size:.75rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;padding-top:12px}
+  .examples{display:flex;flex-wrap:wrap;gap:8px}
+  .example-chip{font-family:var(--font-mono);font-size:.8rem;padding:6px 14px;border-radius:20px;background:var(--surface);border:1px solid var(--border);color:var(--text-muted);cursor:pointer;transition:all .2s}
+  .example-chip:hover{border-color:var(--accent);color:var(--accent);background:rgba(20,184,166,.08)}
+
+  /* === WORKSPACE === */
+  .workspace{display:none;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:28px;margin-bottom:24px}
+  .workspace.visible{display:block;animation:fadeSlideIn .4s ease}
+  @keyframes fadeSlideIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+  /* Fraction Display */
+  .frac-display{background:var(--formula-bg);border:1px solid var(--border);border-radius:10px;padding:20px 24px;margin-bottom:24px;display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap;min-height:80px}
+  .fd-whole{font-family:var(--font-mono);font-size:1.8rem;font-weight:700;color:var(--text)}
+  .fd-frac{display:flex;flex-direction:column;align-items:center}
+  .fd-num,.fd-den{font-family:var(--font-mono);font-size:1.4rem;font-weight:600;color:var(--text);padding:2px 8px}
+  .fd-bar{width:100%;min-width:30px;height:3px;background:var(--text);border-radius:2px}
+  .fd-op{font-family:var(--font-mono);font-size:1.5rem;font-weight:700;color:var(--text-muted)}
+  .fd-eq{font-family:var(--font-mono);font-size:1.5rem;color:var(--text-dim)}
+  .fd-highlight{background:rgba(20,184,166,.15);border-radius:8px;padding:4px 10px;border:1px solid rgba(20,184,166,.3)}
+  .fd-result .fd-num,.fd-result .fd-den,.fd-result .fd-whole{color:var(--success)}
+
+  /* Step Card */
+  .step-card{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:22px;margin-bottom:16px;animation:fadeSlideIn .3s ease}
+  .step-header{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .step-num{width:30px;height:30px;border-radius:50%;background:var(--accent);color:#fff;font-family:var(--font-mono);font-size:.8rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .step-num.done{background:var(--success)}
+  .step-title{font-weight:600;font-size:.95rem}
+  .step-body{padding-left:40px}
+  .step-instruction{color:var(--text-muted);font-size:.88rem;margin-bottom:14px;line-height:1.7}
+  .step-rule-box{background:var(--formula-bg);border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin-bottom:14px;font-size:.88rem;color:var(--text);line-height:1.7}
+  .rule-highlight{color:var(--accent);font-weight:600}
+  .mono{font-family:var(--font-mono);font-weight:600}
+
+  /* Inline fraction in text */
+  .ifrac{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;margin:0 4px;line-height:1}
+  .ifrac .in{font-family:var(--font-mono);font-size:.85em;font-weight:600}
+  .ifrac .ibar{width:100%;height:2px;background:var(--text);margin:1px 0}
+
+  .answer-row{display:flex;gap:10px;align-items:center;margin-bottom:4px;flex-wrap:wrap}
+  .answer-input{font-family:var(--font-mono);font-size:1.1rem;padding:10px 16px;border-radius:8px;border:2px solid var(--border);background:var(--formula-bg);color:var(--text);width:100px;outline:none;transition:border-color .3s;text-align:center}
+  .answer-input:focus{border-color:var(--accent)}
+  .answer-input.correct{border-color:var(--success);background:rgba(34,197,94,.06)}
+  .answer-input.incorrect{border-color:var(--error)}
+  .answer-label{font-family:var(--font-mono);font-size:.85rem;color:var(--text-dim)}
+
+  .choice-row{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+  .choice-btn{padding:10px 22px;border-radius:10px;font-size:.9rem;font-weight:600;background:var(--surface3);color:var(--text);border:2px solid var(--border);cursor:pointer;transition:all .2s;font-family:var(--font-mono)}
+  .choice-btn:hover{border-color:var(--accent);color:var(--accent)}
+  .choice-btn.correct{border-color:var(--success);background:rgba(34,197,94,.12);color:var(--success);pointer-events:none}
+  .choice-btn.incorrect{border-color:var(--error);background:rgba(248,113,113,.08);color:var(--error);animation:shake .4s ease}
+  .choice-btn.disabled{opacity:.35;pointer-events:none}
+  @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+
+  .step-feedback{margin-top:10px;font-size:.85rem;font-weight:500;display:none}
+  .step-feedback.show{display:block;animation:fadeSlideIn .25s ease}
+  .step-feedback.correct{color:var(--success)}
+  .step-feedback.incorrect{color:var(--error)}
+  .step-feedback.hint-text{color:var(--accent-orange)}
+
+  .step-card.completed{opacity:.6}
+  .step-card.completed .answer-input{pointer-events:none}
+  .step-card.completed .btn-check{display:none}
+  .step-card.completed .choice-btn{pointer-events:none}
+
+  /* Result */
+  .result-section{display:none;text-align:center;padding:36px 28px;background:linear-gradient(135deg,rgba(20,184,166,.08),rgba(56,189,248,.06));border:1px solid var(--accent);border-radius:14px;margin-top:20px}
+  .result-section.visible{display:block;animation:fadeSlideIn .5s ease}
+  .result-icon{font-size:2.5rem;margin-bottom:10px}
+  .result-title{font-size:1.3rem;font-weight:700;color:var(--success);margin-bottom:6px}
+  .result-expression{font-family:var(--font-mono);font-size:1.2rem;color:var(--text);background:var(--formula-bg);display:inline-block;padding:12px 24px;border-radius:10px;border:1px solid var(--border);margin:12px 0}
+  .actions{display:flex;gap:10px;justify-content:center;margin-top:20px}
+
+  @media(max-width:600px){
+    .container{padding:16px}
+    .input-section,.workspace{padding:20px}
+    h1{font-size:1.4rem}
+    .frac-input-row{gap:10px}
+    .frac-whole{width:42px;font-size:1.1rem}
+    .frac-num,.frac-den{width:46px;font-size:1rem}
+    .step-body{padding-left:0}
+    .proc-step .p-label{font-size:.5rem}
+    .fd-num,.fd-den{font-size:1.1rem}
+    .fd-whole{font-size:1.4rem}
+  }
+</style>
+</head>
+<body>
+
+<nav class="breadcrumb">
+  <a href="https://reinischclassroom.com">Home</a><span>›</span>
+  <a href="#">Math Toolkit</a><span>›</span>
+  <a href="#">Algebra</a><span>›</span>
+  <a href="#">Pre-Algebra</a><span>›</span>
+  <span class="current">Fractions & Mixed Numbers</span>
+</nav>
+
+<div class="container">
+  <div class="tier-badge">📘 Pre-Algebra · A3</div>
+  <h1>Fractions & Mixed Numbers</h1>
+  <p class="subtitle">Enter a fraction problem from your assignment — this tool walks you through each step of the procedure.</p>
+
+  <!-- Process Banner -->
+  <div class="process-banner" id="procBanner">
+    <div class="proc-step" id="proc-convert" data-proc="convert">
+      <span class="p-icon">🔄</span><span class="p-label">Convert</span>
+    </div>
+    <div class="proc-step" id="proc-lcd" data-proc="lcd">
+      <span class="p-icon">🎯</span><span class="p-label">Find LCD</span>
+    </div>
+    <div class="proc-step" id="proc-compute" data-proc="compute">
+      <span class="p-icon">🔢</span><span class="p-label">Compute</span>
+    </div>
+    <div class="proc-step" id="proc-simplify" data-proc="simplify">
+      <span class="p-icon">✨</span><span class="p-label">Simplify</span>
+    </div>
+  </div>
+
+  <!-- Input Section -->
+  <div class="input-section" id="inputSection">
+    <h2>✏️ Enter Your Fraction Problem</h2>
+    <p class="hint">Enter two fractions (with optional whole numbers for mixed numbers) and pick an operation.</p>
+
+    <div class="frac-input-row">
+      <!-- Fraction A -->
+      <div class="frac-widget">
+        <input type="text" class="frac-whole" id="wholeA" placeholder="W" title="Whole number (optional)">
+        <div class="frac-stack">
+          <input type="text" class="frac-num" id="numA" placeholder="num">
+          <div class="frac-bar"></div>
+          <input type="text" class="frac-den" id="denA" placeholder="den">
+        </div>
+      </div>
+
+      <!-- Operation -->
+      <div class="op-selector-row">
+        <div class="op-btn" data-op="+" onclick="selectOp(this)">+</div>
+        <div class="op-btn" data-op="-" onclick="selectOp(this)">−</div>
+        <div class="op-btn" data-op="*" onclick="selectOp(this)">×</div>
+        <div class="op-btn" data-op="/" onclick="selectOp(this)">÷</div>
+      </div>
+
+      <!-- Fraction B -->
+      <div class="frac-widget">
+        <input type="text" class="frac-whole" id="wholeB" placeholder="W" title="Whole number (optional)">
+        <div class="frac-stack">
+          <input type="text" class="frac-num" id="numB" placeholder="num">
+          <div class="frac-bar"></div>
+          <input type="text" class="frac-den" id="denB" placeholder="den">
+        </div>
+      </div>
+    </div>
+
+    <div class="start-row">
+      <button class="btn-primary" onclick="startSolving()">Let's Solve It →</button>
+    </div>
+    <div class="error-msg" id="errorMsg"></div>
+
+    <!-- Examples -->
+    <div class="examples-panel">
+      <div class="examples-toggle" onclick="toggleExamples()">
+        <span>📋 Try a Practice Problem</span>
+        <span class="toggle-arrow" id="toggleArrow">▼</span>
+      </div>
+      <div class="examples-body" id="examplesBody">
+        <div class="example-category">
+          <div class="category-label">🟢 Adding Fractions</div>
+          <div class="examples">
+            <span class="example-chip" onclick="loadEx(0,1,4,'+',0,2,4)">¼ + 2/4</span>
+            <span class="example-chip" onclick="loadEx(0,1,3,'+',0,1,6)">⅓ + ⅙</span>
+            <span class="example-chip" onclick="loadEx(0,2,5,'+',0,1,3)">⅖ + ⅓</span>
+            <span class="example-chip" onclick="loadEx(0,3,8,'+',0,1,4)">⅜ + ¼</span>
+            <span class="example-chip" onclick="loadEx(1,1,2,'+',2,1,3)">1½ + 2⅓</span>
+          </div>
+        </div>
+        <div class="example-category">
+          <div class="category-label">🟡 Subtracting Fractions</div>
+          <div class="examples">
+            <span class="example-chip" onclick="loadEx(0,3,4,'-',0,1,4)">¾ − ¼</span>
+            <span class="example-chip" onclick="loadEx(0,5,6,'-',0,1,3)">⅚ − ⅓</span>
+            <span class="example-chip" onclick="loadEx(0,7,8,'-',0,1,2)">⅞ − ½</span>
+            <span class="example-chip" onclick="loadEx(3,1,4,'-',1,2,3)">3¼ − 1⅔</span>
+            <span class="example-chip" onclick="loadEx(5,1,2,'-',2,3,4)">5½ − 2¾</span>
+          </div>
+        </div>
+        <div class="example-category">
+          <div class="category-label">🟠 Multiplying Fractions</div>
+          <div class="examples">
+            <span class="example-chip" onclick="loadEx(0,2,3,'*',0,3,4)">⅔ × ¾</span>
+            <span class="example-chip" onclick="loadEx(0,1,2,'*',0,4,5)">½ × ⅘</span>
+            <span class="example-chip" onclick="loadEx(0,5,6,'*',0,3,10)">⅚ × 3/10</span>
+            <span class="example-chip" onclick="loadEx(1,1,3,'*',0,3,4)">1⅓ × ¾</span>
+            <span class="example-chip" onclick="loadEx(2,1,2,'*',1,1,5)">2½ × 1⅕</span>
+          </div>
+        </div>
+        <div class="example-category">
+          <div class="category-label">🔴 Dividing Fractions</div>
+          <div class="examples">
+            <span class="example-chip" onclick="loadEx(0,3,4,'/',0,1,2)">¾ ÷ ½</span>
+            <span class="example-chip" onclick="loadEx(0,2,3,'/',0,4,5)">⅔ ÷ ⅘</span>
+            <span class="example-chip" onclick="loadEx(0,5,8,'/',0,1,4)">⅝ ÷ ¼</span>
+            <span class="example-chip" onclick="loadEx(2,1,2,'/',0,3,4)">2½ ÷ ¾</span>
+            <span class="example-chip" onclick="loadEx(1,2,3,'/',1,1,6)">1⅔ ÷ 1⅙</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Workspace -->
+  <div class="workspace" id="workspace">
+    <div class="frac-display" id="fracDisplay"></div>
+    <div id="stepsContainer"></div>
+    <div class="result-section" id="resultSection">
+      <div class="result-icon">🎉</div>
+      <div class="result-title">Problem Solved!</div>
+      <div class="result-expression" id="resultExpr"></div>
+      <div class="actions">
+        <button class="btn-primary" onclick="resetAll()">Solve Another →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ==================== MATH UTILITIES ====================
+function gcd(a,b){a=Math.abs(a);b=Math.abs(b);while(b){[a,b]=[b,a%b]}return a}
+function lcm(a,b){return Math.abs(a*b)/gcd(a,b)}
+
+function simplifyFrac(n,d){
+  if(d===0)return{n,d};
+  if(n===0)return{n:0,d:1};
+  // Keep denominator positive
+  if(d<0){n=-n;d=-d}
+  const g=gcd(Math.abs(n),Math.abs(d));
+  return{n:n/g,d:d/g};
+}
+
+function toImproper(w,n,d){
+  // Convert mixed number to improper fraction
+  if(w===0)return{n,d};
+  const sign=w<0?-1:1;
+  return{n:sign*(Math.abs(w)*d+Math.abs(n)),d};
+}
+
+function toMixed(n,d){
+  if(d===0)return{w:0,n,d};
+  if(n===0)return{w:0,n:0,d:1};
+  const sign=(n<0)!==(d<0)?-1:1;
+  const absN=Math.abs(n),absD=Math.abs(d);
+  const w=Math.floor(absN/absD);
+  const rem=absN%absD;
+  if(w===0)return{w:0,n:sign*absN,d:absD};
+  return{w:sign*w,n:rem,d:absD};
+}
+
+function fracStr(n,d){
+  const s=simplifyFrac(n,d);
+  return `${s.n}/${s.d}`;
+}
+
+function fracHTML(n,d,cls){
+  cls=cls||'';
+  return `<span class="fd-frac ${cls}"><span class="fd-num">${n}</span><span class="fd-bar"></span><span class="fd-den">${d}</span></span>`;
+}
+
+function mixedHTML(w,n,d,cls){
+  cls=cls||'';
+  if(w===0) return fracHTML(n,d,cls);
+  if(n===0) return `<span class="fd-whole ${cls}">${w}</span>`;
+  return `<span class="fd-whole ${cls}">${w}</span>${fracHTML(n,d,cls)}`;
+}
+
+function inlineFrac(n,d){
+  return `<span class="ifrac"><span class="in">${n}</span><span class="ibar"></span><span class="in">${d}</span></span>`;
+}
+
+function displayOp(op){
+  if(op==='*')return '×';if(op==='/')return '÷';if(op==='-')return '−';return op;
+}
+
+// ==================== STATE ====================
+let selectedOp=null;
+let S={};
+let currentStep=0;
+let stepsData=[];
+
+function selectOp(el){
+  document.querySelectorAll('.op-btn').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedOp=el.dataset.op;
+}
+
+function loadEx(wA,nA,dA,op,wB,nB,dB){
+  document.getElementById('wholeA').value=wA||'';
+  document.getElementById('numA').value=nA;
+  document.getElementById('denA').value=dA;
+  document.getElementById('wholeB').value=wB||'';
+  document.getElementById('numB').value=nB;
+  document.getElementById('denB').value=dB;
+  selectedOp=op;
+  document.querySelectorAll('.op-btn').forEach(b=>b.classList.toggle('selected',b.dataset.op===op));
+}
+
+function toggleExamples(){
+  document.getElementById('examplesBody').classList.toggle('open');
+  document.getElementById('toggleArrow').classList.toggle('open');
+}
+
+function showError(msg){
+  const el=document.getElementById('errorMsg');
+  el.textContent=msg;el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),4000);
+}
+
+// ==================== START ====================
+function startSolving(){
+  const wA=parseInt(document.getElementById('wholeA').value)||0;
+  const nA=parseInt(document.getElementById('numA').value);
+  const dA=parseInt(document.getElementById('denA').value);
+  const wB=parseInt(document.getElementById('wholeB').value)||0;
+  const nB=parseInt(document.getElementById('numB').value);
+  const dB=parseInt(document.getElementById('denB').value);
+
+  if(isNaN(nA)||isNaN(dA)||isNaN(nB)||isNaN(dB)){showError('Please fill in both numerators and denominators.');return}
+  if(!selectedOp){showError('Please select an operation (+, −, ×, ÷).');return}
+  if(dA===0||dB===0){showError('Denominators cannot be zero!');return}
+  if(selectedOp==='/'&&nB===0&&wB===0){showError('Cannot divide by zero!');return}
+
+  // Convert to improper fractions
+  const impA=toImproper(wA,nA,dA);
+  const impB=toImproper(wB,nB,dB);
+
+  const hasMixedA=wA!==0;
+  const hasMixedB=wB!==0;
+
+  S={wA,nA,dA,wB,nB,dB,op:selectedOp,impA,impB,hasMixedA,hasMixedB};
+
+  stepsData=[];
+  currentStep=0;
+
+  buildSteps();
+
+  // Show workspace
+  document.getElementById('inputSection').style.display='none';
+  document.getElementById('workspace').classList.add('visible');
+  document.getElementById('resultSection').classList.remove('visible');
+  document.getElementById('stepsContainer').innerHTML='';
+  document.querySelectorAll('.proc-step').forEach(s=>s.classList.remove('active','done'));
+
+  updateFracDisplay();
+  showStep(0);
+}
+
+// ==================== BUILD STEPS ====================
+function buildSteps(){
+  const {op,impA,impB,hasMixedA,hasMixedB,wA,nA,dA,wB,nB,dB}=S;
+
+  // Step: Convert mixed numbers if needed
+  if(hasMixedA||hasMixedB){
+    let instruction=`Mixed numbers must be converted to <strong>improper fractions</strong> before we can compute.`;
+    let ruleHTML='<strong>Rule:</strong> Multiply the whole number by the denominator, then add the numerator.<br>';
+    const checks=[];
+
+    if(hasMixedA){
+      ruleHTML+=`<br><span class="mono">${wA}</span> × <span class="mono">${dA}</span> + <span class="mono">${nA}</span> = <span class="rule-highlight">?</span> → ${inlineFrac('?',dA)}`;
+      checks.push({label:`Convert ${wA} ${inlineFrac(nA,dA)} → numerator:`,answer:impA.n,den:impA.d});
+    }
+    if(hasMixedB){
+      ruleHTML+=`<br><span class="mono">${wB}</span> × <span class="mono">${dB}</span> + <span class="mono">${nB}</span> = <span class="rule-highlight">?</span> → ${inlineFrac('?',dB)}`;
+      checks.push({label:`Convert ${wB} ${inlineFrac(nB,dB)} → numerator:`,answer:impB.n,den:impB.d});
+    }
+
+    stepsData.push({
+      title:'Convert Mixed Numbers',
+      proc:'convert',
+      instruction,
+      type:'multi-numeric',
+      ruleHTML,
+      checks
+    });
+  }
+
+  // Now work with improper fractions
+  let aN=impA.n, aD=impA.d, bN=impB.n, bD=impB.d;
+
+  if(op==='+'||op==='-'){
+    // Step: Find LCD
+    const lcd=lcm(aD,bD);
+    const multA=lcd/aD, multB=lcd/bD;
+    const newAN=aN*multA, newBN=bN*multB;
+
+    if(aD!==bD){
+      stepsData.push({
+        title:'Find the LCD (Least Common Denominator)',
+        proc:'lcd',
+        instruction:`The denominators are <strong>${aD}</strong> and <strong>${bD}</strong>. We need a common denominator to ${op==='+'?'add':'subtract'}.`,
+        type:'numeric-single',
+        question:`What is the LCD of ${aD} and ${bD}?`,
+        answer:lcd,
+      });
+
+      // Step: Convert fractions to LCD
+      const convChecks=[];
+      if(multA!==1){
+        convChecks.push({label:`${inlineFrac(aN,aD)} → ${inlineFrac('?',lcd)}  (multiply top & bottom by ${multA})`,answer:newAN});
+      }
+      if(multB!==1){
+        convChecks.push({label:`${inlineFrac(bN,bD)} → ${inlineFrac('?',lcd)}  (multiply top & bottom by ${multB})`,answer:newBN});
+      }
+      if(convChecks.length>0){
+        stepsData.push({
+          title:'Build Equivalent Fractions',
+          proc:'lcd',
+          instruction:`Rewrite each fraction with the LCD of <strong>${lcd}</strong> as the denominator.`,
+          type:'multi-numeric',
+          checks:convChecks
+        });
+      }
+    } else {
+      stepsData.push({
+        title:'Denominators Already Match',
+        proc:'lcd',
+        instruction:`Both fractions already have a denominator of <strong>${aD}</strong> — no conversion needed!`,
+        type:'info',
+      });
+    }
+
+    // Step: Add/Subtract numerators
+    const resultN=op==='+'?newAN+newBN:newAN-newBN;
+    const resultD=lcd;
+
+    stepsData.push({
+      title:`${op==='+'?'Add':'Subtract'} the Numerators`,
+      proc:'compute',
+      instruction:`Keep the denominator of <strong>${lcd}</strong>. ${op==='+'?'Add':'Subtract'} the numerators: <span class="mono">${newAN} ${displayOp(op)} ${newBN}</span>`,
+      type:'numeric-single',
+      question:`${newAN} ${displayOp(op)} ${newBN} = ?`,
+      answer:resultN,
+    });
+
+    S.rawN=resultN;
+    S.rawD=resultD;
+  } else if(op==='*'){
+    // Division: Keep-Change-Flip first
+    // Multiply: straight across
+    stepsData.push({
+      title:'Multiply the Numerators',
+      proc:'compute',
+      instruction:`Multiply straight across the top: <span class="mono">${aN} × ${bN}</span>`,
+      type:'numeric-single',
+      question:`${aN} × ${bN} = ?`,
+      answer:aN*bN,
+    });
+    stepsData.push({
+      title:'Multiply the Denominators',
+      proc:'compute',
+      instruction:`Multiply straight across the bottom: <span class="mono">${aD} × ${bD}</span>`,
+      type:'numeric-single',
+      question:`${aD} × ${bD} = ?`,
+      answer:aD*bD,
+    });
+    S.rawN=aN*bN;
+    S.rawD=aD*bD;
+  } else if(op==='/'){
+    // Keep-Change-Flip
+    stepsData.push({
+      title:'Keep — Change — Flip',
+      proc:'compute',
+      instruction:`To divide fractions: <strong>Keep</strong> the first fraction, <strong>Change</strong> ÷ to ×, and <strong>Flip</strong> the second fraction.`,
+      type:'kcf',
+      keepN:aN,keepD:aD,flipN:bD,flipD:bN,
+    });
+
+    // Now multiply
+    const mN=aN*bD, mD=aD*bN;
+    stepsData.push({
+      title:'Multiply the Numerators',
+      proc:'compute',
+      instruction:`Now multiply across the top: <span class="mono">${aN} × ${bD}</span>`,
+      type:'numeric-single',
+      question:`${aN} × ${bD} = ?`,
+      answer:mN,
+    });
+    stepsData.push({
+      title:'Multiply the Denominators',
+      proc:'compute',
+      instruction:`Multiply across the bottom: <span class="mono">${aD} × ${Math.abs(bN)}</span>`,
+      type:'numeric-single',
+      question:`${aD} × ${Math.abs(bN)} = ?`,
+      answer:Math.abs(mD),
+    });
+    // Handle sign
+    S.rawN=mN;
+    S.rawD=mD;
+    // Fix sign
+    if(S.rawD<0){S.rawN=-S.rawN;S.rawD=-S.rawD;}
+  }
+
+  // Step: Simplify
+  const simplified=simplifyFrac(S.rawN,S.rawD);
+  const canSimplify=simplified.n!==S.rawN||simplified.d!==S.rawD;
+  const g=gcd(Math.abs(S.rawN),Math.abs(S.rawD));
+
+  if(canSimplify&&S.rawN!==0){
+    stepsData.push({
+      title:'Simplify the Fraction',
+      proc:'simplify',
+      instruction:`Find the GCF (Greatest Common Factor) of <strong>${Math.abs(S.rawN)}</strong> and <strong>${S.rawD}</strong> and divide both by it.`,
+      type:'simplify',
+      rawN:S.rawN,
+      rawD:S.rawD,
+      gcf:g,
+      simpN:simplified.n,
+      simpD:simplified.d,
+    });
+  }
+
+  // Step: Convert to mixed number if improper
+  const finalFrac=canSimplify?simplified:{n:S.rawN,d:S.rawD};
+  const mixed=toMixed(finalFrac.n,finalFrac.d);
+  if(mixed.w!==0&&mixed.n!==0){
+    stepsData.push({
+      title:'Convert to Mixed Number',
+      proc:'simplify',
+      instruction:`${inlineFrac(finalFrac.n,finalFrac.d)} is an improper fraction. Divide <strong>${Math.abs(finalFrac.n)}</strong> by <strong>${finalFrac.d}</strong> to get the whole number and remainder.`,
+      type:'mixed-convert',
+      impN:finalFrac.n,
+      impD:finalFrac.d,
+      whole:mixed.w,
+      remN:mixed.n,
+      remD:mixed.d,
+    });
+  }
+
+  S.finalN=finalFrac.n;
+  S.finalD=finalFrac.d;
+  S.finalMixed=mixed;
+}
+
+// ==================== DISPLAY ====================
+function updateFracDisplay(extra){
+  const {impA,impB,op,hasMixedA,hasMixedB,wA,nA,dA,wB,nB,dB}=S;
+  let html='';
+
+  if(hasMixedA) html+=mixedHTML(wA,nA,dA);
+  else html+=fracHTML(impA.n,impA.d);
+
+  html+=`<span class="fd-op">${displayOp(op)}</span>`;
+
+  if(hasMixedB) html+=mixedHTML(wB,nB,dB);
+  else html+=fracHTML(impB.n,impB.d);
+
+  if(extra) html+=extra;
+
+  document.getElementById('fracDisplay').innerHTML=html;
+}
+
+function showFinalDisplay(){
+  const {finalMixed,finalN,finalD}=S;
+  let resultHTML='';
+  if(finalMixed.w!==0&&finalMixed.n!==0){
+    resultHTML=`<span class="fd-eq">=</span>${mixedHTML(finalMixed.w,finalMixed.n,finalMixed.d,'fd-result')}`;
+  } else if(finalMixed.w!==0){
+    resultHTML=`<span class="fd-eq">=</span><span class="fd-whole fd-result" style="color:var(--success)">${finalMixed.w}</span>`;
+  } else {
+    const s=simplifyFrac(finalN,finalD);
+    if(s.d===1) resultHTML=`<span class="fd-eq">=</span><span class="fd-whole fd-result" style="color:var(--success)">${s.n}</span>`;
+    else resultHTML=`<span class="fd-eq">=</span>${fracHTML(s.n,s.d,'fd-result')}`;
+  }
+  updateFracDisplay(resultHTML);
+}
+
+// ==================== RENDER STEPS ====================
+function showStep(idx){
+  if(idx>=stepsData.length){finishProblem();return}
+  const step=stepsData[idx];
+  const container=document.getElementById('stepsContainer');
+  const card=document.createElement('div');
+  card.className='step-card';
+  card.id=`step-${idx}`;
+
+  // Activate process banner
+  if(step.proc){
+    document.querySelectorAll('.proc-step').forEach(s=>s.classList.remove('active'));
+    document.getElementById(`proc-${step.proc}`).classList.add('active');
+  }
+
+  let bodyHTML='';
+
+  if(step.type==='info'){
+    bodyHTML=`
+      <div class="step-instruction">${step.instruction}</div>
+      <button class="btn-primary btn-sm" onclick="completeStep(${idx})">Got It →</button>
+    `;
+  } else if(step.type==='multi-numeric'){
+    let checksHTML='';
+    if(step.ruleHTML) checksHTML+=`<div class="step-rule-box">${step.ruleHTML}</div>`;
+    step.checks.forEach((c,ci)=>{
+      checksHTML+=`
+        <div style="margin-bottom:12px">
+          <div style="font-size:.85rem;color:var(--text-muted);margin-bottom:6px">${c.label}</div>
+          <div class="answer-row">
+            <input type="text" class="answer-input" id="ans-${idx}-${ci}" placeholder="?" autocomplete="off"
+                   onkeydown="if(event.key==='Enter')checkMultiNum(${idx},${ci})">
+            <button class="btn-check" id="btn-${idx}-${ci}" onclick="checkMultiNum(${idx},${ci})">Check</button>
+          </div>
+          <div class="step-feedback" id="fb-${idx}-${ci}"></div>
+        </div>
+      `;
+    });
+    bodyHTML=`<div class="step-instruction">${step.instruction}</div>${checksHTML}`;
+  } else if(step.type==='numeric-single'){
+    bodyHTML=`
+      <div class="step-instruction">${step.instruction}</div>
+      <div class="answer-row">
+        <span class="answer-label">${step.question||''} </span>
+        <input type="text" class="answer-input" id="ans-${idx}" placeholder="?" autocomplete="off"
+               onkeydown="if(event.key==='Enter')checkSingleNum(${idx})">
+        <button class="btn-check" onclick="checkSingleNum(${idx})">Check</button>
+      </div>
+      <div class="step-feedback" id="fb-${idx}"></div>
+    `;
+  } else if(step.type==='simplify'){
+    bodyHTML=`
+      <div class="step-instruction">${step.instruction}</div>
+      <div style="margin-bottom:12px">
+        <div style="font-size:.85rem;color:var(--text-muted);margin-bottom:6px">What is the GCF of ${Math.abs(step.rawN)} and ${step.rawD}?</div>
+        <div class="answer-row">
+          <input type="text" class="answer-input" id="ans-${idx}-gcf" placeholder="GCF" autocomplete="off"
+                 onkeydown="if(event.key==='Enter')checkGCF(${idx})">
+          <button class="btn-check" id="btn-${idx}-gcf" onclick="checkGCF(${idx})">Check</button>
+        </div>
+        <div class="step-feedback" id="fb-${idx}-gcf"></div>
+      </div>
+      <div id="simplifyPart2-${idx}" style="display:none">
+        <div style="font-size:.85rem;color:var(--text-muted);margin-bottom:6px">Divide both by ${step.gcf}: ${inlineFrac(step.rawN+' ÷ '+step.gcf, step.rawD+' ÷ '+step.gcf)} = ${inlineFrac('?','?')}</div>
+        <div class="answer-row">
+          <span class="answer-label">Num:</span>
+          <input type="text" class="answer-input" id="ans-${idx}-sn" placeholder="?" autocomplete="off" style="width:70px"
+                 onkeydown="if(event.key==='Enter')checkSimplified(${idx})">
+          <span class="answer-label">Den:</span>
+          <input type="text" class="answer-input" id="ans-${idx}-sd" placeholder="?" autocomplete="off" style="width:70px"
+                 onkeydown="if(event.key==='Enter')checkSimplified(${idx})">
+          <button class="btn-check" id="btn-${idx}-simp" onclick="checkSimplified(${idx})">Check</button>
+        </div>
+        <div class="step-feedback" id="fb-${idx}-simp"></div>
+      </div>
+    `;
+  } else if(step.type==='mixed-convert'){
+    bodyHTML=`
+      <div class="step-instruction">${step.instruction}</div>
+      <div class="answer-row" style="flex-wrap:wrap;gap:8px">
+        <span class="answer-label">Whole:</span>
+        <input type="text" class="answer-input" id="ans-${idx}-w" placeholder="?" autocomplete="off" style="width:70px">
+        <span class="answer-label">Remainder num:</span>
+        <input type="text" class="answer-input" id="ans-${idx}-rn" placeholder="?" autocomplete="off" style="width:70px">
+        <span class="answer-label">Den:</span>
+        <input type="text" class="answer-input" id="ans-${idx}-rd" placeholder="?" autocomplete="off" style="width:70px"
+               onkeydown="if(event.key==='Enter')checkMixedConvert(${idx})">
+        <button class="btn-check" onclick="checkMixedConvert(${idx})">Check</button>
+      </div>
+      <div class="step-feedback" id="fb-${idx}"></div>
+    `;
+  } else if(step.type==='kcf'){
+    bodyHTML=`
+      <div class="step-instruction">${step.instruction}</div>
+      <div class="step-rule-box">
+        <strong>Keep:</strong> ${inlineFrac(step.keepN,step.keepD)}<br>
+        <strong>Change:</strong> ÷ → ×<br>
+        <strong>Flip:</strong> ${inlineFrac(S.impB.n,S.impB.d)} → <span class="rule-highlight">${inlineFrac(step.flipN,step.flipD)}</span>
+      </div>
+      <div style="font-size:.88rem;color:var(--text-muted);margin-bottom:10px">New problem: ${inlineFrac(step.keepN,step.keepD)} <strong>×</strong> ${inlineFrac(step.flipN,step.flipD)}</div>
+      <button class="btn-primary btn-sm" onclick="completeStep(${idx})">Got It →</button>
+    `;
+  }
+
+  card.innerHTML=`
+    <div class="step-header">
+      <div class="step-num">${idx+1}</div>
+      <div class="step-title">${step.title}</div>
+    </div>
+    <div class="step-body">${bodyHTML}</div>
+  `;
+  container.appendChild(card);
+  card.scrollIntoView({behavior:'smooth',block:'nearest'});
+
+  // Focus first input
+  setTimeout(()=>{
+    const inp=card.querySelector('.answer-input');
+    if(inp)inp.focus();
+  },150);
+}
+
+// ==================== CHECK ANSWERS ====================
+const multiDone={};
+
+function completeStep(idx){
+  markDone(idx);
+  currentStep=idx+1;
+  showStep(idx+1);
+}
+
+function markDone(idx){
+  const card=document.getElementById(`step-${idx}`);
+  if(card){card.classList.add('completed');card.querySelector('.step-num').classList.add('done')}
+  const step=stepsData[idx];
+  if(step.proc){
+    document.getElementById(`proc-${step.proc}`).classList.add('done');
+  }
+}
+
+function checkMultiNum(stepIdx,checkIdx){
+  const step=stepsData[stepIdx];
+  const check=step.checks[checkIdx];
+  const inp=document.getElementById(`ans-${stepIdx}-${checkIdx}`);
+  const fb=document.getElementById(`fb-${stepIdx}-${checkIdx}`);
+  const val=parseInt(inp.value.trim());
+
+  if(isNaN(val)){fb.textContent='Enter a number.';fb.className='step-feedback show incorrect';return}
+
+  if(val===check.answer){
+    inp.classList.add('correct');inp.disabled=true;
+    document.getElementById(`btn-${stepIdx}-${checkIdx}`).style.display='none';
+    fb.textContent='Correct! ✓';fb.className='step-feedback show correct';
+    if(!multiDone[stepIdx])multiDone[stepIdx]=new Set();
+    multiDone[stepIdx].add(checkIdx);
+    if(multiDone[stepIdx].size===step.checks.length){
+      setTimeout(()=>{markDone(stepIdx);currentStep=stepIdx+1;showStep(stepIdx+1)},700);
+    }
+  } else {
+    inp.classList.add('incorrect');
+    setTimeout(()=>inp.classList.remove('incorrect'),600);
+    const tries=parseInt(inp.dataset.tries||'0')+1;
+    inp.dataset.tries=tries;
+    if(tries>=3){fb.innerHTML=`The answer is <strong>${check.answer}</strong>`;fb.className='step-feedback show hint-text'}
+    else{fb.textContent='Not quite — try again!';fb.className='step-feedback show incorrect'}
+    inp.value='';inp.focus();
+  }
+}
+
+function checkSingleNum(stepIdx){
+  const step=stepsData[stepIdx];
+  const inp=document.getElementById(`ans-${stepIdx}`);
+  const fb=document.getElementById(`fb-${stepIdx}`);
+  const val=parseFloat(inp.value.trim());
+
+  if(isNaN(val)){fb.textContent='Enter a number.';fb.className='step-feedback show incorrect';return}
+
+  if(Math.abs(val-step.answer)<0.01){
+    inp.classList.add('correct');inp.disabled=true;
+    inp.value=step.answer;
+    fb.textContent='Correct! ✓';fb.className='step-feedback show correct';
+    setTimeout(()=>{markDone(stepIdx);currentStep=stepIdx+1;showStep(stepIdx+1)},700);
+  } else {
+    inp.classList.add('incorrect');
+    setTimeout(()=>inp.classList.remove('incorrect'),600);
+    const tries=parseInt(inp.dataset.tries||'0')+1;
+    inp.dataset.tries=tries;
+    if(tries>=3){fb.innerHTML=`The answer is <strong>${step.answer}</strong>`;fb.className='step-feedback show hint-text'}
+    else if(tries>=2){fb.textContent='Not quite — try once more!';fb.className='step-feedback show incorrect'}
+    else{fb.textContent='Not quite — give it another try!';fb.className='step-feedback show incorrect'}
+    inp.value='';inp.focus();
+  }
+}
+
+function checkGCF(stepIdx){
+  const step=stepsData[stepIdx];
+  const inp=document.getElementById(`ans-${stepIdx}-gcf`);
+  const fb=document.getElementById(`fb-${stepIdx}-gcf`);
+  const val=parseInt(inp.value.trim());
+
+  if(isNaN(val)){fb.textContent='Enter a number.';fb.className='step-feedback show incorrect';return}
+
+  if(val===step.gcf){
+    inp.classList.add('correct');inp.disabled=true;
+    document.getElementById(`btn-${stepIdx}-gcf`).style.display='none';
+    fb.textContent='Correct! ✓';fb.className='step-feedback show correct';
+    document.getElementById(`simplifyPart2-${stepIdx}`).style.display='';
+    setTimeout(()=>{
+      const next=document.getElementById(`ans-${stepIdx}-sn`);
+      if(next)next.focus();
+    },200);
+  } else {
+    inp.classList.add('incorrect');
+    setTimeout(()=>inp.classList.remove('incorrect'),600);
+    const tries=parseInt(inp.dataset.tries||'0')+1;
+    inp.dataset.tries=tries;
+    if(tries>=3){fb.innerHTML=`The GCF is <strong>${step.gcf}</strong>`;fb.className='step-feedback show hint-text'}
+    else{fb.textContent='Not quite — what is the largest number that divides evenly into both?';fb.className='step-feedback show incorrect'}
+    inp.value='';inp.focus();
+  }
+}
+
+function checkSimplified(stepIdx){
+  const step=stepsData[stepIdx];
+  const inpN=document.getElementById(`ans-${stepIdx}-sn`);
+  const inpD=document.getElementById(`ans-${stepIdx}-sd`);
+  const fb=document.getElementById(`fb-${stepIdx}-simp`);
+  const vn=parseInt(inpN.value.trim());
+  const vd=parseInt(inpD.value.trim());
+
+  if(isNaN(vn)||isNaN(vd)){fb.textContent='Fill in both numerator and denominator.';fb.className='step-feedback show incorrect';return}
+
+  if(vn===step.simpN&&vd===step.simpD){
+    inpN.classList.add('correct');inpD.classList.add('correct');
+    inpN.disabled=true;inpD.disabled=true;
+    document.getElementById(`btn-${stepIdx}-simp`).style.display='none';
+    fb.textContent='Simplified! ✓';fb.className='step-feedback show correct';
+    setTimeout(()=>{markDone(stepIdx);currentStep=stepIdx+1;showStep(stepIdx+1)},700);
+  } else {
+    inpN.classList.add('incorrect');inpD.classList.add('incorrect');
+    setTimeout(()=>{inpN.classList.remove('incorrect');inpD.classList.remove('incorrect')},600);
+    const tries=parseInt(inpN.dataset.tries||'0')+1;
+    inpN.dataset.tries=tries;
+    if(tries>=3){fb.innerHTML=`The simplified fraction is <strong>${inlineFrac(step.simpN,step.simpD)}</strong>`;fb.className='step-feedback show hint-text'}
+    else{fb.textContent='Not quite — divide both numbers by the GCF.';fb.className='step-feedback show incorrect'}
+  }
+}
+
+function checkMixedConvert(stepIdx){
+  const step=stepsData[stepIdx];
+  const inpW=document.getElementById(`ans-${stepIdx}-w`);
+  const inpRN=document.getElementById(`ans-${stepIdx}-rn`);
+  const inpRD=document.getElementById(`ans-${stepIdx}-rd`);
+  const fb=document.getElementById(`fb-${stepIdx}`);
+
+  const vw=parseInt(inpW.value.trim());
+  const vrn=parseInt(inpRN.value.trim());
+  const vrd=parseInt(inpRD.value.trim());
+
+  if(isNaN(vw)||isNaN(vrn)||isNaN(vrd)){fb.textContent='Fill in all three values.';fb.className='step-feedback show incorrect';return}
+
+  if(vw===step.whole&&vrn===step.remN&&vrd===step.remD){
+    [inpW,inpRN,inpRD].forEach(i=>{i.classList.add('correct');i.disabled=true});
+    fb.textContent='Perfect! ✓';fb.className='step-feedback show correct';
+    setTimeout(()=>{markDone(stepIdx);currentStep=stepIdx+1;showStep(stepIdx+1)},700);
+  } else {
+    [inpW,inpRN,inpRD].forEach(i=>{i.classList.add('incorrect');setTimeout(()=>i.classList.remove('incorrect'),600)});
+    const tries=parseInt(inpW.dataset.tries||'0')+1;
+    inpW.dataset.tries=tries;
+    if(tries>=3){fb.innerHTML=`The answer is <strong>${step.whole} ${inlineFrac(step.remN,step.remD)}</strong>`;fb.className='step-feedback show hint-text'}
+    else{fb.textContent=`Divide ${Math.abs(step.impN)} by ${step.impD}. The quotient is the whole number, the remainder is the numerator.`;fb.className='step-feedback show incorrect'}
+  }
+}
+
+// ==================== FINISH ====================
+function finishProblem(){
+  document.querySelectorAll('.proc-step').forEach(s=>s.classList.remove('active'));
+
+  showFinalDisplay();
+
+  const {finalMixed,finalN,finalD,op,wA,nA,dA,wB,nB,dB,hasMixedA,hasMixedB}=S;
+
+  // Build result string
+  let leftStr=hasMixedA?`${wA} ${nA}/${dA}`:`${nA}/${dA}`;
+  let rightStr=hasMixedB?`${wB} ${nB}/${dB}`:`${nB}/${dB}`;
+  let ansStr='';
+  if(finalMixed.w!==0&&finalMixed.n!==0) ansStr=`${finalMixed.w} ${finalMixed.n}/${finalMixed.d}`;
+  else if(finalMixed.w!==0) ansStr=`${finalMixed.w}`;
+  else{const s=simplifyFrac(finalN,finalD);ansStr=s.d===1?`${s.n}`:`${s.n}/${s.d}`}
+
+  document.getElementById('resultExpr').textContent=`${leftStr} ${displayOp(op)} ${rightStr} = ${ansStr}`;
+  document.getElementById('resultSection').classList.add('visible');
+  document.getElementById('resultSection').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function resetAll(){
+  document.getElementById('inputSection').style.display='';
+  document.getElementById('workspace').classList.remove('visible');
+  ['wholeA','numA','denA','wholeB','numB','denB'].forEach(id=>document.getElementById(id).value='');
+  selectedOp=null;
+  document.querySelectorAll('.op-btn').forEach(b=>b.classList.remove('selected'));
+  document.getElementById('stepsContainer').innerHTML='';
+  document.getElementById('resultSection').classList.remove('visible');
+  document.querySelectorAll('.proc-step').forEach(s=>s.classList.remove('active','done'));
+  Object.keys(multiDone).forEach(k=>delete multiDone[k]);
+  document.getElementById('numA').focus();
+}
+</script>
+</body>
+</html>
