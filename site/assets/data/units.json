@@ -47,8 +47,16 @@
       "baseOut": "life-skills/presentations",
       "slots": 32,
       "pagePath": "/life-skills/"
+    },
+    {
+      "id": "math",
+      "title": "Math Toolkit",
+      "section": "math-toolkit",
+      "baseOut": "math-toolkit/presentations",
+      "slots": 16,
+      "pagePath": "/math-toolkit/"
     }
   ],
-  "updated": "2025-10-31T00:00:00Z",
+  "updated": "2026-03-02T00:00:00Z",
   "version": "v1"
 }
