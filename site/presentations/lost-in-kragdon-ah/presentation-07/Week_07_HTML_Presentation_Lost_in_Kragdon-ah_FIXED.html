@@ -1,0 +1,1462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Week 7: Lost in Kragdon-ah - Chapters 20-22</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            background-attachment: fixed;
+            color: #ffffff;
+            overflow-x: hidden;
+        }
+
+        .bg-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+        }
+
+        .bg-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            transition: opacity 3s ease-in-out;
+            /* GPU compositing - prevents flicker on Smart TVs */
+            will-change: opacity;
+            transform: translateZ(0);
+            -webkit-transform: translateZ(0);
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+        }
+
+        .bg-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center;
+            display: block;
+        }
+
+        .bg-image.active {
+            opacity: 0.55;
+        }
+
+        .bg-image.fading-out {
+            opacity: 0;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 40px 20px;
+            background: rgba(0, 0, 0, 0.35);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            border-radius: 20px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.8);
+        }
+
+        header h2 {
+            font-size: 1.5em;
+            color: #ffd700;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            font-size: 1.2em;
+            color: #a0d2eb;
+        }
+
+        .theme-banner {
+            background: linear-gradient(90deg, rgba(231, 76, 60, 0.5), rgba(155, 89, 182, 0.5));
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            padding: 15px 30px;
+            border-radius: 10px;
+            margin-top: 20px;
+            display: inline-block;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .theme-banner h3 {
+            font-size: 1.3em;
+            color: #fff;
+        }
+
+        nav {
+            background: rgba(0, 0, 0, 0.35);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        nav h3 {
+            text-align: center;
+            margin-bottom: 15px;
+            color: #ffd700;
+        }
+
+        .nav-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .nav-btn {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.4) 0%, rgba(118, 75, 162, 0.4) 100%);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 25px;
+            color: white;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .nav-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+        }
+
+        .nav-btn.day1 { background: linear-gradient(135deg, rgba(240, 147, 251, 0.6) 0%, rgba(245, 87, 108, 0.6) 100%); }
+        .nav-btn.day2 { background: linear-gradient(135deg, rgba(79, 172, 254, 0.6) 0%, rgba(0, 242, 254, 0.6) 100%); }
+        .nav-btn.day3 { background: linear-gradient(135deg, rgba(67, 233, 123, 0.6) 0%, rgba(56, 249, 215, 0.6) 100%); }
+        .nav-btn.day4 { background: linear-gradient(135deg, rgba(250, 112, 154, 0.6) 0%, rgba(254, 225, 64, 0.6) 100%); }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+            margin-bottom: 30px;
+            overflow: hidden;
+        }
+
+        .progress {
+            height: 100%;
+            background: linear-gradient(90deg, #ffd700, #ff6b6b);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .slide {
+            display: none;
+            background: rgba(0, 0, 0, 0.35);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            animation: fadeIn 0.5s ease;
+        }
+
+        .slide.active { display: block; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .slide h2 {
+            color: #ffd700;
+            font-size: 2em;
+            margin-bottom: 20px;
+            text-align: center;
+            text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.8);
+        }
+
+        .slide h3 {
+            color: #a0d2eb;
+            font-size: 1.5em;
+            margin: 20px 0 15px 0;
+        }
+
+        .slide h4 {
+            color: #ffd700;
+            font-size: 1.2em;
+            margin: 15px 0 10px 0;
+        }
+
+        .slide p {
+            font-size: 1.1em;
+            line-height: 1.8;
+            margin-bottom: 15px;
+        }
+
+        .slide ul, .slide ol {
+            margin-left: 30px;
+            margin-bottom: 20px;
+        }
+
+        .slide li {
+            font-size: 1.1em;
+            line-height: 1.8;
+            margin-bottom: 10px;
+        }
+
+        .highlight {
+            background: rgba(255, 215, 0, 0.10);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-left: 4px solid #ffd700;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 0 10px 10px 0;
+        }
+
+        .key-fact {
+            background: rgba(76, 175, 80, 0.15);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-left: 4px solid #4CAF50;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 0 10px 10px 0;
+        }
+
+        .key-fact h4 { color: #4CAF50; margin-bottom: 10px; }
+
+        .vocab-box {
+            background: rgba(160, 210, 235, 0.10);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 1px solid rgba(160, 210, 235, 0.3);
+        }
+
+        .vocab-word {
+            color: #ffd700;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+
+        .grammar-box {
+            background: rgba(155, 89, 182, 0.15);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 1px solid rgba(155, 89, 182, 0.3);
+        }
+
+        .grammar-box h4 { color: #bb86fc; margin-bottom: 10px; }
+
+        .what-why-how {
+            background: rgba(255, 152, 0, 0.12);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 1px solid rgba(255, 152, 0, 0.3);
+        }
+
+        .what-why-how h4 {
+            color: #ff9800;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+
+        .what-why-how .section {
+            margin-bottom: 15px;
+            padding: 10px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+        }
+
+        .what-why-how .label {
+            color: #ffd700;
+            font-weight: bold;
+            display: block;
+            font-size: 1.1em;
+            margin-bottom: 5px;
+        }
+
+        .example-box {
+            background: rgba(67, 233, 123, 0.10);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 1px solid rgba(67, 233, 123, 0.3);
+        }
+
+        .example-box h4 { color: #43e97b; margin-bottom: 10px; }
+
+        .rule-box {
+            background: rgba(33, 150, 243, 0.12);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 2px solid rgba(33, 150, 243, 0.5);
+        }
+
+        .rule-box h4 {
+            color: #2196F3;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+
+        .warning-box {
+            background: rgba(244, 67, 54, 0.12);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 2px solid rgba(244, 67, 54, 0.5);
+        }
+
+        .warning-box h4 { color: #f44336; margin-bottom: 10px; }
+
+        .practice-box {
+            background: rgba(156, 39, 176, 0.12);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 2px dashed rgba(156, 39, 176, 0.5);
+        }
+
+        .practice-box h4 { color: #ce93d8; margin-bottom: 10px; }
+
+        .writing-prompt {
+            background: rgba(255, 193, 7, 0.15);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 25px;
+            margin: 20px 0;
+            border: 2px solid rgba(255, 193, 7, 0.5);
+        }
+
+        .writing-prompt h3 { color: #ffc107; margin-bottom: 15px; }
+
+        .writing-structure {
+            background: rgba(0, 188, 212, 0.15);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 1px solid rgba(0, 188, 212, 0.3);
+        }
+
+        .writing-structure h4 { color: #00bcd4; margin-bottom: 10px; }
+
+        .compare-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+
+        .compare-table th, .compare-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .compare-table th {
+            background: rgba(255,255,255,0.1);
+            color: #ffd700;
+        }
+
+        .compare-table tr:nth-child(even) { background: rgba(255,255,255,0.05); }
+
+        .subject-word {
+            color: #ffd700;
+            font-weight: bold;
+            text-decoration: underline;
+        }
+
+        .verb-word {
+            color: #00bcd4;
+            font-weight: bold;
+            text-decoration: underline;
+        }
+
+        .past-tense {
+            color: #ff6b6b;
+            font-weight: bold;
+        }
+
+        .present-tense {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+
+        .future-tense {
+            color: #2196F3;
+            font-weight: bold;
+        }
+
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .two-column { grid-template-columns: 1fr; }
+        }
+
+        .three-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .three-column { grid-template-columns: 1fr; }
+        }
+
+        .tense-box {
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .tense-box.past { border: 2px solid #ff6b6b; }
+        .tense-box.present { border: 2px solid #4CAF50; }
+        .tense-box.future { border: 2px solid #2196F3; }
+
+        .anatomy-box {
+            background: rgba(255, 193, 7, 0.2);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 10px;
+            padding: 25px;
+            margin: 20px 0;
+            border: 2px solid rgba(255, 193, 7, 0.5);
+        }
+
+        .anatomy-box h4 {
+            color: #ffc107;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .anatomy-example {
+            font-size: 1.4em;
+            text-align: center;
+            padding: 20px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            margin: 15px 0;
+        }
+
+        .slide-nav {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .slide-nav button {
+            padding: 12px 30px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.4), rgba(118, 75, 162, 0.4));
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 25px;
+            color: white;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .slide-nav button:hover:not(:disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
+        }
+
+        .slide-nav button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        footer {
+            text-align: center;
+            padding: 30px;
+            background: rgba(0, 0, 0, 0.35);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            border-radius: 20px;
+            margin-top: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        footer p {
+            margin: 10px 0;
+            color: #a0d2eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-container">
+        <div class="bg-image active"><img src="image1.jpg" alt=""></div>
+        <div class="bg-image"><img src="image2.jpg" alt=""></div>
+        <div class="bg-image"><img src="image3.jpg" alt=""></div>
+        <div class="bg-image"><img src="image4.jpg" alt=""></div>
+        <div class="bg-image"><img src="image5.jpg" alt=""></div>
+        <div class="bg-image"><img src="image6.jpg" alt=""></div>
+        <div class="bg-image"><img src="image7.jpg" alt=""></div>
+        <div class="bg-image"><img src="image8.jpg" alt=""></div>
+        <div class="bg-image"><img src="image9.jpg" alt=""></div>
+        <div class="bg-image"><img src="image10.jpg" alt=""></div>
+        <div class="bg-image"><img src="image11.jpg" alt=""></div>
+        <div class="bg-image"><img src="image12.jpg" alt=""></div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>Lost in Kragdon-ah</h1>
+            <h2>Week 7: Chapters 20-22</h2>
+            <p>By Shawn Inmon</p>
+            <div class="theme-banner">
+                <h3>ELA Theme: Verb Tenses - Past, Present, Future</h3>
+            </div>
+        </header>
+
+        <nav>
+            <h3>Quick Navigation</h3>
+            <div class="nav-buttons">
+                <button class="nav-btn day1" onclick="goToSlide(1)">Day 1: Chapter 20</button>
+                <button class="nav-btn day2" onclick="goToSlide(9)">Day 2: Vocabulary & Grammar</button>
+                <button class="nav-btn day3" onclick="goToSlide(17)">Day 3: Chapters 21-22</button>
+                <button class="nav-btn day4" onclick="goToSlide(25)">Day 4: Writing</button>
+            </div>
+        </nav>
+
+        <div class="progress-bar">
+            <div class="progress" id="progress"></div>
+        </div>
+
+        <!-- SLIDE 0: OVERVIEW -->
+        <div class="slide active" id="slide-0">
+            <h2>Week 7 Overview</h2>
+            <h3>What We Will Learn This Week</h3>
+            
+            <div class="highlight">
+                <h4>Chapters We Will Read:</h4>
+                <ul>
+                    <li><strong>Day 1:</strong> Chapter 20 - The Hunt</li>
+                    <li><strong>Day 2:</strong> Vocabulary and Grammar Focus</li>
+                    <li><strong>Day 3:</strong> Chapter 21 - A Race Against Time & Chapter 22 - Another Decision</li>
+                    <li><strong>Day 4:</strong> Writing Workshop</li>
+                </ul>
+            </div>
+            
+            <div class="rule-box">
+                <h4>Grammar Skills We Will Master This Week</h4>
+                <ul>
+                    <li><strong>Verb Tenses:</strong> Understanding when actions happen.</li>
+                    <li><strong>Past Tense:</strong> Actions that already happened (yesterday, last week).</li>
+                    <li><strong>Present Tense:</strong> Actions happening right now or that happen regularly.</li>
+                    <li><strong>Future Tense:</strong> Actions that will happen later (tomorrow, next week).</li>
+                </ul>
+            </div>
+
+            <div class="grammar-box">
+                <h4>Building on What We Learned</h4>
+                <p>In previous weeks, we learned about complete sentences (subject + verb). This week, we focus on the <strong>VERB</strong> and how it changes to show WHEN an action happens!</p>
+            </div>
+        </div>
+
+        <!-- DAY 1: CHAPTER 20 - SLIDES 1-8 -->
+        <div class="slide" id="slide-1">
+            <h2>Day 1: Chapter 20 - The Hunt</h2>
+            <h3>Story Recap and Introduction to Verb Tenses</h3>
+            
+            <div class="highlight">
+                <p><strong>Last Week:</strong> Alex agreed to hunt the dandra-ta in exchange for supplies and safe passage across the lake.</p>
+                <p><strong>This Week:</strong> The hunt begins! Alex and his team face the deadly creatures!</p>
+            </div>
+            
+            <div class="key-fact">
+                <h4>Key Facts for Your Assignment</h4>
+                <ul>
+                    <li>The village has only <strong>makeshift weapons</strong> - farm tools and wooden swords</li>
+                    <li>Alex takes the <strong>ceremonial spears</strong> from the guards</li>
+                    <li>The team discovers the dandra-ta are <strong>vulnerable underneath</strong></li>
+                    <li>They find an <strong>egg</strong> in the nest after killing both creatures</li>
+                </ul>
+            </div>
+            
+            <div class="grammar-box">
+                <h4>Today's Grammar Focus: What Are Verb Tenses?</h4>
+                <p>A verb tense tells us WHEN an action happens. The word "tense" comes from a Latin word meaning "time." Today we learn the three main tenses!</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-2">
+            <h2>Day 1: What Are Verb Tenses?</h2>
+            <h3>Understanding WHEN Actions Happen</h3>
+            
+            <div class="what-why-how">
+                <h4>Understanding Verb Tenses</h4>
+                <div class="section">
+                    <span class="label">WHAT ARE VERB TENSES?</span>
+                    Verb tenses are different forms of action words (verbs) that tell us WHEN something happens. The same action can be written in past, present, or future tense.
+                </div>
+                <div class="section">
+                    <span class="label">WHY DO WE NEED VERB TENSES?</span>
+                    Verb tenses help readers understand the TIME of events. Without them, we wouldn't know if something already happened, is happening now, or will happen later. Stories would be confusing!
+                </div>
+                <div class="section">
+                    <span class="label">HOW DO I USE THEM?</span>
+                    Change the ending or form of the verb to match when the action happens. "Walk" becomes "walked" (past) or "will walk" (future). We'll learn the patterns!
+                </div>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-3">
+            <h2>Day 1: The Three Main Tenses</h2>
+            <h3>Past, Present, and Future</h3>
+
+            <div class="three-column">
+                <div class="tense-box past">
+                    <h4 class="past-tense">PAST TENSE</h4>
+                    <p>Actions that <strong>ALREADY HAPPENED</strong></p>
+                    <p><em>Yesterday, last week, before</em></p>
+                    <p style="font-size: 1.3em;"><span class="past-tense">Alex jumped</span> into the hole.</p>
+                </div>
+                <div class="tense-box present">
+                    <h4 class="present-tense">PRESENT TENSE</h4>
+                    <p>Actions happening <strong>RIGHT NOW</strong></p>
+                    <p><em>Today, currently, always</em></p>
+                    <p style="font-size: 1.3em;"><span class="present-tense">Alex jumps</span> into the hole.</p>
+                </div>
+                <div class="tense-box future">
+                    <h4 class="future-tense">FUTURE TENSE</h4>
+                    <p>Actions that <strong>WILL HAPPEN</strong></p>
+                    <p><em>Tomorrow, next week, later</em></p>
+                    <p style="font-size: 1.3em;"><span class="future-tense">Alex will jump</span> into the hole.</p>
+                </div>
+            </div>
+
+            <div class="rule-box">
+                <h4>Notice the Pattern</h4>
+                <ul>
+                    <li><strong class="past-tense">Past:</strong> Usually add <strong>-ed</strong> to the verb (jump → jumped)</li>
+                    <li><strong class="present-tense">Present:</strong> Use the base verb, sometimes add <strong>-s</strong> (jump, jumps)</li>
+                    <li><strong class="future-tense">Future:</strong> Add <strong>"will"</strong> before the verb (will jump)</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-4">
+            <h2>Day 1: Chapter 20 Key Events</h2>
+            <h3>What Happens in This Chapter</h3>
+            
+            <div class="key-fact">
+                <h4>Preparing for the Hunt</h4>
+                <ul>
+                    <li>Alex can't sleep - he's worried about the battle ahead</li>
+                    <li>The village only has <strong>farm tools and wooden swords</strong> as weapons</li>
+                    <li>Alex takes the <strong>ceremonial guard spears</strong> - proper weapons at last!</li>
+                    <li>Tokin-ak whispers important information: <strong>the poison is in the TAIL spikes, not the bite</strong></li>
+                </ul>
+            </div>
+            
+            <div class="highlight">
+                <h4>The Hunt Begins</h4>
+                <ul>
+                    <li>Alex sharpens the torches into <strong>pointed stakes</strong></li>
+                    <li>They search the rocky field at night, looking in holes</li>
+                    <li>Alex finds <strong>BOTH dandra-ta</strong> curled up together in one hole</li>
+                    <li>Alex makes a risky choice: he <strong>jumps into the hole</strong> to attack while they sleep!</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-5">
+            <h2>Day 1: The Battle</h2>
+            <h3>Fighting the Dandra-ta</h3>
+            
+            <div class="warning-box">
+                <h4>Alex's Impetuous Decision</h4>
+                <p>Alex <span class="past-tense">jumped</span> into the hole without thinking! His spear <span class="past-tense">bounced</span> off the creature's armored head. Now he <span class="past-tense">was trapped</span> in a deep hole with two awakened monsters!</p>
+            </div>
+            
+            <div class="key-fact">
+                <h4>How They Won</h4>
+                <ul>
+                    <li>Werda-ak <span class="past-tense">pulled</span> Alex out with the other spear</li>
+                    <li>Senta-eh's arrows <span class="past-tense">bounced</span> off the armor - useless!</li>
+                    <li>The first dandra-ta <span class="past-tense">leaped</span> at Alex, who <span class="past-tense">fell</span> backward</li>
+                    <li>Alex <span class="past-tense">held</span> the sharpened torch upward - it <span class="past-tense">pierced</span> the soft underbelly!</li>
+                    <li>For the second creature, they <span class="past-tense">flipped</span> it onto its back so Senta-eh could shoot its belly</li>
+                </ul>
+            </div>
+
+            <div class="grammar-box">
+                <h4>Notice the Verb Tenses</h4>
+                <p>The author uses <strong class="past-tense">past tense</strong> to tell us what already happened in the story. All these verbs end in <strong>-ed</strong> or are irregular past tense forms (fell, held).</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-6">
+            <h2>Day 1: Past Tense Verbs</h2>
+            <h3>Regular and Irregular Verbs</h3>
+
+            <div class="two-column">
+                <div class="example-box">
+                    <h4>Regular Past Tense</h4>
+                    <p>Most verbs: just add <strong>-ed</strong></p>
+                    <ul>
+                        <li>jump → <span class="past-tense">jumped</span></li>
+                        <li>attack → <span class="past-tense">attacked</span></li>
+                        <li>pull → <span class="past-tense">pulled</span></li>
+                        <li>pierce → <span class="past-tense">pierced</span></li>
+                        <li>discover → <span class="past-tense">discovered</span></li>
+                    </ul>
+                </div>
+                <div class="warning-box">
+                    <h4>Irregular Past Tense</h4>
+                    <p>Some verbs change completely!</p>
+                    <ul>
+                        <li>fall → <span class="past-tense">fell</span></li>
+                        <li>hold → <span class="past-tense">held</span></li>
+                        <li>run → <span class="past-tense">ran</span></li>
+                        <li>see → <span class="past-tense">saw</span></li>
+                        <li>fight → <span class="past-tense">fought</span></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="rule-box">
+                <h4>How to Remember</h4>
+                <p>Most verbs follow the <strong>-ed</strong> rule. The irregular ones are common words that you'll learn to recognize. When in doubt, ask: "Does this SOUND right?" Your ear often knows!</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-7">
+            <h2>Day 1: Practice - Identify the Tense</h2>
+            <h3>Past, Present, or Future?</h3>
+            
+            <div class="practice-box">
+                <h4>Example 1 from Chapter 20:</h4>
+                <p style="font-size: 1.2em;"><em>"Alex <span class="verb-word">grabbed</span> the spear and <span class="verb-word">jumped</span>."</em></p>
+                <ul>
+                    <li><strong>grabbed</strong> - ends in -ed = <span class="past-tense">PAST TENSE</span></li>
+                    <li><strong>jumped</strong> - ends in -ed = <span class="past-tense">PAST TENSE</span></li>
+                </ul>
+                <p>This tells us the action <strong>already happened</strong>.</p>
+            </div>
+            
+            <div class="practice-box">
+                <h4>Example 2:</h4>
+                <p style="font-size: 1.2em;"><em>"Senta-eh <span class="verb-word">fires</span> arrows at the dandra-ta."</em></p>
+                <ul>
+                    <li><strong>fires</strong> - base verb with -s = <span class="present-tense">PRESENT TENSE</span></li>
+                </ul>
+                <p>This tells us the action is happening <strong>right now</strong>.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-8">
+            <h2>Day 1: Day 1 Summary</h2>
+            <h3>What We Learned Today</h3>
+            
+            <div class="rule-box">
+                <h4>The Three Verb Tenses</h4>
+                <table class="compare-table">
+                    <tr>
+                        <th>Tense</th>
+                        <th>When It Happens</th>
+                        <th>How to Form It</th>
+                        <th>Example</th>
+                    </tr>
+                    <tr>
+                        <td class="past-tense">Past</td>
+                        <td>Already happened</td>
+                        <td>Add -ed (usually)</td>
+                        <td>Alex <span class="past-tense">jumped</span></td>
+                    </tr>
+                    <tr>
+                        <td class="present-tense">Present</td>
+                        <td>Happening now</td>
+                        <td>Base verb (add -s for he/she)</td>
+                        <td>Alex <span class="present-tense">jumps</span></td>
+                    </tr>
+                    <tr>
+                        <td class="future-tense">Future</td>
+                        <td>Will happen later</td>
+                        <td>Add "will"</td>
+                        <td>Alex <span class="future-tense">will jump</span></td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="key-fact">
+                <h4>Chapter 20 Key Points</h4>
+                <ul>
+                    <li>Alex <span class="past-tense">took</span> the ceremonial spears for the hunt</li>
+                    <li>The poison is in the <strong>tail spikes</strong>, not the bite</li>
+                    <li>Alex <span class="past-tense">discovered</span> the dandra-ta are vulnerable underneath</li>
+                    <li>They <span class="past-tense">killed</span> both creatures and <span class="past-tense">found</span> an egg</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- DAY 2: VOCABULARY & GRAMMAR - SLIDES 9-16 -->
+        <div class="slide" id="slide-9">
+            <h2>Day 2: Vocabulary and Grammar Focus</h2>
+            <h3>Building Word Knowledge and Verb Tense Skills</h3>
+            
+            <div class="highlight">
+                <h4>Today's Goals:</h4>
+                <ul>
+                    <li>Learn key vocabulary words from Chapters 20-22</li>
+                    <li>Practice changing verbs between tenses</li>
+                    <li>Learn common irregular past tense verbs</li>
+                    <li>Recognize verb tenses in sentences</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-10">
+            <h2>Day 2: Vocabulary Word 1</h2>
+            
+            <div class="vocab-box">
+                <p><span class="vocab-word">MOTLEY</span></p>
+                <p><strong>Definition:</strong> A mixture of different things that don't match; varied and mismatched.</p>
+            </div>
+            
+            <div class="what-why-how">
+                <h4>Understanding Motley</h4>
+                <div class="section">
+                    <span class="label">WHAT IS IT?</span>
+                    Motley describes a group of things that are all different and don't seem to belong together. It often suggests a random or poor collection.
+                </div>
+                <div class="section">
+                    <span class="label">WHY IS IT IN THE STORY?</span>
+                    The weapons the village offered were described as "a motley gathering" - farm tools, wooden swords, and other random items that weren't real weapons.
+                </div>
+                <div class="section">
+                    <span class="label">HOW DO I USE IT?</span>
+                    "The motley crew of volunteers included farmers, teachers, and teenagers."
+                </div>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-11">
+            <h2>Day 2: Vocabulary Word 2</h2>
+            
+            <div class="vocab-box">
+                <p><span class="vocab-word">IMPETUOUS</span></p>
+                <p><strong>Definition:</strong> Acting quickly without thinking about the consequences; rash and impulsive.</p>
+            </div>
+            
+            <div class="what-why-how">
+                <h4>Understanding Impetuous</h4>
+                <div class="section">
+                    <span class="label">WHAT IS IT?</span>
+                    Being impetuous means doing things on impulse without stopping to think first. It can be brave, but also dangerous.
+                </div>
+                <div class="section">
+                    <span class="label">WHY IS IT IN THE STORY?</span>
+                    Alex realized he "had been impetuous once again" when he jumped into the hole with the dandra-ta without a plan for getting out.
+                </div>
+                <div class="section">
+                    <span class="label">HOW DO I USE IT?</span>
+                    "His impetuous decision to climb the cliff without ropes nearly cost him his life."
+                </div>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-12">
+            <h2>Day 2: Vocabulary Word 3</h2>
+            
+            <div class="vocab-box">
+                <p><span class="vocab-word">POULTICE</span></p>
+                <p><strong>Definition:</strong> A soft, moist mixture of healing materials spread on cloth and applied to wounds.</p>
+            </div>
+            
+            <div class="what-why-how">
+                <h4>Understanding Poultice</h4>
+                <div class="section">
+                    <span class="label">WHAT IS IT?</span>
+                    A poultice is a traditional healing treatment - a paste or mixture applied to the skin to draw out infection or poison and promote healing.
+                </div>
+                <div class="section">
+                    <span class="label">WHY IS IT IN THE STORY?</span>
+                    Frina-eh uses poultices made with green powder to draw the poison out of Werda-ak's leg wound after he is scratched by a dandra-ta tail spike.
+                </div>
+                <div class="section">
+                    <span class="label">HOW DO I USE IT?</span>
+                    "The healer applied a warm poultice to the infected cut."
+                </div>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-13">
+            <h2>Day 2: Vocabulary Words 4-6</h2>
+            
+            <div class="vocab-box">
+                <p><span class="vocab-word">PRIMAL</span></p>
+                <p><strong>Definition:</strong> Basic, instinctive, and ancient; relating to early human survival instincts.</p>
+                <p><em>"The hairs on the back of his neck stood up as a primal early warning system."</em></p>
+            </div>
+
+            <div class="vocab-box">
+                <p><span class="vocab-word">DEHYDRATED</span></p>
+                <p><strong>Definition:</strong> Lacking enough water in the body; dried out from not drinking enough fluids.</p>
+                <p><em>"Frina-eh worried about Werda-ak becoming dehydrated during his fever."</em></p>
+            </div>
+
+            <div class="vocab-box">
+                <p><span class="vocab-word">INDULGENTLY</span></p>
+                <p><strong>Definition:</strong> In a way that shows kind tolerance or gentle acceptance; with understanding patience.</p>
+                <p><em>"Senta-eh smiled indulgently at the sleeping Alex."</em></p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-14">
+            <h2>Day 2: Changing Verb Tenses</h2>
+            <h3>How to Switch Between Tenses</h3>
+            
+            <div class="what-why-how">
+                <h4>Converting Verb Tenses</h4>
+                <div class="section">
+                    <span class="label">WHAT IS TENSE CONVERSION?</span>
+                    Changing a verb from one tense to another while keeping the same meaning. For example, "walk" can become "walked" (past) or "will walk" (future).
+                </div>
+                <div class="section">
+                    <span class="label">WHY IS IT IMPORTANT?</span>
+                    Writers need to keep their tenses consistent. If you start a story in past tense, you should stay in past tense. Switching randomly confuses readers!
+                </div>
+                <div class="section">
+                    <span class="label">HOW DO I DO IT?</span>
+                    Start with the base verb (the simplest form). Then apply the rules: add -ed for past, add -s (if needed) for present, add "will" for future.
+                </div>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-15">
+            <h2>Day 2: Common Irregular Past Tense Verbs</h2>
+            <h3>These Don't Follow the -ed Rule!</h3>
+            
+            <div class="rule-box">
+                <h4>Important Irregular Verbs to Know</h4>
+                <table class="compare-table">
+                    <tr>
+                        <th>Present</th>
+                        <th>Past</th>
+                        <th>Example Sentence</th>
+                    </tr>
+                    <tr>
+                        <td>is/are</td>
+                        <td class="past-tense">was/were</td>
+                        <td>Alex <span class="past-tense">was</span> trapped in the hole.</td>
+                    </tr>
+                    <tr>
+                        <td>go</td>
+                        <td class="past-tense">went</td>
+                        <td>They <span class="past-tense">went</span> to hunt at night.</td>
+                    </tr>
+                    <tr>
+                        <td>see</td>
+                        <td class="past-tense">saw</td>
+                        <td>Senta-eh <span class="past-tense">saw</span> the creature.</td>
+                    </tr>
+                    <tr>
+                        <td>take</td>
+                        <td class="past-tense">took</td>
+                        <td>Alex <span class="past-tense">took</span> the spear.</td>
+                    </tr>
+                    <tr>
+                        <td>come</td>
+                        <td class="past-tense">came</td>
+                        <td>Werda-ak <span class="past-tense">came</span> to help.</td>
+                    </tr>
+                    <tr>
+                        <td>have</td>
+                        <td class="past-tense">had</td>
+                        <td>They <span class="past-tense">had</span> no real weapons.</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-16">
+            <h2>Day 2: Verb Tense Practice</h2>
+            <h3>Change the Tense</h3>
+            
+            <div class="practice-box">
+                <h4>Practice Problems</h4>
+                
+                <p><strong>1. Change to PAST tense:</strong></p>
+                <p>"Alex <span class="present-tense">jumps</span> into the hole."</p>
+                <p><span class="past-tense">Answer:</span> "Alex <span class="past-tense">jumped</span> into the hole."</p>
+                
+                <br>
+                
+                <p><strong>2. Change to FUTURE tense:</strong></p>
+                <p>"Senta-eh <span class="present-tense">shoots</span> the arrow."</p>
+                <p><span class="future-tense">Answer:</span> "Senta-eh <span class="future-tense">will shoot</span> the arrow."</p>
+                
+                <br>
+                
+                <p><strong>3. Change to PRESENT tense:</strong></p>
+                <p>"The dandra-ta <span class="past-tense">attacked</span> the village."</p>
+                <p><span class="present-tense">Answer:</span> "The dandra-ta <span class="present-tense">attacks</span> the village."</p>
+            </div>
+        </div>
+
+        <!-- DAY 3: CHAPTERS 21-22 - SLIDES 17-24 -->
+        <div class="slide" id="slide-17">
+            <h2>Day 3: Chapters 21-22</h2>
+            <h3>A Race Against Time & Another Decision</h3>
+            
+            <div class="highlight">
+                <h4>Today's Reading:</h4>
+                <ul>
+                    <li><strong>Chapter 21:</strong> "A Race Against Time" - Werda-ak fights for his life</li>
+                    <li><strong>Chapter 22:</strong> "Another Decision" - Recovery and moving forward</li>
+                </ul>
+            </div>
+            
+            <div class="grammar-box">
+                <h4>Grammar Connection</h4>
+                <p>As we read, notice how the author uses <strong>different tenses</strong> to show what happened (past), what's happening (present in dialogue), and what will happen (future plans).</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-18">
+            <h2>Day 3: Chapter 21 - A Race Against Time</h2>
+            <h3>Key Events</h3>
+            
+            <div class="warning-box">
+                <h4>Werda-ak Is Poisoned!</h4>
+                <ul>
+                    <li>As they walk back, Senta-eh notices <strong>blood on Werda-ak's leg</strong></li>
+                    <li>Werda-ak <span class="past-tense">didn't feel</span> the scratch - but the poison is deadly!</li>
+                    <li>He suddenly <span class="past-tense">collapsed</span>, unconscious</li>
+                    <li>Alex <span class="past-tense">cut</span> the wound open with his knife to release the poison</li>
+                </ul>
+            </div>
+            
+            <div class="key-fact">
+                <h4>The Race to Save Him</h4>
+                <ul>
+                    <li>Alex and Senta-eh <span class="past-tense">carried</span> him back to the village</li>
+                    <li>They <span class="past-tense">took turns</span> because he was too heavy for one person</li>
+                    <li><strong>Frina-eh</strong>, a young healer, <span class="past-tense">treated</span> him with poultices</li>
+                    <li>If the treatment doesn't work, they <span class="future-tense">will have to</span> amputate his leg!</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-19">
+            <h2>Day 3: Frina-eh the Healer</h2>
+            <h3>A Young Hero</h3>
+            
+            <div class="highlight">
+                <h4>Who is Frina-eh?</h4>
+                <p>Frina-eh is just a <strong>teenager</strong>, but she is the village's only healer. Her grandmother trained her since birth, but died before finishing her training. Now Frina-eh must save Werda-ak's life using skills she's never tested before.</p>
+            </div>
+            
+            <div class="key-fact">
+                <h4>Her Treatment</h4>
+                <ul>
+                    <li>She <span class="past-tense">sprinkled</span> green powder into the wound</li>
+                    <li>She <span class="past-tense">made</span> poultices to draw out the poison</li>
+                    <li>She <span class="past-tense">changed</span> the bandages every few hours</li>
+                    <li>She <span class="past-tense">dripped</span> water into his mouth to prevent dehydration</li>
+                </ul>
+            </div>
+
+            <div class="grammar-box">
+                <h4>Verb Tense in Action</h4>
+                <p>Notice how all these verbs are in <strong class="past-tense">past tense</strong> because we're describing what Frina-eh <strong>already did</strong> to help Werda-ak.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-20">
+            <h2>Day 3: The Waiting Game</h2>
+            <h3>Will Werda-ak Survive?</h3>
+            
+            <div class="anatomy-box">
+                <h4>Tenses Show the Timeline</h4>
+                <div class="anatomy-example">
+                    <span class="past-tense">"We thought we had lost you."</span> - What they <strong>believed</strong> before<br><br>
+                    <span class="present-tense">"You're here!"</span> - What <strong>is happening</strong> now<br><br>
+                    <span class="future-tense">"He will be weak for some days."</span> - What <strong>will happen</strong> later
+                </div>
+            </div>
+
+            <div class="key-fact">
+                <h4>The Good News</h4>
+                <p>After 24 hours of fever and unconsciousness, Werda-ak <span class="past-tense">woke up</span>! The poison <span class="past-tense">was leaving</span> his body. Frina-eh's treatment <span class="past-tense">worked</span>!</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-21">
+            <h2>Day 3: Chapter 22 - Another Decision</h2>
+            <h3>Alex Refuses to Leave</h3>
+            
+            <div class="highlight">
+                <h4>Nanka-ak's Offer</h4>
+                <p>The village leader suggests Alex should leave Werda-ak behind to recover. They <span class="future-tense">will care</span> for him like one of their own.</p>
+            </div>
+            
+            <div class="key-fact">
+                <h4>Alex's Response</h4>
+                <p><em>"No. We are a team. We won't leave one of ours behind... We won't leave until he's healthy enough to go with us."</em></p>
+                <p>Alex <span class="past-tense">refused</span> to abandon his teammate, even though it means losing time on their mission.</p>
+            </div>
+
+            <div class="grammar-box">
+                <h4>Future Tense in Promises</h4>
+                <p>Alex uses <strong class="future-tense">future tense</strong> to make promises: "We <span class="future-tense">won't leave</span>," "We <span class="future-tense">will wait</span>." Future tense shows determination and commitment!</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-22">
+            <h2>Day 3: Training the Village</h2>
+            <h3>Alex Shares His Skills</h3>
+            
+            <div class="key-fact">
+                <h4>What Alex Did While Waiting</h4>
+                <ul>
+                    <li>Jabril-ak <span class="past-tense">asked</span> Alex to teach them self-defense</li>
+                    <li>Nanka-ak <span class="past-tense">agreed</span> - the dandra-ta attack changed his mind</li>
+                    <li>Alex <span class="past-tense">trained</span> the young volunteers for ten days</li>
+                    <li>Senta-eh <span class="past-tense">taught</span> them to make weapons and shields</li>
+                </ul>
+            </div>
+
+            <div class="highlight">
+                <h4>Werda-ak's Recovery</h4>
+                <ul>
+                    <li>Day 4: He <span class="past-tense">was able</span> to walk a few steps</li>
+                    <li>Day 7: He <span class="past-tense">took</span> slow walks around the village</li>
+                    <li>Day 10: He <span class="past-tense">announced</span> he was ready to travel</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-23">
+            <h2>Day 3: Verb Tenses in Context</h2>
+            <h3>Finding All Three Tenses in Writing</h3>
+            
+            <div class="practice-box">
+                <h4>Find the Tenses in This Passage</h4>
+                <p style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px;">
+                    "Alex <span class="past-tense">looked</span> at Werda-ak, who <span class="past-tense">was</span> still weak. 'You <span class="present-tense">need</span> more rest,' Alex <span class="past-tense">said</span>. 'We <span class="future-tense">will leave</span> when you <span class="present-tense">are</span> ready.'"
+                </p>
+            </div>
+            
+            <div class="example-box">
+                <h4>Tense Analysis</h4>
+                <ul>
+                    <li><span class="past-tense">looked, was, said</span> = PAST (narration - what happened)</li>
+                    <li><span class="present-tense">need, are</span> = PRESENT (dialogue - current situation)</li>
+                    <li><span class="future-tense">will leave</span> = FUTURE (dialogue - plan for later)</li>
+                </ul>
+                <p>Writers often mix tenses when they include dialogue, because characters talk about now and the future!</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-24">
+            <h2>Day 3: Day 3 Summary</h2>
+            <h3>What We Learned Today</h3>
+            
+            <div class="key-fact">
+                <h4>Chapters 21-22 Key Points</h4>
+                <ul>
+                    <li>Werda-ak <span class="past-tense">was poisoned</span> by a dandra-ta tail spike</li>
+                    <li>Frina-eh <span class="past-tense">saved</span> his life with poultices</li>
+                    <li>Alex <span class="past-tense">refused</span> to leave Werda-ak behind</li>
+                    <li>The team <span class="past-tense">stayed</span> for 10 days while he recovered</li>
+                    <li>Werda-ak and Frina-eh <span class="past-tense">formed</span> a special bond</li>
+                </ul>
+            </div>
+
+            <div class="rule-box">
+                <h4>Verb Tense Summary</h4>
+                <ul>
+                    <li><strong class="past-tense">Past:</strong> Use for narrating events that already happened</li>
+                    <li><strong class="present-tense">Present:</strong> Use in dialogue for current situations</li>
+                    <li><strong class="future-tense">Future:</strong> Use for plans, promises, and predictions</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- DAY 4: WRITING - SLIDES 25-30 -->
+        <div class="slide" id="slide-25">
+            <h2>Day 4: Writing Workshop</h2>
+            <h3>Putting It All Together</h3>
+            
+            <div class="highlight">
+                <h4>Today's Goals:</h4>
+                <ul>
+                    <li>Review the three verb tenses</li>
+                    <li>Write a response using <strong>consistent past tense</strong></li>
+                    <li>Check your work for tense consistency</li>
+                    <li>Use details from the story as evidence</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-26">
+            <h2>Day 4: Writing Prompt</h2>
+            
+            <div class="writing-prompt">
+                <h3>Your Prompt</h3>
+                <p><strong>How did Frina-eh save Werda-ak's life? Use details from Chapter 21 to explain what she did.</strong></p>
+            </div>
+            
+            <h3>Details to Include</h3>
+            <ul>
+                <li>What happened to Werda-ak?</li>
+                <li>What treatments did Frina-eh use?</li>
+                <li>How long did it take for him to recover?</li>
+                <li>Why was her help so important?</li>
+            </ul>
+            
+            <div class="example-box">
+                <h4>Topic Sentence Starter</h4>
+                <p>"<span class="subject-word">Frina-eh</span> <span class="verb-word past-tense">saved</span> Werda-ak's life by using her healing skills and never giving up."</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-27">
+            <h2>Day 4: Writing Structure</h2>
+            <h3>Building Your Response</h3>
+
+            <div class="writing-structure">
+                <h4>Remember Your Writing Structure</h4>
+                <ul>
+                    <li><strong>Topic Sentence:</strong> State that Frina-eh saved Werda-ak</li>
+                    <li><strong>Supporting Detail 1:</strong> What happened (poisoned by dandra-ta spike)</li>
+                    <li><strong>Supporting Detail 2:</strong> First treatment (Alex cut wound, Frina-eh used poultice)</li>
+                    <li><strong>Supporting Detail 3:</strong> Ongoing care (changed bandages, gave water)</li>
+                    <li><strong>Conclusion:</strong> Restate that her treatment worked</li>
+                </ul>
+            </div>
+
+            <div class="warning-box">
+                <h4>Keep Your Tenses Consistent!</h4>
+                <p>Since you're writing about events that <strong>already happened</strong>, use <strong class="past-tense">past tense</strong> throughout your response. Don't switch between tenses!</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-28">
+            <h2>Day 4: Writing Checklist</h2>
+            <h3>Check Your Work Before Submitting</h3>
+            
+            <div class="highlight">
+                <h4>Verb Tense Checklist</h4>
+                <ul>
+                    <li>Are all your verbs in <strong class="past-tense">past tense</strong>?</li>
+                    <li>Did you use -ed endings correctly?</li>
+                    <li>Did you check your irregular verbs (was, had, went, took)?</li>
+                    <li>Did you avoid switching to present or future tense accidentally?</li>
+                </ul>
+            </div>
+            
+            <div class="writing-structure">
+                <h4>Content Checklist</h4>
+                <ul>
+                    <li>Do you have a <strong>topic sentence</strong> that answers the question?</li>
+                    <li>Do you have at least <strong>three details</strong> from the story?</li>
+                    <li>Do you have a <strong>conclusion sentence</strong>?</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-29">
+            <h2>Day 4: Model Response</h2>
+            <h3>Example Answer</h3>
+            
+            <div class="example-box">
+                <p style="line-height: 2.0;"><span class="subject-word">Frina-eh</span> <span class="past-tense">saved</span> Werda-ak's life by using her healing skills and never giving up. First, Werda-ak <span class="past-tense">was poisoned</span> when a dandra-ta tail spike <span class="past-tense">scratched</span> his leg during the battle. Second, Frina-eh <span class="past-tense">sprinkled</span> green powder into the wound and <span class="past-tense">applied</span> poultices to draw out the poison. Third, she <span class="past-tense">stayed</span> with him all night, <span class="past-tense">changed</span> his bandages every few hours, and <span class="past-tense">dripped</span> water into his mouth to keep him hydrated. Because of Frina-eh's skill and dedication, Werda-ak <span class="past-tense">recovered</span> and <span class="past-tense">was able</span> to continue the journey.</p>
+            </div>
+            
+            <div class="key-fact">
+                <h4>Notice:</h4>
+                <p>Every verb is in <strong class="past-tense">past tense</strong> because we're writing about events that already happened. The tenses are consistent throughout!</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-30">
+            <h2>Week 7 Complete Review</h2>
+            <h3>Verb Tenses Reference Guide</h3>
+
+            <div class="rule-box">
+                <h4>The Three Verb Tenses</h4>
+                <table class="compare-table">
+                    <tr>
+                        <th>Tense</th>
+                        <th>When to Use</th>
+                        <th>How to Form</th>
+                        <th>Signal Words</th>
+                    </tr>
+                    <tr>
+                        <td class="past-tense">Past</td>
+                        <td>Already happened</td>
+                        <td>Add -ed or irregular form</td>
+                        <td>yesterday, last week, before</td>
+                    </tr>
+                    <tr>
+                        <td class="present-tense">Present</td>
+                        <td>Happening now</td>
+                        <td>Base verb (+ -s for he/she/it)</td>
+                        <td>today, now, always</td>
+                    </tr>
+                    <tr>
+                        <td class="future-tense">Future</td>
+                        <td>Will happen later</td>
+                        <td>will + base verb</td>
+                        <td>tomorrow, next week, later</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="highlight">
+                <h4>Key Story Facts from Week 7</h4>
+                <ul>
+                    <li>Alex <span class="past-tense">killed</span> both dandra-ta by attacking their soft underbellies.</li>
+                    <li>Werda-ak <span class="past-tense">was poisoned</span> by a tail spike scratch.</li>
+                    <li>Frina-eh <span class="past-tense">saved</span> him with poultices and dedicated care.</li>
+                    <li>Alex <span class="past-tense">refused</span> to leave Werda-ak behind.</li>
+                    <li>The team <span class="past-tense">stayed</span> for 10 days and <span class="past-tense">trained</span> the villagers.</li>
+                    <li>They finally <span class="past-tense">left</span> the island and <span class="past-tense">continued</span> their journey.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide-nav">
+            <button onclick="prevSlide()" id="prevBtn">Previous</button>
+            <button onclick="nextSlide()" id="nextBtn">Next</button>
+        </div>
+
+        <footer>
+            <p>Week 7: Lost in Kragdon-ah, Chapters 20-22</p>
+            <p>ELA Theme: Verb Tenses - Past, Present, Future</p>
+            <p><a href="https://mrripley.weebly.com" style="color: #ffd700;">Return to Classroom Website</a></p>
+        </footer>
+    </div>
+
+    <script>
+        let currentSlide = 0;
+        const totalSlides = 31;
+
+        let currentBg = 0;
+        const bgImages = document.querySelectorAll('.bg-image');
+        const totalBgImages = 12;
+        
+        function rotateBg() {
+            const outgoing = bgImages[currentBg];
+            currentBg = (currentBg + 1) % totalBgImages;
+            const incoming = bgImages[currentBg];
+
+            // Fade in the new image (both layers visible during crossfade)
+            incoming.classList.add('active');
+
+            // After the transition fully completes, fade out the old image
+            setTimeout(function() {
+                outgoing.classList.remove('active');
+            }, 3100); // slightly longer than the 3s CSS transition
+        }
+        
+        setInterval(rotateBg, 8000);
+
+        function updateSlide() {
+            document.querySelectorAll('.slide').forEach((slide, index) => {
+                slide.classList.remove('active');
+                if (index === currentSlide) {
+                    slide.classList.add('active');
+                }
+            });
+            
+            document.getElementById('prevBtn').disabled = currentSlide === 0;
+            document.getElementById('nextBtn').disabled = currentSlide === totalSlides - 1;
+            
+            const progress = ((currentSlide + 1) / totalSlides) * 100;
+            document.getElementById('progress').style.width = progress + '%';
+        }
+
+        function nextSlide() {
+            if (currentSlide < totalSlides - 1) {
+                currentSlide++;
+                updateSlide();
+            }
+        }
+
+        function prevSlide() {
+            if (currentSlide > 0) {
+                currentSlide--;
+                updateSlide();
+            }
+        }
+
+        function goToSlide(slideIndex) {
+            currentSlide = slideIndex;
+            updateSlide();
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight') nextSlide();
+            if (e.key === 'ArrowLeft') prevSlide();
+        });
+
+        updateSlide();
+    </script>
+</body>
+</html>
