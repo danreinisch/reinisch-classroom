@@ -1,6 +1,6 @@
 {
   "version": "v1",
-  "updated": "2026-03-02T19:03:37.374Z",
+  "updated": "2026-03-02T19:20:25.933Z",
   "categories": {
     "toolkit": {
       "slots": 8,
@@ -256,7 +256,7 @@
       "slots": 50,
       "titles": [
         "Order of Operations (PEMDAS)",
-        "",
+        "Integer Operations",
         "",
         "",
         "",
@@ -308,7 +308,7 @@
       ],
       "links": [
         "/math-toolkit/presentations/algebra/pre-algebra/presentation-01/",
-        "",
+        "/math-toolkit/presentations/algebra/pre-algebra/presentation-02/",
         "",
         "",
         "",
