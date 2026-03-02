@@ -943,7 +943,12 @@
       
       const responseCards = constructedItems.map(item => {
         const answer = displayAnswers.find(a => a.item_id === item.id);
-        const studentResponse = answer?.raw_answer || '(No response)';
+        // Fallback: when raw_answer is null (e.g. wiped by a prior upsert bug), check
+        // assignment_instances.settings.writing_response which is set on student submission.
+        const instance = assignmentInstancesData.find(i => i.id === submission.instance_id);
+        const studentResponse = answer?.raw_answer
+          || (instance?.settings?.writing_response || null)
+          || '(No response)';
         const isScored = answer && answer.earned_points != null;
         const currentScore = isScored ? answer.earned_points : 0;
         const scoreDisplay = isScored ? String(currentScore) : '___';

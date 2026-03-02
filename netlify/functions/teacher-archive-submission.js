@@ -84,9 +84,18 @@ exports.handler = async function (event) {
     const instance = instRes.data[0];
 
     // 3. Fetch the student (to get student_code)
-    const stuRes = await supaFetch(
+    let stuRes = await supaFetch(
       `/rest/v1/students?id=eq.${encodeURIComponent(instance.student_id)}&select=id,code,class_code`
     );
+    // If the class_code column doesn't exist in this deployment, retry without it
+    if (!stuRes.ok && stuRes.status === 400) {
+      const errMsg = typeof stuRes.data === 'object' ? (stuRes.data?.message || '') : String(stuRes.data || '');
+      if (errMsg.includes('class_code') || errMsg.includes('42703')) {
+        stuRes = await supaFetch(
+          `/rest/v1/students?id=eq.${encodeURIComponent(instance.student_id)}&select=id,code`
+        );
+      }
+    }
     if (!stuRes.ok || !Array.isArray(stuRes.data) || stuRes.data.length === 0) {
       return jsonResponse(event, 404, { error: 'Student not found' }, {}, requestId);
     }
@@ -162,8 +171,9 @@ exports.handler = async function (event) {
     );
 
     if (!insertRes.ok) {
-      console.error(`[teacher-archive-submission] [${requestId}] Insert failed:`, insertRes.status, insertRes.data);
-      return jsonResponse(event, 500, { error: 'Failed to create archive' }, {}, requestId);
+      const errDetail = typeof insertRes.data === 'object' ? insertRes.data : { raw: String(insertRes.data) };
+      console.error(`[teacher-archive-submission] [${requestId}] Insert failed:`, insertRes.status, errDetail);
+      return jsonResponse(event, 500, { error: 'Failed to create archive', detail: errDetail, status: insertRes.status }, {}, requestId);
     }
 
     const inserted = Array.isArray(insertRes.data) ? insertRes.data[0] : insertRes.data;
@@ -174,6 +184,6 @@ exports.handler = async function (event) {
 
   } catch (err) {
     console.error(`[teacher-archive-submission] [${requestId}] Unexpected error:`, err);
-    return jsonResponse(event, 500, { error: 'Internal server error' }, {}, requestId);
+    return jsonResponse(event, 500, { error: 'Internal server error', detail: err.message || String(err) }, {}, requestId);
   }
 };
