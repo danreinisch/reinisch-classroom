@@ -1,0 +1,1132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Surface Area | Math Toolkit</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:         #0d1117;
+      --surface:    #161d2e;
+      --surface2:   #1e2840;
+      --surface3:   #243050;
+      --border:     #2a3a58;
+      --border2:    #34466e;
+      --accent:     #14b8a6;
+      --accent-dim: #0d9488;
+      --accent2:    #38bdf8;
+      --accent3:    #a78bfa;
+      --text:       #e2e8f0;
+      --text-muted: #8a9bbf;
+      --text-dim:   #5a6a8a;
+      --success:    #22c55e;
+      --error:      #f87171;
+      --formula-bg: #0a1628;
+      --mono:       'JetBrains Mono', monospace;
+    }
+    body { font-family: 'Outfit', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    .page-header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 2rem; display: flex; align-items: center; height: 56px; }
+    .breadcrumb { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: var(--text-muted); }
+    .breadcrumb a { color: var(--text-muted); text-decoration: none; }
+    .breadcrumb a:hover { color: var(--accent); }
+    .breadcrumb .sep { color: var(--text-dim); }
+    .breadcrumb .current { color: var(--text); font-weight: 500; }
+
+    .page-body { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+    .module-title { font-size: 1.65rem; font-weight: 700; color: var(--text); margin-bottom: 0.25rem; }
+    .module-title span { color: var(--accent); }
+    .module-subtitle { color: var(--text-muted); font-size: 0.92rem; margin-bottom: 2rem; }
+    .section-label { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 0.75rem; }
+
+    .shape-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)); gap: 0.75rem; margin-bottom: 2rem; }
+    .shape-btn {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+      padding: 1rem 0.75rem; cursor: pointer; transition: all 0.18s ease;
+      text-align: center; color: var(--text-muted); display: flex; flex-direction: column; align-items: center; gap: 0.4rem;
+    }
+    .shape-btn:hover { border-color: var(--accent); color: var(--text); background: var(--surface2); transform: translateY(-1px); }
+    .shape-btn.active { border-color: var(--accent); background: rgba(20,184,166,0.08); color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+    .shape-btn .shape-icon { font-size: 1.7rem; line-height: 1; }
+    .shape-btn .shape-name { font-size: 0.82rem; font-weight: 500; line-height: 1.2; }
+    .shape-btn .shape-formula { font-family: var(--mono); font-size: 0.64rem; color: var(--text-dim); line-height: 1.2; margin-top: 0.1rem; }
+    .shape-btn.active .shape-formula { color: var(--accent-dim); }
+
+    /* Pyramid sub-selector */
+    .sub-row { display: none; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+    .sub-row.visible { display: flex; }
+    .sub-btn {
+      flex: 1; min-width: 150px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+      padding: 0.6rem 1rem; cursor: pointer; font-family: 'Outfit', sans-serif;
+      font-size: 0.83rem; color: var(--text-muted); transition: all 0.15s; text-align: center;
+    }
+    .sub-btn:hover { border-color: var(--accent); color: var(--text); }
+    .sub-btn.active { border-color: var(--accent); background: rgba(20,184,166,0.1); color: var(--accent); }
+
+    #workspace { display: none; }
+    #workspace.visible { display: block; }
+
+    /* Face breakdown panel — unique to Surface Area */
+    .face-panel {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent3);
+      border-radius: 10px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 1.25rem;
+      animation: slideDown 0.3s ease;
+    }
+    .face-panel-title {
+      font-size: 0.72rem; font-weight: 600; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--accent3); margin-bottom: 0.6rem;
+    }
+    .face-list { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .face-chip {
+      background: var(--surface3); border: 1px solid var(--border2);
+      border-radius: 20px; padding: 0.25rem 0.75rem;
+      font-size: 0.78rem; color: var(--text-muted); font-family: var(--mono);
+    }
+
+    .formula-card {
+      background: var(--formula-bg); border: 1px solid var(--border); border-left: 3px solid var(--accent);
+      border-radius: 10px; padding: 1.25rem 1.5rem; margin-bottom: 1.5rem;
+      display: flex; align-items: flex-start; gap: 1.5rem; animation: slideDown 0.3s ease;
+    }
+    .formula-label { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 0.25rem; }
+    .formula-text { font-family: var(--mono); font-size: 1.25rem; font-weight: 500; color: var(--text); letter-spacing: 0.04em; line-height: 1.6; }
+    .formula-text .var { color: var(--accent2); }
+    .formula-desc { font-size: 0.82rem; color: var(--text-muted); margin-top: 0.35rem; line-height: 1.5; }
+    .formula-key { margin-left: auto; font-size: 0.78rem; color: var(--text-dim); line-height: 1.9; font-family: var(--mono); white-space: nowrap; flex-shrink: 0; }
+    .formula-key .kv { color: var(--accent2); }
+
+    .info-note { background: rgba(56,189,248,0.07); border: 1px solid rgba(56,189,248,0.2); border-radius: 7px; padding: 0.6rem 1rem; font-size: 0.8rem; color: #7dd3fc; margin-bottom: 1.25rem; }
+
+    .step-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 1rem; overflow: hidden; animation: slideDown 0.25s ease; transition: border-color 0.2s; }
+    .step-card.locked { opacity: 0.4; pointer-events: none; }
+    .step-card.complete { border-color: var(--success); }
+    .step-card.error    { border-color: var(--error); }
+    .step-header { padding: 0.85rem 1.25rem; display: flex; align-items: center; gap: 0.75rem; border-bottom: 1px solid var(--border); background: var(--surface2); }
+    .step-badge { width: 26px; height: 26px; border-radius: 50%; background: var(--surface3); border: 1px solid var(--border2); display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 700; color: var(--text-muted); flex-shrink: 0; }
+    .step-card.complete .step-badge { background: var(--success); border-color: var(--success); color: #fff; }
+    .step-title { font-weight: 600; font-size: 0.9rem; color: var(--text); }
+    .step-instruction { font-size: 0.82rem; color: var(--text-muted); margin-left: auto; text-align: right; max-width: 260px; }
+    .step-body { padding: 1.25rem; }
+
+    .known-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 0.85rem; margin-bottom: 1rem; }
+    .field-group { display: flex; flex-direction: column; gap: 0.3rem; }
+    .field-label { font-size: 0.78rem; font-weight: 500; color: var(--text-muted); }
+    .field-label .var-name { font-family: var(--mono); color: var(--accent2); font-size: 0.82rem; }
+    .field-hint { font-size: 0.71rem; color: var(--text-dim); }
+    .known-input { background: var(--surface2); border: 1px solid var(--border); border-radius: 7px; padding: 0.55rem 0.85rem; font-family: var(--mono); font-size: 1rem; color: var(--text); width: 100%; transition: border-color 0.15s; outline: none; }
+    .known-input:focus { border-color: var(--accent); }
+    .known-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+    .begin-btn { background: var(--accent); color: #0a1628; border: none; border-radius: 7px; padding: 0.6rem 1.5rem; font-family: 'Outfit', sans-serif; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.15s; margin-top: 0.5rem; }
+    .begin-btn:hover { background: #0d9488; transform: translateY(-1px); }
+    .begin-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    .expr-display { font-family: var(--mono); font-size: 1rem; color: var(--text); background: var(--formula-bg); border: 1px solid var(--border); border-radius: 7px; padding: 0.75rem 1rem; letter-spacing: 0.03em; line-height: 1.7; }
+    .expr-display .val { color: var(--accent2); }
+    .expr-display .op  { color: var(--text-muted); }
+
+    .compute-row { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
+    .compute-row:last-child { margin-bottom: 0; }
+    .compute-expr { font-family: var(--mono); font-size: 0.97rem; color: var(--text); flex: 1; min-width: 0; line-height: 1.5; }
+    .compute-expr .val { color: var(--accent2); }
+    .compute-label { font-size: 0.75rem; color: var(--text-dim); margin-right: 0.25rem; font-style: italic; }
+    .answer-box { background: var(--surface2); border: 2px solid var(--border2); border-radius: 7px; padding: 0.45rem 0.75rem; font-family: var(--mono); font-size: 1rem; color: var(--text); width: 120px; outline: none; transition: border-color 0.15s; text-align: center; }
+    .answer-box:focus { border-color: var(--accent); }
+    .answer-box.correct { border-color: var(--success); background: rgba(34,197,94,0.08); color: var(--success); }
+    .answer-box.incorrect { border-color: var(--error); background: rgba(248,113,113,0.08); }
+    .check-btn { background: var(--surface3); border: 1px solid var(--border2); border-radius: 6px; padding: 0.45rem 0.85rem; font-family: 'Outfit', sans-serif; font-size: 0.82rem; font-weight: 500; color: var(--text-muted); cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+    .check-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .check-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .feedback-box { border-radius: 7px; padding: 0.65rem 1rem; font-size: 0.83rem; line-height: 1.5; margin-top: 0.75rem; display: none; }
+    .feedback-box.visible { display: block; }
+    .feedback-box.success { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3); color: #86efac; }
+    .feedback-box.error   { background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.3); color: #fca5a5; }
+    .feedback-box.hint    { background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.25); color: #fde68a; }
+
+    /* Running total tracker */
+    .running-total {
+      background: rgba(167,139,250,0.08);
+      border: 1px solid rgba(167,139,250,0.25);
+      border-radius: 7px;
+      padding: 0.6rem 1rem;
+      margin-top: 0.75rem;
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      color: var(--accent3);
+      display: none;
+    }
+    .running-total.visible { display: block; }
+
+    .final-answer-card { background: linear-gradient(135deg, rgba(20,184,166,0.12), rgba(56,189,248,0.08)); border: 1px solid var(--accent); border-radius: 10px; padding: 1.5rem; text-align: center; display: none; animation: celebrate 0.4s ease; }
+    .final-answer-card.visible { display: block; }
+    .final-answer-label { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 0.5rem; }
+    .final-answer-value { font-family: var(--mono); font-size: 2rem; font-weight: 700; color: var(--text); }
+    .final-answer-caption { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.35rem; }
+    .try-again-btn { margin-top: 1.25rem; background: transparent; border: 1px solid var(--border2); border-radius: 7px; padding: 0.5rem 1.25rem; font-family: 'Outfit', sans-serif; font-size: 0.85rem; color: var(--text-muted); cursor: pointer; transition: all 0.15s; }
+    .try-again-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .divider { height: 1px; background: var(--border); margin: 1.75rem 0; }
+
+    @keyframes slideDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes celebrate { 0% { transform: scale(0.95); opacity: 0; } 60% { transform: scale(1.02); } 100% { transform: scale(1); opacity: 1; } }
+
+    @media (max-width: 620px) {
+      .formula-card { flex-direction: column; gap: 0.75rem; }
+      .formula-key { margin-left: 0; }
+      .shape-grid { grid-template-columns: repeat(2, 1fr); }
+      .compute-row { flex-direction: column; align-items: flex-start; }
+      .answer-box { width: 100%; }
+      .step-instruction { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="page-header">
+  <nav class="breadcrumb">
+    <a href="/">Home</a>
+    <span class="sep">›</span>
+    <a href="/math-toolkit">Math Toolkit</a>
+    <span class="sep">›</span>
+    <span class="current">Surface Area</span>
+  </nav>
+</header>
+
+<main class="page-body">
+  <h1 class="module-title">Surface Area of <span>3D Shapes</span></h1>
+  <p class="module-subtitle">Select a 3D shape, enter your known measurements, then work through each face to find the total surface area.</p>
+
+  <div class="section-label">Choose a Shape</div>
+  <div class="shape-grid" id="shapeGrid"></div>
+
+  <!-- Pyramid sub-selector -->
+  <div class="sub-row" id="pyramidSub">
+    <button class="sub-btn active" data-pyr="square">Square Base Pyramid</button>
+    <button class="sub-btn" data-pyr="rectangular">Rectangular Base Pyramid</button>
+    <button class="sub-btn" data-pyr="triangular">Triangular Base Pyramid</button>
+  </div>
+
+  <div id="workspace">
+    <div class="divider"></div>
+
+    <div class="info-note">
+      📦 Surface area is the total area of all the <strong>outside faces</strong> of a 3D shape. It is always measured in <strong>square units</strong> (units²).
+    </div>
+
+    <!-- Face breakdown panel -->
+    <div class="face-panel" id="facePanel">
+      <div class="face-panel-title">🔲 Faces of This Shape</div>
+      <div class="face-list" id="faceList"></div>
+    </div>
+
+    <div class="formula-card" id="formulaCard">
+      <div style="flex:1">
+        <div class="formula-label">Formula</div>
+        <div class="formula-text" id="formulaText"></div>
+        <div class="formula-desc" id="formulaDesc"></div>
+      </div>
+      <div class="formula-key" id="formulaKey"></div>
+    </div>
+
+    <div class="step-card" id="stepKnown">
+      <div class="step-header">
+        <div class="step-badge" id="badgeKnown">1</div>
+        <div class="step-title">Identify Your Known Values</div>
+        <div class="step-instruction">Enter the measurements from your problem.</div>
+      </div>
+      <div class="step-body">
+        <div class="known-grid" id="knownGrid"></div>
+        <button class="begin-btn" id="beginBtn" onclick="beginSteps()" disabled>Begin Solving →</button>
+      </div>
+    </div>
+
+    <div id="stepsContainer"></div>
+
+    <div class="final-answer-card" id="finalCard">
+      <div class="final-answer-label">✓ Total Surface Area</div>
+      <div class="final-answer-value" id="finalValue"></div>
+      <div class="final-answer-caption" id="finalCaption"></div>
+      <br>
+      <button class="try-again-btn" onclick="resetWorkspace()">↺ Try Another Problem</button>
+    </div>
+  </div>
+</main>
+
+<script>
+function round2(n) { return Math.round(n * 100) / 100; }
+function round4(n) { return Math.round(n * 10000) / 10000; }
+function isClose(a, b) { return Math.abs(a - b) <= Math.max(0.06, Math.abs(b) * 0.015); }
+
+/* ================================================================
+   SHAPE DEFINITIONS
+   Each shape includes a faces[] list (for the face panel) and steps.
+================================================================ */
+const SHAPES = {
+
+  cube: {
+    name: 'Cube', icon: '🧊',
+    faces: ['6 equal square faces'],
+    formulaText: 'SA = 6 × <span class="var">s</span>²',
+    formulaDesc: 'A cube has 6 identical square faces. Square the side length and multiply by 6.',
+    formulaKey: '<span class="kv">s</span> = side length',
+    knownFields: [{ id: 's', label: 'Side length', varName: 's', hint: 'All edges of a cube are equal.' }],
+    steps: [
+      {
+        title: 'Substitute Your Value',
+        type: 'expression',
+        displayFn: (k) => `SA = 6 × <span class="val">${k.s}</span>²`
+      },
+      {
+        title: 'Find the Area of One Face (s²)',
+        instruction: 'Square the side length to find one square face.',
+        type: 'compute',
+        rows: [{
+          exprFn:   (k) => `<span class="val">${k.s}</span> × <span class="val">${k.s}</span> =`,
+          answerId: 's2',
+          answerFn: (k) => round2(k.s * k.s),
+          hintFn:   (k) => `Multiply ${k.s} × ${k.s}. This gives you the area of one face.`
+        }]
+      },
+      {
+        title: 'Multiply by 6 Faces',
+        instruction: 'A cube has 6 faces — multiply by 6.',
+        type: 'compute',
+        rows: [{
+          exprFn:   (k, c) => `6 × <span class="val">${c.s2}</span> =`,
+          answerId: 'SA',
+          answerFn: (k, c) => round2(6 * c.s2),
+          hintFn:   (k, c) => `Multiply 6 × ${c.s2}.`
+        }],
+        isFinal: true
+      }
+    ]
+  },
+
+  rectprism: {
+    name: 'Rectangular Prism', icon: '📦',
+    faces: ['2 top/bottom faces (l × w)', '2 front/back faces (l × h)', '2 side faces (w × h)'],
+    formulaText: 'SA = 2(<span class="var">lw</span> + <span class="var">lh</span> + <span class="var">wh</span>)',
+    formulaDesc: 'Find the area of each unique pair of faces, add them, then multiply by 2.',
+    formulaKey: '<span class="kv">l</span> = length<br><span class="kv">w</span> = width<br><span class="kv">h</span> = height',
+    knownFields: [
+      { id: 'l', label: 'Length (l)', varName: 'l', hint: '' },
+      { id: 'w', label: 'Width (w)',  varName: 'w', hint: '' },
+      { id: 'h', label: 'Height (h)', varName: 'h', hint: '' }
+    ],
+    steps: [
+      {
+        title: 'Substitute Your Values',
+        type: 'expression',
+        displayFn: (k) => `SA = 2 × (<span class="val">${k.l}</span>×<span class="val">${k.w}</span> + <span class="val">${k.l}</span>×<span class="val">${k.h}</span> + <span class="val">${k.w}</span>×<span class="val">${k.h}</span>)`
+      },
+      {
+        title: 'Calculate Each Face Pair',
+        instruction: 'Find the area of each unique pair of faces.',
+        type: 'compute',
+        rows: [
+          {
+            exprFn:   (k) => `<span class="compute-label">Top/Bottom:</span> <span class="val">${k.l}</span> × <span class="val">${k.w}</span> =`,
+            answerId: 'lw',
+            answerFn: (k) => round2(k.l * k.w),
+            hintFn:   (k) => `Multiply ${k.l} × ${k.w}.`
+          },
+          {
+            exprFn:   (k) => `<span class="compute-label">Front/Back:</span> <span class="val">${k.l}</span> × <span class="val">${k.h}</span> =`,
+            answerId: 'lh',
+            answerFn: (k) => round2(k.l * k.h),
+            hintFn:   (k) => `Multiply ${k.l} × ${k.h}.`
+          },
+          {
+            exprFn:   (k) => `<span class="compute-label">Left/Right:</span> <span class="val">${k.w}</span> × <span class="val">${k.h}</span> =`,
+            answerId: 'wh',
+            answerFn: (k) => round2(k.w * k.h),
+            hintFn:   (k) => `Multiply ${k.w} × ${k.h}.`
+          }
+        ]
+      },
+      {
+        title: 'Add the Three Face Areas',
+        instruction: 'Add all three face pair areas together.',
+        type: 'compute',
+        rows: [{
+          exprFn:   (k, c) => `<span class="val">${c.lw}</span> + <span class="val">${c.lh}</span> + <span class="val">${c.wh}</span> =`,
+          answerId: 'sum',
+          answerFn: (k, c) => round2(c.lw + c.lh + c.wh),
+          hintFn:   (k, c) => `Add ${c.lw} + ${c.lh} + ${c.wh}.`
+        }]
+      },
+      {
+        title: 'Multiply by 2',
+        instruction: 'Each face has a matching opposite face — multiply by 2.',
+        type: 'compute',
+        rows: [{
+          exprFn:   (k, c) => `2 × <span class="val">${c.sum}</span> =`,
+          answerId: 'SA',
+          answerFn: (k, c) => round2(2 * c.sum),
+          hintFn:   (k, c) => `Multiply 2 × ${c.sum}.`
+        }],
+        isFinal: true
+      }
+    ]
+  },
+
+  triprism: {
+    name: 'Triangular Prism', icon: '🔷',
+    faces: ['2 triangular bases (½bh)', '3 rectangular lateral faces (side × length)'],
+    formulaText: 'SA = <span class="var">bh</span> + (<span class="var">s₁</span>+<span class="var">s₂</span>+<span class="var">s₃</span>)×<span class="var">l</span>',
+    formulaDesc: 'Add both triangle bases (b×h) and all three rectangular side faces.',
+    formulaKey: '<span class="kv">b</span> = triangle base<br><span class="kv">h</span> = triangle height<br><span class="kv">s₁,s₂,s₃</span> = triangle sides<br><span class="kv">l</span> = prism length',
+    knownFields: [
+      { id: 'b',  label: 'Triangle base (b)',   varName: 'b',  hint: 'Base of the triangular face.' },
+      { id: 'h',  label: 'Triangle height (h)', varName: 'h',  hint: 'Perpendicular height of the triangle.' },
+      { id: 's1', label: 'Side 1 of triangle',  varName: 's₁', hint: '' },
+      { id: 's2', label: 'Side 2 of triangle',  varName: 's₂', hint: '' },
+      { id: 's3', label: 'Side 3 of triangle',  varName: 's₃', hint: '' },
+      { id: 'l',  label: 'Prism length (l)',    varName: 'l',  hint: 'How long the prism extends.' }
+    ],
+    steps: [
+      {
+        title: 'Substitute Your Values',
+        type: 'expression',
+        displayFn: (k) => `SA = (<span class="val">${k.b}</span>×<span class="val">${k.h}</span>) + (<span class="val">${k.s1}</span>+<span class="val">${k.s2}</span>+<span class="val">${k.s3}</span>)×<span class="val">${k.l}</span>`
+      },
+      {
+        title: 'Area of Both Triangular Bases',
+        instruction: 'Both triangle faces together = b × h (the ½ cancels when combined).',
+        type: 'compute',
+        rows: [{
+          exprFn:   (k) => `<span class="val">${k.b}</span> × <span class="val">${k.h}</span> =`,
+          answerId: 'triArea',
+          answerFn: (k) => round2(k.b * k.h),
+          hintFn:   (k) => `Multiply ${k.b} × ${k.h}. Both triangles combined = b × h (two halves make a whole).`
+        }]
+      },
+      {
+        title: 'Perimeter of the Triangle',
+        instruction: 'Add all three sides of the triangle — this is its perimeter.',
+        type: 'compute',
+        rows: [{
+          exprFn:   (k) => `<span class="val">${k.s1}</span> + <span class="val">${k.s2}</span> + <span class="val">${k.s3}</span> =`,
+          answerId: 'perim',
+          answerFn: (k) => round2(k.s1 + k.s2 + k.s3),
+          hintFn:   (k) => `Add ${k.s1} + ${k.s2} + ${k.s3}.`
+        }]
+      },
+      {
+        title: 'Area of the Lateral (Side) Faces',
+        instruction: 'Multiply the triangle perimeter by the prism length.',
+        type: 'compute',
+        rows: [{
+          exprFn:   (k, c) => `<span class="val">${c.perim}</span> × <span class="val">${k.l}</span> =`,
+          answerId: 'latArea',
+          answerFn: (k, c) => round2(c.perim * k.l),
+          hintFn:   (k, c) => `Multiply ${c.perim} × ${k.l}.`
+        }]
+      },
+      {
+        title: 'Add All Faces Together',
+        instruction: 'Add the two triangular bases and all lateral faces.',
+        type: 'compute',
+        rows: [{
+          exprFn:   (k, c) => `<span class="val">${c.triArea}</span> + <span class="val">${c.latArea}</span> =`,
+          answerId: 'SA',
+          answerFn: (k, c) => round2(c.triArea + c.latArea),
+          hintFn:   (k, c) => `Add ${c.triArea} + ${c.latArea}.`
+        }],
+        isFinal: true
+      }
+    ]
+  },
+
+  cylinder: {
+    name: 'Cylinder', icon: '🥫',
+    faces: ['2 circular bases (πr²)', '1 curved lateral face (2πr × h)'],
+    formulaText: 'SA = 2π<span class="var">r</span>² + 2π<span class="var">r</span><span class="var">h</span>',
+    formulaDesc: 'Two circular bases plus the curved side surface (like unrolling a label).',
+    formulaKey: '<span class="kv">r</span> = radius<br><span class="kv">h</span> = height<br>π ≈ 3.14',
+    knownFields: [
+      { id: 'r', label: 'Radius (r)', varName: 'r', hint: 'Radius of the circular base.' },
+      { id: 'h', label: 'Height (h)', varName: 'h', hint: 'Height of the cylinder.' }
+    ],
+    steps: [
+      {
+        title: 'Substitute Your Values',
+        type: 'expression',
+        displayFn: (k) => `SA = 2×3.14×<span class="val">${k.r}</span>² + 2×3.14×<span class="val">${k.r}</span>×<span class="val">${k.h}</span>`
+      },
+      {
+        title: 'Square the Radius',
+        instruction: 'Multiply the radius by itself.',
+        type: 'compute',
+        rows: [{
+          exprFn:   (k) => `<span class="val">${k.r}</span> × <span class="val">${k.r}</span> =`,
+          answerId: 'r2',
+          answerFn: (k) => round2(k.r * k.r),
+          hintFn:   (k) => `Multiply ${k.r} × ${k.r}.`
+        }]
+      },
+      {
+        title: 'Area of Both Circular Bases (2πr²)',
+        instruction: 'Multiply 2 × 3.14 × r².',
+        type: 'compute',
+        rows: [{
+          exprFn:   (k, c) => `2 × 3.14 × <span class="val">${c.r2}</span> =`,
+          answerId: 'bases',
+          answerFn: (k, c) => round2(2 * 3.14 * c.r2),
+          hintFn:   (k, c) => `Multiply 2 × 3.14 × ${c.r2}. Start: 2 × 3.14 = 6.28, then × ${c.r2}.`
+        }]
+      },
+      {
+        title: 'Area of the Curved Side (2πrh)',
+        instruction: 'Multiply 2 × 3.14 × radius × height.',
+        type: 'compute',
+        rows: [{
+          exprFn:   (k) => `2 × 3.14 × <span class="val">${k.r}</span> × <span class="val">${k.h}</span> =`,
+          answerId: 'lateral',
+          answerFn: (k) => round2(2 * 3.14 * k.r * k.h),
+          hintFn:   (k) => `Multiply step by step: 2 × 3.14 = 6.28, then × ${k.r} = ${round2(6.28 * k.r)}, then × ${k.h}.`
+        }]
+      },
+      {
+        title: 'Add Both Parts Together',
+        instruction: 'Add the bases area plus the lateral area.',
+        type: 'compute',
+        rows: [{
+          exprFn:   (k, c) => `<span class="val">${c.bases}</span> + <span class="val">${c.lateral}</span> =`,
+          answerId: 'SA',
+          answerFn: (k, c) => round2(c.bases + c.lateral),
+          hintFn:   (k, c) => `Add ${c.bases} + ${c.lateral}.`
+        }],
+        isFinal: true
+      }
+    ]
+  },
+
+  cone: {
+    name: 'Cone', icon: '🍦',
+    faces: ['1 circular base (πr²)', '1 curved lateral face (πrl)'],
+    formulaText: 'SA = π<span class="var">r</span>² + π<span class="var">r</span><span class="var">l</span>',
+    formulaDesc: 'One circular base plus the slanted lateral surface. l = slant height.',
+    formulaKey: '<span class="kv">r</span> = radius<br><span class="kv">l</span> = slant height<br>π ≈ 3.14',
+    knownFields: [
+      { id: 'r', label: 'Radius (r)',       varName: 'r', hint: 'Radius of the circular base.' },
+      { id: 'l', label: 'Slant height (l)', varName: 'l', hint: 'The diagonal distance from base edge to tip — NOT the vertical height.' }
+    ],
+    steps: [
+      {
+        title: 'Substitute Your Values',
+        type: 'expression',
+        displayFn: (k) => `SA = 3.14×<span class="val">${k.r}</span>² + 3.14×<span class="val">${k.r}</span>×<span class="val">${k.l}</span>`
+      },
+      {
+        title: 'Square the Radius',
+        instruction: 'Multiply the radius by itself.',
+        type: 'compute',
+        rows: [{
+          exprFn:   (k) => `<span class="val">${k.r}</span> × <span class="val">${k.r}</span> =`,
+          answerId: 'r2',
+          answerFn: (k) => round2(k.r * k.r),
+          hintFn:   (k) => `Multiply ${k.r} × ${k.r}.`
+        }]
+      },
+      {
+        title: 'Area of the Circular Base (πr²)',
+        instruction: 'Multiply 3.14 by r².',
+        type: 'compute',
+        rows: [{
+          exprFn:   (k, c) => `3.14 × <span class="val">${c.r2}</span> =`,
+          answerId: 'base',
+          answerFn: (k, c) => round2(3.14 * c.r2),
+          hintFn:   (k, c) => `Multiply 3.14 × ${c.r2}.`
+        }]
+      },
+      {
+        title: 'Area of the Lateral Surface (πrl)',
+        instruction: 'Multiply 3.14 × radius × slant height.',
+        type: 'compute',
+        rows: [{
+          exprFn:   (k) => `3.14 × <span class="val">${k.r}</span> × <span class="val">${k.l}</span> =`,
+          answerId: 'lateral',
+          answerFn: (k) => round2(3.14 * k.r * k.l),
+          hintFn:   (k) => `Multiply 3.14 × ${k.r} = ${round2(3.14 * k.r)}, then × ${k.l}.`
+        }]
+      },
+      {
+        title: 'Add Both Parts',
+        instruction: 'Add the base area and the lateral area.',
+        type: 'compute',
+        rows: [{
+          exprFn:   (k, c) => `<span class="val">${c.base}</span> + <span class="val">${c.lateral}</span> =`,
+          answerId: 'SA',
+          answerFn: (k, c) => round2(c.base + c.lateral),
+          hintFn:   (k, c) => `Add ${c.base} + ${c.lateral}.`
+        }],
+        isFinal: true
+      }
+    ]
+  },
+
+  sphere: {
+    name: 'Sphere', icon: '🔵',
+    faces: ['1 continuous curved surface (4πr²)'],
+    formulaText: 'SA = 4π<span class="var">r</span>²',
+    formulaDesc: 'A sphere has one smooth curved surface. Multiply 4 × π × radius squared.',
+    formulaKey: '<span class="kv">r</span> = radius<br>π ≈ 3.14',
+    knownFields: [
+      { id: 'r', label: 'Radius (r)', varName: 'r', hint: 'Distance from center to the surface.' }
+    ],
+    steps: [
+      {
+        title: 'Substitute Your Value',
+        type: 'expression',
+        displayFn: (k) => `SA = 4 × 3.14 × <span class="val">${k.r}</span>²`
+      },
+      {
+        title: 'Square the Radius',
+        instruction: 'Multiply the radius by itself.',
+        type: 'compute',
+        rows: [{
+          exprFn:   (k) => `<span class="val">${k.r}</span> × <span class="val">${k.r}</span> =`,
+          answerId: 'r2',
+          answerFn: (k) => round2(k.r * k.r),
+          hintFn:   (k) => `Multiply ${k.r} × ${k.r}.`
+        }]
+      },
+      {
+        title: 'Multiply 4 × π',
+        instruction: 'Multiply 4 × 3.14.',
+        type: 'compute',
+        rows: [{
+          exprFn:   () => `4 × 3.14 =`,
+          answerId: '4pi',
+          answerFn: () => 12.56,
+          hintFn:   () => `4 × 3.14 = 12.56. This will always be the same.`
+        }]
+      },
+      {
+        title: 'Multiply by r²',
+        instruction: 'Multiply your result by the squared radius.',
+        type: 'compute',
+        rows: [{
+          exprFn:   (k, c) => `<span class="val">${c['4pi']}</span> × <span class="val">${c.r2}</span> =`,
+          answerId: 'SA',
+          answerFn: (k, c) => round2(c['4pi'] * c.r2),
+          hintFn:   (k, c) => `Multiply 12.56 × ${c.r2}.`
+        }],
+        isFinal: true
+      }
+    ]
+  },
+
+  'pyramid-square': {
+    name: 'Square Pyramid', icon: '🔺',
+    faces: ['1 square base (s²)', '4 triangular faces (½ × s × slant height)'],
+    formulaText: 'SA = <span class="var">s</span>² + 2<span class="var">s</span><span class="var">l</span>',
+    formulaDesc: 'One square base plus four triangular faces. l = slant height of a triangular face.',
+    formulaKey: '<span class="kv">s</span> = base side length<br><span class="kv">l</span> = slant height',
+    knownFields: [
+      { id: 's', label: 'Base side length (s)', varName: 's', hint: 'Length of one side of the square base.' },
+      { id: 'l', label: 'Slant height (l)',     varName: 'l', hint: 'Height of one triangular face, from midpoint of base edge to apex.' }
+    ],
+    steps: [
+      {
+        title: 'Substitute Your Values',
+        type: 'expression',
+        displayFn: (k) => `SA = <span class="val">${k.s}</span>² + 2×<span class="val">${k.s}</span>×<span class="val">${k.l}</span>`
+      },
+      {
+        title: 'Area of the Square Base (s²)',
+        instruction: 'Multiply the side length by itself.',
+        type: 'compute',
+        rows: [{
+          exprFn:   (k) => `<span class="val">${k.s}</span> × <span class="val">${k.s}</span> =`,
+          answerId: 'base',
+          answerFn: (k) => round2(k.s * k.s),
+          hintFn:   (k) => `Multiply ${k.s} × ${k.s}.`
+        }]
+      },
+      {
+        title: 'Area of All 4 Triangular Faces (2sl)',
+        instruction: '4 triangles × ½ × s × l simplifies to 2 × s × l.',
+        type: 'compute',
+        rows: [{
+          exprFn:   (k) => `2 × <span class="val">${k.s}</span> × <span class="val">${k.l}</span> =`,
+          answerId: 'lateral',
+          answerFn: (k) => round2(2 * k.s * k.l),
+          hintFn:   (k) => `Multiply 2 × ${k.s} × ${k.l}. Start: 2 × ${k.s} = ${round2(2 * k.s)}, then × ${k.l}.`
+        }]
+      },
+      {
+        title: 'Add Base + Lateral Faces',
+        instruction: 'Add the square base area and the four triangular faces.',
+        type: 'compute',
+        rows: [{
+          exprFn:   (k, c) => `<span class="val">${c.base}</span> + <span class="val">${c.lateral}</span> =`,
+          answerId: 'SA',
+          answerFn: (k, c) => round2(c.base + c.lateral),
+          hintFn:   (k, c) => `Add ${c.base} + ${c.lateral}.`
+        }],
+        isFinal: true
+      }
+    ]
+  },
+
+  'pyramid-rectangular': {
+    name: 'Rectangular Pyramid', icon: '🔺',
+    faces: ['1 rectangular base (l × w)', '2 triangular faces with base l', '2 triangular faces with base w'],
+    formulaText: 'SA = <span class="var">lw</span> + <span class="var">l</span>√(<span class="var">w/2</span>²+<span class="var">h</span>²) + <span class="var">w</span>√(<span class="var">l/2</span>²+<span class="var">h</span>²)',
+    formulaDesc: 'Rectangular base + 4 triangular faces (2 pairs). We calculate each slant height using the Pythagorean theorem.',
+    formulaKey: '<span class="kv">l</span> = base length<br><span class="kv">w</span> = base width<br><span class="kv">h</span> = pyramid height',
+    knownFields: [
+      { id: 'l', label: 'Base length (l)', varName: 'l', hint: '' },
+      { id: 'w', label: 'Base width (w)',  varName: 'w', hint: '' },
+      { id: 'h', label: 'Pyramid height (h)', varName: 'h', hint: 'Vertical height from base to apex.' }
+    ],
+    steps: [
+      {
+        title: 'Substitute Your Values',
+        type: 'expression',
+        displayFn: (k) => `SA = (<span class="val">${k.l}</span>×<span class="val">${k.w}</span>) + triangular faces using h = <span class="val">${k.h}</span>`
+      },
+      {
+        title: 'Area of the Rectangular Base',
+        instruction: 'Multiply length × width.',
+        type: 'compute',
+        rows: [{
+          exprFn:   (k) => `<span class="val">${k.l}</span> × <span class="val">${k.w}</span> =`,
+          answerId: 'base',
+          answerFn: (k) => round2(k.l * k.w),
+          hintFn:   (k) => `Multiply ${k.l} × ${k.w}.`
+        }]
+      },
+      {
+        title: 'Slant Height Along Length (sl_l)',
+        instruction: 'Use Pythagorean theorem: √((w/2)² + h²)',
+        type: 'compute',
+        rows: [
+          {
+            exprFn:   (k) => `<span class="val">${k.w}</span> ÷ 2 =`,
+            answerId: 'w2',
+            answerFn: (k) => round2(k.w / 2),
+            hintFn:   (k) => `Divide ${k.w} ÷ 2.`
+          },
+          {
+            exprFn:   (k, c) => `<span class="val">${c.w2}</span>² + <span class="val">${k.h}</span>² = (inside square root)`,
+            answerId: 'sl_l_sq',
+            answerFn: (k, c) => round2(c.w2 * c.w2 + k.h * k.h),
+            hintFn:   (k, c) => `Calculate ${c.w2}² = ${round2(c.w2*c.w2)}, plus ${k.h}² = ${round2(k.h*k.h)}. Add them.`
+          },
+          {
+            exprFn:   (k, c) => `√<span class="val">${c.sl_l_sq}</span> = slant height₁`,
+            answerId: 'sl_l',
+            answerFn: (k, c) => round2(Math.sqrt(c.sl_l_sq)),
+            hintFn:   (k, c) => `Find the square root of ${c.sl_l_sq}. Use a calculator. ≈ ${round2(Math.sqrt(c.sl_l_sq))}`
+          }
+        ]
+      },
+      {
+        title: 'Slant Height Along Width (sl_w)',
+        instruction: 'Use Pythagorean theorem: √((l/2)² + h²)',
+        type: 'compute',
+        rows: [
+          {
+            exprFn:   (k) => `<span class="val">${k.l}</span> ÷ 2 =`,
+            answerId: 'l2',
+            answerFn: (k) => round2(k.l / 2),
+            hintFn:   (k) => `Divide ${k.l} ÷ 2.`
+          },
+          {
+            exprFn:   (k, c) => `<span class="val">${c.l2}</span>² + <span class="val">${k.h}</span>² = (inside square root)`,
+            answerId: 'sl_w_sq',
+            answerFn: (k, c) => round2(c.l2 * c.l2 + k.h * k.h),
+            hintFn:   (k, c) => `Calculate ${c.l2}² = ${round2(c.l2*c.l2)}, plus ${k.h}² = ${round2(k.h*k.h)}. Add them.`
+          },
+          {
+            exprFn:   (k, c) => `√<span class="val">${c.sl_w_sq}</span> = slant height₂`,
+            answerId: 'sl_w',
+            answerFn: (k, c) => round2(Math.sqrt(c.sl_w_sq)),
+            hintFn:   (k, c) => `Find the square root of ${c.sl_w_sq}. ≈ ${round2(Math.sqrt(c.sl_w_sq))}`
+          }
+        ]
+      },
+      {
+        title: 'Area of the 4 Triangular Faces',
+        instruction: 'Calculate the area of both pairs of triangular faces.',
+        type: 'compute',
+        rows: [
+          {
+            exprFn:   (k, c) => `<span class="compute-label">Pair 1 (along l):</span> <span class="val">${k.l}</span> × <span class="val">${c.sl_l}</span> =`,
+            answerId: 'tri1',
+            answerFn: (k, c) => round2(k.l * c.sl_l),
+            hintFn:   (k, c) => `Multiply ${k.l} × ${c.sl_l}. (This is 2 triangles × ½ × l × sl_l = l × sl_l)`
+          },
+          {
+            exprFn:   (k, c) => `<span class="compute-label">Pair 2 (along w):</span> <span class="val">${k.w}</span> × <span class="val">${c.sl_w}</span> =`,
+            answerId: 'tri2',
+            answerFn: (k, c) => round2(k.w * c.sl_w),
+            hintFn:   (k, c) => `Multiply ${k.w} × ${c.sl_w}.`
+          }
+        ]
+      },
+      {
+        title: 'Add All Parts Together',
+        instruction: 'Add the base and both pairs of triangular faces.',
+        type: 'compute',
+        rows: [{
+          exprFn:   (k, c) => `<span class="val">${c.base}</span> + <span class="val">${c.tri1}</span> + <span class="val">${c.tri2}</span> =`,
+          answerId: 'SA',
+          answerFn: (k, c) => round2(c.base + c.tri1 + c.tri2),
+          hintFn:   (k, c) => `Add ${c.base} + ${c.tri1} + ${c.tri2}.`
+        }],
+        isFinal: true
+      }
+    ]
+  },
+
+  'pyramid-triangular': {
+    name: 'Triangular Pyramid', icon: '🔺',
+    faces: ['1 triangular base', '3 triangular lateral faces'],
+    formulaText: 'SA = <span class="var">Base Area</span> + ½ × <span class="var">Perimeter</span> × <span class="var">l</span>',
+    formulaDesc: 'Also called a tetrahedron. One triangular base plus three slanted triangular faces.',
+    formulaKey: '<span class="kv">b</span> = base side<br><span class="kv">h_b</span> = base triangle height<br><span class="kv">s₁,s₂,s₃</span> = base sides<br><span class="kv">l</span> = slant height',
+    knownFields: [
+      { id: 'b',  label: 'Base length (b)',         varName: 'b',   hint: 'Side of the base triangle.' },
+      { id: 'hb', label: 'Base triangle height (h_b)', varName: 'h_b', hint: 'Height of the base triangle.' },
+      { id: 's1', label: 'Base side 1', varName: 's₁', hint: '' },
+      { id: 's2', label: 'Base side 2', varName: 's₂', hint: '' },
+      { id: 's3', label: 'Base side 3', varName: 's₃', hint: '' },
+      { id: 'l',  label: 'Slant height (l)', varName: 'l', hint: 'Slant height of each lateral triangular face.' }
+    ],
+    steps: [
+      {
+        title: 'Substitute Your Values',
+        type: 'expression',
+        displayFn: (k) => `SA = ½×<span class="val">${k.b}</span>×<span class="val">${k.hb}</span> + ½×(<span class="val">${k.s1}</span>+<span class="val">${k.s2}</span>+<span class="val">${k.s3}</span>)×<span class="val">${k.l}</span>`
+      },
+      {
+        title: 'Area of the Base Triangle (½bh)',
+        instruction: 'Calculate the area of the triangular base.',
+        type: 'compute',
+        rows: [
+          {
+            exprFn:   (k) => `0.5 × <span class="val">${k.b}</span> × <span class="val">${k.hb}</span> =`,
+            answerId: 'baseArea',
+            answerFn: (k) => round2(0.5 * k.b * k.hb),
+            hintFn:   (k) => `Multiply 0.5 × ${k.b} × ${k.hb}. Start: 0.5 × ${k.b} = ${round2(0.5*k.b)}, then × ${k.hb}.`
+          }
+        ]
+      },
+      {
+        title: 'Perimeter of the Base Triangle',
+        instruction: 'Add all three sides of the base triangle.',
+        type: 'compute',
+        rows: [{
+          exprFn:   (k) => `<span class="val">${k.s1}</span> + <span class="val">${k.s2}</span> + <span class="val">${k.s3}</span> =`,
+          answerId: 'perim',
+          answerFn: (k) => round2(k.s1 + k.s2 + k.s3),
+          hintFn:   (k) => `Add ${k.s1} + ${k.s2} + ${k.s3}.`
+        }]
+      },
+      {
+        title: 'Area of the 3 Lateral Faces (½ × P × l)',
+        instruction: 'Multiply: 0.5 × perimeter × slant height.',
+        type: 'compute',
+        rows: [{
+          exprFn:   (k, c) => `0.5 × <span class="val">${c.perim}</span> × <span class="val">${k.l}</span> =`,
+          answerId: 'lateral',
+          answerFn: (k, c) => round2(0.5 * c.perim * k.l),
+          hintFn:   (k, c) => `Multiply 0.5 × ${c.perim} × ${k.l}.`
+        }]
+      },
+      {
+        title: 'Add Base + Lateral Faces',
+        instruction: 'Add the base area and the lateral face area.',
+        type: 'compute',
+        rows: [{
+          exprFn:   (k, c) => `<span class="val">${c.baseArea}</span> + <span class="val">${c.lateral}</span> =`,
+          answerId: 'SA',
+          answerFn: (k, c) => round2(c.baseArea + c.lateral),
+          hintFn:   (k, c) => `Add ${c.baseArea} + ${c.lateral}.`
+        }],
+        isFinal: true
+      }
+    ]
+  }
+};
+
+/* ================================================================
+   STATE
+================================================================ */
+let currentShapeId = null;
+let pyrMode = 'square';
+let knownValues = {}, computedValues = {}, stepAttempts = {};
+
+/* ================================================================
+   SHAPE GRID
+================================================================ */
+const shapeList = [
+  { id: 'cube',        name: 'Cube',                icon: '🧊', formula: 'SA = 6s²' },
+  { id: 'rectprism',   name: 'Rectangular Prism',   icon: '📦', formula: 'SA = 2(lw+lh+wh)' },
+  { id: 'triprism',    name: 'Triangular Prism',     icon: '🔷', formula: 'SA = bh + Pl' },
+  { id: 'cylinder',    name: 'Cylinder',             icon: '🥫', formula: 'SA = 2πr² + 2πrh' },
+  { id: 'cone',        name: 'Cone',                 icon: '🍦', formula: 'SA = πr² + πrl' },
+  { id: 'sphere',      name: 'Sphere',               icon: '🔵', formula: 'SA = 4πr²' },
+  { id: 'pyramid',     name: 'Pyramid',              icon: '🔺', formula: 'Multiple types' }
+];
+
+function buildShapeGrid() {
+  const grid = document.getElementById('shapeGrid');
+  shapeList.forEach(s => {
+    const btn = document.createElement('button');
+    btn.className = 'shape-btn';
+    btn.dataset.shape = s.id;
+    btn.innerHTML = `<span class="shape-icon">${s.icon}</span><span class="shape-name">${s.name}</span><span class="shape-formula">${s.formula}</span>`;
+    btn.addEventListener('click', () => selectShape(s.id));
+    grid.appendChild(btn);
+  });
+}
+
+function selectShape(id) {
+  currentShapeId = id;
+  document.querySelectorAll('.shape-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`.shape-btn[data-shape="${id}"]`).classList.add('active');
+  document.getElementById('pyramidSub').classList.toggle('visible', id === 'pyramid');
+  resetWorkspace();
+  renderWorkspace();
+}
+
+document.querySelectorAll('#pyramidSub .sub-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#pyramidSub .sub-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    pyrMode = btn.dataset.pyr;
+    resetWorkspace();
+    renderWorkspace();
+  });
+});
+
+function getShape() {
+  if (!currentShapeId) return null;
+  if (currentShapeId === 'pyramid') return SHAPES[`pyramid-${pyrMode}`];
+  return SHAPES[currentShapeId];
+}
+
+/* ================================================================
+   RENDER WORKSPACE
+================================================================ */
+function renderWorkspace() {
+  const shape = getShape();
+  if (!shape) return;
+  document.getElementById('workspace').classList.add('visible');
+
+  // Face panel
+  document.getElementById('faceList').innerHTML = shape.faces.map(f =>
+    `<span class="face-chip">${f}</span>`
+  ).join('');
+
+  // Formula
+  document.getElementById('formulaText').innerHTML = shape.formulaText;
+  document.getElementById('formulaDesc').textContent = shape.formulaDesc;
+  document.getElementById('formulaKey').innerHTML = shape.formulaKey;
+
+  // Known fields
+  const grid = document.getElementById('knownGrid');
+  grid.innerHTML = '';
+  shape.knownFields.forEach(field => {
+    const div = document.createElement('div');
+    div.className = 'field-group';
+    div.innerHTML = `
+      <label class="field-label">${field.label} &nbsp;<span class="var-name">(${field.varName})</span></label>
+      ${field.hint ? `<div class="field-hint">${field.hint}</div>` : ''}
+      <input class="known-input" id="known_${field.id}" type="number" step="any" min="0" placeholder="Enter value..." oninput="checkBeginReady()" />
+    `;
+    grid.appendChild(div);
+  });
+
+  document.getElementById('stepsContainer').innerHTML = '';
+  document.getElementById('finalCard').classList.remove('visible');
+  document.getElementById('badgeKnown').textContent = '1';
+  document.getElementById('stepKnown').classList.remove('complete');
+  document.getElementById('beginBtn').disabled = true;
+  document.getElementById('beginBtn').style.display = '';
+  document.querySelectorAll('.known-input').forEach(el => el.disabled = false);
+}
+
+function checkBeginReady() {
+  const shape = getShape();
+  if (!shape) return;
+  const allFilled = shape.knownFields.every(f => {
+    const v = document.getElementById(`known_${f.id}`)?.value.trim();
+    return v !== '' && !isNaN(parseFloat(v));
+  });
+  document.getElementById('beginBtn').disabled = !allFilled;
+}
+
+/* ================================================================
+   BEGIN SOLVING
+================================================================ */
+function beginSteps() {
+  const shape = getShape();
+  knownValues = {}; computedValues = {}; stepAttempts = {};
+  shape.knownFields.forEach(f => {
+    knownValues[f.id] = parseFloat(document.getElementById(`known_${f.id}`).value);
+  });
+  document.getElementById('stepKnown').classList.add('complete');
+  document.getElementById('badgeKnown').textContent = '✓';
+  document.querySelectorAll('.known-input').forEach(el => el.disabled = true);
+  document.getElementById('beginBtn').style.display = 'none';
+  renderSteps(shape);
+}
+
+/* ================================================================
+   RENDER STEPS
+================================================================ */
+function renderSteps(shape) {
+  const container = document.getElementById('stepsContainer');
+  container.innerHTML = '';
+  shape.steps.forEach((step, idx) => {
+    const stepNum = idx + 2;
+    const card = document.createElement('div');
+    card.className = 'step-card' + (idx > 0 ? ' locked' : '');
+    card.id = `dynStep_${idx}`;
+    let bodyHTML = '';
+    if (step.type === 'expression') {
+      bodyHTML = `<div class="expr-display">${step.displayFn(knownValues)}</div>`;
+    } else if (step.type === 'compute') {
+      bodyHTML = step.rows.map((row, rIdx) => {
+        const rowId = `row_${idx}_${rIdx}`;
+        return `
+          <div class="compute-row" id="${rowId}_wrap">
+            <div class="compute-expr">${row.exprFn(knownValues, computedValues)}</div>
+            <input class="answer-box" id="${rowId}_input" type="number" step="any" placeholder="?"
+              onkeydown="if(event.key==='Enter') checkRow('${rowId}',${idx},${rIdx})" />
+            <button class="check-btn" id="${rowId}_btn" onclick="checkRow('${rowId}',${idx},${rIdx})">Check</button>
+          </div>`;
+      }).join('');
+      bodyHTML += `<div class="feedback-box" id="fb_${idx}"></div>`;
+    }
+    card.innerHTML = `
+      <div class="step-header">
+        <div class="step-badge" id="badge_${idx}">${stepNum}</div>
+        <div class="step-title">Step ${stepNum}: ${step.title}</div>
+        <div class="step-instruction">${step.instruction || ''}</div>
+      </div>
+      <div class="step-body">${bodyHTML}</div>`;
+    container.appendChild(card);
+  });
+  document.getElementById('dynStep_0').classList.remove('locked');
+  if (shape.steps[0].type === 'expression') {
+    setTimeout(() => unlockStep(1), 350);
+  }
+}
+
+function unlockStep(idx) {
+  const card = document.getElementById(`dynStep_${idx}`);
+  if (!card) return;
+  card.classList.remove('locked');
+  const shape = getShape();
+  if (shape && shape.steps[idx] && shape.steps[idx].type === 'expression') {
+    const exprEl = card.querySelector('.expr-display');
+    if (exprEl) exprEl.innerHTML = shape.steps[idx].displayFn(knownValues);
+    setTimeout(() => unlockStep(idx + 1), 400);
+  }
+}
+
+/* ================================================================
+   CHECK ROW
+================================================================ */
+function checkRow(rowId, stepIdx, rowIdx) {
+  const shape = getShape();
+  const step = shape.steps[stepIdx];
+  const row  = step.rows[rowIdx];
+  const input = document.getElementById(`${rowId}_input`);
+  const btn   = document.getElementById(`${rowId}_btn`);
+  const fb    = document.getElementById(`fb_${stepIdx}`);
+  const badge = document.getElementById(`badge_${stepIdx}`);
+  const card  = document.getElementById(`dynStep_${stepIdx}`);
+
+  if (!input || input.value.trim() === '') {
+    showFeedback(fb, 'hint', 'Please enter a number before checking.');
+    return;
+  }
+
+  const userAnswer = parseFloat(input.value);
+  const correct    = row.answerFn(knownValues, computedValues);
+  const attemptKey = rowId;
+  stepAttempts[attemptKey] = (stepAttempts[attemptKey] || 0) + 1;
+
+  if (isClose(userAnswer, correct)) {
+    input.classList.add('correct');
+    input.disabled = true;
+    btn.disabled = true;
+    computedValues[row.answerId] = round2(userAnswer);
+
+    const allDone = step.rows.every((r, ri) => {
+      const inp = document.getElementById(`row_${stepIdx}_${ri}_input`);
+      return inp && inp.disabled;
+    });
+
+    if (allDone) {
+      card.classList.add('complete');
+      badge.textContent = '✓';
+      if (step.isFinal) {
+        showFeedback(fb, 'success', `✓ Correct! You found the total surface area!`);
+        showFinalAnswer(computedValues[row.answerId]);
+      } else {
+        showFeedback(fb, 'success', `✓ Correct! Move on to the next step.`);
+        const nextIdx = stepIdx + 1;
+        const nextStep = shape.steps[nextIdx];
+        if (nextStep && nextStep.type === 'compute') {
+          nextStep.rows.forEach((nr, nri) => {
+            const exprEl = document.querySelector(`#row_${nextIdx}_${nri}_wrap .compute-expr`);
+            if (exprEl) exprEl.innerHTML = nr.exprFn(knownValues, computedValues);
+          });
+        }
+        setTimeout(() => unlockStep(nextIdx), 400);
+      }
+    } else {
+      showFeedback(fb, 'success', `✓ Correct! Complete the remaining calculations in this step.`);
+    }
+  } else {
+    input.classList.add('incorrect');
+    card.classList.add('error');
+    setTimeout(() => { input.classList.remove('incorrect'); card.classList.remove('error'); }, 600);
+    const attempts = stepAttempts[attemptKey];
+    let msg = '';
+    if (attempts === 1)      msg = `Not quite — double-check your math and try again.`;
+    else if (attempts === 2) msg = `Still not right. Hint: ${row.hintFn(knownValues, computedValues)}`;
+    else                     msg = `The correct answer is <strong>${correct}</strong>. ${row.hintFn(knownValues, computedValues)}`;
+    showFeedback(fb, 'error', msg);
+  }
+}
+
+function showFeedback(el, type, msg) {
+  el.className = `feedback-box visible ${type}`;
+  el.innerHTML = msg;
+}
+
+function showFinalAnswer(value) {
+  const card = document.getElementById('finalCard');
+  document.getElementById('finalValue').textContent = value + ' square units';
+  document.getElementById('finalCaption').textContent = `You worked through every face of this shape step by step — great work!`;
+  card.classList.add('visible');
+  card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function resetWorkspace() {
+  knownValues = {}; computedValues = {}; stepAttempts = {};
+  document.getElementById('stepsContainer').innerHTML = '';
+  document.getElementById('finalCard').classList.remove('visible');
+  document.getElementById('workspace').classList.remove('visible');
+}
+
+buildShapeGrid();
+</script>
+</body>
+</html>
