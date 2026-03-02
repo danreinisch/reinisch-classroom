@@ -9,7 +9,6 @@
 
   <!-- RC Theme Design System -->
   <link rel="stylesheet" href="/assets/css/rc-theme.css"/>
-  <link rel="stylesheet" href="/assets/css/unit-grid.css"/>
   <link rel="stylesheet" href="/web/teacher-shell.css"/>
   <link rel="stylesheet" href="/assets/css/class-clock.css"/>
   <link rel="stylesheet" href="/assets/css/class-mode.css"/>
@@ -18,21 +17,162 @@
   <script defer src="/assets/js/class-clock.js" type="module"></script>
   <script defer src="/web/class-mode.js"></script>
 
-  <script src="/assets/js/open-in-viewer.js"></script>
-  <script src="/assets/js/unit-grid.js" defer></script>
+  <style>
+    a.rc-card { text-decoration: none; color: inherit; display: block; }
 
+    .content-wrapper { padding-top: 1rem; }
+
+    .content-wrapper h1 {
+      font-size: 38px;
+      font-weight: 850;
+      margin: 0 0 12px 0;
+      letter-spacing: -0.02em;
+      color: var(--rc-ink);
+    }
+
+    .content-wrapper > p {
+      font-size: 1.05rem;
+      color: var(--rc-ink-dim);
+      margin: 0 0 1.5rem 0;
+      max-width: 72ch;
+    }
+
+    .book-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.25rem;
+      margin-top: 2rem;
+    }
+
+    .book-card {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 20px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+      backdrop-filter: blur(12px) saturate(130%);
+      -webkit-backdrop-filter: blur(12px) saturate(130%);
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      border-left: 3px solid transparent;
+      border-radius: 18px;
+      text-decoration: none;
+      color: inherit;
+      transition: all 0.25s ease;
+      box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      min-height: 90px;
+    }
+
+    .book-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(34, 197, 94, 0.35);
+      box-shadow:
+        0 16px 48px rgba(0, 0, 0, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    }
+
+    .book-card:nth-child(1) { border-left-color: rgba(59, 130, 246, 0.5); }
+    .book-card:nth-child(1):hover { border-left-color: rgba(59, 130, 246, 0.8); }
+    .book-card:nth-child(2) { border-left-color: rgba(168, 85, 247, 0.5); }
+    .book-card:nth-child(2):hover { border-left-color: rgba(168, 85, 247, 0.8); }
+    .book-card:nth-child(3) { border-left-color: rgba(34, 197, 94, 0.5); }
+    .book-card:nth-child(3):hover { border-left-color: rgba(34, 197, 94, 0.8); }
+    .book-card:nth-child(4) { border-left-color: rgba(239, 68, 68, 0.5); }
+    .book-card:nth-child(4):hover { border-left-color: rgba(239, 68, 68, 0.8); }
+    .book-card:nth-child(5) { border-left-color: rgba(234, 179, 8, 0.5); }
+    .book-card:nth-child(5):hover { border-left-color: rgba(234, 179, 8, 0.8); }
+
+    .book-icon {
+      font-size: 2.5rem;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+
+    .book-info { display: flex; flex-direction: column; gap: 4px; }
+
+    .book-title {
+      font-size: 1.1rem;
+      font-weight: 800;
+      margin: 0;
+    }
+
+    .book-subtitle {
+      font-size: 0.875rem;
+      color: var(--rc-ink-dim);
+      margin: 0;
+    }
+  </style>
 <body>
   <div class="tc-app" data-page-title="Algebra">
-
     <div class="tc-shell">
-
       <main class="tc-main">
-        <div class="wrap">
-          <header>
-            <h1>Algebra</h1>
-            <p class="unit-subtitle">Explore math presentations and activities</p>
-          </header>
-          <section class="grid" id="grid" aria-live="polite"></section>
+        <div class="content-wrapper">
+          <h1>Algebra</h1>
+          <p>Choose an algebra level to explore presentations and activities.</p>
+
+          <div class="book-grid">
+            <a class="book-card" href="/math-toolkit/algebra/pre-algebra/">
+              <div class="book-icon">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+              </div>
+              <div class="book-info">
+                <strong class="book-title">Pre-Algebra</strong>
+                <span class="book-subtitle">Foundation skills</span>
+              </div>
+            </a>
+            <a class="book-card" href="/math-toolkit/algebra/algebra-1/">
+              <div class="book-icon">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+              </div>
+              <div class="book-info">
+                <strong class="book-title">Algebra 1</strong>
+                <span class="book-subtitle">Core algebra</span>
+              </div>
+            </a>
+            <a class="book-card" href="/math-toolkit/algebra/algebra-2/">
+              <div class="book-icon">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+              </div>
+              <div class="book-info">
+                <strong class="book-title">Algebra 2</strong>
+                <span class="book-subtitle">Intermediate algebra</span>
+              </div>
+            </a>
+            <a class="book-card" href="/math-toolkit/algebra/algebra-3/">
+              <div class="book-icon">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+              </div>
+              <div class="book-info">
+                <strong class="book-title">Algebra 3</strong>
+                <span class="book-subtitle">Advanced topics</span>
+              </div>
+            </a>
+            <a class="book-card" href="/math-toolkit/algebra/college-algebra/">
+              <div class="book-icon">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+              </div>
+              <div class="book-info">
+                <strong class="book-title">College Algebra</strong>
+                <span class="book-subtitle">College Algebra</span>
+              </div>
+            </a>
+          </div>
         </div>
       </main>
     </div>
