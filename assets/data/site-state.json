@@ -1,6 +1,6 @@
 {
   "version": "v1",
-  "updated": "2026-03-03T01:33:31.761Z",
+  "updated": "2026-03-03T01:55:57.854Z",
   "categories": {
     "toolkit": {
       "slots": 8,
@@ -476,7 +476,7 @@
         "Logarithms",
         "Solving Exponential & Log Equations",
         "Arithmetic Sequences",
-        "",
+        "Geometric Sequences & Series",
         "",
         "",
         "",
@@ -528,7 +528,7 @@
         "/math-toolkit/presentations/algebra/algebra-2/presentation-05/",
         "/math-toolkit/presentations/algebra/algebra-2/presentation-06/",
         "/math-toolkit/presentations/algebra/algebra-2/presentation-07/",
-        "",
+        "/math-toolkit/presentations/algebra/algebra-2/presentation-08/",
         "",
         "",
         "",
