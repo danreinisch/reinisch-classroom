@@ -605,7 +605,7 @@
     const submissions = tabState.gradesData || [];
     const sub = submissions.find(s => s.instance_id === instance.id);
     let score = null;
-    if (sub) {
+    if (sub && sub.review_status === 'reviewed') {
       if (sub.score_total != null) score = sub.score_total;
       else if (sub.score_manual != null) score = sub.score_manual;
       else if (sub.score_auto != null) score = sub.score_auto;
