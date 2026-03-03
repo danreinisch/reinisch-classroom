@@ -30,13 +30,13 @@
     }
 
     /* Glow-on-click */
-    @keyframes rc-card-glow {
-      0%   { box-shadow: 0 4px 20px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.08), 0 0 0 0 var(--glow-color,rgba(99,102,241,0.6)); }
-      40%  { box-shadow: 0 4px 20px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.08), 0 0 22px 8px var(--glow-color,rgba(99,102,241,0.6)); }
-      100% { box-shadow: 0 4px 20px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.08), 0 0 0 0 var(--glow-color,rgba(99,102,241,0.6)); }
+    @keyframes card-glow {
+      0%   { box-shadow: 0 4px 20px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.08), 0 0 0 0 var(--glow-color,rgba(52,211,153,0.5)); }
+      40%  { box-shadow: 0 4px 20px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.08), 0 0 22px 8px var(--glow-color,rgba(52,211,153,0.5)); }
+      100% { box-shadow: 0 4px 20px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.08), 0 0 0 0 var(--glow-color,rgba(52,211,153,0.5)); }
     }
     .rc-card-glow-active {
-      animation: rc-card-glow 0.55s ease-out;
+      animation: card-glow 0.55s ease-out;
     }
 
     /* Link styling for rc-card */
@@ -86,9 +86,13 @@
       font-weight: 700;
     }
 
-    .rc-grid .rc-card small.rc-muted {
-      font-size: 0.8rem;
-      opacity: 0.6;
+    .rc-grid .rc-card .card-icon {
+      color: rgba(148,163,184,0.5);
+      transition: color .3s cubic-bezier(0.4,0,0.2,1), filter .3s cubic-bezier(0.4,0,0.2,1);
+    }
+    .rc-grid .rc-card:hover .card-icon {
+      color: var(--rc-brand, rgba(52,211,153,0.9));
+      filter: drop-shadow(0 0 6px rgba(52,211,153,0.35));
     }
   </style>
   
@@ -108,36 +112,36 @@
           
           <div class="rc-grid rc-grid-auto">
             <a class="rc-card" href="/viewer/?src=%2Fpresentations%2Flanguage-arts-toolkit%2Fpresentation-01%2F">
+              <div class="card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></div>
               <strong>Prefixes and Suffixes: Building Vocabulary</strong>
-              <small class="rc-muted">Open presentation</small>
             </a>
             <a class="rc-card" href="/viewer/?src=%2Fpresentations%2Flanguage-arts-toolkit%2Fpresentation-02%2F">
+              <div class="card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></div>
               <strong>Summarizing vs Retelling: Quality Over Quantity</strong>
-              <small class="rc-muted">Open presentation</small>
             </a>
             <a class="rc-card" href="/viewer/?src=%2Fpresentations%2Flanguage-arts-toolkit%2Fpresentation-03%2F">
+              <div class="card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></div>
               <strong>Topic Sentence Checker</strong>
-              <small class="rc-muted">Open presentation</small>
             </a>
             <a class="rc-card" href="/viewer/?src=%2Fpresentations%2Flanguage-arts-toolkit%2Fpresentation-04%2F">
+              <div class="card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></div>
               <strong>Transition Words and Phrases: Creating Flow</strong>
-              <small class="rc-muted">Open presentation</small>
             </a>
             <a class="rc-card" href="/viewer/?src=%2Fpresentations%2Flanguage-arts-toolkit%2Fpresentation-05%2F">
+              <div class="card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></div>
               <strong>Parts of Speech - Interactive Presentation</strong>
-              <small class="rc-muted">Open presentation</small>
             </a>
             <a class="rc-card" href="/viewer/?src=%2Fpresentations%2Flanguage-arts-toolkit%2Fpresentation-06%2F">
+              <div class="card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></div>
               <strong>Effective Written Response Structure</strong>
-              <small class="rc-muted">Open presentation</small>
             </a>
             <a class="rc-card" href="/viewer/?src=%2Fpresentations%2Flanguage-arts-toolkit%2Fpresentation-07%2F">
+              <div class="card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></div>
               <strong>Written Response Builder</strong>
-              <small class="rc-muted">Open presentation</small>
             </a>
             <a class="rc-card" href="/viewer/?src=%2Fpresentations%2Flanguage-arts-toolkit%2Fpresentation-08%2Findex.html&title=Essay+Builder">
+              <div class="card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></div>
               <strong>Essay Builder</strong>
-              <small class="rc-muted">Open presentation</small>
             </a>
           </div>
         </div>
@@ -147,9 +151,8 @@
 
   <script defer src="/web/public-shell.js"></script>
   <script>
-    document.querySelectorAll('.rc-grid .rc-card').forEach(function(card, i) {
-      const glowColors = ['rgba(99,102,241,0.65)','rgba(236,72,153,0.65)','rgba(34,197,94,0.65)','rgba(234,179,8,0.65)','rgba(59,130,246,0.65)','rgba(168,85,247,0.65)','rgba(20,184,166,0.65)','rgba(239,68,68,0.65)'];
-      card.style.setProperty('--glow-color', glowColors[i % glowColors.length]);
+    document.querySelectorAll('.rc-grid .rc-card').forEach(function(card) {
+      card.style.setProperty('--glow-color', 'rgba(52,211,153,0.5)');
       card.addEventListener('click', function() {
         card.classList.remove('rc-card-glow-active');
         void card.offsetWidth;
