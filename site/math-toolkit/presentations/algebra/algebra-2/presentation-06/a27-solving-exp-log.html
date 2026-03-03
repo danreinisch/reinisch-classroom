@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Solving Exponential &amp; Log Equations &mdash; Algebra Toolkit</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0d1117;--surface:#161d2e;--surface2:#1e2840;--surface3:#243050;
+  --border:#2a3a58;--border2:#34466e;--accent:#14b8a6;--accent-blue:#38bdf8;
+  --accent-orange:#fb923c;--accent-purple:#a78bfa;--text:#e2e8f0;
+  --text-muted:#8a9bbf;--text-dim:#5a6a8a;--success:#22c55e;--error:#f87171;
+  --formula-bg:#0a1628;--font-body:'Outfit',sans-serif;--font-mono:'JetBrains Mono',monospace;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-height:100vh;line-height:1.6;overflow-x:hidden}
+.breadcrumb{padding:16px 24px;font-size:.85rem;color:var(--text-dim);border-bottom:1px solid var(--border);background:var(--surface)}
+.breadcrumb span{color:var(--text-dim);margin:0 6px}
+.breadcrumb a{color:var(--text-muted);text-decoration:none;transition:color .2s}
+.breadcrumb a:hover{color:var(--accent)}
+.breadcrumb .current{color:var(--text);font-weight:500}
+.tier-badge{display:inline-flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:6px 16px;font-size:.8rem;color:var(--accent-purple);font-weight:500;margin:20px 24px 0}
+.container{max-width:820px;margin:0 auto;padding:20px 24px 60px}
+h1{font-size:1.8rem;font-weight:700;margin:16px 0 6px}
+.subtitle{color:var(--text-muted);font-size:.95rem;margin-bottom:28px}
+.process-banner{display:flex;gap:4px;margin-bottom:28px;border-radius:12px;overflow:hidden;border:1px solid var(--border);background:var(--surface)}
+.proc-step{flex:1;text-align:center;padding:12px 4px 10px;background:var(--surface);transition:all .4s ease;cursor:default;position:relative}
+.proc-step .p-icon{font-size:1.1rem;display:block;filter:grayscale(.6) opacity(.5);transition:all .4s}
+.proc-step .p-label{font-size:.58rem;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:.4px;transition:all .4s}
+.proc-step.active{background:var(--accent);box-shadow:0 0 24px rgba(20,184,166,.3)}
+.proc-step.active .p-icon{filter:none}
+.proc-step.active .p-label{color:rgba(255,255,255,.9)}
+.proc-step.done{background:var(--surface2)}
+.proc-step.done .p-icon{filter:grayscale(0) opacity(.7)}
+.proc-step.done .p-label{color:var(--success)}
+.proc-step.done::after{content:'\2713';position:absolute;top:3px;right:5px;font-size:.55rem;color:var(--success)}
+button{font-family:var(--font-body);font-weight:600;border:none;cursor:pointer;border-radius:10px;transition:all .25s ease}
+.btn-primary{background:var(--accent);color:#fff;padding:14px 28px;font-size:.95rem}
+.btn-primary:hover{background:#0fa396;transform:translateY(-1px)}
+.btn-sm{padding:10px 22px;font-size:.85rem}
+.btn-check{background:var(--accent);color:#fff;padding:10px 22px;font-size:.88rem}
+.btn-check:hover{background:#0fa396}
+.btn-copy{background:var(--surface3);color:var(--accent-blue);padding:12px 24px;font-size:.88rem;border:2px solid var(--accent-blue);display:inline-flex;align-items:center;gap:8px}
+.btn-copy:hover{background:rgba(56,189,248,.1);transform:translateY(-1px)}
+.btn-copy.copied{border-color:var(--success);color:var(--success);background:rgba(34,197,94,.1)}
+.input-section{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:28px;margin-bottom:24px}
+.input-section h2{font-size:1rem;font-weight:600;margin-bottom:4px}
+.input-section .hint{font-size:.82rem;color:var(--text-muted);margin-bottom:18px}
+.mode-tabs{display:flex;gap:6px;margin-bottom:22px;flex-wrap:wrap}
+.mode-tab{padding:9px 16px;border-radius:10px;font-size:.82rem;font-weight:600;background:var(--surface2);color:var(--text-muted);border:2px solid var(--border);cursor:pointer;transition:all .2s}
+.mode-tab:hover{border-color:var(--accent);color:var(--accent)}
+.mode-tab.selected{background:rgba(20,184,166,.1);border-color:var(--accent);color:var(--accent)}
+.mode-panel{display:none}
+.mode-panel.active{display:block;animation:fadeSlideIn .3s ease}
+.field-row{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:16px;justify-content:center}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-size:.72rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px}
+.field input{font-family:var(--font-mono);font-size:1.1rem;padding:12px 14px;border-radius:8px;border:2px solid var(--border);background:var(--formula-bg);color:var(--text);outline:none;transition:border-color .3s;text-align:center}
+.field input:focus{border-color:var(--accent)}
+.field input::placeholder{color:var(--text-dim);font-size:.85rem}
+.sym{font-family:var(--font-mono);font-weight:700;padding-bottom:8px;color:var(--text-muted);font-size:1.2rem}
+.log-visual{background:var(--formula-bg);border:1px solid var(--border);border-radius:12px;padding:20px;margin:14px 0;text-align:center}
+.log-formula{font-family:var(--font-mono);font-size:1.35rem;font-weight:700;margin:8px 0;line-height:1.8}
+.lf-base{color:var(--accent-blue)}
+.lf-arg{color:var(--accent-orange)}
+.lf-exp{color:var(--accent-purple)}
+.log-label-row{display:flex;justify-content:center;gap:16px;margin-top:10px;flex-wrap:wrap}
+.log-label{font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px;padding:5px 12px;border-radius:6px}
+.log-label.la{background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.3);color:var(--accent-blue)}
+.log-label.lb{background:rgba(251,146,60,.1);border:1px solid rgba(251,146,60,.3);color:var(--accent-orange)}
+.log-label.lc{background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.3);color:var(--accent-purple)}
+.strategy-box{background:var(--surface3);border:1px solid var(--accent);border-radius:10px;padding:16px 20px;margin:14px 0;font-size:.88rem;line-height:1.7}
+.strategy-box .strat-title{font-weight:700;color:var(--accent);margin-bottom:6px;font-size:.9rem}
+.start-row{display:flex;justify-content:center;margin-top:12px}
+.error-msg{background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);color:var(--error);border-radius:10px;padding:12px 18px;font-size:.88rem;margin-top:12px;display:none;text-align:center}
+.error-msg.show{display:block;animation:fadeSlideIn .3s ease}
+.examples-panel{margin-top:16px;border-radius:12px;border:1px solid var(--border);background:var(--surface2);overflow:hidden}
+.examples-toggle{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;cursor:pointer;font-size:.88rem;font-weight:500;color:var(--text-muted);transition:all .2s;user-select:none}
+.examples-toggle:hover{color:var(--text);background:var(--surface3)}
+.toggle-arrow{font-size:.7rem;transition:transform .3s ease}
+.toggle-arrow.open{transform:rotate(180deg)}
+.examples-body{max-height:0;overflow:hidden;transition:max-height .5s ease}
+.examples-body.open{max-height:2000px}
+.example-category{padding:4px 18px 14px;border-top:1px solid var(--border)}
+.category-label{font-size:.75rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;padding-top:12px}
+.examples{display:flex;flex-wrap:wrap;gap:8px}
+.example-chip{font-family:var(--font-mono);font-size:.78rem;padding:6px 14px;border-radius:20px;background:var(--surface);border:1px solid var(--border);color:var(--text-muted);cursor:pointer;transition:all .2s}
+.example-chip:hover{border-color:var(--accent);color:var(--accent);background:rgba(20,184,166,.08)}
+.workspace{display:none;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:28px;margin-bottom:24px}
+.workspace.visible{display:block;animation:fadeSlideIn .4s ease}
+@keyframes fadeSlideIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.problem-display{background:var(--formula-bg);border:1px solid var(--border);border-radius:10px;padding:20px 24px;margin-bottom:24px;text-align:center;min-height:64px;display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;font-family:var(--font-mono);font-size:1.3rem;font-weight:600;color:var(--text)}
+.step-card{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:22px;margin-bottom:16px;animation:fadeSlideIn .3s ease}
+.step-header{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.step-num{width:30px;height:30px;border-radius:50%;background:var(--accent);color:#fff;font-family:var(--font-mono);font-size:.8rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.step-num.done{background:var(--success)}
+.step-title{font-weight:600;font-size:.95rem}
+.step-body{padding-left:40px}
+.step-instruction{color:var(--text-muted);font-size:.88rem;margin-bottom:14px;line-height:1.7}
+.step-rule-box{background:var(--formula-bg);border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin-bottom:14px;font-size:.88rem;color:var(--text);line-height:1.7;text-align:center}
+.mono{font-family:var(--font-mono);font-weight:600}
+.answer-row{display:flex;gap:10px;align-items:center;margin-bottom:4px;flex-wrap:wrap}
+.answer-input{font-family:var(--font-mono);font-size:1.1rem;padding:10px 16px;border-radius:8px;border:2px solid var(--border);background:var(--formula-bg);color:var(--text);width:180px;outline:none;transition:border-color .3s;text-align:center}
+.answer-input:focus{border-color:var(--accent)}
+.answer-input.correct{border-color:var(--success);background:rgba(34,197,94,.06)}
+.answer-input.incorrect{border-color:var(--error)}
+.answer-label{font-family:var(--font-mono);font-size:.85rem;color:var(--text-dim)}
+.choice-row{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+.choice-btn{padding:10px 22px;border-radius:10px;font-size:.88rem;font-weight:600;background:var(--surface3);color:var(--text);border:2px solid var(--border);cursor:pointer;transition:all .2s;font-family:var(--font-mono)}
+.choice-btn:hover{border-color:var(--accent);color:var(--accent)}
+.choice-btn.correct{border-color:var(--success);background:rgba(34,197,94,.12);color:var(--success);pointer-events:none}
+.choice-btn.incorrect{border-color:var(--error);background:rgba(248,113,113,.08);color:var(--error);animation:shake .4s ease}
+.choice-btn.disabled{opacity:.35;pointer-events:none}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.step-feedback{margin-top:10px;font-size:.85rem;font-weight:500;display:none}
+.step-feedback.show{display:block;animation:fadeSlideIn .25s ease}
+.step-feedback.correct{color:var(--success)}
+.step-feedback.incorrect{color:var(--error)}
+.step-feedback.hint-text{color:var(--accent-orange)}
+.step-card.completed{opacity:.6}
+.step-card.completed .answer-input{pointer-events:none}
+.step-card.completed .btn-check{display:none}
+.step-card.completed .choice-btn{pointer-events:none}
+.result-section{display:none;text-align:center;padding:36px 28px;background:linear-gradient(135deg,rgba(20,184,166,.08),rgba(167,139,250,.06));border:1px solid var(--accent);border-radius:14px;margin-top:20px}
+.result-section.visible{display:block;animation:fadeSlideIn .5s ease}
+.result-icon{font-size:2.5rem;margin-bottom:10px}
+.result-title{font-size:1.3rem;font-weight:700;color:var(--success);margin-bottom:6px}
+.result-expression{font-family:var(--font-mono);font-size:1.15rem;color:var(--text);background:var(--formula-bg);display:inline-block;padding:12px 24px;border-radius:10px;border:1px solid var(--border);margin:12px 0;line-height:1.8}
+.result-detail{color:var(--text-muted);font-size:.88rem;margin-top:8px}
+.actions{display:flex;gap:10px;justify-content:center;margin-top:20px;flex-wrap:wrap}
+.check-badge{display:inline-block;padding:6px 14px;border-radius:8px;font-family:var(--font-mono);font-size:.82rem;font-weight:600;margin:4px}
+.check-badge.pass{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);color:var(--success)}
+@media(max-width:600px){
+  .container{padding:16px}.input-section,.workspace{padding:20px}h1{font-size:1.4rem}
+  .step-body{padding-left:0}.mode-tabs{gap:4px}.mode-tab{padding:7px 10px;font-size:.72rem}
+  .problem-display{font-size:1rem}.proc-step .p-label{font-size:.5rem}
+  .log-formula{font-size:1.05rem}.field input{width:70px!important}
+}
+</style>
+</head>
+<body>
+<nav class="breadcrumb">
+  <a href="https://reinischclassroom.com">Home</a><span>&rsaquo;</span>
+  <a href="#">Math Toolkit</a><span>&rsaquo;</span>
+  <a href="#">Algebra</a><span>&rsaquo;</span>
+  <a href="#">Algebra 2</a><span>&rsaquo;</span>
+  <span class="current">Solving Exponential &amp; Log Equations</span>
+</nav>
+<div class="container">
+  <div class="tier-badge">&#128213; Algebra 2 &middot; A27</div>
+  <h1>Solving Exponential &amp; Log Equations</h1>
+  <p class="subtitle">Enter an equation from your assignment &mdash; this tool walks you through isolating the variable using logarithms or exponentiation step by step.</p>
+
+  <div class="process-banner" id="procBanner">
+    <div class="proc-step" id="proc-identify"><span class="p-icon">&#128269;</span><span class="p-label">Identify</span></div>
+    <div class="proc-step" id="proc-setup"><span class="p-icon">&#128208;</span><span class="p-label">Set Up</span></div>
+    <div class="proc-step" id="proc-compute"><span class="p-icon">&#128290;</span><span class="p-label">Solve</span></div>
+    <div class="proc-step" id="proc-answer"><span class="p-icon">&#10024;</span><span class="p-label">Check</span></div>
+  </div>
+
+  <div class="input-section" id="inputSection">
+    <h2>&#9998; What Type of Equation?</h2>
+    <p class="hint">Select the equation type, then enter your values.</p>
+
+    <div class="mode-tabs">
+      <div class="mode-tab" onclick="setMode('expSimple')" id="tab-expSimple">b&#x02E3; = c</div>
+      <div class="mode-tab" onclick="setMode('expCoeff')" id="tab-expCoeff">a&middot;b&#x02E3; = c</div>
+      <div class="mode-tab" onclick="setMode('logSimple')" id="tab-logSimple">log&#x2082;(x) = c</div>
+      <div class="mode-tab" onclick="setMode('logExpr')" id="tab-logExpr">log(ax+b) = c</div>
+      <div class="mode-tab" onclick="setMode('logBoth')" id="tab-logBoth">log = log</div>
+      <div class="mode-tab" onclick="setMode('sameBase')" id="tab-sameBase">b&#x1DA0;&#x207D;&#x02E3;&#x207E; = b&#x1D4D;&#x207D;&#x02E3;&#x207E;</div>
+    </div>
+
+    <!-- Mode 1: b^x = c -->
+    <div class="mode-panel" id="panel-expSimple">
+      <p class="hint">Solve for x when the variable is in the exponent.</p>
+      <div class="field-row">
+        <div class="field"><label>base (b)</label><input type="text" id="esB" placeholder="b" style="width:80px"></div>
+        <span class="sym"><sup style="font-size:.9rem">x</sup> =</span>
+        <div class="field"><label>equals (c)</label><input type="text" id="esC" placeholder="c" style="width:100px"></div>
+      </div>
+    </div>
+
+    <!-- Mode 2: a * b^x = c -->
+    <div class="mode-panel" id="panel-expCoeff">
+      <p class="hint">Isolate the exponential first, then take the log.</p>
+      <div class="field-row">
+        <div class="field"><label>a (coeff)</label><input type="text" id="ecA" placeholder="a" style="width:80px"></div>
+        <span class="sym">&middot;</span>
+        <div class="field"><label>base (b)</label><input type="text" id="ecB" placeholder="b" style="width:80px"></div>
+        <span class="sym"><sup style="font-size:.9rem">x</sup> =</span>
+        <div class="field"><label>equals (c)</label><input type="text" id="ecC" placeholder="c" style="width:100px"></div>
+      </div>
+    </div>
+
+    <!-- Mode 3: log_b(x) = c -->
+    <div class="mode-panel" id="panel-logSimple">
+      <p class="hint">Solve for x by converting to exponential form.</p>
+      <div class="field-row">
+        <span class="sym">log</span>
+        <div class="field"><label>base (b)</label><input type="text" id="lsB" placeholder="b" style="width:70px"></div>
+        <span class="sym">(x) =</span>
+        <div class="field"><label>equals (c)</label><input type="text" id="lsC" placeholder="c" style="width:80px"></div>
+      </div>
+    </div>
+
+    <!-- Mode 4: log_b(ax + d) = c -->
+    <div class="mode-panel" id="panel-logExpr">
+      <p class="hint">Convert to exponential form, then solve the linear equation.</p>
+      <div class="field-row">
+        <span class="sym">log</span>
+        <div class="field"><label>base (b)</label><input type="text" id="leB" placeholder="b" style="width:70px"></div>
+        <span class="sym">(</span>
+        <div class="field"><label>a</label><input type="text" id="leA" placeholder="a" style="width:60px"></div>
+        <span class="sym">x +</span>
+        <div class="field"><label>d</label><input type="text" id="leD" placeholder="d" style="width:60px"></div>
+        <span class="sym">) =</span>
+        <div class="field"><label>c</label><input type="text" id="leC" placeholder="c" style="width:70px"></div>
+      </div>
+    </div>
+
+    <!-- Mode 5: log_b(A) = log_b(B) -->
+    <div class="mode-panel" id="panel-logBoth">
+      <p class="hint">When both sides have the same log base, set arguments equal.</p>
+      <div class="field-row">
+        <span class="sym">log</span>
+        <div class="field"><label>base</label><input type="text" id="lbBase" placeholder="b" style="width:60px"></div>
+        <span class="sym">(</span>
+        <div class="field"><label>a</label><input type="text" id="lbA1" placeholder="a" style="width:55px"></div>
+        <span class="sym">x +</span>
+        <div class="field"><label>d</label><input type="text" id="lbD1" placeholder="d" style="width:55px"></div>
+        <span class="sym">) = log(</span>
+        <div class="field"><label>e</label><input type="text" id="lbE" placeholder="e" style="width:60px"></div>
+        <span class="sym">)</span>
+      </div>
+    </div>
+
+    <!-- Mode 6: Same base b^f(x) = b^g(x) -->
+    <div class="mode-panel" id="panel-sameBase">
+      <p class="hint">When bases match, set exponents equal. Enter: b^(ax+d) = b^(c).</p>
+      <div class="field-row">
+        <div class="field"><label>base (b)</label><input type="text" id="sbB" placeholder="b" style="width:65px"></div>
+        <span class="sym"><sup style="font-size:.8rem">(</sup></span>
+        <div class="field"><label>a</label><input type="text" id="sbA" placeholder="a" style="width:55px"></div>
+        <span class="sym" style="font-size:.9rem">x+</span>
+        <div class="field"><label>d</label><input type="text" id="sbD" placeholder="d" style="width:55px"></div>
+        <span class="sym"><sup style="font-size:.8rem">)</sup> =</span>
+        <div class="field"><label>same base</label><input type="text" id="sbB2" placeholder="b" style="width:65px" disabled></div>
+        <span class="sym"><sup style="font-size:.8rem">(</sup></span>
+        <div class="field"><label>c</label><input type="text" id="sbC" placeholder="c" style="width:55px"></div>
+        <span class="sym"><sup style="font-size:.8rem">)</sup></span>
+      </div>
+    </div>
+
+    <div class="start-row" id="startRow" style="display:none">
+      <button class="btn-primary" onclick="startSolving()">Let's Solve It &rarr;</button>
+    </div>
+    <div class="error-msg" id="errorMsg"></div>
+
+    <div class="examples-panel">
+      <div class="examples-toggle" onclick="toggleExamples()">
+        <span>&#128203; Try a Practice Problem</span>
+        <span class="toggle-arrow" id="toggleArrow">&#9660;</span>
+      </div>
+      <div class="examples-body" id="examplesBody">
+        <div class="example-category"><div class="category-label">&#x1F7E2; Solve b&#x02E3; = c</div><div class="examples">
+          <span class="example-chip" onclick="loadES(2,16)">2&#x02E3; = 16</span>
+          <span class="example-chip" onclick="loadES(3,81)">3&#x02E3; = 81</span>
+          <span class="example-chip" onclick="loadES(5,200)">5&#x02E3; = 200</span>
+          <span class="example-chip" onclick="loadES(10,500)">10&#x02E3; = 500</span>
+          <span class="example-chip" onclick="loadES(2,0.25)">2&#x02E3; = 0.25</span>
+        </div></div>
+        <div class="example-category"><div class="category-label">&#x1F7E1; Solve a&middot;b&#x02E3; = c</div><div class="examples">
+          <span class="example-chip" onclick="loadEC(3,2,48)">3&middot;2&#x02E3; = 48</span>
+          <span class="example-chip" onclick="loadEC(5,10,5000)">5&middot;10&#x02E3; = 5000</span>
+          <span class="example-chip" onclick="loadEC(2,3,162)">2&middot;3&#x02E3; = 162</span>
+          <span class="example-chip" onclick="loadEC(100,1.05,150)">100&middot;1.05&#x02E3; = 150</span>
+          <span class="example-chip" onclick="loadEC(4,5,500)">4&middot;5&#x02E3; = 500</span>
+        </div></div>
+        <div class="example-category"><div class="category-label">&#x1F7E0; Solve log&#x2082;(x) = c</div><div class="examples">
+          <span class="example-chip" onclick="loadLS(2,5)">log&#x2082;(x) = 5</span>
+          <span class="example-chip" onclick="loadLS(3,4)">log&#x2083;(x) = 4</span>
+          <span class="example-chip" onclick="loadLS(10,3)">log(x) = 3</span>
+          <span class="example-chip" onclick="loadLS(5,2)">log&#x2085;(x) = 2</span>
+          <span class="example-chip" onclick="loadLS(2,-3)">log&#x2082;(x) = -3</span>
+        </div></div>
+        <div class="example-category"><div class="category-label">&#x1F535; Solve log(ax+d) = c</div><div class="examples">
+          <span class="example-chip" onclick="loadLE(10,2,3,2)">log(2x+3) = 2</span>
+          <span class="example-chip" onclick="loadLE(2,3,1,5)">log&#x2082;(3x+1) = 5</span>
+          <span class="example-chip" onclick="loadLE(10,5,-2,3)">log(5x-2) = 3</span>
+          <span class="example-chip" onclick="loadLE(3,1,4,3)">log&#x2083;(x+4) = 3</span>
+        </div></div>
+        <div class="example-category"><div class="category-label">&#x1F7E3; Solve log = log (arguments equal)</div><div class="examples">
+          <span class="example-chip" onclick="loadLB(10,3,5,20)">log(3x+5) = log(20)</span>
+          <span class="example-chip" onclick="loadLB(2,2,-1,7)">log&#x2082;(2x-1) = log&#x2082;(7)</span>
+          <span class="example-chip" onclick="loadLB(10,5,0,35)">log(5x) = log(35)</span>
+          <span class="example-chip" onclick="loadLB(10,4,3,27)">log(4x+3) = log(27)</span>
+        </div></div>
+        <div class="example-category"><div class="category-label">&#x1F534; Same Base (set exponents equal)</div><div class="examples">
+          <span class="example-chip" onclick="loadSB(2,3,1,7)">2&#xB3;&#x02E3;&#x207A;&#xB9; = 2&#x2077;</span>
+          <span class="example-chip" onclick="loadSB(5,2,-1,3)">5&#xB2;&#x02E3;&#x207B;&#xB9; = 5&#xB3;</span>
+          <span class="example-chip" onclick="loadSB(3,1,2,5)">3&#x02E3;&#x207A;&#xB2; = 3&#x2075;</span>
+          <span class="example-chip" onclick="loadSB(10,4,0,8)">10&#x2074;&#x02E3; = 10&#x2078;</span>
+        </div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="workspace" id="workspace">
+    <div class="problem-display" id="problemDisplay"></div>
+    <div id="stepsContainer"></div>
+    <div class="result-section" id="resultSection">
+      <div class="result-icon">&#127881;</div>
+      <div class="result-title">Equation Solved!</div>
+      <div class="result-expression" id="resultExpr"></div>
+      <div class="result-detail" id="resultDetail"></div>
+      <div class="actions">
+        <button class="btn-copy" id="copyBtn" onclick="copyWork()">&#128203; Copy My Work</button>
+        <button class="btn-primary" onclick="resetAll()">Solve Another &rarr;</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function fN(n){if(n==null)return"?";if(Number.isInteger(n))return""+n;return parseFloat(n.toFixed(4)).toString()}
+function escH(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/'/g,"&#39;")}
+function rnd(n,d){return parseFloat(n.toFixed(d))}
+function subB(b){var s={"0":"\u2080","1":"\u2081","2":"\u2082","3":"\u2083","4":"\u2084","5":"\u2085","6":"\u2086","7":"\u2087","8":"\u2088","9":"\u2089",".":"."};return String(b).split("").map(function(c){return s[c]||c}).join("")}
+function supN(n){var s={"0":"\u2070","1":"\u00B9","2":"\u00B2","3":"\u00B3","4":"\u2074","5":"\u2075","6":"\u2076","7":"\u2077","8":"\u2078","9":"\u2079","-":"\u207B","+":"\u207A"};return String(n).split("").map(function(c){return s[c]||c}).join("")}
+function fmtSign(n){return n>=0?"+"+fN(n):fN(n)}
+
+var mode=null,S={},stepsData=[],currentStep=0;
+
+function setMode(m){
+  mode=m;
+  document.querySelectorAll(".mode-tab").forEach(function(t){t.classList.remove("selected")});
+  document.getElementById("tab-"+m).classList.add("selected");
+  document.querySelectorAll(".mode-panel").forEach(function(p){p.classList.remove("active")});
+  document.getElementById("panel-"+m).classList.add("active");
+  document.getElementById("startRow").style.display="flex";
+  if(m==="sameBase"){document.getElementById("sbB2").value="";document.getElementById("sbB2").placeholder="(same)"}
+}
+
+function loadES(b,c){setMode("expSimple");document.getElementById("esB").value=b;document.getElementById("esC").value=c}
+function loadEC(a,b,c){setMode("expCoeff");document.getElementById("ecA").value=a;document.getElementById("ecB").value=b;document.getElementById("ecC").value=c}
+function loadLS(b,c){setMode("logSimple");document.getElementById("lsB").value=b;document.getElementById("lsC").value=c}
+function loadLE(b,a,d,c){setMode("logExpr");document.getElementById("leB").value=b;document.getElementById("leA").value=a;document.getElementById("leD").value=d;document.getElementById("leC").value=c}
+function loadLB(base,a,d,e){setMode("logBoth");document.getElementById("lbBase").value=base;document.getElementById("lbA1").value=a;document.getElementById("lbD1").value=d;document.getElementById("lbE").value=e}
+function loadSB(b,a,d,c){setMode("sameBase");document.getElementById("sbB").value=b;document.getElementById("sbA").value=a;document.getElementById("sbD").value=d;document.getElementById("sbC").value=c}
+
+function toggleExamples(){document.getElementById("examplesBody").classList.toggle("open");document.getElementById("toggleArrow").classList.toggle("open")}
+function showError(msg){var el=document.getElementById("errorMsg");el.textContent=msg;el.classList.add("show");setTimeout(function(){el.classList.remove("show")},4000)}
+
+function startSolving(){
+  if(!mode){showError("Select an equation type first.");return}
+  stepsData=[];currentStep=0;S={mode:mode};
+  var fn={expSimple:startExpSimple,expCoeff:startExpCoeff,logSimple:startLogSimple,logExpr:startLogExpr,logBoth:startLogBoth,sameBase:startSameBase};
+  fn[mode]();
+}
+function launchWorkspace(){
+  document.getElementById("inputSection").style.display="none";
+  document.getElementById("workspace").classList.add("visible");
+  document.getElementById("resultSection").classList.remove("visible");
+  document.getElementById("stepsContainer").innerHTML="";
+  document.querySelectorAll(".proc-step").forEach(function(s){s.classList.remove("active","done")});
+  var cb=document.getElementById("copyBtn");cb.classList.remove("copied");cb.innerHTML="&#128203; Copy My Work";
+  showStep(0);
+}
+
+// ========== 1. b^x = c ==========
+function startExpSimple(){
+  var b=parseFloat(document.getElementById("esB").value);
+  var c=parseFloat(document.getElementById("esC").value);
+  if(isNaN(b)||isNaN(c)||b<=0||b===1||c<=0){showError("Enter valid base (>0, \u22601) and positive c.");return}
+  var logC=rnd(Math.log(c),6);var logB=rnd(Math.log(b),6);
+  var ans=rnd(logC/logB,4);
+  var isInt=Math.abs(ans-Math.round(ans))<0.0001;if(isInt)ans=Math.round(ans);
+  Object.assign(S,{b:b,c:c,ans:ans,isInt:isInt});
+
+  document.getElementById("problemDisplay").innerHTML='<span class="lf-base">'+fN(b)+'</span><sup class="lf-exp">x</sup> = <span class="lf-arg">'+fN(c)+'</span>';
+
+  stepsData.push({title:"Identify the Equation Type",proc:"identify",type:"info",instruction:'<div class="strategy-box"><div class="strat-title">&#127919; Strategy: Take the log of both sides</div>Variable is in the exponent \u2192 use logarithms to bring it down.<br>b<sup>x</sup> = c &nbsp;\u2192&nbsp; x = log(c) / log(b)</div>',work:"Strategy: Take log of both sides to bring x out of the exponent"});
+
+  stepsData.push({title:"Take log of Both Sides",proc:"setup",type:"info",instruction:'log(<span class="lf-base">'+fN(b)+'</span><sup>x</sup>) = log(<span class="lf-arg">'+fN(c)+'</span>)<br><br>By the <strong>Power Rule</strong>, the exponent comes down:<br><div class="step-rule-box">x &middot; log('+fN(b)+') = log('+fN(c)+')</div>',work:"log("+fN(b)+"^x) = log("+fN(c)+")  \u2192  x*log("+fN(b)+") = log("+fN(c)+")"});
+
+  stepsData.push({title:"Divide Both Sides by log("+fN(b)+")",proc:"compute",type:"info",instruction:'<div class="step-rule-box">x = <span style="display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle"><span style="border-bottom:2px solid var(--text-muted);padding:2px 8px">log('+fN(c)+')</span><span style="padding:2px 8px">log('+fN(b)+')</span></span></div>',work:"x = log("+fN(c)+") / log("+fN(b)+")"});
+
+  if(isInt){
+    stepsData.push({title:"Compute",proc:"compute",type:"numeric",instruction:fN(b)+" to what power gives "+fN(c)+"?",question:"x =",answer:ans,work:fN(b)+"^"+fN(ans)+" = "+fN(c)});
+  }else{
+    stepsData.push({title:"Calculate log("+fN(c)+")",proc:"compute",type:"numeric",instruction:"Use your calculator:",question:"log("+fN(c)+") =",answer:rnd(Math.log10(c),4),work:"log("+fN(c)+") = "+fN(rnd(Math.log10(c),4))});
+    stepsData.push({title:"Calculate log("+fN(b)+")",proc:"compute",type:"numeric",instruction:"Use your calculator:",question:"log("+fN(b)+") =",answer:rnd(Math.log10(b),4),work:"log("+fN(b)+") = "+fN(rnd(Math.log10(b),4))});
+    stepsData.push({title:"Divide",proc:"compute",type:"numeric",instruction:fN(rnd(Math.log10(c),4))+" \u00F7 "+fN(rnd(Math.log10(b),4)),question:"x =",answer:ans,work:"x = "+fN(rnd(Math.log10(c),4))+" / "+fN(rnd(Math.log10(b),4))+" = "+fN(ans)});
+  }
+
+  stepsData.push({title:"Verify",proc:"answer",type:"info",instruction:'<span class="check-badge pass">\u2713 Check: '+fN(b)+'<sup>'+fN(ans)+'</sup> = '+fN(rnd(Math.pow(b,ans),4))+'</span>',work:"Check: "+fN(b)+"^"+fN(ans)+" = "+fN(rnd(Math.pow(b,ans),4))});
+  stepsData.push({title:"Solution",proc:"answer",type:"info",instruction:'<div class="log-visual"><div class="log-formula" style="color:var(--success);font-size:1.6rem">x = '+fN(ans)+'</div></div>',work:"ANSWER: x = "+fN(ans)});
+  launchWorkspace();
+}
+
+// ========== 2. a * b^x = c ==========
+function startExpCoeff(){
+  var a=parseFloat(document.getElementById("ecA").value);
+  var b=parseFloat(document.getElementById("ecB").value);
+  var c=parseFloat(document.getElementById("ecC").value);
+  if(isNaN(a)||isNaN(b)||isNaN(c)||a===0||b<=0||b===1){showError("Enter valid values.");return}
+  var isolated=rnd(c/a,6);
+  var ans=rnd(Math.log(isolated)/Math.log(b),4);
+  var isInt=Math.abs(ans-Math.round(ans))<0.0001;if(isInt)ans=Math.round(ans);
+  Object.assign(S,{a:a,b:b,c:c,isolated:isolated,ans:ans});
+
+  document.getElementById("problemDisplay").innerHTML=fN(a)+' &middot; <span class="lf-base">'+fN(b)+'</span><sup class="lf-exp">x</sup> = <span class="lf-arg">'+fN(c)+'</span>';
+
+  stepsData.push({title:"Strategy: Isolate, Then Log",proc:"identify",type:"info",instruction:'<div class="strategy-box"><div class="strat-title">&#127919; Two-Step Strategy</div>1. Divide both sides by <strong>'+fN(a)+'</strong> to isolate the exponential<br>2. Take log of both sides to solve for x</div>',work:"Strategy: First divide by "+fN(a)+" to isolate b^x, then take log"});
+
+  stepsData.push({title:"Divide by "+fN(a),proc:"setup",type:"numeric",instruction:'<span class="mono">'+fN(a)+' &middot; '+fN(b)+'<sup>x</sup> = '+fN(c)+'</span><br><br>Divide both sides by <strong>'+fN(a)+'</strong>:<br><span class="mono">'+fN(b)+'<sup>x</sup> = '+fN(c)+' / '+fN(a)+'</span>',question:fN(c)+" \u00F7 "+fN(a)+" =",answer:rnd(isolated,4),work:fN(c)+" / "+fN(a)+" = "+fN(rnd(isolated,4))});
+
+  stepsData.push({title:"Now Solve "+fN(b)+"&#x02E3; = "+fN(rnd(isolated,4)),proc:"setup",type:"info",instruction:'Take log of both sides:<div class="step-rule-box">x &middot; log('+fN(b)+') = log('+fN(rnd(isolated,4))+')<br>x = log('+fN(rnd(isolated,4))+') / log('+fN(b)+')</div>',work:"x = log("+fN(rnd(isolated,4))+") / log("+fN(b)+")"});
+
+  stepsData.push({title:"Calculate x",proc:"compute",type:"numeric",instruction:"Compute log("+fN(rnd(isolated,4))+") / log("+fN(b)+"):",question:"x =",answer:ans,work:"x = "+fN(ans)});
+
+  stepsData.push({title:"Verify",proc:"answer",type:"info",instruction:'<span class="check-badge pass">\u2713 Check: '+fN(a)+' \u00D7 '+fN(b)+'<sup>'+fN(ans)+'</sup> = '+fN(rnd(a*Math.pow(b,ans),2))+'</span>',work:"Check: "+fN(a)+"*"+fN(b)+"^"+fN(ans)+" = "+fN(rnd(a*Math.pow(b,ans),2))});
+  stepsData.push({title:"Solution",proc:"answer",type:"info",instruction:'<div class="log-visual"><div class="log-formula" style="color:var(--success);font-size:1.6rem">x = '+fN(ans)+'</div></div>',work:"ANSWER: x = "+fN(ans)});
+  launchWorkspace();
+}
+
+// ========== 3. log_b(x) = c ==========
+function startLogSimple(){
+  var b=parseFloat(document.getElementById("lsB").value);
+  var c=parseFloat(document.getElementById("lsC").value);
+  if(isNaN(b)||isNaN(c)||b<=0||b===1){showError("Enter valid base and value.");return}
+  var ans=rnd(Math.pow(b,c),4);
+  Object.assign(S,{b:b,c:c,ans:ans});
+
+  document.getElementById("problemDisplay").innerHTML='log<sub class="lf-base">'+fN(b)+'</sub>(x) = <span class="lf-exp">'+fN(c)+'</span>';
+
+  stepsData.push({title:"Strategy: Convert to Exponential",proc:"identify",type:"info",instruction:'<div class="strategy-box"><div class="strat-title">&#127919; Strategy: Rewrite as exponential</div>log<sub>b</sub>(x) = c &nbsp;\u2192&nbsp; b<sup>c</sup> = x<br><em>"The log IS the exponent"</em></div>',work:"Strategy: Convert log_"+fN(b)+"(x) = "+fN(c)+" to exponential form: "+fN(b)+"^"+fN(c)+" = x"});
+
+  stepsData.push({title:"Convert to Exponential Form",proc:"setup",type:"choice",instruction:'log<sub>'+fN(b)+'</sub>(x) = '+fN(c)+' means:',question:"Exponential form:",answer:fN(b)+supN(fN(c))+" = x",options:shuffle([fN(b)+supN(fN(c))+" = x","x"+supN(fN(c))+" = "+fN(b),fN(c)+supN(fN(b))+" = x"]),work:fN(b)+"^"+fN(c)+" = x"});
+
+  stepsData.push({title:"Calculate "+fN(b)+supN(fN(c)),proc:"compute",type:"numeric",instruction:'<span class="mono" style="color:var(--accent-blue)">'+fN(b)+'</span><sup style="color:var(--accent-purple)">'+fN(c)+'</sup> = ?',question:fN(b)+"^"+fN(c)+" =",answer:ans,work:fN(b)+"^"+fN(c)+" = "+fN(ans)});
+
+  stepsData.push({title:"Verify",proc:"answer",type:"info",instruction:'<span class="check-badge pass">\u2713 Check: log<sub>'+fN(b)+'</sub>('+fN(ans)+') = '+fN(c)+'</span>',work:"Check: log_"+fN(b)+"("+fN(ans)+") = "+fN(c)});
+  stepsData.push({title:"Solution",proc:"answer",type:"info",instruction:'<div class="log-visual"><div class="log-formula" style="color:var(--success);font-size:1.6rem">x = '+fN(ans)+'</div></div>',work:"ANSWER: x = "+fN(ans)});
+  launchWorkspace();
+}
+
+// ========== 4. log_b(ax + d) = c ==========
+function startLogExpr(){
+  var b=parseFloat(document.getElementById("leB").value);
+  var a=parseFloat(document.getElementById("leA").value);
+  var d=parseFloat(document.getElementById("leD").value);
+  var c=parseFloat(document.getElementById("leC").value);
+  if([b,a,d,c].some(isNaN)||b<=0||b===1||a===0){showError("Enter valid values (a\u22600).");return}
+  var bc=rnd(Math.pow(b,c),6);
+  var ans=rnd((bc-d)/a,4);
+  Object.assign(S,{b:b,a:a,d:d,c:c,bc:bc,ans:ans});
+  var expr=fN(a)+"x"+(d>=0?"+"+fN(d):fN(d));
+
+  document.getElementById("problemDisplay").innerHTML='log<sub class="lf-base">'+fN(b)+'</sub>(<span class="lf-arg">'+escH(expr)+'</span>) = <span class="lf-exp">'+fN(c)+'</span>';
+
+  stepsData.push({title:"Strategy: Convert, Then Solve Linear",proc:"identify",type:"info",instruction:'<div class="strategy-box"><div class="strat-title">&#127919; Two-Step Strategy</div>1. Convert log to exponential form to eliminate the log<br>2. Solve the resulting linear equation for x</div>',work:"Strategy: Convert to exponential form, then solve linear equation"});
+
+  stepsData.push({title:"Convert to Exponential Form",proc:"setup",type:"info",instruction:'log<sub>'+fN(b)+'</sub>('+escH(expr)+') = '+fN(c)+' means:<div class="step-rule-box" style="margin-top:10px">'+fN(b)+'<sup>'+fN(c)+'</sup> = '+escH(expr)+'</div>',work:fN(b)+"^"+fN(c)+" = "+expr});
+
+  stepsData.push({title:"Calculate "+fN(b)+supN(fN(c)),proc:"compute",type:"numeric",instruction:fN(b)+"<sup>"+fN(c)+"</sup> = ?",question:fN(b)+"^"+fN(c)+" =",answer:rnd(bc,4),work:fN(b)+"^"+fN(c)+" = "+fN(rnd(bc,4))});
+
+  stepsData.push({title:"Solve for x",proc:"compute",type:"info",instruction:'<div class="step-rule-box">'+fN(rnd(bc,4))+' = '+escH(expr)+'<br>'+fN(rnd(bc,4))+(d>=0?' \u2212 '+fN(d):' + '+fN(Math.abs(d)))+' = '+fN(a)+'x<br>'+fN(rnd(bc-d,4))+' = '+fN(a)+'x<br>x = '+fN(rnd(bc-d,4))+' / '+fN(a)+' = <strong style="color:var(--success)">'+fN(ans)+'</strong></div>',work:fN(rnd(bc,4))+" = "+expr+" \u2192 "+fN(rnd(bc-d,4))+" = "+fN(a)+"x \u2192 x = "+fN(ans)});
+
+  // Verify
+  var check=a*ans+d;
+  stepsData.push({title:"Verify",proc:"answer",type:"info",instruction:'<span class="check-badge pass">\u2713 Check: '+fN(a)+'('+fN(ans)+')'+fmtSign(d)+' = '+fN(rnd(check,4))+'</span><br><span class="check-badge pass">\u2713 log<sub>'+fN(b)+'</sub>('+fN(rnd(check,4))+') = '+fN(c)+'</span>'+(check<=0?'<br><span style="color:var(--error);font-size:.85rem">\u26A0 Argument is non-positive \u2014 check for extraneous solution!</span>':''),work:"Check: "+fN(a)+"("+fN(ans)+")"+fmtSign(d)+" = "+fN(rnd(check,4))});
+  stepsData.push({title:"Solution",proc:"answer",type:"info",instruction:'<div class="log-visual"><div class="log-formula" style="color:var(--success);font-size:1.6rem">x = '+fN(ans)+'</div></div>',work:"ANSWER: x = "+fN(ans)});
+  launchWorkspace();
+}
+
+// ========== 5. log_b(ax+d) = log_b(e) ==========
+function startLogBoth(){
+  var base=parseFloat(document.getElementById("lbBase").value);
+  var a1=parseFloat(document.getElementById("lbA1").value);
+  var d1=parseFloat(document.getElementById("lbD1").value);
+  var e=parseFloat(document.getElementById("lbE").value);
+  if([base,a1,d1,e].some(isNaN)||base<=0||base===1||a1===0){showError("Enter valid values.");return}
+  var ans=rnd((e-d1)/a1,4);
+  var expr1=fN(a1)+"x"+(d1>=0&&d1!==0?"+"+fN(d1):d1<0?fN(d1):d1===0?"":"");
+  if(d1===0) expr1=fN(a1)+"x";
+  Object.assign(S,{base:base,a1:a1,d1:d1,e:e,ans:ans,expr1:expr1});
+
+  document.getElementById("problemDisplay").innerHTML='log<sub class="lf-base">'+fN(base)+'</sub>(<span class="lf-arg">'+escH(expr1)+'</span>) = log<sub class="lf-base">'+fN(base)+'</sub>(<span class="lf-exp">'+fN(e)+'</span>)';
+
+  stepsData.push({title:"Key Property: Same Base Logs",proc:"identify",type:"info",instruction:'<div class="strategy-box"><div class="strat-title">&#127919; Strategy: If log&#x2082;(A) = log&#x2082;(B), then A = B</div>When both sides have the <strong>same log base</strong>, the arguments must be equal.<br>This eliminates the logs entirely!</div>',work:"Strategy: If log_b(A) = log_b(B), then A = B"});
+
+  stepsData.push({title:"Set Arguments Equal",proc:"setup",type:"choice",instruction:'Drop the logs and set the insides equal:',question:"Arguments equal:",answer:escH(expr1)+" = "+fN(e),options:shuffle([escH(expr1)+" = "+fN(e),fN(base)+" = "+fN(e),escH(expr1)+" = "+fN(base)]),work:expr1+" = "+fN(e)});
+
+  stepsData.push({title:"Solve the Linear Equation",proc:"compute",type:"info",instruction:'<div class="step-rule-box">'+escH(expr1)+' = '+fN(e)+(d1!==0?'<br>'+fN(a1)+'x = '+fN(e)+(d1>0?' \u2212 '+fN(d1):' + '+fN(Math.abs(d1)))+'<br>'+fN(a1)+'x = '+fN(rnd(e-d1,4)):'')+'<br>x = '+fN(rnd(e-d1,4))+' / '+fN(a1)+' = <strong style="color:var(--success)">'+fN(ans)+'</strong></div>',work:expr1+" = "+fN(e)+" \u2192 x = "+fN(ans)});
+
+  // Check validity
+  var checkVal=a1*ans+d1;
+  stepsData.push({title:"Check for Extraneous Solutions",proc:"answer",type:"info",instruction:'The argument must be <strong>positive</strong> (you can\'t log a negative!):<br><span class="check-badge pass">\u2713 '+escH(expr1)+' at x='+fN(ans)+' gives '+fN(rnd(checkVal,4))+(checkVal>0?' (positive \u2714)':' \u26A0 EXTRANEOUS!')+'</span>',work:"Check: "+expr1+" at x="+fN(ans)+" = "+fN(rnd(checkVal,4))+(checkVal>0?" (valid)":"(EXTRANEOUS!)")});
+  stepsData.push({title:"Solution",proc:"answer",type:"info",instruction:'<div class="log-visual"><div class="log-formula" style="color:var(--success);font-size:1.6rem">x = '+fN(ans)+'</div></div>',work:"ANSWER: x = "+fN(ans)});
+  launchWorkspace();
+}
+
+// ========== 6. Same Base: b^(ax+d) = b^c ==========
+function startSameBase(){
+  var b=parseFloat(document.getElementById("sbB").value);
+  var a=parseFloat(document.getElementById("sbA").value);
+  var d=parseFloat(document.getElementById("sbD").value);
+  var c=parseFloat(document.getElementById("sbC").value);
+  if([b,a,d,c].some(isNaN)||a===0){showError("Enter valid values (a\u22600).");return}
+  var ans=rnd((c-d)/a,4);
+  var exp1=fN(a)+"x"+(d>=0&&d!==0?"+"+fN(d):d<0?fN(d):"");
+  if(d===0) exp1=fN(a)+"x";
+  Object.assign(S,{b:b,a:a,d:d,c:c,ans:ans,exp1:exp1});
+
+  document.getElementById("problemDisplay").innerHTML='<span class="lf-base">'+fN(b)+'</span><sup class="lf-exp">'+escH(exp1)+'</sup> = <span class="lf-base">'+fN(b)+'</span><sup class="lf-exp">'+fN(c)+'</sup>';
+
+  stepsData.push({title:"Key Property: Same Base",proc:"identify",type:"info",instruction:'<div class="strategy-box"><div class="strat-title">&#127919; Strategy: If b&#x1DA0; = b&#x1D4D;, then f = g</div>When the bases are the <strong>same</strong>, the exponents must be equal.<br>This skips logarithms entirely!</div>',work:"Strategy: Same base means exponents are equal"});
+
+  stepsData.push({title:"Set Exponents Equal",proc:"setup",type:"choice",instruction:'Both sides have base <span class="lf-base">'+fN(b)+'</span>, so set the exponents equal:',question:"Exponents equal:",answer:escH(exp1)+" = "+fN(c),options:shuffle([escH(exp1)+" = "+fN(c),fN(b)+" = "+fN(c),escH(exp1)+" = "+fN(b)]),work:exp1+" = "+fN(c)});
+
+  stepsData.push({title:"Solve for x",proc:"compute",type:"info",instruction:'<div class="step-rule-box">'+escH(exp1)+' = '+fN(c)+(d!==0?'<br>'+fN(a)+'x = '+fN(c)+(d>0?' \u2212 '+fN(d):' + '+fN(Math.abs(d)))+'<br>'+fN(a)+'x = '+fN(rnd(c-d,4)):'')+'<br>x = '+fN(rnd(c-d,4))+' / '+fN(a)+' = <strong style="color:var(--success)">'+fN(ans)+'</strong></div>',work:exp1+" = "+fN(c)+" \u2192 x = "+fN(ans)});
+
+  stepsData.push({title:"Verify",proc:"answer",type:"info",instruction:'Plug x = '+fN(ans)+' back in:<br><span class="check-badge pass">\u2713 Left: '+fN(b)+'<sup>'+fN(a)+'('+fN(ans)+')'+fmtSign(d)+'</sup> = '+fN(b)+'<sup>'+fN(rnd(a*ans+d,4))+'</sup></span><br><span class="check-badge pass">\u2713 Right: '+fN(b)+'<sup>'+fN(c)+'</sup> \u2014 They match!</span>',work:"Check: Left exponent = "+fN(a)+"("+fN(ans)+")"+fmtSign(d)+" = "+fN(rnd(a*ans+d,4))+" = Right exponent "+fN(c)});
+  stepsData.push({title:"Solution",proc:"answer",type:"info",instruction:'<div class="log-visual"><div class="log-formula" style="color:var(--success);font-size:1.6rem">x = '+fN(ans)+'</div></div>',work:"ANSWER: x = "+fN(ans)});
+  launchWorkspace();
+}
+
+function shuffle(arr){for(var i=arr.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=arr[i];arr[i]=arr[j];arr[j]=t}return arr}
+
+// ==================== COPY WORK ====================
+function copyWork(){
+  var lines=[];
+  lines.push("=== Solving Exponential & Log Equations \u2014 A27 ===");
+  lines.push("");
+  stepsData.forEach(function(step,i){
+    lines.push("Step "+(i+1)+": "+step.title);
+    if(step.work) lines.push("  "+step.work);
+    lines.push("");
+  });
+  var text=lines.join("\n");
+  navigator.clipboard.writeText(text).then(function(){
+    var btn=document.getElementById("copyBtn");
+    btn.classList.add("copied");btn.innerHTML="\u2713 Copied!";
+    setTimeout(function(){btn.classList.remove("copied");btn.innerHTML="&#128203; Copy My Work"},2500);
+  }).catch(function(){
+    var ta=document.createElement("textarea");ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand("copy");document.body.removeChild(ta);
+    var btn=document.getElementById("copyBtn");btn.classList.add("copied");btn.innerHTML="\u2713 Copied!";
+    setTimeout(function(){btn.classList.remove("copied");btn.innerHTML="&#128203; Copy My Work"},2500);
+  });
+}
+
+// ==================== RENDER ====================
+function showStep(idx){
+  if(idx>=stepsData.length){finishProblem();return}
+  var step=stepsData[idx],container=document.getElementById("stepsContainer");
+  var card=document.createElement("div");
+  card.className="step-card";card.id="step-"+idx;
+  if(step.proc){
+    document.querySelectorAll(".proc-step").forEach(function(s){s.classList.remove("active")});
+    document.getElementById("proc-"+step.proc).classList.add("active");
+  }
+  var bodyHTML="";
+  if(step.type==="info"){
+    bodyHTML='<div class="step-instruction">'+step.instruction+'</div><button class="btn-primary btn-sm" onclick="completeStep('+idx+')">Got It \u2192</button>';
+  }else if(step.type==="numeric"){
+    bodyHTML='<div class="step-instruction">'+step.instruction+'</div><div class="answer-row"><span class="answer-label">'+(step.question||"")+" </span>"+
+    '<input type="text" class="answer-input" id="ans-'+idx+'" placeholder="?" autocomplete="off" onkeydown="if(event.key===\'Enter\')checkNum('+idx+')">'+
+    '<button class="btn-check" onclick="checkNum('+idx+')">Check</button></div><div class="step-feedback" id="fb-'+idx+'"></div>';
+  }else if(step.type==="choice"){
+    bodyHTML='<div class="step-instruction">'+step.instruction+'</div><div style="font-size:.88rem;color:var(--text);margin-bottom:10px;font-weight:500">'+(step.question||"")+"</div>"+
+    '<div class="choice-row" id="choices-'+idx+'">'+step.options.map(function(o){return '<div class="choice-btn" onclick="checkChoice('+idx+",this,'"+escH(o)+"')\">"+escH(o)+"</div>"}).join("")+"</div>"+
+    '<div class="step-feedback" id="fb-'+idx+'"></div>';
+  }
+  card.innerHTML='<div class="step-header"><div class="step-num">'+(idx+1)+'</div><div class="step-title">'+step.title+'</div></div><div class="step-body">'+bodyHTML+"</div>";
+  container.appendChild(card);
+  card.scrollIntoView({behavior:"smooth",block:"nearest"});
+  setTimeout(function(){var inp=card.querySelector(".answer-input");if(inp)inp.focus()},150);
+}
+
+function completeStep(idx){markDone(idx);currentStep=idx+1;showStep(idx+1)}
+function markDone(idx){
+  var card=document.getElementById("step-"+idx);
+  if(card){card.classList.add("completed");card.querySelector(".step-num").classList.add("done")}
+  var step=stepsData[idx];
+  if(step.proc) document.getElementById("proc-"+step.proc).classList.add("done");
+}
+
+function checkNum(idx){
+  var step=stepsData[idx],inp=document.getElementById("ans-"+idx),fb=document.getElementById("fb-"+idx);
+  var val=parseFloat(inp.value.trim());
+  if(isNaN(val)){fb.textContent="Enter a number.";fb.className="step-feedback show incorrect";return}
+  var tol=Math.abs(step.answer)<0.01?0.006:Math.abs(step.answer)<1?0.02:Math.max(0.02,Math.abs(step.answer)*0.01);
+  if(Math.abs(val-step.answer)<=tol){
+    inp.classList.add("correct");inp.disabled=true;inp.value=fN(step.answer);
+    fb.textContent="Correct! \u2713";fb.className="step-feedback show correct";
+    setTimeout(function(){markDone(idx);currentStep=idx+1;showStep(idx+1)},700);
+  }else{
+    inp.classList.add("incorrect");setTimeout(function(){inp.classList.remove("incorrect")},600);
+    var tries=parseInt(inp.dataset.tries||"0")+1;inp.dataset.tries=tries;
+    if(tries>=3){fb.innerHTML="The answer is <strong>"+fN(step.answer)+"</strong>";fb.className="step-feedback show hint-text"}
+    else if(tries>=2){fb.textContent="Not quite \u2014 try once more!";fb.className="step-feedback show incorrect"}
+    else{fb.textContent="Not quite \u2014 give it another try!";fb.className="step-feedback show incorrect"}
+    inp.value="";inp.focus();
+  }
+}
+
+function checkChoice(idx,btn,chosen){
+  var step=stepsData[idx];
+  if(chosen===step.answer){
+    btn.classList.add("correct");
+    document.querySelectorAll("#choices-"+idx+" .choice-btn").forEach(function(b){if(!b.classList.contains("correct"))b.classList.add("disabled")});
+    document.getElementById("fb-"+idx).textContent="Correct! \u2713";
+    document.getElementById("fb-"+idx).className="step-feedback show correct";
+    setTimeout(function(){markDone(idx);currentStep=idx+1;showStep(idx+1)},700);
+  }else{
+    btn.classList.add("incorrect");setTimeout(function(){btn.classList.remove("incorrect")},500);
+    document.getElementById("fb-"+idx).textContent="Not quite \u2014 try again!";
+    document.getElementById("fb-"+idx).className="step-feedback show incorrect";
+  }
+}
+
+function finishProblem(){
+  document.querySelectorAll(".proc-step").forEach(function(s){s.classList.remove("active")});
+  var expr="x = "+fN(S.ans),detail="";
+  if(S.mode==="expSimple") detail=fN(S.b)+"^x = "+fN(S.c)+" solved using logarithms";
+  else if(S.mode==="expCoeff") detail=fN(S.a)+"\u00B7"+fN(S.b)+"^x = "+fN(S.c)+" \u2192 isolated then logged";
+  else if(S.mode==="logSimple") detail="log_"+fN(S.b)+"(x) = "+fN(S.c)+" \u2192 converted to exponential";
+  else if(S.mode==="logExpr") detail="Converted log to exponential, solved linear equation";
+  else if(S.mode==="logBoth") detail="Same-base logs \u2192 set arguments equal";
+  else if(S.mode==="sameBase") detail="Same base \u2192 set exponents equal";
+  document.getElementById("resultExpr").textContent=expr;
+  document.getElementById("resultDetail").textContent=detail;
+  document.getElementById("resultSection").classList.add("visible");
+  document.getElementById("resultSection").scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+
+function resetAll(){
+  document.getElementById("inputSection").style.display="";
+  document.getElementById("workspace").classList.remove("visible");
+  document.getElementById("stepsContainer").innerHTML="";
+  document.getElementById("resultSection").classList.remove("visible");
+  document.querySelectorAll(".proc-step").forEach(function(s){s.classList.remove("active","done")});
+  document.querySelectorAll(".input-section input:not([disabled])").forEach(function(i){i.value=""});
+}
+</script>
+</body>
+</html>
