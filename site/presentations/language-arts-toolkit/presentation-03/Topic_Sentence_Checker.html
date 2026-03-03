@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Topic Sentence Checker | Language Arts Toolkit</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: rgba(255,255,255,0.04);
+      --border: rgba(255,255,255,0.08);
+      --border-bright: rgba(255,255,255,0.15);
+      --teal: #14b8a6;
+      --teal-dim: rgba(20,184,166,0.15);
+      --green: #22c55e;
+      --green-dim: rgba(34,197,94,0.15);
+      --yellow: #eab308;
+      --yellow-dim: rgba(234,179,8,0.15);
+      --red: #ef4444;
+      --red-dim: rgba(239,68,68,0.15);
+      --text: #e2e8f0;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      font-family: 'Outfit', sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 1.5rem;
+    }
+    .breadcrumb {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 1.5rem;
+      width: 100%;
+      max-width: 760px;
+    }
+    .breadcrumb a {
+      color: var(--teal);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .breadcrumb a:hover { color: #2dd4bf; }
+    .breadcrumb span { margin: 0 0.4rem; opacity: 0.5; }
+    h1 { font-weight: 700; font-size: clamp(1.8rem, 4vw, 2.4rem); margin-bottom: 0.4rem; }
+    .subtitle { color: var(--text-muted); font-size: 1rem; margin-bottom: 1.5rem; }
+    .checker {
+      width: 100%; max-width: 760px;
+      background: var(--surface); border: 1px solid var(--border);
+      padding: 2rem; border-radius: 1rem;
+    }
+    .framework-box {
+      background: var(--teal-dim); border: 1px solid rgba(20,184,166,0.25);
+      border-radius: 0.75rem; padding: 1.25rem; margin-bottom: 1.5rem;
+    }
+    .framework-box h3 { font-size: 0.95rem; font-weight: 600; color: var(--teal); margin-bottom: 0.5rem; }
+    .framework-box p { font-size: 0.9rem; color: var(--text-muted); line-height: 1.6; }
+    .structure {
+      display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.75rem;
+    }
+    .structure span {
+      background: rgba(20,184,166,0.2); border: 1px solid rgba(20,184,166,0.3);
+      padding: 0.3rem 0.75rem; border-radius: 2rem; font-size: 0.8rem;
+      font-family: 'JetBrains Mono', monospace; color: var(--teal); font-weight: 500;
+    }
+    .structure span.active-part { background: var(--teal); color: var(--bg); font-weight: 600; }
+    textarea {
+      width: 100%; min-height: 120px; padding: 1rem; border-radius: 0.75rem;
+      border: 1px solid var(--border-bright); font-size: 1rem;
+      font-family: 'Outfit', sans-serif; background: rgba(255,255,255,0.03);
+      color: var(--text); resize: vertical; transition: border-color 0.2s, box-shadow 0.2s;
+      margin-bottom: 1.25rem;
+    }
+    textarea::placeholder { color: var(--text-dim); }
+    textarea:focus { outline: none; border-color: var(--teal); box-shadow: 0 0 0 3px var(--teal-dim); }
+    .feedback-item {
+      display: flex; align-items: flex-start; gap: 0.75rem;
+      padding: 0.75rem 1rem; border-radius: 0.6rem; margin-bottom: 0.5rem;
+      font-size: 0.95rem; line-height: 1.5;
+    }
+    .feedback-item .icon {
+      flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.7rem; font-weight: 700; margin-top: 2px;
+    }
+    .feedback-item.pass { background: var(--green-dim); border-left: 3px solid var(--green); }
+    .feedback-item.pass .icon { background: var(--green); color: var(--bg); }
+    .feedback-item.warn { background: var(--yellow-dim); border-left: 3px solid var(--yellow); }
+    .feedback-item.warn .icon { background: var(--yellow); color: var(--bg); }
+    .feedback-item.error { background: var(--red-dim); border-left: 3px solid var(--red); }
+    .feedback-item.error .icon { background: var(--red); color: #fff; }
+    .feedback-item.tip { background: var(--teal-dim); border-left: 3px solid var(--teal); }
+    .feedback-item.tip .icon { background: var(--teal); color: var(--bg); }
+  </style>
+</head>
+<body>
+  <nav class="breadcrumb">
+    <a href="/">Home</a><span>&#8250;</span>
+    <a href="/language-arts/">Language Arts</a><span>&#8250;</span>
+    <a href="/language-arts/toolkit/">Toolkit</a><span>&#8250;</span>
+    Topic Sentence Checker
+  </nav>
+
+  <main class="checker">
+    <h1>Topic Sentence Checker</h1>
+    <p class="subtitle">Paste or type your topic sentence below &mdash; we'll help you strengthen it.</p>
+
+    <div class="framework-box">
+      <h3>Paragraph Framework Reminder</h3>
+      <p>Your topic sentence is the first and most important part of a paragraph. It tells the reader what the paragraph is about and sets up your three supporting details.</p>
+      <div class="structure">
+        <span class="active-part">Topic Sentence</span>
+        <span>Detail 1</span>
+        <span>Detail 2</span>
+        <span>Detail 3</span>
+        <span>Conclusion</span>
+      </div>
+    </div>
+
+    <textarea id="sentenceInput" placeholder="Enter your topic sentence here..."></textarea>
+    <div id="feedback"></div>
+  </main>
+
+  <script>
+    var input = document.getElementById('sentenceInput');
+    var feedback = document.getElementById('feedback');
+
+    function makeItem(cls, icon, text) {
+      return '<div class="feedback-item ' + cls + '"><div class="icon">' + icon + '</div><div>' + text + '</div></div>';
+    }
+
+    input.addEventListener('input', function() {
+      var text = input.value.trim();
+      var msgs = [];
+      if (!text) { feedback.innerHTML = ''; return; }
+
+      /* Capital letter */
+      if (/^[a-z]/.test(text)) {
+        msgs.push(makeItem('error', '!', 'Start your topic sentence with a capital letter.'));
+      } else {
+        msgs.push(makeItem('pass', '\u2713', 'Starts with a capital letter.'));
+      }
+
+      /* Ending punctuation */
+      if (/[.!?]$/.test(text)) {
+        msgs.push(makeItem('pass', '\u2713', 'Ends with proper punctuation.'));
+      } else {
+        msgs.push(makeItem('warn', '?', 'Your sentence should end with a period, exclamation point, or question mark.'));
+      }
+
+      /* Word count */
+      var words = text.split(/\s+/).filter(function(w) { return w.length > 0; });
+      if (words.length < 4) {
+        msgs.push(makeItem('error', '!', 'Only ' + words.length + ' word' + (words.length === 1 ? '' : 's') + '. A strong topic sentence usually has at least 6\u201312 words.'));
+      } else if (words.length < 6) {
+        msgs.push(makeItem('warn', '?', words.length + ' words \u2014 a bit short. Try expanding your idea to be more specific.'));
+      } else if (words.length > 30) {
+        msgs.push(makeItem('warn', '?', words.length + ' words \u2014 this might be too long for a single topic sentence. Keep it focused.'));
+      } else {
+        msgs.push(makeItem('pass', '\u2713', 'Good length (' + words.length + ' words).'));
+      }
+
+      /* Subject check */
+      var stopWords = ['he','she','they','it','we','you','i','a','an','the','is','are','was','were','am','be','been','being','do','does','did','has','have','had','this','that','my','your','his','her','its','our','their','and','but','or','so','to','of','in','on','for','with','at','by','from','not','no','can','will','would','could','should'];
+      var contentWords = words.map(function(w) { return w.toLowerCase().replace(/[^a-z]/g, ''); }).filter(function(w) { return w.length > 2 && stopWords.indexOf(w) === -1; });
+      if (contentWords.length > 0) {
+        msgs.push(makeItem('pass', '\u2713', 'Contains a clear subject or topic.'));
+      } else {
+        msgs.push(makeItem('warn', '?', 'Your sentence may lack a clear subject. Try naming a specific person, place, thing, or idea.'));
+      }
+
+      /* Purpose / direction check */
+      var purposePatterns = /(should|because|explains|means|shows|argues|reveals|demonstrates|proves|illustrates|one reason|the main|this paragraph|this essay|important|believe|think that|opinion|evidence|first reason|in the (story|book|novel|article|text)|according|three|several|many reasons)/i;
+      if (purposePatterns.test(text)) {
+        msgs.push(makeItem('pass', '\u2713', 'Has clear direction or purpose \u2014 nice!'));
+      } else {
+        msgs.push(makeItem('warn', '?', 'Try stating a reason, opinion, or purpose to guide the paragraph. Think: what are your 3 supporting details going to prove?'));
+      }
+
+      /* Answer-like check */
+      if (/^(yes|no|maybe|sure|not really|i think so|i don't know|i guess)/i.test(text)) {
+        msgs.push(makeItem('error', '!', 'This sounds like a quick answer, not a topic sentence. Restate the question in your own words and include your main point.'));
+      }
+
+      /* First-person informal */
+      if (/^(i |i'm |i've |i'd )/i.test(text)) {
+        msgs.push(makeItem('warn', '?', 'Starting with \u201cI\u201d can make a topic sentence feel informal. Consider rephrasing to focus on the topic itself.'));
+      }
+
+      /* Framework next-step */
+      msgs.push(makeItem('tip', '\u2192', '<strong>Next step:</strong> Once your topic sentence is strong, plan your 3 supporting details and a conclusion to complete the paragraph.'));
+
+      feedback.innerHTML = msgs.join('');
+    });
+  </script>
+</body>
+</html>
