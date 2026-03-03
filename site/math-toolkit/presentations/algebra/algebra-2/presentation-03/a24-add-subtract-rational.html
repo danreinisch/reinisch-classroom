@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Adding &amp; Subtracting Rational Expressions — Algebra Toolkit</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0d1117;--surface:#161d2e;--surface2:#1e2840;--surface3:#243050;
+  --border:#2a3a58;--border2:#34466e;--accent:#14b8a6;--accent-blue:#38bdf8;
+  --accent-orange:#fb923c;--accent-purple:#a78bfa;--text:#e2e8f0;
+  --text-muted:#8a9bbf;--text-dim:#5a6a8a;--success:#22c55e;--error:#f87171;
+  --formula-bg:#0a1628;--font-body:'Outfit',sans-serif;--font-mono:'JetBrains Mono',monospace;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-height:100vh;line-height:1.6;overflow-x:hidden}
+.breadcrumb{padding:16px 24px;font-size:.85rem;color:var(--text-dim);border-bottom:1px solid var(--border);background:var(--surface)}
+.breadcrumb span{color:var(--text-dim);margin:0 6px}
+.breadcrumb a{color:var(--text-muted);text-decoration:none;transition:color .2s}
+.breadcrumb a:hover{color:var(--accent)}
+.breadcrumb .current{color:var(--text);font-weight:500}
+.tier-badge{display:inline-flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:6px 16px;font-size:.8rem;color:var(--accent-purple);font-weight:500;margin:20px 24px 0}
+.container{max-width:820px;margin:0 auto;padding:20px 24px 60px}
+h1{font-size:1.8rem;font-weight:700;margin:16px 0 6px}
+.subtitle{color:var(--text-muted);font-size:.95rem;margin-bottom:28px}
+.process-banner{display:flex;gap:4px;margin-bottom:28px;border-radius:12px;overflow:hidden;border:1px solid var(--border);background:var(--surface)}
+.proc-step{flex:1;text-align:center;padding:12px 4px 10px;background:var(--surface);transition:all .4s ease;cursor:default;position:relative}
+.proc-step .p-icon{font-size:1.1rem;display:block;filter:grayscale(.6) opacity(.5);transition:all .4s}
+.proc-step .p-label{font-size:.58rem;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:.4px;transition:all .4s}
+.proc-step.active{background:var(--accent);box-shadow:0 0 24px rgba(20,184,166,.3)}
+.proc-step.active .p-icon{filter:none}
+.proc-step.active .p-label{color:rgba(255,255,255,.9)}
+.proc-step.done{background:var(--surface2)}
+.proc-step.done .p-icon{filter:grayscale(0) opacity(.7)}
+.proc-step.done .p-label{color:var(--success)}
+.proc-step.done::after{content:'\2713';position:absolute;top:3px;right:5px;font-size:.55rem;color:var(--success)}
+button{font-family:var(--font-body);font-weight:600;border:none;cursor:pointer;border-radius:10px;transition:all .25s ease}
+.btn-primary{background:var(--accent);color:#fff;padding:14px 28px;font-size:.95rem}
+.btn-primary:hover{background:#0fa396;transform:translateY(-1px)}
+.btn-sm{padding:10px 22px;font-size:.85rem}
+.btn-check{background:var(--accent);color:#fff;padding:10px 22px;font-size:.88rem}
+.btn-check:hover{background:#0fa396}
+.input-section{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:28px;margin-bottom:24px}
+.input-section h2{font-size:1rem;font-weight:600;margin-bottom:4px}
+.input-section .hint{font-size:.82rem;color:var(--text-muted);margin-bottom:18px}
+.mode-tabs{display:flex;gap:6px;margin-bottom:22px;flex-wrap:wrap}
+.mode-tab{padding:9px 16px;border-radius:10px;font-size:.82rem;font-weight:600;background:var(--surface2);color:var(--text-muted);border:2px solid var(--border);cursor:pointer;transition:all .2s}
+.mode-tab:hover{border-color:var(--accent);color:var(--accent)}
+.mode-tab.selected{background:rgba(20,184,166,.1);border-color:var(--accent);color:var(--accent)}
+.mode-panel{display:none}
+.mode-panel.active{display:block;animation:fadeSlideIn .3s ease}
+.frac-input-group{display:flex;align-items:center;justify-content:center;gap:20px;flex-wrap:wrap;margin:12px 0}
+.frac-block{display:flex;flex-direction:column;align-items:center;gap:0}
+.frac-block .fb-label{font-size:.65rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.frac-block .fb-label.blue{color:var(--accent-blue)}
+.frac-block .fb-label.orange{color:var(--accent-orange)}
+.frac-block input{font-family:var(--font-mono);font-size:1rem;padding:10px 12px;border-radius:8px;border:2px solid var(--border);background:var(--formula-bg);color:var(--text);outline:none;transition:border-color .3s;text-align:center;width:150px}
+.frac-block input:focus{border-color:var(--accent)}
+.frac-block input::placeholder{color:var(--text-dim);font-size:.8rem}
+.frac-line{width:130px;height:3px;background:var(--text-muted);border-radius:2px;margin:4px 0}
+.frac-op{font-family:var(--font-mono);font-size:1.8rem;font-weight:700;padding:0 4px}
+.frac-op.add{color:var(--accent)}
+.frac-op.sub{color:var(--error)}
+.ifrac{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;margin:0 4px;line-height:1}
+.ifrac .num,.ifrac .den{font-family:var(--font-mono);font-weight:600;padding:2px 6px;font-size:.95em}
+.ifrac .fbar{width:100%;height:2px;background:var(--text-muted);min-width:30px}
+.ifrac .num{color:var(--accent-blue)}
+.ifrac .den{color:var(--accent-orange)}
+.lcd-visual{background:var(--formula-bg);border:1px solid var(--border);border-radius:10px;padding:16px 20px;margin:14px 0}
+.lcd-row{display:flex;align-items:center;justify-content:center;gap:10px;margin:8px 0;flex-wrap:wrap;font-family:var(--font-mono);font-size:.95rem;font-weight:600}
+.lcd-den{padding:6px 14px;border-radius:8px;background:rgba(251,146,60,.1);border:1px solid rgba(251,146,60,.3);color:var(--accent-orange)}
+.lcd-mult{padding:4px 10px;border-radius:6px;background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.3);color:var(--accent-purple);font-size:.85rem}
+.start-row{display:flex;justify-content:center;margin-top:12px}
+.error-msg{background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);color:var(--error);border-radius:10px;padding:12px 18px;font-size:.88rem;margin-top:12px;display:none;text-align:center}
+.error-msg.show{display:block;animation:fadeSlideIn .3s ease}
+.examples-panel{margin-top:16px;border-radius:12px;border:1px solid var(--border);background:var(--surface2);overflow:hidden}
+.examples-toggle{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;cursor:pointer;font-size:.88rem;font-weight:500;color:var(--text-muted);transition:all .2s;user-select:none}
+.examples-toggle:hover{color:var(--text);background:var(--surface3)}
+.toggle-arrow{font-size:.7rem;transition:transform .3s ease}
+.toggle-arrow.open{transform:rotate(180deg)}
+.examples-body{max-height:0;overflow:hidden;transition:max-height .5s ease}
+.examples-body.open{max-height:1400px}
+.example-category{padding:4px 18px 14px;border-top:1px solid var(--border)}
+.category-label{font-size:.75rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;padding-top:12px}
+.examples{display:flex;flex-wrap:wrap;gap:8px}
+.example-chip{font-family:var(--font-mono);font-size:.78rem;padding:6px 14px;border-radius:20px;background:var(--surface);border:1px solid var(--border);color:var(--text-muted);cursor:pointer;transition:all .2s}
+.example-chip:hover{border-color:var(--accent);color:var(--accent);background:rgba(20,184,166,.08)}
+.workspace{display:none;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:28px;margin-bottom:24px}
+.workspace.visible{display:block;animation:fadeSlideIn .4s ease}
+@keyframes fadeSlideIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.problem-display{background:var(--formula-bg);border:1px solid var(--border);border-radius:10px;padding:20px 24px;margin-bottom:24px;text-align:center;min-height:64px;display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;font-family:var(--font-mono);font-size:1.3rem;font-weight:600;color:var(--text)}
+.step-card{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:22px;margin-bottom:16px;animation:fadeSlideIn .3s ease}
+.step-header{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.step-num{width:30px;height:30px;border-radius:50%;background:var(--accent);color:#fff;font-family:var(--font-mono);font-size:.8rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.step-num.done{background:var(--success)}
+.step-title{font-weight:600;font-size:.95rem}
+.step-body{padding-left:40px}
+.step-instruction{color:var(--text-muted);font-size:.88rem;margin-bottom:14px;line-height:1.7}
+.step-rule-box{background:var(--formula-bg);border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin-bottom:14px;font-size:.88rem;color:var(--text);line-height:1.7;text-align:center}
+.mono{font-family:var(--font-mono);font-weight:600}
+.answer-row{display:flex;gap:10px;align-items:center;margin-bottom:4px;flex-wrap:wrap}
+.answer-input{font-family:var(--font-mono);font-size:1.1rem;padding:10px 16px;border-radius:8px;border:2px solid var(--border);background:var(--formula-bg);color:var(--text);width:160px;outline:none;transition:border-color .3s;text-align:center}
+.answer-input:focus{border-color:var(--accent)}
+.answer-input.correct{border-color:var(--success);background:rgba(34,197,94,.06)}
+.answer-input.incorrect{border-color:var(--error)}
+.answer-label{font-family:var(--font-mono);font-size:.85rem;color:var(--text-dim)}
+.choice-row{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+.choice-btn{padding:10px 22px;border-radius:10px;font-size:.88rem;font-weight:600;background:var(--surface3);color:var(--text);border:2px solid var(--border);cursor:pointer;transition:all .2s;font-family:var(--font-mono)}
+.choice-btn:hover{border-color:var(--accent);color:var(--accent)}
+.choice-btn.correct{border-color:var(--success);background:rgba(34,197,94,.12);color:var(--success);pointer-events:none}
+.choice-btn.incorrect{border-color:var(--error);background:rgba(248,113,113,.08);color:var(--error);animation:shake .4s ease}
+.choice-btn.disabled{opacity:.35;pointer-events:none}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.step-feedback{margin-top:10px;font-size:.85rem;font-weight:500;display:none}
+.step-feedback.show{display:block;animation:fadeSlideIn .25s ease}
+.step-feedback.correct{color:var(--success)}
+.step-feedback.incorrect{color:var(--error)}
+.step-feedback.hint-text{color:var(--accent-orange)}
+.step-card.completed{opacity:.6}
+.step-card.completed .answer-input{pointer-events:none}
+.step-card.completed .btn-check{display:none}
+.step-card.completed .choice-btn{pointer-events:none}
+.result-section{display:none;text-align:center;padding:36px 28px;background:linear-gradient(135deg,rgba(20,184,166,.08),rgba(167,139,250,.06));border:1px solid var(--accent);border-radius:14px;margin-top:20px}
+.result-section.visible{display:block;animation:fadeSlideIn .5s ease}
+.result-icon{font-size:2.5rem;margin-bottom:10px}
+.result-title{font-size:1.3rem;font-weight:700;color:var(--success);margin-bottom:6px}
+.result-expression{font-family:var(--font-mono);font-size:1.15rem;color:var(--text);background:var(--formula-bg);display:inline-block;padding:12px 24px;border-radius:10px;border:1px solid var(--border);margin:12px 0;line-height:1.8}
+.result-detail{color:var(--text-muted);font-size:.88rem;margin-top:8px}
+.actions{display:flex;gap:10px;justify-content:center;margin-top:20px}
+@media(max-width:600px){
+  .container{padding:16px}.input-section,.workspace{padding:20px}h1{font-size:1.4rem}
+  .step-body{padding-left:0}.mode-tabs{gap:4px}.mode-tab{padding:7px 11px;font-size:.75rem}
+  .problem-display{font-size:1rem}.proc-step .p-label{font-size:.5rem}
+  .frac-block input{width:120px}.frac-line{width:110px}.frac-input-group{gap:10px}
+}
+</style>
+</head>
+<body>
+<nav class="breadcrumb">
+  <a href="https://reinischclassroom.com">Home</a><span>&rsaquo;</span>
+  <a href="#">Math Toolkit</a><span>&rsaquo;</span>
+  <a href="#">Algebra</a><span>&rsaquo;</span>
+  <a href="#">Algebra 2</a><span>&rsaquo;</span>
+  <span class="current">Adding &amp; Subtracting Rational Expressions</span>
+</nav>
+<div class="container">
+  <div class="tier-badge">&#128213; Algebra 2 &middot; A24</div>
+  <h1>Adding &amp; Subtracting Rational Expressions</h1>
+  <p class="subtitle">Enter a rational expression addition or subtraction problem &mdash; this tool walks you through finding the LCD and combining step by step.</p>
+
+  <div class="process-banner" id="procBanner">
+    <div class="proc-step" id="proc-identify"><span class="p-icon">&#128269;</span><span class="p-label">Identify</span></div>
+    <div class="proc-step" id="proc-lcd"><span class="p-icon">&#128208;</span><span class="p-label">LCD</span></div>
+    <div class="proc-step" id="proc-combine"><span class="p-icon">&#128290;</span><span class="p-label">Combine</span></div>
+    <div class="proc-step" id="proc-answer"><span class="p-icon">&#10024;</span><span class="p-label">Simplify</span></div>
+  </div>
+
+  <div class="input-section" id="inputSection">
+    <h2>&#9998; What Type of Problem?</h2>
+    <p class="hint">Select the operation, then enter the two fractions.</p>
+
+    <div class="mode-tabs">
+      <div class="mode-tab" onclick="setMode('addSame')" id="tab-addSame">Add (Same Denom)</div>
+      <div class="mode-tab" onclick="setMode('subSame')" id="tab-subSame">Subtract (Same Denom)</div>
+      <div class="mode-tab" onclick="setMode('addDiff')" id="tab-addDiff">Add (Diff Denom)</div>
+      <div class="mode-tab" onclick="setMode('subDiff')" id="tab-subDiff">Subtract (Diff Denom)</div>
+    </div>
+
+    <!-- Add Same Denom -->
+    <div class="mode-panel" id="panel-addSame">
+      <p class="hint">Both fractions share the same denominator.</p>
+      <div class="frac-input-group">
+        <div class="frac-block"><span class="fb-label blue">Fraction 1</span><input type="text" id="asN1" placeholder="numerator 1"><div class="frac-line"></div><input type="text" id="asD" placeholder="denominator"><span class="fb-label orange">Common Denom</span></div>
+        <span class="frac-op add">+</span>
+        <div class="frac-block"><span class="fb-label blue">Fraction 2</span><input type="text" id="asN2" placeholder="numerator 2"><div class="frac-line"></div><input type="text" id="asD2" placeholder="(same)" disabled style="opacity:.5"></div>
+      </div>
+    </div>
+
+    <!-- Sub Same Denom -->
+    <div class="mode-panel" id="panel-subSame">
+      <p class="hint">Both fractions share the same denominator.</p>
+      <div class="frac-input-group">
+        <div class="frac-block"><span class="fb-label blue">Fraction 1</span><input type="text" id="ssN1" placeholder="numerator 1"><div class="frac-line"></div><input type="text" id="ssD" placeholder="denominator"><span class="fb-label orange">Common Denom</span></div>
+        <span class="frac-op sub">&minus;</span>
+        <div class="frac-block"><span class="fb-label blue">Fraction 2</span><input type="text" id="ssN2" placeholder="numerator 2"><div class="frac-line"></div><input type="text" id="ssD2" placeholder="(same)" disabled style="opacity:.5"></div>
+      </div>
+    </div>
+
+    <!-- Add Different Denom -->
+    <div class="mode-panel" id="panel-addDiff">
+      <p class="hint">Fractions have different denominators &mdash; we will find the LCD.</p>
+      <div class="frac-input-group">
+        <div class="frac-block"><span class="fb-label blue">Fraction 1</span><input type="text" id="adN1" placeholder="numerator"><div class="frac-line"></div><input type="text" id="adD1" placeholder="denom 1"><span class="fb-label orange">Denom 1</span></div>
+        <span class="frac-op add">+</span>
+        <div class="frac-block"><span class="fb-label blue">Fraction 2</span><input type="text" id="adN2" placeholder="numerator"><div class="frac-line"></div><input type="text" id="adD2" placeholder="denom 2"><span class="fb-label orange">Denom 2</span></div>
+      </div>
+    </div>
+
+    <!-- Sub Different Denom -->
+    <div class="mode-panel" id="panel-subDiff">
+      <p class="hint">Fractions have different denominators &mdash; we will find the LCD.</p>
+      <div class="frac-input-group">
+        <div class="frac-block"><span class="fb-label blue">Fraction 1</span><input type="text" id="sdN1" placeholder="numerator"><div class="frac-line"></div><input type="text" id="sdD1" placeholder="denom 1"><span class="fb-label orange">Denom 1</span></div>
+        <span class="frac-op sub">&minus;</span>
+        <div class="frac-block"><span class="fb-label blue">Fraction 2</span><input type="text" id="sdN2" placeholder="numerator"><div class="frac-line"></div><input type="text" id="sdD2" placeholder="denom 2"><span class="fb-label orange">Denom 2</span></div>
+      </div>
+    </div>
+
+    <div class="start-row" id="startRow" style="display:none">
+      <button class="btn-primary" onclick="startSolving()">Let's Solve It &rarr;</button>
+    </div>
+    <div class="error-msg" id="errorMsg"></div>
+
+    <div class="examples-panel">
+      <div class="examples-toggle" onclick="toggleExamples()">
+        <span>&#128203; Try a Practice Problem</span>
+        <span class="toggle-arrow" id="toggleArrow">&#9660;</span>
+      </div>
+      <div class="examples-body" id="examplesBody">
+        <div class="example-category"><div class="category-label">&#x1F7E2; Add &mdash; Same Denominator</div><div class="examples">
+          <span class="example-chip" onclick="loadAS('3','5','x+1')">3/(x+1) + 5/(x+1)</span>
+          <span class="example-chip" onclick="loadAS('2x','4','x-3')">2x/(x-3) + 4/(x-3)</span>
+          <span class="example-chip" onclick="loadAS('x','7','2x')">x/2x + 7/2x</span>
+          <span class="example-chip" onclick="loadAS('x+1','x-1','x+4')">(x+1)/(x+4) + (x-1)/(x+4)</span>
+        </div></div>
+        <div class="example-category"><div class="category-label">&#x1F7E1; Subtract &mdash; Same Denominator</div><div class="examples">
+          <span class="example-chip" onclick="loadSS('5x','2x','x+3')">5x/(x+3) - 2x/(x+3)</span>
+          <span class="example-chip" onclick="loadSS('x+6','3','x-1')">(x+6)/(x-1) - 3/(x-1)</span>
+          <span class="example-chip" onclick="loadSS('4x','x+2','x-5')">4x/(x-5) - (x+2)/(x-5)</span>
+          <span class="example-chip" onclick="loadSS('3x+1','x-3','2x')">(3x+1)/2x - (x-3)/2x</span>
+        </div></div>
+        <div class="example-category"><div class="category-label">&#x1F7E0; Add &mdash; Different Denominators</div><div class="examples">
+          <span class="example-chip" onclick="loadAD('3','x','5','x+1')">3/x + 5/(x+1)</span>
+          <span class="example-chip" onclick="loadAD('1','x-2','1','x+2')">1/(x-2) + 1/(x+2)</span>
+          <span class="example-chip" onclick="loadAD('2','3x','4','5x')">2/3x + 4/5x</span>
+          <span class="example-chip" onclick="loadAD('x','x+1','3','x-1')">x/(x+1) + 3/(x-1)</span>
+        </div></div>
+        <div class="example-category"><div class="category-label">&#x1F534; Subtract &mdash; Different Denominators</div><div class="examples">
+          <span class="example-chip" onclick="loadSD('7','x','2','x+3')">7/x - 2/(x+3)</span>
+          <span class="example-chip" onclick="loadSD('4','x-1','1','x+1')">4/(x-1) - 1/(x+1)</span>
+          <span class="example-chip" onclick="loadSD('x','2','3','4')">x/2 - 3/4</span>
+          <span class="example-chip" onclick="loadSD('5','x+2','2','x-4')">5/(x+2) - 2/(x-4)</span>
+        </div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="workspace" id="workspace">
+    <div class="problem-display" id="problemDisplay"></div>
+    <div id="stepsContainer"></div>
+    <div class="result-section" id="resultSection">
+      <div class="result-icon">&#127881;</div>
+      <div class="result-title">Problem Solved!</div>
+      <div class="result-expression" id="resultExpr"></div>
+      <div class="result-detail" id="resultDetail"></div>
+      <div class="actions"><button class="btn-primary" onclick="resetAll()">Solve Another &rarr;</button></div>
+    </div>
+  </div>
+</div>
+
+<script>
+function fmtNum(n){if(n==null)return"?";if(Number.isInteger(n))return""+n;return n.toFixed(4).replace(/\.?0+$/,"")}
+function gcd(a,b){a=Math.abs(a);b=Math.abs(b);if(!b)return a;while(b){var t=b;b=a%t;a=t}return a}
+function lcm(a,b){return Math.abs(a*b)/gcd(a,b)}
+function escHtml(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/'/g,"&#39;")}
+function exprD(s){return s.replace(/\^2/g,"\u00B2").replace(/\*/g,"\u00B7")}
+function inlineFrac(n,d){return '<span class="ifrac"><span class="num">'+exprD(n)+'</span><span class="fbar"></span><span class="den">'+exprD(d)+'</span></span>'}
+
+var mode=null,S={},stepsData=[],currentStep=0;
+
+function setMode(m){
+  mode=m;
+  document.querySelectorAll(".mode-tab").forEach(function(t){t.classList.remove("selected")});
+  document.getElementById("tab-"+m).classList.add("selected");
+  document.querySelectorAll(".mode-panel").forEach(function(p){p.classList.remove("active")});
+  document.getElementById("panel-"+m).classList.add("active");
+  document.getElementById("startRow").style.display="flex";
+}
+
+function loadAS(n1,n2,d){setMode("addSame");document.getElementById("asN1").value=n1;document.getElementById("asN2").value=n2;document.getElementById("asD").value=d}
+function loadSS(n1,n2,d){setMode("subSame");document.getElementById("ssN1").value=n1;document.getElementById("ssN2").value=n2;document.getElementById("ssD").value=d}
+function loadAD(n1,d1,n2,d2){setMode("addDiff");document.getElementById("adN1").value=n1;document.getElementById("adD1").value=d1;document.getElementById("adN2").value=n2;document.getElementById("adD2").value=d2}
+function loadSD(n1,d1,n2,d2){setMode("subDiff");document.getElementById("sdN1").value=n1;document.getElementById("sdD1").value=d1;document.getElementById("sdN2").value=n2;document.getElementById("sdD2").value=d2}
+
+function toggleExamples(){document.getElementById("examplesBody").classList.toggle("open");document.getElementById("toggleArrow").classList.toggle("open")}
+function showError(msg){var el=document.getElementById("errorMsg");el.textContent=msg;el.classList.add("show");setTimeout(function(){el.classList.remove("show")},4000)}
+
+function startSolving(){
+  if(!mode){showError("Select a problem type first.");return}
+  stepsData=[];currentStep=0;S={mode:mode};
+  var fn={addSame:startSameDenom,subSame:startSameDenom,addDiff:startDiffDenom,subDiff:startDiffDenom};
+  fn[mode]();
+}
+function launchWorkspace(){
+  document.getElementById("inputSection").style.display="none";
+  document.getElementById("workspace").classList.add("visible");
+  document.getElementById("resultSection").classList.remove("visible");
+  document.getElementById("stepsContainer").innerHTML="";
+  document.querySelectorAll(".proc-step").forEach(function(s){s.classList.remove("active","done")});
+  showStep(0);
+}
+
+// ========== EXPRESSION HELPERS ==========
+function parseSimple(s){
+  s=s.replace(/\s+/g,"").replace(/\u2212/g,"-");
+  var m=s.match(/^(-?\d+)$/);
+  if(m)return{type:"num",val:parseInt(m[1])};
+  m=s.match(/^(-?\d*)x([+-]\d+)?$/);
+  if(m){var a=(m[1]===""||m[1]==="+")? 1 : m[1]==="-"? -1 : parseInt(m[1]);var b=m[2]?parseInt(m[2]):0;return{type:"linear",a:a,b:b}}
+  return{type:"expr",str:s};
+}
+
+function fmtLinear(a,b){
+  if(a===0) return ""+b;
+  var s="";
+  if(a===1) s="x"; else if(a===-1) s="-x"; else s=a+"x";
+  if(b>0) s+="+"+b; else if(b<0) s+=""+b;
+  return s;
+}
+
+function combineNumerators(n1,n2,op){
+  var p1=parseSimple(n1),p2=parseSimple(n2);
+  if(p1.type==="num" && p2.type==="num"){
+    return ""+(op==="+" ? p1.val+p2.val : p1.val-p2.val);
+  }
+  if(p1.type==="linear" && p2.type==="linear"){
+    var a=op==="+" ? p1.a+p2.a : p1.a-p2.a;
+    var b=op==="+" ? p1.b+p2.b : p1.b-p2.b;
+    return fmtLinear(a,b);
+  }
+  if(p1.type==="linear" && p2.type==="num"){
+    var b2=op==="+" ? p1.b+p2.val : p1.b-p2.val;
+    return fmtLinear(p1.a,b2);
+  }
+  if(p1.type==="num" && p2.type==="linear"){
+    var a2=op==="+" ? p2.a : -p2.a;
+    var b3=op==="+" ? p1.val+p2.b : p1.val-p2.b;
+    return fmtLinear(a2,b3);
+  }
+  return n1+(op==="+" ? " + " : " - ")+n2;
+}
+
+function buildLCD(d1,d2){
+  var p1=parseSimple(d1),p2=parseSimple(d2);
+  if(p1.type==="num" && p2.type==="num") return ""+lcm(p1.val,p2.val);
+  if(d1===d2) return d1;
+  // Check if one is numeric multiplier of the other
+  if(p1.type==="num" && p2.type!=="num") return p1.val+"("+d2+")";
+  if(p2.type==="num" && p1.type!=="num") return p2.val+"("+d1+")";
+  return "("+d1+")("+d2+")";
+}
+
+function buildMult(den,lcd){
+  var pd=parseSimple(den),pl=parseSimple(lcd);
+  if(pd.type==="num" && pl.type==="num") return ""+(pl.val/pd.val);
+  if(den===lcd) return "1";
+  // If LCD is (d1)(d2) format, the multiplier is the other factor
+  if(lcd.indexOf("("+den+")")!==-1){
+    var other=lcd.replace("("+den+")","").replace(/^\(|\)$/g,"");
+    return other || "1";
+  }
+  // If LCD is n(den)
+  var m=lcd.match(/^(\d+)\(/);
+  if(m && lcd.indexOf(den)!==-1) return m[1];
+  return lcd.replace(den,"").replace(/[()]/g,"") || "1";
+}
+
+function multiplyExprs(n,m){
+  if(m==="1") return n;
+  var pn=parseSimple(n),pm=parseSimple(m);
+  if(pn.type==="num" && pm.type==="num") return ""+(pn.val*pm.val);
+  if(pm.type==="num"){
+    if(pn.type==="linear") return fmtLinear(pn.a*pm.val, pn.b*pm.val);
+    return pm.val+"("+n+")";
+  }
+  if(pn.type==="num") return pn.val+"("+m+")";
+  return n+"("+m+")";
+}
+
+function trySimplify(num,den){
+  var pn=parseSimple(num),pd=parseSimple(den);
+  if(pn.type==="num" && pd.type==="num"){
+    var g=gcd(Math.abs(pn.val),Math.abs(pd.val));
+    if(g>1) return{changed:true,num:""+(pn.val/g),den:""+(pd.val/g)};
+  }
+  if(pn.type==="linear" && pd.type==="num"){
+    var g2=gcd(gcd(Math.abs(pn.a),Math.abs(pn.b||1)),Math.abs(pd.val));
+    if(g2>1) return{changed:true,num:fmtLinear(pn.a/g2,pn.b/g2),den:""+(pd.val/g2)};
+  }
+  return{changed:false};
+}
+
+function shuffleUniq(arr){
+  var u=[];arr.forEach(function(a){if(u.indexOf(a)===-1)u.push(a)});
+  while(u.length<3)u.push("?");
+  for(var i=u.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=u[i];u[i]=u[j];u[j]=t}
+  return u;
+}
+
+// ========== SAME DENOMINATOR ==========
+function startSameDenom(){
+  var isAdd=(mode==="addSame");
+  var n1,n2,d;
+  if(isAdd){n1=document.getElementById("asN1").value.trim();n2=document.getElementById("asN2").value.trim();d=document.getElementById("asD").value.trim()}
+  else{n1=document.getElementById("ssN1").value.trim();n2=document.getElementById("ssN2").value.trim();d=document.getElementById("ssD").value.trim()}
+  if(!n1||!n2||!d){showError("Enter both numerators and the denominator.");return}
+
+  var opSym=isAdd?"+":"\u2212";
+  var opWord=isAdd?"add":"subtract";
+  var combined=isAdd?combineNumerators(n1,n2,"+"):combineNumerators(n1,n2,"-");
+
+  Object.assign(S,{n1:n1,n2:n2,d:d,opSym:opSym,opWord:opWord,combined:combined,isAdd:isAdd});
+  document.getElementById("problemDisplay").innerHTML=inlineFrac(n1,d)+' <span style="color:'+(isAdd?"var(--accent)":"var(--error)")+';font-weight:700;font-size:1.3rem">'+opSym+'</span> '+inlineFrac(n2,d);
+
+  stepsData.push({title:"Same Denominator \u2014 Easy!",proc:"identify",type:"info",instruction:'When fractions have the <strong>same denominator</strong>, just '+opWord+' the numerators and keep the denominator:<div class="step-rule-box" style="margin-top:10px">'+inlineFrac("A","D")+' '+opSym+' '+inlineFrac("B","D")+' = '+inlineFrac("A "+opSym+" B","D")+"</div>"});
+
+  stepsData.push({title:isAdd?"Add the Numerators":"Subtract the Numerators",proc:"combine",type:"info",instruction:(isAdd?"Add":"Subtract")+' the numerators:<br><span class="mono" style="color:var(--accent-blue)">('+exprD(n1)+") "+opSym+" ("+exprD(n2)+") = "+exprD(combined)+"</span>"+(isAdd?"":'<br><span style="font-size:.82rem;color:var(--error)">Watch: distribute the negative to ALL terms in the second numerator!</span>')});
+
+  stepsData.push({title:"Keep the Denominator",proc:"combine",type:"info",instruction:'The denominator stays the same:<div style="text-align:center;font-size:1.2rem;margin-top:10px">'+inlineFrac('<span style="color:var(--success)">'+exprD(combined)+"</span>",'<span style="color:var(--accent-orange)">'+exprD(d)+"</span>")+"</div>"});
+
+  var simplified=trySimplify(combined,d);
+  if(simplified.changed){
+    stepsData.push({title:"Simplify",proc:"answer",type:"info",instruction:'Factor and cancel if possible:<div style="text-align:center;font-size:1.2rem;margin-top:10px">'+inlineFrac(exprD(combined),exprD(d))+' <span style="color:var(--accent);font-size:1rem">\u2192</span> '+(simplified.den==="1"?'<span class="mono" style="color:var(--success)">'+exprD(simplified.num)+"</span>":inlineFrac('<span style="color:var(--success)">'+exprD(simplified.num)+"</span>",'<span style="color:var(--success)">'+exprD(simplified.den)+"</span>"))+"</div>"});
+    S.finalNum=simplified.num;S.finalDen=simplified.den;
+  } else {
+    S.finalNum=combined;S.finalDen=d;
+  }
+
+  stepsData.push({title:"Final Answer",proc:"answer",type:"info",instruction:'<div style="font-size:1.2rem;margin:12px 0;text-align:center">'+(S.finalDen==="1"?'<span class="mono" style="color:var(--success)">'+exprD(S.finalNum)+"</span>":inlineFrac('<span style="color:var(--success)">'+exprD(S.finalNum)+"</span>",'<span style="color:var(--success)">'+exprD(S.finalDen)+"</span>"))+"</div>"});
+  launchWorkspace();
+}
+
+// ========== DIFFERENT DENOMINATORS ==========
+function startDiffDenom(){
+  var isAdd=(mode==="addDiff");
+  var n1,d1,n2,d2;
+  if(isAdd){n1=document.getElementById("adN1").value.trim();d1=document.getElementById("adD1").value.trim();n2=document.getElementById("adN2").value.trim();d2=document.getElementById("adD2").value.trim()}
+  else{n1=document.getElementById("sdN1").value.trim();d1=document.getElementById("sdD1").value.trim();n2=document.getElementById("sdN2").value.trim();d2=document.getElementById("sdD2").value.trim()}
+  if(!n1||!d1||!n2||!d2){showError("Enter all four parts.");return}
+
+  var opSym=isAdd?"+":"\u2212";
+  var opWord=isAdd?"adding":"subtracting";
+  var lcdStr=buildLCD(d1,d2);
+  var mult1=buildMult(d1,lcdStr);
+  var mult2=buildMult(d2,lcdStr);
+  var newN1=multiplyExprs(n1,mult1);
+  var newN2=multiplyExprs(n2,mult2);
+  var combined=isAdd?combineNumerators(newN1,newN2,"+"):combineNumerators(newN1,newN2,"-");
+
+  Object.assign(S,{n1:n1,d1:d1,n2:n2,d2:d2,opSym:opSym,opWord:opWord,lcdStr:lcdStr,mult1:mult1,mult2:mult2,newN1:newN1,newN2:newN2,combined:combined,isAdd:isAdd});
+
+  document.getElementById("problemDisplay").innerHTML=inlineFrac(n1,d1)+' <span style="color:'+(isAdd?"var(--accent)":"var(--error)")+';font-weight:700;font-size:1.3rem">'+opSym+'</span> '+inlineFrac(n2,d2);
+
+  stepsData.push({title:"Different Denominators",proc:"identify",type:"info",instruction:'The denominators are different (<span class="mono" style="color:var(--accent-orange)">'+exprD(d1)+'</span> and <span class="mono" style="color:var(--accent-orange)">'+exprD(d2)+'</span>), so we need to find the <strong>Least Common Denominator (LCD)</strong> before '+opWord+"."});
+
+  stepsData.push({title:"Find the LCD",proc:"lcd",type:"choice",instruction:'The LCD must contain all factors from <strong>both</strong> denominators.<div class="lcd-visual"><div class="lcd-row"><span class="lcd-den">'+exprD(d1)+'</span><span style="color:var(--text-dim)">and</span><span class="lcd-den">'+exprD(d2)+'</span></div><div class="lcd-row"><span style="color:var(--accent);font-size:1.2rem">\u2192</span><span>LCD =</span></div></div>',question:"LCD =",answer:exprD(lcdStr),options:shuffleUniq([exprD(lcdStr),exprD(d1),exprD(d2),exprD(d1)+"+"+exprD(d2)])});
+
+  var lcdVisual='<div class="lcd-visual">';
+  lcdVisual+='<div class="lcd-row">'+inlineFrac(n1,d1)+' <span style="color:var(--text-dim)">\u2192 multiply by</span> <span class="lcd-mult">'+exprD(mult1)+'</span> <span style="color:var(--text-dim)">\u2192</span> '+inlineFrac(exprD(newN1),exprD(lcdStr))+"</div>";
+  lcdVisual+='<div class="lcd-row">'+inlineFrac(n2,d2)+' <span style="color:var(--text-dim)">\u2192 multiply by</span> <span class="lcd-mult">'+exprD(mult2)+'</span> <span style="color:var(--text-dim)">\u2192</span> '+inlineFrac(exprD(newN2),exprD(lcdStr))+"</div>";
+  lcdVisual+="</div>";
+
+  stepsData.push({title:"Rewrite with LCD",proc:"lcd",type:"info",instruction:"Multiply each fraction so both have the LCD as denominator:"+lcdVisual});
+
+  stepsData.push({title:isAdd?"Add the New Numerators":"Subtract the New Numerators",proc:"combine",type:"info",instruction:"Now that denominators match, "+(isAdd?"add":"subtract")+' the numerators:<div class="step-rule-box" style="margin-top:10px"><span class="mono" style="color:var(--accent-blue)">('+exprD(newN1)+") "+opSym+" ("+exprD(newN2)+')</span><br>= <span class="mono" style="color:var(--success)">'+exprD(combined)+"</span></div>"+(isAdd?"":'<span style="font-size:.82rem;color:var(--error)">Remember to distribute the negative!</span>')});
+
+  stepsData.push({title:"Write Over the LCD",proc:"combine",type:"info",instruction:'<div style="text-align:center;font-size:1.2rem;margin:10px 0">'+inlineFrac('<span style="color:var(--success)">'+exprD(combined)+"</span>",'<span style="color:var(--accent-orange)">'+exprD(lcdStr)+"</span>")+"</div>"});
+
+  var simplified=trySimplify(combined,lcdStr);
+  if(simplified.changed){
+    stepsData.push({title:"Simplify if Possible",proc:"answer",type:"info",instruction:'Check for common factors to cancel:<div style="text-align:center;font-size:1.2rem;margin-top:10px">'+(simplified.den==="1"?'<span class="mono" style="color:var(--success)">'+exprD(simplified.num)+"</span>":inlineFrac('<span style="color:var(--success)">'+exprD(simplified.num)+"</span>",'<span style="color:var(--success)">'+exprD(simplified.den)+"</span>"))+"</div>"});
+    S.finalNum=simplified.num;S.finalDen=simplified.den;
+  } else {
+    S.finalNum=combined;S.finalDen=lcdStr;
+  }
+
+  stepsData.push({title:"Final Answer",proc:"answer",type:"info",instruction:'<div style="font-size:1.2rem;margin:12px 0;text-align:center">'+(S.finalDen==="1"?'<span class="mono" style="color:var(--success);font-size:1.3rem">'+exprD(S.finalNum)+"</span>":inlineFrac('<span style="color:var(--success);font-size:1.1rem">'+exprD(S.finalNum)+"</span>",'<span style="color:var(--success);font-size:1.1rem">'+exprD(S.finalDen)+"</span>"))+"</div>"});
+  launchWorkspace();
+}
+
+// ==================== RENDER ====================
+function showStep(idx){
+  if(idx>=stepsData.length){finishProblem();return}
+  var step=stepsData[idx],container=document.getElementById("stepsContainer");
+  var card=document.createElement("div");
+  card.className="step-card";card.id="step-"+idx;
+  if(step.proc){
+    document.querySelectorAll(".proc-step").forEach(function(s){s.classList.remove("active")});
+    document.getElementById("proc-"+step.proc).classList.add("active");
+  }
+  var bodyHTML="";
+  if(step.type==="info"){
+    bodyHTML='<div class="step-instruction">'+step.instruction+'</div><button class="btn-primary btn-sm" onclick="completeStep('+idx+')">Got It \u2192</button>';
+  }else if(step.type==="numeric"){
+    bodyHTML='<div class="step-instruction">'+step.instruction+'</div><div class="answer-row"><span class="answer-label">'+(step.question||"")+" </span>"+
+    '<input type="text" class="answer-input" id="ans-'+idx+'" placeholder="?" autocomplete="off" onkeydown="if(event.key===\'Enter\')checkNum('+idx+')">'+
+    '<button class="btn-check" onclick="checkNum('+idx+')">Check</button></div><div class="step-feedback" id="fb-'+idx+'"></div>';
+  }else if(step.type==="choice"){
+    bodyHTML='<div class="step-instruction">'+step.instruction+'</div><div style="font-size:.88rem;color:var(--text);margin-bottom:10px;font-weight:500">'+(step.question||"")+"</div>"+
+    '<div class="choice-row" id="choices-'+idx+'">'+step.options.map(function(o){return '<div class="choice-btn" onclick="checkChoice('+idx+",this,'"+escHtml(o)+"')\">"+escHtml(o)+"</div>"}).join("")+"</div>"+
+    '<div class="step-feedback" id="fb-'+idx+'"></div>';
+  }
+  card.innerHTML='<div class="step-header"><div class="step-num">'+(idx+1)+'</div><div class="step-title">'+step.title+'</div></div><div class="step-body">'+bodyHTML+"</div>";
+  container.appendChild(card);
+  card.scrollIntoView({behavior:"smooth",block:"nearest"});
+  setTimeout(function(){var inp=card.querySelector(".answer-input");if(inp)inp.focus()},150);
+}
+
+function completeStep(idx){markDone(idx);currentStep=idx+1;showStep(idx+1)}
+function markDone(idx){
+  var card=document.getElementById("step-"+idx);
+  if(card){card.classList.add("completed");card.querySelector(".step-num").classList.add("done")}
+  var step=stepsData[idx];
+  if(step.proc) document.getElementById("proc-"+step.proc).classList.add("done");
+}
+
+function checkNum(idx){
+  var step=stepsData[idx],inp=document.getElementById("ans-"+idx),fb=document.getElementById("fb-"+idx);
+  var val=parseFloat(inp.value.trim());
+  if(isNaN(val)){fb.textContent="Enter a number.";fb.className="step-feedback show incorrect";return}
+  var tol=Math.abs(step.answer)<1?0.015:Math.max(0.015,Math.abs(step.answer)*0.005);
+  if(Math.abs(val-step.answer)<=tol){
+    inp.classList.add("correct");inp.disabled=true;inp.value=fmtNum(step.answer);
+    fb.textContent="Correct! \u2713";fb.className="step-feedback show correct";
+    setTimeout(function(){markDone(idx);currentStep=idx+1;showStep(idx+1)},700);
+  }else{
+    inp.classList.add("incorrect");setTimeout(function(){inp.classList.remove("incorrect")},600);
+    var tries=parseInt(inp.dataset.tries||"0")+1;inp.dataset.tries=tries;
+    if(tries>=3){fb.innerHTML="The answer is <strong>"+fmtNum(step.answer)+"</strong>";fb.className="step-feedback show hint-text"}
+    else if(tries>=2){fb.textContent="Not quite \u2014 try once more!";fb.className="step-feedback show incorrect"}
+    else{fb.textContent="Not quite \u2014 give it another try!";fb.className="step-feedback show incorrect"}
+    inp.value="";inp.focus();
+  }
+}
+
+function checkChoice(idx,btn,chosen){
+  var step=stepsData[idx];
+  if(chosen===step.answer){
+    btn.classList.add("correct");
+    document.querySelectorAll("#choices-"+idx+" .choice-btn").forEach(function(b){if(!b.classList.contains("correct"))b.classList.add("disabled")});
+    document.getElementById("fb-"+idx).textContent="Correct! \u2713";
+    document.getElementById("fb-"+idx).className="step-feedback show correct";
+    setTimeout(function(){markDone(idx);currentStep=idx+1;showStep(idx+1)},700);
+  }else{
+    btn.classList.add("incorrect");setTimeout(function(){btn.classList.remove("incorrect")},500);
+    document.getElementById("fb-"+idx).textContent="Not quite \u2014 try again!";
+    document.getElementById("fb-"+idx).className="step-feedback show incorrect";
+  }
+}
+
+function finishProblem(){
+  document.querySelectorAll(".proc-step").forEach(function(s){s.classList.remove("active")});
+  var expr="",detail="";
+  var dn=S.finalDen==="1"?exprD(S.finalNum):exprD(S.finalNum)+" / "+exprD(S.finalDen);
+  if(mode==="addSame"||mode==="subSame"){expr=dn;detail="Same denominator \u2014 combined numerators"}
+  else{expr=dn;detail="Found LCD: "+exprD(S.lcdStr)+", then combined"}
+  document.getElementById("resultExpr").textContent=expr;
+  document.getElementById("resultDetail").textContent=detail;
+  document.getElementById("resultSection").classList.add("visible");
+  document.getElementById("resultSection").scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+
+function resetAll(){
+  document.getElementById("inputSection").style.display="";
+  document.getElementById("workspace").classList.remove("visible");
+  document.getElementById("stepsContainer").innerHTML="";
+  document.getElementById("resultSection").classList.remove("visible");
+  document.querySelectorAll(".proc-step").forEach(function(s){s.classList.remove("active","done")});
+  document.querySelectorAll(".input-section input:not([disabled])").forEach(function(i){i.value=""});
+}
+</script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 {
   "version": "v1",
-  "updated": "2026-03-03T01:10:50.463Z",
+  "updated": "2026-03-03T01:12:45.762Z",
   "categories": {
     "toolkit": {
       "slots": 8,
@@ -471,7 +471,7 @@
       "titles": [
         "Complex Numbers",
         "Rational Expressions",
-        "",
+        "Add and Subtract Rational Numbers",
         "",
         "",
         "",
@@ -523,7 +523,7 @@
       "links": [
         "/math-toolkit/presentations/algebra/algebra-2/presentation-01/",
         "/math-toolkit/presentations/algebra/algebra-2/presentation-02/",
-        "",
+        "/math-toolkit/presentations/algebra/algebra-2/presentation-03/",
         "",
         "",
         "",
