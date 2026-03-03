@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Parts of Speech | Language Arts Toolkit</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0d1117;--surface:rgba(255,255,255,0.04);--border:rgba(255,255,255,0.08);--bbr:rgba(255,255,255,0.15);--teal:#14b8a6;--td:rgba(20,184,166,0.15);--tg:rgba(20,184,166,0.25);--text:#e2e8f0;--tm:#94a3b8;--tdim:#64748b;--green:#22c55e;--gd:rgba(34,197,94,0.15);--red:#ef4444;--rd:rgba(239,68,68,0.15);--yellow:#eab308;--purple:#a78bfa;--blue:#60a5fa;--orange:#fb923c;--pink:#f472b6;--cyan:#22d3ee}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow:hidden}
+.bc{position:fixed;top:0;left:0;right:0;padding:1rem 1.5rem;font-size:.8rem;color:var(--tm);z-index:100;background:linear-gradient(var(--bg),transparent)}
+.bc a{color:var(--teal);text-decoration:none}.bc a:hover{color:#2dd4bf}.bc span{margin:0 .35rem;opacity:.4}
+.wrap{height:100vh;width:100%;display:flex;align-items:center;justify-content:center}
+.slide{background:var(--surface);border:1px solid var(--border);border-radius:1.25rem;width:92%;max-width:1000px;height:87vh;padding:2.5rem;display:none;animation:fadeIn .4s ease-out;overflow-y:auto}
+.slide.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.slide::-webkit-scrollbar{width:6px}.slide::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:3px}
+h1{font-size:2.3em;text-align:center;margin-bottom:1.25rem;border-bottom:2px solid var(--teal);padding-bottom:.75rem}
+h2{font-size:1.9em;margin-bottom:1rem;color:var(--teal);border-bottom:2px solid var(--td);padding-bottom:.5rem}
+h3{font-size:1.15em;margin-bottom:.75rem}h4{font-size:1em;margin-bottom:.4rem;color:var(--text)}
+p,li{font-size:1.05em;line-height:1.7;margin-bottom:.5rem}ul{margin-left:1.25rem}
+.ic{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:.75rem;padding:1.25rem;margin:1rem 0}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin:1.25rem 0}
+.hb{background:var(--td);border:1px solid var(--tg);border-radius:.75rem;padding:1.25rem;margin:1rem 0;text-align:center}
+.tb{background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.25);border-radius:.75rem;padding:1.25rem;margin:1rem 0}.tb h3{color:var(--blue)}
+code{font-family:'JetBrains Mono',monospace;background:rgba(20,184,166,.15);padding:.1rem .4rem;border-radius:.25rem;color:var(--teal);font-size:.95em}
+.wp{display:inline-block;padding:.3rem .75rem;border-radius:2rem;font-weight:600;font-size:.9em;margin:.25rem}
+.pn{background:rgba(96,165,250,.2);color:var(--blue);border:1px solid rgba(96,165,250,.3)}
+.pv{background:rgba(239,68,68,.2);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.pa{background:rgba(167,139,250,.2);color:var(--purple);border:1px solid rgba(167,139,250,.3)}
+.pd{background:rgba(251,146,60,.2);color:var(--orange);border:1px solid rgba(251,146,60,.3)}
+.pp{background:rgba(34,211,238,.2);color:var(--cyan);border:1px solid rgba(34,211,238,.3)}
+.pr{background:rgba(244,114,182,.2);color:var(--pink);border:1px solid rgba(244,114,182,.3)}
+.pc{background:rgba(234,179,8,.2);color:var(--yellow);border:1px solid rgba(234,179,8,.3)}
+.pi{background:rgba(34,197,94,.2);color:var(--green);border:1px solid rgba(34,197,94,.3)}
+.pt{background:rgba(148,163,184,.2);color:var(--tm);border:1px solid rgba(148,163,184,.3)}
+.sd{background:rgba(255,255,255,.03);border:1px solid var(--border);padding:1.25rem;border-radius:.75rem;margin:1rem 0;font-size:1.15em;line-height:2;text-align:center}
+.sd .n{background:rgba(96,165,250,.2);color:var(--blue);padding:.1rem .4rem;border-radius:.25rem;font-weight:600}
+.sd .v{background:rgba(239,68,68,.2);color:var(--red);padding:.1rem .4rem;border-radius:.25rem;font-weight:600}
+.sd .aj{background:rgba(167,139,250,.2);color:var(--purple);padding:.1rem .4rem;border-radius:.25rem;font-weight:600}
+.sd .av{background:rgba(251,146,60,.2);color:var(--orange);padding:.1rem .4rem;border-radius:.25rem;font-weight:600}
+.sd .pnx{background:rgba(34,211,238,.2);color:var(--cyan);padding:.1rem .4rem;border-radius:.25rem;font-weight:600}
+.sd .ppx{background:rgba(244,114,182,.2);color:var(--pink);padding:.1rem .4rem;border-radius:.25rem;font-weight:600}
+.sd .cj{background:rgba(234,179,8,.2);color:var(--yellow);padding:.1rem .4rem;border-radius:.25rem;font-weight:600}
+.sd .ij{background:rgba(34,197,94,.2);color:var(--green);padding:.1rem .4rem;border-radius:.25rem;font-weight:600}
+.sd .ar{background:rgba(148,163,184,.15);color:var(--tm);padding:.1rem .4rem;border-radius:.25rem;font-weight:500}
+.sg{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin:.75rem 0}
+.sc{background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:.6rem;padding:.85rem}
+.sc h4{color:var(--teal);font-size:.95em;margin-bottom:.4rem}
+.tc{background:rgba(20,184,166,.08);border:1px dashed var(--tg);border-radius:.75rem;padding:1rem;margin:.75rem 0}
+.tc p{margin-bottom:.25rem;font-style:italic;color:var(--tm)}
+.ga{background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);border-radius:.75rem;padding:1.5rem;margin:1rem 0;text-align:center}
+.gb{background:var(--td);border:1px solid var(--tg);color:var(--text);padding:.55rem 1.25rem;border-radius:2rem;cursor:pointer;font-size:.9rem;font-family:'Outfit',sans-serif;font-weight:500;transition:all .25s;margin:.25rem}
+.gb:hover:not(:disabled){background:var(--teal);color:var(--bg)}.gb:disabled{opacity:.5;cursor:not-allowed}
+.gb.correct{background:var(--green);color:var(--bg);border-color:var(--green)}
+.gb.incorrect{background:var(--red);color:#fff;border-color:var(--red)}
+.scd{font-family:'JetBrains Mono',monospace;font-size:1rem;color:var(--teal);margin:.5rem 0}
+.pg{display:grid;grid-template-columns:repeat(3,1fr);gap:.6rem;margin:1.5rem 0}
+.pkc{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:.75rem;padding:.85rem;text-align:center;transition:all .25s}
+.pkc:hover{background:rgba(255,255,255,.06);border-color:var(--bbr);transform:translateY(-2px)}
+.pkc .emo{font-size:1.6rem;margin-bottom:.3rem}.pkc .lb{font-weight:600;color:var(--teal);font-size:.9rem}
+.navigation{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);display:flex;gap:.75rem;align-items:center;z-index:100}
+.nb{background:var(--surface);border:1px solid var(--bbr);color:var(--text);padding:.65rem 1.5rem;border-radius:2rem;cursor:pointer;font-size:.95rem;font-family:'Outfit',sans-serif;font-weight:500;transition:all .2s}
+.nb:hover:not(:disabled){background:var(--td);border-color:var(--teal);color:var(--teal)}.nb:disabled{opacity:.3;cursor:not-allowed}
+.slc{font-family:'JetBrains Mono',monospace;font-size:.85rem;color:var(--tm);background:var(--surface);border:1px solid var(--border);padding:.4rem 1rem;border-radius:2rem}
+@media(max-width:700px){.g2,.sg,.pg{grid-template-columns:1fr}.slide{padding:1.5rem}}
+</style>
+</head>
+<body>
+<nav class="bc"><a href="/">Home</a><span>&#8250;</span><a href="/language-arts/">Language Arts</a><span>&#8250;</span><a href="/language-arts/toolkit/">Toolkit</a><span>&#8250;</span>Parts of Speech</nav>
+<div class="wrap">
+<!-- SLIDE 1: TITLE -->
+<div class="slide active">
+<h1>Parts of Speech</h1>
+<div style="text-align:center">
+<p style="font-size:1.15em;color:var(--tm);margin-bottom:.5rem">Understanding the Building Blocks of Every Sentence</p>
+<p style="color:var(--tdim);margin-bottom:1.5rem">9 word types &#8226; Definitions &#8226; Examples &#8226; Quick Tests &#8226; Practice Quiz</p>
+<div class="pg">
+<div class="pkc"><div class="emo">&#128100;</div><div class="lb">Nouns</div></div>
+<div class="pkc"><div class="emo">&#127939;</div><div class="lb">Verbs</div></div>
+<div class="pkc"><div class="emo">&#127912;</div><div class="lb">Adjectives</div></div>
+<div class="pkc"><div class="emo">&#9889;</div><div class="lb">Adverbs</div></div>
+<div class="pkc"><div class="emo">&#128073;</div><div class="lb">Pronouns</div></div>
+<div class="pkc"><div class="emo">&#128205;</div><div class="lb">Prepositions</div></div>
+<div class="pkc"><div class="emo">&#128279;</div><div class="lb">Conjunctions</div></div>
+<div class="pkc"><div class="emo">&#128227;</div><div class="lb">Interjections</div></div>
+<div class="pkc"><div class="emo">&#128196;</div><div class="lb">Articles</div></div>
+</div>
+<div class="hb" style="max-width:600px;margin:1.5rem auto">
+<h3 style="color:var(--teal);margin-bottom:.5rem">Color Key for Sentence Examples</h3>
+<div style="display:flex;flex-wrap:wrap;gap:.4rem;justify-content:center">
+<span class="wp pn">noun</span><span class="wp pv">verb</span><span class="wp pa">adjective</span><span class="wp pd">adverb</span><span class="wp pp">pronoun</span><span class="wp pr">preposition</span><span class="wp pc">conjunction</span><span class="wp pi">interjection</span><span class="wp pt">article</span>
+</div></div></div></div>
+
+<!-- SLIDE 2: NOUNS -->
+<div class="slide">
+<h2>&#128100; Nouns</h2>
+<div class="ic" style="border-left:4px solid var(--blue)"><h3>Definition</h3><p>A <strong>noun</strong> is a word that names a person, place, thing, or idea. Nouns are the subjects and objects of sentences and form the backbone of communication.</p></div>
+<div class="sg">
+<div class="sc"><h4>Common Nouns</h4><p>General names: <code>dog</code> <code>city</code> <code>school</code> <code>book</code> <code>teacher</code></p></div>
+<div class="sc"><h4>Proper Nouns</h4><p>Specific (capitalized): <code>Winfield</code> <code>Mrs. Garcia</code> <code>Missouri</code></p></div>
+<div class="sc"><h4>Abstract Nouns</h4><p>Ideas/feelings: <code>happiness</code> <code>freedom</code> <code>courage</code> <code>loyalty</code></p></div>
+<div class="sc"><h4>Collective Nouns</h4><p>Groups: <code>team</code> <code>family</code> <code>flock</code> <code>class</code> <code>audience</code></p></div>
+</div>
+<div class="sd">The <span class="n">teacher</span> read a <span class="n">book</span> about <span class="n">friendship</span> to her <span class="n">students</span> at <span class="n">Winfield</span>.</div>
+<div class="tc"><h3 style="color:var(--teal)">&#128161; Quick Test</h3><p>Can you put "the" or "a" in front of it? Can it be made plural? If yes, it is probably a noun!</p><p>the happiness &#10003; &#8226; a school &#10003; &#8226; dogs &#10003;</p></div>
+</div>
+
+<!-- SLIDE 3: VERBS -->
+<div class="slide">
+<h2>&#127939; Verbs</h2>
+<div class="ic" style="border-left:4px solid var(--red)"><h3>Definition</h3><p>A <strong>verb</strong> expresses an action, occurrence, or state of being. Every complete sentence needs at least one verb. Verbs tell us what the subject is doing.</p></div>
+<div class="sg">
+<div class="sc"><h4>Action Verbs</h4><p>Physical or mental: <code>run</code> <code>write</code> <code>think</code> <code>eat</code> <code>believe</code></p></div>
+<div class="sc"><h4>Linking Verbs</h4><p>Connect subject to description: <code>is</code> <code>are</code> <code>was</code> <code>seem</code> <code>become</code></p></div>
+<div class="sc"><h4>Helping Verbs</h4><p>Support the main verb: <code>can</code> <code>will</code> <code>should</code> <code>have</code> <code>might</code></p></div>
+<div class="sc"><h4>Verb Tenses</h4><p>Past: <code>ran</code> &#8226; Present: <code>run</code> &#8226; Future: <code>will run</code></p></div>
+</div>
+<div class="sd">The <span class="n">children</span> <span class="v">laughed</span> loudly and <span class="v">played</span> in the <span class="n">park</span> while their <span class="n">parents</span> <span class="v">watched</span>.</div>
+<div class="tc"><h3 style="color:var(--teal)">&#128161; Quick Test</h3><p>Can you change it to past tense? Can you add "-ing"? If yes, it is likely a verb!</p><p>run &#8594; ran &#10003; &#8226; write &#8594; writing &#10003; &#8226; think &#8594; thought &#10003;</p></div>
+<div class="tb"><h3>Linking Verb Trick</h3><p>Replace the verb with "=" &#8212; if it still makes sense, it is a linking verb:<br>"She <strong>is</strong> happy" &#8594; "She = happy" &#10003;</p></div>
+</div>
+<!-- SLIDE 4: ADJECTIVES -->
+<div class="slide">
+<h2>&#127912; Adjectives</h2>
+<div class="ic" style="border-left:4px solid var(--purple)"><h3>Definition</h3><p>An <strong>adjective</strong> describes or modifies a noun or pronoun. Adjectives answer three questions: <em>What kind? How many? Which one?</em></p></div>
+<div class="sg">
+<div class="sc"><h4>What kind?</h4><p><code>red</code> car &#8226; <code>tall</code> building &#8226; <code>happy</code> student &#8226; <code>ancient</code> ruins</p></div>
+<div class="sc"><h4>How many?</h4><p><code>three</code> books &#8226; <code>several</code> friends &#8226; <code>many</code> ideas &#8226; <code>few</code> choices</p></div>
+<div class="sc"><h4>Which one?</h4><p><code>this</code> chair &#8226; <code>that</code> movie &#8226; <code>first</code> place &#8226; <code>last</code> chance</p></div>
+<div class="sc"><h4>Comparing</h4><p>big &#8594; <code>bigger</code> &#8594; <code>biggest</code><br>beautiful &#8594; <code>more beautiful</code></p></div>
+</div>
+<div class="sd">The <span class="aj">brave</span>, <span class="aj">young</span> <span class="n">knight</span> <span class="v">rode</span> his <span class="aj">white</span> <span class="n">horse</span> through the <span class="aj">dark</span> <span class="n">forest</span>.</div>
+<div class="tc"><h3 style="color:var(--teal)">&#128161; Quick Test</h3><p>Does it fit between "very" and a noun? "The very _____ dog" &#8212; if it works, it is an adjective!</p><p>the very <strong>happy</strong> dog &#10003; &#8226; the very <strong>tall</strong> building &#10003;</p></div>
+<div class="tb"><h3>Adjective vs. Adverb</h3><p>Adjectives describe <strong>nouns</strong> (the <em>fast</em> car). Adverbs describe <strong>verbs</strong> (she drove <em>fast</em>). If it tells you about a thing = adjective. About an action = adverb.</p></div>
+</div>
+
+<!-- SLIDE 5: ADVERBS -->
+<div class="slide">
+<h2>&#9889; Adverbs</h2>
+<div class="ic" style="border-left:4px solid var(--orange)"><h3>Definition</h3><p>An <strong>adverb</strong> modifies a verb, adjective, or another adverb. Adverbs answer: <em>How? When? Where? How often? To what extent?</em></p></div>
+<div class="sg">
+<div class="sc"><h4>How? (Manner)</h4><p><code>quickly</code> <code>carefully</code> <code>loudly</code> <code>softly</code> <code>bravely</code></p></div>
+<div class="sc"><h4>When? (Time)</h4><p><code>yesterday</code> <code>soon</code> <code>always</code> <code>later</code> <code>now</code></p></div>
+<div class="sc"><h4>Where? (Place)</h4><p><code>here</code> <code>outside</code> <code>everywhere</code> <code>upstairs</code> <code>nearby</code></p></div>
+<div class="sc"><h4>To what extent?</h4><p><code>very</code> <code>extremely</code> <code>quite</code> <code>almost</code> <code>too</code> <code>really</code></p></div>
+</div>
+<div class="sd">She <span class="av">carefully</span> and <span class="av">slowly</span> <span class="v">walked</span> <span class="av">upstairs</span> <span class="av">yesterday</span>.</div>
+<div class="tc"><h3 style="color:var(--teal)">&#128161; Quick Test</h3><p>Many adverbs end in <code>-ly</code>. Try removing the word &#8212; if the sentence still works but loses detail about the action, it is an adverb.</p><p>She ran <strong>quickly</strong> &#8594; She ran (still works, lost detail = adverb!)</p></div>
+<div class="tb"><h3>Watch Out: Not All -ly Words Are Adverbs!</h3><p><code>friendly</code>, <code>lovely</code>, <code>lonely</code>, and <code>silly</code> are actually <strong>adjectives</strong>. Always check: does it describe a noun (adjective) or an action (adverb)?</p></div>
+</div>
+
+<!-- SLIDE 6: PRONOUNS -->
+<div class="slide">
+<h2>&#128073; Pronouns</h2>
+<div class="ic" style="border-left:4px solid var(--cyan)"><h3>Definition</h3><p>A <strong>pronoun</strong> takes the place of a noun so we do not have to repeat it. Pronouns make sentences flow more smoothly.</p></div>
+<div class="sg">
+<div class="sc"><h4>Subject Pronouns</h4><p>Do the action: <code>I</code> <code>you</code> <code>he</code> <code>she</code> <code>it</code> <code>we</code> <code>they</code></p></div>
+<div class="sc"><h4>Object Pronouns</h4><p>Receive the action: <code>me</code> <code>you</code> <code>him</code> <code>her</code> <code>it</code> <code>us</code> <code>them</code></p></div>
+<div class="sc"><h4>Possessive Pronouns</h4><p>Show ownership: <code>my</code> <code>your</code> <code>his</code> <code>her</code> <code>its</code> <code>our</code> <code>their</code></p></div>
+<div class="sc"><h4>Other Types</h4><p>Reflexive: <code>myself</code> <code>herself</code> <code>themselves</code><br>Interrogative: <code>who</code> <code>what</code> <code>which</code></p></div>
+</div>
+<div class="ic"><h3>Without Pronouns vs. With Pronouns</h3>
+<div class="g2" style="margin:0">
+<div style="padding:.5rem;background:var(--rd);border-radius:.5rem"><p style="margin:0"><strong>Awkward:</strong> Sarah loves books. Sarah reads books every day because books make Sarah happy.</p></div>
+<div style="padding:.5rem;background:var(--gd);border-radius:.5rem"><p style="margin:0"><strong>Smooth:</strong> Sarah loves books. <strong>She</strong> reads <strong>them</strong> every day because <strong>they</strong> make <strong>her</strong> happy.</p></div>
+</div></div>
+<div class="sd"><span class="n">Sarah</span> <span class="v">loves</span> <span class="n">books</span>. <span class="pnx">She</span> <span class="v">reads</span> <span class="pnx">them</span> every <span class="n">day</span> because <span class="pnx">they</span> <span class="v">make</span> <span class="pnx">her</span> <span class="aj">happy</span>.</div>
+<div class="tc"><h3 style="color:var(--teal)">&#128161; Quick Test</h3><p>Can you replace it with a specific name or noun? If yes, it is a pronoun!</p><p><strong>He</strong> went to the store &#8594; <strong>Jake</strong> went to the store &#10003;</p></div>
+</div>
+<!-- SLIDE 7: PREPOSITIONS -->
+<div class="slide">
+<h2>&#128205; Prepositions</h2>
+<div class="ic" style="border-left:4px solid var(--pink)"><h3>Definition</h3><p>A <strong>preposition</strong> shows the relationship between a noun (or pronoun) and another word. They usually indicate location, direction, time, or manner.</p></div>
+<div class="sg">
+<div class="sc"><h4>Location</h4><p><code>in</code> <code>on</code> <code>under</code> <code>between</code> <code>behind</code> <code>beside</code></p></div>
+<div class="sc"><h4>Direction</h4><p><code>to</code> <code>from</code> <code>through</code> <code>across</code> <code>into</code> <code>toward</code></p></div>
+<div class="sc"><h4>Time</h4><p><code>before</code> <code>after</code> <code>during</code> <code>until</code> <code>since</code> <code>at</code></p></div>
+<div class="sc"><h4>Other</h4><p><code>with</code> <code>without</code> <code>about</code> <code>for</code> <code>by</code> <code>of</code></p></div>
+</div>
+<div class="sd">The <span class="n">cat</span> <span class="v">jumped</span> <span class="ppx">onto</span> the <span class="n">table</span> and <span class="v">knocked</span> the <span class="n">vase</span> <span class="ppx">off</span> <span class="ppx">during</span> the <span class="n">party</span>.</div>
+<div class="tc"><h3 style="color:var(--teal)">&#128161; Quick Test: The Squirrel and the Tree</h3><p>Does the word fit? "The squirrel ran _____ the tree."</p><p><strong>up</strong>, <strong>around</strong>, <strong>behind</strong>, <strong>through</strong>, <strong>into</strong>, <strong>over</strong> &#8594; all prepositions!</p></div>
+<div class="tb"><h3>Prepositional Phrases</h3><p>A preposition + a noun = a <strong>prepositional phrase</strong>:<br>"The book <strong>on the shelf</strong>" (which book?) &#8226; "She ran <strong>through the park</strong>" (where?)</p></div>
+</div>
+
+<!-- SLIDE 8: CONJUNCTIONS -->
+<div class="slide">
+<h2>&#128279; Conjunctions</h2>
+<div class="ic" style="border-left:4px solid var(--yellow)"><h3>Definition</h3><p>A <strong>conjunction</strong> connects words, phrases, or clauses. They show relationships between ideas and help build complex sentences.</p></div>
+<div class="sg">
+<div class="sc"><h4>Coordinating (FANBOYS)</h4><p><code>For</code> <code>And</code> <code>Nor</code> <code>But</code> <code>Or</code> <code>Yet</code> <code>So</code></p></div>
+<div class="sc"><h4>Subordinating</h4><p><code>because</code> <code>although</code> <code>when</code> <code>if</code> <code>since</code> <code>while</code> <code>unless</code></p></div>
+<div class="sc"><h4>Correlative (Pairs)</h4><p><code>either...or</code> <code>neither...nor</code> <code>both...and</code> <code>not only...but also</code></p></div>
+<div class="sc"><h4>Why They Matter</h4><p>Without conjunctions, every sentence is short and choppy. They are the glue of writing!</p></div>
+</div>
+<div class="hb"><h3 style="color:var(--teal);margin-bottom:.5rem">&#128161; FANBOYS Memory Trick</h3><p style="font-size:1.3em;font-family:'JetBrains Mono',monospace;margin:0"><strong>F</strong>or &#8226; <strong>A</strong>nd &#8226; <strong>N</strong>or &#8226; <strong>B</strong>ut &#8226; <strong>O</strong>r &#8226; <strong>Y</strong>et &#8226; <strong>S</strong>o</p></div>
+<div class="sd">I <span class="v">wanted</span> <span class="n">pizza</span>, <span class="cj">but</span> my <span class="n">sister</span> <span class="v">wanted</span> <span class="n">tacos</span>, <span class="cj">so</span> we <span class="v">got</span> both.</div>
+<div class="tc"><h3 style="color:var(--teal)">&#128161; Quick Test</h3><p>Try removing the word. If the sentence breaks into two separate thoughts, it is a conjunction!</p><p>"I like dogs <strong>and</strong> cats" &#8594; "I like dogs. Cats." (needs the conjunction!)</p></div>
+</div>
+
+<!-- SLIDE 9: INTERJECTIONS -->
+<div class="slide">
+<h2>&#128227; Interjections</h2>
+<div class="ic" style="border-left:4px solid var(--green)"><h3>Definition</h3><p>An <strong>interjection</strong> is a word or phrase that expresses strong emotion or surprise. They usually stand alone with exclamation points or are set off by commas.</p></div>
+<div class="sg">
+<div class="sc"><h4>Surprise</h4><p><code>Wow!</code> <code>Oh!</code> <code>Whoa!</code> <code>Really?</code></p></div>
+<div class="sc"><h4>Joy</h4><p><code>Hooray!</code> <code>Yay!</code> <code>Yes!</code> <code>Bravo!</code></p></div>
+<div class="sc"><h4>Pain / Disgust</h4><p><code>Ouch!</code> <code>Ow!</code> <code>Ew!</code> <code>Yuck!</code></p></div>
+<div class="sc"><h4>Hesitation</h4><p><code>Um...</code> <code>Well...</code> <code>Hmm...</code> <code>Uh...</code></p></div>
+</div>
+<div class="sd"><span class="ij">Wow!</span> That <span class="v">was</span> an <span class="aj">amazing</span> <span class="n">performance</span>. <span class="ij">Bravo!</span> <span class="pnx">You</span> should <span class="v">be</span> <span class="aj">proud</span>.</div>
+<div class="tc"><h3 style="color:var(--teal)">&#128161; Quick Test</h3><p>Can it stand alone as its own sentence? Does it express a feeling? If yes, it is an interjection!</p></div>
+<div class="tb"><h3>Punctuation Matters</h3><p><strong>Strong emotion</strong> = exclamation point: "Wow! That is amazing!"<br><strong>Mild emotion</strong> = comma: "Well, I think we should go."</p></div>
+</div>
+
+<!-- SLIDE 10: ARTICLES -->
+<div class="slide">
+<h2>&#128196; Articles</h2>
+<div class="ic" style="border-left:4px solid var(--tm)"><h3>Definition</h3><p><strong>Articles</strong> are special words before nouns that indicate whether the noun is specific or general. There are only three: <code>the</code>, <code>a</code>, and <code>an</code>.</p></div>
+<div class="g2">
+<div class="ic"><h3 style="color:var(--teal)">Definite: <code>the</code></h3><p>Refers to a <strong>specific</strong> noun both speaker and listener know about.</p><p>"Give me <strong>the</strong> book" = a specific one</p><p>"<strong>The</strong> sun rises in the east" = only one</p></div>
+<div class="ic"><h3 style="color:var(--teal)">Indefinite: <code>a</code> / <code>an</code></h3><p>Refers to <strong>any one</strong> of a group, not specific.</p><p>"Give me <strong>a</strong> book" = any book</p><p>"She ate <strong>an</strong> apple" = one, not specific</p></div>
+</div>
+<div class="hb"><h3 style="color:var(--teal);margin-bottom:.5rem">A vs. An &#8212; The Sound Rule</h3><p>Use <code>a</code> before <strong>consonant sounds</strong>: a dog, a university (sounds like "yoo")<br>Use <code>an</code> before <strong>vowel sounds</strong>: an apple, an hour (the "h" is silent)</p></div>
+<div class="sd"><span class="ar">The</span> <span class="n">student</span> <span class="v">brought</span> <span class="ar">a</span> <span class="n">pencil</span> <span class="cj">and</span> <span class="ar">an</span> <span class="n">eraser</span> <span class="ppx">to</span> <span class="ar">the</span> <span class="n">exam</span>.</div>
+</div>
+<!-- SLIDE 11: PUT IT ALL TOGETHER -->
+<div class="slide">
+<h2>&#127912; Put It All Together</h2>
+<p>See how ALL parts of speech work together in real sentences.</p>
+<div class="sd" style="margin-top:1.5rem"><span class="ij">Wow!</span> <span class="ar">The</span> <span class="aj">brave</span> <span class="n">firefighter</span> <span class="av">quickly</span> <span class="v">rescued</span> <span class="ar">a</span> <span class="aj">tiny</span> <span class="n">kitten</span> <span class="ppx">from</span> <span class="ar">the</span> <span class="aj">tall</span> <span class="n">tree</span>, <span class="cj">and</span> <span class="pnx">she</span> <span class="v">carried</span> <span class="pnx">it</span> <span class="av">gently</span> <span class="ppx">to</span> <span class="pnx">its</span> <span class="n">owner</span>.</div>
+<div class="ic"><h3>Breakdown</h3><div style="display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.5rem">
+<span class="wp pi">Wow! = interjection</span><span class="wp pt">The, a = articles</span><span class="wp pa">brave, tiny, tall = adjectives</span><span class="wp pn">firefighter, kitten, tree, owner = nouns</span><span class="wp pd">quickly, gently = adverbs</span><span class="wp pv">rescued, carried = verbs</span><span class="wp pr">from, to = prepositions</span><span class="wp pc">and = conjunction</span><span class="wp pp">she, it, its = pronouns</span></div></div>
+<div class="tb"><h3>Commonly Confused Pairs</h3><ul>
+<li><strong>Adjective vs. Adverb:</strong> "She is a <em>careful</em> driver" (adj) vs. "She drives <em>carefully</em>" (adv)</li>
+<li><strong>Preposition vs. Adverb:</strong> "She walked <em>in</em>" (adverb, no object) vs. "She walked <em>in</em> the door" (preposition + noun)</li>
+<li><strong>Pronoun vs. Adjective:</strong> "<em>That</em> is mine" (pronoun) vs. "<em>That</em> book is mine" (adjective)</li>
+</ul></div>
+<div class="ic"><h3>Second Example Sentence</h3>
+<div class="sd" style="margin-top:.5rem"><span class="ij">Oh!</span> <span class="pnx">I</span> <span class="av">almost</span> <span class="v">forgot</span> <span class="pnx">my</span> <span class="aj">new</span> <span class="n">backpack</span> <span class="ppx">at</span> <span class="ar">the</span> <span class="aj">busy</span> <span class="n">airport</span>, <span class="cj">but</span> <span class="ar">a</span> <span class="aj">kind</span> <span class="n">stranger</span> <span class="av">quickly</span> <span class="v">returned</span> <span class="pnx">it</span> <span class="ppx">to</span> <span class="pnx">me</span>.</div>
+</div>
+</div>
+
+<!-- SLIDE 12: INTERACTIVE QUIZ -->
+<div class="slide">
+<h2>&#127942; Parts of Speech Quiz</h2>
+<p>Identify the part of speech for the <strong>highlighted word</strong> in each sentence!</p>
+<div class="ga" id="quiz-area">
+<div id="quiz-q" style="font-size:1.2em;margin:1rem 0;padding:1rem;background:rgba(255,255,255,.03);border-radius:.75rem"></div>
+<div id="quiz-opts" style="display:flex;flex-wrap:wrap;gap:.5rem;justify-content:center;margin:1rem 0"></div>
+<div id="quiz-fb" style="margin:.75rem 0;font-weight:600;min-height:1.5rem"></div>
+<div class="scd">Score: <span id="qsc">0</span> / <span id="qtot">10</span></div>
+<button class="gb" id="qnxt" onclick="nxtQ()" style="display:none;margin-top:.5rem;background:rgba(167,139,250,.2);border-color:rgba(167,139,250,.3);color:var(--purple)">Next Question</button>
+</div>
+<div class="hb" style="margin-top:1rem"><h3 style="color:var(--teal);margin-bottom:.25rem">Color Key</h3>
+<div style="display:flex;flex-wrap:wrap;gap:.4rem;justify-content:center">
+<span class="wp pn">noun</span><span class="wp pv">verb</span><span class="wp pa">adjective</span><span class="wp pd">adverb</span><span class="wp pp">pronoun</span><span class="wp pr">preposition</span><span class="wp pc">conjunction</span><span class="wp pi">interjection</span><span class="wp pt">article</span>
+</div></div>
+</div>
+<div class="navigation">
+<button class="nb" id="prevBtn" onclick="chSl(-1)">&#8592; Previous</button>
+<div class="slc"><span id="csl">1</span> / <span id="tsl">12</span></div>
+<button class="nb" id="nextBtn" onclick="chSl(1)">Next &#8594;</button>
+</div>
+</div>
+<script>
+var cs=0;var sl=document.querySelectorAll('.slide');var ts=sl.length;
+document.getElementById('tsl').textContent=ts;
+function shSl(n){sl[cs].classList.remove('active');cs=n;sl[cs].classList.add('active');document.getElementById('csl').textContent=cs+1;document.getElementById('prevBtn').disabled=cs===0;document.getElementById('nextBtn').disabled=cs===ts-1;}
+function chSl(d){var n=cs+d;if(n>=0&&n<ts)shSl(n);}
+document.addEventListener('keydown',function(e){if(e.key==='ArrowRight'||e.key===' '){e.preventDefault();chSl(1);}else if(e.key==='ArrowLeft'){e.preventDefault();chSl(-1);}});
+shSl(0);
+
+var qd=[
+{s:'The <strong>dog</strong> barked loudly at the mailman.',a:'Noun',o:['Noun','Verb','Adjective','Adverb']},
+{s:'She <strong>quickly</strong> finished her homework.',a:'Adverb',o:['Adjective','Adverb','Verb','Pronoun']},
+{s:'The brave knight <strong>fought</strong> the dragon.',a:'Verb',o:['Noun','Verb','Adjective','Adverb']},
+{s:'<strong>They</strong> went to the store after school.',a:'Pronoun',o:['Noun','Pronoun','Conjunction','Article']},
+{s:'The cat jumped <strong>over</strong> the fence.',a:'Preposition',o:['Adverb','Conjunction','Preposition','Verb']},
+{s:'I wanted to go, <strong>but</strong> it was raining.',a:'Conjunction',o:['Preposition','Conjunction','Adverb','Pronoun']},
+{s:'The <strong>beautiful</strong> sunset lit up the sky.',a:'Adjective',o:['Noun','Verb','Adjective','Adverb']},
+{s:'<strong>Wow!</strong> That was an incredible game.',a:'Interjection',o:['Interjection','Adjective','Adverb','Conjunction']},
+{s:'She brought <strong>an</strong> umbrella to school.',a:'Article',o:['Article','Pronoun','Preposition','Noun']},
+{s:'The students worked <strong>together</strong> on the project.',a:'Adverb',o:['Adjective','Adverb','Preposition','Conjunction']}
+];
+var qi=0,qs=0,qa=false;
+document.getElementById('qtot').textContent=qd.length;
+function rQ(){
+if(qi>=qd.length){document.getElementById('quiz-q').innerHTML='<strong>Quiz Complete!</strong>';document.getElementById('quiz-opts').innerHTML='';var msg=qs>=8?'Excellent!':qs>=6?'Great job!':'Keep practicing!';document.getElementById('quiz-fb').textContent='Final Score: '+qs+'/'+qd.length+' - '+msg;document.getElementById('quiz-fb').style.color=qs>=6?'var(--green)':'var(--yellow)';document.getElementById('qnxt').style.display='none';return;}
+var q=qd[qi];document.getElementById('quiz-q').innerHTML=q.s;
+var h='';for(var i=0;i<q.o.length;i++){h+='<button class="gb" onclick="cQ('+JSON.stringify(q.o[i])+')">'+q.o[i]+'</button>';}
+document.getElementById('quiz-opts').innerHTML=h;document.getElementById('quiz-fb').textContent='';document.getElementById('qnxt').style.display='none';qa=false;}
+function cQ(sel){if(qa)return;qa=true;var q=qd[qi];var bs=document.querySelectorAll('#quiz-opts .gb');
+for(var i=0;i<bs.length;i++){bs[i].disabled=true;if(bs[i].textContent===q.a)bs[i].classList.add('correct');if(bs[i].textContent===sel&&sel!==q.a)bs[i].classList.add('incorrect');}
+if(sel===q.a){document.getElementById('quiz-fb').textContent='Correct!';document.getElementById('quiz-fb').style.color='var(--green)';qs++;}
+else{document.getElementById('quiz-fb').textContent='Not quite - it is a '+q.a+'.';document.getElementById('quiz-fb').style.color='var(--red)';}
+document.getElementById('qsc').textContent=qs;document.getElementById('qnxt').style.display='inline-block';}
+function nxtQ(){qi++;rQ();}
+rQ();
+</script>
+</body></html>
