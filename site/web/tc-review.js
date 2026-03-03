@@ -1426,10 +1426,37 @@
 
     if (unreviewed.length === 0) return;
 
-    if (!confirm(`Mark ${unreviewed.length} submission${unreviewed.length !== 1 ? 's' : ''} as reviewed?`)) return;
+    // Separate submissions with unscored constructed-response items — skip those
+    const skipped = [];
+    const toProcess = [];
+    for (const submission of unreviewed) {
+      const items = assignmentItemsCache[submission.assignment_id] || [];
+      const constructedItems = items.filter(item => item.answer_type === 'constructed');
+      if (constructedItems.length > 0) {
+        const answers = submissionAnswersCache[submission.id] || [];
+        const hasUnscored = constructedItems.some(item => {
+          const answer = answers.find(a => a.item_id === item.id);
+          return !answer || answer.earned_points == null;
+        });
+        if (hasUnscored) {
+          skipped.push(submission);
+          continue;
+        }
+      }
+      toProcess.push(submission);
+    }
+
+    if (toProcess.length === 0) {
+      if (skipped.length > 0) {
+        showToast(`${skipped.length} submission${skipped.length !== 1 ? 's' : ''} skipped — they have unscored written responses`, '#f59e0b', '#0b1220');
+      }
+      return;
+    }
+
+    if (!confirm(`Mark ${toProcess.length} submission${toProcess.length !== 1 ? 's' : ''} as reviewed?`)) return;
 
     let processed = 0;
-    for (const submission of unreviewed) {
+    for (const submission of toProcess) {
       try {
         const answers = submissionAnswersCache[submission.id] || [];
         const items = assignmentItemsCache[submission.assignment_id] || [];
@@ -1440,7 +1467,13 @@
                 return sum + (ans?.earned_points || 0);
               }, 0)
           : (submission.score_auto || 0);
-        const scoreManual = submission.score_manual || 0;
+        const constructedItems = items.filter(item => item.answer_type === 'constructed');
+        let scoreManual = 0;
+        constructedItems.forEach(item => {
+          const answer = answers.find(a => a.item_id === item.id);
+          if (answer) scoreManual += answer.earned_points || 0;
+        });
+        if (constructedItems.length === 0) scoreManual = submission.score_manual || 0;
         const scoreTotal = computeScorePercentage(scoreAuto, scoreManual, items);
 
         await db.finalizeSubmission(submission.id, { scoreAuto, scoreManual, scoreTotal });
@@ -1456,7 +1489,8 @@
       }
     }
 
-    showToast(`Marked ${processed} submission${processed !== 1 ? 's' : ''} as reviewed`, '#22c55e', '#0b1220');
+    const skippedMsg = skipped.length > 0 ? ` (${skipped.length} skipped — unscored written responses)` : '';
+    showToast(`Marked ${processed} submission${processed !== 1 ? 's' : ''} as reviewed${skippedMsg}`, '#22c55e', '#0b1220');
     await render();
   }
 

@@ -1980,6 +1980,19 @@ const remote = {
         .eq('assignment_item_id', itemId)
         .select('*')
         .single());
+      // Fallback: PostgREST PGRST204 with 'teacher_note' in the message means the schema
+      // cache hasn't been refreshed after the migration that added this column. Retry without
+      // teacher_note so score saving still works on stale schema caches.
+      if (error && error.code === 'PGRST204' && error.message?.includes('teacher_note')) {
+        console.warn('[data-adapter] teacher_note column not in schema cache, retrying without it');
+        ({ data, error } = await supabase
+          .from('submission_answers')
+          .update({ earned_points: earnedPoints })
+          .eq('submission_id', submissionId)
+          .eq('assignment_item_id', itemId)
+          .select('*')
+          .single());
+      }
     } else {
       // Insert new row when no submission_answer exists yet
       ({ data, error } = await supabase
@@ -1992,6 +2005,19 @@ const remote = {
         })
         .select('*')
         .single());
+      // Fallback: same PGRST204 schema cache miss check for insert path
+      if (error && error.code === 'PGRST204' && error.message?.includes('teacher_note')) {
+        console.warn('[data-adapter] teacher_note column not in schema cache, retrying without it');
+        ({ data, error } = await supabase
+          .from('submission_answers')
+          .insert({
+            submission_id: submissionId,
+            assignment_item_id: itemId,
+            earned_points: earnedPoints
+          })
+          .select('*')
+          .single());
+      }
     }
 
     if (error) throw error;
