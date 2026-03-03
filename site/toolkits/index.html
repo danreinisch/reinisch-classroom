@@ -50,6 +50,7 @@
       justify-content: center;
       background: rgba(255,255,255,0.08);
       border-radius: 10px;
+      transition: box-shadow 0.25s ease, background 0.25s ease;
     }
     .toolkit-card-icon svg {
       width: 28px;
@@ -59,6 +60,7 @@
       stroke-width: 1.5;
       stroke-linecap: round;
       stroke-linejoin: round;
+      transition: stroke 0.25s ease;
     }
     .toolkit-card-title {
       font-size: 1.25rem;
@@ -69,20 +71,44 @@
       opacity: 0.7;
       text-align: center;
     }
-    @keyframes card-glow {
-      0%   { box-shadow: 0 0 0 0 var(--glow-color, rgba(99,102,241,0.5)), 0 0 18px 6px var(--glow-color, rgba(99,102,241,0.3)); }
-      60%  { box-shadow: 0 0 0 6px transparent, 0 0 28px 10px transparent; }
-      100% { box-shadow: 0 0 0 0 transparent, 0 0 0 0 transparent; }
+    /* --- Hover glow on icon --- */
+    .toolkit-card:nth-child(1):hover .toolkit-card-icon {
+      box-shadow: 0 0 12px 4px rgba(99, 102, 241, 0.25);
+      background: rgba(99, 102, 241, 0.12);
     }
-    .toolkit-card.glow {
-      animation: card-glow 0.6s ease-out forwards;
+    .toolkit-card:nth-child(1):hover .toolkit-card-icon svg {
+      stroke: #a5b4fc;
     }
-    .toolkit-card:nth-child(1).glow .toolkit-card-icon svg,
-    .toolkit-card:nth-child(1):active .toolkit-card-icon svg {
+    .toolkit-card:nth-child(2):hover .toolkit-card-icon {
+      box-shadow: 0 0 12px 4px rgba(52, 211, 153, 0.25);
+      background: rgba(52, 211, 153, 0.12);
+    }
+    .toolkit-card:nth-child(2):hover .toolkit-card-icon svg {
+      stroke: #6ee7b7;
+    }
+
+    /* --- Click glow burst on icon --- */
+    @keyframes icon-glow {
+      0%   { box-shadow: 0 0 8px 4px var(--icon-glow, rgba(99,102,241,0.6)), 0 0 24px 12px var(--icon-glow, rgba(99,102,241,0.3)); transform: scale(1.1); }
+      50%  { box-shadow: 0 0 16px 8px var(--icon-glow, rgba(99,102,241,0.4)), 0 0 32px 16px var(--icon-glow, rgba(99,102,241,0.15)); transform: scale(1.15); }
+      100% { box-shadow: 0 0 0 0 transparent, 0 0 0 0 transparent; transform: scale(1); }
+    }
+
+    .toolkit-card.clicked .toolkit-card-icon {
+      animation: icon-glow 0.45s ease-out forwards;
+    }
+
+    .toolkit-card:nth-child(1).clicked .toolkit-card-icon {
+      --icon-glow: rgba(99, 102, 241, 0.6);
+    }
+    .toolkit-card:nth-child(1).clicked .toolkit-card-icon svg {
       stroke: #818cf8;
     }
-    .toolkit-card:nth-child(2).glow .toolkit-card-icon svg,
-    .toolkit-card:nth-child(2):active .toolkit-card-icon svg {
+
+    .toolkit-card:nth-child(2).clicked .toolkit-card-icon {
+      --icon-glow: rgba(52, 211, 153, 0.6);
+    }
+    .toolkit-card:nth-child(2).clicked .toolkit-card-icon svg {
       stroke: #34d399;
     }
   </style>
@@ -124,13 +150,15 @@
   <script defer src="/web/public-shell.js"></script>
   <script>
     document.querySelectorAll('.toolkit-card').forEach(function(card) {
-      card.addEventListener('click', function() {
-        var color = card.dataset.glowColor;
-        if (color) card.style.setProperty('--glow-color', color);
-        card.classList.remove('glow');
-        void card.offsetWidth; // force reflow so animation restarts on rapid clicks
-        card.classList.add('glow');
-        setTimeout(function() { card.classList.remove('glow'); }, 600);
+      card.addEventListener('click', function(e) {
+        if (e.ctrlKey || e.metaKey || e.shiftKey || e.button === 1) return;
+        e.preventDefault();
+        card.classList.add('clicked');
+        var href = card.getAttribute('href');
+        setTimeout(function() {
+          card.classList.remove('clicked');
+          if (href) window.location.href = href;
+        }, 450);
       });
     });
   </script>
