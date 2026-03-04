@@ -1440,7 +1440,7 @@
       const items = assignmentItemsCache[submission.assignment_id] || [];
       const constructedItems = items.filter(item => item.answer_type === 'constructed');
       if (constructedItems.length > 0) {
-        const answers = submissionAnswersCache[submission.id] || [];
+        const answers = submissionAnswersCache[submission.id] || await getSubmissionAnswers(submission.id);
         const hasUnscored = constructedItems.some(item => {
           const answer = answers.find(a => a.item_id === item.id);
           return !answer || answer.earned_points == null;
