@@ -755,8 +755,8 @@
       const totalMax = items.reduce((sum, i) => sum + (i.points || 0), 0);
       if (totalMax > 0) {
         if (submission.review_status === 'reviewed' && submission.score_total != null) {
-          const totalEarned = (submission.score_auto || 0) + (submission.score_manual || 0);
-          const pct = submission.score_total;
+          const totalEarned = (Number(submission.score_auto) || 0) + (Number(submission.score_manual) || 0);
+          const pct = Number(submission.score_total);
           const cls = scoreColorClass(pct);
           scorePreview = `<span class="rv-score-preview ${cls}" style="font-size:13px;font-weight:600;">${totalEarned}/${totalMax} — ${pct}%</span>`;
         } else {
