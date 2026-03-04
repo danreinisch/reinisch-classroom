@@ -1388,15 +1388,15 @@
           let scoreManual = 0;
           constructedItems.forEach(item => {
             const answer = answers.find(a => a.item_id === item.id);
-            if (answer) scoreManual += answer.earned_points || 0;
+            if (answer) scoreManual += Number(answer.earned_points) || 0;
           });
           const scoreAuto = answers.length > 0
             ? items.filter(i => i.answer_type === 'mcq' || i.answer_type === 'boolean' || i.answer_type === 'multi')
                 .reduce((sum, item) => {
                   const ans = answers.find(a => a.item_id === item.id);
-                  return sum + (ans?.earned_points || 0);
+                  return sum + (Number(ans?.earned_points) || 0);
                 }, 0)
-            : (submission.score_auto || 0);
+            : (Number(submission.score_auto) || 0);
           const scoreTotal = computeScorePercentage(scoreAuto, scoreManual, items);
 
           await db.finalizeSubmission(submission.id, { scoreAuto, scoreManual, scoreTotal });

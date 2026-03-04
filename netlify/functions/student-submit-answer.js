@@ -213,7 +213,7 @@ exports.handler = async (event) => {
             'Prefer': 'return=representation'
           },
           body: JSON.stringify({
-            ...(answers && Object.keys(answers).length > 0 ? { answers } : {}),
+            answers: updatedSettings.answers || answers || {},
             submitted_at: new Date().toISOString()
           })
         });
@@ -238,7 +238,7 @@ exports.handler = async (event) => {
           },
           body: JSON.stringify({
             instance_id: instance_id,
-            answers: answers || {},
+            answers: updatedSettings.answers || answers || {},
             submitted_at: new Date().toISOString()
           })
         });
