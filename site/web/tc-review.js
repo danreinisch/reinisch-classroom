@@ -778,7 +778,7 @@
             // Best: use submissionAnswersCache (loaded when expanded)
             autoEarned = autoItems.reduce((sum, item) => {
               const ans = answers.find(a => a.item_id === item.id);
-              return sum + (ans?.earned_points || 0);
+              return sum + (Number(ans?.earned_points) || 0);
             }, 0);
           } else if (submission.answers && typeof submission.answers === 'object' && Object.keys(submission.answers).length > 0) {
             // Fallback: recompute from submission.answers JSONB (raw MCQ answers)
@@ -795,11 +795,11 @@
             }, 0);
           } else {
             // Last resort: use stored score_auto (may be stale)
-            autoEarned = submission.score_auto || 0;
+            autoEarned = Number(submission.score_auto) || 0;
           }
           const manualEarned = constructedItems.reduce((sum, item) => {
             const ans = answers.find(a => a.item_id === item.id);
-            return sum + (ans?.earned_points || 0);
+            return sum + (Number(ans?.earned_points) || 0);
           }, 0);
           const totalEarned = autoEarned + manualEarned;
           const pct = Math.round((totalEarned / totalMax) * 100);
@@ -909,13 +909,13 @@
       manualMax += item.points || 0;
       if (answer && answer.earned_points != null) {
         manualScored++;
-        manualEarned += answer.earned_points || 0;
+        manualEarned += Number(answer.earned_points) || 0;
       }
     });
     
     const autoEarned = autoGradedItems.reduce((sum, item) => {
       const answer = displayAnswers.find(a => a.item_id === item.id);
-      return sum + (answer?.earned_points || 0);
+      return sum + (Number(answer?.earned_points) || 0);
     }, 0);
     const totalEarned = autoEarned + manualEarned;
     const totalMax = (autoGradedItems.reduce((sum, i) => sum + (i.points || 0), 0)) + manualMax;
@@ -938,7 +938,7 @@
             <td>${typeof studentAnswer === 'object' ? JSON.stringify(studentAnswer) : studentAnswer}</td>
             <td>${typeof correctAnswer === 'object' ? JSON.stringify(correctAnswer) : correctAnswer}</td>
             <td>${isCorrect ? CHECK_SVG : X_SVG}</td>
-            <td>${answer?.earned_points || 0}/${item.points || 0}</td>
+            <td>${Number(answer?.earned_points) || 0}/${item.points || 0}</td>
           </tr>
         `;
       }).join('');
@@ -1485,16 +1485,16 @@
             ? items.filter(i => i.answer_type === 'mcq' || i.answer_type === 'boolean' || i.answer_type === 'multi')
                 .reduce((sum, item) => {
                   const ans = answers.find(a => a.item_id === item.id);
-                  return sum + (ans?.earned_points || 0);
+                  return sum + (Number(ans?.earned_points) || 0);
                 }, 0)
-            : (submission.score_auto || 0);
+            : (Number(submission.score_auto) || 0);
           const constructedItems = items.filter(item => item.answer_type === 'constructed');
           let scoreManual = 0;
           constructedItems.forEach(item => {
             const answer = answers.find(a => a.item_id === item.id);
-            if (answer) scoreManual += answer.earned_points || 0;
+            if (answer) scoreManual += Number(answer.earned_points) || 0;
           });
-          if (constructedItems.length === 0) scoreManual = submission.score_manual || 0;
+          if (constructedItems.length === 0) scoreManual = Number(submission.score_manual) || 0;
           const scoreTotal = computeScorePercentage(scoreAuto, scoreManual, items);
 
           await db.finalizeSubmission(submission.id, { scoreAuto, scoreManual, scoreTotal });
@@ -1693,7 +1693,7 @@
       constructedItems.forEach(item => {
         const answer = answers.find(a => a.item_id === item.id);
         if (answer) {
-          scoreManual += answer.earned_points || 0;
+          scoreManual += Number(answer.earned_points) || 0;
         }
       });
       
@@ -1702,7 +1702,7 @@
       let scoreAuto = 0;
       for (const item of autoItems) {
         const ans = answers.find(a => a.item_id === item.id);
-        scoreAuto += (ans?.earned_points || 0);
+        scoreAuto += (Number(ans?.earned_points) || 0);
       }
       const scoreTotal = computeScorePercentage(scoreAuto, scoreManual, items);
       
@@ -1784,7 +1784,7 @@
       const answer = answers.find(a => a.item_id === item.id);
       if (!answer) return;
       
-      const earnedPoints = answer.earned_points || 0;
+      const earnedPoints = Number(answer.earned_points) || 0;
       const maxPoints = item.points || 0;
       
       goalCodes.forEach(goalCode => {
@@ -1857,9 +1857,9 @@
           ? items.filter(i => i.answer_type === 'mcq' || i.answer_type === 'boolean' || i.answer_type === 'multi')
               .reduce((sum, item) => {
                 const ans = answers.find(a => a.item_id === item.id);
-                return sum + (ans?.earned_points || 0);
+                return sum + (Number(ans?.earned_points) || 0);
               }, 0)
-          : (submission.score_auto || 0);
+          : (Number(submission.score_auto) || 0);
         const scoreTotal = computeScorePercentage(scoreAuto, 0, items);
 
         await db.finalizeSubmission(submission.id, {
@@ -2004,7 +2004,7 @@
     constructedItems.forEach(item => {
       const answer = answers.find(a => a.item_id === item.id);
       if (answer && answer.earned_points != null) {
-        scoreManual += answer.earned_points || 0;
+        scoreManual += Number(answer.earned_points) || 0;
       }
     });
 
@@ -2012,9 +2012,9 @@
     const scoreAuto = answers.length > 0
       ? autoItems.reduce((sum, item) => {
           const ans = answers.find(a => a.item_id === item.id);
-          return sum + (ans?.earned_points || 0);
+          return sum + (Number(ans?.earned_points) || 0);
         }, 0)
-      : (submission.score_auto || 0);
+      : (Number(submission.score_auto) || 0);
     const scoreTotal = computeScorePercentage(scoreAuto, scoreManual, items);
 
     button.disabled = true;
