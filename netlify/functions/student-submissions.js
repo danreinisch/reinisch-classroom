@@ -93,9 +93,11 @@ exports.handler = async (event) => {
 
     const studentId = studentData[0].id;
 
-    // Fetch submissions via assignment_instances join
-    // Query submissions with nested joins: submissions -> assignment_instances (filtered by student_id)
-    const submissionsUrl = `${SUPABASE_URL}/rest/v1/submissions?select=*,assignment_instances!inner(id,assignment_id,student_id)&assignment_instances.student_id=eq.${studentId}&order=submitted_at.desc`;
+    // Fetch submissions via assignment_instances join, also joining assignments and classes for title/name.
+    // The assignment_instances!inner join ensures we only return submissions that belong
+    // to this student (via student_id), and the nested assignments+classes joins provide
+    // the title/class_name needed by renderGradeRow() in student-portal-init.js.
+    const submissionsUrl = `${SUPABASE_URL}/rest/v1/submissions?select=*,assignment_instances!inner(id,assignment_id,student_id,assignments(id,title,section,classes(name)))&assignment_instances.student_id=eq.${studentId}&order=submitted_at.desc`;
     
     console.log(`[student-submissions] [${requestId}] Fetching submissions for student ID:`, studentId);
     
@@ -113,14 +115,34 @@ exports.handler = async (event) => {
       throw new Error(`Submissions query failed: ${submissionsResponse.status}`);
     }
 
-    const submissions = await submissionsResponse.json();
+    const rawSubmissions = await submissionsResponse.json();
+    
+    // Enrich each submission with flat assignment_title and class_name fields
+    // so student-portal-init.js renderGradeRow() can use them directly.
+    const submissions = (rawSubmissions || []).map(sub => {
+      const instance = Array.isArray(sub.assignment_instances)
+        ? sub.assignment_instances[0]
+        : sub.assignment_instances;
+      const assignment = Array.isArray(instance?.assignments)
+        ? instance.assignments[0]
+        : instance?.assignments;
+      const classRecord = Array.isArray(assignment?.classes)
+        ? assignment.classes[0]
+        : assignment?.classes;
+      return {
+        ...sub,
+        assignment_title: assignment?.title || null,
+        // Prefer the linked class name; fall back to section (subject category)
+        class_name: classRecord?.name || assignment?.section || null,
+      };
+    });
     
     console.log(`[student-submissions] [${requestId}] Successfully fetched ${submissions.length} submissions`);
     
     return jsonResponse(
       event,
       200,
-      { ok: true, submissions: submissions || [] },
+      { ok: true, submissions },
       { 'Cache-Control': 'no-store' },
       requestId
     );
