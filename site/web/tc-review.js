@@ -91,6 +91,7 @@
   let hasAutoExpanded = false;
   // realtimeChannel will be set in setupRealtime()
   let realtimeChannel = null; // eslint-disable-line no-unused-vars
+  let finalizingInProgress = false;
 
   // Load data from Supabase or localStorage
   async function loadData() {
@@ -190,6 +191,9 @@
 
   function handleRealtimeUpdate(payload) {
     console.log('[tc-review] Realtime update:', payload);
+    
+    // Skip debounced reload during finalize to avoid duplicate calls
+    if (finalizingInProgress) return;
     
     // Debounce to prevent excessive refreshes
     if (realtimeDebounceTimer) {
@@ -1338,8 +1342,11 @@
 
   // Compute score_total as a percentage (0-100) from raw points and total possible
   function computeScorePercentage(scoreAuto, scoreManual, items) {
-    const totalPossible = items.reduce((sum, i) => sum + (i.points || 0), 0);
-    return totalPossible > 0 ? Math.round(((scoreAuto + scoreManual) / totalPossible) * 100) : 0;
+    // Use points from assignment_items as the authoritative denominator.
+    // Items with null/undefined points are excluded from the total to avoid
+    // deflating the denominator when points haven't been set on an item.
+    const totalPossible = items.reduce((sum, i) => sum + (i.points != null ? Number(i.points) : 0), 0);
+    return totalPossible > 0 ? Math.round(((Number(scoreAuto) + Number(scoreManual)) / totalPossible) * 100) : 0;
   }
 
   // Handle "Finalize All Scored" batch action
@@ -1371,55 +1378,60 @@
     if (!confirm(`Finalize ${finalizable.length} submission${finalizable.length !== 1 ? 's' : ''}? This will trigger goal progress updates for each.`)) return;
 
     let processed = 0;
-    for (const submission of finalizable) {
-      try {
-        const items = assignmentItemsCache[submission.assignment_id] || [];
-        const answers = submissionAnswersCache[submission.id] || [];
-        const constructedItems = items.filter(item => item.answer_type === 'constructed');
-        let scoreManual = 0;
-        constructedItems.forEach(item => {
-          const answer = answers.find(a => a.item_id === item.id);
-          if (answer) scoreManual += answer.earned_points || 0;
-        });
-        const scoreAuto = answers.length > 0
-          ? items.filter(i => i.answer_type === 'mcq' || i.answer_type === 'boolean' || i.answer_type === 'multi')
-              .reduce((sum, item) => {
-                const ans = answers.find(a => a.item_id === item.id);
-                return sum + (ans?.earned_points || 0);
-              }, 0)
-          : (submission.score_auto || 0);
-        const scoreTotal = computeScorePercentage(scoreAuto, scoreManual, items);
-
-        await db.finalizeSubmission(submission.id, { scoreAuto, scoreManual, scoreTotal });
-        await triggerGoalProgressUpdates(submission.id, items, answers);
-
-        // Archive submission for DESE compliance (non-fatal)
+    finalizingInProgress = true;
+    try {
+      for (const submission of finalizable) {
         try {
-        const archiveRes = await fetch(ARCHIVE_SUBMISSION_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ submission_id: submission.id }),
+          const items = assignmentItemsCache[submission.assignment_id] || [];
+          const answers = submissionAnswersCache[submission.id] || [];
+          const constructedItems = items.filter(item => item.answer_type === 'constructed');
+          let scoreManual = 0;
+          constructedItems.forEach(item => {
+            const answer = answers.find(a => a.item_id === item.id);
+            if (answer) scoreManual += answer.earned_points || 0;
           });
-          const archiveData = await archiveRes.json();
-          if (!archiveData.ok) {
-            console.warn('[tc-review] Archive returned non-ok:', archiveData);
-          } else {
-            console.log('[tc-review] Archived submission:', archiveData.archive_id);
-          }
-        } catch (archiveErr) {
-          console.warn('[tc-review] Archive failed (non-fatal):', archiveErr);
-        }
+          const scoreAuto = answers.length > 0
+            ? items.filter(i => i.answer_type === 'mcq' || i.answer_type === 'boolean' || i.answer_type === 'multi')
+                .reduce((sum, item) => {
+                  const ans = answers.find(a => a.item_id === item.id);
+                  return sum + (ans?.earned_points || 0);
+                }, 0)
+            : (submission.score_auto || 0);
+          const scoreTotal = computeScorePercentage(scoreAuto, scoreManual, items);
 
-        submission.score_auto = scoreAuto;
-        submission.score_manual = scoreManual;
-        submission.score_total = scoreTotal;
-        submission.review_status = 'reviewed';
-        delete submissionAnswersCache[submission.id];
-        expandedSubmissions.delete(submission.id);
-        processed++;
-      } catch (err) {
-        console.error('[tc-review] Batch finalize error:', submission.id, err);
+          await db.finalizeSubmission(submission.id, { scoreAuto, scoreManual, scoreTotal });
+          await triggerGoalProgressUpdates(submission.id, items, answers);
+
+          // Archive submission for DESE compliance (non-fatal)
+          try {
+          const archiveRes = await fetch(ARCHIVE_SUBMISSION_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ submission_id: submission.id }),
+            });
+            const archiveData = await archiveRes.json();
+            if (!archiveData.ok) {
+              console.warn('[tc-review] Archive returned non-ok:', archiveData);
+            } else {
+              console.log('[tc-review] Archived submission:', archiveData.archive_id);
+            }
+          } catch (archiveErr) {
+            console.warn('[tc-review] Archive failed (non-fatal):', archiveErr);
+          }
+
+          submission.score_auto = scoreAuto;
+          submission.score_manual = scoreManual;
+          submission.score_total = scoreTotal;
+          submission.review_status = 'reviewed';
+          delete submissionAnswersCache[submission.id];
+          expandedSubmissions.delete(submission.id);
+          processed++;
+        } catch (err) {
+          console.error('[tc-review] Batch finalize error:', submission.id, err);
+        }
       }
+    } finally {
+      finalizingInProgress = false;
     }
 
     showToast(`Finalized ${processed} submission${processed !== 1 ? 's' : ''}`, '#22c55e', '#0b1220');
@@ -1463,37 +1475,42 @@
     if (!confirm(`Mark ${toProcess.length} submission${toProcess.length !== 1 ? 's' : ''} as reviewed?`)) return;
 
     let processed = 0;
-    for (const submission of toProcess) {
-      try {
-        const answers = submissionAnswersCache[submission.id] || [];
-        const items = assignmentItemsCache[submission.assignment_id] || [];
-        const scoreAuto = answers.length > 0
-          ? items.filter(i => i.answer_type === 'mcq' || i.answer_type === 'boolean' || i.answer_type === 'multi')
-              .reduce((sum, item) => {
-                const ans = answers.find(a => a.item_id === item.id);
-                return sum + (ans?.earned_points || 0);
-              }, 0)
-          : (submission.score_auto || 0);
-        const constructedItems = items.filter(item => item.answer_type === 'constructed');
-        let scoreManual = 0;
-        constructedItems.forEach(item => {
-          const answer = answers.find(a => a.item_id === item.id);
-          if (answer) scoreManual += answer.earned_points || 0;
-        });
-        if (constructedItems.length === 0) scoreManual = submission.score_manual || 0;
-        const scoreTotal = computeScorePercentage(scoreAuto, scoreManual, items);
+    finalizingInProgress = true;
+    try {
+      for (const submission of toProcess) {
+        try {
+          const answers = submissionAnswersCache[submission.id] || [];
+          const items = assignmentItemsCache[submission.assignment_id] || [];
+          const scoreAuto = answers.length > 0
+            ? items.filter(i => i.answer_type === 'mcq' || i.answer_type === 'boolean' || i.answer_type === 'multi')
+                .reduce((sum, item) => {
+                  const ans = answers.find(a => a.item_id === item.id);
+                  return sum + (ans?.earned_points || 0);
+                }, 0)
+            : (submission.score_auto || 0);
+          const constructedItems = items.filter(item => item.answer_type === 'constructed');
+          let scoreManual = 0;
+          constructedItems.forEach(item => {
+            const answer = answers.find(a => a.item_id === item.id);
+            if (answer) scoreManual += answer.earned_points || 0;
+          });
+          if (constructedItems.length === 0) scoreManual = submission.score_manual || 0;
+          const scoreTotal = computeScorePercentage(scoreAuto, scoreManual, items);
 
-        await db.finalizeSubmission(submission.id, { scoreAuto, scoreManual, scoreTotal });
+          await db.finalizeSubmission(submission.id, { scoreAuto, scoreManual, scoreTotal });
 
-        submission.score_auto = scoreAuto;
-        submission.score_manual = scoreManual;
-        submission.score_total = scoreTotal;
-        submission.review_status = 'reviewed';
-        expandedSubmissions.delete(submission.id);
-        processed++;
-      } catch (err) {
-        console.error('[tc-review] Batch mark reviewed error:', submission.id, err);
+          submission.score_auto = scoreAuto;
+          submission.score_manual = scoreManual;
+          submission.score_total = scoreTotal;
+          submission.review_status = 'reviewed';
+          expandedSubmissions.delete(submission.id);
+          processed++;
+        } catch (err) {
+          console.error('[tc-review] Batch mark reviewed error:', submission.id, err);
+        }
       }
+    } finally {
+      finalizingInProgress = false;
     }
 
     const skippedMsg = skipped.length > 0 ? ` (${skipped.length} skipped — unscored written responses)` : '';
@@ -1665,6 +1682,7 @@
     }
     
     try {
+      finalizingInProgress = true;
       // Load fresh data
       const items = await getAssignmentItemsForAssignment(assignmentId);
       const answers = await getSubmissionAnswers(submissionId);
@@ -1739,6 +1757,8 @@
     } catch (err) {
       console.error('[tc-review] Error finalizing submission:', err);
       alert('Error finalizing submission. Please try again.');
+    } finally {
+      finalizingInProgress = false;
     }
   }
 

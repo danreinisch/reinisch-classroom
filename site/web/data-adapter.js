@@ -1969,12 +1969,13 @@ const remote = {
 
     let data, error;
     if (existing) {
-      // Update only scoring fields, preserving raw_answer, is_correct, max_points, scored_at
+      // Update only scoring fields, preserving raw_answer, is_correct, max_points
       ({ data, error } = await supabase
         .from('submission_answers')
         .update({
           earned_points: earnedPoints,
-          teacher_note: teacherNote || ''
+          teacher_note: teacherNote || '',
+          scored_at: new Date().toISOString()
         })
         .eq('submission_id', submissionId)
         .eq('assignment_item_id', itemId)
@@ -1990,7 +1991,7 @@ const remote = {
         console.warn('[data-adapter] teacher_note column not in schema cache, retrying without it');
         ({ data, error } = await supabase
           .from('submission_answers')
-          .update({ earned_points: earnedPoints })
+          .update({ earned_points: earnedPoints, scored_at: new Date().toISOString() })
           .eq('submission_id', submissionId)
           .eq('assignment_item_id', itemId)
           .select('*')
@@ -2004,7 +2005,8 @@ const remote = {
           submission_id: submissionId,
           assignment_item_id: itemId,
           earned_points: earnedPoints,
-          teacher_note: teacherNote || ''
+          teacher_note: teacherNote || '',
+          scored_at: new Date().toISOString()
         })
         .select('*')
         .single());
@@ -2016,7 +2018,8 @@ const remote = {
           .insert({
             submission_id: submissionId,
             assignment_item_id: itemId,
-            earned_points: earnedPoints
+            earned_points: earnedPoints,
+            scored_at: new Date().toISOString()
           })
           .select('*')
           .single());
