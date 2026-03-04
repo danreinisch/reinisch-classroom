@@ -294,8 +294,8 @@ exports.handler = async (event) => {
 
                 if (item.answer_type === 'mcq' && item.meta && item.meta.correct) {
                   isCorrect = String(studentAnswer).trim().toUpperCase() === String(item.meta.correct).trim().toUpperCase();
-                  maxPoints = 1;
-                  earnedPoints = isCorrect ? 1 : 0;
+                  maxPoints = item.points != null ? Number(item.points) : 1;
+                  earnedPoints = isCorrect ? maxPoints : 0;
                 }
 
                 subAnswers.push({
@@ -320,7 +320,7 @@ exports.handler = async (event) => {
                   raw_answer: { value: writing_response },
                   is_correct: null,
                   earned_points: null,
-                  max_points: constructedItem.points != null ? constructedItem.points : null,
+                  max_points: constructedItem.points != null ? Number(constructedItem.points) : 5, // default 5 pts for writing prompts without explicit points
                   scored_at: null
                 });
                 console.log(`[student-submit-answer] [${requestId}] Added writing response submission_answer for item ${constructedItem.item_ref}`);
