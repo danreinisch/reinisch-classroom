@@ -754,6 +754,12 @@
       const answers = submissionAnswersCache[submission.id] || [];
       const totalMax = items.reduce((sum, i) => sum + (i.points || 0), 0);
       if (totalMax > 0) {
+        if (submission.review_status === 'reviewed' && submission.score_total != null) {
+          const totalEarned = (submission.score_auto || 0) + (submission.score_manual || 0);
+          const pct = submission.score_total;
+          const cls = scoreColorClass(pct);
+          scorePreview = `<span class="rv-score-preview ${cls}" style="font-size:13px;font-weight:600;">${totalEarned}/${totalMax} — ${pct}%</span>`;
+        } else {
         const constructedItems = items.filter(i => i.answer_type === 'constructed');
         const hasUnscored = constructedItems.some(item => {
           const answer = answers.find(a => a.item_id === item.id);
@@ -795,6 +801,7 @@
           const pct = Math.round((totalEarned / totalMax) * 100);
           const cls = scoreColorClass(pct);
           scorePreview = `<span class="rv-score-preview ${cls}" style="font-size:13px;font-weight:600;">${totalEarned}/${totalMax} — ${pct}%</span>`;
+        }
         }
       }
     }
@@ -1672,18 +1679,12 @@
         }
       });
       
-      // Get auto score — recompute from submission.answers JSONB to correct any stale stored value
-      // (submission is already resolved in the outer scope above the try block)
+      // Get auto score from submission_answers rows (canonical earned_points values)
+      const autoItems = items.filter(i => i.answer_type === 'mcq' || i.answer_type === 'boolean' || i.answer_type === 'multi');
       let scoreAuto = 0;
-      const rawAnswers = submission?.answers || {};
-      for (const item of items) {
-        if (item.answer_type !== 'mcq') continue;
-        const studentAnswer = rawAnswers[item.item_ref];
-        if (studentAnswer === undefined) continue;
-        const correct = item.meta?.correct;
-        if (correct && String(studentAnswer).trim().toUpperCase() === String(correct).trim().toUpperCase()) {
-          scoreAuto += (item.points || 1);
-        }
+      for (const item of autoItems) {
+        const ans = answers.find(a => a.item_id === item.id);
+        scoreAuto += (ans?.earned_points || 0);
       }
       const scoreTotal = computeScorePercentage(scoreAuto, scoreManual, items);
       
@@ -1987,7 +1988,13 @@
       }
     });
 
-    const scoreAuto = submission.score_auto || 0;
+    const autoItems = items.filter(i => i.answer_type === 'mcq' || i.answer_type === 'boolean' || i.answer_type === 'multi');
+    const scoreAuto = answers.length > 0
+      ? autoItems.reduce((sum, item) => {
+          const ans = answers.find(a => a.item_id === item.id);
+          return sum + (ans?.earned_points || 0);
+        }, 0)
+      : (submission.score_auto || 0);
     const scoreTotal = computeScorePercentage(scoreAuto, scoreManual, items);
 
     button.disabled = true;
