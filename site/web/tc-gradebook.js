@@ -278,7 +278,10 @@
 
       // Use score_total from submission (Supabase format) or score (localStorage format)
       // Using nullish coalescing to handle both null and undefined
+      // Coerce to Number since Supabase returns numeric columns as strings.
       let score = submission.score_total ?? submission.score;
+      if (score != null) score = Number(score);
+      if (isNaN(score)) score = null;
       
       if (score === undefined && submission.answers) {
         // Try to calculate score from answers

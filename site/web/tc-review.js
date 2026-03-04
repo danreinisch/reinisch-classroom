@@ -762,7 +762,7 @@
     
     // Score preview for collapsed rows (from cache if available)
     let scorePreview = '';
-    const assignmentId = submission.assignment_id;
+    const assignmentId = resolveAssignmentId(submission);
     if (assignmentId && assignmentItemsCache[assignmentId]) {
       const items = assignmentItemsCache[assignmentId];
       const answers = submissionAnswersCache[submission.id] || [];
@@ -850,7 +850,7 @@
 
   // Render expanded submission body
   async function renderSubmissionBody(submission) {
-    const assignmentId = submission.assignment_id;
+    const assignmentId = resolveAssignmentId(submission);
     const submissionId = submission.id;
     
     // Load items and answers
@@ -2011,7 +2011,7 @@
     // Compute score_manual from per-item constructed-response answers
     const submission = submissionsData.find(s => s.id === submissionId);
     if (!submission) return;
-    const items = assignmentItemsCache[submission.assignment_id] || [];
+    const items = assignmentItemsCache[resolveAssignmentId(submission)] || [];
     const answers = submissionAnswersCache[submissionId] || [];
     const constructedItems = items.filter(item => item.answer_type === 'constructed');
     let scoreManual = 0;

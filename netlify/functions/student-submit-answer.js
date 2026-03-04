@@ -256,9 +256,12 @@ exports.handler = async (event) => {
       }
 
       // Step 7: Create/upsert submission_answers linked to assignment_items with auto-scoring
-      // Use updatedSettings.answers (the cumulative merged answers) so all MCQ answers are
-      // captured even when the final call only sends writing_response.
-      const cumulativeAnswers = updatedSettings.answers || {};
+      // Merge prior MCQ answers (already stored in instance.settings) with any newly-received
+      // answers so that all answers are preserved even when the final call only sends
+      // writing_response without re-sending the full answers map.
+      const priorAnswers = (instance.settings && instance.settings.answers) || {};
+      const incomingAnswers = answers || {};
+      const cumulativeAnswers = { ...priorAnswers, ...incomingAnswers };
       const hasAnswers = Object.keys(cumulativeAnswers).length > 0;
       const hasWriting = writing_response && typeof writing_response === 'string' && writing_response.trim().length > 0;
       if (submissionId && (hasAnswers || hasWriting) && instance.assignment_id) {
