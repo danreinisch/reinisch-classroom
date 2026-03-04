@@ -1826,16 +1826,7 @@ const remote = {
     
     console.log('[goal-progress] upsertGoalProgress (remote)', { goal_code, student_code, date, value, source });
     
-    // Look up goal_id and student_id from codes
-    const { data: goalData, error: goalError } = await supabase
-      .from('goals')
-      .select('id, student_id')
-      .eq('code', goal_code)
-      .limit(1)
-      .single();
-    
-    if (goalError) throw new Error(`Goal not found with code: ${goal_code}`);
-    
+    // Look up student first so we can scope the goal lookup to this student
     const { data: studentData, error: studentError } = await supabase
       .from('students')
       .select('id, class_id')
@@ -1844,6 +1835,18 @@ const remote = {
       .single();
     
     if (studentError) throw new Error(`Student not found with code: ${student_code}`);
+    
+    // Look up goal_id filtered by both code AND student_id to avoid picking
+    // a goal belonging to a different student when codes are not globally unique
+    const { data: goalData, error: goalError } = await supabase
+      .from('goals')
+      .select('id, student_id')
+      .eq('code', goal_code)
+      .eq('student_id', studentData.id)
+      .limit(1)
+      .single();
+    
+    if (goalError) throw new Error(`Goal not found with code: ${goal_code} for student: ${student_code}`);
     
     // Look up class_id if class_code provided
     let resolvedClassId = studentData.class_id; // default to student's primary class

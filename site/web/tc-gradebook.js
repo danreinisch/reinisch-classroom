@@ -260,6 +260,9 @@
     }
 
     // Create a map of student_code -> draft_id -> score
+    // submissionsData is ordered newest-first (DESC by submitted_at), so the
+    // first submission we encounter for a given student/assignment is the most
+    // recent one and its score should take priority over older submissions.
     const scoreMap = new Map();
 
     for (const submission of submissionsData) {
@@ -275,6 +278,10 @@
       if (!scoreMap.has(studentCode)) {
         scoreMap.set(studentCode, new Map());
       }
+
+      // Skip if we already recorded a score for this student/assignment from a
+      // more recent submission (earlier in the DESC-ordered array).
+      if (scoreMap.get(studentCode).has(draftId)) continue;
 
       // Use score_total from submission (Supabase format) or score (localStorage format)
       // Using nullish coalescing to handle both null and undefined
