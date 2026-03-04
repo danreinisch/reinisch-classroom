@@ -462,6 +462,7 @@ const local = {
       assignment_item_id: itemId,
       earned_points: earnedPoints,
       teacher_note: teacherNote || '',
+      scored_at: new Date().toISOString(),
       created_at: new Date().toISOString()
     };
     if (existingIndex >= 0) {

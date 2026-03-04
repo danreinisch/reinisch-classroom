@@ -613,6 +613,16 @@
     }
   }
 
+  // Resolve assignment_id from a submission, falling back to the instance lookup.
+  // Caches the resolved value back onto the submission object for subsequent calls.
+  function resolveAssignmentId(submission) {
+    if (!submission.assignment_id) {
+      const instance = assignmentInstancesData.find(i => i.id === submission.instance_id);
+      if (instance?.assignment_id) submission.assignment_id = instance.assignment_id;
+    }
+    return submission.assignment_id || null;
+  }
+
   // Render batch action bar
   async function renderBatchBar() {
     const barEl = $('rvBatchBar');
@@ -626,7 +636,7 @@
     // Count finalizable: all constructed items scored but not yet reviewed
     let finalizableCount = 0;
     for (const submission of unreviewed) {
-      const assignmentId = submission.assignment_id;
+      const assignmentId = resolveAssignmentId(submission);
       if (!assignmentId) continue;
       const items = assignmentItemsCache[assignmentId] || [];
       const constructedItems = items.filter(item => item.answer_type === 'constructed');
@@ -1357,7 +1367,7 @@
     // Find finalizable submissions (all constructed items scored)
     const finalizable = [];
     for (const submission of unreviewed) {
-      const assignmentId = submission.assignment_id;
+      const assignmentId = resolveAssignmentId(submission);
       if (!assignmentId) continue;
       // Bug A fix: skip submissions whose items haven't been backfilled yet — synthetic IDs
       // would cause a bigint error when writing submission_answers rows.
@@ -1449,7 +1459,8 @@
     const skipped = [];
     const toProcess = [];
     for (const submission of unreviewed) {
-      const items = assignmentItemsCache[submission.assignment_id] || [];
+      const assignmentId = resolveAssignmentId(submission);
+      const items = assignmentItemsCache[assignmentId] || [];
       const constructedItems = items.filter(item => item.answer_type === 'constructed');
       if (constructedItems.length > 0) {
         const answers = submissionAnswersCache[submission.id] || await getSubmissionAnswers(submission.id);
@@ -1480,7 +1491,8 @@
       for (const submission of toProcess) {
         try {
           const answers = submissionAnswersCache[submission.id] || [];
-          const items = assignmentItemsCache[submission.assignment_id] || [];
+          const assignmentId = resolveAssignmentId(submission);
+          const items = assignmentItemsCache[assignmentId] || [];
           const scoreAuto = answers.length > 0
             ? items.filter(i => i.answer_type === 'mcq' || i.answer_type === 'boolean' || i.answer_type === 'multi')
                 .reduce((sum, item) => {
@@ -1498,6 +1510,7 @@
           const scoreTotal = computeScorePercentage(scoreAuto, scoreManual, items);
 
           await db.finalizeSubmission(submission.id, { scoreAuto, scoreManual, scoreTotal });
+          await triggerGoalProgressUpdates(submission.id, items, answers);
 
           submission.score_auto = scoreAuto;
           submission.score_manual = scoreManual;
@@ -1844,6 +1857,7 @@
       if (!instance) continue;
       const assignmentId = instance.assignment_id;
       if (!assignmentId) continue;
+      submission.assignment_id = assignmentId;
 
       const items = await getAssignmentItemsForAssignment(assignmentId);
       const constructedItems = items.filter(item => item.answer_type === 'constructed');

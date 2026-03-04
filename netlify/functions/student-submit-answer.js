@@ -292,7 +292,7 @@ exports.handler = async (event) => {
                 let earnedPoints = null;
                 let maxPoints = null;
 
-                if (item.answer_type === 'mcq' && item.meta && item.meta.correct) {
+                if (['mcq', 'boolean', 'multi'].includes(item.answer_type) && item.meta && item.meta.correct) {
                   isCorrect = String(studentAnswer).trim().toUpperCase() === String(item.meta.correct).trim().toUpperCase();
                   maxPoints = item.points != null ? Number(item.points) : 1;
                   earnedPoints = isCorrect ? maxPoints : 0;
@@ -330,7 +330,7 @@ exports.handler = async (event) => {
             }
 
             if (subAnswers.length > 0) {
-              const subAnswersUrl = `${SUPABASE_URL}/rest/v1/submission_answers`;
+              const subAnswersUrl = `${SUPABASE_URL}/rest/v1/submission_answers?on_conflict=submission_id,assignment_item_id`;
               const subAnswersResponse = await fetch(subAnswersUrl, {
                 method: 'POST',
                 headers: {
