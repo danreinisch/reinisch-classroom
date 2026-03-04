@@ -1878,17 +1878,35 @@ const remote = {
     if (existing) {
       ({ data, error } = await supabase
         .from('submission_answers')
-        .update({ earned_points: earnedPoints, teacher_note: teacherNote || '' })
+        .update({ earned_points: earnedPoints, teacher_note: teacherNote || '', scored_at: new Date().toISOString() })
         .eq('submission_id', submissionId)
         .eq('assignment_item_id', itemId)
         .select('*')
         .single());
+      if (error && (error.code === 'PGRST204' || (error.message && error.message.includes('teacher_note')))) {
+        console.warn('[data-adapter] teacher_note column not in schema cache, retrying without it');
+        ({ data, error } = await supabase
+          .from('submission_answers')
+          .update({ earned_points: earnedPoints, scored_at: new Date().toISOString() })
+          .eq('submission_id', submissionId)
+          .eq('assignment_item_id', itemId)
+          .select('*')
+          .single());
+      }
     } else {
       ({ data, error } = await supabase
         .from('submission_answers')
-        .insert({ submission_id: submissionId, assignment_item_id: itemId, earned_points: earnedPoints, teacher_note: teacherNote || '' })
+        .insert({ submission_id: submissionId, assignment_item_id: itemId, earned_points: earnedPoints, teacher_note: teacherNote || '', scored_at: new Date().toISOString() })
         .select('*')
         .single());
+      if (error && (error.code === 'PGRST204' || (error.message && error.message.includes('teacher_note')))) {
+        console.warn('[data-adapter] teacher_note column not in schema cache, retrying without it');
+        ({ data, error } = await supabase
+          .from('submission_answers')
+          .insert({ submission_id: submissionId, assignment_item_id: itemId, earned_points: earnedPoints, scored_at: new Date().toISOString() })
+          .select('*')
+          .single());
+      }
     }
     if (error) throw error;
     return data;
