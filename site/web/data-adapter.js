@@ -899,6 +899,15 @@ const local = {
     localStorage.setItem('rc_app_config_' + key, JSON.stringify(value));
     return value;
   },
+
+  /**
+   * List archived (finalized) submissions from the submission_archives table
+   * @param {Object} filters - Optional filters (studentCode)
+   * @returns {Array} Archived submission records
+   */
+  async listSubmissionArchives(filters = {}) {
+    return store.get('submissionArchives', []);
+  },
 };
 
 const remote = {
@@ -2325,6 +2334,32 @@ const remote = {
 
     if (error) throw error;
     return value;
+  },
+
+  /**
+   * List archived (finalized) submissions from the submission_archives table
+   * @param {Object} filters - Optional filters (studentCode)
+   * @returns {Array} Archived submission records
+   */
+  async listSubmissionArchives(filters = {}) {
+    const supabase = await getSupabase();
+    if (!supabase) return [];
+
+    let query = supabase
+      .from('submission_archives')
+      .select('*')
+      .order('archived_at', { ascending: false });
+
+    if (filters.studentCode) {
+      query = query.eq('student_code', filters.studentCode);
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      console.warn('[data-adapter] Error fetching submission archives:', error);
+      return [];
+    }
+    return data || [];
   }
 };
 

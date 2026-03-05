@@ -75,11 +75,12 @@
   // State
   let currentClassFilter = "All Classes";
   let currentAssignmentFilter = "All Assignments";
-  let currentStatusFilter = "needs-review"; // "needs-review", "reviewed", "all"
+  let currentStatusFilter = "needs-review"; // "needs-review", "reviewed", "all", "finalized"
   let searchText = "";
   let studentsData = [];
   let assignmentsData = [];
   let submissionsData = [];
+  let archivesData = [];
   let assignmentInstancesData = [];
   let assignmentItemsCache = {}; // Cache items by assignment_id
   let syntheticAssignmentIds = new Set(); // Track assignments whose items were synthesized from meta
@@ -139,6 +140,16 @@
       } catch (err) {
         console.warn('[tc-review] Error loading class enrollments:', err);
         classEnrollmentsData = [];
+      }
+
+      // Load submission archives for "Finalized" tab
+      try {
+        if (db.listSubmissionArchives) {
+          archivesData = await db.listSubmissionArchives();
+        }
+      } catch (err) {
+        console.warn('[tc-review] Error loading archives:', err);
+        archivesData = [];
       }
       
       console.log('[tc-review] Loaded:', {
@@ -663,6 +674,73 @@
     markBtn.disabled = markableCount === 0;
   }
 
+  // Render archived (finalized) submissions into the queue container
+  function renderFinalizedArchives(queueContainer) {
+    // Apply filters to archivesData
+    let filtered = archivesData.slice();
+
+    if (currentClassFilter !== 'All Classes') {
+      filtered = filtered.filter(a => a.class_name === currentClassFilter);
+    }
+
+    if (currentAssignmentFilter !== 'All Assignments') {
+      filtered = filtered.filter(a =>
+        a.assignment_id === currentAssignmentFilter ||
+        a.title === currentAssignmentFilter
+      );
+    }
+
+    if (searchText.trim()) {
+      const searchLower = searchText.toLowerCase();
+      filtered = filtered.filter(a =>
+        (a.student_code || '').toLowerCase().includes(searchLower) ||
+        (a.title || '').toLowerCase().includes(searchLower)
+      );
+    }
+
+    if (filtered.length === 0) {
+      queueContainer.innerHTML = `
+        <div class="rv-empty">
+          <div style="margin-bottom:12px;">${INBOX_SVG}</div>
+          <p style="font-weight:500;margin-bottom:4px;">No finalized submissions found</p>
+          <p style="font-size:13px;opacity:0.6;">Finalized submissions appear here after they are archived.</p>
+        </div>
+      `;
+      return;
+    }
+
+    const cardsHtml = filtered.map(archive => {
+      const scoreTotal = archive.score_total != null ? Number(archive.score_total) : null;
+      const colorClass = scoreColorClass(scoreTotal);
+      const scoreDisplay = scoreTotal != null ? `${scoreTotal}%` : '—';
+      const scoreAuto = archive.score_auto != null ? Number(archive.score_auto) : '—';
+      const scoreManual = archive.score_manual != null ? Number(archive.score_manual) : '—';
+      const submittedAt = archive.submitted_at ? formatDate(archive.submitted_at) : '—';
+      const archivedAt = archive.archived_at ? formatDate(archive.archived_at) : '—';
+      const feedbackHtml = archive.feedback
+        ? `<div>Feedback: ${escapeHtml(archive.feedback)}</div>`
+        : '';
+      return `
+        <div class="rv-submission-card rv-finalized">
+          <div class="rv-submission-header" style="cursor:default;">
+            <span class="rv-student-code">${escapeHtml(archive.student_code || '')}</span>
+            <span class="rv-assignment-title" style="flex:1;margin:0 12px;">${escapeHtml(archive.title || '')}</span>
+            <span class="rv-date" style="font-size:12px;opacity:0.6;margin-right:12px;">${escapeHtml(archivedAt)}</span>
+            <span class="rv-score ${colorClass}" style="font-weight:600;margin-right:12px;">${escapeHtml(scoreDisplay)}</span>
+            <span class="rv-status-badge rv-status-finalized"><span aria-hidden="true">✅</span> Finalized</span>
+          </div>
+          <div class="rv-finalized-details">
+            <div>Auto: ${escapeHtml(String(scoreAuto))} | Manual: ${escapeHtml(String(scoreManual))} | Total: ${escapeHtml(scoreDisplay)}</div>
+            ${feedbackHtml}
+            <div class="rv-finalized-dates">Submitted: ${escapeHtml(submittedAt)} | Archived: ${escapeHtml(archivedAt)}</div>
+          </div>
+        </div>
+      `;
+    });
+
+    queueContainer.innerHTML = cardsHtml.join('');
+  }
+
   // Render the UI
   async function render() {
     const queue = buildReviewQueue();
@@ -691,12 +769,23 @@
       allBtn.innerHTML = `All <span class="rv-badge">${submissionsData.length}</span>`;
     }
 
+    const finalizedBtn = $('rvStatusFinalized');
+    if (finalizedBtn) {
+      finalizedBtn.innerHTML = `Finalized <span class="rv-badge">${archivesData.length}</span>`;
+    }
+
     // Render batch bar
     await renderBatchBar();
     
     // Render queue
     const queueContainer = $('rvQueue');
     if (!queueContainer) return;
+
+    // When viewing the Finalized tab, render archives instead of normal queue
+    if (currentStatusFilter === 'finalized') {
+      renderFinalizedArchives(queueContainer);
+      return;
+    }
     
     if (queue.length === 0) {
       queueContainer.innerHTML = `
@@ -1244,17 +1333,18 @@
     }
     
     // Status filter tabs
-    ['rvStatusNeedsReview', 'rvStatusReviewed', 'rvStatusAll'].forEach(id => {
+    ['rvStatusNeedsReview', 'rvStatusReviewed', 'rvStatusAll', 'rvStatusFinalized'].forEach(id => {
       const btn = $(id);
       if (btn) {
         btn.addEventListener('click', () => {
           // Update current filter
           if (id === 'rvStatusNeedsReview') currentStatusFilter = 'needs-review';
           else if (id === 'rvStatusReviewed') currentStatusFilter = 'reviewed';
+          else if (id === 'rvStatusFinalized') currentStatusFilter = 'finalized';
           else currentStatusFilter = 'all';
           
           // Update active state
-          ['rvStatusNeedsReview', 'rvStatusReviewed', 'rvStatusAll'].forEach(btnId => {
+          ['rvStatusNeedsReview', 'rvStatusReviewed', 'rvStatusAll', 'rvStatusFinalized'].forEach(btnId => {
             const button = $(btnId);
             if (button) {
               if (btnId === id) {
@@ -1388,6 +1478,7 @@
     if (!confirm(`Finalize ${finalizable.length} submission${finalizable.length !== 1 ? 's' : ''}? This will trigger goal progress updates for each.`)) return;
 
     let processed = 0;
+    const finalizedIdSet = new Set();
     finalizingInProgress = true;
     try {
       for (const submission of finalizable) {
@@ -1435,6 +1526,7 @@
           submission.review_status = 'reviewed';
           delete submissionAnswersCache[submission.id];
           expandedSubmissions.delete(submission.id);
+          finalizedIdSet.add(submission.id);
           processed++;
         } catch (err) {
           console.error('[tc-review] Batch finalize error:', submission.id, err);
@@ -1442,6 +1534,18 @@
       }
     } finally {
       finalizingInProgress = false;
+    }
+
+    // Remove successfully finalized submissions from submissionsData
+    submissionsData = submissionsData.filter(s => !finalizedIdSet.has(s.id));
+
+    // Reload archives so the Finalized tab reflects newly archived submissions
+    try {
+      if (db.listSubmissionArchives) {
+        archivesData = await db.listSubmissionArchives();
+      }
+    } catch (err) {
+      console.warn('[tc-review] Error reloading archives:', err);
     }
 
     showToast(`Finalized ${processed} submission${processed !== 1 ? 's' : ''}`, '#22c55e', '#0b1220');
@@ -1751,6 +1855,15 @@
       // Remove from submissionsData so it no longer appears on Review page
       submissionsData = submissionsData.filter(s => s.id !== submissionId);
       
+      // Reload archives so the Finalized tab is up to date
+      try {
+        if (db.listSubmissionArchives) {
+          archivesData = await db.listSubmissionArchives();
+        }
+      } catch (err) {
+        console.warn('[tc-review] Error reloading archives:', err);
+      }
+
       // Clear caches
       delete submissionAnswersCache[submissionId];
       expandedSubmissions.delete(submissionId);
@@ -1980,10 +2093,10 @@
     btns.unshift(`<button class="rv-filter-btn${currentClassFilter === 'All Classes' ? ' active' : ''}" data-class="All Classes">All Classes</button>`);
     bar.innerHTML = btns.join('');
     // Restore saved status tab
-    ['rvStatusNeedsReview', 'rvStatusReviewed', 'rvStatusAll'].forEach(btnId => {
+    ['rvStatusNeedsReview', 'rvStatusReviewed', 'rvStatusAll', 'rvStatusFinalized'].forEach(btnId => {
       const btn = $(btnId);
       if (!btn) return;
-      const maps = { rvStatusNeedsReview: 'needs-review', rvStatusReviewed: 'reviewed', rvStatusAll: 'all' };
+      const maps = { rvStatusNeedsReview: 'needs-review', rvStatusReviewed: 'reviewed', rvStatusAll: 'all', rvStatusFinalized: 'finalized' };
       btn.classList.toggle('active', maps[btnId] === currentStatusFilter);
     });
   }
