@@ -1333,7 +1333,7 @@ const remote = {
     // This allows filtering by student_code even though it's not directly in submissions table
     let query = supabase
       .from('submissions')
-      .select('*, assignment_instances!inner(student_id, students!inner(code))')
+      .select('*, assignment_instances!inner(id, assignment_id, student_id, students!inner(code))')
       .order('submitted_at', { ascending: false });
     
     if (filters.student_code) {

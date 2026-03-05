@@ -153,33 +153,52 @@ exports.handler = async (event) => {
       );
     }
 
-    // DELETE: Remove a draft by id
+    // DELETE: Remove a draft by id, or all drafts for the teacher if no id is provided
     if (event.httpMethod === 'DELETE') {
       const params = event.queryStringParameters || {};
       const id = params.id;
 
-      if (!id) {
-        return jsonResponse(event, 400, { ok: false, error: 'Missing draft id' }, {}, requestId);
-      }
+      if (id) {
+        // Delete a single draft by id
+        console.log(`[teacher-drafts] [${requestId}] Deleting draft: ${id}`);
 
-      console.log(`[teacher-drafts] [${requestId}] Deleting draft: ${id}`);
+        const deleteUrl = `${SUPABASE_URL}/rest/v1/teacher_drafts?id=eq.${encodeURIComponent(id)}&teacher=eq.${encodeURIComponent(teacher)}`;
+        const response = await fetch(deleteUrl, {
+          method: 'DELETE',
+          headers: {
+            'apikey': SUPABASE_SERVICE_ROLE_KEY,
+            'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+            'Content-Type': 'application/json'
+          }
+        });
 
-      const deleteUrl = `${SUPABASE_URL}/rest/v1/teacher_drafts?id=eq.${encodeURIComponent(id)}&teacher=eq.${encodeURIComponent(teacher)}`;
-      const response = await fetch(deleteUrl, {
-        method: 'DELETE',
-        headers: {
-          'apikey': SUPABASE_SERVICE_ROLE_KEY,
-          'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-          'Content-Type': 'application/json'
+        if (!response.ok) {
+          console.error(`[teacher-drafts] [${requestId}] Delete failed with status: ${response.status}`);
+          throw new Error(`Draft delete failed: ${response.status}`);
         }
-      });
 
-      if (!response.ok) {
-        console.error(`[teacher-drafts] [${requestId}] Delete failed with status: ${response.status}`);
-        throw new Error(`Draft delete failed: ${response.status}`);
+        console.log(`[teacher-drafts] [${requestId}] Successfully deleted draft: ${id}`);
+      } else {
+        // No id provided: delete ALL drafts for this teacher
+        console.log(`[teacher-drafts] [${requestId}] Deleting all drafts for teacher: ${teacher}`);
+
+        const deleteAllUrl = `${SUPABASE_URL}/rest/v1/teacher_drafts?teacher=eq.${encodeURIComponent(teacher)}`;
+        const response = await fetch(deleteAllUrl, {
+          method: 'DELETE',
+          headers: {
+            'apikey': SUPABASE_SERVICE_ROLE_KEY,
+            'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!response.ok) {
+          console.error(`[teacher-drafts] [${requestId}] Bulk delete failed with status: ${response.status}`);
+          throw new Error(`Bulk draft delete failed: ${response.status}`);
+        }
+
+        console.log(`[teacher-drafts] [${requestId}] Successfully deleted all drafts for teacher: ${teacher}`);
       }
-
-      console.log(`[teacher-drafts] [${requestId}] Successfully deleted draft: ${id}`);
 
       return jsonResponse(
         event,
