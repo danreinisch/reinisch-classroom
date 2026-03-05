@@ -1866,104 +1866,76 @@ const remote = {
 
   // Teacher Review: Update or create a submission answer with teacher scoring
   async updateSubmissionAnswer({ submissionId, itemId, earnedPoints, teacherNote }) {
-    const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
-    const { data: existing, error: checkError } = await supabase
-      .from('submission_answers')
-      .select('id')
-      .eq('submission_id', submissionId)
-      .eq('assignment_item_id', itemId)
-      .maybeSingle();
-    if (checkError) throw checkError;
-    let data, error;
-    if (existing) {
-      ({ data, error } = await supabase
-        .from('submission_answers')
-        .update({ earned_points: earnedPoints, teacher_note: teacherNote || '', scored_at: new Date().toISOString() })
-        .eq('submission_id', submissionId)
-        .eq('assignment_item_id', itemId)
-        .select('*')
-        .single());
-      if (error && (error.code === 'PGRST204' || (error.message && error.message.includes('teacher_note')))) {
-        console.warn('[data-adapter] teacher_note column not in schema cache, retrying without it');
-        ({ data, error } = await supabase
-          .from('submission_answers')
-          .update({ earned_points: earnedPoints, scored_at: new Date().toISOString() })
-          .eq('submission_id', submissionId)
-          .eq('assignment_item_id', itemId)
-          .select('*')
-          .single());
-      }
-    } else {
-      ({ data, error } = await supabase
-        .from('submission_answers')
-        .insert({ submission_id: submissionId, assignment_item_id: itemId, earned_points: earnedPoints, teacher_note: teacherNote || '', scored_at: new Date().toISOString() })
-        .select('*')
-        .single());
-      if (error && (error.code === 'PGRST204' || (error.message && error.message.includes('teacher_note')))) {
-        console.warn('[data-adapter] teacher_note column not in schema cache, retrying without it');
-        ({ data, error } = await supabase
-          .from('submission_answers')
-          .insert({ submission_id: submissionId, assignment_item_id: itemId, earned_points: earnedPoints, scored_at: new Date().toISOString() })
-          .select('*')
-          .single());
-      }
+    const response = await fetch('/.netlify/functions/teacher-review-save', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'save_score',
+        submissionId, itemId, earnedPoints, teacherNote
+      })
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(err.error || `Save score failed: ${response.status}`);
     }
-    if (error) throw error;
-    return data;
+    const result = await response.json();
+    return result.data;
   },
 
   // Teacher Review: Update submission with grading fields
   async upsertSubmission({ id, score_auto, score_manual, score_total, status, graded_at, graded_by, feedback }) {
-    const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
-    const updates = {};
-    if (score_auto !== undefined) updates.score_auto = score_auto;
-    if (score_manual !== undefined) updates.score_manual = score_manual;
-    if (score_total !== undefined) updates.score_total = score_total;
-    if (status !== undefined) updates.review_status = status === 'Graded' ? 'reviewed' : status.toLowerCase();
-    if (graded_at !== undefined) updates.graded_at = graded_at;
-    if (graded_by !== undefined) updates.graded_by = graded_by;
-    if (feedback !== undefined) updates.feedback = feedback;
-    const { error } = await supabase.from('submissions').update(updates).eq('id', id);
-    if (error) throw error;
+    const response = await fetch('/.netlify/functions/teacher-review-save', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'save_grade',
+        submissionId: id,
+        scoreAuto: score_auto,
+        scoreManual: score_manual,
+        scoreTotal: score_total,
+        status,
+        gradedAt: graded_at,
+        gradedBy: graded_by,
+        feedback
+      })
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(err.error || `Grade save failed: ${response.status}`);
+    }
     return true;
   },
 
   // Teacher Review: Finalize submission with scores and update instance status
   async finalizeSubmission(submissionId, { scoreAuto, scoreManual, scoreTotal }) {
+    // Look up instance_id first (SELECT still works with anon key)
     const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
-
-    // Update submission with final scores and review status
-    const { error: updateError } = await supabase
-      .from('submissions')
-      .update({ score_auto: scoreAuto, score_manual: scoreManual, score_total: scoreTotal, review_status: 'reviewed' })
-      .eq('id', submissionId);
-    if (updateError) throw updateError;
-
-    // Look up instance_id for this submission to update instance status
-    const { data: subData, error: lookupError } = await supabase
-      .from('submissions')
-      .select('instance_id')
-      .eq('id', submissionId)
-      .maybeSingle();
-
-    if (lookupError) {
-      console.warn('[data-adapter] Could not look up instance_id after finalize:', lookupError);
-      // Non-fatal: the submission itself was updated successfully
-      return true;
+    let instanceId = null;
+    if (supabase) {
+      const { data } = await supabase
+        .from('submissions')
+        .select('instance_id')
+        .eq('id', submissionId)
+        .maybeSingle();
+      instanceId = data?.instance_id;
     }
 
-    if (subData?.instance_id) {
-      const { error: instanceError } = await supabase
-        .from('assignment_instances')
-        .update({ status: 'Reviewed' })
-        .eq('id', subData.instance_id);
-      if (instanceError) {
-        console.warn('[data-adapter] finalizeSubmission instance update warning:', instanceError);
-        // Non-fatal: submission was updated, instance status is secondary
-      }
+    const response = await fetch('/.netlify/functions/teacher-review-save', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'finalize',
+        submissionId,
+        scoreAuto, scoreManual, scoreTotal,
+        instanceId
+      })
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(err.error || `Finalize failed: ${response.status}`);
     }
     return true;
   },
