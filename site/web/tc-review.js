@@ -1637,17 +1637,11 @@
         // Update locally
         submission.review_status = 'in_progress';
         
-        // Update in database if using Supabase
-        if (usingSupabase) {
-          try {
-            const supabase = await getSupabase();
-            await supabase
-              .from('submissions')
-              .update({ review_status: 'in_progress' })
-              .eq('id', submissionId);
-          } catch (err) {
-            console.warn('[tc-review] Could not update review status:', err);
-          }
+        // Update in database via service role key (anon key is blocked by RLS)
+        try {
+          await db.setSubmissionInProgress(submissionId);
+        } catch (err) {
+          console.warn('[tc-review] Could not update review status:', err);
         }
       }
       
@@ -1753,6 +1747,9 @@
         submission.score_total = scoreTotal;
         submission.review_status = 'reviewed';
       }
+      
+      // Remove from submissionsData so it no longer appears on Review page
+      submissionsData = submissionsData.filter(s => s.id !== submissionId);
       
       // Clear caches
       delete submissionAnswersCache[submissionId];
@@ -2041,20 +2038,9 @@
         status: 'Graded',
         graded_at: gradedAt,
         graded_by: gradedBy,
-        feedback
+        feedback,
+        instance_id: submission.instance_id
       });
-
-      // Update assignment_instances status to 'Graded'
-      if (usingSupabase && submission.instance_id) {
-        const supabase = await getSupabase();
-        if (supabase) {
-          const { error: instanceError } = await supabase
-            .from('assignment_instances')
-            .update({ status: 'Graded' })
-            .eq('id', submission.instance_id);
-          if (instanceError) throw instanceError;
-        }
-      }
 
       // Update local cache
       if (submission) {
