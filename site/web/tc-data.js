@@ -113,6 +113,11 @@
   async function loadProgressForQuarter(quarter) {
     try {
       const range = getQuarterDateRange(quarter);
+      if (!range) {
+        console.warn('[data] No date range for quarter:', quarter);
+        progressData = [];
+        return;
+      }
       
       progressData = await db.listGoalProgress({
         startDate: formatDateYYYYMMDD(range.start),
