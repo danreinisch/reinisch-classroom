@@ -2045,17 +2045,14 @@
       });
 
       // Update assignment_instances status to 'Graded'
-      if (usingSupabase) {
-        try {
-          const supabase = await getSupabase();
-          if (supabase && submission.instance_id) {
-            await supabase
-              .from('assignment_instances')
-              .update({ status: 'Graded' })
-              .eq('id', submission.instance_id);
-          }
-        } catch (err) {
-          console.warn('[tc-review] Could not update instance status:', err);
+      if (usingSupabase && submission.instance_id) {
+        const supabase = await getSupabase();
+        if (supabase) {
+          const { error: instanceError } = await supabase
+            .from('assignment_instances')
+            .update({ status: 'Graded' })
+            .eq('id', submission.instance_id);
+          if (instanceError) throw instanceError;
         }
       }
 
