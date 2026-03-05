@@ -1,5 +1,5 @@
 // Adapter selection: use Supabase if available, else localStorage.
-import { getSupabase } from './supabase-client.js';
+import { getSupabase, resetSupabaseClient } from './supabase-client.js';
 
 const NS = 'rc_unified_';
 const store = {
@@ -2043,49 +2043,59 @@ const remote = {
   async finalizeSubmission(submissionId, { scoreAuto, scoreManual, scoreTotal }) {
     const supabase = await getSupabase();
     if (!supabase) throw new Error('supabase-not-configured');
-    
-    // Update submission with final scores and review status
-    const { error: updateError } = await supabase
-      .from('submissions')
-      .update({
-        score_auto: scoreAuto,
-        score_manual: scoreManual,
-        score_total: scoreTotal,
-        review_status: 'reviewed'
-      })
-      .eq('id', submissionId);
-    
-    if (updateError) {
-      console.error('[data-adapter] finalizeSubmission update error:', updateError);
-      throw updateError;
-    }
-    
-    // Get the submission to find the instance_id
-    const { data: submission, error: fetchError } = await supabase
-      .from('submissions')
-      .select('instance_id')
-      .eq('id', submissionId)
-      .single();
-    
-    if (fetchError) {
-      console.error('[data-adapter] finalizeSubmission fetch error:', fetchError);
-      throw fetchError;
-    }
-    
-    // Update instance status to 'Reviewed'
-    if (submission?.instance_id) {
-      const { error: instanceError } = await supabase
-        .from('assignment_instances')
-        .update({ status: 'Reviewed' })
-        .eq('id', submission.instance_id);
-      
-      if (instanceError) {
-        console.error('[data-adapter] finalizeSubmission instance update error:', instanceError);
-        throw instanceError;
+
+    const doFinalize = async (client) => {
+      // Update submission with final scores and review status
+      const { data: updated, error: updateError } = await client
+        .from('submissions')
+        .update({
+          score_auto: scoreAuto,
+          score_manual: scoreManual,
+          score_total: scoreTotal,
+          review_status: 'reviewed'
+        })
+        .eq('id', submissionId)
+        .select('id, instance_id');
+
+      if (updateError) {
+        console.error('[data-adapter] finalizeSubmission update error:', updateError);
+        throw updateError;
       }
+
+      if (!updated || updated.length === 0) {
+        const noRowsErr = new Error('Finalize failed: submission not updated. This may be due to permissions or an expired session — please reload and try again.');
+        noRowsErr.code = 'NO_ROWS_UPDATED';
+        throw noRowsErr;
+      }
+
+      // Update instance status to 'Reviewed' using instance_id from the updated row
+      const instanceId = updated[0]?.instance_id;
+      if (instanceId) {
+        const { error: instanceError } = await client
+          .from('assignment_instances')
+          .update({ status: 'Reviewed' })
+          .eq('id', instanceId);
+
+        if (instanceError) {
+          console.error('[data-adapter] finalizeSubmission instance update error:', instanceError);
+          throw instanceError;
+        }
+      }
+
+      return true;
+    };
+
+    try {
+      return await doFinalize(supabase);
+    } catch (err) {
+      // On failure, reset the client singleton and retry once (handles stale-client scenario)
+      if (err.code !== 'supabase-not-configured') {
+        resetSupabaseClient();
+        const freshSupabase = await getSupabase();
+        if (freshSupabase) return await doFinalize(freshSupabase);
+      }
+      throw err;
     }
-    
-    return true;
   },
 
   /**
@@ -2104,9 +2114,29 @@ const remote = {
     if (graded_at !== undefined) updates.graded_at = graded_at;
     if (graded_by !== undefined) updates.graded_by = graded_by;
     if (feedback !== undefined) updates.feedback = feedback;
-    const { error } = await supabase.from('submissions').update(updates).eq('id', id);
-    if (error) throw error;
-    return true;
+
+    const doUpdate = async (client) => {
+      const { data: updated, error } = await client.from('submissions').update(updates).eq('id', id).select('id');
+      if (error) throw error;
+      if (!updated || updated.length === 0) {
+        const noRowsErr = new Error('Grade save failed: submission not updated. This may be due to permissions or an expired session — please reload and try again.');
+        noRowsErr.code = 'NO_ROWS_UPDATED';
+        throw noRowsErr;
+      }
+      return true;
+    };
+
+    try {
+      return await doUpdate(supabase);
+    } catch (err) {
+      // On failure, reset the client singleton and retry once (handles stale-client scenario)
+      if (err.code !== 'supabase-not-configured') {
+        resetSupabaseClient();
+        const freshSupabase = await getSupabase();
+        if (freshSupabase) return await doUpdate(freshSupabase);
+      }
+      throw err;
+    }
   },
 
   // ============================================================================
