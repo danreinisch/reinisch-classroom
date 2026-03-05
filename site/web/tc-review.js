@@ -1409,7 +1409,7 @@
             : (Number(submission.score_auto) || 0);
           const scoreTotal = computeScorePercentage(scoreAuto, scoreManual, items);
 
-          await db.finalizeSubmission(submission.id, { scoreAuto, scoreManual, scoreTotal });
+          await db.finalizeSubmission(submission.id, { scoreAuto, scoreManual, scoreTotal, instanceId: submission.instance_id });
           await triggerGoalProgressUpdates(submission.id, items, answers);
 
           // Archive submission for DESE compliance (non-fatal)
@@ -1509,7 +1509,7 @@
           if (constructedItems.length === 0) scoreManual = Number(submission.score_manual) || 0;
           const scoreTotal = computeScorePercentage(scoreAuto, scoreManual, items);
 
-          await db.finalizeSubmission(submission.id, { scoreAuto, scoreManual, scoreTotal });
+          await db.finalizeSubmission(submission.id, { scoreAuto, scoreManual, scoreTotal, instanceId: submission.instance_id });
           await triggerGoalProgressUpdates(submission.id, items, answers);
 
           submission.score_auto = scoreAuto;
@@ -1717,7 +1717,8 @@
       await db.finalizeSubmission(submissionId, {
         scoreAuto,
         scoreManual,
-        scoreTotal
+        scoreTotal,
+        instanceId: submission.instance_id
       });
       
       // Trigger goal progress updates
@@ -1876,7 +1877,8 @@
         await db.finalizeSubmission(submission.id, {
           scoreAuto,
           scoreManual: 0,
-          scoreTotal
+          scoreTotal,
+          instanceId: submission.instance_id
         });
 
         await triggerGoalProgressUpdates(submission.id, items, answers);

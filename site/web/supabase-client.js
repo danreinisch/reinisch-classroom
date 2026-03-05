@@ -100,8 +100,10 @@ function buildClient(config) {
  * @returns {Promise<Object|null>} Supabase client or null if not configured
  */
 export async function getSupabase() {
-  // Use singleton from window to prevent multiple instances across modules
-  if (window.__sbClient && !configChanged(readCurrentConfig())) {
+  // Always return existing singleton from window if available.
+  // window.__sbClient is cleared by resetSupabaseClient() when config changes,
+  // so returning it unconditionally is safe and prevents duplicate GoTrueClient instances.
+  if (window.__sbClient) {
     return window.__sbClient;
   }
   
