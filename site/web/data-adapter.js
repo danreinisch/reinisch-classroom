@@ -1957,81 +1957,21 @@ const remote = {
    * @returns {Object} Updated submission answer
    */
   async updateSubmissionAnswer({ submissionId, itemId, earnedPoints, teacherNote }) {
-    const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
-
-    // Check if a row already exists to avoid wiping raw_answer, is_correct, max_points, scored_at
-    const { data: existing, error: checkError } = await supabase
-      .from('submission_answers')
-      .select('id')
-      .eq('submission_id', submissionId)
-      .eq('assignment_item_id', itemId)
-      .maybeSingle();
-
-    if (checkError) throw checkError;
-
-    let data, error;
-    if (existing) {
-      // Update only scoring fields, preserving raw_answer, is_correct, max_points
-      ({ data, error } = await supabase
-        .from('submission_answers')
-        .update({
-          earned_points: earnedPoints,
-          teacher_note: teacherNote || '',
-          scored_at: new Date().toISOString()
-        })
-        .eq('submission_id', submissionId)
-        .eq('assignment_item_id', itemId)
-        .select('*')
-        .single());
-      // Fallback: retry without teacher_note if the schema cache is stale. Two cases:
-      // 1) PGRST204 — PostgREST "column not found in schema cache"; any PGRST204 on this
-      //    update is almost certainly about teacher_note since that is the only non-standard
-      //    column in the payload.
-      // 2) error message mentions 'teacher_note' — catches alternate error shapes
-      //    (e.g. pg driver returning the column name in the message with a different code).
-      if (error && (error.code === 'PGRST204' || (error.message && error.message.includes('teacher_note')))) {
-        console.warn('[data-adapter] teacher_note column not in schema cache, retrying without it');
-        ({ data, error } = await supabase
-          .from('submission_answers')
-          .update({ earned_points: earnedPoints, scored_at: new Date().toISOString() })
-          .eq('submission_id', submissionId)
-          .eq('assignment_item_id', itemId)
-          .select('*')
-          .single());
-      }
-    } else {
-      // Insert new row when no submission_answer exists yet
-      ({ data, error } = await supabase
-        .from('submission_answers')
-        .insert({
-          submission_id: submissionId,
-          assignment_item_id: itemId,
-          earned_points: earnedPoints,
-          teacher_note: teacherNote || '',
-          scored_at: new Date().toISOString()
-        })
-        .select('*')
-        .single());
-      // Fallback: same two-case schema cache miss check for insert path (see update path comment).
-      if (error && (error.code === 'PGRST204' || (error.message && error.message.includes('teacher_note')))) {
-        console.warn('[data-adapter] teacher_note column not in schema cache, retrying without it');
-        ({ data, error } = await supabase
-          .from('submission_answers')
-          .insert({
-            submission_id: submissionId,
-            assignment_item_id: itemId,
-            earned_points: earnedPoints,
-            scored_at: new Date().toISOString()
-          })
-          .select('*')
-          .single());
-      }
+    const response = await fetch('/.netlify/functions/teacher-review-save', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'save_score',
+        submissionId, itemId, earnedPoints, teacherNote
+      })
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(err.error || `Save score failed: ${response.status}`);
     }
-
-    if (error) throw error;
-
-    return data;
+    const result = await response.json();
+    return result.data;
   },
 
   /**
@@ -2041,51 +1981,33 @@ const remote = {
    * @returns {boolean} Success
    */
   async finalizeSubmission(submissionId, { scoreAuto, scoreManual, scoreTotal }) {
+    // Look up instance_id first (SELECT still works with anon key)
     const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
+    let instanceId = null;
+    if (supabase) {
+      const { data } = await supabase
+        .from('submissions')
+        .select('instance_id')
+        .eq('id', submissionId)
+        .maybeSingle();
+      instanceId = data?.instance_id;
+    }
 
-    // Update submission with final scores and review status
-    const { error: updateError } = await supabase
-      .from('submissions')
-      .update({
-        score_auto: scoreAuto,
-        score_manual: scoreManual,
-        score_total: scoreTotal,
-        review_status: 'reviewed'
+    const response = await fetch('/.netlify/functions/teacher-review-save', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'finalize',
+        submissionId,
+        scoreAuto, scoreManual, scoreTotal,
+        instanceId
       })
-      .eq('id', submissionId);
-
-    if (updateError) {
-      console.error('[data-adapter] finalizeSubmission update error:', updateError);
-      throw updateError;
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(err.error || `Finalize failed: ${response.status}`);
     }
-
-    // Look up instance_id for this submission to update instance status
-    const { data: subData, error: lookupError } = await supabase
-      .from('submissions')
-      .select('instance_id')
-      .eq('id', submissionId)
-      .maybeSingle();
-
-    if (lookupError) {
-      console.warn('[data-adapter] Could not look up instance_id after finalize:', lookupError);
-      // Non-fatal: the submission itself was updated successfully
-      return true;
-    }
-
-    // Update instance status to 'Reviewed'
-    if (subData?.instance_id) {
-      const { error: instanceError } = await supabase
-        .from('assignment_instances')
-        .update({ status: 'Reviewed' })
-        .eq('id', subData.instance_id);
-
-      if (instanceError) {
-        console.warn('[data-adapter] finalizeSubmission instance update warning:', instanceError);
-        // Non-fatal: submission was updated, instance status is secondary
-      }
-    }
-
     return true;
   },
 
@@ -2095,18 +2017,26 @@ const remote = {
    * @returns {boolean} Success
    */
   async upsertSubmission({ id, score_auto, score_manual, score_total, status, graded_at, graded_by, feedback }) {
-    const supabase = await getSupabase();
-    if (!supabase) throw new Error('supabase-not-configured');
-    const updates = {};
-    if (score_auto !== undefined) updates.score_auto = score_auto;
-    if (score_manual !== undefined) updates.score_manual = score_manual;
-    if (score_total !== undefined) updates.score_total = score_total;
-    if (status !== undefined) updates.review_status = status === 'Graded' ? 'reviewed' : status.toLowerCase();
-    if (graded_at !== undefined) updates.graded_at = graded_at;
-    if (graded_by !== undefined) updates.graded_by = graded_by;
-    if (feedback !== undefined) updates.feedback = feedback;
-    const { error } = await supabase.from('submissions').update(updates).eq('id', id);
-    if (error) throw error;
+    const response = await fetch('/.netlify/functions/teacher-review-save', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'save_grade',
+        submissionId: id,
+        scoreAuto: score_auto,
+        scoreManual: score_manual,
+        scoreTotal: score_total,
+        status,
+        gradedAt: graded_at,
+        gradedBy: graded_by,
+        feedback
+      })
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(err.error || `Grade save failed: ${response.status}`);
+    }
     return true;
   },
 
