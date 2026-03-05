@@ -130,10 +130,37 @@ async function handleSaveGrade(body, requestId) {
   if (gradedBy !== undefined) updates.graded_by = gradedBy;
   if (feedback !== undefined) updates.feedback = feedback;
 
-  const subRes = await supaFetch(
+  let subRes = await supaFetch(
     `/rest/v1/submissions?id=eq.${encodeURIComponent(submissionId)}`,
     { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify(updates) }
   );
+
+  // Retry without grading columns if they don't exist in the schema yet
+  if (!subRes.ok) {
+    const errCode = subRes.data?.code || '';
+    const errMsg = typeof subRes.data === 'object'
+      ? (subRes.data?.message || subRes.data?.code || '')
+      : String(subRes.data || '');
+    const isGradingColumnError = (
+      errCode === 'PGRST204' ||  // PostgREST column not found
+      errCode === '42703' ||     // PostgreSQL undefined_column
+      errMsg.includes('graded_at') ||
+      errMsg.includes('graded_by') ||
+      errMsg.includes('feedback')
+    );
+    if (isGradingColumnError) {
+      console.warn(`[teacher-review-save] [${requestId}] grading columns missing, retrying without them`);
+      const safeUpdates = {};
+      if (updates.score_auto !== undefined) safeUpdates.score_auto = updates.score_auto;
+      if (updates.score_manual !== undefined) safeUpdates.score_manual = updates.score_manual;
+      if (updates.score_total !== undefined) safeUpdates.score_total = updates.score_total;
+      if (updates.review_status !== undefined) safeUpdates.review_status = updates.review_status;
+      subRes = await supaFetch(
+        `/rest/v1/submissions?id=eq.${encodeURIComponent(submissionId)}`,
+        { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify(safeUpdates) }
+      );
+    }
+  }
 
   if (!subRes.ok) {
     console.error(`[teacher-review-save] [${requestId}] save_grade submission update failed:`, subRes.status, subRes.data);

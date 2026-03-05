@@ -1939,17 +1939,20 @@ const remote = {
   },
 
   // Teacher Review: Finalize submission with scores and update instance status
-  async finalizeSubmission(submissionId, { scoreAuto, scoreManual, scoreTotal }) {
-    // Look up instance_id first (SELECT still works with anon key)
-    const supabase = await getSupabase();
-    let instanceId = null;
-    if (supabase) {
-      const { data } = await supabase
-        .from('submissions')
-        .select('instance_id')
-        .eq('id', submissionId)
-        .maybeSingle();
-      instanceId = data?.instance_id;
+  async finalizeSubmission(submissionId, { scoreAuto, scoreManual, scoreTotal, instanceId: callerInstanceId }) {
+    // Use caller-provided instanceId when available to avoid a redundant anon SELECT
+    // (which may fail due to RLS). Fall back to a Supabase SELECT only when needed.
+    let instanceId = callerInstanceId || null;
+    if (!instanceId) {
+      const supabase = await getSupabase();
+      if (supabase) {
+        const { data } = await supabase
+          .from('submissions')
+          .select('instance_id')
+          .eq('id', submissionId)
+          .maybeSingle();
+        instanceId = data?.instance_id;
+      }
     }
 
     const response = await fetch('/.netlify/functions/teacher-review-save', {
