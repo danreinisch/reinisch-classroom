@@ -270,10 +270,28 @@
       const instance = assignmentInstancesData.find(
         (inst) => inst.id === submission.instance_id
       );
-      if (!instance) continue;
 
-      const studentCode = instance.student_code;
-      const draftId = instance.assignment_id;
+      let studentCode, draftId;
+      if (instance) {
+        studentCode = instance.student_code;
+        draftId = instance.assignment_id;
+      } else {
+        // Fallback: extract from nested assignment_instances data returned by listSubmissions()
+        // This handles the case where the instance isn't in the locally-loaded assignmentInstancesData
+        const nestedInstance = Array.isArray(submission.assignment_instances)
+          ? submission.assignment_instances[0]
+          : submission.assignment_instances;
+        if (!nestedInstance) {
+          console.warn('[gradebook] No instance found for submission', submission.id, 'instance_id:', submission.instance_id);
+          continue;
+        }
+        studentCode = nestedInstance.students?.code || nestedInstance.student_code;
+        draftId = nestedInstance.assignment_id || submission.assignment_id;
+        if (!studentCode || !draftId) {
+          console.warn('[gradebook] Missing student_code or assignment_id for submission', submission.id);
+          continue;
+        }
+      }
 
       if (!scoreMap.has(studentCode)) {
         scoreMap.set(studentCode, new Map());
