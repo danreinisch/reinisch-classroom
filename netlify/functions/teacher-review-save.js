@@ -196,6 +196,29 @@ async function handleFinalize(body, requestId) {
   return { statusCode: 200, data: { ok: true } };
 }
 
+// Action: set_in_progress
+// PATCH submissions review_status to 'in_progress' using service role key
+async function handleSetInProgress(body, requestId) {
+  const { submissionId } = body;
+
+  if (!submissionId || typeof submissionId !== 'string') {
+    return { statusCode: 400, error: 'submissionId is required' };
+  }
+
+  const subRes = await supaFetch(
+    `/rest/v1/submissions?id=eq.${encodeURIComponent(submissionId)}`,
+    { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ review_status: 'in_progress' }) }
+  );
+
+  if (!subRes.ok) {
+    console.error(`[teacher-review-save] [${requestId}] set_in_progress submission update failed:`, subRes.status, subRes.data);
+    return { statusCode: 500, error: 'Failed to set in_progress', detail: subRes.data };
+  }
+
+  console.log(`[teacher-review-save] [${requestId}] set_in_progress OK submission=${submissionId}`);
+  return { statusCode: 200, data: { ok: true } };
+}
+
 // Action: mark_reviewed
 // PATCH submissions review_status to 'reviewed', PATCH assignment_instances to Reviewed
 async function handleMarkReviewed(body, requestId) {
@@ -301,6 +324,9 @@ exports.handler = async (event) => {
       break;
     case 'mark_reviewed':
       result = await handleMarkReviewed(body, requestId);
+      break;
+    case 'set_in_progress':
+      result = await handleSetInProgress(body, requestId);
       break;
     default:
       console.log(`[teacher-review-save] [${requestId}] Unknown action: ${action}`);

@@ -719,6 +719,16 @@ const local = {
     return true;
   },
 
+  async setSubmissionInProgress(submissionId) {
+    const submissions = store.get('submissions', []);
+    const submission = submissions.find(s => s.id === submissionId);
+    if (submission) {
+      submission.review_status = 'in_progress';
+      store.set('submissions', submissions);
+    }
+    return true;
+  },
+
   // ============================================================================
   // Archive Tab: Student Archive Management
   // ============================================================================
@@ -2013,10 +2023,10 @@ const remote = {
 
   /**
    * Update a submission with grading fields (score_auto, score_manual, score_total, status, graded_at, graded_by, feedback)
-   * @param {Object} params - { id, score_auto, score_manual, score_total, status, graded_at, graded_by, feedback }
+   * @param {Object} params - { id, score_auto, score_manual, score_total, status, graded_at, graded_by, feedback, instance_id }
    * @returns {boolean} Success
    */
-  async upsertSubmission({ id, score_auto, score_manual, score_total, status, graded_at, graded_by, feedback }) {
+  async upsertSubmission({ id, score_auto, score_manual, score_total, status, graded_at, graded_by, feedback, instance_id }) {
     const response = await fetch('/.netlify/functions/teacher-review-save', {
       method: 'POST',
       credentials: 'include',
@@ -2030,12 +2040,35 @@ const remote = {
         status,
         gradedAt: graded_at,
         gradedBy: graded_by,
-        feedback
+        feedback,
+        instanceId: instance_id
       })
     });
     if (!response.ok) {
       const err = await response.json().catch(() => ({ error: 'Unknown error' }));
       throw new Error(err.error || `Grade save failed: ${response.status}`);
+    }
+    return true;
+  },
+
+  /**
+   * Set submission review_status to 'in_progress' using service role key
+   * @param {string} submissionId - Submission ID
+   * @returns {boolean} Success
+   */
+  async setSubmissionInProgress(submissionId) {
+    const response = await fetch('/.netlify/functions/teacher-review-save', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'set_in_progress',
+        submissionId
+      })
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(err.error || `Set in_progress failed: ${response.status}`);
     }
     return true;
   },
