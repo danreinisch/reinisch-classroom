@@ -529,7 +529,7 @@
     const latestLabelX = Math.min(latestPt.x + 6, W - PAD.right - 4);
 
     return `
-      <svg class="st-goal-chart-svg" viewBox="0 0 ${W} ${H}" width="100%" aria-label="Progress chart for goal ${escapeHtml(goal.code || '')}">
+      <svg class="st-goal-chart-svg" role="img" viewBox="0 0 ${W} ${H}" width="100%" aria-label="Progress chart for goal ${escapeHtml(goal.code || '')}">
         <rect width="${W}" height="${H}" fill="none"/>
         <!-- Axes -->
         <line class="st-chart-axis" x1="${PAD.left}" y1="${PAD.top}" x2="${PAD.left}" y2="${PAD.top + chartH}" />
@@ -647,10 +647,7 @@
     }
 
     const toggleBtn = progressEntries.length > 0
-      ? `<button class="st-goal-progress-toggle" data-progress-id="${progressDetailId}" aria-expanded="false" aria-controls="${progressDetailId}">
-           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
-           View Progress
-         </button>`
+      ? `<button class="st-goal-progress-toggle" data-progress-id="${progressDetailId}" aria-expanded="false" aria-controls="${progressDetailId}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg><span class="st-goal-progress-toggle-label">View Progress</span></button>`
       : '';
 
     return `
@@ -713,9 +710,10 @@
         panel.hidden = isExpanded;
         panel.setAttribute('aria-hidden', String(isExpanded));
         this.setAttribute('aria-expanded', String(!isExpanded));
-        this.querySelector('svg') && (this.querySelector('svg').style.transform = isExpanded ? '' : 'rotate(180deg)');
-        const textNode = Array.from(this.childNodes).find(n => n.nodeType === 3);
-        if (textNode) textNode.textContent = isExpanded ? '\n           View Progress\n         ' : '\n           Hide Progress\n         ';
+        const svgEl = this.querySelector('svg');
+        if (svgEl) svgEl.style.transform = isExpanded ? '' : 'rotate(180deg)';
+        const labelEl = this.querySelector('.st-goal-progress-toggle-label');
+        if (labelEl) labelEl.textContent = isExpanded ? 'View Progress' : 'Hide Progress';
       });
     });
   }
