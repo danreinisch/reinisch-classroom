@@ -290,7 +290,7 @@
       total: assignmentsData.length,
       fileCount: assignmentsData.filter(a => a.type === "file").length,
       linkCount: assignmentsData.filter(a => a.type === "link").length,
-      withMeta: assignmentsData.filter(a => a.meta && a.meta.trim()).length
+      withMeta: assignmentsData.filter(a => a.meta && (typeof a.meta === 'string' ? a.meta.trim() : true)).length
     };
   }
 

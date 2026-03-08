@@ -437,6 +437,121 @@
   }
   
   /**
+   * Format a progress value for display based on measurement type
+   */
+  function formatProgressValue(value, measurementType) {
+    if (value == null) return '—';
+    const num = parseFloat(value);
+    if (isNaN(num)) return String(value);
+    if (measurementType === 'percent') return `${Math.round(num * 10) / 10}%`;
+    if (measurementType === 'x_of_y') return String(num);
+    return String(num);
+  }
+
+  /**
+   * Build an inline SVG line chart for goal progress entries
+   */
+  function buildProgressSVG(entries, goal) {
+    const sorted = [...entries].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    if (sorted.length === 0) {
+      return `<div class="st-goal-chart-empty" role="status">No progress data to chart yet.</div>`;
+    }
+    if (sorted.length === 1) {
+      const val = formatProgressValue(sorted[0].value, goal.measurement_type);
+      const dateStr = formatDate(sorted[0].date);
+      return `<div class="st-goal-chart-empty" role="status">Only one data point recorded (${dateStr}: ${val}). Add more to see a chart.</div>`;
+    }
+
+    const W = 340, H = 120;
+    const PAD = { top: 14, right: 16, bottom: 28, left: 38 };
+    const chartW = W - PAD.left - PAD.right;
+    const chartH = H - PAD.top - PAD.bottom;
+
+    const values = sorted.map(e => parseFloat(e.value)).filter(v => !isNaN(v));
+    if (values.length < 2) {
+      return `<div class="st-goal-chart-empty" role="status">Progress values are not numeric; chart unavailable.</div>`;
+    }
+
+    const baseline = goal.baseline != null ? parseFloat(goal.baseline) : null;
+    const target = goal.target != null ? parseFloat(goal.target) : null;
+
+    const allNums = [...values];
+    if (!isNaN(baseline)) allNums.push(baseline);
+    if (!isNaN(target)) allNums.push(target);
+
+    const minV = Math.min(...allNums);
+    const maxV = Math.max(...allNums);
+    const rangeV = maxV - minV || 1;
+
+    const dates = sorted.map(e => new Date(e.date).getTime());
+    const minD = Math.min(...dates);
+    const maxD = Math.max(...dates);
+    const rangeD = maxD - minD || 1;
+
+    const toX = d => PAD.left + ((new Date(d).getTime() - minD) / rangeD) * chartW;
+    const toY = v => PAD.top + chartH - ((v - minV) / rangeV) * chartH;
+
+    const numericEntries = sorted.filter(e => !isNaN(parseFloat(e.value)));
+    const points = numericEntries.map(e => ({ x: toX(e.date), y: toY(parseFloat(e.value)), e }));
+
+    const polyline = points.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+
+    // X-axis labels (first and last date)
+    const firstLabel = formatDate(sorted[0].date);
+    const lastLabel = formatDate(sorted[sorted.length - 1].date);
+
+    // Y-axis labels (min and max)
+    const mt = goal.measurement_type;
+    const yMinLabel = formatProgressValue(minV, mt);
+    const yMaxLabel = formatProgressValue(maxV, mt);
+
+    let refLines = '';
+    if (!isNaN(baseline) && baseline >= minV && baseline <= maxV) {
+      const by = toY(baseline).toFixed(1);
+      refLines += `<line class="st-chart-ref st-chart-baseline" x1="${PAD.left}" y1="${by}" x2="${W - PAD.right}" y2="${by}" />`;
+      refLines += `<text class="st-chart-ref-label" x="${W - PAD.right + 2}" y="${by}" dy="4" font-size="9" fill="var(--muted)">base</text>`;
+    }
+    if (!isNaN(target) && target >= minV && target <= maxV) {
+      const ty = toY(target).toFixed(1);
+      refLines += `<line class="st-chart-ref st-chart-target" x1="${PAD.left}" y1="${ty}" x2="${W - PAD.right}" y2="${ty}" />`;
+      refLines += `<text class="st-chart-ref-label" x="${W - PAD.right + 2}" y="${ty}" dy="4" font-size="9" fill="var(--accent)">target</text>`;
+    }
+
+    const dots = points.map(p => {
+      const val = formatProgressValue(parseFloat(p.e.value), mt);
+      const dt = formatDate(p.e.date);
+      return `<circle class="st-chart-dot" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4" role="img" aria-label="${dt}: ${val}"><title>${dt}: ${val}</title></circle>`;
+    }).join('');
+
+    const latestPt = points[points.length - 1];
+    const latestLabel = formatProgressValue(parseFloat(latestPt.e.value), mt);
+    const latestLabelX = Math.min(latestPt.x + 6, W - PAD.right - 4);
+
+    return `
+      <svg class="st-goal-chart-svg" role="img" viewBox="0 0 ${W} ${H}" width="100%" aria-label="Progress chart for goal ${escapeHtml(goal.code || '')}">
+        <rect width="${W}" height="${H}" fill="none"/>
+        <!-- Axes -->
+        <line class="st-chart-axis" x1="${PAD.left}" y1="${PAD.top}" x2="${PAD.left}" y2="${PAD.top + chartH}" />
+        <line class="st-chart-axis" x1="${PAD.left}" y1="${PAD.top + chartH}" x2="${W - PAD.right}" y2="${PAD.top + chartH}" />
+        <!-- Reference lines -->
+        ${refLines}
+        <!-- Progress line -->
+        <polyline class="st-chart-line" points="${polyline}" />
+        <!-- Data dots -->
+        ${dots}
+        <!-- Latest value label -->
+        <text class="st-chart-latest-label" x="${latestLabelX}" y="${(latestPt.y - 6).toFixed(1)}" font-size="10">${escapeHtml(latestLabel)}</text>
+        <!-- X-axis labels -->
+        <text class="st-chart-axis-label" x="${PAD.left}" y="${H - 4}" font-size="9" text-anchor="middle">${escapeHtml(firstLabel)}</text>
+        <text class="st-chart-axis-label" x="${W - PAD.right}" y="${H - 4}" font-size="9" text-anchor="middle">${escapeHtml(lastLabel)}</text>
+        <!-- Y-axis labels -->
+        <text class="st-chart-axis-label" x="${PAD.left - 4}" y="${(PAD.top + chartH).toFixed(1)}" font-size="9" text-anchor="end" dy="4">${escapeHtml(yMinLabel)}</text>
+        <text class="st-chart-axis-label" x="${PAD.left - 4}" y="${PAD.top}" font-size="9" text-anchor="end" dy="4">${escapeHtml(yMaxLabel)}</text>
+      </svg>`;
+  }
+
+  /**
    * Render a single goal card
    */
   function renderGoalCard(goal, progressMap) {
@@ -499,6 +614,42 @@
       ? escapeHtml(goal.target)
       : '<span class="st-metric-empty">Not yet set</span>';
     
+    // Build progress detail section (if there are entries to show)
+    const progressDetailId = `st-goal-progress-${goal.id.replace(/[^a-z0-9]/gi, '_')}`;
+    let progressDetailHtml = '';
+    if (progressEntries.length > 0) {
+      const sortedForDisplay = [...progressEntries].sort((a, b) => new Date(b.date) - new Date(a.date));
+      const latestEntry = sortedForDisplay[0];
+      const latestVal = formatProgressValue(latestEntry.value, goal.measurement_type);
+
+      const recentRows = sortedForDisplay.slice(0, 5).map(e => {
+        const val = formatProgressValue(e.value, goal.measurement_type);
+        const dt = formatDate(e.date);
+        return `<tr><td class="st-progress-td-date">${escapeHtml(dt)}</td><td class="st-progress-td-value">${escapeHtml(val)}</td></tr>`;
+      }).join('');
+
+      const chartHtml = buildProgressSVG(progressEntries, goal);
+
+      progressDetailHtml = `
+        <div class="st-goal-progress-detail" id="${progressDetailId}" hidden aria-hidden="true">
+          <div class="st-goal-latest-value" aria-label="Latest progress value: ${escapeHtml(latestVal)}">
+            <span class="st-goal-latest-label">Latest:</span>
+            <span class="st-goal-latest-num">${escapeHtml(latestVal)}</span>
+          </div>
+          <div class="st-goal-chart-container" aria-hidden="true">
+            ${chartHtml}
+          </div>
+          <table class="st-progress-table" aria-label="Recent progress data">
+            <thead><tr><th>Date</th><th>Value</th></tr></thead>
+            <tbody>${recentRows}</tbody>
+          </table>
+        </div>`;
+    }
+
+    const toggleBtn = progressEntries.length > 0
+      ? `<button class="st-goal-progress-toggle" data-progress-id="${progressDetailId}" aria-expanded="false" aria-controls="${progressDetailId}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg><span class="st-goal-progress-toggle-label">View Progress</span></button>`
+      : '';
+
     return `
       <div class="st-goal-card" data-goal-id="${goal.id}" data-area="${colorCategory}">
         <div class="st-goal-header">
@@ -529,13 +680,15 @@
             <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg></span>
             <span>Last: ${lastDate}</span>
           </div>
+          ${toggleBtn ? `<div class="st-data-status-item st-data-status-item--toggle">${toggleBtn}</div>` : ''}
         </div>
+        ${progressDetailHtml}
       </div>
     `;
   }
   
   /**
-   * Attach event listeners to "Show more" buttons
+   * Attach event listeners to "Show more" and progress toggle buttons
    */
   function attachShowMoreListeners() {
     const showMoreButtons = document.querySelectorAll('.st-goal-show-more');
@@ -544,6 +697,23 @@
         const descContainer = this.parentElement;
         descContainer.classList.toggle('expanded');
         this.textContent = descContainer.classList.contains('expanded') ? 'Show less' : 'Show more';
+      });
+    });
+
+    const progressToggles = document.querySelectorAll('.st-goal-progress-toggle');
+    progressToggles.forEach(button => {
+      button.addEventListener('click', function() {
+        const targetId = this.dataset.progressId;
+        const panel = document.getElementById(targetId);
+        if (!panel) return;
+        const isExpanded = !panel.hidden;
+        panel.hidden = isExpanded;
+        panel.setAttribute('aria-hidden', String(isExpanded));
+        this.setAttribute('aria-expanded', String(!isExpanded));
+        const svgEl = this.querySelector('svg');
+        if (svgEl) svgEl.style.transform = isExpanded ? '' : 'rotate(180deg)';
+        const labelEl = this.querySelector('.st-goal-progress-toggle-label');
+        if (labelEl) labelEl.textContent = isExpanded ? 'View Progress' : 'Hide Progress';
       });
     });
   }

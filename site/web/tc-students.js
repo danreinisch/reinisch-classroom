@@ -352,9 +352,15 @@
     try {
       const supabase = await getSupabase();
       if (supabase) {
-        const { data, error } = await supabase.from('goal_progress').select('*');
+        const { data, error } = await supabase
+          .from('goal_progress')
+          .select('*, goals!inner(code), students!inner(code)');
         if (error) throw error;
-        return data || [];
+        return (data || []).map(row => ({
+          ...row,
+          student_code: row.students?.code || '',
+          goal_code: row.goals?.code || '',
+        }));
       }
     } catch (e) {
       console.warn('[tc-students] Could not load from goal_progress table, falling back to localStorage:', e);
