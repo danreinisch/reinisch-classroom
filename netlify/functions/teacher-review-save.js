@@ -197,7 +197,7 @@ async function handleFinalize(body, requestId) {
     {
       method: 'PATCH',
       headers: { Prefer: 'return=representation' },
-      body: JSON.stringify({ score_auto: scoreAuto, score_manual: scoreManual, score_total: scoreTotal, review_status: 'reviewed' })
+      body: JSON.stringify({ score_auto: scoreAuto, score_manual: scoreManual, score_total: scoreTotal, review_status: 'finalized' })
     }
   );
 

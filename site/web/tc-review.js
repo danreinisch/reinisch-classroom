@@ -9,6 +9,7 @@
   const { getSupabase, getSupabaseConfig } = await import('/web/supabase-client.js');
   const { getAssignmentItems } = await import('/web/assignment-mapping-db.js');
   const { CANON_CLASSES, CLASS_DISPLAY } = await import('/web/constants.js');
+  const { isRealtimeDisabled } = await import('/web/runtime-config.js');
 
   // Cached Supabase connection details for direct REST fallback calls.
   // Populated during loadData() once the Supabase client is available.
@@ -166,6 +167,10 @@
   // Set up realtime subscriptions
   let realtimeDebounceTimer = null;
   async function setupRealtime() {
+    if (typeof isRealtimeDisabled === 'function' && isRealtimeDisabled()) {
+      console.info('[tc-review] Realtime disabled via runtime config — skipping');
+      return;
+    }
     try {
       const supabase = await getSupabase();
       if (!supabase) return;
@@ -1432,7 +1437,7 @@
           submission.score_auto = scoreAuto;
           submission.score_manual = scoreManual;
           submission.score_total = scoreTotal;
-          submission.review_status = 'reviewed';
+          submission.review_status = 'finalized';
           delete submissionAnswersCache[submission.id];
           expandedSubmissions.delete(submission.id);
           processed++;
@@ -1746,7 +1751,7 @@
         submission.score_auto = scoreAuto;
         submission.score_manual = scoreManual;
         submission.score_total = scoreTotal;
-        submission.review_status = 'reviewed';
+        submission.review_status = 'finalized';
       }
       
       // Remove from submissionsData so it no longer appears on Review page

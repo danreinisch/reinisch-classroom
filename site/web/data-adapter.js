@@ -251,6 +251,8 @@ const local = {
       result = result.filter(s => s.instance_id === filters.instance_id);
     }
     
+    result = result.filter(s => s.review_status !== 'finalized');
+    
     return result;
   },
   
@@ -668,7 +670,7 @@ const local = {
   },
 
   /**
-   * Finalize a submission with scores and set review status to 'reviewed'
+   * Finalize a submission with scores and set review status to 'finalized'
    * @param {string} submissionId - Submission ID
    * @param {Object} params - { scoreAuto, scoreManual, scoreTotal }
    * @returns {boolean} Success
@@ -684,7 +686,7 @@ const local = {
     if (scoreAuto !== undefined) submission.score_auto = scoreAuto;
     submission.score_manual = scoreManual;
     submission.score_total = scoreTotal;
-    submission.review_status = 'reviewed';
+    submission.review_status = 'finalized';
     
     store.set('submissions', submissions);
     
@@ -1344,6 +1346,7 @@ const remote = {
     let query = supabase
       .from('submissions')
       .select('*, assignment_instances!inner(id, assignment_id, student_id, students!inner(code))')
+      .neq('review_status', 'finalized')
       .order('submitted_at', { ascending: false });
     
     if (filters.student_code) {
