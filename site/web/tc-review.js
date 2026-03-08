@@ -118,7 +118,7 @@
       const [students, assignments, submissions, instances] = await Promise.all([
         db.listStudents(),
         db.listAssignments(),
-        db.listSubmissions(),
+        db.listSubmissions({ excludeFinalized: true }),
         db.listAssignmentInstances()
       ]);
       

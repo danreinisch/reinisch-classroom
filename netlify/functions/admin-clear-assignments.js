@@ -1,5 +1,6 @@
 // Admin action: clear all assignment data from Supabase
-// POST /.netlify/functions/admin-clear-assignments
+// GET  /.netlify/functions/admin-clear-assignments  → returns counts (no deletion)
+// POST /.netlify/functions/admin-clear-assignments  → deletes everything
 // Auth: Requires teacher/admin session cookie
 
 const {
@@ -32,15 +33,37 @@ async function deleteFrom(table) {
   return Array.isArray(rows) ? rows.length : 0;
 }
 
+async function countFrom(table) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=not.is.null&select=id`, {
+    method: 'GET',
+    headers: {
+      'apikey': SUPABASE_SERVICE_ROLE_KEY,
+      'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      'Prefer': 'count=exact',
+    },
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`COUNT ${table} failed: ${res.status} ${text}`);
+  }
+  const contentRange = res.headers.get('content-range');
+  if (contentRange) {
+    const match = contentRange.match(/\/(\d+)$/);
+    if (match) return parseInt(match[1], 10);
+  }
+  const rows = await res.json().catch(() => []);
+  return Array.isArray(rows) ? rows.length : 0;
+}
+
 exports.handler = async (event) => {
   const requestId = generateRequestId();
   console.log(`[admin-clear-assignments] [${requestId}] Request received: ${event.httpMethod}`);
 
   if (event.httpMethod === 'OPTIONS') {
-    return handleCorsPreFlight(event, ['POST', 'OPTIONS'], ['Content-Type']);
+    return handleCorsPreFlight(event, ['GET', 'POST', 'OPTIONS'], ['Content-Type']);
   }
 
-  if (event.httpMethod !== 'POST') {
+  if (event.httpMethod !== 'GET' && event.httpMethod !== 'POST') {
     return jsonResponse(event, 405, { ok: false, error: 'Method Not Allowed' }, {}, requestId);
   }
 
@@ -61,6 +84,36 @@ exports.handler = async (event) => {
   }
 
   const user = authResult.user.username || 'unknown';
+
+  // GET: return counts without deleting
+  if (event.httpMethod === 'GET') {
+    console.log(`[admin-clear-assignments] [${requestId}] Count request by ${user}`);
+    try {
+      const [submissions, assignment_instances, assignments] = await Promise.all([
+        countFrom('submissions'),
+        countFrom('assignment_instances'),
+        countFrom('assignments'),
+      ]);
+      return jsonResponse(
+        event,
+        200,
+        { ok: true, counts: { submissions, assignment_instances, assignments } },
+        { 'Cache-Control': 'no-store' },
+        requestId
+      );
+    } catch (err) {
+      console.error(`[admin-clear-assignments] [${requestId}] Count error:`, err);
+      return jsonResponse(
+        event,
+        500,
+        { ok: false, error: String(err?.message || err) },
+        { 'Cache-Control': 'no-store' },
+        requestId
+      );
+    }
+  }
+
+  // POST: delete everything
   console.log(`[admin-clear-assignments] [${requestId}] Authorized user: ${user}`);
 
   try {

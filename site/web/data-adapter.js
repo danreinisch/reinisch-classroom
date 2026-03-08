@@ -251,7 +251,9 @@ const local = {
       result = result.filter(s => s.instance_id === filters.instance_id);
     }
     
-    result = result.filter(s => s.review_status !== 'finalized');
+    if (filters.excludeFinalized) {
+      result = result.filter(s => s.review_status !== 'finalized');
+    }
     
     return result;
   },
@@ -1346,8 +1348,11 @@ const remote = {
     let query = supabase
       .from('submissions')
       .select('*, assignment_instances!inner(id, assignment_id, student_id, students!inner(code))')
-      .neq('review_status', 'finalized')
       .order('submitted_at', { ascending: false });
+    
+    if (filters.excludeFinalized) {
+      query = query.neq('review_status', 'finalized');
+    }
     
     if (filters.student_code) {
       query = query.eq('assignment_instances.students.code', filters.student_code);

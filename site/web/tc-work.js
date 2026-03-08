@@ -686,10 +686,33 @@
   }
 
   async function deleteAllAssignments() {
-    if (!confirm("This will permanently delete ALL assignments, assignment instances, and submissions. This cannot be undone. Are you sure?")) return;
+    const btn = $("btnDeleteAllAssignments");
+
+    // First, fetch current counts to show the user what they're about to delete
+    let counts = null;
+    try {
+      if (btn) btn.disabled = true;
+      const countRes = await fetch("/.netlify/functions/admin-clear-assignments", {
+        method: "GET",
+        credentials: "same-origin",
+      });
+      if (countRes.ok) {
+        const countData = await countRes.json().catch(() => null);
+        counts = countData?.counts || null;
+      }
+    } catch (_) {
+      // Counts unavailable — fall back to generic warning
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+
+    const countSummary = counts
+      ? `\n\n  • ${counts.assignments ?? '?'} assignment(s)\n  • ${counts.assignment_instances ?? '?'} issued instance(s)\n  • ${counts.submissions ?? '?'} submission(s)`
+      : '';
+    const warningMsg = `⚠️ WARNING: This will permanently delete ALL assignments, issued instances, and submissions. This cannot be undone.${countSummary}\n\nAre you sure you want to proceed?`;
+    if (!confirm(warningMsg)) return;
     if (!confirm("Are you absolutely sure? This action cannot be reversed.")) return;
 
-    const btn = $("btnDeleteAllAssignments");
     if (btn) btn.disabled = true;
 
     try {
