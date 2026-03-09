@@ -191,7 +191,8 @@ exports.handler = async (event) => {
         continue;
       }
 
-      // Upsert items
+      // Upsert items — strip dese_codes (not a column on assignment_items)
+      const itemsPayload = itemsToUpsert.map(({ dese_codes: _dc, ...item }) => item);
       const upsertRes = await fetch(`${SUPABASE_URL}/rest/v1/assignment_items`, {
         method: 'POST',
         headers: {
@@ -200,7 +201,7 @@ exports.handler = async (event) => {
           'Content-Type': 'application/json',
           'Prefer': 'resolution=merge-duplicates,return=minimal',
         },
-        body: JSON.stringify(itemsToUpsert),
+        body: JSON.stringify(itemsPayload),
       });
 
       if (!upsertRes.ok) {

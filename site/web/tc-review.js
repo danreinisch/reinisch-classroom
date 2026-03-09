@@ -317,6 +317,50 @@
   }
 
   /**
+   * Enrich items in-place with goal_codes and dese_codes from assignment_item_mappings.
+   * Older assignments (before PR #703) have goal_codes: [] on assignment_items rows;
+   * the authoritative codes live in assignment_item_mappings. This runs for all fetch
+   * paths (JS client and REST) so that finalization always has accurate goal codes.
+   */
+  async function enrichItemsFromMappings(items) {
+    if (!items || items.length === 0 || !SUPABASE_URL_CACHED || !SUPABASE_KEY_CACHED) return;
+    try {
+      const itemIds = items.map(i => i.id).filter(id => id != null).join(',');
+      if (!itemIds) return;
+      const mappingsRes = await fetch(
+        `${SUPABASE_URL_CACHED}/rest/v1/assignment_item_mappings?item_id=in.(${itemIds})&select=item_id,goal_codes,dese_codes`,
+        {
+          headers: {
+            'apikey': SUPABASE_KEY_CACHED,
+            'Authorization': `Bearer ${SUPABASE_KEY_CACHED}`,
+            'Accept': 'application/json',
+          }
+        }
+      );
+      if (mappingsRes.ok) {
+        const mappings = await mappingsRes.json();
+        if (Array.isArray(mappings)) {
+          const mappingsByItemId = {};
+          mappings.forEach(m => { mappingsByItemId[m.item_id] = m; });
+          items.forEach(item => {
+            const mapping = mappingsByItemId[item.id];
+            if (mapping) {
+              if (!item.goal_codes || item.goal_codes.length === 0) {
+                item.goal_codes = mapping.goal_codes || [];
+              }
+              if (!item.dese_codes || item.dese_codes.length === 0) {
+                item.dese_codes = mapping.dese_codes || [];
+              }
+            }
+          });
+        }
+      }
+    } catch (mappingErr) {
+      console.warn('[tc-review] Failed to enrich items with mappings:', mappingErr);
+    }
+  }
+
+  /**
    * Fetch assignment items directly via Supabase REST API, bypassing the JS client.
    * Useful when the JS client is blocked by RLS but the anon key has a SELECT policy.
    * Returns an array of raw DB rows, or null when config is missing or the request fails.
@@ -338,44 +382,7 @@
         const items = await restRes.json();
         if (!Array.isArray(items)) return null;
 
-        // Enrich items with goal_codes from assignment_item_mappings.
-        // Older assignments (before PR #703) have goal_codes: [] on assignment_items rows;
-        // the authoritative codes live in assignment_item_mappings.
-        if (items.length > 0) {
-          try {
-            const itemIds = items.map(i => i.id).join(',');
-            const mappingsRes = await fetch(
-              `${SUPABASE_URL_CACHED}/rest/v1/assignment_item_mappings?item_id=in.(${itemIds})&select=item_id,goal_codes,dese_codes`,
-              {
-                headers: {
-                  'apikey': SUPABASE_KEY_CACHED,
-                  'Authorization': `Bearer ${SUPABASE_KEY_CACHED}`,
-                  'Accept': 'application/json',
-                }
-              }
-            );
-            if (mappingsRes.ok) {
-              const mappings = await mappingsRes.json();
-              if (Array.isArray(mappings)) {
-                const mappingsByItemId = {};
-                mappings.forEach(m => { mappingsByItemId[m.item_id] = m; });
-                items.forEach(item => {
-                  const mapping = mappingsByItemId[item.id];
-                  if (mapping) {
-                    if (!item.goal_codes || item.goal_codes.length === 0) {
-                      item.goal_codes = mapping.goal_codes || [];
-                    }
-                    if (!item.dese_codes || item.dese_codes.length === 0) {
-                      item.dese_codes = mapping.dese_codes || [];
-                    }
-                  }
-                });
-              }
-            }
-          } catch (mappingErr) {
-            console.warn('[tc-review] Failed to enrich items with mappings:', mappingErr);
-          }
-        }
+        await enrichItemsFromMappings(items);
 
         return items;
       }
@@ -429,6 +436,11 @@
       } else {
         // Real items found — ensure any stale synthetic flag is cleared
         syntheticAssignmentIds.delete(assignmentId);
+
+        // Always enrich with goal_codes from assignment_item_mappings via REST so that
+        // items fetched via the JS client (which may be blocked by RLS on mappings) also
+        // get the authoritative codes for goal progress tracking.
+        await enrichItemsFromMappings(items);
       }
       
       assignmentItemsCache[assignmentId] = items;
