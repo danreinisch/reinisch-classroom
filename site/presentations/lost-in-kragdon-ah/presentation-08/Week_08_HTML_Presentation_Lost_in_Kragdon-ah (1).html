@@ -1,0 +1,1479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Week 8: Lost in Kragdon-ah - Chapters 23-25</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            background-attachment: fixed;
+            color: #ffffff;
+            overflow-x: hidden;
+        }
+
+        .bg-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+        }
+
+        .bg-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            will-change: opacity;
+            transform: translateZ(0);
+            -webkit-transform: translateZ(0);
+            transition: opacity 3s ease-in-out;
+        }
+
+        .bg-layer img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center;
+            transform: translateZ(0);
+            -webkit-transform: translateZ(0);
+        }
+
+        .bg-layer-a {
+            opacity: 0.55;
+        }
+
+        .bg-layer-b {
+            opacity: 0;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 40px 20px;
+            background: rgba(0, 0, 0, 0.35);
+            border-radius: 20px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.8);
+        }
+
+        header h2 {
+            font-size: 1.5em;
+            color: #ffd700;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            font-size: 1.2em;
+            color: #a0d2eb;
+        }
+
+        .theme-banner {
+            background: linear-gradient(90deg, rgba(231, 76, 60, 0.5), rgba(155, 89, 182, 0.5));
+            padding: 15px 30px;
+            border-radius: 10px;
+            margin-top: 20px;
+            display: inline-block;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .theme-banner h3 {
+            font-size: 1.3em;
+            color: #fff;
+        }
+
+        nav {
+            background: rgba(0, 0, 0, 0.35);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        nav h3 {
+            text-align: center;
+            margin-bottom: 15px;
+            color: #ffd700;
+        }
+
+        .nav-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .nav-btn {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.4) 0%, rgba(118, 75, 162, 0.4) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 25px;
+            color: white;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .nav-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+        }
+
+        .nav-btn.day1 { background: linear-gradient(135deg, rgba(240, 147, 251, 0.6) 0%, rgba(245, 87, 108, 0.6) 100%); }
+        .nav-btn.day2 { background: linear-gradient(135deg, rgba(79, 172, 254, 0.6) 0%, rgba(0, 242, 254, 0.6) 100%); }
+        .nav-btn.day3 { background: linear-gradient(135deg, rgba(67, 233, 123, 0.6) 0%, rgba(56, 249, 215, 0.6) 100%); }
+        .nav-btn.day4 { background: linear-gradient(135deg, rgba(250, 112, 154, 0.6) 0%, rgba(254, 225, 64, 0.6) 100%); }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+            margin-bottom: 30px;
+            overflow: hidden;
+        }
+
+        .progress {
+            height: 100%;
+            background: linear-gradient(90deg, #ffd700, #ff6b6b);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .slide {
+            display: none;
+            background: rgba(0, 0, 0, 0.35);
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            animation: fadeIn 0.5s ease;
+        }
+
+        .slide.active { display: block; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .slide h2 {
+            color: #ffd700;
+            font-size: 2em;
+            margin-bottom: 20px;
+            text-align: center;
+            text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.8);
+        }
+
+        .slide h3 {
+            color: #a0d2eb;
+            font-size: 1.5em;
+            margin: 20px 0 15px 0;
+        }
+
+        .slide h4 {
+            color: #ffd700;
+            font-size: 1.2em;
+            margin: 15px 0 10px 0;
+        }
+
+        .slide p {
+            font-size: 1.1em;
+            line-height: 1.8;
+            margin-bottom: 15px;
+        }
+
+        .slide ul, .slide ol {
+            margin-left: 30px;
+            margin-bottom: 20px;
+        }
+
+        .slide li {
+            font-size: 1.1em;
+            line-height: 1.8;
+            margin-bottom: 10px;
+        }
+
+        .highlight {
+            background: rgba(255, 215, 0, 0.10);
+            border-left: 4px solid #ffd700;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 0 10px 10px 0;
+        }
+
+        .key-fact {
+            background: rgba(76, 175, 80, 0.15);
+            border-left: 4px solid #4CAF50;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 0 10px 10px 0;
+        }
+
+        .key-fact h4 { color: #4CAF50; margin-bottom: 10px; }
+
+        .vocab-box {
+            background: rgba(160, 210, 235, 0.10);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 1px solid rgba(160, 210, 235, 0.3);
+        }
+
+        .vocab-word {
+            color: #ffd700;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+
+        .grammar-box {
+            background: rgba(155, 89, 182, 0.15);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 1px solid rgba(155, 89, 182, 0.3);
+        }
+
+        .grammar-box h4 { color: #bb86fc; margin-bottom: 10px; }
+
+        .what-why-how {
+            background: rgba(255, 152, 0, 0.12);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 1px solid rgba(255, 152, 0, 0.3);
+        }
+
+        .what-why-how h4 {
+            color: #ff9800;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+
+        .what-why-how .section {
+            margin-bottom: 15px;
+            padding: 10px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+        }
+
+        .what-why-how .label {
+            color: #ffd700;
+            font-weight: bold;
+            display: block;
+            font-size: 1.1em;
+            margin-bottom: 5px;
+        }
+
+        .example-box {
+            background: rgba(67, 233, 123, 0.10);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 1px solid rgba(67, 233, 123, 0.3);
+        }
+
+        .example-box h4 { color: #43e97b; margin-bottom: 10px; }
+
+        .rule-box {
+            background: rgba(33, 150, 243, 0.12);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 2px solid rgba(33, 150, 243, 0.5);
+        }
+
+        .rule-box h4 {
+            color: #2196F3;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+
+        .warning-box {
+            background: rgba(244, 67, 54, 0.12);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 2px solid rgba(244, 67, 54, 0.5);
+        }
+
+        .warning-box h4 { color: #f44336; margin-bottom: 10px; }
+
+        .practice-box {
+            background: rgba(156, 39, 176, 0.12);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 2px dashed rgba(156, 39, 176, 0.5);
+        }
+
+        .practice-box h4 { color: #ce93d8; margin-bottom: 10px; }
+
+        .writing-prompt {
+            background: rgba(255, 193, 7, 0.15);
+            border-radius: 10px;
+            padding: 25px;
+            margin: 20px 0;
+            border: 2px solid rgba(255, 193, 7, 0.5);
+        }
+
+        .writing-prompt h3 { color: #ffc107; margin-bottom: 15px; }
+
+        .writing-structure {
+            background: rgba(0, 188, 212, 0.15);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 1px solid rgba(0, 188, 212, 0.3);
+        }
+
+        .writing-structure h4 { color: #00bcd4; margin-bottom: 10px; }
+
+        .compare-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+
+        .compare-table th, .compare-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .compare-table th {
+            background: rgba(255,255,255,0.1);
+            color: #ffd700;
+        }
+
+        .compare-table tr:nth-child(even) { background: rgba(255,255,255,0.05); }
+
+        .subject-word {
+            color: #ffd700;
+            font-weight: bold;
+            text-decoration: underline;
+        }
+
+        .verb-word {
+            color: #00bcd4;
+            font-weight: bold;
+            text-decoration: underline;
+        }
+
+        .past-tense {
+            color: #ff6b6b;
+            font-weight: bold;
+        }
+
+        .present-tense {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+
+        .future-tense {
+            color: #2196F3;
+            font-weight: bold;
+        }
+
+        .signal-word {
+            color: #ff9800;
+            font-weight: bold;
+            font-style: italic;
+        }
+
+        .incorrect {
+            color: #f44336;
+            text-decoration: line-through;
+        }
+
+        .correct {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .two-column { grid-template-columns: 1fr; }
+        }
+
+        .three-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .three-column { grid-template-columns: 1fr; }
+        }
+
+        .tense-box {
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .tense-box.past { border: 2px solid #ff6b6b; }
+        .tense-box.present { border: 2px solid #4CAF50; }
+        .tense-box.future { border: 2px solid #2196F3; }
+
+        .anatomy-box {
+            background: rgba(255, 193, 7, 0.2);
+            border-radius: 10px;
+            padding: 25px;
+            margin: 20px 0;
+            border: 2px solid rgba(255, 193, 7, 0.5);
+        }
+
+        .anatomy-box h4 {
+            color: #ffc107;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .anatomy-example {
+            font-size: 1.4em;
+            text-align: center;
+            padding: 20px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            margin: 15px 0;
+        }
+
+        .consistency-demo {
+            background: rgba(0,0,0,0.3);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+            line-height: 2.2;
+        }
+
+        .slide-nav {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .slide-nav button {
+            padding: 12px 30px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.4), rgba(118, 75, 162, 0.4));
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 25px;
+            color: white;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .slide-nav button:hover:not(:disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
+        }
+
+        .slide-nav button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        footer {
+            text-align: center;
+            padding: 30px;
+            background: rgba(0, 0, 0, 0.35);
+            border-radius: 20px;
+            margin-top: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        footer p {
+            margin: 10px 0;
+            color: #a0d2eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-container">
+        <div class="bg-layer bg-layer-a" id="bgLayerA">
+            <img src="image1.jpg" alt="">
+        </div>
+        <div class="bg-layer bg-layer-b" id="bgLayerB">
+            <img src="image2.jpg" alt="">
+        </div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>Lost in Kragdon-ah</h1>
+            <h2>Week 8: Chapters 23-25</h2>
+            <p>By Shawn Inmon</p>
+            <div class="theme-banner">
+                <h3>ELA Theme: Verb Tenses - Going Deeper</h3>
+            </div>
+        </header>
+
+        <nav>
+            <h3>Quick Navigation</h3>
+            <div class="nav-buttons">
+                <button class="nav-btn day1" onclick="goToSlide(1)">Day 1: Chapter 23</button>
+                <button class="nav-btn day2" onclick="goToSlide(9)">Day 2: Vocabulary & Grammar</button>
+                <button class="nav-btn day3" onclick="goToSlide(17)">Day 3: Chapters 24-25</button>
+                <button class="nav-btn day4" onclick="goToSlide(25)">Day 4: Writing</button>
+            </div>
+        </nav>
+
+        <div class="progress-bar">
+            <div class="progress" id="progress"></div>
+        </div>
+
+        <!-- SLIDE 0: OVERVIEW -->
+        <div class="slide active" id="slide-0">
+            <h2>Week 8 Overview</h2>
+            <h3>Building on Week 7's Verb Tense Foundation</h3>
+            
+            <div class="highlight">
+                <h4>Chapters We Will Read:</h4>
+                <ul>
+                    <li><strong>Day 1:</strong> Chapter 23 - Hakun-ah</li>
+                    <li><strong>Day 2:</strong> Vocabulary and Grammar Focus</li>
+                    <li><strong>Day 3:</strong> Chapter 24 - Hakun-ah Redux & Chapter 25 - Spring</li>
+                    <li><strong>Day 4:</strong> Writing Workshop</li>
+                </ul>
+            </div>
+            
+            <div class="rule-box">
+                <h4>Going Deeper with Verb Tenses This Week</h4>
+                <ul>
+                    <li><strong>Tense Consistency:</strong> Keeping the SAME tense throughout a paragraph.</li>
+                    <li><strong>Signal Words:</strong> Words that tell us which tense to use (yesterday, now, tomorrow).</li>
+                    <li><strong>Subject-Verb Agreement:</strong> Making subjects and verbs match in every tense.</li>
+                    <li><strong>When to Shift Tenses:</strong> When it's okay to change tenses (dialogue!).</li>
+                </ul>
+            </div>
+
+            <div class="grammar-box">
+                <h4>Week 7 Review</h4>
+                <p>Last week we learned the three tenses: <span class="past-tense">PAST</span> (already happened), <span class="present-tense">PRESENT</span> (happening now), <span class="future-tense">FUTURE</span> (will happen). This week we go DEEPER!</p>
+            </div>
+        </div>
+
+        <!-- DAY 1: CHAPTER 23 - SLIDES 1-8 -->
+        <div class="slide" id="slide-1">
+            <h2>Day 1: Chapter 23 - Hakun-ah</h2>
+            <h3>The Journey Continues</h3>
+            
+            <div class="highlight">
+                <p><strong>Last Week:</strong> The team stayed on the island while Werda-ak recovered. Alex trained the villagers for 10 days.</p>
+                <p><strong>This Week:</strong> They continue their journey, climbing into the mountains toward Hakun-ah, the monastery of the holy men!</p>
+            </div>
+            
+            <div class="key-fact">
+                <h4>Key Facts for Your Assignment</h4>
+                <ul>
+                    <li>The path climbs higher and higher into the <strong>mountains</strong></li>
+                    <li>Tokin-ak leads them to <strong>shelters</strong> made for holy men</li>
+                    <li>Werda-ak <strong>falls off his horse</strong> from exhaustion (but not poison!)</li>
+                    <li>Monda-ak catches a <strong>rabbit</strong> and brings it to share with the team</li>
+                </ul>
+            </div>
+            
+            <div class="grammar-box">
+                <h4>Today's Grammar Focus: Tense Consistency</h4>
+                <p>When writing a paragraph, you should use the SAME tense throughout. Jumping between tenses confuses readers!</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-2">
+            <h2>Day 1: What Is Tense Consistency?</h2>
+            <h3>Keeping Your Writing Smooth</h3>
+            
+            <div class="what-why-how">
+                <h4>Understanding Tense Consistency</h4>
+                <div class="section">
+                    <span class="label">WHAT IS TENSE CONSISTENCY?</span>
+                    Tense consistency means using the SAME verb tense throughout a paragraph or passage. If you start in past tense, STAY in past tense!
+                </div>
+                <div class="section">
+                    <span class="label">WHY IS IT IMPORTANT?</span>
+                    Switching tenses randomly confuses readers. They won't know WHEN events are happening. Consistent tenses create a clear timeline.
+                </div>
+                <div class="section">
+                    <span class="label">HOW DO I DO IT?</span>
+                    Before writing, decide: Am I telling about something that already happened (past), something happening now (present), or something that will happen (future)? Then stick with that choice!
+                </div>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-3">
+            <h2>Day 1: Consistent vs. Inconsistent</h2>
+            <h3>See the Difference</h3>
+
+            <div class="warning-box">
+                <h4>INCONSISTENT (Confusing!)</h4>
+                <div class="consistency-demo">
+                    "Alex <span class="past-tense">looked</span> at Werda-ak. He <span class="present-tense">notices</span> the boy <span class="past-tense">was</span> tired. The team <span class="future-tense">will stop</span> to rest."
+                </div>
+                <p>This jumps between past, present, and future! The reader gets confused about when things happen.</p>
+            </div>
+
+            <div class="example-box">
+                <h4>CONSISTENT (Clear!)</h4>
+                <div class="consistency-demo">
+                    "Alex <span class="past-tense">looked</span> at Werda-ak. He <span class="past-tense">noticed</span> the boy <span class="past-tense">was</span> tired. The team <span class="past-tense">stopped</span> to rest."
+                </div>
+                <p>All verbs are in PAST tense. The reader knows all events already happened!</p>
+            </div>
+
+            <div class="rule-box">
+                <h4>The Golden Rule</h4>
+                <p>Pick ONE tense for your paragraph and stick with it. Check every verb to make sure it matches!</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-4">
+            <h2>Day 1: Chapter 23 Key Events</h2>
+            <h3>Climbing Into the Mountains</h3>
+            
+            <div class="key-fact">
+                <h4>The Journey Begins</h4>
+                <ul>
+                    <li>The path <span class="past-tense">climbed</span> higher and higher into the mountains</li>
+                    <li>Tokin-ak <span class="past-tense">explained</span> that predators <span class="past-tense">were</span> less common at higher elevations</li>
+                    <li>Holy men <span class="past-tense">had built</span> shelters along the route for pilgrims</li>
+                    <li>Tokin-ak <span class="past-tense">could lead</span> them in darkness because he <span class="past-tense">was</span> already blind</li>
+                </ul>
+            </div>
+            
+            <div class="highlight">
+                <h4>Notice the Consistent Past Tense</h4>
+                <p>The author keeps ALL verbs in past tense when describing what happened: climbed, explained, were, had built, could lead, was. This creates a clear narrative!</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-5">
+            <h2>Day 1: Werda-ak's Collapse</h2>
+            <h3>Bravery vs. Honesty</h3>
+            
+            <div class="warning-box">
+                <h4>What Happened</h4>
+                <p>Senta-eh <span class="past-tense">shouted</span> "Manta-ak!" (which means "Stop!"). Alex <span class="past-tense">turned</span> and <span class="past-tense">saw</span> Werda-ak's horse walking without a rider. Werda-ak <span class="past-tense">had fallen</span> off, unconscious!</p>
+            </div>
+            
+            <div class="key-fact">
+                <h4>Good News: Not the Poison!</h4>
+                <ul>
+                    <li>Alex <span class="past-tense">checked</span> the wound - it <span class="past-tense">was</span> clean, no infection</li>
+                    <li>Werda-ak <span class="past-tense">had pushed</span> himself past exhaustion</li>
+                    <li>He <span class="past-tense">was</span> trying to be brave, but he <span class="past-tense">wasn't</span> being honest about his limits</li>
+                    <li>Alex <span class="past-tense">told</span> him: "I need to be able to trust you when you tell me something."</li>
+                </ul>
+            </div>
+
+            <div class="grammar-box">
+                <h4>Character Lesson + Grammar Lesson</h4>
+                <p>Just like Werda-ak needed to be CONSISTENT with his honesty, writers need to be CONSISTENT with their verb tenses!</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-6">
+            <h2>Day 1: Signal Words</h2>
+            <h3>Words That Tell Us Which Tense to Use</h3>
+
+            <div class="three-column">
+                <div class="tense-box past">
+                    <h4 class="past-tense">PAST Signal Words</h4>
+                    <ul style="text-align: left; list-style: none; margin: 0; padding: 10px;">
+                        <li><span class="signal-word">yesterday</span></li>
+                        <li><span class="signal-word">last week/month/year</span></li>
+                        <li><span class="signal-word">before</span></li>
+                        <li><span class="signal-word">earlier</span></li>
+                        <li><span class="signal-word">once</span></li>
+                        <li><span class="signal-word">ago</span></li>
+                        <li><span class="signal-word">already</span></li>
+                    </ul>
+                </div>
+                <div class="tense-box present">
+                    <h4 class="present-tense">PRESENT Signal Words</h4>
+                    <ul style="text-align: left; list-style: none; margin: 0; padding: 10px;">
+                        <li><span class="signal-word">today</span></li>
+                        <li><span class="signal-word">now</span></li>
+                        <li><span class="signal-word">currently</span></li>
+                        <li><span class="signal-word">at this moment</span></li>
+                        <li><span class="signal-word">always</span></li>
+                        <li><span class="signal-word">every day</span></li>
+                        <li><span class="signal-word">right now</span></li>
+                    </ul>
+                </div>
+                <div class="tense-box future">
+                    <h4 class="future-tense">FUTURE Signal Words</h4>
+                    <ul style="text-align: left; list-style: none; margin: 0; padding: 10px;">
+                        <li><span class="signal-word">tomorrow</span></li>
+                        <li><span class="signal-word">next week/month/year</span></li>
+                        <li><span class="signal-word">later</span></li>
+                        <li><span class="signal-word">soon</span></li>
+                        <li><span class="signal-word">eventually</span></li>
+                        <li><span class="signal-word">in the future</span></li>
+                        <li><span class="signal-word">someday</span></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="rule-box">
+                <h4>Signal Words Are Clues!</h4>
+                <p>When you see a signal word, it tells you which tense to use. "<span class="signal-word">Yesterday</span>, Alex <span class="past-tense">climbed</span>." "<span class="signal-word">Tomorrow</span>, they <span class="future-tense">will reach</span> the mountain."</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-7">
+            <h2>Day 1: Practice - Fix the Inconsistency</h2>
+            <h3>Find and Fix the Tense Errors</h3>
+            
+            <div class="practice-box">
+                <h4>Example 1:</h4>
+                <p style="font-size: 1.2em;"><span class="incorrect">"Yesterday, Monda-ak catches a rabbit and brings it to Alex."</span></p>
+                <p><strong>Problem:</strong> "Yesterday" is a PAST signal word, but "catches" and "brings" are present tense!</p>
+                <p><span class="correct">"Yesterday, Monda-ak caught a rabbit and brought it to Alex."</span></p>
+            </div>
+            
+            <div class="practice-box">
+                <h4>Example 2:</h4>
+                <p style="font-size: 1.2em;"><span class="incorrect">"Tomorrow, they climbed the mountain."</span></p>
+                <p><strong>Problem:</strong> "Tomorrow" is a FUTURE signal word, but "climbed" is past tense!</p>
+                <p><span class="correct">"Tomorrow, they will climb the mountain."</span></p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-8">
+            <h2>Day 1: Day 1 Summary</h2>
+            <h3>What We Learned Today</h3>
+            
+            <div class="rule-box">
+                <h4>Tense Consistency Rules</h4>
+                <ul>
+                    <li><strong>Pick ONE tense</strong> for your paragraph and stick with it</li>
+                    <li><strong>Check every verb</strong> to make sure it matches the tense you chose</li>
+                    <li><strong>Use signal words</strong> to help you know which tense to use</li>
+                    <li><strong>Be consistent</strong> - just like Werda-ak needed to be honest consistently!</li>
+                </ul>
+            </div>
+
+            <div class="key-fact">
+                <h4>Chapter 23 Key Points</h4>
+                <ul>
+                    <li>The team <span class="past-tense">climbed</span> higher into the mountains</li>
+                    <li>Tokin-ak <span class="past-tense">led</span> them to shelters built for holy men</li>
+                    <li>Werda-ak <span class="past-tense">fell</span> off his horse from exhaustion (not poison)</li>
+                    <li>Monda-ak <span class="past-tense">caught</span> a rabbit and <span class="past-tense">shared</span> it with the group</li>
+                    <li>Alex <span class="past-tense">asked</span> Werda-ak to be honest about his limits</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- DAY 2: VOCABULARY & GRAMMAR - SLIDES 9-16 -->
+        <div class="slide" id="slide-9">
+            <h2>Day 2: Vocabulary and Grammar Focus</h2>
+            <h3>Subject-Verb Agreement Across Tenses</h3>
+            
+            <div class="highlight">
+                <h4>Today's Goals:</h4>
+                <ul>
+                    <li>Learn key vocabulary words from Chapters 23-25</li>
+                    <li>Master <strong>subject-verb agreement</strong> in all three tenses</li>
+                    <li>Practice more <strong>irregular past tense</strong> verbs</li>
+                    <li>Learn when it's <strong>okay to shift tenses</strong></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-10">
+            <h2>Day 2: Vocabulary Word 1</h2>
+            
+            <div class="vocab-box">
+                <p><span class="vocab-word">ELEVATION</span></p>
+                <p><strong>Definition:</strong> The height of a place above sea level; how high up something is.</p>
+            </div>
+            
+            <div class="what-why-how">
+                <h4>Understanding Elevation</h4>
+                <div class="section">
+                    <span class="label">WHAT IS IT?</span>
+                    Elevation measures how high something is compared to sea level. Mountains have high elevation; valleys have low elevation.
+                </div>
+                <div class="section">
+                    <span class="label">WHY IS IT IN THE STORY?</span>
+                    The path "rose in elevation" as they climbed toward Hakun-ah. Higher elevation meant fewer predators but colder temperatures.
+                </div>
+                <div class="section">
+                    <span class="label">HOW DO I USE IT?</span>
+                    "The mountain has an elevation of 10,000 feet above sea level."
+                </div>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-11">
+            <h2>Day 2: Vocabulary Word 2</h2>
+            
+            <div class="vocab-box">
+                <p><span class="vocab-word">REVERIE</span></p>
+                <p><strong>Definition:</strong> A state of being lost in pleasant thoughts; daydreaming.</p>
+            </div>
+            
+            <div class="what-why-how">
+                <h4>Understanding Reverie</h4>
+                <div class="section">
+                    <span class="label">WHAT IS IT?</span>
+                    A reverie is when your mind drifts away into deep thought or daydreaming. You're awake but lost in your own thoughts.
+                </div>
+                <div class="section">
+                    <span class="label">WHY IS IT IN THE STORY?</span>
+                    Alex "was snapped out of his reverie" when Senta-eh shouted. He had been thinking deeply about battles and strategies.
+                </div>
+                <div class="section">
+                    <span class="label">HOW DO I USE IT?</span>
+                    "The student was lost in a reverie until the teacher called her name."
+                </div>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-12">
+            <h2>Day 2: Vocabulary Word 3</h2>
+            
+            <div class="vocab-box">
+                <p><span class="vocab-word">MONASTERY</span></p>
+                <p><strong>Definition:</strong> A building where monks or other religious people live, work, and pray together.</p>
+            </div>
+            
+            <div class="what-why-how">
+                <h4>Understanding Monastery</h4>
+                <div class="section">
+                    <span class="label">WHAT IS IT?</span>
+                    A monastery is a community of religious people (like monks) who live together, often in a remote or secluded place.
+                </div>
+                <div class="section">
+                    <span class="label">WHY IS IT IN THE STORY?</span>
+                    Hakun-ah is a monastery high in the mountains where the holy men live. Alex and his team will spend the entire winter there.
+                </div>
+                <div class="section">
+                    <span class="label">HOW DO I USE IT?</span>
+                    "The ancient monastery sat on top of the mountain, far from any town."
+                </div>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-13">
+            <h2>Day 2: Vocabulary Words 4-6</h2>
+            
+            <div class="vocab-box">
+                <p><span class="vocab-word">TRIBUTE</span></p>
+                <p><strong>Definition:</strong> A payment or gift given to show respect or as a form of thanks.</p>
+                <p><em>"Some tribes paid tribute to the monastery by bringing them meat several times a year."</em></p>
+            </div>
+
+            <div class="vocab-box">
+                <p><span class="vocab-word">REVITALIZED</span></p>
+                <p><strong>Definition:</strong> Given new life, energy, or strength; refreshed and renewed.</p>
+                <p><em>"After the winter rest, humans and animals alike were revitalized."</em></p>
+            </div>
+
+            <div class="vocab-box">
+                <p><span class="vocab-word">THAW</span></p>
+                <p><strong>Definition:</strong> When frozen things (like snow or ice) melt and become warmer; the end of a cold period.</p>
+                <p><em>"The day of the thaw, much of the snow will release and tumble down the mountain."</em></p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-14">
+            <h2>Day 2: Subject-Verb Agreement Review</h2>
+            <h3>Making Subjects and Verbs Match in Every Tense</h3>
+            
+            <div class="what-why-how">
+                <h4>Subject-Verb Agreement Across Tenses</h4>
+                <div class="section">
+                    <span class="label">WHAT IS IT?</span>
+                    Subject-verb agreement means the verb must match whether the subject is singular (one) or plural (more than one). This rule applies in ALL tenses!
+                </div>
+                <div class="section">
+                    <span class="label">WHY IS IT IMPORTANT?</span>
+                    Incorrect agreement sounds wrong and makes writing unclear. "He walk" sounds wrong; "He walks" is correct.
+                </div>
+                <div class="section">
+                    <span class="label">HOW DO I DO IT?</span>
+                    Check: Is the subject singular or plural? Then choose the verb form that matches. This is especially tricky in present tense!
+                </div>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-15">
+            <h2>Day 2: Subject-Verb Agreement in Each Tense</h2>
+            <h3>The Rules for Singular and Plural</h3>
+            
+            <div class="rule-box">
+                <h4>Agreement Across All Tenses</h4>
+                <table class="compare-table">
+                    <tr>
+                        <th>Tense</th>
+                        <th>Singular Subject</th>
+                        <th>Plural Subject</th>
+                    </tr>
+                    <tr>
+                        <td class="past-tense">Past</td>
+                        <td>Alex <span class="past-tense">walked</span></td>
+                        <td>They <span class="past-tense">walked</span></td>
+                    </tr>
+                    <tr>
+                        <td class="present-tense">Present</td>
+                        <td>Alex <span class="present-tense">walks</span> (add -s!)</td>
+                        <td>They <span class="present-tense">walk</span> (no -s)</td>
+                    </tr>
+                    <tr>
+                        <td class="future-tense">Future</td>
+                        <td>Alex <span class="future-tense">will walk</span></td>
+                        <td>They <span class="future-tense">will walk</span></td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="warning-box">
+                <h4>Tricky Part: Present Tense!</h4>
+                <p>In present tense, singular subjects (he, she, it, Alex) need verbs ending in <strong>-s</strong>. Plural subjects (they, we, the monks) do NOT add -s.</p>
+                <ul>
+                    <li><span class="correct">The monk walks slowly.</span> (singular - add -s)</li>
+                    <li><span class="correct">The monks walk slowly.</span> (plural - no -s)</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-16">
+            <h2>Day 2: When Tense Shifts Are Okay</h2>
+            <h3>Dialogue Is Different!</h3>
+            
+            <div class="example-box">
+                <h4>Acceptable Tense Shift in Dialogue</h4>
+                <div class="consistency-demo">
+                    "Alex <span class="past-tense">looked</span> at Tokin-ak and <span class="past-tense">asked</span>, 'Where <span class="future-tense">will</span> we <span class="present-tense">go</span> tomorrow?'"
+                </div>
+                <p>The <strong>narration</strong> (who said it) stays in past tense. The <strong>dialogue</strong> (what was said) can use present or future because that's what the character actually said!</p>
+            </div>
+
+            <div class="rule-box">
+                <h4>The Rule</h4>
+                <ul>
+                    <li><strong>Narration:</strong> Keep in ONE tense (usually past for stories)</li>
+                    <li><strong>Dialogue:</strong> Use whatever tense the character would actually say</li>
+                    <li><strong>Don't mix tenses</strong> WITHIN narration or WITHIN one character's speech</li>
+                </ul>
+            </div>
+
+            <div class="practice-box">
+                <h4>Example from the Story:</h4>
+                <p>"Tokin-ak <span class="past-tense">said</span>, 'We <span class="future-tense">will</span> talk tonight, then you <span class="present-tense">are</span> free to do whatever you want.'"</p>
+                <p>Narration: past ("said"). Dialogue: future and present (what Tokin-ak actually says).</p>
+            </div>
+        </div>
+
+        <!-- DAY 3: CHAPTERS 24-25 - SLIDES 17-24 -->
+        <div class="slide" id="slide-17">
+            <h2>Day 3: Chapters 24-25</h2>
+            <h3>Hakun-ah Redux & Spring</h3>
+            
+            <div class="highlight">
+                <h4>Today's Reading:</h4>
+                <ul>
+                    <li><strong>Chapter 24:</strong> "Hakun-ah Redux" - Arriving at the monastery</li>
+                    <li><strong>Chapter 25:</strong> "Spring" - Waiting out the winter</li>
+                </ul>
+            </div>
+            
+            <div class="grammar-box">
+                <h4>Grammar Connection</h4>
+                <p>As we read, notice how the author maintains <strong>consistent past tense</strong> in narration while using different tenses in dialogue.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-18">
+            <h2>Day 3: Chapter 24 - Arriving at Hakun-ah</h2>
+            <h3>The Monastery in the Mountains</h3>
+            
+            <div class="key-fact">
+                <h4>The Magic Boulder</h4>
+                <ul>
+                    <li>A huge boulder <span class="past-tense">blocked</span> the path to Hakun-ah</li>
+                    <li>Alex <span class="past-tense">thought</span> it was impossible to move</li>
+                    <li>Tokin-ak simply <span class="past-tense">pushed</span> it aside with his walking stick!</li>
+                    <li>He <span class="past-tense">said</span>, "Welcome to Hakun-ah, where nothing is as it seems."</li>
+                </ul>
+            </div>
+            
+            <div class="highlight">
+                <h4>What Hakun-ah Looks Like</h4>
+                <ul>
+                    <li>Built into a <strong>cliffside</strong> like Winten-ah, but more advanced</li>
+                    <li>Architecture and nature <span class="past-tense">worked</span> together in harmony</li>
+                    <li>Rock structures <span class="past-tense">blended</span> with natural caves</li>
+                    <li>Many monks <span class="past-tense">had</span> physical disabilities but <span class="past-tense">were</span> not held back</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-19">
+            <h2>Day 3: The Foot-Washing Ritual</h2>
+            <h3>Humility and Hospitality</h3>
+            
+            <div class="highlight">
+                <h4>An Unusual Welcome</h4>
+                <p>When they <span class="past-tense">entered</span> the monastery, the oldest monk <span class="past-tense">washed</span> everyone's feet! Alex <span class="past-tense">felt</span> extremely uncomfortable - his feet <span class="past-tense">were</span> dirty and smelly from the long journey.</p>
+            </div>
+            
+            <div class="key-fact">
+                <h4>Why This Matters</h4>
+                <ul>
+                    <li>The foot-washing <span class="past-tense">showed</span> the monks' humility</li>
+                    <li>Even the <strong>oldest, most important</strong> monk <span class="past-tense">served</span> the guests</li>
+                    <li>The ritual <span class="past-tense">made</span> Alex realize these <span class="past-tense">were</span> unusual people</li>
+                </ul>
+            </div>
+
+            <div class="grammar-box">
+                <h4>Notice the Consistent Narration</h4>
+                <p>All the verbs in the narration are past tense: entered, washed, felt, were, showed, served, made. The author maintains consistency!</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-20">
+            <h2>Day 3: The Bad News</h2>
+            <h3>Trapped by Winter</h3>
+            
+            <div class="warning-box">
+                <h4>Why They Must Stay</h4>
+                <p>Tokin-ak <span class="past-tense">explained</span> that the mountain pass <span class="past-tense">was blocked</span> by snow. They <span class="past-tense">had</span> two choices:</p>
+                <ul>
+                    <li>Go out and likely <span class="past-tense">freeze</span> to death</li>
+                    <li>Stay at the monastery until spring</li>
+                </ul>
+            </div>
+            
+            <div class="key-fact">
+                <h4>Alex's Decision</h4>
+                <p>Alex <span class="past-tense">swallowed</span> his pride and <span class="past-tense">accepted</span> the offer. He <span class="past-tense">said</span>, "Thank you for your offer of hospitality. We <span class="future-tense">will</span> stay with you."</p>
+                <p>Notice: The narration is past tense, but Alex's dialogue uses future tense because that's what he actually said!</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-21">
+            <h2>Day 3: Chapter 25 - Waiting for Spring</h2>
+            <h3>How They Spent the Winter</h3>
+            
+            <div class="key-fact">
+                <h4>Each Character's Winter Activities</h4>
+                <ul>
+                    <li><strong>Werda-ak:</strong> <span class="past-tense">Rested</span> and <span class="past-tense">became</span> friends with a young monk</li>
+                    <li><strong>Senta-eh:</strong> <span class="past-tense">Made</span> new arrows and arrowheads</li>
+                    <li><strong>Alex:</strong> <span class="past-tense">Chopped</span> wood, <span class="past-tense">learned</span> self-defense with a walking stick (chaimi)</li>
+                    <li><strong>All:</strong> <span class="past-tense">Became</span> revitalized after months of rest</li>
+                </ul>
+            </div>
+
+            <div class="highlight">
+                <h4>Learning New Skills</h4>
+                <p>Tokin-ak <span class="past-tense">trained</span> Alex in chaimi - self-defense using a walking stick. This <span class="past-tense">was</span> how Tokin-ak <span class="past-tense">had defeated</span> younger, stronger men on the trail. Alex <span class="past-tense">knew</span> this skill might save his life someday.</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-22">
+            <h2>Day 3: The Thaw</h2>
+            <h3>Time to Go</h3>
+            
+            <div class="highlight">
+                <h4>Spring Finally Arrives</h4>
+                <p>After months of waiting, a new sound <span class="past-tense">echoed</span> through the monastery - the deep rumble of snow and ice beginning to melt. Tokin-ak <span class="past-tense">said</span>, "The thaw is almost here."</p>
+            </div>
+            
+            <div class="key-fact">
+                <h4>Tokin-ak's Gift</h4>
+                <ul>
+                    <li>Tokin-ak <span class="past-tense">gave</span> Alex a special pendant - a half-circle stone on a leather necklace</li>
+                    <li>He <span class="past-tense">said</span> a dream <span class="past-tense">told</span> him to give it</li>
+                    <li>It might help Alex in a "time of need"</li>
+                    <li>Alex <span class="past-tense">promised</span> to wear it always</li>
+                </ul>
+            </div>
+
+            <div class="grammar-box">
+                <h4>Looking Forward</h4>
+                <p>Tokin-ak <span class="past-tense">said</span>, "The thaw <span class="present-tense">is</span> almost here. It <span class="future-tense">won't</span> be tonight or tomorrow, but soon." Notice how the dialogue mixes present and future tenses while the narration stays in past!</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-23">
+            <h2>Day 3: More Irregular Past Tense Verbs</h2>
+            <h3>Expanding Your Knowledge</h3>
+            
+            <div class="rule-box">
+                <h4>New Irregular Verbs from This Week</h4>
+                <table class="compare-table">
+                    <tr>
+                        <th>Present</th>
+                        <th>Past</th>
+                        <th>Example from Story</th>
+                    </tr>
+                    <tr>
+                        <td>lead</td>
+                        <td class="past-tense">led</td>
+                        <td>Tokin-ak <span class="past-tense">led</span> them to Hakun-ah.</td>
+                    </tr>
+                    <tr>
+                        <td>teach</td>
+                        <td class="past-tense">taught</td>
+                        <td>The monks <span class="past-tense">taught</span> Alex chaimi.</td>
+                    </tr>
+                    <tr>
+                        <td>give</td>
+                        <td class="past-tense">gave</td>
+                        <td>Tokin-ak <span class="past-tense">gave</span> Alex a pendant.</td>
+                    </tr>
+                    <tr>
+                        <td>know</td>
+                        <td class="past-tense">knew</td>
+                        <td>Alex <span class="past-tense">knew</span> they had to stay.</td>
+                    </tr>
+                    <tr>
+                        <td>become</td>
+                        <td class="past-tense">became</td>
+                        <td>They <span class="past-tense">became</span> revitalized.</td>
+                    </tr>
+                    <tr>
+                        <td>spend</td>
+                        <td class="past-tense">spent</td>
+                        <td>They <span class="past-tense">spent</span> the winter there.</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-24">
+            <h2>Day 3: Day 3 Summary</h2>
+            <h3>What We Learned Today</h3>
+            
+            <div class="key-fact">
+                <h4>Chapters 24-25 Key Points</h4>
+                <ul>
+                    <li>Tokin-ak <span class="past-tense">moved</span> a huge boulder to reveal Hakun-ah</li>
+                    <li>The oldest monk <span class="past-tense">washed</span> their feet as a welcome</li>
+                    <li>The mountain pass <span class="past-tense">was blocked</span> - they <span class="past-tense">had</span> to stay all winter</li>
+                    <li>Each team member <span class="past-tense">spent</span> the winter productively</li>
+                    <li>Alex <span class="past-tense">learned</span> chaimi (stick-fighting)</li>
+                    <li>Tokin-ak <span class="past-tense">gave</span> Alex a special pendant before they <span class="past-tense">left</span></li>
+                </ul>
+            </div>
+
+            <div class="rule-box">
+                <h4>Grammar Summary</h4>
+                <ul>
+                    <li><strong>Narration:</strong> Keep in consistent past tense</li>
+                    <li><strong>Dialogue:</strong> Can use any tense (what characters actually say)</li>
+                    <li><strong>Subject-verb agreement:</strong> Singular subjects + -s in present tense</li>
+                    <li><strong>Irregular verbs:</strong> lead/led, teach/taught, give/gave, know/knew</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- DAY 4: WRITING - SLIDES 25-30 -->
+        <div class="slide" id="slide-25">
+            <h2>Day 4: Writing Workshop</h2>
+            <h3>Putting It All Together</h3>
+            
+            <div class="highlight">
+                <h4>Today's Goals:</h4>
+                <ul>
+                    <li>Write a response using <strong>consistent past tense</strong></li>
+                    <li>Include <strong>correct subject-verb agreement</strong></li>
+                    <li>Use <strong>signal words</strong> appropriately</li>
+                    <li>Check your work for errors</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-26">
+            <h2>Day 4: Writing Prompt</h2>
+            
+            <div class="writing-prompt">
+                <h3>Your Prompt</h3>
+                <p><strong>Why did Alex and his team have to stay at Hakun-ah for the winter? What did they do during this time?</strong></p>
+            </div>
+            
+            <h3>Details to Include</h3>
+            <ul>
+                <li>Why couldn't they continue their journey?</li>
+                <li>What did each team member do during the winter?</li>
+                <li>What did Alex learn from the monks?</li>
+                <li>What gift did Tokin-ak give Alex?</li>
+            </ul>
+            
+            <div class="example-box">
+                <h4>Topic Sentence Starter</h4>
+                <p>"<span class="subject-word">Alex</span> and his team <span class="verb-word past-tense">had</span> to stay at Hakun-ah because the mountain pass <span class="past-tense">was blocked</span> by snow."</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-27">
+            <h2>Day 4: Writing Structure</h2>
+            <h3>Building Your Response</h3>
+
+            <div class="writing-structure">
+                <h4>Remember Your Writing Structure</h4>
+                <ul>
+                    <li><strong>Topic Sentence:</strong> State WHY they had to stay (snow blocked the pass)</li>
+                    <li><strong>Supporting Detail 1:</strong> What Werda-ak did (rested, made friends)</li>
+                    <li><strong>Supporting Detail 2:</strong> What Alex did (chopped wood, learned chaimi)</li>
+                    <li><strong>Supporting Detail 3:</strong> What happened when spring came (thaw, pendant gift)</li>
+                    <li><strong>Conclusion:</strong> Summarize the winter stay and their readiness to continue</li>
+                </ul>
+            </div>
+
+            <div class="warning-box">
+                <h4>Verb Tense Reminders!</h4>
+                <ul>
+                    <li>Use <strong class="past-tense">past tense</strong> throughout (events already happened)</li>
+                    <li>Check <strong>subject-verb agreement</strong> in every sentence</li>
+                    <li>Watch out for <strong>irregular verbs</strong>: had (not "haved"), taught (not "teached"), gave (not "gived")</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-28">
+            <h2>Day 4: Writing Checklist</h2>
+            <h3>Check Your Work Before Submitting</h3>
+            
+            <div class="highlight">
+                <h4>Tense Consistency Checklist</h4>
+                <ul>
+                    <li>Are ALL your verbs in <strong class="past-tense">past tense</strong>?</li>
+                    <li>Did you avoid switching to present or future in narration?</li>
+                    <li>Did you use correct irregular past tense forms?</li>
+                </ul>
+            </div>
+            
+            <div class="rule-box">
+                <h4>Subject-Verb Agreement Checklist</h4>
+                <ul>
+                    <li>Does every singular subject have a matching verb?</li>
+                    <li>Does every plural subject have a matching verb?</li>
+                    <li>In present tense (if any), did you add -s for he/she/it?</li>
+                </ul>
+            </div>
+
+            <div class="writing-structure">
+                <h4>Content Checklist</h4>
+                <ul>
+                    <li>Do you have a <strong>topic sentence</strong> that answers the question?</li>
+                    <li>Do you have at least <strong>three details</strong> from the story?</li>
+                    <li>Do you have a <strong>conclusion sentence</strong>?</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-29">
+            <h2>Day 4: Model Response</h2>
+            <h3>Example Answer</h3>
+            
+            <div class="example-box">
+                <p style="line-height: 2.0;"><span class="subject-word">Alex</span> and his team <span class="past-tense">had</span> to stay at Hakun-ah because the mountain pass <span class="past-tense">was blocked</span> by snow and ice. First, Tokin-ak <span class="past-tense">explained</span> that they <span class="past-tense">could</span> either freeze trying to cross or wait for the thaw. Second, each team member <span class="past-tense">spent</span> the winter productively: Werda-ak <span class="past-tense">rested</span> his leg and <span class="past-tense">made</span> friends, Senta-eh <span class="past-tense">crafted</span> new arrows, and Alex <span class="past-tense">chopped</span> wood and <span class="past-tense">learned</span> chaimi from the monks. Third, when spring finally <span class="past-tense">arrived</span>, Tokin-ak <span class="past-tense">gave</span> Alex a special pendant that might help him in a "time of need." The winter at Hakun-ah <span class="past-tense">revitalized</span> the entire team and <span class="past-tense">prepared</span> them to continue their journey.</p>
+            </div>
+            
+            <div class="key-fact">
+                <h4>Notice:</h4>
+                <p>Every verb is in <strong class="past-tense">past tense</strong>. Subject-verb agreement is correct throughout. The irregular verbs (had, was, spent, made, gave, arrived) are all in correct past tense form!</p>
+            </div>
+        </div>
+
+        <div class="slide" id="slide-30">
+            <h2>Week 8 Complete Review</h2>
+            <h3>Verb Tenses - Going Deeper</h3>
+
+            <div class="rule-box">
+                <h4>What We Mastered This Week</h4>
+                <table class="compare-table">
+                    <tr>
+                        <th>Skill</th>
+                        <th>What It Means</th>
+                        <th>Example</th>
+                    </tr>
+                    <tr>
+                        <td>Tense Consistency</td>
+                        <td>Keep same tense throughout paragraph</td>
+                        <td>All past: walked, talked, saw</td>
+                    </tr>
+                    <tr>
+                        <td>Signal Words</td>
+                        <td>Words that tell which tense to use</td>
+                        <td>Yesterday = past, Tomorrow = future</td>
+                    </tr>
+                    <tr>
+                        <td>Subject-Verb Agreement</td>
+                        <td>Subjects and verbs must match</td>
+                        <td>He walks (singular), They walk (plural)</td>
+                    </tr>
+                    <tr>
+                        <td>Dialogue Shifts</td>
+                        <td>Dialogue can use different tenses</td>
+                        <td>Alex said, "We will go tomorrow."</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="highlight">
+                <h4>Key Story Facts from Week 8</h4>
+                <ul>
+                    <li>The team <span class="past-tense">climbed</span> into the mountains toward Hakun-ah.</li>
+                    <li>Werda-ak <span class="past-tense">fell</span> off his horse from exhaustion.</li>
+                    <li>Tokin-ak <span class="past-tense">moved</span> a giant boulder to reveal the monastery.</li>
+                    <li>They <span class="past-tense">had</span> to stay all winter because the pass <span class="past-tense">was blocked</span>.</li>
+                    <li>Alex <span class="past-tense">learned</span> chaimi (stick-fighting) from the monks.</li>
+                    <li>Tokin-ak <span class="past-tense">gave</span> Alex a special pendant before they <span class="past-tense">left</span>.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="slide-nav">
+            <button onclick="prevSlide()" id="prevBtn">Previous</button>
+            <button onclick="nextSlide()" id="nextBtn">Next</button>
+        </div>
+
+        <footer>
+            <p>Week 8: Lost in Kragdon-ah, Chapters 23-25</p>
+            <p>ELA Theme: Verb Tenses - Going Deeper (Consistency, Signal Words, Subject-Verb Agreement)</p>
+            <p><a href="https://mrripley.weebly.com" style="color: #ffd700;">Return to Classroom Website</a></p>
+        </footer>
+    </div>
+
+    <script>
+        let currentSlide = 0;
+        const totalSlides = 31;
+
+        let currentBg = 0;
+        const bgSources = [
+            'image1.jpg','image2.jpg','image3.jpg','image4.jpg',
+            'image5.jpg','image6.jpg','image7.jpg','image8.jpg',
+            'image9.jpg','image10.jpg','image11.jpg','image12.jpg'
+        ];
+        const totalBgImages = bgSources.length;
+        const layerA = document.getElementById('bgLayerA');
+        const layerB = document.getElementById('bgLayerB');
+        let activeLayer = 'A';
+
+        // Preload all images to prevent flash on first display
+        bgSources.forEach(function(src) {
+            var img = new Image();
+            img.src = src;
+        });
+
+        function rotateBg() {
+            currentBg = (currentBg + 1) % totalBgImages;
+            var nextIndex = (currentBg + 1) % totalBgImages;
+
+            if (activeLayer === 'A') {
+                // Load next image into layer B, crossfade B in / A out
+                layerB.querySelector('img').src = bgSources[currentBg];
+                layerB.style.opacity = '0.55';
+                layerA.style.opacity = '0';
+                activeLayer = 'B';
+                // Preload the one after next into layer A
+                setTimeout(function() {
+                    layerA.querySelector('img').src = bgSources[nextIndex];
+                }, 3500);
+            } else {
+                // Load next image into layer A, crossfade A in / B out
+                layerA.querySelector('img').src = bgSources[currentBg];
+                layerA.style.opacity = '0.55';
+                layerB.style.opacity = '0';
+                activeLayer = 'A';
+                // Preload the one after next into layer B
+                setTimeout(function() {
+                    layerB.querySelector('img').src = bgSources[nextIndex];
+                }, 3500);
+            }
+        }
+        
+        setInterval(rotateBg, 8000);
+
+        function updateSlide() {
+            document.querySelectorAll('.slide').forEach((slide, index) => {
+                slide.classList.remove('active');
+                if (index === currentSlide) {
+                    slide.classList.add('active');
+                }
+            });
+            
+            document.getElementById('prevBtn').disabled = currentSlide === 0;
+            document.getElementById('nextBtn').disabled = currentSlide === totalSlides - 1;
+            
+            const progress = ((currentSlide + 1) / totalSlides) * 100;
+            document.getElementById('progress').style.width = progress + '%';
+        }
+
+        function nextSlide() {
+            if (currentSlide < totalSlides - 1) {
+                currentSlide++;
+                updateSlide();
+            }
+        }
+
+        function prevSlide() {
+            if (currentSlide > 0) {
+                currentSlide--;
+                updateSlide();
+            }
+        }
+
+        function goToSlide(slideIndex) {
+            currentSlide = slideIndex;
+            updateSlide();
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight') nextSlide();
+            if (e.key === 'ArrowLeft') prevSlide();
+        });
+
+        updateSlide();
+    </script>
+</body>
+</html>
