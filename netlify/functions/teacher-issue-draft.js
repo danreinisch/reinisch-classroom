@@ -835,6 +835,10 @@ exports.handler = async (event) => {
       if (itemsToUpsert.length > 0) {
         console.log(`[teacher-issue-draft] [${requestId}] Creating/updating ${itemsToUpsert.length} assignment_items`);
 
+        // Strip dese_codes before POSTing: assignment_items has no dese_codes column.
+        // dese_codes belong only in assignment_item_mappings (see step 5c below).
+        const itemsPayload = itemsToUpsert.map(({ dese_codes: _dc, ...item }) => item);
+
         const itemsUrl = `${SUPABASE_URL}/rest/v1/assignment_items`;
         const itemsResponse = await fetch(itemsUrl, {
           method: 'POST',
@@ -844,7 +848,7 @@ exports.handler = async (event) => {
             'Content-Type': 'application/json',
             'Prefer': 'resolution=merge-duplicates,return=representation'
           },
-          body: JSON.stringify(itemsToUpsert)
+          body: JSON.stringify(itemsPayload)
         });
 
         if (!itemsResponse.ok) {
