@@ -492,8 +492,8 @@
               correct: q.correct,
               hint: q.hint,
             },
-            goal_codes: [],
-            dese_codes: [],
+            goal_codes: q.goal_codes || [],
+            dese_codes: q.dese_codes || [],
           });
         }
       } else if (day.type === 'writing_prompt') {
@@ -511,8 +511,8 @@
             structure: day.structure,
             hints: day.hints,
           },
-          goal_codes: [],
-          dese_codes: [],
+          goal_codes: day.goal_codes || [],
+          dese_codes: day.dese_codes || [],
         });
       }
     }
