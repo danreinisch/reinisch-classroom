@@ -176,8 +176,11 @@
     .final-answer-label { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 0.5rem; }
     .final-answer-value { font-family: var(--mono); font-size: 2rem; font-weight: 700; color: var(--text); }
     .final-answer-caption { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.35rem; }
-    .try-again-btn { margin-top: 1.25rem; background: transparent; border: 1px solid var(--border2); border-radius: 7px; padding: 0.5rem 1.25rem; font-family: 'Outfit', sans-serif; font-size: 0.85rem; color: var(--text-muted); cursor: pointer; transition: all 0.15s; }
+    .final-actions { display: flex; gap: 0.75rem; justify-content: center; margin-top: 1.25rem; flex-wrap: wrap; }
+    .try-again-btn, .copy-btn { background: transparent; border: 1px solid var(--border2); border-radius: 7px; padding: 0.5rem 1.25rem; font-family: 'Outfit', sans-serif; font-size: 0.85rem; color: var(--text-muted); cursor: pointer; transition: all 0.15s; }
     .try-again-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .copy-btn { border-color: var(--accent-dim); color: var(--accent); } .copy-btn:hover { background: rgba(20,184,166,0.1); border-color: var(--accent); }
+    .copy-btn.copied { background: rgba(34,197,94,0.12); border-color: var(--success); color: var(--success); pointer-events: none; }
 
     @keyframes slideDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes celebrate { 0% { transform: scale(0.95); opacity: 0; } 60% { transform: scale(1.02); } 100% { transform: scale(1); opacity: 1; } }
@@ -256,8 +259,10 @@
       <div class="final-answer-label" id="finalLabel">✓ Missing Angle</div>
       <div class="final-answer-value" id="finalValue"></div>
       <div class="final-answer-caption" id="finalCaption"></div>
-      <br>
-      <button class="try-again-btn" onclick="resetWorkspace()">↺ Try Another Problem</button>
+      <div class="final-actions">
+        <button class="copy-btn" id="copyBtn" onclick="copyToClipboard()">📋 Copy Problem to Clipboard</button>
+        <button class="try-again-btn" onclick="resetWorkspace()">↺ Try Another Problem</button>
+      </div>
     </div>
   </div>
 </main>
@@ -778,6 +783,41 @@ const PROBLEMS = {
     ]
   },
 
+  exterior_regular: {
+    name: 'Exterior Angle (Regular Polygon)',
+    icon: '🔶',
+    desc: 'Find each exterior angle of a regular polygon',
+    rule: 'ext = 360° ÷ n',
+    diagramTag: '🔶 Regular Polygon — Exterior Angle',
+    diagramKey: 'polygon_sum',
+    diagramRule: 'The <strong>exterior angles</strong> of any polygon always add up to <strong class="hi-orange">360°</strong>. In a regular polygon, all exterior angles are equal, so each one = 360° ÷ n.',
+    diagramLegend: [
+      { color: '#14b8a6', label: 'Regular polygon — all exterior angles equal' },
+      { color: '#fb923c', label: 'Each exterior angle = 360° ÷ n' }
+    ],
+    formulaText: 'Each exterior angle = <span class="tot">360°</span> ÷ <span class="var">n</span>',
+    formulaDesc: 'Divide 360° by the number of sides. Exterior angles always sum to 360° for any convex polygon.',
+    formulaKey: '<span class="kv">n</span> = number of sides<br><span class="kt">360°</span> = total exterior sum',
+    knownFields: [{ id: 'n', label: 'Number of sides (n)', varName: 'n', hint: 'e.g. Triangle=3, Square=4, Pentagon=5, Hexagon=6…' }],
+    finalLabel: '✓ Each Exterior Angle',
+    finalCaption: (v, k) => `Each exterior angle of a regular ${k.n}-gon measures ${v}°. (${v}° × ${k.n} = 360°)`,
+    steps: [
+      { title: 'Substitute Your Value', type: 'expression', displayFn: (k) => `Each exterior angle = <span class="tot">360°</span> ÷ <span class="val">${k.n}</span>` },
+      {
+        title: 'Divide 360° by Number of Sides',
+        instruction: 'Divide 360° by n.',
+        type: 'compute',
+        rows: [{
+          exprFn: (k) => `<span class="tot">360</span>° ÷ <span class="val">${k.n}</span> =`,
+          answerId: 'ext',
+          answerFn: (k) => round2(360 / k.n),
+          hintFn: (k) => `Divide 360 ÷ ${k.n}.`
+        }],
+        isFinal: true
+      }
+    ]
+  },
+
   isosceles: {
     name: 'Isosceles Triangle Angles',
     icon: '🔺',
@@ -829,6 +869,7 @@ const probList = [
   { id: 'transversal',              name: 'Parallel & Transversal', icon: '⚡', desc: '8 angles, parallel lines',      rule: 'Corresponding = equal' },
   { id: 'polygon_sum',              name: 'Polygon Angle Sum',   icon: '⬡', desc: 'Sum of all interior angles',      rule: '(n−2) × 180°' },
   { id: 'single_interior',          name: 'Regular Polygon Angle', icon: '🔷', desc: 'Each angle of a regular polygon', rule: '(n−2)×180° ÷ n' },
+  { id: 'exterior_regular',          name: 'Exterior Angle (Regular)', icon: '🔶', desc: 'Each exterior angle = 360° ÷ n',  rule: '360° ÷ n' },
   { id: 'isosceles',                name: 'Isosceles Triangle',  icon: '🏔️', desc: 'Equal base angles',               rule: 'B = B, A + 2B = 180°' }
 ];
 
@@ -1227,11 +1268,100 @@ function showMultiFinalAnswer(valueStr, caption) {
   setTimeout(() => finalCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
 }
 
+/* ================================================================
+   COPY TO CLIPBOARD
+================================================================ */
+function buildProblemText() {
+  const prob = PROBLEMS[currentProbId]; if (!prob) return '';
+  const lines = [], d = '─'.repeat(40);
+  lines.push('ANGLES');
+  lines.push(`Problem Type: ${prob.name}`);
+  lines.push(d);
+  lines.push(`Formula: ${prob.formulaText.replace(/<[^>]+>/g, '').replace(/<br>/g, ' | ')}`);
+  lines.push('');
+  lines.push('Step 1: Known Values');
+  prob.knownFields.forEach(f => {
+    if (f.isSelect) {
+      lines.push(`  ${f.label}: ${knownValues[f.id]}`);
+    } else {
+      lines.push(`  ${f.label} (${f.varName}) = ${knownValues[f.id]}°`);
+    }
+  });
+  lines.push('');
+
+  // For isosceles, get the dynamic steps
+  const steps = currentProbId === 'isosceles' ? getIsoscelesStepsForClipboard() : prob.steps;
+
+  steps.forEach((step, idx) => {
+    const stepNum = idx + 2;
+    lines.push(`Step ${stepNum}: ${step.title}`);
+    if (step.type === 'expression' && step.displayFn) {
+      lines.push(`  ${step.displayFn(knownValues).replace(/<[^>]+>/g, '')}`);
+    } else if (step.type === 'compute') {
+      step.rows.forEach((row, rIdx) => {
+        const expr = row.exprFn(knownValues, computedValues).replace(/<[^>]+>/g, '');
+        const ans = computedValues[row.answerId];
+        const att = stepAttempts[`row_${idx}_${rIdx}`] || 1;
+        const note = att === 1 ? ' ✓ (1st try)' : ` (${att} attempts)`;
+        lines.push(`  ${expr} ${ans}°${note}`);
+      });
+    } else if (step.type === 'transversal_summary') {
+      const ang1 = knownValues.ang1;
+      const supp = round2(180 - ang1);
+      lines.push(`  ∠1, ∠3, ∠5, ∠7 = ${ang1}°`);
+      lines.push(`  ∠2, ∠4, ∠6, ∠8 = ${supp}°`);
+    }
+    lines.push('');
+  });
+
+  lines.push(d);
+  // Final answer from the displayed final value
+  const fv = document.getElementById('finalValue')?.textContent || '';
+  const fc = document.getElementById('finalCaption')?.textContent || '';
+  lines.push(fv);
+  if (fc) lines.push(fc);
+  lines.push(d);
+  return lines.join('\n');
+}
+
+function getIsoscelesStepsForClipboard() {
+  const mode = knownValues.mode;
+  const val = knownValues.known;
+  if (mode === 'vertex') {
+    return [
+      { title: 'Substitute Your Value', type: 'expression', displayFn: () => `${val}° + 2B = 180°` },
+      { title: 'Subtract Vertex Angle from 180°', type: 'compute', rows: [{ exprFn: () => `180° − ${val}° =`, answerId: 'rem', answerFn: () => round2(180-val), hintFn: () => '' }]},
+      { title: 'Divide by 2', type: 'compute', rows: [{ exprFn: (k,c) => `${c.rem}° ÷ 2 =`, answerId: 'B', answerFn: (k,c) => round2(c.rem/2), hintFn: () => '' }], isFinal: true }
+    ];
+  } else {
+    return [
+      { title: 'Substitute Your Value', type: 'expression', displayFn: () => `A + 2(${val}°) = 180°` },
+      { title: 'Multiply Base Angle by 2', type: 'compute', rows: [{ exprFn: () => `2 × ${val}° =`, answerId: 'twoB', answerFn: () => round2(2*val), hintFn: () => '' }]},
+      { title: 'Subtract from 180°', type: 'compute', rows: [{ exprFn: (k,c) => `180° − ${c.twoB}° =`, answerId: 'A', answerFn: (k,c) => round2(180-c.twoB), hintFn: () => '' }], isFinal: true }
+    ];
+  }
+}
+
+function copyToClipboard() {
+  const text = buildProblemText(), btn = document.getElementById('copyBtn');
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = '✓ Copied!'; btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = '📋 Copy Problem to Clipboard'; btn.classList.remove('copied'); }, 2500);
+  }).catch(() => {
+    const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px';
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+    btn.textContent = '✓ Copied!'; btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = '📋 Copy Problem to Clipboard'; btn.classList.remove('copied'); }, 2500);
+  });
+}
+
 function resetWorkspace() {
   knownValues = {}; computedValues = {}; stepAttempts = {};
   document.getElementById('stepsContainer').innerHTML = '';
   document.getElementById('finalCard').classList.remove('visible');
   document.getElementById('workspace').classList.remove('visible');
+  const cb = document.getElementById('copyBtn');
+  cb.textContent = '📋 Copy Problem to Clipboard'; cb.classList.remove('copied');
 }
 
 buildProblemGrid();
