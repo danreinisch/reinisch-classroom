@@ -2559,7 +2559,13 @@ const remote = {
         .limit(1)
         .single();
       
-      if (goalError) throw new Error(`Goal not found with code: ${goal_code} for student: ${student_code}`);
+      if (goalError) {
+        // A goal_code on an assignment item may not correspond to an active IEP goal for
+        // this student (e.g. goal was removed or never existed). Log a warning and skip
+        // rather than throwing so other goals in the same submission still get recorded.
+        console.warn(`[goal-progress] Goal with code "${goal_code}" not found for student "${student_code}" — skipping progress entry`);
+        return null;
+      }
       
       // Look up class_id if class_code provided
       let resolvedClassId = studentData.class_id; // default to student's primary class

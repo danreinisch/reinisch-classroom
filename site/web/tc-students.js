@@ -362,19 +362,39 @@
   }
 
   // Progress tracking functions
-  async function loadProgressEntries() {
+  // goalsList and studentsList are passed in when available so the join-less
+  // fallback path can enrich rows with goal_code/student_code from local data.
+  async function loadProgressEntries(goalsList = [], studentsList = []) {
     try {
       const supabase = await getSupabase();
       if (supabase) {
+        // Primary query: use inner joins to get goal_code and student_code directly.
         const { data, error } = await supabase
           .from('goal_progress')
           .select('*, goals!inner(code), students!inner(code)');
-        if (error) throw error;
-        return (data || []).map(row => ({
-          ...row,
-          student_code: row.students?.code || '',
-          goal_code: row.goals?.code || '',
-        }));
+        if (!error) {
+          return (data || []).map(row => ({
+            ...row,
+            student_code: row.students?.code || '',
+            goal_code: row.goals?.code || '',
+          }));
+        }
+        // Join failed (e.g. a PostgREST relationship error). Try a flat select and enrich locally.
+        console.warn('[tc-students] goal_progress join query failed, trying fallback:', error);
+        const { data: flatData, error: flatError } = await supabase
+          .from('goal_progress')
+          .select('*');
+        if (!flatError && flatData) {
+          // Build fast lookup maps from the arrays passed in by loadData.
+          const goalById = new Map(goalsList.map(g => [g.id, g]));
+          const studentById = new Map(studentsList.map(s => [s.id, s]));
+          return flatData.map(row => ({
+            ...row,
+            goal_code: goalById.get(row.goal_id)?.code || '',
+            student_code: studentById.get(row.student_id)?.code || '',
+          }));
+        }
+        if (flatError) throw flatError;
       }
     } catch (e) {
       console.warn('[tc-students] Could not load from goal_progress table, falling back to localStorage:', e);
@@ -511,12 +531,12 @@
       isSyncing = true;
       updateSyncIndicator();
 
-      // Use Promise.allSettled to handle partial failures
+      // Load students, goals and enrollments in parallel first so that the
+      // fallback path in loadProgressEntries can enrich rows using those arrays.
       const results = await Promise.allSettled([
         db.listStudents(),
         db.listGoalsAll(),
         db.listClassEnrollments(),
-        loadProgressEntries() // Load progress data
       ]);
 
       let schemaDriftDetected = false;
@@ -546,12 +566,13 @@
         schemaDriftDetected = true;
       }
 
-      if (results[3].status === 'fulfilled') {
-        allProgressEntries = results[3].value;
-        // Build progress lookup map for O(1) access
+      // Load progress entries after students/goals are available so the fallback
+      // enrichment can map goal_id → goal_code and student_id → student_code.
+      try {
+        allProgressEntries = await loadProgressEntries(allGoals, allStudents);
         buildProgressLookupMap();
-      } else {
-        console.error('[tc-students] Failed to load progress entries:', results[3].reason);
+      } catch (e) {
+        console.error('[tc-students] Failed to load progress entries:', e);
         allProgressEntries = [];
         progressLookupMap.clear();
       }
