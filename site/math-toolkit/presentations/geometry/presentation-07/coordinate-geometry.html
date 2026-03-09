@@ -200,8 +200,11 @@
     .final-answer-label { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 0.5rem; }
     .final-answer-value { font-family: var(--mono); font-size: 1.9rem; font-weight: 700; color: var(--text); }
     .final-answer-caption { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.35rem; line-height: 1.6; }
-    .try-again-btn { margin-top: 1.25rem; background: transparent; border: 1px solid var(--border2); border-radius: 7px; padding: 0.5rem 1.25rem; font-family: 'Outfit', sans-serif; font-size: 0.85rem; color: var(--text-muted); cursor: pointer; transition: all 0.15s; }
+    .final-actions { display: flex; gap: 0.75rem; justify-content: center; margin-top: 1.25rem; flex-wrap: wrap; }
+    .try-again-btn, .copy-btn { background: transparent; border: 1px solid var(--border2); border-radius: 7px; padding: 0.5rem 1.25rem; font-family: 'Outfit', sans-serif; font-size: 0.85rem; color: var(--text-muted); cursor: pointer; transition: all 0.15s; }
     .try-again-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .copy-btn { border-color: var(--accent-dim); color: var(--accent); } .copy-btn:hover { background: rgba(20,184,166,0.1); border-color: var(--accent); }
+    .copy-btn.copied { background: rgba(34,197,94,0.12); border-color: var(--success); color: var(--success); pointer-events: none; }
 
     @keyframes slideDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes celebrate { 0% { transform: scale(0.95); opacity: 0; } 60% { transform: scale(1.02); } 100% { transform: scale(1); opacity: 1; } }
@@ -281,8 +284,10 @@
       <div class="final-answer-label" id="finalLabel">✓ Answer</div>
       <div class="final-answer-value" id="finalValue"></div>
       <div class="final-answer-caption" id="finalCaption"></div>
-      <br>
-      <button class="try-again-btn" onclick="resetWorkspace()">↺ Try Another Problem</button>
+      <div class="final-actions">
+        <button class="copy-btn" id="copyBtn" onclick="copyToClipboard()">📋 Copy Problem to Clipboard</button>
+        <button class="try-again-btn" onclick="resetWorkspace()">↺ Try Another Problem</button>
+      </div>
     </div>
   </div>
 </main>
@@ -1277,12 +1282,89 @@ function showFinalAnswer(step) {
 
 function showFeedback(el, type, msg) { el.className = `feedback-box visible ${type}`; el.innerHTML = msg; }
 
+/* ================================================================
+   COPY TO CLIPBOARD
+================================================================ */
+function buildProblemText() {
+  const prob = PROBLEMS[currentProbId]; if (!prob) return '';
+  const steps = window._dynSteps || prob.steps;
+  const lines = [], d = '─'.repeat(40);
+
+  lines.push('COORDINATE GEOMETRY');
+  lines.push(`Problem Type: ${prob.name}`);
+  lines.push(d);
+  lines.push(`Formula: ${prob.formulaText.replace(/<[^>]+>/g, '').replace(/<br>/g, ' | ')}`);
+  lines.push('');
+
+  // Known values
+  lines.push('Step 1: Known Values');
+  if (prob.usesPoints || prob.isClassify) {
+    lines.push(`  Point 1: (${knownValues.x1}, ${knownValues.y1})`);
+    lines.push(`  Point 2: (${knownValues.x2}, ${knownValues.y2})`);
+  } else if (prob.usesSlope) {
+    lines.push(`  Slope (m) = ${knownValues.m}`);
+    lines.push(`  Point: (${knownValues.x}, ${knownValues.y})`);
+  } else if (prob.usesSingleSlope) {
+    lines.push(`  Original slope (m) = ${knownValues.m_orig}`);
+  } else if (prob.usesMissingCoord) {
+    lines.push(`  Finding: ${knownValues.missing === 'y2' ? 'y₂' : 'x₂'}`);
+    lines.push(`  Slope (m) = ${knownValues.m_mc}`);
+    lines.push(`  Point 1: (${knownValues.x1_mc}, ${knownValues.y1_mc})`);
+    lines.push(`  Known coordinate: ${knownValues.partial}`);
+  }
+  lines.push('');
+
+  // Steps
+  steps.forEach((step, idx) => {
+    const stepNum = idx + 2;
+    lines.push(`Step ${stepNum}: ${step.title}`);
+    if (step.type === 'expression' && step.displayFn) {
+      lines.push(`  ${step.displayFn(knownValues).replace(/<[^>]+>/g, '').replace(/<br>/g, '\n  ')}`);
+    } else if (step.type === 'compute') {
+      step.rows.forEach((row, rIdx) => {
+        const expr = row.exprFn(knownValues, computedValues).replace(/<[^>]+>/g, '');
+        const ans = computedValues[row.answerId];
+        const ansStr = isFinite(ans) ? ans : 'undefined';
+        const att = stepAttempts[`row_${idx}_${rIdx}`] || 1;
+        const note = att === 1 ? ' ✓ (1st try)' : ` (${att} attempts)`;
+        lines.push(`  ${expr} ${ansStr}${note}`);
+      });
+    }
+    lines.push('');
+  });
+
+  // Final answer from displayed value
+  lines.push(d);
+  const fv = document.getElementById('finalValue')?.textContent || '';
+  const fc = document.getElementById('finalCaption')?.textContent || '';
+  lines.push(fv);
+  if (fc) lines.push(fc);
+  lines.push(d);
+
+  return lines.join('\n');
+}
+
+function copyToClipboard() {
+  const text = buildProblemText(), btn = document.getElementById('copyBtn');
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = '✓ Copied!'; btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = '📋 Copy Problem to Clipboard'; btn.classList.remove('copied'); }, 2500);
+  }).catch(() => {
+    const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px';
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+    btn.textContent = '✓ Copied!'; btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = '📋 Copy Problem to Clipboard'; btn.classList.remove('copied'); }, 2500);
+  });
+}
+
 function resetWorkspace() {
   knownValues = {}; computedValues = {}; stepAttempts = {};
   window._dynSteps = null;
   document.getElementById('stepsContainer').innerHTML = '';
   document.getElementById('finalCard').classList.remove('visible');
   document.getElementById('workspace').classList.remove('visible');
+  const cb = document.getElementById('copyBtn');
+  cb.textContent = '📋 Copy Problem to Clipboard'; cb.classList.remove('copied');
   refreshCanvas();
 }
 
