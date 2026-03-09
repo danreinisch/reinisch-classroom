@@ -104,6 +104,20 @@
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   }
 
+  function formatProgressValue(value, measurementType) {
+    if (value == null) return '—';
+    const num = parseFloat(value);
+    if (isNaN(num)) return String(value);
+    if (measurementType === 'Accuracy') return `${Math.round(num * 10) / 10}%`;
+    if (measurementType === 'Duration') {
+      const mins = Math.floor(num);
+      const secs = Math.round((num - mins) * 60);
+      return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`;
+    }
+    if (measurementType === 'Rate') return `${Math.round(num * 10) / 10}/min`;
+    return String(Math.round(num * 10) / 10);
+  }
+
   function abbreviateClass(fullName) {
     return CLASS_ABBREVIATIONS[fullName] || fullName;
   }
@@ -1127,6 +1141,30 @@
     const statusText = `${quarterProgress.length} of ${dataStatus.expected} this quarter`;
     const lastText = lastDate ? `Last: ${formatDate(lastDate)}` : 'No data yet';
 
+    // Build collapsible progress detail section for this quarter
+    const progressDetailId = `tc-goal-progress-${goal.id.replace(/[^a-z0-9]/gi, '_')}`;
+    let progressDetailHtml = '';
+    let progressToggleBtn = '';
+    if (quarterProgress.length > 0) {
+      const sorted = [...quarterProgress].sort((a, b) => new Date(b.date) - new Date(a.date));
+      const avg = sorted.reduce((sum, e) => sum + parseFloat(e.value || 0), 0) / sorted.length;
+      const avgFormatted = formatProgressValue(avg, goal.measurement_type);
+      const rows = sorted.map(e => {
+        const val = formatProgressValue(e.value, goal.measurement_type);
+        const dt = formatDate(e.date);
+        return `<tr><td style="padding:2px 8px 2px 0;font-size:12px;">${escapeHtml(dt)}</td><td style="padding:2px 0;font-size:12px;">${escapeHtml(val)}</td></tr>`;
+      }).join('');
+      progressDetailHtml = `
+        <div class="st-goal-progress-detail" id="${progressDetailId}" hidden aria-hidden="true" style="padding:8px 0 4px;border-top:1px solid rgba(0,0,0,0.08);margin-top:6px;">
+          <div style="font-size:12px;font-weight:600;margin-bottom:4px;">Q${getCurrentQuarter().slice(1)} Progress — Avg: ${escapeHtml(avgFormatted)}</div>
+          <table style="border-collapse:collapse;width:100%;">
+            <thead><tr><th style="text-align:left;font-size:11px;opacity:0.7;padding:0 8px 2px 0;">Date</th><th style="text-align:left;font-size:11px;opacity:0.7;">Value</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>`;
+      progressToggleBtn = `<button class="st-btn st-btn-small tc-progress-toggle-btn" data-progress-id="${progressDetailId}" aria-expanded="false" style="margin-left:auto;">📈 View Data</button>`;
+    }
+
     // Determine if this card should be collapsed
     const isExpanded = expandMode === 'all' || expandedGoalCards.has(goal.id);
     const collapsedClass = isExpanded ? '' : 'collapsed';
@@ -1163,7 +1201,9 @@
               <span>📅</span>
               <span>${lastText}</span>
             </div>
+            ${progressToggleBtn ? `<div class="st-data-status-item" style="margin-left:auto;">${progressToggleBtn}</div>` : ''}
           </div>
+          ${progressDetailHtml}
         </div>
         <div class="st-goal-meta">
           <div class="st-goal-manager">👤 ${escapeHtml(goal.case_manager || 'N/A')}</div>
@@ -1531,6 +1571,22 @@
           preview.style.display = isShowing ? '' : 'none';
           full.style.display = isShowing ? 'none' : '';
           e.target.textContent = isShowing ? 'Show more' : 'Show less';
+          e.stopPropagation();
+          return;
+        }
+
+        // Progress detail toggle
+        const progressToggleBtn = e.target.closest('.tc-progress-toggle-btn');
+        if (progressToggleBtn) {
+          const targetId = progressToggleBtn.dataset.progressId;
+          const panel = document.getElementById(targetId);
+          if (panel) {
+            const isExpanded = !panel.hidden;
+            panel.hidden = isExpanded;
+            panel.setAttribute('aria-hidden', String(isExpanded));
+            progressToggleBtn.setAttribute('aria-expanded', String(!isExpanded));
+            progressToggleBtn.textContent = isExpanded ? '📈 View Data' : '📉 Hide Data';
+          }
           e.stopPropagation();
           return;
         }
@@ -2029,20 +2085,31 @@
       // Save to goal_progress table or localStorage
       const supabase = await getSupabase();
       if (supabase) {
-        // Try to save to Supabase
-        try {
-          const { error } = await supabase.from('goal_progress').insert({
-            student_code: goal.student_code,
-            goal_code: goal.code,
-            value: calculatedValue,
-            date: dataDate,
-            notes: notes,
-            measurement_type: goal.measurement_type,
-            collected_by: 'teacher'
-          });
-          if (error) throw error;
-        } catch (err) {
-          console.warn('[tc-students] Could not save to goal_progress, falling back to localStorage:', err);
+        // Resolve student UUID – goal_progress uses student_id/goal_id FK columns
+        const student = allStudents.find(s => s.code === goal.student_code);
+        const studentId = student?.id;
+        if (!studentId) {
+          console.warn('[tc-students] Student UUID not found; falling back to localStorage');
+        }
+        // Try to save to Supabase (only when both UUIDs are available)
+        let savedToSupabase = false;
+        if (studentId) {
+          try {
+            const { error } = await supabase.from('goal_progress').insert({
+              student_id: studentId,
+              goal_id: goal.id,
+              value: calculatedValue,
+              date: dataDate,
+              notes: notes,
+              collected_by: 'teacher'
+            });
+            if (error) throw error;
+            savedToSupabase = true;
+          } catch (err) {
+            console.warn('[tc-students] Could not save to goal_progress, falling back to localStorage:', err);
+          }
+        }
+        if (!savedToSupabase) {
           // Fall back to localStorage
           const KEY = 'rc_goal_progress_v1';
           const existing = JSON.parse(localStorage.getItem(KEY) || '[]');
@@ -2052,7 +2119,6 @@
             value: calculatedValue,
             date: dataDate,
             notes: notes,
-            measurement_type: goal.measurement_type,
             collected_by: 'teacher',
             created_at: new Date().toISOString()
           });
@@ -2068,7 +2134,6 @@
           value: calculatedValue,
           date: dataDate,
           notes: notes,
-          measurement_type: goal.measurement_type,
           collected_by: 'teacher',
           created_at: new Date().toISOString()
         });

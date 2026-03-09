@@ -136,27 +136,32 @@ export function getCurrentQuarter() {
  * @returns {{ start: Date, end: Date }|null}
  */
 export function getQuarterDateRange(quarter) {
-  const dates = getQuarterDates();
-  const range = dates[quarter];
-  if (!range || !range.start || !range.end) return null;
-
-  const [sMon, sDay] = range.start.split(" ");
-  const [eMon, eDay] = range.end.split(" ");
-  const sm = MONTH_MAP[sMon];
-  const em = MONTH_MAP[eMon];
-  if (sm === undefined || em === undefined) return null;
-
   const now = new Date();
   const schoolYear = getSchoolYear(now);
 
-  // Months >= Aug (index 7) are in schoolYear; earlier months are in schoolYear+1
-  const startYear = sm >= 7 ? schoolYear : schoolYear + 1;
-  const endYear = em >= 7 ? schoolYear : schoolYear + 1;
+  /**
+   * Attempt to parse a { start, end } range object using "Mon DD" format.
+   * Returns { start: Date, end: Date } on success, or null if unparseable.
+   */
+  function tryParseRange(range) {
+    if (!range || !range.start || !range.end) return null;
+    const [sMon, sDay] = range.start.split(" ");
+    const [eMon, eDay] = range.end.split(" ");
+    const sm = MONTH_MAP[sMon];
+    const em = MONTH_MAP[eMon];
+    if (sm === undefined || em === undefined) return null;
+    // Months >= Aug (index 7) are in schoolYear; earlier months are in schoolYear+1
+    const startYear = sm >= 7 ? schoolYear : schoolYear + 1;
+    const endYear = em >= 7 ? schoolYear : schoolYear + 1;
+    return {
+      start: new Date(startYear, sm, parseInt(sDay, 10)),
+      end: new Date(endYear, em, parseInt(eDay, 10)),
+    };
+  }
 
-  return {
-    start: new Date(startYear, sm, parseInt(sDay, 10)),
-    end: new Date(endYear, em, parseInt(eDay, 10)),
-  };
+  const dates = getQuarterDates();
+  // Try saved dates first; if they can't be parsed fall back to built-in defaults.
+  return tryParseRange(dates[quarter]) || tryParseRange(DEFAULT_QUARTER_DATES[quarter]);
 }
 
 /**
