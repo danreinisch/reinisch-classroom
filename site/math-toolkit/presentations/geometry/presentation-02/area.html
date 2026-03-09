@@ -29,14 +29,7 @@
 
     body { font-family: 'Outfit', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
 
-    .page-header {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 0 2rem;
-      display: flex;
-      align-items: center;
-      height: 56px;
-    }
+    .page-header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 2rem; display: flex; align-items: center; height: 56px; }
     .breadcrumb { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: var(--text-muted); }
     .breadcrumb a { color: var(--text-muted); text-decoration: none; }
     .breadcrumb a:hover { color: var(--accent); }
@@ -44,21 +37,13 @@
     .breadcrumb .current { color: var(--text); font-weight: 500; }
 
     .page-body { max-width: 860px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
-
     .module-title { font-size: 1.65rem; font-weight: 700; color: var(--text); margin-bottom: 0.25rem; }
     .module-title span { color: var(--accent); }
     .module-subtitle { color: var(--text-muted); font-size: 0.92rem; margin-bottom: 2rem; }
-
     .section-label { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 0.75rem; }
 
     .shape-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(145px, 1fr)); gap: 0.75rem; margin-bottom: 2rem; }
-
-    .shape-btn {
-      background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
-      padding: 1rem 0.75rem; cursor: pointer; transition: all 0.18s ease;
-      text-align: center; color: var(--text-muted);
-      display: flex; flex-direction: column; align-items: center; gap: 0.4rem;
-    }
+    .shape-btn { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1rem 0.75rem; cursor: pointer; transition: all 0.18s ease; text-align: center; color: var(--text-muted); display: flex; flex-direction: column; align-items: center; gap: 0.4rem; }
     .shape-btn:hover { border-color: var(--accent); color: var(--text); background: var(--surface2); transform: translateY(-1px); }
     .shape-btn.active { border-color: var(--accent); background: rgba(20,184,166,0.08); color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
     .shape-btn .shape-icon { font-size: 1.6rem; line-height: 1; }
@@ -66,26 +51,22 @@
     .shape-btn .shape-formula { font-family: var(--mono); font-size: 0.68rem; color: var(--text-dim); line-height: 1; }
     .shape-btn.active .shape-formula { color: var(--accent-dim); }
 
-    /* Triangle sub-selector */
-    .tri-sub { display: none; gap: 0.5rem; margin-bottom: 1.5rem; }
-    .tri-sub.visible { display: flex; flex-wrap: wrap; }
-    .sub-btn {
-      flex: 1; min-width: 140px;
-      background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
-      padding: 0.6rem 1rem; cursor: pointer; font-family: 'Outfit', sans-serif;
-      font-size: 0.83rem; color: var(--text-muted); transition: all 0.15s; text-align: center;
-    }
+    .sub-selector { display: none; gap: 0.5rem; margin-bottom: 1.5rem; }
+    .sub-selector.visible { display: flex; flex-wrap: wrap; }
+    .sub-btn { flex: 1; min-width: 140px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 0.6rem 1rem; cursor: pointer; font-family: 'Outfit', sans-serif; font-size: 0.83rem; color: var(--text-muted); transition: all 0.15s; text-align: center; }
     .sub-btn:hover { border-color: var(--accent); color: var(--text); }
     .sub-btn.active { border-color: var(--accent); background: rgba(20,184,166,0.1); color: var(--accent); }
+
+    .mode-toggle { display: none; gap: 0.5rem; margin-bottom: 1.5rem; }
+    .mode-toggle.visible { display: flex; flex-wrap: wrap; }
+    .mode-btn { flex: 1; min-width: 180px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 0.7rem 1rem; cursor: pointer; font-family: 'Outfit', sans-serif; font-size: 0.85rem; color: var(--text-muted); transition: all 0.15s; text-align: center; }
+    .mode-btn:hover { border-color: var(--accent); color: var(--text); }
+    .mode-btn.active { border-color: var(--accent); background: rgba(20,184,166,0.1); color: var(--accent); }
 
     #workspace { display: none; }
     #workspace.visible { display: block; }
 
-    .formula-card {
-      background: var(--formula-bg); border: 1px solid var(--border); border-left: 3px solid var(--accent);
-      border-radius: 10px; padding: 1.25rem 1.5rem; margin-bottom: 1.5rem;
-      display: flex; align-items: center; gap: 1.5rem; animation: slideDown 0.3s ease;
-    }
+    .formula-card { background: var(--formula-bg); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 10px; padding: 1.25rem 1.5rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 1.5rem; animation: slideDown 0.3s ease; }
     .formula-label { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 0.25rem; }
     .formula-text { font-family: var(--mono); font-size: 1.4rem; font-weight: 500; color: var(--text); letter-spacing: 0.05em; }
     .formula-text .var { color: var(--accent2); }
@@ -93,23 +74,12 @@
     .formula-key { margin-left: auto; font-size: 0.78rem; color: var(--text-dim); line-height: 1.8; font-family: var(--mono); white-space: nowrap; }
     .formula-key .kv { color: var(--accent2); }
 
-    .step-card {
-      background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
-      margin-bottom: 1rem; overflow: hidden; animation: slideDown 0.25s ease; transition: border-color 0.2s;
-    }
+    .step-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 1rem; overflow: hidden; animation: slideDown 0.25s ease; transition: border-color 0.2s; }
     .step-card.locked { opacity: 0.4; pointer-events: none; }
     .step-card.complete { border-color: var(--success); }
-    .step-card.error    { border-color: var(--error); }
-
-    .step-header {
-      padding: 0.85rem 1.25rem; display: flex; align-items: center; gap: 0.75rem;
-      border-bottom: 1px solid var(--border); background: var(--surface2);
-    }
-    .step-badge {
-      width: 26px; height: 26px; border-radius: 50%; background: var(--surface3);
-      border: 1px solid var(--border2); display: flex; align-items: center; justify-content: center;
-      font-size: 0.72rem; font-weight: 700; color: var(--text-muted); flex-shrink: 0;
-    }
+    .step-card.error { border-color: var(--error); }
+    .step-header { padding: 0.85rem 1.25rem; display: flex; align-items: center; gap: 0.75rem; border-bottom: 1px solid var(--border); background: var(--surface2); }
+    .step-badge { width: 26px; height: 26px; border-radius: 50%; background: var(--surface3); border: 1px solid var(--border2); display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 700; color: var(--text-muted); flex-shrink: 0; }
     .step-card.complete .step-badge { background: var(--success); border-color: var(--success); color: #fff; }
     .step-title { font-weight: 600; font-size: 0.9rem; color: var(--text); }
     .step-instruction { font-size: 0.82rem; color: var(--text-muted); margin-left: auto; }
@@ -120,54 +90,33 @@
     .field-label { font-size: 0.78rem; font-weight: 500; color: var(--text-muted); }
     .field-label .var-name { font-family: var(--mono); color: var(--accent2); font-size: 0.82rem; }
     .field-hint { font-size: 0.71rem; color: var(--text-dim); }
-    .known-input {
-      background: var(--surface2); border: 1px solid var(--border); border-radius: 7px;
-      padding: 0.55rem 0.85rem; font-family: var(--mono); font-size: 1rem; color: var(--text);
-      width: 100%; transition: border-color 0.15s; outline: none;
-    }
+    .known-input { background: var(--surface2); border: 1px solid var(--border); border-radius: 7px; padding: 0.55rem 0.85rem; font-family: var(--mono); font-size: 1rem; color: var(--text); width: 100%; transition: border-color 0.15s; outline: none; }
     .known-input:focus { border-color: var(--accent); }
     .known-input::-webkit-inner-spin-button { -webkit-appearance: none; }
 
-    .begin-btn {
-      background: var(--accent); color: #0a1628; border: none; border-radius: 7px;
-      padding: 0.6rem 1.5rem; font-family: 'Outfit', sans-serif; font-size: 0.9rem;
-      font-weight: 600; cursor: pointer; transition: all 0.15s; margin-top: 0.5rem;
-    }
+    .unit-row { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; padding: 0.65rem 0.85rem; background: var(--formula-bg); border: 1px solid var(--border); border-radius: 7px; }
+    .unit-label { font-size: 0.78rem; font-weight: 500; color: var(--text-muted); white-space: nowrap; }
+    .unit-select { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 0.4rem 0.6rem; font-family: 'Outfit', sans-serif; font-size: 0.88rem; color: var(--text); outline: none; cursor: pointer; min-width: 80px; }
+    .unit-select:focus { border-color: var(--accent); }
+    .unit-select option { background: var(--surface); color: var(--text); }
+    .unit-hint { font-size: 0.72rem; color: var(--text-dim); font-style: italic; }
+
+    .begin-btn { background: var(--accent); color: #0a1628; border: none; border-radius: 7px; padding: 0.6rem 1.5rem; font-family: 'Outfit', sans-serif; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.15s; margin-top: 0.5rem; }
     .begin-btn:hover { background: #0d9488; transform: translateY(-1px); }
     .begin-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
 
-    .expr-display {
-      font-family: var(--mono); font-size: 1.1rem; color: var(--text);
-      background: var(--formula-bg); border: 1px solid var(--border);
-      border-radius: 7px; padding: 0.75rem 1rem; letter-spacing: 0.04em;
-    }
+    .expr-display { font-family: var(--mono); font-size: 1.1rem; color: var(--text); background: var(--formula-bg); border: 1px solid var(--border); border-radius: 7px; padding: 0.75rem 1rem; letter-spacing: 0.04em; }
     .expr-display .val { color: var(--accent2); }
-
-    /* Fraction display for formulas like ½bh */
-    .frac {
-      display: inline-flex; flex-direction: column; align-items: center;
-      vertical-align: middle; margin: 0 2px; font-size: 0.85em; line-height: 1;
-    }
-    .frac .num { border-bottom: 1.5px solid currentColor; padding-bottom: 1px; line-height: 1.2; }
-    .frac .den { padding-top: 1px; line-height: 1.2; }
 
     .compute-row { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
     .compute-row:last-child { margin-bottom: 0; }
     .compute-expr { font-family: var(--mono); font-size: 1rem; color: var(--text); flex: 1; min-width: 0; }
     .compute-expr .val { color: var(--accent2); }
-    .answer-box {
-      background: var(--surface2); border: 2px solid var(--border2); border-radius: 7px;
-      padding: 0.45rem 0.75rem; font-family: var(--mono); font-size: 1rem; color: var(--text);
-      width: 120px; outline: none; transition: border-color 0.15s; text-align: center;
-    }
+    .answer-box { background: var(--surface2); border: 2px solid var(--border2); border-radius: 7px; padding: 0.45rem 0.75rem; font-family: var(--mono); font-size: 1rem; color: var(--text); width: 120px; outline: none; transition: border-color 0.15s; text-align: center; }
     .answer-box:focus { border-color: var(--accent); }
     .answer-box.correct { border-color: var(--success); background: rgba(34,197,94,0.08); color: var(--success); }
     .answer-box.incorrect { border-color: var(--error); background: rgba(248,113,113,0.08); }
-    .check-btn {
-      background: var(--surface3); border: 1px solid var(--border2); border-radius: 6px;
-      padding: 0.45rem 0.85rem; font-family: 'Outfit', sans-serif; font-size: 0.82rem;
-      font-weight: 500; color: var(--text-muted); cursor: pointer; transition: all 0.15s; white-space: nowrap;
-    }
+    .check-btn { background: var(--surface3); border: 1px solid var(--border2); border-radius: 6px; padding: 0.45rem 0.85rem; font-family: 'Outfit', sans-serif; font-size: 0.82rem; font-weight: 500; color: var(--text-muted); cursor: pointer; transition: all 0.15s; white-space: nowrap; }
     .check-btn:hover { border-color: var(--accent); color: var(--accent); }
     .check-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
@@ -177,28 +126,17 @@
     .feedback-box.error   { background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.3); color: #fca5a5; }
     .feedback-box.hint    { background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.25); color: #fde68a; }
 
-    /* Units note */
-    .units-note {
-      background: rgba(56,189,248,0.07); border: 1px solid rgba(56,189,248,0.2);
-      border-radius: 7px; padding: 0.6rem 1rem; font-size: 0.8rem; color: #7dd3fc;
-      margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem;
-    }
-
-    .final-answer-card {
-      background: linear-gradient(135deg, rgba(20,184,166,0.12), rgba(56,189,248,0.08));
-      border: 1px solid var(--accent); border-radius: 10px; padding: 1.5rem;
-      text-align: center; display: none; animation: celebrate 0.4s ease;
-    }
+    .final-answer-card { background: linear-gradient(135deg, rgba(20,184,166,0.12), rgba(56,189,248,0.08)); border: 1px solid var(--accent); border-radius: 10px; padding: 1.5rem; text-align: center; display: none; animation: celebrate 0.4s ease; }
     .final-answer-card.visible { display: block; }
     .final-answer-label { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 0.5rem; }
     .final-answer-value { font-family: var(--mono); font-size: 2rem; font-weight: 700; color: var(--text); }
     .final-answer-caption { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.35rem; }
-    .try-again-btn {
-      margin-top: 1.25rem; background: transparent; border: 1px solid var(--border2);
-      border-radius: 7px; padding: 0.5rem 1.25rem; font-family: 'Outfit', sans-serif;
-      font-size: 0.85rem; color: var(--text-muted); cursor: pointer; transition: all 0.15s;
-    }
+    .final-actions { display: flex; gap: 0.75rem; justify-content: center; margin-top: 1.25rem; flex-wrap: wrap; }
+    .try-again-btn, .copy-btn { background: transparent; border: 1px solid var(--border2); border-radius: 7px; padding: 0.5rem 1.25rem; font-family: 'Outfit', sans-serif; font-size: 0.85rem; color: var(--text-muted); cursor: pointer; transition: all 0.15s; }
     .try-again-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .copy-btn { border-color: var(--accent-dim); color: var(--accent); }
+    .copy-btn:hover { background: rgba(20,184,166,0.1); border-color: var(--accent); }
+    .copy-btn.copied { background: rgba(34,197,94,0.12); border-color: var(--success); color: var(--success); pointer-events: none; }
 
     .divider { height: 1px; background: var(--border); margin: 1.75rem 0; }
 
@@ -211,6 +149,8 @@
       .shape-grid { grid-template-columns: repeat(2, 1fr); }
       .compute-row { flex-direction: column; align-items: flex-start; }
       .answer-box { width: 100%; }
+      .mode-toggle { flex-direction: column; }
+      .sub-selector { flex-direction: column; }
     }
   </style>
 </head>
@@ -218,41 +158,37 @@
 
 <header class="page-header">
   <nav class="breadcrumb">
-    <a href="/">Home</a>
-    <span class="sep">›</span>
-    <a href="/math-toolkit">Math Toolkit</a>
-    <span class="sep">›</span>
+    <a href="/">Home</a><span class="sep">›</span>
+    <a href="/math-toolkit">Math Toolkit</a><span class="sep">›</span>
     <span class="current">Area</span>
   </nav>
 </header>
 
 <main class="page-body">
-
   <h1 class="module-title">Area of <span>2D Shapes</span></h1>
   <p class="module-subtitle">Select a shape, enter your known values, then work through each step to find the area.</p>
 
   <div class="section-label">Choose a Shape</div>
   <div class="shape-grid" id="shapeGrid"></div>
 
-  <!-- Triangle sub-type selector -->
-  <div class="tri-sub" id="triSub">
+  <div class="sub-selector" id="triSub">
     <button class="sub-btn active" data-tri="standard">Standard Triangle &nbsp;(A = ½bh)</button>
     <button class="sub-btn" data-tri="equilateral">Equilateral Triangle &nbsp;(A = (√3/4)s²)</button>
     <button class="sub-btn" data-tri="right">Right Triangle &nbsp;(A = ½ × leg₁ × leg₂)</button>
   </div>
 
-  <!-- Circle sub-type selector -->
-  <div class="tri-sub" id="circleSub">
+  <div class="sub-selector" id="circleSub">
     <button class="sub-btn active" data-circle="radius">I know the Radius &nbsp;(A = πr²)</button>
     <button class="sub-btn" data-circle="diameter">I know the Diameter &nbsp;(A = π(d/2)²)</button>
   </div>
 
+  <div class="mode-toggle" id="modeToggle">
+    <button class="mode-btn active" data-mode="forward" onclick="setMode('forward')">→ Find the Area</button>
+    <button class="mode-btn" data-mode="reverse" onclick="setMode('reverse')">← Find a Missing Dimension</button>
+  </div>
+
   <div id="workspace">
     <div class="divider"></div>
-
-    <div class="units-note">
-      📐 Remember: Area is always measured in <strong>square units</strong> (units²). If your measurements are in cm, your area will be in cm².
-    </div>
 
     <div class="formula-card" id="formulaCard">
       <div>
@@ -270,6 +206,20 @@
         <div class="step-instruction">Enter the measurements from your problem.</div>
       </div>
       <div class="step-body">
+        <div class="unit-row">
+          <span class="unit-label">Units:</span>
+          <select class="unit-select" id="unitSelect">
+            <option value="">no unit</option>
+            <option value="in">inches (in)</option>
+            <option value="ft">feet (ft)</option>
+            <option value="yd">yards (yd)</option>
+            <option value="cm" selected>centimeters (cm)</option>
+            <option value="mm">millimeters (mm)</option>
+            <option value="m">meters (m)</option>
+            <option value="km">kilometers (km)</option>
+          </select>
+          <span class="unit-hint" id="unitHint">Area will be in cm²</span>
+        </div>
         <div class="known-grid" id="knownGrid"></div>
         <button class="begin-btn" id="beginBtn" onclick="beginSteps()" disabled>Begin Solving →</button>
       </div>
@@ -278,14 +228,15 @@
     <div id="stepsContainer"></div>
 
     <div class="final-answer-card" id="finalCard">
-      <div class="final-answer-label">✓ Area</div>
+      <div class="final-answer-label" id="finalLabel">✓ Area</div>
       <div class="final-answer-value" id="finalValue"></div>
       <div class="final-answer-caption" id="finalCaption"></div>
-      <br>
-      <button class="try-again-btn" onclick="resetWorkspace()">↺ Try Another Problem</button>
+      <div class="final-actions">
+        <button class="copy-btn" id="copyBtn" onclick="copyToClipboard()">📋 Copy Problem to Clipboard</button>
+        <button class="try-again-btn" onclick="resetWorkspace()">↺ Try Another Problem</button>
+      </div>
     </div>
   </div>
-
 </main>
 
 <script>
@@ -300,524 +251,396 @@ function isClose(a, b) {
 }
 
 /* ================================================================
-   SHAPE DEFINITIONS
+   SHAPE DEFINITIONS — forward + reverse
 ================================================================ */
 const SHAPES = {
 
   square: {
-    name: 'Square',
-    icon: '⬜',
-    formulaText: 'A = <span class="var">s</span>²',
-    formulaDesc: 'Square the side length to find the area.',
-    formulaKey: '<span class="kv">s</span> = side length',
-    knownFields: [
-      { id: 's', label: 'Side length', varName: 's', hint: 'All sides are equal.' }
-    ],
-    steps: [
-      {
-        title: 'Substitute Your Value',
-        type: 'expression',
-        displayFn: (k) => `A = <span class="val">${k.s}</span>²`
-      },
-      {
-        title: 'Square the Side Length',
-        instruction: 'Multiply the side length by itself.',
-        type: 'compute',
-        rows: [
-          {
-            exprFn:   (k) => `<span class="val">${k.s}</span> × <span class="val">${k.s}</span> =`,
-            answerId: 'A',
-            answerFn: (k) => round2(k.s * k.s),
-            hintFn:   (k) => `Multiply ${k.s} × ${k.s}. Squaring means multiplying a number by itself.`
-          }
-        ],
-        isFinal: true, finalLabel: 'Area'
-      }
-    ]
+    name: 'Square', icon: '⬜',
+    forward: {
+      formulaText: 'A = <span class="var">s</span>²',
+      formulaDesc: 'Square the side length to find the area.',
+      formulaKey: '<span class="kv">s</span> = side length',
+      knownFields: [{ id: 's', label: 'Side length', varName: 's', hint: 'All sides are equal.' }],
+      steps: [
+        { title: 'Substitute Your Value', type: 'expression', displayFn: (k) => `A = <span class="val">${k.s}</span>²` },
+        { title: 'Square the Side Length', instruction: 'Multiply the side by itself.', type: 'compute', isFinal: true, finalLabel: 'Area',
+          rows: [{ exprFn: (k) => `<span class="val">${k.s}</span> × <span class="val">${k.s}</span> =`, answerId: 'A', answerFn: (k) => round2(k.s * k.s),
+            hintFn: (k) => `Multiply ${k.s} × ${k.s}. Squaring means multiplying a number by itself.` }]}
+      ]
+    },
+    reverse: {
+      formulaText: '<span class="var">s</span> = √A',
+      formulaDesc: 'Take the square root of the area to find the side length. Use a calculator for √.',
+      formulaKey: '<span class="kv">A</span> = area',
+      knownFields: [{ id: 'A', label: 'Area', varName: 'A', hint: 'The total area of the square.' }],
+      steps: [
+        { title: 'Substitute Your Value', type: 'expression', displayFn: (k) => `s = √<span class="val">${k.A}</span>` },
+        { title: 'Find the Square Root', instruction: 'What number × itself = the area? Use a calculator.', type: 'compute', isFinal: true, finalLabel: 'Side Length',
+          rows: [{ exprFn: (k) => `√<span class="val">${k.A}</span> =`, answerId: 's', answerFn: (k) => round2(Math.sqrt(k.A)),
+            hintFn: (k) => `Find √${k.A}. Ask: what number times itself equals ${k.A}?` }]}
+      ]
+    }
   },
 
   rectangle: {
-    name: 'Rectangle',
-    icon: '▭',
-    formulaText: 'A = <span class="var">l</span> × <span class="var">w</span>',
-    formulaDesc: 'Multiply length times width.',
-    formulaKey: '<span class="kv">l</span> = length<br><span class="kv">w</span> = width',
-    knownFields: [
-      { id: 'l', label: 'Length', varName: 'l', hint: 'The longer side.' },
-      { id: 'w', label: 'Width',  varName: 'w', hint: 'The shorter side.' }
-    ],
-    steps: [
-      {
-        title: 'Substitute Your Values',
-        type: 'expression',
-        displayFn: (k) => `A = <span class="val">${k.l}</span> × <span class="val">${k.w}</span>`
-      },
-      {
-        title: 'Multiply Length × Width',
-        instruction: 'Multiply length times width to find the area.',
-        type: 'compute',
-        rows: [
-          {
-            exprFn:   (k) => `<span class="val">${k.l}</span> × <span class="val">${k.w}</span> =`,
-            answerId: 'A',
-            answerFn: (k) => round2(k.l * k.w),
-            hintFn:   (k) => `Multiply ${k.l} × ${k.w}.`
-          }
-        ],
-        isFinal: true, finalLabel: 'Area'
-      }
-    ]
+    name: 'Rectangle', icon: '▭',
+    forward: {
+      formulaText: 'A = <span class="var">l</span> × <span class="var">w</span>',
+      formulaDesc: 'Multiply length times width.',
+      formulaKey: '<span class="kv">l</span> = length<br><span class="kv">w</span> = width',
+      knownFields: [
+        { id: 'l', label: 'Length', varName: 'l', hint: 'The longer side.' },
+        { id: 'w', label: 'Width', varName: 'w', hint: 'The shorter side.' }
+      ],
+      steps: [
+        { title: 'Substitute Your Values', type: 'expression', displayFn: (k) => `A = <span class="val">${k.l}</span> × <span class="val">${k.w}</span>` },
+        { title: 'Multiply Length × Width', instruction: 'Multiply to find the area.', type: 'compute', isFinal: true, finalLabel: 'Area',
+          rows: [{ exprFn: (k) => `<span class="val">${k.l}</span> × <span class="val">${k.w}</span> =`, answerId: 'A', answerFn: (k) => round2(k.l * k.w),
+            hintFn: (k) => `Multiply ${k.l} × ${k.w}.` }]}
+      ]
+    },
+    reverse: {
+      formulaText: 'missing = A ÷ known side',
+      formulaDesc: 'Divide the area by the side you know to find the missing side.',
+      formulaKey: '<span class="kv">A</span> = area<br><span class="kv">known</span> = one side',
+      knownFields: [
+        { id: 'A', label: 'Area', varName: 'A', hint: 'The total area.' },
+        { id: 'known', label: 'Known side', varName: 'known', hint: 'Length or width you already know.' }
+      ],
+      steps: [
+        { title: 'Substitute Your Values', type: 'expression', displayFn: (k) => `missing = <span class="val">${k.A}</span> ÷ <span class="val">${k.known}</span>` },
+        { title: 'Divide', instruction: 'Divide the area by the known side.', type: 'compute', isFinal: true, finalLabel: 'Missing Side',
+          rows: [{ exprFn: (k) => `<span class="val">${k.A}</span> ÷ <span class="val">${k.known}</span> =`, answerId: 'side', answerFn: (k) => round2(k.A / k.known),
+            hintFn: (k) => `Divide ${k.A} ÷ ${k.known}.` }]}
+      ]
+    }
   },
 
   'triangle-standard': {
-    name: 'Triangle',
-    icon: '△',
-    formulaText: 'A = ½ × <span class="var">b</span> × <span class="var">h</span>',
-    formulaDesc: 'One half times base times height. ½ = 0.5',
-    formulaKey: '<span class="kv">b</span> = base<br><span class="kv">h</span> = height (perpendicular)',
-    knownFields: [
-      { id: 'b', label: 'Base', varName: 'b', hint: 'The bottom side.' },
-      { id: 'h', label: 'Height', varName: 'h', hint: 'Perpendicular height — straight up from the base.' }
-    ],
-    steps: [
-      {
-        title: 'Substitute Your Values',
-        type: 'expression',
-        displayFn: (k) => `A = 0.5 × <span class="val">${k.b}</span> × <span class="val">${k.h}</span>`
-      },
-      {
-        title: 'Multiply Base × Height',
-        instruction: 'First multiply the base times the height.',
-        type: 'compute',
-        rows: [
-          {
-            exprFn:   (k) => `<span class="val">${k.b}</span> × <span class="val">${k.h}</span> =`,
-            answerId: 'bh',
-            answerFn: (k) => round2(k.b * k.h),
-            hintFn:   (k) => `Multiply ${k.b} × ${k.h}.`
-          }
-        ]
-      },
-      {
-        title: 'Multiply by ½ (0.5)',
-        instruction: 'Now multiply your result by 0.5 (one half) to find the area.',
-        type: 'compute',
-        rows: [
-          {
-            exprFn:   (k, c) => `0.5 × <span class="val">${c.bh}</span> =`,
-            answerId: 'A',
-            answerFn: (k, c) => round2(0.5 * c.bh),
-            hintFn:   (k, c) => `Multiply 0.5 × ${c.bh}. Multiplying by 0.5 is the same as dividing by 2.`
-          }
-        ],
-        isFinal: true, finalLabel: 'Area'
-      }
-    ]
+    name: 'Triangle', icon: '△',
+    forward: {
+      formulaText: 'A = ½ × <span class="var">b</span> × <span class="var">h</span>',
+      formulaDesc: 'One half times base times height. ½ = 0.5',
+      formulaKey: '<span class="kv">b</span> = base<br><span class="kv">h</span> = height',
+      knownFields: [
+        { id: 'b', label: 'Base', varName: 'b', hint: 'The bottom side.' },
+        { id: 'h', label: 'Height', varName: 'h', hint: 'Perpendicular height — straight up from the base.' }
+      ],
+      steps: [
+        { title: 'Substitute Your Values', type: 'expression', displayFn: (k) => `A = 0.5 × <span class="val">${k.b}</span> × <span class="val">${k.h}</span>` },
+        { title: 'Multiply Base × Height', instruction: 'Multiply base times height first.', type: 'compute',
+          rows: [{ exprFn: (k) => `<span class="val">${k.b}</span> × <span class="val">${k.h}</span> =`, answerId: 'bh', answerFn: (k) => round2(k.b * k.h),
+            hintFn: (k) => `Multiply ${k.b} × ${k.h}.` }]},
+        { title: 'Multiply by ½ (0.5)', instruction: 'Multiply your result by 0.5 to find the area.', type: 'compute', isFinal: true, finalLabel: 'Area',
+          rows: [{ exprFn: (k, c) => `0.5 × <span class="val">${c.bh}</span> =`, answerId: 'A', answerFn: (k, c) => round2(0.5 * c.bh),
+            hintFn: (k, c) => `Multiply 0.5 × ${c.bh}. Same as dividing by 2.` }]}
+      ]
+    },
+    reverse: {
+      formulaText: 'missing = 2A ÷ known',
+      formulaDesc: 'Multiply the area by 2, then divide by the dimension you know.',
+      formulaKey: '<span class="kv">A</span> = area<br><span class="kv">known</span> = base or height',
+      knownFields: [
+        { id: 'A', label: 'Area', varName: 'A', hint: 'The total area.' },
+        { id: 'known', label: 'Known dimension', varName: 'known', hint: 'The base or height you know.' }
+      ],
+      steps: [
+        { title: 'Multiply Area by 2', instruction: 'Undo the ½ by multiplying by 2.', type: 'compute',
+          rows: [{ exprFn: (k) => `2 × <span class="val">${k.A}</span> =`, answerId: 'dbl', answerFn: (k) => round2(2 * k.A),
+            hintFn: (k) => `Multiply 2 × ${k.A}.` }]},
+        { title: 'Divide by Known Dimension', instruction: 'Divide to find the missing dimension.', type: 'compute', isFinal: true, finalLabel: 'Missing Dimension',
+          rows: [{ exprFn: (k, c) => `<span class="val">${c.dbl}</span> ÷ <span class="val">${k.known}</span> =`, answerId: 'missing', answerFn: (k, c) => round2(c.dbl / k.known),
+            hintFn: (k, c) => `Divide ${c.dbl} ÷ ${k.known}.` }]}
+      ]
+    }
   },
 
   'triangle-right': {
-    name: 'Right Triangle',
-    icon: '◺',
-    formulaText: 'A = ½ × <span class="var">a</span> × <span class="var">b</span>',
-    formulaDesc: 'For right triangles, the two legs are the base and height.',
-    formulaKey: '<span class="kv">a</span> = leg 1<br><span class="kv">b</span> = leg 2',
-    knownFields: [
-      { id: 'a', label: 'Leg 1 (a)', varName: 'a', hint: 'One of the two sides that form the right angle.' },
-      { id: 'b', label: 'Leg 2 (b)', varName: 'b', hint: 'The other side that forms the right angle.' }
-    ],
-    steps: [
-      {
-        title: 'Substitute Your Values',
-        type: 'expression',
-        displayFn: (k) => `A = 0.5 × <span class="val">${k.a}</span> × <span class="val">${k.b}</span>`
-      },
-      {
-        title: 'Multiply the Two Legs',
-        instruction: 'Multiply leg 1 times leg 2.',
-        type: 'compute',
-        rows: [
-          {
-            exprFn:   (k) => `<span class="val">${k.a}</span> × <span class="val">${k.b}</span> =`,
-            answerId: 'ab',
-            answerFn: (k) => round2(k.a * k.b),
-            hintFn:   (k) => `Multiply ${k.a} × ${k.b}.`
-          }
-        ]
-      },
-      {
-        title: 'Multiply by ½ (0.5)',
-        instruction: 'Multiply your result by 0.5 to find the area.',
-        type: 'compute',
-        rows: [
-          {
-            exprFn:   (k, c) => `0.5 × <span class="val">${c.ab}</span> =`,
-            answerId: 'A',
-            answerFn: (k, c) => round2(0.5 * c.ab),
-            hintFn:   (k, c) => `Multiply 0.5 × ${c.ab}. Same as dividing by 2.`
-          }
-        ],
-        isFinal: true, finalLabel: 'Area'
-      }
-    ]
+    name: 'Right Triangle', icon: '◺',
+    forward: {
+      formulaText: 'A = ½ × <span class="var">a</span> × <span class="var">b</span>',
+      formulaDesc: 'For right triangles, the two legs are the base and height.',
+      formulaKey: '<span class="kv">a</span> = leg 1<br><span class="kv">b</span> = leg 2',
+      knownFields: [
+        { id: 'a', label: 'Leg 1 (a)', varName: 'a', hint: 'One side forming the right angle.' },
+        { id: 'b', label: 'Leg 2 (b)', varName: 'b', hint: 'The other side forming the right angle.' }
+      ],
+      steps: [
+        { title: 'Substitute Your Values', type: 'expression', displayFn: (k) => `A = 0.5 × <span class="val">${k.a}</span> × <span class="val">${k.b}</span>` },
+        { title: 'Multiply the Two Legs', instruction: 'Multiply leg 1 × leg 2.', type: 'compute',
+          rows: [{ exprFn: (k) => `<span class="val">${k.a}</span> × <span class="val">${k.b}</span> =`, answerId: 'ab', answerFn: (k) => round2(k.a * k.b),
+            hintFn: (k) => `Multiply ${k.a} × ${k.b}.` }]},
+        { title: 'Multiply by ½ (0.5)', instruction: 'Multiply by 0.5 to find the area.', type: 'compute', isFinal: true, finalLabel: 'Area',
+          rows: [{ exprFn: (k, c) => `0.5 × <span class="val">${c.ab}</span> =`, answerId: 'A', answerFn: (k, c) => round2(0.5 * c.ab),
+            hintFn: (k, c) => `Multiply 0.5 × ${c.ab}. Same as dividing by 2.` }]}
+      ]
+    },
+    reverse: {
+      formulaText: 'missing leg = 2A ÷ known leg',
+      formulaDesc: 'Multiply area by 2, then divide by the leg you know.',
+      formulaKey: '<span class="kv">A</span> = area<br><span class="kv">known</span> = one leg',
+      knownFields: [
+        { id: 'A', label: 'Area', varName: 'A', hint: 'The total area.' },
+        { id: 'known', label: 'Known leg', varName: 'known', hint: 'The leg you already know.' }
+      ],
+      steps: [
+        { title: 'Multiply Area by 2', instruction: 'Undo the ½ by multiplying by 2.', type: 'compute',
+          rows: [{ exprFn: (k) => `2 × <span class="val">${k.A}</span> =`, answerId: 'dbl', answerFn: (k) => round2(2 * k.A),
+            hintFn: (k) => `Multiply 2 × ${k.A}.` }]},
+        { title: 'Divide by Known Leg', instruction: 'Divide to find the missing leg.', type: 'compute', isFinal: true, finalLabel: 'Missing Leg',
+          rows: [{ exprFn: (k, c) => `<span class="val">${c.dbl}</span> ÷ <span class="val">${k.known}</span> =`, answerId: 'missing', answerFn: (k, c) => round2(c.dbl / k.known),
+            hintFn: (k, c) => `Divide ${c.dbl} ÷ ${k.known}.` }]}
+      ]
+    }
   },
 
   'triangle-equilateral': {
-    name: 'Equilateral Triangle',
-    icon: '▲',
-    formulaText: 'A = (√3 ÷ 4) × <span class="var">s</span>²',
-    formulaDesc: 'Use the equilateral triangle formula. √3 ÷ 4 ≈ 0.433.',
-    formulaKey: '<span class="kv">s</span> = side length<br>√3 ÷ 4 ≈ 0.433',
-    knownFields: [
-      { id: 's', label: 'Side length', varName: 's', hint: 'All three sides are equal.' }
-    ],
-    steps: [
-      {
-        title: 'Substitute Your Value',
-        type: 'expression',
-        displayFn: (k) => `A = 0.433 × <span class="val">${k.s}</span>²`
-      },
-      {
-        title: 'Square the Side Length',
-        instruction: 'Multiply the side length by itself.',
-        type: 'compute',
-        rows: [
-          {
-            exprFn:   (k) => `<span class="val">${k.s}</span> × <span class="val">${k.s}</span> =`,
-            answerId: 's2',
-            answerFn: (k) => round2(k.s * k.s),
-            hintFn:   (k) => `Multiply ${k.s} × ${k.s}.`
-          }
-        ]
-      },
-      {
-        title: 'Multiply by 0.433',
-        instruction: 'Multiply your result by 0.433 (this is √3 ÷ 4).',
-        type: 'compute',
-        rows: [
-          {
-            exprFn:   (k, c) => `0.433 × <span class="val">${c.s2}</span> =`,
-            answerId: 'A',
-            answerFn: (k, c) => round2(0.433 * c.s2),
-            hintFn:   (k, c) => `Multiply 0.433 × ${c.s2}. You can use a calculator for this step.`
-          }
-        ],
-        isFinal: true, finalLabel: 'Area'
-      }
-    ]
+    name: 'Equilateral Triangle', icon: '▲',
+    forward: {
+      formulaText: 'A = (√3 ÷ 4) × <span class="var">s</span>²',
+      formulaDesc: 'Use the equilateral triangle formula. √3 ÷ 4 ≈ 0.433.',
+      formulaKey: '<span class="kv">s</span> = side length<br>√3÷4 ≈ 0.433',
+      knownFields: [{ id: 's', label: 'Side length', varName: 's', hint: 'All three sides are equal.' }],
+      steps: [
+        { title: 'Substitute Your Value', type: 'expression', displayFn: (k) => `A = 0.433 × <span class="val">${k.s}</span>²` },
+        { title: 'Square the Side Length', instruction: 'Multiply the side by itself.', type: 'compute',
+          rows: [{ exprFn: (k) => `<span class="val">${k.s}</span> × <span class="val">${k.s}</span> =`, answerId: 's2', answerFn: (k) => round2(k.s * k.s),
+            hintFn: (k) => `Multiply ${k.s} × ${k.s}.` }]},
+        { title: 'Multiply by 0.433', instruction: 'Multiply by √3÷4 (0.433).', type: 'compute', isFinal: true, finalLabel: 'Area',
+          rows: [{ exprFn: (k, c) => `0.433 × <span class="val">${c.s2}</span> =`, answerId: 'A', answerFn: (k, c) => round2(0.433 * c.s2),
+            hintFn: (k, c) => `Multiply 0.433 × ${c.s2}. You can use a calculator.` }]}
+      ]
+    },
+    reverse: null
   },
 
   parallelogram: {
-    name: 'Parallelogram',
-    icon: '▱',
-    formulaText: 'A = <span class="var">b</span> × <span class="var">h</span>',
-    formulaDesc: 'Multiply the base by the perpendicular height.',
-    formulaKey: '<span class="kv">b</span> = base<br><span class="kv">h</span> = height (perpendicular)',
-    knownFields: [
-      { id: 'b', label: 'Base', varName: 'b', hint: 'The bottom side.' },
-      { id: 'h', label: 'Height', varName: 'h', hint: 'Perpendicular height — NOT the slanted side.' }
-    ],
-    steps: [
-      {
-        title: 'Substitute Your Values',
-        type: 'expression',
-        displayFn: (k) => `A = <span class="val">${k.b}</span> × <span class="val">${k.h}</span>`
-      },
-      {
-        title: 'Multiply Base × Height',
-        instruction: 'Multiply the base times the height.',
-        type: 'compute',
-        rows: [
-          {
-            exprFn:   (k) => `<span class="val">${k.b}</span> × <span class="val">${k.h}</span> =`,
-            answerId: 'A',
-            answerFn: (k) => round2(k.b * k.h),
-            hintFn:   (k) => `Multiply ${k.b} × ${k.h}.`
-          }
-        ],
-        isFinal: true, finalLabel: 'Area'
-      }
-    ]
+    name: 'Parallelogram', icon: '▱',
+    forward: {
+      formulaText: 'A = <span class="var">b</span> × <span class="var">h</span>',
+      formulaDesc: 'Multiply the base by the perpendicular height.',
+      formulaKey: '<span class="kv">b</span> = base<br><span class="kv">h</span> = height',
+      knownFields: [
+        { id: 'b', label: 'Base', varName: 'b', hint: 'The bottom side.' },
+        { id: 'h', label: 'Height', varName: 'h', hint: 'Perpendicular height — NOT the slanted side.' }
+      ],
+      steps: [
+        { title: 'Substitute Your Values', type: 'expression', displayFn: (k) => `A = <span class="val">${k.b}</span> × <span class="val">${k.h}</span>` },
+        { title: 'Multiply Base × Height', instruction: 'Multiply to find the area.', type: 'compute', isFinal: true, finalLabel: 'Area',
+          rows: [{ exprFn: (k) => `<span class="val">${k.b}</span> × <span class="val">${k.h}</span> =`, answerId: 'A', answerFn: (k) => round2(k.b * k.h),
+            hintFn: (k) => `Multiply ${k.b} × ${k.h}.` }]}
+      ]
+    },
+    reverse: {
+      formulaText: 'missing = A ÷ known',
+      formulaDesc: 'Divide the area by the dimension you know.',
+      formulaKey: '<span class="kv">A</span> = area<br><span class="kv">known</span> = base or height',
+      knownFields: [
+        { id: 'A', label: 'Area', varName: 'A', hint: 'The total area.' },
+        { id: 'known', label: 'Known dimension', varName: 'known', hint: 'The base or height you know.' }
+      ],
+      steps: [
+        { title: 'Substitute Your Values', type: 'expression', displayFn: (k) => `missing = <span class="val">${k.A}</span> ÷ <span class="val">${k.known}</span>` },
+        { title: 'Divide', instruction: 'Divide the area by the known dimension.', type: 'compute', isFinal: true, finalLabel: 'Missing Dimension',
+          rows: [{ exprFn: (k) => `<span class="val">${k.A}</span> ÷ <span class="val">${k.known}</span> =`, answerId: 'missing', answerFn: (k) => round2(k.A / k.known),
+            hintFn: (k) => `Divide ${k.A} ÷ ${k.known}.` }]}
+      ]
+    }
   },
 
   trapezoid: {
-    name: 'Trapezoid',
-    icon: '⏢',
-    formulaText: 'A = ½ × (<span class="var">b₁</span> + <span class="var">b₂</span>) × <span class="var">h</span>',
-    formulaDesc: 'Add both bases, multiply by the height, then multiply by one half.',
-    formulaKey: '<span class="kv">b₁</span> = top base<br><span class="kv">b₂</span> = bottom base<br><span class="kv">h</span> = height',
-    knownFields: [
-      { id: 'b1', label: 'Base 1 (b₁)', varName: 'b₁', hint: 'Top parallel side.' },
-      { id: 'b2', label: 'Base 2 (b₂)', varName: 'b₂', hint: 'Bottom parallel side.' },
-      { id: 'h',  label: 'Height (h)',   varName: 'h',  hint: 'Perpendicular height between the two bases.' }
-    ],
-    steps: [
-      {
-        title: 'Substitute Your Values',
-        type: 'expression',
-        displayFn: (k) => `A = 0.5 × (<span class="val">${k.b1}</span> + <span class="val">${k.b2}</span>) × <span class="val">${k.h}</span>`
-      },
-      {
-        title: 'Add the Two Bases',
-        instruction: 'Start by adding base 1 and base 2 together.',
-        type: 'compute',
-        rows: [
-          {
-            exprFn:   (k) => `<span class="val">${k.b1}</span> + <span class="val">${k.b2}</span> =`,
-            answerId: 'sumB',
-            answerFn: (k) => round2(k.b1 + k.b2),
-            hintFn:   (k) => `Add ${k.b1} + ${k.b2}.`
-          }
-        ]
-      },
-      {
-        title: 'Multiply by the Height',
-        instruction: 'Multiply the sum of the bases by the height.',
-        type: 'compute',
-        rows: [
-          {
-            exprFn:   (k, c) => `<span class="val">${c.sumB}</span> × <span class="val">${k.h}</span> =`,
-            answerId: 'bh',
-            answerFn: (k, c) => round2(c.sumB * k.h),
-            hintFn:   (k, c) => `Multiply ${c.sumB} × ${k.h}.`
-          }
-        ]
-      },
-      {
-        title: 'Multiply by ½ (0.5)',
-        instruction: 'Finally, multiply by 0.5 to find the area.',
-        type: 'compute',
-        rows: [
-          {
-            exprFn:   (k, c) => `0.5 × <span class="val">${c.bh}</span> =`,
-            answerId: 'A',
-            answerFn: (k, c) => round2(0.5 * c.bh),
-            hintFn:   (k, c) => `Multiply 0.5 × ${c.bh}. Same as dividing by 2.`
-          }
-        ],
-        isFinal: true, finalLabel: 'Area'
-      }
-    ]
+    name: 'Trapezoid', icon: '⏢',
+    forward: {
+      formulaText: 'A = ½ × (<span class="var">b₁</span> + <span class="var">b₂</span>) × <span class="var">h</span>',
+      formulaDesc: 'Add both bases, multiply by height, then multiply by one half.',
+      formulaKey: '<span class="kv">b₁</span> = top base<br><span class="kv">b₂</span> = bottom base<br><span class="kv">h</span> = height',
+      knownFields: [
+        { id: 'b1', label: 'Base 1 (b₁)', varName: 'b₁', hint: 'Top parallel side.' },
+        { id: 'b2', label: 'Base 2 (b₂)', varName: 'b₂', hint: 'Bottom parallel side.' },
+        { id: 'h', label: 'Height (h)', varName: 'h', hint: 'Perpendicular height between the two bases.' }
+      ],
+      steps: [
+        { title: 'Substitute Your Values', type: 'expression', displayFn: (k) => `A = 0.5 × (<span class="val">${k.b1}</span> + <span class="val">${k.b2}</span>) × <span class="val">${k.h}</span>` },
+        { title: 'Add the Two Bases', instruction: 'Add base 1 and base 2.', type: 'compute',
+          rows: [{ exprFn: (k) => `<span class="val">${k.b1}</span> + <span class="val">${k.b2}</span> =`, answerId: 'sumB', answerFn: (k) => round2(k.b1 + k.b2),
+            hintFn: (k) => `Add ${k.b1} + ${k.b2}.` }]},
+        { title: 'Multiply by the Height', instruction: 'Multiply the sum of bases by height.', type: 'compute',
+          rows: [{ exprFn: (k, c) => `<span class="val">${c.sumB}</span> × <span class="val">${k.h}</span> =`, answerId: 'bh', answerFn: (k, c) => round2(c.sumB * k.h),
+            hintFn: (k, c) => `Multiply ${c.sumB} × ${k.h}.` }]},
+        { title: 'Multiply by ½ (0.5)', instruction: 'Multiply by 0.5 to find the area.', type: 'compute', isFinal: true, finalLabel: 'Area',
+          rows: [{ exprFn: (k, c) => `0.5 × <span class="val">${c.bh}</span> =`, answerId: 'A', answerFn: (k, c) => round2(0.5 * c.bh),
+            hintFn: (k, c) => `Multiply 0.5 × ${c.bh}. Same as dividing by 2.` }]}
+      ]
+    },
+    reverse: {
+      formulaText: '<span class="var">h</span> = 2A ÷ (<span class="var">b₁</span> + <span class="var">b₂</span>)',
+      formulaDesc: 'Multiply area by 2, then divide by the sum of the bases.',
+      formulaKey: '<span class="kv">A</span> = area<br><span class="kv">b₁, b₂</span> = both bases',
+      knownFields: [
+        { id: 'A', label: 'Area', varName: 'A', hint: 'The total area.' },
+        { id: 'b1', label: 'Base 1 (b₁)', varName: 'b₁', hint: 'Top parallel side.' },
+        { id: 'b2', label: 'Base 2 (b₂)', varName: 'b₂', hint: 'Bottom parallel side.' }
+      ],
+      steps: [
+        { title: 'Add the Two Bases', instruction: 'Add both bases together.', type: 'compute',
+          rows: [{ exprFn: (k) => `<span class="val">${k.b1}</span> + <span class="val">${k.b2}</span> =`, answerId: 'sumB', answerFn: (k) => round2(k.b1 + k.b2),
+            hintFn: (k) => `Add ${k.b1} + ${k.b2}.` }]},
+        { title: 'Multiply Area by 2', instruction: 'Undo the ½ by multiplying by 2.', type: 'compute',
+          rows: [{ exprFn: (k) => `2 × <span class="val">${k.A}</span> =`, answerId: 'dbl', answerFn: (k) => round2(2 * k.A),
+            hintFn: (k) => `Multiply 2 × ${k.A}.` }]},
+        { title: 'Divide to Find Height', instruction: 'Divide by the sum of the bases.', type: 'compute', isFinal: true, finalLabel: 'Height',
+          rows: [{ exprFn: (k, c) => `<span class="val">${c.dbl}</span> ÷ <span class="val">${c.sumB}</span> =`, answerId: 'h', answerFn: (k, c) => round2(c.dbl / c.sumB),
+            hintFn: (k, c) => `Divide ${c.dbl} ÷ ${c.sumB}.` }]}
+      ]
+    }
   },
 
   rhombus: {
-    name: 'Rhombus',
-    icon: '◆',
-    formulaText: 'A = (<span class="var">d₁</span> × <span class="var">d₂</span>) ÷ 2',
-    formulaDesc: 'Multiply the two diagonals and divide by 2.',
-    formulaKey: '<span class="kv">d₁</span> = diagonal 1<br><span class="kv">d₂</span> = diagonal 2',
-    knownFields: [
-      { id: 'd1', label: 'Diagonal 1 (d₁)', varName: 'd₁', hint: 'One diagonal across the rhombus.' },
-      { id: 'd2', label: 'Diagonal 2 (d₂)', varName: 'd₂', hint: 'The other diagonal.' }
-    ],
-    steps: [
-      {
-        title: 'Substitute Your Values',
-        type: 'expression',
-        displayFn: (k) => `A = (<span class="val">${k.d1}</span> × <span class="val">${k.d2}</span>) ÷ 2`
-      },
-      {
-        title: 'Multiply the Diagonals',
-        instruction: 'Multiply diagonal 1 times diagonal 2.',
-        type: 'compute',
-        rows: [
-          {
-            exprFn:   (k) => `<span class="val">${k.d1}</span> × <span class="val">${k.d2}</span> =`,
-            answerId: 'dd',
-            answerFn: (k) => round2(k.d1 * k.d2),
-            hintFn:   (k) => `Multiply ${k.d1} × ${k.d2}.`
-          }
-        ]
-      },
-      {
-        title: 'Divide by 2',
-        instruction: 'Divide your result by 2 to find the area.',
-        type: 'compute',
-        rows: [
-          {
-            exprFn:   (k, c) => `<span class="val">${c.dd}</span> ÷ 2 =`,
-            answerId: 'A',
-            answerFn: (k, c) => round2(c.dd / 2),
-            hintFn:   (k, c) => `Divide ${c.dd} by 2.`
-          }
-        ],
-        isFinal: true, finalLabel: 'Area'
-      }
-    ]
+    name: 'Rhombus', icon: '◆',
+    forward: {
+      formulaText: 'A = (<span class="var">d₁</span> × <span class="var">d₂</span>) ÷ 2',
+      formulaDesc: 'Multiply the two diagonals and divide by 2.',
+      formulaKey: '<span class="kv">d₁</span> = diagonal 1<br><span class="kv">d₂</span> = diagonal 2',
+      knownFields: [
+        { id: 'd1', label: 'Diagonal 1 (d₁)', varName: 'd₁', hint: 'One diagonal across.' },
+        { id: 'd2', label: 'Diagonal 2 (d₂)', varName: 'd₂', hint: 'The other diagonal.' }
+      ],
+      steps: [
+        { title: 'Substitute Your Values', type: 'expression', displayFn: (k) => `A = (<span class="val">${k.d1}</span> × <span class="val">${k.d2}</span>) ÷ 2` },
+        { title: 'Multiply the Diagonals', instruction: 'Multiply d₁ × d₂.', type: 'compute',
+          rows: [{ exprFn: (k) => `<span class="val">${k.d1}</span> × <span class="val">${k.d2}</span> =`, answerId: 'dd', answerFn: (k) => round2(k.d1 * k.d2),
+            hintFn: (k) => `Multiply ${k.d1} × ${k.d2}.` }]},
+        { title: 'Divide by 2', instruction: 'Divide your result by 2.', type: 'compute', isFinal: true, finalLabel: 'Area',
+          rows: [{ exprFn: (k, c) => `<span class="val">${c.dd}</span> ÷ 2 =`, answerId: 'A', answerFn: (k, c) => round2(c.dd / 2),
+            hintFn: (k, c) => `Divide ${c.dd} by 2.` }]}
+      ]
+    },
+    reverse: {
+      formulaText: 'missing d = 2A ÷ known d',
+      formulaDesc: 'Multiply area by 2, then divide by the diagonal you know.',
+      formulaKey: '<span class="kv">A</span> = area<br><span class="kv">known</span> = one diagonal',
+      knownFields: [
+        { id: 'A', label: 'Area', varName: 'A', hint: 'The total area.' },
+        { id: 'known', label: 'Known diagonal', varName: 'known', hint: 'The diagonal you know.' }
+      ],
+      steps: [
+        { title: 'Multiply Area by 2', instruction: 'Undo the ÷2 by multiplying by 2.', type: 'compute',
+          rows: [{ exprFn: (k) => `2 × <span class="val">${k.A}</span> =`, answerId: 'dbl', answerFn: (k) => round2(2 * k.A),
+            hintFn: (k) => `Multiply 2 × ${k.A}.` }]},
+        { title: 'Divide by Known Diagonal', instruction: 'Divide to find the missing diagonal.', type: 'compute', isFinal: true, finalLabel: 'Missing Diagonal',
+          rows: [{ exprFn: (k, c) => `<span class="val">${c.dbl}</span> ÷ <span class="val">${k.known}</span> =`, answerId: 'missing', answerFn: (k, c) => round2(c.dbl / k.known),
+            hintFn: (k, c) => `Divide ${c.dbl} ÷ ${k.known}.` }]}
+      ]
+    }
   },
 
   'circle-radius': {
-    name: 'Circle (Radius)',
-    icon: '⭕',
-    formulaText: 'A = π × <span class="var">r</span>²',
-    formulaDesc: 'Pi times the radius squared. Use π = 3.14.',
-    formulaKey: '<span class="kv">r</span> = radius<br>π ≈ 3.14',
-    knownFields: [
-      { id: 'r', label: 'Radius', varName: 'r', hint: 'Distance from center to the edge.' }
-    ],
-    steps: [
-      {
-        title: 'Substitute Your Value',
-        type: 'expression',
-        displayFn: (k) => `A = 3.14 × <span class="val">${k.r}</span>²`
-      },
-      {
-        title: 'Square the Radius',
-        instruction: 'Multiply the radius by itself.',
-        type: 'compute',
-        rows: [
-          {
-            exprFn:   (k) => `<span class="val">${k.r}</span> × <span class="val">${k.r}</span> =`,
-            answerId: 'r2',
-            answerFn: (k) => round2(k.r * k.r),
-            hintFn:   (k) => `Multiply ${k.r} × ${k.r}. Squaring means multiplying a number by itself.`
-          }
-        ]
-      },
-      {
-        title: 'Multiply by π (3.14)',
-        instruction: 'Multiply your squared radius by 3.14.',
-        type: 'compute',
-        rows: [
-          {
-            exprFn:   (k, c) => `3.14 × <span class="val">${c.r2}</span> =`,
-            answerId: 'A',
-            answerFn: (k, c) => round2(3.14 * c.r2),
-            hintFn:   (k, c) => `Multiply 3.14 × ${c.r2}.`
-          }
-        ],
-        isFinal: true, finalLabel: 'Area'
-      }
-    ]
+    name: 'Circle (Radius)', icon: '⭕',
+    forward: {
+      formulaText: 'A = π × <span class="var">r</span>²',
+      formulaDesc: 'Pi times the radius squared. Use π = 3.14.',
+      formulaKey: '<span class="kv">r</span> = radius<br>π ≈ 3.14',
+      knownFields: [{ id: 'r', label: 'Radius', varName: 'r', hint: 'Distance from center to edge.' }],
+      steps: [
+        { title: 'Substitute Your Value', type: 'expression', displayFn: (k) => `A = 3.14 × <span class="val">${k.r}</span>²` },
+        { title: 'Square the Radius', instruction: 'Multiply the radius by itself.', type: 'compute',
+          rows: [{ exprFn: (k) => `<span class="val">${k.r}</span> × <span class="val">${k.r}</span> =`, answerId: 'r2', answerFn: (k) => round2(k.r * k.r),
+            hintFn: (k) => `Multiply ${k.r} × ${k.r}. Squaring = multiplying by itself.` }]},
+        { title: 'Multiply by π (3.14)', instruction: 'Multiply by 3.14.', type: 'compute', isFinal: true, finalLabel: 'Area',
+          rows: [{ exprFn: (k, c) => `3.14 × <span class="val">${c.r2}</span> =`, answerId: 'A', answerFn: (k, c) => round2(3.14 * c.r2),
+            hintFn: (k, c) => `Multiply 3.14 × ${c.r2}.` }]}
+      ]
+    },
+    reverse: {
+      formulaText: '<span class="var">r</span> = √(A ÷ π)',
+      formulaDesc: 'Divide area by 3.14, then take the square root. Use a calculator for √.',
+      formulaKey: '<span class="kv">A</span> = area<br>π ≈ 3.14',
+      knownFields: [{ id: 'A', label: 'Area', varName: 'A', hint: 'The total area of the circle.' }],
+      steps: [
+        { title: 'Divide Area by π', instruction: 'Divide the area by 3.14.', type: 'compute',
+          rows: [{ exprFn: (k) => `<span class="val">${k.A}</span> ÷ 3.14 =`, answerId: 'div', answerFn: (k) => round2(k.A / 3.14),
+            hintFn: (k) => `Divide ${k.A} ÷ 3.14.` }]},
+        { title: 'Take the Square Root', instruction: 'Find √ of your result. Use a calculator.', type: 'compute', isFinal: true, finalLabel: 'Radius',
+          rows: [{ exprFn: (k, c) => `√<span class="val">${c.div}</span> =`, answerId: 'r', answerFn: (k, c) => round2(Math.sqrt(c.div)),
+            hintFn: (k, c) => `Find √${c.div}. What number × itself = ${c.div}?` }]}
+      ]
+    }
   },
 
   'circle-diameter': {
-    name: 'Circle (Diameter)',
-    icon: '⭕',
-    formulaText: 'A = π × (<span class="var">d</span> ÷ 2)²',
-    formulaDesc: 'Find the radius first (diameter ÷ 2), then square it and multiply by π.',
-    formulaKey: '<span class="kv">d</span> = diameter<br>π ≈ 3.14',
-    knownFields: [
-      { id: 'd', label: 'Diameter', varName: 'd', hint: 'Distance all the way across the center.' }
-    ],
-    steps: [
-      {
-        title: 'Substitute Your Value',
-        type: 'expression',
-        displayFn: (k) => `A = 3.14 × (<span class="val">${k.d}</span> ÷ 2)²`
-      },
-      {
-        title: 'Find the Radius (d ÷ 2)',
-        instruction: 'Divide the diameter by 2 to find the radius.',
-        type: 'compute',
-        rows: [
-          {
-            exprFn:   (k) => `<span class="val">${k.d}</span> ÷ 2 =`,
-            answerId: 'r',
-            answerFn: (k) => round2(k.d / 2),
-            hintFn:   (k) => `Divide ${k.d} ÷ 2. The radius is always half the diameter.`
-          }
-        ]
-      },
-      {
-        title: 'Square the Radius',
-        instruction: 'Multiply the radius by itself.',
-        type: 'compute',
-        rows: [
-          {
-            exprFn:   (k, c) => `<span class="val">${c.r}</span> × <span class="val">${c.r}</span> =`,
-            answerId: 'r2',
-            answerFn: (k, c) => round2(c.r * c.r),
-            hintFn:   (k, c) => `Multiply ${c.r} × ${c.r}.`
-          }
-        ]
-      },
-      {
-        title: 'Multiply by π (3.14)',
-        instruction: 'Multiply your squared radius by 3.14.',
-        type: 'compute',
-        rows: [
-          {
-            exprFn:   (k, c) => `3.14 × <span class="val">${c.r2}</span> =`,
-            answerId: 'A',
-            answerFn: (k, c) => round2(3.14 * c.r2),
-            hintFn:   (k, c) => `Multiply 3.14 × ${c.r2}.`
-          }
-        ],
-        isFinal: true, finalLabel: 'Area'
-      }
-    ]
+    name: 'Circle (Diameter)', icon: '⭕',
+    forward: {
+      formulaText: 'A = π × (<span class="var">d</span> ÷ 2)²',
+      formulaDesc: 'Find the radius first (d ÷ 2), then square it and multiply by π.',
+      formulaKey: '<span class="kv">d</span> = diameter<br>π ≈ 3.14',
+      knownFields: [{ id: 'd', label: 'Diameter', varName: 'd', hint: 'Distance all the way across.' }],
+      steps: [
+        { title: 'Substitute Your Value', type: 'expression', displayFn: (k) => `A = 3.14 × (<span class="val">${k.d}</span> ÷ 2)²` },
+        { title: 'Find the Radius (d ÷ 2)', instruction: 'Divide the diameter by 2.', type: 'compute',
+          rows: [{ exprFn: (k) => `<span class="val">${k.d}</span> ÷ 2 =`, answerId: 'r', answerFn: (k) => round2(k.d / 2),
+            hintFn: (k) => `Divide ${k.d} ÷ 2. The radius is half the diameter.` }]},
+        { title: 'Square the Radius', instruction: 'Multiply the radius by itself.', type: 'compute',
+          rows: [{ exprFn: (k, c) => `<span class="val">${c.r}</span> × <span class="val">${c.r}</span> =`, answerId: 'r2', answerFn: (k, c) => round2(c.r * c.r),
+            hintFn: (k, c) => `Multiply ${c.r} × ${c.r}.` }]},
+        { title: 'Multiply by π (3.14)', instruction: 'Multiply by 3.14.', type: 'compute', isFinal: true, finalLabel: 'Area',
+          rows: [{ exprFn: (k, c) => `3.14 × <span class="val">${c.r2}</span> =`, answerId: 'A', answerFn: (k, c) => round2(3.14 * c.r2),
+            hintFn: (k, c) => `Multiply 3.14 × ${c.r2}.` }]}
+      ]
+    },
+    reverse: null
+  },
+
+  semicircle: {
+    name: 'Semicircle', icon: '◗',
+    forward: {
+      formulaText: 'A = ½ × π × <span class="var">r</span>²',
+      formulaDesc: 'Half of a full circle\'s area. Use π = 3.14.',
+      formulaKey: '<span class="kv">r</span> = radius<br>π ≈ 3.14',
+      knownFields: [{ id: 'r', label: 'Radius', varName: 'r', hint: 'Distance from center to edge.' }],
+      steps: [
+        { title: 'Substitute Your Value', type: 'expression', displayFn: (k) => `A = 0.5 × 3.14 × <span class="val">${k.r}</span>²` },
+        { title: 'Square the Radius', instruction: 'Multiply the radius by itself.', type: 'compute',
+          rows: [{ exprFn: (k) => `<span class="val">${k.r}</span> × <span class="val">${k.r}</span> =`, answerId: 'r2', answerFn: (k) => round2(k.r * k.r),
+            hintFn: (k) => `Multiply ${k.r} × ${k.r}.` }]},
+        { title: 'Multiply by π (3.14)', instruction: 'Multiply by 3.14.', type: 'compute',
+          rows: [{ exprFn: (k, c) => `3.14 × <span class="val">${c.r2}</span> =`, answerId: 'pir2', answerFn: (k, c) => round2(3.14 * c.r2),
+            hintFn: (k, c) => `Multiply 3.14 × ${c.r2}.` }]},
+        { title: 'Multiply by ½ (0.5)', instruction: 'Take half for the semicircle.', type: 'compute', isFinal: true, finalLabel: 'Area',
+          rows: [{ exprFn: (k, c) => `0.5 × <span class="val">${c.pir2}</span> =`, answerId: 'A', answerFn: (k, c) => round2(0.5 * c.pir2),
+            hintFn: (k, c) => `Multiply 0.5 × ${c.pir2}. Same as dividing by 2.` }]}
+      ]
+    },
+    reverse: null
   },
 
   sector: {
-    name: 'Sector (Pie Slice)',
-    icon: '🥧',
-    formulaText: 'A = (θ ÷ 360) × π × <span class="var">r</span>²',
-    formulaDesc: 'A sector is a "pie slice" of a circle. θ is the central angle.',
-    formulaKey: '<span class="kv">θ</span> = central angle (°)<br><span class="kv">r</span> = radius<br>π ≈ 3.14',
-    knownFields: [
-      { id: 'theta', label: 'Central angle θ (°)', varName: 'θ', hint: 'The angle of the "slice" in degrees.' },
-      { id: 'r',     label: 'Radius (r)',          varName: 'r', hint: 'Distance from center to edge.' }
-    ],
-    steps: [
-      {
-        title: 'Substitute Your Values',
-        type: 'expression',
-        displayFn: (k) => `A = (<span class="val">${k.theta}</span> ÷ 360) × 3.14 × <span class="val">${k.r}</span>²`
-      },
-      {
-        title: 'Divide the Angle by 360',
-        instruction: 'Find what fraction of a full circle your sector is.',
-        type: 'compute',
-        rows: [
-          {
-            exprFn:   (k) => `<span class="val">${k.theta}</span> ÷ 360 =`,
-            answerId: 'frac',
-            answerFn: (k) => round4(k.theta / 360),
-            hintFn:   (k) => `Divide ${k.theta} ÷ 360. Round to 4 decimal places.`
-          }
-        ]
-      },
-      {
-        title: 'Square the Radius',
-        instruction: 'Multiply the radius by itself.',
-        type: 'compute',
-        rows: [
-          {
-            exprFn:   (k) => `<span class="val">${k.r}</span> × <span class="val">${k.r}</span> =`,
-            answerId: 'r2',
-            answerFn: (k) => round2(k.r * k.r),
-            hintFn:   (k) => `Multiply ${k.r} × ${k.r}.`
-          }
-        ]
-      },
-      {
-        title: 'Multiply π × r²',
-        instruction: 'Multiply 3.14 by your squared radius.',
-        type: 'compute',
-        rows: [
-          {
-            exprFn:   (k, c) => `3.14 × <span class="val">${c.r2}</span> =`,
-            answerId: 'pir2',
-            answerFn: (k, c) => round2(3.14 * c.r2),
-            hintFn:   (k, c) => `Multiply 3.14 × ${c.r2}.`
-          }
-        ]
-      },
-      {
-        title: 'Multiply by the Fraction',
-        instruction: 'Multiply the full circle area by your angle fraction.',
-        type: 'compute',
-        rows: [
-          {
-            exprFn:   (k, c) => `<span class="val">${c.frac}</span> × <span class="val">${c.pir2}</span> =`,
-            answerId: 'A',
-            answerFn: (k, c) => round2(c.frac * c.pir2),
-            hintFn:   (k, c) => `Multiply ${c.frac} × ${c.pir2}.`
-          }
-        ],
-        isFinal: true, finalLabel: 'Area'
-      }
-    ]
+    name: 'Sector (Pie Slice)', icon: '🥧',
+    forward: {
+      formulaText: 'A = (θ ÷ 360) × π × <span class="var">r</span>²',
+      formulaDesc: 'A sector is a "pie slice" of a circle. θ is the central angle.',
+      formulaKey: '<span class="kv">θ</span> = angle (°)<br><span class="kv">r</span> = radius<br>π ≈ 3.14',
+      knownFields: [
+        { id: 'theta', label: 'Central angle θ (°)', varName: 'θ', hint: 'The angle of the "slice" in degrees.' },
+        { id: 'r', label: 'Radius (r)', varName: 'r', hint: 'Distance from center to edge.' }
+      ],
+      steps: [
+        { title: 'Substitute Your Values', type: 'expression', displayFn: (k) => `A = (<span class="val">${k.theta}</span> ÷ 360) × 3.14 × <span class="val">${k.r}</span>²` },
+        { title: 'Divide Angle by 360', instruction: 'Find the fraction of the full circle.', type: 'compute',
+          rows: [{ exprFn: (k) => `<span class="val">${k.theta}</span> ÷ 360 =`, answerId: 'frac', answerFn: (k) => round4(k.theta / 360),
+            hintFn: (k) => `Divide ${k.theta} ÷ 360. Round to 4 decimal places.` }]},
+        { title: 'Square the Radius', instruction: 'Multiply the radius by itself.', type: 'compute',
+          rows: [{ exprFn: (k) => `<span class="val">${k.r}</span> × <span class="val">${k.r}</span> =`, answerId: 'r2', answerFn: (k) => round2(k.r * k.r),
+            hintFn: (k) => `Multiply ${k.r} × ${k.r}.` }]},
+        { title: 'Multiply π × r²', instruction: 'Multiply 3.14 by r².', type: 'compute',
+          rows: [{ exprFn: (k, c) => `3.14 × <span class="val">${c.r2}</span> =`, answerId: 'pir2', answerFn: (k, c) => round2(3.14 * c.r2),
+            hintFn: (k, c) => `Multiply 3.14 × ${c.r2}.` }]},
+        { title: 'Multiply by the Fraction', instruction: 'Multiply the full circle area by the angle fraction.', type: 'compute', isFinal: true, finalLabel: 'Area',
+          rows: [{ exprFn: (k, c) => `<span class="val">${c.frac}</span> × <span class="val">${c.pir2}</span> =`, answerId: 'A', answerFn: (k, c) => round2(c.frac * c.pir2),
+            hintFn: (k, c) => `Multiply ${c.frac} × ${c.pir2}.` }]}
+      ]
+    },
+    reverse: null
   }
 };
 
@@ -825,22 +648,72 @@ const SHAPES = {
    STATE
 ================================================================ */
 let currentShapeId = null;
-let triMode    = 'standard';
-let circleMode = 'radius';
+let triMode = 'standard', circleMode = 'radius', problemMode = 'forward';
 let knownValues = {}, computedValues = {}, stepAttempts = {};
+
+/* ================================================================
+   HELPERS
+================================================================ */
+function getUnit() { return document.getElementById('unitSelect').value; }
+function getUnitLabel(squared) {
+  const u = getUnit();
+  if (!u) return '';
+  return squared ? ` ${u}²` : ` ${u}`;
+}
+
+function getShape() {
+  if (!currentShapeId) return null;
+  let id = currentShapeId;
+  if (id === 'triangle') id = `triangle-${triMode}`;
+  if (id === 'circle') id = `circle-${circleMode}`;
+  const def = SHAPES[id];
+  if (!def) return null;
+  if (problemMode === 'reverse' && def.reverse) return def.reverse;
+  return def.forward;
+}
+
+function getShapeName() {
+  if (!currentShapeId) return '';
+  let id = currentShapeId;
+  if (id === 'triangle') id = `triangle-${triMode}`;
+  if (id === 'circle') id = `circle-${circleMode}`;
+  return SHAPES[id]?.name || '';
+}
+
+function hasReverse() {
+  if (!currentShapeId) return false;
+  let id = currentShapeId;
+  if (id === 'triangle') id = `triangle-${triMode}`;
+  if (id === 'circle') id = `circle-${circleMode}`;
+  return !!SHAPES[id]?.reverse;
+}
+
+/* ================================================================
+   UNIT HINT UPDATE
+================================================================ */
+document.getElementById('unitSelect').addEventListener('change', () => {
+  const u = getUnit();
+  const hint = document.getElementById('unitHint');
+  if (problemMode === 'forward') {
+    hint.textContent = u ? `Area will be in ${u}²` : 'Area is measured in square units';
+  } else {
+    hint.textContent = u ? `Dimensions in ${u}` : 'Label your answer correctly!';
+  }
+});
 
 /* ================================================================
    SHAPE GRID
 ================================================================ */
 const shapeList = [
-  { id: 'square',      name: 'Square',       icon: '⬜', formula: 'A = s²' },
-  { id: 'rectangle',   name: 'Rectangle',    icon: '▭', formula: 'A = l × w' },
-  { id: 'triangle',    name: 'Triangle',     icon: '△', formula: 'A = ½bh' },
-  { id: 'parallelogram',name:'Parallelogram', icon: '▱', formula: 'A = bh' },
-  { id: 'trapezoid',   name: 'Trapezoid',    icon: '⏢', formula: 'A = ½(b₁+b₂)h' },
-  { id: 'rhombus',     name: 'Rhombus',      icon: '◆', formula: 'A = (d₁×d₂)÷2' },
-  { id: 'circle',      name: 'Circle',       icon: '⭕', formula: 'A = πr²' },
-  { id: 'sector',      name: 'Sector',       icon: '🥧', formula: 'A = (θ/360)πr²' }
+  { id: 'square', name: 'Square', icon: '⬜', formula: 'A = s²' },
+  { id: 'rectangle', name: 'Rectangle', icon: '▭', formula: 'A = l × w' },
+  { id: 'triangle', name: 'Triangle', icon: '△', formula: 'A = ½bh' },
+  { id: 'parallelogram', name: 'Parallelogram', icon: '▱', formula: 'A = bh' },
+  { id: 'trapezoid', name: 'Trapezoid', icon: '⏢', formula: 'A = ½(b₁+b₂)h' },
+  { id: 'rhombus', name: 'Rhombus', icon: '◆', formula: 'A = (d₁×d₂)÷2' },
+  { id: 'circle', name: 'Circle', icon: '⭕', formula: 'A = πr²' },
+  { id: 'semicircle', name: 'Semicircle', icon: '◗', formula: 'A = ½πr²' },
+  { id: 'sector', name: 'Sector', icon: '🥧', formula: 'A = (θ/360)πr²' }
 ];
 
 function buildShapeGrid() {
@@ -849,11 +722,7 @@ function buildShapeGrid() {
     const btn = document.createElement('button');
     btn.className = 'shape-btn';
     btn.dataset.shape = s.id;
-    btn.innerHTML = `
-      <span class="shape-icon">${s.icon}</span>
-      <span class="shape-name">${s.name}</span>
-      <span class="shape-formula">${s.formula}</span>
-    `;
+    btn.innerHTML = `<span class="shape-icon">${s.icon}</span><span class="shape-name">${s.name}</span><span class="shape-formula">${s.formula}</span>`;
     btn.addEventListener('click', () => selectShape(s.id));
     grid.appendChild(btn);
   });
@@ -865,8 +734,21 @@ function selectShape(id) {
   document.querySelector(`.shape-btn[data-shape="${id}"]`).classList.add('active');
   document.getElementById('triSub').classList.toggle('visible', id === 'triangle');
   document.getElementById('circleSub').classList.toggle('visible', id === 'circle');
+  updateModeToggle();
   resetWorkspace();
   renderWorkspace();
+}
+
+function updateModeToggle() {
+  const toggle = document.getElementById('modeToggle');
+  if (hasReverse()) {
+    toggle.classList.add('visible');
+  } else {
+    toggle.classList.remove('visible');
+    problemMode = 'forward';
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector('.mode-btn[data-mode="forward"]').classList.add('active');
+  }
 }
 
 // Sub-selectors
@@ -875,6 +757,7 @@ document.querySelectorAll('#triSub .sub-btn').forEach(btn => {
     document.querySelectorAll('#triSub .sub-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     triMode = btn.dataset.tri;
+    updateModeToggle();
     resetWorkspace();
     renderWorkspace();
   });
@@ -884,16 +767,26 @@ document.querySelectorAll('#circleSub .sub-btn').forEach(btn => {
     document.querySelectorAll('#circleSub .sub-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     circleMode = btn.dataset.circle;
+    updateModeToggle();
     resetWorkspace();
     renderWorkspace();
   });
 });
 
-function getShape() {
-  if (!currentShapeId) return null;
-  if (currentShapeId === 'triangle') return SHAPES[`triangle-${triMode}`];
-  if (currentShapeId === 'circle')   return SHAPES[`circle-${circleMode}`];
-  return SHAPES[currentShapeId];
+function setMode(mode) {
+  problemMode = mode;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`.mode-btn[data-mode="${mode}"]`).classList.add('active');
+  // Update unit hint
+  const u = getUnit();
+  const hint = document.getElementById('unitHint');
+  if (mode === 'forward') {
+    hint.textContent = u ? `Area will be in ${u}²` : 'Area is measured in square units';
+  } else {
+    hint.textContent = u ? `Dimensions in ${u}` : 'Label your answer correctly!';
+  }
+  resetWorkspace();
+  renderWorkspace();
 }
 
 /* ================================================================
@@ -926,7 +819,6 @@ function renderWorkspace() {
   document.getElementById('stepKnown').classList.remove('complete');
   document.getElementById('beginBtn').disabled = true;
   document.getElementById('beginBtn').style.display = '';
-  document.querySelectorAll('.known-input').forEach(el => el.disabled = false);
 }
 
 function checkBeginReady() {
@@ -945,18 +837,17 @@ function checkBeginReady() {
 function beginSteps() {
   const shape = getShape();
   knownValues = {}; computedValues = {}; stepAttempts = {};
-  shape.knownFields.forEach(f => {
-    knownValues[f.id] = parseFloat(document.getElementById(`known_${f.id}`).value);
-  });
+  shape.knownFields.forEach(f => { knownValues[f.id] = parseFloat(document.getElementById(`known_${f.id}`).value); });
   document.getElementById('stepKnown').classList.add('complete');
   document.getElementById('badgeKnown').textContent = '✓';
   document.querySelectorAll('.known-input').forEach(el => el.disabled = true);
+  document.getElementById('unitSelect').disabled = true;
   document.getElementById('beginBtn').style.display = 'none';
   renderSteps(shape);
 }
 
 /* ================================================================
-   RENDER STEPS
+   RENDER / UNLOCK / CHECK — same engine as perimeter
 ================================================================ */
 function renderSteps(shape) {
   const container = document.getElementById('stepsContainer');
@@ -972,31 +863,19 @@ function renderSteps(shape) {
     } else if (step.type === 'compute') {
       bodyHTML = step.rows.map((row, rIdx) => {
         const rowId = `row_${idx}_${rIdx}`;
-        return `
-          <div class="compute-row" id="${rowId}_wrap">
-            <div class="compute-expr">${row.exprFn(knownValues, computedValues)}</div>
-            <input class="answer-box" id="${rowId}_input" type="number" step="any" placeholder="?"
-              onkeydown="if(event.key==='Enter') checkRow('${rowId}',${idx},${rIdx})" />
-            <button class="check-btn" id="${rowId}_btn" onclick="checkRow('${rowId}',${idx},${rIdx})">Check</button>
-          </div>`;
+        return `<div class="compute-row" id="${rowId}_wrap">
+          <div class="compute-expr">${row.exprFn(knownValues, computedValues)}</div>
+          <input class="answer-box" id="${rowId}_input" type="number" step="any" placeholder="?" onkeydown="if(event.key==='Enter') checkRow('${rowId}',${idx},${rIdx})" />
+          <button class="check-btn" id="${rowId}_btn" onclick="checkRow('${rowId}',${idx},${rIdx})">Check</button>
+        </div>`;
       }).join('');
       bodyHTML += `<div class="feedback-box" id="fb_${idx}"></div>`;
     }
-    card.innerHTML = `
-      <div class="step-header">
-        <div class="step-badge" id="badge_${idx}">${stepNum}</div>
-        <div class="step-title">Step ${stepNum}: ${step.title}</div>
-        <div class="step-instruction">${step.instruction || 'Follow the formula.'}</div>
-      </div>
-      <div class="step-body">${bodyHTML}</div>`;
+    card.innerHTML = `<div class="step-header"><div class="step-badge" id="badge_${idx}">${stepNum}</div><div class="step-title">Step ${stepNum}: ${step.title}</div><div class="step-instruction">${step.instruction || 'Follow the formula.'}</div></div><div class="step-body">${bodyHTML}</div>`;
     container.appendChild(card);
   });
   document.getElementById('dynStep_0').classList.remove('locked');
-  // Auto-advance first expression step
-  const shape2 = getShape();
-  if (shape2.steps[0].type === 'expression') {
-    setTimeout(() => unlockStep(1), 350);
-  }
+  if (shape.steps[0].type === 'expression') setTimeout(() => unlockStep(1), 350);
 }
 
 function unlockStep(idx) {
@@ -1011,93 +890,136 @@ function unlockStep(idx) {
   }
 }
 
-/* ================================================================
-   CHECK ROW
-================================================================ */
 function checkRow(rowId, stepIdx, rowIdx) {
   const shape = getShape();
-  const step = shape.steps[stepIdx];
-  const row  = step.rows[rowIdx];
-  const input = document.getElementById(`${rowId}_input`);
-  const btn   = document.getElementById(`${rowId}_btn`);
-  const fb    = document.getElementById(`fb_${stepIdx}`);
-  const badge = document.getElementById(`badge_${stepIdx}`);
-  const card  = document.getElementById(`dynStep_${stepIdx}`);
-
-  if (!input || input.value.trim() === '') {
-    showFeedback(fb, 'hint', 'Please enter a number before checking.');
-    return;
-  }
-
-  const userAnswer = parseFloat(input.value);
-  const correct    = row.answerFn(knownValues, computedValues);
-  const attemptKey = rowId;
-  stepAttempts[attemptKey] = (stepAttempts[attemptKey] || 0) + 1;
+  const step = shape.steps[stepIdx], row = step.rows[rowIdx];
+  const input = document.getElementById(`${rowId}_input`), btn = document.getElementById(`${rowId}_btn`);
+  const fb = document.getElementById(`fb_${stepIdx}`), badge = document.getElementById(`badge_${stepIdx}`), card = document.getElementById(`dynStep_${stepIdx}`);
+  if (!input || input.value.trim() === '') { showFeedback(fb, 'hint', 'Please enter a number before checking.'); return; }
+  const userAnswer = parseFloat(input.value), correct = row.answerFn(knownValues, computedValues);
+  stepAttempts[rowId] = (stepAttempts[rowId] || 0) + 1;
 
   if (isClose(userAnswer, correct)) {
-    input.classList.add('correct');
-    input.disabled = true;
-    btn.disabled = true;
+    input.classList.add('correct'); input.disabled = true; btn.disabled = true;
     computedValues[row.answerId] = round2(userAnswer);
-
-    const allDone = step.rows.every((r, ri) => {
-      const inp = document.getElementById(`row_${stepIdx}_${ri}_input`);
-      return inp && inp.disabled;
-    });
-
+    const allDone = step.rows.every((r, ri) => { const inp = document.getElementById(`row_${stepIdx}_${ri}_input`); return inp && inp.disabled; });
     if (allDone) {
-      card.classList.add('complete');
-      badge.textContent = '✓';
+      card.classList.add('complete'); badge.textContent = '✓';
       if (step.isFinal) {
         showFeedback(fb, 'success', `✓ Correct! Excellent work solving this step by step.`);
         showFinalAnswer(step.finalLabel, computedValues[row.answerId]);
       } else {
         showFeedback(fb, 'success', `✓ Correct! Move on to the next step.`);
-        const nextIdx = stepIdx + 1;
-        const nextStep = shape.steps[nextIdx];
+        const nextIdx = stepIdx + 1, nextStep = shape.steps[nextIdx];
         if (nextStep && nextStep.type === 'compute') {
-          nextStep.rows.forEach((nr, nri) => {
-            const exprEl = document.querySelector(`#row_${nextIdx}_${nri}_wrap .compute-expr`);
-            if (exprEl) exprEl.innerHTML = nr.exprFn(knownValues, computedValues);
-          });
+          nextStep.rows.forEach((nr, nri) => { const el = document.querySelector(`#row_${nextIdx}_${nri}_wrap .compute-expr`); if (el) el.innerHTML = nr.exprFn(knownValues, computedValues); });
         }
         setTimeout(() => unlockStep(nextIdx), 400);
       }
-    } else {
-      showFeedback(fb, 'success', `✓ Correct! Complete the next calculation.`);
-    }
+    } else { showFeedback(fb, 'success', `✓ Correct! Complete the next calculation.`); }
   } else {
-    input.classList.add('incorrect');
-    card.classList.add('error');
+    input.classList.add('incorrect'); card.classList.add('error');
     setTimeout(() => { input.classList.remove('incorrect'); card.classList.remove('error'); }, 600);
-    const attempts = stepAttempts[attemptKey];
+    const att = stepAttempts[rowId];
     let msg = '';
-    if (attempts === 1)      msg = `Not quite — double-check your math and try again.`;
-    else if (attempts === 2) msg = `Still not right. Hint: ${row.hintFn(knownValues, computedValues)}`;
-    else                     msg = `The correct answer is <strong>${correct}</strong>. ${row.hintFn(knownValues, computedValues)}`;
+    if (att === 1) msg = `Not quite — double-check your math and try again.`;
+    else if (att === 2) msg = `Still not right. Hint: ${row.hintFn(knownValues, computedValues)}`;
+    else msg = `The correct answer is <strong>${correct}</strong>. ${row.hintFn(knownValues, computedValues)}`;
     showFeedback(fb, 'error', msg);
   }
 }
 
-function showFeedback(el, type, msg) {
-  el.className = `feedback-box visible ${type}`;
-  el.innerHTML = msg;
-}
+function showFeedback(el, type, msg) { el.className = `feedback-box visible ${type}`; el.innerHTML = msg; }
 
+/* ================================================================
+   FINAL ANSWER
+================================================================ */
 function showFinalAnswer(label, value) {
   const card = document.getElementById('finalCard');
-  card.querySelector('.final-answer-label').textContent = `✓ ${label}`;
-  document.getElementById('finalValue').textContent = value + ' square units';
-  document.getElementById('finalCaption').textContent = `You successfully worked through the formula step by step!`;
+  const isAreaResult = problemMode === 'forward';
+  const ul = getUnitLabel(isAreaResult);
+  document.getElementById('finalLabel').textContent = `✓ ${label}`;
+  document.getElementById('finalValue').textContent = value + ul;
+  document.getElementById('finalCaption').textContent = 'You successfully worked through the formula step by step!';
   card.classList.add('visible');
   card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
+/* ================================================================
+   COPY TO CLIPBOARD
+================================================================ */
+function buildProblemText() {
+  const shape = getShape();
+  if (!shape) return '';
+  const isAreaResult = problemMode === 'forward';
+  const ul = getUnitLabel(isAreaResult);
+  const ulInput = getUnitLabel(false);
+  const lines = [], div = '─'.repeat(40);
+
+  lines.push('AREA');
+  lines.push(`Shape: ${getShapeName()}`);
+  lines.push(`Mode: ${problemMode === 'forward' ? 'Find Area' : 'Find Missing Dimension'}`);
+  if (getUnit()) lines.push(`Units: ${getUnit()}`);
+  lines.push(div);
+  lines.push(`Formula: ${shape.formulaText.replace(/<[^>]+>/g, '')}`);
+  lines.push('');
+  lines.push('Step 1: Known Values');
+  shape.knownFields.forEach(f => {
+    const inputUnit = (f.id === 'A' && problemMode === 'reverse') ? getUnitLabel(true) : ulInput;
+    lines.push(`  ${f.label} (${f.varName}) = ${knownValues[f.id]}${inputUnit}`);
+  });
+  lines.push('');
+
+  shape.steps.forEach((step, idx) => {
+    const stepNum = idx + 2;
+    lines.push(`Step ${stepNum}: ${step.title}`);
+    if (step.type === 'expression') {
+      lines.push(`  ${step.displayFn(knownValues).replace(/<[^>]+>/g, '')}`);
+    } else if (step.type === 'compute') {
+      step.rows.forEach((row, rIdx) => {
+        const expr = row.exprFn(knownValues, computedValues).replace(/<[^>]+>/g, '');
+        const ans = computedValues[row.answerId];
+        const att = stepAttempts[`row_${idx}_${rIdx}`] || 1;
+        const note = att === 1 ? ' ✓ (1st try)' : ` (${att} attempts)`;
+        lines.push(`  ${expr} ${ans}${note}`);
+      });
+    }
+    lines.push('');
+  });
+
+  lines.push(div);
+  const finalStep = shape.steps.find(s => s.isFinal);
+  const finalKey = finalStep?.rows?.slice(-1)[0]?.answerId;
+  lines.push(`${finalStep?.finalLabel || 'Answer'} = ${computedValues[finalKey]}${ul}`);
+  lines.push(div);
+  return lines.join('\n');
+}
+
+function copyToClipboard() {
+  const text = buildProblemText();
+  const btn = document.getElementById('copyBtn');
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = '✓ Copied!'; btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = '📋 Copy Problem to Clipboard'; btn.classList.remove('copied'); }, 2500);
+  }).catch(() => {
+    const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px';
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+    btn.textContent = '✓ Copied!'; btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = '📋 Copy Problem to Clipboard'; btn.classList.remove('copied'); }, 2500);
+  });
+}
+
+/* ================================================================
+   RESET
+================================================================ */
 function resetWorkspace() {
   knownValues = {}; computedValues = {}; stepAttempts = {};
   document.getElementById('stepsContainer').innerHTML = '';
   document.getElementById('finalCard').classList.remove('visible');
   document.getElementById('workspace').classList.remove('visible');
+  document.getElementById('unitSelect').disabled = false;
+  const cb = document.getElementById('copyBtn');
+  cb.textContent = '📋 Copy Problem to Clipboard'; cb.classList.remove('copied');
 }
 
 buildShapeGrid();
