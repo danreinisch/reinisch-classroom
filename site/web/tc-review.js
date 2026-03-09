@@ -1456,7 +1456,7 @@
           const scoreTotal = computeScorePercentage(scoreAuto, scoreManual, items);
 
           await db.finalizeSubmission(submission.id, { scoreAuto, scoreManual, scoreTotal, instanceId: submission.instance_id });
-          await triggerGoalProgressUpdates(submission.id, items, answers);
+          await triggerGoalProgressUpdates(submission, items, answers);
 
           // Archive submission for DESE compliance (non-fatal)
           try {
@@ -1556,7 +1556,7 @@
           const scoreTotal = computeScorePercentage(scoreAuto, scoreManual, items);
 
           await db.finalizeSubmission(submission.id, { scoreAuto, scoreManual, scoreTotal, instanceId: submission.instance_id });
-          await triggerGoalProgressUpdates(submission.id, items, answers);
+          await triggerGoalProgressUpdates(submission, items, answers);
 
           submission.score_auto = scoreAuto;
           submission.score_manual = scoreManual;
@@ -1768,7 +1768,7 @@
       });
       
       // Trigger goal progress updates
-      await triggerGoalProgressUpdates(submissionId, items, answers);
+      await triggerGoalProgressUpdates(submission, items, answers);
 
       // Archive submission for DESE compliance (non-fatal)
       try {
@@ -1820,10 +1820,17 @@
   }
 
   // Trigger goal progress updates for finalized submission
-  async function triggerGoalProgressUpdates(submissionId, items, answers) {
-    const submission = submissionsData.find(s => s.id === submissionId);
+  async function triggerGoalProgressUpdates(submission, items, answers) {
     if (!submission) return;
-    
+    const submissionId = submission.id;
+
+    console.log('[tc-review] triggerGoalProgressUpdates:', {
+      submissionId,
+      itemCount: items.length,
+      answerCount: answers.length,
+      itemsWithGoalCodes: items.filter(i => (i.goal_codes || []).length > 0).length
+    });
+
     const instance = assignmentInstancesData.find(i => i.id === submission.instance_id);
     if (!instance) return;
     
@@ -1842,7 +1849,7 @@
       if (!answer) return;
       
       const earnedPoints = Number(answer.earned_points) || 0;
-      const maxPoints = item.points || 0;
+      const maxPoints = Number(item.points) || 0;
       
       goalCodes.forEach(goalCode => {
         if (!goalRollups[goalCode]) {
@@ -1865,7 +1872,8 @@
     
     // Create goal progress entries
     for (const [goalCode, rollup] of Object.entries(goalRollups)) {
-      const value = rollup.max > 0 ? (rollup.earned / rollup.max) * 100 : 0;
+      const rawValue = rollup.max > 0 ? (rollup.earned / rollup.max) * 100 : 0;
+      const value = isNaN(rawValue) ? 0 : Math.round(rawValue * 100) / 100;
       
       try {
         await db.upsertGoalProgress({
@@ -1883,6 +1891,8 @@
         console.error('[tc-review] Error creating goal progress:', err);
       }
     }
+
+    console.log('[tc-review] Goal progress update complete:', { goalCodesProcessed: Object.keys(goalRollups).length });
   }
 
   // Auto-finalize submissions for MCQ-only assignments (no constructed-response items)
@@ -1927,7 +1937,7 @@
           instanceId: submission.instance_id
         });
 
-        await triggerGoalProgressUpdates(submission.id, items, answers);
+        await triggerGoalProgressUpdates(submission, items, answers);
 
         submission.score_auto = scoreAuto;
         submission.score_manual = 0;
