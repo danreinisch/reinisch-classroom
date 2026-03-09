@@ -1915,6 +1915,10 @@
       const answer = answers.find(a => a.item_id === item.id);
       if (!answer) return;
       
+      // Skip items that haven't been scored yet (e.g. writing prompts awaiting teacher review).
+      // Treating null as 0 would incorrectly record 0% progress for Written Expression goals.
+      if (answer.earned_points === null || answer.earned_points === undefined) return;
+      
       const earnedPoints = Number(answer.earned_points) || 0;
       const maxPoints = Number(item.points) || 0;
       
