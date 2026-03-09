@@ -804,7 +804,6 @@ exports.handler = async (event) => {
               answer_type: 'mcq',
               points: 1,
               goal_codes: q.goal_codes || [],
-              dese_codes: q.dese_codes || [],
               meta: {
                 day: day.day_number,
                 question_number: q.number,
@@ -822,7 +821,6 @@ exports.handler = async (event) => {
             answer_type: 'constructed',
             points: 5,
             goal_codes: day.goal_codes || [],
-            dese_codes: day.dese_codes || [],
             meta: {
               day: day.day_number,
               type: 'writing_prompt',
