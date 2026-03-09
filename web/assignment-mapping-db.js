@@ -148,8 +148,8 @@ export async function getAssignmentItems(supabase, assignmentId) {
         scoring: item.meta?.scoring || {},
         notes: item.meta?.notes || '',
         meta: item.meta,
-        dese_codes: mapping.dese_codes || [],
-        goal_codes: mapping.goal_codes || [],
+        dese_codes: (mapping.dese_codes && mapping.dese_codes.length > 0) ? mapping.dese_codes : (item.dese_codes || []),
+        goal_codes: (mapping.goal_codes && mapping.goal_codes.length > 0) ? mapping.goal_codes : (item.goal_codes || []),
         weight: mapping.weight || 1.0
       };
     });

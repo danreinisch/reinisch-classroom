@@ -857,15 +857,32 @@ exports.handler = async (event) => {
         console.log(`[teacher-issue-draft] [${requestId}] Successfully upserted ${itemsToUpsert.length} assignment_items`);
 
         // Step 5c: Populate assignment_item_mappings for items that have goal/DESE codes
-        const mappingsToUpsert = (Array.isArray(upsertedItems) ? upsertedItems : []).filter(item =>
-          (Array.isArray(item.goal_codes) && item.goal_codes.length > 0) ||
-          (Array.isArray(item.dese_codes) && item.dese_codes.length > 0)
-        ).map(item => ({
-          item_id: item.id,
-          goal_codes: item.goal_codes || [],
-          dese_codes: item.dese_codes || [],
-          weight: 1.0
-        }));
+        // Use original itemsToUpsert (which has goal_codes from the parser) matched to
+        // upserted IDs by item_ref, since the Supabase response may return stale values
+        // when resolution=merge-duplicates is used.
+        const upsertedMap = {};
+        (Array.isArray(upsertedItems) ? upsertedItems : []).forEach(item => {
+          upsertedMap[item.item_ref] = item;
+        });
+
+        const mappingsToUpsert = [];
+        for (const original of itemsToUpsert) {
+          if (!original.item_ref) continue;
+          const upserted = upsertedMap[original.item_ref];
+          if (!upserted || !upserted.id) continue;
+
+          const goalCodes = original.goal_codes || [];
+          const deseCodes = original.dese_codes || [];
+
+          if (goalCodes.length > 0 || deseCodes.length > 0) {
+            mappingsToUpsert.push({
+              item_id: upserted.id,
+              goal_codes: goalCodes,
+              dese_codes: deseCodes,
+              weight: 1.0
+            });
+          }
+        }
 
         if (mappingsToUpsert.length > 0) {
           console.log(`[teacher-issue-draft] [${requestId}] Upserting ${mappingsToUpsert.length} assignment_item_mappings`);
