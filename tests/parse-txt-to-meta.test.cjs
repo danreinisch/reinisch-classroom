@@ -182,8 +182,27 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
 
     if (!currentDay) continue;
 
-    // Skip DESE Standard(s) and IEP Goal lines (both "IEP Goal Code(s):" and "IEP Goal(s):" formats)
-    if (/^DESE\s+Standard/i.test(trimmed) || /^IEP\s+Goal\b/i.test(trimmed)) {
+    // Skip DESE Standard(s) lines
+    if (/^DESE\s+Standard/i.test(trimmed)) {
+      continue;
+    }
+
+    // Parse IEP Goal lines and attach codes to the current question (or day for writing prompts)
+    if (/^IEP\s+Goal\b/i.test(trimmed)) {
+      const colonIdx = trimmed.indexOf(':');
+      if (colonIdx !== -1) {
+        const codesStr = trimmed.substring(colonIdx + 1).trim();
+        if (codesStr) {
+          const codes = codesStr.split(',').map(c => c.trim()).filter(Boolean);
+          if (codes.length > 0) {
+            if (currentQuestion) {
+              currentQuestion.goal_codes = (currentQuestion.goal_codes || []).concat(codes);
+            } else if (currentDay) {
+              currentDay.goal_codes = (currentDay.goal_codes || []).concat(codes);
+            }
+          }
+        }
+      }
       continue;
     }
 
@@ -546,25 +565,27 @@ ANSWER: C`;
   assert.strictEqual(result.days[0].questions[0].correct, 'B', 'Should parse ANSWER: B as correct answer');
   assert.strictEqual(result.days[0].questions[1].number, 2, 'Second question number should be 2');
   assert.strictEqual(result.days[0].questions[1].correct, 'C', 'Should parse ANSWER: C as correct answer');
+  // Day-level IEP goals (before Q1) should be attached to the day
+  assert.deepStrictEqual(result.days[0].goal_codes, ['S016.11.2-1', 'S019.10.1'], 'Day-level IEP goals should be stored on the day');
 });
 
-// Test 12: IEP Goal(s): line is skipped (no "Code" in label)
-test('Skip IEP Goal(s): lines without "Code" keyword', () => {
+// Test 12: IEP Goal(s): lines after a question are attached to that question
+test('IEP Goal(s): lines after a question are stored on that question', () => {
   const txtContent = `DAY 1 QUESTIONS
 
+Q1: Test question?
 IEP Goal(s): S016.11.2-1
 IEP Goal Code(s): S015.11.1-2
-
-Q1: Test question?
 A) Yes
 B) No
 ANSWER: A`;
 
   const result = parseTxtToMeta(txtContent, 'Language Arts 3 SC', 'test.txt');
 
-  assert(result !== null, 'Should parse while skipping both IEP Goal formats');
-  assert.strictEqual(result.days[0].questions.length, 1, 'Should have 1 question (not IEP lines)');
+  assert(result !== null, 'Should parse while extracting IEP Goal codes');
+  assert.strictEqual(result.days[0].questions.length, 1, 'Should have 1 question');
   assert.strictEqual(result.days[0].questions[0].text, 'Test question?', 'Should parse question text correctly');
+  assert.deepStrictEqual(result.days[0].questions[0].goal_codes, ['S016.11.2-1', 'S015.11.1-2'], 'Should store both IEP goal codes on the question');
 });
 
 // Test 13: Dashed DAY headers from mega-split format

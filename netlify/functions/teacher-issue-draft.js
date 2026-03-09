@@ -212,8 +212,27 @@ function parseTxtToMeta(txtContent, resolvedClassName, sourceFileName) {
 
     if (!currentDay) continue;
 
-    // Skip DESE Standard(s) and IEP Goal lines (both "IEP Goal Code(s):" and "IEP Goal(s):" formats)
-    if (/^DESE\s+Standard/i.test(trimmed) || /^IEP\s+Goal\b/i.test(trimmed)) {
+    // Skip DESE Standard(s) lines
+    if (/^DESE\s+Standard/i.test(trimmed)) {
+      continue;
+    }
+
+    // Parse IEP Goal lines and attach codes to the current question (or day for writing prompts)
+    if (/^IEP\s+Goal\b/i.test(trimmed)) {
+      const colonIdx = trimmed.indexOf(':');
+      if (colonIdx !== -1) {
+        const codesStr = trimmed.substring(colonIdx + 1).trim();
+        if (codesStr) {
+          const codes = codesStr.split(',').map(c => c.trim()).filter(Boolean);
+          if (codes.length > 0) {
+            if (currentQuestion) {
+              currentQuestion.goal_codes = (currentQuestion.goal_codes || []).concat(codes);
+            } else if (currentDay) {
+              currentDay.goal_codes = (currentDay.goal_codes || []).concat(codes);
+            }
+          }
+        }
+      }
       continue;
     }
 
@@ -784,6 +803,8 @@ exports.handler = async (event) => {
               item_ref: `${day.day_number}_${q.number}`,
               answer_type: 'mcq',
               points: 1,
+              goal_codes: q.goal_codes || [],
+              dese_codes: q.dese_codes || [],
               meta: {
                 day: day.day_number,
                 question_number: q.number,
@@ -800,6 +821,8 @@ exports.handler = async (event) => {
             item_ref: `WP_${day.day_number}`,
             answer_type: 'constructed',
             points: 5,
+            goal_codes: day.goal_codes || [],
+            dese_codes: day.dese_codes || [],
             meta: {
               day: day.day_number,
               type: 'writing_prompt',
@@ -821,7 +844,7 @@ exports.handler = async (event) => {
             'apikey': SUPABASE_SERVICE_ROLE_KEY,
             'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
             'Content-Type': 'application/json',
-            'Prefer': 'resolution=merge-duplicates,return=minimal'
+            'Prefer': 'resolution=merge-duplicates,return=representation'
           },
           body: JSON.stringify(itemsToUpsert)
         });
@@ -830,8 +853,43 @@ exports.handler = async (event) => {
           const errorText = await itemsResponse.text();
           console.error(`[teacher-issue-draft] [${requestId}] assignment_items upsert failed: ${itemsResponse.status} - ${errorText}`);
           throw new Error(`Failed to create assignment items: ${itemsResponse.status} - ${errorText}`);
-        } else {
-          console.log(`[teacher-issue-draft] [${requestId}] Successfully upserted ${itemsToUpsert.length} assignment_items`);
+        }
+
+        const upsertedItems = await itemsResponse.json();
+        console.log(`[teacher-issue-draft] [${requestId}] Successfully upserted ${itemsToUpsert.length} assignment_items`);
+
+        // Step 5c: Populate assignment_item_mappings for items that have goal/DESE codes
+        const mappingsToUpsert = (Array.isArray(upsertedItems) ? upsertedItems : []).filter(item =>
+          (Array.isArray(item.goal_codes) && item.goal_codes.length > 0) ||
+          (Array.isArray(item.dese_codes) && item.dese_codes.length > 0)
+        ).map(item => ({
+          item_id: item.id,
+          goal_codes: item.goal_codes || [],
+          dese_codes: item.dese_codes || [],
+          weight: 1.0
+        }));
+
+        if (mappingsToUpsert.length > 0) {
+          console.log(`[teacher-issue-draft] [${requestId}] Upserting ${mappingsToUpsert.length} assignment_item_mappings`);
+
+          const mappingsUrl = `${SUPABASE_URL}/rest/v1/assignment_item_mappings`;
+          const mappingsResponse = await fetch(mappingsUrl, {
+            method: 'POST',
+            headers: {
+              'apikey': SUPABASE_SERVICE_ROLE_KEY,
+              'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+              'Content-Type': 'application/json',
+              'Prefer': 'resolution=merge-duplicates,return=minimal'
+            },
+            body: JSON.stringify(mappingsToUpsert)
+          });
+
+          if (!mappingsResponse.ok) {
+            const errorText = await mappingsResponse.text();
+            console.warn(`[teacher-issue-draft] [${requestId}] assignment_item_mappings upsert failed: ${mappingsResponse.status} - ${errorText}`);
+          } else {
+            console.log(`[teacher-issue-draft] [${requestId}] Successfully upserted ${mappingsToUpsert.length} assignment_item_mappings`);
+          }
         }
       }
     }

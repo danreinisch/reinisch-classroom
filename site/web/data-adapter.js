@@ -1882,6 +1882,7 @@ const remote = {
     }
     
     // Insert progress entry
+    const safeValue = (value === null || value === undefined || isNaN(Number(value))) ? 0 : parseFloat(value);
     const { data, error } = await supabase
       .from('goal_progress')
       .insert({
@@ -1889,7 +1890,7 @@ const remote = {
         student_id: studentData.id,
         class_id: resolvedClassId,
         date,
-        value: parseFloat(value),
+        value: safeValue,
         source,
         collected_by
       })
