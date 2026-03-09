@@ -1836,6 +1836,11 @@
     if (!submission) return;
     const submissionId = submission.id;
 
+    // Always enrich items with goal_codes from assignment_item_mappings so that
+    // items fetched via the JS client (which skips the REST enrichment path) also
+    // carry accurate goal codes before we compute rollups.
+    await enrichItemsFromMappings(items);
+
     console.log('[tc-review] triggerGoalProgressUpdates:', {
       submissionId,
       itemCount: items.length,
@@ -1849,12 +1854,62 @@
     const studentCode = instance.student_code;
     const classCode = instance.class_code || null;
     const date = submission.submitted_at ? submission.submitted_at.split('T')[0] : new Date().toISOString().split('T')[0];
-    
+
+    // Fetch the submitting student's own goal codes so we can filter out codes
+    // that belong to other students (avoids 406 errors from upsertGoalProgress).
+    let studentGoalCodes = null;
+    if (SUPABASE_URL_CACHED && SUPABASE_KEY_CACHED) {
+      try {
+        const studentRes = await fetch(
+          `${SUPABASE_URL_CACHED}/rest/v1/students?code=eq.${encodeURIComponent(studentCode)}&select=id&limit=1`,
+          {
+            headers: {
+              'apikey': SUPABASE_KEY_CACHED,
+              'Authorization': `Bearer ${SUPABASE_KEY_CACHED}`,
+              'Accept': 'application/json',
+            }
+          }
+        );
+        if (studentRes.ok) {
+          const studentRows = await studentRes.json();
+          if (Array.isArray(studentRows) && studentRows.length > 0) {
+            const studentId = studentRows[0].id;
+            const goalsRes = await fetch(
+              `${SUPABASE_URL_CACHED}/rest/v1/goals?student_id=eq.${studentId}&select=code`,
+              {
+                headers: {
+                  'apikey': SUPABASE_KEY_CACHED,
+                  'Authorization': `Bearer ${SUPABASE_KEY_CACHED}`,
+                  'Accept': 'application/json',
+                }
+              }
+            );
+            if (goalsRes.ok) {
+              const goalRows = await goalsRes.json();
+              if (Array.isArray(goalRows)) {
+                studentGoalCodes = new Set(goalRows.map(g => g.code));
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('[tc-review] Failed to fetch student goals for filtering:', err);
+      }
+    }
+
+    if (!studentGoalCodes) {
+      console.warn('[tc-review] Could not determine student goal codes for', studentCode,
+        '— all goal codes will be attempted (may cause 406 errors for codes belonging to other students).');
+    }
+
     // Build goal rollups by goal_code
     const goalRollups = {};
     
     items.forEach(item => {
-      const goalCodes = item.goal_codes || [];
+      // Only include goal codes that belong to the submitting student
+      const goalCodes = (item.goal_codes || []).filter(
+        code => !studentGoalCodes || studentGoalCodes.has(code)
+      );
       if (goalCodes.length === 0) return;
       
       const answer = answers.find(a => a.item_id === item.id);
