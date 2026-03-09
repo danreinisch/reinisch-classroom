@@ -122,6 +122,12 @@
     .known-input.hyp-input:focus { border-color: #f87171; }
     .known-input::-webkit-inner-spin-button { -webkit-appearance: none; }
 
+    .unit-row { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; padding: 0.65rem 0.85rem; background: var(--formula-bg); border: 1px solid var(--border); border-radius: 7px; }
+    .unit-label { font-size: 0.78rem; font-weight: 500; color: var(--text-muted); white-space: nowrap; }
+    .unit-select { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 0.4rem 0.6rem; font-family: 'Outfit', sans-serif; font-size: 0.88rem; color: var(--text); outline: none; cursor: pointer; min-width: 80px; }
+    .unit-select:focus { border-color: var(--accent); } .unit-select option { background: var(--surface); color: var(--text); }
+    .unit-hint { font-size: 0.72rem; color: var(--text-dim); font-style: italic; }
+
     .begin-btn { background: var(--accent); color: #0a1628; border: none; border-radius: 7px; padding: 0.6rem 1.5rem; font-family: 'Outfit', sans-serif; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.15s; margin-top: 0.5rem; }
     .begin-btn:hover { background: #0d9488; transform: translateY(-1px); }
     .begin-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
@@ -165,8 +171,11 @@
     .final-answer-label { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 0.5rem; }
     .final-answer-value { font-family: var(--mono); font-size: 2rem; font-weight: 700; color: var(--text); }
     .final-answer-caption { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.35rem; }
-    .try-again-btn { margin-top: 1.25rem; background: transparent; border: 1px solid var(--border2); border-radius: 7px; padding: 0.5rem 1.25rem; font-family: 'Outfit', sans-serif; font-size: 0.85rem; color: var(--text-muted); cursor: pointer; transition: all 0.15s; }
+    .final-actions { display: flex; gap: 0.75rem; justify-content: center; margin-top: 1.25rem; flex-wrap: wrap; }
+    .try-again-btn, .copy-btn { background: transparent; border: 1px solid var(--border2); border-radius: 7px; padding: 0.5rem 1.25rem; font-family: 'Outfit', sans-serif; font-size: 0.85rem; color: var(--text-muted); cursor: pointer; transition: all 0.15s; }
     .try-again-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .copy-btn { border-color: var(--accent-dim); color: var(--accent); } .copy-btn:hover { background: rgba(20,184,166,0.1); border-color: var(--accent); }
+    .copy-btn.copied { background: rgba(34,197,94,0.12); border-color: var(--success); color: var(--success); pointer-events: none; }
     .divider { height: 1px; background: var(--border); margin: 1.75rem 0; }
 
     @keyframes slideDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
@@ -255,6 +264,20 @@
         <div class="step-instruction">Enter the side lengths from your problem.</div>
       </div>
       <div class="step-body">
+        <div class="unit-row">
+          <span class="unit-label">Units:</span>
+          <select class="unit-select" id="unitSelect">
+            <option value="">no unit</option>
+            <option value="in">inches (in)</option>
+            <option value="ft">feet (ft)</option>
+            <option value="yd">yards (yd)</option>
+            <option value="cm" selected>centimeters (cm)</option>
+            <option value="mm">millimeters (mm)</option>
+            <option value="m">meters (m)</option>
+            <option value="km">kilometers (km)</option>
+          </select>
+          <span class="unit-hint" id="unitHint">Answer will be in cm</span>
+        </div>
         <div class="known-grid" id="knownGrid"></div>
         <button class="begin-btn" id="beginBtn" onclick="beginSteps()" disabled>Begin Solving →</button>
       </div>
@@ -266,8 +289,10 @@
       <div class="final-answer-label" id="finalLabel">✓ Missing Side Length</div>
       <div class="final-answer-value" id="finalValue"></div>
       <div class="final-answer-caption" id="finalCaption"></div>
-      <br>
-      <button class="try-again-btn" onclick="resetWorkspace()">↺ Try Another Problem</button>
+      <div class="final-actions">
+        <button class="copy-btn" id="copyBtn" onclick="copyToClipboard()">📋 Copy Problem to Clipboard</button>
+        <button class="try-again-btn" onclick="resetWorkspace()">↺ Try Another Problem</button>
+      </div>
     </div>
   </div>
 </main>
@@ -276,6 +301,14 @@
 function round2(n) { return Math.round(n * 100) / 100; }
 function round4(n) { return Math.round(n * 10000) / 10000; }
 function isClose(a, b) { return Math.abs(a - b) <= Math.max(0.06, Math.abs(b) * 0.015); }
+
+function getUnit() { return document.getElementById('unitSelect').value; }
+function getUnitLabel() { const u = getUnit(); return u ? ` ${u}` : ''; }
+
+document.getElementById('unitSelect').addEventListener('change', () => {
+  const u = getUnit();
+  document.getElementById('unitHint').textContent = u ? `Answer will be in ${u}` : 'Label your answer correctly!';
+});
 
 /* ================================================================
    PROBLEM DEFINITIONS
@@ -295,7 +328,7 @@ const PROBLEMS = {
       { id: 'b', label: 'Leg b', varName: 'b', hint: 'The other shorter side.', isHyp: false }
     ],
     finalLabel: '✓ Hypotenuse (c)',
-    finalCaption: (v) => `The hypotenuse is ${v} units long.`,
+    finalCaption: (v, ul) => `The hypotenuse is ${v}${ul} long.`,
     steps: [
       {
         title: 'Substitute Your Values',
@@ -361,7 +394,7 @@ const PROBLEMS = {
       { id: 'b', label: 'Known leg (b)',  varName: 'b', hint: 'The leg you already know.', isHyp: false }
     ],
     finalLabel: '✓ Missing Leg (a)',
-    finalCaption: (v) => `The missing leg is ${v} units long.`,
+    finalCaption: (v, ul) => `The missing leg is ${v}${ul} long.`,
     steps: [
       {
         title: 'Substitute Your Values',
@@ -498,7 +531,7 @@ const PROBLEMS = {
       { id: 'y2', label: 'Point 2 — y₂', varName: 'y₂', hint: 'y-coordinate of the second point.', isHyp: false, allowNeg: true }
     ],
     finalLabel: '✓ Distance (d)',
-    finalCaption: (v) => `The distance between the two points is ${v} units.`,
+    finalCaption: (v, ul) => `The distance between the two points is ${v}${ul || ' units'}.`,
     steps: [
       {
         title: 'Substitute Your Values',
@@ -761,6 +794,7 @@ function beginSteps() {
   document.getElementById('stepKnown').classList.add('complete');
   document.getElementById('badgeKnown').textContent = '✓';
   document.querySelectorAll('.known-input').forEach(el => el.disabled = true);
+  document.getElementById('unitSelect').disabled = true;
   document.getElementById('beginBtn').style.display = 'none';
   renderSteps(prob);
 }
@@ -948,20 +982,95 @@ function showFeedback(el, type, msg) { el.className = `feedback-box visible ${ty
 function showFinalAnswer(step, value) {
   const prob = PROBLEMS[currentProbId];
   const finalCard = document.getElementById('finalCard');
+  const ul = getUnitLabel();
   document.getElementById('finalLabel').textContent = prob.finalLabel;
-  document.getElementById('finalValue').textContent = value + ' units';
+  document.getElementById('finalValue').textContent = value + ul;
   document.getElementById('finalValue').style.color = '';
   document.getElementById('finalValue').style.fontSize = '';
-  document.getElementById('finalCaption').textContent = prob.finalCaption ? prob.finalCaption(value) : '';
+  document.getElementById('finalCaption').textContent = prob.finalCaption ? prob.finalCaption(value, ul) : '';
   finalCard.classList.add('visible');
   setTimeout(() => finalCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
 }
 
+/* ================================================================
+   COPY TO CLIPBOARD
+================================================================ */
+function buildProblemText() {
+  const prob = PROBLEMS[currentProbId]; if (!prob) return '';
+  const ul = getUnitLabel();
+  const lines = [], d = '─'.repeat(40);
+  lines.push('PYTHAGOREAN THEOREM');
+  lines.push(`Problem Type: ${prob.name}`);
+  if (getUnit()) lines.push(`Units: ${getUnit()}`);
+  lines.push(d);
+  lines.push(`Formula: ${prob.formulaText.replace(/<[^>]+>/g, '').replace(/\?=/g, '?=')}`);
+  lines.push('');
+  lines.push('Step 1: Known Values');
+  prob.knownFields.forEach(f => {
+    lines.push(`  ${f.label} (${f.varName}) = ${knownValues[f.id]}${ul}`);
+  });
+  lines.push('');
+
+  prob.steps.forEach((step, idx) => {
+    const stepNum = idx + 2;
+    lines.push(`Step ${stepNum}: ${step.title}`);
+    if (step.type === 'expression') {
+      lines.push(`  ${step.displayFn(knownValues).replace(/<[^>]+>/g, '').replace(/<br>/g, '\n  ')}`);
+    } else if (step.type === 'compute') {
+      step.rows.forEach((row, rIdx) => {
+        const expr = row.exprFn(knownValues, computedValues).replace(/<[^>]+>/g, '');
+        const ans = computedValues[row.answerId];
+        const att = stepAttempts[`row_${idx}_${rIdx}`] || 1;
+        const note = att === 1 ? ' ✓ (1st try)' : ` (${att} attempts)`;
+        lines.push(`  ${expr} ${ans}${note}`);
+      });
+    } else if (step.type === 'verdict') {
+      if (verdictResult !== null) {
+        lines.push(verdictResult
+          ? `  ✓ YES — Right triangle! a² + b² = c²`
+          : `  ✗ NO — Not a right triangle. a² + b² ≠ c²`);
+      }
+    }
+    lines.push('');
+  });
+
+  lines.push(d);
+  // Final answer
+  const finalStep = prob.steps.find(s => s.isFinal);
+  if (finalStep && finalStep.type === 'compute') {
+    const fk = finalStep.rows.slice(-1)[0]?.answerId;
+    lines.push(`${prob.finalLabel.replace('✓ ', '')} = ${computedValues[fk]}${ul}`);
+  } else if (finalStep && finalStep.type === 'verdict') {
+    lines.push(verdictResult ? 'Result: RIGHT TRIANGLE ✓' : 'Result: NOT a right triangle ✗');
+  }
+  lines.push(d);
+  return lines.join('\n');
+}
+
+function copyToClipboard() {
+  const text = buildProblemText(), btn = document.getElementById('copyBtn');
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = '✓ Copied!'; btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = '📋 Copy Problem to Clipboard'; btn.classList.remove('copied'); }, 2500);
+  }).catch(() => {
+    const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px';
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+    btn.textContent = '✓ Copied!'; btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = '📋 Copy Problem to Clipboard'; btn.classList.remove('copied'); }, 2500);
+  });
+}
+
+/* ================================================================
+   RESET
+================================================================ */
 function resetWorkspace() {
   knownValues = {}; computedValues = {}; stepAttempts = {}; verdictResult = null;
   document.getElementById('stepsContainer').innerHTML = '';
   document.getElementById('finalCard').classList.remove('visible');
   document.getElementById('workspace').classList.remove('visible');
+  document.getElementById('unitSelect').disabled = false;
+  const cb = document.getElementById('copyBtn');
+  cb.textContent = '📋 Copy Problem to Clipboard'; cb.classList.remove('copied');
 }
 
 buildProblemGrid();
