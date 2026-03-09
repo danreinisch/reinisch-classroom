@@ -688,16 +688,14 @@
   }
   
   /**
-   * Tracks containers that already have delegated goal-interaction listeners,
-   * preventing duplicate attachments across multiple calls to attachShowMoreListeners.
-   */
-  const _goalListenerContainers = new WeakSet();
-
-  /**
    * Attach event listeners to "Show more" and progress toggle buttons.
    * Uses event delegation on the container elements so that dynamically
    * re-rendered goal cards (async load) are always covered without
    * needing to rebind on every render.
+   *
+   * Tracks attachment via a data attribute on the DOM element so that the
+   * guard remains valid even if the function is called multiple times and
+   * survives across innerHTML replacements of child content.
    */
   function attachShowMoreListeners() {
     const containers = [
@@ -706,8 +704,8 @@
     ];
 
     containers.forEach(container => {
-      if (!container || _goalListenerContainers.has(container)) return;
-      _goalListenerContainers.add(container);
+      if (!container || container.dataset.listenersAttached) return;
+      container.dataset.listenersAttached = '1';
 
       container.addEventListener('click', function(e) {
         // Handle "Show more / Show less" description toggle
