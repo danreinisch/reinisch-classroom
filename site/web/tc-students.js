@@ -470,6 +470,40 @@
     return '⚠️';
   }
 
+  /**
+   * Render a compact quarterly-averages row for a goal card.
+   * Shows Q1–Q4 avg (collected/expected) for the current school year.
+   */
+  function renderQuarterlyAverages(studentCode, goalCode) {
+    const goal = allGoals.find(g => g.student_code === studentCode && g.code === goalCode);
+    const expected = (goal && goal.expected_data_points) || 3;
+    const measurementType = goal && goal.measurement_type;
+    const entries = getProgressForGoal(studentCode, goalCode);
+
+    const spans = ['Q1', 'Q2', 'Q3', 'Q4'].map(q => {
+      const range = getQuarterDateRange(q);
+      if (!range) return `<span style="opacity:0.5;">${q}: —</span>`;
+
+      const qEntries = entries.filter(p => {
+        const d = new Date(p.date);
+        return d >= range.start && d <= range.end;
+      });
+
+      const count = qEntries.length;
+      const countStr = `(${count}/${expected})`;
+
+      if (count === 0) {
+        return `<span style="opacity:0.5;">${q}: — ${escapeHtml(countStr)}</span>`;
+      }
+
+      const avg = qEntries.reduce((sum, e) => sum + parseFloat(e.value || 0), 0) / (count || 1);
+      const avgStr = formatProgressValue(avg, measurementType);
+      return `<span>${q}: ${escapeHtml(avgStr)} ${escapeHtml(countStr)}</span>`;
+    });
+
+    return `<div class="st-quarterly-averages" style="flex-basis:100%;display:flex;gap:12px;flex-wrap:wrap;font-size:12px;margin-top:2px;opacity:0.85;">${spans.join('')}</div>`;
+  }
+
   // Load data
   async function loadData() {
     try {
@@ -1202,6 +1236,7 @@
               <span>${lastText}</span>
             </div>
             ${progressToggleBtn ? `<div class="st-data-status-item" style="margin-left:auto;">${progressToggleBtn}</div>` : ''}
+            ${renderQuarterlyAverages(goal.student_code, goal.code)}
           </div>
           ${progressDetailHtml}
         </div>

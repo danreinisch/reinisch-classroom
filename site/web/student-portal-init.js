@@ -622,7 +622,7 @@
       const latestEntry = sortedForDisplay[0];
       const latestVal = formatProgressValue(latestEntry.value, goal.measurement_type);
 
-      const recentRows = sortedForDisplay.slice(0, 5).map(e => {
+      const allRows = sortedForDisplay.map(e => {
         const val = formatProgressValue(e.value, goal.measurement_type);
         const dt = formatDate(e.date);
         return `<tr><td class="st-progress-td-date">${escapeHtml(dt)}</td><td class="st-progress-td-value">${escapeHtml(val)}</td></tr>`;
@@ -630,24 +630,37 @@
 
       const chartHtml = buildProgressSVG(progressEntries, goal);
 
+      // Quarter average
+      const qAvgVal = thisQuarterEntries.length > 0
+        ? thisQuarterEntries.reduce((sum, e) => sum + parseFloat(e.value || 0), 0) / thisQuarterEntries.length
+        : null;
+      const qAvgHtml = qAvgVal !== null
+        ? `<div class="st-goal-latest-value" style="margin-top:8px;">
+            <span class="st-goal-latest-label">This Quarter Avg:</span>
+            <span class="st-goal-latest-num" style="font-size:16px;">${escapeHtml(formatProgressValue(qAvgVal, goal.measurement_type))}</span>
+            <span style="font-size:12px;opacity:0.6;">(${thisQuarterEntries.length} ${thisQuarterEntries.length === 1 ? 'entry' : 'entries'})</span>
+          </div>`
+        : '';
+
       progressDetailHtml = `
         <div class="st-goal-progress-detail" id="${progressDetailId}" hidden aria-hidden="true">
           <div class="st-goal-latest-value" aria-label="Latest progress value: ${escapeHtml(latestVal)}">
             <span class="st-goal-latest-label">Latest:</span>
             <span class="st-goal-latest-num">${escapeHtml(latestVal)}</span>
           </div>
+          ${qAvgHtml}
           <div class="st-goal-chart-container" aria-hidden="true">
             ${chartHtml}
           </div>
-          <table class="st-progress-table" aria-label="Recent progress data">
+          <table class="st-progress-table" aria-label="All progress data (${sortedForDisplay.length} ${sortedForDisplay.length === 1 ? 'entry' : 'entries'})">
             <thead><tr><th>Date</th><th>Value</th></tr></thead>
-            <tbody>${recentRows}</tbody>
+            <tbody>${allRows}</tbody>
           </table>
         </div>`;
     }
 
     const toggleBtn = progressEntries.length > 0
-      ? `<button class="st-goal-progress-toggle" data-progress-id="${progressDetailId}" aria-expanded="false" aria-controls="${progressDetailId}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg><span class="st-goal-progress-toggle-label">View Progress</span></button>`
+      ? `<button class="st-goal-progress-toggle" data-progress-id="${progressDetailId}" aria-expanded="false" aria-controls="${progressDetailId}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="pointer-events:none"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg><span class="st-goal-progress-toggle-label" style="pointer-events:none">View Progress</span></button>`
       : '';
 
     return `
@@ -718,7 +731,8 @@
         }
 
         // Handle "View Progress / Hide Progress" panel toggle
-        const toggleBtn = e.target.closest('.st-goal-progress-toggle');
+        const toggleBtn = e.target.closest('.st-goal-progress-toggle')
+          || e.target.closest('button[data-progress-id]');
         if (toggleBtn) {
           const targetId = toggleBtn.dataset.progressId;
           const panel = document.getElementById(targetId);
