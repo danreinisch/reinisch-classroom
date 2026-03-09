@@ -688,32 +688,52 @@
   }
   
   /**
-   * Attach event listeners to "Show more" and progress toggle buttons
+   * Tracks containers that already have delegated goal-interaction listeners,
+   * preventing duplicate attachments across multiple calls to attachShowMoreListeners.
+   */
+  const _goalListenerContainers = new WeakSet();
+
+  /**
+   * Attach event listeners to "Show more" and progress toggle buttons.
+   * Uses event delegation on the container elements so that dynamically
+   * re-rendered goal cards (async load) are always covered without
+   * needing to rebind on every render.
    */
   function attachShowMoreListeners() {
-    const showMoreButtons = document.querySelectorAll('.st-goal-show-more');
-    showMoreButtons.forEach(button => {
-      button.addEventListener('click', function() {
-        const descContainer = this.parentElement;
-        descContainer.classList.toggle('expanded');
-        this.textContent = descContainer.classList.contains('expanded') ? 'Show less' : 'Show more';
-      });
-    });
+    const containers = [
+      document.getElementById('goalsContent'),
+      document.getElementById('dashGoalsSnapshot'),
+    ];
 
-    const progressToggles = document.querySelectorAll('.st-goal-progress-toggle');
-    progressToggles.forEach(button => {
-      button.addEventListener('click', function() {
-        const targetId = this.dataset.progressId;
-        const panel = document.getElementById(targetId);
-        if (!panel) return;
-        const isExpanded = !panel.hidden;
-        panel.hidden = isExpanded;
-        panel.setAttribute('aria-hidden', String(isExpanded));
-        this.setAttribute('aria-expanded', String(!isExpanded));
-        const svgEl = this.querySelector('svg');
-        if (svgEl) svgEl.style.transform = isExpanded ? '' : 'rotate(180deg)';
-        const labelEl = this.querySelector('.st-goal-progress-toggle-label');
-        if (labelEl) labelEl.textContent = isExpanded ? 'View Progress' : 'Hide Progress';
+    containers.forEach(container => {
+      if (!container || _goalListenerContainers.has(container)) return;
+      _goalListenerContainers.add(container);
+
+      container.addEventListener('click', function(e) {
+        // Handle "Show more / Show less" description toggle
+        const showMoreBtn = e.target.closest('.st-goal-show-more');
+        if (showMoreBtn) {
+          const descContainer = showMoreBtn.parentElement;
+          descContainer.classList.toggle('expanded');
+          showMoreBtn.textContent = descContainer.classList.contains('expanded') ? 'Show less' : 'Show more';
+          return;
+        }
+
+        // Handle "View Progress / Hide Progress" panel toggle
+        const toggleBtn = e.target.closest('.st-goal-progress-toggle');
+        if (toggleBtn) {
+          const targetId = toggleBtn.dataset.progressId;
+          const panel = document.getElementById(targetId);
+          if (!panel) return;
+          const isExpanded = !panel.hidden;
+          panel.hidden = isExpanded;
+          panel.setAttribute('aria-hidden', String(isExpanded));
+          toggleBtn.setAttribute('aria-expanded', String(!isExpanded));
+          const svgEl = toggleBtn.querySelector('svg');
+          if (svgEl) svgEl.style.transform = isExpanded ? '' : 'rotate(180deg)';
+          const labelEl = toggleBtn.querySelector('.st-goal-progress-toggle-label');
+          if (labelEl) labelEl.textContent = isExpanded ? 'View Progress' : 'Hide Progress';
+        }
       });
     });
   }
