@@ -95,14 +95,19 @@
       (s) => s.review_status === "pending" || s.review_status === "in_progress"
     ).length;
 
-    // 3. Assignments This Quarter — instances created within the current quarter
+    // 3. Assignments This Quarter — instances assigned within the current quarter
+    // Uses assigned_at (or due_at as fallback) since created_at is not returned by listAssignmentInstances.
     let assignmentsThisQuarter = 0;
     if (quarterRange) {
       assignmentsThisQuarter = instances.filter((inst) => {
-        if (!inst.created_at) return false;
-        const d = new Date(inst.created_at);
+        const ts = inst.assigned_at || inst.due_at;
+        if (!ts) return false;
+        const d = new Date(ts);
         return d >= quarterRange.start && d <= quarterRange.end;
       }).length;
+    } else {
+      // Fallback: if quarter dates are misconfigured and no range is available, count all instances
+      assignmentsThisQuarter = instances.length;
     }
 
     // 4. Goal Progress — average progress across all active goals' latest entries this quarter
@@ -154,7 +159,7 @@
     if (kpiQuarter) kpiQuarter.textContent = assignmentsThisQuarter;
     if (kpiQuarterSub) kpiQuarterSub.textContent = currentQuarter;
 
-    if (kpiGoals) kpiGoals.textContent = avgProgress != null ? `${avgProgress}%` : "—";
+    if (kpiGoals) kpiGoals.textContent = avgProgress != null ? `${avgProgress}%` : "N/A";
     if (kpiGoalsSub)
       kpiGoalsSub.textContent =
         activeGoals.length > 0 ? `Avg across ${activeGoals.length} goal${activeGoals.length !== 1 ? "s" : ""}` : "";
@@ -592,13 +597,15 @@
     // Submissions
     for (const sub of submissions) {
       if (sub.submitted_at) {
-        const student = studentMap.get(sub.student_code);
-        const instance = instances.find((i) => i.id === sub.assignment_instance_id);
+        const studentCode = sub.assignment_instances?.students?.code || sub.student_code;
+        const student = studentMap.get(studentCode);
+        const instanceId = sub.instance_id || sub.assignment_instance_id;
+        const instance = instances.find((i) => i.id === instanceId);
         const assignment = instance ? assignmentMap.get(instance.assignment_id) : null;
         events.push({
           type: "submission",
           date: new Date(sub.submitted_at),
-          text: `${student?.name || sub.student_code} submitted ${assignment?.title || "Assignment"}`,
+          text: `${student?.name || studentCode || "Unknown"} submitted ${assignment?.title || "Assignment"}`,
           icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
         });
       }
